@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+## 2026-06-04 - CORRECTION: cnz1 & mtz1 real causes (prior "3-subsystem" diagnosis was 2/3 wrong)
+
+The earlier "MTZ-family = three subsystems" entry below was REFUTED by deeper per-frontier
+investigation (recorder-probe + regen where needed). MTZ3 was correct (fixed: cog ride-release).
+The other two are DIFFERENT subsystems than first diagnosed — record the proven causes here so
+follow-ups target the right code:
+
+- **CNZ1 f3831 (x): NOT bumper trig.** The CNZ bumper bounce is correct (x/x_speed/x_sub match ROM
+  through f3804-3830). The 1px divergence at f3831 is **ground-collision surface-departure rounding
+  on the curved bumper-pit wall** (`ground_mode 2` left-wall departure final step): ROM lands 0x0F71,
+  engine 0x0F72, sub-pixel identical. FIX CLASS: curved-surface ground-mode departure displacement.
+  (A real but trace-unexercised bumper-trig word-vs-byte correctness bug — `CNZBumpersReact_Angle`,
+  s2.asm:32645-32660 — was found en route and preserved on branch `bugfix/ai-cnz1-bumper-trig`.)
+- **MTZ1 f375 (tails_air): NOT slot-field inheritance.** Proven via a read-only Obj42 recorder probe:
+  the steam spring inits ZEROED at f93 (no garbage inheritance) and is in top-wait (routine_secondary
+  4), never rises at f375. Tails is launched by its **own Tails-CPU auto-jump**: `Tails_CPU_jumping`/
+  auto_jump held across the airborne approach; ROM `TailsCPU_Normal_FilterAction` (s2.asm:39342-39376)
+  re-asserts the held jump bit on the LANDING frame -> fresh press -> bounce at f375. Engine
+  `SidekickCpuController` (jumpingFlag block ~:1458-1463) sets held but produces no landing press-edge.
+  FIX CLASS: shared S2/S3K sidekick-CPU auto-jump landing re-press (cross-game gated). Same path as
+  the f163/f182/f225 auto-jumps (Tails_CPU_jumping-held, NOT the &0x3F periodic gate).
+
+Net: MTZ-green remains gated by these two (cnz1 ground-collision, mtz1 sidekick-CPU auto-jump) plus
+later divergences. The ROM object-windowing port + explosion + cog fixes are MERGED (commit 4e385458c);
+cnz1 carries an accepted documented regression (3906->3831) pending the ground-collision fix.
+
+
 ## 2026-06-04 - DIAGNOSIS: MTZ-family frontiers are THREE separate subsystems (not object-lifetime)
 
 - After the (correct) ROM object-windowing port + per-game explosion-timing fix, the three blocked
