@@ -1,5 +1,259 @@
 # Trace Frontier Log
 
+## 2026-06-04 - arz2 f549->f566: ChopChop (Obj91) X movement via ObjectMove subpixel integration
+
+- Branch `bugfix/ai-trace-s2-arz2`, worktree `.worktrees/trace-s2-arz2` (off develop `868249c0f`).
+- Command (cmd.exe mvn inside worktree):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** advanced, genuine, zero same-game regressions.
+- **Root cause:** `ChopChopBadnikInstance` (ARZ piranha, Obj91) applied patrol X velocity as a
+  plain `currentX += (xVelocity >> 8)`. Patrol x_vel is `move.w #$40,x_vel(a0)` (s2.asm:73621-73626)
+  = 0x40 = 0.25px/frame. `0x40 >> 8 == 0`, so the badnik never advanced horizontally — its position
+  diverged from ROM, perturbing the player/Tails interaction downstream.
+- **Fix:** Both Obj91 movement states call `JmpTo26_ObjectMove` (s2.asm:73642, 73688), and `ObjectMove`
+  integrates `x_pos(32) += x_vel<<8` (s2.asm:30185-30199) — the low byte of x_vel carries into the
+  sub-pixel and into the whole pixel. Modelled as a 16:8 X accumulator (`applyXVelocitySubpixel`) used
+  by both patrol and charge states. Charge X is `Obj91_HorizontalSpeeds` ±2 whole pixels written via
+  `move.b` to the HIGH byte (x_vel = ±0x200, zero subpixel carry; s2.asm:73678-73680); charge Y is
+  `Obj91_VerticalSpeeds` $80 written to the LOW byte of y_vel = 0.5px/frame (s2.asm:73682-73684).
+  Per-object change in ChopChop's own class — no zone/route/frame/gameId carve-out, no shared-code edit.
+- **arz2: f549 -> f566** (errors -> 2178). New first divergence f566 is unrelated to ChopChop:
+  `tails_x_speed` (expected 0x0231, actual 0x0463) — a sidekick CPU follow/steering issue
+  (eng-tails-cpu branch=follow_steering), to be addressed separately.
+- Same-game regression guard (single-fork): EHZ1, SCZ, WFZ all GREEN (total=4 passed=3, the only
+  failure is arz2 itself). No same-game green regressed.
+
+## 2026-06-04 - ooz1 f756->f1133: OOZ Fan push adds to x_pos/y_pos PIXEL word (subpixel preserved)
+
+- Branch `bugfix/ai-trace-s2-ooz1`, worktree `.worktrees/trace-s2-ooz1` (off develop `868249c0f`).
+- Command (worktree, cmd mvn.cmd, forkCount=1):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2OozLevelSelectTraceReplay#replayMatchesTrace" test`
+- Status: ADVANCED. 1479 errors / 0 warnings. First error frame 756 -> frame 1133
+  (`y` expected=0x0664, actual=0x065A).
+- **Root cause:** `FanObjectInstance.applyVerticalPush`/`applyHorizontalPush` wrote the wind push via
+  `setCentreY`/`setCentreX`, which ZERO the player's sub-pixel fraction. ROM `Obj3F_Vertical`
+  (`add.w d1,y_pos(a1)`, docs/s2disasm/s2.asm loc_2A990 / line ~57778) and `Obj3F_Horizontal`
+  (`add.w d0,x_pos(a1)`, s2.asm loc_2A8F8 / line ~57698) add the push directly to the 16-bit
+  POSITION (pixel) word, leaving the sub-pixel (`y_sub`/`x_sub`) untouched. Zeroing it each fan-push
+  frame dropped ~0x9C00 of accumulated y_sub and produced a 1-pixel-Y carry divergence one frame
+  later (OOZ1 f756: ROM y_sub 9C00 vs engine 0000).
+- **Fix:** use `shiftY(push)` / `shiftX(push)` (which do `yPixel += delta` / `xPixel += delta` without
+  touching sub-pixels, the ROM-faithful `add.w d,pos(a1)` semantics) instead of `setCentreY`/`setCentreX`.
+  S2-only object class (`FanObjectInstance`); no shared physics change, no gameId/zone/route/frame
+  carve-out, comparison-only.
+- **ooz1: f756 -> f1133.** New first divergence f1133 is unrelated (`y` 0x0664 vs 0x065A while riding
+  OOZPoppingPform slot 0x33 — a downstream platform-carry/popping-platform timing issue, not the fan).
+- Same-game regression guard (single-fork): EHZ1, SCZ, WFZ all GREEN (3 passed / 1 failed = ooz1 itself).
+  No same-game green regressed.
+
+## 2026-06-04 - mtz1 ADVANCED f863->f1000: S2 Button (Obj47) gated behind render_flags.on_screen
+
+- Branch `bugfix/ai-trace-s2-mtz1`, worktree `.worktrees/trace-s2-mtz1` (off develop `868249c0f`).
+- Command (cmd mvn.cmd inside worktree):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2MtzLevelSelectTraceReplay#replayMatchesTrace" test`
+- Status: ADVANCED (targeted trace still fails, frontier moved 863 -> 1000).
+- Error count: 1431 errors / 0 warnings (unchanged trace, deeper first divergence).
+- First error: frame 863 (g_speed/air, Sonic dropped through floor) -> frame 1000
+  (`g_speed mismatch expected=0x0001 actual=0x0000`, unrelated Sonic air divergence).
+- **Root cause:** `ButtonObjectInstance.update` ran the full Obj47 routine every frame regardless of
+  on-screen state. ROM `Obj47_Main` (docs/s2disasm/s2.asm:50825-50847) gates the ENTIRE routine behind
+  `_btst #render_flags.on_screen,render_flags(a0)` / `_beq.s BranchTo_JmpTo12_MarkObjGone` — off-screen
+  buttons run NEITHER the `SolidObject` check NOR the `bclr/bset d3,(a3)` on `ButtonVine_Trigger`.
+  MTZ1 has two Obj47 buttons on switch 0 (x=0x06CC and x=0x0858); the off-screen 0x0858 button's
+  per-frame `bclr` clobbered the switch-0 trigger bit that the on-screen pressed button + subtype-7
+  MTZ long platform relied on, so the platform never retracted and Sonic fell through the floor.
+- **Fix:** early-return when `!isWithinSolidContactBounds()` (engine render_flags bit-7 / `width_pixels`
+  model; button `width_pixels=0x10`=16 == default on-screen half-width). Models ROM render-flag
+  visibility; no zone/route/frame/gameId carve-out; comparison-only.
+- Same-game regression guard (run individually, `-Dmse=off -DreuseForks=false`):
+  EHZ1 GREEN, SCZ GREEN, WFZ GREEN. No same-game greens regressed.
+  File: `src/main/java/com/openggf/game/sonic2/objects/ButtonObjectInstance.java`.
+
+## 2026-06-04 - dez1 ADVANCED f1023->f1366: DEZ Mecha Sonic Aim&Dash wind-up anim length + boss collision 1-frame lag
+
+- Branch `bugfix/ai-trace-s2-dez1`, worktree `.worktrees/trace-s2-dez1` (off develop `868249c0f`).
+- Command (cmd mvn inside worktree):
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace" test`
+- Status: still FAIL (frontier advanced, not green). Tests run: 1, Failures: 1.
+- Before: 199 errors, first error frame 1023 (`y_speed expected=-03E0 actual=0x03E0`; `x_speed`
+  also flips the same frame). The DEZ Mecha Sonic boss (obj 0xAF) body + window children sat ~0x1F px
+  too far right during the second Aim&Dash, so a rolling player's boss-hit touch overlap registered ~4
+  frames late and the ROM deflection (`neg.w x_vel` / `neg.w y_vel`, Touch_Enemy multi_sprite branch,
+  s2.asm:85261-85276) never fired.
+- After: 148 errors, first error frame 1366 (`camera_x expected=0x0224 actual=0x0225`, single-frame
+  post-defeat camera-unlock off-by-one; distinct subsystem, out of scope for this boss-positioning fix).
+- Root cause (two ROM-faithful corrections, both confined to `Sonic2MechaSonicInstance`):
+  1. `ANIM_3_SPEEDUP` had 21 displayed frames (three leading `3`s). ROM `byte_39DFE` (s2.asm:78141-78142)
+     is `dc.b 3, 3,3, 6,6,6, ... ,$FC`: byte[0]=$3 is the animation SPEED, leaving **20** displayed
+     frames (two leading `3`s). `AnimateSprite_Checked` holds each frame speed+1 (=4) game frames, so the
+     spurious frame stretched the wind-up (loc_39A1C) by 4 frames per attack cycle, delaying the dash.
+  2. ROM `loc_398C0` calls `loc_39D1C` to refresh `collision_flags` from `mapping_frame` BEFORE the
+     routine handler runs `AnimateSprite_Checked` (s2.asm:77570-77584, 78013-78039), so the touch
+     category ($1A standing vs $9A ball) lags the displayed frame by one frame. The engine computed it
+     from the live frame. Modeled the lag by latching `collisionFrame` at the top of `updateBossLogic`.
+     Without this, fix #1 moved ball-form one step early and a rolling fall at f536 took a HURT instead
+     of the standing-form deflect; the lag restores the f536 deflect.
+
+## 2026-06-04 - cnz2 ADVANCED f1775->f1784: vertical flipper per-player standing state + shared launch trigger
+
+- Branch `bugfix/ai-trace-s2-cnz2`, worktree `.worktrees/trace-s2-cnz2` (off develop `868249c0f`).
+- Command (cmd mvn inside worktree, single ROM):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** FAIL (advanced). 857 errors / 0 warnings. First error frame 1775 -> 1784.
+  - Before: f1775 `tails_y expected=0x0423 got=0x041E` (Tails seated 5px high, st=09 vs ROM st=0D).
+  - After: f1784 `tails_y_speed mismatch (expected=-0B59, actual=-03C8)` — Tails now seats correctly
+    AND is launched (negative=upward); remaining divergence is the launch *velocity magnitude* from
+    the `loc_2B290` sine-table launch, a downstream issue.
+- **Root cause / fix:** `FlipperObjectInstance` (Obj86 `Obj86_UpwardsType`) modelled the ROM's per-player
+  vs shared object-variable split incorrectly. ROM calls `loc_2B20A` twice — MainCharacter vs its own
+  standing byte `objoff_36(a0)` (`Ctrl_1_Logical`, `p1_standing_bit`), Sidekick vs `objoff_37(a0)`
+  (`Ctrl_2`, `p2_standing_bit`) — so the first-stand-vs-already-on branch is PER PLAYER
+  (docs/s2disasm/s2.asm:58281-58332). The jump-launch trigger `objoff_38(a0)` is a SINGLE SHARED byte:
+  `loc_2B288` sets it when either standing player presses jump, then `Obj86_UpwardsType` checks it once
+  and calls `loc_2B290` for BOTH Sidekick and MainCharacter (docs/s2disasm/s2.asm:58296-58303,
+  58361-58407). Engine had used one shared int for standing state (Sonic's stand suppressed Tails'
+  first-stand seating) and gated launch per-player on `isJumpPressed()` (CPU sidekick has no synthetic
+  jump, so a leader-jump never launched Tails — f1783 `tails_air` expected=1 actual=0). Fix: per-player
+  `IdentityHashMap` standing/lock state + a shared `verticalLaunchTriggered` pass (`processVerticalLaunch`)
+  run once after both players. First-stand +5 y_pos nudge (`addq.w #5,y_pos`, s2.asm:58323-58325) now
+  written as `centre += 5` via `setCentreYPreserveSubpixel`. No zone/route/frame/gameId carve-out;
+  comparison-only. Obj86 is S2-specific object code, so no PhysicsFeatureSet gate needed.
+- **Same-game regression guard:** EHZ1 PASS, SCZ PASS, WFZ PASS (per-class surefire lines; the MSE
+  project-wide total was contaminated by a stale cnz2 report — judged by per-class lines). Zero regressions.
+- Files: `src/main/java/com/openggf/game/sonic2/objects/FlipperObjectInstance.java`.
+## 2026-06-04 - mcz1 f2181->f2362: Obj80 (MCZ vine) now models the ROM off-screen release of a pinned sidekick
+
+- Branch `bugfix/ai-trace-s2-mcz1`, worktree `.worktrees/trace-s2-mcz1` (off develop `868249c0f`).
+- Command (per-class, S2 ROM only):
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2MczLevelSelectTraceReplay#replayMatchesTrace" test`
+- **Root cause:** at f2181 the CPU sidekick (Tails) was grabbed and pinned on the MCZ vine pulley
+  (Obj80, `obj_control=1`). As the camera tracked Sonic running right, the pinned Tails scrolled off
+  the LEFT edge. ROM `Obj80_Action` immediately tests `render_flags.on_screen` on the grabbed
+  character and branches to `loc_29B42` (clears `obj_control(a1)`, clears the grab flag, sets a
+  60-frame release delay, NO jump velocity) BEFORE the routine>=4 / A/B/C-press checks
+  (docs/s2disasm/s2.asm:56707-56708,56741-56744). The engine's `MovingVineObjectInstance.handleGrabbedPlayer`
+  deliberately skipped this on-screen check, and the only modeled release for a CPU sidekick was a raw
+  Ctrl_2 A/B/C press which a CPU Tails can never satisfy (it writes only Ctrl_2_Logical). So the engine
+  kept Tails pinned with `x_speed=0` while ROM had released it (Tails air-accelerating right at 0x18).
+- **Fix:** added the missing on-screen-release branch to `handleGrabbedPlayer`, gated on
+  `player.hasRenderFlagOnScreenState() && !player.isRenderFlagOnScreen()` (render_flags.on_screen,
+  refreshed every frame per playable by `SpriteManager` via `camera.isVisibleForRenderFlag`), calling
+  the existing no-jump release path (`releasePlayer(..., jumped=false)` -> `loc_29B42` semantics). This
+  is a per-object S2 fix entirely inside Obj80's modeled routine (shared by the MCZ vine and WFZ hook,
+  both Obj80) — NOT shared physics. No `PhysicsFeatureSet` flag; S1/S3K have no Obj80 equivalent. No
+  zone/route/frame carve-out, comparison-only.
+- **mcz1: f2181 -> f2362** (errors 309 -> 369; error count rose because the trace now reaches a longer
+  later segment). New first divergence f2362 is unrelated and out of scope: `tails_rolling`/`tails_air`
+  mismatch where ROM performs the CPU auto-follow jump (`mode air 0->1`, `mode rolling 0->1`,
+  y_speed -0680) but the engine's sidekick CPU jump is decided (`jp=true`) and never applied to
+  velocity (`postCpu ... xv0000 yv0000`). That is a sidekick CPU-jump-application bug in a separate
+  subsystem, left for follow-up.
+- **Cross-game / regression check:** `TestS2WfzLevelSelectTraceReplay` (Obj80 WFZ hook variant, shares
+  `handleGrabbedPlayer`) and `TestS2Ehz1TraceReplay` (general sidekick) stay GREEN. `mcz2` was already
+  failing at f2362's analogue f4009 at baseline (527 errors); with this fix it still first-diverges at
+  f4009 but with FEWER errors (501), so the change is not a regression and slightly helps mcz2.
+- Frontier moved: mcz1 2181 -> 2362. No green trace regressed.
+
+## 2026-06-04 - cpz2 ADVANCED f2518->f2542: CPZ spin tube runs its capture routine per-character (Sonic + sidekick), modelling ROM Obj1E_Main dual objoff_2C/objoff_36 dispatch
+
+- Branch `bugfix/ai-trace-s2-cpz2`, worktree `.worktrees/trace-s2-cpz2` (off develop `868249c0f`).
+- Command (cmd mvn inside worktree; ROM path parens-free):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** advanced (genuine). Targeted trace `target/trace-reports/s2_cpz2_report.json`.
+- **First error before:** f2518 `tails_y_speed` (expected=0x0800, actual=0x04D0), 1646 errors.
+- **First error after:** f2542 `tails_y_speed` (expected=-00E3, actual=-00BA), 1041 errors.
+- **Root cause:** the ROM `Obj1E_Main` (CPZ spin tube) runs its entire capture + path-follow
+  routine ONCE PER PLAYABLE CHARACTER each frame: once for `MainCharacter` using state slot
+  `objoff_2C(a0)` then once for `Sidekick` using `objoff_36(a0)` (docs/s2disasm/s2.asm:48447-48457).
+  Each slot independently holds that character's mode byte, entry frame, segment duration and path
+  pointer, so Tails is captured and forced to the tube's 0x800 velocity exactly like Sonic. The
+  capture gate (`loc_225FC`, s2.asm:48467-48480) is ONLY: not Debug_placement_mode, x distance
+  < objoff_2A, y distance < 0x80, and `anim(a1) != $20` — there is deliberately no rolling /
+  obj_control / "recently released" gate. The engine had (a) a single shared state slot (so only
+  the main player could be in the tube) and (b) engine-invented rolling/cooldown guards that blocked
+  the rolling Tails sidekick from ever entering the tube, leaving it to free-fall under gravity
+  instead of being pinned to the tube velocity (trace f2518: ROM `tails_y_speed`=0x0800 tube velocity
+  vs engine 0x04D0 gravity fall).
+- **Fix:** `CPZSpinTubeObjectInstance` now keeps one independent `CharacterState` slot per playable
+  (IdentityHashMap keyed on the sprite), runs the state machine against the main player AND every
+  sidekick each frame (the two-pass objoff_2C/objoff_36 dispatch), and replaces the engine
+  rolling/obj-control/cooldown gates with the ROM `anim(a1) != $20` gate. `isPersistent()` now stays
+  true while ANY character is mid-tube. No zone/route/frame/gameId carve-out — Obj1E is an S2-only
+  object and the change lives entirely in that object class. Comparison-only (no trace hydration).
+- **Same-game regression guard (EHZ1 / SCZ / WFZ): all green** (Tests run 1, Failures 0 each).
+  CPZ1 first-error frame unchanged at f2822 (not in guard set; frontier did not move backward).
+- New first divergence f2542 is the next downstream `tails_y_speed` step inside the same tube
+  traversal (a separate per-segment velocity-timing detail), left to follow-up.
+## 2026-06-04 - cpz1 ADVANCED f2822->f3303: Speed Booster (Obj1B) boosts BOTH characters + sets move_lock (not spring)
+
+- Branch `bugfix/ai-trace-s2-cpz1`, worktree `.worktrees/trace-s2-cpz1` (off develop `868249c0f`).
+- Targeted command (Windows cmd mvn inside worktree):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2CpzLevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status: advanced (targeted trace still fails at the new frontier).** Before: 1 failure, First error frame 2822.
+  After: 1 failure, **225 errors, First error frame 3303 -- `tails_air` mismatch (expected=0, actual=1)**.
+- **Root cause:** ROM `Obj1B_Main` (docs/s2disasm/s2.asm:48166-48211) builds one +/-$10 box and checks
+  BOTH characters against it independently: `lea (MainCharacter).w,a1` (s2.asm:48179-48194) then
+  `lea (Sidekick).w,a1` (s2.asm:48196-48209), each calling `Obj1B_GiveBoost` when grounded and in-box.
+  The engine ran the box-check against only the single main player, so CPU Tails was never boosted in a
+  booster pad. `Obj1B_GiveBoost` (s2.asm:48215-48238) sets `move.w #$F,move_lock(a1)` (s2.asm:48230) and
+  `bclr #status.player.pushing,status(a1)` (s2.asm:48234); the engine had used `setSpringing()` (a no-op
+  for CPU Tails, which follows the leader unless `getMoveLockTimer()>0`) and omitted the pushing clear.
+- **Fix:** `SpeedBoosterObjectInstance.update()` now also iterates `services().playerQuery().sidekicks()`
+  (participation model, no zone/route/gameId carve-out); `applyBoost` uses `setMoveLockTimer(0xF)`
+  (equivalent to the spring path for the main character per `PlayableSpriteMovement`) and
+  `setPushing(false)`. Comparison-only; trace data never hydrated.
+- **cpz1: f2822 -> f3303** (new owner is a downstream `tails_air` divergence on the now-boosted Tails).
+- Same-game regression guard (single-fork): **EHZ1 / SCZ / WFZ all green** (failures=0, errors=0).
+  No same-game regression introduced.
+- File: `src/main/java/com/openggf/game/sonic2/objects/SpeedBoosterObjectInstance.java`.
+
+## 2026-06-04 - mtz3 ADVANCED f3719->f6913: dead CPU Tails fall bypasses Screen_Y_wrap mask on the SpriteManager dead-fall path
+
+- Branch `bugfix/ai-trace-s2-mtz3`, worktree `.worktrees/trace-s2-mtz3` (off develop `868249c0f`).
+- Command:
+  `mvn -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" test`
+- Status: advanced (FAIL, but first-error frame moved forward). Error count 990 / 0 warnings.
+- First error: frame 3719 (`tails_y`) -> frame 6913 (`g_speed` mismatch, expected=-0001 actual=-0010, main player).
+- Root cause: `SpriteManager.applyScreenYWrapValueAfterControl(playable)` (the static
+  dead-fall variant) unconditionally applied the `Screen_Y_wrap_value` mask to the
+  dead CPU sidekick. ROM `Obj02_Dead` (docs/s2disasm/s2.asm:41125-41131) runs
+  `jsr (ObjectMoveAndFall).l` (s2.asm:30158-30173, plain y_pos+=y_vel, no mask)
+  and only despawns once `Obj02_CheckGameOver` (s2.asm:41136-41149) sees
+  `y_pos > Tails_Max_Y_pos + $100`, branching to `TailsCPU_Despawn` (s2.asm:39391+).
+  Masking the falling body's y_pos at the 0x800 wrap boundary meant `getCentreY()`
+  never crossed the despawn threshold, so MTZ3 diverged on `tails_y` at f3719.
+  Fix mirrors the already-proven bypass in
+  `PlayableSpriteMovement.applyScreenYWrapValueAfterControl()` (gated by
+  `SidekickCpuController.deadFallBypassesScreenYWrapValue()` -> S2/S3K
+  `PhysicsFeatureSet.sidekickDeathUsesDeferredDespawn`; S1 = false). No
+  gameId/zone/route/frame carve-out; comparison-only (reads engine state only).
+- Same-game regression guard (`TestS2Ehz1TraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay`):
+  all three green, zero regressions.
+
+## 2026-06-04 - mcz2 f4009->f4049: MCZ Obj6A subtype-0x18 parent is a real solid/rendering/moving platform
+
+- Branch `bugfix/ai-trace-s2-mcz2`, worktree `.worktrees/trace-s2-mcz2` (off develop `8eb4710a3`).
+- Command (independent verification, single-fork):
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Root cause:** `MCZRotPformsObjectInstance` (Obj6A) treated the MCZ subtype-0x18 parent as an
+  invisible, non-solid spawner (`isSolidFor` excluded `isParent`; `update()` early-returned after
+  spawning children; `appendRenderCommands` early-returned). In the ROM (`docs/s2disasm/s2.asm`
+  Obj6A_Init), the `cmpi.b #$18,subtype` / `bne.w loc_27BD0` check gates ONLY the child-spawn block;
+  after allocating its two children the parent falls through (`bra.s loc_27BC4` -> `loc_27BD0` ->
+  `loc_27CA2`) and runs routine 4 (`loc_27C66`) every frame as a full moving platform that calls
+  `JmpTo13_SolidObject`. Obj6A_Init sets the Crate art tile and `mapping_frame=0` with no invisibility
+  flag, so the parent renders and collides like any other Obj6A platform.
+- **Fix:** `isSolidFor` returns `!isDestroyed()`; `update()` spawns children once then continues into
+  the same MCZ move/collide path the children use (`phaseIndex=0x18` reads the velocity table
+  normally); `appendRenderCommands` no longer early-returns for the parent. `isParent` is still derived
+  from ROM subtype `0x18` in MCZ — no zone/route/frame/gameId carve-out, comparison-only.
+- **Status: advanced. mcz2 f4009 -> f4049** (errors at f4049: 611). New first divergence f4049 is a
+  downstream `tails_y_speed` mismatch (expected 0x0038, actual 0x0000) — a Tails-CPU-on-platform issue,
+  unrelated to the parent platform now being solid.
+- **Same-game regression guard (TestS2Ehz1/Scz/Wfz):** all 3 GREEN (passed=3). Zero regressions.
+- No S2 frontier moved backward: mcz1 2181, mtz1 863, mtz2 641, mtz3 3719 all unchanged from develop
+  baseline (verified in same sweep). S3K/S1 untouched (S2-only object).
+
 ## 2026-06-04 - cnz1 RESTORED f3831->f3906: S2 post-camera gap-scan now bypasses the vertical load filter (ObjD4 cadence fixed)
 
 - Branch `bugfix/ai-cnz1-objd4-cadence`, worktree `.worktrees/cnz1-objd4-cadence` (off develop `d192a8087`).

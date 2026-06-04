@@ -164,21 +164,42 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
             {0xD90, 0x2B0, 0xC90, 0x2B0, 0xC90, 0xB0, 0xE80, 0xB0, 0x1110, 0xB0, 0x1110, 0x230, 0x10F0, 0x230}
     };
 
-    // Character state tracking
-    // State modes: 0=waiting, 2=entry path, 4=main path, 6=exiting
-    private int mainCharState = 0;
-    private int mainCharFrame = 0;        // Animation/entry frame
-    private int mainCharDuration = 0;     // Frames remaining in current segment
-    private int mainCharPathIndex = 0;    // Current position in path data
-    private int[] mainCharPath = null;    // Current path being followed
-    private boolean mainCharReverse = false; // Traversing path in reverse
+    /**
+     * Per-character tube traversal state.
+     *
+     * <p>The ROM Obj1E_Main runs the entire capture+path-follow routine once per
+     * playable character each frame: once for MainCharacter using state slot
+     * {@code objoff_2C(a0)} and once for Sidekick using state slot
+     * {@code objoff_36(a0)} (docs/s2disasm/s2.asm:48447-48457). Each slot holds
+     * that character's mode byte, entry frame, segment duration, segment count,
+     * and path pointer independently, so each character is captured and routed
+     * through the tube on its own. This class mirrors one such ROM state slot;
+     * the object keeps one instance per playable so Tails is grabbed and forced
+     * to the tube's 0x800 velocity exactly like Sonic instead of free-falling.
+     */
+    private static final class CharacterState {
+        // State modes: 0=waiting, 2=entry path, 4=main path, 6=exiting
+        int state = 0;
+        int frame = 0;            // Animation/entry frame ((a4)+1)
+        int duration = 0;         // Frames remaining in current segment ((a4)+2)
+        int pathIndex = 0;        // Current position in path data
+        int[] path = null;        // Current path being followed (6(a4))
+        boolean reverse = false;  // Traversing path in reverse (sign of 1(a4))
 
-    // Expected route tracking for debugging
-    private int expectedMainPathId = 0;         // Expected main path ID (0 = no main path)
-    private boolean expectedReverse = false;    // Expected direction
-    private int expectedSegmentCount = 0;       // Expected number of segments to traverse
-    private int completedSegmentCount = 0;      // Number of segments actually completed
-    private String expectedExitDirection = "";  // Expected exit direction (UP, DOWN, LEFT, RIGHT)
+        // Expected route tracking for debugging
+        int expectedMainPathId = 0;        // Expected main path ID (0 = no main path)
+        boolean expectedReverse = false;   // Expected direction
+        int expectedSegmentCount = 0;      // Expected number of segments to traverse
+        int completedSegmentCount = 0;     // Number of segments actually completed
+        String expectedExitDirection = ""; // Expected exit direction (UP, DOWN, LEFT, RIGHT)
+    }
+
+    // One independent state slot per playable, mirroring ROM objoff_2C (main)
+    // and objoff_36 (sidekick). Keyed on the player sprite identity so each
+    // character runs the tube routine independently
+    // (docs/s2disasm/s2.asm:48447-48457).
+    private final java.util.Map<AbstractPlayableSprite, CharacterState> characterStates =
+            new java.util.IdentityHashMap<>();
 
     // Collision distance for this tube instance
     private final int collisionDistance;
@@ -188,11 +209,6 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
 
     // Current frame counter (stored from update for use in sub-methods)
     private int currentFrameCounter = 0;
-
-    // Number of frames to wait before allowing another tube to grab the player
-    // Extended from 8 to 30 frames to give the player time to leave overlapping
-    // tube capture zones, especially when they land and stop rolling
-    private static final int TUBE_EXIT_COOLDOWN_FRAMES = 30;
 
     public CPZSpinTubeObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -209,39 +225,53 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Store frame counter for use in sub-methods
         this.currentFrameCounter = frameCounter;
         // Update timer second (used for path variant selection)
         timerSecond = (frameCounter / 60) & 0xFF;
 
-        if (player != null) {
-            updateCharacter(player);
+        // ROM Obj1E_Main runs the routine once per playable character each frame:
+        // MainCharacter (objoff_2C) then Sidekick (objoff_36)
+        // (docs/s2disasm/s2.asm:48447-48457). Mirror that two-pass dispatch by
+        // running the same state machine against the main player and every
+        // sidekick, each with its own independent CharacterState slot.
+        if (playerEntity instanceof AbstractPlayableSprite mainPlayer) {
+            updateCharacter(mainPlayer);
+        }
+        for (PlayableEntity sidekickEntity : services().sidekicks()) {
+            if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
+                updateCharacter(sidekick);
+            }
         }
     }
 
+    private CharacterState stateFor(AbstractPlayableSprite player) {
+        return characterStates.computeIfAbsent(player, p -> new CharacterState());
+    }
+
     private void updateCharacter(AbstractPlayableSprite player) {
+        CharacterState cs = stateFor(player);
         // If player entered debug mode while in tube, reset tube state
-        if (player.isDebugMode() && (mainCharState == 2 || mainCharState == 4)) {
-            resetTubeState();
+        if (player.isDebugMode() && (cs.state == 2 || cs.state == 4)) {
+            resetTubeState(cs);
             return;
         }
 
-        if (mainCharState != 0) {
-            LOGGER.fine("updateCharacter: state=" + mainCharState);
+        if (cs.state != 0) {
+            LOGGER.fine("updateCharacter: state=" + cs.state);
         }
-        switch (mainCharState) {
+        switch (cs.state) {
             case 0:
-                checkEntryCollision(player);
+                checkEntryCollision(player, cs);
                 break;
             case 2:
-                updateEntryPath(player);
+                updateEntryPath(player, cs);
                 break;
             case 4:
-                updateMainPath(player);
+                updateMainPath(player, cs);
                 break;
             case 6:
-                checkExitCollision(player);
+                checkExitCollision(player, cs);
                 break;
         }
     }
@@ -250,19 +280,19 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
      * Resets tube internal state without modifying player.
      * Used when player enters debug mode while traversing the tube.
      */
-    private void resetTubeState() {
-        mainCharState = 0;
-        mainCharPathIndex = 0;
-        mainCharDuration = 0;
-        mainCharPath = null;
-        completedSegmentCount = 0;
-        expectedSegmentCount = 0;
+    private void resetTubeState(CharacterState cs) {
+        cs.state = 0;
+        cs.pathIndex = 0;
+        cs.duration = 0;
+        cs.path = null;
+        cs.completedSegmentCount = 0;
+        cs.expectedSegmentCount = 0;
     }
 
     /**
      * Mode 0: Check if player enters the tube activation zone.
      */
-    private void checkEntryCollision(AbstractPlayableSprite player) {
+    private void checkEntryCollision(AbstractPlayableSprite player, CharacterState cs) {
         // Skip if in debug placement mode
         // (Not implemented in this engine)
 
@@ -284,14 +314,21 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
             return;
         }
 
-        // Debug logging to trace capture attempts
-        boolean isRolling = player.getRolling();
-        boolean isObjectControlled = player.isObjectControlled();
-        boolean recentlyReleased = player.wasRecentlyObjectControlled(currentFrameCounter, TUBE_EXIT_COOLDOWN_FRAMES);
-
-        // Skip if player is currently being controlled by another object
-        if (isObjectControlled) {
-            LOGGER.fine("Tube 0x" + Integer.toHexString(spawn.subtype()) + " skipped: player is object controlled");
+        // ROM loc_225FC (docs/s2disasm/s2.asm:48467-48483) gates capture ONLY on:
+        //   - not Debug_placement_mode (not modelled here)
+        //   - x_pos(a1)-x_pos(a0) < objoff_2A (collisionDistance)  [checked above]
+        //   - y_pos(a1)-y_pos(a0) < 0x80                           [checked above]
+        //   - anim(a1) != $20 (raw S2 anim index: AniIDSonAni_Lying for Sonic,
+        //     the Tails helicopter-fly anim for Tails — both correctly excluded)
+        // There is deliberately NO rolling / obj_control / "recently released"
+        // gate. Each character runs its own state slot (objoff_2C / objoff_36),
+        // so re-capture after an exit is prevented by that character's mode-6
+        // exit-collision state, not by a rolling/cooldown guard. The earlier
+        // engine guards blocked the rolling sidekick (Tails) from ever entering
+        // the tube, leaving it to free-fall under gravity instead of being pinned
+        // to the tube's 0x800 velocity. Modelling the ROM gate fixes that without
+        // any zone/route carve-out (Obj1E is S2-only).
+        if (player.getAnimationId() == 0x20) {
             return;
         }
 
@@ -314,32 +351,9 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         // Determine if this is a NEAR entry (connected tube pass-through) or FAR entry
         boolean isNearEntry = adjustedDx < 0x80;
 
-        // For NEAR entries: This is a connected tube pass-through (like exiting one tube
-        // segment directly into another). Allow capture even if rolling/recently released.
-        // The player will go through a short entry path and immediately exit (no main path).
-        //
-        // For FAR entries: This is a normal tube entry. Apply protections to prevent
-        // unwanted recapture after drifting from an exit point.
-        if (!isNearEntry) {
-            // FAR entry - apply normal protections
-            if (isRolling) {
-                LOGGER.fine("Tube 0x" + Integer.toHexString(spawn.subtype()) + " skipped: FAR entry and player is rolling");
-                return;
-            }
-            if (recentlyReleased) {
-                LOGGER.fine("Tube 0x" + Integer.toHexString(spawn.subtype()) + " skipped: FAR entry and player recently released");
-                return;
-            }
-        } else if (recentlyReleased) {
-            // NEAR entry from recently released player - this is a connected tube pass-through
-            LOGGER.fine("Tube 0x" + Integer.toHexString(spawn.subtype()) + " NEAR entry pass-through: " +
-                    "capturing recently-released player for connected tube traversal");
-        }
-
         LOGGER.fine("Tube 0x" + Integer.toHexString(spawn.subtype()) + " at (" + objX + "," + objY +
                 ") capturing: playerPos=(" + playerX + "," + playerY +
                 "), dx=" + dx + ", adjustedDx=" + adjustedDx + ", isNearEntry=" + isNearEntry +
-                ", rolling=" + isRolling + ", recentlyReleased=" + recentlyReleased +
                 ", frame=" + currentFrameCounter);
 
         // Determine entry frame based on position
@@ -372,10 +386,10 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         LOGGER.fine("Entry frame selection: " + entryReason);
 
         // Store entry frame
-        mainCharFrame = d2;
+        cs.frame = d2;
 
         // Calculate and log expected route BEFORE capturing
-        calculateExpectedRoute(d2);
+        calculateExpectedRoute(cs, d2);
 
         // Calculate entry path index
         int pathIndex = (d2 + d3) & 0xF;
@@ -384,23 +398,23 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         }
 
         // Get the entry path
-        mainCharPath = ENTRY_PATHS[pathIndex];
-        mainCharReverse = false;
+        cs.path = ENTRY_PATHS[pathIndex];
+        cs.reverse = false;
 
         // Initialize path position
-        mainCharPathIndex = 0;
-        mainCharDuration = (mainCharPath.length / 2) - 2;  // -2 for start position
+        cs.pathIndex = 0;
+        cs.duration = (cs.path.length / 2) - 2;  // -2 for start position
 
         // Position player at first waypoint (center-based)
-        int startX = mainCharPath[0] + objX;
-        int startY = mainCharPath[1] + objY;
+        int startX = cs.path[0] + objX;
+        int startY = cs.path[1] + objY;
         player.setCentreX((short) startX);
         player.setCentreY((short) startY);
 
         // Move to second waypoint for velocity calculation
-        mainCharPathIndex = 2;
-        int nextX = mainCharPath[2] + objX;
-        int nextY = mainCharPath[3] + objY;
+        cs.pathIndex = 2;
+        int nextX = cs.path[2] + objX;
+        int nextY = cs.path[3] + objY;
 
         // Set player state for tube traversal
         // ROM: move.b #$81,obj_control(a1) - locks player to object control
@@ -421,16 +435,16 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         player.setPriorityBucket(RenderPriority.MIN);
 
         // Calculate velocity to next waypoint
-        calculateVelocity(player, nextX, nextY, TUBE_SPEED);
+        calculateVelocity(player, cs, nextX, nextY, TUBE_SPEED);
 
         // Play rolling sound
         playSound(GameSound.ROLLING);
 
         // Advance to entry path mode
-        mainCharState = 2;
+        cs.state = 2;
 
         LOGGER.fine("Player entered spin tube: subtype=0x" + Integer.toHexString(spawn.subtype()) +
-                ", entryFrame=" + mainCharFrame + ", pathIndex=" + pathIndex +
+                ", entryFrame=" + cs.frame + ", pathIndex=" + pathIndex +
                 ", collisionDist=0x" + Integer.toHexString(collisionDistance) +
                 ", objPos=(" + objX + "," + objY + ")");
     }
@@ -438,9 +452,9 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
     /**
      * Mode 2: Following the entry path.
      */
-    private void updateEntryPath(AbstractPlayableSprite player) {
-        mainCharDuration--;
-        if (mainCharDuration >= 0) {
+    private void updateEntryPath(AbstractPlayableSprite player, CharacterState cs) {
+        cs.duration--;
+        if (cs.duration >= 0) {
             // Continue moving along current segment
             moveCharacter(player);
             return;
@@ -451,46 +465,46 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         int objY = spawn.y();
 
         // Get next waypoint
-        int nextX = mainCharPath[mainCharPathIndex] + objX;
-        int nextY = mainCharPath[mainCharPathIndex + 1] + objY;
+        int nextX = cs.path[cs.pathIndex] + objX;
+        int nextY = cs.path[cs.pathIndex + 1] + objY;
 
         // Set player position to current target (center-based)
         player.setCentreX((short) nextX);
         player.setCentreY((short) nextY);
 
         // Check if we've reached the end of entry path
-        mainCharPathIndex += 2;
+        cs.pathIndex += 2;
 
-        if (mainCharPathIndex >= mainCharPath.length) {
+        if (cs.pathIndex >= cs.path.length) {
             // End of entry path - transition to main path
             // Exit velocity is from the final segment we just completed
-            transitionToMainPath(player);
+            transitionToMainPath(player, cs);
             return;
         }
 
         // Calculate velocity to next waypoint
-        int targetX = mainCharPath[mainCharPathIndex] + objX;
-        int targetY = mainCharPath[mainCharPathIndex + 1] + objY;
-        calculateVelocity(player, targetX, targetY, TUBE_SPEED);
+        int targetX = cs.path[cs.pathIndex] + objX;
+        int targetY = cs.path[cs.pathIndex + 1] + objY;
+        calculateVelocity(player, cs, targetX, targetY, TUBE_SPEED);
     }
 
     /**
      * Transition from entry path to main path or exit.
      */
-    private void transitionToMainPath(AbstractPlayableSprite player) {
+    private void transitionToMainPath(AbstractPlayableSprite player, CharacterState cs) {
         // Check if entry frame indicates we should go to main path
-        if (mainCharFrame >= 4) {
+        if (cs.frame >= 4) {
             // Exit tube
             LOGGER.fine("Exiting tube early: entryFrame >= 4");
-            exitTube(player, currentFrameCounter);
+            exitTube(player, cs, currentFrameCounter);
             return;
         }
 
         // Calculate main path index from subtype and entry frame
-        int routingIndex = (spawn.subtype() & 0xFC) + mainCharFrame;
+        int routingIndex = (spawn.subtype() & 0xFC) + cs.frame;
         if (routingIndex >= MAIN_PATH_ROUTING.length) {
             LOGGER.fine("Exiting tube: routingIndex " + routingIndex + " out of bounds");
-            exitTube(player, currentFrameCounter);
+            exitTube(player, cs, currentFrameCounter);
             return;
         }
 
@@ -498,143 +512,132 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         if (pathId == 0) {
             // No main path - exit
             LOGGER.fine("Exiting tube: no main path for routingIndex " + routingIndex +
-                    " (subtype=0x" + Integer.toHexString(spawn.subtype()) + ", frame=" + mainCharFrame + ")");
-            exitTube(player, currentFrameCounter);
+                    " (subtype=0x" + Integer.toHexString(spawn.subtype()) + ", frame=" + cs.frame + ")");
+            exitTube(player, cs, currentFrameCounter);
             return;
         }
 
         // Set entry frame to 4 to indicate we're in main path
-        mainCharFrame = 4;
+        cs.frame = 4;
 
         // Determine path direction and index
         if (pathId < 0) {
             // Negative = reverse traversal
-            mainCharReverse = true;
+            cs.reverse = true;
             pathId = -pathId;
         } else {
-            mainCharReverse = false;
+            cs.reverse = false;
         }
 
         // Adjust for 1-based indexing in routing table
         pathId--;
         if (pathId < 0 || pathId >= MAIN_PATHS.length) {
-            exitTube(player, currentFrameCounter);
+            exitTube(player, cs, currentFrameCounter);
             return;
         }
 
         // Get the main path
-        mainCharPath = MAIN_PATHS[pathId];
+        cs.path = MAIN_PATHS[pathId];
 
-        if (mainCharReverse) {
+        if (cs.reverse) {
             // Start from end of path
-            mainCharPathIndex = mainCharPath.length - 4;
+            cs.pathIndex = cs.path.length - 4;
         } else {
             // Start from beginning
-            mainCharPathIndex = 0;
+            cs.pathIndex = 0;
         }
-        // Note: mainCharDuration will be set by calculateVelocity
+        // Note: cs.duration will be set by calculateVelocity
 
         // Position player at first waypoint (absolute coordinates, center-based)
         int startX, startY;
-        if (mainCharReverse) {
-            startX = mainCharPath[mainCharPathIndex + 2];
-            startY = mainCharPath[mainCharPathIndex + 3];
+        if (cs.reverse) {
+            startX = cs.path[cs.pathIndex + 2];
+            startY = cs.path[cs.pathIndex + 3];
         } else {
-            startX = mainCharPath[0];
-            startY = mainCharPath[1];
+            startX = cs.path[0];
+            startY = cs.path[1];
         }
         player.setCentreX((short) startX);
         player.setCentreY((short) startY);
 
         // Get next waypoint
         int nextX, nextY;
-        if (mainCharReverse) {
-            nextX = mainCharPath[mainCharPathIndex];
-            nextY = mainCharPath[mainCharPathIndex + 1];
+        if (cs.reverse) {
+            nextX = cs.path[cs.pathIndex];
+            nextY = cs.path[cs.pathIndex + 1];
         } else {
-            mainCharPathIndex = 2;
-            nextX = mainCharPath[2];
-            nextY = mainCharPath[3];
+            cs.pathIndex = 2;
+            nextX = cs.path[2];
+            nextY = cs.path[3];
         }
 
         // Calculate velocity
-        calculateVelocity(player, nextX, nextY, TUBE_SPEED);
+        calculateVelocity(player, cs, nextX, nextY, TUBE_SPEED);
 
         // Play rolling sound
         playSound(GameSound.ROLLING);
 
         // Advance to main path mode
-        mainCharState = 4;
+        cs.state = 4;
 
-        LOGGER.fine("Transitioned to main path " + (pathId + 1) + " (reverse=" + mainCharReverse +
-                "), routingIndex=" + routingIndex + ", pathLength=" + mainCharPath.length +
-                ", duration=" + mainCharDuration + ", startPos=(" + startX + "," + startY +
+        LOGGER.fine("Transitioned to main path " + (pathId + 1) + " (reverse=" + cs.reverse +
+                "), routingIndex=" + routingIndex + ", pathLength=" + cs.path.length +
+                ", duration=" + cs.duration + ", startPos=(" + startX + "," + startY +
                 "), nextTarget=(" + nextX + "," + nextY + ")");
     }
 
     /**
      * Mode 4: Following the main tube path.
      */
-    private void updateMainPath(AbstractPlayableSprite player) {
+    private void updateMainPath(AbstractPlayableSprite player, CharacterState cs) {
 
-        mainCharDuration--;
-        if (mainCharDuration >= 0) {
+        cs.duration--;
+        if (cs.duration >= 0) {
             // Continue moving along current segment
             moveCharacter(player);
             return;
         }
 
         // Reached current waypoint, advance to next
-        int nextX, nextY;
-        if (mainCharReverse) {
-            nextX = mainCharPath[mainCharPathIndex];
-            nextY = mainCharPath[mainCharPathIndex + 1];
-        } else {
-            nextX = mainCharPath[mainCharPathIndex];
-            nextY = mainCharPath[mainCharPathIndex + 1];
-        }
+        int nextX = cs.path[cs.pathIndex];
+        int nextY = cs.path[cs.pathIndex + 1];
 
         // Set player position to current target (center-based)
         player.setCentreX((short) nextX);
         player.setCentreY((short) nextY);
 
         // Completed a segment
-        completedSegmentCount++;
+        cs.completedSegmentCount++;
 
         // Advance path index
-        if (mainCharReverse) {
-            mainCharPathIndex -= 2;
-            if (mainCharPathIndex < 0) {
+        if (cs.reverse) {
+            cs.pathIndex -= 2;
+            if (cs.pathIndex < 0) {
                 // End of main path - completed all segments
-                LOGGER.fine("Main path complete: completed " + completedSegmentCount + "/" + expectedSegmentCount + " segments");
-                exitTube(player, currentFrameCounter);
+                LOGGER.fine("Main path complete: completed " + cs.completedSegmentCount + "/" + cs.expectedSegmentCount + " segments");
+                exitTube(player, cs, currentFrameCounter);
                 return;
             }
         } else {
-            mainCharPathIndex += 2;
-            if (mainCharPathIndex >= mainCharPath.length) {
+            cs.pathIndex += 2;
+            if (cs.pathIndex >= cs.path.length) {
                 // End of main path - completed all segments
-                LOGGER.fine("Main path complete: completed " + completedSegmentCount + "/" + expectedSegmentCount + " segments");
-                exitTube(player, currentFrameCounter);
+                LOGGER.fine("Main path complete: completed " + cs.completedSegmentCount + "/" + cs.expectedSegmentCount + " segments");
+                exitTube(player, cs, currentFrameCounter);
                 return;
             }
         }
 
         // Calculate velocity to next waypoint
-        if (mainCharReverse) {
-            nextX = mainCharPath[mainCharPathIndex];
-            nextY = mainCharPath[mainCharPathIndex + 1];
-        } else {
-            nextX = mainCharPath[mainCharPathIndex];
-            nextY = mainCharPath[mainCharPathIndex + 1];
-        }
-        calculateVelocity(player, nextX, nextY, TUBE_SPEED);
+        nextX = cs.path[cs.pathIndex];
+        nextY = cs.path[cs.pathIndex + 1];
+        calculateVelocity(player, cs, nextX, nextY, TUBE_SPEED);
     }
 
     /**
      * Mode 6: Player has exited, check if they re-enter.
      */
-    private void checkExitCollision(AbstractPlayableSprite player) {
+    private void checkExitCollision(AbstractPlayableSprite player, CharacterState cs) {
         int objX = spawn.x();
         int objY = spawn.y();
         // ROM uses center-based coordinates
@@ -645,30 +648,30 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         int dx = playerX - objX;
         if (dx < 0 || dx >= collisionDistance) {
             // Player has left - reset state
-            mainCharState = 0;
+            cs.state = 0;
             return;
         }
 
         int dy = playerY - objY;
         if (dy < 0 || dy >= 0x80) {
             // Player has left - reset state
-            mainCharState = 0;
+            cs.state = 0;
         }
     }
 
     /**
      * Exit the tube and restore player control.
      */
-    private void exitTube(AbstractPlayableSprite player, int frameCounter) {
+    private void exitTube(AbstractPlayableSprite player, CharacterState cs, int frameCounter) {
         // Check for early exit and log warning
-        if (expectedSegmentCount > 0 && completedSegmentCount < expectedSegmentCount) {
-            LOGGER.warning("EARLY EXIT WARNING: Completed " + completedSegmentCount + "/" + expectedSegmentCount +
-                    " segments! Expected exit direction was " + expectedExitDirection +
+        if (cs.expectedSegmentCount > 0 && cs.completedSegmentCount < cs.expectedSegmentCount) {
+            LOGGER.warning("EARLY EXIT WARNING: Completed " + cs.completedSegmentCount + "/" + cs.expectedSegmentCount +
+                    " segments! Expected exit direction was " + cs.expectedExitDirection +
                     ", subtype=0x" + Integer.toHexString(spawn.subtype()) +
                     ", pos=(" + player.getCentreX() + "," + player.getCentreY() + ")" +
                     ", xSpeed=" + player.getXSpeed() + ", ySpeed=" + player.getYSpeed());
-        } else if (expectedSegmentCount > 0) {
-            LOGGER.fine("Normal exit: Completed all " + completedSegmentCount + " segments, exit direction=" + expectedExitDirection);
+        } else if (cs.expectedSegmentCount > 0) {
+            LOGGER.fine("Normal exit: Completed all " + cs.completedSegmentCount + " segments, exit direction=" + cs.expectedExitDirection);
         }
 
         // Clear Y position high bits (mask to 0x7FF) - using center coordinates
@@ -700,7 +703,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         playSound(GameSound.SPINDASH_RELEASE);
 
         // Move to exit check mode
-        mainCharState = 6;
+        cs.state = 6;
 
         LOGGER.fine("Player exited spin tube");
     }
@@ -736,7 +739,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
      * @param targetY Target Y coordinate
      * @param speed Fixed movement speed (0x800 = 8 pixels/frame in 8.8 format)
      */
-    private void calculateVelocity(AbstractPlayableSprite player, int targetX, int targetY, int speed) {
+    private void calculateVelocity(AbstractPlayableSprite player, CharacterState cs, int targetX, int targetY, int speed) {
         // Use center coordinates to match ROM behavior
         int currentX = player.getCentreX();
         int currentY = player.getCentreY();
@@ -785,23 +788,23 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
 
         player.setXSpeed((short) xVel);
         player.setYSpeed((short) yVel);
-        mainCharDuration = frames;
+        cs.duration = frames;
     }
 
     /**
      * Calculates the expected route for debugging purposes.
      * This predicts what main path we'll use and what direction we'll exit.
      */
-    private void calculateExpectedRoute(int entryFrame) {
+    private void calculateExpectedRoute(CharacterState cs, int entryFrame) {
         // Reset tracking
-        completedSegmentCount = 0;
+        cs.completedSegmentCount = 0;
 
         // Check if entry frame indicates we'll skip main path
         if (entryFrame >= 4) {
-            expectedMainPathId = 0;
-            expectedReverse = false;
-            expectedSegmentCount = 0;
-            expectedExitDirection = "NONE (entry frame >= 4, early exit)";
+            cs.expectedMainPathId = 0;
+            cs.expectedReverse = false;
+            cs.expectedSegmentCount = 0;
+            cs.expectedExitDirection = "NONE (entry frame >= 4, early exit)";
             LOGGER.fine("EXPECTED ROUTE: No main path (entryFrame=" + entryFrame + " >= 4)");
             return;
         }
@@ -809,33 +812,33 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         // Calculate main path index from subtype and entry frame
         int routingIndex = (spawn.subtype() & 0xFC) + entryFrame;
         if (routingIndex >= MAIN_PATH_ROUTING.length) {
-            expectedMainPathId = 0;
-            expectedReverse = false;
-            expectedSegmentCount = 0;
-            expectedExitDirection = "NONE (routingIndex out of bounds)";
+            cs.expectedMainPathId = 0;
+            cs.expectedReverse = false;
+            cs.expectedSegmentCount = 0;
+            cs.expectedExitDirection = "NONE (routingIndex out of bounds)";
             LOGGER.fine("EXPECTED ROUTE: No main path (routingIndex=" + routingIndex + " out of bounds)");
             return;
         }
 
         int pathId = MAIN_PATH_ROUTING[routingIndex];
         if (pathId == 0) {
-            expectedMainPathId = 0;
-            expectedReverse = false;
-            expectedSegmentCount = 0;
-            expectedExitDirection = "NONE (pathId=0, no main path for this route)";
+            cs.expectedMainPathId = 0;
+            cs.expectedReverse = false;
+            cs.expectedSegmentCount = 0;
+            cs.expectedExitDirection = "NONE (pathId=0, no main path for this route)";
             LOGGER.fine("EXPECTED ROUTE: No main path for routingIndex=" + routingIndex +
                     " (subtype=0x" + Integer.toHexString(spawn.subtype()) + ", entryFrame=" + entryFrame + ")");
             return;
         }
 
         // Determine path direction and index
-        expectedReverse = pathId < 0;
-        int actualPathIndex = (expectedReverse ? -pathId : pathId) - 1;
-        expectedMainPathId = pathId;
+        cs.expectedReverse = pathId < 0;
+        int actualPathIndex = (cs.expectedReverse ? -pathId : pathId) - 1;
+        cs.expectedMainPathId = pathId;
 
         if (actualPathIndex < 0 || actualPathIndex >= MAIN_PATHS.length) {
-            expectedSegmentCount = 0;
-            expectedExitDirection = "NONE (invalid path index)";
+            cs.expectedSegmentCount = 0;
+            cs.expectedExitDirection = "NONE (invalid path index)";
             LOGGER.warning("EXPECTED ROUTE: Invalid path index " + actualPathIndex);
             return;
         }
@@ -843,11 +846,11 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         // Calculate expected segment count and exit direction
         int[] path = MAIN_PATHS[actualPathIndex];
         int waypointCount = path.length / 2;
-        expectedSegmentCount = waypointCount - 1;  // segments = waypoints - 1
+        cs.expectedSegmentCount = waypointCount - 1;  // segments = waypoints - 1
 
         // Determine exit direction from final segment
         int exitStartX, exitStartY, exitEndX, exitEndY;
-        if (expectedReverse) {
+        if (cs.expectedReverse) {
             // Reverse: exit from first waypoint, coming from second waypoint
             exitEndX = path[0];
             exitEndY = path[1];
@@ -864,15 +867,15 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         int exitDx = exitEndX - exitStartX;
         int exitDy = exitEndY - exitStartY;
         if (Math.abs(exitDx) > Math.abs(exitDy)) {
-            expectedExitDirection = exitDx > 0 ? "RIGHT" : "LEFT";
+            cs.expectedExitDirection = exitDx > 0 ? "RIGHT" : "LEFT";
         } else {
-            expectedExitDirection = exitDy > 0 ? "DOWN" : "UP";
+            cs.expectedExitDirection = exitDy > 0 ? "DOWN" : "UP";
         }
 
         LOGGER.fine("EXPECTED ROUTE: Main path " + (actualPathIndex + 1) +
-                " (" + (expectedReverse ? "REVERSE" : "FORWARD") + ")" +
-                ", segments=" + expectedSegmentCount +
-                ", exit direction=" + expectedExitDirection +
+                " (" + (cs.expectedReverse ? "REVERSE" : "FORWARD") + ")" +
+                ", segments=" + cs.expectedSegmentCount +
+                ", exit direction=" + cs.expectedExitDirection +
                 ", exit pos=(" + exitEndX + "," + exitEndY + ")");
     }
 
@@ -891,7 +894,15 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
 
     @Override
     public boolean isPersistent() {
-        // Keep this object active while it's controlling a player (state != 0 and state != 6)
-        return mainCharState == 2 || mainCharState == 4;
+        // Keep this object active while it's controlling ANY character
+        // (state == 2 entry path or state == 4 main path). The ROM tracks a
+        // separate state slot per character (objoff_2C / objoff_36), so the
+        // object must stay live while either Sonic or a sidekick is mid-tube.
+        for (CharacterState cs : characterStates.values()) {
+            if (cs.state == 2 || cs.state == 4) {
+                return true;
+            }
+        }
+        return false;
     }
 }

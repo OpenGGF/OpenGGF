@@ -58,6 +58,7 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance {
     private State state;
     private int moveTimer;           // objoff_36 - frames until direction switch
     private int waitTimer;           // anim_frame_duration - frames until charge
+    private int xSubpixel;           // Subpixel accumulator for x movement (ObjectMove 16.16 carry)
     private int ySubpixel;           // Subpixel accumulator for y movement during charge
     private final int startX;        // Initial X position for direction reference
 
@@ -66,6 +67,7 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance {
         this.state = State.PATROLLING;
         this.moveTimer = MOVE_TIMER_INIT;
         this.waitTimer = 0;
+        this.xSubpixel = 0;
         this.ySubpixel = 0;
         this.startX = spawn.x();
 
@@ -96,8 +98,13 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance {
      * - Check for player detection
      */
     private void updatePatrolling(int frameCounter, AbstractPlayableSprite player) {
-        // Apply velocity (convert from subpixels: velocity is in 1/256 pixels)
-        currentX += (xVelocity >> 8);
+        // Apply velocity via ObjectMove-style subpixel integration.
+        // Obj91_Main calls JmpTo26_ObjectMove (s2.asm:73642), and ObjectMove
+        // integrates x_pos(32) += x_vel<<8 (s2.asm:30185-30199): the velocity's
+        // low byte accumulates into the sub-pixel and carries into the whole
+        // pixel. PATROL_SPEED=0x40 = 0.25px/frame, so a plain `>>8` would
+        // discard it entirely and the badnik would never advance.
+        applyXVelocitySubpixel();
 
         // Decrement direction switch timer
         moveTimer--;
@@ -140,19 +147,34 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance {
      * - Vertical: 0.5 pixels/frame downward
      */
     private void updateCharging(AbstractPlayableSprite player) {
-        // Move horizontally toward player
-        if (facingLeft) {
-            currentX -= CHARGE_SPEED_X;
-        } else {
-            currentX += CHARGE_SPEED_X;
-        }
+        // Obj91_Charge calls JmpTo26_ObjectMove (s2.asm:73688) which integrates
+        // both axes as x_pos(32) += x_vel<<8 (s2.asm:30185-30199).
+        // Obj91_HorizontalSpeeds (s2.asm:73678-73680) is -2/+2 *whole pixels*,
+        // i.e. x_vel = +-0x200 in 16.8, so the X subpixel carry is zero and the
+        // badnik moves exactly 2px/frame. Drive X through the same subpixel
+        // integrator so the accumulator stays consistent across states.
+        xVelocity = facingLeft ? -(CHARGE_SPEED_X << 8) : (CHARGE_SPEED_X << 8);
+        applyXVelocitySubpixel();
 
-        // Move downward at 0.5 pixels/frame using subpixel accumulator
+        // Obj91_VerticalSpeeds (s2.asm:73682-73684) writes $80 into the LOW byte
+        // of y_vel, giving y_vel = 0x80 = 0.5px/frame downward via subpixel carry.
         ySubpixel += CHARGE_SPEED_Y_SUBPIXEL;
         if (ySubpixel >= 0x100) {
             currentY += (ySubpixel >> 8);
             ySubpixel &= 0xFF;
         }
+    }
+
+    /**
+     * ObjectMove X integration (s2.asm:30185-30199): x_pos(32) += x_vel&lt;&lt;8.
+     * Reproduced as a 16:8 accumulator — the low byte of x_vel accumulates into
+     * the sub-pixel and carries into the whole pixel. xVelocity is signed where
+     * 0x100 = 1px/frame.
+     */
+    private void applyXVelocitySubpixel() {
+        int total = xSubpixel + (xVelocity & 0xFF);
+        currentX += (xVelocity >> 8) + (total >> 8);
+        xSubpixel = total & 0xFF;
     }
 
     /**
