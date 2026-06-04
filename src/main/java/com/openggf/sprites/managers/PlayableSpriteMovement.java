@@ -931,7 +931,26 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	/** Sonic_JumpHeight: Jump release velocity cap (s2.asm:37076) */
 	private void doJumpHeight() {
-		if (jumpPressed) {
+		// ROM gates the variable jump-height cap on the sprite's actual
+		// jumping(a0) status byte, NOT on the held jump button:
+		//   tst.b jumping(a0) / beq Sonic_UpVelCap
+		// (docs/s2disasm/s2.asm:37411-37412 Sonic_JumpHeight;
+		//  docs/s2disasm/s2.asm:40428-40429 Tails_JumpHeight;
+		//  docs/s1disasm/_incObj/01 Sonic.asm:1197-1198;
+		//  docs/skdisasm/sonic3k.asm:23366-23367 -- identical gate in all
+		//  three games, so this is a universal correction, no feature flag).
+		// Previously this branched on the `jumpPressed` controller-loop latch.
+		// That latch is set whenever a jump button is held (including the
+		// A/B/C bits TailsCPU_Normal_FilterAction synthesizes into Ctrl_2
+		// every ~64 frames, docs/s2disasm/s2.asm:39342-39370). A sidekick
+		// launched upward by a CNZ flipper (Obj86 loc_2B290 sets in_air,
+		// clears on_object, routine=2, obj_control=0, but never sets
+		// jumping, docs/s2disasm/s2.asm:58366-58407) was therefore wrongly
+		// receiving the -0x400 variable-height cap. ROM with jumping==0
+		// takes Sonic_UpVelCap/Tails_UpVelCap instead (pinball bypass +
+		// -0xFC0 cap, docs/s2disasm/s2.asm:37431-37436 / 40446-40451), so a
+		// slower-than-0xFC0 flipper launch only receives gravity.
+		if (sprite.isJumping()) {
 			short ySpeedCap = sprite.isInWater() ? (short) 0x200 : (short) 0x400;
 			if (sprite.getYSpeed() < -ySpeedCap && !inputJump) {
 				sprite.setYSpeed((short) -ySpeedCap);

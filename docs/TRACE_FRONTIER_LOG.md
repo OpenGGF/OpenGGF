@@ -175,6 +175,31 @@
     the DEZ boss (per-class hook) or re-derive the WFZ defeat-timer phase so both stay ROM-faithful.
 - Committed under the relaxed bar: genuine ROM-backed advance, same-game regression logged for
   follow-up investigation rather than blocking the land.
+## 2026-06-04 - cnz2 f1784->f2172: Sonic_JumpHeight variable cap gates on jumping(a0), not held button
+
+- Branch `bugfix/ai-trace-s2-cnz2`, worktree `.worktrees/trace-s2-cnz2` (off develop `89ad6d7ae`).
+- Command (cmd.exe mvn.cmd inside worktree, forkCount=1):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** advanced, genuine, zero same-game regressions.
+- **Root cause:** `PlayableSpriteMovement.doJumpHeight()` gated the variable jump-height velocity
+  cap on the `jumpPressed` controller-loop latch (set whenever a jump button is held). ROM
+  `Sonic_JumpHeight` instead gates on the `jumping(a0)` status byte: `tst.b jumping(a0) /
+  beq.s Sonic_UpVelCap` (s2.asm:37410-37412 Sonic; s2.asm:40428-40429 Tails; identical in
+  s1disasm `_incObj/01 Sonic.asm`:1196-1197 and skdisasm sonic3k.asm:23366-23367 — universal).
+  A CNZ flipper (Obj86 `loc_2B290`, s2.asm:58366-58407) launches the sidekick upward by setting
+  in_air / clearing on_object / routine=2 / obj_control=0 but never sets `jumping`. The Tails CPU
+  also synthesizes A/B/C button bits into Ctrl_2 (~64-frame cadence, s2.asm:39342-39370), so the
+  held-button latch fired spuriously and wrongly applied the -0x400 cap to a flipper launch. With
+  jumping==0 the ROM takes Sonic_UpVelCap/Tails_UpVelCap (pinball bypass + -0xFC0 cap), so a
+  flipper launch slower than 0xFC0 receives only gravity.
+- **Fix:** branch `doJumpHeight()` on `sprite.isJumping()` (the ROM `jumping(a0)` byte) instead of
+  `jumpPressed`. Universal correction, no feature flag, no gameId/zone/route/frame carve-out;
+  shared movement code only.
+- **cnz2: f1784 -> f2172** (1271 errors). New first divergence f2172 is `y_speed` mismatch
+  (expected 0x0000, actual -0680) on a jump frame (jump=true) -- a separate downstream issue.
+- Same-game regression guard (single-fork): EHZ1, SCZ, WFZ all GREEN. Baseline (git stash) vs fixed:
+  identical S2 trace failure set {Arz2, Arz, Cnz2, Cnz, Cpz2, Cpz, DezEnding, Htz2, Htz, Mcz2} both
+  runs (passed=41 failed=22 in both). No same-game green regressed.
 
 ## 2026-06-04 - arz2 f549->f566: ChopChop (Obj91) X movement via ObjectMove subpixel integration
 
