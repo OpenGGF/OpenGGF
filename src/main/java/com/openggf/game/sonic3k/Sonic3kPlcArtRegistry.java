@@ -1414,6 +1414,13 @@ public final class Sonic3kPlcArtRegistry {
                 1,
                 null));
 
+        // Cup Elevator (Object 0x18/0x19): make_art_tile(ArtTile_LBZMisc+$4A, 2, 0)
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.LBZ_CUP_ELEVATOR,
+                Sonic3kConstants.MAP_LBZ_CUP_ELEVATOR_ADDR,
+                Sonic3kConstants.ARTTILE_LBZ_MISC + 0x4A,
+                2,
+                null));
+
         // Moving Platform (Object 0x11): make_art_tile(ArtTile_LBZMisc, 2, 0)
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.LBZ_MOVING_PLATFORM,
                 Sonic3kConstants.MAP_LBZ_MOVING_PLATFORM_ADDR,

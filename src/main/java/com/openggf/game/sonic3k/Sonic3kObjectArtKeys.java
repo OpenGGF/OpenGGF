@@ -239,6 +239,7 @@ public final class Sonic3kObjectArtKeys {
     public static final String LBZ_MOVING_PLATFORM = "lbz_moving_platform";
     public static final String LBZ_TUBE_ELEVATOR = "lbz_tube_elevator";
     public static final String LBZ_RIDE_GRAPPLE = "lbz_ride_grapple";
+    public static final String LBZ_CUP_ELEVATOR = "lbz_cup_elevator";
     public static final String ORBINAUT = "lbz_orbinaut";
     public static final String RIBOT = "lbz_ribot";
     public static final String CORKEY = "lbz_corkey";

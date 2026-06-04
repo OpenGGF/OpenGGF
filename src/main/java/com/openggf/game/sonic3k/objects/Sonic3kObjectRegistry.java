@@ -192,6 +192,22 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new LbzRideGrappleInstance(spawn);
                 });
+        factories.put(Sonic3kObjectIds.LBZ_CUP_ELEVATOR,
+                (spawn, registry) -> {
+                    S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet != S3kZoneSet.S3KL) {
+                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                    }
+                    return new LbzCupElevatorInstance(spawn);
+                });
+        factories.put(Sonic3kObjectIds.LBZ_CUP_ELEVATOR_POLE,
+                (spawn, registry) -> {
+                    S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet != S3kZoneSet.S3KL) {
+                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                    }
+                    return new LbzCupElevatorPoleInstance(spawn);
+                });
         factories.put(Sonic3kObjectIds.AUTOMATIC_TUNNEL,
                 (spawn, registry) -> new AutomaticTunnelObjectInstance(spawn));
         factories.put(Sonic3kObjectIds.MHZ_MUSHROOM_CAP,

@@ -67,6 +67,13 @@ All notable changes to the OpenGGF project are documented in this file.
   and jump release suppresses the stale held-button edge so insta-shield waits
   for a real release/re-press.
 
+- **Implemented S3K LBZ cup elevator Obj18/Obj19.** S3KL slots `$18` and `$19`
+  now route to `Obj_LBZCupElevator` and `Obj_LBZCupElevatorPole`, using the
+  ROM-backed LBZ cup elevator mapping table from the locked-on data include,
+  LBZ misc art, subtype-driven travel distance/start phase, cup attach/base
+  children, player carry/release handling with the ROM twist-frame pose table,
+  pole variants, and rewind-safe structural child state.
+
 - **Implemented S3K LBZ moving platform Obj11.** S3KL slot `$11` now routes to
   `Obj_LBZMovingPlatform`, using ROM-backed LBZ misc level art and the S&K-side
   moving-platform mapping table. The implementation covers stationary bob,

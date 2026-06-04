@@ -182,6 +182,9 @@ public class Sonic3kConstants {
     public static final int MAP_LBZ_CORK_FLOOR_ADDR = 0x229EE8;   // Map_LBZCorkFloor (2 frames, 8/16 pieces)
     public static final int MAP_LBZ_MOVING_PLATFORM_ADDR = 0x025338; // Map_LBZMovingPlatform (3 frames, S&K-side)
     public static final int MAP_LBZ_RIDE_GRAPPLE_ADDR = 0x026930; // Map_LBZRideGrapple (3 frames, S&K-side)
+    // Map_LBZCupElevator (5 frames). LockOn data include; verified by ROM byte
+    // search for offset-table prefix 00 0A 00 18 00 20 00 2E 00 42.
+    public static final int MAP_LBZ_CUP_ELEVATOR_ADDR = 0x22619A;
     public static final int MAP_FBZ_CORK_FLOOR_ADDR = 0x2A920;    // Map_FBZCorkFloor (2 frames, 2/4 pieces, in sonic3k.asm)
 
     // ===== Breakable Wall mappings (Obj_BreakableWall, ID 0x0D) =====

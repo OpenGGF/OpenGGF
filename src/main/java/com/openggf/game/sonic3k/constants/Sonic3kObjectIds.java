@@ -38,6 +38,10 @@ public final class Sonic3kObjectIds {
     public static final int UPDRAFT = 0x14;
     // S3KL object table: Obj_LBZRideGrapple.
     public static final int LBZ_RIDE_GRAPPLE = 0x17;
+    // S3KL object table: Obj_LBZCupElevator.
+    public static final int LBZ_CUP_ELEVATOR = 0x18;
+    // S3KL object table: Obj_LBZCupElevatorPole.
+    public static final int LBZ_CUP_ELEVATOR_POLE = 0x19;
     public static final int AUTOMATIC_TUNNEL = 0x24;
     public static final int AUTO_SPIN = 0x26;
     public static final int CORK_FLOOR = 0x2A;
