@@ -61,6 +61,21 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
     private int directionToggleCount;   // Button presses in current check window (objoff_38)
     private boolean inputDetectedThisCycle; // Has input been detected this cycle (objoff_31)
     private int lastDirectionBits;          // Last direction pressed as bitmask (objoff_36)
+    // Previous-frame HELD direction bits, used to derive the freshly-PRESSED edge
+    // the ROM escape window actually consumes. loc_390BC reads `move.w (Ctrl_1_Held),d0`
+    // then `andi.b #$C,d0` — the .b operates on the LOW byte of the word, which is
+    // Ctrl_1_Press (the newly-pressed edge), NOT Ctrl_1_Held. So the escape both
+    // latches (loc_390E6) and tallies toggles on pressed edges. See the Ctrl_1 word
+    // layout (Ctrl_1_Held=high byte, Ctrl_1_Press=low byte) at
+    // s2.constants.asm:1387-1389, the `move.w (a1),d0` read at s2.asm:76916, and
+    // loc_390BC s2.asm:76915-76930.
+    private int prevHeldDirectionBits;
+    // ROM parity (s2.asm:76947): on escape, loc_390FA executes `clr.b collision_flags(a0)`,
+    // making the Grabber non-interactive so the freed (still-rolling) player does NOT
+    // touch-kill it and receive a spurious enemy bounce. The engine's touch scanner
+    // skips any object whose getCollisionFlags() returns 0 (ObjectManager.java:5181),
+    // so we mirror the ROM clear with this latch.
+    private boolean collisionFlagsCleared;
     private boolean paletteFlipped;         // Palette bit toggle for blink effect (not visibility)
     private int anchorY;            // Y position of anchor point (where Grabber starts)
     private AbstractPlayableSprite grabbedPlayer;
@@ -103,6 +118,8 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
         this.directionToggleCount = 0;
         this.inputDetectedThisCycle = false;
         this.lastDirectionBits = 0;
+        this.prevHeldDirectionBits = 0;
+        this.collisionFlagsCleared = false;
         this.paletteFlipped = false;
         this.grabbedPlayer = null;
         this.legsFrame = 3;
@@ -298,6 +315,15 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
         directionToggleCount = 0;                // objoff_38 = 0 (button press counter)
         inputDetectedThisCycle = false;          // objoff_31 = 0
         lastDirectionBits = 0;                   // objoff_36 = 0
+        // Seed the held-edge history from the player's held direction bits AT the
+        // grab frame. The ROM escape consumes Ctrl_1_Pressed, a GLOBAL edge computed
+        // every frame as (held & ~heldPrev) independent of the grab. So on the first
+        // carry frame the pressed edge is taken against the true previous frame's
+        // held state, not against zero. Seeding from 0 would make a direction the
+        // player was already holding at grab spuriously read as freshly pressed and
+        // over-count the first window's toggles, firing the escape several frames
+        // early (CPZ2: seed=0 escapes at csvrow 1612, ROM/seed-from-grab at 1619).
+        prevHeldDirectionBits = heldDirectionBits(player);
 
         // Lock player movement (obj_control = $81)
         ObjectControlState.nativeBit7FullControl().applyTo(player);
@@ -323,6 +349,17 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
 
         animFrame = 1; // Closed claws frame
         // Note: Per disassembly, no sound effect plays on grab
+    }
+
+    /**
+     * Held direction bits (left=$04, right=$08, mask $0C), mirroring the high byte
+     * of the ROM {@code Ctrl_1_Held} word that loc_390BC reads (s2.asm:76916).
+     */
+    private static int heldDirectionBits(AbstractPlayableSprite player) {
+        int bits = 0;
+        if (player.isLeftPressed()) bits |= 0x04;
+        if (player.isRightPressed()) bits |= 0x08;
+        return bits & 0x0C;
     }
 
     private void updateCarrying() {
@@ -361,10 +398,19 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
         // === Escape-window input checking (loc_390BC, s2.asm:76915-76957) ===
         // Track directional input changes using a bitmask like the disassembly:
         // Bit 2 = left ($04), Bit 3 = right ($08), mask = $0C (objoff_36/objoff_38).
-        int currentDirectionBits = 0;
-        if (grabbedPlayer.isLeftPressed()) currentDirectionBits |= 0x04;
-        if (grabbedPlayer.isRightPressed()) currentDirectionBits |= 0x08;
-        currentDirectionBits &= 0x0C;  // Mask to direction bits only
+        //
+        // ROM-faithful PRESSED-edge input: loc_390BC does `move.w (Ctrl_1_Held),d0`
+        // then `andi.b #$C,d0`. The `.b` masks the LOW byte of that word, which is
+        // Ctrl_1_Pressed (the freshly-pressed edge), NOT the held byte. So both the
+        // first-input latch (loc_390E6 s2.asm:76933-76940) and the toggle tally
+        // (loc_390BC s2.asm:76922-76928) operate on newly-pressed direction edges.
+        // isLeftPressed()/isRightPressed() return HELD state, so derive the press
+        // edge here: pressed = held & ~prevHeld. Consuming held bits (the prior
+        // engine behaviour) over-counted toggles and fired the escape ~11 frames
+        // early (CPZ2 release at csvrow 1609 vs ROM 1619/gfc 0x0652).
+        int heldDirectionBits = heldDirectionBits(grabbedPlayer);
+        int currentDirectionBits = heldDirectionBits & ~prevHeldDirectionBits;
+        prevHeldDirectionBits = heldDirectionBits;
 
         // ROM gate (s2.asm:76918-76919): tst.b objoff_31 / beq loc_390E6.
         // The 32-frame escape window (objoff_37) only begins counting AFTER the
@@ -470,9 +516,44 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
             grabbedPlayer = null;
         }
 
+        if (escaped) {
+            // ROM loc_390FA (s2.asm:76942-76951): on a successful button-mash escape
+            // the Grabber clears its own collision_flags (`clr.b collision_flags(a0)`,
+            // s2.asm:76947) and frees the player WITHOUT imparting any velocity. The
+            // freed player is still rolling, so without this clear the engine's
+            // per-frame ENEMY touch poll would touch-kill the Grabber on the very
+            // next frame and give the player a spurious enemy-destruction bounce
+            // (-0x00C8). Latch the clear so getCollisionFlags() returns 0 and the
+            // touch scanner skips this object (ObjectManager.java:5181).
+            collisionFlagsCleared = true;
+
+            // ROM loc_390FA sets routine_secondary=$A (s2.asm:76945). Routine $A is
+            // BranchTo_ObjA7_CheckExplode (s2.asm:76610, off_38E46 entry $A): the
+            // Grabber does NOT return to patrol or hunt again — it only continues the
+            // ObjA7_CheckExplode blink countdown until ObjA7_Poof transforms it into
+            // an explosion. Routing escape into State.DEATH (= routine $A) instead of
+            // RELEASING/returnToPatrol prevents the engine from re-diving and
+            // re-grabbing the just-freed player (CPZ2 second-grab at frame 1737).
+            state = State.DEATH;
+            animFrame = 0; // Open claws
+            // Keep the blink countdown (blinkCounter/blinkCount) where it is so the
+            // remaining objoff_2A/objoff_2B frames run out exactly as in routine $A.
+            return;
+        }
+
         state = State.RELEASING;
         animFrame = 0; // Open claws
         paletteFlipped = false;  // Reset palette
+    }
+
+    @Override
+    public int getCollisionFlags() {
+        if (collisionFlagsCleared) {
+            // ROM loc_390FA `clr.b collision_flags(a0)` — Grabber is no longer
+            // interactive after a button-mash escape (s2.asm:76947).
+            return 0;
+        }
+        return super.getCollisionFlags();
     }
 
     /**
@@ -506,11 +587,33 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
     }
 
     private void updateDeath() {
-        // Release any grabbed player
+        // ROM routine_secondary=$A (BranchTo_ObjA7_CheckExplode, off_38E46 entry $A
+        // at s2.asm:76610): the Grabber runs ONLY ObjA7_CheckExplode each frame
+        // (s2.asm:76967-76975) — no patrol, no dive, no escape window. The blink
+        // countdown (objoff_2A/objoff_2B) continues from where the escape left it,
+        // and when objoff_2B reaches 0 ObjA7_Poof (s2.asm:76977-76989) transforms the
+        // Grabber into an Explosion. Because the player was freed at escape
+        // (objoff_32 cleared, loc_390FA s2.asm:76951), Poof's player-hurt branch
+        // (`tst.w objoff_32; beq +`, s2.asm:76981-76982) is skipped: NO player hurt.
         if (grabbedPlayer != null) {
-            releasePlayer(true);
+            // Safety: if somehow still holding a player when entering DEATH via a
+            // non-escape path, release without imparting velocity.
+            ObjectControlState.none().applyTo(grabbedPlayer);
+            grabbedPlayer.setAir(true);
+            grabbedPlayer = null;
         }
-        // Death is handled by AbstractBadnikInstance
+
+        // Continue the ObjA7_CheckExplode blink countdown.
+        blinkCounter--;
+        if (blinkCounter <= 0) {
+            blinkCounter = blinkCount;
+            blinkCount--;
+            paletteFlipped = !paletteFlipped;  // bchg #palette_bit_0,art_tile(a0)
+            if (blinkCount <= 0) {
+                // ObjA7_Poof: transform into an explosion (no animal, no hurt).
+                triggerDestruction();
+            }
+        }
     }
 
     private void updateStringFrame() {

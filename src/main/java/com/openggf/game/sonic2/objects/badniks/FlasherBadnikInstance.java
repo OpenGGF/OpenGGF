@@ -51,6 +51,7 @@ public class FlasherBadnikInstance extends AbstractBadnikInstance {
     private static final int FRAME_ELECTRIFIED_TRANSITION = 3; // loc_3884A
 
     private enum State {
+        INIT,               // routine 0 (loc_3875A): one-frame setup, no countdown
         WAITING,            // routine 2
         FLYING,             // routine 4
         CHARGING,           // routine 6
@@ -77,7 +78,15 @@ public class FlasherBadnikInstance extends AbstractBadnikInstance {
 
     public FlasherBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Flasher", Sonic2BadnikConfig.DESTRUCTION);
-        this.state = State.WAITING;
+        // ObjA3 routine 0 (loc_3875A, s2.asm:76027-76030) runs as a dedicated
+        // init frame: LoadSubObject, set objoff_2A=$40, then rts WITHOUT running
+        // the countdown that lives in routine 2 (loc_38766). Modeling WAITING as
+        // the start state would decrement objoff_2A on the spawn frame, starting
+        // the firefly's flight one frame early; the trajectory then leads ROM by
+        // one frame (MCZ2 trace f3729: engine hits the Flasher one frame before
+        // ROM, applying the React_Enemy +$100 y_vel bounce a frame early). The
+        // INIT state consumes the routine-0 frame and only sets up the countdown.
+        this.state = State.INIT;
         this.stateTimer = WAIT_TIMER_INIT;
         this.xPosFixed = currentX << 8;
         this.yPosFixed = currentY << 8;
@@ -93,6 +102,7 @@ public class FlasherBadnikInstance extends AbstractBadnikInstance {
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
+            case INIT -> updateInit();
             case WAITING -> updateWaiting();
             case FLYING -> updateFlying();
             case CHARGING -> updateCharging();
@@ -103,6 +113,14 @@ public class FlasherBadnikInstance extends AbstractBadnikInstance {
 
         currentX = xPosFixed >> 8;
         currentY = yPosFixed >> 8;
+    }
+
+    private void updateInit() {
+        // ObjA3 loc_3875A (s2.asm:76027-76030): routine 0 only sets the wait
+        // timer (objoff_2A=$40) and returns; the routine advances to 2 so the
+        // countdown begins on the NEXT frame. No position/timer change here.
+        stateTimer = WAIT_TIMER_INIT;
+        state = State.WAITING;
     }
 
     private void updateWaiting() {

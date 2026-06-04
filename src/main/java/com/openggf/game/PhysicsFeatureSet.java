@@ -132,9 +132,14 @@ public record PhysicsFeatureSet(
          *  (docs/s2disasm/s2.asm:37618-37625, 40473-40480). */
         boolean airLeftWallHitContinuesIntoCeilingSeparation,
         /** Whether full-solid underside overlap uses the player's current y-radius
-         *  on both halves of the vertical collision box.
-         *  Current parity: S1=true for rolling glass-block behavior, S2/S3K=false
-         *  to preserve the taller underside box used by existing solid/spring traces. */
+         *  symmetrically on both halves of the vertical collision box.
+         *  S1: true -- SolidObject d2 = obHeight/2 + obHeight(a1) [current y_radius],
+         *  bottom boundary d4 = 2*d2 (s1disasm/_incObj/sub SolidObject.asm:109-119).
+         *  S2: true -- SolidObject_cont d2 = obHeight/2 + y_radius(a1) [current],
+         *  bottom boundary d4 = 2*d2 (s2.asm:35355-35367). Identical to S1.
+         *  S3K: false -- loc_1DFD6 substitutes default_y_radius(a1) [standing] for the
+         *  bottom extra term (d4 = default_y_radius + obHeight + current y_radius), giving
+         *  a taller asymmetric underside box (sonic3k.asm:41422-41436). */
         boolean fullSolidBottomOverlapUsesCurrentYRadiusOnly,
         /** Maximum vertical scroll speed for airborne + fast-ground camera paths.
          *  S1/S2: 16 (0x10) pixels/frame (s2.asm:18190 ".doScroll_fast").
@@ -886,7 +891,9 @@ public record PhysicsFeatureSet(
             true, false,
             true /* pinballLandingPreservesRoll: S2 skips the Status_Roll clear while pinball_mode is set (s2.asm:37770-37771) */,
             true /* pinballLandingPreservesPinballMode: S2 Sonic_ResetOnFloor / Tails_ResetOnFloor never clear pinball_mode (s2.asm:37770-37771,40625-40626) — both branch to Part3 on pinball_mode, and Part3 only clears in_air/pushing/rolljumping/jumping */,
-            false, false, false, false, false, FAST_SCROLL_CAP_S2, false, false,
+            false, false, false, false,
+            true /* fullSolidBottomOverlapUsesCurrentYRadiusOnly: S2 SolidObject_cont uses the player's CURRENT y_radius symmetrically on both halves of the underside box (d2 = obHeight/2 + y_radius(a1); bottom boundary d4 = 2*d2), s2.asm:35355-35367. This matches S1 (s1disasm/_incObj/sub SolidObject.asm:109-119). Only S3K loc_1DFD6 (sonic3k.asm:41422-41436) substitutes default_y_radius for the bottom extra term, giving the taller asymmetric box — so S3K stays false. Previously false here gave Sonic a 5px-too-tall underside box that triggered a phantom Stomper (Obj2A) ceiling hit during a MCZ rolling jump (y_radius 0x0E vs standing 0x13), zeroing y_speed at MCZ1 trace frame 2005 where ROM never collides. */,
+            FAST_SCROLL_CAP_S2, false, false,
             SIDEKICK_FOLLOW_SNAP_S2, SIDEKICK_DESPAWN_X_S2, SIDEKICK_FOLLOW_LEAD_OFFSET_NONE, true, false /* useScreenYWrapValueForVisibility: S2 keeps 32-margin */,
             true /* sidekickDespawnUsesObjectIdMismatch: S2 cmp.b id(a3),d0 in TailsCPU_CheckDespawn (s2.asm:39067) */,
             SIDEKICK_FLY_LAND_BLOCKERS_S2, false /* sidekickFlyLandRequiresLeaderAlive: S2 TailsCPU_Flying_Part2 has no Sonic-routine check */, false /* solidObjectOffscreenGate: keep current S2 trace baseline */,

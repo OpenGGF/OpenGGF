@@ -12,6 +12,7 @@ import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -183,13 +184,38 @@ public class SwingingPformObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Update behavior based on type
+        // Update behavior based on type (Obj82_Types jump table).
+        // ROM Obj82_Main: jsr Obj82_Types (docs/s2disasm/s2.asm:57140).
         updateBehavior(player);
 
-        // Update swinging animation
+        // Carry any riding player BEFORE the swing CalcSine writes the new y_pos.
+        // ROM Obj82_Main runs JmpTo23_SolidObject (rider carry,
+        // docs/s2disasm/s2.asm:57159) BEFORE loc_2A432 (swing CalcSine y_pos write,
+        // docs/s2disasm/s2.asm:57162). With the default AUTO_AFTER_UPDATE the rider
+        // carry would fire after updateSwinging() had already written the
+        // current-frame swing y, putting the rider (and downstream camera) 1px ahead
+        // of the ROM whenever the platform is moving. MANUAL_CHECKPOINT below lets us
+        // resolve the solid contact here, between the two ROM steps, so the rider
+        // follows the platform's previous-frame swing position like the ROM does.
+        services().solidExecution().resolveSolidNowAll();
+
+        // Update swinging animation (loc_2A432, docs/s2disasm/s2.asm:57162 ->
+        // 57280-57307: CalcSine -> y_pos). Runs AFTER the rider carry above.
         updateSwinging();
 
         updateDynamicSpawn(x, y);
+    }
+
+    /**
+     * Obj82 carries its rider via JmpTo23_SolidObject (docs/s2disasm/s2.asm:57159)
+     * BEFORE running the swing CalcSine motion loc_2A432 (docs/s2disasm/s2.asm:57162),
+     * so the rider follows the platform's previous-frame swing y. The default
+     * AUTO_AFTER_UPDATE checkpoint fires after the whole update() (after the swing has
+     * already written the new y), so we drive the checkpoint manually from update().
+     */
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
 
     /**
@@ -235,12 +261,22 @@ public class SwingingPformObjectInstance extends AbstractObjectInstance
      * Corresponds to loc_2A392 in disassembly.
      */
     private void updateFalling() {
-        // Apply gravity
-        yVel += GRAVITY;
-
-        // Move
+        // ROM loc_2A392 (docs/s2disasm/s2.asm:57203-57205):
+        //   jsrto JmpTo16_ObjectMove   ; move y_pos by the CURRENT y_vel first
+        //   addi_.w #8,y_vel(a0)        ; THEN add gravity for next frame
+        // ObjectMove (docs/s2disasm/s2.asm:30192-30197) does
+        // y_pos(16.16) += y_vel << 8, i.e. the 8.8 subpixel y += y_vel. So the
+        // platform descends using last frame's velocity, and gravity only takes
+        // effect on the following frame. Adding gravity BEFORE moving (the prior
+        // order here) advanced the platform one velocity step early, which carried
+        // the riding player 1px ahead of the ROM every falling frame (ARZ2 trace
+        // first-divergence frame 264: slot 22 Obj82 type 2).
+        // Move with current velocity.
         subY += yVel;
         y = subY >> 8;
+
+        // Apply gravity AFTER the move (ROM addi_.w #8,y_vel after ObjectMove).
+        yVel += GRAVITY;
 
         // Check floor collision using ObjectTerrainUtils (mirrors ROM's ObjCheckFloorDist)
         TerrainCheckResult result = ObjectTerrainUtils.checkFloorDist(x, y, yRadius);
@@ -259,12 +295,18 @@ public class SwingingPformObjectInstance extends AbstractObjectInstance
      * Corresponds to loc_2A3B6 in disassembly.
      */
     private void updateRising() {
-        // Apply anti-gravity
-        yVel -= GRAVITY;
-
-        // Move
+        // ROM loc_2A3B6 (docs/s2disasm/s2.asm:57218-57220):
+        //   jsrto JmpTo16_ObjectMove   ; move y_pos by the CURRENT y_vel first
+        //   subi_.w #8,y_vel(a0)        ; THEN apply anti-gravity for next frame
+        // Same move-then-accelerate order as the falling routine above; apply the
+        // velocity before decrementing it so the platform (and rider) does not lead
+        // the ROM by one step.
+        // Move with current velocity.
         subY += yVel;
         y = subY >> 8;
+
+        // Apply anti-gravity AFTER the move (ROM subi_.w #8,y_vel after ObjectMove).
+        yVel -= GRAVITY;
 
         // Check ceiling collision using ObjectTerrainUtils (mirrors ROM's ObjCheckCeilingDist)
         TerrainCheckResult result = ObjectTerrainUtils.checkCeilingDist(x, y, yRadius);
