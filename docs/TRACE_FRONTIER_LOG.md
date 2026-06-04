@@ -1,5 +1,28 @@
 # Trace Frontier Log
 
+## 2026-06-04 - arz2 f549->f566: ChopChop (Obj91) X movement via ObjectMove subpixel integration
+
+- Branch `bugfix/ai-trace-s2-arz2`, worktree `.worktrees/trace-s2-arz2` (off develop `868249c0f`).
+- Command (cmd.exe mvn inside worktree):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** advanced, genuine, zero same-game regressions.
+- **Root cause:** `ChopChopBadnikInstance` (ARZ piranha, Obj91) applied patrol X velocity as a
+  plain `currentX += (xVelocity >> 8)`. Patrol x_vel is `move.w #$40,x_vel(a0)` (s2.asm:73621-73626)
+  = 0x40 = 0.25px/frame. `0x40 >> 8 == 0`, so the badnik never advanced horizontally — its position
+  diverged from ROM, perturbing the player/Tails interaction downstream.
+- **Fix:** Both Obj91 movement states call `JmpTo26_ObjectMove` (s2.asm:73642, 73688), and `ObjectMove`
+  integrates `x_pos(32) += x_vel<<8` (s2.asm:30185-30199) — the low byte of x_vel carries into the
+  sub-pixel and into the whole pixel. Modelled as a 16:8 X accumulator (`applyXVelocitySubpixel`) used
+  by both patrol and charge states. Charge X is `Obj91_HorizontalSpeeds` ±2 whole pixels written via
+  `move.b` to the HIGH byte (x_vel = ±0x200, zero subpixel carry; s2.asm:73678-73680); charge Y is
+  `Obj91_VerticalSpeeds` $80 written to the LOW byte of y_vel = 0.5px/frame (s2.asm:73682-73684).
+  Per-object change in ChopChop's own class — no zone/route/frame/gameId carve-out, no shared-code edit.
+- **arz2: f549 -> f566** (errors -> 2178). New first divergence f566 is unrelated to ChopChop:
+  `tails_x_speed` (expected 0x0231, actual 0x0463) — a sidekick CPU follow/steering issue
+  (eng-tails-cpu branch=follow_steering), to be addressed separately.
+- Same-game regression guard (single-fork): EHZ1, SCZ, WFZ all GREEN (total=4 passed=3, the only
+  failure is arz2 itself). No same-game green regressed.
+
 ## 2026-06-04 - cnz1 RESTORED f3831->f3906: S2 post-camera gap-scan now bypasses the vertical load filter (ObjD4 cadence fixed)
 
 - Branch `bugfix/ai-cnz1-objd4-cadence`, worktree `.worktrees/cnz1-objd4-cadence` (off develop `d192a8087`).
