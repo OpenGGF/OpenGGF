@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+## 2026-06-04 - mcz2 f4009->f4049: MCZ Obj6A subtype-0x18 parent is a real solid/rendering/moving platform
+
+- Branch `bugfix/ai-trace-s2-mcz2`, worktree `.worktrees/trace-s2-mcz2` (off develop `8eb4710a3`).
+- Command (independent verification, single-fork):
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Root cause:** `MCZRotPformsObjectInstance` (Obj6A) treated the MCZ subtype-0x18 parent as an
+  invisible, non-solid spawner (`isSolidFor` excluded `isParent`; `update()` early-returned after
+  spawning children; `appendRenderCommands` early-returned). In the ROM (`docs/s2disasm/s2.asm`
+  Obj6A_Init), the `cmpi.b #$18,subtype` / `bne.w loc_27BD0` check gates ONLY the child-spawn block;
+  after allocating its two children the parent falls through (`bra.s loc_27BC4` -> `loc_27BD0` ->
+  `loc_27CA2`) and runs routine 4 (`loc_27C66`) every frame as a full moving platform that calls
+  `JmpTo13_SolidObject`. Obj6A_Init sets the Crate art tile and `mapping_frame=0` with no invisibility
+  flag, so the parent renders and collides like any other Obj6A platform.
+- **Fix:** `isSolidFor` returns `!isDestroyed()`; `update()` spawns children once then continues into
+  the same MCZ move/collide path the children use (`phaseIndex=0x18` reads the velocity table
+  normally); `appendRenderCommands` no longer early-returns for the parent. `isParent` is still derived
+  from ROM subtype `0x18` in MCZ — no zone/route/frame/gameId carve-out, comparison-only.
+- **Status: advanced. mcz2 f4009 -> f4049** (errors at f4049: 611). New first divergence f4049 is a
+  downstream `tails_y_speed` mismatch (expected 0x0038, actual 0x0000) — a Tails-CPU-on-platform issue,
+  unrelated to the parent platform now being solid.
+- **Same-game regression guard (TestS2Ehz1/Scz/Wfz):** all 3 GREEN (passed=3). Zero regressions.
+- No S2 frontier moved backward: mcz1 2181, mtz1 863, mtz2 641, mtz3 3719 all unchanged from develop
+  baseline (verified in same sweep). S3K/S1 untouched (S2-only object).
+
 ## 2026-06-04 - cnz1 RESTORED f3831->f3906: S2 post-camera gap-scan now bypasses the vertical load filter (ObjD4 cadence fixed)
 
 - Branch `bugfix/ai-cnz1-objd4-cadence`, worktree `.worktrees/cnz1-objd4-cadence` (off develop `d192a8087`).
