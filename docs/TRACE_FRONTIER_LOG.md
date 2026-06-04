@@ -24,6 +24,36 @@
 - File: `src/main/java/com/openggf/game/sonic2/objects/OOZPoppingPlatformObjectInstance.java`.
 - Same-game regression guard (single-fork): EHZ1, SCZ, WFZ all GREEN (tests=1 failures=0 errors=0 each);
   no same-game green regressed.
+## 2026-06-04 - cpz1 f3303->f3329: SpinyOnWall (ObjA6) detection band + spike-fire parity
+
+- Branch `bugfix/ai-trace-s2-cpz1`, worktree `.worktrees/trace-s2-cpz1`.
+- Command (worktree, cmd.exe mvn.cmd, forkCount=1):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2CpzLevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** advanced, genuine, zero same-game regressions.
+- **Error count:** 231 -> 214 errors / 0 warnings.
+- **First error: frame 3303 (`tails_air` expected=0, actual=1) -> frame 3329 (`y_speed` expected=-0258, actual=0x0258).**
+- **Root cause:** `SpinyOnWallBadnikInstance` (CPZ wall spiny, ObjA6) used an invented `0x80`x`0x40`
+  detection box plus a "player must be in front of the spiny" facing gate, and offset the spawned
+  spike by +/-8px from the body. ROM `loc_38BBA` (docs/s2disasm/s2.asm:76445-76449) gates the attack
+  ONLY on `Obj_GetOrientationToPlayer; addi.w #$60,d2; cmpi.w #$C0,d2; blo` — the signed horizontal
+  distance to the CLOSER of MainCharacter/Sidekick must lie in `[-$60,$60)`. There is NO vertical
+  gate and NO facing gate. `Obj_GetOrientationToPlayer` (s2.asm:72755-72781) selects the closer
+  character by absolute horizontal distance and returns `d2` = that signed distance. The fire routine
+  `loc_38C6E` (s2.asm:76509-76526) spawns the spike at the spiny's exact `x_pos`/`y_pos`, `x_vel=$300`
+  negated by `render_flags.x_flip` (the spiny's FIXED flip, not player side), `y_vel=0`; then
+  `Obj98_SpinyShotFall` (s2.asm:74628-74632) applies `+$20` gravity. The engine's extra gates fired
+  the spike at the wrong frames and the muzzle offset shifted its landing point, so in CPZ1 the
+  falling spike hit CPU Tails — a hurt the ROM never produces.
+- **Fix:** replace the box/dy/facing logic with the ROM `(currentX - closestPlayer.x + $60) < $C0`
+  horizontal band; `closestPlayer()` mirrors `Obj_GetOrientationToPlayer` (closer of MainCharacter /
+  sidekicks by abs horizontal distance, via `ObjectPlayerQuery`/`ALL_ENGINE_PLAYERS`); spike spawns at
+  exact `currentX`/`currentY` (muzzle offset removed). Per-object S2 change confined to ObjA6's class —
+  no zone/route/frame/gameId carve-out, no shared physics edit, comparison-only (engine state only).
+- **cpz1: f3303 -> f3329.** New first divergence (`y_speed`/`tails_air` at f3329) is an unrelated
+  downstream player jump/air issue, to be addressed separately.
+- Same-game regression guard (single-fork, surefire XML): `TestS2Ehz1TraceReplay`,
+  `TestS2SczLevelSelectTraceReplay`, `TestS2WfzLevelSelectTraceReplay` all tests=1 failures=0 errors=0.
+  Zero same-game greens regressed.
 
 ## 2026-06-04 - arz2 f549->f566: ChopChop (Obj91) X movement via ObjectMove subpixel integration
 

@@ -7,6 +7,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -40,9 +42,18 @@ public class SpinyOnWallBadnikInstance extends AbstractBadnikInstance {
     private static final int FIRE_FRAME = 0x14;     // Fire at this remaining (20 frames)
     private static final int ATTACK_LOCKOUT = 0x40; // Cooldown after attack (64 frames)
 
-    // Detection range (simplified from angle-based detection)
-    private static final int DETECT_X_RANGE = 0x80; // Horizontal detection range
-    private static final int DETECT_Y_RANGE = 0x40; // Vertical detection range
+    // Detection range. ROM loc_38BBA (s2.asm:76445-76449) calls
+    // Obj_GetOrientationToPlayer, then: addi.w #$60,d2 / cmpi.w #$C0,d2 / blo.
+    // d2 is the *signed* horizontal distance (spiny.x - closestPlayer.x) to the
+    // CLOSER of MainCharacter/Sidekick. The unsigned (d2 + $60) < $C0 test
+    // therefore attacks whenever the player is within [-$60, $60) horizontally.
+    // There is NO vertical gate and NO facing gate in ObjA6's detection — the
+    // earlier 0x80 box + dy + facing check fired the spike at the wrong frames,
+    // and in CPZ1 the resulting falling spike hit CPU Tails (a hurt ROM never
+    // produces). Firing direction is the spiny's fixed x_flip (loc_38C6E), not
+    // the player's side.
+    private static final int DETECT_X_OFFSET = 0x60; // addi.w #$60,d2
+    private static final int DETECT_X_RANGE = 0xC0;  // cmpi.w #$C0,d2 / blo
 
     // Projectile constants - horizontal only for wall variant
     private static final int SPIKE_X_VEL = 0x300;   // Horizontal spike velocity
@@ -136,22 +147,57 @@ public class SpinyOnWallBadnikInstance extends AbstractBadnikInstance {
     }
 
     /**
-     * Checks if player is within attack range.
-     * The original uses angle-based detection (0x60-0xC0 range).
-     * We simplify to horizontal/vertical distance check.
+     * Checks if a player is within attack range, matching ROM ObjA6 loc_38BBA
+     * (s2.asm:76445-76449):
+     * <pre>
+     *   bsr.w  Obj_GetOrientationToPlayer  ; d2 = spiny.x - closestPlayer.x (signed)
+     *   addi.w #$60,d2
+     *   cmpi.w #$C0,d2
+     *   blo.s  loc_38BEA                   ; attack
+     * </pre>
+     * The signed horizontal distance is taken to the CLOSER of MainCharacter and
+     * Sidekick (Obj_GetOrientationToPlayer, s2.asm:72755-72781). The detection
+     * uses ONLY this horizontal band; there is no vertical gate and no facing
+     * gate in the ROM.
      */
     private boolean isPlayerInRange(AbstractPlayableSprite player) {
-        int dx = Math.abs(player.getCentreX() - currentX);
-        int dy = Math.abs(player.getCentreY() - currentY);
-
-        // Player must be within detection range
-        if (dx > DETECT_X_RANGE || dy > DETECT_Y_RANGE) {
+        AbstractPlayableSprite target = closestPlayer(player);
+        if (target == null) {
             return false;
         }
+        // d2 = spiny.x - player.x (signed), then unsigned (d2 + $60) < $C0.
+        int adjustedDx = (currentX - target.getCentreX()) + DETECT_X_OFFSET;
+        return adjustedDx >= 0 && adjustedDx < DETECT_X_RANGE;
+    }
 
-        // Player must be roughly in front of SpinyOnWall (not behind)
-        boolean playerIsLeft = player.getCentreX() < currentX;
-        return playerIsLeft == facingLeft;
+    /**
+     * Mirrors Obj_GetOrientationToPlayer's character selection (s2.asm:72755-72781):
+     * picks the closer of MainCharacter / Sidekick by absolute horizontal distance.
+     */
+    private AbstractPlayableSprite closestPlayer(PlayableEntity mainPlayer) {
+        AbstractPlayableSprite best = null;
+        int bestDist = Integer.MAX_VALUE;
+        if (mainPlayer instanceof AbstractPlayableSprite mainSprite) {
+            best = mainSprite;
+            bestDist = Math.abs(mainSprite.getCentreX() - currentX);
+        }
+        ObjectServices svc = tryServices();
+        if (svc != null) {
+            for (PlayableEntity sk : svc.playerQuery()
+                    .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                if (sk == mainPlayer) {
+                    continue;
+                }
+                if (sk instanceof AbstractPlayableSprite skSprite) {
+                    int dist = Math.abs(skSprite.getCentreX() - currentX);
+                    if (dist < bestDist) {
+                        best = skSprite;
+                        bestDist = dist;
+                    }
+                }
+            }
+        }
+        return best;
     }
 
     private void startAttack() {
@@ -163,13 +209,18 @@ public class SpinyOnWallBadnikInstance extends AbstractBadnikInstance {
     }
 
     private void fireSpike() {
-        // Fire based on facing direction, not player position
+        // ROM loc_38C6E (s2.asm:76509-76526): the spike spawns at the spiny's
+        // exact x_pos/y_pos and moves at x_vel = $300, negated when the spiny's
+        // render_flags.x_flip bit is set (facingLeft). y_vel starts at 0 and
+        // Obj98_SpinyShotFall applies +$20 gravity (s2.asm:74628-74632). The
+        // previous +/-8 muzzle offset is not in the ROM and shifted the spike's
+        // landing point, contributing to phantom CPU-Tails hits in CPZ1.
         int xVel = facingLeft ? -SPIKE_X_VEL : SPIKE_X_VEL;
 
         services().objectManager().createDynamicObject(() -> new BadnikProjectileInstance(
                 spawn,
                 BadnikProjectileInstance.ProjectileType.SPINY_SPIKE,
-                currentX + (facingLeft ? -8 : 8),  // Offset from body in firing direction
+                currentX,
                 currentY,
                 xVel,
                 SPIKE_Y_VEL,
