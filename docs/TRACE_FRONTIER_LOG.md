@@ -138,6 +138,43 @@
   `src/main/java/com/openggf/game/PhysicsFeatureSet.java`,
   `src/main/java/com/openggf/game/CrossGameFeatureProvider.java`,
   `src/test/java/com/openggf/game/TestHybridPhysicsFeatureSet.java`.
+## 2026-06-05 - dez1 ADVANCED f1366->f2194 (regresses wfz): boss defeat routine-read-once one-frame deferral
+
+- Branch `bugfix/ai-trace-s2-dez1`, worktree `.worktrees/trace-s2-dez1` (off develop `89ad6d7ae`).
+- Command (cmd mvn.cmd inside worktree, forkCount=1):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** advanced-with-regression, genuine. Tests run: 1, Failures: 1.
+- Before: 148 errors, first error frame 1366 (`camera_x expected=0x0224 actual=0x0225`, post-defeat
+  camera-unlock off-by-one).
+- After: 147 errors, first error frame 2194 (`y_speed expected=0x0000 actual=-0700`) — now at the
+  DeathEggRobot (obj 0xC7) fight, well past the Mecha Sonic defeat / camera release. Distinct boss
+  and subsystem.
+- **Root cause:** When the boss is killed, the engine's S2 frame order runs touch-responses (inside
+  `tickPlayablePhysics`, LevelFrameStep step 2) BEFORE the object exec loop (step 3) the same frame.
+  `BossHitHandler.triggerDefeat()` flips `state.routine` to the defeat handler during the touch pass,
+  so without deferral `updateBossLogic` dispatched the defeat routine and decremented its countdown
+  the SAME frame the routine changed -- releasing Camera_Max_X_pos one frame early. ROM ObjAF (DEZ
+  Mecha/Silver Sonic) reads `routine(a0)` once at the top of its dispatch (docs/s2disasm/s2.asm:77412-77415);
+  loc_39CF0 sets `routine=$C` + `objoff_32=$FF` mid-frame (s2.asm:78003-78004); routine $C (loc_39B92)
+  first decrements `objoff_32` and releases the camera (loc_39BA4, s2.asm:77848-77857) only on the
+  NEXT frame.
+- **Fix:** `AbstractBossInstance` sets a one-frame `deferDefeatRoutineDispatch` flag in
+  `BossHitHandler.triggerDefeat()` (non-sequencer branch) and consumes it at the top of `update()` to
+  skip the first defeat-routine dispatch. File:
+  `src/main/java/com/openggf/level/objects/boss/AbstractBossInstance.java`.
+- **Same-game regression guard** (`TestS2Ehz1TraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay`,
+  single-fork): EHZ1 GREEN, SCZ GREEN, **WFZ REGRESSED**.
+  - **REGRESSION INTRODUCED:** S2 WFZ: GREEN -> first error frame 12886 (`camera_y` expected=0x0448
+    actual=0x0442). Confirmed by A/B: WFZ is green with the fix stashed, fails with it applied.
+    Root: the deferral is placed in the shared `AbstractBossInstance` base, so it also delays the WFZ
+    boss (ObjC5) defeat-timer (`objoff_30=$EF`) by one frame, shifting its post-defeat camera_y
+    release. ObjC5's defeat is set via `routine_secondary=$1E` in `ObjC5_NoHitPointsLeft`
+    (docs/s2disasm/s2.asm:81954-81962) -- a structurally different dispatch from ObjAF's main-`routine`
+    change -- and the engine's WFZ defeat timing was already correct (green) without the deferral. The
+    shared-level deferral double-counts a one-frame offset for WFZ. FOLLOW-UP: scope the deferral to
+    the DEZ boss (per-class hook) or re-derive the WFZ defeat-timer phase so both stay ROM-faithful.
+- Committed under the relaxed bar: genuine ROM-backed advance, same-game regression logged for
+  follow-up investigation rather than blocking the land.
 
 ## 2026-06-04 - arz2 f549->f566: ChopChop (Obj91) X movement via ObjectMove subpixel integration
 
