@@ -4,7 +4,7 @@
 
 **Goal:** Land ROM-frame-exact S2 object load/unload/slot-recycle timing on top of a single `ObjectManager`-owned slot-allocator authority, so MTZ1/MTZ3 (and the wider sidekick cluster) can be re-derived, without leaving non-ROM heuristics running.
 
-**Architecture:** Stage 0 extracts the existing scattered slot mechanics (`allocateSlot`/`allocateSlotAfter`/`releaseSlot`/`reserveDynamicSlot`/`objectIdInSlot`/`usedSlots`/`execOrder`) into one cohesive `SlotAllocator` authority with a **per-game empty predicate** (S1/S2 id-byte, S3K routine-pointer) and explicit identity-clear, and routes every allocation path (windowing, child, dynamic, boss) through it. Stage 1 replaces the S2 manager-level distance/dormancy unload with ROM object-side `MarkObjGone` (`(x&$FF80) − ((cam−$80)&$FF80) > $280`, first-delete bucket $300), corrects S2 frame ordering to exec-then-load, aligns the S2 load cursor to the final `[camRounded−$80, camRounded+$280]` window, and adds a comparison-only slot→id/type occupancy oracle. S1 and S3K are later stages (same loop).
+**Architecture:** Stage 0 extracts the scattered slot **occupancy/allocation** mechanics (`allocateSlot`/`allocateSlotAfter`/`releaseSlot`/`reserveDynamicSlot`/`usedSlots`) into one cohesive `SlotAllocator` authority with a **per-game empty predicate** (S1/S2 id-byte, S3K routine-pointer), and routes every allocation path (windowing, child, dynamic, boss) through it. **`execOrder` and `objectIdInSlot` stay in `ObjectManager`** — `ObjectManager` remains the slot→occupant **identity authority** (the recycled-slot id the MTZ3 invariant reads); the allocator owns only occupancy/allocation. Stage 1 replaces the S2 manager-level distance/dormancy unload with ROM object-side `MarkObjGone` (`(x&$FF80) − ((cam−$80)&$FF80) > $280`, first-delete bucket $300), corrects S2 frame ordering to exec-then-load, aligns the S2 load cursor to the final `[camRounded−$80, camRounded+$280]` window, and adds a comparison-only slot→id/type occupancy oracle. S1 and S3K are later stages (same loop).
 
 **Tech Stack:** Java 21, JUnit 5 (Jupiter), Maven (Maven Silent Extension; `-Dsurefire.forkCount=1 -DreuseForks=true` for trace sweeps), `HeadlessTestRunner`/`HeadlessTestFixture`, trace replay harness (`AbstractTraceReplayTest`), S2 disassembly under `docs/s2disasm/`.
 
@@ -19,7 +19,7 @@
 ## File Structure
 
 **Create:**
-- `src/main/java/com/openggf/level/objects/SlotAllocator.java` — the single SST slot authority: occupancy (`usedSlots` BitSet + `execOrder`), `allocate()`/`allocateAfter(parent)`/`reserve(slot)`/`release(slot)`/`isEmpty(slot)`/`occupantIdInSlot(slot)`, parameterized by `ObjectSlotLayout` + a `SlotEmptyPredicate`.
+- `src/main/java/com/openggf/level/objects/SlotAllocator.java` — the single SST **occupancy/allocation** authority: `usedSlots` BitSet + `allocate()`/`allocateAfter(parent)`/`reserve(slot)`/`release(slot)`/`isEmpty(slot)`, parameterized by `ObjectSlotLayout` + a `SlotEmptyPredicate`. Does **not** hold `execOrder` or report occupant ids — `ObjectManager` keeps `execOrder` + `objectIdInSlot` as the identity authority.
 - `src/main/java/com/openggf/level/objects/SlotEmptyPredicate.java` — per-game enum/strategy documenting the ROM identity field read by `AllocateObject` (S1/S2 = `ID_BYTE`, S3K = `ROUTINE_POINTER`); used for parity reasoning + S3K-later wiring. (Engine occupancy stays BitSet-backed; this records which ROM field the predicate models so S3K isn't wired with an id-byte assumption.)
 - `src/main/java/com/openggf/game/sonic2/objects/S2ObjectWindowing.java` — S2 ROM loader cursor + `MarkObjGone` object-side unload helper, delegating allocation/free to `SlotAllocator`. (Placement-timing port only.)
 - `src/test/java/com/openggf/tests/objects/TestSlotAllocator.java` — Stage 0 unit tests.
@@ -28,7 +28,7 @@
 - `src/test/java/com/openggf/tests/trace/TestS2ObjectOccupancyOracle.java` — runs the oracle on `TestS2MtzLevelSelectTraceReplay` + one green S2 trace.
 
 **Modify:**
-- `src/main/java/com/openggf/level/objects/ObjectManager.java` — own a `SlotAllocator` field; replace the private `allocateSlot`/`allocateSlotAfter`/`releaseSlot`/`reserveDynamicSlot`/`objectIdInSlot` bodies + `usedSlots`/`execOrder` fields with delegation to it (call sites unchanged in signature); Stage 1: swap the S2 unload path off `isOutOfRangeS1` onto `S2ObjectWindowing.markObjGone`, and fix the S2 exec/load ordering (`update()` `:716-746`).
+- `src/main/java/com/openggf/level/objects/ObjectManager.java` — own a `SlotAllocator` field; replace the private `allocateSlot`/`allocateSlotAfter`/`releaseSlot`/`reserveDynamicSlot` bodies + the `usedSlots` BitSet field with delegation to it (call sites unchanged in signature). **Keep** `execOrder` and `objectIdInSlot` here (identity authority). Stage 1: swap the S2 unload path off `isOutOfRangeS1` onto `S2ObjectWindowing.markObjGone`, fix the S2 exec/load ordering across **both** load sites (`update()` `:716-746` AND the post-block `:775-782`), and wire the S2 cursor scan to `S2ObjectWindowing` final boundaries.
 - `src/main/java/com/openggf/level/spawn/AbstractPlacementManager.java` — Stage 1: S2 window math sourced from `S2ObjectWindowing` (final `[−$80,+$280]` boundaries); remove the S2 dormancy path once `MarkObjGone` drives unload.
 - `docs/TRACE_FRONTIER_LOG.md` — cascade-map entries per stage.
 - `CHANGELOG.md` — Stage 1 engine change.
@@ -106,17 +106,14 @@ class TestSlotAllocator {
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails to compile**
+- [ ] **Step 2: Run to verify it fails to compile (observe locally — do NOT commit)**
 
 Run: `mvn -q -Dmse=relaxed "-Dtest=TestSlotAllocator" test`
 Expected: COMPILE FAILURE — `SlotAllocator` / `SlotEmptyPredicate` do not exist.
 
-- [ ] **Step 3: Commit the failing test**
+- [ ] **Step 3: Hold the test uncommitted.** Per the repo's red-to-green commit discipline (below), do **not** commit a non-compiling test — it would leave the branch unbuildable between commits and trip hooks/CI. Tasks 0.2 + 0.3 add the implementation; **Task 0.3 commits this test together with `SlotAllocator` once green.**
 
-```bash
-git add src/test/java/com/openggf/tests/objects/TestSlotAllocator.java
-git commit -m "test: characterize SlotAllocator authority (stage 0, failing)"
-```
+> **Commit discipline (whole plan):** write the failing test, observe the failure **locally**, implement, then commit the **compiling red-to-green** result (test + implementation together) in one commit. Never commit a non-compiling or red state.
 
 ### Task 0.2: Create `SlotEmptyPredicate`
 
@@ -247,11 +244,11 @@ public final class SlotAllocator {
 Run: `mvn -q -Dmse=relaxed "-Dtest=TestSlotAllocator" test`
 Expected: PASS (all 5).
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Commit (test + implementation together, green)**
 
 ```bash
-git add src/main/java/com/openggf/level/objects/SlotAllocator.java
-git commit -m "feat: SlotAllocator — single SST slot authority (stage 0)"
+git add src/main/java/com/openggf/level/objects/SlotAllocator.java src/test/java/com/openggf/tests/objects/TestSlotAllocator.java
+git commit -m "feat: SlotAllocator — single SST occupancy/allocation authority + tests (stage 0)"
 ```
 
 ### Task 0.4: Route `ObjectManager` through `SlotAllocator` (delegation, identical behavior)
@@ -277,7 +274,7 @@ public boolean reserveDynamicSlot(int slotIndex) { return slotAllocator.reserve(
 public int allocateSlotAfter(int parentSlot) { return slotAllocator.allocateAfter(parentSlot); }
 private void releaseSlot(int slotIndex) { slotAllocator.release(slotIndex); }
 ```
-Delete the now-dead `usedSlots` BitSet field and `peakSlotCount` int; replace any `usedSlots.*` reads elsewhere (grep `usedSlots`) — `peakSlotCount` reads become `slotAllocator.peakSlotCount()`; any `usedSlots.clear()` reset becomes `slotAllocator.clear()`. Keep `execOrder` as-is for now (instance ordering is separate from occupancy).
+Delete the now-dead `usedSlots` BitSet field and `peakSlotCount` int; replace any `usedSlots.*` reads elsewhere (grep `usedSlots`) — `peakSlotCount` reads become `slotAllocator.peakSlotCount()`; any `usedSlots.clear()` reset becomes `slotAllocator.clear()`. **Keep `execOrder` AND `objectIdInSlot` in `ObjectManager`, unchanged** — `ObjectManager` stays the slot→occupant identity authority (the recycled-slot id the MTZ3 invariant reads); the allocator owns occupancy only. Do **not** delegate or move `objectIdInSlot`.
 
 - [ ] **Step 3: Build + run the object/slot regression guards**
 
@@ -527,11 +524,15 @@ void recycle_releasedSlotIsReusedAndIdentityCleared() {
 }
 ```
 
-- [ ] **Step 2: Run** → PASS (the allocator already supports this; this locks the recycle invariant the foundation depends on). **Step 3: Commit**
+- [ ] **Step 2: Run** → PASS (allocator-level reuse). NOTE: this proves slot *reuse* only, not "the slot now reports the new occupant's id".
+
+- [ ] **Step 3: Add the `ObjectManager`-level recycle-IDENTITY test** (the MTZ3 invariant) — using the headless object harness (see `TestHeadlessWallCollision`/`HeadlessTestRunner` setup; reset singletons via `@FullReset`/`SingletonResetExtension`): spawn object A into a dynamic slot via the manager, assert `om.objectIdInSlot(slot) == A.objectId`; destroy A and run the unload so the slot is released; spawn object B which recycles the **same** slot, assert `om.objectIdInSlot(slot) == B.objectId` (NOT A's, NOT −1). File: `src/test/java/com/openggf/tests/objects/TestObjectManagerSlotRecycleIdentity.java`. This is the engine-level proof that the recycled slot reports the new id, which the sidekick despawn compare reads. *(The Task 1.7 occupancy oracle is the per-frame integration proof of the same invariant across a real trace.)*
+
+- [ ] **Step 4: Run** → PASS. **Step 5: Commit**
 
 ```bash
-git add src/test/java/com/openggf/tests/objects/TestSlotAllocator.java
-git commit -m "test: lock slot-recycle identity invariant (stage 1)"
+git add src/test/java/com/openggf/tests/objects/TestSlotAllocator.java src/test/java/com/openggf/tests/objects/TestObjectManagerSlotRecycleIdentity.java
+git commit -m "test: slot-recycle reuse + objectIdInSlot reports new occupant (stage 1)"
 ```
 
 ### Task 1.4: Build the comparison-only occupancy oracle
@@ -541,7 +542,9 @@ git commit -m "test: lock slot-recycle identity invariant (stage 1)"
 - Create: `src/test/java/com/openggf/tests/trace/TestS2ObjectOccupancyOracle.java`
 - Reference: `com.openggf.trace.TraceData`/`TraceEvent` (read its `object_appeared`/`object_removed`/`object_near` records), `AbstractTraceReplayTest` (how it steps frames + exposes engine state), `ObjectManager.objectIdInSlot`.
 
-- [ ] **Step 1: Write the oracle** — reconstruct expected per-frame slot→id occupancy from the trace events and diff against the engine. **Comparison-only: it must never write engine state.** If the recorder cannot express a same-frame delete+reallocate of one slot (see spec §7 caveat), fall back to comparing the full per-frame slot→id snapshot table rather than transition deltas. Skeleton:
+- [ ] **Step 0: Add `ObjectManager.occupiedDynamicSlotIds()`** — a read-only `Map<Integer,Integer>` (slot→`spawn.objectId()&0xFF`) for every live (non-destroyed, spawn-backed) dynamic-slot occupant, built from the same `getActiveObjects()` scan `objectIdInSlot` uses (`ObjectManager.java:1477-1490`). This is the engine side of the oracle's extra-occupant detection. Commit with the oracle in Step 4.
+
+- [ ] **Step 1: Write the oracle** — reconstruct expected per-frame slot→id occupancy from the trace events and diff against the engine **in both directions** (missing/wrong expected slots AND extra engine occupants ROM unloaded). **Comparison-only: it must never write engine state.** If the recorder cannot express a same-frame delete+reallocate of one slot (see spec §7 caveat), fall back to comparing the full per-frame slot→id snapshot table rather than transition deltas. Skeleton:
 
 ```java
 package com.openggf.tests.trace;
@@ -564,16 +567,33 @@ public final class ObjectOccupancyOracle {
         return occ;
     }
 
-    /** Returns the first frame where engine slot occupancy differs from expected, or null. */
+    /**
+     * First slot where engine occupancy differs from ROM expected, or null.
+     * Compares BOTH directions: a wrong/missing expected slot AND an EXTRA engine
+     * occupant absent from ROM (engine kept an object loaded ROM had unloaded —
+     * the MTZ3 failure mode). Uses {@code -1} to mean "empty" on either side.
+     */
     public static Divergence firstDivergence(TraceData trace, ObjectManager om, int frame) {
         Map<Integer,Integer> expected = expectedOccupancy(trace, frame);
-        for (var e : expected.entrySet()) {
-            int slot = e.getKey();
-            int want = e.getValue();
-            int got = om.objectIdInSlot(slot);
-            if (want != got) return new Divergence(frame, slot, want, got);
+        Map<Integer,Integer> actual = engineOccupancy(om); // slot -> id for every live dynamic slot
+        java.util.TreeSet<Integer> slots = new java.util.TreeSet<>();
+        slots.addAll(expected.keySet());
+        slots.addAll(actual.keySet());
+        for (int slot : slots) {
+            int want = expected.getOrDefault(slot, -1);
+            int got = actual.getOrDefault(slot, -1);
+            if (want != got) return new Divergence(frame, slot, want, got); // missing, wrong, OR extra
         }
         return null;
+    }
+
+    /** Engine slot->id for every occupied dynamic slot (extra-occupant detection). */
+    private static Map<Integer,Integer> engineOccupancy(ObjectManager om) {
+        Map<Integer,Integer> m = new HashMap<>();
+        // Add ObjectManager.occupiedDynamicSlotIds() (Task 1.4 Step 0): returns slot->id
+        // for every live (non-destroyed, spawn-backed) dynamic-slot occupant.
+        for (var e : om.occupiedDynamicSlotIds().entrySet()) m.put(e.getKey(), e.getValue());
+        return m;
     }
 }
 ```
@@ -587,24 +607,65 @@ git add src/test/java/com/openggf/tests/trace/ObjectOccupancyOracle.java src/tes
 git commit -m "test: comparison-only S2 object occupancy oracle (stage 1 measurement)"
 ```
 
+### Task 1.4b: Wire the S2 load cursor scan to `S2ObjectWindowing` final boundaries
+
+**Files:**
+- Modify: `src/main/java/com/openggf/level/spawn/AbstractPlacementManager.java` (the S2 window source) and/or the S2 `Placement` in `ObjectManager.java:3459-3758` + the `syncActiveSpawnsLoad(true)` path (grep it).
+- Test: `src/test/java/com/openggf/tests/objects/TestS2ObjectWindowing.java` (add a spawn-list scan test).
+
+The S2 load must consume `S2ObjectWindowing.forwardLoadEdge`/`backwardLoadEdge`/`leftTrimEdge`/`rightTrimEdge` as the **final** load/trim boundaries, driven by camera **motion direction** (ROM keeps a right cursor + left cursor and loads forward when the camera moved right, backward when it moved left — `s2.asm:33026` `ObjectsManager_GoingForward`/`GoingBackward`). The current `AbstractPlacementManager.getWindowStart/getWindowEnd` (`:181-189`) is a symmetric window-recompute; at native width its edges already equal `loadCoarse−$80`/`loadCoarse+$280`, but it is not directional and the trim side is not ROM-cursor-shaped.
+
+- [ ] **Step 1: Read** `AbstractPlacementManager.getWindowStart/getWindowEnd`, the S2 `Placement.update`/`syncActiveSpawnsLoad` path, and confirm the directional-cursor gap vs `ObjectsManager_GoingForward/GoingBackward`.
+- [ ] **Step 2: Write the failing scan test** — a real sorted spawn list (e.g. x = {0x1000, 0x1180, 0x1400, 0x1700, 0x1A00}) driven through camera motion **forward then reverse**, asserting:
+  - moving forward, a spawn loads exactly when `spawn.x <= forwardLoadEdge(cam)` and not before (boundary spawn at `forwardLoadEdge` loads; at `forwardLoadEdge + 1` does not);
+  - the left cursor trims a spawn exactly at `leftTrimEdge(cam)`;
+  - moving backward, loads use `backwardLoadEdge(cam)` and the right cursor trims at `rightTrimEdge(cam)`;
+  - no spawn loads/trims `$80` early or late (the trap from the spec).
+
+```java
+@Test
+void s2DirectionalScanLoadsAtFinalBoundaries() {
+    // Pseudocode contract — implement against the real Placement/scan once read:
+    // ForwardScan fwd = new ForwardScan(spawnXs);
+    // assertTrue(fwd.loadsAt(spawnX, cam) == (spawnX <= S2ObjectWindowing.forwardLoadEdge(cam)));
+    // assertTrue(fwd.trimsAt(spawnX, cam) == (spawnX < S2ObjectWindowing.leftTrimEdge(cam)));
+    // ... and the backward-direction analogue with backwardLoadEdge/rightTrimEdge ...
+}
+```
+
+- [ ] **Step 3: Implement** the directional S2 cursor scan consuming the `S2ObjectWindowing` edges (replace the symmetric window source for S2; keep S1/S3K on their existing paths this stage).
+- [ ] **Step 4: Run** the scan test → PASS. **Step 5: Commit** (test + impl together, green):
+
+```bash
+git add src/main/java/com/openggf/level/spawn/AbstractPlacementManager.java src/main/java/com/openggf/level/objects/ObjectManager.java src/test/java/com/openggf/tests/objects/TestS2ObjectWindowing.java
+git commit -m "feat: S2 directional load cursor consumes ROM final boundaries (stage 1)"
+```
+
 ### Task 1.5: Wire S2 object-side `MarkObjGone` unload (replace the manager distance heuristic for S2)
 
 **Files:**
 - Modify: `ObjectManager.java` — the S2 unload path. `unloadCounterBasedOutOfRange` `:2520` is S1's counter path; the S2 (exec-then-load / `syncActiveSpawnsUnload` or per-instance) unload currently leans on `isOutOfRangeS1` `:2485`. Route S2 instances' off-screen unload decision through `S2ObjectWindowing.markObjGone(objX, cameraX)` instead of the distance limit, clearing the respawn "loaded" bit (the existing `dispatchDestroyRemoveFromActive`/`removeFromActiveForUnload` respawnable path) then releasing the slot via the allocator.
 
-- [ ] **Step 1: Read** the current S2 unload call path (grep `isOutOfRangeS1`, `syncActiveSpawnsUnload`, `removeFromActiveForUnload`) and identify the S2 branch.
-- [ ] **Step 2: Add an S2 unload decision** that calls `S2ObjectWindowing.markObjGone(referenceX, cameraX)` for S2 (gate by `slotLayout`/game), keeping S1/S3K paths untouched in this stage. Clear the respawn bit + `release(slot)` on delete, matching ROM (`respawn_index != 0` ⇒ clear bit 7; then DeleteObject).
-- [ ] **Step 3: Unit test** the decision wrapper if extracted (assert it delegates to `markObjGone`).
+- [ ] **Step 1: Read** the current S2 unload call path (grep `isOutOfRangeS1`, `syncActiveSpawnsUnload`, `removeFromActiveForUnload`, `outOfRangeReferenceX`) and identify the S2 branch.
+- [ ] **Step 2: Add an S2 unload decision** that calls `S2ObjectWindowing.markObjGone(romXPos, cameraX)` for S2 (gate by `slotLayout`/game), keeping S1/S3K paths untouched in this stage. Clear the respawn bit + `release(slot)` on delete, matching ROM (`respawn_index != 0` ⇒ clear bit 7; then DeleteObject).
+  - **Coordinate-semantics guard (REQUIRED):** ROM `MarkObjGone` reads `x_pos(a0)`, which in this engine is the **centre** X — use `getCentreX()` (or the object's explicit ROM out-of-range reference via the existing `getOutOfRangeReferenceX()`/`outOfRangeReferenceX(...)` path, `ObjectManager.java:2563`), **never** `getX()`/sprite top-left bounds. A top-left X would shift the unload boundary by the object's half-width.
+- [ ] **Step 3: Unit test** the decision wrapper: assert it delegates to `markObjGone` AND that it is fed `getCentreX()` (or the ROM reference X), not `getX()`. Construct a stub object whose `getX()` and `getCentreX()` differ by a known half-width and assert the unload decision uses the centre value (the object stays loaded at a centre-X inside the window even though its top-left X is outside it, and vice-versa).
 - [ ] **Step 4: Targeted trace check** — `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 "-Ds2.rom.path=<abs>" "-Dtest=TestS2MtzLevelSelectTraceReplay#replayMatchesTrace" test` → record frame movement. **Step 5: Commit.**
 
-### Task 1.6: Correct S2 frame ordering to exec-then-load
+### Task 1.6: Correct S2 frame ordering to exec-then-load (BOTH load sites — there are two)
 
 **Files:**
-- Modify: `ObjectManager.java` `update()` `:716-746` — the S2 (`execThenLoad && !twoAxisCursorPlacement`) branch currently calls `syncActiveSpawnsLoad(true)` then `runExecLoop` (load-then-exec). ROM S2 is `RunObjects` (`s2.asm:5095`) then `ObjectsManager` (`:5112`) = **exec-then-load**.
+- Modify: `ObjectManager.java` `update()` — the S2 path currently loads **twice** per frame:
+  1. **top branch** `:740-743` (`execThenLoad && !twoAxisCursorPlacement`): `syncActiveSpawnsLoad(true)` **then** `runExecLoop(...)` (load-then-exec), and
+  2. **post-block** `:775-782` (`!counterBased`): `placement.update(cameraX)` then again `cleanupDestroyedDynamicObjects()` + `syncActiveSpawnsLoad(true)`.
+  ROM S2 is `RunObjects` (`s2.asm:5095`) then exactly one `ObjectsManager` (`:5112`) = **exec → one load**.
 
-- [ ] **Step 1: Read** the S2 branch + confirm against ROM `Level_MainLoop` ordering. Note: S3K (`twoAxisCursorPlacement`) stays load-then-exec (`Load_Sprites` before `Process_Sprites`, `sonic3k.asm:7884`) — do NOT change it.
-- [ ] **Step 2: Reorder the S2 branch** to run `runExecLoop` (with object-side MarkObjGone self-deletes from Task 1.5) BEFORE the windowing load, matching ROM. Keep S1 (`counterBased`) and S3K branches unchanged.
-- [ ] **Step 3: Targeted + same-game-green check** — run MTZ1/MTZ3 + EHZ1/SCZ/WFZ with `-Dsurefire.forkCount=1`. **Step 4: Commit.**
+- [ ] **Step 1: Read** both sites (`:716-783`) and confirm the double-load. Map which spawns each currently loads (add a temporary log if needed) so Step 2's consolidation is verified, not assumed.
+- [ ] **Step 2: Consolidate S2 to exec → exactly one load.** In the top S2 branch, run `runExecLoop(...)` (with the Task 1.5 object-side `MarkObjGone` self-deletes) **first**, then exactly one `placement.update(cameraX)` + `syncActiveSpawnsLoad(true)` in the ROM `RunObjects → ObjectsManager` position. **Remove (or gate off for S2) the post-block load at `:775-782`** so S2 does not load a second time. Remove the pre-exec top-branch `syncActiveSpawnsLoad(true)` at `:740`. Net S2 per-frame: `runExecLoop` → one `placement.update` + one `syncActiveSpawnsLoad`.
+  - **Camera-timing note:** verify the single load sees the same `cameraX` (pre- vs post-`DeformLayers`) that ROM `ObjectsManager` sees, so cursor/respawn assignment matches. The post-block comment (`:771-774`) documents the S1 post-camera requirement; confirm the S2 load's `cameraX` source against ROM before finalizing the position.
+  - **Do NOT change** the S1 (`counterBased`) branch or the S3K (`twoAxisCursorPlacement`) branch — S3K stays load-then-exec (`Load_Sprites` before `Process_Sprites`, `sonic3k.asm:7884`).
+- [ ] **Step 3: Add a frame-ordering assertion** — a focused test (headless ObjectManager, S2 layout) that loads/executes are called in the order exec→load exactly once each per frame for S2 (e.g. via a spy/counter on the load + exec entry points), guarding against re-introducing a second load.
+- [ ] **Step 4: Targeted + same-game-green check** — run MTZ1/MTZ3 + EHZ1/SCZ/WFZ with `-Dsurefire.forkCount=1`; confirm no double-load artifacts (object count per frame sane). **Step 5: Commit.**
 
 ### Task 1.7: Occupancy oracle passes for S2 up to frontier; enable the assert
 
@@ -632,7 +693,8 @@ git commit -m "test: comparison-only S2 object occupancy oracle (stage 1 measure
 
 ## Self-Review
 
-- **Spec coverage:** §2 invariants → Tasks 1.1/1.3; §3 single-authority allocator → Stage 0 (0.2-0.5); §4 S2 loader/unload/ChkLoadObj/Allocate/Delete → 1.1/1.2/1.5; §5 S2 exec-then-load ordering → 1.6 (S3K load-then-exec explicitly preserved); §6 slot recycle + interact → 1.3; §7 occupancy oracle (slot→id, same-frame-recycle caveat) → 1.4/1.7; §8 edge-case tests → 1.1/1.2/0.1/1.3; §9 cascade loop → 1.9. S1/S3K loaders are explicitly later stages (not in this plan) — flagged in the plan goal.
-- **Placeholder scan:** Tasks 1.5/1.6/1.8 intentionally use read-then-modify steps (not full code) because they edit specific branches of the 8851-line `ObjectManager`; each names the exact method/line and the precise transformation + ROM citation. All NEW components (SlotAllocator, S2ObjectWindowing, predicate, tests) have complete code. Oracle `expectedOccupancy` body is a skeleton against `TraceData`'s event API — the implementing agent fills it against the real accessors (called out in Task 1.4 Step 1).
-- **Type consistency:** `SlotAllocator.allocate/allocateAfter/reserve/release/isEmpty/clear/peakSlotCount`, `SlotEmptyPredicate.ID_BYTE/ROUTINE_POINTER`, `S2ObjectWindowing.loadCoarse/unloadCoarse/forwardLoadEdge/leftTrimEdge/backwardLoadEdge/rightTrimEdge/markObjGone/chkLoadObj/LoadOutcome` are used consistently across tasks.
+- **Spec coverage:** §2 invariants → Tasks 1.1/1.3; §3 single-authority **occupancy/allocation** (identity stays in ObjectManager) → Stage 0 (0.2-0.5); §4 S2 loader window/scan → 1.1 + **1.4b**, ChkLoadObj → 1.2, unload + coordinate-semantics → 1.5, Allocate/Delete recycle → 0.3/1.3; §5 S2 exec-then-**one**-load across **both** load sites → 1.6 (S3K load-then-exec preserved); §6 slot recycle + **objectIdInSlot-reports-new-id** → 1.3 (allocator reuse + ObjectManager identity test) + 1.7 (oracle); §7 occupancy oracle **bidirectional** (missing/wrong AND extra occupants) + same-frame-recycle caveat → 1.4/1.7; §8 edge-case tests → 1.1/1.2/0.1/1.3/1.4b; §9 cascade loop → 1.9. S1/S3K loaders are explicitly later stages.
+- **Review-fix coverage:** [P1] second S2 load site → 1.6 Step 2; [P1] loader-window wiring → 1.4b; [P1] identity authority (ObjectManager keeps objectIdInSlot; recycle-id test) → arch text + 0.4 + 1.3; [P1] oracle bidirectional → 1.4 firstDivergence + `occupiedDynamicSlotIds`; [P2] coordinate semantics (`getCentreX`) → 1.5; [P2] execOrder consistency (stays in ObjectManager) → arch + file structure + 0.4; [P2] no committing non-compiling tests → red-to-green commit discipline (0.1 Step 3, applied throughout).
+- **Placeholder scan:** Tasks 1.4b/1.5/1.6/1.8 use read-then-modify steps (not full code) because they edit specific branches of the 8851-line `ObjectManager`/`AbstractPlacementManager`; each names the exact method/line + the precise transformation + ROM citation. All NEW components have complete code; oracle `expectedOccupancy` + the 1.4b scan test are skeletons against the real `TraceData`/`Placement` APIs, explicitly called out for the implementing agent to fill.
+- **Type consistency:** `SlotAllocator.allocate/allocateAfter/reserve/release/isEmpty/clear/peakSlotCount`, `SlotEmptyPredicate.ID_BYTE/ROUTINE_POINTER`, `S2ObjectWindowing.loadCoarse/unloadCoarse/forwardLoadEdge/leftTrimEdge/backwardLoadEdge/rightTrimEdge/markObjGone/chkLoadObj/LoadOutcome`, `ObjectManager.objectIdInSlot/occupiedDynamicSlotIds` are used consistently across tasks.
 - **Scope:** Stage 0 + Stage 1 only; produces working, testable software (clean allocator substrate + ROM-timed S2 windowing). S1/S3K are separate later plans.
