@@ -1,13 +1,50 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectWindowingStrategy;
+
 /**
  * ROM-exact S2 object windowing math (docs/s2disasm/s2.asm).
  * Load base: camRounded = Camera_X_pos &amp; $FF80 (ObjectsManager_Main, s2.asm:33026).
  * Unload base: Camera_X_pos_coarse = (Camera_X_pos - $80) &amp; $FF80 (MarkObjGone, s2.asm:30209).
  * Live window (final boundaries): [camRounded - $80, camRounded + $280] (width $300).
+ *
+ * <p>Implements the shared {@link ObjectWindowingStrategy} so the game-agnostic
+ * {@code com.openggf.level.objects.ObjectManager} consumes S2 windowing through
+ * the interface (injected via {@code Sonic2ObjectRegistry}) rather than importing
+ * this class directly. The static methods remain the ROM-math source of truth and
+ * are reused by the instance overrides and by unit tests.
  */
-public final class S2ObjectWindowing {
+public final class S2ObjectWindowing implements ObjectWindowingStrategy {
+
+    /** Shared stateless S2 windowing strategy instance. */
+    public static final S2ObjectWindowing INSTANCE = new S2ObjectWindowing();
+
     private S2ObjectWindowing() {}
+
+    @Override
+    public boolean overridesLoadWindow() {
+        return true;
+    }
+
+    @Override
+    public int loadWindowForwardEdge(int cameraX) {
+        return forwardLoadEdge(cameraX);
+    }
+
+    @Override
+    public int loadWindowLeftTrimEdge(int cameraX) {
+        return leftTrimEdge(cameraX);
+    }
+
+    @Override
+    public boolean overridesUnloadWindow() {
+        return true;
+    }
+
+    @Override
+    public boolean isOutsideUnloadWindow(int objX, int cameraX) {
+        return markObjGone(objX, cameraX);
+    }
 
     public static final int LOAD_AHEAD = 0x280;
     public static final int TRIM_BEHIND = 0x80;

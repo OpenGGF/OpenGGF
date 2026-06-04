@@ -66,7 +66,7 @@ class TestS2ObjectWindowing {
         int[] spawnXs = {0x1480, 0x1500, edge - 1, edge, edge + 1};
         // Establish a window one chunk back, then scroll forward into cam (forward scan).
         int[] cameraSeq = {0x1400, cam};
-        int[] active = ObjectManager.runS2WindowingScanForTest(spawnXs, cameraSeq);
+        int[] active = ObjectManager.runWindowingScanForTest(spawnXs, cameraSeq, S2ObjectWindowing.INSTANCE);
 
         // edge-1 loads (strictly below edge); edge and edge+1 do NOT (exclusive).
         // 0x1480 == leftTrim survives (trim is x < leftTrim); 0x1500 in window.
@@ -89,7 +89,7 @@ class TestS2ObjectWindowing {
         int[] spawnXs = {0x1480, 0x1500, fwdEdge - 1};
         // Forward into 0x1500 (loads fwdEdge-1 = 0x177F), then reverse back to 0x1400.
         int[] cameraSeq = {0x1400, forwardCam, reverseCam};
-        int[] active = ObjectManager.runS2WindowingScanForTest(spawnXs, cameraSeq);
+        int[] active = ObjectManager.runWindowingScanForTest(spawnXs, cameraSeq, S2ObjectWindowing.INSTANCE);
 
         // On reverse, the right cursor trims spawns at/beyond rightTrimEdge (0x1680):
         // 0x177F >= 0x1680 -> trimmed. 0x1480, 0x1500 stay (both < 0x1680, > backLoad).

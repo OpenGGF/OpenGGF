@@ -115,6 +115,11 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
     }
 
     @Override
+    public com.openggf.level.objects.ObjectWindowingStrategy objectWindowingStrategy() {
+        return S2ObjectWindowing.INSTANCE;
+    }
+
+    @Override
     public void reportCoverage(List<ObjectSpawn> spawns) {
         ensureLoaded();
         if (spawns == null || spawns.isEmpty()) {
