@@ -69,6 +69,31 @@
   EHZ1 GREEN, SCZ GREEN, WFZ GREEN. No same-game greens regressed.
   File: `src/main/java/com/openggf/game/sonic2/objects/ButtonObjectInstance.java`.
 
+## 2026-06-04 - dez1 ADVANCED f1023->f1366: DEZ Mecha Sonic Aim&Dash wind-up anim length + boss collision 1-frame lag
+
+- Branch `bugfix/ai-trace-s2-dez1`, worktree `.worktrees/trace-s2-dez1` (off develop `868249c0f`).
+- Command (cmd mvn inside worktree):
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace" test`
+- Status: still FAIL (frontier advanced, not green). Tests run: 1, Failures: 1.
+- Before: 199 errors, first error frame 1023 (`y_speed expected=-03E0 actual=0x03E0`; `x_speed`
+  also flips the same frame). The DEZ Mecha Sonic boss (obj 0xAF) body + window children sat ~0x1F px
+  too far right during the second Aim&Dash, so a rolling player's boss-hit touch overlap registered ~4
+  frames late and the ROM deflection (`neg.w x_vel` / `neg.w y_vel`, Touch_Enemy multi_sprite branch,
+  s2.asm:85261-85276) never fired.
+- After: 148 errors, first error frame 1366 (`camera_x expected=0x0224 actual=0x0225`, single-frame
+  post-defeat camera-unlock off-by-one; distinct subsystem, out of scope for this boss-positioning fix).
+- Root cause (two ROM-faithful corrections, both confined to `Sonic2MechaSonicInstance`):
+  1. `ANIM_3_SPEEDUP` had 21 displayed frames (three leading `3`s). ROM `byte_39DFE` (s2.asm:78141-78142)
+     is `dc.b 3, 3,3, 6,6,6, ... ,$FC`: byte[0]=$3 is the animation SPEED, leaving **20** displayed
+     frames (two leading `3`s). `AnimateSprite_Checked` holds each frame speed+1 (=4) game frames, so the
+     spurious frame stretched the wind-up (loc_39A1C) by 4 frames per attack cycle, delaying the dash.
+  2. ROM `loc_398C0` calls `loc_39D1C` to refresh `collision_flags` from `mapping_frame` BEFORE the
+     routine handler runs `AnimateSprite_Checked` (s2.asm:77570-77584, 78013-78039), so the touch
+     category ($1A standing vs $9A ball) lags the displayed frame by one frame. The engine computed it
+     from the live frame. Modeled the lag by latching `collisionFrame` at the top of `updateBossLogic`.
+     Without this, fix #1 moved ball-form one step early and a rolling fall at f536 took a HURT instead
+     of the standing-form deflect; the lag restores the f536 deflect.
+
 ## 2026-06-04 - cnz1 RESTORED f3831->f3906: S2 post-camera gap-scan now bypasses the vertical load filter (ObjD4 cadence fixed)
 
 - Branch `bugfix/ai-cnz1-objd4-cadence`, worktree `.worktrees/cnz1-objd4-cadence` (off develop `d192a8087`).

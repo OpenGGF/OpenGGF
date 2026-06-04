@@ -125,14 +125,20 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance {
     // Anim 2: dash start (speed 3, stall) — used in Dash Across second half
     private static final int[] ANIM_2_DASH = {4, 5, 4, 3};
     // Anim 3: speed-up ball form (speed 3, stall) — aim phase wind-up.
-    // ROM byte_39DFE (s2.asm:78141-78142): dc.b 3, 3,3,3, 6,6,6, 7,7,7, 8,8,8, 6,6, 7,7, 8,8, 6,7,8, $FC
-    // i.e. THREE leading standing (frame 3) entries before the ball frames begin.
-    // The engine previously had only two leading 3s, which advanced the body into
-    // ball form (frames 6/7/8 -> collision_flags $9A/HURT) one anim-step (4 frames)
-    // early. That made a rolling Sonic falling into the boss register a HURT touch
-    // instead of the standing-form ($1A/ENEMY) boss-bounce the ROM produces
-    // (loc_39D24 gates ball vs standing strictly on mapping_frame, s2.asm:78017-78039).
-    private static final int[] ANIM_3_SPEEDUP = {3, 3, 3, 6, 6, 6, 7, 7, 7, 8, 8, 8, 6, 6, 7, 7, 8, 8, 6, 7, 8};
+    // ROM byte_39DFE (s2.asm:78141-78142):
+    //   dc.b 3, 3,3, 6,6,6, 7,7,7, 8,8,8, 6,6, 7,7, 8,8, 6,7,8, $FC
+    // byte[0]=$3 is the animation SPEED (held separately in ANIM_SPEEDS[3]), NOT a
+    // displayed frame. The displayed-frame list is the 20 bytes after it (two leading
+    // standing "3" frames, then the ball/spin frames). A prior change mis-counted the
+    // speed byte as a third leading "3" (21 displayed frames). AnimateSprite_Checked
+    // holds each frame for speed+1 (=4) game frames, so the spurious frame stretched
+    // the Aim&Dash wind-up (loc_39A1C) by 4 frames every attack cycle; by the second
+    // DEZ Mecha Sonic attack the boss body lagged ROM by ~0x1F px and the rolling
+    // player's boss-hit overlap registered ~4 frames late, so the ROM deflection
+    // (neg.w x_vel / neg.w y_vel, Touch_Enemy multi_sprite branch s2.asm:85261-85276)
+    // never fired at trace frame 1023. loc_39D24 gates ball vs standing collision on
+    // mapping_frame (s2.asm:78017-78039).
+    private static final int[] ANIM_3_SPEEDUP = {3, 3, 6, 6, 6, 7, 7, 7, 8, 8, 8, 6, 6, 7, 7, 8, 8, 6, 7, 8};
     // Anim 4: spin loop (speed 2, loop) — continuous ball spin during dash
     private static final int[] ANIM_4_SPIN = {6, 7, 8};
     // Anim 5: decel spin-down (speed 3, stall) — post-dash walk-out
@@ -168,6 +174,16 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance {
     private int dashRepeatCount;
     private int defeatTimer;
     private int currentFrame;
+    /**
+     * ROM loc_398C0 (s2.asm:77570-77584) calls loc_39D1C to refresh collision_flags
+     * from mapping_frame BEFORE the routine handler runs AnimateSprite_Checked (which
+     * mutates mapping_frame). collision_flags therefore reflects the PREVIOUS frame's
+     * mapping_frame -- a 1-frame lag between the displayed frame and the touch
+     * response category (loc_39D24, s2.asm:78017-78039: $1A standing vs $9A ball).
+     * We mirror that lag by latching the collision-relevant frame at the start of each
+     * boss update from the prior frame's currentFrame.
+     */
+    private int collisionFrame = FRAME_STAND;
     private boolean facingLeft;
     private boolean ballForm;
     private boolean spikeballsFired;
@@ -235,6 +251,11 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance {
     @Override
     protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        // ROM loc_39D1C (s2.asm:78013-78039) runs at the top of the main routine,
+        // BEFORE the per-routine handler animates the sprite. Latch the collision
+        // frame from the value mapping_frame held going into this update so the touch
+        // response category lags the displayed frame by one frame, exactly as ROM.
+        collisionFrame = currentFrame;
         // ROM: AnimateSprite_Checked is NOT called globally. Each routine/phase
         // calls it explicitly only when needed.
         switch (state.routine) {
@@ -884,8 +905,12 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance {
     public int getCollisionFlags() {
         if (state.invulnerable || state.defeated) return 0;
         if (state.routine < ROUTINE_IDLE) return 0;
-        if (currentFrame == FRAME_BALL_A || currentFrame == FRAME_BALL_B
-                || currentFrame == FRAME_BALL_C) {
+        // ROM loc_39D24 (s2.asm:78017-78039): collision_flags is $9A only when the
+        // mapping_frame latched at the top of the update (collisionFrame) is a ball
+        // frame (6/7/8); otherwise $1A. Using the latched frame, not the live one,
+        // preserves the loc_39D1C one-frame lag.
+        if (collisionFrame == FRAME_BALL_A || collisionFrame == FRAME_BALL_B
+                || collisionFrame == FRAME_BALL_C) {
             return COLLISION_BALL;
         }
         return COLLISION_STANDING;
