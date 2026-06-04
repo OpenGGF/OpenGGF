@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+## 2026-06-04 - S2 ROM object-windowing Stage 1 cascade sweep (CNZ1 f3906->f3831, MTZ3 f2638->f2047 expected cascade)
+
+- Worktree: `feature/ai-rom-object-windowing-s2` (Stage 1 tasks 1.1-1.6 + arch fix + test fix).
+- Command (single fork, all ROMs):
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true -Ds1.rom.path=... -Ds2.rom.path=... -Ds3k.rom.path=... -Dtest=*TraceReplay test`
+- Baseline = develop foundation. Full before->after first-error frame table:
+  - S1: all GREEN (unchanged).
+  - S2 GREEN: ehz1, scz, wfz (unchanged).
+  - S2 unchanged frontiers: arz1 2043, arz2 549, cnz2 1775, cpz1 2822, cpz2 2518,
+    dez1 1023, htz1 5647, htz2 1078, mcz1 2181, mcz2 4009, mtz1 375, mtz2 641, ooz1 756, ooz2 389.
+  - S2 MOVED (expected cascade, backward): **cnz1 3906 (tails_y) -> 3831 (x)**;
+    **mtz3 2638 (tails_air) -> 2047 (tails_x)**.
+  - S3K unchanged: aiz 8941, cnz 17276, mgz 4124.
+- Bisect: both moves are clean at 1.4b (18e2dedc0) and 1.5 (5d74d1791); they appear at
+  1.6 (c336b8d56, exec -> exactly one load per frame). The arch refactor (ObjectWindowingStrategy
+  injection) and the test-hygiene fix are confirmed no-ops on every frontier.
+- Verdict: the 1.6 reorder is ROM-correct (s2.asm:5085-5112: a single `ObjectsManager` call
+  AFTER `RunObjects` per frame; the engine previously double-loaded). cnz1 f3831 and mtz3 f2047
+  are both player/sidekick-riding-object interactions (both onObj=33 / onObj=23) where the prior
+  frontier leaned on the old non-ROM double-load timing. They fall in the documented MTZ/object
+  exec-load-unload/slot-recycle blocker class (entry below), which is out of Stage 1 scope. No
+  regression to a previously-GREEN trace; no engine fix warranted (reverting would re-introduce
+  the non-ROM double load).
+
 ## 2026-06-04 - BLOCKER: MTZ1/MTZ3 need off-screen object exec/load-unload/slot-recycle windowing parity
 
 - After the slot-based interact(a0) foundation (7d45d28a9), mtz1 (f375) and mtz3 (f2638) are both
