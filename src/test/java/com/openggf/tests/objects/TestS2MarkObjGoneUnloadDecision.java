@@ -17,11 +17,13 @@ import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.tests.FullReset;
+import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestEnvironment;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
  * Task 1.5 coordinate-semantics guard for the S2 object-side unload.
@@ -40,6 +42,7 @@ import org.junit.jupiter.api.Test;
  * matches {@code markObjGone(centreX, cameraX)} — i.e. the decision is fed the
  * centre, not the top-left.
  */
+@ExtendWith(SingletonResetExtension.class)
 @FullReset
 public class TestS2MarkObjGoneUnloadDecision {
 

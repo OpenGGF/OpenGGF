@@ -18,11 +18,13 @@ import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.tests.FullReset;
+import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestEnvironment;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
  * Engine-level proof of the MTZ3 slot-recycle invariant: after an object is
@@ -37,6 +39,7 @@ import org.junit.jupiter.api.Test;
  * proves only allocator-level slot reuse. The Task 1.7 occupancy oracle is the
  * per-frame integration proof of the same invariant across a real trace.
  */
+@ExtendWith(SingletonResetExtension.class)
 @FullReset
 public class TestObjectManagerSlotRecycleIdentity {
 
