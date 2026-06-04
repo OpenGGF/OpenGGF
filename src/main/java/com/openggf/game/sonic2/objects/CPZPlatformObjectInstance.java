@@ -107,6 +107,18 @@ public class CPZPlatformObjectInstance extends AbstractObjectInstance
         return new SolidObjectParams(widthPixels, HALF_HEIGHT, HALF_HEIGHT);
     }
 
+    /**
+     * ROM Obj19 stores its subtype-driven {@code width_pixels} ($20/$18/$40,
+     * see SUBTYPE_PROPERTIES) in the SST byte the player balance routines read
+     * (s2.asm:36586/39707 {@code move.b width_pixels(a1),d1}). The shared
+     * default of 16 px would place a balancing rider on the wrong object edge,
+     * so report the platform's actual {@code width_pixels} for balance.
+     */
+    @Override
+    public int getBalanceWidthPixels() {
+        return widthPixels;
+    }
+
     @Override
     public boolean isTopSolidOnly() {
         return true;

@@ -377,13 +377,22 @@ public class MovingVineObjectInstance extends AbstractObjectInstance {
             return;
         }
 
-        // Check for a new A/B/C press to release. Obj80 receives the full Ctrl_1
-        // word (docs/s2disasm/s2.asm:56279-56288), whose low byte is press
-        // bits from Joypad_Read (s2.asm:1362-1387). Directional release uses
-        // the high held byte later, but A/B/C release does not treat a held jump
-        // from the grab frame as another release input.
-        // ROM: andi.b #button_B_mask|button_C_mask|button_A_mask,d0 / beq.w loc_29B50
-        if (player.isJumpJustPressed()) {
+        // Check for a new A/B/C press to release. Obj80_Action reads the RAW
+        // HELD controller word -- (Ctrl_1) for the MainCharacter and (Ctrl_2)
+        // for the Sidekick (docs/s2disasm/s2.asm:56695,56699) -- and releases
+        // only on an A/B/C press bit in that raw word
+        // (andi.b #button_B_mask|button_C_mask|button_A_mask,d0 / beq.w loc_29B50,
+        // docs/s2disasm/s2.asm:56711-56712). The S2 Tails CPU writes its
+        // synthesized follow-jump only to Ctrl_2_Logical
+        // (docs/s2disasm/s2.asm:39375), never to the physical (Ctrl_2); in 1P
+        // Sonic+Tails mode no controller 2 is plugged in, so (Ctrl_2)=0 and the
+        // CPU sidekick can never satisfy this release -- it stays pinned to the
+        // vine. isRawControllerJumpJustPressed() models exactly that raw (Ctrl_2)
+        // semantic (0 for a CPU sidekick) and falls through to isJumpJustPressed()
+        // for human-controlled sprites, so Sonic on controller 1 is unaffected.
+        // This matches the sister object Obj7F (VineSwitchObjectInstance, which
+        // reads the same raw (Ctrl_1)/(Ctrl_2) word, docs/s2disasm/s2.asm:56463-56491).
+        if (player.isRawControllerJumpJustPressed()) {
             releasePlayer(player, isPlayer2, true);
             return;
         }

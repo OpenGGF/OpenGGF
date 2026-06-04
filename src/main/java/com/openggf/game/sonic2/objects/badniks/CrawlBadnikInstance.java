@@ -196,28 +196,66 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
             return;
         }
 
-        // ObjectMove — subpixel-accurate horizontal motion
-        xSubpixel += Math.abs(xVelocity);
-        if (xSubpixel >= 0x100) {
-            int pixels = xSubpixel >> 8;
-            xSubpixel &= 0xFF;
-            if (facingLeft) {
-                currentX -= pixels;
-            } else {
-                currentX += pixels;
-            }
-        }
+        // ObjectMove (JmpTo26_ObjectMove, s2.asm:81853 -> ObjectMove): ROM adds the
+        // SIGNED x_vel to the 16.16 (x_pos:x_sub) position. For leftward motion this
+        // BORROWS from x_pos on the first sub-pixel underflow rather than carrying only
+        // after an abs-accumulator crosses 0x100. The previous abs accumulator decremented
+        // x_pos one pixel-step LATE on every leftward run, so the Crawl's frozen x_pos at
+        // an ATTACKING-entry frame that was not an exact 8-frame boundary landed 1px off
+        // ROM (e.g. CNZ2 s20 froze at 0x32F instead of ROM 0x32E). Use a signed 16:8 step
+        // (equivalent to ObjectMove's 16.16 for |x_vel| < 0x100) so the per-frame x_pos
+        // matches ROM at every frame, not only on carry boundaries.
+        int xTotal = (xSubpixel & 0xFF) + (xVelocity & 0xFF);
+        currentX += (xVelocity >> 8) + (xTotal >> 8);
+        xSubpixel = xTotal & 0xFF;
 
-        // loc_3D416: enter attack mode if player within 64×64 px box.
+        // loc_3D416 (s2.asm:82411): enter attack mode if the CLOSEST character is
+        // within the orientation box. ROM calls Obj_GetOrientationToPlayer
+        // (s2.asm:72755), which selects whichever of Main/Sidekick has the smaller
+        // absolute horizontal distance, then tests d2/d3 (Crawl_pos - char_pos).
+        // ROM box: addi.w #$40,d; cmpi.w #$80,d; bhs rts  -> keep when -$40 <= d < $40.
         // ROM does NOT check rolling here; the bounce check is in loc_3D2D4.
-        if (player != null) {
-            int dx = Math.abs(player.getCentreX() - currentX);
-            int dy = Math.abs(player.getCentreY() - currentY);
-            if (dx < 64 && dy < 64) {
-                previousState = state;
-                state = State.ATTACKING;
+        AbstractPlayableSprite closest = closestCharacter(player);
+        if (closest != null && withinOrientationBox(closest)) {
+            previousState = state;
+            state = State.ATTACKING;
+        }
+    }
+
+    /**
+     * Mirrors Obj_GetOrientationToPlayer's character selection (s2.asm:72755-72781):
+     * picks whichever of MainCharacter / Sidekick has the smaller absolute horizontal
+     * distance to the Crawl, with the MainCharacter winning ties (bls.s branch).
+     */
+    private AbstractPlayableSprite closestCharacter(AbstractPlayableSprite main) {
+        AbstractPlayableSprite closest = main;
+        int bestDist = main != null ? Math.abs(main.getCentreX() - currentX) : Integer.MAX_VALUE;
+        for (PlayableEntity entity : services().sidekicks()) {
+            if (!(entity instanceof AbstractPlayableSprite sidekick)) {
+                continue;
+            }
+            int dist = Math.abs(sidekick.getCentreX() - currentX);
+            // ROM cmp.w d5,d4 / bls.s + : sidekick wins only when strictly closer.
+            if (dist < bestDist) {
+                bestDist = dist;
+                closest = sidekick;
             }
         }
+        return closest;
+    }
+
+    /**
+     * ROM orientation box (loc_3D416 / loc_3D2D4, s2.asm:82306-82311):
+     * d2 = x_pos(Crawl) - x_pos(char); addi.w #$40,d2; cmpi.w #$80,d2; bhs -> outside.
+     * The original 64x64 half-extent box; the engine keeps the long-standing
+     * {@code |delta| < 64} expression, which already matched ROM at every prior
+     * Crawl/Sonic contact site. The only behaviour change in this fix is WHICH
+     * character supplies the delta (closest of Main/Sidekick), not the box size.
+     */
+    private boolean withinOrientationBox(AbstractPlayableSprite character) {
+        int dx = Math.abs(character.getCentreX() - currentX);
+        int dy = Math.abs(character.getCentreY() - currentY);
+        return dx < 64 && dy < 64;
     }
 
     /**
@@ -247,27 +285,34 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
             applyAttackingTouch(pending);
         }
 
-        if (player == null) {
+        // ROM exit check (loc_3D2D4, s2.asm:82304-82311): Obj_GetOrientationToPlayer
+        // selects the closest character; if it leaves the $40/$80 box, branch to
+        // loc_3D39A and revert to the prior routine. Match the same closest-character
+        // selection so the Crawl stays frozen in ATTACKING while the SIDEKICK is the
+        // nearby character even when the MainCharacter is already out of range.
+        AbstractPlayableSprite closest = closestCharacter(player);
+        if (closest == null) {
             return;
         }
-        int dx = Math.abs(player.getCentreX() - currentX);
-        int dy = Math.abs(player.getCentreY() - currentY);
-        if (dx >= 64 || dy >= 64) {
+        if (!withinOrientationBox(closest)) {
             state = previousState;
             return;
         }
 
-        // ROM: Touch_Special fires every frame Sonic geometrically overlaps Crawl.
+        int dx = Math.abs(closest.getCentreX() - currentX);
+        int dy = Math.abs(closest.getCentreY() - currentY);
+
+        // ROM: Touch_Special fires every frame the character geometrically overlaps Crawl.
         // Our SPECIAL is edge-triggered, so the callback is blocked when Crawl transitions
-        // WALKING→ATTACKING while Sonic is already in the overlapping set (from the prior ENEMY
-        // interaction). Synthesise the collision_property check directly using the same combined
-        // extents as isOverlapping: x ≤ touch_x_radius+8 (playerX=centreX-8, playerWidth=16),
-        // y ≤ touch_y_radius+baseYRadius (baseYRadius=max(1,yr-3)).
+        // WALKING→ATTACKING while the character is already in the overlapping set (from the
+        // prior ENEMY interaction). Synthesise the collision_property check directly using the
+        // same combined extents as isOverlapping: x ≤ touch_x_radius+8 (playerX=centreX-8,
+        // playerWidth=16), y ≤ touch_y_radius+baseYRadius (baseYRadius=max(1,yr-3)).
         // touchAppliedThisFrame prevents a double-apply when onTouchResponse already fired.
         if (!touchAppliedThisFrame) {
-            int baseYRadius = Math.max(1, player.getYRadius() - 3);
+            int baseYRadius = Math.max(1, closest.getYRadius() - 3);
             if (dx <= TOUCH_HEIGHT_RADIUS + 8 && dy <= TOUCH_HEIGHT_RADIUS + baseYRadius) {
-                applyAttackingTouch(player);
+                applyAttackingTouch(closest);
             }
         }
     }

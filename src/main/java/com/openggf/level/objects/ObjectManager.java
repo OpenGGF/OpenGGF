@@ -5960,6 +5960,18 @@ public class ObjectManager {
         // Standing/riding contacts still apply in pre-movement for platform delta tracking.
         private boolean deferSideToPostMovement;
 
+        // ROM Obj70 (MTZ Cog) allocates one SST slot per tooth and runs each slot's
+        // SolidObject independently in ascending allocation order (s2.asm:55039-55078,
+        // 55080-55141). An earlier-slot tooth therefore side-pushes Sonic BEFORE the
+        // ridden tooth's standing-bit ExitPlatform branch (loc_19896, s2.asm:35196-35214)
+        // re-checks the ride bounds against the pushed x_pos. The engine resolves the
+        // riding/ExitPlatform branch up front (before processMultiPieceCollision applies
+        // sibling side-pushes), so for providers that opt into
+        // resolvesEarlierPiecesBeforeRidingPiece() we pre-apply the earlier-slot pieces'
+        // side-push here and record how many were resolved so the main multi-piece pass
+        // skips re-pushing them. -1 means "no earlier-piece pre-resolution this frame".
+        private int multiPieceEarlierPiecesResolvedUpTo = -1;
+
         private final Map<PlayableEntity, PlayerStandingState> latestStandingSnapshots =
                 new IdentityHashMap<>(2);
         private final Map<PlayableEntity, Map<Integer, Integer>> latestHeadroomSnapshots =
@@ -6388,6 +6400,11 @@ public class ObjectManager {
                 return null;
             }
 
+            // Reset per-object/per-player multi-piece earlier-slot pre-resolution
+            // tracking; set only when resolveEarlierMultiPieceSiblings runs below and
+            // consumed by the multi-piece pass for this same instance.
+            multiPieceEarlierPiecesResolvedUpTo = -1;
+
             RidingState state = ridingStates.get(player);
             ObjectInstance ridingObject = state != null ? state.object : null;
             int ridingX = state != null ? state.x : 0;
@@ -6488,6 +6505,34 @@ public class ObjectManager {
             }
 
             if (instance == ridingObject) {
+                // ROM Obj70 (MTZ Cog) allocates one SST slot per tooth and runs each
+                // slot's SolidObject independently in ascending allocation order
+                // (s2.asm:55039-55078 Obj70_Init, 55080-55141 Obj70_Main +
+                // JmpTo16_SolidObject). An earlier-slot tooth therefore side-pushes the
+                // rider (loc_19896 side path, s2.asm:35196-35207) BEFORE the ridden
+                // tooth's standing-bit ExitPlatform branch re-checks the ride bounds
+                // (loc_198B8, s2.asm:35209-35214). This engine folds all teeth into one
+                // instance and resolves the ridden tooth's ExitPlatform carry
+                // (processInlineRidingObject) before the sibling teeth side-push
+                // (processMultiPieceCollision below), which would re-seat a rider the
+                // ROM unseats. For providers that opt into
+                // resolvesEarlierPiecesBeforeRidingPiece(), pre-apply the earlier-slot
+                // teeth's side contact here so the ride-bounds re-check observes the
+                // pushed x_pos. The multi-piece pass then skips those teeth via
+                // multiPieceEarlierPiecesResolvedUpTo so a single ROM SolidObject
+                // side-push per slot is not applied twice.
+                if (ridingPieceIndex > 0
+                        && provider instanceof MultiPieceSolidProvider earlyMulti
+                        && earlyMulti.resolvesEarlierPiecesBeforeRidingPiece()
+                        && !player.getAir()
+                        && provider.isSolidFor(player)
+                        && !blocksSolidContacts(player, instance)
+                        && !instance.isSkipSolidContactThisFrame()) {
+                    resolveEarlierMultiPieceSiblings(
+                            player, earlyMulti, instance, ridingPieceIndex,
+                            frameCounter, solidProfile.stickyContactBuffer());
+                    multiPieceEarlierPiecesResolvedUpTo = ridingPieceIndex;
+                }
                 SolidContact ridingContact = processInlineRidingObject(
                         player, instance, provider, ridingX, ridingY, ridingPieceIndex);
                 if (!(provider instanceof MultiPieceSolidProvider)) {
@@ -7485,6 +7530,46 @@ public class ObjectManager {
                 int pieceIndex,
                 SolidContact aggregateContact) {}
 
+        /**
+         * Resolve the side/push contact of the sibling pieces allocated before the
+         * ridden piece, ahead of the ridden piece's continued-ride ExitPlatform bounds
+         * check. Mirrors ROM Obj70 (MTZ Cog) where each tooth's SolidObject runs in slot
+         * allocation order (s2.asm:55039-55141), so an earlier-slot tooth side-pushes the
+         * rider (loc_19896 / SolidObject side path) before the ridden tooth's standing-bit
+         * branch re-checks the ride bounds (s2.asm:35196-35214). Only the horizontal
+         * side-push matters here — the ridden piece's own riding/Y handling runs
+         * afterward — so pieces that would register STANDING are left to the main pass.
+         */
+        private void resolveEarlierMultiPieceSiblings(PlayableEntity player,
+                MultiPieceSolidProvider multiPiece, ObjectInstance instance, int ridingPieceIndex,
+                int frameCounter, boolean useStickyBuffer) {
+            SolidRoutineProfile solidProfile = multiPiece.getSolidRoutineProfile();
+            for (int i = 0; i < ridingPieceIndex && i < multiPiece.getPieceCount(); i++) {
+                SolidObjectParams params = multiPiece.getPieceParams(i);
+                int anchorX = multiPiece.getPieceX(i) + params.offsetX();
+                int anchorY = multiPiece.getPieceY(i) + params.offsetY();
+                int halfHeight = player.getAir() ? params.airHalfHeight() : params.groundHalfHeight();
+                SlopedSolidRoutineAdapter slopedAdapter = null;
+                byte[] slopeData = null;
+                if (instance instanceof SlopedSolidProvider sloped) {
+                    slopedAdapter = SlopedSolidRoutineProfile.adapt(sloped);
+                    slopeData = slopedAdapter.getSlopeData();
+                }
+                SolidContact contact;
+                if (slopeData != null && shouldUseSlopeForContact(instance, slopedAdapter)) {
+                    contact = resolveSlopedContact(player, anchorX, anchorY, params.halfWidth(),
+                            params.groundHalfHeight(), solidProfile.topSolidOnly(), useStickyBuffer,
+                            instance, true, slopedAdapter);
+                } else {
+                    contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
+                            solidProfile, useStickyBuffer, instance, i, true);
+                }
+                if (contact != null) {
+                    multiPiece.onPieceContact(i, player, contact, frameCounter);
+                }
+            }
+        }
+
         private MultiPieceContactResult processMultiPieceCollision(PlayableEntity player,
                 MultiPieceSolidProvider multiPiece, ObjectInstance instance, int frameCounter,
                 boolean useStickyBuffer) {
@@ -7504,6 +7589,14 @@ public class ObjectManager {
             int currentRidingPieceIndex = getCurrentPlayerRidingPieceIndex();
 
             for (int i = 0; i < pieceCount; i++) {
+                // ROM slot-order parity: when the earlier slots of this ridden object
+                // were already side-pushed ahead of the ride-bounds re-check
+                // (resolveEarlierMultiPieceSiblings set multiPieceEarlierPiecesResolvedUpTo
+                // for this instance+player), skip them here so a single ROM SolidObject
+                // side-push per slot is not applied twice in one frame.
+                if (i < multiPieceEarlierPiecesResolvedUpTo) {
+                    continue;
+                }
                 SolidObjectParams params = multiPiece.getPieceParams(i);
                 int pieceX = multiPiece.getPieceX(i);
                 int pieceY = multiPiece.getPieceY(i);

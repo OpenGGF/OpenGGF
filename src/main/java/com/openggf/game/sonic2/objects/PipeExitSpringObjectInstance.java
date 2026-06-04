@@ -118,7 +118,9 @@ public class PipeExitSpringObjectInstance extends BoxObjectInstance
 
         // ROM: bset #status.player.in_air
         player.setAir(true);
-        player.setGSpeed((short) 0);
+        // ROM loc_296C2 (s2.asm:56394-56435) never writes inertia in the non-twirl
+        // path. Do NOT zero g_speed here - the landing-frame inertia must be preserved
+        // exactly as the ROM does (e.g. CPZ pipe-exit f2038: inertia stays -03B4).
 
         // ROM: bit 7 of subtype - if set, clear X velocity
         if ((spawn.subtype() & 0x80) != 0) {
@@ -149,10 +151,11 @@ public class PipeExitSpringObjectInstance extends BoxObjectInstance
                 inertia = -1;  // ROM: neg.w inertia(a1)
             }
             player.setGSpeed(inertia);
-        } else {
-            // ROM: No twirl - clear inertia
-            player.setGSpeed((short) 0);
         }
+        // ROM: non-twirl path (beq.s loc_29736 at s2.asm:56407) jumps straight to the
+        // collision-bit setup at loc_29736 (s2.asm:56422-56435) and leaves inertia
+        // untouched - identical to the regular vertical spring Obj41 (s2.asm:33801+).
+        // Do NOT clear g_speed in the non-twirl branch.
 
         // ROM: loc_29736-29768 - Set collision layer based on subtype bits 2-3
         SpringHelper.applyCollisionLayerBits(player, subtype);

@@ -3395,11 +3395,22 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// the Tails_Lookup branch falls through to Tails_Duck, which sets
 		// anim=Duck and spuriously triggers Tails_CheckSpindash the next
 		// frame when the delayed Ctrl_2 jump-press latches.
+		// ROM Sonic_Move / Tails_Move balance reads `width_pixels(a1)` — the
+		// object's own SST width byte (s2.asm:36586/39707, sonic3k.asm:22455) —
+		// which is neither the rendered on-screen footprint nor the (possibly
+		// extended) SolidObject X-check width. AbstractObjectInstance exposes it
+		// via getBalanceWidthPixels(); it defaults to getOnScreenHalfWidth()
+		// (16 px, correct for SmashableGround and most sprites) and is overridden
+		// where the balance width_pixels differs (e.g. the CPZ/WFZ moving
+		// platform Obj19, whose subtype width_pixels is $20/$18/$40). Using 16
+		// for the platform shifted the d1 edge test by up to 8 px, making the
+		// player balance/flip facing on the wrong (left) object edge — observed
+		// as a sidekick (Tails CPU) facing latch in CPZ2.
 		int objectWidth;
 		if (useMultiPieceWidth) {
 			objectWidth = params.halfWidth();
 		} else if (ridingObject instanceof com.openggf.level.objects.AbstractObjectInstance objectInstance) {
-			objectWidth = objectInstance.getOnScreenHalfWidth();
+			objectWidth = objectInstance.getBalanceWidthPixels();
 		} else {
 			objectWidth = params.halfWidth();
 		}

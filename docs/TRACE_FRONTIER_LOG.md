@@ -1,5 +1,11 @@
 # Trace Frontier Log
 
+## 2026-06-04 - S2 trace-green-fleet pass 4: 6 frontiers advanced, integrated + verified
+
+- Branch `feature/ai-trace-green-integration` off develop `6925c3d65`; single-fork sweep: 0 flakes, 0 regressions. S1 green, S2 greens green, S3K (aiz 8941/cnz 17276/mgz 4124) held.
+  ARZ2 482->549 `28fbaaff2`; CNZ2 1490->1775 `41240ba4a`; CPZ1 2038->2822 `f1942190a`; CPZ2 2251->2518 `a04f2588f`; MTZ3 2111->3719 `518e120dc`; MCZ2 3991->4009 `8a3196f18`. (MCZ1 drifted 2049->2181 as a side effect; no separate fix.)
+- Shared touches scope-verified: cpz2 getBalanceWidthPixels defaults to existing on-screen half-width (no-op for other objects/games); mtz3 multi-piece earlier-sibling resolution gated on opt-in provider predicate.
+
 ## 2026-06-04 - S2 trace-green-fleet pass 3 + DEZ unblock: 7 frontiers advanced, integrated + verified
 
 - Branch `feature/ai-trace-green-integration` off develop `fe79b8d52`; verified with one

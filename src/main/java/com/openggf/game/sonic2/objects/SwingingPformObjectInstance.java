@@ -512,10 +512,26 @@ public class SwingingPformObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        // Use widthPixels as half-width and yRadius as half-height
-        // For property 0: widthPixels=32, yRadius=8 (small platform)
-        // For property 1: widthPixels=28, yRadius=50 (tall pillar)
-        return new SolidObjectParams(widthPixels, yRadius, yRadius + 1);
+        // ROM Obj82_Main builds the SolidObject collision box from the property
+        // table values, but NOT 1:1 (docs/s2disasm/s2.asm:57145-57151):
+        //   moveq   #0,d1
+        //   move.b  width_pixels(a0),d1
+        //   addi.w  #$B,d1            ; d1 = width_pixels + 0xB  (SolidObject half-width)
+        //   moveq   #0,d2
+        //   move.b  y_radius(a0),d2   ; d2 = y_radius            (air/jumping half-height)
+        //   move.w  d2,d3
+        //   addq.w  #1,d3             ; d3 = y_radius + 1        (ground/walking half-height)
+        // The +0xB widens the SolidObject box beyond the raw property width, so the
+        // standing/ExitPlatform x-range that keeps a rider attached is
+        // x_player - x_obj in [-d1, d1) = [-(width_pixels+0xB), width_pixels+0xB).
+        // Without the +0xB the engine half-width was width_pixels (0x1C), unseating
+        // the rider ~0xB px too early on the pillar's right edge: in the ARZ2 trace
+        // the leader walked off the s27 pillar at x_player-x_obj=0x1E (relX 58),
+        // one frame before the ROM (which keeps him on until 0x27), so the frame-483
+        // jump fired airborne instead of from the on-object ground state.
+        // (Retail REV01 builds with fixBugs = 0 (docs/s2disasm/s2.asm:27), so the
+        // pillar-specific subq.w #2,d3 at s2.asm:57152-57156 does NOT apply.)
+        return new SolidObjectParams(widthPixels + 0xB, yRadius, yRadius + 1);
     }
 
     @Override
