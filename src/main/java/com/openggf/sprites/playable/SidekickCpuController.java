@@ -125,7 +125,15 @@ public class SidekickCpuController {
     private int maxXBound = Integer.MIN_VALUE;
     private int minYBound = Integer.MIN_VALUE;
     private int maxYBound = Integer.MIN_VALUE;
-    private int lastInteractObjectId;
+    /**
+     * Engine mirror of ROM {@code Tails_interact_ID} (s2.constants.asm): the id
+     * byte snapshotted from the live object in the sidekick's persistent
+     * {@code interact(a0)} slot, refreshed each non-despawning frame by
+     * {@link #refreshInteractIdSnapshot}. {@code -1} means "no snapshot taken
+     * yet" (sidekick has never stood on an object), which suppresses the
+     * slot-id-mismatch despawn compare until a real id is observed.
+     */
+    private int lastInteractObjectId = -1;
     private int normalFrameCount;
     private int sidekickCount = 1;
     private int normalPushingGraceFrames;
@@ -772,7 +780,7 @@ public class SidekickCpuController {
         despawnCounter = 0;
         normalFrameCount = 0;
         jumpingFlag = false;
-        lastInteractObjectId = 0;
+        lastInteractObjectId = -1; // ROM Tails_interact_ID unset until next UpdateObjInteract
         sidekick.setForcedAnimationId(-1);
         sidekick.setControlLocked(false);
         ObjectControlState.none().applyTo(sidekick);
@@ -830,7 +838,7 @@ public class SidekickCpuController {
         despawnCounter = 0;
         normalFrameCount = 0;
         jumpingFlag = false;
-        lastInteractObjectId = 0;
+        lastInteractObjectId = -1; // ROM Tails_interact_ID unset until next UpdateObjInteract
         sidekick.setForcedAnimationId(-1);
         sidekick.setControlLocked(false);
         ObjectControlState.none().applyTo(sidekick);
@@ -888,7 +896,7 @@ public class SidekickCpuController {
         sidekick.setControlLocked(true);
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         sidekick.setForcedAnimationId(flyAnimId);
-        lastInteractObjectId = 0;
+        lastInteractObjectId = -1; // ROM Tails_interact_ID unset until next UpdateObjInteract
     }
 
     /**
@@ -2654,79 +2662,141 @@ public class SidekickCpuController {
         return Math.min(targetY, waterY - 0x10);
     }
 
+    /**
+     * ROM {@code TailsCPU_CheckDespawn} (docs/s2disasm/s2.asm:39403-39446) with
+     * the slot-based {@code interact(a0)} model.
+     *
+     * <p>ROM control flow:
+     * <pre>
+     *   if on_screen:                            ResetRespawnTimer; UpdateObjInteract; rts
+     *   else if NOT on_object:                   TickRespawnTimer
+     *   else (off-screen, on_object):
+     *       a3 = Object_RAM[interact(a0)]        (live slot dereference)
+     *       if Tails_interact_ID != id(a3):      Despawn
+     *       else:                                fall to TickRespawnTimer
+     *   TickRespawnTimer:
+     *       respawn_counter++
+     *       if respawn_counter < $12C:           UpdateObjInteract; rts
+     *       else:                                Despawn
+     *   UpdateObjInteract:
+     *       Tails_interact_ID = id(Object_RAM[interact(a0)])
+     * </pre>
+     *
+     * <p>The id snapshot ({@link #lastInteractObjectId} = {@code Tails_interact_ID})
+     * is refreshed every non-despawning frame from the LIVE object currently in
+     * the persistent {@code interact} slot, NOT from the (instance-resolved)
+     * latch id. The off-screen compare therefore fires only when the slot's live
+     * object id changed between consecutive frames — i.e. the slot was recycled
+     * to a different object (mtz1 f375: object {@code 0x01} → SteamSpring
+     * {@code 0x42}) — and stays quiet when the same object persists in the slot
+     * off-screen (htz2 f795: HTZ platform {@code 0x41} stays put). An empty
+     * engine slot ({@link ObjectManager#objectIdInSlot} returns {@code -1})
+     * models "object unloaded but slot not recycled" and is treated as
+     * unchanged, deferring to the {@code $12C}-frame respawn timer, mirroring the
+     * ROM fall-through to {@code TailsCPU_TickRespawnTimer}.
+     *
+     * <p>S3K's {@code sub_13EFC} (docs/skdisasm/sonic3k.asm:26816-26833) compares
+     * the routine-pointer high word, which is identical for virtually all
+     * gameplay objects, so its only practical despawn trigger is a slot freed by
+     * {@code Delete_Referenced_Sprite} (id word → 0, sonic3k.asm:36116-36124).
+     * That stays modelled by the riding-instance-loss path, gated by
+     * {@link PhysicsFeatureSet#sidekickDespawnUsesRidingInstanceLoss()} (S3K
+     * true). The S2 slot-id-mismatch path is gated by
+     * {@link PhysicsFeatureSet#sidekickDespawnUsesObjectIdMismatch()} (S2 true,
+     * S3K false), so the two games never both fire.
+     */
     private boolean checkDespawn() {
         boolean onScreen = sidekick.hasRenderFlagOnScreenState()
                 ? sidekick.isRenderFlagOnScreen()
                 : isCurrentlyVisible();
-        int currentInteractObjectId = sidekick.getLatchedSolidObjectId() & 0xFF;
+
+        // UpdateObjInteract source: id of the LIVE object currently occupying
+        // the persistent interact(a0) slot. -1 == slot empty in the engine.
+        int liveSlotId = liveInteractSlotObjectId();
+
         if (onScreen) {
-            lastInteractObjectId = currentInteractObjectId;
+            // ROM TailsCPU_ResetRespawnTimer -> TailsCPU_UpdateObjInteract.
             despawnCounter = 0;
+            refreshInteractIdSnapshot(liveSlotId);
             return false;
         }
 
-        ObjectInstance currentRidingInstance = sidekick.getLatchedSolidObjectInstance();
         PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
         boolean useRidingInstanceLossDespawn = fs != null
                 && fs.sidekickDespawnUsesRidingInstanceLoss();
-        boolean useObjectIdMismatchDespawn = fs == null
+        boolean useSlotIdMismatchDespawn = fs == null
                 || fs.sidekickDespawnUsesObjectIdMismatch();
-        // S2's id-byte mismatch path also sees a deleted ride slot as id 0.
-        // S3K sub_13EFC reads the first word of the cached interact slot; when
-        // Delete_Referenced_Sprite has freed the slot, that word is zero and
-        // the compare falls through to sub_13ECA (sonic3k.asm:26816-26833,
-        // 36116-36124). Counter-window unloads remove the engine instance from
-        // ObjectManager without necessarily marking it destroyed, so treat a
-        // latched instance that is no longer active as the same freed slot.
-        if ((useRidingInstanceLossDespawn || useObjectIdMismatchDespawn)
-                && sidekick.isOnObject()
-                && currentInteractObjectId != 0
-                && currentRidingInstance != null
-                && isLatchedRideSlotFreed(currentRidingInstance)) {
-            lastInteractObjectId = currentInteractObjectId;
-            triggerDespawn(DespawnCause.OBJECT_ID_MISMATCH);
-            return true;
+
+        if (sidekick.isOnObject()) {
+            // S3K: sub_13EFC's only practical trigger is a slot freed by
+            // Delete_Referenced_Sprite (id word zeroed -> mismatch -> despawn).
+            // Tracked via the latched-instance reference because S3K's
+            // latchedSolidObjectId is sticky across destruction.
+            if (useRidingInstanceLossDespawn) {
+                ObjectInstance ridingInstance = sidekick.getLatchedSolidObjectInstance();
+                if ((sidekick.getLatchedSolidObjectId() & 0xFF) != 0
+                        && ridingInstance != null
+                        && isLatchedRideSlotFreed(ridingInstance)) {
+                    refreshInteractIdSnapshot(liveSlotId);
+                    triggerDespawn(DespawnCause.OBJECT_ID_MISMATCH);
+                    return true;
+                }
+            }
+
+            // S2: cmp.b id(a3),d0 — Tails_interact_ID (snapshot) vs the live id
+            // of whatever object now occupies interact(a0). Only a real recycle
+            // (slot occupied by a different id) fires; an empty engine slot
+            // (liveSlotId == -1) is treated as "unchanged" so the platform
+            // persisting off-screen does not spuriously despawn.
+            if (useSlotIdMismatchDespawn
+                    && liveSlotId >= 0
+                    && lastInteractObjectId >= 0
+                    && liveSlotId != lastInteractObjectId) {
+                refreshInteractIdSnapshot(liveSlotId);
+                triggerDespawn(DespawnCause.OBJECT_ID_MISMATCH);
+                return true;
+            }
         }
 
-        // Object-id-mismatch despawn path. ROM semantics differ across games:
-        //
-        //   S2 (s2.asm:39051 TailsCPU_CheckDespawn): cmp.b id(a3),d0 — compare
-        //       Tails_interact_ID byte against the object's id field. The object
-        //       ID is the per-game object-pointer-table index, so different
-        //       object types compare differently. Engine's existing behaviour
-        //       (compare 8-bit object IDs) matches this byte-for-byte.
-        //
-        //   S3K (sonic3k.asm:26823 sub_13EFC): cmp.w (a3),d0 — compare cached
-        //       Tails_CPU_interact word against the FIRST WORD of the object's
-        //       structure (the high word of its routine pointer). For S3K all
-        //       gameplay objects live in ROM 0x0001xxxx-0x0007xxxx, so the high
-        //       word is identical (0x0000-0x0007) for virtually every object
-        //       type encountered in normal play. The check therefore almost
-        //       never fires in S3K — it is effectively a sanity guard against
-        //       wholly different code regions, which CNZ-style barber-pole →
-        //       wire-cage transitions do NOT trigger (both routines live in
-        //       0x000338xx, same high word 0x0003).
-        //
-        // Gate the path via PhysicsFeatureSet so S2 keeps its existing semantics
-        // and S3K stops despawning Tails on legitimate same-region object
-        // transitions (CNZ1 trace F1685 barber-pole → wire-cage divergence).
-        if (useObjectIdMismatchDespawn
-                && sidekick.isOnObject()
-                && currentInteractObjectId != 0
-                && lastInteractObjectId != 0
-                && currentInteractObjectId != lastInteractObjectId) {
-            lastInteractObjectId = currentInteractObjectId;
-            triggerDespawn(DespawnCause.OBJECT_ID_MISMATCH);
-            return true;
-        }
-
+        // ROM TailsCPU_TickRespawnTimer.
         despawnCounter++;
-        lastInteractObjectId = currentInteractObjectId;
         if (despawnCounter >= DESPAWN_TIMEOUT) {
+            refreshInteractIdSnapshot(liveSlotId);
             triggerDespawn(DespawnCause.OFF_SCREEN_TIMEOUT);
             return true;
         }
+        // ROM falls through to TailsCPU_UpdateObjInteract.
+        refreshInteractIdSnapshot(liveSlotId);
         return false;
+    }
+
+    /**
+     * Dereferences the persistent {@code interact(a0)} slot and returns the live
+     * object's id byte, or {@code -1} when the slot is empty in the engine.
+     * Mirrors ROM {@code a3 = Object_RAM + interact(a0)*object_size; id(a3)}.
+     */
+    private int liveInteractSlotObjectId() {
+        int slot = sidekick.getInteractSlotIndex();
+        if (slot < 0) {
+            return -1;
+        }
+        LevelManager levelManager = sidekick.currentLevelManagerIfAvailable();
+        if (levelManager == null || levelManager.getObjectManager() == null) {
+            return -1;
+        }
+        return levelManager.getObjectManager().objectIdInSlot(slot);
+    }
+
+    /**
+     * ROM {@code TailsCPU_UpdateObjInteract}: {@code Tails_interact_ID = id(slot)}.
+     * The engine keeps the last <em>real</em> id when the slot is momentarily
+     * empty ({@code liveSlotId == -1}) so a later recycle is still detectable
+     * against the last known occupant.
+     */
+    private void refreshInteractIdSnapshot(int liveSlotId) {
+        if (liveSlotId >= 0) {
+            lastInteractObjectId = liveSlotId;
+        }
     }
 
     private boolean isLatchedRideSlotFreed(ObjectInstance instance) {
@@ -2855,7 +2925,7 @@ public class SidekickCpuController {
         sidekick.setControlLocked(true);
         // NOT object_controlled - DEAD_FALLING is its own dispatch state
         // so updateDeadFalling fires on the next tick regardless.
-        lastInteractObjectId = 0;
+        lastInteractObjectId = -1; // ROM Tails_interact_ID unset until next UpdateObjInteract
     }
 
     private void applyKillCharacterTouchFloorReset() {
@@ -3119,7 +3189,7 @@ public class SidekickCpuController {
         // (beginLevelBoundaryKill) does its own zeroing earlier in the
         // Kill_Character (sonic3k.asm:21148-21151) phase, which runs
         // before this marker warp on Frame N+1.
-        lastInteractObjectId = 0;
+        lastInteractObjectId = -1; // ROM Tails_interact_ID unset until next UpdateObjInteract
     }
 
     /**
@@ -3629,7 +3699,7 @@ public class SidekickCpuController {
         // Note: leader is NOT cleared — it's a structural chain relationship set at
         // construction time, not per-level state. Clearing it would break the sidekick
         // permanently since findLeader() scanning was removed in favor of explicit assignment.
-        lastInteractObjectId = 0;
+        lastInteractObjectId = -1; // ROM Tails_interact_ID unset until next UpdateObjInteract
         minXBound = Integer.MIN_VALUE;
         maxXBound = Integer.MIN_VALUE;
         minYBound = Integer.MIN_VALUE;
