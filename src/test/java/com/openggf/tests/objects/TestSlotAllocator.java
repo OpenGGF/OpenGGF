@@ -1,0 +1,85 @@
+package com.openggf.tests.objects;
+
+import static org.junit.jupiter.api.Assertions.*;
+import com.openggf.level.objects.ObjectSlotLayout;
+import com.openggf.level.objects.SlotAllocator;
+import com.openggf.level.objects.SlotEmptyPredicate;
+import org.junit.jupiter.api.Test;
+
+class TestSlotAllocator {
+
+    private SlotAllocator s2() {
+        return new SlotAllocator(ObjectSlotLayout.SONIC_2, SlotEmptyPredicate.ID_BYTE);
+    }
+
+    @Test
+    void allocateReturnsFirstDynamicSlotThenAscending() {
+        SlotAllocator a = s2();
+        assertEquals(16, a.allocate());   // SONIC_2.firstDynamicSlot
+        assertEquals(17, a.allocate());
+        assertEquals(18, a.allocate());
+    }
+
+    @Test
+    void releaseMakesSlotFirstChoiceAgain_recycle() {
+        SlotAllocator a = s2();
+        int s16 = a.allocate(); // 16
+        int s17 = a.allocate(); // 17
+        a.release(s16);
+        assertTrue(a.isEmpty(s16));
+        assertEquals(16, a.allocate()); // recycled: linear-first-empty returns 16, not 18
+        assertEquals(18, a.allocate());
+    }
+
+    @Test
+    void allocateAfterFindsNextFreeAfterParent() {
+        SlotAllocator a = s2();
+        int parent = a.allocate(); // 16
+        a.allocate();              // 17
+        assertEquals(18, a.allocateAfter(parent)); // first free strictly after parent slot
+    }
+
+    @Test
+    void allocateReturnsMinusOneWhenPoolFull() {
+        SlotAllocator a = s2();
+        for (int i = 0; i < ObjectSlotLayout.SONIC_2.dynamicSlotCount(); i++) {
+            assertTrue(a.allocate() >= 0);
+        }
+        assertEquals(-1, a.allocate());
+    }
+
+    @Test
+    void reserveSpecificSlotSucceedsWhenFreeAndFailsWhenTaken() {
+        SlotAllocator a = s2();
+        assertTrue(a.reserve(20));
+        assertFalse(a.isEmpty(20));
+        assertFalse(a.reserve(20));      // already taken
+        assertFalse(a.reserve(5));        // outside dynamic range (below firstDynamicSlot)
+    }
+
+    @Test
+    void rewindSnapshotRestoreRoundTrip_preservesOccupancyAndCount() {
+        SlotAllocator a = s2();
+        a.allocate(); a.allocate();      // 16, 17
+        a.reserve(40);
+        long[] bits = a.toLongArray();
+        int count = a.activeCount();     // 3
+
+        SlotAllocator b = new SlotAllocator(ObjectSlotLayout.SONIC_2, SlotEmptyPredicate.ID_BYTE);
+        b.restoreFromLongArray(bits);
+        assertEquals(count, b.activeCount());
+        assertFalse(b.isEmpty(16));
+        assertFalse(b.isEmpty(17));
+        assertFalse(b.isEmpty(40));
+        assertTrue(b.isEmpty(18));
+    }
+
+    @Test
+    void reserveOrMarkUsedForcesOccupiedEvenIfAlreadySet() {
+        SlotAllocator a = s2();
+        a.reserveOrMarkUsed(50);
+        assertFalse(a.isEmpty(50));
+        a.reserveOrMarkUsed(50);          // idempotent force-set, no exception
+        assertEquals(1, a.activeCount());
+    }
+}
