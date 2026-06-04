@@ -734,16 +734,15 @@ public class ObjectManager {
                     // S3K Load_Sprites runs before Process_Sprites and performs
                     // the X-cursor pass before the Y-camera pass
                     // (docs/skdisasm/sonic3k.asm:7884-7894, 37640-37762).
+                    // S3K stays load-then-exec.
                     placement.update(cameraX);
                     syncActiveSpawnsLoad(false);
-                } else {
-                    // S2 ObjectsManager_GoingForward/Backward calls ChkLoadObj
-                    // directly after the X-window scan and has no Camera_Y_pos
-                    // filter (docs/s2disasm/s2.asm:32870-32950). The bypass is
-                    // gated inside isSpawnVerticallyEligibleForLoad() to S2 slot
-                    // layout only; S3K still keeps its vertical filter here.
-                    syncActiveSpawnsLoad(true);
                 }
+                // S2: NO pre-exec load. ROM S2 is RunObjects (s2.asm:5095) then
+                // exactly one ObjectsManager (s2.asm:5112) = exec -> one load.
+                // The single S2 load runs in the post-block below
+                // (RunObjects -> ObjectsManager position), after runExecLoop has
+                // applied the object-side MarkObjGone self-deletes.
                 cleanupDestroyedDynamicObjects();
                 runExecLoop(cameraX, player, activeSidekicks, inlineSolidResolution, solidPostMovement);
             } else {
@@ -777,6 +776,13 @@ public class ObjectManager {
         // ROM parity: S1's ObjPosLoad runs AFTER DeformLayers (camera update).
         // Counter-based respawn depends on seeing the post-camera X to assign
         // the same counter values as the ROM. Defer to postCameraPlacementUpdate().
+        //
+        // S2: this is the SINGLE per-frame load. ROM S2 RunObjects (s2.asm:5095)
+        // then exactly one ObjectsManager (s2.asm:5112) = exec -> one load. The
+        // pre-exec load in the execThenLoad branch above was removed so S2 no
+        // longer double-loads. The load consumes the same `cameraX` the exec loop
+        // saw (pre-DeformLayers), matching ROM ObjectsManager; the post-camera
+        // chunk-crossing catch-up is handled separately by postCameraPlacementUpdate().
         if (!counterBased) {
             if (!execThenLoad || !slotLayout.twoAxisCursorPlacement()) {
                 placement.update(cameraX);
