@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- Implemented the S3K Launch Base Zone Act 1 interior reveal screen events.
+  Entering the ROM trigger rectangles now copies the hidden staging chunk cells
+  into the visible foreground layout, and leaving the corresponding exit ranges
+  restores the covered cells.
+
 - Added `AudioManager.outputSampleRate()` so `TraceCaptureTool` reads the synthesis rate through `AudioManager` rather than `GameServices.audio().getBackend()` (satisfies `TestAudioBackendBypassGuard`, which the prior singleton-closure fix had tripped).
 - Routed the trace-capture code through `EngineServices`/`GameServices` instead of raw process singletons so `TestProductionSingletonClosureGuard` passes: `LevelRenderer` resolves `TraceRenderVisibility` from its injected `configService`; `TraceCaptureSession`/`TraceCaptureTool` use `GameServices.audio()`/`GameServices.configuration()`; `HeadlessGameBoot` reads managers off the `EngineContext`; and `TraceCaptureTool` configures `EngineServices` once at `main()` as the CLI composition root. The two headless composition roots are allowlisted for the legacy-bootstrap bridge like `Engine`.
 - Extracted the SMPS audio synthesis out of `LWJGLAudioBackend` into a device-agnostic `AbstractSmpsAudioBackend` base (synthesis, sequencer, music stack, SFX lifecycle, snapshot/rewind, deterministic-runtime binding) behind a small set of device-output hooks. `LWJGLAudioBackend` now implements those hooks with its existing OpenAL code (live audio unchanged), and a new `HeadlessSmpsAudioBackend` implements them as no-ops — a **true no-device** backend that synthesizes for headless trace capture without opening any audio device (works on machines with no audio hardware). This replaces and reverts the temporary `offlineNoDevice` flag on `LWJGLAudioBackend`. Headless trace capture now uses `HeadlessSmpsAudioBackend`.

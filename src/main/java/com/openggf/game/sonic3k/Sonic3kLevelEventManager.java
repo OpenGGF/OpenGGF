@@ -16,6 +16,7 @@ import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kHCZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kICZEvents;
+import com.openggf.game.sonic3k.events.Sonic3kLBZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kMHZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kMGZEvents;
 import com.openggf.game.sonic3k.events.S3kTransitionEventBridge;
@@ -87,6 +88,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private Sonic3kCNZEvents cnzEvents;
     private Sonic3kHCZEvents hczEvents;
     private Sonic3kICZEvents iczEvents;
+    private Sonic3kLBZEvents lbzEvents;
     private Sonic3kMGZEvents mgzEvents;
     private Sonic3kMHZEvents mhzEvents;
     private final S3kFixedAirCountdownManager fixedAirCountdownManager =
@@ -194,6 +196,12 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             iczEvents.init(act);
         } else {
             iczEvents = null;
+        }
+        if (zone == Sonic3kZoneIds.ZONE_LBZ) {
+            lbzEvents = new Sonic3kLBZEvents();
+            lbzEvents.init(act);
+        } else {
+            lbzEvents = null;
         }
         if (zone == Sonic3kZoneIds.ZONE_MGZ) {
             mgzEvents = new Sonic3kMGZEvents();
@@ -326,6 +334,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (iczEvents != null && currentZone == Sonic3kZoneIds.ZONE_ICZ) {
             iczEvents.update(currentAct, frameCounter);
+        }
+        if (lbzEvents != null && currentZone == Sonic3kZoneIds.ZONE_LBZ) {
+            lbzEvents.update(currentAct, frameCounter);
         }
         if (mgzEvents != null && currentZone == Sonic3kZoneIds.ZONE_MGZ) {
             mgzEvents.update(currentAct, frameCounter);
@@ -757,6 +768,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     /** Returns the HCZ zone events handler, or null if not in HCZ. */
     public Sonic3kMGZEvents getMgzEvents() {
         return mgzEvents;
+    }
+
+    /** Returns the LBZ zone events handler, or null if not in LBZ. */
+    public Sonic3kLBZEvents getLbzEvents() {
+        return lbzEvents;
     }
 
     @Override
