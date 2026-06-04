@@ -207,7 +207,11 @@ public class FanObjectInstance extends AbstractObjectInstance {
             push = -push;
         }
 
-        player.setCentreX((short) (player.getCentreX() + push));
+        // ROM: add.w d0,x_pos(a1) (Obj3F_Horizontal, s2.asm:57698). As with the
+        // vertical push, the ROM adds to the x_pos PIXEL word and leaves x_sub
+        // untouched; shiftX() preserves the sub-pixel where setCentreX() would
+        // zero it.
+        player.shiftX(push);
     }
 
     /**
@@ -246,9 +250,15 @@ public class FanObjectInstance extends AbstractObjectInstance {
             dy = ((~dy & 0xFFFF) << 1) & 0xFFFF; // not.w d1; add.w d1,d1 (16-bit)
         }
         dy = (dy + 0x60) & 0xFFFF; // addi.w #$60,d1 (16-bit)
-        // ROM: neg.w d1 / asr.w #4,d1 / add.w d1,y_pos(a1)
+        // ROM: neg.w d1 / asr.w #4,d1 / add.w d1,y_pos(a1) (Obj3F_Vertical,
+        // s2.asm:57775-57780). The ROM adds the push directly to the y_pos
+        // PIXEL word, leaving the y_sub fraction untouched. shiftY() mirrors
+        // that (yPixel += push, y_sub preserved); setCentreY() would wipe the
+        // sub-pixel to 0 each frame the fan pushes, dropping ~0x9C00 of
+        // accumulated y_sub and producing a 1-pixel-Y carry divergence one
+        // frame later (OOZ1 trace f756: ROM y_sub 9C00 vs engine 0000).
         int push = ((short) (-dy & 0xFFFF)) >> 4;
-        player.setCentreY((short) (player.getCentreY() + push));
+        player.shiftY(push);
 
         // Set player airborne state and tumble
         player.setAir(true);
