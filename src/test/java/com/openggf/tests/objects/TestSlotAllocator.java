@@ -84,6 +84,17 @@ class TestSlotAllocator {
     }
 
     @Test
+    void recycle_releasedSlotIsReusedAndIdentityCleared() {
+        SlotAllocator a = new SlotAllocator(ObjectSlotLayout.SONIC_2, SlotEmptyPredicate.ID_BYTE);
+        int s = a.allocate();          // 16, "occupied by object A"
+        assertFalse(a.isEmpty(s));
+        a.release(s);                  // ROM DeleteObject: identity cleared
+        assertTrue(a.isEmpty(s));      // empty predicate now true
+        int s2 = a.allocate();         // ROM AllocateObject linear-first-empty → same slot
+        assertEquals(s, s2);           // recycled to the same slot for "object B"
+    }
+
+    @Test
     void noSecondAllocatorOutsideSlotAllocatorAndObjectManager() throws Exception {
         // Scan src/main for `new BitSet` used as object-slot occupancy or `nextClearBit`
         // outside SlotAllocator. Allowed files: SlotAllocator.java only.
