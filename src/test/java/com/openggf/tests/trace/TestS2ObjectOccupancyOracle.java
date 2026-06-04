@@ -15,22 +15,44 @@ import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Set;
 
 /**
- * Comparison-only measurement of the engine's dynamic-slot occupancy against
- * the ROM trace timeline using {@link ObjectOccupancyOracle}.
+ * Comparison-only measurement and assertion of the engine's dynamic-slot
+ * occupancy against the ROM trace timeline using {@link ObjectOccupancyOracle}.
  *
- * <p>This is a MEASUREMENT test (Task 1.4): it drives the MTZ1 level-select
- * trace through the engine and reports the first per-frame slot-occupancy
- * divergence rather than asserting parity. The S2 ROM-windowing timing fixes
- * (Tasks 1.4b-1.6) have not landed yet, so the engine is expected to diverge
- * at the windowing-drift frame; Task 1.7 flips this to an assertion once the
- * windowing is ROM-timed.
+ * <p><strong>Self-deleting transient assertion (Task 1.7, piece a).</strong>
+ * The green S2 traces (EHZ1, SCZ, WFZ) assert frame-for-frame parity of the
+ * live <em>count</em> of the badnik-death explosion (Obj27), whose destroy
+ * frame is a fixed {@code anim_frame_duration} countdown: it deletes 35 game
+ * frames after spawn in S2/S3K (init 3 / reload 7 / delete at mapping_frame 5 —
+ * docs/s2disasm/s2.asm:46672-46684). Piece (a) aligns the engine explosion to
+ * that exact frame (previously it lingered 4 frames via a uniform 8-frame
+ * delay).
+ *
+ * <p>The assertion is deliberately scoped two ways. First, by id (see
+ * {@link #TRANSIENT_SELF_DELETE_IDS}): the Animal (Obj28) despawns by walk/fly
+ * physics and the off-screen {@code MarkObjGone} window (docs/s2disasm/s2.asm
+ * Obj28_Walk/Obj28_Fly), and the points popup (Obj29) — already ROM-correct on
+ * lifespan — diverges only by a one-frame spawn-windowing offset; both are
+ * object-lifetime categories outside piece (a). Second, by <em>count</em>
+ * rather than by slot: it compares the number of live Obj27 instances the
+ * engine holds against the ROM timeline. A delete that is a frame late leaves
+ * engineCount &gt; romCount; a frame early leaves engineCount &lt; romCount.
+ * Counting by id ignores spawn-slot-allocation / windowing drift (the engine
+ * spawning the same transient into a different slot than the ROM — piece b),
+ * which would otherwise mask or fake a transient-timing regression. See
+ * {@link ObjectOccupancyOracle#firstTransientCountDivergence}.
+ *
+ * <p>MTZ1 stays a non-asserting MEASUREMENT: it is a trace frontier (not a green
+ * trace), so its occupancy diverges for windowing reasons unrelated to transient
+ * timing.
  *
  * <p><strong>Comparison-only invariant:</strong> the oracle and this test read
  * trace data and engine state and report; they never write engine state from
@@ -41,10 +63,29 @@ public class TestS2ObjectOccupancyOracle {
 
     private static final int FIRST_DYNAMIC_SLOT = ObjectSlotLayout.SONIC_2.firstDynamicSlot();
 
+    /**
+     * Self-deleting transient object id whose destroy frame this assertion
+     * guards: Obj27, the badnik-death explosion. Its ROM lifespan is a fixed
+     * {@code anim_frame_duration} countdown (init 3 / reload 7 / delete at
+     * mapping_frame 5 in S2/S3K) = 35 game frames from spawn; piece (a) aligns
+     * the engine to that exact frame.
+     *
+     * <p>Obj29 (the floating points popup) is deliberately NOT in scope even
+     * though its self-delete logic is also fixed-countdown and the engine
+     * already matches the ROM lifespan exactly (32 frames: delete when
+     * {@code y_vel >= 0}, docs/s2disasm/s2.asm Obj29_Main). Its per-frame count
+     * still diverges by one frame in some green traces (e.g. EHZ1 f1308: ROM
+     * spawns the points at f1309, the engine at f1308) because the engine spawns
+     * it one frame off the ROM {@code AllocateObject} ordering — a
+     * spawn-slot-windowing offset (piece b), not a delete-frame error. Including
+     * Obj29 would make this assertion red for a reason outside piece (a).
+     */
+    private static final Set<Integer> TRANSIENT_SELF_DELETE_IDS = Set.of(0x27);
+
     @Test
     public void measureMtz1OccupancyDivergence() throws Exception {
         ObjectOccupancyOracle.Divergence first =
-                measureFirstDivergence("mtz", Sonic2ZoneConstants.ZONE_MTZ, 0);
+                measureFirstDivergence("mtz", Sonic2ZoneConstants.ZONE_MTZ, 0, null);
         if (first == null) {
             System.out.println(
                     "[occupancy-oracle] MTZ1: no dynamic-slot occupancy divergence "
@@ -56,39 +97,77 @@ public class TestS2ObjectOccupancyOracle {
                     first.frame(), first.slot(),
                     first.expectedId() & 0xFF, first.actualId() & 0xFF);
         }
-        // Measurement only: do not assert. Task 1.7 enables the assertion.
+        // Measurement only: MTZ1 is a trace frontier, not a green trace.
     }
 
     @Test
-    public void measureEhz1OccupancyDivergence() throws Exception {
-        // A green S2 sample alongside MTZ1, per the plan's "MTZ + one green
-        // S2 trace" measurement target.
+    public void scz1TransientOccupancyMatchesRom() throws Exception {
+        assertTransientOccupancy("scz", Sonic2ZoneConstants.ZONE_SCZ, 0);
+    }
+
+    @Test
+    public void wfz1TransientOccupancyMatchesRom() throws Exception {
+        assertTransientOccupancy("wfz", Sonic2ZoneConstants.ZONE_WFZ, 0);
+    }
+
+    /**
+     * Asserts that for every replayed frame of the named green S2 trace, the
+     * engine never holds MORE live instances of a self-deleting transient
+     * ({@link #TRANSIENT_SELF_DELETE_IDS}) than the ROM timeline — i.e. the
+     * transient never self-deletes LATER than the ROM {@code DeleteObject}. This
+     * is exactly the piece-(a) regression the explosion fix closes (the old
+     * uniform 8-frame delay made the explosion linger 4 frames). Counting by id
+     * ignores slot reshuffle; restricting to {@code engineCount > romCount}
+     * ignores the {@code engineCount < romCount} spawn-frame windowing offset
+     * that belongs to piece (b).
+     */
+    private void assertTransientOccupancy(String route, int zone, int act) throws Exception {
+        ObjectOccupancyOracle.CountDivergence first = driveTrace(route, zone, act,
+                (trace, om, frame) -> ObjectOccupancyOracle.firstTransientCountDivergence(
+                        trace, om, frame, FIRST_DYNAMIC_SLOT, TRANSIENT_SELF_DELETE_IDS, true));
+        Assertions.assertNull(first, () -> first == null ? "" : String.format(
+                "[occupancy-oracle] %s transient lingers past its ROM DeleteObject: "
+                        + "frame=%d id=0x%02X romCount=%d engineCount=%d "
+                        + "(scope=Obj27; engineCount>romCount = late self-delete)",
+                route.toUpperCase(), first.frame(), first.id(),
+                first.romCount(), first.engineCount()));
+    }
+
+    /** Per-frame comparison-only probe over the driven engine + ROM timeline. */
+    @FunctionalInterface
+    private interface FrameProbe<T> {
+        T check(TraceData trace, ObjectManager om, int frame);
+    }
+
+    @Test
+    public void ehz1TransientOccupancyMatchesRom() throws Exception {
+        // EHZ1 is a green S2 trace (Sonic+Tails). Assert transient self-delete
+        // occupancy (Obj27/Obj29) frame-for-frame against the ROM timeline.
         Path traceDir = Path.of("src/test/resources/traces/s2").resolve("ehz1_fullrun");
         Assumptions.assumeTrue(Files.isDirectory(traceDir),
                 "EHZ1 trace directory not found: " + traceDir);
-        ObjectOccupancyOracle.Divergence first =
-                measureFirstDivergence("ehz1_fullrun", Sonic2ZoneConstants.ZONE_EHZ, 0);
-        if (first == null) {
-            System.out.println(
-                    "[occupancy-oracle] EHZ1: no dynamic-slot occupancy divergence "
-                            + "across the trace.");
-        } else {
-            System.out.printf(
-                    "[occupancy-oracle] EHZ1 first divergence: frame=%d slot=%d "
-                            + "expectedId=0x%02X actualId=0x%02X%n",
-                    first.frame(), first.slot(),
-                    first.expectedId() & 0xFF, first.actualId() & 0xFF);
-        }
+        assertTransientOccupancy("ehz1_fullrun", Sonic2ZoneConstants.ZONE_EHZ, 0);
+    }
+
+    /**
+     * Unscoped slot-occupancy measurement (every slot divergence) used by the
+     * non-asserting MTZ1 frontier probe.
+     */
+    private ObjectOccupancyOracle.Divergence measureFirstDivergence(
+            String route, int zone, int act, Set<Integer> unused) throws Exception {
+        return driveTrace(route, zone, act,
+                (trace, om, frame) -> ObjectOccupancyOracle.firstDivergence(
+                        trace, om, frame, FIRST_DYNAMIC_SLOT));
     }
 
     /**
      * Drives the named S2 level-select trace through the engine (mirroring the
      * S2 branch of {@code AbstractTraceReplayTest.replayMatchesTrace}) and
-     * returns the first dynamic-slot occupancy divergence reported by the
-     * oracle, or {@code null} when occupancy matched for every replayed frame.
+     * returns the first non-null result from {@code probe}, or {@code null} when
+     * the probe reported no divergence for any replayed frame.
      */
-    private ObjectOccupancyOracle.Divergence measureFirstDivergence(
-            String route, int zone, int act) throws Exception {
+    private <T> T driveTrace(String route, int zone, int act, FrameProbe<T> probe)
+            throws Exception {
         Path traceDir = Path.of("src/test/resources/traces/s2").resolve(route);
         Assumptions.assumeTrue(Files.isDirectory(traceDir),
                 "Trace directory not found: " + traceDir);
@@ -148,8 +227,7 @@ public class TestS2ObjectOccupancyOracle {
                 if (!TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
                     continue;
                 }
-                ObjectOccupancyOracle.Divergence divergence =
-                        ObjectOccupancyOracle.firstDivergence(trace, om, i, FIRST_DYNAMIC_SLOT);
+                T divergence = probe.check(trace, om, i);
                 if (divergence != null) {
                     return divergence;
                 }

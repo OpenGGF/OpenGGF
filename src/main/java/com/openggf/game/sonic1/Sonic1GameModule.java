@@ -94,6 +94,17 @@ public class Sonic1GameModule implements GameModule {
         return GameId.S1;
     }
 
+    /**
+     * S1 {@code ExItem_Main} loads {@code move.b #7,obTimeFrame(a0)} for the
+     * badnik-death explosion (docs/s1disasm/_incObj/24, 27 &amp; 3F
+     * Explosions.asm), so the explosion's frame 0 is held 8 game frames — unlike
+     * S2/S3K which load {@code 3}. See {@link GameModule#explosionInitialAnimDuration()}.
+     */
+    @Override
+    public int explosionInitialAnimDuration() {
+        return 7;
+    }
+
     @Override
     public Game createGame(Rom rom) {
         return new Sonic1(rom);

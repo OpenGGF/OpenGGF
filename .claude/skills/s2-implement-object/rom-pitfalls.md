@@ -1792,6 +1792,60 @@ x_sub -- MTZ3 frontier advances from frame 4793 to frame 5143.
 
 ---
 
+## P42 -- Self-deleting transient anim timing must mirror the ROM `anim_frame_duration` countdown, not a uniform per-frame delay
+
+**Symptom.** A short-lived self-deleting object (explosion, points popup,
+sparkle) occupies its SST slot a few frames longer (or shorter) than ROM, even
+though the player physics are fine. An object-occupancy oracle shows the engine
+still holding the transient's id one or more frames after the ROM
+`DeleteObject` / `Delete_Current_Sprite`. The lifespan is wrong by a small fixed
+amount across every spawn of that object.
+
+**Root cause.** ROM animation-driven transients run a predecrement-reload
+countdown each frame, with a **different initial duration on the first/setup
+frame** than the reload value:
+```
+subq.b  #1, anim_frame_duration(a0)   ; predecrement (see P30: fires at -1)
+bpl.s   +                             ; still >= 0 -> just display this frame
+move.b  #7, anim_frame_duration(a0)   ; reload
+addq.b  #1, mapping_frame(a0)         ; advance frame
+cmpi.b  #5, mapping_frame(a0)         ; reached the delete frame?
+beq.w   DeleteObject
++ DisplaySprite
+```
+A Java port that approximates this with a single uniform `ANIM_DELAY` (e.g.
+"advance every 8 frames, delete after N frames") gets the frame-0 hold wrong:
+frame 0 in ROM lasts `initialDuration + 1` game frames, not `reload + 1`. For
+the badnik-death explosion (Obj27) the ROM init duration differs **per game** —
+S1 `ExItem_Main` loads `move.b #7`, while S2 `Obj27_Init` / S3K `loc_1E626`
+load `move.b #3` — so a uniform delay that happened to match S1 (frame 0 = 8
+game frames, delete +39) left S2/S3K lingering 4 frames past `DeleteObject`
+(delete should be +35).
+
+**What to check.** For any self-deleting animated transient: (1) port the exact
+`subq/bpl/reload/advance/cmp/delete` loop, not a uniform delay; (2) read the
+`move.b #N,anim_frame_duration` value in the **init/setup routine** separately
+from the reload `move.b #N` in the animate routine — they are usually different;
+(3) confirm whether the init duration differs per game and, if so, expose it as
+object animation data at the owning boundary (e.g. a defaulted `GameModule`
+accessor resolved at the object's first update) rather than a `gameId` branch;
+(4) the first `update()` corresponds to the ROM init->main same-frame
+fall-through (the spawn frame), so deletion lands `lifespan` game frames after
+that first update. See also P30 (`bmi`/`bpl` countdowns fire at -1).
+
+**ROM citation.** S2 `Obj27_Init`/`Obj27_Main` `docs/s2disasm/s2.asm:46672-46684`
+(init `#3`, reload `#7`, delete at mapping_frame 5); S3K `loc_1E626`/`loc_1E66E`
+`docs/skdisasm/sonic3k.asm:42195-42205` (init `#3`); S1 `ExItem_Main`/
+`ExItem_Animate` `docs/s1disasm/_incObj/24, 27 & 3F Explosions.asm` (init `#7`).
+Points popup Obj29 (`docs/s2disasm/s2.asm` `Obj29_Main`) is the velocity-driven
+variant: delete when `y_vel >= 0`, 32 frames after spawn.
+
+**Originating commit.** Object-lifetime piece (a): `ExplosionObjectInstance`
+ROM-exact self-delete + `GameModule.explosionInitialAnimDuration()`; enables the
+`TestS2ObjectOccupancyOracle` Obj27 assertion on green EHZ1/SCZ/WFZ.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

@@ -105,6 +105,76 @@ public final class ObjectOccupancyOracle {
         return null;
     }
 
+    /**
+     * One per-id transient-count divergence: at {@code frame}, the ROM timeline
+     * holds {@code romCount} live instances of object {@code id} across all
+     * dynamic slots, while the engine holds {@code engineCount}.
+     */
+    public record CountDivergence(int frame, int id, int romCount, int engineCount) {
+    }
+
+    /**
+     * Reports the first scoped-transient id whose live <em>count</em> across all
+     * dynamic slots diverges between the engine and the ROM timeline at
+     * {@code frame}, in the direction selected by {@code lateDeleteOnly}.
+     *
+     * <p>Self-deleting transients (explosion Obj27, points Obj29) must be
+     * destroyed on the ROM-exact frame. Relative to the ROM timeline:
+     * <ul>
+     *   <li>a <em>late</em> delete leaves the engine holding the transient after
+     *       the ROM {@code DeleteObject}: {@code engineCount > romCount};</li>
+     *   <li>an <em>early</em> delete, OR an earlier first-animate / earlier
+     *       spawn frame than ROM's {@code AllocateObject} slot ordering, leaves
+     *       {@code engineCount < romCount}.</li>
+     * </ul>
+     *
+     * <p>Counting by id (not by slot) ignores which slot each instance lands in,
+     * so a pure slot reshuffle does not register. But the count is still shifted
+     * by <em>spawn-frame</em> windowing: in the ROM, an explosion allocated into
+     * a slot below its spawning object runs its first {@code Obj27_Main} animate
+     * one frame later (a 36-frame recorded lifespan instead of 35), while the
+     * engine's same-frame child execution animates it immediately. That
+     * one-frame spawn/first-animate offset is windowing drift (piece b), not a
+     * delete-frame error, and shows up only as {@code engineCount < romCount}.
+     *
+     * <p>Therefore {@code lateDeleteOnly = true} reports only
+     * {@code engineCount > romCount} — the exact "transient lingers past its ROM
+     * {@code DeleteObject}" regression that piece (a) fixes — and stays blind to
+     * the {@code engineCount < romCount} windowing offset owned by piece (b).
+     * {@code lateDeleteOnly = false} reports any inequality (diagnostic).
+     *
+     * <p>Comparison-only: reads trace + engine state and reports.
+     *
+     * @param scopeIds       transient object ids ({@code 0..0xFF}) this guards
+     * @param lateDeleteOnly when true, report only {@code engineCount > romCount}
+     */
+    public static CountDivergence firstTransientCountDivergence(TraceData trace, ObjectManager om,
+                                                                int frame, int firstDynamicSlot,
+                                                                java.util.Set<Integer> scopeIds,
+                                                                boolean lateDeleteOnly) {
+        Map<Integer, Integer> expected = expectedOccupancy(trace, frame, firstDynamicSlot);
+        Map<Integer, Integer> actual = engineOccupancy(om);
+        for (int id : new TreeSet<>(scopeIds)) {
+            int romCount = countId(expected, id);
+            int engineCount = countId(actual, id);
+            boolean diverges = lateDeleteOnly ? engineCount > romCount : engineCount != romCount;
+            if (diverges) {
+                return new CountDivergence(frame, id, romCount, engineCount);
+            }
+        }
+        return null;
+    }
+
+    private static int countId(Map<Integer, Integer> occ, int id) {
+        int n = 0;
+        for (int v : occ.values()) {
+            if ((v & 0xFF) == (id & 0xFF)) {
+                n++;
+            }
+        }
+        return n;
+    }
+
     /** Engine {@code slot -> id} for every occupied dynamic slot (read-only). */
     private static Map<Integer, Integer> engineOccupancy(ObjectManager om) {
         Map<Integer, Integer> m = new HashMap<>();

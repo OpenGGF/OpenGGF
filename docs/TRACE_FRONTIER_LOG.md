@@ -1,5 +1,46 @@
 # Trace Frontier Log
 
+## 2026-06-04 - Object-lifetime piece (a): transient explosion (Obj27) self-delete aligned to ROM-exact frame
+
+- Worktree: `feature/ai-rom-object-windowing-s2` (branch `feature/ai-trace-green...`).
+- Change: `ExplosionObjectInstance` (shared S1/S2/S3K Obj27) now mirrors the ROM
+  `anim_frame_duration` countdown (`subq #1 / bpl / reload 7 / mapping_frame 5`)
+  instead of a uniform 8-frame delay. It previously lingered 4 frames past the
+  ROM `DeleteObject` in S2/S3K. The frame-0 hold differs per game (S1
+  `move.b #7,obTimeFrame`; S2/S3K `move.b #3`), modelled via new
+  `GameModule.explosionInitialAnimDuration()` (default 3, `Sonic1GameModule`
+  overrides 7) — object animation data, not a gameId branch. Cites:
+  docs/s2disasm/s2.asm:46672-46684; docs/skdisasm/sonic3k.asm:42195-42205;
+  docs/s1disasm/_incObj/24, 27 & 3F Explosions.asm (ExItem_Main/ExItem_Animate).
+- Oracle: `TestS2ObjectOccupancyOracle` Task 1.7 assertion ENABLED for the green
+  S2 traces EHZ1/SCZ/WFZ, scoped to Obj27 self-delete-timing (engineCount must
+  never exceed romCount = "lingers past ROM DeleteObject"). PASS (4 tests, 0
+  failures). MTZ1 stays a non-asserting frontier measurement.
+- Full single-fork sweep (all ROMs, working-dir defaults):
+  `mvn -q -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=true surefire:test -Dtest=*TraceReplay`
+  - S1: all GREEN (Ghz1, Mz1, Credits00-07).
+  - S2 greens: EHZ1, SCZ, WFZ GREEN (unchanged).
+  - S2 frontiers UNCHANGED: arz 2043, arz2 549, cnz 3831, cnz2 1775, cpz 2822,
+    cpz2 2518, dez 1023, htz 5647, htz2 1078, mcz 2181, mcz2 4009, mtz 375,
+    mtz2 641, mtz3 2047, ooz 756, ooz2 389.
+  - S3K frontiers UNCHANGED: aiz 8941, cnz 17276, mgz 4124.
+  - No green regressed; no frontier moved backward. (Pre-existing unit-test
+    failures `TestSidekickCpuDespawnParity` x2 are baseline, unrelated to this
+    change — confirmed by stash A/B.)
+- Out of scope (left for ridden/windowing object-lifetime work, piece b):
+  - Animal (Obj28) despawn is walk/fly-physics + off-screen `MarkObjGone`
+    driven (docs/s2disasm/s2.asm Obj28_Walk/Obj28_Fly), variable lifespan — not
+    a fixed self-delete timer.
+  - Points (Obj29) self-delete timing is already ROM-correct (32-frame lifespan,
+    delete when `y_vel>=0`); its per-frame occupancy still diverges by one frame
+    in some greens (e.g. EHZ1 f1308: ROM spawns the points f1309, engine f1308)
+    due to a one-frame spawn/`AllocateObject`-ordering windowing offset.
+  - Some ROM explosions live 36 frames (deferred first-animate from lower-slot
+    allocation, e.g. EHZ1 2810->2846, WFZ 3486->3522) vs the engine's 35-frame
+    same-frame-exec base case — a spawn-slot windowing offset (engineCount <
+    romCount), not a delete-frame error, so the oracle's late-delete-only guard
+    correctly ignores it.
+
 ## 2026-06-04 - S2 ROM object-windowing Stage 1 cascade sweep (CNZ1 f3906->f3831, MTZ3 f2638->f2047 expected cascade)
 
 - Worktree: `feature/ai-rom-object-windowing-s2` (Stage 1 tasks 1.1-1.6 + arch fix + test fix).
