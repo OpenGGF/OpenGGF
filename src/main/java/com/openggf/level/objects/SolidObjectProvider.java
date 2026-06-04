@@ -54,9 +54,28 @@ public interface SolidObjectProvider {
     /**
      * Whether this object accepts a new top-solid landing at the exact surface
      * boundary even when the game's shared top-solid profile normally rejects it.
+     * <p>
+     * The shared {@code topSolidLandingAllowsZeroDist} game flag models
+     * {@code PlatformObject_ChkYRange}, whose new-landing fall-through window is
+     * gated per game (S2 rejects the exact boundary; S1/S3K accept it).  However,
+     * top-solid objects that land players through {@code SolidObject_Landed}
+     * (reached via {@code SolidObject_TopBottom}) rather than
+     * {@code PlatformObject_ChkYRange} accept the exact surface boundary on every
+     * game: {@code SolidObject_TopBottom} does {@code cmpi.w #$10,d3 / blo
+     * SolidObject_Landed} (docs/s2disasm/s2.asm:35488-35494), and {@code blo}
+     * (unsigned lower-than $10) covers {@code d3 == 0}.  The engine identifies the
+     * {@code SolidObject_Landed} routine by {@code !usesPlatformObjectLandingSnap()}
+     * (the same predicate that selects the {@code playerY - distY + 3} snap), so a
+     * SolidObject-routine top-solid object accepts the {@code distY == 0} boundary
+     * regardless of the PlatformObject-oriented game flag.  This is required for
+     * S2's Obj82 swinging platform (Obj82_Main calls JmpTo23_SolidObject,
+     * docs/s2disasm/s2.asm:57159), where a fast-falling rider can reach the pillar
+     * top with exactly {@code d3 == 0} and must still land that frame.
      */
     default boolean allowsZeroDistanceTopSolidLanding(PlayableEntity player) {
-        return false;
+        // SolidObject_Landed (s2.asm:35488-35494 blo covers d3==0) accepts the
+        // exact boundary; PlatformObject_ChkYRange (game flag) governs the rest.
+        return isTopSolidOnly() && !usesPlatformObjectLandingSnap();
     }
 
     /**

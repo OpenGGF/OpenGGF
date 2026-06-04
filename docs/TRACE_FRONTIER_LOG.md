@@ -1,5 +1,28 @@
 # Trace Frontier Log
 
+## 2026-06-04 - S2 trace-green-fleet pass 2: 8 frontiers advanced, integrated + verified
+
+- Branch `feature/ai-trace-green-integration` off develop `b91c7a13a`; verified with one
+  single-fork sweep (`-DforkCount=1`, all 3 ROMs, `-Dtest=*TraceReplay`): 0 flakes.
+- 8 advances held; S1 (×10) green, S2 greens (ehz1/scz/wfz) green, S3K (aiz f8941 /
+  cnz f17276 / mgz f4124) byte-identical → shared `Camera` + `SolidObjectProvider`
+  changes confirmed inert for S1/S3K.
+  | Trace | frame | commit |
+  |-------|-------|--------|
+  | ARZ2 | 241→264   | `5e995882e` SolidObjectProvider zero-distance top-solid landing |
+  | MTZ2 | 453→641   | `c45893ab5` MTZ platform carry |
+  | CPZ1 | 844→1905  | `011ee14df` Spiny badnik + projectile |
+  | MTZ3 | 1379→2111 | `05a9e294e` Camera vertical-wrap visibility window (PhysicsFeatureSet-gated) |
+  | MCZ1 | 1455→2005 | `7f8078ecc` sliding spikes |
+  | CPZ2 | 1607→1609 | `e57e6e6fd` Grabber |
+  | MCZ2 | 3003→3729 | `70117fa09` vine switch |
+  | OOZ1 | 741→756   | `7be563ebe` fan |
+- DROPPED from this integration: DEZ (`e265e4ff0`, MechaSonic, f536→1759). Its advance
+  is valid but UNMASKS a pre-existing crash — `Sonic2DeathEggRobotInstance$ForearmChild.
+  updatePunch` calls `services()` on a child without construction context
+  (`IllegalStateException`) once the trace reaches the Death Egg Robot (~f1759). To be
+  re-landed together with a ForearmChild spawn-context fix.
+
 ## 2026-06-03 - S2 trace-green-fleet: 7 frontiers advanced, integrated + combined-verified
 
 - Branch: `feature/ai-trace-green-integration` (worktree `.worktrees/trace-green-integration`),

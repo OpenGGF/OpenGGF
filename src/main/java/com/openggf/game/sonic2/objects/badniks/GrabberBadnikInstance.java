@@ -337,42 +337,11 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
             return;
         }
 
-        // === Input checking (loc_390BC in disassembly) ===
-        // Track directional input changes using bitmask like the disassembly
-        // Bit 2 = left ($04), Bit 3 = right ($08), mask = $0C
-        int currentDirectionBits = 0;
-        if (grabbedPlayer.isLeftPressed()) currentDirectionBits |= 0x04;
-        if (grabbedPlayer.isRightPressed()) currentDirectionBits |= 0x08;
-        currentDirectionBits &= 0x0C;  // Mask to direction bits only
-
-        if (currentDirectionBits != 0) {
-            if (!inputDetectedThisCycle) {
-                // First direction press in this cycle - set baseline
-                inputDetectedThisCycle = true;
-                lastDirectionBits = currentDirectionBits;
-            } else if (currentDirectionBits != lastDirectionBits) {
-                // Direction changed - count the toggle
-                directionToggleCount++;
-                lastDirectionBits = currentDirectionBits;
-            }
-        }
-
-        // Every 32 frames, check if player has escaped (objoff_37 countdown)
-        inputCheckTimer--;
-        if (inputCheckTimer <= 0) {
-            if (directionToggleCount >= ESCAPE_BUTTON_COUNT) {
-                // Player escaped! Grabber survives and returns to patrol
-                releasePlayer(true);
-                return;
-            }
-            // Reset for next check window
-            inputCheckTimer = INPUT_CHECK_INTERVAL;
-            directionToggleCount = 0;
-            inputDetectedThisCycle = false;
-        }
-
-        // === Blink mechanism (ObjA7_CheckExplode) ===
-        // Decrement blink counter each frame
+        // === Blink mechanism (ObjA7_CheckExplode, s2.asm:76967-76975) ===
+        // ROM ordering: the carry routines loc_38F3E (s2.asm:76708-76710) and
+        // loc_38F58 (s2.asm:76722-76724) call ObjA7_CheckExplode BEFORE loc_390BC
+        // every frame. Run the blink countdown first so a same-frame blink-timeout
+        // (ObjA7_Poof) wins over the escape evaluation exactly as the ROM does.
         blinkCounter--;
         if (blinkCounter <= 0) {
             // Reload counter and decrement blink count
@@ -386,6 +355,58 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
                 // Trigger destruction (Grabber transforms to explosion)
                 triggerDestruction();
                 return;
+            }
+        }
+
+        // === Escape-window input checking (loc_390BC, s2.asm:76915-76957) ===
+        // Track directional input changes using a bitmask like the disassembly:
+        // Bit 2 = left ($04), Bit 3 = right ($08), mask = $0C (objoff_36/objoff_38).
+        int currentDirectionBits = 0;
+        if (grabbedPlayer.isLeftPressed()) currentDirectionBits |= 0x04;
+        if (grabbedPlayer.isRightPressed()) currentDirectionBits |= 0x08;
+        currentDirectionBits &= 0x0C;  // Mask to direction bits only
+
+        // ROM gate (s2.asm:76918-76919): tst.b objoff_31 / beq loc_390E6.
+        // The 32-frame escape window (objoff_37) only begins counting AFTER the
+        // first directional press of the cycle has been latched into objoff_31.
+        // On that first-input frame the ROM takes the loc_390E6 path
+        // (s2.asm:76933-76940) which sets objoff_31 + objoff_36 and returns
+        // WITHOUT decrementing objoff_37 and WITHOUT counting a toggle. Only on
+        // subsequent frames (objoff_31 already set) does loc_390BC decrement
+        // objoff_37 and tally toggles. The previous engine code decremented the
+        // timer unconditionally every carrying frame, which started the window at
+        // the grab frame instead of at first input and fired the escape ~12 frames
+        // early (CPZ2 f1607 divergence: ROM keeps Sonic pinned, engine released).
+        if (!inputDetectedThisCycle) {
+            // loc_390E6: waiting for the first directional press of this cycle.
+            if (currentDirectionBits != 0) {
+                inputDetectedThisCycle = true;          // st.b objoff_31
+                lastDirectionBits = currentDirectionBits; // move.b d0,objoff_36
+            }
+            // No objoff_37 decrement on the latch (or idle) frame.
+        } else {
+            // objoff_31 set: now the window counts down (subq.b #1,objoff_37).
+            inputCheckTimer--;
+            if (inputCheckTimer <= 0) {
+                // loc_390FA (s2.asm:76942-76956): window expired. Escape only when
+                // >=4 toggles were tallied this window; either way reset the timer
+                // to $20 AND clear the first-input latch + toggle count so the next
+                // window again waits for first input.
+                if (directionToggleCount >= ESCAPE_BUTTON_COUNT) {
+                    // Player escaped: obj_control=0, in_air, Walk anim, NO velocity
+                    // imparted (s2.asm:76945-76951). Sonic drops from rest.
+                    releasePlayer(true);
+                    return;
+                }
+                inputCheckTimer = INPUT_CHECK_INTERVAL;  // move.b #$20,objoff_37
+                directionToggleCount = 0;                // clr.b objoff_38
+                inputDetectedThisCycle = false;          // clr.b objoff_31
+            } else if (currentDirectionBits != 0
+                    && currentDirectionBits != lastDirectionBits) {
+                // s2.asm:76922-76928: count a toggle only when a direction is held
+                // this frame and it differs from the last latched direction.
+                directionToggleCount++;
+                lastDirectionBits = currentDirectionBits;
             }
         }
 

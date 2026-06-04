@@ -49,12 +49,26 @@ public class SpinyBadnikInstance extends AbstractBadnikInstance {
 
     // Movement constants
     private static final int X_VEL = 0x40;        // Movement speed (subpixels)
-    private static final int MOVE_TIMER = 0x80;   // Frames before reversing (128)
+    // ROM reversal-timer quirk (s2.asm:76362, 76380, 76382):
+    //   ObjA5_Init / reversal: `move.w #$80,objoff_2A(a0)` (a WORD write)
+    //   loc_38B2C:             `subq.b #1,objoff_2A(a0)`   (a BYTE decrement)
+    // objoff_2A is a single byte at $2A (s2.constants.asm:133). The word write
+    // $0080 is big-endian, so byte[$2A] (the high byte, which the BYTE subq
+    // decrements) is set to $00, NOT $80. Decrementing the high byte from $00
+    // therefore wraps $00->$FF->...->$01->$00, taking 256 (0x100) decrements to
+    // reach zero and reverse — NOT 128. The low byte $80 lands in objoff_2B
+    // (the adjacent detect-lockout byte at $2B); see INITIAL_LOCKOUT below.
+    private static final int MOVE_TIMER = 0x100;  // Move-frames before reversing (256, see above)
 
     // Attack constants
     private static final int ATTACK_TIMER = 0x28;   // Attack duration (40 frames)
     private static final int FIRE_FRAME = 0x14;     // Fire at this remaining (20 frames)
     private static final int ATTACK_LOCKOUT = 0x40; // Cooldown after attack (64 frames)
+    // Side effect of the `move.w #$80,objoff_2A` quirk above: the WORD write's
+    // low byte ($80) lands in objoff_2B (the detect-lockout byte at $2B). So at
+    // spawn AND on every direction reversal, the spiny gets a 128-frame window
+    // where loc_38B10 skips detection (objoff_2B != 0 -> bra loc_38B2C).
+    private static final int INITIAL_LOCKOUT = 0x80; // Detect lockout from word write (128)
 
     // Detection range (ROM Obj_GetOrientationToPlayer + Spiny addi/cmpi/blo gate)
     // s2.asm:75939-75941: addi.w #$60, d2 ; cmpi.w #$C0, d2 ; blo
@@ -86,7 +100,9 @@ public class SpinyBadnikInstance extends AbstractBadnikInstance {
         this.state = State.PATROLLING;
         this.moveCounter = MOVE_TIMER;
         this.attackTimer = 0;
-        this.attackLockout = 0;
+        // ROM ObjA5_Init `move.w #$80,objoff_2A` also seeds objoff_2B=$80, giving
+        // a 128-frame initial detect lockout (s2.asm:76362; see INITIAL_LOCKOUT).
+        this.attackLockout = INITIAL_LOCKOUT;
         this.movingLeft = true;      // Start moving left (like disassembly)
         this.hasFired = false;
         this.facingLeft = true;
@@ -132,11 +148,17 @@ public class SpinyBadnikInstance extends AbstractBadnikInstance {
             }
         }
 
-        // Step 3: decrement direction timer, possibly reverse x_vel.
+        // Step 3: decrement direction timer (objoff_2A), possibly reverse x_vel.
+        // ROM loc_38B2C (s2.asm:76379-76383): subq.b #1,objoff_2A ; bne + ;
+        // move.w #$80,objoff_2A ; neg.w x_vel. The reversal's `move.w #$80` is
+        // the same word-write quirk as Init: it reseeds objoff_2A's reversal
+        // period to 256 AND reseeds objoff_2B (attackLockout) to $80 (128),
+        // re-imposing the detect lockout for 128 frames after every reversal.
         moveCounter--;
         if (moveCounter <= 0) {
             movingLeft = !movingLeft;
             moveCounter = MOVE_TIMER;
+            attackLockout = INITIAL_LOCKOUT;
         }
 
         // Step 4: ObjectMove (x_vel into x_pos:x_sub).
@@ -239,16 +261,32 @@ public class SpinyBadnikInstance extends AbstractBadnikInstance {
         final int spawnX = currentX;
         final int spawnY = currentY; // ROM uses y_pos(a0) directly, no -8 offset
         final int fireXVel = xVel;
-        services().objectManager().createDynamicObject(() -> new BadnikProjectileInstance(
-                spawn,
-                BadnikProjectileInstance.ProjectileType.SPINY_SPIKE,
-                spawnX,
-                spawnY,
-                fireXVel,
-                SPIKE_Y_VEL,
-                true,  // Apply gravity (Obj98_SpinyShotFall)
-                false  // No initial flip
-        ));
+        // ROM loc_38C22 uses AllocateObjectAfterCurrent (s2.asm:76487), so the
+        // Obj98 spike takes the slot right after the spiny and runs THIS frame's
+        // exec pass — but its first pass is routine 0 (Obj98_Init -> LoadSubObject,
+        // no movement, s2.asm:74583-74584); it only starts Obj98_SpinyShotFall
+        // movement on the NEXT frame. Without deferring that init frame the engine
+        // spike moves one frame early, arriving in the player/sidekick touchbox a
+        // frame ahead of the ROM. Mirror CluckerBadnikInstance/NebulaBadnikInstance:
+        // build with construction context, defer the init frame, add-after-current.
+        BadnikProjectileInstance spike = services().objectManager().createDynamicObject(
+                () -> new BadnikProjectileInstance(
+                        spawn,
+                        BadnikProjectileInstance.ProjectileType.SPINY_SPIKE,
+                        spawnX,
+                        spawnY,
+                        fireXVel,
+                        SPIKE_Y_VEL,
+                        true,  // Apply gravity (Obj98_SpinyShotFall)
+                        false  // No initial flip
+                ));
+        if (spike != null) {
+            // Remove the slot assigned by addDynamicObject and re-add after the
+            // current exec slot so the spike runs its no-move init frame this frame.
+            services().objectManager().removeDynamicObject(spike);
+            spike.deferFirstMovementForLoadSubObjectInit();
+            services().objectManager().addDynamicObjectAfterCurrent(spike);
+        }
     }
 
     @Override
@@ -260,6 +298,17 @@ public class SpinyBadnikInstance extends AbstractBadnikInstance {
             // Crawling animation (frames 0-1, 9-frame delay)
             animFrame = ((frameCounter / CRAWL_ANIM_DELAY) & 1);
         }
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("st=%s mc=%02X at=%02X lk=%02X sub=%04X dir=%s",
+                state,
+                moveCounter & 0xFFFF,
+                attackTimer & 0xFFFF,
+                attackLockout & 0xFFFF,
+                subPixelX & 0xFFFF,
+                movingLeft ? "L" : "R");
     }
 
     @Override

@@ -679,7 +679,14 @@ class TestSonic2TriggerParticipation {
                 new ObjectSpawn(0x1000, 0x1000, 0xA5, 0, 0, false, 0));
         spiny.setServices(new QueryOnlyPlayerServices(main, List.of(tails)));
 
-        spiny.update(0, main);
+        // ROM ObjA5_Init `move.w #$80,objoff_2A` also seeds the adjacent detect
+        // lockout byte objoff_2B=$80 (objoff_2A=$2A, objoff_2B=$2B; s2.constants.asm
+        // line 133), so loc_38B10 skips detection for the first 128 frames
+        // (s2.asm:76362, 76367-76370). Advance past that initial lockout, then the
+        // spiny's first detection must resolve the closest sidekick (Tails) and attack.
+        for (int i = 0; i <= 0x80; i++) {
+            spiny.update(i, main);
+        }
 
         assertEquals("ATTACKING", field(spiny, "state").toString(),
                 "Spiny should resolve closest P2 candidates through ObjectPlayerQuery");

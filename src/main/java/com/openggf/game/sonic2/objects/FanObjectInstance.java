@@ -45,8 +45,13 @@ public class FanObjectInstance extends AbstractObjectInstance {
 
     // Timer state machine
     // NOTE: 'spinUp' maps to objoff_32 != 0 in the disassembly.
-    // When spinUp=true (180 frames): fan accelerates animation, no wind push.
-    // When spinUp=false (120 frames): fan blows at full speed, pushes player.
+    // ROM Obj3F_Vertical/Horizontal (s2.asm:57606-57615, 57704-57713) reloads
+    // objoff_30 = #$78 by default, then BCHG #0,objoff_32 (which sets Z from the
+    // ORIGINAL bit) and BEQ skips the #$B4 override when the new objoff_32 bit0 == 1.
+    // Result: objoff_32 -> 1 (spinUp=true, NO push) keeps #$78 = 120 = IDLE_DURATION;
+    // objoff_32 -> 0 (spinUp=false, BLOW/push) overrides to #$B4 = 180 = ACTIVE_DURATION.
+    // When spinUp=true (120 frames): fan accelerates animation, no wind push.
+    // When spinUp=false (180 frames): fan blows at full speed, pushes player.
     private int timer;
     private boolean spinUp; // objoff_32: true = spinning up, false = blowing
 
@@ -80,7 +85,10 @@ public class FanObjectInstance extends AbstractObjectInstance {
             if (timer < 0) {
                 accumulator = 0;
                 spinUp = !spinUp;
-                timer = spinUp ? ACTIVE_DURATION : IDLE_DURATION;
+                // ROM s2.asm:57710-57713 / 57612-57615: default #$78 (IDLE) kept when
+                // objoff_32 toggles to 1 (spinUp, no push); overridden to #$B4 (ACTIVE)
+                // when objoff_32 toggles to 0 (blow/push). BCHG sets Z from the original bit.
+                timer = spinUp ? IDLE_DURATION : ACTIVE_DURATION;
             }
         }
 
