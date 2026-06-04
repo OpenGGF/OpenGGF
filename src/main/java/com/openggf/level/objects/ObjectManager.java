@@ -2520,6 +2520,30 @@ public class ObjectManager {
     }
 
     /**
+     * Shared out-of-range delete decision used by the standard (non-custom)
+     * unload path.
+     * <p>
+     * S2 routes the per-instance off-screen unload through the ROM object-side
+     * {@code MarkObjGone} window ({@link S2ObjectWindowing#markObjGone}, base
+     * {@code (Camera_X_pos - $80) & $FF80}, first deleting bucket {@code $300};
+     * docs/s2disasm/s2.asm MarkObjGone). S1/S3K keep the S1 {@code out_of_range}
+     * macro ({@link #isOutOfRangeS1}). The two share the same reference X.
+     * <p>
+     * <b>Coordinate semantics:</b> ROM {@code MarkObjGone} (and {@code out_of_range})
+     * read {@code x_pos(a0)} — the object's ROM centre X. Both branches consume
+     * {@link #outOfRangeReferenceX(ObjectInstance, ObjectSpawn)} (the object's
+     * explicit ROM reference X, defaulting to its centre-aligned {@code getX()}),
+     * never a sprite top-left bound, so the window is not shifted by half-width.
+     */
+    private boolean isObjectOutOfRange(ObjectInstance instance, ObjectSpawn spawn, int cameraX) {
+        int referenceX = outOfRangeReferenceX(instance, spawn);
+        if (slotLayout == ObjectSlotLayout.SONIC_2) {
+            return S2ObjectWindowing.markObjGone(referenceX, cameraX);
+        }
+        return isOutOfRangeS1(referenceX, cameraX);
+    }
+
+    /**
      * ROM parity dispatcher for the destroy-from-active path.
      *
      * <p>When an object self-destroys via an off-screen check
@@ -2564,7 +2588,7 @@ public class ObjectManager {
         }
         boolean outOfRange = instance.usesCustomOutOfRangeCheck()
                 ? instance.isCustomOutOfRange(cameraX)
-                : isOutOfRangeS1(outOfRangeReferenceX(instance, spawn), cameraX);
+                : isObjectOutOfRange(instance, spawn, cameraX);
         if (persistent || !outOfRange) {
             return false;
         }
