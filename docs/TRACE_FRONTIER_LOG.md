@@ -1,5 +1,19 @@
 # Trace Frontier Log
 
+## 2026-06-04 - cnz1 f3831 corrected cause: CNZBigBlock (ObjD4) update-cadence drift (1px)
+
+- cnz1 stays at f3831 (the windowing-cascade regression, not yet restored). Prior diagnoses
+  (ridden-object, bumper-trig, ground-collision departure rounding) were all REFUTED.
+- Proven cause: at f3831 the player physics land identically (centreX 0x0F6F in both); the 1px X
+  divergence (ROM 0x0F71 vs engine 0x0F72) comes from the moving solid **CNZBigBlock (ObjD4)** being
+  **1px right of ROM** (ROM block @0F46 vs engine @0F47), so its `SolidObject_cont` side-push is +3
+  (engine) vs +2 (ROM). ObjD4's per-frame 16:16 integration + accel/turnaround are bit-exact with ROM
+  `ObjD4_Horizontal`; the 1px is an **object spawn-frame / load-window update-cadence phase difference**
+  accumulated over ~500 updates. FIX CLASS: ObjD4/CNZBigBlock spawn-frame/update-cadence parity (needs
+  ROM-side frame correlation of ObjD4 x_pos/updateCount vs engine). Do NOT nudge the block or touch
+  shared ground/wall physics (verified correct). Detail on branch `bugfix/ai-cnz1-ground-departure`.
+
+
 ## 2026-06-04 - INTEGRATION: unified interact(a0) slot model advances mtz1 375->863 AND mtz3 2638->3719 together
 
 - Branch `feature/ai-mtz-sidekick-despawn-integration`, worktree
