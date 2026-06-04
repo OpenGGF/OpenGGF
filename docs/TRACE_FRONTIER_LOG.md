@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+## 2026-06-04 - ROOT CAUSE: S2 sidekick Tails_interact_ID despawn (blocks mtz1/htz2) — architectural, not a despawn-predicate fix
+
+- Focused investigation (no code change committed; analysis recorded here per the maintainer's
+  pass-5 directive to find the EHZ regression's true cause).
+- ROM `TailsCPU_CheckDespawn` (s2.asm:39403-39446) compares `id(a3)` — the LIVE id of whatever
+  object currently occupies the PERSISTENT slot `interact(a0)` (s2.constants.asm:69; written only
+  by `RideObject_SetRide` s2.asm:36006, never cleared on dismount/despawn/death) — against
+  `Tails_interact_ID`, which `UpdateObjInteract` (s2.asm:39435-39446) refreshes to `id(interact(a0))`
+  every on-screen frame. Because slots recycle, ROM `Tails_interact_ID` is highly dynamic
+  (EHZ1 regen with the 9.8-s2 recorder's per-frame `cpu_state.interact`: cycles
+  0x18→0→0x08→0→0x9D→0→0x28→0→0x18 across f1000-1406).
+- The engine models this with an INSTANCE-based latch (`latchedSolidObjectId`/`latchedSolidObjectInstance`
+  in AbstractPlayableSprite) + `lastInteractObjectId` mirror in SidekickCpuController — which cannot
+  capture ROM's slot-recycling semantics. The despawn guards `currentInteractObjectId != 0 &&
+  lastInteractObjectId != 0` (introduced ~`841370074`/`15c98e1be`) are a MASK: they suppress the
+  id-mismatch despawn whenever the engine never established a remembered ride id. Removing them
+  (the ROM-literal compare) advances mtz1 375→863 (next divergence is a genuine Sonic `air` issue)
+  but does NOT advance htz2 (795, now a spurious despawn) and REGRESSES green EHZ1 at f1417.
+- The CONFLICTING existing behavior (maintainer's hypothesis, refined): NOT a despawn fix — it is the
+  sidekick FOLLOW/LANDING physics. In EHZ1 the engine's Tails rides a Bridge (id 0x11) at f1132-1305
+  where ROM rides a floating platform (id 0x18); so even a sticky latch yields last=0x11 ≠ ROM 0x18 →
+  spurious despawn. mtz1 instead is blocked by the `!= 0` guard (ROM `Tails_interact_ID=0x01` vs new
+  SteamSpring 0x42 → ROM despawns; engine `last=0` so the guard blocks it).
+- REAL FIX (out of focused scope; needs its own effort): (1) model ROM's slot-based `interact(a0)` on
+  the sidekick (persistent slot index, never cleared) + an `UpdateObjInteract`-equivalent refresh, and
+  (2) correct the sidekick follow/landing so the engine rides the same objects ROM does (0x18 vs 0x11
+  in EHZ1). Architectural change to the latch model + a follow-physics correction, with cross-trace risk.
+- Baseline confirmed unchanged: EHZ1/SCZ/WFZ green; mtz1@375, htz2@795; S3K AIZ@8941 (path S3K-gated off,
+  PhysicsFeatureSet.java:944). Worktree left clean (no commit).
+
+
 ## 2026-06-04 - S2 trace-green-fleet pass 4: 6 frontiers advanced, integrated + verified
 
 - Branch `feature/ai-trace-green-integration` off develop `6925c3d65`; single-fork sweep: 0 flakes, 0 regressions. S1 green, S2 greens green, S3K (aiz 8941/cnz 17276/mgz 4124) held.
