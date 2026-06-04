@@ -46,16 +46,17 @@ Wording: this is a **"shared SST/respawn/allocator substrate (owned by ObjectMan
 ## 4. Per-game loaders & unload (verified thresholds + citations)
 
 ### S2 (reference model)
-- **Load** (`ObjectsManager_Main`, `s2.asm:33026`): `d6 = Camera_X_pos & $FF80` (**no −$80** on the load base).
-  - Moving **forward** (right): load forward to `d6 + $280`; left-cursor trim at `d6 − $300`.
-  - Moving **backward** (left): load to `d6 − $80`; right-cursor trim at `d6 + $300`.
+- **Load** (`ObjectsManager_Main`, `s2.asm:33026`): `camRounded = Camera_X_pos & $FF80` (**no −$80** on the load base). Stated as **FINAL compare boundaries from `camRounded`** (not the ROM's internal post-shift deltas):
+  - forward (right) **load edge** = `camRounded + $280`; left-cursor **trim edge** = `camRounded − $80`.
+  - backward (left) **load edge** = `camRounded − $80`; right-cursor **trim edge** = `camRounded + $280`.
+  - i.e. the live window is `[camRounded − $80, camRounded + $280]` (width **$300**). NOTE: ROM reaches the trim edges via an `addi/subi #$300` applied to `d6` **after** it has already moved to the load edge (e.g. forward: `d6 += $280`, then left-trim `d6 − $300` = `camRounded − $80`). The `$300` is the internal delta / window width, **NOT** a boundary measured from `camRounded` — tests must assert the final `+$280` / `−$80` boundaries, not `±$300` from `camRounded`.
 - **`ChkLoadObj`** (`s2.asm:33592`): `bset #7` of the respawn entry both **tests and sets**. If bit 7 was already set → advance the list pointer by 6 and return **success** (`d0=0`) so scanning continues; only a **full SST** (allocation failure) returns failure. *(Required unit test: skip-vs-full distinction.)*
 - **Allocate** (`AllocateObject`, `s2.asm:33675`): linear forward search for first slot whose **empty predicate** holds — for S1/S2 that is `id byte == 0`. (S3K's predicate differs — see below; the §3 contract abstracts this.)
 - **Delete** (`DeleteObject`, `s2.asm:30324`): zero the whole slot ($40 bytes incl. the id byte).
 - **Object-side unload** (`MarkObjGone`, `s2.asm:30209`): `(x_pos & $FF80) − Camera_X_pos_coarse > $80 + roundToNextMultiple(screen_width,$80) + $80`. At native 320px width this constant is **$280** (320 is not a multiple of $80, so it rounds up to $180); since the compared value is $80-coarse, the **first deleting bucket is $300**. `Camera_X_pos_coarse = (Camera_X_pos − $80) & $FF80`. On out-of-range: if `respawn_index != 0`, clear bit 7 of its respawn entry, then `DeleteObject`.
 
 ### S1 (own faithful port; structurally close to two-cursor)
-- **Loader** (`ObjPosLoad.asm:7`): counter-based; `v_opl_data` = right cursor, `v_opl_data+4` = left cursor; two respawn counters in `v_objstate`. `cameraRounded` from the screen-pos. Forward load to `cameraRounded + 640` ($280); left trim to `cameraRounded − 128` ($80); backward load to `cameraRounded − 128`; right trim to `cameraRounded + 768` ($300).
+- **Loader** (`ObjPosLoad.asm:7`): counter-based; `v_opl_data` = right cursor, `v_opl_data+4` = left cursor; two respawn counters in `v_objstate`. `cameraRounded` from the screen-pos. **FINAL compare boundaries (same shape as S2):** forward **load edge** = `cameraRounded + $280` (640); left **trim edge** = `cameraRounded − $80` (−128); backward **load edge** = `cameraRounded − $80` (−128); right **trim edge** = `cameraRounded + $280`. NOTE: the right trim is `+$280`, **not** `+$300`/+768 — ROM subtracts `$80` first (to the backward load edge) and later adds `$300`, netting to `cameraRounded + $280`. The `+768`/`$300` is the internal delta, not the final boundary.
 - **Object-side unload** (`out_of_range` macro `Macros.asm:261`; `RememberState.asm:5`): native compare `128 + 320 + 192 = $280`, with `screenX = (v_screenposx − 128) & $FF80`. Object-driven (sets respawn state, deletes) — **not** placement-window deletion.
 
 ### S3K (distinct model — not S2 + a Y filter)
@@ -77,7 +78,7 @@ Do **not** encode a single "execute then windowing-load" rule for all games. Eac
 
 ## 6. Slot recycle + interact(a0) integration
 
-The slot-recycle behavior (deleted slot id=0 → reused by next allocate → `interact(a0)` dereference yields new id) is the regression surface that blocks MTZ3 and that the sidekick foundation depends on. With the ROM loader driving load/unload/allocation on ROM-exact frames, the recycle will occur on the ROM-exact frame and the foundation's `objectIdInSlot(interactSlotIndex)` compare will match ROM. No change to the foundation itself; this design supplies the correct slot timeline it reads.
+The slot-recycle behavior (deleted slot **identity cleared** per the per-game empty predicate → reused by next allocate → `interact(a0)` dereference of the recycled **slot → id/type/pointer** yields the new object) is the regression surface that blocks MTZ3 and that the sidekick foundation depends on. With the ROM loader driving load/unload/allocation on ROM-exact frames, the recycle will occur on the ROM-exact frame and the foundation's `objectIdInSlot(interactSlotIndex)` compare will match ROM. No change to the foundation itself; this design supplies the correct slot timeline it reads.
 
 ## 7. Verification — slot→id/type occupancy oracle
 
@@ -97,7 +98,7 @@ Headless unit tests (no ROM/GL), following existing `Test*` patterns:
 
 - Coarse-camera math per game (S2 load base `cam & $FF80` vs unload base `(cam−$80)&$FF80`; S3K `Camera_X_pos_coarse_back`).
 - S1/S2 native **$280** unload compare (and S1's `(v_screenposx−128)&$FF80` screenX).
-- S2 cursor boundaries: forward `+$280`, left-trim `−$300`, backward `−$80`, right-trim `+$300`.
+- S1/S2 cursor boundaries — assert the **FINAL** compare boundaries from `camRounded`: forward load `+$280`, left-trim `−$80`, backward load `−$80`, right-trim `+$280` (live window `[−$80, +$280]`). Explicitly assert the trim edges are `−$80` / `+$280`, **NOT** `±$300` from `camRounded` — a test using `±$300` would bless a loader that trims/loads $80 too far out.
 - S2 `ChkLoadObj` `bset #7` **skip-vs-full** distinction (already-set → continue scan; SST-full → fail).
 - **Per-game empty predicate**: S1/S2 slot empty ⇔ id byte == 0; **S3K slot empty ⇔ routine-pointer longword == 0** (`tst.l`). Allocation scan finds the first slot satisfying the game's predicate.
 - `DeleteObject` / `Delete_Current_Sprite` clear the **slot identity field** the predicate reads (S1/S2 id byte → 0; S3K routine-pointer longword → 0), making the slot allocatable again.
