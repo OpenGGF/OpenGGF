@@ -90,6 +90,16 @@ public final class SlotAllocator {
     }
 
     /**
+     * Restore the peak-occupancy counter to a rewind-snapshot value verbatim (replaces
+     * {@code ObjectManager}'s prior {@code peakSlotCount = snapshot.peakSlotCount()}
+     * assignment). The snapshot's peak is always {@literal >=} its own occupancy, so the
+     * restored peak never undercounts the freshly restored slots.
+     */
+    public void restorePeakSlotCount(int snapshotPeak) {
+        peak = snapshotPeak;
+    }
+
+    /**
      * Force-mark a dynamic slot occupied regardless of current state — for rewind
      * restore and pre-assigned/reserved slots where {@link #reserve(int)}'s
      * "fail if already taken" semantics are not wanted. No-op for non-dynamic slots.

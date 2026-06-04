@@ -426,7 +426,6 @@ public class ObjectManager {
     private final ObjectSlotLayout slotLayout;
     private final ObjectInstance[] execOrder;
     private int currentExecSlot = -1; // -1 when not in update loop
-    private int peakSlotCount = 0;    // Track actual peak usedSlots cardinality
     private final boolean skipVerticalSpawnLoadFilterForGame;
 
     private final ObjectServices objectServices;
@@ -448,7 +447,9 @@ public class ObjectManager {
 
     // ROM parity: dynamic object slot tracking for the current game's allocatable
     // SST window. S1 uses 32..127, S2 uses 16..127, and S3K uses 4..92.
-    private final BitSet usedSlots;
+    // Occupancy/allocation authority; ObjectManager retains execOrder + objectIdInSlot
+    // as the slot->occupant identity authority.
+    private final SlotAllocator slotAllocator;
     private int twoAxisCameraYCoarse = Integer.MIN_VALUE;
 
     // ROM parity: Tracks child slots reserved by objects with getReservedChildSlotCount() > 0.
@@ -494,7 +495,10 @@ public class ObjectManager {
                 camera != null ? camera::getWidth : com.openggf.level.spawn.PlacementViewportWidth::current);
         this.placement.setTwoAxisCursorPlacement(slotLayout.twoAxisCursorPlacement());
         this.execOrder = new ObjectInstance[slotLayout.dynamicSlotCount()];
-        this.usedSlots = new BitSet(slotLayout.dynamicSlotCount());
+        this.slotAllocator = new SlotAllocator(slotLayout,
+                slotLayout.twoAxisCursorPlacement()
+                        ? SlotEmptyPredicate.ROUTINE_POINTER
+                        : SlotEmptyPredicate.ID_BYTE);
         this.planeSwitchers = planeSwitcherConfig != null
                 ? new PlaneSwitchers(placement, planeSwitcherObjectId, planeSwitcherConfig)
                 : null;
@@ -555,9 +559,8 @@ public class ObjectManager {
         dynamicObjects.clear();
         deferredDynamicExecThisFrame.clear();
         reservedChildSlots.clear();
-        usedSlots.clear();
+        slotAllocator.clear();
         Arrays.fill(execOrder, null);
-        peakSlotCount = 0;
         cachedActiveObjects.clear();
         activeObjectsCacheDirty = true;
         bucketsDirty = true;
@@ -864,9 +867,6 @@ public class ObjectManager {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
             }
         }
-        int currentSlotCount = usedSlots.cardinality();
-        if (currentSlotCount > peakSlotCount) peakSlotCount = currentSlotCount;
-
         // Phase 2: ExecuteObjects — run objects in slot order with inline out_of_range.
         updating = true;
         boolean objectsRemoved = false;
@@ -975,7 +975,7 @@ public class ObjectManager {
 
         // Phase 3: ObjPosLoad — load new objects AFTER ExecuteObjects.
         // Slots freed during the exec loop and child slots allocated during exec
-        // are now reflected in usedSlots. New objects get the correct slot numbers.
+        // are now reflected in the allocator. New objects get the correct slot numbers.
         syncActiveSpawnsLoad(false);
 
     }
@@ -1007,9 +1007,6 @@ public class ObjectManager {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
             }
         }
-        int currentSlotCount = usedSlots.cardinality();
-        if (currentSlotCount > peakSlotCount) peakSlotCount = currentSlotCount;
-
         updating = true;
         boolean objectsRemoved = false;
         // Track objects processed by the slot-based loop so the fallback loop
@@ -1577,11 +1574,11 @@ public class ObjectManager {
     }
 
     public int getActiveObjectSlotCount() {
-        return usedSlots.cardinality();
+        return slotAllocator.activeCount();
     }
 
     public int getPeakObjectSlotCount() {
-        return peakSlotCount;
+        return slotAllocator.peakSlotCount();
     }
 
     public int getObjectSlotCapacity() {
@@ -1684,7 +1681,7 @@ public class ObjectManager {
             // ROM parity: FindFreeObj allocates an SST slot for EVERY object,
             // including children spawned by other objects (lava balls, projectiles,
             // explosion effects, etc.). Without this, child objects don't consume
-            // slots in usedSlots, causing subsequent OPL allocations to get lower
+            // slots in the allocator, causing subsequent OPL allocations to get lower
             // slot numbers than the ROM — shifting d7 values and breaking timing
             // gates like (v_vbla_byte + d7) & 7.
             if (aoi.getSlotIndex() < 0) {
@@ -1704,12 +1701,10 @@ public class ObjectManager {
                 }
             } else {
                 // Pre-assigned slot (e.g. from addDynamicObjectAtSlot for badnik
-                // replacement). Ensure the slot is marked as used in the BitSet —
+                // replacement). Ensure the slot is marked as used in the allocator —
                 // it may have been released when the original object was destroyed.
                 int slot = aoi.getSlotIndex();
-                if (isManagedDynamicSlot(slot)) {
-                    usedSlots.set(execIndexForSlot(slot));
-                }
+                slotAllocator.reserveOrMarkUsed(slot);
             }
         }
         dynamicObjects.add(object);
@@ -1755,14 +1750,7 @@ public class ObjectManager {
      * Returns -1 if all slots are in use (overflow).
      */
     private int allocateSlot() {
-        int bit = usedSlots.nextClearBit(0);
-        if (bit >= execOrder.length) {
-            return -1;
-        }
-        usedSlots.set(bit);
-        int currentSlotCount = usedSlots.cardinality();
-        if (currentSlotCount > peakSlotCount) peakSlotCount = currentSlotCount;
-        return slotIndexForExec(bit);
+        return slotAllocator.allocate();
     }
 
     /**
@@ -1772,7 +1760,7 @@ public class ObjectManager {
      * by {@code RingManager} rather than {@code ObjectManager}.
      */
     public int allocateDynamicSlot() {
-        return allocateSlot();
+        return slotAllocator.allocate();
     }
 
     /**
@@ -1780,17 +1768,7 @@ public class ObjectManager {
      * occupant from a rewind snapshot.
      */
     public boolean reserveDynamicSlot(int slotIndex) {
-        if (!isManagedDynamicSlot(slotIndex)) {
-            return false;
-        }
-        int execIdx = execIndexForSlot(slotIndex);
-        if (execIdx < 0 || execIdx >= execOrder.length || usedSlots.get(execIdx)) {
-            return false;
-        }
-        usedSlots.set(execIdx);
-        int currentSlotCount = usedSlots.cardinality();
-        if (currentSlotCount > peakSlotCount) peakSlotCount = currentSlotCount;
-        return true;
+        return slotAllocator.reserve(slotIndex);
     }
 
     /**
@@ -1803,24 +1781,14 @@ public class ObjectManager {
      * @return the allocated slot index, or -1 if no slot is available
      */
     public int allocateSlotAfter(int parentSlot) {
-        int startBit = Math.max(0, parentSlot - slotLayout.firstDynamicSlot() + 1);
-        int bit = usedSlots.nextClearBit(startBit);
-        if (bit >= execOrder.length) {
-            return -1;
-        }
-        usedSlots.set(bit);
-        int currentSlotCount = usedSlots.cardinality();
-        if (currentSlotCount > peakSlotCount) peakSlotCount = currentSlotCount;
-        return slotIndexForExec(bit);
+        return slotAllocator.allocateAfter(parentSlot);
     }
 
     /**
      * Releases a previously allocated dynamic slot index.
      */
     private void releaseSlot(int slotIndex) {
-        if (isManagedDynamicSlot(slotIndex)) {
-            usedSlots.clear(execIndexForSlot(slotIndex));
-        }
+        slotAllocator.release(slotIndex);
     }
 
     private void releaseSlotIfManaged(ObjectInstance instance) {
@@ -1999,7 +1967,7 @@ public class ObjectManager {
                 if (object instanceof AbstractObjectInstance aoi) {
                     aoi.setServices(objectServices);
                     aoi.setSlotIndex(reservedSlot);
-                    // Slot is already marked used in usedSlots from pre-allocation;
+                    // Slot is already marked used in the allocator from pre-allocation;
                     // no need to call allocateSlot() again.
                 }
                 // Mark slot as consumed in the reservation table so freeAllReservedChildSlots
@@ -2082,11 +2050,11 @@ public class ObjectManager {
      * Returns peak dynamic slot count seen during this level.
      */
     public int getPeakSlotCount() {
-        return peakSlotCount;
+        return slotAllocator.peakSlotCount();
     }
 
     public int getAllocatedSlotCount() {
-        return usedSlots.cardinality();
+        return slotAllocator.activeCount();
     }
 
     /**
@@ -3010,8 +2978,8 @@ public class ObjectManager {
      * Returns a {@link com.openggf.game.rewind.RewindSnapshottable} adapter for
      * this ObjectManager.
      *
-     * <p><strong>Capture</strong> records the current slot inventory ({@code usedSlots}
-     * BitSet as {@code long[]}), per-instance state for every active placement-managed
+     * <p><strong>Capture</strong> records the current slot inventory (the
+     * {@link SlotAllocator} occupancy BitSet as {@code long[]}), per-instance state for every active placement-managed
      * object (via {@link AbstractObjectInstance#captureRewindState()}), scalar counters
      * ({@code frameCounter}, {@code vblaCounter}, {@code currentExecSlot},
      * {@code peakSlotCount}), the render-cache dirty flag, and reserved child-slot entries.
@@ -3020,7 +2988,7 @@ public class ObjectManager {
      * <ol>
      *   <li>Clears the current active object table (without triggering placement state
      *       side-effects).</li>
-     *   <li>Restores scalar counters and {@code usedSlots}.</li>
+     *   <li>Restores scalar counters and {@link SlotAllocator} occupancy.</li>
      *   <li>Re-instantiates each captured object from its {@link ObjectSpawn} using the
      *       same {@link ObjectRegistry#create} pipeline used by {@code syncActiveSpawnsLoad},
      *       with the slot pre-assigned from the snapshot.</li>
@@ -3102,7 +3070,7 @@ public class ObjectManager {
                         frameCounter,
                         vblaCounter,
                         currentExecSlot,
-                        peakSlotCount,
+                        slotAllocator.peakSlotCount(),
                         bucketsDirty,
                         List.copyOf(childSpawns),
                         List.copyOf(dynamicEntries),
@@ -3126,17 +3094,12 @@ public class ObjectManager {
                 Arrays.fill(execOrder, null);
                 pendingPlayerBoundEntries.clear();
 
-                // 2. Restore scalar counters and usedSlots
-                usedSlots.clear();
-                long[] bits = s.usedSlotsBits();
-                BitSet restoredBits = BitSet.valueOf(bits);
-                for (int i = restoredBits.nextSetBit(0); i >= 0; i = restoredBits.nextSetBit(i + 1)) {
-                    usedSlots.set(i);
-                }
+                // 2. Restore scalar counters and slot occupancy
+                slotAllocator.restoreFromLongArray(s.usedSlotsBits());
                 frameCounter = s.frameCounter();
                 vblaCounter = s.vblaCounter();
                 currentExecSlot = s.currentExecSlot();
-                peakSlotCount = s.peakSlotCount();
+                slotAllocator.restorePeakSlotCount(s.peakSlotCount());
                 bucketsDirty = s.bucketsDirty();
                 activeObjectsCacheDirty = true;
 
