@@ -1481,12 +1481,13 @@ public class ObjectManager {
      * {@code a3 = Object_RAM + interact(a0)*object_size}; {@code id(a3)} is the
      * byte at the slot. When ROM {@code DeleteObject} (s2.asm:30324-30339) has
      * zeroed the slot, {@code id(a3)} reads {@code 0}; the engine has no
-     * persistent zeroed bytes, so an empty engine slot returns {@code -1} and
-     * the sidekick despawn comparator treats that as "slot unchanged" (the live
-     * object simply unloaded off-screen without being recycled to a different
-     * id), deferring to the off-screen respawn timer exactly as the ROM
-     * fall-through to {@code TailsCPU_TickRespawnTimer} does when the id still
-     * matches.
+     * persistent zeroed bytes, so an empty engine slot returns {@code -1} here.
+     * The sidekick despawn comparator maps that {@code -1} back to ROM id
+     * {@code 0} (an emptied/deleted slot is a real id change, not "slot
+     * unchanged"), so an off-screen {@code DeleteObject} of the ridden object
+     * fires {@code TailsCPU_Despawn} exactly as ROM does
+     * (s2.asm:39403-39429). A still-loaded same-id object returns its real id
+     * and matches the snapshot, deferring to the off-screen respawn timer.
      */
     public int objectIdInSlot(int slot) {
         if (slot < 0) {
