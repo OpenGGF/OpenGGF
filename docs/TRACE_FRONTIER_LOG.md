@@ -1,5 +1,63 @@
 # Trace Frontier Log
 
+## 2026-06-04 - FOUNDATION: ROM slot-based sidekick interact(a0) model committed (knowingly regresses MTZ3; HTZ2 advances)
+
+- Branch `feature/ai-s2-sidekick-interact-slot`, worktree `.worktrees/s2-sidekick-interact-slot`, off develop `5057629e5`.
+  Implements Part A of the prior root-cause entry: the persistent ROM SST `interact(a0)` **slot index**
+  (`AbstractPlayableSprite.interactSlotIndex`, written by the `RideObject_SetRide`-equivalent in `ObjectManager`,
+  s2.asm:35980-36006, never cleared on dismount/despawn/death) + an `UpdateObjInteract`-equivalent that refreshes
+  `Tails_interact_ID` (`SidekickCpuController.lastInteractObjectId`) each non-despawning frame from the LIVE object
+  in that slot (`ObjectManager.objectIdInSlot`). Off-screen despawn now fires only on a real slot recycle, matching
+  ROM `TailsCPU_CheckDespawn` (s2.asm:39403-39446) WITHOUT the non-ROM `!= 0` guards. ROM-universal model;
+  S2 slot-id-mismatch despawn stays gated by `sidekickDespawnUsesObjectIdMismatch` (S2 true, S3K false), S3K keeps
+  the `sub_13EFC` deleted-slot path via `sidekickDespawnUsesRidingInstanceLoss` (S3K true).
+- **This is a foundation change that knowingly regresses one frontier**, committed per the maintainer's revised
+  directive (correct foundation kept regardless of board color; not merged to develop). Verified single-fork
+  (`-Dsurefire.forkCount=1 -DreuseForks=true`, all 3 ROMs, `-Dtest=*TraceReplay`), 0 native flakes.
+- Full before->after first-error cascade (every trace class):
+
+  | Trace | BEFORE | AFTER | Verdict |
+  |-------|--------|-------|---------|
+  | S1 x10 (Ghz1, Mz1, Credits00-07) | GREEN | GREEN | unchanged |
+  | S2 EHZ1 | GREEN | GREEN | unchanged |
+  | S2 SCZ | GREEN | GREEN | unchanged |
+  | S2 WFZ | GREEN | GREEN | unchanged |
+  | S2 HTZ2 | f795 tails_air | f1078 y_speed | **ADVANCED +283** (spurious despawn fixed) |
+  | S2 MTZ3 | f3719 tails_y | f2638 tails_air | **REGRESSED -1081** (see attribution) |
+  | S2 MTZ1 | f375 tails_air | f375 tails_air | unchanged (blocked on Part B) |
+  | S2 ARZ1 | f2043 tails_y_speed | f2043 | unchanged |
+  | S2 ARZ2 | f549 y_speed | f549 | unchanged |
+  | S2 CNZ1 | f3906 tails_y | f3906 | unchanged |
+  | S2 CNZ2 | f1775 tails_y | f1775 | unchanged |
+  | S2 CPZ1 | f2822 tails_x_speed | f2822 | unchanged |
+  | S2 CPZ2 | f2518 tails_y_speed | f2518 | unchanged |
+  | S2 DEZ | f1023 y_speed | f1023 | unchanged |
+  | S2 HTZ1 | f5647 tails_x | f5647 | unchanged |
+  | S2 MCZ1 | f2181 tails_x_speed | f2181 | unchanged |
+  | S2 MCZ2 | f4009 y_speed | f4009 | unchanged |
+  | S2 MTZ2 | f641 tails_x_speed | f641 | unchanged |
+  | S2 OOZ1 | f756 y | f756 | unchanged |
+  | S2 OOZ2 | f389 y_speed | f389 | unchanged |
+  | S3K AIZ | f8941 camera_y | f8941 | unchanged |
+  | S3K CNZ | f17276 x_speed | f17276 | unchanged |
+  | S3K MGZ | f4124 y_speed | f4124 | unchanged |
+
+- **Regression attribution (MTZ3 f3719->f2638) and MTZ1 non-advance:** Both are the SAME class. At MTZ3 f2638 / MTZ1
+  f375, ROM despawns Tails because its persistent `interact(a0)` slot was RECYCLED to a different-id object while
+  Tails sat on it off-screen (MTZ1: object 0x01 -> SteamSpring 0x42; MTZ3: Tails rides an Obj65 slot, ROM's slot
+  recycles). The engine keeps the original object loaded in that slot (engine object load/unload windowing does not
+  recycle the slot the way ROM does) AND, for MTZ1, the sidekick follow/landing rides the SteamSpring (0x42)
+  directly (Part B: EHZ-class wrong-follow-target -- engine rides Bridge 0x11 vs ROM platform 0x18 in EHZ1), so no
+  recycle is observable. The OLD `isLatchedRideSlotFreed`/id-latch despawn heuristic
+  (`15c98e1be`/`841370074`/`3942e9032`; MTZ3 frontier advance `518e120dc`) happened to despawn MTZ3 f2638 correctly
+  but mis-fired on MTZ1/HTZ2 -- it was COMPENSATING for the broken instance-latch model. On the correct slot
+  foundation, MTZ3/MTZ1 need (Part B) the sidekick to ride the same object ROM does, and/or engine interact-slot
+  recycle parity. Not re-derived here (out of this commit's scope); left as the next step.
+- Unit tests green on this branch: TestS3kAiz1SkipHeadless, TestSonic3kLevelLoading, TestSonic3kBootstrapResolver,
+  TestSonic3kDecodingUtils, TestAbstractPlayableSpriteRewindCapture, TestSidekickDespawnXFeatureFlag,
+  TestSidekickGating, TestSidekickCpuControllerCarry, TestSidekickChainHealing, TestSpindashGating,
+  TestCollisionModel, TestObjectServicesMigrationGuard, TestNoServicesInObjectConstructors.
+
 ## 2026-06-04 - ROOT CAUSE: S2 sidekick Tails_interact_ID despawn (blocks mtz1/htz2) — architectural, not a despawn-predicate fix
 
 - Focused investigation (no code change committed; analysis recorded here per the maintainer's

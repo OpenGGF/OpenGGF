@@ -351,7 +351,7 @@ public record PerObjectRewindSnapshot(
             boolean tunnelMode,
             // Surface interaction / collision
             boolean onObject, boolean onObjectAtFrameStart,
-            int latchedSolidObjectId, boolean slopeRepelJustSlipped,
+            int latchedSolidObjectId, int interactSlotIndex, boolean slopeRepelJustSlipped,
             boolean stickToConvex, boolean sliding, boolean pushing,
             boolean skidding, int skidDustTimer,
             short wallClimbX, int rightWallPenetrationTimer,

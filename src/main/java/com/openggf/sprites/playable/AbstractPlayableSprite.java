@@ -309,6 +309,23 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected int latchedSolidObjectId = 0;
 
         /**
+         * ROM SST {@code interact(a0)} (s2.constants.asm:69 "last object stood
+         * on"): the SST <em>slot index</em> of the last object the sprite stood
+         * on. This is the persistent slot reference written only by
+         * {@code RideObject_SetRide} (docs/s2disasm/s2.asm:35980-36006,
+         * S3K docs/skdisasm/sonic3k.asm:41982-42015) and is NEVER cleared on
+         * dismount, despawn, or death. Unlike {@link #latchedSolidObjectId}
+         * (which is an instance-resolved id byte), this is the raw slot index so
+         * the sidekick despawn comparator can re-dereference whatever live
+         * object currently occupies that slot every frame — exactly the ROM
+         * {@code a3 = Object_RAM + interact(a0)*object_size} indirection — rather
+         * than holding a stale {@code ObjectInstance} reference. {@code -1} means
+         * "no slot recorded yet" (sprite has never stood on an object). This
+         * field is ROM-universal (S2 and S3K sidekicks both have it).
+         */
+        protected int interactSlotIndex = -1;
+
+        /**
          * Set when {@code Player_SlopeRepel} slipped the player into air on the
          * current physics frame (sonic3k.asm:23929 {@code bset #Status_InAir}).
          * Cleared at the start of each player update tick. Used by per-object
@@ -890,7 +907,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         preserveRollingOnNextRollStop, objectPreservedRollBoostFollowup,
                         objectPreservedRollWallProbe, objectPreservedRollVelocityCarry, tunnelMode,
                         onObject, onObjectAtFrameStart,
-                        latchedSolidObjectId, slopeRepelJustSlipped,
+                        latchedSolidObjectId, interactSlotIndex, slopeRepelJustSlipped,
                         stickToConvex, sliding, pushing,
                         skidding, skidDustTimer,
                         wallClimbX, rightWallPenetrationTimer,
@@ -1017,6 +1034,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.onObject = extra.onObject();
                 this.onObjectAtFrameStart = extra.onObjectAtFrameStart();
                 this.latchedSolidObjectId = extra.latchedSolidObjectId();
+                this.interactSlotIndex = extra.interactSlotIndex();
                 this.slopeRepelJustSlipped = extra.slopeRepelJustSlipped();
                 this.stickToConvex = extra.stickToConvex();
                 this.sliding = extra.sliding();
@@ -1788,6 +1806,33 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         com.openggf.level.objects.ObjectInstance instance) {
                 this.latchedSolidObjectId = latchedSolidObjectId & 0xFF;
                 this.latchedSolidObjectInstance = instance;
+                // ROM RideObject_SetRide writes interact(a1) = slot index of the
+                // ridden object (s2.asm:36005-36006). Record the slot so the
+                // sidekick despawn comparator can re-dereference the live slot.
+                if (instance instanceof com.openggf.level.objects.AbstractObjectInstance aoi) {
+                        int slot = aoi.getSlotIndex();
+                        if (slot >= 0) {
+                                this.interactSlotIndex = slot;
+                        }
+                }
+        }
+
+        /**
+         * Returns the persistent ROM {@code interact(a0)} SST slot index — the
+         * slot of the last object this sprite stood on, never cleared on
+         * dismount. {@code -1} if the sprite has never stood on an object.
+         */
+        public int getInteractSlotIndex() {
+                return interactSlotIndex;
+        }
+
+        /**
+         * Sets the ROM {@code interact(a0)} slot index directly. Used by rewind
+         * restore and the sidekick controller's bootstrap; gameplay normally
+         * routes through {@link #setLatchedSolidObject}.
+         */
+        public void setInteractSlotIndex(int slot) {
+                this.interactSlotIndex = slot;
         }
 
         /** True when {@code Player_SlopeRepel} slipped the player into air on

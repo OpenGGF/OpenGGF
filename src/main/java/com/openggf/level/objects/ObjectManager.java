@@ -1455,6 +1455,40 @@ public class ObjectManager {
         return cachedActiveObjects;
     }
 
+    /**
+     * ROM-parity slot dereference: returns the object-pointer-table id byte of
+     * the object currently occupying SST slot {@code slot}, or {@code -1} when
+     * no live object occupies it.
+     *
+     * <p>This models the 68000 pointer arithmetic in S2
+     * {@code TailsCPU_CheckDespawn} / {@code TailsCPU_UpdateObjInteract}
+     * (docs/s2disasm/s2.asm:39409-39419,39435-39446) and the S3K analogue
+     * {@code sub_13EFC} (docs/skdisasm/sonic3k.asm:26816-26833):
+     * {@code a3 = Object_RAM + interact(a0)*object_size}; {@code id(a3)} is the
+     * byte at the slot. When ROM {@code DeleteObject} (s2.asm:30324-30339) has
+     * zeroed the slot, {@code id(a3)} reads {@code 0}; the engine has no
+     * persistent zeroed bytes, so an empty engine slot returns {@code -1} and
+     * the sidekick despawn comparator treats that as "slot unchanged" (the live
+     * object simply unloaded off-screen without being recycled to a different
+     * id), deferring to the off-screen respawn timer exactly as the ROM
+     * fall-through to {@code TailsCPU_TickRespawnTimer} does when the id still
+     * matches.
+     */
+    public int objectIdInSlot(int slot) {
+        if (slot < 0) {
+            return -1;
+        }
+        for (ObjectInstance instance : getActiveObjects()) {
+            if (instance instanceof AbstractObjectInstance aoi
+                    && aoi.getSlotIndex() == slot
+                    && !instance.isDestroyed()
+                    && instance.getSpawn() != null) {
+                return instance.getSpawn().objectId() & 0xFF;
+            }
+        }
+        return -1;
+    }
+
     public List<ObjectInstance> snapshotPersistentDynamicObjectsForTransition() {
         List<ObjectInstance> snapshot = new ArrayList<>();
         for (ObjectInstance instance : dynamicObjects) {
