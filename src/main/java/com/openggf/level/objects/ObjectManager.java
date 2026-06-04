@@ -1486,6 +1486,37 @@ public class ObjectManager {
         return -1;
     }
 
+    /**
+     * Read-only snapshot of every live dynamic-slot occupant as {@code slot ->
+     * (spawn.objectId() & 0xFF)}. This is the bulk analogue of
+     * {@link #objectIdInSlot(int)}: it walks the same {@link #getActiveObjects()}
+     * scan and applies the same liveness predicate (non-destroyed,
+     * spawn-backed), but restricts the result to managed dynamic slots
+     * ({@link ObjectSlotLayout#isDynamicSlot(int)}) so it lines up with the
+     * SST window the {@link SlotAllocator} owns.
+     *
+     * <p>It is the engine side of the comparison-only occupancy oracle's
+     * extra-occupant detection: a slot present here but absent from the ROM
+     * trace timeline means the engine kept an object loaded that the ROM had
+     * already unloaded (the MTZ off-screen-unload failure mode). The returned
+     * map is freshly built and never aliases internal state, so callers cannot
+     * mutate manager state through it.
+     */
+    public java.util.Map<Integer, Integer> occupiedDynamicSlotIds() {
+        java.util.Map<Integer, Integer> occupancy = new java.util.HashMap<>();
+        for (ObjectInstance instance : getActiveObjects()) {
+            if (instance instanceof AbstractObjectInstance aoi
+                    && !instance.isDestroyed()
+                    && instance.getSpawn() != null) {
+                int slot = aoi.getSlotIndex();
+                if (slotLayout.isDynamicSlot(slot)) {
+                    occupancy.put(slot, instance.getSpawn().objectId() & 0xFF);
+                }
+            }
+        }
+        return occupancy;
+    }
+
     public List<ObjectInstance> snapshotPersistentDynamicObjectsForTransition() {
         List<ObjectInstance> snapshot = new ArrayList<>();
         for (ObjectInstance instance : dynamicObjects) {
