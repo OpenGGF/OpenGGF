@@ -46,6 +46,29 @@
 - Same-game regression guard (single-fork): EHZ1, SCZ, WFZ all GREEN (3 passed / 1 failed = ooz1 itself).
   No same-game green regressed.
 
+## 2026-06-04 - mtz1 ADVANCED f863->f1000: S2 Button (Obj47) gated behind render_flags.on_screen
+
+- Branch `bugfix/ai-trace-s2-mtz1`, worktree `.worktrees/trace-s2-mtz1` (off develop `868249c0f`).
+- Command (cmd mvn.cmd inside worktree):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2MtzLevelSelectTraceReplay#replayMatchesTrace" test`
+- Status: ADVANCED (targeted trace still fails, frontier moved 863 -> 1000).
+- Error count: 1431 errors / 0 warnings (unchanged trace, deeper first divergence).
+- First error: frame 863 (g_speed/air, Sonic dropped through floor) -> frame 1000
+  (`g_speed mismatch expected=0x0001 actual=0x0000`, unrelated Sonic air divergence).
+- **Root cause:** `ButtonObjectInstance.update` ran the full Obj47 routine every frame regardless of
+  on-screen state. ROM `Obj47_Main` (docs/s2disasm/s2.asm:50825-50847) gates the ENTIRE routine behind
+  `_btst #render_flags.on_screen,render_flags(a0)` / `_beq.s BranchTo_JmpTo12_MarkObjGone` — off-screen
+  buttons run NEITHER the `SolidObject` check NOR the `bclr/bset d3,(a3)` on `ButtonVine_Trigger`.
+  MTZ1 has two Obj47 buttons on switch 0 (x=0x06CC and x=0x0858); the off-screen 0x0858 button's
+  per-frame `bclr` clobbered the switch-0 trigger bit that the on-screen pressed button + subtype-7
+  MTZ long platform relied on, so the platform never retracted and Sonic fell through the floor.
+- **Fix:** early-return when `!isWithinSolidContactBounds()` (engine render_flags bit-7 / `width_pixels`
+  model; button `width_pixels=0x10`=16 == default on-screen half-width). Models ROM render-flag
+  visibility; no zone/route/frame/gameId carve-out; comparison-only.
+- Same-game regression guard (run individually, `-Dmse=off -DreuseForks=false`):
+  EHZ1 GREEN, SCZ GREEN, WFZ GREEN. No same-game greens regressed.
+  File: `src/main/java/com/openggf/game/sonic2/objects/ButtonObjectInstance.java`.
+
 ## 2026-06-04 - cnz1 RESTORED f3831->f3906: S2 post-camera gap-scan now bypasses the vertical load filter (ObjD4 cadence fixed)
 
 - Branch `bugfix/ai-cnz1-objd4-cadence`, worktree `.worktrees/cnz1-objd4-cadence` (off develop `d192a8087`).
