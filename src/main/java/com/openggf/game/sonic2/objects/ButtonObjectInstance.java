@@ -99,6 +99,27 @@ public class ButtonObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+
+        // ROM Obj47_Main (s2.asm:50826-50827) gates the ENTIRE button routine
+        // behind the render_flags.on_screen bit:
+        //   _btst #render_flags.on_screen,render_flags(a0)
+        //   _beq.s BranchTo_JmpTo12_MarkObjGone   ; off-screen -> MarkObjGone, return
+        // When the button is off-screen the ROM runs NEITHER the SolidObject
+        // standing check NOR the bclr/bset on ButtonVine_Trigger -- it leaves the
+        // shared trigger byte untouched. This matters whenever two buttons share a
+        // switch id: a far off-screen unpressed button must NOT clear the trigger
+        // bit that an on-screen pressed button (or a latched consumer) is relying
+        // on. MTZ1 has Obj47 buttons at x=0x06CC (switch 0) and x=0x0858 (switch 0);
+        // without this gate the off-screen 0x0858 button's bclr clobbered switch 0
+        // every frame, so the MTZ_LONG_PLATFORM (subtype-7 button retract) never saw
+        // the press and stayed extended, dropping Sonic through the floor it should
+        // have landed on (mtz1 trace f863 air/rolling/y divergence).
+        // isWithinSolidContactBounds() mirrors the ROM Render_Sprites render_flags
+        // bit-7 bounding-box test for this object's width_pixels.
+        if (!isWithinSolidContactBounds()) {
+            return;
+        }
+
         // ROM: move.b #0,mapping_frame(a0) - reset to unpressed each frame
         mappingFrame = FRAME_UNPRESSED;
 
