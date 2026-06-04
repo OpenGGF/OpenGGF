@@ -37,7 +37,12 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
 
     private static final int COLLISION_SIZE_STINGER = 0x18; // From disassembly $98 & 0x3F
     private static final int COLLISION_SIZE_COCONUT = 0x0B; // From disassembly $8B & 0x3F
-    private static final int COLLISION_SIZE_SPINY_SPIKE = 0x0B; // Same as coconut
+    // CPZ Spiny shot is Obj98 with subtype $34 -> ObjA6_SubObjData, whose
+    // subObjData collision byte is $98 (s2.asm:74659-74660, 76491). $98 & 0x3F =
+    // 0x18 -> Touch_Sizes index 0x18 = 4x4 (s2.asm:85078). It is NOT the coconut
+    // 0x8B/0x0B (8x8) size; the earlier "same as coconut" value made the spike
+    // touchbox twice too tall/wide and produced phantom hits the ROM never has.
+    private static final int COLLISION_SIZE_SPINY_SPIKE = 0x18; // ObjA6_SubObjData: $98 & 0x3F
     private static final int COLLISION_SIZE_REXON_FIREBALL = 0x18; // From disassembly $98 & 0x3F
     private static final int COLLISION_SIZE_OCTUS_BULLET = 0x18; // From disassembly $98 & 0x3F
     private static final int COLLISION_SIZE_AQUIS_BULLET = 0x18; // From disassembly $98 & 0x3F

@@ -196,11 +196,21 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance {
             return;
         }
 
-        // Keep player attached to vine switch
-        // ROM: Player stays at position set during grab (x_pos(a0), y_pos(a0) + 0x30)
-        int hangY = spawn.y() + HANG_Y_OFFSET;
-        player.setY((short) (hangY - player.getHeight() / 2));
-        player.setX((short) (spawn.x() - player.getWidth() / 2));
+        // ROM Obj7F_Action grabbed branch (s2.asm:56500-56522): once a player is
+        // grabbed (tst.b (a2) set), the routine ONLY tests for a release press and
+        // otherwise falls through to return_29936. It does NOT rewrite x_pos/y_pos
+        // while grabbed -- the hang position is written exactly once at grab time
+        // in the loc_29890 branch (s2.asm:56550-56552, mirrored by grabPlayer()).
+        // The grabbed player is held in place by obj_control=1
+        // (objectControlSuppressesMovement), so no per-frame reposition is needed.
+        //
+        // Re-applying the hang position every frame diverged from the ROM when the
+        // sidekick CPU despawn marker warps Tails off-screen: ROM TailsCPU_Despawn
+        // writes x_pos=$4000/y_pos=0 with obj_control bit 7 set (s2.asm:39391-39400),
+        // and the vine -- which never rewrites position while grabbed -- lets that
+        // marker stand. The engine's old per-frame setX/setY here pulled Tails back
+        // to the vine hang position every frame, clobbering the despawn marker
+        // (S2 MCZ2 trace first-divergence frame 3003, tails_x expected $4000).
     }
 
     /**

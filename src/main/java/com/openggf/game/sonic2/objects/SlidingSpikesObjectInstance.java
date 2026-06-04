@@ -53,9 +53,6 @@ public class SlidingSpikesObjectInstance extends AbstractObjectInstance
     private static final int WIDTH_PIXELS = 0x40;  // 64 pixels (half-width for collision)
     private static final int Y_RADIUS = 0x10;      // 16 pixels
 
-    // Off-screen margin for despawn check (MarkObjGone2 tolerance)
-    private static final int DESPAWN_MARGIN = 128;
-
     // Slide parameters
     private static final int SLIDE_DISTANCE = 0x80; // 128 pixels total movement
 
@@ -381,33 +378,31 @@ public class SlidingSpikesObjectInstance extends AbstractObjectInstance
 
     /**
      * Check if the BASE position (spawn point) is on screen.
-     * ROM uses objoff_34 (original x_pos) for MarkObjGone2, not the current
-     * sliding position. This ensures spikes despawn based on their wall
-     * anchor point, not their extended spike tip.
+     * <p>
+     * ROM Obj76 ends every frame with {@code move.w objoff_34(a0),d0;
+     * jmpto MarkObjGone2} (docs/s2disasm/s2.asm:55722-55723), using objoff_34
+     * (the original x_pos captured in Obj76_Init, s2.asm:55681) — NOT the current
+     * sliding x_pos. This anchors despawn to the spike's wall mount, not its tip.
+     * <p>
+     * MarkObjGone2 (docs/s2disasm/s2.asm:30231-30248) deletes the object when:
+     * <pre>(x &amp; $FF80) - Camera_X_pos_coarse &gt; $80 + roundToNextMultiple(screen_width,$80) + $80</pre>
+     * where {@code Camera_X_pos_coarse = Camera_X_pos &amp; $FF80}, the subtract is a
+     * 16-bit {@code sub.w} and the compare is an unsigned {@code bhi}. At native
+     * 320px width the limit is {@code $80 + $180 + $80 = $280}.
      */
     private boolean isBasePositionOnScreen() {
-        // Access camera bounds via the parent's mechanism
-        // We check baseX (objoff_34 equivalent) instead of currentX
-        return isOnScreenAt(baseX, spawn.y(), DESPAWN_MARGIN);
-    }
-
-    /**
-     * Check if a specific position is on screen with margin.
-     * Used for despawn check with base position instead of current position.
-     */
-    private boolean isOnScreenAt(int x, int y, int margin) {
-        // Use the camera bounds from parent class
-        // This mirrors isOnScreen(margin) but with explicit coordinates
         var camera = services().camera();
         if (camera == null) {
             return true;  // Assume on-screen if no camera
         }
-        int camX = camera.getX();
-        int camY = camera.getY();
-        int screenWidth = viewportWidth();
-        int screenHeight = viewportHeight();
-
-        return x >= camX - margin && x <= camX + screenWidth + margin
-            && y >= camY - margin && y <= camY + screenHeight + margin;
+        // ROM MarkObjGone2 is X-only; Y plays no part in the despawn test.
+        int baseAligned = baseX & 0xFF80;
+        int cameraCoarse = camera.getX() & 0xFF80;  // Camera_X_pos_coarse
+        // 16-bit sub.w followed by unsigned bhi: preserve wrap semantics.
+        int dist = (baseAligned - cameraCoarse) & 0xFFFF;
+        // limit = $80 + roundToNextMultiple(screen_width,$80) + $80
+        int roundedWidth = (viewportWidth() + 0x7F) & ~0x7F;
+        int limit = 0x80 + roundedWidth + 0x80;
+        return dist <= limit;
     }
 }

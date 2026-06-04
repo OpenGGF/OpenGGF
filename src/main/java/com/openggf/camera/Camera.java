@@ -563,6 +563,30 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * routines use slightly different margins. Gate the S3K-specific 24-margin
 	 * via {@link com.openggf.game.PhysicsFeatureSet#useScreenYWrapValueForVisibility()}
 	 * so existing S1/S2 traces keep their 32-margin behaviour.
+	 *
+	 * <p><b>Vertical-wrap windowing (the off-screen-flag Y boundary):</b> the ROM
+	 * does not mask the raw {@code relY} — it first biases by the low margin (so a
+	 * sprite a few pixels above the camera top stays inside the window) and only
+	 * then masks into the VDP plane wrap range before a single unsigned-range
+	 * compare. Masking the raw signed {@code relY} (as an earlier version did)
+	 * mapped a small negative {@code relY} to a huge unsigned value and wrongly
+	 * reported off-screen one frame early. The two games:
+	 * <ul>
+	 *   <li>S2 {@code BuildSprites_ApproxYCheck} (s2.asm:30597-30605):
+	 *       {@code d2 = (y_pos - Camera_Y_pos_copy + sprite_top_boundary) & $7FF};
+	 *       on-screen iff {@code (sprite_top_boundary-32) <= d2 < (sprite_top_boundary+screen_height+32)}
+	 *       with {@code sprite_top_boundary=$80}, {@code screen_height=224}. This is
+	 *       algebraically {@code ((relY + 32) & $7FF) < screen_height + 64}. The mask
+	 *       is the literal VDP {@code $7FF}, independent of the level's vertical
+	 *       wrap range. S1 uses the same routine/margin.</li>
+	 *   <li>S3K {@code Render_Sprites} (sonic3k.asm:36356-36364):
+	 *       {@code d1 = ((y_pos - Camera_Y_pos_copy) + height_pixels) & Screen_Y_wrap_value};
+	 *       off-screen iff {@code d1 >= 2*height_pixels + 224}. That is
+	 *       {@code ((relY + margin) & Screen_Y_wrap_value) < screen_height + 2*margin}
+	 *       with {@code margin = height_pixels = 24}, masked by the level-configured
+	 *       {@code Screen_Y_wrap_value}.</li>
+	 * </ul>
+	 * Both reduce to {@code ((relY + yMargin) & mask) < height + 2*yMargin}.
 	 */
 	public boolean isVisibleForRenderFlag(AbstractPlayableSprite sprite) {
 		int widthPixels = sprite.getRenderFlagWidthPixels();
@@ -571,12 +595,18 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			return false;
 		}
 		int relY = sprite.getRenderCentreY() - y;
-		if (verticalWrapEnabled) {
-			relY &= verticalWrapMask;
-		}
 		com.openggf.game.PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
 		boolean useS3kMargin = fs != null && fs.useScreenYWrapValueForVisibility();
 		int yMargin = useS3kMargin ? widthPixels : 32;
+		if (verticalWrapEnabled) {
+			// ROM-accurate wrap window: bias by the low margin BEFORE masking, then
+			// one unsigned-range compare. S2/S1 BuildSprites masks with the literal
+			// VDP $7FF (s2.asm:30601); S3K masks with Screen_Y_wrap_value
+			// (sonic3k.asm:36360, modelled by verticalWrapMask).
+			int mask = useS3kMargin ? verticalWrapMask : 0x7FF;
+			int wrapped = (relY + yMargin) & mask;
+			return wrapped < height + 2 * yMargin;
+		}
 		return relY >= -yMargin && relY < height + yMargin;
 	}
 
