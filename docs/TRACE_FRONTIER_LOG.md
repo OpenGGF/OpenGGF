@@ -1,5 +1,38 @@
 # Trace Frontier Log
 
+## 2026-06-05 - spilled-ring object model reconciled onto develop + Obj37 boundary-delete fix
+
+- Branch `feature/ai-spilled-ring-reconciled`, worktree `.worktrees/spilled-ring-reconciled` (off develop `2206ba626`).
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true -Ds2.rom.path=s2.gen -Dtest=com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay test`
+- **Context:** Merged `feature/ai-spilled-ring-object-model` (real ROM Obj37 spilled rings) onto the
+  collaborator-extracted develop. The type-keyed lost-ring touch branch was re-homed into
+  `ObjectTouchResponseController` (next to `buildingSet.add(instance)`); the `LostRingRewindCodec`
+  registration and the `spawnLostRingObjectAtSlot`/`activeObjectsOfType`/`reserveAllButNFreeSlots`
+  helpers stayed in `ObjectManager` (dynamic-object plumbing did not move in the extraction).
+- **Bug fixed during reconciliation:** `LostRingObjectInstance` defined `updateMovement()` but never
+  overrode `update(int, PlayableEntity)` — the `AbstractObjectInstance.update()` default is a no-op
+  (only `AbstractBadnikInstance` drives `updateMovement`), so spilled rings were FROZEN at the spawn
+  point and the whole mechanism was inert. Added `LostRingObjectInstance.update()` to run the physics
+  step plus the ROM Obj37 boundary delete (delete when the shared `Ring_spill_anim_counter` reaches 0,
+  or `y_pos` passes below `Camera_Max_Y_pos + screen_height`; docs/s2disasm/s2.asm:25203-25245).
+- **mtz2 ADVANCE:** `TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace` first-error frame **641 -> 873**
+  (now 1888 errors; new owner is `tails_x_speed` expected=0x041D actual=0x0405, with the live Obj37
+  lost ring now executing in the exec loop near the player).
+- **mcz1 HELD:** `TestS2MczLevelSelectTraceReplay#replayMatchesTrace` first-error frame **2757** (held;
+  no regression toward f825).
+- **REGRESSION INTRODUCED: SCZ green -> f6180 (spilled-ring SST-occupancy parity, follow-up).**
+  `TestS2SczLevelSelectTraceReplay#replayMatchesTrace` was GREEN; now 44 errors, first error frame
+  **6180** -- `y_speed` mismatch (expected=-0450, actual=0x0450), a single player bounce in dense SCZ.
+  Accepted under the land-genuine/allow-regression policy: the SST-occupancy parity in dense SCZ (object
+  slots now shared by the live Obj37 ring objects) is a known follow-up. NOT carved out in code.
+- **Regression checks:** `TestS2Ehz1TraceReplay` and `TestS2WfzLevelSelectTraceReplay` both PASS (green).
+  Pre-existing develop reds untouched: `TestRewindArchitectureGuard` (`LbzCupElevatorInstance` 4
+  un-baselined `@RewindTransient`) and `TestRewindTorture.tortureFixedAdjacent` (`interactSlotIndex`
+  A=24 B=16 @f2400) both fail identically on clean develop. Touched-area units green:
+  `com.openggf.level.rings.*`, `TestLostRingTouchOrdering`, `TestTouchResponseManager`,
+  `com.openggf.tests.TestRingManager`, and the rest of `com.openggf.game.rewind.*`.
+
 ## 2026-06-05 - arz1 f2043->f2169: Grounder (Obj8D) closest-player orientation, animate/route timing, and touch box
 
 - Branch `bugfix/ai-arz1-grounder-xpos`, worktree `.worktrees/arz1-grounder`.

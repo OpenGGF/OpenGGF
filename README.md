@@ -209,6 +209,16 @@ behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Spilled rings as ROM Obj37 objects in the unified touch loop (2026-06-05).** Merged the
+  spilled-ring object model (`LostRingObjectInstance` + shared `SpillAnimationState` + type-keyed
+  every-frame lost-ring touch branch in `ObjectTouchResponseController` + `LostRingRewindCodec` +
+  cross-game gating), reconciled onto the architecture-roadmap refactor. Spilled rings now execute in
+  the object loop and participate in the slot-ordered touch loop (ROM `Touch_ChkValue`), so a lower-slot
+  spilled ring suppresses a later hazard. **Advances MTZ2 f641→f873.** Landed under the
+  land-genuine/allow-regression policy with **one accepted, documented regression: SCZ green→f6180**
+  (spilled-ring SST-occupancy parity in the object-dense zone — a concrete orchestration follow-up,
+  logged in `docs/TRACE_FRONTIER_LOG.md`). mcz1 held at f2757; EHZ1/WFZ stay green. Spec/plan under
+  `docs/superpowers/`.
 - **Architecture roadmap cleanup (2026-06-05).** Merged `feature/ai-architecture-roadmap` (15 commits):
   object-manager collaborator extraction, owned editor/frame runtime contexts, shared object-art data
   split, explicit frame-collision phases (`FrameCollisionPlan`), pattern-atlas overlap guard, scoped

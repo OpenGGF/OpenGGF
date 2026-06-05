@@ -862,7 +862,10 @@ public class LevelManager {
             if (!ringManager.usesObjectTouchCollection()) {
                 ringManager.collectStageRings(playable, frameCounter + 1);
             }
-            ringManager.checkLostRingCollection(playable);
+            // Lost (spilled) ring collection now runs through the unified slot-ordered touch
+            // loop in ObjectManager.runTouchResponsesForPlayer (above) via the type-keyed
+            // LostRingObjectInstance branch — see ObjectManager Touch_ChkValue lost-ring gate.
+            // The legacy RingManager.checkLostRingCollection scan has been removed.
         }
     }
 
@@ -1014,9 +1017,9 @@ public class LevelManager {
         }
         if (ringManager != null) {
             ringManager.update(camera.getX(), playable, frameCounter + 1);
-            // Lost ring physics run once per frame after all players have had their
-            // touch-phase collection checks via applyTouchResponses(), matching the
-            // ROM's Touch_Rings/Obj37 order.
+            // Per-ring spilled-ring physics now runs in the object exec loop
+            // (LostRingObjectInstance); this only advances the shared decelerating
+            // spin once per frame (ROM ChangeRingFrame / Ring_spill_anim_*).
             ringManager.updateLostRingPhysics(frameCounter + 1);
         }
         // Water movement — ROM order: MoveWater (move toward target) runs BEFORE

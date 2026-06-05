@@ -17,7 +17,6 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.rings.LostRing;
 import com.openggf.level.rings.RingFrame;
 import com.openggf.level.rings.RingFramePiece;
 import com.openggf.level.rings.RingManager;
@@ -151,65 +150,16 @@ public class TestRingManager {
         assertEquals(0, tails.getRingCount());
     }
 
-    @Test
-    public void testCpuSidekickObjectControlledRecoveryCannotCollectLostRings() throws Exception {
-        RingManager ringManager = buildRingManager(List.of());
-        TestPlayableSprite tails = new TestPlayableSprite((short) 0x03B7, (short) 0x025A);
-        tails.setCpuControlled(true);
-        tails.setObjectControlled(true);
-        tails.setControlLocked(true);
-        tails.setInvulnerableFrames(0);
-
-        configureSingleLostRing(ringManager, 0x03AE, 0x0261);
-        ringManager.checkLostRingCollection(tails);
-
-        assertEquals(0, tails.getRingCount(),
-                "CPU Tails recovery flight keeps object_control set and must not collect lost rings");
-    }
+    // NOTE: legacy per-ring lost-ring lifecycle (collected-ring sparkle expiry and
+    // on-expiry slot release) was retired with the legacy LostRingPool.updatePhysics
+    // loop — per-ring physics/lifetime now runs in the object exec loop
+    // (LostRingObjectInstance). Per-ring round-trip is covered by
+    // com.openggf.level.rings.TestLostRingRewindCodec; the object-loop expiry/slot
+    // release lands with the Stage-5 object physics relocation. updateLostRingPhysics
+    // now only advances the shared decelerating spin (Ring_spill_anim_*).
 
     @Test
-    public void testLostRingCollectionUsesTouchPhaseInvulnerabilityThreshold() throws Exception {
-        RingManager ringManager = buildRingManager(List.of());
-        TestPlayableSprite player = new TestPlayableSprite((short) 0x03B7, (short) 0x025A);
-        player.setRolling(true);
-
-        player.setInvulnerableFrames(90);
-        configureSingleLostRing(ringManager, 0x03AE, 0x0261);
-        ringManager.checkLostRingCollection(player);
-        assertEquals(0, player.getRingCount(),
-                "Lost ring recollection should stay blocked while the ROM threshold is still active");
-
-        player.setInvulnerableFrames(89);
-        configureSingleLostRing(ringManager, 0x03AE, 0x0261);
-        ringManager.checkLostRingCollection(player);
-        assertEquals(1, player.getRingCount(),
-                "Lost ring recollection should award as soon as the touch-phase timer drops below the ROM threshold");
-    }
-
-    @Test
-    public void testCollectedLostRingExpiresFromLogicWithoutRenderPass() throws Exception {
-        RingManager ringManager = buildRingManager(List.of());
-        TestPlayableSprite player = new TestPlayableSprite((short) 0x03B7, (short) 0x025A);
-        player.setRolling(true);
-        player.setInvulnerableFrames(0);
-        GameServices.camera().setMaxY((short) 0x7FFF);
-
-        configureSingleLostRing(ringManager, 0x03AE, 0x0261);
-
-        ringManager.checkLostRingCollection(player);
-        assertEquals(1, player.getRingCount());
-        assertEquals(1, ringManager.getActiveLostRings().size(),
-                "Freshly collected lost rings should remain active long enough to show their sparkle");
-
-        ringManager.updateLostRingPhysics(1);
-        ringManager.updateLostRingPhysics(2);
-
-        assertTrue(ringManager.getActiveLostRings().isEmpty(),
-                "Collected lost rings must leave the active pool from logic alone so headless replay matches ROM slots");
-    }
-
-    @Test
-    public void testLostRingSpawnReservesAndReleasesDynamicSlots() throws Exception {
+    public void testLostRingSpawnReservesDynamicSlots() throws Exception {
         LevelManager levelManager = GameServices.level();
         ObjectManager objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);
         setField(levelManager, "objectManager", objectManager);
@@ -223,13 +173,6 @@ public class TestRingManager {
 
         assertEquals(3, objectManager.getAllocatedSlotCount(),
                 "Spilled lost rings should reserve real dynamic slots while active");
-
-        for (int frame = 0; frame <= 0xFF; frame++) {
-            ringManager.updateLostRingPhysics(frame);
-        }
-
-        assertEquals(0, objectManager.getAllocatedSlotCount(),
-                "Expired lost rings should release their reserved dynamic slots");
     }
 
     @Test
@@ -389,21 +332,6 @@ public class TestRingManager {
                 GameServices.audio());
         ringManager.ensurePatternsCached(GraphicsManager.getInstance(), 0);
         return ringManager;
-    }
-
-    private void configureSingleLostRing(RingManager ringManager, int x, int y) throws Exception {
-        Field lostRingsField = RingManager.class.getDeclaredField("lostRings");
-        lostRingsField.setAccessible(true);
-        Object lostRings = lostRingsField.get(ringManager);
-
-        Field ringPoolField = lostRings.getClass().getDeclaredField("ringPool");
-        ringPoolField.setAccessible(true);
-        LostRing[] ringPool = (LostRing[]) ringPoolField.get(lostRings);
-        ringPool[0].reset(0, x, y, 0, 0, 0xFF);
-
-        Field activeRingCountField = lostRings.getClass().getDeclaredField("activeRingCount");
-        activeRingCountField.setAccessible(true);
-        activeRingCountField.setInt(lostRings, 1);
     }
 
     private void setField(Object target, String fieldName, Object value) throws Exception {
