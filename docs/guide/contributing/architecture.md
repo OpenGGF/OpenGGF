@@ -247,6 +247,48 @@ As a contributor, be aware that:
   registries, buffers, or render-mode booleans.
 - Some process-global `getInstance()` compatibility paths still exist for bootstrap and legacy tests, but they are not the current production style.
 
+## Architecture Ratchets And Migration Sequence
+
+The architecture guard suite is meant to make the preferred direction
+incremental. Existing debt is frozen in explicit baselines or source-text
+budgets, and new work should reduce those numbers rather than growing them.
+Current source ratchets cover four high-pressure seams:
+
+- `Engine` and `GameLoop` should be composition and mode-dispatch roots, not
+  owners of concrete Sonic 1, Sonic 2, or Sonic 3&K behavior.
+- `ObjectManager` should stay game-agnostic. Rewind recreation, dynamic children,
+  and object lifecycle special cases should move through registered codecs,
+  factories, or provider contracts instead of naming concrete Sonic objects.
+- Low-level graphics and audio code should not look up gameplay-scoped services
+  directly. Camera, fade, level, sprite, or gameplay state should arrive from the
+  render/audio orchestration layer through explicit parameters or context objects.
+- Large root dispatch methods in `Engine` and `GameLoop` should not grow. When a
+  change touches one of those methods, prefer extracting a focused collaborator
+  and lowering the documented budget.
+
+The target architecture is:
+
+1. `Engine` wires process services, window/runtime bootstrapping, and top-level
+   mode transitions only.
+2. `GameLoop` delegates each mode to provider-backed mode controllers or
+   existing module interfaces.
+3. Game modules own concrete game objects, art, save/data-select presentation,
+   special/bonus-stage bootstrap details, and debug-only game-specific helpers.
+4. Shared managers such as `ObjectManager` depend on shared lifecycle/profile
+   contracts and registries, not concrete `game.sonic*` classes.
+5. Graphics/audio infrastructure remains a lower layer; gameplay state is pushed
+   to it by callers rather than pulled through `GameServices`.
+
+Use this migration order when cleaning up a boundary:
+
+1. Add or reuse a provider/registry contract at the current shared boundary.
+2. Move one concrete Sonic dependency behind that contract without changing
+   runtime behavior.
+3. Run the focused architecture guard that owns the boundary.
+4. If the count shrinks, lower the source-ratchet budget or frozen baseline in
+   the same commit and update `docs/architecture/archunit-exceptions.md`.
+5. Repeat with the next concrete dependency or oversized dispatcher block.
+
 ## Level Initialization: LevelInitProfile
 
 Each game defines a `LevelInitProfile`: a declarative sequence of initialization steps

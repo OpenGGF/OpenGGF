@@ -10,10 +10,14 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.sonic2.objects.CheckpointDongleInstance;
 import com.openggf.game.sonic2.objects.CheckpointObjectInstance;
 import com.openggf.game.sonic2.objects.CheckpointStarInstance;
+import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
+import com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance;
+import com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance;
 import com.openggf.graphics.GLCommand;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -40,7 +44,7 @@ class TestObjectManagerRewindDynamicClassification {
     @Test
     void registeredDynamicRewindCodecCapturesAndRecreatesDynamicObject() {
         GenericRewindEligibility.registerForTestOrMigration(TestDynamicObject.class);
-        ObjectManager.registerRewindDynamicObjectCodecForTest(new ObjectManager.RewindDynamicObjectCodec() {
+        ObjectManager.registerRewindDynamicObjectCodecForTest(new DynamicObjectRewindCodec() {
             @Override
             public boolean supports(ObjectInstance instance) {
                 return instance instanceof TestDynamicObject;
@@ -52,7 +56,7 @@ class TestObjectManagerRewindDynamicClassification {
             }
 
             @Override
-            public ObjectInstance recreate(ObjectManager.DynamicObjectRecreateContext context,
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
                     ObjectManagerSnapshot.DynamicObjectEntry entry) {
                 return new TestDynamicObject(entry.spawn());
             }
@@ -90,9 +94,54 @@ class TestObjectManagerRewindDynamicClassification {
     void checkpointDynamicChildrenAreRewindRestorable() {
         ObjectSpawn spawn = new ObjectSpawn(0x100, 0x180, 0x79, 0, 0, false, 0);
         CheckpointObjectInstance parent = new CheckpointObjectInstance(spawn, "Checkpoint");
+        Sonic2ObjectRegistry registry = new Sonic2ObjectRegistry();
 
-        assertTrue(ObjectManager.isRewindRestorableDynamicObject(new CheckpointDongleInstance(parent)));
-        assertTrue(ObjectManager.isRewindRestorableDynamicObject(new CheckpointStarInstance(parent, 0x40)));
+        assertTrue(ObjectManager.isRewindRestorableDynamicObject(new CheckpointDongleInstance(parent), registry));
+        assertTrue(ObjectManager.isRewindRestorableDynamicObject(new CheckpointStarInstance(parent, 0x40), registry));
+    }
+
+    @Test
+    void sonic2BadnikProjectileRestoresThroughRegistryCodec() {
+        Sonic2ObjectRegistry registry = new Sonic2ObjectRegistry();
+        ObjectManager manager = new ObjectManager(List.of(), registry, 0, null, null);
+        ObjectSpawn spawn = new ObjectSpawn(0x100, 0x180, 0x98, 0, 0, false, 0);
+        BadnikProjectileInstance projectile = new BadnikProjectileInstance(
+                spawn,
+                BadnikProjectileInstance.ProjectileType.BUZZER_STINGER,
+                0x120,
+                0x1A0,
+                0x180,
+                0x180,
+                false,
+                false);
+        manager.addDynamicObject(projectile);
+
+        ObjectManagerSnapshot snapshot = manager.rewindSnapshottable().capture();
+        manager.removeDynamicObject(projectile);
+        manager.rewindSnapshottable().restore(snapshot);
+
+        BadnikProjectileInstance restored = manager.getActiveObjects().stream()
+                .filter(BadnikProjectileInstance.class::isInstance)
+                .map(BadnikProjectileInstance.class::cast)
+                .findFirst()
+                .orElse(null);
+        assertNotNull(restored);
+        assertEquals(0x120, restored.getX());
+        assertEquals(0x1A0, restored.getY());
+    }
+
+    @Test
+    void sonic2BuzzerFlameChildIsClassifiedThroughRegistryCodec() throws Exception {
+        Sonic2ObjectRegistry registry = new Sonic2ObjectRegistry();
+        ObjectSpawn spawn = new ObjectSpawn(0x100, 0x180, 0x4B, 0, 0, false, 0);
+        BuzzerBadnikInstance parent = new BuzzerBadnikInstance(spawn);
+        Class<?> childClass = Class.forName(
+                "com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance$BuzzerFlameChild");
+        Constructor<?> ctor = childClass.getDeclaredConstructor(ObjectSpawn.class, BuzzerBadnikInstance.class);
+        ctor.setAccessible(true);
+        ObjectInstance child = (ObjectInstance) ctor.newInstance(spawn, parent);
+
+        assertTrue(ObjectManager.isRewindRestorableDynamicObject(child, registry));
     }
 
     @Test
@@ -114,7 +163,7 @@ class TestObjectManagerRewindDynamicClassification {
 
     @Test
     void dynamicRestoreHonorsLegacySingleArgumentSubclassRestoreOverride() {
-        ObjectManager.registerRewindDynamicObjectCodecForTest(new ObjectManager.RewindDynamicObjectCodec() {
+        ObjectManager.registerRewindDynamicObjectCodecForTest(new DynamicObjectRewindCodec() {
             @Override
             public boolean supports(ObjectInstance instance) {
                 return instance instanceof LegacyOverrideDynamicObject;
@@ -126,7 +175,7 @@ class TestObjectManagerRewindDynamicClassification {
             }
 
             @Override
-            public ObjectInstance recreate(ObjectManager.DynamicObjectRecreateContext context,
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
                     ObjectManagerSnapshot.DynamicObjectEntry entry) {
                 return new LegacyOverrideDynamicObject(entry.spawn());
             }

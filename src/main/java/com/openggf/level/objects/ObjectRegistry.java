@@ -22,6 +22,15 @@ public interface ObjectRegistry {
         return ObjectWindowingStrategy.LEGACY;
     }
 
+    /**
+     * Game-specific dynamic-object rewind codecs. Shared/core codecs remain in
+     * {@link ObjectRewindDynamicCodecs}; concrete game object classes belong in
+     * the owning registry implementation.
+     */
+    default List<DynamicObjectRewindCodec> dynamicRewindCodecs() {
+        return List.of();
+    }
+
     default List<String> getAliases(int objectId) {
         return List.of();
     }

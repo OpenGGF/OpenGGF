@@ -31,6 +31,7 @@ import com.openggf.game.ZoneRegistry;
 import com.openggf.game.dataselect.CrossGameDataSelectPresentations;
 import com.openggf.game.dataselect.DataSelectHostProfile;
 import com.openggf.game.dataselect.DataSelectPresentationProvider;
+import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.credits.Sonic1EndingProvider;
@@ -60,6 +61,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import java.util.Optional;
 
 import static java.security.MessageDigest.getInstance;
 
@@ -259,6 +261,15 @@ public class Sonic1GameModule implements GameModule {
     }
 
     @Override
+    public Optional<DonatedDataSelectWarmupTask> getDonatedDataSelectWarmupTask() {
+        S1DataSelectImageCacheManager manager = getDataSelectImageCacheManager();
+        if (manager instanceof DonatedDataSelectWarmupTask warmup) {
+            return Optional.of(warmup);
+        }
+        return Optional.empty();
+    }
+
+    @Override
     public void onLevelLoad() {
         // Reset oscillation values to Sonic 1 settings.
         // S1 differs from S2 in oscillators 8+ (amplitude, initial values).
@@ -360,7 +371,7 @@ public class Sonic1GameModule implements GameModule {
     }
 
     private static final class WarmupAwareS1DataSelectImageCacheManager
-            extends S1DataSelectImageCacheManager implements S1DataSelectImageWarmup {
+            extends S1DataSelectImageCacheManager implements S1DataSelectImageWarmup, DonatedDataSelectWarmupTask {
 
         private WarmupAwareS1DataSelectImageCacheManager(Path cacheRoot,
                                                          com.openggf.configuration.SonicConfigurationService config,
@@ -372,6 +383,16 @@ public class Sonic1GameModule implements GameModule {
         @Override
         public void ensureGenerationStarted() {
             super.ensureGenerationStarted();
+        }
+
+        @Override
+        public void start() {
+            ensureGenerationStarted();
+        }
+
+        @Override
+        public boolean isRunning() {
+            return isGenerationRunning();
         }
     }
 

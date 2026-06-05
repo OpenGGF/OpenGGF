@@ -69,10 +69,7 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossSpikeChild.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossVisualChild.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossWeatherMachineChild.java#@RewindTransient", 1),
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossWeatherVisualChild.java#@RewindTransient", 1),
-            // Obj37 spilled ring (spilled-ring object model): the global shared spin owner reference is
-            // @RewindTransient — captured once via the ring-manager snapshot, re-injected on recreate.
-            Map.entry("src/main/java/com/openggf/level/rings/LostRingObjectInstance.java#@RewindTransient", 1)
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossWeatherVisualChild.java#@RewindTransient", 1)
     );
 
     private static final Set<String> REWIND_REGISTRY_PRODUCTION_ALLOWLIST = Set.of(
@@ -119,6 +116,27 @@ class TestRewindArchitectureGuard {
 
         if (!violations.isEmpty()) {
             fail("Production RewindRegistry ownership must stay in approved gameplay lifecycle code:\n"
+                    + String.join("\n", violations));
+        }
+    }
+
+    @Test
+    void objectManagerDynamicRewindCodecsDoNotReferenceConcreteGamePackages() throws IOException {
+        Path source = Path.of("src/main/java/com/openggf/level/objects/ObjectManager.java");
+        List<String> violations = new ArrayList<>();
+        List<String> lines = Files.readAllLines(source);
+        for (int i = 0; i < lines.size(); i++) {
+            String line = lines.get(i);
+            if (line.contains("com.openggf.game.sonic1")
+                    || line.contains("com.openggf.game.sonic2")
+                    || line.contains("com.openggf.game.sonic3k")) {
+                violations.add(normalize(source) + ":" + (i + 1) + ": " + line.trim());
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            fail("ObjectManager is shared object infrastructure; dynamic rewind codec knowledge "
+                    + "for concrete games must live behind ObjectRegistry providers:\n"
                     + String.join("\n", violations));
         }
     }

@@ -139,6 +139,58 @@ public class TestGameLoop {
     }
 
     @Test
+    public void stepInternalDelegatesBootScreensToExtractedController() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
+
+        // Boot-screen update sequencing now lives in BootScreenModeController.
+        assertTrue(source.contains("bootScreenModeController.updateLegalDisclaimer("),
+                "GameLoop must delegate the legal-disclaimer frame to BootScreenModeController");
+        assertTrue(source.contains("bootScreenModeController.updateMasterTitle("),
+                "GameLoop must delegate the master-title frame to BootScreenModeController");
+
+        // The screen-update body must no longer be inlined in the dispatcher.
+        int stepStart = source.indexOf("private void stepInternal()");
+        int firstHandler = source.indexOf("private void updateSpecialStageMode()");
+        assertTrue(stepStart >= 0 && firstHandler > stepStart,
+                "stepInternal and the extracted handlers must both exist");
+        String stepBody = source.substring(stepStart, firstHandler);
+        assertFalse(stepBody.contains("masterScreen.update(inputHandler)"),
+                "stepInternal must not inline the master-title screen update after extraction");
+        assertFalse(stepBody.contains("disclaimer.update(inputHandler)"),
+                "stepInternal must not inline the legal-disclaimer screen update after extraction");
+    }
+
+    @Test
+    public void stepInternalDelegatesGameplayModesToCohesiveHandlers() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
+
+        // Each large mode group is owned by a dedicated extracted handler rather
+        // than the monolithic dispatcher.
+        for (String handler : new String[] {
+                "private void updateSpecialStageMode()",
+                "private void updateSpecialStageResultsMode()",
+                "private boolean updateTitleCardMode(",
+                "private void updateTitleScreenMode()",
+                "private void updateLevelSelectMode()",
+                "private void updateDataSelectMode()",
+                "private boolean updateLevelMode(",
+                "private void updateBonusStageMode(" }) {
+            assertTrue(source.contains(handler),
+                    "GameLoop must own the extracted mode handler: " + handler);
+        }
+
+        // The canonical gameplay frame step and bonus-stage glowing-sphere
+        // bootstrap must no longer be inlined inside stepInternal itself.
+        int stepStart = source.indexOf("private void stepInternal()");
+        int firstHandler = source.indexOf("private void updateSpecialStageMode()");
+        String stepBody = source.substring(stepStart, firstHandler);
+        assertFalse(stepBody.contains("LevelFrameStep.execute("),
+                "stepInternal must route the gameplay frame step through extracted mode handlers");
+        assertFalse(stepBody.contains("ZONE_GLOWING_SPHERE"),
+                "stepInternal must not inline the bonus-stage bootstrap check");
+    }
+
+    @Test
     public void testMasterTitleScreenStepDoesNotRequireGameplayRuntime() {
         SessionManager.clear();
         SessionManager.clear();
