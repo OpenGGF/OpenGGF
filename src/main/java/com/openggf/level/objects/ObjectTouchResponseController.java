@@ -641,7 +641,12 @@ final class ObjectTouchResponseController {
                     if (instance instanceof TouchResponseAttackable attackable) {
                         attackable.onPlayerAttack(sidekick, result);
                     }
-                    if (hpBeforeHit > 0) {
+                    // ROM byte zero-test gate, not signed compare (see player path
+                    // above): S2 s2.asm:85282-85290 Touch_Enemy_Part2 tst.b
+                    // collision_property/beq; S1 React_Enemy tst.b obColProp/beq;
+                    // S3K sonic3k.asm:20911-20922 tst.b boss_hitcount2/beq. A NONZERO
+                    // byte (incl. 0xFF/-1 always-bounce) negates both velocities.
+                    if ((hpBeforeHit & 0xFF) != 0) {
                         // S3K boss-hit path also negates ground_vel; S1/S2 keep it.
                         sidekick.setXSpeed((short) -sidekick.getXSpeed());
                         sidekick.setYSpeed((short) -sidekick.getYSpeed());
@@ -841,7 +846,25 @@ final class ObjectTouchResponseController {
                     if (instance instanceof TouchResponseAttackable attackable) {
                         attackable.onPlayerAttack(player, result);
                     }
-                    if (hpBeforeHit > 0) {
+                    // ROM gates the boss-rebound on a BYTE zero-test, not a signed
+                    // compare. All three games tst.b the gated byte and beq to the
+                    // kill path; a NONZERO byte (incl. the 0xFF "always-bounce" the
+                    // S2 DEZ Death Egg Robot head writes, ObjC7_Head rtn 8
+                    // s2.asm:83276-83277 move.b #-1,collision_property) runs
+                    // neg.w x_vel / neg.w y_vel. References:
+                    //   S2  s2.asm:85282-85290 Touch_Enemy_Part2:
+                    //       tst.b collision_property(a1); beq Touch_KillEnemy;
+                    //       neg.w x_vel(a0); neg.w y_vel(a0)
+                    //   S1  s1disasm _incObj/sub ReactToItem.asm:181-191 React_Enemy:
+                    //       tst.b obColProp(a1); beq .breakenemy; neg.w obVelX/obVelY
+                    //   S3K sonic3k.asm:20911-20922 .checkhurtenemy:
+                    //       tst.b boss_hitcount2(a1); beq Touch_EnemyNormal;
+                    //       neg.w x_vel; neg.w y_vel; neg.w ground_vel
+                    // A signed `> 0` test wrongly rejected 0xFF/-1. For S3K bosses
+                    // getCollisionProperty() returns positive HP, so != 0 is
+                    // behaviorally identical there; the only changed case is the
+                    // 0xFF always-bounce value, treated as nonzero by all 3 ROMs.
+                    if ((hpBeforeHit & 0xFF) != 0) {
                         // S3K boss-hit path also negates ground_vel; S1/S2 keep it.
                         player.setXSpeed((short) -player.getXSpeed());
                         player.setYSpeed((short) -player.getYSpeed());

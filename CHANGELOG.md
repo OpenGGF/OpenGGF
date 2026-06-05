@@ -16,6 +16,21 @@ All notable changes to the OpenGGF project are documented in this file.
   ROM's initial stationary shooting phase; `updateChase` now decrements and bails
   to shooting BEFORE accelerating/moving, matching the ROM ordering. Advances the
   s2 ooz2 level-select trace frontier (first-error frame 389 -> 489).
+- **Enemy/boss touch-rebound now uses the ROM byte zero-test, not a signed compare:**
+  The player and sidekick ENEMY-touch boss-rebound in `ObjectTouchResponseController`
+  gated the `neg.w x_vel`/`neg.w y_vel` bounce on a signed `hpBeforeHit > 0`. The ROM
+  gates it on a BYTE zero-test (`tst.b collision_property; beq <kill>`; any nonzero byte
+  bounces): S2 `Touch_Enemy_Part2` (docs/s2disasm/s2.asm:85283-85286), S1 `React_Enemy`
+  (docs/s1disasm/_incObj/sub ReactToItem.asm:180-184), S3K `.checkhurtenemy`
+  (docs/skdisasm/sonic3k.asm:20911-20922). The S2 DEZ Death Egg Robot head writes
+  `move.b #-1,collision_property` every frame in its active fight routine (ObjC7_Head
+  routine 8 / `loc_3DC46`, docs/s2disasm/s2.asm:83278), so the signed test wrongly
+  rejected the 0xFF/-1 "always-bounce" sentinel and the player phased into the head.
+  Both gates now test `(hpBeforeHit & 0xFF) != 0`. For all normal positive HP this is
+  identical to `> 0`; only the 0xFF/-1 case changes, which all three ROMs treat as
+  nonzero. No zone/gameId carve-out (the S3K-only `ground_vel` negation remains gated by
+  `PhysicsFeatureSet.bossHitNegatesGroundSpeed()`). Advances the s2 dez1 ending trace
+  (first-error frame 3250 -> 3580); zero same-game regressions.
 - **DEZ Death Egg Robot WaitEggman handshake now ROM-accurate:** The boss body's
   WAIT_EGGMAN state previously released as soon as Eggman boarded the cockpit
   (`p1_standing`), ~150 frames too early, walking the body west into the player's

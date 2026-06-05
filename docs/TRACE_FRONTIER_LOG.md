@@ -28,6 +28,31 @@
 - A/B baseline measured by copying the changed file aside, `git checkout -- <path>` to HEAD,
   running the trace (clean f389), then restoring the fix (f489). No `git stash` used (shared
   worktree stack).
+## 2026-06-05 - s2 dez1 f3250->f3580: Touch_Enemy boss-rebound is a BYTE zero-test, not signed `>0`
+
+- Branch `bugfix/ai-trace-s2-dez1`, worktree `.worktrees/trace-s2-dez1` (off develop, HEAD `8ea491072`).
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=...\s2.gen" "-Dtest=TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status: ADVANCED.** First-error frame **3250 (y_speed) -> 3580 (rolling)**; error count 133 -> 128.
+  Surefire (this class): `Tests run: 1, Failures: 1` (still red at the new, later frontier). Report
+  `target/trace-reports/s2_dez1_report.json` summary: `First error: frame 3580 -- rolling mismatch (expected=1, actual=0)`.
+- **Root cause:** the player/sidekick ENEMY-touch boss-rebound in `ObjectTouchResponseController` gated the
+  velocity negation on a SIGNED `hpBeforeHit > 0`. The ROM gates it on a BYTE zero-test (`tst.b ...; beq` to
+  the kill path; any NONZERO byte negates `x_vel`/`y_vel`). The S2 DEZ Death Egg Robot head writes
+  `move.b #-1,collision_property` every frame in its active fight routine (ObjC7_Head rtn 8 / `loc_3DC46`,
+  docs/s2disasm/s2.asm:83278; `HeadChild.getCollisionProperty()` returns -1). The signed test wrongly rejected
+  -1 (0xFF), so the player never bounced off the head. Changed both gates to `(hpBeforeHit & 0xFF) != 0`,
+  matching `tst.b` semantics. Verified in all three disassemblies:
+  S2 `Touch_Enemy_Part2` docs/s2disasm/s2.asm:85283-85286; S1 `React_Enemy`
+  docs/s1disasm/_incObj/sub ReactToItem.asm:180-184; S3K `.checkhurtenemy` docs/skdisasm/sonic3k.asm:20911-20922.
+  For all normal badnik/boss HP the byte is positive, so `!= 0` is behaviourally identical to `> 0`; the only
+  changed case is the 0xFF/-1 always-bounce sentinel, which all three ROMs treat as nonzero. No zone/gameId
+  carve-out (S3K-only ground_vel negation stays gated by `PhysicsFeatureSet.bossHitNegatesGroundSpeed()`).
+  Comparison-only invariant held.
+- **Same-game regression measurement (full S2 suite, A/B at clean HEAD vs with-fix):** ZERO regressions.
+  Identical 20-class failing set before and after (S1 mz1; S2 arz2/cnz/cnz2/cpz/cpz2/dez1/htz/htz2/mcz/mcz2/
+  mtz/mtz2/mtz3/ooz/ooz2/scz; S3K aiz/cnz/mgz — all pre-existing). Requested guards
+  `TestS2Ehz1TraceReplay,TestS2WfzLevelSelectTraceReplay,TestS2ArzLevelSelectTraceReplay` all `Failures: 0`.
 
 ## 2026-06-05 - S2 arz1 GREEN: Whisp (Obj8C) on-screen one-frame defer + bmi pause underflow
 
