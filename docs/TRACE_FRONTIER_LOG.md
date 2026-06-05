@@ -1,5 +1,39 @@
 # Trace Frontier Log
 
+## 2026-06-05 - arz2 f669->f857: ChopChop (Obj91) charge velocities latched once with the vertical-band gate
+
+- Branch `bugfix/ai-trace-s2-arz2`, worktree `.worktrees/trace-s2-arz2`.
+- Command (worktree, cmd mvn.cmd, forkCount=1):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** ADVANCED (genuine, ROM-cited, zero same-game regressions). Targeted trace still fails.
+- **arz2:** `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` — first-error frame **669 -> 857**.
+  - Before (HEAD baseline, fix reverted): 1949 errors, first error frame 669 -- `y_speed` mismatch
+    (expected=-0080, actual=-0180). Player bouncing off ChopChop (s22 0x91) at @0788,0544: ROM bounce
+    y_speed -0x80 vs engine -0x180 because the engine ChopChop was adding 0.5px/frame downward velocity
+    during the charge, displacing its collision box so the player rebound differed.
+  - After (fix applied): 2061 errors, first error frame 857 -- `tails_g_speed` mismatch
+    (expected=0x000C, actual=0x0006). New frontier is an unrelated Tails-CPU ground-speed divergence
+    (branch=leader_fast), not ChopChop.
+- **Root cause:** `ChopChopBadnikInstance` (Obj91) recomputed/added a constant 0.5px/frame downward
+  charge velocity every charge frame. ROM `Obj91_MoveTowardsPlayer` (docs/s2disasm/s2.asm:73664-73684)
+  latches the charge velocities ONCE at the Waiting->Charge transition, and writes the vertical speed
+  ($80 down) ONLY when the closest character is OUTSIDE a narrow band: `addi.w #$10,d3 / cmpi.w #$20,d3 /
+  blo +` skips the vertical-speed write when `(d3+0x10) u< 0x20` (d3 = obj_y - player_y, from
+  `Obj_GetOrientationToPlayer` s2.asm:72776-72777). When the player is level with the ChopChop the
+  vertical speed stays 0 and it charges purely horizontally holding its y_pos. `Obj91_Charge`
+  (s2.asm:73687-73688) thereafter just re-integrates the latched x_vel/y_vel via `ObjectMove`
+  (s2.asm:30185-30199); velocities are not recomputed per frame. Also corrected the wait-timer transition
+  to fire when the byte timer goes negative (`subq.b #1 / bmi`, s2.asm:73659-73660).
+- **Fix:** in `ChopChopBadnikInstance`, latch x_vel/y_vel once via new `latchChargeVelocities()` at the
+  Waiting->Charge transition (vertical-band gate; both `Obj91_VerticalSpeeds` entries are $80), add a
+  `chargeLatched` flag, and make `updateCharging()` only integrate the latched velocities. No
+  zone/route/frame/gameId carve-out — pure ROM-accurate per-object behavior driven by player position
+  relative to the badnik; comparison-only invariant held (trace data never written back).
+- Files: `src/main/java/com/openggf/game/sonic2/objects/badniks/ChopChopBadnikInstance.java`.
+- Same-game regression guard (single-fork): EHZ1, SCZ, WFZ all GREEN (tests=1 failures=0 errors=0 each).
+  No same-game green regressed. (`TestS2ArzLevelSelectTraceReplay`, the act-1 sibling, was already
+  failing pre-fix at frame 2043 on an unrelated `tails_y_speed` Tails-CPU divergence and is unchanged.)
+
 ## 2026-06-05 - wfz GREEN restored (was dez1-introduced f12886 regression); dez1 held at f2194
 
 - Branch `bugfix/ai-wfz-defeat-deferral-scope`, worktree `.worktrees/wfz-defeat-scope`.
