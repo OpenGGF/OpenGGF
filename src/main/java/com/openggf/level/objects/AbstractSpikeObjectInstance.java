@@ -124,6 +124,22 @@ public abstract class AbstractSpikeObjectInstance extends AbstractObjectInstance
         return RenderPriority.clamp(4);
     }
 
+    @Override
+    public int getOnScreenHalfHeight() {
+        // ROM Obj36 (S2 s2.asm:29341-29345) / Obj_Spikes (S3K) set only
+        // render_flags.level_fg in their init -- never render_flags.explicit_height.
+        // BuildSprites therefore evaluates the on-screen flag through the
+        // approximate Y check (BuildSprites_ApproxYCheck, s2.asm:30606-30619),
+        // which assumes a 32px (0x20) Y radius regardless of the spike's actual
+        // y_radius: on-screen when (y_pos - Camera_Y) is within [-32, screen_height+32).
+        // The shared gate default (16px) clipped the spike off-screen one frame
+        // early near the bottom of the viewport, so SolidObject_OnScreenTest
+        // (s2.asm:35330-35336) skipped the side push that ROM applies. Use the
+        // ROM approximate radius so the inline solid gate matches render_flags
+        // bit 7. S3K Obj_Spikes mirrors this (sonic3k.asm:48925 set only level_fg).
+        return 0x20;
+    }
+
     // ---- Movement ----
 
     /**

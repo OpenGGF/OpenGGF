@@ -46,6 +46,18 @@ All notable changes to the OpenGGF project are documented in this file.
   the generic roll-clear only for objects whose ROM routine omits
   `Sonic_ResetOnFloor`. Advances the s2 cnz2 level-select trace frontier
   (first-error frame 4060 -> 4294).
+- **Spike on-screen / solid-contact gate uses ROM 32px approximate-Y radius:**
+  `AbstractSpikeObjectInstance` now overrides `getOnScreenHalfHeight()` to `0x20`
+  (32px). S2 Obj36 (`docs/s2disasm/s2.asm:29360`) and S3K Obj_Spikes
+  (`docs/skdisasm/sonic3k.asm:48925`) set only `render_flags.level_fg` in init,
+  never `explicit_height`, so `BuildSprites` evaluates the on-screen flag through
+  `BuildSprites_ApproxYCheck` (`docs/s2disasm/s2.asm:30597-30605`), which assumes a
+  32px Y radius regardless of the spike's actual `y_radius`. The shared 16px default
+  clipped the spike's `render_flags.on_screen` bit one frame early near the bottom of
+  the viewport, so `SolidObject_OnScreenTest` (`docs/s2disasm/s2.asm:35331-35336`)
+  skipped the side push ROM applies. Gated at the spike class (S2 + S3K subclasses
+  only; no S1 consumer), not a zone/gameId branch. Advances the s2 mtz3 level-select
+  trace frontier (first-error frame 5173 -> 5664).
 - **DEZ Death Egg Robot WaitEggman handshake now ROM-accurate:** The boss body's
   WAIT_EGGMAN state previously released as soon as Eggman boarded the cockpit
   (`p1_standing`), ~150 frames too early, walking the body west into the player's

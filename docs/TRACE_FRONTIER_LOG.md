@@ -84,6 +84,26 @@
   htz f5686, mcz2 f4485, mcz f2757, arz2 f857 (identical with and without the fix).
 - A/B baseline measured by copying the three changed files aside, `git checkout -- <paths>`
   to HEAD (clean f4060), then restoring the fix (f4294). No `git stash` used (shared worktree stack).
+## 2026-06-05 - S2 mtz3 ADVANCED: spike on-screen gate uses ROM 32px approximate-Y radius
+
+- Branch `bugfix/ai-trace-s2-mtz3`, worktree `.worktrees/trace-s2-mtz3`.
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=...\s2.gen" "-Dtest=TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status: ADVANCED (still red).** First-error frame **5173 (`tails_x`) -> 5664 (`tails_x_speed`)**.
+  Surefire: `Tests run: 1, Failures: 1`. Error count 1004 -> 1010. A/B verified against worktree HEAD
+  (copy-aside + `git checkout --` baseline = f5173; with fix = f5664).
+- **Root cause:** the shared spike on-screen / solid-contact gate used the default 16px half-height, which
+  clipped the spike's `render_flags.on_screen` bit off one frame early near the bottom of the viewport.
+  S2 Obj36 (`docs/s2disasm/s2.asm:29360`, `ori.b #1<<render_flags.level_fg`) and S3K Obj_Spikes
+  (`docs/skdisasm/sonic3k.asm:48925`, `ori.b #4`) set ONLY `level_fg`, never `explicit_height`, so
+  `BuildSprites` evaluates the on-screen flag via `BuildSprites_ApproxYCheck`
+  (`docs/s2disasm/s2.asm:30597-30605`), which assumes a 32px Y radius regardless of the spike's actual
+  `y_radius`. `SolidObject_OnScreenTest` (`docs/s2disasm/s2.asm:35331-35336`) then gates the side push on
+  that bit. Fix overrides `getOnScreenHalfHeight()` -> `0x20` on the shared `AbstractSpikeObjectInstance`
+  (only S2 + S3K spike subclasses; no S1 consumer), gated at the spike class — not a zone/gameId branch.
+- **Same-game guard:** EHZ1, WFZ, ARZ all GREEN (0 failures). No same-game regression introduced.
+- **New MTZ3 frontier (frame 5664):** `tails_x_speed expected=0x0000 actual=-0200` in a Shellcracker
+  (ObjA0/Obj9F) + spike cluster — a distinct downstream Tails-CPU owner from the prior f5173 spike gate.
 
 ## 2026-06-05 - S2 arz1 GREEN: Whisp (Obj8C) on-screen one-frame defer + bmi pause underflow
 
