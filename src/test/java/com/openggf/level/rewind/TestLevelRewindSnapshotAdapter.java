@@ -82,6 +82,7 @@ class TestLevelRewindSnapshotAdapter {
         assertEquals(123, levelState.getTimerFrames());
         assertTrue(!levelState.isTimerPaused());
         verify(manager).setFrameCounter(88);
+        verify(manager).invalidateAllTilemaps();
         verify(manager).restoreRespawnRequestedForRewind(true);
         verify(manager).restoreCheckpointStateForRewind(null);
     }

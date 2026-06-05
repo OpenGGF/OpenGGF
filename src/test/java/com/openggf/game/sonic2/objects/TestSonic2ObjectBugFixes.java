@@ -245,13 +245,11 @@ class TestSonic2ObjectBugFixes {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x0460, (short) 0x052C);
         setIntField(platform, "yFixed", (0x04EC << 16) | 0xF000);
 
-        platform.update(0, player);
-        assertEquals(5, intField(platform, "moveType"));
-
         platform.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
+        platform.update(1, player);
 
         assertEquals(6, intField(platform, "moveType"),
-                "Obj6B must consume the standing bit as soon as the shared solid pass establishes it");
+                "Obj6B type 5 must consume the standing bit on the following Obj6B dispatch");
         assertEquals(platform.getY() << 16 | 0xF000, intField(platform, "yFixed"),
                 "Obj6B type 5 uses move.w y_pos and must preserve y_sub for the following ObjectMove");
     }

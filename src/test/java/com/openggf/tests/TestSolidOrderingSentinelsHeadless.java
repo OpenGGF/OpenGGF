@@ -70,6 +70,7 @@ class TestSolidOrderingSentinelsHeadless {
         player.setCentreY((short) 0x0EE);
         player.setAir(true);
         player.setYSpeed((short) 0x100);
+        fixture.camera().updatePosition(true);
 
         fixture.stepFrame(false, false, false, false, false);
 
@@ -91,6 +92,7 @@ class TestSolidOrderingSentinelsHeadless {
         player.setCentreY((short) 0x0EE);
         player.setAir(true);
         player.setYSpeed((short) 0x100);
+        fixture.camera().updatePosition(true);
 
         fixture.stepFrame(false, false, false, false, false);
 
@@ -116,6 +118,7 @@ class TestSolidOrderingSentinelsHeadless {
         sidekick.setCentreY((short) (0x100 - 8 - sidekick.getYRadius()));
         sidekick.setAir(true);
         sidekick.setYSpeed((short) 0x100);
+        fixture.camera().updatePosition(true);
 
         fixture.stepFrame(false, false, false, false, false);
 

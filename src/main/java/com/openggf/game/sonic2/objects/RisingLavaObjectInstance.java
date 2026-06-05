@@ -353,6 +353,16 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
         return true;
     }
 
+    @Override
+    public int getOnScreenHalfWidth() {
+        return widthPixels;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        return getSolidParams().groundHalfHeight();
+    }
+
     // ========================================================================
     // Rendering (Debug only - this is an invisible object)
     // ========================================================================

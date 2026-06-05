@@ -89,6 +89,14 @@ public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance {
     }
 
     @Override
+    public int getOnScreenHalfHeight() {
+        // S3K Render_Sprites reads height_pixels(a0) directly. Obj_Spikes
+        // initializes that from byte_23F74, which matches the shared y-radius
+        // table for the spike subtypes.
+        return getEntryValue(Y_RADIUS);
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         ObjectRenderManager renderManager = getRenderManager();
         if (renderManager == null) {
