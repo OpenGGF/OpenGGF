@@ -1253,6 +1253,23 @@ public class SpriteManager {
 										   LevelManager levelManager, int frameCounter) {
 		boolean isUnified = requiresPostMovementSolidPass(playable);
 		boolean usesInlineSolidResolution = levelManager != null && levelManager.objectsExecuteAfterPlayerPhysics();
+		// Capture the hurt-routine membership BEFORE movement runs, because the
+		// landing-from-hurt step clears the hurt flag mid-tick (calculateLanding ->
+		// resetOnFloor). The ROM hurt routine owns the whole frame and never calls
+		// the water-handling routine, including the frame it transitions back to the
+		// normal control routine: S2 Obj02_Hurt / Obj01_Hurt have no Tails_Water /
+		// Sonic_Water call (docs/s2disasm/s2.asm:41057 Obj02_Hurt;
+		// docs/s2disasm/s2.asm:38158 Obj01_Hurt), S1 Sonic_Hurt only gains the
+		// water call under the FixBugs assembly switch ("Fix water not being
+		// acknowledged during a hurt state", docs/s1disasm/_incObj/01 Sonic.asm:1814-1817),
+		// and S3K Tails hurt loc_156D6 likewise omits it (docs/skdisasm/sonic3k.asm:29194-29210).
+		// Only the next, first normal-control frame's Obj02_Control reaches Tails_Water,
+		// and it runs AFTER Tails_Move (docs/s2disasm/s2.asm:38973 move, :38981 water),
+		// so the underwater acceleration switch (Tails_acceleration $C->$6,
+		// docs/s2disasm/s2.asm:39550 vs dry $C at :38902/:39045) is first observed by the
+		// frame after that move. Skipping the water update on the hurt-landing frame keeps
+		// the engine's waterPhysicsActive flag from being set one frame early.
+		boolean hurtAtTickStart = playable.isHurt();
 		// For S1 UNIFIED: skip pre-movement solid pass. ROM processes all solid
 		// objects AFTER Sonic's movement (his slot runs first in ExecuteObjects),
 		// so only the post-movement pass is ROM-accurate. Running both creates
@@ -1292,7 +1309,7 @@ public class SpriteManager {
 		levelManager.applyPlaneSwitchers(playable);
 		playable.tickStatus();
 		playable.endOfTick();
-		if (usesInlineSolidResolution) {
+		if (usesInlineSolidResolution && !hurtAtTickStart) {
 			levelManager.updatePlayableWaterStateForCurrentLevel(playable);
 		}
 	}

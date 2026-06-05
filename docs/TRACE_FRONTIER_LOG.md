@@ -1,5 +1,37 @@
 # Trace Frontier Log
 
+## 2026-06-05 - s2 arz2 f857->f899: water profile not applied on a hurt-landing frame
+
+- Branch `bugfix/ai-trace-s2-arz2`, worktree `.worktrees/trace-s2-arz2`.
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status: ADVANCED (still failing).** First-error frame **857 -> 899**, error count **2096 -> 1955**.
+  Surefire: `Tests run: 1, Failures: 1`.
+- **Root cause:** `SpriteManager.tickPlayablePhysics` ran `updatePlayableWaterStateForCurrentLevel`
+  at end of tick whenever the active module resolves solids inline (S2/S3K). On a frame the player
+  began in the hurt routine and landed mid-tick (`calculateLanding -> resetOnFloor` clears the hurt
+  flag), the engine immediately switched to the underwater acceleration profile (`Tails_acceleration
+  $C->$6`). The ROM hurt routine owns the whole frame and never calls the water-handling routine,
+  including the landing-transition frame where `Tails_HurtStop` flips `routine` to `Obj02_Control`:
+  S2 `Obj02_Hurt` / `Obj01_Hurt` have no `Tails_Water` / `Sonic_Water` call
+  (`docs/s2disasm/s2.asm:41057`, `docs/s2disasm/s2.asm:38158`); `Tails_HurtStop`
+  (`docs/s2disasm/s2.asm:41076-41107`) resets routine within the hurt frame; only the next
+  `Obj02_Control` frame reaches `Tails_Water` after `Tails_Move` (`docs/s2disasm/s2.asm:38973` move,
+  `:38981` water; dry accel `$C` at `:38902`/`:39045`, underwater `$6` at `:39550`). Shipping S1 ROM
+  also omits the hurt-state water call (gated by `FixBugs`, `docs/s1disasm/_incObj/01 Sonic.asm:1810-1817`).
+  Fix captures `boolean hurtAtTickStart = playable.isHurt()` before movement and skips the water update
+  when set. Semantic ROM-state predicate (hurt-routine membership), no zone/route/frame/gameId carve-out,
+  comparison-only invariant held.
+- Baseline f857 = `tails_g_speed` mismatch expected=`0x000C` actual=`0x0006` (dry vs underwater accel,
+  the exact field). New frontier f899 = `y_speed` mismatch expected=`-02D0` actual=`-01D0`, a fresh
+  divergence unrelated to the water profile.
+- **Same-game regression guard (PASS, zero regressions):**
+  `-Dtest=TestS2Ehz1TraceReplay,TestS2WfzLevelSelectTraceReplay,TestS2ArzLevelSelectTraceReplay`
+  -> all three `Failures: 0, Errors: 0`.
+- A/B baseline measured by copying the changed file aside, `git checkout -- <path>` to HEAD,
+  running the trace (clean f857), then restoring the fix (f899). No `git stash` used (shared
+  worktree stack).
+
 ## 2026-06-05 - ooz2 f389->f489: Aquis (Obj50) on-screen activation + follow-timer underflow
 
 - Branch `bugfix/ai-trace-s2-ooz2`, worktree `.worktrees/trace-s2-ooz2`.

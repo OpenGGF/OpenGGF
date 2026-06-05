@@ -20,6 +20,26 @@ All notable changes to the OpenGGF project are documented in this file.
   replay) and `TraceCatalog` (the dev-only trace test-mode picker) resolve the
   shared movie first and fall back to a legacy per-dir `.bk2` when `source_bk2`
   is absent or the shared file is missing, so existing traces are unaffected.
+- **Underwater physics profile no longer applied one frame early on a hurt
+  landing:** The per-tick water-state update (`updatePlayableWaterStateForCurrentLevel`)
+  is now skipped on any frame the player began in the hurt routine. The ROM hurt
+  routine owns the whole frame and never calls the water-handling routine, even on
+  the frame `*_HurtStop` lands the player and resets routine back to normal control:
+  S2 `Obj02_Hurt` / `Obj01_Hurt` have no `Tails_Water` / `Sonic_Water` call
+  (`docs/s2disasm/s2.asm:41057`, `docs/s2disasm/s2.asm:38158`), `Tails_HurtStop`
+  flips `routine` to `Obj02_Control` within the hurt frame
+  (`docs/s2disasm/s2.asm:41076-41107`), and only the next `Obj02_Control` frame
+  reaches `Tails_Water` after `Tails_Move` (`docs/s2disasm/s2.asm:38973` move,
+  `docs/s2disasm/s2.asm:38981` water). The shipping S1 ROM likewise does not
+  acknowledge water during a hurt state — the `Sonic_Water` call is gated behind
+  the `FixBugs` switch (`docs/s1disasm/_incObj/01 Sonic.asm:1810-1817`). The engine
+  previously cleared its hurt flag mid-tick (`resetOnFloor`) and immediately ran the
+  water update, switching to the underwater acceleration profile
+  (`Tails_acceleration $C->$6`, `docs/s2disasm/s2.asm:39550` vs dry `$C` at
+  `:38902`/`:39045`) one frame early. Branch is on the hurt-routine membership
+  captured at tick start (a semantic ROM-state predicate), not a zone/route carve-out.
+  Advances the s2 arz2 level-select trace frontier (first-error frame 857 `tails_g_speed`
+  `$C` vs `$6` -> 899).
 
 - **OOZ Aquis (Obj50) on-screen activation and follow-timer now ROM-accurate:**
   `Obj50_CheckIfOnScreen` tests `render_flags.on_screen`
