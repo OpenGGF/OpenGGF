@@ -9,6 +9,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
@@ -19,11 +20,14 @@ import java.util.logging.Logger;
  * - TerrainCollisionManager (terrain sensor probes)
  * - ObjectManager.SolidContacts (solid object collision resolution)
  *
- * The pipeline executes in three explicit phases:
+ * Full-frame callers should use {@link #run(FrameCollisionPlan,
+ * AbstractPlayableSprite, Sensor[], Sensor[])} with an explicit plan instead
+ * of relying on a method name to imply which collision systems run.
+ *
+ * The legacy playable-frame plan executes these phases:
  * 1. Terrain probes (ground/ceiling/wall sensors against level collision)
  * 2. Compatibility solid-object resolution when the active frame path still uses a
  *    batched solid pass
- * 3. Post-resolution adjustments (ground mode, gSpeed recompute, headroom)
  */
 public class CollisionSystem {
     private static final Logger LOGGER = Logger.getLogger(CollisionSystem.class.getName());
@@ -68,15 +72,32 @@ public class CollisionSystem {
     }
 
     /**
-     * Execute the full collision pipeline for a sprite.
-     * This is the main entry point that replaces separate calls to
-     * terrain collision and solid object managers.
-     *
-     * @param sprite The playable sprite to process collision for
-     * @param groundSensors Ground sensor array
-     * @param ceilingSensors Ceiling sensor array
+     * Compatibility wrapper for older callers that expect the legacy full
+     * playable-frame pass. New callers should choose a named
+     * {@link FrameCollisionPlan} and invoke {@link #run(FrameCollisionPlan,
+     * AbstractPlayableSprite, Sensor[], Sensor[])} or
+     * {@link #runSolidObjectResolution(FrameCollisionPlan, AbstractPlayableSprite,
+     * boolean, boolean)}.
      */
+    @Deprecated(since = "0.6.prerelease", forRemoval = false)
     public void step(AbstractPlayableSprite sprite, Sensor[] groundSensors, Sensor[] ceilingSensors) {
+        run(FrameCollisionPlan.playableFrame(), sprite, groundSensors, ceilingSensors);
+    }
+
+    /**
+     * Execute the collision phases requested by {@code plan} for a playable
+     * sprite. The plan documents whether this frame is doing terrain probes,
+     * batched solid-object resolution, trace recording, or a future
+     * post-resolution ground-mode phase.
+     *
+     * @param plan explicit phase plan for this frame
+     * @param sprite playable sprite to process
+     * @param groundSensors ground sensor array, used only when the plan runs terrain probes
+     * @param ceilingSensors ceiling sensor array, used only when the plan runs terrain probes
+     */
+    public void run(FrameCollisionPlan plan, AbstractPlayableSprite sprite,
+                    Sensor[] groundSensors, Sensor[] ceilingSensors) {
+        FrameCollisionPlan effectivePlan = Objects.requireNonNull(plan, "plan");
         if (sprite == null || sprite.getDead()) {
             return;
         }
@@ -85,29 +106,22 @@ public class CollisionSystem {
             return;
         }
 
-        // Record initial state
-        int startX = sprite.getCentreX();
-        int startY = sprite.getCentreY();
-        boolean inAir = sprite.getAir();
+        if (effectivePlan.runsTerrainProbes()) {
+            if (effectivePlan.recordsTrace()) {
+                trace.onTerrainProbesStart(sprite.getCentreX(), sprite.getCentreY(), sprite.getAir());
+            }
 
-        trace.onTerrainProbesStart(startX, startY, inAir);
+            terrainProbes(sprite, groundSensors, "ground", effectivePlan.recordsTrace());
+            terrainProbes(sprite, ceilingSensors, "ceiling", effectivePlan.recordsTrace());
 
-        // Phase 1: Terrain probes
-        SensorResult[] groundResults = terrainProbes(sprite, groundSensors, "ground");
-        SensorResult[] ceilingResults = terrainProbes(sprite, ceilingSensors, "ceiling");
+            if (effectivePlan.recordsTrace()) {
+                trace.onTerrainProbesComplete(sprite.getCentreX(), sprite.getCentreY(), sprite.getAngle());
+            }
+        }
 
-        trace.onTerrainProbesComplete(sprite.getCentreX(), sprite.getCentreY(), sprite.getAngle());
-
-        // Phase 2: Solid object resolution
-        trace.onSolidContactsStart(sprite.getCentreX(), sprite.getCentreY());
-        resolveSolidContacts(sprite);
-        trace.onSolidContactsComplete(
-            objectManager != null && objectManager.isRidingObject(sprite),
-            sprite.getCentreX(), sprite.getCentreY()
-        );
-
-        // Phase 3: Post-resolution adjustments
-        postResolutionAdjustments(sprite);
+        if (effectivePlan.runsSolidObjectResolution()) {
+            runSolidObjectResolution(effectivePlan, sprite, false, false);
+        }
     }
 
     /**
@@ -115,9 +129,14 @@ public class CollisionSystem {
      * Currently delegates to TerrainCollisionManager.
      */
     public SensorResult[] terrainProbes(AbstractPlayableSprite sprite, Sensor[] sensors, String sensorType) {
+        return terrainProbes(sprite, sensors, sensorType, true);
+    }
+
+    private SensorResult[] terrainProbes(AbstractPlayableSprite sprite, Sensor[] sensors,
+                                         String sensorType, boolean recordTrace) {
         SensorResult[] results = terrainCollisionManager.getSensorResult(sensors);
 
-        if (trace != NoOpCollisionTrace.INSTANCE) {
+        if (recordTrace && trace != NoOpCollisionTrace.INSTANCE) {
             for (int i = 0; i < results.length; i++) {
                 trace.onTerrainProbeResult(sensorType + "_" + i, results[i]);
             }
@@ -131,20 +150,30 @@ public class CollisionSystem {
      * Inline-order modules resolve object solids during object execution instead.
      */
     public void resolveSolidContacts(AbstractPlayableSprite sprite) {
-        if (objectManager == null) {
-            return;
-        }
-
-        // Delegate to existing solid contacts system
-        objectManager.updateSolidContacts(sprite);
+        runSolidObjectResolution(FrameCollisionPlan.objectResolutionOnly(), sprite, false, false);
     }
 
-    /**
-     * Phase 3: Apply post-resolution adjustments.
-     * Currently a no-op; adjustments are performed inline in movement code.
-     * This will be expanded as logic migrates from PlayableSpriteMovement.
-     */
-    public void postResolutionAdjustments(AbstractPlayableSprite sprite) {
+    public void runSolidObjectResolution(FrameCollisionPlan plan, AbstractPlayableSprite sprite,
+                                         boolean postMovement, boolean deferSideToPostMovement) {
+        FrameCollisionPlan effectivePlan = Objects.requireNonNull(plan, "plan");
+        if (!effectivePlan.runsSolidObjectResolution() || sprite == null || sprite.getDead()
+                || sprite.isDebugMode()) {
+            return;
+        }
+        if (effectivePlan.recordsTrace()) {
+            trace.onSolidContactsStart(sprite.getCentreX(), sprite.getCentreY());
+        }
+
+        if (objectManager != null) {
+            objectManager.updateSolidContacts(sprite, postMovement, deferSideToPostMovement);
+        }
+
+        if (effectivePlan.recordsTrace()) {
+            trace.onSolidContactsComplete(
+                objectManager != null && objectManager.isRidingObject(sprite),
+                sprite.getCentreX(), sprite.getCentreY()
+            );
+        }
     }
 
     /**

@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Collision frame orchestration now names its phases explicitly:** Added
+  `FrameCollisionPlan` and routed the legacy playable collision pass plus the
+  batched solid-object bridge through named terrain/solid phase plans. The
+  previous `CollisionSystem.step(...)` surface remains as a deprecated
+  compatibility wrapper, while the no-op public post-resolution adjustment phase
+  is no longer advertised as active. This is an architecture-only refactor; no
+  Sonic physics behavior, feature flags, or trace data changed.
+
 - **Pattern atlas virtual range registration now fails fast on overlap:** `PatternAtlas.registerRange` throws an `IllegalArgumentException` when a newly registered half-open virtual pattern range intersects an existing one, while adjacent ranges remain valid. This turns range collisions from warning-only diagnostics into startup/load-time failures before atlas entries can silently alias or corrupt later rendering.
 
 - **Grounder (Obj8D) faces the closest player, uses the ROM animate/route timing, and has the correct touch box (advances ARZ1 level-select trace f2043→f2169):** Three ROM-accuracy fixes to `GrounderBadnikInstance` let rolling Tails land on and kill the Grounder, whose `Touch_KillEnemy` `neg.w y_vel` bounce sets `tails_y_speed=-070B` (ARZ1 first-error frame 2043, expected=-070B actual=+070B). (1) **Direction:** ROM `loc_36ADC`/`loc_36B0E` orient to the CLOSEST of MainCharacter/Sidekick via `Obj_GetOrientationToPlayer` (docs/s2disasm/s2.asm:72755-72774, 73296-73310); the engine update loop passes only the main character, so detection and the routine-6 direction latch now re-derive against the closest player (`playerQuery().nearestByRomX(NATIVE_P1_P2, …)`). When a leading sidekick has just passed the Grounder this flips it from walking left (away) to right (toward the killer). (2) **Timing:** routine 4 (`Obj8D_Animate`, `Ani_obj8D_b = 7,0,1,$FC`) holds each frame `duration+1=8` frames (s2.asm:30425-30448), so frames 0,1 occupy 16 frames; the `$FC` advance frame (Anim_End_FC, s2.asm:30476-30482) is a dead frame before routine 6 latches direction, so the idle timer is now 17 (was 14) to latch on the ROM-correct frame. (3) **Touch box:** the subObjData trailing field is `collision_flags=2` (s2.asm:73505, macro fields per s2.macros.asm:231), not 5 (that is the priority); the prior index 5 selected `Touch_Sizes` {$C,$12} (height 18) instead of {$C,$14} (height 20, s2.asm:85055-85056), leaving a 1px vertical gap that defeated the kill. Pure per-object ROM behavior; no zone/route/frame/gameId carve-out.

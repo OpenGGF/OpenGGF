@@ -20,7 +20,9 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.Direction;
+import com.openggf.physics.FrameCollisionPlan;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.CustomPlayablePhysics;
 import com.openggf.sprites.playable.SidekickCpuController;
@@ -1273,10 +1275,18 @@ public class SpriteManager {
 
 	private static void applySolidContacts(LevelManager levelManager, AbstractPlayableSprite playable,
 										   boolean postMovement, boolean deferSideToPostMovement) {
-		if (levelManager.getObjectManager() != null) {
-			levelManager.getObjectManager().updateSolidContacts(playable, postMovement,
-					deferSideToPostMovement);
+		ObjectManager objectManager = levelManager.getObjectManager();
+		if (objectManager == null) {
+			return;
 		}
+		CollisionSystem collisionSystem = GameServices.collisionOrNull();
+		if (collisionSystem != null) {
+			collisionSystem.setObjectManager(objectManager);
+			collisionSystem.runSolidObjectResolution(
+					FrameCollisionPlan.objectResolutionOnly(), playable, postMovement, deferSideToPostMovement);
+			return;
+		}
+		objectManager.updateSolidContacts(playable, postMovement, deferSideToPostMovement);
 	}
 
 	private static void applyScreenYWrapValueAfterControl(AbstractPlayableSprite playable) {
