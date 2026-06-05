@@ -2,7 +2,6 @@ package com.openggf.data;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 
 import java.io.IOException;
@@ -133,9 +132,6 @@ public class RomManager implements AutoCloseable {
         }
 
         initialized = true;
-
-        // Auto-detect game type and set appropriate module
-        GameModuleRegistry.detectAndSetModule(rom);
     }
 
     /**

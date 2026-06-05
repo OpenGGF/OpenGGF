@@ -42,6 +42,7 @@ import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaConstructorCall;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaField;
 import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.domain.JavaModifier;
@@ -59,6 +60,8 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
@@ -107,6 +110,129 @@ class TestArchUnitRules {
             "tools",
             "trace",
             "util");
+    private static final Set<String> CORE_RUNTIME_TOP_LEVEL_DEPENDENCY_EDGES = Set.of(
+            "audio -> configuration",
+            "audio -> data",
+            "audio -> debug",
+            "audio -> game",
+            "camera -> configuration",
+            "camera -> game",
+            "camera -> sprites",
+            "capture -> audio",
+            "data -> configuration",
+            "data -> audio",
+            "data -> game",
+            "data -> level",
+            "data -> sprites",
+            "debug -> camera",
+            "debug -> configuration",
+            "debug -> control",
+            "debug -> data",
+            "debug -> game",
+            "debug -> graphics",
+            "debug -> level",
+            "debug -> physics",
+            "debug -> sprites",
+            "editor -> camera",
+            "editor -> control",
+            "editor -> debug",
+            "editor -> game",
+            "editor -> graphics",
+            "editor -> level",
+            "game -> architecture",
+            "game -> audio",
+            "game -> camera",
+            "game -> configuration",
+            "game -> control",
+            "game -> data",
+            "game -> debug",
+            "game -> graphics",
+            "game -> level",
+            "game -> physics",
+            "game -> sprites",
+            "game -> testmode",
+            "game -> timer",
+            "game -> tools",
+            "game -> trace",
+            "game -> util",
+            "game -> version",
+            "graphics -> camera",
+            "graphics -> configuration",
+            "graphics -> control",
+            "graphics -> debug",
+            "graphics -> game",
+            "graphics -> level",
+            "graphics -> sprites",
+            "graphics -> util",
+            "integration -> game",
+            "integration -> level",
+            "level -> audio",
+            "level -> camera",
+            "level -> configuration",
+            "level -> data",
+            "level -> debug",
+            "level -> editor",
+            "level -> game",
+            "level -> graphics",
+            "level -> physics",
+            "level -> sprites",
+            "level -> testmode",
+            "level -> tools",
+            "level -> trace",
+            "level -> util",
+            "physics -> camera",
+            "physics -> game",
+            "physics -> level",
+            "physics -> sprites",
+            "render -> debug",
+            "render -> game",
+            "sprites -> audio",
+            "sprites -> camera",
+            "sprites -> configuration",
+            "sprites -> control",
+            "sprites -> data",
+            "sprites -> game",
+            "sprites -> graphics",
+            "sprites -> level",
+            "sprites -> physics",
+            "sprites -> timer",
+            "sprites -> trace",
+            "testmode -> camera",
+            "testmode -> configuration",
+            "testmode -> control",
+            "testmode -> debug",
+            "testmode -> game",
+            "testmode -> graphics",
+            "testmode -> sprites",
+            "testmode -> trace",
+            "timer -> audio",
+            "timer -> camera",
+            "timer -> game",
+            "timer -> level",
+            "timer -> sprites",
+            "tools -> audio",
+            "tools -> camera",
+            "tools -> capture",
+            "tools -> configuration",
+            "tools -> control",
+            "tools -> data",
+            "tools -> debug",
+            "tools -> game",
+            "tools -> graphics",
+            "tools -> level",
+            "tools -> sprites",
+            "tools -> trace",
+            "trace -> camera",
+            "trace -> configuration",
+            "trace -> debug",
+            "trace -> game",
+            "trace -> level",
+            "trace -> physics",
+            "trace -> sprites",
+            "util -> data",
+            "util -> game",
+            "util -> level",
+            "util -> tools");
     private static final String[] RUNTIME_MANAGER_SINGLETONS = {
             Camera.class.getName(),
             LevelManager.class.getName(),
@@ -155,19 +281,11 @@ class TestArchUnitRules {
         };
     }
 
-    private static DescribedPredicate<JavaClass> inCoreRuntimeCycleCluster() {
-        return new DescribedPredicate<>("cycle:core-runtime top-level slices") {
+    private static DescribedPredicate<JavaClass> inTopLevelSlice(String slice) {
+        return new DescribedPredicate<>("top-level com.openggf." + slice + " slice") {
             @Override
             public boolean test(JavaClass input) {
-                String packageName = input.getPackageName();
-                String prefix = "com.openggf.";
-                if (!packageName.startsWith(prefix)) {
-                    return false;
-                }
-                String remainder = packageName.substring(prefix.length());
-                int dot = remainder.indexOf('.');
-                String topLevel = dot >= 0 ? remainder.substring(0, dot) : remainder;
-                return CORE_RUNTIME_CYCLE_CLUSTER_SLICES.contains(topLevel);
+                return slice.equals(topLevelCoreRuntimeSlice(input));
             }
         };
     }
@@ -250,9 +368,142 @@ class TestArchUnitRules {
     static final ArchRule package_slices_are_free_of_cycles =
             FreezingArchRule.freeze(slices().matching("com.openggf.(*)..")
                             .should().beFreeOfCycles()
-                            .ignoreDependency(inCoreRuntimeCycleCluster(), inCoreRuntimeCycleCluster())
+                            .ignoreDependency(inTopLevelSlice("audio"), inTopLevelSlice("configuration"))
+                            .ignoreDependency(inTopLevelSlice("audio"), inTopLevelSlice("data"))
+                            .ignoreDependency(inTopLevelSlice("audio"), inTopLevelSlice("debug"))
+                            .ignoreDependency(inTopLevelSlice("audio"), inTopLevelSlice("game"))
+                            .ignoreDependency(inTopLevelSlice("camera"), inTopLevelSlice("configuration"))
+                            .ignoreDependency(inTopLevelSlice("camera"), inTopLevelSlice("game"))
+                            .ignoreDependency(inTopLevelSlice("camera"), inTopLevelSlice("sprites"))
+                            .ignoreDependency(inTopLevelSlice("capture"), inTopLevelSlice("audio"))
+                            .ignoreDependency(inTopLevelSlice("data"), inTopLevelSlice("configuration"))
+                            .ignoreDependency(inTopLevelSlice("data"), inTopLevelSlice("audio"))
+                            .ignoreDependency(inTopLevelSlice("data"), inTopLevelSlice("game"))
+                            .ignoreDependency(inTopLevelSlice("data"), inTopLevelSlice("level"))
+                            .ignoreDependency(inTopLevelSlice("data"), inTopLevelSlice("sprites"))
+                            .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("camera"))
+                            .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("configuration"))
+                            .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("control"))
+                            .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("data"))
+                            .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("game"))
+                            .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("graphics"))
+                            .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("level"))
+                            .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("physics"))
+                            .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("sprites"))
+                            .ignoreDependency(inTopLevelSlice("editor"), inTopLevelSlice("camera"))
+                            .ignoreDependency(inTopLevelSlice("editor"), inTopLevelSlice("control"))
+                            .ignoreDependency(inTopLevelSlice("editor"), inTopLevelSlice("debug"))
+                            .ignoreDependency(inTopLevelSlice("editor"), inTopLevelSlice("game"))
+                            .ignoreDependency(inTopLevelSlice("editor"), inTopLevelSlice("graphics"))
+                            .ignoreDependency(inTopLevelSlice("editor"), inTopLevelSlice("level"))
+                            .ignoreDependency(inTopLevelSlice("game"), inTopLevelSlice("architecture"))
+                            .ignoreDependency(inTopLevelSlice("game"), inTopLevelSlice("audio"))
+                            .ignoreDependency(inTopLevelSlice("game"), inTopLevelSlice("camera"))
+                            .ignoreDependency(inTopLevelSlice("game"), inTopLevelSlice("configuration"))
+                            .ignoreDependency(inTopLevelSlice("game"), inTopLevelSlice("control"))
+                            .ignoreDependency(inTopLevelSlice("game"), inTopLevelSlice("data"))
+                            .ignoreDependency(inTopLevelSlice("game"), inTopLevelSlice("debug"))
+                            .ignoreDependency(inTopLevelSlice("game"), inTopLevelSlice("graphics"))
+                            .ignoreDependency(inTopLevelSlice("game"), inTopLevelSlice("level"))
+                            .ignoreDependency(inTopLevelSlice("game"), inTopLevelSlice("physics"))
+                            .ignoreDependency(inTopLevelSlice("game"), inTopLevelSlice("sprites"))
+                            .ignoreDependency(inTopLevelSlice("game"), inTopLevelSlice("testmode"))
+                            .ignoreDependency(inTopLevelSlice("game"), inTopLevelSlice("timer"))
+                            .ignoreDependency(inTopLevelSlice("game"), inTopLevelSlice("tools"))
+                            .ignoreDependency(inTopLevelSlice("game"), inTopLevelSlice("trace"))
+                            .ignoreDependency(inTopLevelSlice("game"), inTopLevelSlice("util"))
+                            .ignoreDependency(inTopLevelSlice("game"), inTopLevelSlice("version"))
+                            .ignoreDependency(inTopLevelSlice("graphics"), inTopLevelSlice("camera"))
+                            .ignoreDependency(inTopLevelSlice("graphics"), inTopLevelSlice("configuration"))
+                            .ignoreDependency(inTopLevelSlice("graphics"), inTopLevelSlice("control"))
+                            .ignoreDependency(inTopLevelSlice("graphics"), inTopLevelSlice("debug"))
+                            .ignoreDependency(inTopLevelSlice("graphics"), inTopLevelSlice("game"))
+                            .ignoreDependency(inTopLevelSlice("graphics"), inTopLevelSlice("level"))
+                            .ignoreDependency(inTopLevelSlice("graphics"), inTopLevelSlice("sprites"))
+                            .ignoreDependency(inTopLevelSlice("graphics"), inTopLevelSlice("util"))
+                            .ignoreDependency(inTopLevelSlice("integration"), inTopLevelSlice("game"))
+                            .ignoreDependency(inTopLevelSlice("integration"), inTopLevelSlice("level"))
+                            .ignoreDependency(inTopLevelSlice("level"), inTopLevelSlice("audio"))
+                            .ignoreDependency(inTopLevelSlice("level"), inTopLevelSlice("camera"))
+                            .ignoreDependency(inTopLevelSlice("level"), inTopLevelSlice("configuration"))
+                            .ignoreDependency(inTopLevelSlice("level"), inTopLevelSlice("data"))
+                            .ignoreDependency(inTopLevelSlice("level"), inTopLevelSlice("debug"))
+                            .ignoreDependency(inTopLevelSlice("level"), inTopLevelSlice("editor"))
+                            .ignoreDependency(inTopLevelSlice("level"), inTopLevelSlice("game"))
+                            .ignoreDependency(inTopLevelSlice("level"), inTopLevelSlice("graphics"))
+                            .ignoreDependency(inTopLevelSlice("level"), inTopLevelSlice("physics"))
+                            .ignoreDependency(inTopLevelSlice("level"), inTopLevelSlice("sprites"))
+                            .ignoreDependency(inTopLevelSlice("level"), inTopLevelSlice("testmode"))
+                            .ignoreDependency(inTopLevelSlice("level"), inTopLevelSlice("tools"))
+                            .ignoreDependency(inTopLevelSlice("level"), inTopLevelSlice("trace"))
+                            .ignoreDependency(inTopLevelSlice("level"), inTopLevelSlice("util"))
+                            .ignoreDependency(inTopLevelSlice("physics"), inTopLevelSlice("camera"))
+                            .ignoreDependency(inTopLevelSlice("physics"), inTopLevelSlice("game"))
+                            .ignoreDependency(inTopLevelSlice("physics"), inTopLevelSlice("level"))
+                            .ignoreDependency(inTopLevelSlice("physics"), inTopLevelSlice("sprites"))
+                            .ignoreDependency(inTopLevelSlice("render"), inTopLevelSlice("debug"))
+                            .ignoreDependency(inTopLevelSlice("render"), inTopLevelSlice("game"))
+                            .ignoreDependency(inTopLevelSlice("sprites"), inTopLevelSlice("audio"))
+                            .ignoreDependency(inTopLevelSlice("sprites"), inTopLevelSlice("camera"))
+                            .ignoreDependency(inTopLevelSlice("sprites"), inTopLevelSlice("configuration"))
+                            .ignoreDependency(inTopLevelSlice("sprites"), inTopLevelSlice("control"))
+                            .ignoreDependency(inTopLevelSlice("sprites"), inTopLevelSlice("data"))
+                            .ignoreDependency(inTopLevelSlice("sprites"), inTopLevelSlice("game"))
+                            .ignoreDependency(inTopLevelSlice("sprites"), inTopLevelSlice("graphics"))
+                            .ignoreDependency(inTopLevelSlice("sprites"), inTopLevelSlice("level"))
+                            .ignoreDependency(inTopLevelSlice("sprites"), inTopLevelSlice("physics"))
+                            .ignoreDependency(inTopLevelSlice("sprites"), inTopLevelSlice("timer"))
+                            .ignoreDependency(inTopLevelSlice("sprites"), inTopLevelSlice("trace"))
+                            .ignoreDependency(inTopLevelSlice("testmode"), inTopLevelSlice("camera"))
+                            .ignoreDependency(inTopLevelSlice("testmode"), inTopLevelSlice("configuration"))
+                            .ignoreDependency(inTopLevelSlice("testmode"), inTopLevelSlice("control"))
+                            .ignoreDependency(inTopLevelSlice("testmode"), inTopLevelSlice("debug"))
+                            .ignoreDependency(inTopLevelSlice("testmode"), inTopLevelSlice("game"))
+                            .ignoreDependency(inTopLevelSlice("testmode"), inTopLevelSlice("graphics"))
+                            .ignoreDependency(inTopLevelSlice("testmode"), inTopLevelSlice("sprites"))
+                            .ignoreDependency(inTopLevelSlice("testmode"), inTopLevelSlice("trace"))
+                            .ignoreDependency(inTopLevelSlice("timer"), inTopLevelSlice("audio"))
+                            .ignoreDependency(inTopLevelSlice("timer"), inTopLevelSlice("camera"))
+                            .ignoreDependency(inTopLevelSlice("timer"), inTopLevelSlice("game"))
+                            .ignoreDependency(inTopLevelSlice("timer"), inTopLevelSlice("level"))
+                            .ignoreDependency(inTopLevelSlice("timer"), inTopLevelSlice("sprites"))
+                            .ignoreDependency(inTopLevelSlice("tools"), inTopLevelSlice("audio"))
+                            .ignoreDependency(inTopLevelSlice("tools"), inTopLevelSlice("camera"))
+                            .ignoreDependency(inTopLevelSlice("tools"), inTopLevelSlice("capture"))
+                            .ignoreDependency(inTopLevelSlice("tools"), inTopLevelSlice("configuration"))
+                            .ignoreDependency(inTopLevelSlice("tools"), inTopLevelSlice("control"))
+                            .ignoreDependency(inTopLevelSlice("tools"), inTopLevelSlice("data"))
+                            .ignoreDependency(inTopLevelSlice("tools"), inTopLevelSlice("debug"))
+                            .ignoreDependency(inTopLevelSlice("tools"), inTopLevelSlice("game"))
+                            .ignoreDependency(inTopLevelSlice("tools"), inTopLevelSlice("graphics"))
+                            .ignoreDependency(inTopLevelSlice("tools"), inTopLevelSlice("level"))
+                            .ignoreDependency(inTopLevelSlice("tools"), inTopLevelSlice("sprites"))
+                            .ignoreDependency(inTopLevelSlice("tools"), inTopLevelSlice("trace"))
+                            .ignoreDependency(inTopLevelSlice("trace"), inTopLevelSlice("camera"))
+                            .ignoreDependency(inTopLevelSlice("trace"), inTopLevelSlice("configuration"))
+                            .ignoreDependency(inTopLevelSlice("trace"), inTopLevelSlice("debug"))
+                            .ignoreDependency(inTopLevelSlice("trace"), inTopLevelSlice("game"))
+                            .ignoreDependency(inTopLevelSlice("trace"), inTopLevelSlice("level"))
+                            .ignoreDependency(inTopLevelSlice("trace"), inTopLevelSlice("physics"))
+                            .ignoreDependency(inTopLevelSlice("trace"), inTopLevelSlice("sprites"))
+                            .ignoreDependency(inTopLevelSlice("util"), inTopLevelSlice("data"))
+                            .ignoreDependency(inTopLevelSlice("util"), inTopLevelSlice("game"))
+                            .ignoreDependency(inTopLevelSlice("util"), inTopLevelSlice("level"))
+                            .ignoreDependency(inTopLevelSlice("util"), inTopLevelSlice("tools"))
                             .as("top-level com.openggf package slices should be free of cycles"))
                     .because("package cycles make ownership boundaries and migration work hard to reason about; cycle:core-runtime freezes 16 existing top-level slices so new slices cannot join cycles");
+
+    @ArchTest
+    static void core_runtime_cycle_cluster_does_not_gain_top_level_edges(JavaClasses classes) {
+        Set<String> currentEdges = topLevelCoreRuntimeDependencyEdges(classes);
+        Set<String> unexpectedEdges = new TreeSet<>(currentEdges);
+        unexpectedEdges.removeAll(CORE_RUNTIME_TOP_LEVEL_DEPENDENCY_EDGES);
+
+        assertTrue(unexpectedEdges.isEmpty(),
+                "core-runtime top-level dependency edges grew; route new dependencies through "
+                        + "provider/service boundaries or consciously update the ratchet:\n  "
+                        + String.join("\n  ", unexpectedEdges));
+    }
 
     @ArchTest
     static final ArchRule low_level_layers_do_not_depend_on_runtime_layers =
@@ -459,7 +710,7 @@ class TestArchUnitRules {
                                     "com.openggf.game.sonic2..",
                                     "com.openggf.game.sonic3k..")
                     .as("shared level and game layers should not depend on game-specific packages"))
-                    .because("shared layers should depend on provider contracts or shared abstractions, not concrete game packages; frozen baseline: 81 violations");
+                    .because("shared layers should depend on provider contracts or shared abstractions, not concrete game packages; frozen baseline: 11 violations");
 
     @ArchTest
     static final ArchRule per_game_packages_do_not_cross_depend =
@@ -519,6 +770,44 @@ class TestArchUnitRules {
         assertTrue(violations.isEmpty(),
                 "Virtual pattern base fields should reference PatternAtlasRange instead of duplicating documented bases:\n"
                         + String.join("\n", violations));
+    }
+
+    private static Set<String> topLevelCoreRuntimeDependencyEdges(JavaClasses classes) {
+        Set<String> edges = new TreeSet<>();
+        for (JavaClass origin : classes) {
+            String originSlice = topLevelSlice(origin);
+            if (originSlice == null) {
+                continue;
+            }
+            for (Dependency dependency : origin.getDirectDependenciesFromSelf()) {
+                String targetSlice = topLevelSlice(dependency.getTargetClass());
+                if (targetSlice == null || originSlice.equals(targetSlice)) {
+                    continue;
+                }
+                if (!CORE_RUNTIME_CYCLE_CLUSTER_SLICES.contains(originSlice)
+                        && !CORE_RUNTIME_CYCLE_CLUSTER_SLICES.contains(targetSlice)) {
+                    continue;
+                }
+                edges.add(originSlice + " -> " + targetSlice);
+            }
+        }
+        return edges;
+    }
+
+    private static String topLevelCoreRuntimeSlice(JavaClass javaClass) {
+        String topLevel = topLevelSlice(javaClass);
+        return topLevel != null && CORE_RUNTIME_CYCLE_CLUSTER_SLICES.contains(topLevel) ? topLevel : null;
+    }
+
+    private static String topLevelSlice(JavaClass javaClass) {
+        String packageName = javaClass.getPackageName();
+        String prefix = "com.openggf.";
+        if (!packageName.startsWith(prefix)) {
+            return null;
+        }
+        String remainder = packageName.substring(prefix.length());
+        int dot = remainder.indexOf('.');
+        return dot >= 0 ? remainder.substring(0, dot) : remainder;
     }
 
     private static boolean fieldInitializesFromPatternAtlasRange(JavaField javaField, String rangeName) {

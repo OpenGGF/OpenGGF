@@ -43,6 +43,7 @@ import com.openggf.game.sonic1.scroll.Sonic1ScrollHandlerProvider;
 import com.openggf.game.CheckpointState;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.CrossGameFeatureProvider;
+import com.openggf.game.CrossGameDonorProvider;
 import com.openggf.game.DonorCapabilities;
 import com.openggf.game.GameId;
 import com.openggf.game.LevelGamestate;
@@ -54,6 +55,7 @@ import com.openggf.game.sonic1.titlecard.Sonic1TitleCardManager;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.PlaneSwitcherConfig;
 import com.openggf.level.objects.TouchResponseTable;
+import com.openggf.level.Palette;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SuperStateController;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -79,6 +81,7 @@ public class Sonic1GameModule implements GameModule {
     private final Sonic1TitleScreenManager titleScreenProvider = new Sonic1TitleScreenManager();
     private final Sonic1LevelSelectManager levelSelectProvider = new Sonic1LevelSelectManager();
     private final S1DataSelectProfile dataSelectHostProfile = new S1DataSelectProfile();
+    private final CrossGameDonorProvider donorProvider = new Sonic1CrossGameDonorProvider();
     private DataSelectPresentationProvider dataSelectPresentationProvider;
     private S1DataSelectImageCacheManager dataSelectImageCacheManager;
     private final LevelInitProfile levelInitProfile =
@@ -345,6 +348,11 @@ public class Sonic1GameModule implements GameModule {
         return Sonic1DonorCapabilities.INSTANCE;
     }
 
+    @Override
+    public CrossGameDonorProvider getCrossGameDonorProvider() {
+        return donorProvider;
+    }
+
     private S1DataSelectImageCacheManager getDataSelectImageCacheManager() {
         if (dataSelectImageCacheManager == null) {
             dataSelectImageCacheManager = new WarmupAwareS1DataSelectImageCacheManager(
@@ -470,6 +478,31 @@ public class Sonic1GameModule implements GameModule {
                 com.openggf.data.RomByteReader reader) {
             var art = new Sonic1PlayerArt(reader);
             return art::loadForCharacter;
+        }
+    }
+
+    private static final class Sonic1CrossGameDonorProvider implements CrossGameDonorProvider {
+        @Override
+        public DonorCapabilities getDonorCapabilities() {
+            return Sonic1DonorCapabilities.INSTANCE;
+        }
+
+        @Override
+        public com.openggf.data.PlayerSpriteArtProvider createPlayerArtProvider(RomByteReader reader) {
+            return Sonic1DonorCapabilities.INSTANCE.getPlayerArtProvider(reader);
+        }
+
+        @Override
+        public GameAudioProfile getAudioProfile() {
+            return new Sonic1AudioProfile();
+        }
+
+        @Override
+        public Palette loadCharacterPalette(RomByteReader reader, String characterCode) {
+            byte[] data = reader.slice(Sonic1Constants.SONIC_PALETTE_ADDR, Palette.PALETTE_SIZE_IN_ROM);
+            Palette palette = new Palette();
+            palette.fromSegaFormat(data);
+            return palette;
         }
     }
 }

@@ -16,6 +16,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestObjectPhysicsStandardizationGuard {
     private static final Pattern OBJECT_CONTROL_SETTER = Pattern.compile(
@@ -46,6 +47,10 @@ class TestObjectPhysicsStandardizationGuard {
             "(?:setSlotIndex\\s*\\(\\s*-\\s*1\\s*\\)|\\.markRemembered\\s*\\(|"
                     + "\\.removeFromActiveSpawns\\s*\\(|\\.addDynamicObjectAtSlot\\s*\\(|"
                     + "\\.allocateSlotAfter\\s*\\()");
+    private static final Pattern RAW_SET_DESTROYED_TRUE = Pattern.compile(
+            "\\b(?:[A-Za-z_$][\\w$]*\\s*\\.\\s*)?setDestroyed\\s*\\(\\s*true\\s*\\)");
+    private static final Pattern RAW_ADD_DYNAMIC_OBJECT = Pattern.compile(
+            "\\.\\s*addDynamicObject\\s*\\(");
     private static final Pattern TOUCH_PROFILE_HOOK_WITHOUT_PROFILE = Pattern.compile(
             "\\bpublic\\s+(?:boolean|int|TouchRegion\\[\\]|TouchResponseProvider\\.TouchRegion\\[\\])\\s+"
                     + "(?:requiresContinuousTouchCallbacks|usesS3kTouchSpecialPropertyResponse|"
@@ -111,6 +116,14 @@ class TestObjectPhysicsStandardizationGuard {
             "com/openggf/game/sonic3k/objects/Sonic3kSpringObjectInstance.java",
             "com/openggf/game/sonic3k/sidekick/Sonic3kCnzCarryTrigger.java"
     );
+    private static final Set<String> LIFECYCLE_RATCHET_OWNER_FILES = Set.of(
+            "com/openggf/level/objects/AbstractObjectInstance.java",
+            "com/openggf/level/objects/DestructionEffects.java",
+            "com/openggf/level/objects/ObjectLifetimeOps.java",
+            "com/openggf/level/objects/ObjectManager.java"
+    );
+    private static final int RAW_SET_DESTROYED_TRUE_OBJECT_PACKAGE_BUDGET = 585;
+    private static final int RAW_ADD_DYNAMIC_OBJECT_OBJECT_PACKAGE_BUDGET = 136;
 
     @Test
     void objectManagerUsesNativePositionOpsForPlayablePreserveSubpixelWrites() throws IOException {
@@ -188,6 +201,34 @@ class TestObjectPhysicsStandardizationGuard {
     @Test
     void productionObjectPhysicsStandardizationHasNoUnapprovedViolations() throws IOException {
         assertEquals(List.of(), scanProductionSources());
+    }
+
+    @Test
+    void productionObjectLifecycleRawCallCountsDoNotGrow() throws IOException {
+        List<String> lifecycleViolations = scanProductionLifecycleRatchetSources();
+        List<String> rawSetDestroyed = lifecycleViolations
+                .stream()
+                .filter(violation -> violation.contains("raw setDestroyed(true)"))
+                .toList();
+        List<String> rawAddDynamicObject = lifecycleViolations
+                .stream()
+                .filter(violation -> violation.contains("raw addDynamicObject(...)"))
+                .toList();
+
+        assertTrue(rawSetDestroyed.size() <= RAW_SET_DESTROYED_TRUE_OBJECT_PACKAGE_BUDGET,
+                "Raw setDestroyed(true) calls in object production packages must not grow. Current count is "
+                        + rawSetDestroyed.size() + "; budget is "
+                        + RAW_SET_DESTROYED_TRUE_OBJECT_PACKAGE_BUDGET + ". "
+                        + "Prefer ObjectLifetimeOps.destroyLatched(...) or "
+                        + "ObjectLifetimeOps.destroyRespawnableOffscreen(...). Current violations:\n  "
+                        + String.join("\n  ", rawSetDestroyed));
+        assertTrue(rawAddDynamicObject.size() <= RAW_ADD_DYNAMIC_OBJECT_OBJECT_PACKAGE_BUDGET,
+                "Raw addDynamicObject(...) calls in object production packages must not grow. Current count is "
+                        + rawAddDynamicObject.size() + "; budget is "
+                        + RAW_ADD_DYNAMIC_OBJECT_OBJECT_PACKAGE_BUDGET + ". "
+                        + "Prefer spawnChild(...), spawnFreeChild(...), or "
+                        + "ObjectManager.createDynamicObject(...). Current violations:\n  "
+                        + String.join("\n  ", rawAddDynamicObject));
     }
 
     @Test
@@ -518,6 +559,41 @@ class TestObjectPhysicsStandardizationGuard {
     }
 
     @Test
+    void lifecycleRatchetDetectsRawDestroyedAndDynamicSpawnCallsInSampleSource() {
+        SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(List.of(
+                "class Sample {",
+                "  void update(ObjectManager objectManager, AbstractObjectInstance child) {",
+                "    setDestroyed(true);",
+                "    child.setDestroyed ( true );",
+                "    objectManager.addDynamicObject(new Sparkle());",
+                "  }",
+                "}"));
+
+        assertEquals(List.of(
+                        "Sample.java:3 - raw setDestroyed(true); use ObjectLifetimeOps.destroyLatched(...) "
+                                + "or ObjectLifetimeOps.destroyRespawnableOffscreen(...)",
+                        "Sample.java:4 - raw setDestroyed(true); use ObjectLifetimeOps.destroyLatched(...) "
+                                + "or ObjectLifetimeOps.destroyRespawnableOffscreen(...)",
+                        "Sample.java:5 - raw addDynamicObject(...); use spawnChild(...), spawnFreeChild(...), "
+                                + "or ObjectManager.createDynamicObject(...)"),
+                scanLifecycleRatchetSource("Sample.java", source));
+    }
+
+    @Test
+    void lifecycleRatchetAllowsSharedWrapperOwnerSources() {
+        SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(List.of(
+                "class ObjectLifetimeOps {",
+                "  void replace(ObjectManager objectManager, AbstractObjectInstance replacement) {",
+                "    objectManager.addDynamicObject(replacement);",
+                "    replacement.setDestroyed(true);",
+                "  }",
+                "}"));
+
+        assertEquals(List.of(), scanLifecycleRatchetSource(
+                "com/openggf/level/objects/ObjectLifetimeOps.java", source));
+    }
+
+    @Test
     void guardDetectsTouchProfileHookWithoutProfileInSampleSource() {
         SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(List.of(
                 "class Sample {",
@@ -630,6 +706,25 @@ class TestObjectPhysicsStandardizationGuard {
         return violations;
     }
 
+    private static List<String> scanProductionLifecycleRatchetSources() throws IOException {
+        Path srcMain = ObjectGuardSourceScanner.findSourceRoot();
+        if (srcMain == null) {
+            throw new IOException("Could not locate src/main/java");
+        }
+        List<String> violations = new ArrayList<>();
+        for (Path sourceFile : ObjectGuardSourceScanner.javaFilesUnderPackages(
+                srcMain, ObjectGuardSourceScanner.OBJECT_PACKAGE_PATHS)) {
+            String path = srcMain.relativize(sourceFile).toString().replace('\\', '/');
+            if (LIFECYCLE_RATCHET_OWNER_FILES.contains(path)) {
+                continue;
+            }
+            SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(
+                    Files.readAllLines(sourceFile));
+            violations.addAll(scanLifecycleRatchetSource(path, source));
+        }
+        return violations;
+    }
+
     private static List<String> productionScanRelativePaths() throws IOException {
         Path srcMain = ObjectGuardSourceScanner.findSourceRoot();
         if (srcMain == null) {
@@ -691,6 +786,26 @@ class TestObjectPhysicsStandardizationGuard {
                 violations.add(new SourceViolation(path, trimmed,
                         ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE));
             }
+        }
+        return violations;
+    }
+
+    private static List<String> scanLifecycleRatchetSource(String path, SourceText source) {
+        if (LIFECYCLE_RATCHET_OWNER_FILES.contains(path)) {
+            return List.of();
+        }
+        List<String> violations = new ArrayList<>();
+        Matcher destroyedMatcher = RAW_SET_DESTROYED_TRUE.matcher(source.text());
+        while (destroyedMatcher.find()) {
+            violations.add(path + ":" + source.lineAt(destroyedMatcher.start())
+                    + " - raw setDestroyed(true); use ObjectLifetimeOps.destroyLatched(...) "
+                    + "or ObjectLifetimeOps.destroyRespawnableOffscreen(...)");
+        }
+        Matcher dynamicMatcher = RAW_ADD_DYNAMIC_OBJECT.matcher(source.text());
+        while (dynamicMatcher.find()) {
+            violations.add(path + ":" + source.lineAt(dynamicMatcher.start())
+                    + " - raw addDynamicObject(...); use spawnChild(...), spawnFreeChild(...), "
+                    + "or ObjectManager.createDynamicObject(...)");
         }
         return violations;
     }

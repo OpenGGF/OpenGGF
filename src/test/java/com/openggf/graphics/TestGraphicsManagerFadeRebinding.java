@@ -1,11 +1,9 @@
 package com.openggf.graphics;
 
-import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.camera.Camera;
 import com.openggf.game.session.EngineContext;
-import com.openggf.game.GameServices;
 import com.openggf.graphics.pipeline.UiRenderPipeline;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,47 +31,51 @@ public class TestGraphicsManagerFadeRebinding {
     }
 
     @Test
-    public void testGetFadeManagerRebindsRuntimeManagedReferences() throws Exception {
+    public void testExplicitRuntimeBindingReplacesBootstrapManagers() throws Exception {
         SessionManager.clear();
-        GraphicsManager graphicsManager = EngineContext.fromLegacySingletonsForBootstrap().graphics();
+        EngineContext engineContext = EngineContext.fromLegacySingletonsForBootstrap();
+        GraphicsManager graphicsManager = engineContext.graphics();
         graphicsManager.resetState();
 
         FadeManager bootstrapFade = graphicsManager.getFadeManager();
         Camera bootstrapCamera = (Camera) getPrivateField(graphicsManager, "camera");
-        setPrivateField(graphicsManager, "camera", bootstrapCamera);
         UiRenderPipeline pipeline = new UiRenderPipeline(graphicsManager);
         pipeline.setFadeManager(bootstrapFade);
         setPrivateField(graphicsManager, "uiRenderPipeline", pipeline);
 
-        TestEnvironment.activeGameplayMode();
-        FadeManager runtimeFade = GameServices.fade();
-        Camera runtimeCamera = GameServices.camera();
+        FadeManager runtimeFade = new FadeManager();
+        Camera runtimeCamera = new Camera(engineContext.configuration());
 
-        FadeManager resolvedFade = graphicsManager.getFadeManager();
+        graphicsManager.bindRuntimeManagedReferences(runtimeCamera, runtimeFade);
 
-        assertSame(runtimeFade, resolvedFade, "GraphicsManager should switch to the runtime FadeManager");
+        assertSame(runtimeFade, graphicsManager.getFadeManager(), "GraphicsManager should switch to the explicitly bound runtime FadeManager");
         assertSame(runtimeFade, pipeline.getFadeManager(), "UiRenderPipeline should also use the runtime FadeManager");
         assertSame(runtimeCamera, getPrivateField(graphicsManager, "camera"), "GraphicsManager should switch to the runtime Camera");
+        assertSame(bootstrapFade, getPrivateField(graphicsManager, "bootstrapFadeManager"), "Bootstrap FadeManager should be retained");
+        assertSame(bootstrapCamera, getPrivateField(graphicsManager, "bootstrapCamera"), "Bootstrap Camera should be retained");
     }
 
     @Test
-    public void testGetUiRenderPipelineRebindsRuntimeManagedReferences() throws Exception {
+    public void testClearRuntimeBindingRestoresBootstrapManagers() throws Exception {
         SessionManager.clear();
-        GraphicsManager graphicsManager = EngineContext.fromLegacySingletonsForBootstrap().graphics();
+        EngineContext engineContext = EngineContext.fromLegacySingletonsForBootstrap();
+        GraphicsManager graphicsManager = engineContext.graphics();
         graphicsManager.resetState();
 
         FadeManager bootstrapFade = graphicsManager.getFadeManager();
+        Camera bootstrapCamera = (Camera) getPrivateField(graphicsManager, "camera");
         UiRenderPipeline pipeline = new UiRenderPipeline(graphicsManager);
         pipeline.setFadeManager(bootstrapFade);
         setPrivateField(graphicsManager, "uiRenderPipeline", pipeline);
 
-        TestEnvironment.activeGameplayMode();
-        FadeManager runtimeFade = GameServices.fade();
+        graphicsManager.bindRuntimeManagedReferences(new Camera(engineContext.configuration()), new FadeManager());
 
-        UiRenderPipeline resolvedPipeline = graphicsManager.getUiRenderPipeline();
+        graphicsManager.clearRuntimeManagedReferences();
 
-        assertSame(runtimeFade, resolvedPipeline.getFadeManager(),
-                "UiRenderPipeline returned directly from GraphicsManager should use the runtime FadeManager");
+        assertSame(bootstrapFade, graphicsManager.getFadeManager(), "GraphicsManager should return to the bootstrap FadeManager");
+        assertSame(bootstrapFade, graphicsManager.getUiRenderPipeline().getFadeManager(),
+                "UiRenderPipeline should return to the bootstrap FadeManager");
+        assertSame(bootstrapCamera, getPrivateField(graphicsManager, "camera"), "GraphicsManager should return to the bootstrap Camera");
     }
 
     @Test

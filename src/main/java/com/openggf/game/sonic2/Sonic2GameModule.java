@@ -26,6 +26,7 @@ import com.openggf.game.sonic2.titlescreen.TitleScreenManager;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.CheckpointState;
 import com.openggf.game.CrossGameFeatureProvider;
+import com.openggf.game.CrossGameDonorProvider;
 import com.openggf.game.DonorCapabilities;
 import com.openggf.game.EndingProvider;
 import com.openggf.game.PlayerCharacter;
@@ -62,6 +63,7 @@ import com.openggf.game.sonic2.dataselect.S2DataSelectProfile;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.PlaneSwitcherConfig;
 import com.openggf.level.objects.TouchResponseTable;
+import com.openggf.level.Palette;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SuperStateController;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -89,6 +91,7 @@ public class Sonic2GameModule implements GameModule {
     private final TitleScreenManager titleScreenProvider = new TitleScreenManager();
     private final LevelSelectManager levelSelectProvider = new LevelSelectManager();
     private final S2DataSelectProfile dataSelectHostProfile = new S2DataSelectProfile();
+    private final CrossGameDonorProvider donorProvider = new Sonic2CrossGameDonorProvider();
     private DataSelectPresentationProvider dataSelectPresentationProvider;
     private S2DataSelectImageCacheManager dataSelectImageCacheManager;
     private Sonic2ObjectArtProvider objectArtProvider;
@@ -417,6 +420,11 @@ public class Sonic2GameModule implements GameModule {
         return Sonic2DonorCapabilities.INSTANCE;
     }
 
+    @Override
+    public CrossGameDonorProvider getCrossGameDonorProvider() {
+        return donorProvider;
+    }
+
     /** Lazily-constructed singleton holding S2 donation metadata. */
     private static final class Sonic2DonorCapabilities implements DonorCapabilities {
 
@@ -499,6 +507,42 @@ public class Sonic2GameModule implements GameModule {
                 com.openggf.data.RomByteReader reader) {
             var art = new Sonic2PlayerArt(reader);
             return art::loadForCharacter;
+        }
+    }
+
+    private static final class Sonic2CrossGameDonorProvider implements CrossGameDonorProvider {
+        @Override
+        public DonorCapabilities getDonorCapabilities() {
+            return Sonic2DonorCapabilities.INSTANCE;
+        }
+
+        @Override
+        public com.openggf.data.PlayerSpriteArtProvider createPlayerArtProvider(RomByteReader reader) {
+            return Sonic2DonorCapabilities.INSTANCE.getPlayerArtProvider(reader);
+        }
+
+        @Override
+        public com.openggf.data.SpindashDustArtProvider createSpindashDustArtProvider(RomByteReader reader) {
+            Sonic2DustArt dustArt = new Sonic2DustArt(reader);
+            return dustArt::loadForCharacter;
+        }
+
+        @Override
+        public GameAudioProfile getAudioProfile() {
+            return new Sonic2AudioProfile();
+        }
+
+        @Override
+        public Palette loadCharacterPalette(RomByteReader reader, String characterCode) {
+            byte[] data = reader.slice(Sonic2Constants.SONIC_TAILS_PALETTE_ADDR, Palette.PALETTE_SIZE_IN_ROM);
+            Palette palette = new Palette();
+            palette.fromSegaFormat(data);
+            return palette;
+        }
+
+        @Override
+        public SuperStateController createSuperStateController(AbstractPlayableSprite player) {
+            return new Sonic2SuperStateController(player);
         }
     }
 }

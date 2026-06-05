@@ -96,6 +96,10 @@ class TestArchitecturalReviewGuard {
                 "Cycle ratchet docs should publish the current cluster count");
         assertTrue(docs.contains("`cycle:core-runtime`"),
                 "Cycle ratchet docs should name the current core runtime cluster");
+        assertFalse(archUnitRules.contains(".ignoreDependency(inCoreRuntimeCycleCluster(), inCoreRuntimeCycleCluster())"),
+                "Package cycle ratchets must not ignore every dependency inside a documented cycle cluster");
+        assertFalse(archUnitRules.contains("inCoreRuntimeCycleCluster()"),
+                "Package cycle ratchets should be frozen against concrete current debt, not a broad cluster predicate");
         assertFalse(archUnitRules.contains("CURRENT_TOP_LEVEL_CYCLE_SLICES"),
                 "Package cycle ratchets should not use a broad current-slice allowlist");
         assertFalse(archUnitRules.contains("inCurrentTopLevelCycleSlice"),

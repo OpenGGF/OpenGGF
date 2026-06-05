@@ -31,7 +31,7 @@ class TestArchitecturalSourceGuard {
             GAME_LOOP_PATH, 15
     );
     private static final int OBJECT_MANAGER_CONCRETE_SONIC_REFERENCE_BUDGET = 0;
-    private static final int LOW_LEVEL_GAMEPLAY_SERVICE_LOOKUP_BUDGET = 2;
+    private static final int LOW_LEVEL_GAMEPLAY_SERVICE_LOOKUP_BUDGET = 0;
     private static final List<MethodBudget> ROOT_DISPATCH_METHOD_BUDGETS = List.of(
             new MethodBudget(ENGINE_PATH, "draw", 3),
             new MethodBudget(ENGINE_PATH, "init", 180),
@@ -114,6 +114,9 @@ class TestArchitecturalSourceGuard {
     private static final Pattern CONCRETE_SONIC_REFERENCE = Pattern.compile(
             "\\b(?:Sonic1|Sonic2|Sonic3k|S1|S2|S3k)[A-Z][A-Za-z0-9_]*\\b"
                     + "|\\bcom\\.openggf\\.game\\.sonic(?:1|2|3k)(?:\\.[A-Za-z_][A-Za-z0-9_]*)+");
+    private static final Pattern CROSS_GAME_DONOR_CONCRETE_REFERENCE = Pattern.compile(
+            "\\b(?:Sonic1|Sonic2|Sonic3k|S3k)[A-Z][A-Za-z0-9_]*\\b"
+                    + "|\\bcom\\.openggf\\.game\\.sonic(?:1|2|3k)(?:\\.[A-Za-z_][A-Za-z0-9_]*)+");
     private static final Pattern LOW_LEVEL_GAMEPLAY_SERVICE_LOOKUP = Pattern.compile(
             "\\bGameServices\\s*\\.\\s*"
                     + "(?:camera|cameraOrNull|level|levelOrNull|sprites|spritesOrNull|gameState|gameStateOrNull"
@@ -121,6 +124,8 @@ class TestArchitecturalSourceGuard {
                     + "|parallax|parallaxOrNull|zoneLayoutMutationPipeline|zoneLayoutMutationPipelineOrNull"
                     + "|zoneRuntimeRegistry|paletteOwnershipRegistry|animatedTileChannelGraph"
                     + "|specialRenderEffectRegistry|advancedRenderModeController)\\s*\\(");
+    private static final Pattern GAME_MODULE_REGISTRY_MUTATION = Pattern.compile(
+            "\\bGameModuleRegistry\\s*\\.\\s*(?:setCurrent|detectAndSetModule)\\s*\\(");
     private static final Pattern PLAYER_TOP_LEFT_ACCESS = Pattern.compile(
             "\\b(?:player|playable|entity|sonic|tails|knuckles)\\s*\\.\\s*get[XY]\\s*\\(\\s*\\)");
     private static final Pattern COORDINATE_CONTEXT = Pattern.compile(
@@ -143,6 +148,21 @@ class TestArchitecturalSourceGuard {
         }
 
         assertNoViolations("GameId behavior branches must use feature flags or approved routing/composition code",
+                violations);
+    }
+
+    @Test
+    void crossGameFeatureProviderDoesNotNameConcreteSonicDonors() throws IOException {
+        String source = stripCommentsAndStrings(Files.readString(
+                SRC_MAIN.resolve("com/openggf/game/CrossGameFeatureProvider.java")));
+        Matcher matcher = CROSS_GAME_DONOR_CONCRETE_REFERENCE.matcher(source);
+        List<String> violations = new ArrayList<>();
+        while (matcher.find()) {
+            violations.add("line " + lineNumberForOffset(source, matcher.start()) + ": " + matcher.group());
+        }
+
+        assertNoViolations(
+                "CrossGameFeatureProvider should request donor behavior through shared provider/factory contracts",
                 violations);
     }
 
@@ -281,6 +301,23 @@ class TestArchitecturalSourceGuard {
 
         assertTrue(!source.contains("GameServices."),
                 "LevelFrameStep must receive frame dependencies through LevelFrameContext, not GameServices");
+    }
+
+    @Test
+    void runtimeProductionCodeDoesNotMutateGameModuleRegistry() throws IOException {
+        List<String> violations = new ArrayList<>();
+        for (Path file : productionFiles()) {
+            String relative = relative(file);
+            if (isApprovedGameModuleRegistryMutationFile(relative)) {
+                continue;
+            }
+            violations.addAll(scanPattern(relative,
+                    Files.readString(file),
+                    GAME_MODULE_REGISTRY_MUTATION));
+        }
+
+        assertNoViolations("Active gameplay modules are owned by WorldSession; runtime code must not mutate "
+                + "GameModuleRegistry bootstrap compatibility state", violations);
     }
 
     @Test
@@ -521,6 +558,22 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
+    void sampleScannerDetectsGameModuleRegistryMutation() {
+        List<String> violations = scanPattern("sample/Runtime.java", """
+                class Runtime {
+                    void bad(GameModule module, Rom rom) {
+                        GameModuleRegistry.setCurrent(module);
+                        GameModuleRegistry.detectAndSetModule(rom);
+                    }
+                }
+                """, GAME_MODULE_REGISTRY_MUTATION);
+
+        assertEquals(List.of(
+                "sample/Runtime.java:3 - GameModuleRegistry.setCurrent(",
+                "sample/Runtime.java:4 - GameModuleRegistry.detectAndSetModule("), violations);
+    }
+
+    @Test
     void sampleScannerDetectsCoordinateHazardNearDistanceExpression() {
         List<String> violations = scanCoordinateHazards("sample/Object.java", """
                 class Object {
@@ -564,6 +617,12 @@ class TestArchitecturalSourceGuard {
 
     private static boolean isCoordinateScanned(String relative) {
         return COORDINATE_SCAN_PREFIXES.stream().anyMatch(relative::startsWith);
+    }
+
+    private static boolean isApprovedGameModuleRegistryMutationFile(String relative) {
+        return relative.equals("com/openggf/game/GameModuleRegistry.java")
+                || relative.equals("com/openggf/game/RomDetectionService.java")
+                || relative.startsWith("com/openggf/tools/");
     }
 
     private static List<String> scanGameIdBranches(String relative, String source) {

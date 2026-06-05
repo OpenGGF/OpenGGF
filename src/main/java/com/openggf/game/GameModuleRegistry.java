@@ -9,7 +9,8 @@ import java.util.Optional;
 import java.util.logging.Logger;
 
 /**
- * Central registry for the current game module.
+ * Bootstrap compatibility registry for game-module access before a world
+ * session exists.
  *
  * <p>The game module defines game-specific behavior including:
  * <ul>
@@ -20,8 +21,10 @@ import java.util.logging.Logger;
  *   <li>Scroll handlers and zone features</li>
  * </ul>
  *
- * <p>Use {@link #detectAndSetModule(Rom)} to auto-detect the game from a ROM,
- * or {@link #setCurrent(GameModule)} to set it manually.
+ * <p>Live gameplay module ownership belongs to {@link SessionManager} /
+ * {@code WorldSession}. {@link #getCurrent()} resolves from that session when
+ * one exists and falls back to the bootstrap default only for pre-session
+ * construction paths.
  */
 @CompositionRoot
 public final class GameModuleRegistry {
@@ -34,9 +37,10 @@ public final class GameModuleRegistry {
     }
 
     /**
-     * Gets the currently active game module.
+     * Gets the session-owned active module when gameplay has a world session,
+     * otherwise returns the bootstrap default.
      *
-     * @return the current game module
+     * @return the session module or pre-session bootstrap default
      */
     public static synchronized GameModule getCurrent() {
         if (SessionManager.getCurrentWorldSession() != null) {
@@ -56,6 +60,8 @@ public final class GameModuleRegistry {
 
     /**
      * Sets the bootstrap default game module used before a world session exists.
+     * Do not call this from gameplay runtime setup; open a world session with
+     * the selected {@link GameModule} instead.
      *
      * @param module the module to set as current (ignored if null)
      */
@@ -67,8 +73,9 @@ public final class GameModuleRegistry {
     }
 
     /**
-     * Auto-detects the game from the ROM and sets the appropriate module.
-     * Falls back to Sonic 2 if detection fails.
+     * Auto-detects the game from the ROM and updates the bootstrap default.
+     * Falls back to Sonic 2 if detection fails. This exists for explicit
+     * pre-session compatibility paths only.
      *
      * @param rom the ROM to detect
      * @return true if detection succeeded, false if using fallback

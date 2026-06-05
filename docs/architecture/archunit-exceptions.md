@@ -29,7 +29,7 @@ target rather than walking back the assertion.
 | Rule | Baseline | Target | Trigger |
 |------|----------|--------|---------|
 | `low_level_layers_do_not_depend_on_runtime_layers` | 213 | <=150 | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
-| `shared_layers_do_not_depend_on_game_specific_packages` | 81 | <=40 | `CrossGameFeatureProvider` donor construction and `ObjectManager` rewind dynamic-object recreation move behind shared provider/factory contracts |
+| `shared_layers_do_not_depend_on_game_specific_packages` | 11 | 0 | `DefaultPowerUpSpawner` visual object creation moves behind provider contracts and bootstrap module construction becomes an explicit composition-root allowlist |
 | `per_game_packages_do_not_cross_depend` | 37 | <=20 | Data-select preview loading, payload validation, and menu animation helpers extracted out of per-game packages |
 
 ## Source Ratchets
@@ -41,10 +41,11 @@ refresh unless this document is updated to publish a lower target.
 
 | Rule | Baseline | Target | Trigger |
 |------|----------|--------|---------|
-| Root `Engine` / `GameLoop` concrete Sonic references | `Engine.java`: 13, `GameLoop.java`: 15 | 0 | Mode startup, data-select, bonus-stage, and debug special cases move behind module/provider contracts |
-| `ObjectManager` concrete Sonic references | 41 | 0 | Rewind dynamic-object recreation moves to game/module-registered codecs and factories |
-| Low-level graphics/audio gameplay `GameServices` lookups | 2 | 0 | Camera/fade state is passed through render orchestration or explicit context objects |
-| Root dispatcher method sizes | `Engine.draw`: 182, `Engine.init`: 180, `Engine.display`: 174, `GameLoop.stepInternal`: 567, `GameLoop.doExitBonusStage`: 142, `GameLoop.updateSpecialStageInput`: 101, `GameLoop.loadEndingDemoZone`: 95, `GameLoop.enterTitleCardFromResults`: 91, `GameLoop.enterBonusStage`: 86 | Decrease each touched method | Mode/render responsibilities extract into focused controllers without growing the root dispatchers |
+| Root `Engine` / `GameLoop` concrete Sonic references | `Engine.java`: 3, `GameLoop.java`: 15 | 0 | Mode startup, data-select, bonus-stage, and debug special cases move behind module/provider contracts |
+| `ObjectManager` concrete Sonic references | 0 | 0 | Rewind dynamic-object recreation moves to game/module-registered codecs and factories |
+| Low-level graphics/audio gameplay `GameServices` lookups | 0 | 0 | Camera/fade state is passed through render orchestration or explicit context objects |
+| Root dispatcher method sizes | `Engine.draw`: 3, `Engine.init`: 180, `Engine.display`: 174, `GameLoop.stepInternal`: 207, `GameLoop.doExitBonusStage`: 142, `GameLoop.updateSpecialStageInput`: 101, `GameLoop.loadEndingDemoZone`: 95, `GameLoop.enterTitleCardFromResults`: 91, `GameLoop.enterBonusStage`: 86 | Decrease each touched method | Mode/render responsibilities extract into focused controllers without growing the root dispatchers |
+| Object lifecycle raw calls in production object packages | `setDestroyed(true)`: 585, `addDynamicObject(...)`: 136 | 0 | New lifecycle work routes through `ObjectLifetimeOps`, `spawnChild(...)`, `spawnFreeChild(...)`, or `ObjectManager.createDynamicObject(...)`; shared lifecycle owner/wrapper classes remain exempt |
 
 When a source ratchet fails, prefer moving the new dependency behind an existing
 provider, service context, codec registry, or mode collaborator. Raising a
@@ -59,20 +60,24 @@ When a frozen baseline shrinks or grows intentionally, update the matching count
 in the same commit.
 
 - `low_level_layers_do_not_depend_on_runtime_layers`: 213
-- `shared_layers_do_not_depend_on_game_specific_packages`: 81
+- `shared_layers_do_not_depend_on_game_specific_packages`: 11
 - `per_game_packages_do_not_cross_depend`: 37
 
 ## Package Cycle Ratchets
 
 `package_slices_are_free_of_cycles`: 1 frozen top-level package cycle cluster.
+`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 122 current
+top-level dependency edges inside or adjacent to that cluster.
 
 - `cycle:core-runtime`: 16 top-level slices (`audio`, `camera`, `control`,
   `data`, `debug`, `editor`, `game`, `graphics`, `level`, `physics`, `sprites`,
   `testmode`, `timer`, `tools`, `trace`, `util`). Owner package: shared runtime
   architecture. Intended direction: split runtime service roots and tooling/debug
-  edges out of gameplay/data/graphics ownership loops. First decay target:
-  remove at least one slice from `CORE_RUNTIME_CYCLE_CLUSTER_SLICES` when its
-  incoming and outgoing cycle edges are eliminated.
+  edges out of gameplay/data/graphics ownership loops. Current debt is ratcheted
+  as explicit source/target top-level dependency edges in
+  `CORE_RUNTIME_TOP_LEVEL_DEPENDENCY_EDGES`; new internal or adjacent edge pairs
+  are not covered by a cluster-wide ignore. First decay target: remove at least
+  one edge from that set when its dependency direction is eliminated.
 
 If a temporary package-cycle cluster is accepted later, document it as
 ``cycle:<name>`` with current count, owner package, intended direction, and first
@@ -114,23 +119,14 @@ Rule: `shared level and game layers should not depend on game-specific packages`
 
 Frozen violations fall into these categories:
 
-- `CrossGameFeatureProvider` constructs or stores Sonic 1, Sonic 2, and S3K
-  donor implementations for cross-game character art, audio, palette, and
-  capability reuse.
 - `GameModuleRegistry` and `RomDetectionService` construct built-in game modules
   and detectors as bootstrap composition-root behavior.
 - `DefaultPowerUpSpawner` constructs Sonic 1 splash and S3K shield/insta-shield
   visuals from shared object code.
-- `ObjectManager` contains rewind dynamic-object recreation support that names
-  Sonic 1, Sonic 2, and S3K object classes.
 
 Target direction:
 
-- Move durable cross-game donation into shared provider contracts or dedicated
-  donor composition code.
 - Move game-specific visual object creation behind providers.
-- Move rewind child/dynamic-object recreation toward registered factories instead
-  of shared-manager concrete class references.
 
 ### Per-Game Packages Must Not Cross-Depend
 

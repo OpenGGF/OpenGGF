@@ -277,6 +277,7 @@ public class GameLoop {
             this.gameState = null;
             this.fadeManager = null;
             this.waterSystem = null;
+            engineServices.graphics().clearRuntimeManagedReferences();
             return;
         }
         this.gameplayMode = currentGameplayMode;
@@ -287,6 +288,7 @@ public class GameLoop {
         this.gameState = currentGameplayMode.getGameStateManager();
         this.fadeManager = currentGameplayMode.getFadeManager();
         this.waterSystem = currentGameplayMode.getWaterSystem();
+        engineServices.graphics().bindRuntimeManagedReferences(this.camera, this.fadeManager);
     }
 
     public void setInputHandler(InputHandler inputHandler) {

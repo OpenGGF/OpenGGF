@@ -7,6 +7,7 @@ import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.CrossGameFeatureProvider;
+import com.openggf.game.CrossGameDonorProvider;
 import com.openggf.game.DonorCapabilities;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
@@ -50,14 +51,22 @@ import com.openggf.game.dataselect.DataSelectHostProfile;
 import com.openggf.game.dataselect.DataSelectPresentationProvider;
 import com.openggf.game.dataselect.DataSelectSessionController;
 import com.openggf.level.LevelManager;
+import com.openggf.level.Palette;
+import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.PlaneSwitcherConfig;
 import com.openggf.level.objects.TouchResponseTable;
+import com.openggf.level.render.SpriteDplcFrame;
+import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.sprites.art.SpriteArtSet;
+import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCarryTrigger;
 import com.openggf.sprites.playable.SuperStateController;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -93,6 +102,7 @@ public class Sonic3kGameModule implements GameModule {
             new Sonic3kSpecialStageProvider(specialStageManager);
     private final LevelInitProfile levelInitProfile = new Sonic3kLevelInitProfile(levelEventManager);
     private final SidekickCarryTrigger sidekickCarryTrigger = new Sonic3kCnzCarryTrigger();
+    private final CrossGameDonorProvider donorProvider = new Sonic3kCrossGameDonorProvider();
     private Sonic3kScrollHandlerProvider scrollHandlerProvider;
     private PhysicsProvider physicsProvider;
     private Sonic3kObjectArtProvider objectArtProvider;
@@ -343,6 +353,11 @@ public class Sonic3kGameModule implements GameModule {
         return Sonic3kDonorCapabilities.INSTANCE;
     }
 
+    @Override
+    public CrossGameDonorProvider getCrossGameDonorProvider() {
+        return donorProvider;
+    }
+
     /** Lazily-constructed singleton holding S3K donation metadata. */
     private static final class Sonic3kDonorCapabilities implements DonorCapabilities {
 
@@ -420,6 +435,103 @@ public class Sonic3kGameModule implements GameModule {
                 com.openggf.data.RomByteReader reader) {
             var art = new Sonic3kPlayerArt(reader);
             return art::loadForCharacter;
+        }
+    }
+
+    private static final class Sonic3kCrossGameDonorProvider implements CrossGameDonorProvider {
+        @Override
+        public DonorCapabilities getDonorCapabilities() {
+            return Sonic3kDonorCapabilities.INSTANCE;
+        }
+
+        @Override
+        public com.openggf.data.PlayerSpriteArtProvider createPlayerArtProvider(RomByteReader reader) {
+            return Sonic3kDonorCapabilities.INSTANCE.getPlayerArtProvider(reader);
+        }
+
+        @Override
+        public com.openggf.data.SpindashDustArtProvider createSpindashDustArtProvider(RomByteReader reader) {
+            Sonic3kDustArt dustArt = new Sonic3kDustArt(reader);
+            return dustArt::loadForCharacter;
+        }
+
+        @Override
+        public GameAudioProfile getAudioProfile() {
+            return new Sonic3kAudioProfile();
+        }
+
+        @Override
+        public Palette loadCharacterPalette(RomByteReader reader, String characterCode) {
+            int paletteAddr;
+            int paletteSize = Palette.PALETTE_SIZE_IN_ROM;
+            if ("knuckles".equalsIgnoreCase(characterCode)) {
+                paletteAddr = Sonic3kConstants.KNUCKLES_PALETTE_ADDR;
+                paletteSize = 32;
+            } else {
+                paletteAddr = Sonic3kConstants.SONIC_PALETTE_ADDR;
+            }
+            byte[] data = reader.slice(paletteAddr, paletteSize);
+            Palette palette = new Palette();
+            palette.fromSegaFormat(data);
+            return palette;
+        }
+
+        @Override
+        public Palette loadHostCompatiblePalette(RomByteReader reader, String characterCode) {
+            if (!"knuckles".equalsIgnoreCase(characterCode)) {
+                return null;
+            }
+            byte[] data = reader.slice(Sonic3kConstants.KNUCKLES_S2_PALETTE_ADDR,
+                    Palette.PALETTE_SIZE_IN_ROM);
+            Palette palette = new Palette();
+            palette.fromSegaFormat(data);
+            Palette.Color gold = palette.getColor(14);
+            Palette.Color idx4 = palette.getColor(4);
+            idx4.r = gold.r;
+            idx4.g = gold.g;
+            idx4.b = gold.b;
+            return palette;
+        }
+
+        @Override
+        public SuperStateController createSuperStateController(AbstractPlayableSprite player) {
+            return new Sonic3kSuperStateController(player);
+        }
+
+        @Override
+        public boolean hasSeparateTailsTailArt() {
+            return true;
+        }
+
+        @Override
+        public SpriteArtSet loadTailsTailArt(RomByteReader reader) throws IOException {
+            return new Sonic3kPlayerArt(reader).loadTailsTail();
+        }
+
+        @Override
+        public SpriteArtSet loadInstaShieldArt(RomByteReader reader) throws IOException {
+            Pattern[] tiles = S3kSpriteDataLoader.loadArtTiles(reader,
+                    Sonic3kConstants.ART_UNC_INSTA_SHIELD_ADDR,
+                    Sonic3kConstants.ART_UNC_INSTA_SHIELD_SIZE);
+            List<SpriteMappingFrame> mappings = S3kSpriteDataLoader.loadMappingFrames(
+                    reader, Sonic3kConstants.MAP_INSTA_SHIELD_ADDR);
+            List<SpriteDplcFrame> dplcs = S3kSpriteDataLoader.loadDplcFrames(
+                    reader, Sonic3kConstants.DPLC_INSTA_SHIELD_ADDR);
+
+            if (dplcs.size() > mappings.size()) {
+                dplcs = new ArrayList<>(dplcs.subList(0, mappings.size()));
+            }
+            while (dplcs.size() < mappings.size()) {
+                dplcs.add(new SpriteDplcFrame(List.of()));
+            }
+
+            int bankSize = S3kSpriteDataLoader.resolveBankSize(dplcs, mappings);
+            SpriteAnimationSet animSet = S3kSpriteDataLoader.loadAnimationSet(reader,
+                    Sonic3kConstants.ANI_INSTA_SHIELD_ADDR,
+                    Sonic3kConstants.ANI_INSTA_SHIELD_COUNT);
+
+            return new SpriteArtSet(tiles, mappings, dplcs,
+                    0, Sonic3kConstants.ART_TILE_SHIELD, 1, bankSize, null, animSet);
         }
     }
 }

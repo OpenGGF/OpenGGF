@@ -25,6 +25,7 @@ import static org.lwjgl.opengl.GL20.*;
 import java.util.Queue;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -273,7 +274,7 @@ public class GraphicsManager {
 		this.instancedPatternRenderer = new InstancedPatternRenderer(this, cfg);
 		this.instancedPatternRenderer.init(INSTANCED_VERTEX_SHADER_PATH, pixelShaderPath, WATER_SHADER_PATH);
 
-		syncRuntimeManagedReferences();
+		ensureRuntimeManagedReferences();
 		this.fadeManager.setFadeShader(this.fadeShaderProgram);
 
 		// Initialize unified UI render pipeline
@@ -327,19 +328,34 @@ public class GraphicsManager {
 	 * This avoids triggering Camera singleton initialization during GraphicsManager construction.
 	 */
 	private Camera getCamera() {
-		syncRuntimeManagedReferences();
+		ensureRuntimeManagedReferences();
 		return camera;
 	}
 
-	private void syncRuntimeManagedReferences() {
-		Camera runtimeCamera = GameServices.cameraOrNull();
-		Camera resolvedCamera = runtimeCamera != null ? runtimeCamera : getOrCreateBootstrapCamera();
-		if (camera != resolvedCamera) {
-			camera = resolvedCamera;
-		}
+	public void bindRuntimeManagedReferences(Camera runtimeCamera, FadeManager runtimeFadeManager) {
+		camera = Objects.requireNonNull(runtimeCamera, "runtimeCamera");
+		setActiveFadeManager(Objects.requireNonNull(runtimeFadeManager, "runtimeFadeManager"));
+	}
 
-		FadeManager runtimeFadeManager = GameServices.fadeOrNull();
-		FadeManager resolvedFadeManager = runtimeFadeManager != null ? runtimeFadeManager : getOrCreateBootstrapFadeManager();
+	public void clearRuntimeManagedReferences() {
+		if (camera != null || bootstrapCamera != null) {
+			camera = getOrCreateBootstrapCamera();
+		}
+		if (fadeManager != null || bootstrapFadeManager != null || uiRenderPipeline != null) {
+			setActiveFadeManager(getOrCreateBootstrapFadeManager());
+		}
+	}
+
+	private void ensureRuntimeManagedReferences() {
+		if (camera == null) {
+			camera = getOrCreateBootstrapCamera();
+		}
+		if (fadeManager == null) {
+			setActiveFadeManager(getOrCreateBootstrapFadeManager());
+		}
+	}
+
+	private void setActiveFadeManager(FadeManager resolvedFadeManager) {
 		if (fadeManager != resolvedFadeManager) {
 			fadeManager = resolvedFadeManager;
 			if (fadeShaderProgram != null) {
@@ -1615,7 +1631,7 @@ public class GraphicsManager {
 	 * Get the fade manager for screen transitions.
 	 */
 	public FadeManager getFadeManager() {
-		syncRuntimeManagedReferences();
+		ensureRuntimeManagedReferences();
 		return fadeManager;
 	}
 
@@ -1702,7 +1718,7 @@ public class GraphicsManager {
 	 * Get the unified UI render pipeline for overlay + fade ordering.
 	 */
 	public UiRenderPipeline getUiRenderPipeline() {
-		syncRuntimeManagedReferences();
+		ensureRuntimeManagedReferences();
 		return uiRenderPipeline;
 	}
 

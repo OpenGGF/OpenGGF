@@ -460,6 +460,20 @@ public interface GameModule {
     }
 
     /**
+     * Returns the provider used when this module acts as a cross-game donor.
+     *
+     * <p>The provider owns construction of game-specific donor art loaders,
+     * palettes, audio profiles, and super-state controllers so shared donation
+     * orchestration does not name concrete Sonic implementation classes.</p>
+     *
+     * @return a donor provider, or {@code null} if this module cannot donate
+     * cross-game features
+     */
+    default CrossGameDonorProvider getCrossGameDonorProvider() {
+        return null;
+    }
+
+    /**
      * Applies a seamless mutation to the given level manager using the provided key.
      * Called when a seamless zone transition requires applying level data mutations.
      *

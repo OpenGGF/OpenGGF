@@ -655,7 +655,6 @@ public class Engine {
 
 	private void initializeGameplayRuntime(GameplayModeContext gameplayMode, boolean initializeGlobalGameplayServices) {
 		GameModule module = gameplayMode.getWorldSession().getGameModule();
-		GameModuleRegistry.setCurrent(module);
 		GameplaySessionFactory.attachManagers(gameplayMode, EngineServices.current());
 		bindGameplayMode(gameplayMode);
 		gameplayMode.getGameStateManager().configureSpecialStageProgress(

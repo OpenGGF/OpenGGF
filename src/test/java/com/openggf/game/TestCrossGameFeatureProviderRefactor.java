@@ -71,6 +71,7 @@ class TestCrossGameFeatureProviderRefactor {
         setField(provider, "donorRenderContext", context);
         setField(provider, "donorGameId", GameId.S3K);
         setField(provider, "donorCapabilities", new StubDonorCapabilities());
+        setField(provider, "donorPlayerArtProvider", StubDonorCapabilities.PROVIDER);
         setField(provider, "donorReader", new com.openggf.data.RomByteReader(new byte[0]));
 
         provider.loadPlayerSpriteArt("knuckles");

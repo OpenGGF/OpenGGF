@@ -91,13 +91,19 @@ public final class SessionManager {
     }
 
     private static void destroyCurrentMode() {
+        boolean destroyedRuntimeMode = false;
         if (currentGameplayMode != null) {
             currentGameplayMode.destroy();
             currentGameplayMode = null;
+            destroyedRuntimeMode = true;
         }
         if (currentEditorMode != null) {
             currentEditorMode.destroy();
             currentEditorMode = null;
+            destroyedRuntimeMode = true;
+        }
+        if (destroyedRuntimeMode) {
+            EngineServices.current().graphics().clearRuntimeManagedReferences();
         }
     }
 

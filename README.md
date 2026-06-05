@@ -209,6 +209,12 @@ behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Clean architecture boundary ratchets (2026-06-05).** Merged
+  `feature/ai-clean-architecture-integration`: tightened the architecture review guardrails around
+  package-cycle edges, module ownership, graphics runtime bindings, cross-game donor construction, and
+  raw object-lifecycle calls. The branch keeps runtime state ownership explicit and records the current
+  architectural debt as shrink-only ratchets so future cleanup can reduce the baseline without widening
+  shared-layer coupling.
 - **Architecture consolidation feature (2026-06-05).** Merged
   `feature/ai-clean-architecture-consolidated`: consolidated the architectural review workers into one
   branch, extracting boot/menu controllers, engine render dispatch, donated data-select warmup, level
