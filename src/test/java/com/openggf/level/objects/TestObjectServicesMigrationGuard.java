@@ -524,6 +524,27 @@ class TestObjectServicesMigrationGuard {
         }
     }
 
+    @Test
+    void objectConstructionThreadLocalWrites_shouldStayInsideScopedContextHelper() throws IOException {
+        Path srcMain = Path.of("src/main/java");
+        if (!Files.isDirectory(srcMain)) {
+            return;
+        }
+
+        List<String> violations = new ArrayList<>();
+        Path packageDir = srcMain.resolve(SHARED_OBJECT_PACKAGE);
+        try (Stream<Path> files = Files.walk(packageDir)) {
+            files.filter(path -> path.toString().endsWith(".java"))
+                    .forEach(path -> collectForbiddenConstructionContextWrites(srcMain, path, violations));
+        }
+
+        if (!violations.isEmpty()) {
+            fail("Object construction ThreadLocal set/remove must stay inside ObjectConstructionContext.\n"
+                    + "Use ObjectConstructionContext.with(...) so nested construction restores the prior scope.\n\n  "
+                    + String.join("\n  ", violations));
+        }
+    }
+
     /**
      * Scans a Java source file for direct calls to monitored singletons —
      * either {@code <SimpleClassName>.getInstance(} for any class in
@@ -567,6 +588,41 @@ class TestObjectServicesMigrationGuard {
         }
         Collections.sort(violations);
         return violations;
+    }
+
+    private void collectForbiddenConstructionContextWrites(Path srcMain, Path sourceFile, List<String> violations) {
+        try {
+            String className = ObjectGuardSourceScanner.className(srcMain, sourceFile);
+            if ("com.openggf.level.objects.ObjectConstructionContext".equals(className)) {
+                return;
+            }
+
+            SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(Files.readAllLines(sourceFile));
+            for (String pattern : forbiddenConstructionContextWritePatterns()) {
+                int searchFrom = 0;
+                while (true) {
+                    int match = source.text().indexOf(pattern, searchFrom);
+                    if (match < 0) {
+                        break;
+                    }
+                    violations.add(String.format("%s:%d uses `%s` in `%s`",
+                            className,
+                            source.lineAt(match),
+                            pattern,
+                            source.lineTextAt(match).trim()));
+                    searchFrom = match + pattern.length();
+                }
+            }
+        } catch (IOException ignored) {
+        }
+    }
+
+    private static List<String> forbiddenConstructionContextWritePatterns() {
+        return List.of(
+                "CONSTRUCTION_CONTEXT.set(",
+                "CONSTRUCTION_CONTEXT.remove(",
+                "PRE_ALLOCATED_SLOT.set(",
+                "PRE_ALLOCATED_SLOT.remove(");
     }
 
     private void collectForbiddenGlobalAccessViolations(Path srcMain, Path sourceFile, List<String> violations) {

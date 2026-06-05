@@ -1214,33 +1214,27 @@ public class ObjectManager {
         if (preSlot < 0) {
             return false; // FindFreeObj failure equivalent
         }
-        AbstractObjectInstance.PRE_ALLOCATED_SLOT.set(preSlot);
-        AbstractObjectInstance.CONSTRUCTION_CONTEXT.set(objectServices);
-        try {
-            ObjectInstance instance = registry != null ? registry.create(spawn) : null;
-            if (instance != null) {
-                if (instance instanceof AbstractObjectInstance aoi) {
-                    aoi.setServices(objectServices);
-                    if (aoi.getSlotIndex() < 0) {
-                        aoi.setSlotIndex(preSlot);
-                    }
-                    if (counterValue >= 0) {
-                        aoi.setRespawnStateIndex(counterValue);
-                    }
-                } else {
-                    releaseSlot(preSlot);
+        ObjectInstance instance = ObjectConstructionContext.with(objectServices, preSlot,
+                () -> registry != null ? registry.create(spawn) : null);
+        if (instance != null) {
+            if (instance instanceof AbstractObjectInstance aoi) {
+                aoi.setServices(objectServices);
+                if (aoi.getSlotIndex() < 0) {
+                    aoi.setSlotIndex(preSlot);
                 }
-                registerActiveObject(spawn, instance);
-                bucketsDirty = true;
-                activeObjectsCacheDirty = true;
-                return true;
+                if (counterValue >= 0) {
+                    aoi.setRespawnStateIndex(counterValue);
+                }
             } else {
                 releaseSlot(preSlot);
-                return false;
             }
-        } finally {
-            AbstractObjectInstance.CONSTRUCTION_CONTEXT.remove();
-            AbstractObjectInstance.PRE_ALLOCATED_SLOT.remove();
+            registerActiveObject(spawn, instance);
+            bucketsDirty = true;
+            activeObjectsCacheDirty = true;
+            return true;
+        } else {
+            releaseSlot(preSlot);
+            return false;
         }
     }
 
@@ -1697,14 +1691,11 @@ public class ObjectManager {
     }
 
     public <T extends ObjectInstance> T createDynamicObject(Supplier<T> factory) {
-        AbstractObjectInstance.CONSTRUCTION_CONTEXT.set(objectServices);
-        try {
+        return ObjectConstructionContext.construct(objectServices, () -> {
             T object = factory.get();
             addDynamicObject(object);
             return object;
-        } finally {
-            AbstractObjectInstance.CONSTRUCTION_CONTEXT.remove();
-        }
+        });
     }
 
     public void removeDynamicObject(ObjectInstance object) {
@@ -2761,43 +2752,37 @@ public class ObjectManager {
             // Pre-allocate parent slot — consumed by AbstractObjectInstance's
             // constructor via the PRE_ALLOCATED_SLOT ThreadLocal.
             int preSlot = allocateSlot();
-            AbstractObjectInstance.PRE_ALLOCATED_SLOT.set(preSlot >= 0 ? preSlot : null);
-            AbstractObjectInstance.CONSTRUCTION_CONTEXT.set(objectServices);
-            try {
-                ObjectInstance instance = registry != null ? registry.create(spawn) : null;
-                if (instance != null) {
-                    if (instance instanceof AbstractObjectInstance aoi) {
-                        aoi.setServices(objectServices);
-                        // Slot already set by constructor via PRE_ALLOCATED_SLOT.
-                        // Ensure it's set (defensive, in case constructor didn't consume it).
-                        if (aoi.getSlotIndex() < 0 && preSlot >= 0) {
-                            aoi.setSlotIndex(preSlot);
-                        }
-                        // ROM: S1 OPL_MakeItem stores the counter value as
-                        // obRespawnNo for RememberState to use on unload.
-                        if (placement.isCounterBasedRespawn()) {
-                            int counter = placement.getCounterForSpawn(spawn);
-                            if (counter >= 0) {
-                                aoi.setRespawnStateIndex(counter);
-                            }
-                        }
-                    } else {
-                        // Non-AbstractObjectInstance: release pre-allocated slot
-                        if (preSlot >= 0) {
-                            releaseSlot(preSlot);
+            ObjectInstance instance = ObjectConstructionContext.with(objectServices, preSlot,
+                    () -> registry != null ? registry.create(spawn) : null);
+            if (instance != null) {
+                if (instance instanceof AbstractObjectInstance aoi) {
+                    aoi.setServices(objectServices);
+                    // Slot already set by constructor via PRE_ALLOCATED_SLOT.
+                    // Ensure it's set (defensive, in case constructor didn't consume it).
+                    if (aoi.getSlotIndex() < 0 && preSlot >= 0) {
+                        aoi.setSlotIndex(preSlot);
+                    }
+                    // ROM: S1 OPL_MakeItem stores the counter value as
+                    // obRespawnNo for RememberState to use on unload.
+                    if (placement.isCounterBasedRespawn()) {
+                        int counter = placement.getCounterForSpawn(spawn);
+                        if (counter >= 0) {
+                            aoi.setRespawnStateIndex(counter);
                         }
                     }
-                    registerActiveObject(spawn, instance);
-                    changed = true;
                 } else {
-                    // Creation failed: release pre-allocated slot
+                    // Non-AbstractObjectInstance: release pre-allocated slot
                     if (preSlot >= 0) {
                         releaseSlot(preSlot);
                     }
                 }
-            } finally {
-                AbstractObjectInstance.CONSTRUCTION_CONTEXT.remove();
-                AbstractObjectInstance.PRE_ALLOCATED_SLOT.remove();
+                registerActiveObject(spawn, instance);
+                changed = true;
+            } else {
+                // Creation failed: release pre-allocated slot
+                if (preSlot >= 0) {
+                    releaseSlot(preSlot);
+                }
             }
         }
 
@@ -2828,37 +2813,31 @@ public class ObjectManager {
         if (preSlot < 0) {
             return false;
         }
-        AbstractObjectInstance.PRE_ALLOCATED_SLOT.set(preSlot >= 0 ? preSlot : null);
-        AbstractObjectInstance.CONSTRUCTION_CONTEXT.set(objectServices);
-        try {
-            ObjectInstance instance = registry != null ? registry.create(spawn) : null;
-            if (instance != null) {
-                if (instance instanceof AbstractObjectInstance aoi) {
-                    aoi.setServices(objectServices);
-                    if (aoi.getSlotIndex() < 0 && preSlot >= 0) {
-                        aoi.setSlotIndex(preSlot);
-                    }
-                    if (placement.isCounterBasedRespawn()) {
-                        int counter = placement.getCounterForSpawn(spawn);
-                        if (counter >= 0) {
-                            aoi.setRespawnStateIndex(counter);
-                        }
-                    }
-                } else if (preSlot >= 0) {
-                    releaseSlot(preSlot);
+        ObjectInstance instance = ObjectConstructionContext.with(objectServices, preSlot,
+                () -> registry != null ? registry.create(spawn) : null);
+        if (instance != null) {
+            if (instance instanceof AbstractObjectInstance aoi) {
+                aoi.setServices(objectServices);
+                if (aoi.getSlotIndex() < 0 && preSlot >= 0) {
+                    aoi.setSlotIndex(preSlot);
                 }
-                registerActiveObject(spawn, instance);
-                placement.clearDeferredVerticalLoad(spawn);
-                return true;
-            }
-            if (preSlot >= 0) {
+                if (placement.isCounterBasedRespawn()) {
+                    int counter = placement.getCounterForSpawn(spawn);
+                    if (counter >= 0) {
+                        aoi.setRespawnStateIndex(counter);
+                    }
+                }
+            } else if (preSlot >= 0) {
                 releaseSlot(preSlot);
             }
-            return false;
-        } finally {
-            AbstractObjectInstance.CONSTRUCTION_CONTEXT.remove();
-            AbstractObjectInstance.PRE_ALLOCATED_SLOT.remove();
+            registerActiveObject(spawn, instance);
+            placement.clearDeferredVerticalLoad(spawn);
+            return true;
         }
+        if (preSlot >= 0) {
+            releaseSlot(preSlot);
+        }
+        return false;
     }
 
     private boolean tryLoadPlacementSpawnForTwoAxisYPass(ObjectSpawn spawn, int previousYCoarse, int currentYCoarse) {
@@ -2876,37 +2855,31 @@ public class ObjectManager {
         if (preSlot < 0) {
             return false;
         }
-        AbstractObjectInstance.PRE_ALLOCATED_SLOT.set(preSlot >= 0 ? preSlot : null);
-        AbstractObjectInstance.CONSTRUCTION_CONTEXT.set(objectServices);
-        try {
-            ObjectInstance instance = registry != null ? registry.create(spawn) : null;
-            if (instance != null) {
-                if (instance instanceof AbstractObjectInstance aoi) {
-                    aoi.setServices(objectServices);
-                    if (aoi.getSlotIndex() < 0 && preSlot >= 0) {
-                        aoi.setSlotIndex(preSlot);
-                    }
-                    if (placement.isCounterBasedRespawn()) {
-                        int counter = placement.getCounterForSpawn(spawn);
-                        if (counter >= 0) {
-                            aoi.setRespawnStateIndex(counter);
-                        }
-                    }
-                } else if (preSlot >= 0) {
-                    releaseSlot(preSlot);
+        ObjectInstance instance = ObjectConstructionContext.with(objectServices, preSlot,
+                () -> registry != null ? registry.create(spawn) : null);
+        if (instance != null) {
+            if (instance instanceof AbstractObjectInstance aoi) {
+                aoi.setServices(objectServices);
+                if (aoi.getSlotIndex() < 0 && preSlot >= 0) {
+                    aoi.setSlotIndex(preSlot);
                 }
-                registerActiveObject(spawn, instance);
-                placement.clearDeferredVerticalLoad(spawn);
-                return true;
-            }
-            if (preSlot >= 0) {
+                if (placement.isCounterBasedRespawn()) {
+                    int counter = placement.getCounterForSpawn(spawn);
+                    if (counter >= 0) {
+                        aoi.setRespawnStateIndex(counter);
+                    }
+                }
+            } else if (preSlot >= 0) {
                 releaseSlot(preSlot);
             }
-            return false;
-        } finally {
-            AbstractObjectInstance.CONSTRUCTION_CONTEXT.remove();
-            AbstractObjectInstance.PRE_ALLOCATED_SLOT.remove();
+            registerActiveObject(spawn, instance);
+            placement.clearDeferredVerticalLoad(spawn);
+            return true;
         }
+        if (preSlot >= 0) {
+            releaseSlot(preSlot);
+        }
+        return false;
     }
 
     private boolean isSpawnVerticallyEligibleForTwoAxisYPass(ObjectSpawn spawn,
@@ -3228,29 +3201,23 @@ public class ObjectManager {
                     ObjectSpawn spawn = entry.spawn();
                     int targetSlot = entry.slotIndex();
                     // Use PRE_ALLOCATED_SLOT so the constructor picks up the correct slot
-                    AbstractObjectInstance.PRE_ALLOCATED_SLOT.set(targetSlot >= 0 ? targetSlot : null);
-                    AbstractObjectInstance.CONSTRUCTION_CONTEXT.set(objectServices);
-                    try {
-                        ObjectInstance inst = registry != null ? registry.create(spawn) : null;
-                        if (inst instanceof AbstractObjectInstance aoi) {
-                            aoi.setServices(objectServices);
-                            if (aoi.getSlotIndex() < 0 && targetSlot >= 0) {
-                                aoi.setSlotIndex(targetSlot);
-                            }
-                            // 4. Restore per-instance state
-                            restoreObjectRewindState(aoi, entry.state(), rewindContext);
-                            registerActiveObject(spawn, inst);
-                            // Wire into execOrder if within the managed slot window
-                            int execIdx = execIndexForSlot(aoi.getSlotIndex());
-                            if (execIdx >= 0 && execIdx < execOrder.length) {
-                                execOrder[execIdx] = aoi;
-                            }
-                        } else if (inst != null) {
-                            registerActiveObject(spawn, inst);
+                    ObjectInstance inst = ObjectConstructionContext.with(objectServices, targetSlot,
+                            () -> registry != null ? registry.create(spawn) : null);
+                    if (inst instanceof AbstractObjectInstance aoi) {
+                        aoi.setServices(objectServices);
+                        if (aoi.getSlotIndex() < 0 && targetSlot >= 0) {
+                            aoi.setSlotIndex(targetSlot);
                         }
-                    } finally {
-                        AbstractObjectInstance.CONSTRUCTION_CONTEXT.remove();
-                        AbstractObjectInstance.PRE_ALLOCATED_SLOT.remove();
+                        // 4. Restore per-instance state
+                        restoreObjectRewindState(aoi, entry.state(), rewindContext);
+                        registerActiveObject(spawn, inst);
+                        // Wire into execOrder if within the managed slot window
+                        int execIdx = execIndexForSlot(aoi.getSlotIndex());
+                        if (execIdx >= 0 && execIdx < execOrder.length) {
+                            execOrder[execIdx] = aoi;
+                        }
+                    } else if (inst != null) {
+                        registerActiveObject(spawn, inst);
                     }
                 }
 
