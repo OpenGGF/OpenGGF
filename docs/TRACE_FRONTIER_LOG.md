@@ -37,6 +37,27 @@
   (green) with the fix applied. Zero same-game regressions.
 - A/B baseline measured by copying the changed file aside, `git checkout -- <path>` to HEAD, running
   the trace (clean f2880), then restoring the fix (f4060). No `git stash` used (shared worktree stack).
+## 2026-06-05 - dez1 Death Egg Robot WaitEggman body-release now models ROM status.npc.misc handshake
+
+- Branch `bugfix/ai-trace-s2-dez1`, worktree `.worktrees/trace-s2-dez1` (off develop `e28761c15`).
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** ADVANCED. Genuine ROM-backed fix; zero same-game regressions.
+- **Root cause:** The body's WAIT_EGGMAN state (ROM `loc_3D5A8`, docs/s2disasm/s2.asm:82527-82536)
+  polls `status.npc.misc` on its OWN status word. That bit is set by the head only at the END of its
+  routine-6 countdown (`loc_3DC2A`, docs/s2disasm/s2.asm:83265-83274: `bset #status.npc.misc,status(a1)`
+  where `a1` = the body via `objoff_2C`), i.e. AFTER the head observes `DEZ_Eggman` set `p1_standing`
+  (`loc_3DC02`, :83247-83256), plays the `Ani_objC7_a` glow once (`loc_3DC1C`, :83259-83262), and counts
+  down `objoff_2A=$40=64` frames. The engine previously released the body at the earlier `p1_standing`
+  moment (~150 frames early), walking the boss body west into the player hurtbox (spurious HURT).
+  Fix: head now drives its own r0->r2->r4->r6->r8 state machine; body's WaitEggman polls a `bodyMiscSignaled`
+  flag set only at the head's r6 countdown expiry.
+- **dez1 ADVANCE:** `TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace` first-error frame
+  **2194 -> 3250** (now 133 errors; new owner is `y_speed` expected=-0010 actual=0x0010 while the
+  player is mid-jump onto the boss at frame 3250 — a downstream divergence unrelated to the WaitEggman
+  handshake).
+- **Same-game regression guard:** `TestS2Ehz1TraceReplay` and `TestS2WfzLevelSelectTraceReplay` both
+  GREEN (no regression). File: `src/main/java/com/openggf/game/sonic2/objects/bosses/Sonic2DeathEggRobotInstance.java`.
 
 ## 2026-06-05 - spilled-ring object model reconciled onto develop + Obj37 boundary-delete fix
 

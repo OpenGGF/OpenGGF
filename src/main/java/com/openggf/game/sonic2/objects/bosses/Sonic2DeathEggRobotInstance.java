@@ -598,9 +598,15 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     // BODY STATE IMPLEMENTATIONS
     // ========================================================================
 
-    /** State 2: WaitEggman - wait for head to signal Eggman has boarded */
+    /** State 2: WaitEggman - wait for the body's misc bit to be set.
+     *  ROM loc_3D5A8: btst #status.npc.misc,status(a0) on the body's OWN status.
+     *  That bit is set by the head at the end of its routine-6 countdown
+     *  (loc_3DC2A), i.e. only after the head has observed Eggman board the
+     *  cockpit, played its glow once, and counted down 64 frames. Polling the
+     *  earlier p1_standing/boarding moment released the body ~150 frames early,
+     *  walking its body west into Sonic's hurtbox (spurious HURT). */
     private void updateWaitEggman() {
-        if (head != null && head.isEggmanBoarded()) {
+        if (head != null && head.isBodyMiscSignaled()) {
             bodyRoutine = BODY_COUNTDOWN;
             actionTimer = COUNTDOWN_TIMER;
             services().fadeOutMusic();
@@ -1077,14 +1083,6 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
         }
     }
 
-    /** Called by HeadChild when routine 6's countdown expires — head signals body is ready.
-     *  If the body is already waiting in BODY_WAIT_READY, advance to BODY_SELECT_ATTACK. */
-    void onHeadReady() {
-        if (bodyRoutine == BODY_WAIT_READY) {
-            bodyRoutine = BODY_SELECT_ATTACK;
-        }
-    }
-
     void onHeadHit() {
         if (state.invulnerable || state.defeated) {
             return;
@@ -1445,8 +1443,10 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
 
     /**
      * Signal that Eggman has boarded the cockpit (called by Sonic2DEZEggmanInstance).
-     * ROM: ObjC7 head child polls (DEZ_Eggman).w for status.npc.p1_standing bit.
-     * This flag mirrors the status bit polled by HeadChild.isEggmanBoarded().
+     * ROM: ObjC7 head child polls (DEZ_Eggman).w for status.npc.p1_standing bit
+     * (loc_3DC02). This flag mirrors that p1_standing bit; the head consumes it in
+     * its routine-2 poll, then plays its glow + 64-frame countdown before setting
+     * the body's misc bit that actually releases the body's WAIT_EGGMAN state.
      */
     public void setEggmanBoarded() {
         this.eggmanBoardedFlag = true;
@@ -1732,7 +1732,8 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     static class HeadChild extends AbstractBossChild implements com.openggf.level.objects.TouchResponseProvider, com.openggf.level.objects.TouchResponseAttackable {
         private int headRoutine;
         private int waitTimer;
-        private boolean eggmanBoarded;
+        private boolean bodyMiscSignaled; // ROM: head r6 end -> bset misc on body (loc_3DC2A)
+        private int eggmanPollTimer;      // Fallback timer when no DEZ_Eggman object is present
         private int glowIndex;     // Current index in HEAD_GLOW_FRAMES
         private int glowTimer;     // Frame counter for glow animation speed
         private boolean glowComplete; // ROM: $FA terminator — glow plays once then advances routine
@@ -1741,42 +1742,30 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
             super(parent, "Head", priority, Sonic2ObjectIds.DEATH_EGG_ROBOT);
             this.headRoutine = 0;
             this.waitTimer = 0;
-            this.eggmanBoarded = false;
+            this.bodyMiscSignaled = false;
+            this.eggmanPollTimer = 0;
             this.glowIndex = 0;
             this.glowTimer = 0;
             this.glowComplete = false;
         }
 
         /**
-         * Check if Eggman has boarded the cockpit.
-         * ROM: loc_3DC02 — polls (DEZ_Eggman).w status.npc.p1_standing bit.
-         * When the Sonic2DEZEggmanInstance signals boarding (via parent's
-         * eggmanBoardedFlag), advance head routine and signal the body.
-         * Falls back to the original timer if no Eggman object is present
-         * (e.g., when the DER is spawned without Silver Sonic fight).
+         * Whether the head has finished its boarding sequence and set the body's
+         * misc bit, which is what releases the body's WAIT_EGGMAN state.
+         *
+         * ROM: the body's WAIT_EGGMAN (loc_3D5A8) polls {@code status.npc.misc}
+         * on its OWN status word. That bit is set by the head at the END of its
+         * routine 6 countdown (loc_3DC2A: {@code bset #status.npc.misc,status(a1)}
+         * where a1 = the body via objoff_2C), i.e. only AFTER the head has:
+         *   1. seen DEZ_Eggman set p1_standing (the cockpit jump, loc_3DC02),
+         *   2. played the Ani_objC7_a glow once (head r4, loc_3DC1C), and
+         *   3. counted down objoff_2A = $40 = 64 frames (head r6, loc_3DC2A).
+         * The head drives this whole sequence in its own update(); the body must
+         * NOT release at the earlier p1_standing moment, which is ~150 frames too
+         * early and walks the boss body west into the player's hurtbox.
          */
-        boolean isEggmanBoarded() {
-            if (headRoutine == 0) {
-                headRoutine = 2;
-            }
-            if (headRoutine == 2) {
-                Sonic2DeathEggRobotInstance boss = (Sonic2DeathEggRobotInstance) parent;
-                if (boss.eggmanBoardedFlag) {
-                    // Eggman transition object signaled boarding
-                    headRoutine = 4;
-                    waitTimer = 0x40;
-                    eggmanBoarded = true;
-                } else {
-                    // Fallback timer for cases without Eggman object (debug/test)
-                    waitTimer++;
-                    if (waitTimer > 180) {
-                        headRoutine = 4;
-                        waitTimer = 0x40;
-                        eggmanBoarded = true;
-                    }
-                }
-            }
-            return eggmanBoarded;
+        boolean isBodyMiscSignaled() {
+            return bodyMiscSignaled;
         }
 
         @Override
@@ -1785,26 +1774,48 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
             if (!beginUpdate(frameCounter)) return;
 
             switch (headRoutine) {
+                case 0 -> {
+                    // ROM loc_3DBF6: set mapping_frame $15, advance to routine 2.
+                    headRoutine = 2;
+                }
+                case 2 -> {
+                    // ROM loc_3DC02: poll (DEZ_Eggman).w for status.npc.p1_standing
+                    // (the cockpit-jump bit set by ObjC6 at loc_3CFC0). When set,
+                    // arm the 64-frame countdown and advance to the glow routine.
+                    Sonic2DeathEggRobotInstance boss = (Sonic2DeathEggRobotInstance) parent;
+                    if (boss.eggmanBoardedFlag) {
+                        headRoutine = 4;
+                        waitTimer = 0x40; // ROM: move.w #$40,objoff_2A(a0)
+                    } else {
+                        // Fallback for debug/test spawns without the DEZ_Eggman object.
+                        eggmanPollTimer++;
+                        if (eggmanPollTimer > 180) {
+                            headRoutine = 4;
+                            waitTimer = 0x40;
+                        }
+                    }
+                }
                 case 4 -> {
-                    // ROM routine 4: ONLY animation (Ani_objC7_a glow).
+                    // ROM routine 4 (loc_3DC1C): ONLY animation (Ani_objC7_a glow).
                     // $FA terminator advances routine_secondary by 2 (4->6).
                     stepGlow();
                     if (glowComplete) {
                         headRoutine = 6;
-                        waitTimer = 0x40; // ROM: move.b #$40,anim_frame_duration(a0)
+                        // ROM keeps the objoff_2A value armed in routine 2; do NOT
+                        // re-arm here (the $40 set at routine 2 is the countdown).
                     }
                 }
                 case 6 -> {
-                    // ROM routine 6: countdown timer, then signal body and advance.
+                    // ROM routine 6 (loc_3DC2A): countdown objoff_2A, then set the
+                    // body's misc bit (releasing the body's WAIT_EGGMAN) and advance.
                     waitTimer--;
                     if (waitTimer < 0) {
-                        Sonic2DeathEggRobotInstance boss = (Sonic2DeathEggRobotInstance) parent;
-                        boss.onHeadReady();
+                        bodyMiscSignaled = true; // ROM: bset #status.npc.misc,status(body)
                         headRoutine = 8;
                     }
                 }
                 case 8 -> {
-                    // ROM routine 8: Active fight state — head is hittable.
+                    // ROM routine 8 (loc_3DC46): Active fight state — head is hittable.
                     // ROM: move.b #-1,collision_property(a0) every frame
                     collisionFlags = COLLISION_HEAD;
                 }

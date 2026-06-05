@@ -4,6 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **DEZ Death Egg Robot WaitEggman handshake now ROM-accurate:** The boss body's
+  WAIT_EGGMAN state previously released as soon as Eggman boarded the cockpit
+  (`p1_standing`), ~150 frames too early, walking the body west into the player's
+  hurtbox. It now waits for the head to set the body's `status.npc.misc` bit at the
+  end of the head's routine-6 countdown (ROM `loc_3D5A8` / `loc_3DC02` / `loc_3DC1C` /
+  `loc_3DC2A`, docs/s2disasm/s2.asm:82527, 83247, 83259, 83265), matching the ROM
+  p1_standing -> glow -> 64-frame-countdown -> body-misc-bit handshake. Advances the
+  dez1 ending trace (first-error frame 2194 -> 3250).
+
 - **Architecture roadmap completion:** Playable terrain collision paths now name
   `FrameCollisionPlan.terrainOnly()` at the call sites, with plan-aware
   `CollisionSystem` overloads guarding against accidentally routing terrain
