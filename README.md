@@ -209,6 +209,14 @@ behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **S1 complete-run trace suite — 18 acts from one TAS (2026-06-05).** A single complete-run BizHawk
+  movie (Raiscan, every level start-to-finish) is auto-segmented by a new recorder
+  (`tools/bizhawk/s1_complete_run_recorder.lua`) into a per-act trace for **all 18 S1 gameplay acts**
+  (GHZ1..FZ), each sliced at its BK2 offset. No mid-run-offset bootstrap change was needed — the
+  recorder's frame-0 arming makes each complete-run frame-0 row identical to a dedicated-BK2 trace.
+  17 acts now pin a genuine object-physics first-divergence (the new S1 frontier targets; FZ needs
+  Final-Zone-specific handling). Tests use the engine gameplay-progression `zone()` index, not the ROM
+  `zone_id` (the documented zone-numbering pitfall). See `docs/TRACE_FRONTIER_LOG.md`.
 - **Clean architecture boundary ratchets (2026-06-05).** Merged
   `feature/ai-clean-architecture-integration`: tightened the architecture review guardrails around
   package-cycle edges, module ownership, graphics runtime bindings, cross-game donor construction, and
