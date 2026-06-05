@@ -17,6 +17,26 @@
   comparison-only invariant held.
 - **Same-game regression guard (PASS, zero regressions):**
   `-Dtest=TestS2Ehz1TraceReplay,TestS2WfzLevelSelectTraceReplay` -> both `Failures: 0, Errors: 0`.
+## 2026-06-05 - cnz2 f2880->f4060: CNZRectBlocks (ObjD2) objoff_3A zero-init phase alignment
+
+- Branch `bugfix/ai-trace-s2-cnz2`, worktree `.worktrees/trace-s2-cnz2` (off develop `7a26823a2`).
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true -Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen -Dtest=TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace test`
+- **Root cause:** `CNZRectBlocksObjectInstance` started its caterpillar-animation timer
+  (`animTimer`, the ROM `objoff_3A`) at `FRAMES_PER_TICK-1` (=15). The ROM `ObjD2_Init`
+  (docs/s2disasm/s2.asm:58524-58538) never writes `objoff_3A`, so it is zero-initialized; the
+  first `ObjD2_Main` tick (s2.asm:58547-58549) does `subq.w #1,objoff_3A` on 0 -> -1, the `bpl`
+  fails, and the object immediately `move.w #$F,objoff_3A` and `addq.b #1,mapping_frame`. Thus
+  mapping_frame 0 is shown for only one tick. The engine's 15-start delayed every frame advance
+  by 15 ticks, putting the rect-blocks platform 16 px below ROM where Sonic stands on it.
+- **cnz2 ADVANCE:** `TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace` first-error frame
+  **2880 -> 4060** (1066 -> 942 errors). Baseline f2880 = `y` mismatch expected=0x03EC actual=0x03DC
+  on the CNZRectBlocks contact (onSlot 0xD2). New frontier f4060 = `y` mismatch expected=0x03F4
+  actual=0x03F3 (a 1-px Y diff on a LauncherSpring 0x85 contact, unrelated object).
+- **Regression checks:** `TestS2Ehz1TraceReplay` and `TestS2WfzLevelSelectTraceReplay` both PASS
+  (green) with the fix applied. Zero same-game regressions.
+- A/B baseline measured by copying the changed file aside, `git checkout -- <path>` to HEAD, running
+  the trace (clean f2880), then restoring the fix (f4060). No `git stash` used (shared worktree stack).
 
 ## 2026-06-05 - spilled-ring object model reconciled onto develop + Obj37 boundary-delete fix
 
