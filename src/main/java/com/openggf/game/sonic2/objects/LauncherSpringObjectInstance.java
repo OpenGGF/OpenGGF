@@ -612,24 +612,50 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
                 || player.getYSpeed() < 0) {
             return 0;
         }
-        // S2 Obj85 vertical launcher calls SolidObject_Always before its
-        // capture code writes rolling/y_radius=$E (s2.asm:57520-57538).
-        // Keep the contact window on the current radius, then apply only the
-        // lift ROM expresses for this object:
-        // - Sonic rolling->standing needs the full radius delta.
-        // - Tails already uses the ROM's shorter standing radius ($0F), so
-        //   the generic SolidObject_Landed correction produces the same
-        //   d3/subq #1 result as Obj85 without the extra engine lift.
-        // - rolling recapture with no radius delta still needs the one-pixel
-        //   lift used by this helper's top-landing path.
+        // S2 Obj85 vertical launcher calls SolidObject_Always_SingleCharacter
+        // BEFORE its capture code writes rolling/y_radius=$E/x_radius=7
+        // (s2.asm:57947-57968 loc_2AD26/loc_2AD2A: the snap happens first,
+        // then obj_control=$81, the rolling status bit and the reduced radii
+        // are set with no further y_pos write).  So the whole-pixel landing
+        // placement is determined entirely by the generic SolidObject_Landed
+        // snap on the player's CURRENT radius:
+        //   d3 = (y_pos(a1)-y_pos(a0)) + 4 + ($20 + y_radius)   (s2.asm:35338-35367)
+        //   subq.w #4,d3 ; sub.w d3,y_pos ; subq.w #1,y_pos     (s2.asm:35614-35621)
+        //   net y_pos(a1) = objY - $20 - y_radius - 1
+        // The engine's ObjectSolidContactController already encodes that
+        // generic snap in its `playerCenterY - distY + 3` term (the +3 = ROM's
+        // +4 from SolidObject_cont minus the -1 from SolidObject_Landed), so a
+        // plain standing-radius landing must add NO extra lift here.
+        //
+        // The only Obj85-specific lift this helper still owes is the radius
+        // delta when the player is captured while rolling (y_radius=$E) and the
+        // contact must re-seat onto the standing/object radius:
+        // - radiusDelta > 1: rolling->standing recapture needs the full delta.
+        // - Tails / radiusDelta == 0: ROM applies no further y_pos write after
+        //   SolidObject_Landed, so the generic +3 snap already matches the ROM
+        //   exactly (objY - $20 - y_radius - 1).  Returning 0 here keeps the
+        //   standing falling-Sonic landing on ROM (frame 4060 s2 cnz2: y=0x03F4
+        //   = 0x0428 - $20 - $13 - 1).
         int radiusDelta = solidTopYRadius - player.getYRadius();
         if (radiusDelta > 1) {
             return radiusDelta;
         }
-        if (isTails(player)) {
-            return 0;
-        }
-        return radiusDelta == 0 ? 1 : 0;
+        return 0;
+    }
+
+    @Override
+    public boolean landingPreservesRolling(PlayableEntity playerEntity) {
+        // S2 Obj85's vertical launcher captures the player with
+        // SolidObject_Always_SingleCharacter / RideObject_SetRide and then sets
+        // the rolling status bit, y_radius=$E and x_radius=7 itself
+        // (s2.asm:57947-57968) — it never calls Sonic_ResetOnFloor, so the
+        // player stays curled and the snap y_pos is left untouched. The diagonal
+        // (subtype) variant positions the player through its own object-managed
+        // ride path instead of the generic landing snap, so this only applies to
+        // the vertical capture. Skipping the generic roll-clear here keeps a
+        // rolling re-landing at objY-$20-y_radius-1 instead of losing the
+        // asymmetric roll-exit/roll-enter half-pixel (s2 cnz2 frame 4292).
+        return !isDiagonal() && spawn.subtype() == 0;
     }
 
     @Override

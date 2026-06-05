@@ -31,6 +31,21 @@ All notable changes to the OpenGGF project are documented in this file.
   nonzero. No zone/gameId carve-out (the S3K-only `ground_vel` negation remains gated by
   `PhysicsFeatureSet.bossHitNegatesGroundSpeed()`). Advances the s2 dez1 ending trace
   (first-error frame 3250 -> 3580); zero same-game regressions.
+- **S2 CNZ vertical launcher (Obj85) landing snap + preserved roll:** The
+  LauncherSpring vertical-capture landing no longer adds an extra one-pixel lift
+  on a plain standing/Tails landing and no longer clears the player's rolling
+  state on capture. ROM `Obj85` `loc_2AD2A` (docs/s2disasm/s2.asm:57947-57968)
+  snaps the player with `SolidObject_Always_SingleCharacter` on the *current*
+  radius, then sets `obj_control=$81`, the rolling status bit, `y_radius=$E` and
+  `x_radius=7` itself — it never calls `Sonic_ResetOnFloor`, so the generic
+  `SolidObject_Landed` snap (`sub.w d3,y_pos` / `subq.w #1,y_pos`,
+  docs/s2disasm/s2.asm:35614-35621) fully determines the landing y
+  (`objY-$20-y_radius-1`) and the player stays curled. Added a per-object
+  `SolidObjectProvider.landingPreservesRolling` hook (gated to the vertical
+  Obj85 capture, no zone/gameId branch) so the shared object-landing path skips
+  the generic roll-clear only for objects whose ROM routine omits
+  `Sonic_ResetOnFloor`. Advances the s2 cnz2 level-select trace frontier
+  (first-error frame 4060 -> 4294).
 - **DEZ Death Egg Robot WaitEggman handshake now ROM-accurate:** The boss body's
   WAIT_EGGMAN state previously released as soon as Eggman boarded the cockpit
   (`p1_standing`), ~150 frames too early, walking the body west into the player's

@@ -53,6 +53,37 @@
   Identical 20-class failing set before and after (S1 mz1; S2 arz2/cnz/cnz2/cpz/cpz2/dez1/htz/htz2/mcz/mcz2/
   mtz/mtz2/mtz3/ooz/ooz2/scz; S3K aiz/cnz/mgz — all pre-existing). Requested guards
   `TestS2Ehz1TraceReplay,TestS2WfzLevelSelectTraceReplay,TestS2ArzLevelSelectTraceReplay` all `Failures: 0`.
+## 2026-06-05 - cnz2 f4060->f4294: Obj85 vertical launcher landing snap + preserved roll
+
+- Branch `bugfix/ai-trace-s2-cnz2`, worktree `.worktrees/trace-s2-cnz2` (off develop `7a26823a2`).
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status: ADVANCED (still failing).** First-error frame **4060 -> 4294** (942 -> 939 errors).
+  Surefire: `Tests run: 1, Failures: 1`. New frontier f4294 = `y` mismatch expected=0x03FA
+  actual=0x03FB (still on the LauncherSpring 0x85 contact, a sub-pixel-carry 1px Y diff a few
+  frames later).
+- **Root cause:** S2 `Obj85` vertical-launcher capture `loc_2AD2A`
+  (docs/s2disasm/s2.asm:57947-57968) snaps the player with
+  `SolidObject_Always_SingleCharacter` on the CURRENT radius, then sets
+  `obj_control=$81`, the rolling status bit, `y_radius=$E`, `x_radius=7` itself and
+  NEVER calls `Sonic_ResetOnFloor`. The generic `SolidObject_Landed` snap
+  (`sub.w d3,y_pos` / `subq.w #1,y_pos`, docs/s2disasm/s2.asm:35614-35621) therefore
+  fully determines the landing y (`objY-$20-y_radius-1`) and the player stays curled.
+  The engine's `LauncherSpringObjectInstance` was adding an extra +1px lift on a
+  plain standing/Tails landing, and the shared `applyObjectLandingState` was
+  clearing the rolling flag (and applying the asymmetric roll-exit y restore).
+  Fix removes the extra lift and adds a per-object
+  `SolidObjectProvider.landingPreservesRolling` hook (true only for the vertical
+  Obj85 capture) so the shared path skips the generic roll-clear for objects whose
+  ROM routine omits `Sonic_ResetOnFloor`. Per-object scope, no zone/route/frame/
+  gameId carve-out; comparison-only invariant held.
+- **Same-game regression guard (PASS, zero regressions):**
+  `-Dtest=TestS2Ehz1TraceReplay,TestS2WfzLevelSelectTraceReplay,TestS2ArzLevelSelectTraceReplay`
+  -> all three `Failures: 0, Errors: 0`. A/B baseline at clean HEAD confirmed the other
+  still-failing S2 frontiers are pre-existing and unchanged by this fix: htz2 f2306,
+  htz f5686, mcz2 f4485, mcz f2757, arz2 f857 (identical with and without the fix).
+- A/B baseline measured by copying the three changed files aside, `git checkout -- <paths>`
+  to HEAD (clean f4060), then restoring the fix (f4294). No `git stash` used (shared worktree stack).
 
 ## 2026-06-05 - S2 arz1 GREEN: Whisp (Obj8C) on-screen one-frame defer + bmi pause underflow
 

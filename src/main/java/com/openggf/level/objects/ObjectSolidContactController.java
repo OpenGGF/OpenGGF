@@ -2680,7 +2680,7 @@ final class ObjectSolidContactController {
                 // (btst #1,obStatus(a1) / beq.s .notinair). This clears the air
                 // flag, resets rolling, and sets ground mode.
                 if (player.getAir()) {
-                    applyObjectLandingState(player);
+                    applyObjectLandingState(player, instance);
                 }
                 player.setOnObject(true);
             }
@@ -2829,7 +2829,7 @@ final class ObjectSolidContactController {
                         player.setYSpeed((short) 0);
                         player.setGSpeed(player.getXSpeed());
                         if (player.getAir()) {
-                            applyObjectLandingState(player);
+                            applyObjectLandingState(player, instance);
                         }
                         player.setOnObject(true);
                     }
@@ -3045,7 +3045,7 @@ final class ObjectSolidContactController {
                 if (player.getAir()) {
                     LOGGER.fine(() -> "Solid object landing at (" + player.getX() + "," + player.getY() +
                         ") distY=" + distY);
-                    applyObjectLandingState(player);
+                    applyObjectLandingState(player, instance);
                 }
                 // ROM: bset #status.player.on_object (s2.asm:35739)
                 player.setOnObject(true);
@@ -3382,6 +3382,10 @@ final class ObjectSolidContactController {
     }
 
     private void applyObjectLandingState(PlayableEntity player) {
+        applyObjectLandingState(player, null);
+    }
+
+    private void applyObjectLandingState(PlayableEntity player, ObjectInstance instance) {
         AbstractPlayableSprite playableSprite = player instanceof AbstractPlayableSprite sprite ? sprite : null;
         boolean wasHurt = playableSprite != null && playableSprite.isHurt();
         int savedDoubleJumpFlag = player.getDoubleJumpFlag();
@@ -3391,7 +3395,21 @@ final class ObjectSolidContactController {
         } else {
             player.setAir(false);
         }
-        clearRollingOnLanding(player);
+        // ROM: most object/platform landings run Sonic_ResetOnFloor /
+        // Solid_ResetFloor, which clears the rolling flag and restores the
+        // standing radii. A few object routines (e.g. S2 Obj85's vertical
+        // launcher capture, s2.asm:57947-57968) snap the player via
+        // SolidObject_Always_SingleCharacter / RideObject_SetRide WITHOUT ever
+        // calling Sonic_ResetOnFloor, so the player stays curled and y_pos is
+        // left exactly where the snap placed it. Honour that per-object choice
+        // so the asymmetric roll-exit/roll-enter y adjustments do not shift the
+        // landing centre (s2 cnz2 frame 4292: a rolling re-landing must stay at
+        // objY-$20-y_radius-1 = 0x03F4, not 0x03EF).
+        boolean preservesRolling = instance instanceof SolidObjectProvider provider
+                && provider.landingPreservesRolling(player);
+        if (!preservesRolling) {
+            clearRollingOnLanding(player);
+        }
         player.setGroundMode(GroundMode.GROUND);
 
         if (wasHurt) {

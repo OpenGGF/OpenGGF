@@ -202,6 +202,24 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether a player landing on this object's top surface keeps its rolling
+     * state instead of running the generic floor roll-clear.
+     * <p>
+     * The shared object-landing path mirrors {@code Sonic_ResetOnFloor} /
+     * {@code Solid_ResetFloor}, which clears the rolling flag (and applies the
+     * full roll-exit y_radius restoration) on landing. A few object routines
+     * deliberately keep the player curled: they call only
+     * {@code SolidObject_Always_SingleCharacter}/{@code RideObject_SetRide} for
+     * the snap and never invoke {@code Sonic_ResetOnFloor}, so the rolling flag
+     * and ball radii survive untouched. Returning {@code true} skips the generic
+     * roll-clear for those objects so the landing y_pos is left exactly where the
+     * snap placed it.
+     */
+    default boolean landingPreservesRolling(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Whether this solid uses S3K's {@code SolidObjectFull} Player 2 visibility
      * gate. That helper processes Player 1, then skips Player 2 when Player 2's
      * {@code render_flags} bit 7 is clear (sonic3k.asm:41003-41008).
