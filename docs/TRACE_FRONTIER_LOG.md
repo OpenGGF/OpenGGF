@@ -1,5 +1,44 @@
 # Trace Frontier Log
 
+## 2026-06-05 - arz1 f2043->f2169: Grounder (Obj8D) closest-player orientation, animate/route timing, and touch box
+
+- Branch `bugfix/ai-arz1-grounder-xpos`, worktree `.worktrees/arz1-grounder`.
+- Command (worktree, cmd mvn.cmd):
+  `mvn.cmd -Dmse=relaxed -Ds2.rom.path=s2.gen -Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay test`
+- **Status:** ADVANCED (genuine, ROM-cited, zero same-game regressions). Targeted trace still fails.
+- **arz1:** `TestS2ArzLevelSelectTraceReplay#replayMatchesTrace` — first-error frame **2043 -> 2169**.
+  - Before (HEAD baseline, fix reverted): 487 errors, first error frame 2043 -- `tails_y_speed`
+    mismatch (expected=-070B, actual=+070B). Rolling Tails should land on the Grounder (Obj8D @11AD,03BC),
+    kill it (explosion/animal/points s18/s42/s47 0x27/0x28/0x29 spawn at @11AD), and `Touch_KillEnemy`
+    `neg.w y_vel` bounces Tails up (tails_y_speed -070B). The engine Grounder sat ~30px left (@118F vs
+    @11AD), walking the wrong way, so Tails never overlapped it and kept gravity (+070B).
+  - After (fix applied): 427 errors, first error frame 2169 -- `y_speed` mismatch (expected=0x0172,
+    actual=0x0072). New frontier is an unrelated ARZ Whisp (Obj8C) hurt/kill contact, not the Grounder.
+- **Root cause (three layers):**
+  1. **Direction.** ROM `loc_36ADC` (detection) and `loc_36B0E` (routine 6 direction latch) orient to the
+     CLOSEST of MainCharacter/Sidekick via `Obj_GetOrientationToPlayer` (s2.asm:72755-72774, 73296-73310),
+     indexing `Obj8D_Directions {-$100,+$100}` by d0 (0=player left->move left, 2=player right->move right).
+     The engine update loop passes only the main character, so the Grounder ignored a leading sidekick
+     (Tails) and walked toward Sonic (left/away). At the latch frame Tails had just crossed to the
+     Grounder's right, so the ROM walks right (toward Tails); the engine walked left.
+  2. **Timing.** Routine 4 `Obj8D_Animate` plays `Ani_obj8D_b = dc.b 7,0,1,$FC` (s2.asm:73521-73523).
+     AnimateSprite holds each frame `duration+1=8` frames (s2.asm:30425-30448) -> 16 frames for frames 0,1.
+     The `$FC` end-command (Anim_End_FC, s2.asm:30476-30482) only does `addq #2,routine` (4->6) on the 17th
+     frame -- a dead frame -- before routine 6 latches direction the following frame. The engine idle timer
+     was 14 (latched ~3 frames early, while the player was still left); corrected to 17.
+  3. **Touch box.** `Obj8D_SubObjData` (s2.asm:73505) trailing field is `collision_flags=2` (subObjData
+     macro field order per s2.macros.asm:231: mappings, vram, renderflags, priority, width, collision); the
+     prior code used 5 (the priority) as the size index, selecting `Touch_Sizes` {$C,$12} (height 18)
+     instead of entry 2 {$C,$14} (height 20, s2.asm:85055-85056). The 2px-short box left a 1px vertical gap
+     that defeated the rolling-Tails land/kill overlap.
+- **Fix:** in `GrounderBadnikInstance` use `playerQuery().nearestByRomX(NATIVE_P1_P2, currentX)` for both
+  detection distance and the movement-setup direction, seed `idleAnimTimer = (7+1)*2 + 1 = 17`, and set
+  `COLLISION_SIZE_INDEX = 2`. No zone/route/frame/gameId carve-out -- pure ROM-accurate per-object behavior.
+- **Regression checks:** `TestS2Ehz1TraceReplay`, `TestS2SczLevelSelectTraceReplay`,
+  `TestS2WfzLevelSelectTraceReplay` all PASS. `TestS2Arz2LevelSelectTraceReplay` unchanged frontier
+  (f857 `tails_g_speed`, pre-existing, no Grounder involved; errors 2106->2096). Grounder (Obj8D) is
+  ARZ-only.
+
 ## 2026-06-05 - arz2 f669->f857: ChopChop (Obj91) charge velocities latched once with the vertical-band gate
 
 - Branch `bugfix/ai-trace-s2-arz2`, worktree `.worktrees/trace-s2-arz2`.

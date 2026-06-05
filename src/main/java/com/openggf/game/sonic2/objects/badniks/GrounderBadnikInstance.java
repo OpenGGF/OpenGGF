@@ -10,6 +10,7 @@ import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.objects.PatrolMovementHelper;
@@ -47,8 +48,17 @@ import java.util.List;
  */
 public class GrounderBadnikInstance extends AbstractBadnikInstance {
 
-    // Collision size index from subObjData (collision_flags = 5)
-    private static final int COLLISION_SIZE_INDEX = 5;
+    // Touch collision size index from subObjData. Obj8D_SubObjData (s2.asm:73505)
+    //   subObjData Obj8D_MapUnc_36CF0, make_art_tile(...), 1<<level_fg, 5, $10, 2
+    // The subObjData macro fields are (mappings, vram, renderflags, priority,
+    // width, collision) (s2.macros.asm:231), so collision_flags = 2 (the trailing
+    // value); the 5 is the priority and $10 is width_pixels. The previous code
+    // used 5 (the priority) as the touch size index, which selected Touch_Sizes
+    // entry 5 = {$C,$12} (height 18) instead of the correct entry 2 = {$C,$14}
+    // (height 20, s2.asm:85055-85056). The 2px-shorter box left a 1px vertical
+    // gap that prevented rolling Tails from landing on / killing the Grounder
+    // (S2 ARZ1 trace f2043: the Touch_KillEnemy neg.w y_vel bounce never fired).
+    private static final int COLLISION_SIZE_INDEX = 2;
 
     // Detection range from disassembly (0x60 = 96 pixels)
     private static final int DETECTION_RANGE = 0x60;
@@ -207,15 +217,63 @@ public class GrounderBadnikInstance extends AbstractBadnikInstance {
         }
 
         // Check horizontal distance to player (ROM uses bls = <=)
-        int dx = Math.abs(player.getCentreX() - currentX);
+        // ROM loc_36ADC orients to the CLOSEST of MainCharacter/Sidekick
+        // (Obj_GetOrientationToPlayer, s2.asm:72755-72774) and tests the absolute
+        // horizontal distance against #$60 (abs.w d2 / cmpi.w #$60,d2 / bls). Use
+        // the same closest-player selection rather than only the main character so
+        // a leading sidekick can trigger and orient the Grounder.
+        int dx = closestPlayerDx();
         if (dx <= DETECTION_RANGE) {
             // Player detected - set flag, spawn rocks, start idle animation
             activated = true;
             spawnRocks();
-            // Idle animation: 2 frames (0, 1) at duration 7 each = 14 frames total
-            idleAnimTimer = IDLE_ANIM_DURATION * 2;
+            // ROM frame budget from detection (routine 2) to the routine-6
+            // direction latch:
+            //   * Routine 4 (Obj8D_Animate) plays Ani_obj8D_b = dc.b 7,0,1,$FC
+            //     (s2.asm:73521-73523). AnimateSprite holds each frame for
+            //     (duration+1)=8 frames (s2.asm:30425-30448), so frames 0,1 occupy
+            //     8+8 = 16 frames.
+            //   * On the 17th frame the $FC end-command runs Anim_End_FC, which
+            //     only does addq #2,routine (4->6) without setting any direction
+            //     (s2.asm:30476-30482) -- a "dead" frame.
+            //   * The following frame routine 6 (loc_36B0E) runs and latches the
+            //     orientation/direction.
+            // So the direction is latched 16 (hold) + 1 (the $FC advance frame)
+            // frames after the animate begins. The IDLE_ANIMATE -> MOVEMENT_SETUP
+            // state transition already costs one frame (MOVEMENT_SETUP runs the
+            // frame after the timer expires), so seed the timer with 17 to land
+            // the latch on the ROM-correct frame (S2 ARZ1 trace: routine 6 logic
+            // at f2028 with the player just past the Grounder; the earlier 14/16
+            // values latched a frame early while the player was still to the left,
+            // sending the Grounder the wrong way).
+            idleAnimTimer = (IDLE_ANIM_DURATION + 1) * 2 + 1;
             state = State.IDLE_ANIMATE;
         }
+    }
+
+    /**
+     * Returns the absolute horizontal distance to the closest player, matching
+     * the ROM {@code Obj_GetOrientationToPlayer} selection (closest of
+     * MainCharacter/Sidekick by absolute 16-bit signed X distance,
+     * s2.asm:72755-72770).
+     */
+    private int closestPlayerDx() {
+        var nearest = services().playerQuery().nearestByRomX(
+                ObjectPlayerParticipationPolicy.NATIVE_P1_P2, currentX);
+        if (nearest == null || nearest.player() == null) {
+            return Integer.MAX_VALUE;
+        }
+        return nearest.distance();
+    }
+
+    /**
+     * Returns the closest player (MainCharacter/Sidekick by absolute X distance)
+     * or {@code null}, matching {@code Obj_GetOrientationToPlayer}.
+     */
+    private AbstractPlayableSprite closestPlayer() {
+        var nearest = services().playerQuery().nearestByRomX(
+                ObjectPlayerParticipationPolicy.NATIVE_P1_P2, currentX);
+        return (nearest != null && nearest.player() instanceof AbstractPlayableSprite p) ? p : null;
     }
 
     /**
@@ -242,9 +300,18 @@ public class GrounderBadnikInstance extends AbstractBadnikInstance {
             activated = true;
         }
 
-        // Set direction toward player (or keep current facing if no player)
-        if (player != null) {
-            facingLeft = player.getCentreX() < currentX;
+        // ROM loc_36B0E orients to the CLOSEST player via Obj_GetOrientationToPlayer
+        // and indexes Obj8D_Directions {-$100, +$100} by d0 (0=player left -> move
+        // left, 2=player right -> move right), also setting the x_flip status bit
+        // (s2.asm:73296-73310). The engine update loop only passes the main
+        // character, so re-derive the orientation against the closest of
+        // MainCharacter/Sidekick to match the ROM when a sidekick is leading.
+        AbstractPlayableSprite target = closestPlayer();
+        if (target == null) {
+            target = player;
+        }
+        if (target != null) {
+            facingLeft = target.getCentreX() < currentX;
         }
 
         // Set velocity
