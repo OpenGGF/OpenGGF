@@ -111,6 +111,10 @@
                                 <include>**/tests/trace/s2/*Regression.java</include>
                             </includes>
                             <excludes>
+                                <exclude>**/Debug*.java</exclude>
+                                <exclude>**/*Debug*.java</exclude>
+                                <exclude>**/*Probe.java</exclude>
+                                <exclude>**/*Probe*.java</exclude>
                                 <exclude>**/TestGraphicsManagerHeadless.java</exclude>
                                 <exclude>**/VisualRegressionTest.java</exclude>
                                 <exclude>**/VisualReferenceGenerator.java</exclude>

@@ -29,8 +29,37 @@ target rather than walking back the assertion.
 | Rule | Baseline | Target | Trigger |
 |------|----------|--------|---------|
 | `low_level_layers_do_not_depend_on_runtime_layers` | 213 | <=150 | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
-| `shared_layers_do_not_depend_on_game_specific_packages` | 64 | <=40 | `CrossGameFeatureProvider` donor construction and `ObjectManager` rewind dynamic-object recreation move behind shared provider/factory contracts |
+| `shared_layers_do_not_depend_on_game_specific_packages` | 81 | <=40 | `CrossGameFeatureProvider` donor construction and `ObjectManager` rewind dynamic-object recreation move behind shared provider/factory contracts |
 | `per_game_packages_do_not_cross_depend` | 37 | <=20 | Data-select preview loading, payload validation, and menu animation helpers extracted out of per-game packages |
+
+## Published Baseline Counts
+
+These counts are mechanically checked against `src/test/resources/archunit/frozen/stored.rules`
+by `TestArchitecturalReviewGuard.archUnitPublishedBaselineCountsMatchFrozenStore`.
+When a frozen baseline shrinks or grows intentionally, update the matching count
+in the same commit.
+
+- `low_level_layers_do_not_depend_on_runtime_layers`: 213
+- `shared_layers_do_not_depend_on_game_specific_packages`: 81
+- `per_game_packages_do_not_cross_depend`: 37
+
+## Package Cycle Ratchets
+
+`package_slices_are_free_of_cycles`: 1 frozen top-level package cycle cluster.
+
+- `cycle:core-runtime`: 16 top-level slices (`audio`, `camera`, `control`,
+  `data`, `debug`, `editor`, `game`, `graphics`, `level`, `physics`, `sprites`,
+  `testmode`, `timer`, `tools`, `trace`, `util`). Owner package: shared runtime
+  architecture. Intended direction: split runtime service roots and tooling/debug
+  edges out of gameplay/data/graphics ownership loops. First decay target:
+  remove at least one slice from `CORE_RUNTIME_CYCLE_CLUSTER_SLICES` when its
+  incoming and outgoing cycle edges are eliminated.
+
+If a temporary package-cycle cluster is accepted later, document it as
+``cycle:<name>`` with current count, owner package, intended direction, and first
+decay target. Add a matching `@ArchTest` method or frozen-store entry in the same
+commit so `TestArchitecturalReviewGuard.archUnitCycleClusterDocumentationHasMatchingRatchets`
+can enforce the ratchet.
 
 ## Frozen Rules
 
