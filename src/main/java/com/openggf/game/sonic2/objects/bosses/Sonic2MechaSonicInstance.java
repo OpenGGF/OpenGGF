@@ -934,6 +934,21 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance {
     @Override
     protected boolean usesDefeatSequencer() { return false; }
 
+    /**
+     * ObjAF selects defeat by overwriting the <strong>primary {@code routine}</strong>
+     * ({@code loc_39CF0}: {@code move.b #$C,routine(a0)}, docs/s2disasm/s2.asm:78003-78004)
+     * and dispatches on {@code routine(a0)} read once at the top of {@code ObjAF}
+     * (docs/s2disasm/s2.asm:77412-77415). Routine $C's defeat countdown
+     * ({@code loc_39B92}: {@code subq.w #1,objoff_32}, docs/s2disasm/s2.asm:77848-77853)
+     * therefore first runs the frame after the hit. Because the engine runs touch
+     * responses before this object's own update, this boss needs the one-frame defeat
+     * dispatch deferral to match the ROM Camera_Max_X release timing
+     * ({@code loc_39BA4}, docs/s2disasm/s2.asm:77856-77857). WFZ (ObjC5) uses
+     * {@code routine_secondary} instead and is correctly left undeferred.
+     */
+    @Override
+    protected boolean defeatDeferralAppliesToThisBoss() { return true; }
+
     @Override
     protected void onDefeatStarted() {
         state.routine = ROUTINE_DEFEAT;
