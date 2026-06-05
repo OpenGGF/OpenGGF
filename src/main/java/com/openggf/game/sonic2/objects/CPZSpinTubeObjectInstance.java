@@ -227,8 +227,22 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
     public void update(int frameCounter, PlayableEntity playerEntity) {
         // Store frame counter for use in sub-methods
         this.currentFrameCounter = frameCounter;
-        // Update timer second (used for path variant selection)
-        timerSecond = (frameCounter / 60) & 0xFF;
+        // Update timer second (used for path variant selection).
+        // ROM loc_2265E reads the live level-time seconds via
+        // move.b (Timer_second).w,d2 / andi.b #1,d2 (docs/s2disasm/s2.asm:48499-48503),
+        // i.e. the on-screen TIME seconds digit, NOT a free-running global frame
+        // counter. Deriving it from the raw replay frame counter (frames since
+        // capture start) diverges from the ROM Timer_second whenever the act
+        // begins with a non-zero level timer, which flips the timer-parity entry
+        // path selection (byte_2266E value 2 -> Timer_second&1). Read the actual
+        // game timer so the captured entry path matches the ROM. Because the
+        // seconds value is only ever used as Timer_second & 1 and 60 is even,
+        // (elapsedSeconds & 1) == (Timer_second & 1) exactly.
+        var levelGamestate = services().levelGamestate();
+        int timerSeconds = levelGamestate != null
+                ? levelGamestate.getElapsedSeconds()
+                : (frameCounter / 60);
+        timerSecond = timerSeconds & 0xFF;
 
         // ROM Obj1E_Main runs the routine once per playable character each frame:
         // MainCharacter (objoff_2C) then Sidekick (objoff_36)
@@ -405,11 +419,16 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         cs.pathIndex = 0;
         cs.duration = (cs.path.length / 2) - 2;  // -2 for start position
 
-        // Position player at first waypoint (center-based)
+        // Position player at first waypoint (center-based).
+        // ROM loc_22688 captures the player onto the entry path with
+        // move.w d4,x_pos(a1) / move.w d5,y_pos(a1) (docs/s2disasm/s2.asm:48531-48545),
+        // a word write that preserves the 16-bit subpixel low word. Use the
+        // subpixel-preserving setters so the carried fraction is not zeroed; the
+        // fraction is what the next loc_22902 velocity recompute integrates over.
         int startX = cs.path[0] + objX;
         int startY = cs.path[1] + objY;
-        player.setCentreX((short) startX);
-        player.setCentreY((short) startY);
+        player.setCentreXPreserveSubpixel((short) startX);
+        player.setCentreYPreserveSubpixel((short) startY);
 
         // Move to second waypoint for velocity calculation
         cs.pathIndex = 2;
@@ -468,9 +487,15 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         int nextX = cs.path[cs.pathIndex] + objX;
         int nextY = cs.path[cs.pathIndex + 1] + objY;
 
-        // Set player position to current target (center-based)
-        player.setCentreX((short) nextX);
-        player.setCentreY((short) nextY);
+        // Set player position to current target (center-based).
+        // ROM loc_2271A writes the waypoint with move.w d4,x_pos(a1) /
+        // move.w d5,y_pos(a1) (docs/s2disasm/s2.asm:48577-48586) -- a word write
+        // that leaves the 16-bit subpixel fraction untouched. Use the
+        // subpixel-preserving setters so the fraction carried across waypoints is
+        // not lost; zeroing it drifts the tube position and shifts the cross-axis
+        // velocity recomputed at loc_22902 (docs/s2disasm/s2.asm:48761-48815).
+        player.setCentreXPreserveSubpixel((short) nextX);
+        player.setCentreYPreserveSubpixel((short) nextY);
 
         // Check if we've reached the end of entry path
         cs.pathIndex += 2;
@@ -557,8 +582,11 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
             startX = cs.path[0];
             startY = cs.path[1];
         }
-        player.setCentreX((short) startX);
-        player.setCentreY((short) startY);
+        // ROM writes the initial main-path waypoint with move.w to x_pos(a1) /
+        // y_pos(a1) (docs/s2disasm/s2.asm:48531-48545), preserving the subpixel
+        // fraction. Use the subpixel-preserving setters here too.
+        player.setCentreXPreserveSubpixel((short) startX);
+        player.setCentreYPreserveSubpixel((short) startY);
 
         // Get next waypoint
         int nextX, nextY;
@@ -602,9 +630,14 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         int nextX = cs.path[cs.pathIndex];
         int nextY = cs.path[cs.pathIndex + 1];
 
-        // Set player position to current target (center-based)
-        player.setCentreX((short) nextX);
-        player.setCentreY((short) nextY);
+        // Set player position to current target (center-based).
+        // ROM loc_227FE writes the main-path waypoint with move.w d4,x_pos(a1) /
+        // move.w d5,y_pos(a1) (docs/s2disasm/s2.asm:48655-48662) -- preserving the
+        // subpixel low word. Use the subpixel-preserving setters so the carried
+        // fraction survives each waypoint snap and the loc_22902 velocity recompute
+        // (docs/s2disasm/s2.asm:48761-48815) sees ROM-accurate integer-pixel input.
+        player.setCentreXPreserveSubpixel((short) nextX);
+        player.setCentreYPreserveSubpixel((short) nextY);
 
         // Completed a segment
         cs.completedSegmentCount++;

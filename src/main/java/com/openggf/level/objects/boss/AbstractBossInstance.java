@@ -44,6 +44,23 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
     protected final Map<Integer, Integer> customMemory;
     private ObjectSpawn dynamicSpawn;
 
+    /**
+     * Set when {@link BossHitHandler#triggerDefeat()} flips the boss to defeated and
+     * switches its routine to the defeat handler during touch-response processing
+     * (which, for the S2 post-physics object ordering, runs <em>before</em> this
+     * object's own {@code update()} on the same frame). It defers the first defeat
+     * routine dispatch to the following frame.
+     *
+     * <p>ROM model: ObjAF reads {@code routine(a0)} once at the top of its dispatch
+     * (docs/s2disasm/s2.asm:77412-77415). When loc_39CF0 sets {@code routine=$C}
+     * mid-frame (docs/s2disasm/s2.asm:78003-78004), routine $C (loc_39B92:
+     * {@code subq.w #1,objoff_32; bmi}, docs/s2disasm/s2.asm:77848-77853) does not
+     * begin its per-frame countdown until the next frame. Without this deferral the
+     * engine would run an extra same-frame countdown decrement, releasing
+     * Camera_Max_X_pos (loc_39BA4, docs/s2disasm/s2.asm:77856-77857) one frame early.
+     */
+    private boolean deferDefeatRoutineDispatch;
+
     public AbstractBossInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
         this.state = new BossStateContext(spawn.x(), spawn.y(), getInitialHitCount());
@@ -89,7 +106,15 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
             // to match ROM order: flash first, then decrement timer
         }
 
-        if (!state.defeated || !usesDefeatSequencer()) {
+        // ROM routine-read-once deferral: if the boss became defeated during this
+        // frame's touch-response pass (before this object's own update ran), the
+        // newly-selected defeat routine must not be dispatched until the next frame,
+        // mirroring ObjAF reading routine(a0) once at the top of its dispatch
+        // (docs/s2disasm/s2.asm:77412-77415). Consume the one-frame deferral here so
+        // the defeat countdown's first decrement lands one frame later, as in ROM.
+        boolean deferThisFrame = deferDefeatRoutineDispatch;
+        deferDefeatRoutineDispatch = false;
+        if ((!state.defeated || !usesDefeatSequencer()) && !deferThisFrame) {
             updateBossLogic(frameCounter, player);
         }
 
@@ -293,6 +318,15 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
             } else {
                 services().gameState().addScore(1000);
                 onDefeatStarted();
+                // onDefeatStarted() switched state.routine to the defeat handler.
+                // For the S2 post-physics ordering this triggerDefeat() runs in the
+                // touch-response pass BEFORE this object's own update() this frame, so
+                // without deferral updateBossLogic() would dispatch the defeat routine
+                // (and decrement its countdown) on the same frame the routine changed.
+                // ROM reads routine(a0) once per object update, so the defeat routine
+                // first runs next frame (docs/s2disasm/s2.asm:77412-77415, 78003-78004,
+                // 77848-77853). Defer the first defeat dispatch by one frame.
+                deferDefeatRoutineDispatch = true;
             }
         }
     }

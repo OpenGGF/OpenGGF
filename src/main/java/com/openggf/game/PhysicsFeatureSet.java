@@ -775,6 +775,30 @@ public record PhysicsFeatureSet(
          *  18782-18842). S1/S2 keep the prior detach baseline until their
          *  right-wall traces are revalidated against the matching disassembly. */
         boolean rightWallDeepProbePreservesPenetration,
+        /**
+         * Whether a barely-poking solid-object overlap (vertical penetration
+         * {@code d1 <= 4} with horizontal penetration not exceeding it) resolves
+         * as a SIDE contact rather than a top/bottom landing.
+         *
+         * <p>S1/S2: {@code true}. {@code SolidObject_cont} compares
+         * {@code cmp d1,d5 / bhi <TopBottom>} then {@code cmpi.w #4,d1 /
+         * bls.s <SideAir>}: a vertical penetration of 4 or less is routed to
+         * {@code SolidObject_SideAir} (s2.asm:35404-35412) /
+         * {@code Solid_SideAir} (s1disasm/_incObj/sub SolidObject.asm:181-184),
+         * which still returns {@code moveq #1,d4} — a SIDE contact
+         * (s2.asm:35447-35453, s1 SolidObject.asm:211-214). This lets MTZ
+         * Obj66 (Spring Wall) fire its in-air {@code -$800,-$800} diagonal
+         * bounce on a flush side overlap (s2.asm:53221-53232, loc_2704C at
+         * s2.asm:53283-53340).
+         *
+         * <p>S3K: {@code false}. {@code cmp d1,d5 / bhi.w loc_1E0D4} then
+         * {@code cmpi.w #4,d1 / bls.w loc_1E0D4} sends the {@code d1 <= 4}
+         * case to the TOP/BOTTOM vertical resolution path
+         * (sonic3k.asm:41463-41466, loc_1E0D4 at sonic3k.asm:41541-41546),
+         * NOT SideAir. The engine's existing {@code absDistY > 4} gate matches
+         * S3K and stays unchanged for it.
+         */
+        boolean solidObjectBarelyPokingResolvesAsSide,
         /** Level-frame cadence at which the speed-shoes timer decrements.
          *  S1/S2: {@code 1} (per-frame word timer, s2.asm:36008-36025).
          *  S3K: {@code 8} (byte timer decremented every 8th level frame; ROM
@@ -876,6 +900,7 @@ public record PhysicsFeatureSet(
             true /* touchResponseUsesRenderFlagYGate: S1 ReactToItem (s1disasm/_incObj/sub ReactToItem.asm:26-27) reads obRender bit 7, cleared by BuildSprites (s1disasm/_inc/BuildSprites.asm:71-78) on Y-out-of-band */,
             false /* sidekickDeathUsesDeferredDespawn: S1 has no Tails CPU sidekick */,
             false /* rightWallDeepProbePreservesPenetration: preserve S1 baseline until right-wall traces are revalidated */,
+            true /* solidObjectBarelyPokingResolvesAsSide: S1 Solid_cont sends d1<=4 to Solid_SideAir (s1disasm/_incObj/sub SolidObject.asm:181-184), which returns moveq #1,d4 = side contact (lines 211-214) */,
             1 /* speedShoesTimerDecimation: S1 per-frame word timer */);
 
     /** Sonic 2: spindash with standard speed table (s2.asm:37294), dual collision paths, delayed look scroll,
@@ -920,6 +945,7 @@ public record PhysicsFeatureSet(
             false /* touchResponseUsesRenderFlagYGate: S2 Touch_Loop (s2.asm ~84502-84551) walks active objects without consulting the render flag; preserve pre-Task-3 X-only baseline */,
             true /* sidekickDeathUsesDeferredDespawn: S2 Obj02_Dead (s2.asm:40736-40759) runs ObjectMoveAndFall each frame and only branches to TailsCPU_Despawn (s2.asm:39043-39052) once y_pos exceeds Tails_Max_Y_pos + $100. Required to unblock HTZ trace f471 and MCZ trace f399 where engine warped Tails to $4000 on Frame N+1 instead of letting the body fall first. */,
             false /* rightWallDeepProbePreservesPenetration: preserve S2 baseline until right-wall traces are revalidated */,
+            true /* solidObjectBarelyPokingResolvesAsSide: S2 SolidObject_cont sends d1<=4 to SolidObject_SideAir (s2.asm:35404-35412), which returns moveq #1,d4 = side contact (s2.asm:35447-35453); lets MTZ Obj66 Spring Wall fire its in-air -$800,-$800 diagonal bounce (s2.asm:53221-53232,53283-53340) */,
             1 /* speedShoesTimerDecimation: S2 per-frame word timer (s2.asm:36008-36025) */);
 
     /** Sonic 3&K: spindash with same speed table as S2, dual collision paths, delayed look scroll,
@@ -966,6 +992,7 @@ public record PhysicsFeatureSet(
             false /* touchResponseUsesRenderFlagYGate: S3K TouchResponse (sonic3k.asm:20655) consumes a pre-built Collision_response_list; render-flag gating happens upstream during list build, not at touch time. Adding a Y check inside the engine touch loop drops objects ROM had on the response list (MGZ trace replay first-fail moves from f2395 to f1659). */,
             true /* sidekickDeathUsesDeferredDespawn: S3K dead-fall runs sub_123C2 before sub_13ECA; it waits until y_pos exceeds Camera_Y_pos+$100, then writes the $7F00 marker and returns to MoveSprite_TestGravity (sonic3k.asm:24538-24578,29284-29285,26800-26809). */,
             true /* rightWallDeepProbePreservesPenetration: Player_AnglePos keeps right-wall angle continuity through deep negative probes before later walk-off checks (sonic3k.asm:18782-18842). */,
+            false /* solidObjectBarelyPokingResolvesAsSide: S3K SolidObject_cont sends d1<=4 to loc_1E0D4 (TOP/BOTTOM), not SideAir (sonic3k.asm:41463-41466; loc_1E0D4 at 41541-41546) — keep existing absDistY>4 gate */,
             8 /* speedShoesTimerDecimation: S3K byte timer decremented every 8th level frame (sonic3k.asm:22072-22078; init 40818) */);
 
     /** Returns true when the game supports dual collision paths (primary/secondary). */

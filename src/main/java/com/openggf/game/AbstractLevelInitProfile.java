@@ -131,6 +131,29 @@ public abstract class AbstractLevelInitProfile implements LevelInitProfile {
     }
 
     /**
+     * Re-derives the {@link WaterSystem} config from the already-loaded level.
+     * <p>
+     * The per-test reset clears {@code WaterSystem.waterConfigs} via
+     * {@link #resetWaterIfAvailable()} but, unlike the full level-reload path,
+     * does not re-run the {@code InitWater} load step. This restores the water
+     * config exactly as the production level-load profile populates it (via
+     * {@link LevelManager#initWater()}), so the engine evolves its water state
+     * natively rather than running with water permanently disabled. No-op when
+     * no level is loaded yet (e.g. the first reset before any level load).
+     */
+    private static void reloadWaterIfLevelLoaded() {
+        LevelManager levelManager = GameServices.levelOrNull();
+        if (levelManager == null || levelManager.getCurrentLevel() == null) {
+            return;
+        }
+        try {
+            levelManager.initWater();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /**
      * Builds the 13 core level-load steps that are identical across all
      * three game profiles. Each step delegates to the corresponding
      * {@link LevelManager} method.
@@ -343,6 +366,19 @@ public abstract class AbstractLevelInitProfile implements LevelInitProfile {
                 AbstractLevelInitProfile::resetTimersIfAvailable),
             new InitStep("ResetWater", "Undoes LZWaterFeatures / WaterEffects / Handle_Onscreen_Water_Height",
                 AbstractLevelInitProfile::resetWaterIfAvailable),
+            // ResetWater clears WaterSystem.waterConfigs (the level-load-time water
+            // config), but unlike levelTeardownSteps (which is followed by a full
+            // level reload), the per-test reset reuses the already-loaded Level
+            // without re-running the InitWater load step. Without this reload the
+            // water config stays empty, so WaterSystem.hasWater() returns false and
+            // the per-frame Sonic_Water / Tails_Water path (ROM Obj01_InWater /
+            // Obj02_InWater, docs/s2disasm/s2.asm:36369-36393, 39528-39556) never
+            // fires. That silently disabled the ARZ2 sidekick water-entry velocity
+            // reduction (asr x_vel once / y_vel twice) in trace replay. Re-derive the
+            // water config from the loaded level here, exactly as the production
+            // level-load profile does, so the engine evolves natively.
+            new InitStep("ReloadWater", "Re-derives WaterSystem config from the loaded level (mirrors InitWater)",
+                AbstractLevelInitProfile::reloadWaterIfLevelLoaded),
             new InitStep("ResetDebugOverlay", "Clears overlay toggle states and pending debug text",
                 () -> GameServices.debugOverlay().resetState())
         );

@@ -399,8 +399,27 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // ROM Obj26 SolidObject_Monitor_* branches to SolidObject_cont
+        // (docs/s2disasm/s2.asm:25628), whose X bounds gate rejects the right
+        // edge with bhi: `cmp.w d3,d0 / bhi.w SolidObject_TestClearPush`
+        // (docs/s2disasm/s2.asm:25587 width=$1A, s2.asm:35347-35348). bhi is a
+        // strictly-greater test, so relX == halfWidth*2 (the player centred
+        // exactly on the monitor's right solid edge) is still INSIDE the box
+        // and resolves as a zero-distance side contact (SolidObject_AtEdge,
+        // s2.asm:35427-35446 sets the pushing bit without shoving x_pos).
+        // The engine default uses an exclusive (>=) bound, which dropped the
+        // CPU sidekick's edge contact one pixel early: in MCZ2 the CPU Tails
+        // walking right into the monitor reached centreX == 0x0E2A (= 0x0E10 +
+        // $1A, the exact right edge) and the exclusive gate returned no contact,
+        // so Tails was never pinned/pushing and the ROM auto-jump branch never
+        // fired. Match the ROM bhi semantics with the inclusive right edge.
+        return true;
+    }
+
+    @Override
     public SolidRoutineProfile getSolidRoutineProfile() {
-        return SolidRoutineProfile.fullSolid(false);
+        return SolidRoutineProfile.fullSolid(false, usesInclusiveRightEdge(), false);
     }
 
     @Override

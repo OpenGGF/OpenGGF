@@ -103,6 +103,7 @@ public class TestHybridPhysicsFeatureSet {
                 true,   // touchResponseUsesRenderFlagYGate - S1 ReactToItem reads obRender bit 7 cleared by BuildSprites Y-band
                 false,  // sidekickDeathUsesDeferredDespawn - S1 has no Tails CPU
                 false,  // rightWallDeepProbePreservesPenetration - S1 baseline
+                true,   // solidObjectBarelyPokingResolvesAsSide - S1 Solid_SideAir (s1 SolidObject.asm:181-184,211-214)
                 1       // speedShoesTimerDecimation - S1 per-frame word timer
         );
 

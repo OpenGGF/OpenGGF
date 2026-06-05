@@ -1,5 +1,231 @@
 # Trace Frontier Log
 
+## 2026-06-05 - ooz1 f1133->f1756: OOZ popping platform (Obj33) auto-pop starts in mode 2 (one-frame-later pop)
+
+- Branch `bugfix/ai-trace-s2-ooz1`, worktree `.worktrees/trace-s2-ooz1`.
+- Command (worktree, cmd mvn.cmd, forkCount=1):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2OozLevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** advanced, genuine, zero same-game regressions.
+- 1052 errors / 0 warnings. First error frame 1133 -> frame 1756
+  (`tails_x` expected=0x0CF9, actual=0x0CF8 — a downstream sidekick CPU follow-steering off-by-one).
+- **Root cause:** `OOZPoppingPlatformObjectInstance` (Obj33, OOZ green burner lid) initialised the
+  auto-pop (subtype 0) variant directly into `TIMER_COUNTDOWN` (mode 0). ROM `Obj33_Init`
+  (docs/s2disasm/s2.asm:49653-49657) sets `routine_secondary` to **2** (`addq.b #2,routine_secondary`)
+  for **all** variants and only overrides it to 4 (wait-for-player) when `subtype != 0`. The auto-pop
+  variant therefore first runs one mode-2 frame (`loc_23BEA`, s2.asm:49710-49728) with `objoff_32`
+  (velocity) = 0: y stays at home, velocity becomes `$3800` (< `$10000`), so it does
+  `subq.b #2,routine_secondary` back to mode 0 and bounces — the `$78` timer countdown therefore starts
+  the *next* frame. Starting in mode 0 popped the platform one frame early, dragging the riding sidekick
+  down a frame too soon (f1133: ROM `y` 0x0664 vs engine 0x065A while riding the popping platform).
+- **Fix:** subtype-0 variant initialises to `POP_PHYSICS` (mode 2); `updatePopPhysics()` with velocity 0
+  already reproduces the ROM's immediate transition-to-timer + bounce. Per-object S2 change in Obj33's
+  own class, branching on the ROM `subtype` data field — no zone/route/frame/gameId carve-out, no shared
+  physics change, comparison-only.
+- File: `src/main/java/com/openggf/game/sonic2/objects/OOZPoppingPlatformObjectInstance.java`.
+- Same-game regression guard (single-fork): EHZ1, SCZ, WFZ all GREEN (tests=1 failures=0 errors=0 each);
+  no same-game green regressed.
+## 2026-06-04 - cpz1 f3303->f3329: SpinyOnWall (ObjA6) detection band + spike-fire parity
+
+- Branch `bugfix/ai-trace-s2-cpz1`, worktree `.worktrees/trace-s2-cpz1`.
+- Command (worktree, cmd.exe mvn.cmd, forkCount=1):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2CpzLevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** advanced, genuine, zero same-game regressions.
+- **Error count:** 231 -> 214 errors / 0 warnings.
+- **First error: frame 3303 (`tails_air` expected=0, actual=1) -> frame 3329 (`y_speed` expected=-0258, actual=0x0258).**
+- **Root cause:** `SpinyOnWallBadnikInstance` (CPZ wall spiny, ObjA6) used an invented `0x80`x`0x40`
+  detection box plus a "player must be in front of the spiny" facing gate, and offset the spawned
+  spike by +/-8px from the body. ROM `loc_38BBA` (docs/s2disasm/s2.asm:76445-76449) gates the attack
+  ONLY on `Obj_GetOrientationToPlayer; addi.w #$60,d2; cmpi.w #$C0,d2; blo` — the signed horizontal
+  distance to the CLOSER of MainCharacter/Sidekick must lie in `[-$60,$60)`. There is NO vertical
+  gate and NO facing gate. `Obj_GetOrientationToPlayer` (s2.asm:72755-72781) selects the closer
+  character by absolute horizontal distance and returns `d2` = that signed distance. The fire routine
+  `loc_38C6E` (s2.asm:76509-76526) spawns the spike at the spiny's exact `x_pos`/`y_pos`, `x_vel=$300`
+  negated by `render_flags.x_flip` (the spiny's FIXED flip, not player side), `y_vel=0`; then
+  `Obj98_SpinyShotFall` (s2.asm:74628-74632) applies `+$20` gravity. The engine's extra gates fired
+  the spike at the wrong frames and the muzzle offset shifted its landing point, so in CPZ1 the
+  falling spike hit CPU Tails — a hurt the ROM never produces.
+- **Fix:** replace the box/dy/facing logic with the ROM `(currentX - closestPlayer.x + $60) < $C0`
+  horizontal band; `closestPlayer()` mirrors `Obj_GetOrientationToPlayer` (closer of MainCharacter /
+  sidekicks by abs horizontal distance, via `ObjectPlayerQuery`/`ALL_ENGINE_PLAYERS`); spike spawns at
+  exact `currentX`/`currentY` (muzzle offset removed). Per-object S2 change confined to ObjA6's class —
+  no zone/route/frame/gameId carve-out, no shared physics edit, comparison-only (engine state only).
+- **cpz1: f3303 -> f3329.** New first divergence (`y_speed`/`tails_air` at f3329) is an unrelated
+  downstream player jump/air issue, to be addressed separately.
+- Same-game regression guard (single-fork, surefire XML): `TestS2Ehz1TraceReplay`,
+  `TestS2SczLevelSelectTraceReplay`, `TestS2WfzLevelSelectTraceReplay` all tests=1 failures=0 errors=0.
+  Zero same-game greens regressed.
+## 2026-06-05 - mcz2 f4252->f4485: Monitor (Obj26) inclusive right solid edge (ROM `bhi` bound)
+
+- Branch `bugfix/ai-trace-s2-mcz2`, worktree `.worktrees/trace-s2-mcz2` (off develop `b78f3b3b9`).
+- Command (cmd.exe mvn inside worktree):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status: advanced, genuine, zero same-game regressions.**
+- **First error: frame 4252 -> frame 4485** (errors 704 -> 527).
+  - before f4252: `tails_x mismatch (expected=0x0E2A, actual=0x0E2C)` — CPU Tails walking right
+    into the Obj26 monitor at x=0x0E10 reached centreX 0x0E2A (= 0x0E10 + $1A, the exact right
+    solid edge); engine's exclusive (`>=`) right bound returned no contact, so Tails drifted past
+    instead of being pinned/pushing.
+  - after f4485: `tails_x mismatch (expected=0x0EAB, actual=0x0EAC)` — downstream CPU-Tails
+    subpixel-rounding near the same MCZ monitor cluster (distinct issue).
+- **Root cause / fix:** `MonitorObjectInstance.usesInclusiveRightEdge()` now returns `true`.
+  ROM Obj26 `SolidObject_Monitor_*` (s2.asm:25586-25631) sets monitor width `move.w #$1A,d1`
+  (s2.asm:25587) and falls into `SolidObject_cont`, whose X gate is
+  `cmp.w d3,d0 / bhi.w SolidObject_TestClearPush` with `d3 = width*2` (s2.asm:35347-35348).
+  `bhi` is unsigned strictly-greater, so relX == width*2 (right-edge-exact) stays INSIDE the box
+  and resolves as a zero-distance side contact in `SolidObject_AtEdge` (s2.asm:35427-35446),
+  which sets the pushing bit without shoving x_pos. Engine default used an exclusive `>=` bound
+  (`ObjectManager` ~line 7935), dropping that boundary pixel. Fix uses the existing per-object
+  `usesInclusiveRightEdge()` hook (also used by springs/flippers/spikes), feeding
+  `SolidRoutineProfile.fullSolid(false, true, false)`.
+- **Genuineness:** real ROM citations, per-object narrowest abstraction, no gameId/zone/route/frame
+  carve-out, no tolerance band, no trace-state hydration (comparison-only), not a no-op (baseline
+  f4252 -> f4485 confirmed by stash-out re-run).
+- **Same-game regression guard (single-fork, authoritative surefire .txt per class):**
+  EHZ1 `Tests run: 1, Failures: 0`; SCZ `Tests run: 1, Failures: 0`; WFZ `Tests run: 1, Failures: 0`.
+  Zero regressions. (MSE relaxed `total=2`/`TEST_FAIL Mcz2` lines are an artifact of stale .txt
+  reports lingering in target/surefire-reports between single-class runs; per-class .txt is the
+  authoritative source.)
+- File: `src/main/java/com/openggf/game/sonic2/objects/MonitorObjectInstance.java`.
+## 2026-06-04 - arz2 f566->f669: per-test reset reloads WaterSystem config (InitWater)
+
+- Branch `bugfix/ai-trace-s2-arz2`, worktree `.worktrees/trace-s2-arz2` (HEAD `89ad6d7ae`).
+- Command (cmd.exe mvn inside worktree):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** advanced, genuine, zero same-game regressions.
+- **Root cause:** `AbstractLevelInitProfile.perTestResetSteps()` runs `ResetWater` (clears
+  `WaterSystem.waterConfigs`) but, unlike `levelTeardownSteps` (which is followed by a full level
+  reload), reuses the already-loaded `Level` without re-running the `InitWater` load step. Water
+  config stayed empty -> `WaterSystem.hasWater()` false -> the per-frame `Sonic_Water`/`Tails_Water`
+  underwater path (ROM `Obj01_InWater`/`Obj02_InWater`, gated on `Water_flag`,
+  docs/s2disasm/s2.asm:36369-36393 and 39534-39556) never fired, silently disabling the ARZ2
+  sidekick water-entry velocity reduction (`asr x_vel` once, `asr y_vel` twice).
+- **Fix:** add a `ReloadWater` reset step that re-derives the water config from the already-loaded
+  level via `LevelManager.initWater()` (ROM/level-sourced, mirroring the production level-load
+  profile — NOT hydrated from trace data). Shared reset-harness fix; applies uniformly across all
+  three games. No zone/route/frame/gameId carve-out, comparison-only invariant preserved.
+- **arz2: f566 -> f669** (1953 errors). New first divergence f669 is unrelated: `y_speed`
+  (expected -0080, actual -0180) — a separate sidekick CPU issue, to be addressed separately.
+- Same-game regression guard (single-fork): `TestS2Ehz1TraceReplay`, `TestS2SczLevelSelectTraceReplay`,
+  `TestS2WfzLevelSelectTraceReplay` all GREEN. Swept-in CPZ2 (f2542 `tails_y_speed`) and HTZ2
+  (f2306 `tails_rolling`) are pre-existing failures, frontier unchanged with vs without the fix
+  (verified by stash baseline run). No same-game green regressed.
+## 2026-06-05 - mtz3 f6913->f7304: Spring Wall flush-side bounce (barely-poking solid overlap resolves as SIDE in S1/S2)
+
+- Branch `bugfix/ai-trace-s2-mtz3`, worktree `.worktrees/trace-s2-mtz3`.
+- Command (cmd.exe mvn inside worktree):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** advanced, genuine, zero same-game regressions.
+- **Error count:** 833 errors (was failing earlier at f6913). First error frame/field: **f6913 -> f7304** (y_speed mismatch; new owner is an unrelated main-player `y_speed` divergence, expected=-02C8 actual=-03C8).
+- **Root cause:** `ObjectManager.SolidContacts` resolved a barely-poking solid-object overlap
+  (vertical penetration `d1<=4`, horizontal `<= vertical`) only via the engine `absDistY > 4` gate,
+  sending it to the vertical landing path. ROM `SolidObject_cont` diverges per game: S1/S2
+  `cmpi.w #4,d1 / bls.s SolidObject_SideAir` (s2.asm:35411-35412; s1 SolidObject.asm:183-184) route
+  `d1<=4` to SideAir, which does `bsr Solid_NotPushing` then `moveq #1,d4` = SIDE contact, NO
+  position/speed change (s2.asm:35447-35453; s1 SolidObject.asm:211-213). S3K routes `d1<=4` to
+  `loc_1E0D4`, the TOP/BOTTOM path (sonic3k.asm:41465-41466,41541-41546). MTZ Spring Wall (Obj66)
+  `Obj66_Main` fires its `-$800,-$800` diagonal bounce only when SolidObject returns `d4==1` (side)
+  AND player `in_air` (s2.asm:53221-53232; `loc_2704C` s2.asm:53283-53340); without SideAir the
+  flush airborne side overlap was misclassified as a landing and the spring wall never bounced.
+- **Fix:** new `PhysicsFeatureSet.solidObjectBarelyPokingResolvesAsSide` (S1/S2 true, S3K false) and a
+  dedicated early-return in `SolidContacts.classify` returning `SolidContact.side(false, distX,
+  movingInto)` for the barely-poking case. Gated on the per-game flag, NOT gameId/zone/route/frame;
+  comparison-only; S3K byte-unchanged (flag false -> existing absDistY>4 path).
+- **Same-game regression guard (single-fork):** EHZ1, SCZ, WFZ all GREEN. No same-game green regressed.
+- **Pre-existing failures (NOT regressions, baseline-confirmed with fix stashed):** S3K aiz f8941,
+  cnz f17276, mgz f4124 — byte-identical first-error frames at HEAD without the change (S3K flag=false,
+  no-op for S3K). Not same-game (S3K vs S2 target).
+- Files: `src/main/java/com/openggf/level/objects/ObjectManager.java`,
+  `src/main/java/com/openggf/game/PhysicsFeatureSet.java`,
+  `src/main/java/com/openggf/game/CrossGameFeatureProvider.java`,
+  `src/test/java/com/openggf/game/TestHybridPhysicsFeatureSet.java`.
+## 2026-06-05 - dez1 ADVANCED f1366->f2194 (regresses wfz): boss defeat routine-read-once one-frame deferral
+
+- Branch `bugfix/ai-trace-s2-dez1`, worktree `.worktrees/trace-s2-dez1` (off develop `89ad6d7ae`).
+- Command (cmd mvn.cmd inside worktree, forkCount=1):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** advanced-with-regression, genuine. Tests run: 1, Failures: 1.
+- Before: 148 errors, first error frame 1366 (`camera_x expected=0x0224 actual=0x0225`, post-defeat
+  camera-unlock off-by-one).
+- After: 147 errors, first error frame 2194 (`y_speed expected=0x0000 actual=-0700`) — now at the
+  DeathEggRobot (obj 0xC7) fight, well past the Mecha Sonic defeat / camera release. Distinct boss
+  and subsystem.
+- **Root cause:** When the boss is killed, the engine's S2 frame order runs touch-responses (inside
+  `tickPlayablePhysics`, LevelFrameStep step 2) BEFORE the object exec loop (step 3) the same frame.
+  `BossHitHandler.triggerDefeat()` flips `state.routine` to the defeat handler during the touch pass,
+  so without deferral `updateBossLogic` dispatched the defeat routine and decremented its countdown
+  the SAME frame the routine changed -- releasing Camera_Max_X_pos one frame early. ROM ObjAF (DEZ
+  Mecha/Silver Sonic) reads `routine(a0)` once at the top of its dispatch (docs/s2disasm/s2.asm:77412-77415);
+  loc_39CF0 sets `routine=$C` + `objoff_32=$FF` mid-frame (s2.asm:78003-78004); routine $C (loc_39B92)
+  first decrements `objoff_32` and releases the camera (loc_39BA4, s2.asm:77848-77857) only on the
+  NEXT frame.
+- **Fix:** `AbstractBossInstance` sets a one-frame `deferDefeatRoutineDispatch` flag in
+  `BossHitHandler.triggerDefeat()` (non-sequencer branch) and consumes it at the top of `update()` to
+  skip the first defeat-routine dispatch. File:
+  `src/main/java/com/openggf/level/objects/boss/AbstractBossInstance.java`.
+- **Same-game regression guard** (`TestS2Ehz1TraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay`,
+  single-fork): EHZ1 GREEN, SCZ GREEN, **WFZ REGRESSED**.
+  - **REGRESSION INTRODUCED:** S2 WFZ: GREEN -> first error frame 12886 (`camera_y` expected=0x0448
+    actual=0x0442). Confirmed by A/B: WFZ is green with the fix stashed, fails with it applied.
+    Root: the deferral is placed in the shared `AbstractBossInstance` base, so it also delays the WFZ
+    boss (ObjC5) defeat-timer (`objoff_30=$EF`) by one frame, shifting its post-defeat camera_y
+    release. ObjC5's defeat is set via `routine_secondary=$1E` in `ObjC5_NoHitPointsLeft`
+    (docs/s2disasm/s2.asm:81954-81962) -- a structurally different dispatch from ObjAF's main-`routine`
+    change -- and the engine's WFZ defeat timing was already correct (green) without the deferral. The
+    shared-level deferral double-counts a one-frame offset for WFZ. FOLLOW-UP: scope the deferral to
+    the DEZ boss (per-class hook) or re-derive the WFZ defeat-timer phase so both stay ROM-faithful.
+- Committed under the relaxed bar: genuine ROM-backed advance, same-game regression logged for
+  follow-up investigation rather than blocking the land.
+## 2026-06-04 - cnz2 f1784->f2172: Sonic_JumpHeight variable cap gates on jumping(a0), not held button
+
+- Branch `bugfix/ai-trace-s2-cnz2`, worktree `.worktrees/trace-s2-cnz2` (off develop `89ad6d7ae`).
+- Command (cmd.exe mvn.cmd inside worktree, forkCount=1):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** advanced, genuine, zero same-game regressions.
+- **Root cause:** `PlayableSpriteMovement.doJumpHeight()` gated the variable jump-height velocity
+  cap on the `jumpPressed` controller-loop latch (set whenever a jump button is held). ROM
+  `Sonic_JumpHeight` instead gates on the `jumping(a0)` status byte: `tst.b jumping(a0) /
+  beq.s Sonic_UpVelCap` (s2.asm:37410-37412 Sonic; s2.asm:40428-40429 Tails; identical in
+  s1disasm `_incObj/01 Sonic.asm`:1196-1197 and skdisasm sonic3k.asm:23366-23367 — universal).
+  A CNZ flipper (Obj86 `loc_2B290`, s2.asm:58366-58407) launches the sidekick upward by setting
+  in_air / clearing on_object / routine=2 / obj_control=0 but never sets `jumping`. The Tails CPU
+  also synthesizes A/B/C button bits into Ctrl_2 (~64-frame cadence, s2.asm:39342-39370), so the
+  held-button latch fired spuriously and wrongly applied the -0x400 cap to a flipper launch. With
+  jumping==0 the ROM takes Sonic_UpVelCap/Tails_UpVelCap (pinball bypass + -0xFC0 cap), so a
+  flipper launch slower than 0xFC0 receives only gravity.
+- **Fix:** branch `doJumpHeight()` on `sprite.isJumping()` (the ROM `jumping(a0)` byte) instead of
+  `jumpPressed`. Universal correction, no feature flag, no gameId/zone/route/frame carve-out;
+  shared movement code only.
+- **cnz2: f1784 -> f2172** (1271 errors). New first divergence f2172 is `y_speed` mismatch
+  (expected 0x0000, actual -0680) on a jump frame (jump=true) -- a separate downstream issue.
+- Same-game regression guard (single-fork): EHZ1, SCZ, WFZ all GREEN. Baseline (git stash) vs fixed:
+  identical S2 trace failure set {Arz2, Arz, Cnz2, Cnz, Cpz2, Cpz, DezEnding, Htz2, Htz, Mcz2} both
+  runs (passed=41 failed=22 in both). No same-game green regressed.
+## 2026-06-05 - mcz1 f2362->f2522: standing-still duck/look-up uses pre-friction inertia (CPU Tails spindash vs jump)
+
+- Branch `bugfix/ai-trace-s2-mcz1`, worktree `.worktrees/trace-s2-mcz1` (off develop `b78f3b3b9`).
+- Command (cmd.exe mvn inside worktree):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:/Users/farre/IdeaProjects/sonic-engine/s2.gen" "-Dtest=TestS2MczLevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** advanced, genuine, zero same/cross-game regressions (S1 Ghz1, S2 Ehz1 stay green;
+  S2 Cnz1 stays at its documented f3906 frontier; S3K Aiz stays at f8941).
+- **Root cause:** Sonic releases a spindash at f2360 and rockets right; CPU Tails replays Sonic's
+  delayed input ~16 frames later. At the frame the delayed jump-press arrives, the engine had already
+  flipped Tails into the Duck animation, so `doCheckSpindash` (anim==Duck + jump press) charged a
+  spindash instead of letting `doJump` fire. ROM order in `Obj02_MdNormal` is `Tails_CheckSpindash`
+  -> `Tails_Jump` -> `Tails_Move` (s2.asm:39594-39596): the duck animation is decided inside
+  `Tails_Move`/`Sonic_Move` from inertia tested with `tst.w inertia` BEFORE ground friction runs
+  (S2 s2.asm:36568 Sonic / 39689 Tails, S1 _incObj/01 Sonic.asm:373), while friction is applied later
+  in `Obj01_UpdateSpeedOnGround` (s2.asm:36768-36786). The engine evaluated the duck gate from the
+  POST-friction g_speed, so a sidekick whose inertia decayed to 0 this frame ducked one frame early
+  and met the spindash gate ahead of the jump.
+- **Fix:** Snapshot the pre-friction g_speed in `doGroundMove` (at the ROM `tst.w inertia` point) and
+  feed it to `updateCrouchState`'s standing-still gate instead of the live post-friction g_speed.
+  Shared player code change, ROM-accurate for all three games (Sonic and Tails both gate the
+  standing-still duck/look-up/balance on pre-friction inertia). No zone/route/frame/gameId carve-out.
+- **mcz1: f2362 -> f2522** (errors 455 -> 534). New first divergence f2522 is unrelated: CPU Tails
+  fails to land on/ride the MCZ moving platform (ROM onObj=0x12), drifts off-screen, and the engine's
+  `TailsCPU_CheckDespawn` teleports it to (0x4000,0) (s2.asm:39391-39400) where ROM keeps Tails riding.
+  That is a separate Tails platform-landing/riding cascade, deferred.
+
 ## 2026-06-04 - arz2 f549->f566: ChopChop (Obj91) X movement via ObjectMove subpixel integration
 
 - Branch `bugfix/ai-trace-s2-arz2`, worktree `.worktrees/trace-s2-arz2` (off develop `868249c0f`).
@@ -154,6 +380,39 @@
   f4009 but with FEWER errors (501), so the change is not a regression and slightly helps mcz2.
 - Frontier moved: mcz1 2181 -> 2362. No green trace regressed.
 
+## 2026-06-04 - cpz2 ADVANCED f2542->f2888: CPZ spin tube preserves waypoint subpixel fraction (ROM move.w) + reads live Timer_second for entry-path parity
+
+- Branch `bugfix/ai-trace-s2-cpz2`, worktree `.worktrees/trace-s2-cpz2`.
+- Command (cmd mvn inside worktree; ROM path parens-free):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** advanced (genuine). Targeted trace `target/trace-reports/s2_cpz2_report.json`.
+- **First error before:** f2542 `tails_y_speed` (expected=-00E3, actual=-00BA), 1041 errors.
+- **First error after:** f2888 `tails_x` (expected=0x10F8, actual=0x10F0), 1058 errors.
+- **Root cause (two ROM-state divergences in `CPZSpinTubeObjectInstance` / Obj1E):**
+  1. *Subpixel loss at waypoints.* ROM writes each tube waypoint with `move.w d4,x_pos(a1)` /
+     `move.w d5,y_pos(a1)` (loc_22688 s2.asm:48531-48545, loc_2271A s2.asm:48577-48586,
+     loc_227FE s2.asm:48655-48662) — a WORD write that preserves the 16-bit subpixel low word.
+     The engine snapped with `setCentreX/Y`, which zero `xSubpixel/ySubpixel`
+     (AbstractSprite.java:67-75). Tails' carried fraction was lost every waypoint, so its position
+     drifted from ROM (trace showed engine sub=(0000,0000) vs ROM sub=(D900,2F00) at f2542).
+  2. *Wrong timer source for entry-path parity.* ROM loc_2265E selects the timer-alternated entry
+     path via `move.b (Timer_second).w,d2 / andi.b #1,d2` (s2.asm:48499-48503) — the live on-screen
+     TIME seconds digit. The engine derived it from the raw replay frame counter (`frameCounter/60`),
+     which diverges from `Timer_second` because this act begins with a non-zero level timer. That
+     flipped the timer parity and selected entry PATH 0 instead of ROM's PATH 1; the two paths share
+     the same start waypoint but diverge one segment later (path0 seg2 yields cross-vel -0xBA,
+     path1 seg2 yields -0xE3 — exactly the f2542 symptom).
+- **Fix:** (1) the four waypoint snaps now use `setCentreXPreserveSubpixel/setCentreYPreserveSubpixel`
+  (AbstractSprite.java:82-93), mirroring the ROM word write. (2) `update()` reads
+  `services().levelGamestate().getElapsedSeconds()` for the timer parity instead of `frameCounter/60`;
+  since the value is only used as `& 1` and 60 is even, `(elapsedSeconds & 1) == (Timer_second & 1)`.
+  No zone/route/frame/gameId carve-out — Obj1E is an S2-only object and the change lives entirely in
+  that object class. Comparison-only (no trace hydration). `MTZSpinTubeObjectInstance` (Obj67) was
+  checked and needs neither fix: it already uses `NativePositionOps.write{X,Y}PosPreserveSubpixel`
+  for every waypoint and has no timer-based path-variant selection.
+- New first divergence f2888 is post-tube-EXIT: the main player has left object control
+  (`objCtrl=false`) and the ~8px `tails_x` / `-07E8` `x_speed` drift is in normal post-exit rolling
+  physics, a distinct subsystem from the tube object. Left to follow-up.
 ## 2026-06-04 - cpz2 ADVANCED f2518->f2542: CPZ spin tube runs its capture routine per-character (Sonic + sidekick), modelling ROM Obj1E_Main dual objoff_2C/objoff_36 dispatch
 
 - Branch `bugfix/ai-trace-s2-cpz2`, worktree `.worktrees/trace-s2-cpz2` (off develop `868249c0f`).

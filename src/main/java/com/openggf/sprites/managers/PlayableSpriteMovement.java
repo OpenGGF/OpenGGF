@@ -94,6 +94,17 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean inputRawLeft, inputRawRight;
 	private boolean facingFlipForcesPushClearAfterGroundWall;
 	private boolean wasCrouching;
+	// ROM Sonic_Move/Tails_Move decide the standing-still duck/look-up/balance
+	// animation from inertia BEFORE ground friction runs: the `tst.w inertia`
+	// gate (S1 _incObj/01 Sonic.asm:373, S2 s2.asm:36568 Sonic / 39689 Tails,
+	// S3K shares the convention) sits ahead of Obj01_UpdateSpeedOnGround's
+	// friction (s2.asm:36768-36786). The engine applies friction inside
+	// doGroundMove and then runs updateCrouchState, so the crouch decision must
+	// observe this pre-friction inertia snapshot rather than the post-friction
+	// g_speed. NO_PRE_FRICTION_SNAPSHOT marks "doGroundMove did not run this
+	// frame" so updateCrouchState falls back to the live g_speed.
+	private static final int NO_PRE_FRICTION_SNAPSHOT = Integer.MIN_VALUE;
+	private int preFrictionGroundSpeed = NO_PRE_FRICTION_SNAPSHOT;
 	private int staleHorizontalInputRideSlotIndex;
 	private int staleHorizontalInputSuppressFrames;
 	private int staleHorizontalInputRideFrames;
@@ -327,6 +338,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// distinguish "fresh slip honour the air state" from "stale move_lock
 		// from an earlier slip".
 		sprite.setSlopeRepelJustSlipped(false);
+
+		// Invalidate the pre-friction inertia snapshot at frame start; doGroundMove
+		// repopulates it before updateCrouchState consumes it (see field comment).
+		preFrictionGroundSpeed = NO_PRE_FRICTION_SNAPSHOT;
 
 		// Snapshot pre-physics state for per-object hooks running AFTER
 		// physics in the engine's frame order. ROM order runs cage/object
@@ -931,7 +946,26 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	/** Sonic_JumpHeight: Jump release velocity cap (s2.asm:37076) */
 	private void doJumpHeight() {
-		if (jumpPressed) {
+		// ROM gates the variable jump-height cap on the sprite's actual
+		// jumping(a0) status byte, NOT on the held jump button:
+		//   tst.b jumping(a0) / beq Sonic_UpVelCap
+		// (docs/s2disasm/s2.asm:37411-37412 Sonic_JumpHeight;
+		//  docs/s2disasm/s2.asm:40428-40429 Tails_JumpHeight;
+		//  docs/s1disasm/_incObj/01 Sonic.asm:1197-1198;
+		//  docs/skdisasm/sonic3k.asm:23366-23367 -- identical gate in all
+		//  three games, so this is a universal correction, no feature flag).
+		// Previously this branched on the `jumpPressed` controller-loop latch.
+		// That latch is set whenever a jump button is held (including the
+		// A/B/C bits TailsCPU_Normal_FilterAction synthesizes into Ctrl_2
+		// every ~64 frames, docs/s2disasm/s2.asm:39342-39370). A sidekick
+		// launched upward by a CNZ flipper (Obj86 loc_2B290 sets in_air,
+		// clears on_object, routine=2, obj_control=0, but never sets
+		// jumping, docs/s2disasm/s2.asm:58366-58407) was therefore wrongly
+		// receiving the -0x400 variable-height cap. ROM with jumping==0
+		// takes Sonic_UpVelCap/Tails_UpVelCap instead (pinball bypass +
+		// -0xFC0 cap, docs/s2disasm/s2.asm:37431-37436 / 40446-40451), so a
+		// slower-than-0xFC0 flipper launch only receives gravity.
+		if (sprite.isJumping()) {
 			short ySpeedCap = sprite.isInWater() ? (short) 0x200 : (short) 0x400;
 			if (sprite.getYSpeed() < -ySpeedCap && !inputJump) {
 				sprite.setYSpeed((short) -ySpeedCap);
@@ -1858,6 +1892,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				}
 			}
 		}
+
+		// Snapshot inertia at the ROM `tst.w inertia` point — i.e. before the
+		// ground friction below. ROM Sonic_Move/Tails_Move pick the standing-still
+		// duck/look-up animation from this pre-friction inertia (S1 _incObj/01
+		// Sonic.asm:373, S2 s2.asm:36568/39689) and only afterwards run
+		// Obj01_UpdateSpeedOnGround friction (s2.asm:36768-36786). updateCrouchState
+		// consumes this so a sidekick whose inertia decays to 0 this frame does not
+		// duck a frame early (S2 MCZ1 Tails spindash/jump divergence at f2362).
+		preFrictionGroundSpeed = gSpeed;
 
 		// Friction
 		// ROM ref: s2.asm:36443-36446 — Super Sonic uses normal friction (0x0C) not his profile friction (0x30)
@@ -3027,8 +3070,17 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		// ROM s2.asm:36237-36245: Balance/crouch/lookup checks happen when standing still
-		// on flat ground (angle + 0x20 & 0xC0 == 0) and not moving (inertia == 0)
-		boolean standingStill = sprite.getGSpeed() == 0 && isOnFlatGround()
+		// on flat ground (angle + 0x20 & 0xC0 == 0) and not moving (inertia == 0).
+		// ROM tests inertia BEFORE ground friction (S1 _incObj/01 Sonic.asm:373,
+		// S2 s2.asm:36568 Sonic / 39689 Tails, friction at s2.asm:36768-36786), so use
+		// the pre-friction snapshot captured in doGroundMove. Without it, a player
+		// whose inertia decays to 0 this frame ducks one frame early; for S2 CPU Tails
+		// that early duck flips Tails_CheckSpindash ahead of Tails_Jump (s2.asm:
+		// 39594-39596) so Tails spindashes instead of jumping (MCZ1 f2362).
+		short standingInertia = preFrictionGroundSpeed != NO_PRE_FRICTION_SNAPSHOT
+				? (short) preFrictionGroundSpeed
+				: sprite.getGSpeed();
+		boolean standingStill = standingInertia == 0 && isOnFlatGround()
 				&& !sprite.getAir() && !sprite.getRolling() && !sprite.getSpindash();
 
 		// Update balance state (checks for ledge edges)

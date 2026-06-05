@@ -8365,10 +8365,55 @@ public class ObjectManager {
             // for topSolidOnly so contacts always reach the vertical landing check.
             //
             // For SolidObjectFull (not topSolidOnly):
-            // ROM: cmp.w d1,d5; bhi.w SolidObject_TopBottom
-            //      cmpi.w #4,d1; bls.w SolidObject_TopBottom
-            // Side resolution only when horizontal penetration <= vertical AND
-            // vertical penetration > 4.
+            // ROM: cmp.w d1,d5; b{hi|ls} <branch by game>
+            //      cmpi.w #4,d1; b{ls|bls} <branch by game>
+            //
+            // Per-game divergence on the d1<=4 ("barely poking") boundary,
+            // gated by PhysicsFeatureSet#solidObjectBarelyPokingResolvesAsSide:
+            //
+            //   S3K (false): cmp d1,d5 / bhi.w loc_1E0D4 ; cmpi.w #4,d1 /
+            //     bls.w loc_1E0D4 — when d5<=d1 AND d1<=4, ROM goes to the
+            //     TOP/BOTTOM path (loc_1E0D4, sonic3k.asm:41463-41466,
+            //     41541-41546). Falls through to the vertical landing path.
+            //
+            //   S1/S2 (true): cmp d1,d5 / bhi <TopBottom> ; cmpi.w #4,d1 /
+            //     bls.s <SideAir> — when d5<=d1 AND d1<=4, ROM goes to
+            //     SolidObject_SideAir / Solid_SideAir (s2.asm:35404-35412;
+            //     s1disasm/_incObj/sub SolidObject.asm:181-184). SideAir
+            //     (s2.asm:35447-35453, s1 SolidObject.asm:211-214) does
+            //     bsr Solid_NotPushing then returns moveq #1,d4 — a SIDE
+            //     contact with NO position correction (no sub.w d0,x_pos) and
+            //     NO x_vel/inertia zeroing. The comment in the ROM explains
+            //     this lets the player walk over objects barely poking out of
+            //     the ground; it also lets MTZ Obj66 Spring Wall see
+            //     touchSide()=true while in_air and fire its -$800,-$800
+            //     diagonal bounce (s2.asm:53221-53232, loc_2704C at
+            //     s2.asm:53283-53340). Handled as a dedicated early return so
+            //     the full LeftRight side-effect path (which DOES correct
+            //     position and zero speed) is not entered.
+            if (!topSolidOnly
+                    && solidObjectBarelyPokingResolvesAsSide(player)
+                    && classifyAbsDistX <= absDistY
+                    && absDistY <= 4) {
+                // SolidObject_SideAir: clear push, no position/speed change.
+                // distX is the signed horizontal distance to the nearer edge;
+                // movingInto mirrors Solid_Left/Solid_Right intent but is NOT
+                // acted on here (SideAir skips StopCharacter entirely).
+                boolean leftSide = relX < halfWidth;
+                boolean movingInto = leftSide ? player.getXSpeed() > 0 : player.getXSpeed() < 0;
+                if (apply
+                        && isSignedObjectControlSideContactRejected(player, instance)) {
+                    return null;
+                }
+                // pushing=false: SideAir routes through Solid_NotPushing, which
+                // clears the push flags (s2.asm:35477-35482).
+                return SolidContact.side(false, distX, movingInto);
+            }
+
+            // ROM: SolidObject_LeftRight side resolution (S1/S2/S3K) when the
+            // horizontal penetration does not exceed the vertical and the
+            // vertical penetration is greater than 4. This is the pushing /
+            // stop-character path with position correction.
             if (!topSolidOnly && classifyAbsDistX <= absDistY && absDistY > 4) {
                 if (instance != null
                         && instance.getSpawn().objectId() == OBJ85_ID
@@ -8877,6 +8922,25 @@ public class ObjectManager {
             }
             PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
             return featureSet != null && featureSet.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity();
+        }
+
+        /**
+         * ROM: {@code SolidObject_cont} routes a barely-poking overlap
+         * ({@code d5 <= d1} with {@code d1 <= 4}) differently per game. S1/S2
+         * send it to {@code SolidObject_SideAir} / {@code Solid_SideAir}, which
+         * returns {@code moveq #1,d4} — a SIDE contact
+         * (s2.asm:35404-35412,35447-35453;
+         * s1disasm/_incObj/sub SolidObject.asm:181-184,211-214). S3K sends it to
+         * {@code loc_1E0D4}, the TOP/BOTTOM path
+         * (sonic3k.asm:41463-41466,41541-41546). Gated via
+         * {@link PhysicsFeatureSet#solidObjectBarelyPokingResolvesAsSide()}.
+         */
+        private boolean solidObjectBarelyPokingResolvesAsSide(PlayableEntity player) {
+            if (player == null) {
+                return false;
+            }
+            PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
+            return featureSet != null && featureSet.solidObjectBarelyPokingResolvesAsSide();
         }
 
         private boolean preservesEdgeSubpixelMotion(ObjectInstance instance) {
