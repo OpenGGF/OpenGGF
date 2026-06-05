@@ -1,5 +1,6 @@
 package com.openggf.game.rewind;
 
+import com.openggf.LevelFrameContext;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -120,7 +121,7 @@ public final class LiveRewindManager {
         inputSource = new LiveRewindInputSource();
         gameplayMode.installPlaybackController(
                 inputSource,
-                new LiveRewindStepper(inputSource, config),
+                new LiveRewindStepper(inputSource, config, () -> LevelFrameContext.from(gameplayMode)),
                 KEYFRAME_INTERVAL);
         rewindController = gameplayMode.getRewindController();
         installedGameplayMode = gameplayMode;

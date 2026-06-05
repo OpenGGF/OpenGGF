@@ -1,11 +1,13 @@
 package com.openggf.game.rewind;
 
+import com.openggf.LevelFrameContext;
 import com.openggf.LevelFrameStep;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.game.GameServices;
 
 import java.util.Objects;
+import java.util.function.Supplier;
 
 /**
  * Replays one recorded live-input row through the normal level frame step.
@@ -14,10 +16,14 @@ final class LiveRewindStepper implements RewindSeekAwareEngineStepper {
 
     private final LiveRewindInputSource inputs;
     private final SonicConfigurationService config;
+    private final Supplier<LevelFrameContext> frameContextSupplier;
 
-    LiveRewindStepper(LiveRewindInputSource inputs, SonicConfigurationService config) {
+    LiveRewindStepper(LiveRewindInputSource inputs,
+                      SonicConfigurationService config,
+                      Supplier<LevelFrameContext> frameContextSupplier) {
         this.inputs = Objects.requireNonNull(inputs, "inputs");
         this.config = Objects.requireNonNull(config, "config");
+        this.frameContextSupplier = Objects.requireNonNull(frameContextSupplier, "frameContextSupplier");
     }
 
     @Override
@@ -31,7 +37,7 @@ final class LiveRewindStepper implements RewindSeekAwareEngineStepper {
         Bk2FrameInput previous = inputs.read(Math.max(0, input.frameIndex() - 1));
         var replayInput = new RewindFrameInputHandler(config, input, previous);
         sprites.publishHeldInputForLevelEvents(replayInput);
-        LevelFrameStep.execute(level, camera, () -> sprites.update(replayInput));
+        LevelFrameStep.execute(frameContextSupplier.get(), level, camera, () -> sprites.update(replayInput));
     }
 
     @Override

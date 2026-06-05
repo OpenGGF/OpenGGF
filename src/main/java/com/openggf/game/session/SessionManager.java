@@ -11,6 +11,7 @@ public final class SessionManager {
     private static WorldSession currentWorldSession;
     private static GameplayModeContext currentGameplayMode;
     private static EditorModeContext currentEditorMode;
+    private static final EditorSessionFactory EDITOR_SESSION_FACTORY = new EditorSessionFactory();
 
     private SessionManager() {
     }
@@ -39,7 +40,8 @@ public final class SessionManager {
             throw new IllegalStateException("Cannot enter editor mode without an active world session.");
         }
         destroyCurrentMode();
-        currentEditorMode = new EditorModeContext(currentWorldSession, cursor, playtestStash);
+        currentEditorMode = EDITOR_SESSION_FACTORY.create(
+                currentWorldSession, EngineServices.current(), cursor, playtestStash);
         return currentEditorMode;
     }
 

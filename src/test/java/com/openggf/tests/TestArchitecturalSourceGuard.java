@@ -154,6 +154,14 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
+    void levelFrameStepDoesNotUseAmbientGameServices() throws IOException {
+        String source = Files.readString(SRC_MAIN.resolve("com/openggf/LevelFrameStep.java"));
+
+        assertTrue(!source.contains("GameServices."),
+                "LevelFrameStep must receive frame dependencies through LevelFrameContext, not GameServices");
+    }
+
+    @Test
     void objectArtDataDoesNotGainNewGameOrZoneSpecificSurface() throws IOException {
         String source = stripCommentsAndStrings(Files.readString(
                 SRC_MAIN.resolve("com/openggf/level/objects/ObjectArtData.java")));

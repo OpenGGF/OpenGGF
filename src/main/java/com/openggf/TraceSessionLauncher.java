@@ -488,7 +488,8 @@ public final class TraceSessionLauncher {
             }
             sprites.setPlaybackInputSuppressed(true);
             sprites.publishHeldInputForLevelEvents(loop.getInputHandler());
-            LevelFrameStep.execute(level, camera, () -> sprites.update(loop.getInputHandler()));
+            LevelFrameStep.execute(LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
+                    level, camera, () -> sprites.update(loop.getInputHandler()));
         }
 
         @Override

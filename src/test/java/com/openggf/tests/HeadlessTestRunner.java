@@ -1,5 +1,6 @@
 package com.openggf.tests;
 
+import com.openggf.LevelFrameContext;
 import com.openggf.LevelFrameStep;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
@@ -8,6 +9,7 @@ import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.game.GameServices;
 import com.openggf.game.TitleCardProvider;
+import com.openggf.game.session.SessionManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -119,7 +121,8 @@ public class HeadlessTestRunner {
         setKeyState(p2StartKey, p2Start);
 
         GameServices.sprites().publishHeldInputForLevelEvents(inputHandler);
-        LevelFrameStep.execute(levelManager, GameServices.camera(),
+        LevelFrameStep.execute(LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
+                levelManager, GameServices.camera(),
                 () -> GameServices.sprites().update(inputHandler));
         inputHandler.update();
     }

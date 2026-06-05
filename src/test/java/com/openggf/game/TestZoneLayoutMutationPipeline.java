@@ -3,6 +3,7 @@ package com.openggf.game;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
+import com.openggf.LevelFrameContext;
 import com.openggf.LevelFrameStep;
 import com.openggf.game.mutation.DirectLevelMutationSurface;
 import com.openggf.game.mutation.LayoutMutationContext;
@@ -258,11 +259,11 @@ class TestZoneLayoutMutationPipeline {
             return null;
         }).when(levelEvents).update();
 
-        LevelFrameStep.execute(levelManager, camera, () -> { });
+        LevelFrameStep.execute(LevelFrameContext.from(gameplayMode), levelManager, camera, () -> { });
         assertEquals("DEMIBP", log.toString(),
                 "queued gameplay mutations should flush after level events and before camera work");
 
-        LevelFrameStep.execute(levelManager, camera, () -> { });
+        LevelFrameStep.execute(LevelFrameContext.from(gameplayMode), levelManager, camera, () -> { });
         assertEquals("DEMIBPDEBP", log.toString(),
                 "queued mutation batch should be empty on the next frame while processDirtyRegions stays at frame start");
     }
