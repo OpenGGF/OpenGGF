@@ -59,9 +59,29 @@ public class WhispBadnikInstance extends AbstractBadnikInstance {
     private static final int ESCAPE_VELOCITY_Y = -0x200;  // Escape velocity Y (line 72705)
     private static final int INITIAL_CHASE_Y_VEL = -0x100; // Initial upward velocity when starting chase (line 72711)
 
+    // ROM Render_Sprites / BuildSprites on-screen culling parameters (s2.asm:30560-30621).
+    // The X test sets render_flags.on_screen when the object's render box overlaps
+    // the 320px-wide screen: (x_pos - cam_x + width_pixels) >= 0 AND
+    // (x_pos - cam_x - width_pixels) < screen_width. width_pixels for Obj8C is $C
+    // (subObjData ...,4,$C,$B at s2.asm:73223 -> the $C width field).
+    private static final int RENDER_WIDTH_PIXELS = 0x0C;   // width_pixels(a0) for Obj8C
+    private static final int SCREEN_WIDTH = 320;
+    // Obj8C is displayed with the approximate-Y check (level_fg, no explicit_height),
+    // which assumes a Y radius of 32px: on-screen in Y when
+    // (y_pos - cam_y) in [-32, screen_height+32) (s2.asm:30603-30609).
+    private static final int RENDER_Y_RADIUS = 32;
+    private static final int SCREEN_HEIGHT = 224;
+
     private State state;
     private int timer;
     private int attacksRemaining;
+
+    // ROM render_flags.on_screen bit. BuildSprites sets it at the END of a frame's
+    // display pass (s2.asm:30621), and Obj8C_WaitUntilOnscreen tests it at the
+    // START of the NEXT frame's object update (s2.asm:73138). We mirror that
+    // one-frame display-then-observe ordering with a deferred flag so the chase
+    // starts on the same frame the ROM does.
+    private boolean onScreenFlag;
 
     // Fixed-point position (8.8 format for subpixel accuracy)
     private int xPosFixed;
@@ -116,15 +136,36 @@ public class WhispBadnikInstance extends AbstractBadnikInstance {
      * When visible, decrement attacks and start chase (matching loc_36970 flow).
      */
     private void updateWaitOnscreen() {
-        Camera camera = services().camera();
-        int screenX = currentX - camera.getX();
-        int screenY = currentY - camera.getY();
-
-        // Check if on-screen (with some margin)
-        if (screenX >= -32 && screenX < 352 && screenY >= -32 && screenY < 256) {
-            // Transition to attack check (loc_36970 in disassembly)
+        // Obj8C_WaitUntilOnscreen (s2.asm:73138-73140): test render_flags.on_screen,
+        // and on a set bit branch to loc_36970 to begin the first attack. The flag
+        // reflects the PREVIOUS frame's BuildSprites pass, so we observe last frame's
+        // computed value first, then recompute it from this frame's geometry for the
+        // next frame. This deferred ordering is what aligns the engine's chase start
+        // with the ROM's (a live same-frame check started the chase ~2 frames early,
+        // drifting the Whisp ahead of ROM into Sonic's touch box -> ARZ frame 2169).
+        boolean wasOnScreen = onScreenFlag;
+        onScreenFlag = computeOnScreen();
+        if (wasOnScreen) {
             startNextAttackOrEscape();
         }
+    }
+
+    /**
+     * ROM BuildSprites on-screen culling for Obj8C (s2.asm:30560-30621). Sets the
+     * render_flags.on_screen bit when the object's render box overlaps the screen.
+     */
+    private boolean computeOnScreen() {
+        Camera camera = services().camera();
+        int screenX = currentX - camera.getX();
+        // X: (screenX + width) >= 0 && (screenX - width) < screen_width (s2.asm:30566-30571)
+        if (screenX + RENDER_WIDTH_PIXELS < 0) return false;
+        if (screenX - RENDER_WIDTH_PIXELS >= SCREEN_WIDTH) return false;
+        // Y: approximate check, radius 32 -> screenY in [-32, screen_height+32)
+        // (s2.asm:30603-30609)
+        int screenY = currentY - camera.getY();
+        if (screenY + RENDER_Y_RADIUS < 0) return false;
+        if (screenY - RENDER_Y_RADIUS >= SCREEN_HEIGHT) return false;
+        return true;
     }
 
     /**
@@ -147,13 +188,20 @@ public class WhispBadnikInstance extends AbstractBadnikInstance {
     }
 
     /**
-     * PAUSE state: Random 0-31 frame pause between attacks.
-     * When timer expires, go to attack check (loc_36970).
+     * PAUSE state: Random 0-31 frame pause between attacks
+     * (Obj8C_WaitUntilTimerExpires, routine 6, s2.asm:73145-73147).
+     *
+     * <p>ROM decrements the timer FIRST and branches to the attack check on
+     * underflow: {@code subq.b #1,obj8C_timer(a0) ; bmi.s loc_36970}. {@code bmi}
+     * fires only when the result is strictly negative, so a pause loaded with
+     * value P lasts P+1 frames. The previous {@code timer <= 0} test ended the
+     * pause one frame early (P frames per cycle). Using {@code timer < 0}
+     * reproduces the ROM {@code bmi} timing exactly.
      */
     private void updatePause() {
         timer--;
-        if (timer <= 0) {
-            // Timer expired - check attacks and start next chase
+        if (timer < 0) {
+            // Timer underflowed (bmi.s loc_36970) - check attacks and start next chase
             startNextAttackOrEscape();
         }
     }

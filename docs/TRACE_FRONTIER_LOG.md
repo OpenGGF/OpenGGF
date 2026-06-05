@@ -1,5 +1,23 @@
 # Trace Frontier Log
 
+## 2026-06-05 - S2 arz1 GREEN: Whisp (Obj8C) on-screen one-frame defer + bmi pause underflow
+
+- Branch `bugfix/ai-trace-s2-arz1`, worktree `.worktrees/trace-s2-arz1` (off develop `7a26823a2`).
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=...\s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status: PASS (GREEN).** First-error frame **2169 -> none** (0 errors / 0 warnings). Surefire: `Tests run: 1, Failures: 0, Errors: 0`.
+- **Root cause:** `WhispBadnikInstance` left WAIT_ONSCREEN on a live same-frame on-screen check, starting the
+  first chase ~2 frames early and drifting the Whisp ahead of the ROM into Sonic's touch box at frame 2169.
+  ROM `Obj8C_WaitUntilOnscreen` tests `render_flags.on_screen`, which `BuildSprites` sets at the END of the
+  PREVIOUS frame's display pass (docs/s2disasm/s2.asm:73142-73145, 30621). Fix mirrors that display-then-observe
+  ordering with a deferred flag and ports the ROM `BuildSprites` cull box exactly (X: 320px screen, width_pixels=$C
+  from subObjData s2.asm:73222 + s2.macros.asm:231-235, cull s2.asm:30564-30572; approximate-Y radius 32px vs 224px,
+  s2.asm:30597-30605). Also fixed the inter-attack pause to use `bmi` underflow: `subq.b #1,obj8C_timer ; bmi.s`
+  (s2.asm:73148-73150) lasts P+1 frames, so `timer <= 0` -> `timer < 0`. Per-object scope, no zone/gameId carve-out,
+  comparison-only invariant held.
+- **Same-game regression guard (PASS, zero regressions):**
+  `-Dtest=TestS2Ehz1TraceReplay,TestS2WfzLevelSelectTraceReplay` -> both `Failures: 0, Errors: 0`.
+
 ## 2026-06-05 - spilled-ring object model reconciled onto develop + Obj37 boundary-delete fix
 
 - Branch `feature/ai-spilled-ring-reconciled`, worktree `.worktrees/spilled-ring-reconciled` (off develop `2206ba626`).
