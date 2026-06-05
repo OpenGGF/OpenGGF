@@ -32,6 +32,25 @@ target rather than walking back the assertion.
 | `shared_layers_do_not_depend_on_game_specific_packages` | 81 | <=40 | `CrossGameFeatureProvider` donor construction and `ObjectManager` rewind dynamic-object recreation move behind shared provider/factory contracts |
 | `per_game_packages_do_not_cross_depend` | 37 | <=20 | Data-select preview loading, payload validation, and menu animation helpers extracted out of per-game packages |
 
+## Source Ratchets
+
+Some review findings are source-shape constraints rather than ArchUnit bytecode
+rules. These live in `TestArchitecturalSourceGuard` and use shrink-only budgets:
+the current count is the maximum, and reductions do not require a baseline
+refresh unless this document is updated to publish a lower target.
+
+| Rule | Baseline | Target | Trigger |
+|------|----------|--------|---------|
+| Root `Engine` / `GameLoop` concrete Sonic references | `Engine.java`: 13, `GameLoop.java`: 15 | 0 | Mode startup, data-select, bonus-stage, and debug special cases move behind module/provider contracts |
+| `ObjectManager` concrete Sonic references | 41 | 0 | Rewind dynamic-object recreation moves to game/module-registered codecs and factories |
+| Low-level graphics/audio gameplay `GameServices` lookups | 2 | 0 | Camera/fade state is passed through render orchestration or explicit context objects |
+| Root dispatcher method sizes | `Engine.draw`: 182, `Engine.init`: 180, `Engine.display`: 174, `GameLoop.stepInternal`: 567, `GameLoop.doExitBonusStage`: 142, `GameLoop.updateSpecialStageInput`: 101, `GameLoop.loadEndingDemoZone`: 95, `GameLoop.enterTitleCardFromResults`: 91, `GameLoop.enterBonusStage`: 86 | Decrease each touched method | Mode/render responsibilities extract into focused controllers without growing the root dispatchers |
+
+When a source ratchet fails, prefer moving the new dependency behind an existing
+provider, service context, codec registry, or mode collaborator. Raising a
+budget should be treated like accepting a new architecture exception: document
+the reason and the next removal step in the same commit.
+
 ## Published Baseline Counts
 
 These counts are mechanically checked against `src/test/resources/archunit/frozen/stored.rules`

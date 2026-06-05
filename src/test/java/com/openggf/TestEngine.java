@@ -139,10 +139,14 @@ class TestEngine {
 
         S1DataSelectImageCacheManager manager = module.getGameService(S1DataSelectImageCacheManager.class);
         S1DataSelectImageCacheManager secondLookup = module.getGameService(S1DataSelectImageCacheManager.class);
+        Optional<com.openggf.game.startup.DonatedDataSelectWarmupTask> warmup =
+                module.getDonatedDataSelectWarmupTask();
 
         assertNotNull(manager);
         assertTrue(manager instanceof Sonic1GameModule.S1DataSelectImageWarmup);
         assertSame(manager, secondLookup);
+        assertTrue(warmup.isPresent());
+        assertSame(manager, warmup.orElseThrow());
     }
 
     @Test
@@ -152,10 +156,14 @@ class TestEngine {
 
         S2DataSelectImageCacheManager manager = module.getGameService(S2DataSelectImageCacheManager.class);
         S2DataSelectImageCacheManager secondLookup = module.getGameService(S2DataSelectImageCacheManager.class);
+        Optional<com.openggf.game.startup.DonatedDataSelectWarmupTask> warmup =
+                module.getDonatedDataSelectWarmupTask();
 
         assertNotNull(manager);
         assertTrue(manager instanceof Sonic2GameModule.S2DataSelectImageWarmup);
         assertSame(manager, secondLookup);
+        assertTrue(warmup.isPresent());
+        assertSame(manager, warmup.orElseThrow());
     }
 
     @Test
@@ -264,7 +272,8 @@ class TestEngine {
     }
 
     private static final class TrackingS1ImageCacheManager extends S1DataSelectImageCacheManager
-            implements Sonic1GameModule.S1DataSelectImageWarmup {
+            implements Sonic1GameModule.S1DataSelectImageWarmup,
+            com.openggf.game.startup.DonatedDataSelectWarmupTask {
         int ensureStartedCalls;
         final AtomicInteger renderTaskRuns = new AtomicInteger();
         private final GraphicsManager graphics;
@@ -284,6 +293,16 @@ class TestEngine {
                 renderTaskRuns.incrementAndGet();
                 return 42;
             });
+        }
+
+        @Override
+        public void start() {
+            ensureGenerationStarted();
+        }
+
+        @Override
+        public boolean isRunning() {
+            return false;
         }
     }
 
@@ -322,6 +341,11 @@ class TestEngine {
                     return type.cast(cacheManager);
                 }
                 return super.getGameService(type);
+            }
+
+            @Override
+            public Optional<com.openggf.game.startup.DonatedDataSelectWarmupTask> getDonatedDataSelectWarmupTask() {
+                return Optional.of(cacheManager);
             }
         };
 

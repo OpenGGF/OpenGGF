@@ -36,6 +36,8 @@ import com.openggf.debug.PerformanceProfiler;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
+import com.openggf.game.mode.BootScreenModeController;
+import com.openggf.game.mode.MenuScreenModeController;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.rewind.LiveRewindManager;
 import com.openggf.game.startup.DataSelectPresentationResolution;
@@ -122,6 +124,8 @@ public class GameLoop {
     private final PlaybackDebugManager playbackDebugManager;
     private final LiveRewindManager liveRewindManager;
     private final StartupRouteResolver startupRouteResolver = new StartupRouteResolver();
+    private final BootScreenModeController bootScreenModeController = new BootScreenModeController();
+    private final MenuScreenModeController menuScreenModeController = new MenuScreenModeController();
     private final PresenceManager presenceManager;
 
     // The active session-owned gameplay mode. Cached fields above are sourced from this context.
@@ -487,33 +491,25 @@ public class GameLoop {
         // Legal disclaimer screen mode - runs before master title screen.
         // Must be checked before pause handling since keys trigger dismissal.
         if (currentGameMode == GameMode.LEGAL_DISCLAIMER) {
-            LegalDisclaimerScreen disclaimer = legalDisclaimerSupplier != null
-                    ? legalDisclaimerSupplier.get()
-                    : null;
-            if (disclaimer != null) {
-                disclaimer.update(inputHandler);
-                if (disclaimer.isDismissed() && legalDisclaimerExitHandler != null) {
-                    legalDisclaimerExitHandler.run();
-                    legalDisclaimerExitHandler = null;
-                }
-            }
-            inputHandler.update();
+            bootScreenModeController.updateLegalDisclaimer(
+                    legalDisclaimerSupplier != null ? legalDisclaimerSupplier.get() : null,
+                    inputHandler,
+                    () -> {
+                        if (legalDisclaimerExitHandler != null) {
+                            legalDisclaimerExitHandler.run();
+                            legalDisclaimerExitHandler = null;
+                        }
+                    });
             return;
         }
 
         // Master title screen mode - runs before any ROM/game systems are loaded.
         // Must be checked before pause handling since Enter is both confirm and pause.
         if (currentGameMode == GameMode.MASTER_TITLE_SCREEN) {
-            MasterTitleScreen masterScreen = masterTitleScreenSupplier != null
-                    ? masterTitleScreenSupplier.get()
-                    : null;
-            if (masterScreen != null) {
-                masterScreen.update(inputHandler);
-                if (masterScreen.isGameSelected()) {
-                    exitMasterTitleScreen(masterScreen);
-                }
-            }
-            inputHandler.update();
+            bootScreenModeController.updateMasterTitle(
+                    masterTitleScreenSupplier != null ? masterTitleScreenSupplier.get() : null,
+                    inputHandler,
+                    this::exitMasterTitleScreen);
             return;
         }
 
@@ -607,173 +603,29 @@ public class GameLoop {
             handleBonusStageDebugKey(debugBonusType);
         }
 
+        // Per-mode update dispatch. Each branch delegates to a cohesive handler
+        // that preserves the original frame ordering, profiler bracketing, and
+        // early-return semantics. SPECIAL_STAGE / SPECIAL_STAGE_RESULTS fall
+        // through to the shared post-update tail; the screen modes early-return.
         if (currentGameMode == GameMode.SPECIAL_STAGE) {
-            SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
-
-            // Debug: X key = next stage within current set
-            if (isUnmodifiedDebugKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_X)) {
-                ssProvider.debugNextStage();
-            }
-            // Debug: Z key = switch layout set (S3 ↔ SK)
-            if (isUnmodifiedDebugKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_Z)) {
-                ssProvider.debugToggleLayoutSet();
-            }
-
-            // Debug complete special stage with emerald (for testing results screen)
-            if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_COMPLETE_KEY))) {
-                debugCompleteSpecialStageWithEmerald();
-            }
-
-            // Debug fail special stage (for testing results screen without emerald)
-            if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_FAIL_KEY))) {
-                debugFailSpecialStage();
-            }
-
-            // Toggle sprite frame debug viewer (shows all animation frames)
-            if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_SPRITE_DEBUG_KEY))) {
-                ssProvider.toggleSpriteDebugMode();
-            }
-
-            // Cycle special stage plane visibility (A/B/both/off)
-            if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_PLANE_DEBUG_KEY))) {
-                ssProvider.cyclePlaneDebugMode();
-            }
-
-            // Handle sprite debug viewer navigation (uses configured movement keys)
-            if (ssProvider.isSpriteDebugMode()) {
-                SpecialStageDebugProvider debugProvider = ssProvider.getDebugProvider();
-                if (debugProvider != null) {
-                    // Left/Right: Change page within current graphics set
-                    if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.RIGHT))) {
-                        debugProvider.nextPage();
-                    }
-                    if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.LEFT))) {
-                        debugProvider.previousPage();
-                    }
-                    // Up/Down: Cycle between graphics sets
-                    if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.DOWN))) {
-                        debugProvider.nextSet();
-                    }
-                    if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.UP))) {
-                        debugProvider.previousSet();
-                    }
-                }
-            }
-
-            updateSpecialStageInput();
-            ssProvider.update();
-
-            // Check for special stage completion or failure
-            if (ssProvider.isFinished()) {
-                boolean gotEmerald = ssProvider.isEmeraldCollected();
-                enterResultsScreen(gotEmerald);
-            }
+            updateSpecialStageMode();
         } else if (currentGameMode == GameMode.SPECIAL_STAGE_RESULTS) {
-            // Update results screen
-            resultsFrameCounter++;
-            if (resultsScreen != null) {
-                resultsScreen.update(resultsFrameCounter, null);
-                if (resultsScreen.isComplete()) {
-                    exitResultsScreen();
-                }
-            }
+            updateSpecialStageResultsMode();
         } else if (currentGameMode == GameMode.TITLE_CARD) {
-            // Update title card animation
-            TitleCardProvider tcpCard = getTitleCardProviderLazy();
-            if (tcpCard != null) {
-                tcpCard.update();
+            if (!updateTitleCardMode(doFrameStep)) {
+                return; // Still in the locked title-card phase; LEVEL logic deferred.
             }
-
-            // From disassembly lines 5073-5078: control is released at the START of
-            // TEXT_WAIT,
-            // not when the title card is complete. This allows the player to move while the
-            // text is still visible on screen.
-            if (tcpCard == null || tcpCard.shouldReleaseControl()) {
-                exitTitleCard();
-                // Continue to LEVEL mode processing this frame (fall through)
-            } else {
-                // Still in locked phase. The work performed differs by game,
-                // matching the ROM title-card wait loops:
-                //
-                //   S1  Level_TtlCardLoop (sonic.asm:2766-2794) -> ExecuteObjects
-                //                                                  + BuildSprites + RunPLC
-                //                                                  (NO camera, NO level events)
-                //   S2  Level_TtlCard     (s2.asm:4914-4924)    -> RunObjects + BuildSprites
-                //                                                  + RunPLC_RAM (camera ticks
-                //                                                  via VInt routine)
-                //   S3K title-card wait   (sonic3k.asm:7737-7748) -> Process_Sprites
-                //                                                  + Render_Sprites
-                //                                                  (NO camera, NO level events)
-                //
-                // The {@link TitleCardProvider#shouldRunPlayerPhysics()} gate
-                // selects per-game behaviour:
-                //   - S2 ROM advances player object slots through RunObjects
-                //     during Level_TtlCard so Sonic settles onto the Tornado
-                //     in SCZ. Use the full LevelFrameStep canonical order
-                //     (objects + camera + dynamic events + parallax + water).
-                //   - S1/S3K ROMs run a minimal wait loop that ticks objects
-                //     only — no camera update, no level events, no scroll.
-                //     Use the legacy minimal pre-orchestration path so the
-                //     S3K AIZ trace and S1 Level_TtlCardLoop parity hold.
-                beginGameplayAudioFrameForTick();
-                if (tcpCard.shouldRunPlayerPhysics()) {
-                    // S2: full title-card frame step.
-                    spriteManager.publishHeldInputForLevelEvents(inputHandler);
-                    LevelFrameStep.execute(LevelFrameContext.from(gameplayMode),
-                            levelManager, camera, () -> spriteManager.update(inputHandler),
-                            (name, step) -> {
-                                profiler.beginSection(name);
-                                step.run();
-                                profiler.endSection(name);
-                            });
-                } else {
-                    // S1/S3K: ROM TitleCard_Main / Level_TtlCardLoop runs
-                    // ExecuteObjects only -- no camera tick, no level-event
-                    // routines, no scroll update.
-                    levelManager.updateObjectPositions();
-                    camera.updatePosition(true);
-                }
-                advanceGameplayAudioFrameForTick(doFrameStep);
-                profiler.endSection("input");
-                return; // Don't process LEVEL mode logic yet
-            }
+            // Title card released control this frame: fall through to LEVEL mode.
         } else if (currentGameMode == GameMode.TITLE_SCREEN) {
-            // Update title screen
-            TitleScreenProvider titleScreen = getTitleScreenProviderLazy();
-            if (titleScreen != null) {
-                titleScreen.update(inputHandler);
-
-                if (titleScreen.isExiting() && !fadeManager.isActive()) {
-                    exitTitleScreen();
-                }
-            }
-            inputHandler.update();
+            updateTitleScreenMode();
             profiler.endSection("input");
             return; // Don't process LEVEL mode logic
         } else if (currentGameMode == GameMode.LEVEL_SELECT) {
-            // Update level select screen
-            LevelSelectProvider levelSelect = getLevelSelectProviderLazy();
-            if (levelSelect != null) {
-                levelSelect.update(inputHandler);
-
-                // Check if user made a selection
-                if (levelSelect.isExiting()) {
-                    exitLevelSelect();
-                }
-            }
-            inputHandler.update();
+            updateLevelSelectMode();
             profiler.endSection("input");
             return; // Don't process LEVEL mode logic
         } else if (currentGameMode == GameMode.DATA_SELECT) {
-            // Update data select screen (S3K save slot selection)
-            DataSelectProvider dataSelect = getDataSelectProviderLazy();
-            if (dataSelect != null) {
-                dataSelect.update(inputHandler);
-                if (dataSelect.isExiting()) {
-                    exitDataSelect();
-                }
-            }
-            inputHandler.update();
+            updateDataSelectMode();
             profiler.endSection("input");
             return; // Don't process LEVEL mode logic
         } else if (currentGameMode == GameMode.CREDITS_TEXT
@@ -790,222 +642,11 @@ public class GameLoop {
 
         // LEVEL mode (or just transitioned from TITLE_CARD)
         if (currentGameMode == GameMode.LEVEL) {
-            // Continue updating title card overlay if still active
-            // (TEXT_WAIT and TEXT_EXIT phases where player can move but text is still
-            // visible)
-            TitleCardProvider tcp = getTitleCardProviderLazy();
-            if (tcp != null && tcp.isOverlayActive()) {
-                tcp.update();
-            }
-
-            // Handle in-place seamless transitions before fade-based routes.
-            SeamlessLevelTransitionRequest seamlessRequest = levelManager.consumeSeamlessTransitionRequest();
-            if (seamlessRequest != null) {
-                levelManager.applySeamlessTransition(seamlessRequest);
-                if (levelManager.consumeInLevelTitleCardRequest()) {
-                    enterInLevelTitleCard(levelManager.getInLevelTitleCardZone(), levelManager.getInLevelTitleCardAct());
-                }
-                updateNonGameplayAudio(doFrameStep);
-                // Trace playback still consumes one BK2/VBlank row on a
-                // transition-only frame. Headless replay advances its movie
-                // cursor after applySeamlessTransition(); keep the live
-                // comparator cursor aligned with the same ordering.
-                playbackDebugManager.onLevelFrameAdvanced();
-                TraceSessionLauncher traceSession = TraceSessionLauncher.active();
-                if (traceSession != null) {
-                    traceSession.recordExternalRewindFrame();
-                } else {
-                    liveRewindManager.resetBufferAtCurrentFrame(currentGameMode);
-                }
-                return;
-            }
-
-            // Trigger transparent in-level title card overlays (no mode switch).
-            if (levelManager.consumeInLevelTitleCardRequest()) {
-                enterInLevelTitleCard(levelManager.getInLevelTitleCardZone(), levelManager.getInLevelTitleCardAct());
-            }
-
-            // Check if a title card was requested (new level loaded)
-            if (levelManager.consumeTitleCardRequest()) {
-                enterTitleCard(levelManager.getTitleCardZone(), levelManager.getTitleCardAct());
-                updateNonGameplayAudio(doFrameStep);
-                return; // Skip normal level update this frame
-            }
-
-            // Check for transition requests that need fade-to-black
-            FadeManager fadeManager = this.fadeManager;
-            if (!fadeManager.isActive()) {
-                if (levelManager.consumeRespawnRequest()) {
-                    startRespawnFade();
-                    updateNonGameplayAudio(doFrameStep);
-                    return;
-                }
-                if (levelManager.consumeNextActRequest()) {
-                    startNextActFade();
-                    updateNonGameplayAudio(doFrameStep);
-                    return;
-                }
-                if (levelManager.consumeNextZoneRequest()) {
-                    startNextZoneFade();
-                    updateNonGameplayAudio(doFrameStep);
-                    return;
-                }
-                if (levelManager.consumeZoneActRequest()) {
-                    startZoneActFade(levelManager.getRequestedZone(), levelManager.getRequestedAct());
-                    updateNonGameplayAudio(doFrameStep);
-                    return;
-                }
-                if (levelManager.consumeCreditsRequest()) {
-                    startEndingFade();
-                    updateNonGameplayAudio(doFrameStep);
-                    return;
-                }
-            }
-
-            boolean freezeForArtViewer = debugOverlayManager.isEnabled(DebugOverlayToggle.OBJECT_ART_VIEWER);
-            // Freeze level updates during special/bonus stage entry transitions
-            boolean freezeForSpecialStage = specialStageTransitionPending;
-            boolean freezeForBonusStage = bonusStageTransitionPending;
-            // ObjB2 transition parity: freeze gameplay during pending zone-act fade.
-            boolean freezeForZoneActTransition = levelManager.isLevelInactiveForTransition();
-            if (!freezeForArtViewer && !freezeForSpecialStage && !freezeForBonusStage && !freezeForZoneActTransition) {
-                beginGameplayAudioFrameForTick();
-                // LiveTraceComparator (or any PlaybackFrameObserver) may ask
-                // us to skip the gameplay tick on ROM lag frames so the
-                // engine and trace stay aligned. Cursor advance still runs
-                // via onLevelFrameAdvanced below.
-                boolean skipGameplay = playbackDebugManager.shouldSkipCurrentGameplayTick();
-                if (!skipGameplay) {
-                    // Canonical level tick sequence — see LevelFrameStep for ordering rationale.
-                    spriteManager.publishHeldInputForLevelEvents(inputHandler);
-                    LevelFrameStep.execute(LevelFrameContext.from(gameplayMode),
-                            levelManager, camera, () -> spriteManager.update(inputHandler),
-                            (name, step) -> {
-                                profiler.beginSection(name);
-                                step.run();
-                                profiler.endSection(name);
-                            });
-                } else if (levelManager.getObjectManager() != null) {
-                    // ROM v_vbla_byte increments in VBlank even on rows where
-                    // LevelLoop did not run. Headless trace replay mirrors
-                    // this in HeadlessTestRunner.skipFrameFromRecording();
-                    // live visual trace mode must do the same or object timing
-                    // gates enter gameplay hundreds of VBlanks behind.
-                    levelManager.getObjectManager().advanceVblaCounter();
-                }
-                advanceGameplayAudioFrameForTick(doFrameStep);
-                // Fire the BK2-advance callback either way — on both real
-                // gameplay ticks and lag-gated skips — so the observer's
-                // cursor always matches the BK2 cursor. onLevelFrameAdvanced
-                // is a no-op when no playback session is active.
-                playbackDebugManager.onLevelFrameAdvanced();
-                TraceSessionLauncher traceSession = TraceSessionLauncher.active();
-                if (traceSession != null) {
-                    traceSession.recordExternalRewindFrame();
-                } else {
-                    liveRewindManager.recordExternalFrame(currentGameMode, inputHandler);
-                }
-
-                // Check if a checkpoint star requested a special stage
-                if (levelManager.consumeSpecialStageRequest()) {
-                    enterSpecialStage();
-                }
-
-                // Check if a bonus star requested a bonus stage
-                BonusStageType bonusRequest = levelManager.consumeBonusStageRequest();
-                if (bonusRequest != null) {
-                    enterBonusStage(bonusRequest);
-                }
-
-                // Drive the trace session completion-hold + auto-fade state.
-                traceSession = TraceSessionLauncher.active();
-                if (traceSession != null) {
-                    traceSession.tick();
-                }
-            } else {
-                updateNonGameplayAudio(doFrameStep);
-            }
-
-            // Debug keys for level transitions (use request system for fade)
-            if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.NEXT_ACT))) {
-                levelManager.requestNextAct();
-            }
-
-            if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.NEXT_ZONE))) {
-                // DEZ: skip to ending cutscene instead of next zone
-                if (levelManager.getRomZoneId() == 0x0E) {
-                    levelManager.requestCreditsTransition();
-                } else {
-                    levelManager.requestNextZone();
-                }
-            }
-
-            // Debug: Teleport to last checkpoint (END key, only in LEVEL mode)
-            if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.DEBUG_LAST_CHECKPOINT_KEY))) {
-                teleportToLastCheckpoint();
-            }
-
-            // Level select key (F9 by default)
-            if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.LEVEL_SELECT_KEY))) {
-                enterLevelSelect();
-            }
-
-            if (isUnmodifiedDebugKeyPressed(
-                    configService.getInt(SonicConfiguration.CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY))) {
-                logCurrentPreviewCaptureOverride();
+            if (!updateLevelMode(doFrameStep)) {
+                return; // LEVEL mode requested a transition/fade; skip the per-frame tail.
             }
         } else if (currentGameMode == GameMode.BONUS_STAGE) {
-            // Continue updating title card overlay during bonus stage
-            // (EXIT phase: elements slide off screen after exitTitleCard transitioned here)
-            TitleCardProvider bonusTcp = getTitleCardProviderLazy();
-            if (bonusTcp != null && bonusTcp.isOverlayActive()) {
-                bonusTcp.update();
-            }
-
-            if (levelManager.getRomZoneId() == Sonic3kZoneIds.ZONE_GLOWING_SPHERE) {
-                ensureBonusStageBootstrapObjectPresent(BonusStageType.GLOWING_SPHERE);
-            }
-
-            // Bonus stage runs the same level frame steps as LEVEL mode
-            boolean freezeForBonusExit = bonusStageTransitionPending;
-            if (!freezeForBonusExit) {
-                beginGameplayAudioFrameForTick();
-                spriteManager.publishHeldInputForLevelEvents(inputHandler);
-                LevelFrameStep.execute(LevelFrameContext.from(gameplayMode), levelManager, camera, () -> {
-                    spriteManager.update(inputHandler);
-                }, (name, step) -> {
-                    profiler.beginSection(name);
-                    step.run();
-                    profiler.endSection(name);
-                });
-
-                // ROM lines 127411-127412: player art_tile priority bit stays HIGH throughout
-                // the bonus stage. Must be set AFTER the sprite update (which runs inside
-                // LevelFrameStep.execute) because setAir(false) on hurt-landing clears it.
-                forcePlayerHighPriorityInBonusStage();
-
-                // Notify coordinator of frame tick
-                if (activeBonusStageProvider != null && !activeBonusStageProvider.updateDuringLevelFrame()) {
-                    activeBonusStageProvider.onFrameUpdate();
-                }
-
-                // Check bonus stage completion
-                if (activeBonusStageProvider != null && activeBonusStageProvider.isStageComplete()) {
-                    exitBonusStage();
-                }
-                advanceGameplayAudioFrameForTick(doFrameStep);
-            } else {
-                updateNonGameplayAudio(doFrameStep);
-            }
-
-            // Debug: F11 cycles through bucket/priority isolation for the gumball machine
-            if (isUnmodifiedDebugKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_F11)) {
-                com.openggf.game.sonic3k.objects.GumballMachineObjectInstance.cycleDebugFilter();
-            }
-            // Debug: Insert cycles through gumball child-source isolation without colliding with overlay F-keys.
-            if (isUnmodifiedDebugKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_INSERT)) {
-                com.openggf.game.sonic3k.objects.GumballMachineObjectInstance.cycleDebugSourceFilter();
-            }
+            updateBonusStageMode(doFrameStep);
         }
 
         // Post-update hook for the trace test-mode camera focus controller.
@@ -1018,6 +659,435 @@ public class GameLoop {
         }
 
         inputHandler.update();
+    }
+
+    /**
+     * SPECIAL_STAGE per-frame update: debug shortcuts, sprite-debug navigation,
+     * the special-stage input/update tick, and the completion → results-screen
+     * handoff. Falls through (no early return) to the shared post-update tail,
+     * matching the original dispatcher.
+     */
+    private void updateSpecialStageMode() {
+        SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
+
+        // Debug: X key = next stage within current set
+        if (isUnmodifiedDebugKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_X)) {
+            ssProvider.debugNextStage();
+        }
+        // Debug: Z key = switch layout set (S3 ↔ SK)
+        if (isUnmodifiedDebugKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_Z)) {
+            ssProvider.debugToggleLayoutSet();
+        }
+
+        // Debug complete special stage with emerald (for testing results screen)
+        if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_COMPLETE_KEY))) {
+            debugCompleteSpecialStageWithEmerald();
+        }
+
+        // Debug fail special stage (for testing results screen without emerald)
+        if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_FAIL_KEY))) {
+            debugFailSpecialStage();
+        }
+
+        // Toggle sprite frame debug viewer (shows all animation frames)
+        if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_SPRITE_DEBUG_KEY))) {
+            ssProvider.toggleSpriteDebugMode();
+        }
+
+        // Cycle special stage plane visibility (A/B/both/off)
+        if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_PLANE_DEBUG_KEY))) {
+            ssProvider.cyclePlaneDebugMode();
+        }
+
+        // Handle sprite debug viewer navigation (uses configured movement keys)
+        if (ssProvider.isSpriteDebugMode()) {
+            SpecialStageDebugProvider debugProvider = ssProvider.getDebugProvider();
+            if (debugProvider != null) {
+                // Left/Right: Change page within current graphics set
+                if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.RIGHT))) {
+                    debugProvider.nextPage();
+                }
+                if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.LEFT))) {
+                    debugProvider.previousPage();
+                }
+                // Up/Down: Cycle between graphics sets
+                if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.DOWN))) {
+                    debugProvider.nextSet();
+                }
+                if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.UP))) {
+                    debugProvider.previousSet();
+                }
+            }
+        }
+
+        updateSpecialStageInput();
+        ssProvider.update();
+
+        // Check for special stage completion or failure
+        if (ssProvider.isFinished()) {
+            boolean gotEmerald = ssProvider.isEmeraldCollected();
+            enterResultsScreen(gotEmerald);
+        }
+    }
+
+    /**
+     * SPECIAL_STAGE_RESULTS per-frame update: advances the results screen and
+     * exits when complete. Falls through to the shared post-update tail.
+     */
+    private void updateSpecialStageResultsMode() {
+        // Update results screen
+        resultsFrameCounter++;
+        if (resultsScreen != null) {
+            resultsScreen.update(resultsFrameCounter, null);
+            if (resultsScreen.isComplete()) {
+                exitResultsScreen();
+            }
+        }
+    }
+
+    /**
+     * TITLE_CARD per-frame update.
+     *
+     * @return {@code true} if the title card released control this frame (caller
+     *         should fall through to LEVEL-mode processing), {@code false} if the
+     *         card is still in its locked phase (caller must return — this method
+     *         has already closed the {@code "input"} profiler section).
+     */
+    private boolean updateTitleCardMode(boolean doFrameStep) {
+        // Update title card animation
+        TitleCardProvider tcpCard = getTitleCardProviderLazy();
+        if (tcpCard != null) {
+            tcpCard.update();
+        }
+
+        // From disassembly lines 5073-5078: control is released at the START of
+        // TEXT_WAIT,
+        // not when the title card is complete. This allows the player to move while the
+        // text is still visible on screen.
+        if (tcpCard == null || tcpCard.shouldReleaseControl()) {
+            exitTitleCard();
+            // Continue to LEVEL mode processing this frame (fall through)
+            return true;
+        }
+        // Still in locked phase. The work performed differs by game,
+        // matching the ROM title-card wait loops:
+        //
+        //   S1  Level_TtlCardLoop (sonic.asm:2766-2794) -> ExecuteObjects
+        //                                                  + BuildSprites + RunPLC
+        //                                                  (NO camera, NO level events)
+        //   S2  Level_TtlCard     (s2.asm:4914-4924)    -> RunObjects + BuildSprites
+        //                                                  + RunPLC_RAM (camera ticks
+        //                                                  via VInt routine)
+        //   S3K title-card wait   (sonic3k.asm:7737-7748) -> Process_Sprites
+        //                                                  + Render_Sprites
+        //                                                  (NO camera, NO level events)
+        //
+        // The {@link TitleCardProvider#shouldRunPlayerPhysics()} gate
+        // selects per-game behaviour:
+        //   - S2 ROM advances player object slots through RunObjects
+        //     during Level_TtlCard so Sonic settles onto the Tornado
+        //     in SCZ. Use the full LevelFrameStep canonical order
+        //     (objects + camera + dynamic events + parallax + water).
+        //   - S1/S3K ROMs run a minimal wait loop that ticks objects
+        //     only — no camera update, no level events, no scroll.
+        //     Use the legacy minimal pre-orchestration path so the
+        //     S3K AIZ trace and S1 Level_TtlCardLoop parity hold.
+        beginGameplayAudioFrameForTick();
+        if (tcpCard.shouldRunPlayerPhysics()) {
+            // S2: full title-card frame step.
+            spriteManager.publishHeldInputForLevelEvents(inputHandler);
+            LevelFrameStep.execute(LevelFrameContext.from(gameplayMode),
+                    levelManager, camera, () -> spriteManager.update(inputHandler),
+                    (name, step) -> {
+                        profiler.beginSection(name);
+                        step.run();
+                        profiler.endSection(name);
+                    });
+        } else {
+            // S1/S3K: ROM TitleCard_Main / Level_TtlCardLoop runs
+            // ExecuteObjects only -- no camera tick, no level-event
+            // routines, no scroll update.
+            levelManager.updateObjectPositions();
+            camera.updatePosition(true);
+        }
+        advanceGameplayAudioFrameForTick(doFrameStep);
+        profiler.endSection("input");
+        return false; // Don't process LEVEL mode logic yet
+    }
+
+    /**
+     * TITLE_SCREEN per-frame update: delegates provider sequencing to the
+     * menu-screen controller and exits once it reports an exit request and no
+     * fade is in progress. The controller owns {@code inputHandler.update()}.
+     */
+    private void updateTitleScreenMode() {
+        menuScreenModeController.updateTitleScreen(
+                getTitleScreenProviderLazy(),
+                inputHandler,
+                () -> {
+                    if (!fadeManager.isActive()) {
+                        exitTitleScreen();
+                    }
+                });
+    }
+
+    /**
+     * LEVEL_SELECT per-frame update: delegates provider sequencing to the
+     * menu-screen controller and exits once it reports a selection.
+     */
+    private void updateLevelSelectMode() {
+        menuScreenModeController.updateLevelSelect(
+                getLevelSelectProviderLazy(),
+                inputHandler,
+                this::exitLevelSelect);
+    }
+
+    /**
+     * DATA_SELECT per-frame update: delegates provider sequencing to the
+     * menu-screen controller and exits once it reports completion.
+     */
+    private void updateDataSelectMode() {
+        menuScreenModeController.updateDataSelect(
+                getDataSelectProviderLazy(),
+                inputHandler,
+                this::exitDataSelect);
+    }
+
+    /**
+     * LEVEL per-frame update: overlay tick, seamless/title-card/fade transition
+     * routing, the canonical gameplay frame step (or lag-gated skip), special/
+     * bonus-stage entry checks, trace-session drive, and level debug keys.
+     *
+     * @return {@code true} when the frame completed normally and the caller
+     *         should run the shared post-update tail; {@code false} when a
+     *         transition/fade consumed the frame and the caller must return.
+     */
+    private boolean updateLevelMode(boolean doFrameStep) {
+        // Continue updating title card overlay if still active
+        // (TEXT_WAIT and TEXT_EXIT phases where player can move but text is still
+        // visible)
+        TitleCardProvider tcp = getTitleCardProviderLazy();
+        if (tcp != null && tcp.isOverlayActive()) {
+            tcp.update();
+        }
+
+        // Handle in-place seamless transitions before fade-based routes.
+        SeamlessLevelTransitionRequest seamlessRequest = levelManager.consumeSeamlessTransitionRequest();
+        if (seamlessRequest != null) {
+            levelManager.applySeamlessTransition(seamlessRequest);
+            if (levelManager.consumeInLevelTitleCardRequest()) {
+                enterInLevelTitleCard(levelManager.getInLevelTitleCardZone(), levelManager.getInLevelTitleCardAct());
+            }
+            updateNonGameplayAudio(doFrameStep);
+            // Trace playback still consumes one BK2/VBlank row on a
+            // transition-only frame. Headless replay advances its movie
+            // cursor after applySeamlessTransition(); keep the live
+            // comparator cursor aligned with the same ordering.
+            playbackDebugManager.onLevelFrameAdvanced();
+            TraceSessionLauncher traceSession = TraceSessionLauncher.active();
+            if (traceSession != null) {
+                traceSession.recordExternalRewindFrame();
+            } else {
+                liveRewindManager.resetBufferAtCurrentFrame(currentGameMode);
+            }
+            return false;
+        }
+
+        // Trigger transparent in-level title card overlays (no mode switch).
+        if (levelManager.consumeInLevelTitleCardRequest()) {
+            enterInLevelTitleCard(levelManager.getInLevelTitleCardZone(), levelManager.getInLevelTitleCardAct());
+        }
+
+        // Check if a title card was requested (new level loaded)
+        if (levelManager.consumeTitleCardRequest()) {
+            enterTitleCard(levelManager.getTitleCardZone(), levelManager.getTitleCardAct());
+            updateNonGameplayAudio(doFrameStep);
+            return false; // Skip normal level update this frame
+        }
+
+        // Check for transition requests that need fade-to-black
+        FadeManager fadeManager = this.fadeManager;
+        if (!fadeManager.isActive()) {
+            if (levelManager.consumeRespawnRequest()) {
+                startRespawnFade();
+                updateNonGameplayAudio(doFrameStep);
+                return false;
+            }
+            if (levelManager.consumeNextActRequest()) {
+                startNextActFade();
+                updateNonGameplayAudio(doFrameStep);
+                return false;
+            }
+            if (levelManager.consumeNextZoneRequest()) {
+                startNextZoneFade();
+                updateNonGameplayAudio(doFrameStep);
+                return false;
+            }
+            if (levelManager.consumeZoneActRequest()) {
+                startZoneActFade(levelManager.getRequestedZone(), levelManager.getRequestedAct());
+                updateNonGameplayAudio(doFrameStep);
+                return false;
+            }
+            if (levelManager.consumeCreditsRequest()) {
+                startEndingFade();
+                updateNonGameplayAudio(doFrameStep);
+                return false;
+            }
+        }
+
+        boolean freezeForArtViewer = debugOverlayManager.isEnabled(DebugOverlayToggle.OBJECT_ART_VIEWER);
+        // Freeze level updates during special/bonus stage entry transitions
+        boolean freezeForSpecialStage = specialStageTransitionPending;
+        boolean freezeForBonusStage = bonusStageTransitionPending;
+        // ObjB2 transition parity: freeze gameplay during pending zone-act fade.
+        boolean freezeForZoneActTransition = levelManager.isLevelInactiveForTransition();
+        if (!freezeForArtViewer && !freezeForSpecialStage && !freezeForBonusStage && !freezeForZoneActTransition) {
+            beginGameplayAudioFrameForTick();
+            // LiveTraceComparator (or any PlaybackFrameObserver) may ask
+            // us to skip the gameplay tick on ROM lag frames so the
+            // engine and trace stay aligned. Cursor advance still runs
+            // via onLevelFrameAdvanced below.
+            boolean skipGameplay = playbackDebugManager.shouldSkipCurrentGameplayTick();
+            if (!skipGameplay) {
+                // Canonical level tick sequence — see LevelFrameStep for ordering rationale.
+                spriteManager.publishHeldInputForLevelEvents(inputHandler);
+                LevelFrameStep.execute(LevelFrameContext.from(gameplayMode),
+                        levelManager, camera, () -> spriteManager.update(inputHandler),
+                        (name, step) -> {
+                            profiler.beginSection(name);
+                            step.run();
+                            profiler.endSection(name);
+                        });
+            } else if (levelManager.getObjectManager() != null) {
+                // ROM v_vbla_byte increments in VBlank even on rows where
+                // LevelLoop did not run. Headless trace replay mirrors
+                // this in HeadlessTestRunner.skipFrameFromRecording();
+                // live visual trace mode must do the same or object timing
+                // gates enter gameplay hundreds of VBlanks behind.
+                levelManager.getObjectManager().advanceVblaCounter();
+            }
+            advanceGameplayAudioFrameForTick(doFrameStep);
+            // Fire the BK2-advance callback either way — on both real
+            // gameplay ticks and lag-gated skips — so the observer's
+            // cursor always matches the BK2 cursor. onLevelFrameAdvanced
+            // is a no-op when no playback session is active.
+            playbackDebugManager.onLevelFrameAdvanced();
+            TraceSessionLauncher traceSession = TraceSessionLauncher.active();
+            if (traceSession != null) {
+                traceSession.recordExternalRewindFrame();
+            } else {
+                liveRewindManager.recordExternalFrame(currentGameMode, inputHandler);
+            }
+
+            // Check if a checkpoint star requested a special stage
+            if (levelManager.consumeSpecialStageRequest()) {
+                enterSpecialStage();
+            }
+
+            // Check if a bonus star requested a bonus stage
+            BonusStageType bonusRequest = levelManager.consumeBonusStageRequest();
+            if (bonusRequest != null) {
+                enterBonusStage(bonusRequest);
+            }
+
+            // Drive the trace session completion-hold + auto-fade state.
+            traceSession = TraceSessionLauncher.active();
+            if (traceSession != null) {
+                traceSession.tick();
+            }
+        } else {
+            updateNonGameplayAudio(doFrameStep);
+        }
+
+        // Debug keys for level transitions (use request system for fade)
+        if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.NEXT_ACT))) {
+            levelManager.requestNextAct();
+        }
+
+        if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.NEXT_ZONE))) {
+            // DEZ: skip to ending cutscene instead of next zone
+            if (levelManager.getRomZoneId() == 0x0E) {
+                levelManager.requestCreditsTransition();
+            } else {
+                levelManager.requestNextZone();
+            }
+        }
+
+        // Debug: Teleport to last checkpoint (END key, only in LEVEL mode)
+        if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.DEBUG_LAST_CHECKPOINT_KEY))) {
+            teleportToLastCheckpoint();
+        }
+
+        // Level select key (F9 by default)
+        if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.LEVEL_SELECT_KEY))) {
+            enterLevelSelect();
+        }
+
+        if (isUnmodifiedDebugKeyPressed(
+                configService.getInt(SonicConfiguration.CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY))) {
+            logCurrentPreviewCaptureOverride();
+        }
+        return true;
+    }
+
+    /**
+     * BONUS_STAGE per-frame update: overlay tick, glowing-sphere bootstrap, the
+     * shared level frame step (with the bonus-stage high-priority enforcement
+     * and completion check), and the gumball debug shortcuts. Falls through to
+     * the shared post-update tail.
+     */
+    private void updateBonusStageMode(boolean doFrameStep) {
+        // Continue updating title card overlay during bonus stage
+        // (EXIT phase: elements slide off screen after exitTitleCard transitioned here)
+        TitleCardProvider bonusTcp = getTitleCardProviderLazy();
+        if (bonusTcp != null && bonusTcp.isOverlayActive()) {
+            bonusTcp.update();
+        }
+
+        if (levelManager.getRomZoneId() == Sonic3kZoneIds.ZONE_GLOWING_SPHERE) {
+            ensureBonusStageBootstrapObjectPresent(BonusStageType.GLOWING_SPHERE);
+        }
+
+        // Bonus stage runs the same level frame steps as LEVEL mode
+        boolean freezeForBonusExit = bonusStageTransitionPending;
+        if (!freezeForBonusExit) {
+            beginGameplayAudioFrameForTick();
+            spriteManager.publishHeldInputForLevelEvents(inputHandler);
+            LevelFrameStep.execute(LevelFrameContext.from(gameplayMode), levelManager, camera, () -> {
+                spriteManager.update(inputHandler);
+            }, (name, step) -> {
+                profiler.beginSection(name);
+                step.run();
+                profiler.endSection(name);
+            });
+
+            // ROM lines 127411-127412: player art_tile priority bit stays HIGH throughout
+            // the bonus stage. Must be set AFTER the sprite update (which runs inside
+            // LevelFrameStep.execute) because setAir(false) on hurt-landing clears it.
+            forcePlayerHighPriorityInBonusStage();
+
+            // Notify coordinator of frame tick
+            if (activeBonusStageProvider != null && !activeBonusStageProvider.updateDuringLevelFrame()) {
+                activeBonusStageProvider.onFrameUpdate();
+            }
+
+            // Check bonus stage completion
+            if (activeBonusStageProvider != null && activeBonusStageProvider.isStageComplete()) {
+                exitBonusStage();
+            }
+            advanceGameplayAudioFrameForTick(doFrameStep);
+        } else {
+            updateNonGameplayAudio(doFrameStep);
+        }
+
+        // Debug: F11 cycles through bucket/priority isolation for the gumball machine
+        if (isUnmodifiedDebugKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_F11)) {
+            com.openggf.game.sonic3k.objects.GumballMachineObjectInstance.cycleDebugFilter();
+        }
+        // Debug: Insert cycles through gumball child-source isolation without colliding with overlay F-keys.
+        if (isUnmodifiedDebugKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_INSERT)) {
+            com.openggf.game.sonic3k.objects.GumballMachineObjectInstance.cycleDebugSourceFilter();
+        }
     }
 
     private void updateNonGameplayAudio(boolean doFrameStep) {

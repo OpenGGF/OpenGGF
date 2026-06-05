@@ -49,13 +49,11 @@ import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
-import com.openggf.game.sonic2.Sonic2GameModule.S2DataSelectImageWarmup;
-import com.openggf.game.sonic2.dataselect.S2DataSelectImageCacheManager;
-import com.openggf.game.sonic1.Sonic1GameModule.S1DataSelectImageWarmup;
-import com.openggf.game.sonic1.dataselect.S1DataSelectImageCacheManager;
+import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.data.Rom;
 import com.openggf.physics.Direction;
 import com.openggf.graphics.color.DisplayColorProfileController;
+import com.openggf.render.EngineRenderDispatcher;
 
 import java.io.IOException;
 import java.nio.IntBuffer;
@@ -101,6 +99,9 @@ public class Engine {
 	private final PerformanceProfiler profiler;
 
 	private final GameLoop gameLoop;
+	private final EngineRenderDispatcher renderDispatcher = new EngineRenderDispatcher();
+	private final EngineRenderDispatcher.ClearActions clearActions = new EngineClearActions();
+	private final EngineRenderDispatcher.DrawActions drawActions = new EngineDrawActions();
 	private final LevelEditorController levelEditorController = new LevelEditorController();
 	private final EditorInputHandler editorInputHandler;
 	private final EditorOverlayRenderer editorOverlayRenderer;
@@ -695,24 +696,14 @@ public class Engine {
 		if (module == null || !crossGameEnabled || !s3kConfiguredDonor || !CrossGameFeatureProvider.isS3kDonorActive()) {
 			return false;
 		}
-		if (module.getGameId() == GameId.S1) {
-			S1DataSelectImageCacheManager manager = module.getGameService(S1DataSelectImageCacheManager.class);
-			if (manager instanceof S1DataSelectImageWarmup warmup) {
-				warmup.ensureGenerationStarted();
-				pumpRenderThreadTasksUntilSettled(manager::isGenerationRunning);
-				return true;
-			}
+		Optional<DonatedDataSelectWarmupTask> warmup = module.getDonatedDataSelectWarmupTask();
+		if (warmup.isEmpty()) {
 			return false;
 		}
-		if (module.getGameId() == GameId.S2) {
-			S2DataSelectImageCacheManager manager = module.getGameService(S2DataSelectImageCacheManager.class);
-			if (manager instanceof S2DataSelectImageWarmup warmup) {
-				warmup.ensureGenerationStarted();
-				pumpRenderThreadTasksUntilSettled(manager::isGenerationRunning);
-				return true;
-			}
-		}
-		return false;
+		DonatedDataSelectWarmupTask task = warmup.orElseThrow();
+		task.start();
+		pumpRenderThreadTasksUntilSettled(task::isRunning);
+		return true;
 	}
 
 	private void pumpRenderThreadTasksUntilSettled(java.util.function.BooleanSupplier generationRunning) {
@@ -1253,61 +1244,7 @@ public class Engine {
 		projectionMatrix.identity().ortho2D(0, (float) projectionWidth, 0, (float) realHeight);
 		projectionMatrix.get(matrixBuffer);
 
-		// Set clear color based on game mode and clear the game viewport
-		if (getCurrentGameMode() == GameMode.SPECIAL_STAGE) {
-			SpecialStageProvider ssProviderForClear = gameLoop.getActiveSpecialStageProvider();
-			if (ssProviderForClear != null) {
-				ssProviderForClear.setClearColor();
-			} else {
-				glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-			}
-		} else if (getCurrentGameMode() == GameMode.SPECIAL_STAGE_RESULTS) {
-			// White background — Pal_Results sets backdrop color to white ($0EEE)
-			glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-		} else if (getCurrentGameMode() == GameMode.TITLE_SCREEN) {
-			// Title screen backdrop is palette 2, color 0 (per VDP register $8720)
-			TitleScreenProvider titleScreen = gameLoop.getTitleScreenProvider();
-			if (titleScreen != null) {
-				titleScreen.setClearColor();
-			}
-		} else if (getCurrentGameMode() == GameMode.LEVEL_SELECT) {
-			// Level select backdrop is palette 0, color 0 (per VDP register $8700)
-			LevelSelectProvider levelSelect = gameLoop.getLevelSelectProvider();
-			if (levelSelect != null) {
-				levelSelect.setClearColor();
-			}
-		} else if (getCurrentGameMode() == GameMode.DATA_SELECT) {
-			// Data select backdrop
-			DataSelectProvider dataSelect = gameLoop.getDataSelectProvider();
-			if (dataSelect != null) {
-				dataSelect.setClearColor();
-			} else {
-				glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-			}
-		} else if (getCurrentGameMode() == GameMode.CREDITS_TEXT
-				|| getCurrentGameMode() == GameMode.ENDING_CUTSCENE) {
-			// Ending: delegate to EndingProvider for phase-dependent background color
-			// (sky blue during cutscene sky phases, black during photos/credits/logo)
-			EndingProvider ending = gameLoop.getEndingProvider();
-			if (ending != null) {
-				ending.setClearColor();
-			} else {
-				glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-			}
-		} else if (getCurrentGameMode() == GameMode.TRY_AGAIN_END) {
-			// TRY AGAIN / END screen: black background
-			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		} else if (getCurrentGameMode() == GameMode.MASTER_TITLE_SCREEN) {
-			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		} else if (getCurrentGameMode() == GameMode.LEGAL_DISCLAIMER) {
-			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		} else if (getCurrentGameMode() == GameMode.EDITOR) {
-			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		} else if (getCurrentGameMode() == GameMode.TITLE_CARD) {
-			levelManager.setClearColor();
-		} else {
-			levelManager.setClearColor();
-		}
+		renderDispatcher.applyClearColor(getCurrentGameMode(), clearActions);
 		glScissor(viewportX, viewportY, viewportWidth, viewportHeight);
 		glEnable(GL_SCISSOR_TEST);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -1410,6 +1347,89 @@ public class Engine {
 		overlayStateReady = false;
 	}
 
+	private void applySpecialStageClearColor() {
+		SpecialStageProvider ssProviderForClear = gameLoop.getActiveSpecialStageProvider();
+		if (ssProviderForClear != null) {
+			ssProviderForClear.setClearColor();
+		} else {
+			applyBlackClearColor();
+		}
+	}
+
+	private void applySpecialStageResultsClearColor() {
+		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+	}
+
+	private void applyTitleScreenClearColor() {
+		TitleScreenProvider titleScreen = gameLoop.getTitleScreenProvider();
+		if (titleScreen != null) {
+			titleScreen.setClearColor();
+		}
+	}
+
+	private void applyLevelSelectClearColor() {
+		LevelSelectProvider levelSelect = gameLoop.getLevelSelectProvider();
+		if (levelSelect != null) {
+			levelSelect.setClearColor();
+		}
+	}
+
+	private void applyDataSelectClearColor() {
+		DataSelectProvider dataSelect = gameLoop.getDataSelectProvider();
+		if (dataSelect != null) {
+			dataSelect.setClearColor();
+		} else {
+			applyBlackClearColor();
+		}
+	}
+
+	private void applyEndingClearColor() {
+		EndingProvider ending = gameLoop.getEndingProvider();
+		if (ending != null) {
+			ending.setClearColor();
+		} else {
+			applyBlackClearColor();
+		}
+	}
+
+	private void applyBlackClearColor() {
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	}
+
+	private void applyLevelClearColor() {
+		levelManager.setClearColor();
+	}
+
+	private final class EngineClearActions implements EngineRenderDispatcher.ClearActions {
+		@Override public void specialStage() { applySpecialStageClearColor(); }
+		@Override public void specialStageResults() { applySpecialStageResultsClearColor(); }
+		@Override public void titleScreen() { applyTitleScreenClearColor(); }
+		@Override public void levelSelect() { applyLevelSelectClearColor(); }
+		@Override public void dataSelect() { applyDataSelectClearColor(); }
+		@Override public void ending() { applyEndingClearColor(); }
+		@Override public void black() { applyBlackClearColor(); }
+		@Override public void level() { applyLevelClearColor(); }
+	}
+
+	private final class EngineDrawActions implements EngineRenderDispatcher.DrawActions {
+		@Override public void legalDisclaimer() { drawLegalDisclaimer(); }
+		@Override public void masterTitle() { drawMasterTitle(); }
+		@Override public void editor() { drawEditor(); }
+		@Override public void specialStage() { drawSpecialStage(); }
+		@Override public void specialStageResults() { drawSpecialStageResults(); }
+		@Override public void titleScreen() { drawTitleScreen(); }
+		@Override public void levelSelect() { drawLevelSelect(); }
+		@Override public void dataSelect() { drawDataSelect(); }
+		@Override public void endingCutscene() { drawEndingCutscene(); }
+		@Override public void creditsText() { drawCreditsText(); }
+		@Override public void creditsDemo() { drawCreditsDemo(); }
+		@Override public void tryAgainEnd() { drawTryAgainEnd(); }
+		@Override public void titleCard() { drawTitleCardMode(); }
+		@Override public void debugPatterns() { drawDebugPatterns(); }
+		@Override public void debugBlocks() { drawDebugBlocks(); }
+		@Override public void level() { drawLevel(); }
+	}
+
 	private void renderDisplayColorProfileNotification() {
 		if (displayColorProfileController == null) {
 			return;
@@ -1455,186 +1475,182 @@ public class Engine {
 	}
 
 	public void draw() {
-		var uiPipeline = graphicsManager.getUiRenderPipeline();
-		if (getCurrentGameMode() == GameMode.LEGAL_DISCLAIMER) {
-			if (camera != null) {
-				camera.setX((short) 0);
-				camera.setY((short) 0);
-			}
-			if (legalDisclaimerScreen != null) {
-				legalDisclaimerScreen.setProjectionMatrix(getProjectionMatrixBuffer());
-				legalDisclaimerScreen.draw();
-			}
-			return;
+		renderDispatcher.draw(getCurrentGameMode(), debugViewEnabled, debugState, drawActions);
+	}
+
+	private void drawLegalDisclaimer() {
+		resetCameraForScreenSpaceIfPresent();
+		if (legalDisclaimerScreen != null) {
+			legalDisclaimerScreen.setProjectionMatrix(getProjectionMatrixBuffer());
+			legalDisclaimerScreen.draw();
 		}
-		if (getCurrentGameMode() == GameMode.MASTER_TITLE_SCREEN) {
-			if (camera != null) {
-				camera.setX((short) 0);
-				camera.setY((short) 0);
-			}
-			if (masterTitleScreen != null) {
-				// Pass the full projection width so the master title can expand the
-				// background/clouds to the viewport while centering foreground elements.
-				// The projection matrix maps [0, realWidth] x [0, 224] to the viewport,
-				// so realWidth is the coordinate-space width of the full viewport.
-				// At native 320 this is a no-op (setViewportWidth(320) == default).
-				masterTitleScreen.setViewportWidth((int) realWidth);
-				masterTitleScreen.setProjectionMatrix(getProjectionMatrixBuffer());
-				// Note: no beginSafeArea wrapping — MasterTitleScreen uses its own
-				// TexturedQuadRenderer with its own shader uniform, so the
-				// GraphicsManager safe-area override has no effect on it.
-				masterTitleScreen.draw();
-			}
-			return;
+	}
+
+	private void drawMasterTitle() {
+		resetCameraForScreenSpaceIfPresent();
+		if (masterTitleScreen != null) {
+			masterTitleScreen.setViewportWidth((int) realWidth);
+			masterTitleScreen.setProjectionMatrix(getProjectionMatrixBuffer());
+			masterTitleScreen.draw();
 		}
-		if (getCurrentGameMode() == GameMode.EDITOR) {
-			flushEditorDirtyRegionsForRendering();
-			levelManager.drawWithSpritePriority(spriteManager);
-			editorOverlayRenderer.renderWorldSpaceOverlay();
-			graphicsManager.flush();
-			graphicsManager.resetForFixedFunction();
-			prepareOverlayState();
-			editorOverlayRenderer.renderScreenSpaceOverlay();
-			graphicsManager.flushScreenSpace();
-			return;
-		}
-		if (getCurrentGameMode() == GameMode.SPECIAL_STAGE) {
-			SpecialStageProvider ssProvider = gameLoop.getActiveSpecialStageProvider();
-			if (ssProvider.isSpriteDebugMode()) {
-				SpecialStageDebugProvider debugProvider = ssProvider.getDebugProvider();
-				if (debugProvider != null) {
-					debugProvider.draw();
-				} else {
-					ssProvider.draw();
-				}
+	}
+
+	private void drawEditor() {
+		flushEditorDirtyRegionsForRendering();
+		levelManager.drawWithSpritePriority(spriteManager);
+		editorOverlayRenderer.renderWorldSpaceOverlay();
+		graphicsManager.flush();
+		graphicsManager.resetForFixedFunction();
+		prepareOverlayState();
+		editorOverlayRenderer.renderScreenSpaceOverlay();
+		graphicsManager.flushScreenSpace();
+	}
+
+	private void drawSpecialStage() {
+		SpecialStageProvider ssProvider = gameLoop.getActiveSpecialStageProvider();
+		if (ssProvider.isSpriteDebugMode()) {
+			SpecialStageDebugProvider debugProvider = ssProvider.getDebugProvider();
+			if (debugProvider != null) {
+				debugProvider.draw();
 			} else {
 				ssProvider.draw();
 			}
-		} else if (getCurrentGameMode() == GameMode.SPECIAL_STAGE_RESULTS) {
-			var resultsScreen = gameLoop.getResultsScreen();
-			if (resultsScreen != null) {
-				camera.setX((short) 0);
-				camera.setY((short) 0);
+		} else {
+			ssProvider.draw();
+		}
+	}
 
-				graphicsManager.beginPatternBatch();
+	private void drawSpecialStageResults() {
+		var resultsScreen = gameLoop.getResultsScreen();
+		if (resultsScreen == null) {
+			return;
+		}
+		camera.setX((short) 0);
+		camera.setY((short) 0);
 
-				resultsCommands.clear();
-				resultsScreen.appendRenderCommands(resultsCommands);
+		graphicsManager.beginPatternBatch();
 
-				// Flush pattern batch (PatternSpriteRenderer renders through the
-				// instanced batch system, not through the GLCommand list)
-				graphicsManager.flushPatternBatch();
+		resultsCommands.clear();
+		resultsScreen.appendRenderCommands(resultsCommands);
 
-				// Also register any GLCommand-based rendering (S2 results screen)
-				if (!resultsCommands.isEmpty()) {
-					graphicsManager.registerCommand(new GLCommandGroup(
-							GL_LINES, resultsCommands));
-				}
+		graphicsManager.flushPatternBatch();
 
-				// Execute all queued commands in screen space (camera at 0,0)
-				graphicsManager.flushScreenSpace();
-			}
-		} else if (getCurrentGameMode() == GameMode.TITLE_SCREEN) {
-			// Render title screen
-			camera.setX((short) 0);
-			camera.setY((short) 0);
-			TitleScreenProvider titleScreen = gameLoop.getTitleScreenProvider();
-			if (titleScreen != null) {
-				titleScreen.draw();
-			}
-		} else if (getCurrentGameMode() == GameMode.LEVEL_SELECT) {
-			// Render level select screen
-			camera.setX((short) 0);
-			camera.setY((short) 0);
-			LevelSelectProvider levelSelect = gameLoop.getLevelSelectProvider();
-			if (levelSelect != null) {
-				levelSelect.draw();
-			}
-		} else if (getCurrentGameMode() == GameMode.DATA_SELECT) {
-			// Render data select screen
-			camera.setX((short) 0);
-			camera.setY((short) 0);
-			DataSelectProvider dataSelect = gameLoop.getDataSelectProvider();
-			if (dataSelect != null) {
-				dataSelect.draw();
-			}
-		} else if (getCurrentGameMode() == GameMode.ENDING_CUTSCENE) {
-			// Ending cutscene: render DEZ background during sky phases, then cutscene sprites
-			camera.setX((short) 0);
-			camera.setY((short) 0);
-			EndingProvider provider = gameLoop.getEndingProvider();
-			if (provider != null) {
-				if (provider.needsLevelBackground()) {
-					levelManager.renderEndingBackground(
-							provider.getBackgroundVscroll(),
-							provider.getBackdropColorOverride());
-					// Flush deferred BG shader commands BEFORE cutscene sprites.
-					// Without this, the parallax compositing pass executes during
-					// the top-level flush() AFTER provider.draw(), rendering the
-					// DEZ star field ON TOP of the palette-faded cutscene.
-					graphicsManager.flush();
-				}
-				provider.draw();
-			}
-		} else if (getCurrentGameMode() == GameMode.CREDITS_TEXT) {
-			// Credits text: screen-space rendering (no background)
-			camera.setX((short) 0);
-			camera.setY((short) 0);
-			EndingProvider provider = gameLoop.getEndingProvider();
-			if (provider != null) {
-				provider.draw();
-			}
-		} else if (getCurrentGameMode() == GameMode.CREDITS_DEMO) {
-			// Sonic 1 credits demo fade-in keeps sprites/objects visible while the
-			// tile planes are still under the black fade. Render only the tile side
-			// here and replay the sprite/object pass after the fade overlay.
-			EndingProvider provider = gameLoop.getEndingProvider();
-			boolean includeSprites = provider == null || !provider.shouldRenderDemoSpritesOverFade();
-			levelManager.drawWithSpritePriority(spriteManager, includeSprites);
-		} else if (getCurrentGameMode() == GameMode.TRY_AGAIN_END) {
-			// TRY AGAIN / END / post-credits screen: screen-space rendering
-			camera.setX((short) 0);
-			camera.setY((short) 0);
-			EndingProvider provider = gameLoop.getEndingProvider();
-			if (provider != null) {
-				provider.draw();
-			}
-		} else if (getCurrentGameMode() == GameMode.TITLE_CARD) {
-			levelManager.drawWithSpritePriority(spriteManager);
+		if (!resultsCommands.isEmpty()) {
+			graphicsManager.registerCommand(new GLCommandGroup(GL_LINES, resultsCommands));
+		}
 
+		graphicsManager.flushScreenSpace();
+	}
+
+	private void drawTitleScreen() {
+		resetCameraForScreenSpace();
+		TitleScreenProvider titleScreen = gameLoop.getTitleScreenProvider();
+		if (titleScreen != null) {
+			titleScreen.draw();
+		}
+	}
+
+	private void drawLevelSelect() {
+		resetCameraForScreenSpace();
+		LevelSelectProvider levelSelect = gameLoop.getLevelSelectProvider();
+		if (levelSelect != null) {
+			levelSelect.draw();
+		}
+	}
+
+	private void drawDataSelect() {
+		resetCameraForScreenSpace();
+		DataSelectProvider dataSelect = gameLoop.getDataSelectProvider();
+		if (dataSelect != null) {
+			dataSelect.draw();
+		}
+	}
+
+	private void drawEndingCutscene() {
+		resetCameraForScreenSpace();
+		EndingProvider provider = gameLoop.getEndingProvider();
+		if (provider == null) {
+			return;
+		}
+		if (provider.needsLevelBackground()) {
+			levelManager.renderEndingBackground(
+					provider.getBackgroundVscroll(),
+					provider.getBackdropColorOverride());
+			graphicsManager.flush();
+		}
+		provider.draw();
+	}
+
+	private void drawCreditsText() {
+		resetCameraForScreenSpace();
+		EndingProvider provider = gameLoop.getEndingProvider();
+		if (provider != null) {
+			provider.draw();
+		}
+	}
+
+	private void drawCreditsDemo() {
+		EndingProvider provider = gameLoop.getEndingProvider();
+		boolean includeSprites = provider == null || !provider.shouldRenderDemoSpritesOverFade();
+		levelManager.drawWithSpritePriority(spriteManager, includeSprites);
+	}
+
+	private void drawTryAgainEnd() {
+		resetCameraForScreenSpace();
+		EndingProvider provider = gameLoop.getEndingProvider();
+		if (provider != null) {
+			provider.draw();
+		}
+	}
+
+	private void drawTitleCardMode() {
+		levelManager.drawWithSpritePriority(spriteManager);
+
+		graphicsManager.flush();
+		graphicsManager.resetForFixedFunction();
+
+		TitleCardProvider titleCardProvider = gameLoop.getTitleCardProvider();
+		if (titleCardProvider != null) {
+			titleCardProvider.draw();
+			graphicsManager.flushScreenSpace();
+		}
+	}
+
+	private void drawDebugPatterns() {
+		levelManager.drawAllPatterns();
+		drawActiveLevelTitleCardOverlay();
+	}
+
+	private void drawDebugBlocks() {
+		levelManager.draw();
+		drawActiveLevelTitleCardOverlay();
+	}
+
+	private void drawLevel() {
+		levelManager.drawWithSpritePriority(spriteManager);
+		drawActiveLevelTitleCardOverlay();
+	}
+
+	private void drawActiveLevelTitleCardOverlay() {
+		TitleCardProvider titleCardProvider = gameLoop.getTitleCardProvider();
+		if (titleCardProvider != null && titleCardProvider.isOverlayActive()) {
 			graphicsManager.flush();
 			graphicsManager.resetForFixedFunction();
-
-			TitleCardProvider titleCardProvider = gameLoop.getTitleCardProvider();
-			if (titleCardProvider != null) {
-				titleCardProvider.draw();
-				graphicsManager.flushScreenSpace();
-			}
-		} else if (!debugViewEnabled) {
-			levelManager.drawWithSpritePriority(spriteManager);
-
-			TitleCardProvider levelTitleCardProvider = gameLoop.getTitleCardProvider();
-			if (levelTitleCardProvider != null && levelTitleCardProvider.isOverlayActive()) {
-				graphicsManager.flush();
-				graphicsManager.resetForFixedFunction();
-				levelTitleCardProvider.draw();
-				graphicsManager.flushScreenSpace();
-			}
-		} else {
-			switch (debugState) {
-				case PATTERNS_VIEW -> levelManager.drawAllPatterns();
-				case BLOCKS_VIEW -> levelManager.draw();
-				case null, default -> levelManager.drawWithSpritePriority(spriteManager);
-			}
-
-			TitleCardProvider debugTitleCardProvider = gameLoop.getTitleCardProvider();
-			if (debugTitleCardProvider != null && debugTitleCardProvider.isOverlayActive()) {
-				graphicsManager.flush();
-				graphicsManager.resetForFixedFunction();
-				debugTitleCardProvider.draw();
-				graphicsManager.flushScreenSpace();
-			}
+			titleCardProvider.draw();
+			graphicsManager.flushScreenSpace();
 		}
+	}
+
+	private void resetCameraForScreenSpaceIfPresent() {
+		if (camera != null) {
+			camera.setX((short) 0);
+			camera.setY((short) 0);
+		}
+	}
+
+	private void resetCameraForScreenSpace() {
+		camera.setX((short) 0);
+		camera.setY((short) 0);
 	}
 
 	void flushEditorDirtyRegionsForRendering() {

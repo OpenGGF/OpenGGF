@@ -55,7 +55,6 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 
@@ -63,348 +62,10 @@ public class ObjectManager {
     private static final int BUCKET_COUNT = RenderPriority.MAX - RenderPriority.MIN + 1;
     static final int ANIM_ROLL = 0x02;
     static final int ANIM_SPINDASH = 0x09;
-    private static final String S2_BUZZER_FLAME_CHILD_CLASS =
-            "com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance$BuzzerFlameChild";
-    private static final List<RewindDynamicObjectCodec> TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS =
+    private static final List<DynamicObjectRewindCodec> TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS =
             new CopyOnWriteArrayList<>();
-    private static final List<RewindDynamicObjectCodec> BUILT_IN_REWIND_DYNAMIC_OBJECT_CODECS = List.of(
-            new RewindDynamicObjectCodec() {
-                @Override
-                public boolean supports(ObjectInstance instance) {
-                    return instance instanceof com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance;
-                }
-
-                @Override
-                public String className() {
-                    return com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance.class.getName();
-                }
-
-                @Override
-                public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                    var extra = (PerObjectRewindSnapshot.BadnikProjectileRewindExtra)
-                            entry.state().objectSubclassExtra();
-                    return new com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance(
-                            entry.spawn(),
-                            com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance.ProjectileType.valueOf(
-                                    extra.projectileType()),
-                            extra.currentX(),
-                            extra.currentY(),
-                            extra.xVelocity(),
-                            extra.yVelocity(),
-                            extra.applyGravity(),
-                            extra.hFlip(),
-                            extra.initialDelay(),
-                            extra.fixedFrame());
-                }
-            },
-            new RewindDynamicObjectCodec() {
-                @Override
-                public boolean supports(ObjectInstance instance) {
-                    return instance.getClass().getName().equals(S2_BUZZER_FLAME_CHILD_CLASS);
-                }
-
-                @Override
-                public String className() {
-                    return S2_BUZZER_FLAME_CHILD_CLASS;
-                }
-
-                @Override
-                public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                    try {
-                        var extra = (PerObjectRewindSnapshot.BuzzerFlameRewindExtra)
-                                entry.state().objectSubclassExtra();
-                        com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance parent =
-                                context.objectManager().findBuzzerParentForRewind(extra.parentSlotIndex());
-                        if (parent == null) {
-                            return null;
-                        }
-                        Class<?> cls = Class.forName(entry.className());
-                        var ctor = cls.getDeclaredConstructor(
-                                ObjectSpawn.class,
-                                com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance.class);
-                        ctor.setAccessible(true);
-                        return (ObjectInstance) ctor.newInstance(entry.spawn(), parent);
-                    } catch (ReflectiveOperationException e) {
-                        throw new IllegalStateException(
-                                "Failed to recreate dynamic rewind object " + entry.className(), e);
-                    }
-                }
-            },
-            new RewindDynamicObjectCodec() {
-                @Override
-                public boolean supports(ObjectInstance instance) {
-                    return instance instanceof AnimalObjectInstance;
-                }
-
-                @Override
-                public String className() {
-                    return AnimalObjectInstance.class.getName();
-                }
-
-                @Override
-                public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                    return AnimalObjectInstance.forRewindRecreate(
-                            entry.spawn(), context.objectServices());
-                }
-            },
-            pointsCodec(com.openggf.game.sonic1.objects.Sonic1PointsObjectInstance.class),
-            pointsCodec(com.openggf.game.sonic2.objects.PointsObjectInstance.class),
-            pointsCodec(com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance.class),
-            new LostRingRewindCodec(),
-            deferredPlayerBoundCodec(ShieldObjectInstance.class, ShieldObjectInstance.class),
-            deferredPlayerBoundCodec(
-                    com.openggf.game.sonic3k.objects.FireShieldObjectInstance.class,
-                    ShieldObjectInstance.class),
-            deferredPlayerBoundCodec(
-                    com.openggf.game.sonic3k.objects.LightningShieldObjectInstance.class,
-                    ShieldObjectInstance.class),
-            deferredPlayerBoundCodec(
-                    com.openggf.game.sonic3k.objects.BubbleShieldObjectInstance.class,
-                    ShieldObjectInstance.class),
-            deferredPlayerBoundCodec(
-                    InvincibilityStarsObjectInstance.class,
-                    InvincibilityStarsObjectInstance.class),
-            deferredPlayerBoundCodec(
-                    com.openggf.game.sonic3k.objects.Sonic3kInvincibilityStarsObjectInstance.class,
-                    InvincibilityStarsObjectInstance.class),
-            new RewindDynamicObjectCodec() {
-                @Override
-                public boolean supports(ObjectInstance instance) {
-                    return instance instanceof com.openggf.game.sonic2.objects.CheckpointDongleInstance;
-                }
-
-                @Override
-                public String className() {
-                    return com.openggf.game.sonic2.objects.CheckpointDongleInstance.class.getName();
-                }
-
-                @Override
-                public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                    com.openggf.game.sonic2.objects.CheckpointObjectInstance parent =
-                            context.objectManager().findCheckpointParentForRewind(entry.spawn());
-                    return parent == null
-                            ? null
-                            : new com.openggf.game.sonic2.objects.CheckpointDongleInstance(parent);
-                }
-            },
-            new RewindDynamicObjectCodec() {
-                @Override
-                public boolean supports(ObjectInstance instance) {
-                    return instance instanceof com.openggf.game.sonic2.objects.CheckpointStarInstance;
-                }
-
-                @Override
-                public String className() {
-                    return com.openggf.game.sonic2.objects.CheckpointStarInstance.class.getName();
-                }
-
-                @Override
-                public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                    com.openggf.game.sonic2.objects.CheckpointObjectInstance parent =
-                            context.objectManager().findCheckpointParentForRewind(entry.spawn());
-                    return parent == null
-                            ? null
-                            : new com.openggf.game.sonic2.objects.CheckpointStarInstance(parent, 0);
-                }
-            },
-            new RewindDynamicObjectCodec() {
-                @Override
-                public boolean supports(ObjectInstance instance) {
-                    return instance instanceof ExplosionObjectInstance;
-                }
-
-                @Override
-                public String className() {
-                    return ExplosionObjectInstance.class.getName();
-                }
-
-                @Override
-                public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                    ObjectSpawn spawn = entry.spawn();
-                    ObjectRenderManager renderManager = context.objectServices().renderManager();
-                    // sfxId=-1 suppresses the constructor's SFX replay. The captured
-                    // animTimer/animFrame are reapplied via restoreRewindState.
-                    return new ExplosionObjectInstance(
-                            spawn.objectId(), spawn.x(), spawn.y(), renderManager, -1);
-                }
-            },
-            new RewindDynamicObjectCodec() {
-                @Override
-                public boolean supports(ObjectInstance instance) {
-                    return instance instanceof SkidDustObjectInstance;
-                }
-
-                @Override
-                public String className() {
-                    return SkidDustObjectInstance.class.getName();
-                }
-
-                @Override
-                public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                    return SkidDustObjectInstance.forRewindRecreate(
-                            entry.spawn(), context.objectServices());
-                }
-            },
-            cnzMinibossChildCodec(
-                    com.openggf.game.sonic3k.objects.CnzMinibossTopInstance.class,
-                    com.openggf.game.sonic3k.objects.CnzMinibossTopInstance::new),
-            cnzMinibossChildCodec(
-                    com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance.class,
-                    com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance::new),
-            cnzMinibossChildCodec(
-                    com.openggf.game.sonic3k.objects.CnzMinibossSparkInstance.class,
-                    com.openggf.game.sonic3k.objects.CnzMinibossSparkInstance::new),
-            exactSpawnCodec(
-                    com.openggf.game.sonic3k.objects.CnzMinibossScrollControlInstance.class,
-                    com.openggf.game.sonic3k.objects.CnzMinibossScrollControlInstance::new)
-    );
-
-    /**
-     * Builds a deferred-construction codec for player-bound dynamics whose
-     * recreation needs the freshly-restored player reference. The codec marks
-     * the class as captureable (so {@link #isRewindRestorableDynamicObject}
-     * returns true and the entry lands in {@code dynamicObjects}) and stashes
-     * the captured slot via {@link #enqueuePendingPlayerBoundSlot} during
-     * restore. The post-restore power-up re-spawn in
-     * {@code DefaultPowerUpSpawner} consumes that slot via
-     * {@link #consumePendingPlayerBoundSlot} so the new instance lands at the
-     * captured slot index instead of a fresh free slot.
-     */
-    private static RewindDynamicObjectCodec deferredPlayerBoundCodec(
-            Class<? extends ObjectInstance> exactClass, Class<?> baseTypeKey) {
-        return new RewindDynamicObjectCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == exactClass;
-            }
-
-            @Override
-            public String className() {
-                return exactClass.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                context.objectManager().enqueuePendingPlayerBoundEntry(baseTypeKey, entry);
-                return null;
-            }
-        };
-    }
-
-    /**
-     * Builds a points-popup codec for one of the {@link AbstractPointsObjectInstance}
-     * subclasses. The recreate path calls the subclass's
-     * {@code (ObjectSpawn, ObjectServices, int points)} constructor with a
-     * placeholder {@code points} value; the captured {@code scoreFrame} (and
-     * other scalars) are reapplied via {@link AbstractObjectInstance#restoreRewindState}.
-     */
-    private static RewindDynamicObjectCodec pointsCodec(Class<? extends AbstractPointsObjectInstance> type) {
-        return new RewindDynamicObjectCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == type;
-            }
-
-            @Override
-            public String className() {
-                return type.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                try {
-                    var ctor = type.getDeclaredConstructor(
-                            ObjectSpawn.class, ObjectServices.class, int.class);
-                    return ctor.newInstance(entry.spawn(), context.objectServices(), 0);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + type.getName(), e);
-                }
-            }
-        };
-    }
-
-    private static RewindDynamicObjectCodec cnzMinibossChildCodec(
-            Class<? extends AbstractObjectInstance> type,
-            Function<ObjectSpawn, ? extends AbstractObjectInstance> factory) {
-        return new RewindDynamicObjectCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == type;
-            }
-
-            @Override
-            public String className() {
-                return type.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                com.openggf.game.sonic3k.objects.CnzMinibossInstance parent =
-                        context.objectManager().findCnzMinibossParentForRewind();
-                if (parent == null) {
-                    return null;
-                }
-                AbstractObjectInstance child = factory.apply(entry.spawn());
-                if (child instanceof com.openggf.game.sonic3k.objects.CnzMinibossTopInstance top) {
-                    top.attachBossForTest(parent);
-                } else if (child instanceof com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance coil) {
-                    coil.attachBossForTest(parent);
-                } else if (child instanceof com.openggf.game.sonic3k.objects.CnzMinibossSparkInstance spark) {
-                    spark.attachBossForTest(parent);
-                }
-                return child;
-            }
-        };
-    }
-
-    private static RewindDynamicObjectCodec exactSpawnCodec(
-            Class<? extends AbstractObjectInstance> type,
-            Function<ObjectSpawn, ? extends AbstractObjectInstance> factory) {
-        return new RewindDynamicObjectCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == type;
-            }
-
-            @Override
-            public String className() {
-                return type.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                return factory.apply(entry.spawn());
-            }
-        };
-    }
-
-    interface RewindDynamicObjectCodec {
-        boolean supports(ObjectInstance instance);
-
-        String className();
-
-        ObjectInstance recreate(
-                DynamicObjectRecreateContext context,
-                com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry);
-    }
-
-    record DynamicObjectRecreateContext(ObjectManager objectManager) {
-        ObjectServices objectServices() {
-            return objectManager.objectServices;
-        }
-    }
+    private static final List<DynamicObjectRewindCodec> SHARED_REWIND_DYNAMIC_OBJECT_CODECS =
+            ObjectRewindDynamicCodecs.sharedCodecs();
 
     private final ObjectPlacementController placement;
     private final ObjectRegistry registry;
@@ -3184,7 +2845,7 @@ public class ObjectManager {
      *
      * <p>ObjectPlacementController-managed objects are restored through their original spawn.
      * Non-ObjectPlacementController dynamic objects are restored when their class has a registered
-     * {@link RewindDynamicObjectCodec}; unsupported entries remain diagnostic-only.
+     * {@link DynamicObjectRewindCodec}; unsupported entries remain diagnostic-only.
      */
     public com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot> rewindSnapshottable() {
         return new com.openggf.game.rewind.RewindSnapshottable<>() {
@@ -3457,7 +3118,15 @@ public class ObjectManager {
     }
 
     static boolean isRewindRestorableDynamicObject(ObjectInstance inst) {
-        return rewindDynamicObjectCodecFor(inst).isPresent();
+        return isRewindRestorableDynamicObject(inst, null);
+    }
+
+    static boolean isRewindRestorableDynamicObject(ObjectInstance inst, ObjectRegistry registry) {
+        return rewindDynamicObjectCodecFor(inst, registry).isPresent();
+    }
+
+    ObjectServices objectServicesForRewind() {
+        return objectServices;
     }
 
     /**
@@ -3490,7 +3159,7 @@ public class ObjectManager {
         return queue.poll();
     }
 
-    static void registerRewindDynamicObjectCodecForTest(RewindDynamicObjectCodec codec) {
+    static void registerRewindDynamicObjectCodecForTest(DynamicObjectRewindCodec codec) {
         TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS.add(codec);
     }
 
@@ -3498,13 +3167,19 @@ public class ObjectManager {
         TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS.clear();
     }
 
-    private static Optional<RewindDynamicObjectCodec> rewindDynamicObjectCodecFor(ObjectInstance inst) {
-        for (RewindDynamicObjectCodec codec : TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS) {
+    private static Optional<DynamicObjectRewindCodec> rewindDynamicObjectCodecFor(
+            ObjectInstance inst, ObjectRegistry registry) {
+        for (DynamicObjectRewindCodec codec : TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS) {
             if (codec.supports(inst)) {
                 return Optional.of(codec);
             }
         }
-        for (RewindDynamicObjectCodec codec : BUILT_IN_REWIND_DYNAMIC_OBJECT_CODECS) {
+        for (DynamicObjectRewindCodec codec : SHARED_REWIND_DYNAMIC_OBJECT_CODECS) {
+            if (codec.supports(inst)) {
+                return Optional.of(codec);
+            }
+        }
+        for (DynamicObjectRewindCodec codec : registryDynamicRewindCodecs(registry)) {
             if (codec.supports(inst)) {
                 return Optional.of(codec);
             }
@@ -3512,65 +3187,35 @@ public class ObjectManager {
         return Optional.empty();
     }
 
-    private static Optional<RewindDynamicObjectCodec> rewindDynamicObjectCodecForClassName(String className) {
-        for (RewindDynamicObjectCodec codec : TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS) {
+    private static Optional<DynamicObjectRewindCodec> rewindDynamicObjectCodecForClassName(
+            String className, ObjectRegistry registry) {
+        for (DynamicObjectRewindCodec codec : TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS) {
             if (codec.className().equals(className)) {
                 return Optional.of(codec);
             }
         }
-        for (RewindDynamicObjectCodec codec : BUILT_IN_REWIND_DYNAMIC_OBJECT_CODECS) {
+        for (DynamicObjectRewindCodec codec : SHARED_REWIND_DYNAMIC_OBJECT_CODECS) {
+            if (codec.className().equals(className)) {
+                return Optional.of(codec);
+            }
+        }
+        for (DynamicObjectRewindCodec codec : registryDynamicRewindCodecs(registry)) {
             if (codec.className().equals(className)) {
                 return Optional.of(codec);
             }
         }
         return Optional.empty();
+    }
+
+    private static List<DynamicObjectRewindCodec> registryDynamicRewindCodecs(ObjectRegistry registry) {
+        return registry == null ? List.of() : registry.dynamicRewindCodecs();
     }
 
     private ObjectInstance recreateDynamicObject(
             com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
-        return rewindDynamicObjectCodecForClassName(entry.className())
+        return rewindDynamicObjectCodecForClassName(entry.className(), registry)
                 .map(codec -> codec.recreate(new DynamicObjectRecreateContext(this), entry))
                 .orElse(null);
-    }
-
-    private com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance findBuzzerParentForRewind(
-            int parentSlotIndex) {
-        for (ObjectInstance inst : activeObjects.values()) {
-            if (inst instanceof com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance buzzer
-                    && buzzer.getSlotIndex() == parentSlotIndex) {
-                return buzzer;
-            }
-        }
-        return null;
-    }
-
-    private com.openggf.game.sonic2.objects.CheckpointObjectInstance findCheckpointParentForRewind(
-            ObjectSpawn childSpawn) {
-        if (childSpawn == null) {
-            return null;
-        }
-        for (ObjectInstance inst : activeObjects.values()) {
-            if (inst instanceof com.openggf.game.sonic2.objects.CheckpointObjectInstance checkpoint
-                    && checkpoint.getCenterX() == childSpawn.x()
-                    && checkpoint.getCenterY() == childSpawn.y()) {
-                return checkpoint;
-            }
-        }
-        return null;
-    }
-
-    private com.openggf.game.sonic3k.objects.CnzMinibossInstance findCnzMinibossParentForRewind() {
-        for (ObjectInstance inst : activeObjects.values()) {
-            if (inst instanceof com.openggf.game.sonic3k.objects.CnzMinibossInstance parent) {
-                return parent;
-            }
-        }
-        for (ObjectInstance inst : dynamicObjects) {
-            if (inst instanceof com.openggf.game.sonic3k.objects.CnzMinibossInstance parent) {
-                return parent;
-            }
-        }
-        return null;
     }
 
     ObjectInstance findRestoredRidingObject(ObjectSpawn spawn, int slotIndex) {

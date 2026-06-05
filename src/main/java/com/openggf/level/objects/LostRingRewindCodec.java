@@ -19,7 +19,7 @@ import com.openggf.level.rings.LostRingObjectInstance;
  * {@link com.openggf.game.rewind.RewindTransient}-marked per-ring (captured once by the
  * ring-manager snapshot) and is re-injected by the spawner; it is intentionally NOT carried here.
  */
-final class LostRingRewindCodec implements ObjectManager.RewindDynamicObjectCodec {
+final class LostRingRewindCodec implements DynamicObjectRewindCodec {
 
     @Override
     public boolean supports(ObjectInstance instance) {
@@ -33,7 +33,7 @@ final class LostRingRewindCodec implements ObjectManager.RewindDynamicObjectCode
 
     @Override
     public ObjectInstance recreate(
-            ObjectManager.DynamicObjectRecreateContext context,
+            DynamicObjectRecreateContext context,
             ObjectManagerSnapshot.DynamicObjectEntry entry) {
         LostRingObjectInstance ring = LostRingObjectInstance.create(entry.spawn());
         ring.setServices(context.objectServices());

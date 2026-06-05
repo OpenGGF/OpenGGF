@@ -209,6 +209,11 @@ behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Architecture consolidation feature (2026-06-05).** Merged
+  `feature/ai-clean-architecture-consolidated`: consolidated the architectural review workers into one
+  branch, extracting boot/menu controllers, engine render dispatch, donated data-select warmup, level
+  rewind snapshots, and dynamic object rewind codecs into focused collaborators. The merge also tightens
+  source-guard ratchets and keeps follow-up architecture guidance in the contributor docs.
 - **Architecture roadmap completion (2026-06-05).** Integrated the follow-on roadmap phase (recovered
   from a sibling architecture agent that worked in the shared checkout instead of a worktree, then
   reconciled cleanly onto develop — zero conflicts): playable terrain collision paths name

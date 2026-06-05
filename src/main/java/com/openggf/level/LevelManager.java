@@ -23,12 +23,15 @@ import com.openggf.debug.PerformanceProfiler;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
+import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.rewind.snapshot.LevelSnapshot;
 import com.openggf.game.render.AdvancedRenderModeController;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
 import com.openggf.game.render.SpecialRenderEffectStage;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
+import com.openggf.level.rewind.LevelRewindSnapshotAdapter;
 import com.openggf.level.objects.HudRenderManager;
 import com.openggf.level.objects.HudStaticArt;
 import com.openggf.graphics.GLCommand;
@@ -3547,6 +3550,22 @@ public class LevelManager {
         return checkpointState;
     }
 
+    public CheckpointState.RewindState captureCheckpointStateForRewind() {
+        return checkpointState instanceof CheckpointState cs ? cs.captureRewindState() : null;
+    }
+
+    public void restoreCheckpointStateForRewind(CheckpointState.RewindState checkpointRewindState) {
+        if (checkpointRewindState == null) {
+            return;
+        }
+        if (checkpointState == null && gameModule != null) {
+            checkpointState = gameModule.createRespawnState();
+        }
+        if (checkpointState instanceof CheckpointState cs) {
+            cs.restoreRewindState(checkpointRewindState);
+        }
+    }
+
     // ==================== Transition Coordinator Delegation ====================
     // Thin wrappers that delegate to LevelTransitionCoordinator.
     /** Returns the transition coordinator. */
@@ -4034,76 +4053,11 @@ public class LevelManager {
         }
     }
 
-    // ===== Rewind snapshot adapter =====
-
     /**
      * Returns a {@link com.openggf.game.rewind.RewindSnapshottable} adapter for level state.
      * Captures block/chunk array references and map data; restores via copy-on-write.
      */
-    public com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.LevelSnapshot> levelRewindSnapshottable() {
-        return new com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.LevelSnapshot>() {
-            @Override
-            public String key() {
-                return "level";
-            }
-
-            @Override
-            public com.openggf.game.rewind.snapshot.LevelSnapshot capture() {
-                Level currentLevel = getCurrentLevel();
-                if (!(currentLevel instanceof AbstractLevel)) {
-                    throw new IllegalStateException("Current level is not an AbstractLevel: " + currentLevel.getClass().getName());
-                }
-                AbstractLevel level = (AbstractLevel) currentLevel;
-
-                return new com.openggf.game.rewind.snapshot.LevelSnapshot(
-                        level.currentEpoch(),
-                        level.blocksReference(),
-                        level.chunksReference(),
-                        level.getMap().getData(),
-                        frameCounter,
-                        levelGamestate != null,
-                        levelGamestate != null ? levelGamestate.getRings() : 0,
-                        levelGamestate != null ? levelGamestate.getTimerFrames() : 0,
-                        levelGamestate != null && levelGamestate.isTimerPaused(),
-                        isRespawnRequestedForRewind(),
-                        checkpointState instanceof CheckpointState cs ? cs.captureRewindState() : null
-                );
-            }
-
-            @Override
-            public void restore(com.openggf.game.rewind.snapshot.LevelSnapshot s) {
-                Level currentLevel = getCurrentLevel();
-                if (!(currentLevel instanceof AbstractLevel)) {
-                    throw new IllegalStateException("Current level is not an AbstractLevel: " + currentLevel.getClass().getName());
-                }
-                AbstractLevel level = (AbstractLevel) currentLevel;
-
-                level.replaceBlocks(s.blocks());
-                level.replaceChunks(s.chunks());
-                level.getMap().restoreData(s.mapData());
-                level.bumpEpoch();
-                // TODO: mark dirty regions for re-upload — see L1 LevelManager.processDirtyRegions
-                level.markAllDirty();
-                frameCounter = s.frameCounter();
-                if (s.hasLevelHudState() && levelGamestate != null) {
-                    levelGamestate.setRings(s.levelRings());
-                    levelGamestate.setTimerFrames(s.levelTimerFrames());
-                    if (s.levelTimerPaused()) {
-                        levelGamestate.pauseTimer();
-                    } else {
-                        levelGamestate.resumeTimer();
-                    }
-                }
-                restoreRespawnRequestedForRewind(s.respawnRequested());
-                if (s.checkpointState() != null) {
-                    if (checkpointState == null && gameModule != null) {
-                        checkpointState = gameModule.createRespawnState();
-                    }
-                    if (checkpointState instanceof CheckpointState cs) {
-                        cs.restoreRewindState(s.checkpointState());
-                    }
-                }
-            }
-        };
+    public RewindSnapshottable<LevelSnapshot> levelRewindSnapshottable() {
+        return LevelRewindSnapshotAdapter.create(this);
     }
 }

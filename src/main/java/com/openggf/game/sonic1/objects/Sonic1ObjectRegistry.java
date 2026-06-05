@@ -27,6 +27,8 @@ import com.openggf.game.sonic1.objects.bosses.Sonic1FZBossInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance;
 import com.openggf.level.objects.AbstractObjectRegistry;
+import com.openggf.level.objects.DynamicObjectRewindCodec;
+import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.rings.RingSpawn;
 
@@ -42,6 +44,9 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
 
     private Map<ObjectSpawn, List<RingSpawn>> ringSpawnMapping = Map.of();
 
+    private static final List<DynamicObjectRewindCodec> DYNAMIC_REWIND_CODECS = List.of(
+            ObjectRewindDynamicCodecs.pointsCodec(Sonic1PointsObjectInstance.class));
+
     public void setRingSpawnMapping(Map<ObjectSpawn, List<RingSpawn>> mapping) {
         this.ringSpawnMapping = mapping != null ? mapping : Map.of();
     }
@@ -56,6 +61,11 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             return s1Level.getRingSpawnMapping();
         }
         return ringSpawnMapping;
+    }
+
+    @Override
+    public List<DynamicObjectRewindCodec> dynamicRewindCodecs() {
+        return DYNAMIC_REWIND_CODECS;
     }
 
     @Override

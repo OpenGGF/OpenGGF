@@ -6,6 +6,7 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.dataselect.DataSelectHostProfile;
 import com.openggf.game.dataselect.DataSelectPresentationProvider;
+import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.PlaneSwitcherConfig;
@@ -13,6 +14,8 @@ import com.openggf.level.objects.TouchResponseTable;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SuperStateController;
+
+import java.util.Optional;
 
 public interface GameModule {
     String getIdentifier();
@@ -480,6 +483,14 @@ public interface GameModule {
      * @return the service instance, or null
      */
     default <T> T getGameService(Class<T> type) { return null; }
+
+    /**
+     * Returns the donated S3K data-select preview image warmup, if this module
+     * renders S3K-style data select using host-owned generated preview images.
+     */
+    default Optional<DonatedDataSelectWarmupTask> getDonatedDataSelectWarmupTask() {
+        return Optional.empty();
+    }
 
     /** Returns the GameId for this module. */
     GameId getGameId();

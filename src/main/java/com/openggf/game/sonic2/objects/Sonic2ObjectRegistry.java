@@ -1,17 +1,23 @@
 package com.openggf.game.sonic2.objects;
 import com.openggf.level.objects.ExplosionObjectInstance;
 
+import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.level.objects.boss.BossExplosionObjectInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2MCZBossInstance;
 import com.openggf.level.objects.AbstractObjectRegistry;
+import com.openggf.level.objects.DynamicObjectRecreateContext;
+import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectFactory;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.game.sonic2.objects.badniks.AsteronBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance;
+import com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance;
 import com.openggf.game.sonic2.objects.badniks.OctusBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.MasherBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance;
@@ -58,6 +64,14 @@ import java.util.logging.Logger;
 
 public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
     private static final Logger LOGGER = Logger.getLogger(Sonic2ObjectRegistry.class.getName());
+    private static final String BUZZER_FLAME_CHILD_CLASS =
+            "com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance$BuzzerFlameChild";
+    private static final List<DynamicObjectRewindCodec> DYNAMIC_REWIND_CODECS = List.of(
+            badnikProjectileCodec(),
+            buzzerFlameCodec(),
+            ObjectRewindDynamicCodecs.pointsCodec(PointsObjectInstance.class),
+            checkpointDongleCodec(),
+            checkpointStarCodec());
 
     private final Map<Integer, List<String>> namesById = new HashMap<>();
     private final Set<Integer> unknownIds = new HashSet<>();
@@ -120,6 +134,11 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
     }
 
     @Override
+    public List<DynamicObjectRewindCodec> dynamicRewindCodecs() {
+        return DYNAMIC_REWIND_CODECS;
+    }
+
+    @Override
     public void reportCoverage(List<ObjectSpawn> spawns) {
         ensureLoaded();
         if (spawns == null || spawns.isEmpty()) {
@@ -146,6 +165,140 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
         if (!missingEntries.isEmpty()) {
             LOGGER.info("Missing object ids: " + String.join(", ", missingEntries));
         }
+    }
+
+    private static DynamicObjectRewindCodec badnikProjectileCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance instanceof BadnikProjectileInstance;
+            }
+
+            @Override
+            public String className() {
+                return BadnikProjectileInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                var extra = (PerObjectRewindSnapshot.BadnikProjectileRewindExtra)
+                        entry.state().objectSubclassExtra();
+                return new BadnikProjectileInstance(
+                        entry.spawn(),
+                        BadnikProjectileInstance.ProjectileType.valueOf(extra.projectileType()),
+                        extra.currentX(),
+                        extra.currentY(),
+                        extra.xVelocity(),
+                        extra.yVelocity(),
+                        extra.applyGravity(),
+                        extra.hFlip(),
+                        extra.initialDelay(),
+                        extra.fixedFrame());
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec buzzerFlameCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(BUZZER_FLAME_CHILD_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return BUZZER_FLAME_CHILD_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                try {
+                    var extra = (PerObjectRewindSnapshot.BuzzerFlameRewindExtra)
+                            entry.state().objectSubclassExtra();
+                    BuzzerBadnikInstance parent = findBuzzerParentForRewind(context, extra.parentSlotIndex());
+                    if (parent == null) {
+                        return null;
+                    }
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(ObjectSpawn.class, BuzzerBadnikInstance.class);
+                    ctor.setAccessible(true);
+                    return (ObjectInstance) ctor.newInstance(entry.spawn(), parent);
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec checkpointDongleCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance instanceof CheckpointDongleInstance;
+            }
+
+            @Override
+            public String className() {
+                return CheckpointDongleInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                CheckpointObjectInstance parent = findCheckpointParentForRewind(context, entry.spawn());
+                return parent == null ? null : new CheckpointDongleInstance(parent);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec checkpointStarCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance instanceof CheckpointStarInstance;
+            }
+
+            @Override
+            public String className() {
+                return CheckpointStarInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                CheckpointObjectInstance parent = findCheckpointParentForRewind(context, entry.spawn());
+                return parent == null ? null : new CheckpointStarInstance(parent, 0);
+            }
+        };
+    }
+
+    private static BuzzerBadnikInstance findBuzzerParentForRewind(
+            DynamicObjectRecreateContext context, int parentSlotIndex) {
+        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+            if (inst instanceof BuzzerBadnikInstance buzzer
+                    && buzzer.getSlotIndex() == parentSlotIndex) {
+                return buzzer;
+            }
+        }
+        return null;
+    }
+
+    private static CheckpointObjectInstance findCheckpointParentForRewind(
+            DynamicObjectRecreateContext context, ObjectSpawn childSpawn) {
+        if (childSpawn == null) {
+            return null;
+        }
+        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+            if (inst instanceof CheckpointObjectInstance checkpoint
+                    && checkpoint.getCenterX() == childSpawn.x()
+                    && checkpoint.getCenterY() == childSpawn.y()) {
+                return checkpoint;
+            }
+        }
+        return null;
     }
 
     @Override
