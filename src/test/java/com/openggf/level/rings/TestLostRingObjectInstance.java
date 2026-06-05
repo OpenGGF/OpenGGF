@@ -45,6 +45,96 @@ class TestLostRingObjectInstance {
     }
 
     @Test
+    void floorCheckCadenceReadsFeatureSetMaskS1EveryFourFramesS2EveryEight() {
+        // ROM: per-game floor-check cadence (relocated from RingManager.LostRingPool.updatePhysics,
+        // RingManager.java:1242-1248). S1 probes every 4 frames (andi.b #3), S2/S3K every 8 (andi.b #7).
+        // The object must consult PhysicsFeatureSet.ringFloorCheckMask(), not a hardcoded constant.
+        ProbeRecordingRing s1Ring = new ProbeRecordingRing(0x100, 0x100, 0, 0x0400,
+                /*mask*/com.openggf.game.PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S1,
+                /*reverseGravity*/false);
+        // phaseOffset 0: probe fires when (vbla & mask) == 0.
+        s1Ring.setVblaForTest(4);   // 4 & 3 == 0 → S1 probes; would NOT probe under S2 mask (4 & 7 == 4)
+        s1Ring.stepPhysicsForTest(0x18, true);
+        assertEquals(1, s1Ring.floorProbeCount, "S1 (#3 mask) must probe the floor on frame 4");
+
+        ProbeRecordingRing s2Ring = new ProbeRecordingRing(0x100, 0x100, 0, 0x0400,
+                /*mask*/com.openggf.game.PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S2,
+                /*reverseGravity*/false);
+        s2Ring.setVblaForTest(4);   // 4 & 7 == 4 → S2 does NOT probe on frame 4
+        s2Ring.stepPhysicsForTest(0x18, true);
+        assertEquals(0, s2Ring.floorProbeCount, "S2 (#7 mask) must NOT probe the floor on frame 4");
+        s2Ring.setVblaForTest(8);   // 8 & 7 == 0 → S2 probes
+        s2Ring.stepPhysicsForTest(0x18, true);
+        assertEquals(1, s2Ring.floorProbeCount, "S2 (#7 mask) must probe the floor on frame 8");
+    }
+
+    @Test
+    void s3kReverseGravityProbesCeilingNotFloor() {
+        // ROM: S3K Reverse_gravity_flag routes Obj37 to Obj_Bouncing_Ring_Reverse_Gravity,
+        // which probes the CEILING (RingCheckFloorDist_ReverseGravity, upward) and only when
+        // yVel <= 0 (rising). Relocated from RingManager.java:1271-1294.
+        ProbeRecordingRing ring = new ProbeRecordingRing(0x100, 0x100, 0, /*yVel rising*/-0x0400,
+                /*mask*/com.openggf.game.PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S2,
+                /*reverseGravity*/true);
+        ring.setVblaForTest(0);     // 0 & 7 == 0 → probe fires this frame
+        ring.stepPhysicsForTest(0x18, true);
+        assertEquals(1, ring.ceilingProbeCount, "S3K reverse gravity must probe the ceiling");
+        assertEquals(0, ring.floorProbeCount, "S3K reverse gravity must NOT probe the floor");
+    }
+
+    /**
+     * Captures which per-game probe path the object takes given an injected floor-check mask and
+     * reverse-gravity flag — the feature-set-driven cadence decision is the unit under test, so the
+     * actual level collision distance is stubbed to 0 (no terrain).
+     */
+    private static final class ProbeRecordingRing extends LostRingObjectInstance {
+        private final int mask;
+        private final boolean reverseGravity;
+        private int vbla;
+        int floorProbeCount;
+        int ceilingProbeCount;
+
+        private ProbeRecordingRing(int xPixel, int yPixel, int xVel, int yVel,
+                                   int mask, boolean reverseGravity) {
+            super(new ObjectSpawn(xPixel & 0xFFFF, yPixel & 0xFFFF, 0x37, 0, 0, false, 0));
+            initFixedPointForTest(xPixel, yPixel, xVel, yVel, 0, 0xFF);
+            this.mask = mask;
+            this.reverseGravity = reverseGravity;
+        }
+
+        void setVblaForTest(int vbla) {
+            this.vbla = vbla;
+        }
+
+        @Override
+        protected int resolveFloorCheckMask() {
+            return mask;
+        }
+
+        @Override
+        protected boolean isReverseGravityActive() {
+            return reverseGravity;
+        }
+
+        @Override
+        protected int resolveVblaCounter() {
+            return vbla;
+        }
+
+        @Override
+        protected int ringCheckFloorDist(int x, int y) {
+            floorProbeCount++;
+            return 0;
+        }
+
+        @Override
+        protected int ringCheckCeilingDist(int x, int y) {
+            ceilingProbeCount++;
+            return 0;
+        }
+    }
+
+    @Test
     void ringBouncePhysicsMatchesLegacyPool() {
         // Fixed-point contract (identical to LostRing.reset, RingManager LostRing.java:24):
         //   xSubpixel = x << 8 (pixel coordinate stored in the high byte; low byte = sub-pixel).
