@@ -3,6 +3,7 @@ package com.openggf.game.sonic2;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.art.ObjectArtRegistration;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -27,8 +28,12 @@ public final class Sonic2PlcArtRegistry {
         ObjectSpriteSheet build(Sonic2ObjectArt art);
     }
 
-    /** Registration entry: art key + builder function. */
-    public record ArtRegistration(String key, SheetBuilder builder) {}
+    /** Registration entry: provider-owned metadata + builder function. */
+    public record ArtRegistration(ObjectArtRegistration metadata, SheetBuilder builder) {
+        public String key() {
+            return metadata.key();
+        }
+    }
 
     private static final Map<Integer, ArtRegistration> REGISTRY = new HashMap<>();
 
@@ -319,7 +324,14 @@ public final class Sonic2PlcArtRegistry {
     }
 
     private static void reg(int romAddr, String key, SheetBuilder builder) {
-        ArtRegistration existing = REGISTRY.put(romAddr, new ArtRegistration(key, builder));
+        ObjectArtRegistration metadata = ObjectArtRegistration.sheet(key)
+                .withRomSource(
+                        romAddr,
+                        ObjectArtRegistration.UNSPECIFIED,
+                        ObjectArtRegistration.UNSPECIFIED,
+                        ObjectArtRegistration.UNSPECIFIED)
+                .requiringPlc();
+        ArtRegistration existing = REGISTRY.put(romAddr, new ArtRegistration(metadata, builder));
         if (existing != null) {
             LOG.fine(String.format("Registry override at 0x%06X: %s -> %s", romAddr, existing.key(), key));
         }

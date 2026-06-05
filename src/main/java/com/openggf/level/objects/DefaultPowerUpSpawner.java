@@ -169,12 +169,7 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
         if (services == null) {
             return factory.get();
         }
-        AbstractObjectInstance.CONSTRUCTION_CONTEXT.set(services);
-        try {
-            return factory.get();
-        } finally {
-            AbstractObjectInstance.CONSTRUCTION_CONTEXT.remove();
-        }
+        return ObjectConstructionContext.construct(services, factory);
     }
 
     private void addPowerUpObject(ObjectInstance object) {

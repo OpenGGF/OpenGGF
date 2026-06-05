@@ -6,6 +6,7 @@ import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.HudStaticArt;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.art.ObjectArtBundle;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 
@@ -53,6 +54,14 @@ public interface ObjectArtProvider {
      * @return the animation set, or null if not found
      */
     SpriteAnimationSet getAnimations(String key);
+
+    /**
+     * Gets the game-agnostic art bundle currently exposed by this provider.
+     * Providers may build this from their own registries after zone-specific loading.
+     */
+    default ObjectArtBundle getArtBundle() {
+        return ObjectArtBundle.empty();
+    }
 
     /**
      * Gets zone-specific integer data.

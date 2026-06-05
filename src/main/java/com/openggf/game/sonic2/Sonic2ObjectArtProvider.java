@@ -15,6 +15,8 @@ import com.openggf.level.objects.HudStaticArt;
 import com.openggf.level.objects.ObjectArtData;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.art.ObjectArtBundle;
+import com.openggf.level.objects.art.ObjectArtRegistration;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import com.openggf.sprites.animation.SpriteAnimationSet;
@@ -36,6 +38,27 @@ import java.util.logging.Logger;
 public class Sonic2ObjectArtProvider implements ObjectArtProvider,
         com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.PlcProgressSnapshot> {
     private static final Logger LOGGER = Logger.getLogger(Sonic2ObjectArtProvider.class.getName());
+
+    @FunctionalInterface
+    private interface ZoneSheetBuilder {
+        ObjectSpriteSheet build(Sonic2ObjectArt artLoader, int zoneIndex);
+    }
+
+    private record SheetRegistration(ObjectArtRegistration metadata, ZoneSheetBuilder builder) {}
+
+    private static final List<SheetRegistration> EAGER_SHEET_REGISTRATIONS = List.of(
+            new SheetRegistration(
+                    ObjectArtRegistration.sheet(Sonic2ObjectArtKeys.BREAKABLE_BLOCK),
+                    Sonic2ObjectArt::loadBreakableBlockSheet),
+            new SheetRegistration(
+                    ObjectArtRegistration.sheet(Sonic2ObjectArtKeys.CPZ_PLATFORM),
+                    Sonic2ObjectArt::loadGenericPlatformBSheet),
+            new SheetRegistration(
+                    ObjectArtRegistration.sheet(Sonic2ObjectArtKeys.CPZ_STAIR_BLOCK),
+                    (artLoader, zoneIndex) -> artLoader.loadCpzStairBlockSheet()),
+            new SheetRegistration(
+                    ObjectArtRegistration.sheet(Sonic2ObjectArtKeys.SIDEWAYS_PFORM),
+                    (artLoader, zoneIndex) -> artLoader.loadSidewaysPformSheet()));
 
     private Sonic2ObjectArt artLoader;
     private ObjectArtData artData;
@@ -111,13 +134,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
         registerSheet(ObjectArtKeys.MONITOR, artData.monitorSheet());
         registerSheet(Sonic2ObjectArtKeys.WATERFALL, artData.waterfallSheet());
         registerSheet(ObjectArtKeys.ANIMAL, artData.animalSheet());
-        registerSheet(Sonic2ObjectArtKeys.BREAKABLE_BLOCK, artData.breakableBlockSheet());
-        registerSheet(Sonic2ObjectArtKeys.CPZ_PLATFORM, artData.cpzPlatformSheet());
-        // MTZPlatform (Obj6B) and MTZLongPlatform (Obj65) use ArtTile_ArtKos_LevelArt (level art)
-        // and have no dedicated Nemesis art file. CPZ_STAIR_BLOCK provides the closest compatible
-        // sprite sheet for rendering. Must be loaded for all zones, not just CPZ.
-        registerSheet(Sonic2ObjectArtKeys.CPZ_STAIR_BLOCK, artLoader.loadCpzStairBlockSheet());
-        registerSheet(Sonic2ObjectArtKeys.SIDEWAYS_PFORM, artData.sidewaysPformSheet());
+        registerEagerSheets(zoneIndex);
         // Red spring variants (share base spring art, different mappings — not PLC entries)
         registerSheet(ObjectArtKeys.SPRING_VERTICAL_RED, artData.springVerticalRedSheet());
         registerSheet(ObjectArtKeys.SPRING_HORIZONTAL_RED, artData.springHorizontalRedSheet());
@@ -235,6 +252,13 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
         }
     }
 
+    private void registerEagerSheets(int zoneIndex) {
+        for (SheetRegistration registration : EAGER_SHEET_REGISTRATIONS) {
+            ObjectSpriteSheet sheet = registration.builder().build(artLoader, zoneIndex);
+            registerSheet(registration.metadata().key(), sheet);
+        }
+    }
+
     /**
      * Loads a Sonic 2 PLC on demand, matching runtime event-triggered PLC requests.
      * Re-requesting an already loaded PLC is harmless because individual art keys
@@ -333,6 +357,23 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
     @Override
     public SpriteAnimationSet getAnimations(String key) {
         return animations.get(key);
+    }
+
+    @Override
+    public ObjectArtBundle getArtBundle() {
+        ObjectArtBundle.Builder builder = ObjectArtBundle.builder()
+                .sheets(sheets)
+                .animations(animations)
+                .hudDigitPatterns(hudDigitPatterns)
+                .hudTextPatterns(hudTextPatterns)
+                .hudLivesPatterns(hudLivesPatterns)
+                .hudLivesNumbers(hudLivesNumbers)
+                .hudHexDigitPatterns(hudHexDigits);
+        if (artData != null) {
+            builder.zoneData(ObjectArtKeys.ANIMAL_TYPE_A, artData.getAnimalTypeA())
+                    .zoneData(ObjectArtKeys.ANIMAL_TYPE_B, artData.getAnimalTypeB());
+        }
+        return builder.build();
     }
 
     @Override

@@ -20,6 +20,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 class TestArchitecturalSourceGuard {
     private static final Path SRC_MAIN = Path.of("src", "main", "java");
     private static final String ENGINE_PATH = "com/openggf/Engine.java";
+    private static final String OBJECT_MANAGER_PATH = "com/openggf/level/objects/ObjectManager.java";
+    private static final int OBJECT_MANAGER_MAX_LINES = 3900;
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
 
@@ -42,15 +44,6 @@ class TestArchitecturalSourceGuard {
             "flipperSheet",
             "speedBoosterSheet",
             "blueBallsSheet",
-            "breakableBlockSheet",
-            "cpzPlatformSheet",
-            "cpzStairBlockSheet",
-            "sidewaysPformSheet",
-            "cpzPylonSheet",
-            "pipeExitSpringSheet",
-            "tippingFloorSheet",
-            "barrierSheet",
-            "springboardSheet",
             "resultsSheet",
             "leavesSheet",
             "checkpointAnimations",
@@ -60,7 +53,7 @@ class TestArchitecturalSourceGuard {
             "springboardAnimations"
     );
     private static final Pattern OBJECT_ART_FORBIDDEN_NAME =
-            Pattern.compile("(?i).*(sonic|s1|s2|s3k|ghz|lz|mz|slz|syz|sbz|ehz|cpz|arz|cnz|htz|mcz|ooz|mtz|wfz|scz|dez|aiz|hcz|mgz|cnz|icz|lbz|mhz|fbz|soz|lrz|hpz|ssz|ddz).*");
+            Pattern.compile("(?i).*(sonic|s1|s2|s3k|ghz|lz|mz|slz|syz|sbz|ehz|cpz|arz|cnz|htz|mcz|ooz|mtz|wfz|scz|dez|aiz|hcz|mgz|cnz|icz|lbz|mhz|fbz|soz|lrz|hpz|ssz|ddz|plc|dplc|romAddr|artAddr|mappingAddr|patternBase).*");
 
     private static final Set<String> COORDINATE_HAZARD_ALLOWED = Set.of(
             "com/openggf/game/sonic2/objects/CheckpointStarInstance.java",
@@ -163,6 +156,25 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
+    void levelFrameStepDoesNotUseAmbientGameServices() throws IOException {
+        String source = Files.readString(SRC_MAIN.resolve("com/openggf/LevelFrameStep.java"));
+
+        assertTrue(!source.contains("GameServices."),
+                "LevelFrameStep must receive frame dependencies through LevelFrameContext, not GameServices");
+    }
+
+    @Test
+    void objectManagerFacadeStaysWithinExtractedCollaboratorBudget() throws IOException {
+        SourceFile objectManager = SourceFile.read(SRC_MAIN.resolve(OBJECT_MANAGER_PATH));
+        int lineCount = objectManager.lines().size();
+        assertTrue(lineCount <= OBJECT_MANAGER_MAX_LINES,
+                "ObjectManager.java is " + lineCount + " lines; budget is " + OBJECT_MANAGER_MAX_LINES
+                        + " after extracting ObjectPlacementController, ObjectTouchResponseController, "
+                        + "and ObjectSolidContactController. Keep new placement, touch-response, "
+                        + "and solid-contact logic in those collaborators.");
+    }
+
+    @Test
     void objectArtDataDoesNotGainNewGameOrZoneSpecificSurface() throws IOException {
         String source = stripCommentsAndStrings(Files.readString(
                 SRC_MAIN.resolve("com/openggf/level/objects/ObjectArtData.java")));
@@ -176,6 +188,37 @@ class TestArchitecturalSourceGuard {
 
         assertNoViolations("ObjectArtData must stay game-agnostic; add game/zone art to object art providers instead",
                 violations);
+    }
+
+    @Test
+    void sharedObjectArtSplitTypesExistAtProviderBoundary() {
+        assertTrue(Files.exists(SRC_MAIN.resolve("com/openggf/level/objects/art/ObjectArtBundle.java")),
+                "ObjectArtBundle should be the shared, game-agnostic render data contract");
+        assertTrue(Files.exists(SRC_MAIN.resolve("com/openggf/level/objects/art/ObjectArtRegistration.java")),
+                "ObjectArtRegistration should hold provider-owned art registration metadata");
+    }
+
+    @Test
+    void objectArtDataDoesNotExposeSonic2ProviderSpecificFields() throws IOException {
+        String source = stripCommentsAndStrings(Files.readString(
+                SRC_MAIN.resolve("com/openggf/level/objects/ObjectArtData.java")));
+        List<String> names = objectArtDataSurfaceNames(source);
+        List<String> forbidden = names.stream()
+                .filter(Set.of(
+                        "breakableBlockSheet",
+                        "cpzPlatformSheet",
+                        "cpzStairBlockSheet",
+                        "sidewaysPformSheet",
+                        "cpzPylonSheet",
+                        "pipeExitSpringSheet",
+                        "tippingFloorSheet",
+                        "barrierSheet",
+                        "springboardSheet")::contains)
+                .sorted()
+                .toList();
+
+        assertEquals(List.of(), forbidden,
+                "Sonic 2 conditional/eager sheets belong in Sonic2ObjectArtProvider registrations, not ObjectArtData");
     }
 
     @Test

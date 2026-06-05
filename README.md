@@ -209,6 +209,14 @@ behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Architecture roadmap cleanup (2026-06-05).** Merged `feature/ai-architecture-roadmap` (15 commits):
+  object-manager collaborator extraction, owned editor/frame runtime contexts, shared object-art data
+  split, explicit frame-collision phases (`FrameCollisionPlan`), pattern-atlas overlap guard, scoped
+  object construction context, and tightened architecture-governance guards. Compiles with the core
+  architecture guards green; landed under the land-genuine/allow-regression policy — any trace
+  frontier moved by the refactor is captured in `docs/TRACE_FRONTIER_LOG.md` for an orchestration
+  follow-up rather than blocking the merge. (Pre-existing `TestRewindArchitectureGuard` red on the
+  `LbzCupElevatorInstance` baseline is unrelated to this branch.)
 - **S2 trace-fleet pass 8 — 4 genuine advances, 0 regressions (2026-06-05).** Third 16-trace S2 pass;
   diminishing returns confirmed (10→9→4 advances across passes 6-8 as the generic per-trace fleet
   saturates). Landed: ChopChop vertical-band gate (arz2 669→857), a `PlayableSpriteMovement` sidekick

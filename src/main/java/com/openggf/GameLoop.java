@@ -719,7 +719,8 @@ public class GameLoop {
                 if (tcpCard.shouldRunPlayerPhysics()) {
                     // S2: full title-card frame step.
                     spriteManager.publishHeldInputForLevelEvents(inputHandler);
-                    LevelFrameStep.execute(levelManager, camera, () -> spriteManager.update(inputHandler),
+                    LevelFrameStep.execute(LevelFrameContext.from(gameplayMode),
+                            levelManager, camera, () -> spriteManager.update(inputHandler),
                             (name, step) -> {
                                 profiler.beginSection(name);
                                 step.run();
@@ -877,7 +878,8 @@ public class GameLoop {
                 if (!skipGameplay) {
                     // Canonical level tick sequence — see LevelFrameStep for ordering rationale.
                     spriteManager.publishHeldInputForLevelEvents(inputHandler);
-                    LevelFrameStep.execute(levelManager, camera, () -> spriteManager.update(inputHandler),
+                    LevelFrameStep.execute(LevelFrameContext.from(gameplayMode),
+                            levelManager, camera, () -> spriteManager.update(inputHandler),
                             (name, step) -> {
                                 profiler.beginSection(name);
                                 step.run();
@@ -969,7 +971,7 @@ public class GameLoop {
             if (!freezeForBonusExit) {
                 beginGameplayAudioFrameForTick();
                 spriteManager.publishHeldInputForLevelEvents(inputHandler);
-                LevelFrameStep.execute(levelManager, camera, () -> {
+                LevelFrameStep.execute(LevelFrameContext.from(gameplayMode), levelManager, camera, () -> {
                     spriteManager.update(inputHandler);
                 }, (name, step) -> {
                     profiler.beginSection(name);

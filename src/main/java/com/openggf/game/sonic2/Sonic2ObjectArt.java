@@ -206,49 +206,8 @@ public class Sonic2ObjectArt {
         ObjectSpriteSheet speedBoosterSheet = loadSpeedBoosterSheet();
         ObjectSpriteSheet blueBallsSheet = loadBlueBallsSheet();
 
-        // Breakable Block / Rock art (Object 0x32) - CPZ metal block or HTZ rock
-        ZoneArtProvider.ObjectArtConfig breakableBlockArtConfig = getObjectArtConfig(Sonic2ObjectIds.BREAKABLE_BLOCK, zoneIndex);
-        int breakableBlockArtAddr = breakableBlockArtConfig != null
-                ? breakableBlockArtConfig.artAddress()
-                : Sonic2Constants.ART_NEM_CPZ_METAL_BLOCK_ADDR;
-        int breakableBlockPalette = breakableBlockArtConfig != null
-                ? breakableBlockArtConfig.palette()
-                : 3;
-        String breakableBlockName = (zoneIndex == Sonic2Constants.ZONE_HTZ) ? "HTZRock" : "CPZMetalBlock";
-        Pattern[] breakableBlockPatterns = safeLoadNemesisPatterns(breakableBlockArtAddr, breakableBlockName);
-        int breakableBlockMapAddr = (zoneIndex == Sonic2Constants.ZONE_HTZ)
-                ? Sonic2Constants.MAP_UNC_OBJ32_HTZ_ADDR
-                : Sonic2Constants.MAP_UNC_OBJ32_CPZ_ADDR;
-        List<SpriteMappingFrame> breakableBlockMappings = loadMappingFrames(breakableBlockMapAddr);
-        ObjectSpriteSheet breakableBlockSheet = new ObjectSpriteSheet(
-                breakableBlockPatterns, breakableBlockMappings, breakableBlockPalette, 1);
-
-        // CPZ/OOZ/WFZ Moving Platform art (Object 0x19)
-        // Load art based on zone via ZoneArtProvider
-        ZoneArtProvider.ObjectArtConfig platformArtConfig = getObjectArtConfig(Sonic2ObjectIds.GENERIC_PLATFORM_B, zoneIndex);
-        int cpzPlatformArtAddr = platformArtConfig != null ? platformArtConfig.artAddress() : Sonic2Constants.ART_NEM_CPZ_ELEVATOR_ADDR;
-        int cpzPlatformPalette = platformArtConfig != null ? platformArtConfig.palette() : 3;
-        Pattern[] cpzPlatformPatterns = safeLoadNemesisPatterns(cpzPlatformArtAddr, "CPZPlatform");
-        List<SpriteMappingFrame> cpzPlatformMappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJ19_ADDR);
-        ObjectSpriteSheet cpzPlatformSheet = new ObjectSpriteSheet(cpzPlatformPatterns, cpzPlatformMappings, cpzPlatformPalette, 0);
-
-        ObjectSpriteSheet cpzStairBlockSheet = loadCpzStairBlockSheet();
-
-        // CPZ/MCZ Sideways Platform art (Object 0x7A) - horizontal moving platform
-        // Uses same patterns as CPZ Stair Block but different mappings (tiles 16+, 48x16 platform)
-        List<SpriteMappingFrame> sidewaysPformMappings = loadMappingFrames(Sonic2Constants.MAP_UNC_CPZ_STAIR_BLOCK_ADDR);
-        Pattern[] cpzStairBlockPatterns = safeLoadNemesisPatterns(Sonic2Constants.ART_NEM_CPZ_STAIRBLOCK_ADDR, "CPZStairBlock");
-        ObjectSpriteSheet sidewaysPformSheet = new ObjectSpriteSheet(cpzStairBlockPatterns, sidewaysPformMappings, 3, 1);
-
-        ObjectSpriteSheet cpzPylonSheet = loadCpzPylonSheet();
-        ObjectSpriteSheet pipeExitSpringSheet = loadPipeExitSpringSheet();
         SpriteAnimationSet pipeExitSpringAnimations = createPipeExitSpringAnimations();
-
-        ObjectSpriteSheet tippingFloorSheet = loadTippingFloorSheet();
         SpriteAnimationSet tippingFloorAnimations = createTippingFloorAnimations();
-
-        ObjectSpriteSheet barrierSheet = loadBarrierSheet();
-        ObjectSpriteSheet springboardSheet = loadSpringboardSheet();
         SpriteAnimationSet springboardAnimations = createSpringboardAnimations();
 
         ObjectSpriteSheet bubblesSheet = loadBubblesSheet();
@@ -322,15 +281,6 @@ public class Sonic2ObjectArt {
                 flipperSheet,
                 speedBoosterSheet,
                 blueBallsSheet,
-                breakableBlockSheet,
-                cpzPlatformSheet,
-                cpzStairBlockSheet,
-                sidewaysPformSheet,
-                cpzPylonSheet,
-                pipeExitSpringSheet,
-                tippingFloorSheet,
-                barrierSheet,
-                springboardSheet,
                 resultsSheet,
                 bubblesSheet,
                 leavesSheet,
@@ -540,9 +490,43 @@ public class Sonic2ObjectArt {
                 Sonic2Constants.MAP_UNC_BLUE_BALLS_ADDR, 3, 0);
     }
 
+    public ObjectSpriteSheet loadBreakableBlockSheet(int zoneIndex) {
+        ZoneArtProvider.ObjectArtConfig artConfig =
+                getObjectArtConfig(Sonic2ObjectIds.BREAKABLE_BLOCK, zoneIndex);
+        int artAddr = artConfig != null
+                ? artConfig.artAddress()
+                : Sonic2Constants.ART_NEM_CPZ_METAL_BLOCK_ADDR;
+        int palette = artConfig != null ? artConfig.palette() : 3;
+        String assetName = (zoneIndex == Sonic2Constants.ZONE_HTZ) ? "HTZRock" : "CPZMetalBlock";
+        Pattern[] patterns = safeLoadNemesisPatterns(artAddr, assetName);
+        int mappingAddr = (zoneIndex == Sonic2Constants.ZONE_HTZ)
+                ? Sonic2Constants.MAP_UNC_OBJ32_HTZ_ADDR
+                : Sonic2Constants.MAP_UNC_OBJ32_CPZ_ADDR;
+        List<SpriteMappingFrame> mappings = loadMappingFrames(mappingAddr);
+        return new ObjectSpriteSheet(patterns, mappings, palette, 1);
+    }
+
+    public ObjectSpriteSheet loadGenericPlatformBSheet(int zoneIndex) {
+        ZoneArtProvider.ObjectArtConfig artConfig =
+                getObjectArtConfig(Sonic2ObjectIds.GENERIC_PLATFORM_B, zoneIndex);
+        int artAddr = artConfig != null
+                ? artConfig.artAddress()
+                : Sonic2Constants.ART_NEM_CPZ_ELEVATOR_ADDR;
+        int palette = artConfig != null ? artConfig.palette() : 3;
+        Pattern[] patterns = safeLoadNemesisPatterns(artAddr, "GenericPlatformB");
+        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJ19_ADDR);
+        return new ObjectSpriteSheet(patterns, mappings, palette, 0);
+    }
+
     public ObjectSpriteSheet loadCpzStairBlockSheet() {
         Pattern[] patterns = safeLoadNemesisPatterns(Sonic2Constants.ART_NEM_CPZ_STAIRBLOCK_ADDR, "CPZStairBlock");
         List<SpriteMappingFrame> mappings = createCPZStairBlockMappings();
+        return new ObjectSpriteSheet(patterns, mappings, 3, 1);
+    }
+
+    public ObjectSpriteSheet loadSidewaysPformSheet() {
+        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_CPZ_STAIR_BLOCK_ADDR);
+        Pattern[] patterns = safeLoadNemesisPatterns(Sonic2Constants.ART_NEM_CPZ_STAIRBLOCK_ADDR, "CPZStairBlock");
         return new ObjectSpriteSheet(patterns, mappings, 3, 1);
     }
 
