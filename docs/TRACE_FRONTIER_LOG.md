@@ -200,6 +200,31 @@
 - Same-game regression guard (single-fork): EHZ1, SCZ, WFZ all GREEN. Baseline (git stash) vs fixed:
   identical S2 trace failure set {Arz2, Arz, Cnz2, Cnz, Cpz2, Cpz, DezEnding, Htz2, Htz, Mcz2} both
   runs (passed=41 failed=22 in both). No same-game green regressed.
+## 2026-06-05 - mcz1 f2362->f2522: standing-still duck/look-up uses pre-friction inertia (CPU Tails spindash vs jump)
+
+- Branch `bugfix/ai-trace-s2-mcz1`, worktree `.worktrees/trace-s2-mcz1` (off develop `b78f3b3b9`).
+- Command (cmd.exe mvn inside worktree):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:/Users/farre/IdeaProjects/sonic-engine/s2.gen" "-Dtest=TestS2MczLevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** advanced, genuine, zero same/cross-game regressions (S1 Ghz1, S2 Ehz1 stay green;
+  S2 Cnz1 stays at its documented f3906 frontier; S3K Aiz stays at f8941).
+- **Root cause:** Sonic releases a spindash at f2360 and rockets right; CPU Tails replays Sonic's
+  delayed input ~16 frames later. At the frame the delayed jump-press arrives, the engine had already
+  flipped Tails into the Duck animation, so `doCheckSpindash` (anim==Duck + jump press) charged a
+  spindash instead of letting `doJump` fire. ROM order in `Obj02_MdNormal` is `Tails_CheckSpindash`
+  -> `Tails_Jump` -> `Tails_Move` (s2.asm:39594-39596): the duck animation is decided inside
+  `Tails_Move`/`Sonic_Move` from inertia tested with `tst.w inertia` BEFORE ground friction runs
+  (S2 s2.asm:36568 Sonic / 39689 Tails, S1 _incObj/01 Sonic.asm:373), while friction is applied later
+  in `Obj01_UpdateSpeedOnGround` (s2.asm:36768-36786). The engine evaluated the duck gate from the
+  POST-friction g_speed, so a sidekick whose inertia decayed to 0 this frame ducked one frame early
+  and met the spindash gate ahead of the jump.
+- **Fix:** Snapshot the pre-friction g_speed in `doGroundMove` (at the ROM `tst.w inertia` point) and
+  feed it to `updateCrouchState`'s standing-still gate instead of the live post-friction g_speed.
+  Shared player code change, ROM-accurate for all three games (Sonic and Tails both gate the
+  standing-still duck/look-up/balance on pre-friction inertia). No zone/route/frame/gameId carve-out.
+- **mcz1: f2362 -> f2522** (errors 455 -> 534). New first divergence f2522 is unrelated: CPU Tails
+  fails to land on/ride the MCZ moving platform (ROM onObj=0x12), drifts off-screen, and the engine's
+  `TailsCPU_CheckDespawn` teleports it to (0x4000,0) (s2.asm:39391-39400) where ROM keeps Tails riding.
+  That is a separate Tails platform-landing/riding cascade, deferred.
 
 ## 2026-06-04 - arz2 f549->f566: ChopChop (Obj91) X movement via ObjectMove subpixel integration
 

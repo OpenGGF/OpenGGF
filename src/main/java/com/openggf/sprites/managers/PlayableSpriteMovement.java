@@ -94,6 +94,17 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean inputRawLeft, inputRawRight;
 	private boolean facingFlipForcesPushClearAfterGroundWall;
 	private boolean wasCrouching;
+	// ROM Sonic_Move/Tails_Move decide the standing-still duck/look-up/balance
+	// animation from inertia BEFORE ground friction runs: the `tst.w inertia`
+	// gate (S1 _incObj/01 Sonic.asm:373, S2 s2.asm:36568 Sonic / 39689 Tails,
+	// S3K shares the convention) sits ahead of Obj01_UpdateSpeedOnGround's
+	// friction (s2.asm:36768-36786). The engine applies friction inside
+	// doGroundMove and then runs updateCrouchState, so the crouch decision must
+	// observe this pre-friction inertia snapshot rather than the post-friction
+	// g_speed. NO_PRE_FRICTION_SNAPSHOT marks "doGroundMove did not run this
+	// frame" so updateCrouchState falls back to the live g_speed.
+	private static final int NO_PRE_FRICTION_SNAPSHOT = Integer.MIN_VALUE;
+	private int preFrictionGroundSpeed = NO_PRE_FRICTION_SNAPSHOT;
 	private int staleHorizontalInputRideSlotIndex;
 	private int staleHorizontalInputSuppressFrames;
 	private int staleHorizontalInputRideFrames;
@@ -327,6 +338,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// distinguish "fresh slip honour the air state" from "stale move_lock
 		// from an earlier slip".
 		sprite.setSlopeRepelJustSlipped(false);
+
+		// Invalidate the pre-friction inertia snapshot at frame start; doGroundMove
+		// repopulates it before updateCrouchState consumes it (see field comment).
+		preFrictionGroundSpeed = NO_PRE_FRICTION_SNAPSHOT;
 
 		// Snapshot pre-physics state for per-object hooks running AFTER
 		// physics in the engine's frame order. ROM order runs cage/object
@@ -1878,6 +1893,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			}
 		}
 
+		// Snapshot inertia at the ROM `tst.w inertia` point — i.e. before the
+		// ground friction below. ROM Sonic_Move/Tails_Move pick the standing-still
+		// duck/look-up animation from this pre-friction inertia (S1 _incObj/01
+		// Sonic.asm:373, S2 s2.asm:36568/39689) and only afterwards run
+		// Obj01_UpdateSpeedOnGround friction (s2.asm:36768-36786). updateCrouchState
+		// consumes this so a sidekick whose inertia decays to 0 this frame does not
+		// duck a frame early (S2 MCZ1 Tails spindash/jump divergence at f2362).
+		preFrictionGroundSpeed = gSpeed;
+
 		// Friction
 		// ROM ref: s2.asm:36443-36446 — Super Sonic uses normal friction (0x0C) not his profile friction (0x30)
 		if (!inputRawLeft && !inputRawRight) {
@@ -3046,8 +3070,17 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		// ROM s2.asm:36237-36245: Balance/crouch/lookup checks happen when standing still
-		// on flat ground (angle + 0x20 & 0xC0 == 0) and not moving (inertia == 0)
-		boolean standingStill = sprite.getGSpeed() == 0 && isOnFlatGround()
+		// on flat ground (angle + 0x20 & 0xC0 == 0) and not moving (inertia == 0).
+		// ROM tests inertia BEFORE ground friction (S1 _incObj/01 Sonic.asm:373,
+		// S2 s2.asm:36568 Sonic / 39689 Tails, friction at s2.asm:36768-36786), so use
+		// the pre-friction snapshot captured in doGroundMove. Without it, a player
+		// whose inertia decays to 0 this frame ducks one frame early; for S2 CPU Tails
+		// that early duck flips Tails_CheckSpindash ahead of Tails_Jump (s2.asm:
+		// 39594-39596) so Tails spindashes instead of jumping (MCZ1 f2362).
+		short standingInertia = preFrictionGroundSpeed != NO_PRE_FRICTION_SNAPSHOT
+				? (short) preFrictionGroundSpeed
+				: sprite.getGSpeed();
+		boolean standingStill = standingInertia == 0 && isOnFlatGround()
 				&& !sprite.getAir() && !sprite.getRolling() && !sprite.getSpindash();
 
 		// Update balance state (checks for ledge edges)
