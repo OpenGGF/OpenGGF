@@ -1,5 +1,6 @@
 package com.openggf.level.rings;
 
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -45,7 +46,14 @@ public final class LostRingObjectInstance extends AbstractObjectInstance
     private boolean collected;
     private int sparkleStartFrame = -1;
 
-    /** Shared spin owner; the displayed frame = owner.frame() + phaseOffset. */
+    /**
+     * Shared spin owner; the displayed frame = owner.frame() + phaseOffset. This is
+     * GLOBAL state shared across every live spilled ring (not per-ring), captured and
+     * restored once via {@link SpillAnimationState#snapshot()}/{@link SpillAnimationState#restore(int[])}
+     * by the ring-manager snapshot — so it is excluded from per-ring rewind capture and
+     * re-injected by the spawner / {@code LostRingRewindCodec} on recreate.
+     */
+    @RewindTransient(reason = "global shared spin owner; captured once via ring-manager snapshot, re-injected on recreate")
     private SpillAnimationState spillAnimation;
 
     private LostRingObjectInstance(ObjectSpawn spawn) {

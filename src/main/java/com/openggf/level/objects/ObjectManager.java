@@ -160,6 +160,7 @@ public class ObjectManager {
             pointsCodec(com.openggf.game.sonic1.objects.Sonic1PointsObjectInstance.class),
             pointsCodec(com.openggf.game.sonic2.objects.PointsObjectInstance.class),
             pointsCodec(com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance.class),
+            new LostRingRewindCodec(),
             deferredPlayerBoundCodec(ShieldObjectInstance.class, ShieldObjectInstance.class),
             deferredPlayerBoundCodec(
                     com.openggf.game.sonic3k.objects.FireShieldObjectInstance.class,
