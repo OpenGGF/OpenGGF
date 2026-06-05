@@ -58,6 +58,32 @@
   handshake).
 - **Same-game regression guard:** `TestS2Ehz1TraceReplay` and `TestS2WfzLevelSelectTraceReplay` both
   GREEN (no regression). File: `src/main/java/com/openggf/game/sonic2/objects/bosses/Sonic2DeathEggRobotInstance.java`.
+## 2026-06-05 - s2 htz1 f5647->f5686: enable S2 off-screen SolidObject gate (SolidObject_OnScreenTest)
+
+- Branch `bugfix/ai-trace-s2-htz1`, worktree `.worktrees/trace-s2-htz1` (off develop `e28761c15`).
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true -Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen -Dtest=TestS2HtzLevelSelectTraceReplay#replayMatchesTrace test`
+- **Status:** ADVANCED (genuine, ROM-cited, zero same-game regressions). Targeted trace still fails.
+- **Root cause / fix:** Flipped `PhysicsFeatureSet.solidObjectOffscreenGate` to `true` for SONIC_2,
+  modelling the ROM `SolidObject_OnScreenTest` optimisation (`docs/s2disasm/s2.asm:35330-35336`:
+  `_btst #render_flags.on_screen,render_flags(a0)` / `_beq.w SolidObject_TestClearPush`, documented as
+  "if Sonic outruns the screen then he can phase through solid objects"). Plain `SolidObject` objects
+  (Obj36 Spikes, called at s2.asm:29396) branch to this gate when the player is not standing on them.
+  At htz1 f5647 an off-screen-left upright spike (slot 53 @0x1548, box right edge 0x1563, camera left
+  edge 0x157F) was side-pushing CPU Tails to 0x1563 and zeroing its x_vel where ROM preserves the
+  smooth left accel. Objects reaching `SolidObject_cont` via `SolidObject_Always_SingleCharacter`
+  (which `beq.w SolidObject_cont` bypassing the gate; def s2.asm:35064) opt out through
+  `bypassesOffscreenSolidGate()`: Obj86 Flipper (s2.asm:58418/58427), Obj7B PipeExitSpring
+  (s2.asm:56335/56343), ObjD6 PointPokey (s2.asm:59013). Gated at PhysicsFeatureSet + per-class hook;
+  NO zone/route/frame/gameId carve-out; comparison-only invariant held.
+- **htz1 ADVANCE:** `TestS2HtzLevelSelectTraceReplay#replayMatchesTrace` first-error frame
+  **5647 (tails_x, exp=0x155F) -> 5686 (tails_y_speed, exp=-000B actual=-0008)**; error count 426 -> 395.
+- **Same-game A/B (full `com.openggf.tests.trace.s2.*TraceReplay` sweep, HEAD vs fix, single fork):**
+  identical 17 failed / 2 passed at both. First-error frames unchanged for every already-red trace
+  (cnz1 3906, cnz2 2880, ooz1 1755, ooz2 389, mtz1 1000, mcz1 2757, mcz2 4485, arz1 2169, arz2 857,
+  htz2 2306; htz2 error count improved 864->806). The two previously-GREEN S2 traces
+  `TestS2Ehz1TraceReplay` and `TestS2WfzLevelSelectTraceReplay` both remain GREEN. No same-game trace
+  regressed; no first-error frame moved backward.
 
 ## 2026-06-05 - spilled-ring object model reconciled onto develop + Obj37 boundary-delete fix
 

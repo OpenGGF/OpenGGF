@@ -133,6 +133,17 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    public boolean bypassesOffscreenSolidGate() {
+        // ROM ObjD6 (PointPokey) reaches SolidObject_cont via
+        // SolidObject_Always_SingleCharacter (s2.asm:59013), bypassing the
+        // SolidObject_OnScreenTest render_flags(a0) gate at s2.asm:35330-35336.
+        // Off-screen pokeys still resolve solid contact in ROM. Required so
+        // enabling PhysicsFeatureSet.solidObjectOffscreenGate for S2 does not
+        // change CNZ pokey solid behaviour off-screen.
+        return true;
+    }
+
+    @Override
     public SolidExecutionMode solidExecutionMode() {
         return SolidExecutionMode.MANUAL_CHECKPOINT;
     }

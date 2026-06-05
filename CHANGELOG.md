@@ -12,6 +12,17 @@ All notable changes to the OpenGGF project are documented in this file.
   `loc_3DC2A`, docs/s2disasm/s2.asm:82527, 83247, 83259, 83265), matching the ROM
   p1_standing -> glow -> 64-frame-countdown -> body-misc-bit handshake. Advances the
   dez1 ending trace (first-error frame 2194 -> 3250).
+- **S2 off-screen solid-object gate (`SolidObject_OnScreenTest`):** Enabled
+  `PhysicsFeatureSet.solidObjectOffscreenGate` for Sonic 2, modelling the ROM
+  `SolidObject_OnScreenTest` optimisation (`docs/s2disasm/s2.asm:35330-35336`,
+  `_btst #render_flags.on_screen,render_flags(a0)` / `_beq SolidObject_TestClearPush`
+  — "if Sonic outruns the screen then he can phase through solid objects"). Plain
+  `SolidObject` objects (e.g. Obj36 Spikes) no longer side-push or zero a player's
+  velocity once their render box has scrolled off-screen. Objects that reach
+  `SolidObject_cont` through `SolidObject_Always_SingleCharacter` (Obj86 Flipper,
+  Obj7B PipeExitSpring, ObjD6 PointPokey) opt out via `bypassesOffscreenSolidGate()`
+  to match the ROM helper-routine split. Advances the s2 htz1 level-select trace
+  frontier (first-error frame 5647 -> 5686).
 
 - **Architecture roadmap completion:** Playable terrain collision paths now name
   `FrameCollisionPlan.terrainOnly()` at the call sites, with plan-aware

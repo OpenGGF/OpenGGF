@@ -447,6 +447,19 @@ public class FlipperObjectInstance extends BoxObjectInstance
         return isHorizontal();
     }
 
+    @Override
+    public boolean bypassesOffscreenSolidGate() {
+        // ROM Obj86 (Flipper) reaches SolidObject_cont via
+        // SolidObject_Always_SingleCharacter (s2.asm:58418/58427), which jumps
+        // straight to SolidObject_cont (s2.asm:35059->35147) WITHOUT the
+        // SolidObject_OnScreenTest render_flags(a0) gate at s2.asm:35330-35336.
+        // Off-screen flippers therefore still resolve push/side contact in ROM,
+        // mirroring the S3K SolidObjectFull2_1P behaviour. Required so enabling
+        // PhysicsFeatureSet.solidObjectOffscreenGate for S2 does not regress CNZ
+        // pinball bounces (CNZ1 trace f355).
+        return true;
+    }
+
     private void ensureInitialized() {
         if (animInitialized) {
             return;
