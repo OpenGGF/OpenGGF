@@ -267,6 +267,34 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
     }
 
     /**
+     * Whether this boss's defeat needs the one-frame "routine-read-once" dispatch
+     * deferral (see {@link #deferDefeatRoutineDispatch}).
+     *
+     * <p>Models <em>which ROM defeat-dispatch mechanism</em> the boss uses, exposed
+     * at the owning boss class. The deferral is only correct for bosses whose defeat
+     * is selected by overwriting the <strong>primary {@code routine}</strong> during
+     * the hit pass, where the object dispatches on {@code routine(a0)} read <em>once</em>
+     * at the top of its update (ObjAF / DEZ Mecha Sonic:
+     * docs/s2disasm/s2.asm:77412-77415, loc_39CF0 sets {@code routine=$C} at
+     * docs/s2disasm/s2.asm:78003-78004). For those, the newly-selected defeat routine
+     * must not be dispatched until the next frame, and because the engine runs touch
+     * responses before this object's own {@code update()}, the deferral restores that
+     * one-frame offset.
+     *
+     * <p>It must stay {@code false} for bosses whose defeat is selected via a different
+     * dispatch — e.g. ObjC5 / Wing Fortress, which sets {@code routine_secondary=$1E}
+     * (docs/s2disasm/s2.asm:81954-81962) dispatched fresh every frame from within the
+     * already-running main routine ({@code ObjC5_LaserCase} reads
+     * {@code routine_secondary} each frame, docs/s2disasm/s2.asm:81155-81160). That path
+     * does not carry ObjAF's primary-routine read-once offset, so the engine's existing
+     * post-hit countdown already matches the ROM camera-release timing. Defaults to
+     * {@code false}; override {@code true} only on the ObjAF main-routine defeat path.
+     */
+    protected boolean defeatDeferralAppliesToThisBoss() {
+        return false;
+    }
+
+    /**
      * Inner class: Handles hit detection and invulnerability.
      * ROM Reference: s2.asm:60734-60758 (Boss_HandleHits routine)
      */
@@ -325,8 +353,14 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
                 // (and decrement its countdown) on the same frame the routine changed.
                 // ROM reads routine(a0) once per object update, so the defeat routine
                 // first runs next frame (docs/s2disasm/s2.asm:77412-77415, 78003-78004,
-                // 77848-77853). Defer the first defeat dispatch by one frame.
-                deferDefeatRoutineDispatch = true;
+                // 77848-77853). Defer the first defeat dispatch by one frame -- but ONLY
+                // for bosses whose defeat overwrites the primary routine dispatched
+                // read-once at the top of their update (ObjAF / DEZ Mecha Sonic).
+                // Bosses that select defeat via routine_secondary dispatched fresh each
+                // frame (ObjC5 / WFZ) do not carry this offset and must not be deferred.
+                if (defeatDeferralAppliesToThisBoss()) {
+                    deferDefeatRoutineDispatch = true;
+                }
             }
         }
     }

@@ -1,5 +1,40 @@
 # Trace Frontier Log
 
+## 2026-06-05 - wfz GREEN restored (was dez1-introduced f12886 regression); dez1 held at f2194
+
+- Branch `bugfix/ai-wfz-defeat-deferral-scope`, worktree `.worktrees/wfz-defeat-scope`.
+- Command (worktree, cmd mvn.cmd, forkCount=1):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2WfzLevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** REGRESSION FIXED — WFZ restored green→green; DEZ1 advance preserved; zero same-game regressions.
+- **WFZ:** `TestS2WfzLevelSelectTraceReplay#replayMatchesTrace` — Tests run: 1, Failures: 0, Errors: 0
+  (previously first-error f12886 `camera_y` expected=0x0448 actual=0x0442, the regression introduced by
+  the DEZ1 boss-defeat deferral commit).
+- **DEZ1:** `TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace` still first-diverges at
+  **frame 2194** (`y_speed` expected=0x0000 actual=-0700, DeathEggRobot fight — unchanged, NOT regressed
+  back toward f1366). Mecha Sonic still defers.
+- **Root cause of the regression:** the DEZ1 fix put a one-frame `deferDefeatRoutineDispatch` in the
+  SHARED `AbstractBossInstance.BossHitHandler.triggerDefeat()` (non-sequencer path). It correctly models
+  ROM ObjAF (DEZ Mecha Sonic), whose defeat overwrites the **primary `routine`** to `$C` mid-frame
+  (`loc_39CF0`, docs/s2disasm/s2.asm:78003-78004) and which dispatches on `routine(a0)` read once at the
+  top of `ObjAF` (s2.asm:77412-77415), so routine $C's countdown / `Camera_Max_X` release
+  (`loc_39B92`/`loc_39BA4`, s2.asm:77848-77857) first runs the next frame — and the engine runs touch
+  responses before the boss's own update, so the deferral restores that offset. But the shared flag also
+  delayed WFZ's ObjC5, whose defeat is set via **`routine_secondary=$1E`** (`ObjC5_NoHitPointsLeft`,
+  s2.asm:81954-81962) dispatched fresh every frame from inside the already-running main routine
+  (`ObjC5_LaserCase` reads `routine_secondary` each frame, s2.asm:81155-81160). ObjC5's secondary dispatch
+  carries no primary-routine read-once offset; the engine's existing `objoff_30`/`$EF` post-hit countdown
+  already matched the ROM `ObjC5_End` camera_y release ($442→$720, s2.asm:81418-81437), so the shared
+  deferral double-counted one frame → WFZ camera_y released one frame late at f12886.
+- **Fix:** added `protected boolean defeatDeferralAppliesToThisBoss()` on `AbstractBossInstance`
+  (default `false`) and gated the `deferDefeatRoutineDispatch` set on it; `Sonic2MechaSonicInstance`
+  (ObjAF) overrides it `true`. Models which ROM defeat-dispatch mechanism the boss uses (primary
+  `routine` overwrite vs `routine_secondary`), exposed at the owning boss class — no zone/route/frame/
+  gameId carve-out, comparison-only.
+- Files: `src/main/java/com/openggf/level/objects/boss/AbstractBossInstance.java`,
+  `src/main/java/com/openggf/game/sonic2/objects/bosses/Sonic2MechaSonicInstance.java`.
+- Same-game regression guard (single-fork): EHZ1, SCZ both GREEN (tests=1 failures=0 errors=0 each);
+  WFZ GREEN; DEZ1 held at f2194. No same-game green regressed.
+
 ## 2026-06-05 - ooz1 f1133->f1756: OOZ popping platform (Obj33) auto-pop starts in mode 2 (one-frame-later pop)
 
 - Branch `bugfix/ai-trace-s2-ooz1`, worktree `.worktrees/trace-s2-ooz1`.
