@@ -1017,9 +1017,9 @@ public class LevelManager {
         }
         if (ringManager != null) {
             ringManager.update(camera.getX(), playable, frameCounter + 1);
-            // Lost ring physics run once per frame after all players have had their
-            // touch-phase collection checks via applyTouchResponses(), matching the
-            // ROM's Touch_Rings/Obj37 order.
+            // Per-ring spilled-ring physics now runs in the object exec loop
+            // (LostRingObjectInstance); this only advances the shared decelerating
+            // spin once per frame (ROM ChangeRingFrame / Ring_spill_anim_*).
             ringManager.updateLostRingPhysics(frameCounter + 1);
         }
         // Water movement — ROM order: MoveWater (move toward target) runs BEFORE

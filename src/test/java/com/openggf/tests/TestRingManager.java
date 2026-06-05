@@ -17,7 +17,6 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.rings.LostRing;
 import com.openggf.level.rings.RingFrame;
 import com.openggf.level.rings.RingFramePiece;
 import com.openggf.level.rings.RingManager;
@@ -151,30 +150,16 @@ public class TestRingManager {
         assertEquals(0, tails.getRingCount());
     }
 
-    @Test
-    public void testCollectedLostRingExpiresFromLogicWithoutRenderPass() throws Exception {
-        // Lost-ring collection now flows through the unified slot-ordered touch loop
-        // (see com.openggf.level.objects.TestLostRingTouchOrdering for the collect / invuln
-        // gate / sidekick-cannot-collect coverage). This test keeps the distinct concern:
-        // a *collected* spilled ring must leave the active logic pool on its own (sparkle +
-        // expiry) without a render pass, so headless replay matches ROM slot occupancy.
-        RingManager ringManager = buildRingManager(List.of());
-        GameServices.camera().setMaxY((short) 0x7FFF);
-
-        configureSingleCollectedLostRing(ringManager, 0x03AE, 0x0261);
-
-        assertEquals(1, ringManager.getActiveLostRings().size(),
-                "Freshly collected lost rings should remain active long enough to show their sparkle");
-
-        ringManager.updateLostRingPhysics(1);
-        ringManager.updateLostRingPhysics(2);
-
-        assertTrue(ringManager.getActiveLostRings().isEmpty(),
-                "Collected lost rings must leave the active pool from logic alone so headless replay matches ROM slots");
-    }
+    // NOTE: legacy per-ring lost-ring lifecycle (collected-ring sparkle expiry and
+    // on-expiry slot release) was retired with the legacy LostRingPool.updatePhysics
+    // loop — per-ring physics/lifetime now runs in the object exec loop
+    // (LostRingObjectInstance). Per-ring round-trip is covered by
+    // com.openggf.level.rings.TestLostRingRewindCodec; the object-loop expiry/slot
+    // release lands with the Stage-5 object physics relocation. updateLostRingPhysics
+    // now only advances the shared decelerating spin (Ring_spill_anim_*).
 
     @Test
-    public void testLostRingSpawnReservesAndReleasesDynamicSlots() throws Exception {
+    public void testLostRingSpawnReservesDynamicSlots() throws Exception {
         LevelManager levelManager = GameServices.level();
         ObjectManager objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);
         setField(levelManager, "objectManager", objectManager);
@@ -188,13 +173,6 @@ public class TestRingManager {
 
         assertEquals(3, objectManager.getAllocatedSlotCount(),
                 "Spilled lost rings should reserve real dynamic slots while active");
-
-        for (int frame = 0; frame <= 0xFF; frame++) {
-            ringManager.updateLostRingPhysics(frame);
-        }
-
-        assertEquals(0, objectManager.getAllocatedSlotCount(),
-                "Expired lost rings should release their reserved dynamic slots");
     }
 
     @Test
@@ -354,24 +332,6 @@ public class TestRingManager {
                 GameServices.audio());
         ringManager.ensurePatternsCached(GraphicsManager.getInstance(), 0);
         return ringManager;
-    }
-
-    private void configureSingleCollectedLostRing(RingManager ringManager, int x, int y) throws Exception {
-        Field lostRingsField = RingManager.class.getDeclaredField("lostRings");
-        lostRingsField.setAccessible(true);
-        Object lostRings = lostRingsField.get(ringManager);
-
-        Field ringPoolField = lostRings.getClass().getDeclaredField("ringPool");
-        ringPoolField.setAccessible(true);
-        LostRing[] ringPool = (LostRing[]) ringPoolField.get(lostRings);
-        ringPool[0].reset(0, x, y, 0, 0, 0xFF);
-        // Mark collected directly (collection itself is exercised by the unified touch-loop
-        // tests); here we only verify a collected ring sparkles then expires from logic.
-        ringPool[0].markCollected(0);
-
-        Field activeRingCountField = lostRings.getClass().getDeclaredField("activeRingCount");
-        activeRingCountField.setAccessible(true);
-        activeRingCountField.setInt(lostRings, 1);
     }
 
     private void setField(Object target, String fieldName, Object value) throws Exception {
