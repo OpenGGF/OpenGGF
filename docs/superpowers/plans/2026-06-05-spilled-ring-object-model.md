@@ -216,20 +216,32 @@ void spawnRegistersRingObjectsInSlotOrder() {
 
 - [ ] **Step 2: Run → FAIL.**
 
-- [ ] **Step 3: Implement — single allocation per ring (NO double-consume).** The legacy
-  `allocateSlotIndices` (RingManager.java:1321) already calls `objectManager.allocateSlotAfter(...)`
+- [ ] **Step 3: Implement — single allocation per ring (NO double-consume), into `dynamicObjects`.** The
+  legacy `allocateSlotIndices` (RingManager.java:1321) already calls `objectManager.allocateSlotAfter(...)`
   for each ring. **Do NOT also allocate via `addDynamicObject`** (that would consume a *second* SST slot
-  per ring and shift slot pressure/order before cutover — the exact trap to avoid). Instead, add
-  `ObjectManager.spawnLostRingObjectAtSlot(LostRingObjectInstance ring, int reservedSlot)` that places
-  the object into the **already-reserved** slot (set `ring.setSlotIndex(reservedSlot)`, insert into
-  `activeObjects`/`execOrder` at that slot's exec index, set services — mirroring the tail of
-  `addDynamicObjectInternal` but WITHOUT re-allocating since `ring.getSlotIndex() >= 0`). In
-  `LostRingPool.spawnLostRings`, for each reserved slot from `allocateSlotIndices`, construct the
+  per ring and shift slot pressure/order before cutover). Add
+  `ObjectManager.spawnLostRingObjectAtSlot(LostRingObjectInstance ring, int reservedSlot)` that:
+  - sets services and `ring.setSlotIndex(reservedSlot)` (slot already reserved via `allocateSlotAfter`,
+    so it does NOT re-allocate);
+  - **adds the ring to `dynamicObjects`** (the `List<ObjectInstance>` at ObjectManager.java:414, the same
+    collection used by `addDynamicObjectInternal` at :1805) — **NOT** to the `activeObjects` map. This is
+    critical for Stage 4: rewind capture iterates `activeObjects` into placement `PerSlotEntry`
+    (restored via `registry.create(spawn)`, ObjectManager.java:3143) and `dynamicObjects` into
+    `DynamicObjectEntry` (restored via the `LostRingRewindCodec`/`recreateDynamicObject`, :3172). A
+    non-placement lost ring placed in `activeObjects` would be restored through the placement registry
+    instead of the codec — directly conflicting with Stage 4.1;
+  - marks the active/touch caches dirty (call `rebuildActiveObjectCaches()`, ObjectManager.java:1607) so
+    the ring joins the slot-ordered touch iteration;
+  - wires `execOrder[execIndexForSlot(reservedSlot)] = ring` **only when same-frame execution is needed**
+    (mirror the conditional `execOrder` write at :1823); otherwise the ring executes next frame like any
+    freshly-spawned dynamic object.
+
+  In `LostRingPool.spawnLostRings`, for each reserved slot from `allocateSlotIndices`, construct the
   `LostRingObjectInstance` and call `spawnLostRingObjectAtSlot(ring, reservedSlot)`. Reset the shared
   `SpillAnimationState`. During this parallel stage the legacy `LostRing[]` is the OWNER of collection
   and rewind (object path is exec-only); the object and its legacy `LostRing` twin share the **same**
   slot, so total slot consumption is unchanged from today. Add `ObjectManager.activeObjectsOfType(Class)`
-  test accessor.
+  test accessor (it scans `dynamicObjects` for the ring type).
 
 - [ ] **Step 4: Run → PASS.** Also run the full existing ring tests to ensure no break:
   `mvn "-Dtest=com.openggf.level.rings.*,com.openggf.level.objects.TestObjectManagerChildSlotAllocation" test` → PASS.
@@ -566,3 +578,4 @@ Expected: **mcz1 still first-diverges at f2757 (NOT regressed toward f1665)**; E
 3. **Player API** — the loop param is `PlayableEntity` (ObjectManager.java:5284); the branch casts to `AbstractPlayableSprite` for `getInvulnerableFrames()` (:2117) / `addRings(int)` (:1427); only the main character collects/credits, both paths break (matches legacy `cannotCollectRings`).
 4. **Compile-safety on removals** — 2.2 / 4.2 / 5.4 grep all callers and migrate referencing tests (`TestRingManagerRewindSnapshot`, `TestRingManager`, `TestS3kIczFreezerObject`, `TestS1Mz1SlotLayoutRegression`, stubs) in the same task, with broadened test commands.
 5. **Fixed-point contract** — Task 1.2 asserts on `xSubpixel`/`ySubpixel` with `x << 8` start (`LostRing.java:24`), e.g. `(0x100 << 8) + xVel`, not pixel-space `x + xVel`.
+6. **Dynamic, not placement** — `spawnLostRingObjectAtSlot` adds the ring to `dynamicObjects` (ObjectManager.java:414/:1805), NOT the `activeObjects` map. Rewind captures `activeObjects`→placement `PerSlotEntry` (`registry.create(spawn)`, :3143) and `dynamicObjects`→`DynamicObjectEntry` (the codec, :3172); placing a lost ring in `activeObjects` would route it through the placement registry instead of the Stage-4.1 `LostRingRewindCodec`. `execOrder` is wired only when same-frame exec is needed.
