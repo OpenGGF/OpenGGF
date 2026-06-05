@@ -2,7 +2,6 @@ package com.openggf;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.BonusStageProvider;
-import com.openggf.game.GameServices;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.managers.SpriteManager;
@@ -51,9 +50,9 @@ public final class LevelFrameStep {
      * @param spriteUpdate callback that runs the sprite/player physics update
      *                     (e.g. {@code SpriteManager.update()} or headless equivalent)
      */
-    public static void execute(LevelManager levelManager, Camera camera,
+    public static void execute(LevelFrameContext context, LevelManager levelManager, Camera camera,
                                Runnable spriteUpdate) {
-        execute(levelManager, camera, spriteUpdate, DIRECT);
+        execute(context, levelManager, camera, spriteUpdate, DIRECT);
     }
 
     /**
@@ -67,8 +66,11 @@ public final class LevelFrameStep {
      * @param spriteUpdate callback that runs the sprite/player physics update
      * @param wrapper      wraps individual steps (e.g. for profiling)
      */
-    public static void execute(LevelManager levelManager, Camera camera,
+    public static void execute(LevelFrameContext context, LevelManager levelManager, Camera camera,
                                Runnable spriteUpdate, StepWrapper wrapper) {
+        if (context == null) {
+            throw new NullPointerException("context");
+        }
         // 0. Process dirty regions from MutableLevel (editor mutations).
         //    No-op when the level is not a MutableLevel — zero impact on gameplay.
         levelManager.processDirtyRegions();
@@ -84,7 +86,7 @@ public final class LevelFrameStep {
         //     sliding status bit before the player's friction/move code runs the
         //     same frame; running it post-physics applied oil friction one frame
         //     early (OOZ1 trace f563). Default no-op for other games/zones.
-        LevelEventProvider prePhysicsEvents = GameServices.module().getLevelEventProvider();
+        LevelEventProvider prePhysicsEvents = context.levelEventProvider();
         if (prePhysicsEvents != null) {
             prePhysicsEvents.updatePrePhysics();
         }
@@ -119,7 +121,7 @@ public final class LevelFrameStep {
         }
 
         // 4. Dynamic level events — boss arenas, boundary changes, zone transitions.
-        LevelEventProvider levelEvents = GameServices.module().getLevelEventProvider();
+        LevelEventProvider levelEvents = context.levelEventProvider();
         if (levelEvents != null) {
             wrapper.wrap("fixed-objects", levelEvents::updateFixedInLevelObjects);
             levelEvents.update();
@@ -128,7 +130,7 @@ public final class LevelFrameStep {
 
         levelManager.flushQueuedLayoutMutations();
 
-        BonusStageProvider bonusStageProvider = GameServices.bonusStage();
+        BonusStageProvider bonusStageProvider = context.bonusStageProvider();
         boolean integratedBonusStageUpdate = bonusStageProvider != null
                 && bonusStageProvider.updateDuringLevelFrame();
         boolean suppressDefaultCamera = bonusStageProvider != null
@@ -158,7 +160,7 @@ public final class LevelFrameStep {
         wrapper.wrap("level", levelManager::update);
 
         // 7. Cache BuildSprites on-screen results for next frame's logic.
-        SpriteManager spriteManager = GameServices.spritesOrNull();
+        SpriteManager spriteManager = context.spriteManager();
         if (spriteManager != null) {
             spriteManager.refreshPlayableRenderFlags(camera);
         }

@@ -74,6 +74,19 @@ class TestEditorModeContextLifecycle {
     }
 
     @Test
+    void enterEditorMode_preservesWorldAndOwnsEditorManagers() {
+        GameplayModeContext gameplay = SessionManager.openGameplaySession(new Sonic2GameModule());
+        WorldSession world = gameplay.getWorldSession();
+
+        EditorModeContext editor = SessionManager.enterEditorMode(new EditorCursorState(77, 88));
+
+        assertSame(world, editor.getWorldSession());
+        assertNotNull(editor.getCamera());
+        assertNotNull(editor.getSpriteManager());
+        assertNotNull(editor.getLevelManager());
+    }
+
+    @Test
     void editorModeContext_retainsCursorAndPlaytestStash() {
         WorldSession world = new WorldSession(new Sonic2GameModule());
         EditorPlaytestStash stash = new EditorPlaytestStash(

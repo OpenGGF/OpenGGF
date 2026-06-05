@@ -1,7 +1,9 @@
 package com.openggf.tests;
 
 import com.openggf.game.GameServices;
+import com.openggf.LevelFrameContext;
 import com.openggf.LevelFrameStep;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.CnzCannonInstance;
@@ -1090,7 +1092,8 @@ public class TestS3kCnzDirectedTraversalHeadless {
         sidekick.setJumpInputPressed(false);
         sidekick.setDirectionalInputPressed(false, false, false, false);
 
-        LevelFrameStep.execute(GameServices.level(), GameServices.camera(), () -> {
+        LevelFrameStep.execute(LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
+                GameServices.level(), GameServices.camera(), () -> {
             SpriteManager.tickPlayablePhysics(player, false, false, false, false, false,
                     false, false, false, GameServices.level(), frameCounter);
             SpriteManager.tickPlayablePhysics(sidekick, false, false, false, false, false,

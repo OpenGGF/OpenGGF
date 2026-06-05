@@ -910,24 +910,13 @@ public class Engine {
 	                                 short maxX,
 	                                 short minY,
 	                                 short maxY) {
-		Camera editorCamera = new Camera();
-		SpriteManager editorSprites = new SpriteManager();
-		com.openggf.level.WaterSystem editorWater = new com.openggf.level.WaterSystem();
-		com.openggf.level.ParallaxManager editorParallax = new com.openggf.level.ParallaxManager();
-		com.openggf.physics.TerrainCollisionManager editorTerrain =
-				new com.openggf.physics.TerrainCollisionManager();
-		com.openggf.physics.CollisionSystem editorCollision =
-				new com.openggf.physics.CollisionSystem(editorTerrain);
-		GameStateManager editorGameState = new GameStateManager();
-		LevelManager editorLevelManager = new LevelManager(
-				editorCamera,
-				editorSprites,
-				editorParallax,
-				editorCollision,
-				editorWater,
-				editorGameState,
-				EngineServices.current(),
-				SessionManager.getCurrentWorldSession());
+		EditorModeContext editorMode = SessionManager.getCurrentEditorMode();
+		if (editorMode == null || !editorMode.isEditorRuntimeReady()) {
+			throw new IllegalStateException("Editor mode is not ready for level rendering.");
+		}
+		Camera editorCamera = editorMode.getCamera();
+		SpriteManager editorSprites = editorMode.getSpriteManager();
+		LevelManager editorLevelManager = editorMode.getLevelManager();
 		editorLevelManager.restoreEditorLevelView(editorLevel);
 		editorCamera.setMinX(minX);
 		editorCamera.setMaxX(maxX);
