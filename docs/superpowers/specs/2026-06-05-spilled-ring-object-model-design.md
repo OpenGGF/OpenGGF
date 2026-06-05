@@ -79,10 +79,12 @@ set for the renderer. Bespoke physics/collection/rewind are removed.
 
 | Component | Responsibility | Notes / refs |
 |---|---|---|
-| `LostRingObjectInstance` (new) | ROM Obj37: position/velocity/`lifetime`/`sparkleStartFrame`/`phaseOffset`; `updateMovement()` = bounce physics (gravity, per-game floor cadence, lifetime countdown, off-bottom delete); `collision_flags=$47`; `appendRenderCommands`. | Mirrors current `LostRing.java` state + `LostRingPool.updatePhysics` math, relocated into an object. ROM Obj37 / `Obj_LostRings`. |
-| `ObjectManager.TouchResponses` ring handler | In `processCollisionLoop`, for `collision_flags & $C0` in `$40–$7F` and size `!= $46`: collect-if-not-invulnerable (`invulnerable_time ≥ 90` skip-collection gate), then **break**. | Models `Touch_ChkValue` ring branch, s2.asm:85196-85219. Shared across players/sidekick. |
-| `RingManager` / `LostRingPool` (slimmed) | `spawnLostRings()` → allocate slots + spawn instances; hold live-ring registry for `RingRenderer`. Remove `updatePhysics`, `checkCollection`, bespoke rewind snapshot. | RingManager.java:1105-1523. |
-| `RingRenderer` | Reads the live `LostRingObjectInstance` set (or each ring self-renders via `appendRenderCommands`), keeping cached pattern rendering. | RingManager `RingRenderer`. |
+| `LostRingObjectInstance` (new) | ROM Obj37, **per-ring** state only: position/velocity/`lifetime`/`phaseOffset` (+ collected flag, `sparkleStartFrame`); `updateMovement()` = bounce physics (gravity, per-game floor cadence, lifetime countdown, off-bottom delete); `collision_flags=$47`. **Reads** the shared spin frame for its displayed mapping — it does NOT own the spin counter. | Mirrors current per-ring `LostRing.java` state + `LostRingPool.updatePhysics` math, relocated into an object. ROM Obj37 / `Obj_LostRings`. |
+| **Shared spill-animation owner** (kept) | Owns the **global** ROM spill-spin state `Ring_spill_anim_counter` / `Ring_spill_anim_accum` / `Ring_spill_anim_frame` (decelerating spin: accumulator += counter each frame). Ticked **once per frame** (not per ring); each ring renders `sharedSpillAnimFrame + phaseOffset`. | RingManager.java:1121-1124. This state is GLOBAL in ROM, not per-object — moving it into per-ring instances would desync the spin. Stays in the slimmed `LostRingPool` (or a dedicated `SpillAnimationState`) and ticks in `RingManager.update()`. |
+| `ObjectManager.TouchResponses` ring handler | A **dedicated ring branch evaluated every frame on overlap** (NOT edge-triggered): for `collision_flags & $C0` in `$40–$7F` and size `!= $46`, run collect-if-not-invulnerable (`invulnerable_time ≥ 90` skip-collection gate), then **break**. Placed before the SPECIAL edge-trigger gate (ObjectManager.java:5378) OR via a lost-ring touch profile whose `requiresContinuousTouchCallbacks()` is true — so the ring still collects once `invulnerable_time` drops below 90 while the player is *continuously* overlapping (no new overlap edge occurs). | Models `Touch_ChkValue` ring branch, s2.asm:85196-85219, which re-runs every frame in the loop. Shared across players/sidekick. |
+| `RingManager` / `LostRingPool` (slimmed) | `spawnLostRings()` → atomic slot allocation + spawn instances (see Allocation contract below); own the shared spill-anim state; hold live-ring registry for `RingRenderer`. Remove per-ring `updatePhysics`, `checkCollection`, bespoke per-ring rewind snapshot. | RingManager.java:1105-1523. |
+| `LostRingRewindCodec` (new) | A `RewindDynamicObjectCodec` registered centrally for `LostRingObjectInstance`: captures per-ring fields and **recreates** the ring via a factory on restore (through `ObjectManager.recreateDynamicObject`). Without it, lost rings are diagnostic-only and **vanish on seek**. | See Rewind section. Precedent: Shield + Stars dynamic codecs. ObjectManager.java:3127, 3264, 3404. |
+| `RingRenderer` | Reads the live `LostRingObjectInstance` set (registry) for positions and the shared spill-anim frame, keeping cached pattern rendering. | RingManager `RingRenderer`. |
 
 ### Frame ordering (before → after)
 
@@ -108,6 +110,16 @@ On overlap with a spilled ring in slot order:
 4. **Either way: break the touch loop** (the ring was the first overlapping object). Later-slot
    hazards are not reached this frame.
 
+**Every-frame evaluation (not edge-triggered).** ROM `Touch_ChkValue` runs inside `Touch_Loop` every
+frame, so the ring re-evaluates the invuln gate each frame it overlaps. The engine's generic SPECIAL
+($40–$7F) path is **edge-triggered** unless `requiresContinuousTouchCallbacks()` is true
+(ObjectManager.java:5378) — which would mean a ring that overlaps during invulnerability, breaks
+without collecting, and is *still continuously overlapping* when `invulnerable_time` later drops below
+90, would never collect (no new overlap edge). The design therefore uses a **dedicated ring branch
+evaluated every frame on overlap** (placed before the SPECIAL edge-trigger gate), or equivalently a
+lost-ring touch profile with `requiresContinuousTouchCallbacks() == true`. The break itself happens on
+every overlapping frame regardless.
+
 Self-collection of just-spilled rings is prevented as in ROM by the freshly-spilled state (the engine's
 existing initial animation-counter / lifetime gate that already blocks same-frame re-pickup).
 
@@ -125,29 +137,67 @@ never `gameId`:
 - The touch handler + invuln gate are ROM-identical across games (`Touch_ChkValue`), so shared.
 - **Capacity:** ROM caps spilled rings at `0x20` (32). The engine must mirror this cap and ensure 32
   ring-objects + other dynamic objects do not exhaust the per-game dynamic slot pool
-  (`ObjectSlotLayout`: S1 first=32/count=96, S2 16/112, S3K 4/89). Spawn must cap at the ROM limit and
-  degrade gracefully (no allocation failure).
+  (`ObjectSlotLayout`: S1 first=32/count=96, S2 16/112, S3K 4/89). The atomic allocation contract above
+  handles slot pressure (stop-on-(-1), truncate) without allocation failure.
+
+### Placement & ownership (resolved open question)
+
+`LostRingObjectInstance` is **game-agnostic**, placed in `level.rings` alongside its spawner/owner
+(`RingManager`/`LostRingPool`), with a **single, centrally-registered** `LostRingRewindCodec`. Rationale:
+
+- Lost rings are **not** level-layout objects — they are spawned dynamically by the shared `RingManager`
+  on a hit, so they never flow through a per-game `ObjectRegistry`/`ObjectSpawn`/`ObjectSlotLayout`
+  placement path. There is no per-game registry that would naturally own them.
+- Their behavior is already shared across games today (the `LostRingPool` is game-agnostic); the only
+  differences (floor cadence, S3K reverse-gravity / lightning-shield) are `PhysicsFeatureSet`-gated, not
+  game-identity branches.
+- The ROM object id (`$37`) is uniform across S1/S2/S3K, and the dynamic rewind codec is cleaner as one
+  central registration than three per-game copies (matching the central Shield/Stars codec precedent).
+
+Per-game object **id constants** (e.g. `Sonic2ObjectIds`) are not required, since the ring is never
+resolved through the per-game object factory; if a numeric id is needed for the occupancy oracle /
+touch tables it is exposed as a shared constant (`$37`) on the ring class.
 
 ---
 
 ## Rewind
 
-Because spilled rings become real slot objects, the **generic object rewind**
-(`GenericFieldCapturer` / compact schema codecs + stable identity ids in
-`com.openggf.game.rewind.identity`) captures them automatically. The bespoke `LostRingPool` rewind
-snapshot (RingManager.java rewind paths) is **retired**. Requirements:
-- `LostRingObjectInstance` exposes a **stable identity id** so rewind seek/replay is deterministic
-  across the spawn/despawn of 32 transient rings.
-- All ring scalar fields have codecs (or are `@RewindTransient`/`@RewindDeferred` as appropriate) so
-  default compact capture applies, consistent with other dynamic objects.
-- A rewind torture/round-trip test covers spilling rings, seeking across the spill, and replaying.
+> **Correction (spec review):** generic field capture stores an object's *fields*, but **restoring a
+> non-placement dynamic object requires a registered `RewindDynamicObjectCodec`**. `ObjectManager`
+> restores dynamic entries only via `recreateDynamicObject(entry)` (ObjectManager.java:3264); classes
+> without a codec are **diagnostic-only** and are NOT recreated on seek (ObjectManager.java:3127,
+> 3404) — i.e. the rings would **disappear when the player rewinds across a spill**. A stable id alone
+> is insufficient.
+
+Spilled rings are **dynamic** (spawned on hit, not from the level layout / placement), so they take the
+dynamic-object rewind path. Requirements:
+- Implement and **centrally register a `LostRingRewindCodec`** (a `RewindDynamicObjectCodec`) for
+  `LostRingObjectInstance`: it captures the per-ring fields and provides a **recreate factory** so
+  `recreateDynamicObject` rebuilds the ring (with services + restored field state) on seek. This mirrors
+  the existing Shield + Stars player-bound dynamic codecs.
+- The ring exposes a **stable identity id** (`com.openggf.game.rewind.identity`) for deterministic
+  seek/replay across the spawn/despawn of up to 32 transient rings.
+- The **shared spill-animation state** (`Ring_spill_anim_*`) is captured by the slimmed
+  `LostRingPool`/`SpillAnimationState` rewind path (it is global, not per-ring) — this small bespoke
+  snapshot is **retained** (only the per-ring snapshot is retired).
+- The old bespoke **per-ring** `LostRingPool` rewind snapshot is retired once the codec path is green.
+- A rewind torture/round-trip test covers spilling rings, seeking across the spill, and replaying —
+  asserting rings reappear with correct positions and the spin frame stays in sync.
 
 ---
 
 ## Edge cases & error handling
 
-- **Slot exhaustion:** cap spilled-ring spawns at the ROM `0x20` limit; if the dynamic pool is full,
-  spawn fewer (ROM behavior under slot pressure) — never throw. Log if a cap truncates.
+- **Atomic slot-allocation contract (spawn).** `allocateSlotAfter()` can return **-1** (no free slot),
+  and the generic `addDynamicObjectInternal` path may otherwise allocate a *different* first-free slot
+  or mark the object destroyed depending on pre-assignment (ObjectManager.java:1770) — either of which
+  would break ROM slot order or graceful truncation. `spawnLostRings` therefore follows one explicit
+  contract: iterate the rings to spawn; for each, `allocateSlotAfter(previousSuccessfulRingSlot)`; if it
+  returns **-1, stop spawning** (truncate the spill); **only construct and register a ring for a real
+  (≥0) slot**, and advance `previousSuccessfulRingSlot` to it. No ring is constructed for a failed
+  allocation, so slot order and the live-ring registry never diverge. (RingManager.java:1157.)
+- **Slot exhaustion:** the contract above caps naturally; additionally cap spilled-ring spawns at the
+  ROM `0x20` (32) limit. Never throw; `log()` if a cap or a -1 truncates the spill.
 - **Lifetime / off-bottom delete:** ring deletes at `lifetime ≤ 0` or below the camera bottom (ROM
   Obj37 delete), through the normal object delete path (`SlotAllocator.release`).
 - **Collected state:** a collected ring plays the sparkle then deletes; it must not re-trigger the
@@ -166,11 +216,21 @@ snapshot (RingManager.java rewind paths) is **retired**. Requirements:
 2. **Unit — ordering invariant (the mtz2 mechanism):** with a spilled ring at a *lower* slot than a
    hazard, both overlapping the player, the touch loop collects the ring and **breaks**, so the hazard
    does not fire; with the ring at a *higher* slot, the hazard fires first. Direct, ROM-cited.
-3. **Unit — invuln gate:** overlap during `invulnerable_time ≥ 90` breaks without collecting.
-4. **Occupancy oracle:** spilled rings now occupy slots; `TestS2ObjectOccupancyOracle` should see
+3. **Unit — invuln gate + every-frame collect:** overlap during `invulnerable_time ≥ 90` breaks
+   without collecting; with the player *continuously* overlapping, the ring collects on the first frame
+   `invulnerable_time` drops below 90 (proves the dedicated/continuous ring branch, not edge-trigger).
+4. **Unit — shared spin sync:** all live rings render `sharedSpillAnimFrame + phaseOffset` from the
+   single global owner; ticking once per frame keeps every ring's spin in lockstep (ROM
+   `Ring_spill_anim_*`).
+5. **Unit — atomic allocation/truncation:** when `allocateSlotAfter` returns -1 (or the `0x20` cap is
+   hit), spawning stops; exactly the successfully-allocated rings are constructed/registered, in slot
+   order; no ring exists for a failed slot.
+6. **Occupancy oracle:** spilled rings now occupy slots; `TestS2ObjectOccupancyOracle` should see
    Obj37 in slots consistent with ROM (comparison-only).
-5. **Rewind:** torture/round-trip across a spill.
-6. **Trace:** mtz2 advances; **mcz1 does not regress**; greens stay green; full single-fork S1/S2/S3K
+7. **Rewind (dynamic codec):** torture/round-trip across a spill — rewinding *across* the spill
+   recreates every ring via `LostRingRewindCodec` with correct positions, and the shared spin frame is
+   restored in sync. Asserts rings do **not** vanish on seek (the codec is what prevents that).
+8. **Trace:** mtz2 advances; **mcz1 does not regress**; greens stay green; full single-fork S1/S2/S3K
    `*TraceReplay` sweep shows no frontier moves backward.
 
 ---
