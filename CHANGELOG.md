@@ -4,6 +4,16 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Trace system supports a shared, deduplicated BK2 movie reference:** a trace
+  directory may now reference a single movie stored once under
+  `<game>/_movies/<name>.bk2` via a `source_bk2` metadata field instead of
+  carrying its own copy. This removes 18 duplicate copies of the ~79 KB S1
+  complete-run movie (one per per-act trace) in favour of a single shared file.
+  Both BK2 consumers honour the reference: `AbstractTraceReplayTest` (JUnit
+  replay) and `TraceCatalog` (the dev-only trace test-mode picker) resolve the
+  shared movie first and fall back to a legacy per-dir `.bk2` when `source_bk2`
+  is absent or the shared file is missing, so existing traces are unaffected.
+
 - **OOZ Aquis (Obj50) on-screen activation and follow-timer now ROM-accurate:**
   `Obj50_CheckIfOnScreen` tests `render_flags.on_screen`
   (`docs/s2disasm/s2.asm:60607-60614`), which the engine models with the

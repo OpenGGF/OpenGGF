@@ -74,6 +74,43 @@ class TraceCatalogTest {
     }
 
     @Test
+    void scanResolvesSharedMovieViaSourceBk2(@TempDir Path tmp) throws Exception {
+        // No per-dir .bk2: the movie lives once under <game>/_movies/ and is
+        // referenced by metadata.source_bk2 (the deduplicated layout).
+        Path dir = tmp.resolve("s1/ghz1_completerun");
+        writeTraceWithoutBk2(dir, "s1", 0, 0, "s1-complete-run.bk2");
+        Files.createDirectories(tmp.resolve("s1/_movies"));
+        Files.writeString(tmp.resolve("s1/_movies/s1-complete-run.bk2"), "shared-movie");
+
+        List<TraceEntry> entries = TraceCatalog.scan(tmp);
+
+        assertEquals(1, entries.size());
+        assertEquals(tmp.resolve("s1/_movies/s1-complete-run.bk2"),
+                entries.getFirst().bk2Path());
+    }
+
+    @Test
+    void scanFallsBackToPerDirBk2WhenSharedMovieMissing(@TempDir Path tmp) throws Exception {
+        // source_bk2 declared but the shared movie is absent — a legacy per-dir
+        // copy must still resolve so older traces keep working.
+        Path dir = tmp.resolve("s1/ghz1");
+        writeTraceWithoutBk2(dir, "s1", 0, 0, "s1-complete-run.bk2");
+        Files.writeString(dir.resolve("trace.bk2"), "stub");
+
+        List<TraceEntry> entries = TraceCatalog.scan(tmp);
+
+        assertEquals(1, entries.size());
+        assertEquals(dir.resolve("trace.bk2"), entries.getFirst().bk2Path());
+    }
+
+    @Test
+    void scanSkipsWhenSourceBk2DeclaredButNoMovieResolvable(@TempDir Path tmp) throws Exception {
+        // source_bk2 set, no shared movie, no per-dir .bk2 → unresolvable, skip.
+        writeTraceWithoutBk2(tmp.resolve("s1/ghz1"), "s1", 0, 0, "missing.bk2");
+        assertTrue(TraceCatalog.scan(tmp).isEmpty());
+    }
+
+    @Test
     void scanAcceptsGzippedPhysicsCsv(@TempDir Path tmp) throws Exception {
         Path dir = tmp.resolve("s3k/cnz1");
         writeValidTrace(dir, "s3k", 3, 1);
@@ -109,5 +146,31 @@ class TraceCatalogTest {
         Files.writeString(dir.resolve("physics.csv"),
                 "0,0,0,0,0,0,0,0,0,0,0\n1,0,0,0,0,0,0,0,0,0,0\n");
         Files.writeString(dir.resolve("trace.bk2"), "stub");
+    }
+
+    /**
+     * Like {@link #writeValidTrace} but writes no per-dir {@code .bk2} and adds
+     * a {@code source_bk2} reference, exercising the shared-movie resolution.
+     */
+    private static void writeTraceWithoutBk2(
+            Path dir, String game, int zoneId, int act, String sourceBk2)
+            throws Exception {
+        Files.createDirectories(dir);
+        Files.writeString(dir.resolve("metadata.json"), String.format("""
+            {
+              "game": "%s",
+              "zone": "ZONE",
+              "zone_id": %d,
+              "act": %d,
+              "trace_schema": 3,
+              "bk2_frame_offset": 100,
+              "pre_trace_osc_frames": 12,
+              "main_character": "sonic",
+              "sidekicks": [],
+              "source_bk2": "%s"
+            }
+            """, game, zoneId, act, sourceBk2));
+        Files.writeString(dir.resolve("physics.csv"),
+                "0,0,0,0,0,0,0,0,0,0,0\n1,0,0,0,0,0,0,0,0,0,0\n");
     }
 }

@@ -100,13 +100,15 @@ public abstract class AbstractTraceReplayTest {
         Assumptions.assumeTrue(Files.exists(traceDir.resolve("metadata.json")), "metadata.json not found in " + traceDir);
         Assumptions.assumeTrue(hasTracePayload(traceDir, "physics.csv"), "physics.csv(.gz) not found in " + traceDir);
 
-        // 1. Find BK2 file in trace directory (check before loading trace data)
-        Path bk2Path = findBk2File(traceDir);
-        Assumptions.assumeTrue(bk2Path != null, "No .bk2 file found in " + traceDir);
-
-        // 2. Load trace data
+        // 1. Load trace data (metadata is needed to resolve a shared, deduplicated BK2)
         TraceData trace = TraceData.load(traceDir);
         TraceMetadata meta = trace.metadata();
+
+        // 2. Resolve BK2: prefer a shared movie referenced by metadata.source_bk2 (stored once
+        //    under <game>/_movies/), else a legacy per-dir .bk2 copy.
+        Path bk2Path = resolveBk2File(traceDir, meta);
+        Assumptions.assumeTrue(bk2Path != null,
+                "No BK2 found for " + traceDir + " (no _movies/<source_bk2> and no .bk2 in dir)");
         boolean requiresFreshLevelLoad =
                 TraceReplayBootstrap.requiresFreshLevelLoadForTraceReplay(trace);
 
@@ -494,6 +496,22 @@ public abstract class AbstractTraceReplayTest {
             case DATA_SELECT -> 0x18;
             case CREDITS_TEXT, CREDITS_DEMO, TRY_AGAIN_END, ENDING_CUTSCENE, EDITOR, BONUS_STAGE, LEGAL_DISCLAIMER -> null;
         };
+    }
+
+    /**
+     * Resolve the BK2 movie for a trace. Prefers a shared, deduplicated movie named by
+     * {@code metadata.source_bk2} and stored once under {@code <game>/_movies/} (sibling to the
+     * per-act trace dirs) — so a complete-run movie used by 18 acts is committed once, not 18×.
+     * Falls back to a legacy {@code .bk2} copy inside the trace dir.
+     */
+    private Path resolveBk2File(Path traceDir, TraceMetadata meta) throws IOException {
+        if (meta != null && meta.sourceBk2() != null && !meta.sourceBk2().isBlank()) {
+            Path shared = traceDir.getParent().resolve("_movies").resolve(meta.sourceBk2());
+            if (Files.exists(shared)) {
+                return shared;
+            }
+        }
+        return findBk2File(traceDir);
     }
 
     private Path findBk2File(Path dir) throws IOException {

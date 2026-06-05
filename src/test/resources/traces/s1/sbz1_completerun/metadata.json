@@ -12,5 +12,6 @@
   "trace_schema": 3,
   "csv_version": 4,
   "rom_checksum": "",
-  "notes": ""
+  "notes": "",
+  "source_bk2": "s1-complete-run.bk2"
 }

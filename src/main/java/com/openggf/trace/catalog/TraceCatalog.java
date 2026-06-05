@@ -25,10 +25,12 @@ import java.util.zip.GZIPInputStream;
  * returns an immutable, sorted list of valid {@link TraceEntry} records.
  *
  * <p>A directory is a valid trace iff it contains {@code metadata.json},
- * {@code physics.csv} (or {@code physics.csv.gz}), and exactly one {@code .bk2}
- * file, and its metadata declares one of the supported games ({@code s1},
- * {@code s2}, {@code s3k}). The {@code synthetic/} subtree is always filtered
- * out.
+ * {@code physics.csv} (or {@code physics.csv.gz}), a resolvable BK2 movie, and
+ * its metadata declares one of the supported games ({@code s1}, {@code s2},
+ * {@code s3k}). The BK2 movie is resolved either from a shared, deduplicated
+ * copy referenced by {@code metadata.source_bk2} (stored once under
+ * {@code <game>/_movies/}) or from a legacy per-dir {@code .bk2} file. The
+ * {@code synthetic/} subtree is always filtered out.
  */
 public final class TraceCatalog {
     private static final Logger LOGGER = Logger.getLogger(TraceCatalog.class.getName());
@@ -75,16 +77,6 @@ public final class TraceCatalog {
         if (!Files.isRegularFile(metaPath) || physicsPath == null) {
             return Optional.empty();
         }
-        List<Path> bk2s;
-        try (Stream<Path> s = Files.list(dir)) {
-            bk2s = s.filter(p -> p.getFileName().toString().endsWith(".bk2")).toList();
-        } catch (IOException e) {
-            LOGGER.log(Level.FINE, "list() failed for " + dir, e);
-            return Optional.empty();
-        }
-        if (bk2s.size() != 1) {
-            return Optional.empty();
-        }
         TraceMetadata meta;
         int frameCount;
         try {
@@ -95,6 +87,15 @@ public final class TraceCatalog {
             return Optional.empty();
         }
         if (meta.game() == null || !VALID_GAME_IDS.contains(meta.game())) {
+            return Optional.empty();
+        }
+        // Resolve the BK2 movie: prefer a shared, deduplicated movie referenced
+        // by metadata.source_bk2 (stored once under <game>/_movies/), else fall
+        // back to a legacy per-dir .bk2 copy. Mirrors AbstractTraceReplayTest so
+        // shared-movie traces (e.g. the S1 complete-run suite) appear in trace
+        // test mode, not just the JUnit replay tests.
+        Path bk2 = resolveBk2(dir, meta);
+        if (bk2 == null) {
             return Optional.empty();
         }
         String main = meta.recordedMainCharacter();
@@ -115,8 +116,38 @@ public final class TraceCatalog {
                 meta.bk2FrameOffset(),
                 meta.preTraceOscillationFrames(),
                 team,
-                bk2s.get(0),
+                bk2,
                 meta));
+    }
+
+    /**
+     * Resolve a trace directory's BK2 movie. A shared movie referenced by
+     * {@code metadata.source_bk2} (looked up under the sibling
+     * {@code <game>/_movies/} directory) wins; otherwise the legacy convention
+     * of exactly one per-dir {@code .bk2} applies. Returns {@code null} when no
+     * movie can be resolved (the trace is then skipped).
+     */
+    private static Path resolveBk2(Path dir, TraceMetadata meta) {
+        if (meta.sourceBk2() != null && !meta.sourceBk2().isBlank()) {
+            Path parent = dir.getParent();
+            if (parent != null) {
+                Path shared = parent.resolve("_movies").resolve(meta.sourceBk2());
+                if (Files.isRegularFile(shared)) {
+                    return shared;
+                }
+            }
+            LOGGER.log(Level.FINE,
+                    "source_bk2={0} declared but no shared movie found for {1}",
+                    new Object[] {meta.sourceBk2(), dir});
+        }
+        List<Path> bk2s;
+        try (Stream<Path> s = Files.list(dir)) {
+            bk2s = s.filter(p -> p.getFileName().toString().endsWith(".bk2")).toList();
+        } catch (IOException e) {
+            LOGGER.log(Level.FINE, "list() failed for " + dir, e);
+            return null;
+        }
+        return bk2s.size() == 1 ? bk2s.get(0) : null;
     }
 
     /**
