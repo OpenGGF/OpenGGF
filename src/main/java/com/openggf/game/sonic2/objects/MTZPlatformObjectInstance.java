@@ -143,14 +143,17 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (contact.standing() || contact.touchTop()) {
             contactStanding = true;
-            // ROM Obj6B_Main runs the type handler before SolidObject in one
-            // routine (s2.asm:54360-54378). The engine's shared solid pass calls
-            // this listener after the split contact pass establishes the same
-            // standing bit, so arm the next subtype immediately and leave the
-            // current fixed-point Y low word intact for the following ObjectMove.
-            if (moveType == 5) {
-                moveType = 6;
-            }
+            // ROM Obj6B type 5 (loc_27EC4, s2.asm:54451-54462) and type 7
+            // (loc_27F10, s2.asm:54483-54489) test the object's persisted
+            // standing bit inside their OWN type handler, AFTER positioning the
+            // platform that frame. The transition to subtype+1 (type 5->6) and
+            // the bounce-accel arm therefore take effect through applyMovement's
+            // standing check, not eagerly here. Setting moveType=6 directly in
+            // this contact callback made the trigger-fall platform start falling
+            // one frame early (it skipped the final loc_27EC4 oscillation-hold
+            // frame), shifting every rider's y down by 1px for the rest of the
+            // descent. Only the bounce arm remains here because applyBouncy's
+            // bounceAccel==0 path also keys off the same standing flag.
             if (moveType == 7 && bounceAccel == 0) {
                 bounceAccel = 8;
             }

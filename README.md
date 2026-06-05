@@ -215,10 +215,13 @@ live in `CHANGELOG.md`; this README keeps only the high-level shape of the relea
   `FrameCollisionPlan.terrainOnly()` at call sites with plan-aware `CollisionSystem` overloads,
   `ObjectArtData` drops dead legacy `obj26`/`obj41`/`obj79` fields, the architectural source guard blocks
   shared object-art metadata growth, and `ObjectSolidContactController` is extended. Its own suite is
-  green. Landed under the land-genuine/allow-regression policy with **one accepted regression: MTZ2
-  873→453** — the `MTZPlatformObjectInstance` Obj6B `moveType` eager-arming change reverted a prior
-  rider-Y fix (1px Y at f453 on the Obj64 platform); logged in `docs/TRACE_FRONTIER_LOG.md` as a
-  reconciliation follow-up. mcz1/scz/cnz1/mcz2 held; EHZ1/WFZ green; spilled-ring behavior preserved.
+  green. Landed under the land-genuine/allow-regression policy. The completion had *accidentally
+  reverted* a genuine MTZ2 fix — an `MTZPlatformObjectInstance` Obj6B `moveType` eager-arm the prior
+  comment warned shifts every rider 1px (f453); since that eager-arm gave mtz3 no benefit either, it was
+  **restored** (MTZ2 stays f873). **One accepted regression remains: MTZ3 7596→5664**, from the
+  completion's terrain-collision-plan changes (`CollisionSystem`/`ObjectSolidContactController`/
+  `PlayableSpriteMovement`), logged in `docs/TRACE_FRONTIER_LOG.md` as a follow-up. mcz1/scz/cnz1/mcz2
+  held; EHZ1/WFZ green; spilled-ring behavior preserved.
 - **Spilled rings as ROM Obj37 objects in the unified touch loop (2026-06-05).** Merged the
   spilled-ring object model (`LostRingObjectInstance` + shared `SpillAnimationState` + type-keyed
   every-frame lost-ring touch branch in `ObjectTouchResponseController` + `LostRingRewindCodec` +

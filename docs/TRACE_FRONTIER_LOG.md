@@ -8232,3 +8232,19 @@ Command: full S2 unit+trace verify in worktree `.worktrees/completion-integ` (cm
 - Green: EHZ1, WFZ. Completion own suite green (TestFrameCollisionPlan/TestArchitecturalSourceGuard/
   TestSolidOrderingSentinelsHeadless/TestPlayableSpriteMovement). Pre-existing unrelated red: TestRewindArchitectureGuard
   (LbzCupElevatorInstance baseline) — not introduced by this merge.
+
+## 2026-06-05 — Completion merge correction: restore MTZ2 fix, real regression is MTZ3
+
+Trade-off table (verified, worktree .worktrees/completion-integ, forkCount=1, s2.gen):
+- pre-completion develop 7a26823a2: mtz2 f873, mtz3 f7596
+- completion as-merged (MTZPlatform eager-arm): mtz2 f453, mtz3 f5664
+- completion with eager-arm reverted (prior fix restored): mtz2 f873, mtz3 f5664
+
+CONCLUSION: the completion's `MTZPlatformObjectInstance` Obj6B `moveType` eager-arm (`if(moveType==5)moveType=6;`)
+was an ACCIDENTAL REVERT of a genuine MTZ2 fix — it only regressed mtz2 (873→453) and gave mtz3 NO benefit
+(mtz3 is f5664 either way). RESTORED the prior fix (MTZPlatform reverted to 7a26823a2). MTZ2 stays f873.
+- **REGRESSION INTRODUCED (real, separate): MTZ3 f7596 → f5664** (`tails_x_speed`), caused by the completion's
+  terrain-collision-plan changes (`CollisionSystem` plan overloads / `ObjectSolidContactController` extension /
+  `PlayableSpriteMovement.FrameCollisionPlan.terrainOnly()` call-site routing) — NOT MTZPlatform. Accepted under
+  land-genuine/allow-regression; FOLLOW-UP: bisect which completion collision-plan change moves mtz3 between
+  f5664 and f7596 and reconcile against ROM.
