@@ -5,10 +5,15 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import java.lang.reflect.Method;
 import java.util.List;
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestFrameCollisionPlan {
@@ -63,6 +68,32 @@ class TestFrameCollisionPlan {
     }
 
     @Test
+    void terrainPlayableApisExposePlanAwareOverloads() {
+        assertPlanAwareCollisionMethod("resolveGroundWallCollision", AbstractPlayableSprite.class);
+        assertPlanAwareCollisionMethod("resolveGroundAttachment",
+                AbstractPlayableSprite.class, int.class, BooleanSupplier.class);
+        assertPlanAwareCollisionMethod("resolveAirCollision",
+                AbstractPlayableSprite.class, Consumer.class);
+        assertPlanAwareCollisionMethod("resolveAirCollision",
+                AbstractPlayableSprite.class, Consumer.class, boolean.class);
+    }
+
+    @Test
+    void terrainPlayableApisRejectObjectResolutionOnlyPlans() {
+        CollisionSystem collisionSystem = new CollisionSystem(new EmptyTerrainCollisionManager());
+        AbstractPlayableSprite sprite = newTestSprite();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> collisionSystem.resolveGroundWallCollision(FrameCollisionPlan.objectResolutionOnly(), sprite));
+        assertThrows(IllegalArgumentException.class,
+                () -> collisionSystem.resolveGroundAttachment(
+                        FrameCollisionPlan.objectResolutionOnly(), sprite, 14, () -> false));
+        assertThrows(IllegalArgumentException.class,
+                () -> collisionSystem.resolveAirCollision(
+                        FrameCollisionPlan.objectResolutionOnly(), sprite, ignored -> { }));
+    }
+
+    @Test
     void legacyStepDelegatesThroughPlayableFramePlan() {
         CollisionSystem collisionSystem = new CollisionSystem(new EmptyTerrainCollisionManager());
         RecordingCollisionTrace trace = new RecordingCollisionTrace();
@@ -77,6 +108,13 @@ class TestFrameCollisionPlan {
                         CollisionEvent.EventType.SOLID_CONTACTS_START,
                         CollisionEvent.EventType.SOLID_CONTACTS_COMPLETE),
                 trace.getEvents().stream().map(CollisionEvent::type).toList());
+    }
+
+    private static Method assertPlanAwareCollisionMethod(String name, Class<?>... trailingParameterTypes) {
+        Class<?>[] parameterTypes = new Class<?>[trailingParameterTypes.length + 1];
+        parameterTypes[0] = FrameCollisionPlan.class;
+        System.arraycopy(trailingParameterTypes, 0, parameterTypes, 1, trailingParameterTypes.length);
+        return assertDoesNotThrow(() -> CollisionSystem.class.getDeclaredMethod(name, parameterTypes));
     }
 
     private static AbstractPlayableSprite newTestSprite() {

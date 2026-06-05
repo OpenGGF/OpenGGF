@@ -1,10 +1,7 @@
 package com.openggf.level.objects;
 
 import com.openggf.level.Pattern;
-import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.sprites.animation.SpriteAnimationSet;
-
-import java.util.List;
 
 /**
  * Bundles object art and animations loaded from ROM.
@@ -45,9 +42,6 @@ public class ObjectArtData {
         private final Pattern[] hudLivesPatterns;
         private final Pattern[] hudLivesNumbers;
         private final Pattern[] debugFontPatterns;
-        private final List<SpriteMappingFrame> obj26Mappings;
-        private final List<SpriteMappingFrame> obj41Mappings;
-        private final List<SpriteMappingFrame> obj79Mappings;
         private final SpriteAnimationSet monitorAnimations;
         private final SpriteAnimationSet springAnimations;
         private final SpriteAnimationSet checkpointAnimations;
@@ -93,9 +87,6 @@ public class ObjectArtData {
                         Pattern[] hudLivesPatterns,
                         Pattern[] hudLivesNumbers,
                         Pattern[] debugFontPatterns,
-                        List<SpriteMappingFrame> obj26Mappings,
-                        List<SpriteMappingFrame> obj41Mappings,
-                        List<SpriteMappingFrame> obj79Mappings,
                         SpriteAnimationSet monitorAnimations,
                         SpriteAnimationSet springAnimations,
                         SpriteAnimationSet checkpointAnimations,
@@ -139,9 +130,6 @@ public class ObjectArtData {
                 this.hudLivesPatterns = hudLivesPatterns;
                 this.hudLivesNumbers = hudLivesNumbers;
                 this.debugFontPatterns = debugFontPatterns;
-                this.obj26Mappings = obj26Mappings;
-                this.obj41Mappings = obj41Mappings;
-                this.obj79Mappings = obj79Mappings;
                 this.monitorAnimations = monitorAnimations;
                 this.springAnimations = springAnimations;
                 this.checkpointAnimations = checkpointAnimations;

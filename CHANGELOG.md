@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Architecture roadmap completion:** Playable terrain collision paths now name
+  `FrameCollisionPlan.terrainOnly()` at the call sites, with plan-aware
+  `CollisionSystem` overloads guarding against accidentally routing terrain
+  probes through object-resolution plans. `ObjectArtData` no longer carries the
+  dead legacy `obj26` / `obj41` / `obj79` mapping fields, and the source guard
+  now blocks shared object-art data from growing game, zone, PLC/DPLC,
+  conditional/eager, provider, or legacy Obj-number metadata.
+
 - **ObjectManager placement, touch responses, and solid contacts now live in focused collaborators:** Extracted `ObjectPlacementController`, `ObjectTouchResponseController`, and `ObjectSolidContactController` while keeping `ObjectManager` as the facade and owner of object collections/slots. Added a source-size guard so the facade does not absorb those responsibilities again.
 
 - **Editor and frame runtime context ownership:** Moved editor-level view manager construction behind `EditorSessionFactory` and `EditorModeContext`, so editor mode now owns its camera, sprite manager, and level manager while `WorldSession` remains durable across gameplay/editor transitions. `LevelFrameStep` now receives an explicit `LevelFrameContext` instead of reading `GameServices` directly; the source guard prevents future ambient service access in the canonical frame-step coordinator.

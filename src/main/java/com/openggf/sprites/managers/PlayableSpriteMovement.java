@@ -14,6 +14,7 @@ import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.Direction;
+import com.openggf.physics.FrameCollisionPlan;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.Sensor;
 import com.openggf.physics.SensorResult;
@@ -1777,7 +1778,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (sprite.isSliding()) {
 			sprite.setGSpeed(gSpeed);
 			calculateXYFromGSpeed();
-			collisionSystem().resolveGroundWallCollision(sprite);
+			collisionSystem().resolveGroundWallCollision(FrameCollisionPlan.terrainOnly(), sprite);
 			return;
 		}
 
@@ -1911,7 +1912,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		sprite.setGSpeed(gSpeed);
 		calculateXYFromGSpeed();
-		collisionSystem().resolveGroundWallCollision(sprite);
+		collisionSystem().resolveGroundWallCollision(FrameCollisionPlan.terrainOnly(), sprite);
 		clearFacingFlipPushAfterGroundWallCollision();
 	}
 
@@ -2101,7 +2102,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		xVel = (short) Math.max(-0x1000, Math.min(0x1000, xVel));
 		sprite.setXSpeed(xVel);
 		sprite.setYSpeed(yVel);
-		collisionSystem().resolveGroundWallCollision(sprite);
+		collisionSystem().resolveGroundWallCollision(FrameCollisionPlan.terrainOnly(), sprite);
 	}
 
 	// ========================================
@@ -2411,7 +2412,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// resolveGroundAttachment handles the ROM Status_OnObj early return only
 		// when a live object support path still owns the player. Stale latches must
 		// fall through to terrain walk-off so the player cannot stand in mid-air.
-		collisionSystem().resolveGroundAttachment(sprite, positiveThreshold, this::hasObjectSupport);
+		collisionSystem().resolveGroundAttachment(
+				FrameCollisionPlan.terrainOnly(), sprite, positiveThreshold, this::hasObjectSupport);
 	}
 
 	/** Sonic_SlopeRepel: Slip/fall check (s2.asm:37432) */
@@ -2470,7 +2472,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int quadrant = TrigLookupTable.calcMovementQuadrant(sprite.getXSpeed(), sprite.getYSpeed());
 		Consumer<AbstractPlayableSprite> landingHandler =
 				usesDirectHitFloorLanding(quadrant) ? this::calculateDirectFloorLanding : this::calculateLanding;
-		collisionSystem().resolveAirCollision(sprite, landingHandler, forceFloorCheck);
+		collisionSystem().resolveAirCollision(FrameCollisionPlan.terrainOnly(), sprite, landingHandler, forceFloorCheck);
 	}
 
 	private static boolean usesDirectHitFloorLanding(int quadrant) {
@@ -2480,7 +2482,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	/** Obj01_CheckWallsOnGround: Ground wall collision (s2.asm:36486) */
 	private void doWallCollisionGround() {
 		if (collisionSystem() != null) {
-			collisionSystem().resolveGroundWallCollision(sprite);
+			collisionSystem().resolveGroundWallCollision(FrameCollisionPlan.terrainOnly(), sprite);
 			return;
 		}
 		// S1 roll tunnels: suppress push sensor wall check to prevent false

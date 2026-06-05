@@ -6,6 +6,7 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -61,9 +62,10 @@ public class SpeedBoosterObjectInstance extends AbstractObjectInstance {
         if (player != null) {
             checkPlayerCollision(player);
         }
-        for (PlayableEntity sidekick : services().playerQuery().sidekicks()) {
-            if (sidekick instanceof AbstractPlayableSprite sidekickSprite && sidekickSprite != player) {
-                checkPlayerCollision(sidekickSprite);
+        for (PlayableEntity candidate :
+                services().playerQuery().playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (candidate instanceof AbstractPlayableSprite candidateSprite && candidateSprite != player) {
+                checkPlayerCollision(candidateSprite);
             }
         }
     }

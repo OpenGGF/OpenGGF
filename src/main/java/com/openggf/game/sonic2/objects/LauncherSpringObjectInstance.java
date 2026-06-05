@@ -11,6 +11,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.*;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
+import com.openggf.physics.FrameCollisionPlan;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.Tails;
@@ -212,7 +213,7 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         player.setGSpeed((short) -0x400);
         player.setXSpeed((short) -0x400);
         player.setYSpeed((short) 0);
-        services().collisionSystem().resolveGroundWallCollision(player);
+        services().collisionSystem().resolveGroundWallCollision(FrameCollisionPlan.terrainOnly(), player);
         player.move(player.getXSpeed(), player.getYSpeed());
         player.markObjectPreservedRollBoostFollowup();
         player.markObjectPreservedRollVelocityCarry();

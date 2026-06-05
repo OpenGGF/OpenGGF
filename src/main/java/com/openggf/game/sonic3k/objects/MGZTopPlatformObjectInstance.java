@@ -24,6 +24,7 @@ import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.Direction;
+import com.openggf.physics.FrameCollisionPlan;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.physics.TrigLookupTable;
@@ -1517,7 +1518,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         if (collisionSystem == null) {
             return;
         }
-        collisionSystem.resolveAirCollision(player, landed -> landed.setYSpeed((short) 0));
+        collisionSystem.resolveAirCollision(FrameCollisionPlan.terrainOnly(), player, landed -> landed.setYSpeed((short) 0));
         // ROM MGZ carry does not feed terrain angle back into Sonic's walk/run
         // presentation; the captured state keeps flat-surface animation semantics.
         player.setAngle((byte) 0);

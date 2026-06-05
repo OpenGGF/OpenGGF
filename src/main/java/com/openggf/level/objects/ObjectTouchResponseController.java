@@ -160,7 +160,7 @@ final class ObjectTouchResponseController {
         }
         // Resolve sidekick PlayableEntity refs from the injected live SpriteManager.
         com.openggf.sprites.managers.SpriteManager sm = objectManager.services().spriteManager();
-        for (var skEntry : state.sidekicks()) {
+        for (var skEntry : state.sidekickEntries()) {
             com.openggf.sprites.Sprite sprite = sm.getSprite(skEntry.sidekickCode());
             if (!(sprite instanceof PlayableEntity pe)) continue;
             OverlapBufferPair pair = new OverlapBufferPair();

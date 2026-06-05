@@ -39,7 +39,8 @@ class TestTopSolidRoutineProfileAdoption {
                 new ObjectSpawn(0x1000, 0x0300, Sonic2ObjectIds.SWINGING_PFORM, 0x00, 0, false, 0),
                 "SwingingPform");
 
-        assertDeclaredTopSolidProfile(SwingingPformObjectInstance.class, platform);
+        assertDeclaredProfile(SwingingPformObjectInstance.class, platform,
+                SolidRoutineProfile.fromProvider(platform));
     }
 
     @Test
@@ -56,11 +57,18 @@ class TestTopSolidRoutineProfileAdoption {
     private static void assertDeclaredTopSolidProfile(
             Class<?> owner,
             SolidObjectProvider provider) throws Exception {
+        assertDeclaredProfile(owner, provider,
+                SolidRoutineProfile.topSolid(provider.usesStickyContactBuffer()));
+    }
+
+    private static void assertDeclaredProfile(
+            Class<?> owner,
+            SolidObjectProvider provider,
+            SolidRoutineProfile expected) throws Exception {
         Method method = owner.getDeclaredMethod("getSolidRoutineProfile");
 
         assertEquals(SolidRoutineProfile.class, method.getReturnType());
         assertTrue(provider.isTopSolidOnly());
-        assertEquals(SolidRoutineProfile.topSolid(provider.usesStickyContactBuffer()),
-                provider.getSolidRoutineProfile());
+        assertEquals(expected, provider.getSolidRoutineProfile());
     }
 }

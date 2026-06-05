@@ -53,7 +53,7 @@ class TestArchitecturalSourceGuard {
             "springboardAnimations"
     );
     private static final Pattern OBJECT_ART_FORBIDDEN_NAME =
-            Pattern.compile("(?i).*(sonic|s1|s2|s3k|ghz|lz|mz|slz|syz|sbz|ehz|cpz|arz|cnz|htz|mcz|ooz|mtz|wfz|scz|dez|aiz|hcz|mgz|cnz|icz|lbz|mhz|fbz|soz|lrz|hpz|ssz|ddz|plc|dplc|romAddr|artAddr|mappingAddr|patternBase).*");
+            Pattern.compile("(?i).*(sonic|s1|s2|s3k|ghz|lz|mz|slz|syz|sbz|ehz|cpz|arz|cnz|htz|mcz|ooz|mtz|wfz|scz|dez|aiz|hcz|mgz|cnz|icz|lbz|mhz|fbz|soz|lrz|hpz|ssz|ddz|obj\\d+|plc|dplc|eager|conditional|provider|romAddr|artAddr|mappingAddr|patternBase).*");
 
     private static final Set<String> COORDINATE_HAZARD_ALLOWED = Set.of(
             "com/openggf/game/sonic2/objects/CheckpointStarInstance.java",
@@ -164,6 +164,29 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
+    void playableMovementRoutesTerrainCollisionThroughFramePlans() throws IOException {
+        String relative = "com/openggf/sprites/managers/PlayableSpriteMovement.java";
+        String source = stripCommentsAndStrings(Files.readString(SRC_MAIN.resolve(relative)));
+
+        assertTrue(source.contains("FrameCollisionPlan.terrainOnly()"),
+                "Playable movement terrain collision paths must name the FrameCollisionPlan they run");
+
+        Pattern directPlayableTerrainCollision = Pattern.compile(
+                "collisionSystem\\s*\\(\\s*\\)\\s*\\.\\s*"
+                        + "(resolveGroundAttachment|resolveAirCollision|resolveGroundWallCollision)"
+                        + "\\s*\\(\\s*sprite\\b");
+        Matcher matcher = directPlayableTerrainCollision.matcher(source);
+        List<String> violations = new ArrayList<>();
+        while (matcher.find()) {
+            violations.add(relative + ":" + lineNumberForOffset(source, matcher.start())
+                    + " - direct " + matcher.group(1) + " call without FrameCollisionPlan");
+        }
+
+        assertNoViolations("Playable movement collision orchestration must route through FrameCollisionPlan",
+                violations);
+    }
+
+    @Test
     void objectManagerFacadeStaysWithinExtractedCollaboratorBudget() throws IOException {
         SourceFile objectManager = SourceFile.read(SRC_MAIN.resolve(OBJECT_MANAGER_PATH));
         int lineCount = objectManager.lines().size();
@@ -222,6 +245,30 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
+    void productionCodeDoesNotCallDeprecatedCollisionSystemStep() throws IOException {
+        List<String> violations = new ArrayList<>();
+        Pattern deprecatedStepCall = Pattern.compile("\\.step\\s*\\(");
+        for (Path file : productionFiles()) {
+            String relative = relative(file);
+            if (relative.equals("com/openggf/physics/CollisionSystem.java")) {
+                continue;
+            }
+            String stripped = stripCommentsAndStrings(Files.readString(file));
+            if (!stripped.contains("CollisionSystem")) {
+                continue;
+            }
+            String[] lines = stripped.split("\\R", -1);
+            for (int i = 0; i < lines.length; i++) {
+                if (deprecatedStepCall.matcher(lines[i]).find()) {
+                    violations.add(relative + ":" + (i + 1) + " - use a named FrameCollisionPlan instead");
+                }
+            }
+        }
+
+        assertNoViolations("Production code must not call deprecated CollisionSystem.step()", violations);
+    }
+
+    @Test
     void objectCodeDoesNotAddSuspiciousPlayerTopLeftCoordinateHazards() throws IOException {
         List<String> violations = new ArrayList<>();
         for (Path file : productionFiles()) {
@@ -272,6 +319,7 @@ class TestArchitecturalSourceGuard {
                 class ObjectArtData {
                     private final ObjectSpriteSheet monitorSheet;
                     private final ObjectSpriteSheet ghzBridgeSheet;
+                    private final List<SpriteMappingFrame> obj26Mappings;
                     public ObjectArtData(ObjectSpriteSheet monitorSheet, ObjectSpriteSheet ghzBridgeSheet) {}
                     public ObjectSpriteSheet s3kMonitorSheet() { return null; }
                 }
@@ -284,7 +332,7 @@ class TestArchitecturalSourceGuard {
                 .sorted()
                 .toList();
 
-        assertEquals(List.of("ghzBridgeSheet", "s3kMonitorSheet"), violations);
+        assertEquals(List.of("ghzBridgeSheet", "obj26Mappings", "s3kMonitorSheet"), violations);
     }
 
     @Test

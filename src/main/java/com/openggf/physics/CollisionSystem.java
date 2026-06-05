@@ -263,6 +263,11 @@ public class CollisionSystem {
     }
 
     public void resolveGroundWallCollision(AbstractPlayableSprite sprite) {
+        resolveGroundWallCollision(FrameCollisionPlan.terrainOnly(), sprite);
+    }
+
+    public void resolveGroundWallCollision(FrameCollisionPlan plan, AbstractPlayableSprite sprite) {
+        requireTerrainOnlyPlan(plan, "resolveGroundWallCollision");
         if (sprite == null || sprite.isTunnelMode()
                 || sprite.isStickToConvex()
                 || sprite.isSuppressGroundWallCollision()) {
@@ -378,6 +383,14 @@ public class CollisionSystem {
     public void resolveGroundAttachment(AbstractPlayableSprite sprite,
                                         int positiveThreshold,
                                         BooleanSupplier hasObjectSupport) {
+        resolveGroundAttachment(FrameCollisionPlan.terrainOnly(), sprite, positiveThreshold, hasObjectSupport);
+    }
+
+    public void resolveGroundAttachment(FrameCollisionPlan plan,
+                                        AbstractPlayableSprite sprite,
+                                        int positiveThreshold,
+                                        BooleanSupplier hasObjectSupport) {
+        requireTerrainOnlyPlan(plan, "resolveGroundAttachment");
         // ROM: btst #0,object_control(a0) at sonic3k.asm:21555-21561 skips the
         // entire status-based dispatch (which includes terrain probes and
         // air-state transitions) when object_control bit 0 is set. Mirror that
@@ -594,7 +607,13 @@ public class CollisionSystem {
 
     public void resolveAirCollision(AbstractPlayableSprite sprite,
                                     Consumer<AbstractPlayableSprite> landingHandler) {
-        resolveAirCollision(sprite, landingHandler, false);
+        resolveAirCollision(FrameCollisionPlan.terrainOnly(), sprite, landingHandler, false);
+    }
+
+    public void resolveAirCollision(FrameCollisionPlan plan,
+                                    AbstractPlayableSprite sprite,
+                                    Consumer<AbstractPlayableSprite> landingHandler) {
+        resolveAirCollision(plan, sprite, landingHandler, false);
     }
 
     /**
@@ -607,6 +626,14 @@ public class CollisionSystem {
     public void resolveAirCollision(AbstractPlayableSprite sprite,
                                     Consumer<AbstractPlayableSprite> landingHandler,
                                     boolean forceFloorCheck) {
+        resolveAirCollision(FrameCollisionPlan.terrainOnly(), sprite, landingHandler, forceFloorCheck);
+    }
+
+    public void resolveAirCollision(FrameCollisionPlan plan,
+                                    AbstractPlayableSprite sprite,
+                                    Consumer<AbstractPlayableSprite> landingHandler,
+                                    boolean forceFloorCheck) {
+        requireTerrainOnlyPlan(plan, "resolveAirCollision");
         int quadrant = TrigLookupTable.calcMovementQuadrant(sprite.getXSpeed(), sprite.getYSpeed());
         switch (quadrant) {
             case 0x00 -> {
@@ -648,6 +675,15 @@ public class CollisionSystem {
             }
             default -> {
             }
+        }
+    }
+
+    private static void requireTerrainOnlyPlan(FrameCollisionPlan plan, String operation) {
+        FrameCollisionPlan effectivePlan = Objects.requireNonNull(plan, "plan");
+        if (!effectivePlan.runsTerrainProbes()
+                || effectivePlan.runsSolidObjectResolution()
+                || effectivePlan.runsPostResolutionGroundMode()) {
+            throw new IllegalArgumentException(operation + " requires a terrain-only FrameCollisionPlan");
         }
     }
 

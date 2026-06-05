@@ -6,7 +6,9 @@ import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -252,7 +254,11 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         if (playerEntity instanceof AbstractPlayableSprite mainPlayer) {
             updateCharacter(mainPlayer);
         }
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
+        for (PlayableEntity sidekickEntity :
+                services().playerQuery().playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (sidekickEntity == playerEntity) {
+                continue;
+            }
             if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
                 updateCharacter(sidekick);
             }
@@ -427,8 +433,8 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         // fraction is what the next loc_22902 velocity recompute integrates over.
         int startX = cs.path[0] + objX;
         int startY = cs.path[1] + objY;
-        player.setCentreXPreserveSubpixel((short) startX);
-        player.setCentreYPreserveSubpixel((short) startY);
+        NativePositionOps.writeXPosPreserveSubpixel(player, startX);
+        NativePositionOps.writeYPosPreserveSubpixel(player, startY);
 
         // Move to second waypoint for velocity calculation
         cs.pathIndex = 2;
@@ -494,8 +500,8 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         // subpixel-preserving setters so the fraction carried across waypoints is
         // not lost; zeroing it drifts the tube position and shifts the cross-axis
         // velocity recomputed at loc_22902 (docs/s2disasm/s2.asm:48761-48815).
-        player.setCentreXPreserveSubpixel((short) nextX);
-        player.setCentreYPreserveSubpixel((short) nextY);
+        NativePositionOps.writeXPosPreserveSubpixel(player, nextX);
+        NativePositionOps.writeYPosPreserveSubpixel(player, nextY);
 
         // Check if we've reached the end of entry path
         cs.pathIndex += 2;
@@ -585,8 +591,8 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         // ROM writes the initial main-path waypoint with move.w to x_pos(a1) /
         // y_pos(a1) (docs/s2disasm/s2.asm:48531-48545), preserving the subpixel
         // fraction. Use the subpixel-preserving setters here too.
-        player.setCentreXPreserveSubpixel((short) startX);
-        player.setCentreYPreserveSubpixel((short) startY);
+        NativePositionOps.writeXPosPreserveSubpixel(player, startX);
+        NativePositionOps.writeYPosPreserveSubpixel(player, startY);
 
         // Get next waypoint
         int nextX, nextY;
@@ -636,8 +642,8 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         // subpixel low word. Use the subpixel-preserving setters so the carried
         // fraction survives each waypoint snap and the loc_22902 velocity recompute
         // (docs/s2disasm/s2.asm:48761-48815) sees ROM-accurate integer-pixel input.
-        player.setCentreXPreserveSubpixel((short) nextX);
-        player.setCentreYPreserveSubpixel((short) nextY);
+        NativePositionOps.writeXPosPreserveSubpixel(player, nextX);
+        NativePositionOps.writeYPosPreserveSubpixel(player, nextY);
 
         // Completed a segment
         cs.completedSegmentCount++;

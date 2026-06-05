@@ -54,8 +54,9 @@ public class Sonic2OOZEvents extends Sonic2ZoneEvents {
         }
         // ROM Obj07_Main (oil surface) runs during object processing, after the
         // player object (s2.asm:49659-49749). Mirror that post-physics here.
+        ObjectPlayerQuery playerQuery = playerQueryFromRuntime();
         for (PlayableEntity participant :
-                playerQueryFromRuntime().playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                playerQuery.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             if (participant instanceof AbstractPlayableSprite playable) {
                 oilManager.updateSurface(playable);
             }
