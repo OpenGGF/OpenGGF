@@ -20,4 +20,20 @@ class TestLostRingObjectInstance {
         // accum after 4 ticks = 0xFF+0xFE+0xFD+0xFC = 0x03FA; (0x03FA>>9)&3 = 1
         assertEquals(1, anim.frame());
     }
+
+    @Test
+    void ringBouncePhysicsMatchesLegacyPool() {
+        // Fixed-point contract (identical to LostRing.reset, RingManager LostRing.java:24):
+        //   xSubpixel = x << 8 (pixel coordinate stored in the high byte; low byte = sub-pixel).
+        // forTest(x, y, ...) constructs with xSubpixel = x << 8, ySubpixel = y << 8.
+        LostRingObjectInstance ring = LostRingObjectInstance.forTest(
+                /*xPixel*/0x100, /*yPixel*/0x100, /*xVel*/0x0200, /*yVel*/-0x0400, /*phase*/0, /*lifetime*/0xFF);
+        assertEquals(0x100 << 8, ring.getXSubpixelForTest());      // 0x10000 at start
+        ring.stepPhysicsForTest(/*gravity*/0x18, /*floorCheck*/false);
+        // ROM step (LostRingPool.updatePhysics, RingManager.java:1245-1247):
+        //   xSubpixel += xVel;  ySubpixel += yVel;  yVel += gravity.
+        assertEquals((0x100 << 8) + 0x0200, ring.getXSubpixelForTest()); // 0x10200
+        assertEquals((0x100 << 8) + (-0x0400), ring.getYSubpixelForTest()); // 0x0FC00
+        assertEquals(-0x0400 + 0x18, ring.getYVelForTest());
+    }
 }
