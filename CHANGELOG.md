@@ -4,6 +4,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **ObjectManager placement, touch responses, and solid contacts now live in focused collaborators:** Extracted ObjectPlacementController, ObjectTouchResponseController, and ObjectSolidContactController while keeping ObjectManager as the facade and owner of object collections/slots. Added a source-size guard so the facade does not absorb those responsibilities again.
+
 - **Object construction context installation is now scoped and nest-safe:** `ObjectConstructionContext.with(...)` saves and restores both `ObjectServices` and pre-allocated object slot state, so nested object creation restores the outer construction context instead of clearing it. `ObjectManager` placement, dynamic factory, rewind restore, child-spawn, and power-up construction paths now use the scoped helper; a source guard blocks new raw construction ThreadLocal set/remove sites outside `ObjectConstructionContext`.
 
 - **Collision frame orchestration now names its phases explicitly:** Added
