@@ -31,6 +31,37 @@
 - A/B baseline measured by copying the changed file aside, `git checkout -- <path>` to HEAD,
   running the trace (clean f857), then restoring the fix (f899). No `git stash` used (shared
   worktree stack).
+## 2026-06-05 - cnz2 f4294->f4295: LauncherSpring (Obj85) vertical capture-frame compression skip
+
+- Branch `bugfix/ai-trace-s2-cnz2`, worktree `.worktrees/trace-s2-cnz2`.
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status: ADVANCED (still failing).** First-error frame **4294 -> 4295**, error count **939 -> 840**.
+  Surefire: `Tests run: 1, Failures: 1`.
+- **Root cause:** ROM `loc_2AD26` reads the per-player state byte `objoff_36`
+  (`move.b (a2),d0 / bne loc_2AD7A`, `docs/s2disasm/s2.asm:57948-57949`) and only reaches the
+  compression timer `loc_2ADB0` (`subq.b #1,objoff_32` / `addq.w #1,objoff_38`,
+  `docs/s2disasm/s2.asm:57992-58003`) when that byte was already nonzero at the START of the
+  object update. The EMPTY->STANDING capture routine `loc_2AD2A` only sets `objoff_36` nonzero at
+  its tail (`addq.b #1,(a2)`, `docs/s2disasm/s2.asm:57968`), so the capture frame runs
+  `loc_2AD2A` and never decrements `objoff_32` nor advances `objoff_38` that frame.
+  `LauncherSpringObjectInstance` now models the one-frame skip via a `capturedThisFrame` latch,
+  gated to the vertical routine (`Obj85_Up` / `loc_2AD26`). The diagonal routine
+  (`Obj85_Diagonal` / `loc_2AF06`, `docs/s2disasm/s2.asm:58106-58135`) is a DISTINCT ROM routine
+  whose engine capture fires on a different object-update phase and already aligns, so the skip is
+  gated to the non-diagonal subtype (a data-driven object-subtype distinction, NOT a
+  zone/route/frame/gameId carve-out). Comparison-only invariant held.
+- Baseline f4294 = `y` mismatch expected=0x03FA actual=0x03FB while a player is captured on the
+  vertical LauncherSpring (`eng-near s36 0x85 LauncherSpring @1A30,0428 comp=01`). New frontier
+  f4295 = same `y` field, expected=0x03FA actual=0x03FB, one frame later (a residual 1-px Y diff
+  during the same capture sequence).
+- **Same-game regression guard (PASS, zero regressions):** EHZ1, WFZ, ARZ each run individually
+  (`-Dtest=<class>#replayMatchesTrace`, surefire per-class report) -> all three `Failures: 0`.
+  Also `TestS2CnzLevelSelectTraceReplay` (cnz1, diagonal LauncherSprings) unchanged at f3906/199
+  errors between HEAD and fixed -> not regressed.
+- A/B baseline measured by copying the changed file aside, `git checkout -- <path>` to HEAD
+  (clean f4294/939), then restoring the fix (f4295/840). No `git stash` used (shared worktree
+  stack).
 
 ## 2026-06-05 - ooz2 f389->f489: Aquis (Obj50) on-screen activation + follow-timer underflow
 

@@ -41,6 +41,20 @@ All notable changes to the OpenGGF project are documented in this file.
   Advances the s2 arz2 level-select trace frontier (first-error frame 857 `tails_g_speed`
   `$C` vs `$6` -> 899).
 
+- **CNZ vertical LauncherSpring (Obj85) now skips compression on the capture frame:**
+  ROM `loc_2AD26` reads `objoff_36` and only branches to the compression timer
+  `loc_2ADB0` when the state byte was already nonzero at the start of the object
+  update (`move.b (a2),d0 / bne loc_2AD7A`, `docs/s2disasm/s2.asm:57948-57949`).
+  The EMPTY->STANDING capture routine `loc_2AD2A` sets `objoff_36` nonzero only
+  at its tail (`addq.b #1,(a2)`, `docs/s2disasm/s2.asm:57968`), so the capture
+  frame itself never decrements `objoff_32` nor advances `objoff_38`
+  (`docs/s2disasm/s2.asm:57992-58003`). `LauncherSpringObjectInstance` now models
+  that one-frame skip via a `capturedThisFrame` latch for the vertical routine
+  (`Obj85_Up`); the diagonal routine (`Obj85_Diagonal` / `loc_2AF06`,
+  `docs/s2disasm/s2.asm:58106-58135`) is a distinct ROM routine whose engine
+  capture already aligns, so the skip is gated to the non-diagonal subtype.
+  Advances the s2 cnz2 level-select trace frontier (first-error frame 4294 ->
+  4295; 939 -> 840 errors).
 - **OOZ Aquis (Obj50) on-screen activation and follow-timer now ROM-accurate:**
   `Obj50_CheckIfOnScreen` tests `render_flags.on_screen`
   (`docs/s2disasm/s2.asm:60607-60614`), which the engine models with the

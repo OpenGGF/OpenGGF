@@ -79,6 +79,17 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         int state = STATE_EMPTY;
         int launchCooldown = 0;
         boolean pinballBeforeCapture = false;
+        /**
+         * ROM objoff_36/objoff_37 only become nonzero at the END of the capture
+         * routine loc_2AD2A (s2.asm:57968 addq.b #1,(a2)). The compression timer
+         * path loc_2ADB0 is reached on a frame ONLY when objoff_36 was already
+         * nonzero at frame start (loc_2AD7A is entered via "move.b (a2),d0 /
+         * bne loc_2AD7A", s2.asm:57948-57949). So the EMPTY->STANDING transition
+         * frame runs loc_2AD2A, NOT loc_2ADB0, and never decrements objoff_32 or
+         * advances objoff_38 that frame. This flag reproduces that one-frame
+         * "captured this frame, no compression yet" skip.
+         */
+        boolean capturedThisFrame = false;
     }
 
     // Per-player state map (ROM: objoff_36 for P1, objoff_37 for P2)
@@ -279,8 +290,35 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         player.setAnimationId(Sonic2AnimationIds.ROLL);
 
         ps.state = STATE_STANDING;
+        // ROM loc_2AD2A (vertical Obj85_Up) only sets objoff_36 nonzero at its
+        // tail (s2.asm:57968 addq.b #1,(a2)). The compression timer loc_2ADB0 is
+        // reached only when objoff_36 was already nonzero at the START of the
+        // object update ("move.b (a2),d0 / bne loc_2AD7A", s2.asm:57948-57949),
+        // so the EMPTY->STANDING capture frame runs loc_2AD2A and never advances
+        // objoff_38 that frame. Reproduce that one-frame skip.
+        //
+        // This is scoped to the vertical routine (Obj85_Up). The diagonal
+        // routine Obj85_Diagonal (loc_2AF06, s2.asm:58106-58135) has the same
+        // structure, but the engine's diagonal capture fires on a different
+        // object-update phase (side-push conversion at loc_2AF2E,
+        // s2.asm:58114-58135), so its first-compression frame is already aligned
+        // without the skip; applying the skip there would push the diagonal head
+        // one compression-step behind ROM (s2 cnz2 frame 928). The two are
+        // distinct ROM routines, so modelling the skip per-routine is accurate.
+        if (!isDiagonal()) {
+            ps.capturedThisFrame = true;
+        }
 
-        // Reset compression only if no other player is on the spring
+        // Reset compression only if no other player is on the spring.
+        // objoff_32 (compressionFrameCounter) is reset to 0 here, matching the
+        // spawn-cleared object RAM that ROM relies on for a fresh spring: ROM
+        // Obj85_Init never initializes objoff_32 and the capture routine
+        // loc_2AD2A/loc_2AF2E does not touch it, so a never-yet-compressed
+        // spring has objoff_32 == 0. The capturedThisFrame skip above then
+        // reproduces ROM's one-frame "no compression on the capture frame"
+        // delay (objoff_36 only becomes nonzero at the loc_2AD2A tail,
+        // s2.asm:57968), so the FIRST decrement underflows 0->-1 and compresses
+        // on the frame AFTER capture, not on the capture frame.
         if (!hasAnyPlayerOnSpring()) {
             compression = 0;
             compressionFrameCounter = 0;
@@ -339,6 +377,17 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
      */
     private boolean handleCompression(AbstractPlayableSprite player, PlayerState ps) {
         boolean jumpPressed = player.isJumpPressed();
+
+        // ROM: the compression timer path loc_2ADB0 is only reached when
+        // objoff_36 was already nonzero at the start of this object update.
+        // On the frame the player was captured (objoff_36 0->1 inside
+        // loc_2AD2A, s2.asm:57968), the routine fell through loc_2AD2A and
+        // never ran loc_2ADB0, so no objoff_32 decrement / objoff_38 increment
+        // happened. Skip exactly that one frame, then resume next frame.
+        if (ps.capturedThisFrame) {
+            ps.capturedThisFrame = false;
+            return jumpPressed;
+        }
 
         if (jumpPressed) {
             // ROM: tst.b objoff_3A(a0) / bne.s loc_2ADFE - skip if already processed this frame
