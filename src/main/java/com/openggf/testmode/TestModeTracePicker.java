@@ -27,6 +27,7 @@ public final class TestModeTracePicker {
     private final List<TraceEntry> entries;
     private final PixelFont font;
     private int cursor;
+    private int firstVisible;
     private Result pendingResult = Result.NONE;
 
     public TestModeTracePicker(List<TraceEntry> entries, PixelFont font) {
@@ -59,6 +60,9 @@ public final class TestModeTracePicker {
         if (input.isKeyPressedWithoutModifiers(GLFW_KEY_PAGE_UP)) {
             cursor = prevGroupStart(cursor);
         }
+        // Keep the scroll window in sync with the cursor after any movement
+        // so the selected entry is always within the visible viewport.
+        firstVisible = computeFirstVisible(firstVisible, cursor);
         if (input.isKeyPressedWithoutModifiers(GLFW_KEY_ENTER)) {
             pendingResult = Result.LAUNCH;
         }
@@ -71,13 +75,18 @@ public final class TestModeTracePicker {
     private static final int LINE_HEIGHT = 6;
     private static final int GROUP_GAP = 3;
     private static final int HEADING_HEIGHT = 8;
+    // The scrollable list occupies [LIST_TOP, LIST_AREA_BOTTOM]; below that sits
+    // the selected-entry info panel (renderInfoPanel, y >= 192) on the 224px
+    // virtual screen. Entries are windowed so the list never spills into it.
+    private static final int LIST_TOP = 18;
+    private static final int LIST_AREA_BOTTOM = 184;
 
     public void render() {
         // Entire screen is pure text on the font atlas — mega-batch into one GL draw.
         font.beginMegaBatch();
         try {
-            font.drawText("TRACE TEST MODE", 8, 6, SCALE, 1f, 1f, 1f, 1f);
             if (entries.isEmpty()) {
+                font.drawText("TRACE TEST MODE", 8, 6, SCALE, 1f, 1f, 1f, 1f);
                 font.drawText("No traces found.", 8, 24, SCALE, 1f, 0.5f, 0.5f, 1f);
                 font.drawText("Check debug.testMode.catalogDir in config.yaml", 8, 32, SCALE,
                         0.8f, 0.8f, 0.8f, 1f);
@@ -87,15 +96,28 @@ public final class TestModeTracePicker {
                         0.7f, 0.7f, 0.7f, 1f);
                 return;
             }
-            int y = 18;
-            String lastGame = null;
-            for (int i = 0; i < entries.size(); i++) {
+            // Recompute defensively so rendering is correct even if update()
+            // has not run this frame (e.g. first render after construction).
+            firstVisible = computeFirstVisible(firstVisible, cursor);
+            int lastVisible = lastFullyVisibleIndex(firstVisible);
+
+            font.drawText(String.format("TRACE TEST MODE   (%d/%d)",
+                    cursor + 1, entries.size()), 8, 6, SCALE, 1f, 1f, 1f, 1f);
+
+            // Sticky heading for the topmost visible entry's game so the group
+            // context is never lost when scrolled into the middle of a group.
+            String topHeading = gameHeading(entries.get(firstVisible).gameId())
+                    + (firstVisible > 0 ? "   ^ more above" : "");
+            font.drawText(topHeading, 8, LIST_TOP, SCALE, 1f, 1f, 0.6f, 1f);
+
+            int y = LIST_TOP + HEADING_HEIGHT;
+            for (int i = firstVisible; i <= lastVisible; i++) {
                 TraceEntry e = entries.get(i);
-                if (!e.gameId().equals(lastGame)) {
-                    if (lastGame != null) y += GROUP_GAP;
+                if (i > firstVisible
+                        && !e.gameId().equals(entries.get(i - 1).gameId())) {
+                    y += GROUP_GAP;
                     font.drawText(gameHeading(e.gameId()), 8, y, SCALE, 1f, 1f, 0.6f, 1f);
                     y += HEADING_HEIGHT;
-                    lastGame = e.gameId();
                 }
                 boolean selected = (i == cursor);
                 float brightness = selected ? 1.0f : 0.6f;
@@ -104,12 +126,64 @@ public final class TestModeTracePicker {
                 font.drawText(line, 12, y, SCALE, brightness, brightness, brightness, 1f);
                 y += LINE_HEIGHT;
             }
-            if (cursor < entries.size()) {
-                renderInfoPanel(entries.get(cursor));
+            int below = entries.size() - 1 - lastVisible;
+            if (below > 0) {
+                font.drawText("  v " + below + " more below", 12, y, SCALE,
+                        0.7f, 0.7f, 0.4f, 1f);
             }
+            renderInfoPanel(entries.get(cursor));
         } finally {
             font.endMegaBatch();
         }
+    }
+
+    /**
+     * Index of the last entry that fully fits in the scroll viewport when the
+     * window begins at {@code firstVisible}. Accounts for the sticky heading and
+     * any inline group headings that appear within the window. Always returns at
+     * least {@code firstVisible} so the selected row can render even on a screen
+     * too short to fit it. Package-private for unit testing.
+     */
+    int lastFullyVisibleIndex(int firstVisible) {
+        if (entries.isEmpty()) {
+            return 0;
+        }
+        firstVisible = Math.max(0, Math.min(firstVisible, entries.size() - 1));
+        int y = LIST_TOP + HEADING_HEIGHT; // below the sticky heading
+        int last = firstVisible;
+        for (int i = firstVisible; i < entries.size(); i++) {
+            int rowHeight = LINE_HEIGHT;
+            if (i > firstVisible
+                    && !entries.get(i).gameId().equals(entries.get(i - 1).gameId())) {
+                rowHeight += GROUP_GAP + HEADING_HEIGHT;
+            }
+            if (y + rowHeight > LIST_AREA_BOTTOM) {
+                break;
+            }
+            y += rowHeight;
+            last = i;
+        }
+        return last;
+    }
+
+    /**
+     * Minimal scroll-window start that keeps {@code cursor} visible. Scrolls up
+     * when the cursor is above the window and down (one entry at a time) until
+     * the cursor fits, never moving past the cursor. Package-private for testing.
+     */
+    int computeFirstVisible(int firstVisible, int cursor) {
+        if (entries.isEmpty()) {
+            return 0;
+        }
+        firstVisible = Math.max(0, Math.min(firstVisible, entries.size() - 1));
+        cursor = Math.max(0, Math.min(cursor, entries.size() - 1));
+        if (firstVisible > cursor) {
+            firstVisible = cursor;
+        }
+        while (firstVisible < cursor && cursor > lastFullyVisibleIndex(firstVisible)) {
+            firstVisible++;
+        }
+        return firstVisible;
     }
 
     private void renderInfoPanel(TraceEntry e) {

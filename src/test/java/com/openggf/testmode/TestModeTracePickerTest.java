@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests for {@link TestModeTracePicker}'s navigation helpers. The
@@ -63,6 +64,59 @@ class TestModeTracePickerTest {
     void emptyPickerStartsWithNoResult() {
         TestModeTracePicker picker = new TestModeTracePicker(List.of(), null);
         assertEquals(TestModeTracePicker.Result.NONE, picker.consumeResult());
+    }
+
+    @Test
+    void viewportKeepsCursorVisibleAcrossLargeCatalog() {
+        // A catalog far taller than the screen: the cursor must always fall
+        // inside [firstVisible, lastFullyVisibleIndex(firstVisible)].
+        String[] ids = new String[120];
+        for (int i = 0; i < ids.length; i++) {
+            ids[i] = i < 40 ? "s1" : i < 80 ? "s2" : "s3k";
+        }
+        TestModeTracePicker picker = new TestModeTracePicker(entries(ids), null);
+        int firstVisible = 0;
+        for (int cursor = 0; cursor < ids.length; cursor++) {
+            firstVisible = picker.computeFirstVisible(firstVisible, cursor);
+            assertTrue(firstVisible >= 0 && firstVisible <= cursor,
+                    "firstVisible must not pass the cursor (cursor=" + cursor + ")");
+            assertTrue(cursor <= picker.lastFullyVisibleIndex(firstVisible),
+                    "cursor must be within the visible window (cursor=" + cursor + ")");
+        }
+    }
+
+    @Test
+    void viewportScrollsWhenListExceedsScreen() {
+        // With many entries the bottom of the list cannot be shown from the top,
+        // so reaching the last entry must scroll the window down.
+        String[] ids = new String[120];
+        java.util.Arrays.fill(ids, "s1");
+        TestModeTracePicker picker = new TestModeTracePicker(entries(ids), null);
+
+        assertEquals(0, picker.computeFirstVisible(0, 0));
+        assertTrue(picker.lastFullyVisibleIndex(0) < ids.length - 1,
+                "the whole list should not fit on one screen");
+        int atEnd = picker.computeFirstVisible(0, ids.length - 1);
+        assertTrue(atEnd > 0, "selecting the last entry must scroll the window down");
+    }
+
+    @Test
+    void viewportScrollsBackToTop() {
+        String[] ids = new String[120];
+        java.util.Arrays.fill(ids, "s1");
+        TestModeTracePicker picker = new TestModeTracePicker(entries(ids), null);
+        int deep = picker.computeFirstVisible(0, ids.length - 1);
+        assertEquals(0, picker.computeFirstVisible(deep, 0),
+                "returning to the first entry must scroll the window back to the top");
+    }
+
+    @Test
+    void viewportShowsWholeListWhenItFits() {
+        // A small catalog fits entirely: no scrolling, window stays at 0.
+        TestModeTracePicker picker = new TestModeTracePicker(
+                entries("s1", "s1", "s2"), null);
+        assertEquals(0, picker.computeFirstVisible(0, 2));
+        assertEquals(2, picker.lastFullyVisibleIndex(0));
     }
 
     private static List<TraceEntry> entries(String... gameIds) {

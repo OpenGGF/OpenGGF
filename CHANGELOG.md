@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Trace test-mode picker now scrolls:** `TestModeTracePicker` windows the trace
+  list through a pixel-accurate scrolling viewport that follows the cursor, so a
+  large/growing catalog no longer overruns the screen or the selected-entry info
+  panel. Adds a sticky game heading (kept visible when scrolled into the middle
+  of a group), `^ more above` / `v N more below` indicators, and a `(cursor/total)`
+  position counter. The viewport math (`computeFirstVisible`,
+  `lastFullyVisibleIndex`) is pure and unit-tested without a GL context.
 - **Trace system supports a shared, deduplicated BK2 movie reference:** a trace
   directory may now reference a single movie stored once under
   `<game>/_movies/<name>.bk2` via a `source_bk2` metadata field instead of
