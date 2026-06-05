@@ -209,6 +209,13 @@ behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **S2 trace-fleet pass 8 — 4 genuine advances, 0 regressions (2026-06-05).** Third 16-trace S2 pass;
+  diminishing returns confirmed (10→9→4 advances across passes 6-8 as the generic per-trace fleet
+  saturates). Landed: ChopChop vertical-band gate (arz2 669→857), a `PlayableSpriteMovement` sidekick
+  correction (cnz2 2172→2880), the first direct `SidekickCpuController` fix (mcz1 2522→2757), and a
+  Slicer badnik fix (mtz3 7304→**7596**). Combined sweep: greens intact, no regression. The 12
+  no-changes cluster on CPU-sidekick (Tails) behavior — the next high-leverage target is a focused
+  `SidekickCpuController`/ROM `TailsCPU_*` deep-dive rather than more generic passes. See `CHANGELOG.md`.
 - **S2 trace-fleet pass 7 — 9 genuine advances, 1 accepted+queued regression (2026-06-05).** Second
   16-trace S2 pass under the land-genuine/investigate-regressions-after policy. 9 ROM-cited advances:
   two universal player-physics corrections cited across all three games — variable jump-height cap

@@ -3593,9 +3593,24 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return;
 		}
 
-		// S2/S3K: Edge detection uses ±9 side sensors as the primary gate
-		// (ChkFloorEdge probes at center X, but the distance threshold effectively
-		// aligns with the side sensor approach for S2/S3K terrain geometry).
+		// S2/S3K: ROM Sonic_Balance (s2.asm:36657-36660, sonic3k.asm:22531-22535)
+		// first probes ChkFloorEdge at the player's CENTER X (`x_pos(a0)`, a single
+		// probe — ChkFloorEdge sets d3=x_pos at s2.asm:44092-44093) and requires the
+		// center floor distance >= $C before any balance; otherwise it falls through
+		// to Sonic_Lookup/Sonic_Duck (`cmpi.w #$C,d1; blt Sonic_Lookup`). Only once
+		// the CENTER is over a >=12px gap does it choose the left/right edge branch.
+		// Without this center gate the engine balanced whenever one ±9 side sensor
+		// ran off a solid edge while the center still had ground — e.g. CNZ2 Sonic
+		// standing on the left lip of a wide invisible solid block (Obj74). That
+		// spurious balance suppressed the Duck crouch (updateCrouchState requires
+		// !isBalancing), so a held Down+B fired a normal jump instead of charging a
+		// spin-dash (s2.asm:37549-37571 Sonic_CheckSpindash requires anim==Duck).
+		// The S1 (!extended) branch above already applies this center gate.
+		SensorResult centerResult = groundSensors[0].scan((short) 9, (short) 0);
+		int centerDist = (centerResult == null) ? 99 : centerResult.distance();
+		if (centerDist < EDGE_THRESHOLD) {
+			return; // Center still has ground — ROM branches to Lookup/Duck, no balance.
+		}
 
 		// Right edge: left sensor has ground, right sensor doesn't
 		if (leftDist < EDGE_THRESHOLD && rightDist >= EDGE_THRESHOLD) {

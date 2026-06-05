@@ -1,5 +1,119 @@
 # Trace Frontier Log
 
+## 2026-06-05 - arz2 f669->f857: ChopChop (Obj91) charge velocities latched once with the vertical-band gate
+
+- Branch `bugfix/ai-trace-s2-arz2`, worktree `.worktrees/trace-s2-arz2`.
+- Command (worktree, cmd mvn.cmd, forkCount=1):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** ADVANCED (genuine, ROM-cited, zero same-game regressions). Targeted trace still fails.
+- **arz2:** `TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace` — first-error frame **669 -> 857**.
+  - Before (HEAD baseline, fix reverted): 1949 errors, first error frame 669 -- `y_speed` mismatch
+    (expected=-0080, actual=-0180). Player bouncing off ChopChop (s22 0x91) at @0788,0544: ROM bounce
+    y_speed -0x80 vs engine -0x180 because the engine ChopChop was adding 0.5px/frame downward velocity
+    during the charge, displacing its collision box so the player rebound differed.
+  - After (fix applied): 2061 errors, first error frame 857 -- `tails_g_speed` mismatch
+    (expected=0x000C, actual=0x0006). New frontier is an unrelated Tails-CPU ground-speed divergence
+    (branch=leader_fast), not ChopChop.
+- **Root cause:** `ChopChopBadnikInstance` (Obj91) recomputed/added a constant 0.5px/frame downward
+  charge velocity every charge frame. ROM `Obj91_MoveTowardsPlayer` (docs/s2disasm/s2.asm:73664-73684)
+  latches the charge velocities ONCE at the Waiting->Charge transition, and writes the vertical speed
+  ($80 down) ONLY when the closest character is OUTSIDE a narrow band: `addi.w #$10,d3 / cmpi.w #$20,d3 /
+  blo +` skips the vertical-speed write when `(d3+0x10) u< 0x20` (d3 = obj_y - player_y, from
+  `Obj_GetOrientationToPlayer` s2.asm:72776-72777). When the player is level with the ChopChop the
+  vertical speed stays 0 and it charges purely horizontally holding its y_pos. `Obj91_Charge`
+  (s2.asm:73687-73688) thereafter just re-integrates the latched x_vel/y_vel via `ObjectMove`
+  (s2.asm:30185-30199); velocities are not recomputed per frame. Also corrected the wait-timer transition
+  to fire when the byte timer goes negative (`subq.b #1 / bmi`, s2.asm:73659-73660).
+- **Fix:** in `ChopChopBadnikInstance`, latch x_vel/y_vel once via new `latchChargeVelocities()` at the
+  Waiting->Charge transition (vertical-band gate; both `Obj91_VerticalSpeeds` entries are $80), add a
+  `chargeLatched` flag, and make `updateCharging()` only integrate the latched velocities. No
+  zone/route/frame/gameId carve-out — pure ROM-accurate per-object behavior driven by player position
+  relative to the badnik; comparison-only invariant held (trace data never written back).
+- Files: `src/main/java/com/openggf/game/sonic2/objects/badniks/ChopChopBadnikInstance.java`.
+- Same-game regression guard (single-fork): EHZ1, SCZ, WFZ all GREEN (tests=1 failures=0 errors=0 each).
+  No same-game green regressed. (`TestS2ArzLevelSelectTraceReplay`, the act-1 sibling, was already
+  failing pre-fix at frame 2043 on an unrelated `tails_y_speed` Tails-CPU divergence and is unchanged.)
+## 2026-06-05 - cnz2 f2172->f2880: Sonic_Balance terrain edge-balance gated on CENTER floor distance >= $C
+
+- Branch `bugfix/ai-trace-s2-cnz2`, worktree `.worktrees/trace-s2-cnz2`.
+- Command (worktree, cmd mvn.cmd, forkCount=1):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** ADVANCED, genuine, zero same-game regressions.
+- **cnz2: f2172 -> f2880** (1271 -> 1066 errors). Verified A/B: HEAD baseline (fix file checked out
+  to HEAD, recompiled) first-diverges at f2172 `y_speed` expected=0x0000 actual=-0680 (jump=true: Sonic
+  jumped instead of charging a spindash); with the fix it first-diverges at **f2880**
+  `y mismatch (expected=0x03EC, actual=0x03DC)` — a downstream main-player `y` divergence, distinct from
+  the spindash/balance subsystem.
+- **Root cause:** `PlayableSpriteMovement.checkTerrainEdgeBalance()` S2/S3K (extendedEdgeBalance) branch
+  entered an edge-balance state whenever ONE of the ±9 side ground sensors ran off a solid edge while the
+  CENTER still had ground. ROM `Sonic_Balance` (docs/s2disasm/s2.asm:36647-36660) FIRST does
+  `jsr (ChkFloorEdge) / cmpi.w #$C,d1 / blt.w Sonic_Lookup` — a single CENTER-X probe (`ChkFloorEdge`
+  sets `d3 = x_pos(a0)`, s2.asm:44092-44093) — and only balances when the center floor distance >= $C;
+  otherwise it falls through to Sonic_Lookup/Sonic_Duck. The spurious balance set `isBalancing()`, which
+  blocks `updateCrouchState()` (PlayableSpriteMovement.java:3097 requires `!sprite.isBalancing()`), so the
+  Duck crouch animation never started; `Sonic_CheckSpindash` requires `anim == Duck`
+  (s2.asm:37548-37551), so a held Down+B fired a normal jump (the f2172 `y_speed=-0680` jump) instead of
+  charging a spin-dash. CNZ2 Sonic was standing on the left lip of a wide invisible solid block (Obj74).
+- **Fix:** add the same CENTER-floor `>= $C` gate the S1 (!extended) branch already applies — probe at
+  center (`groundSensors[0].scan(+9, 0)`) and early-return (no balance) when `centerDist < $C`, mirroring
+  ROM `cmpi.w #$C,d1 / blt Sonic_Lookup`. Inside the existing `extendedEdgeBalance()` PhysicsFeatureSet
+  branch (S2/S3K); not a gameId/zone/route/frame carve-out, no tolerance band, comparison-only.
+  File: `src/main/java/com/openggf/sprites/managers/PlayableSpriteMovement.java`.
+- **Same-game regression guard** (single-fork, separate run):
+  `mvn.cmd ... "-Dtest=TestS2Ehz1TraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`
+  — EHZ1 green, SCZ green, WFZ green. Zero same-game regressions.
+## 2026-06-05 - mcz1 f2522 -> f2757: S2 Tails respawn-counter freezes during the hurt routine
+
+- Branch `bugfix/ai-trace-s2-mcz1`, worktree `.worktrees/trace-s2-mcz1`.
+- Command (worktree, cmd mvn.cmd, forkCount=1):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2MczLevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** ADVANCED — genuine, zero same-game regressions.
+- **MCZ1:** first-error frame moved **2522 (`tails_air`) -> 2757 (`y`)**; target/trace-reports/s2_mcz1_report.json:
+  423 errors, total_frames 6083, first error frame 2757 `y` expected=0x0774 actual=0x076E.
+- **Root cause:** S2 CPU off-screen respawn/despawn timer `Tails_respawn_counter` (threshold `$12C`) is ticked
+  ONLY inside the normal CPU control path `TailsCPU_CheckDespawn` (docs/s2disasm/s2.asm:39403-39433). When Tails
+  is hurt, `Obj02_Index` dispatches `routine=4` to `Obj02_Hurt` (s2.asm:38887; body s2.asm:41057-41074), which
+  runs ObjectMove/Tails_HurtStop/Tails_LevelBound/Tails_RecordPos/Tails_Animate/LoadTailsDynPLC/DisplaySprite and
+  returns WITHOUT ever reaching `Obj02_Control -> TailsCPU_Control -> TailsCPU_CheckDespawn`. So the despawn
+  counter does NOT advance during the hurt routine. The engine kept ticking it during hurt frames, crossing
+  `$12C` early and spuriously despawning Tails after he was hurt off-screen (~45 frames in this trace).
+- **Fix:** flip `PhysicsFeatureSet.sidekickNormalCpuSkipsHurtRoutine` to `true` for S2 (S3K already `true`;
+  S1 stays `false` — no Tails CPU). `SidekickCpuController` already gates the despawn-counter skip on this flag.
+  Per-game divergence gated at `PhysicsFeatureSet` and branched on the flag — no zone/route/frame/gameId carve-out,
+  comparison-only invariant held.
+- Files: `src/main/java/com/openggf/game/PhysicsFeatureSet.java`,
+  `src/main/java/com/openggf/sprites/playable/SidekickCpuController.java`.
+- **Same-game regression guard (single-fork):** EHZ1, SCZ, WFZ all GREEN (Tests run: 1, Failures: 0, Errors: 0 each).
+  Full S2 trace-sweep A/B (clean-HEAD baseline vs with-change): ONLY the MCZ1 first-error frame moved
+  (2522 -> 2757); every other S2 trace's first-error frame identical. Zero same-game regressions.
+## 2026-06-05 - mtz3 f7304->f7596: Slicer (ObjA1) honors ObjA1_Init routine-0 setup frame before moving
+
+- Branch `bugfix/ai-trace-s2-mtz3`, worktree `.worktrees/trace-s2-mtz3`.
+- Command (worktree, cmd mvn.cmd, forkCount=1):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** advanced — mtz3 first-error frame 7304 -> 7596; zero same-game regressions.
+- **mtz3:** `TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace`
+  - Before (HEAD baseline, A/B confirmed): 833 errors, first error **frame 7304** — `y_speed`
+    expected=-02C8 actual=-03C8, contact frame with `s48 0xA1 Slicer @1865,01CF`.
+  - After (fix): 813 errors, first error **frame 7596** — `y_speed` expected=0x0000 actual=0x0470
+    (new, later divergence in an on-object/landing situation; Slicer contact frame now matches).
+- **Root cause:** `SlicerBadnikInstance` started directly in `WALKING` (routine-2 behaviour) on its first
+  object frame, so it ran `ObjectMove` one frame earlier than the ROM. ROM `ObjA1_Init` (routine 0) calls
+  `LoadSubObject`, which sets mappings/art/velocity/radius and bumps `routine` by 2
+  (`addq.b #2,routine(a0)`, docs/s2disasm/s2.asm:72633) before `rts`, and returns WITHOUT calling
+  ObjectMove (`ObjA1_Init` body, docs/s2disasm/s2.asm:75777-75788). `ObjA1_Main` (routine 2, ending in
+  the `ObjectMove` at `loc_3841C`) therefore first moves the Slicer on the NEXT object frame. The early
+  move led the ROM Slicer x_pos by ~1px on the MTZ contact frame and suppressed the `Touch_KillEnemy`
+  bounce, diverging player `y_speed` at f7304.
+- **Fix:** add an `INIT` state to `SlicerBadnikInstance` that consumes the first object frame without
+  moving (modelling routine 0 -> 2), then transitions to `WALKING`. Models the actual ROM routine-counter
+  state for object id ObjA1 (routine 0 vs 2) — no zone/route/frame/gameId carve-out, comparison-only.
+- Files: `src/main/java/com/openggf/game/sonic2/objects/badniks/SlicerBadnikInstance.java`,
+  `src/test/java/com/openggf/game/sonic2/objects/TestSonic2TriggerParticipation.java` (unit test steps
+  the extra INIT frame; 40 tests green).
+- Same-game regression guard (each run single-fork, alone): EHZ1 GREEN (tests=1 failures=0),
+  SCZ GREEN (tests=1 failures=0), WFZ GREEN (tests=1 failures=0). No same-game green regressed.
+
 ## 2026-06-05 - wfz GREEN restored (was dez1-introduced f12886 regression); dez1 held at f2194
 
 - Branch `bugfix/ai-wfz-defeat-deferral-scope`, worktree `.worktrees/wfz-defeat-scope`.

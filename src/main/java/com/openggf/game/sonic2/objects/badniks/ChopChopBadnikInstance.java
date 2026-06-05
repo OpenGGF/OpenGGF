@@ -21,12 +21,16 @@ import java.util.List;
  * 1. PATROLLING: Move at speed 0x40, switch direction every 512 frames,
  *    spawn bubbles every 80 frames
  * 2. WAITING: Stop for 16 frames when player detected (mouth animation)
- * 3. CHARGING: Move toward player at 2 pixels/frame horizontal,
- *    0.5 pixels/frame downward
+ * 3. CHARGING: Move toward player at 2 pixels/frame horizontal. Vertical speed
+ *    (0.5 px/frame down) is added ONLY when the player is OUTSIDE the narrow
+ *    +-0x10px vertical band at the Waiting->Charge transition; if the player is
+ *    level with the ChopChop, it charges purely horizontally and holds its y_pos
+ *    (s2.asm:73664-73684, Obj91_MoveTowardsPlayer). The velocities are latched
+ *    ONCE at that transition, not recomputed per frame.
  *
- * Player detection:
+ * Player detection (Obj91_TestCharacterPos, s2.asm:73716-73747):
  * - Horizontal range: 32-160 pixels (0x20-0xA0)
- * - Vertical range: -32 to +31 pixels (asymmetric)
+ * - Vertical range: -32 to +31 pixels (asymmetric, +-0x20 band)
  * - Only attacks if already moving toward the player
  */
 public class ChopChopBadnikInstance extends AbstractBadnikInstance {
@@ -60,6 +64,7 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance {
     private int waitTimer;           // anim_frame_duration - frames until charge
     private int xSubpixel;           // Subpixel accumulator for x movement (ObjectMove 16.16 carry)
     private int ySubpixel;           // Subpixel accumulator for y movement during charge
+    private boolean chargeLatched;   // Have charge velocities been latched (Obj91_MoveTowardsPlayer)?
     private final int startX;        // Initial X position for direction reference
 
     public ChopChopBadnikInstance(ObjectSpawn spawn) {
@@ -69,6 +74,7 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance {
         this.waitTimer = 0;
         this.xSubpixel = 0;
         this.ySubpixel = 0;
+        this.chargeLatched = false;
         this.startX = spawn.x();
 
         // Initial facing based on render_flags (status.npc.x_flip bit)
@@ -86,7 +92,7 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
             case PATROLLING -> updatePatrolling(frameCounter, player);
-            case WAITING -> updateWaiting(frameCounter);
+            case WAITING -> updateWaiting(frameCounter, player);
             case CHARGING -> updateCharging(player);
         }
     }
@@ -121,48 +127,105 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance {
             state = State.WAITING;
             waitTimer = WAIT_TIME;
             xVelocity = 0; // Stop moving
+            chargeLatched = false; // charge velocities re-latched at Waiting->Charge
         }
 
         // TODO: Spawn bubbles every 80 frames (requires SmallBubbles object support)
     }
 
     /**
-     * Waiting state (Loc_36468):
-     * - Stop movement for 16 frames
-     * - Animate mouth open/close
-     * - Then transition to charging
+     * Waiting state (Obj91_Waiting, s2.asm:73658-73661):
+     *   subq.b #1,Obj91_move_timer(a0)
+     *   bmi.s  Obj91_MoveTowardsPlayer   ; branch when wait time is over
+     *   bra.w  Obj91_Animate
+     * The ROM waits while the byte timer is >= 0 and only crosses into
+     * Obj91_MoveTowardsPlayer when the decrement makes it negative.
      */
-    private void updateWaiting(int frameCounter) {
+    private void updateWaiting(int frameCounter, AbstractPlayableSprite player) {
         waitTimer--;
-        if (waitTimer <= 0) {
-            // Transition to charging
+        if (waitTimer < 0) {
+            // Obj91_MoveTowardsPlayer (s2.asm:73664-73675) runs ONCE at the
+            // Waiting->Charge transition. It latches x_vel and (conditionally)
+            // y_vel, then control falls into Obj91_Charge which from then on
+            // only re-integrates those latched velocities via ObjectMove.
+            latchChargeVelocities(player);
             state = State.CHARGING;
         }
     }
 
     /**
-     * Charging state (Loc_3648A):
-     * - Move toward player at high speed
-     * - Horizontal: 2 pixels/frame
-     * - Vertical: 0.5 pixels/frame downward
+     * Obj91_MoveTowardsPlayer (s2.asm:73664-73684) — latch charge velocities ONCE.
+     *
+     * Horizontal: x_vel = Obj91_HorizontalSpeeds[d0>>1] = -2/+2 whole pixels,
+     * i.e. +-0x200 in 16.8 (d0 carries +2 when the player is to the object's
+     * left, from Obj_GetOrientationToPlayer s2.asm:72772-72774).
+     *
+     * Vertical (the load-bearing gate): d3 = y_pos(a0) - y_pos(player); the ROM
+     * does:
+     *   addi.w #$10,d3
+     *   cmpi.w #$20,d3
+     *   blo.s  +              ; SKIP the vertical-speed write
+     *   ... move.b VerticalSpeeds,1+y_vel ...
+     *   +:
+     * The `blo` is taken (skipping the write) when (d3 + 0x10) u< 0x20, i.e.
+     * when the closest character is INSIDE the narrow band (~0x10px above to
+     * ~0xF px below the object). So the vertical speed ($80 down) is written
+     * ONLY when the player is OUTSIDE that band; when the player is level with
+     * the ChopChop, y_vel stays 0 and it charges horizontally holding its y_pos.
+     * Verified against this trace: at the Waiting->Charge frame the closest
+     * character is at d3=-5 (inside the band) so ROM leaves y_pos=0x538 fixed
+     * for the whole charge. Both Obj91_VerticalSpeeds entries are $80, so the
+     * band gate alone decides whether any vertical motion happens at all.
+     */
+    private void latchChargeVelocities(AbstractPlayableSprite player) {
+        chargeLatched = true;
+        ySubpixel = 0;
+
+        // Horizontal speed selection: aim at the closest character. Use the same
+        // sign convention as detectPlayer: player to the object's left -> move
+        // left. facingLeft was already aligned during detection, but re-derive
+        // from the live orientation so the latch matches Obj_GetOrientationToPlayer.
+        if (player != null) {
+            facingLeft = currentX > player.getCentreX();
+        }
+        xVelocity = facingLeft ? -(CHARGE_SPEED_X << 8) : (CHARGE_SPEED_X << 8);
+
+        // Vertical band gate (s2.asm:73669-73673). d3 = obj_y - player_y.
+        // ROM writes the vertical speed only when the player is OUTSIDE the band:
+        //   addi.w #$10,d3 / cmpi.w #$20,d3 / blo + (blo SKIPS the write).
+        // So vertical motion happens when (d3 + 0x10) u>= 0x20.
+        boolean verticalSpeed = false;
+        if (player != null) {
+            int d3 = currentY - player.getCentreY();
+            int banded = (d3 + 0x10) & 0xFFFF;        // addi.w #$10,d3 (16-bit)
+            verticalSpeed = banded >= 0x20;           // cmpi.w #$20,d3 ; NOT blo
+        }
+        // Obj91_VerticalSpeeds (s2.asm:73682-73684): both entries are $80 (down).
+        yVelocity = verticalSpeed ? CHARGE_SPEED_Y_SUBPIXEL : 0;
+    }
+
+    /**
+     * Charging state (Obj91_Charge, s2.asm:73687-73688):
+     *   jsrto JmpTo26_ObjectMove
+     * Each charge frame just re-integrates the latched x_vel/y_vel via ObjectMove
+     * (s2.asm:30185-30199, x_pos(32) += x_vel<<8). The velocities were fixed once
+     * in Obj91_MoveTowardsPlayer; they are NOT recomputed per frame. In
+     * particular y_vel is 0 unless the band gate fired at the transition, so a
+     * ChopChop that latched no vertical speed holds its y_pos for the charge.
      */
     private void updateCharging(AbstractPlayableSprite player) {
-        // Obj91_Charge calls JmpTo26_ObjectMove (s2.asm:73688) which integrates
-        // both axes as x_pos(32) += x_vel<<8 (s2.asm:30185-30199).
-        // Obj91_HorizontalSpeeds (s2.asm:73678-73680) is -2/+2 *whole pixels*,
-        // i.e. x_vel = +-0x200 in 16.8, so the X subpixel carry is zero and the
-        // badnik moves exactly 2px/frame. Drive X through the same subpixel
-        // integrator so the accumulator stays consistent across states.
-        xVelocity = facingLeft ? -(CHARGE_SPEED_X << 8) : (CHARGE_SPEED_X << 8);
+        // Defensive: if somehow charging without a latch (e.g. restored state),
+        // latch from the current orientation before integrating.
+        if (!chargeLatched) {
+            latchChargeVelocities(player);
+        }
         applyXVelocitySubpixel();
 
-        // Obj91_VerticalSpeeds (s2.asm:73682-73684) writes $80 into the LOW byte
-        // of y_vel, giving y_vel = 0x80 = 0.5px/frame downward via subpixel carry.
-        ySubpixel += CHARGE_SPEED_Y_SUBPIXEL;
-        if (ySubpixel >= 0x100) {
-            currentY += (ySubpixel >> 8);
-            ySubpixel &= 0xFF;
-        }
+        // y_vel low-byte ($80) accumulates into the sub-pixel and carries into a
+        // whole pixel; y_vel = 0 means no vertical motion at all.
+        ySubpixel += (yVelocity & 0xFF);
+        currentY += (yVelocity >> 8) + (ySubpixel >> 8);
+        ySubpixel &= 0xFF;
     }
 
     /**
