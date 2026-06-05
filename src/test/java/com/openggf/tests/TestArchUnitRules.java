@@ -444,7 +444,7 @@ class TestArchUnitRules {
                             .and().doNotHaveFullyQualifiedName("com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry")
                             .should().accessClassesThat().haveFullyQualifiedName(GameServices.class.getName())
                             .as("object packages should not access global GameServices except approved bridges"))
-                    .because("object instances should use injected ObjectServices; frozen baseline: 4 violations");
+                    .because("object instances should use injected ObjectServices; frozen baseline: 2 violations");
 
     @ArchTest
     static final ArchRule shared_layers_do_not_depend_on_game_specific_packages =

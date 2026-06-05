@@ -15,7 +15,7 @@ public class TestObjectPlacementManager {
         ObjectSpawn spawnA = new ObjectSpawn(0, 0, 0x01, 0, 0, false, 0);
         ObjectSpawn spawnB = new ObjectSpawn(800, 0, 0x02, 0, 0, false, 0);
 
-        ObjectManager.Placement manager = new ObjectManager.Placement(List.of(spawnA, spawnB), () -> 320);
+        ObjectPlacementController manager = new ObjectPlacementController(List.of(spawnA, spawnB), () -> 320);
         manager.reset(0);
 
         assertTrue(manager.getActiveSpawns().contains(spawnA));
@@ -44,7 +44,7 @@ public class TestObjectPlacementManager {
     public void testRememberedObjectDoesNotRespawnOnCameraReturn() {
         // Simulates: break a block, scroll away, scroll back - block should NOT reappear
         ObjectSpawn spawn = new ObjectSpawn(500, 0, 0x32, 0, 0, true, 0x8000);
-        ObjectManager.Placement manager = new ObjectManager.Placement(List.of(spawn), () -> 320);
+        ObjectPlacementController manager = new ObjectPlacementController(List.of(spawn), () -> 320);
 
         // Camera starts at 0 - spawn at x=500 is within load-ahead range (0x280=640)
         manager.reset(0);
@@ -78,7 +78,7 @@ public class TestObjectPlacementManager {
         // the old instance gone from activeObjects, and will create a NEW instance.
         // This is the "broken blocks reappear" bug.
         ObjectSpawn spawn = new ObjectSpawn(500, 0, 0x32, 0, 0, true, 0x8000);
-        ObjectManager.Placement manager = new ObjectManager.Placement(List.of(spawn), () -> 320);
+        ObjectPlacementController manager = new ObjectPlacementController(List.of(spawn), () -> 320);
 
         manager.reset(0);
         assertTrue(manager.getActiveSpawns().contains(spawn), "Spawn should be in active window");
@@ -105,7 +105,7 @@ public class TestObjectPlacementManager {
         // equal but NOT identity-equal to the canonical reference in the spawns list,
         // the fallback should still find the correct index and set the remembered bit.
         ObjectSpawn canonical = new ObjectSpawn(500, 0, 0x32, 0, 0, true, 0x8000);
-        ObjectManager.Placement manager = new ObjectManager.Placement(List.of(canonical), () -> 320);
+        ObjectPlacementController manager = new ObjectPlacementController(List.of(canonical), () -> 320);
 
         manager.reset(0);
         assertTrue(manager.getActiveSpawns().contains(canonical), "Spawn should be in active window");
@@ -139,7 +139,7 @@ public class TestObjectPlacementManager {
         // of the level (until level-init wipes the table at sonic3k.asm loc_1B784).
         // See AIZ trace F2202 fix.
         ObjectSpawn spawn = new ObjectSpawn(500, 0, 0x1A, 0, 0, false, 0);
-        ObjectManager.Placement manager = new ObjectManager.Placement(List.of(spawn), () -> 320);
+        ObjectPlacementController manager = new ObjectPlacementController(List.of(spawn), () -> 320);
         manager.enablePermanentDestroyLatch();
 
         manager.reset(0);
@@ -172,7 +172,7 @@ public class TestObjectPlacementManager {
     @Test
     public void testDormantNonCounterSpawnSurvivesSmallBackwardCameraMotion() {
         ObjectSpawn spawn = new ObjectSpawn(0x17C0, 0x0860, 0x41, 0, 0, false, 0x0860);
-        ObjectManager.Placement manager = new ObjectManager.Placement(List.of(spawn), () -> 320);
+        ObjectPlacementController manager = new ObjectPlacementController(List.of(spawn), () -> 320);
 
         manager.reset(0x1736);
         assertTrue(manager.getActiveSpawns().contains(spawn));
@@ -195,7 +195,7 @@ public class TestObjectPlacementManager {
     @Test
     public void testBackwardCounteredNonTrackedSpawnCreatesInlineDuringUpdateAndLoad() {
         ObjectSpawn spawn = new ObjectSpawn(0x0AD0, 0, 0x32, 0, 0, false, 0);
-        ObjectManager.Placement manager = new ObjectManager.Placement(List.of(spawn), () -> 320);
+        ObjectPlacementController manager = new ObjectPlacementController(List.of(spawn), () -> 320);
         manager.enableCounterBasedRespawn();
         manager.reset(0x0B82);
 

@@ -20,6 +20,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 class TestArchitecturalSourceGuard {
     private static final Path SRC_MAIN = Path.of("src", "main", "java");
     private static final String ENGINE_PATH = "com/openggf/Engine.java";
+    private static final String OBJECT_MANAGER_PATH = "com/openggf/level/objects/ObjectManager.java";
+    private static final int OBJECT_MANAGER_MAX_LINES = 3900;
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
 
@@ -159,6 +161,17 @@ class TestArchitecturalSourceGuard {
 
         assertTrue(!source.contains("GameServices."),
                 "LevelFrameStep must receive frame dependencies through LevelFrameContext, not GameServices");
+    }
+
+    @Test
+    void objectManagerFacadeStaysWithinExtractedCollaboratorBudget() throws IOException {
+        SourceFile objectManager = SourceFile.read(SRC_MAIN.resolve(OBJECT_MANAGER_PATH));
+        int lineCount = objectManager.lines().size();
+        assertTrue(lineCount <= OBJECT_MANAGER_MAX_LINES,
+                "ObjectManager.java is " + lineCount + " lines; budget is " + OBJECT_MANAGER_MAX_LINES
+                        + " after extracting ObjectPlacementController, ObjectTouchResponseController, "
+                        + "and ObjectSolidContactController. Keep new placement, touch-response, "
+                        + "and solid-contact logic in those collaborators.");
     }
 
     @Test
