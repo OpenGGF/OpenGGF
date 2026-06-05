@@ -4,6 +4,18 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **OOZ Aquis (Obj50) on-screen activation and follow-timer now ROM-accurate:**
+  `Obj50_CheckIfOnScreen` tests `render_flags.on_screen`
+  (`docs/s2disasm/s2.asm:60607-60614`), which the engine models with the
+  shared frame-driven camera-bounds overlap test `isWithinSolidContactBounds()`
+  rather than a draw-command-driven flag that never fired under headless trace
+  replay (the Aquis previously stayed frozen at spawn and never chased). On
+  activation `Obj50_timer` is left at 0 (the cleared SST byte, NOT `$80`) so the
+  first `Obj50_FollowPlayer` frame underflows (`subq.b #1` -> `$FF` -> `bmi`
+  `Obj50_DoneFollowing`, `docs/s2disasm/s2.asm:60669-60697`), reproducing the
+  ROM's initial stationary shooting phase; `updateChase` now decrements and bails
+  to shooting BEFORE accelerating/moving, matching the ROM ordering. Advances the
+  s2 ooz2 level-select trace frontier (first-error frame 389 -> 489).
 - **DEZ Death Egg Robot WaitEggman handshake now ROM-accurate:** The boss body's
   WAIT_EGGMAN state previously released as soon as Eggman boarded the cockpit
   (`p1_standing`), ~150 frames too early, walking the body west into the player's

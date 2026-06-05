@@ -66,13 +66,6 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
     private final ObjectAnimationState wingAnimationState;
     private boolean wingDestroyed;
 
-    // Bug 4 fix: track render_flags.on_screen one-frame lag like ROM does.
-    // ROM's Obj50_CheckIfOnScreen tests the on_screen bit, which is cleared
-    // at the start of each frame's BuildSprites pass and only re-set if the
-    // object was actually drawn (visible). This is "was drawn last frame".
-    private boolean onScreenLastFrame;
-    private boolean onScreenThisFrame;
-
     public AquisBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Aquis", Sonic2BadnikConfig.DESTRUCTION);
         this.state = State.WAIT_FOR_SCREEN;
@@ -84,8 +77,6 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
         this.animationState = new ObjectAnimationState(ANIMATIONS, 0, 0);
         this.wingAnimationState = new ObjectAnimationState(WING_ANIMATIONS, 0, 1);
         this.wingDestroyed = false;
-        this.onScreenLastFrame = false;
-        this.onScreenThisFrame = false;
         // Bug 1 fix: ROM Obj50_Init writes move.w #-$100, x_vel(a0) immediately
         // after the standard init block (s2.asm:60100).
         this.xVelocity = -0x100;
@@ -93,13 +84,6 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
 
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
-        // Bug 4 fix: snapshot last-frame on-screen state, then clear the
-        // this-frame flag. It will be re-set by appendRenderCommands() if the
-        // object is drawn this frame, matching the ROM render_flags.on_screen
-        // one-frame lag.
-        onScreenLastFrame = onScreenThisFrame;
-        onScreenThisFrame = false;
-
         AbstractPlayableSprite player = closestPlayer(playerEntity);
         switch (state) {
             case WAIT_FOR_SCREEN -> updateWaitForScreen();
@@ -119,20 +103,62 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
     }
 
     private void updateWaitForScreen() {
-        // Bug 4 fix: ROM Obj50_CheckIfOnScreen tests render_flags.on_screen,
-        // which means "was drawn last frame" (set by BuildSprites after it
-        // passes the viewport check and draws the sprite). Use the lagged
-        // one-frame-tracked flag instead of an instantaneous viewport test.
-        if (onScreenLastFrame) {
+        // ROM Obj50_CheckIfOnScreen (s2.asm:60600-60611) tests
+        // render_flags.on_screen and advances routine_secondary to Obj50_Chase
+        // the instant that bit is set. render_flags.on_screen is set by
+        // Render_Sprites (the BuildSprites pass) when the object's rendered
+        // bounding box overlaps the camera viewport; it is NOT contingent on
+        // draw commands being emitted by any particular caller. Model it with
+        // the shared frame-driven camera-bounds overlap test
+        // (isWithinSolidContactBounds == cameraBounds.containsRenderSpriteBounds,
+        // see AbstractObjectInstance.java:580-600), which already carries the
+        // ROM's one-frame "set last frame, tested this frame" lag because the
+        // cached camera bounds reflect the prior frame's Render_Sprites pass.
+        // The previous draw-command-driven flag never fired under headless
+        // trace replay, so the Aquis stayed frozen at spawn and never chased.
+        if (isWithinSolidContactBounds()) {
+            // ROM Obj50_CheckIfOnScreen (s2.asm:60607-60614) only advances
+            // routine_secondary to Obj50_Chase; it does NOT initialise
+            // Obj50_timer. The SST timer byte is therefore still 0 from the
+            // cleared object slot, so the very first Obj50_FollowPlayer frame
+            // does subq.b #1 -> 0xFF -> bmi -> Obj50_DoneFollowing immediately
+            // (s2.asm:60670-60671). i.e. the Aquis fires one shot from its
+            // spawn position before it ever moves. Leaving timer at 0 here (NOT
+            // CHASE_TIMER) reproduces that initial stationary shooting phase;
+            // setting it to 0x80 made the engine chase ~58 frames too early and
+            // drift the Aquis ~41px left of the ROM by the kill frame.
             state = State.CHASE;
-            timer = CHASE_TIMER;
+            timer = 0;
             animationState.setAnimId(1); // Flapping body animation
         }
     }
 
     private void updateChase(AbstractPlayableSprite player) {
+        // ROM Obj50_FollowPlayer (s2.asm:60669-60697) decrements the timer and
+        // bails to Obj50_DoneFollowing (-> Obj_MoveStop) BEFORE running
+        // GetOrientationToPlayer / accel / CapSpeed / ObjectMove. Mirror that
+        // ordering: on the expiry frame the object must NOT accelerate or move.
+        // subq.b #1 / bmi fires when the byte underflows (0x00 -> 0xFF).
+        timer = (byte) (timer - 1);
+        if (timer < 0) {
+            // Obj50_DoneFollowing (s2.asm:60693-60697): Obj_MoveStop clears
+            // x_vel/y_vel, then routine -> Obj50_Shooting with timer = $20.
+            xVelocity = 0;
+            yVelocity = 0;
+            state = State.SHOOTING;
+            timer = SHOOT_DELAY;
+            shootingFlag = false;
+            animationState.setAnimId(0); // Static body
+            return;
+        }
+
         if (player != null && !player.isDebugMode()) {
-            // Determine direction to player and accelerate
+            // Obj_GetOrientationToPlayer (s2.asm:72755-72781) indexes
+            // Obj50_Speeds {-$10, +$10} (s2.asm:60689-60691): the object
+            // accelerates TOWARD the closest player on both axes, and faces
+            // toward the player on X. d2 = obj.x - player.x; player to the left
+            // (d2 >= 0) -> index 0 = -$10 (accel left); player to the right
+            // (d2 < 0) -> index 2 = +$10 (accel right). Y is symmetric.
             if (player.getCentreX() < currentX) {
                 xVelocity -= CHASE_ACCEL;
                 facingLeft = true;
@@ -148,25 +174,11 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
             }
         }
 
-        // Cap speed (Obj_CapSpeed equivalent)
+        // Obj_CapSpeed (s2.asm) clamps |x_vel|,|y_vel| to $100.
         xVelocity = clampSpeed(xVelocity, MAX_CHASE_SPEED);
         yVelocity = clampSpeed(yVelocity, MAX_CHASE_SPEED);
 
         applyMovement();
-
-        // Bug 2 fix: ROM uses subq.b #1, timer / bmi (s2.asm:60244-60245).
-        // bmi fires when the byte becomes negative (0x00 -> 0xFF). Original
-        // engine code used <=0 which fired one frame early.
-        timer = (byte) (timer - 1);
-        if (timer < 0) {
-            // Stop movement, transition to shooting
-            xVelocity = 0;
-            yVelocity = 0;
-            state = State.SHOOTING;
-            timer = SHOOT_DELAY;
-            shootingFlag = false;
-            animationState.setAnimId(0); // Static body
-        }
     }
 
     private void updateShooting(AbstractPlayableSprite player) {
@@ -295,15 +307,6 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
 
         PatternSpriteRenderer renderer = getRenderer(Sonic2ObjectArtKeys.AQUIS);
         if (renderer == null) return;
-
-        // Bug 4 fix: ROM render_flags.on_screen is set when BuildSprites
-        // passes the X/Y bounds test and draws the sprite. We mirror that here
-        // by marking on_screen this frame whenever we actually emit draw
-        // commands, gated by an exact viewport check (no margin) to match the
-        // ROM bounds test.
-        if (isOnScreen(0)) {
-            onScreenThisFrame = true;
-        }
 
         // Draw main body (priority 4)
         renderer.drawFrameIndex(animFrame, currentX, currentY, !facingLeft, false);

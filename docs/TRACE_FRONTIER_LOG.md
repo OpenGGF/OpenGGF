@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+## 2026-06-05 - ooz2 f389->f489: Aquis (Obj50) on-screen activation + follow-timer underflow
+
+- Branch `bugfix/ai-trace-s2-ooz2`, worktree `.worktrees/trace-s2-ooz2`.
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status: ADVANCED (still failing).** First-error frame **389 -> 489**, error count **1229 -> 952**.
+  Surefire: `Tests run: 1, Failures: 1`.
+- **Root cause:** `AquisBadnikInstance` left WAIT_FOR_SCREEN on a draw-command-driven
+  `onScreenThisFrame` flag set inside `appendRenderCommands()`, which never fires under headless
+  trace replay, so the Aquis stayed frozen at spawn and never chased. ROM `Obj50_CheckIfOnScreen`
+  tests `render_flags.on_screen` (`docs/s2disasm/s2.asm:60607-60614`), modelled by the shared
+  frame-driven camera-bounds overlap test `isWithinSolidContactBounds()`
+  (`AbstractObjectInstance.java:580-600`, ROM-parity for `render_flags` bit 7). On activation
+  `Obj50_timer` is left at 0 (the cleared SST byte, NOT `$80`/`CHASE_TIMER`) so the first
+  `Obj50_FollowPlayer` frame underflows (`subq.b #1` -> `$FF` -> `bmi Obj50_DoneFollowing`,
+  `docs/s2disasm/s2.asm:60669-60697`), reproducing the ROM initial stationary shooting phase;
+  `updateChase` now decrements/bails to shooting BEFORE accelerating/moving (ROM ordering).
+  Per-object scope, no zone/route/frame/gameId carve-out, comparison-only invariant held.
+- Baseline f389 = `y_speed` mismatch expected=-0358 actual=0x0358 while the player bounces on the
+  Aquis (`eng-near s16 0x50 Aquis @0558,0558`). New frontier f489 = `y` mismatch expected=0x05AB
+  actual=0x05AA, a 1-px Tails-sidekick CPU-follow Y diff on a CPZPlatform (0x19) contact, unrelated
+  to the Aquis.
+- **Same-game regression guard (PASS, zero regressions):**
+  `-Dtest=TestS2Ehz1TraceReplay,TestS2WfzLevelSelectTraceReplay,TestS2ArzLevelSelectTraceReplay`
+  -> all three `Failures: 0, Errors: 0`.
+- A/B baseline measured by copying the changed file aside, `git checkout -- <path>` to HEAD,
+  running the trace (clean f389), then restoring the fix (f489). No `git stash` used (shared
+  worktree stack).
+
 ## 2026-06-05 - S2 arz1 GREEN: Whisp (Obj8C) on-screen one-frame defer + bmi pause underflow
 
 - Branch `bugfix/ai-trace-s2-arz1`, worktree `.worktrees/trace-s2-arz1` (off develop `7a26823a2`).
