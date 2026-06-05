@@ -381,6 +381,11 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         lostRings.spawnLostRings(player, ringCount, frameCounter);
     }
 
+    /** Shared spilled-ring spin owner feeding the LostRingObjectInstance object path. */
+    public SpillAnimationState getSpillAnimationState() {
+        return lostRings.spillAnimation;
+    }
+
     public List<LostRing> getActiveLostRings() {
         return lostRings.getActiveRingsSnapshot();
     }
@@ -1125,6 +1130,11 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         private int spillAnimAccum;
         private int spillAnimFrame;
         private int frameCounter;
+        // Shared spilled-ring spin owner (Ring_spill_anim_*) feeding the parallel
+        // LostRingObjectInstance object path. During the parallel cutover stage the
+        // legacy spillAnim* ints above still own collection/rewind; this owner is the
+        // render-frame source injected into each spawned ring object.
+        private final SpillAnimationState spillAnimation = new SpillAnimationState();
 
         private LostRingPool(LevelManager levelManager, RingRenderer renderer, TouchResponseTable touchResponseTable,
                              AudioManager audioManager) {
@@ -1160,6 +1170,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             spillAnimCounter = LIFETIME_FRAMES;
             spillAnimAccum = 0;
             spillAnimFrame = 0;
+            // Reset the shared spin owner that feeds the parallel object path.
+            spillAnimation.reset();
+            ObjectManager objectManager = levelManager != null ? levelManager.getObjectManager() : null;
 
             for (int i = 0; i < count; i++) {
                 if (angle >= 0) {
@@ -1181,10 +1194,21 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                         }
                     }
                 }
+                int slotIndex = slotIndices[activeRingCount];
+                int phase = slotPhases[activeRingCount];
                 LostRing ring = ringPool[activeRingCount];
-                ring.reset(slotPhases[activeRingCount], player.getCentreX(), player.getCentreY(),
+                ring.reset(phase, player.getCentreX(), player.getCentreY(),
                         xVel, yVel, LIFETIME_FRAMES);
-                ring.setSlotIndex(slotIndices[activeRingCount]);
+                ring.setSlotIndex(slotIndex);
+                // Parallel object path: register a LostRingObjectInstance twin onto the
+                // SAME reserved slot (no second allocation). The legacy LostRing remains
+                // the OWNER of collection/rewind during this stage; the object is exec-only.
+                if (objectManager != null && slotIndex >= 0) {
+                    LostRingObjectInstance ringObject = LostRingObjectInstance.spawn(
+                            player.getCentreX(), player.getCentreY(), xVel, yVel,
+                            phase, LIFETIME_FRAMES, spillAnimation);
+                    objectManager.spawnLostRingObjectAtSlot(ringObject, slotIndex);
+                }
                 activeRingCount++;
                 xVel = -xVel;
                 angle = -angle;

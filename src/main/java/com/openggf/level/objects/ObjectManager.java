@@ -1840,6 +1840,65 @@ public class ObjectManager {
     }
 
     /**
+     * Registers a spilled lost-ring object (ROM Obj37) into the dynamic-object exec
+     * loop on a slot that was <em>already reserved</em> by the caller via
+     * {@link #allocateSlotAfter(int)}.
+     * <p>
+     * Unlike {@link #addDynamicObjectAtSlot}, this does NOT re-allocate or
+     * mark-used the slot — {@code RingManager.LostRingPool} reserves the slot
+     * up-front through {@code allocateSlotAfter} so the legacy {@code LostRing[]}
+     * twin and the object share the same slot during the parallel cutover stage
+     * (total slot consumption unchanged from today).
+     * <p>
+     * The ring is added to {@link #dynamicObjects} (NOT {@link #activeObjects}):
+     * rewind capture restores {@code dynamicObjects} entries through the
+     * {@code LostRingRewindCodec} dynamic recreate path (Stage 4.1), whereas
+     * {@code activeObjects} entries are restored through the placement registry —
+     * a lost ring placed in {@code activeObjects} would be recreated by the wrong
+     * path. {@code execOrder} is wired only when same-frame execution is needed
+     * (mirrors the conditional write in {@link #addDynamicObjectInternal}).
+     */
+    public void spawnLostRingObjectAtSlot(AbstractObjectInstance ring, int reservedSlot) {
+        if (ring == null) {
+            return;
+        }
+        ring.setServices(objectServices);
+        // Slot is already reserved via allocateSlotAfter — do NOT re-allocate.
+        ring.setSlotIndex(reservedSlot);
+        dynamicObjects.add(ring);
+        if (updating && isManagedDynamicSlot(reservedSlot)) {
+            int execIdx = execIndexForSlot(reservedSlot);
+            if (execIdx >= 0 && execIdx < execOrder.length && execIdx > currentExecSlot) {
+                ring.snapshotPreUpdatePosition();
+                ring.setSkipTouchThisFrame(true);
+                execOrder[execIdx] = ring;
+            }
+        }
+        bucketsDirty = true;
+        activeObjectsCacheDirty = true;
+    }
+
+    /**
+     * Test/diagnostic accessor: returns all live {@link #dynamicObjects} of the
+     * given concrete type, in ascending slot order. Used by the spilled-ring
+     * object-model tests to assert ring objects entered the exec loop.
+     */
+    public <T extends ObjectInstance> List<T> activeObjectsOfType(Class<T> type) {
+        List<T> matches = new ArrayList<>();
+        for (ObjectInstance instance : dynamicObjects) {
+            if (type.isInstance(instance)) {
+                matches.add(type.cast(instance));
+            }
+        }
+        matches.sort((a, b) -> {
+            int slotA = a instanceof AbstractObjectInstance aoiA ? aoiA.getSlotIndex() : Integer.MAX_VALUE;
+            int slotB = b instanceof AbstractObjectInstance aoiB ? aoiB.getSlotIndex() : Integer.MAX_VALUE;
+            return Integer.compare(slotA, slotB);
+        });
+        return matches;
+    }
+
+    /**
      * Allocates the next available dynamic slot index for the current game's layout.
      * Equivalent to ROM's FindFreeObj — searches from the first dynamic slot forward.
      * Returns -1 if all slots are in use (overflow).

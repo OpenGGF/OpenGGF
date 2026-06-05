@@ -72,6 +72,19 @@ public final class LostRingObjectInstance extends AbstractObjectInstance
         return ring;
     }
 
+    /**
+     * Production spawn factory: build a spilled ring at the given pixel position with the
+     * ROM bounce velocity / phase / lifetime, sharing the {@code spillAnimation} owner.
+     * Mirrors the {@link LostRing#reset} fixed-point contract (xSubpixel = x &lt;&lt; 8).
+     */
+    public static LostRingObjectInstance spawn(int xPixel, int yPixel, int xVel, int yVel,
+                                               int phaseOffset, int lifetime,
+                                               SpillAnimationState spillAnimation) {
+        LostRingObjectInstance ring = forTest(xPixel, yPixel, xVel, yVel, phaseOffset, lifetime);
+        ring.spillAnimation = spillAnimation;
+        return ring;
+    }
+
     /** Inject the shared spill-spin owner (frame source for rendering). */
     public void setSpillAnimation(SpillAnimationState spillAnimation) {
         this.spillAnimation = spillAnimation;
