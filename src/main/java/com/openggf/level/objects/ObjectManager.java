@@ -27,6 +27,8 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.spawn.AbstractPlacementManager;
+import com.openggf.audio.GameSound;
+import com.openggf.level.rings.LostRingObjectInstance;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.game.PlayableEntity;
@@ -63,6 +65,12 @@ public class ObjectManager {
     private static final int BUCKET_COUNT = RenderPriority.MAX - RenderPriority.MIN + 1;
     private static final int ANIM_ROLL = 0x02;
     private static final int ANIM_SPINDASH = 0x09;
+    /**
+     * ROM Touch_ChkValue lost-ring re-collection gate (s2.asm:85196-85219): a spilled ring
+     * is only collected when {@code invulnerable_time < 90}. Mirrors the legacy
+     * {@code RingManager.LOST_RING_RECOLLECTION_INVULNERABLE_THRESHOLD}.
+     */
+    private static final int LOST_RING_INVULNERABLE_THRESHOLD = 90;
     private static final String S2_BUZZER_FLAME_CHILD_CLASS =
             "com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance$BuzzerFlameChild";
     private static final List<RewindDynamicObjectCodec> TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS =
@@ -5434,6 +5442,28 @@ public class ObjectManager {
                     continue;
                 }
                 buildingSet.add(instance);
+
+                // Type-keyed lost-ring collectible: ROM Touch_ChkValue ring branch
+                // (docs/s2disasm/s2.asm:85196-85219). Evaluated EVERY frame on overlap
+                // (NOT edge-triggered) so the ring collects the frame invulnerable_time
+                // drops below 90 while the player is still continuously overlapping.
+                // Keyed on the LostRingObjectInstance marker, NOT the 0x47 byte shape —
+                // so other SPECIAL objects sharing $47 (e.g. S1 placed rings) keep their
+                // own listener path. Ring crediting matches the legacy
+                // LostRingPool.checkCollection gate (RingManager.java:1313-1343): only the
+                // main character collects/credits (sidekick Tails does not pick up rings);
+                // BOTH players still break the loop (ROM rts on the first overlap).
+                if (instance instanceof LostRingObjectInstance lostRing && lostRing.isLostRingCollectible()) {
+                    if (!isSidekick && player instanceof AbstractPlayableSprite aps) {
+                        int invuln = aps.getInvulnerableFrames(); // AbstractPlayableSprite.java:2117
+                        if (invuln < LOST_RING_INVULNERABLE_THRESHOLD && !lostRing.isCollected()) {
+                            lostRing.markCollected(currentFrameCounter);
+                            aps.addRings(1); // AbstractPlayableSprite.java:1427
+                            objectManager.services().playSfx(GameSound.RING);
+                        }
+                    }
+                    break; // ROM: rts — first overlapping object ends the loop (both paths).
+                }
                 // ROM touch checks run every frame for BOSS/HURT/ENEMY. SPECIAL
                 // (collision_flags 0x40-0x7F) objects in ROM are run every
                 // frame too, but the object itself typically transitions to a
