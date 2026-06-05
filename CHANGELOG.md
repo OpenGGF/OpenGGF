@@ -4,6 +4,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Object art data split first slice:** Introduced shared `ObjectArtBundle` / `ObjectArtRegistration` types at the object-art provider boundary and moved Sonic 2 conditional/eager sheet registrations out of `ObjectArtData` into `Sonic2ObjectArtProvider`/`Sonic2PlcArtRegistry`. Shared render code can now consume a game-agnostic keyed art bundle while provider-owned registries keep Sonic/zone-specific art decisions out of the common data class.
+
 - **Object construction context installation is now scoped and nest-safe:** `ObjectConstructionContext.with(...)` saves and restores both `ObjectServices` and pre-allocated object slot state, so nested object creation restores the outer construction context instead of clearing it. `ObjectManager` placement, dynamic factory, rewind restore, child-spawn, and power-up construction paths now use the scoped helper; a source guard blocks new raw construction ThreadLocal set/remove sites outside `ObjectConstructionContext`.
 
 - **Collision frame orchestration now names its phases explicitly:** Added
