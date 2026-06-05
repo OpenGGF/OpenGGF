@@ -180,32 +180,36 @@ class TestRingManagerRewindSnapshot {
     }
 
     @Test
-    void roundTripLostRingPoolCounters() {
+    void roundTripSharedSpillAnimation() {
+        // Per-ring lost-ring state is no longer snapshotted (physics moved to the
+        // object exec loop; per-ring round-trip is covered by TestLostRingRewindCodec).
+        // Only the small GLOBAL spin (Ring_spill_anim_counter/accum/frame) survives here.
         RingManager mgr = buildManager(2);
         RingSnapshot base = mgr.capture();
 
-        // Inject custom spill-anim state via a crafted snapshot
         RingSnapshot modified = new RingSnapshot(
                 base.collected(),
                 base.sparkleTimers(),
                 base.placementCursorIndex(),
                 base.placementLastCameraX(),
-                3,      // lostRingActiveCount
+                base.lostRingActiveCount(),
                 0xAB,   // spillAnimCounter
                 0xCD,   // spillAnimAccum
-                7,      // spillAnimFrame
-                100,    // lostRingFrameCounter
+                3,      // spillAnimFrame (0-3)
+                base.lostRingFrameCounter(),
                 base.lostRings(),
                 base.attractedRings());
 
         mgr.restore(modified);
         RingSnapshot after = mgr.capture();
 
-        assertEquals(3,    after.lostRingActiveCount());
         assertEquals(0xAB, after.spillAnimCounter());
         assertEquals(0xCD, after.spillAnimAccum());
-        assertEquals(7,    after.spillAnimFrame());
-        assertEquals(100,  after.lostRingFrameCounter());
+        assertEquals(3,    after.spillAnimFrame());
+        // Per-ring pool fields are retired: capture always reports an empty pool.
+        assertEquals(0, after.lostRingActiveCount());
+        assertEquals(0, after.lostRings().length);
+        assertEquals(0, after.lostRingFrameCounter());
     }
 
     @Test
@@ -218,85 +222,41 @@ class TestRingManagerRewindSnapshot {
     }
 
     @Test
-    void restoreSparseLostRingsClearsPreviousActiveSlots() {
+    void restoreIgnoresLegacyPerRingEntriesButKeepsSharedSpin() {
+        // The legacy per-ring pool restore is retired: a snapshot carrying per-ring
+        // LostRingEntry rows must NOT repopulate any pool (the spilled rings are now
+        // dynamic objects restored via LostRingRewindCodec), while the shared spin
+        // still round-trips.
         RingManager mgr = buildManager(0);
         RingSnapshot base = mgr.capture();
 
-        RingSnapshot withActiveLostRing = new RingSnapshot(
+        RingSnapshot withStaleEntries = new RingSnapshot(
                 base.collected(),
                 base.sparkleTimers(),
                 base.placementCursorIndex(),
                 base.placementLastCameraX(),
-                1,
-                base.spillAnimCounter(),
-                base.spillAnimAccum(),
-                base.spillAnimFrame(),
-                base.lostRingFrameCounter(),
+                4,        // stale lostRingActiveCount — must be ignored
+                0x11,     // spillAnimCounter
+                0x22,     // spillAnimAccum
+                2,        // spillAnimFrame
+                99,       // stale lostRingFrameCounter — must be ignored
                 new RingSnapshot.LostRingEntry[] {
                         new RingSnapshot.LostRingEntry(
                                 true, 0x1234_00, 0x0800_00, 0x300, -0x200,
-                                120, false, -1, 0, 5)
+                                120, false, -1, 0, 5, 3)
                 },
                 base.attractedRings());
 
-        mgr.restore(withActiveLostRing);
-
-        RingSnapshot withoutLostRings = new RingSnapshot(
-                base.collected(),
-                base.sparkleTimers(),
-                base.placementCursorIndex(),
-                base.placementLastCameraX(),
-                0,
-                base.spillAnimCounter(),
-                base.spillAnimAccum(),
-                base.spillAnimFrame(),
-                base.lostRingFrameCounter(),
-                new RingSnapshot.LostRingEntry[0],
-                base.attractedRings());
-
-        mgr.restore(withoutLostRings);
+        mgr.restore(withStaleEntries);
         RingSnapshot after = mgr.capture();
 
+        // Per-ring entries are dropped; only the shared spin survives.
         assertEquals(0, after.lostRings().length);
         assertEquals(0, after.lostRingActiveCount());
-    }
-
-    @Test
-    void roundTripLostRingSlot() {
-        RingManager mgr = buildManager(0);
-        RingSnapshot base = mgr.capture();
-
-        // Inject an active LostRing entry at pool slot 3 with source slot 5.
-        RingSnapshot.LostRingEntry[] lostRings = {
-                new RingSnapshot.LostRingEntry(
-                        true, 0x1234_00, 0x0800_00, 0x300, -0x200,
-                        120, false, -1, 0, 5, 3)
-        };
-
-        RingSnapshot modified = new RingSnapshot(
-                base.collected(),
-                base.sparkleTimers(),
-                base.placementCursorIndex(),
-                base.placementLastCameraX(),
-                4,
-                base.spillAnimCounter(),
-                base.spillAnimAccum(),
-                base.spillAnimFrame(),
-                base.lostRingFrameCounter(),
-                lostRings,
-                base.attractedRings());
-
-        mgr.restore(modified);
-        RingSnapshot after = mgr.capture();
-
-        assertTrue(after.lostRings()[0].active());
-        assertEquals(0x1234_00, after.lostRings()[0].xSubpixel());
-        assertEquals(0x0800_00, after.lostRings()[0].ySubpixel());
-        assertEquals(0x300,     after.lostRings()[0].xVel());
-        assertEquals(-0x200,    after.lostRings()[0].yVel());
-        assertEquals(120,       after.lostRings()[0].lifetime());
-        assertEquals(5,         after.lostRings()[0].slotIndex());
-        assertEquals(3,         after.lostRings()[0].poolIndex());
+        assertEquals(0, after.lostRingFrameCounter());
+        assertEquals(0x11, after.spillAnimCounter());
+        assertEquals(0x22, after.spillAnimAccum());
+        assertEquals(2,    after.spillAnimFrame());
     }
 
     @Test

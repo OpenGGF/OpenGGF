@@ -1,6 +1,7 @@
 package com.openggf.level.objects;
 
 
+import com.openggf.audio.GameSound;
 import com.openggf.camera.Camera;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.PhysicsFeatureSet;
@@ -15,6 +16,7 @@ import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.level.rings.LostRingObjectInstance;
 import com.openggf.level.spawn.AbstractPlacementManager;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
@@ -83,6 +85,11 @@ final class ObjectTouchResponseController {
     private static final int SHIELD_TOUCH_HALF_SIZE = 0x18;
     private static final int SHIELD_TOUCH_SIZE = SHIELD_TOUCH_HALF_SIZE * 2;
     private static final int SHIELD_REACTION_BOUNCE_BIT = 1 << 3;
+    /**
+     * ROM Touch_ChkValue lost-ring re-collection gate (s2.asm:85196-85219): a spilled ring
+     * is only collected when {@code invulnerable_time < 90}.
+     */
+    private static final int LOST_RING_INVULNERABLE_THRESHOLD = 90;
     private int currentFrameCounter;
     private boolean instaShieldActive;
     private PlayableEntity currentPlayer;
@@ -450,6 +457,28 @@ final class ObjectTouchResponseController {
                 continue;
             }
             buildingSet.add(instance);
+
+            // Type-keyed lost-ring collectible: ROM Touch_ChkValue ring branch
+            // (docs/s2disasm/s2.asm:85196-85219). Evaluated EVERY frame on overlap
+            // (NOT edge-triggered) so the ring collects the frame invulnerable_time
+            // drops below 90 while the player is still continuously overlapping.
+            // Keyed on the LostRingObjectInstance marker, NOT the 0x47 byte shape —
+            // so other SPECIAL objects sharing $47 (e.g. S1 placed rings) keep their
+            // own listener path. Crediting gate (ROM Touch_ChkValue): only the main
+            // character collects/credits (sidekick Tails does not pick up rings);
+            // BOTH players still break the loop (ROM rts on the first overlap). This is
+            // now the sole lost-ring collection path — the legacy RingManager scan is gone.
+            if (instance instanceof LostRingObjectInstance lostRing && lostRing.isLostRingCollectible()) {
+                if (!isSidekick && player instanceof AbstractPlayableSprite aps) {
+                    int invuln = aps.getInvulnerableFrames(); // AbstractPlayableSprite.java:2117
+                    if (invuln < LOST_RING_INVULNERABLE_THRESHOLD && !lostRing.isCollected()) {
+                        lostRing.markCollected(currentFrameCounter);
+                        aps.addRings(1); // AbstractPlayableSprite.java:1427
+                        objectManager.services().playSfx(GameSound.RING);
+                    }
+                }
+                break; // ROM: rts — first overlapping object ends the loop (both paths).
+            }
             // ROM touch checks run every frame for BOSS/HURT/ENEMY. SPECIAL
             // (collision_flags 0x40-0x7F) objects in ROM are run every
             // frame too, but the object itself typically transitions to a
