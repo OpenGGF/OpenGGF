@@ -158,18 +158,24 @@ Mirror an existing minimal `AbstractObjectInstance` subclass for the boilerplate
 ```java
 @Test
 void ringBouncePhysicsMatchesLegacyPool() {
-    // Flat-ground-free fall: velocity integrates, gravity adds each frame.
+    // Fixed-point contract (identical to LostRing.reset, RingManager LostRing.java:24):
+    //   xSubpixel = x << 8 (pixel coordinate stored in the high byte; low byte = sub-pixel).
+    // forTest(x, y, ...) constructs with xSubpixel = x << 8, ySubpixel = y << 8.
     LostRingObjectInstance ring = LostRingObjectInstance.forTest(
-            /*x*/0x100, /*y*/0x100, /*xVel*/0x0200, /*yVel*/-0x0400, /*phase*/0, /*lifetime*/0xFF);
-    int y0 = ring.getCentreY();
+            /*xPixel*/0x100, /*yPixel*/0x100, /*xVel*/0x0200, /*yVel*/-0x0400, /*phase*/0, /*lifetime*/0xFF);
+    assertEquals(0x100 << 8, ring.getXSubpixelForTest());      // 0x10000 at start
     ring.stepPhysicsForTest(/*gravity*/0x18, /*floorCheck*/false);
-    // y += yVel (>>8 into pixels handled by subpixel), yVel += gravity
-    assertEquals(0x100 + 0x0200 /*xVel pixels carry*/ , ring.getXSubpixelForTest() );
+    // ROM step (LostRingPool.updatePhysics, RingManager.java:1245-1247):
+    //   xSubpixel += xVel;  ySubpixel += yVel;  yVel += gravity.
+    assertEquals((0x100 << 8) + 0x0200, ring.getXSubpixelForTest()); // 0x10200
+    assertEquals((0x100 << 8) + (-0x0400), ring.getYSubpixelForTest()); // 0x0FC00
     assertEquals(-0x0400 + 0x18, ring.getYVelForTest());
 }
 ```
 
-(Use the same fixed-point contract as `LostRing`: `addXSubpixel(xVel)`, `addYSubpixel(yVel)`, `addYVel(gravity)`. Keep the test assertions identical to the legacy math so frame-exactness is provable.)
+(Use the same fixed-point contract as `LostRing` (`LostRing.java:24` — `xSubpixel = x << 8`):
+`addXSubpixel(xVel)`, `addYSubpixel(yVel)`, `addYVel(gravity)`. Assert on `xSubpixel`/`ySubpixel`
+(fixed-point), not pixel values, so the sub-pixel carry is exercised exactly as the legacy math.)
 
 - [ ] **Step 2: Run → FAIL** (class/methods absent).
 
@@ -210,7 +216,20 @@ void spawnRegistersRingObjectsInSlotOrder() {
 
 - [ ] **Step 2: Run → FAIL.**
 
-- [ ] **Step 3: Implement.** In `LostRingPool.spawnLostRings`, after computing each ring's position/velocity/phase, construct a `LostRingObjectInstance` and register it via the new `ObjectManager.spawnLostRingObject(ring)` which calls the existing `addDynamicObject` path (so it allocates a slot and joins `execOrder`). Reset the shared `SpillAnimationState`. Keep the legacy `LostRing[]` pool populated too FOR NOW (parallel), gated so collection/rewind still use legacy until Stage 2/4 cut over. Add `ObjectManager.activeObjectsOfType(Class)` test accessor.
+- [ ] **Step 3: Implement — single allocation per ring (NO double-consume).** The legacy
+  `allocateSlotIndices` (RingManager.java:1321) already calls `objectManager.allocateSlotAfter(...)`
+  for each ring. **Do NOT also allocate via `addDynamicObject`** (that would consume a *second* SST slot
+  per ring and shift slot pressure/order before cutover — the exact trap to avoid). Instead, add
+  `ObjectManager.spawnLostRingObjectAtSlot(LostRingObjectInstance ring, int reservedSlot)` that places
+  the object into the **already-reserved** slot (set `ring.setSlotIndex(reservedSlot)`, insert into
+  `activeObjects`/`execOrder` at that slot's exec index, set services — mirroring the tail of
+  `addDynamicObjectInternal` but WITHOUT re-allocating since `ring.getSlotIndex() >= 0`). In
+  `LostRingPool.spawnLostRings`, for each reserved slot from `allocateSlotIndices`, construct the
+  `LostRingObjectInstance` and call `spawnLostRingObjectAtSlot(ring, reservedSlot)`. Reset the shared
+  `SpillAnimationState`. During this parallel stage the legacy `LostRing[]` is the OWNER of collection
+  and rewind (object path is exec-only); the object and its legacy `LostRing` twin share the **same**
+  slot, so total slot consumption is unchanged from today. Add `ObjectManager.activeObjectsOfType(Class)`
+  test accessor.
 
 - [ ] **Step 4: Run → PASS.** Also run the full existing ring tests to ensure no break:
   `mvn "-Dtest=com.openggf.level.rings.*,com.openggf.level.objects.TestObjectManagerChildSlotAllocation" test` → PASS.
@@ -298,18 +317,30 @@ class TestLostRingTouchOrdering {
 // invulnerable_time drops below 90 while the player is still continuously overlapping.
 // Keyed on the LostRingObjectInstance marker, NOT the 0x47 byte shape — so S1 placed
 // rings (Sonic1RingInstance, also 0x47) keep their own listener path.
+//
+// NOTE: the loop param `player` is PlayableEntity (ObjectManager.java:5284), which does
+// NOT expose ring/invuln APIs. addRings(int) and getInvulnerableFrames() live on
+// AbstractPlayableSprite (AbstractPlayableSprite.java:1427 / :2117) — cast to reach them.
+// Ring crediting matches the legacy LostRingPool.checkCollection gate: ONLY the main
+// character collects/credits (sidekick Tails does not pick up rings); BOTH still break.
 if (instance instanceof LostRingObjectInstance lostRing && lostRing.isLostRingCollectible()) {
-    if (player.getInvulnerableFrames() < LOST_RING_INVULNERABLE_THRESHOLD /*90*/
-            && !lostRing.isCollected()) {
-        lostRing.markCollected(frameCounterForTouch());
-        player.addRings(1);
-        services().audio()...playSfx(GameSound.RING); // mirror legacy collection SFX
+    if (!isSidekick && player instanceof AbstractPlayableSprite aps) {
+        int invuln = aps.getInvulnerableFrames();                       // :2117
+        if (invuln < LOST_RING_INVULNERABLE_THRESHOLD /*90*/ && !lostRing.isCollected()) {
+            lostRing.markCollected(frameCounterForTouch());
+            aps.addRings(1);                                            // :1427
+            audioManager.playSfx(GameSound.RING);  // same SFX as legacy checkCollection
+        }
     }
-    break; // ROM: rts — the ring was the first overlapping object; stop the loop.
+    break; // ROM: rts — the ring was the first overlapping object; stop the loop (both paths).
 }
 ```
 
-Place it so it runs for both player and sidekick paths (the sidekick does not collect rings in ROM? — confirm: ROM `TouchResponse` rings use MainCharacter/Sidekick invuln; the break still applies. Match legacy `cannotCollectRings`/sidekick behavior: a sidekick overlap still breaks but only the main character credits rings. Encode that with the existing `isSidekick` flag.)
+`LOST_RING_INVULNERABLE_THRESHOLD = 90` mirrors the legacy
+`LOST_RING_RECOLLECTION_INVULNERABLE_THRESHOLD` (RingManager.java). The branch sits in the shared
+`processCollisionLoop`, which the main path (ObjectManager.java:5199) and sidekick path (:5260) both
+call — `isSidekick` is in scope. A sidekick overlap takes the `break` (suppresses the later hazard) but
+does not collect/credit, matching ROM + legacy `cannotCollectRings`.
 
 - [ ] **Step 4: Run → PASS** (all five tests). Then run `TestTouchResponseManager` to confirm no SPECIAL regression:
   `mvn "-Dtest=com.openggf.level.objects.TestTouchResponseManager,com.openggf.level.objects.TestLostRingTouchOrdering" test` → PASS.
@@ -323,8 +354,17 @@ Place it so it runs for both player and sidekick paths (the sidekick does not co
 - Modify: `src/main/java/com/openggf/level/LevelManager.java:865` (drop the `checkLostRingCollection` call)
 - Test: existing ring tests + the Stage 2.1 tests
 
-- [ ] **Step 1:** Delete the `LevelManager.java:865` `ringManager.checkLostRingCollection(playable)` call and the `RingManager.checkLostRingCollection` / `LostRingPool.checkCollection` methods. Collection now happens only via the touch branch.
-- [ ] **Step 2: Run** the Stage-2.1 tests + `mvn "-Dtest=com.openggf.level.rings.*" test` → PASS.
+> **Compile-safety rule (applies to every removal task, 2.2 / 4.2 / 5.4):** before deleting any public
+> API, `grep -rn "<symbol>" src --include=*.java` and migrate **every** caller — main AND test — in the
+> SAME task/commit, or the repo will not compile. Known referencing tests for the ring subsystem:
+> `com.openggf.tests.TestRingManager`, `com.openggf.level.rings.TestRingManagerRewindSnapshot`,
+> `com.openggf.tests.TestS3kIczFreezerObject`, `com.openggf.tests.trace.s1.TestS1Mz1SlotLayoutRegression`,
+> and the test stubs `com.openggf.level.objects.StubObjectServices` / `TestObjectServices`.
+
+- [ ] **Step 1:** `grep -rn "checkLostRingCollection" src --include=*.java` → confirm the only caller is
+  `LevelManager.java:865` (no tests). Delete that call and the `RingManager.checkLostRingCollection` /
+  `LostRingPool.checkCollection` methods. Collection now happens only via the Stage-2.1 touch branch.
+- [ ] **Step 2: Run** a BROAD set (not just `level.rings.*`): `mvn "-Dtest=com.openggf.level.rings.*,com.openggf.tests.TestRingManager,com.openggf.level.objects.TestLostRingTouchOrdering" test` → PASS (compiles + green).
 - [ ] **Step 3: Commit** (`refactor(rings): collection now via unified touch loop; remove legacy checkCollection`).
 
 ---
@@ -365,13 +405,19 @@ void neverSpawnsMoreThanRomCapOf32() {
 
 ```java
 int toSpawn = Math.min(ringCount, MAX_LOST_RINGS /*0x20*/);
-int previousSlot = currentSpawningObjectSlot; // ROM: allocate after the spilling object
+// Allocation predecessor: keep the EXISTING anchor used by the working legacy code —
+// `previousSlot = 31` (RingManager.java:1328). Spilling happens from the player's hurt
+// handler, OUTSIDE the object exec cursor, so there is no "current spawning object slot"
+// to anchor on; the fixed predecessor reproduces today's slot placement. (Flagged for
+// later ROM re-verification, but 31 is the current, trace-validated value — do NOT swap
+// to an exec-cursor value, which would be wrong/unavailable on the touch/spawn path.)
+int previousSlot = 31;
 spillAnimation.reset();
 int spawned = 0;
 for (int i = 0; i < toSpawn; i++) {
     int slot = objectManager.allocateSlotAfter(previousSlot);
-    if (slot < 0) {                 // ROM: no free slot → stop spilling
-        // log() how many were truncated
+    if (slot < 0) {                 // ROM: no free slot → stop spilling (truncate)
+        // log() how many of (toSpawn - spawned) were truncated
         break;
     }
     // compute this ring's pos/vel/phase, construct the instance, register it ON this real slot
@@ -382,7 +428,13 @@ for (int i = 0; i < toSpawn; i++) {
 }
 ```
 
-Remove the old pre-allocate-then-spawn `allocateSlotIndices` two-phase path (which could allocate slots for rings that then fail to construct). Add `ObjectManager.reserveAllButNFreeSlots(n)` test helper.
+Replace the old two-phase `allocateSlotIndices` (which pre-allocated an array of slots, some possibly
+`-1`, before constructing rings) with this single in-loop allocate-then-construct path, so a failed
+allocation never leaves a reserved-but-unused slot and slot order never diverges. Add
+`ObjectManager.reserveAllButNFreeSlots(n)` test helper. **Note for Task 1.3 reconciliation:** once this
+Stage-3 contract lands, Task 1.3's "reuse legacy reserved slot" wiring collapses into this single path —
+the object IS the ring (legacy `LostRing[]` twin is already retired by Stage 4.2), so
+`spawnLostRingObjectAtSlot` is the sole allocator.
 
 - [ ] **Step 4: Run → PASS.**
 - [ ] **Step 5: Commit** (`fix(rings): atomic stop-on-(-1) lost-ring slot allocation + 0x20 cap`).
@@ -431,8 +483,8 @@ void ringsReappearOnSeekAcrossSpill() {
 - Modify: `src/main/java/com/openggf/level/LevelManager.java:1020` (replace `ringManager.updateLostRingPhysics(frame+1)` with a shared-spin `tick()` only — physics now runs in the object loop)
 - Test: `src/test/java/com/openggf/level/rings/TestRingManagerRewindSnapshot.java` (update expectations)
 
-- [ ] **Step 1:** Remove the per-ring physics loop and per-ring snapshot; `RingManager.update`/`LevelManager.update` now only `spillAnimation.tick()` once per frame. Update `TestRingManagerRewindSnapshot` to assert the shared-spin snapshot only (per-ring is gone; rings are covered by the object rewind test).
-- [ ] **Step 2: Run** `mvn "-Dtest=com.openggf.level.rings.*,com.openggf.game.rewind.*" test` → PASS.
+- [ ] **Step 1:** `grep -rn "updateLostRingPhysics\|RingSnapshot.LostRingEntry\|LostRingEntry" src --include=*.java`. Remove the per-ring physics loop and the per-ring `RingSnapshot.LostRingEntry` capture/restore; `RingManager.update`/`LevelManager.update:1020` now only `spillAnimation.tick()` once per frame. **Migrate `TestRingManagerRewindSnapshot` in this same task** — it constructs `RingSnapshot.LostRingEntry[]` and asserts per-ring counters at lines 183/212/221/225-257; rewrite those to assert the shared-spin snapshot only (per-ring coverage moves to `TestLostRingRewindCodec` from Task 4.1). If the `RingSnapshot.LostRingEntry` record is now unused, delete it (grep first).
+- [ ] **Step 2: Run** `mvn "-Dtest=com.openggf.level.rings.*,com.openggf.game.rewind.*,com.openggf.tests.TestRingManager" test` → PASS (compiles + green).
 - [ ] **Step 3: Commit** (`refactor(rings): retire legacy per-ring physics/snapshot; physics runs in object loop`).
 
 ---
@@ -489,8 +541,14 @@ Expected: **mcz1 still first-diverges at f2757 (NOT regressed toward f1665)**; E
 **Files:**
 - Modify/Delete: `src/main/java/com/openggf/level/rings/LostRing.java` (delete if fully unused), legacy `LostRing[] ringPool`, `RingSnapshot.LostRingEntry` (if unused).
 
-- [ ] **Step 1:** Delete `LostRing.java` and the legacy pool array / per-ring snapshot record only once nothing references them (grep first: `grep -rn "LostRing\b" src/main`). Keep `LostRingObjectInstance`, `SpillAnimationState`, and the slim spawner.
-- [ ] **Step 2: Run** the full ring + object + rewind unit set + the trace pair → PASS.
+- [ ] **Step 1:** `grep -rn "LostRing\b\|ringPool\b" src --include=*.java` (BOTH main and test). Migrate
+  every remaining reference: `com.openggf.tests.TestRingManager`,
+  `com.openggf.tests.TestS3kIczFreezerObject`, `com.openggf.tests.trace.s1.TestS1Mz1SlotLayoutRegression`,
+  and the stubs `StubObjectServices`/`TestObjectServices` — repoint them at `LostRingObjectInstance`/the
+  slim spawner (most call `spawnLostRings`, which STAYS; only direct `LostRing`/`ringPool` field uses need
+  migration). Delete `LostRing.java` and the legacy `LostRing[] ringPool` only once the grep is clean.
+  Keep `LostRingObjectInstance`, `SpillAnimationState`, and the slim spawner.
+- [ ] **Step 2: Run** the broad set: `mvn "-Dtest=com.openggf.level.rings.*,com.openggf.level.objects.TestLostRingTouchOrdering,com.openggf.tests.TestRingManager,com.openggf.tests.TestS3kIczFreezerObject,com.openggf.tests.trace.s1.TestS1Mz1SlotLayoutRegression,com.openggf.game.rewind.*" test` → PASS (compiles + green). Then re-run the Stage 5.3 trace pair (mtz2 + mcz1).
 - [ ] **Step 3: Commit** (`refactor(rings): remove dead legacy LostRing pool after object-model cutover`).
 
 ---
@@ -501,3 +559,10 @@ Expected: **mcz1 still first-diverges at f2757 (NOT regressed toward f1665)**; E
 - **Type consistency:** `LostRingObjectInstance` (`isLostRingCollectible()`, `isCollected()`, `markCollected(int)`, `getSlotIndex()`, `getCollisionFlags()→0x47`), `SpillAnimationState` (`reset/tick/frame/counter/accum/snapshot/restore`), `ObjectManager` (`spawnLostRingObjectAtSlot`, `activeObjectsOfType`, `reserveAllButNFreeSlots`, `LOST_RING_INVULNERABLE_THRESHOLD=90`), `LostRingRewindCodec` (mirrors `pointsCodec`). Names are consistent across tasks.
 - **Cutover safety:** legacy collection removed only in Stage 2.2 (after the object branch is green); legacy physics/snapshot removed only in Stage 4.2 (after the codec is green); dead code deleted only in Stage 5.4 (after grep-confirmed unused).
 - **Verification bar gates the end:** Stage 5.3 enforces mtz2-advances / mcz1-no-regress / no-frontier-regression before the work is considered done.
+
+**Plan-review fixes incorporated (2026-06-05):**
+1. **No double-consumed slots** in the parallel stage — Task 1.3 spawns the object into the legacy-reserved slot (`spawnLostRingObjectAtSlot`, no second `addDynamicObject` allocation); total slot use unchanged until cutover.
+2. **Allocation anchor** is the existing literal `previousSlot = 31` (RingManager.java:1328), not an exec-cursor value (spilling runs outside the object exec cursor); flagged for ROM re-verification but kept at the trace-validated value.
+3. **Player API** — the loop param is `PlayableEntity` (ObjectManager.java:5284); the branch casts to `AbstractPlayableSprite` for `getInvulnerableFrames()` (:2117) / `addRings(int)` (:1427); only the main character collects/credits, both paths break (matches legacy `cannotCollectRings`).
+4. **Compile-safety on removals** — 2.2 / 4.2 / 5.4 grep all callers and migrate referencing tests (`TestRingManagerRewindSnapshot`, `TestRingManager`, `TestS3kIczFreezerObject`, `TestS1Mz1SlotLayoutRegression`, stubs) in the same task, with broadened test commands.
+5. **Fixed-point contract** — Task 1.2 asserts on `xSubpixel`/`ySubpixel` with `x << 8` start (`LostRing.java:24`), e.g. `(0x100 << 8) + xVel`, not pixel-space `x + xVel`.
