@@ -1,6 +1,7 @@
 package com.openggf.game.rewind.snapshot;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.solid.ContactKind;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 
@@ -43,6 +44,7 @@ public record ObjectManagerSnapshot(
         List<DynamicObjectEntry> dynamicObjects,
         PlacementSnapshot placement,
         List<SolidContactRidingEntry> solidContactRiding,
+        SolidContactState solidContactState,
         PlaneSwitcherSnapshot planeSwitchers,
         TouchResponseOverlapState touchResponseOverlap
 ) {
@@ -52,6 +54,9 @@ public record ObjectManagerSnapshot(
         childSpawns = List.copyOf(childSpawns);
         dynamicObjects = List.copyOf(dynamicObjects);
         solidContactRiding = solidContactRiding == null ? List.of() : List.copyOf(solidContactRiding);
+        solidContactState = solidContactState == null
+                ? SolidContactState.fromRiding(solidContactRiding)
+                : solidContactState;
         planeSwitchers = planeSwitchers == null ? PlaneSwitcherSnapshot.empty() : planeSwitchers;
         touchResponseOverlap = touchResponseOverlap == null
                 ? TouchResponseOverlapState.empty() : touchResponseOverlap;
@@ -75,6 +80,7 @@ public record ObjectManagerSnapshot(
                 frameCounter, vblaCounter, currentExecSlot, peakSlotCount,
                 bucketsDirty, childSpawns, dynamicObjects, placement,
                 solidContactRiding,
+                SolidContactState.fromRiding(solidContactRiding),
                 PlaneSwitcherSnapshot.empty(),
                 TouchResponseOverlapState.empty()
         );
@@ -148,6 +154,81 @@ public record ObjectManagerSnapshot(
             int x,
             int y,
             int pieceIndex
+    ) {}
+
+    /**
+     * Complete snapshot of the solid-contact collaborator's hidden state.
+     * Riding entries alone are not enough for deterministic fixed-adjacent
+     * rewind: per-player support latches, cached headroom, and the collaborator
+     * frame counter affect the next replayed contact pass.
+     */
+    public record SolidContactState(
+            int frameCounter,
+            List<SolidContactRidingEntry> riding,
+            List<PlayableEntity> inlineSupportedPlayers,
+            List<PlayableEntity> forceAirOnStaleSupportLoss,
+            List<SolidContactStandingSnapshotEntry> standingSnapshots,
+            List<SolidContactHeadroomSnapshotEntry> headroomSnapshots,
+            List<SolidContactLatchEntry> standingBits,
+            List<SolidContactLatchEntry> pushingBits,
+            List<SolidContactLatchEntry> standingBitSnapshots
+    ) {
+        public SolidContactState {
+            riding = riding == null ? List.of() : List.copyOf(riding);
+            inlineSupportedPlayers = inlineSupportedPlayers == null ? List.of() : List.copyOf(inlineSupportedPlayers);
+            forceAirOnStaleSupportLoss = forceAirOnStaleSupportLoss == null
+                    ? List.of() : List.copyOf(forceAirOnStaleSupportLoss);
+            standingSnapshots = standingSnapshots == null ? List.of() : List.copyOf(standingSnapshots);
+            headroomSnapshots = headroomSnapshots == null ? List.of() : List.copyOf(headroomSnapshots);
+            standingBits = standingBits == null ? List.of() : List.copyOf(standingBits);
+            pushingBits = pushingBits == null ? List.of() : List.copyOf(pushingBits);
+            standingBitSnapshots = standingBitSnapshots == null ? List.of() : List.copyOf(standingBitSnapshots);
+        }
+
+        public static SolidContactState empty() {
+            return fromRiding(List.of());
+        }
+
+        public static SolidContactState fromRiding(List<SolidContactRidingEntry> riding) {
+            return new SolidContactState(
+                    0,
+                    riding,
+                    List.of(),
+                    List.of(),
+                    List.of(),
+                    List.of(),
+                    List.of(),
+                    List.of(),
+                    List.of());
+        }
+    }
+
+    public record SolidContactStandingSnapshotEntry(
+            PlayableEntity player,
+            ContactKind kind,
+            boolean standing,
+            boolean pushing
+    ) {}
+
+    public record SolidContactHeadroomSnapshotEntry(
+            PlayableEntity player,
+            int hexAngle,
+            int distance
+    ) {}
+
+    public record SolidContactLatchEntry(
+            PlayableEntity player,
+            List<SolidContactLatchKey> keys
+    ) {
+        public SolidContactLatchEntry {
+            keys = keys == null ? List.of() : List.copyOf(keys);
+        }
+    }
+
+    public record SolidContactLatchKey(
+            ObjectSpawn spawn,
+            int slotIndex,
+            boolean instanceKey
     ) {}
 
     /**
@@ -309,13 +390,13 @@ public record ObjectManagerSnapshot(
      *                                    {@code building} buffer
      * @param mainParitySwapped           true when {@code overlapping=bufferB}
      *                                    (after odd number of swaps)
-     * @param sidekicks                   per-sidekick overlap state
+     * @param sidekickEntries             per-sidekick overlap state
      */
     public record TouchResponseOverlapState(
             int[] mainOverlappingSlotIndices,
             int[] mainBuildingSlotIndices,
             boolean mainParitySwapped,
-            List<SidekickOverlapEntry> sidekicks
+            List<SidekickOverlapEntry> sidekickEntries
     ) {
         public TouchResponseOverlapState {
             mainOverlappingSlotIndices = mainOverlappingSlotIndices == null
@@ -324,7 +405,7 @@ public record ObjectManagerSnapshot(
             mainBuildingSlotIndices = mainBuildingSlotIndices == null
                     ? new int[0]
                     : Arrays.copyOf(mainBuildingSlotIndices, mainBuildingSlotIndices.length);
-            sidekicks = sidekicks == null ? List.of() : List.copyOf(sidekicks);
+            sidekickEntries = sidekickEntries == null ? List.of() : List.copyOf(sidekickEntries);
         }
 
         public static TouchResponseOverlapState empty() {

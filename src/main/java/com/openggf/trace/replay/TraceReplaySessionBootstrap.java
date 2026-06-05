@@ -15,6 +15,7 @@ import com.openggf.game.sonic2.trace.Sonic2TornadoRidePrelude;
 import com.openggf.level.LevelData;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.physics.FrameCollisionPlan;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
@@ -480,7 +481,8 @@ public final class TraceReplaySessionBootstrap {
         // Ground snap: 14 subpixel threshold matches the fixture.
         var collision = GameServices.collisionOrNull();
         if (collision != null) {
-            collision.resolveGroundAttachment(sprite, 14, () -> false);
+            collision.resolveGroundAttachment(
+                    FrameCollisionPlan.terrainOnly(), sprite, 14, () -> false);
         }
     }
 

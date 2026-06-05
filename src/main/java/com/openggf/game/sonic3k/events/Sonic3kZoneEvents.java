@@ -13,6 +13,7 @@ import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.game.sonic3k.Sonic3kPlcLoader;
 import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
+import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.resources.PlcParser.PlcDefinition;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -107,6 +108,10 @@ public abstract class Sonic3kZoneEvents {
 
     protected boolean hasRuntime() {
         return GameServices.hasRuntime();
+    }
+
+    protected ZoneRuntimeRegistry zoneRuntimeRegistry() {
+        return GameServices.zoneRuntimeRegistry();
     }
 
     protected ZoneLayoutMutationPipeline zoneLayoutMutationPipeline() {

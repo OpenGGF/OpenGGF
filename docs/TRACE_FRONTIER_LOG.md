@@ -8213,3 +8213,22 @@ The new owner is the Slicer pincer hurt-contact window: ROM has Sonic entering
 routine 4 with rings lost near ObjA1/ObjA2 at `@1718,0348` / `@16D8,0321`,
 while the engine misses the pincer contact and remains in normal gameplay
 routine with seven rings.
+
+## 2026-06-05 — Architecture-roadmap-completion merge (develop integration)
+
+Merged `feature/ai-architecture-roadmap-completion` onto develop (roadmap + spilled-ring) — zero merge conflicts.
+Command: full S2 unit+trace verify in worktree `.worktrees/completion-integ` (cmd //c mvn.cmd, forkCount=1, s2.gen).
+
+- **REGRESSION INTRODUCED: MTZ2 f873 → f453** (`y` expected=0x063C actual=0x063D, 1px Y on the Obj64 MTZ platform).
+  Cause: the completion's `MTZPlatformObjectInstance` Obj6B change re-added `if (moveType == 5) moveType = 6;`
+  (eager-arming the next subtype in the contact callback), which reverts a prior trace fix — the removed
+  comment documented that this makes the trigger-fall platform start falling one frame early, shifting
+  every rider's y down 1px (ROM Obj6B type-5 `loc_27EC4` s2.asm:54451-54462 tests the standing bit in its
+  OWN handler AFTER positioning; the eager arm skips the final oscillation-hold frame). Accepted under the
+  land-genuine/allow-regression policy; FOLLOW-UP: reconcile the completion's `Obj6B_Main`-before-`SolidObject`
+  reasoning (s2.asm:54360-54378) with the prior rider-Y fix so mtz2 returns to ≥873 without breaking whatever
+  the completion change intended.
+- Held (no regression): mcz1 f2757, scz f6180 (pre-accepted spilled-ring regression), cnz1 f3906, mcz2 f4485.
+- Green: EHZ1, WFZ. Completion own suite green (TestFrameCollisionPlan/TestArchitecturalSourceGuard/
+  TestSolidOrderingSentinelsHeadless/TestPlayableSpriteMovement). Pre-existing unrelated red: TestRewindArchitectureGuard
+  (LbzCupElevatorInstance baseline) — not introduced by this merge.

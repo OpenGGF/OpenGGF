@@ -11,6 +11,7 @@ import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.physics.CollisionSystem;
+import com.openggf.physics.FrameCollisionPlan;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -112,6 +113,7 @@ public class TestPlayableSpriteMovement {
                 mockSprite.setAir(true);
                 mockSprite.setRolling(true);
                 mockSprite.setRollingJump(true);
+                mockSprite.setJumping(true);
                 mockSprite.setXSpeed((short) 0);
                 mockSprite.setYSpeed((short) 0x07D8);
                 mockSprite.setGSpeed((short) 0x03B0);
@@ -1880,6 +1882,14 @@ public class TestPlayableSpriteMovement {
                 }
 
                 @Override
+                public void resolveAirCollision(FrameCollisionPlan plan,
+                                                AbstractPlayableSprite sprite,
+                                                Consumer<AbstractPlayableSprite> landingHandler,
+                                                boolean forceFloorCheck) {
+                        probe.accept(sprite, landingHandler, forceFloorCheck);
+                }
+
+                @Override
                 public void resolveAirCollision(AbstractPlayableSprite sprite,
                                                 Consumer<AbstractPlayableSprite> landingHandler,
                                                 boolean forceFloorCheck) {
@@ -1890,6 +1900,15 @@ public class TestPlayableSpriteMovement {
         private static final class NoGroundAttachmentCollisionSystem extends CollisionSystem {
                 private NoGroundAttachmentCollisionSystem() {
                         super(new TerrainCollisionManager());
+                }
+
+                @Override
+                public void resolveGroundAttachment(FrameCollisionPlan plan,
+                                                    AbstractPlayableSprite sprite,
+                                                    int positiveThreshold,
+                                                    BooleanSupplier hasObjectSupport) {
+                        sprite.setAir(true);
+                        sprite.setPushing(false);
                 }
 
                 @Override
@@ -1907,6 +1926,14 @@ public class TestPlayableSpriteMovement {
                 }
 
                 @Override
+                public void resolveGroundAttachment(FrameCollisionPlan plan,
+                                                    AbstractPlayableSprite sprite,
+                                                    int positiveThreshold,
+                                                    BooleanSupplier hasObjectSupport) {
+                        sprite.setAir(false);
+                }
+
+                @Override
                 public void resolveGroundAttachment(AbstractPlayableSprite sprite,
                                                     int positiveThreshold,
                                                     BooleanSupplier hasObjectSupport) {
@@ -1920,10 +1947,30 @@ public class TestPlayableSpriteMovement {
                 }
 
                 @Override
+                public void resolveGroundAttachment(FrameCollisionPlan plan,
+                                                    AbstractPlayableSprite sprite,
+                                                    int positiveThreshold,
+                                                    BooleanSupplier hasObjectSupport) {
+                        sprite.setAir(false);
+                }
+
+                @Override
                 public void resolveGroundAttachment(AbstractPlayableSprite sprite,
                                                     int positiveThreshold,
                                                     BooleanSupplier hasObjectSupport) {
                         sprite.setAir(false);
+                }
+
+                @Override
+                public void resolveGroundWallCollision(FrameCollisionPlan plan, AbstractPlayableSprite sprite) {
+                        // ROM Tails_InputAcceleration_Path converts nonzero ground_vel
+                        // to x_vel first, then CalcRoomInFront's push path zeroes
+                        // ground_vel while preserving the collision x_vel for
+                        // MoveSprite_TestGravity2 (sonic3k.asm:27947-27955,
+                        // 27997-28017).
+                        sprite.setXSpeed((short) -0x00E8);
+                        sprite.setGSpeed((short) 0);
+                        sprite.setPushing(true);
                 }
 
                 @Override

@@ -5,6 +5,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.ObjectSolidExecutionContext;
 import com.openggf.game.solid.PlayerSolidContactResult;
@@ -27,6 +28,7 @@ import com.openggf.sprites.playable.Knuckles;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.sprites.NativePositionOps;
+import com.openggf.sprites.Sprite;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.game.GroundMode;
 
@@ -306,16 +308,15 @@ final class ObjectSolidContactController {
         objectStandingBitSnapshot.clear();
     }
 
-    List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SolidContactRidingEntry> captureRewindState() {
-        List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SolidContactRidingEntry> entries =
-                new ArrayList<>();
+    ObjectManagerSnapshot.SolidContactState captureRewindState() {
+        List<ObjectManagerSnapshot.SolidContactRidingEntry> entries = new ArrayList<>();
         for (var entry : ridingStates.entrySet()) {
             PlayableEntity player = entry.getKey();
             RidingState state = entry.getValue();
             if (player == null || state == null || state.object == null) {
                 continue;
             }
-            entries.add(new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SolidContactRidingEntry(
+            entries.add(new ObjectManagerSnapshot.SolidContactRidingEntry(
                     player,
                     state.object.getSpawn(),
                     state.object instanceof AbstractObjectInstance aoi ? aoi.getSlotIndex() : -1,
@@ -323,14 +324,176 @@ final class ObjectSolidContactController {
                     state.y,
                     state.pieceIndex));
         }
+        entries.sort(Comparator.comparing(entry -> playerSnapshotKey(entry.player())));
+        return new ObjectManagerSnapshot.SolidContactState(
+                frameCounter,
+                List.copyOf(entries),
+                sortedPlayers(inlineSupportedPlayers),
+                sortedPlayers(forceAirOnStaleSupportLoss),
+                captureStandingSnapshots(),
+                captureHeadroomSnapshots(),
+                captureLatchEntries(objectStandingBitSet),
+                captureLatchEntries(objectPushingBitSet),
+                captureLatchEntries(objectStandingBitSnapshot));
+    }
+
+    private List<ObjectManagerSnapshot.SolidContactStandingSnapshotEntry> captureStandingSnapshots() {
+        ArrayList<ObjectManagerSnapshot.SolidContactStandingSnapshotEntry> entries = new ArrayList<>();
+        for (var entry : latestStandingSnapshots.entrySet()) {
+            PlayableEntity player = entry.getKey();
+            PlayerStandingState state = entry.getValue();
+            if (player == null || state == null) {
+                continue;
+            }
+            entries.add(new ObjectManagerSnapshot.SolidContactStandingSnapshotEntry(
+                    player,
+                    state.kind(),
+                    state.standing(),
+                    state.pushing()));
+        }
+        entries.sort(Comparator.comparing(entry -> playerSnapshotKey(entry.player())));
         return List.copyOf(entries);
     }
 
-    void restoreRewindState(
-            List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SolidContactRidingEntry> entries) {
+    private List<ObjectManagerSnapshot.SolidContactHeadroomSnapshotEntry> captureHeadroomSnapshots() {
+        ArrayList<ObjectManagerSnapshot.SolidContactHeadroomSnapshotEntry> entries = new ArrayList<>();
+        for (var playerEntry : latestHeadroomSnapshots.entrySet()) {
+            PlayableEntity player = playerEntry.getKey();
+            if (player == null || playerEntry.getValue() == null) {
+                continue;
+            }
+            for (var angleEntry : playerEntry.getValue().entrySet()) {
+                entries.add(new ObjectManagerSnapshot.SolidContactHeadroomSnapshotEntry(
+                        player,
+                        angleEntry.getKey(),
+                        angleEntry.getValue()));
+            }
+        }
+        entries.sort(Comparator
+                .comparing((ObjectManagerSnapshot.SolidContactHeadroomSnapshotEntry entry) ->
+                        playerSnapshotKey(entry.player()))
+                .thenComparingInt(ObjectManagerSnapshot.SolidContactHeadroomSnapshotEntry::hexAngle));
+        return List.copyOf(entries);
+    }
+
+    private List<ObjectManagerSnapshot.SolidContactLatchEntry> captureLatchEntries(
+            Map<PlayableEntity, Set<Object>> source) {
+        ArrayList<ObjectManagerSnapshot.SolidContactLatchEntry> entries = new ArrayList<>();
+        for (var entry : source.entrySet()) {
+            PlayableEntity player = entry.getKey();
+            Set<Object> keys = entry.getValue();
+            if (player == null || keys == null || keys.isEmpty()) {
+                continue;
+            }
+            ArrayList<ObjectManagerSnapshot.SolidContactLatchKey> snapshotKeys = new ArrayList<>();
+            for (Object key : keys) {
+                ObjectManagerSnapshot.SolidContactLatchKey snapshotKey = latchKeyForSnapshot(key);
+                if (snapshotKey != null) {
+                    snapshotKeys.add(snapshotKey);
+                }
+            }
+            if (!snapshotKeys.isEmpty()) {
+                snapshotKeys.sort(Comparator.comparing(ObjectSolidContactController::latchKeySnapshotKey));
+                entries.add(new ObjectManagerSnapshot.SolidContactLatchEntry(player, snapshotKeys));
+            }
+        }
+        entries.sort(Comparator.comparing(entry -> playerSnapshotKey(entry.player())));
+        return List.copyOf(entries);
+    }
+
+    private static List<PlayableEntity> sortedPlayers(Collection<PlayableEntity> players) {
+        ArrayList<PlayableEntity> sorted = new ArrayList<>();
+        if (players != null) {
+            for (PlayableEntity player : players) {
+                if (player != null) {
+                    sorted.add(player);
+                }
+            }
+        }
+        sorted.sort(Comparator.comparing(ObjectSolidContactController::playerSnapshotKey));
+        return List.copyOf(sorted);
+    }
+
+    private static String playerSnapshotKey(PlayableEntity player) {
+        if (player == null) {
+            return "";
+        }
+        if (player instanceof Sprite sprite && sprite.getCode() != null) {
+            return sprite.getCode();
+        }
+        return player.getClass().getName();
+    }
+
+    private static String latchKeySnapshotKey(ObjectManagerSnapshot.SolidContactLatchKey key) {
+        if (key == null) {
+            return "";
+        }
+        ObjectSpawn spawn = key.spawn();
+        String spawnKey = spawn == null ? "" : spawn.layoutIndex()
+                + ":" + spawn.objectId()
+                + ":" + spawn.x()
+                + ":" + spawn.y()
+                + ":" + spawn.subtype()
+                + ":" + spawn.renderFlags()
+                + ":" + spawn.rawYWord();
+        return (key.instanceKey() ? "I:" : "S:") + spawnKey + ":" + key.slotIndex();
+    }
+
+    private static ObjectManagerSnapshot.SolidContactLatchKey latchKeyForSnapshot(Object key) {
+        if (key instanceof ObjectSpawn spawn) {
+            return new ObjectManagerSnapshot.SolidContactLatchKey(spawn, -1, false);
+        }
+        if (key instanceof AbstractObjectInstance aoi) {
+            return new ObjectManagerSnapshot.SolidContactLatchKey(
+                    aoi.getSpawn(),
+                    aoi.getSlotIndex(),
+                    true);
+        }
+        if (key instanceof ObjectInstance instance) {
+            return new ObjectManagerSnapshot.SolidContactLatchKey(
+                    instance.getSpawn(),
+                    -1,
+                    true);
+        }
+        return null;
+    }
+
+    void restoreRewindState(ObjectManagerSnapshot.SolidContactState state) {
         ridingStates.clear();
-        latestStandingSnapshots.clear();
+        inlineSupportedPlayers.clear();
         forceAirOnStaleSupportLoss.clear();
+        latestStandingSnapshots.clear();
+        latestHeadroomSnapshots.clear();
+        objectStandingBitSet.clear();
+        objectPushingBitSet.clear();
+        objectStandingBitSnapshot.clear();
+        if (state == null) {
+            frameCounter = 0;
+            return;
+        }
+        frameCounter = state.frameCounter();
+        inlineSupportedPlayers.addAll(state.inlineSupportedPlayers());
+        forceAirOnStaleSupportLoss.addAll(state.forceAirOnStaleSupportLoss());
+        for (var entry : state.standingSnapshots()) {
+            if (entry.player() != null && entry.kind() != null) {
+                latestStandingSnapshots.put(entry.player(), new PlayerStandingState(
+                        entry.kind(),
+                        entry.standing(),
+                        entry.pushing()));
+            }
+        }
+        for (var entry : state.headroomSnapshots()) {
+            if (entry.player() != null) {
+                latestHeadroomSnapshots
+                        .computeIfAbsent(entry.player(), p -> new HashMap<>())
+                        .put(entry.hexAngle() & 0xFF, entry.distance());
+            }
+        }
+        restoreLatchEntries(objectStandingBitSet, state.standingBits());
+        restoreLatchEntries(objectPushingBitSet, state.pushingBits());
+        restoreLatchEntries(objectStandingBitSnapshot, state.standingBitSnapshots());
+
+        List<ObjectManagerSnapshot.SolidContactRidingEntry> entries = state.riding();
         if (entries == null || entries.isEmpty()) {
             return;
         }
@@ -346,6 +509,47 @@ final class ObjectSolidContactController {
                         entry.pieceIndex()));
             }
         }
+    }
+
+    void restoreRewindState(List<ObjectManagerSnapshot.SolidContactRidingEntry> entries) {
+        restoreRewindState(ObjectManagerSnapshot.SolidContactState.fromRiding(entries));
+    }
+
+    private void restoreLatchEntries(Map<PlayableEntity, Set<Object>> target,
+            List<ObjectManagerSnapshot.SolidContactLatchEntry> entries) {
+        if (entries == null) {
+            return;
+        }
+        for (var entry : entries) {
+            PlayableEntity player = entry.player();
+            if (player == null) {
+                continue;
+            }
+            Set<Object> keys = target.computeIfAbsent(player, p -> new HashSet<>());
+            for (var snapshotKey : entry.keys()) {
+                Object restoredKey = restoreLatchKey(snapshotKey);
+                if (restoredKey != null) {
+                    keys.add(restoredKey);
+                }
+            }
+            if (keys.isEmpty()) {
+                target.remove(player);
+            }
+        }
+    }
+
+    private Object restoreLatchKey(ObjectManagerSnapshot.SolidContactLatchKey key) {
+        if (key == null) {
+            return null;
+        }
+        if (!key.instanceKey() && key.spawn() != null) {
+            return key.spawn();
+        }
+        ObjectInstance instance = objectManager.findRestoredRidingObject(key.spawn(), key.slotIndex());
+        if (instance != null) {
+            return airUnseatLatchKeyFor(instance);
+        }
+        return key.spawn();
     }
 
     private void cacheStandingSnapshot(PlayableEntity player, PlayerStandingState snapshot) {

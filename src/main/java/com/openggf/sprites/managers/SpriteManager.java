@@ -17,6 +17,7 @@ import com.openggf.camera.Camera;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.LevelManager;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -1168,7 +1169,11 @@ public class SpriteManager {
 				if (isActiveObjectWithId(current, activeObjects, objectId)) {
 					continue;
 				}
-				playable.setLatchedSolidObject(objectId, nearestActiveObjectWithId(playable, activeObjects, objectId));
+				ObjectInstance restored = activeObjectAtInteractSlot(playable, activeObjects, objectId);
+				if (restored == null) {
+					restored = nearestActiveObjectWithId(playable, activeObjects, objectId);
+				}
+				playable.setLatchedSolidObjectInstance(restored);
 			}
 		}
 	}
@@ -1180,6 +1185,25 @@ public class SpriteManager {
 				&& object.getSpawn() != null
 				&& (object.getSpawn().objectId() & 0xFF) == objectId
 				&& activeObjects.contains(object);
+	}
+
+	private ObjectInstance activeObjectAtInteractSlot(AbstractPlayableSprite playable,
+			Collection<ObjectInstance> activeObjects,
+			int objectId) {
+		int slotIndex = playable.getInteractSlotIndex();
+		if (slotIndex < 0) {
+			return null;
+		}
+		for (ObjectInstance object : activeObjects) {
+			if (!(object instanceof AbstractObjectInstance aoi)
+					|| aoi.getSlotIndex() != slotIndex
+					|| object.getSpawn() == null
+					|| (object.getSpawn().objectId() & 0xFF) != objectId) {
+				continue;
+			}
+			return object;
+		}
+		return null;
 	}
 
 	private ObjectInstance nearestActiveObjectWithId(AbstractPlayableSprite playable,

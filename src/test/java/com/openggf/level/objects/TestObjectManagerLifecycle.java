@@ -96,27 +96,31 @@ public class TestObjectManagerLifecycle {
     }
 
     @Test
-    public void execThenLoadPlacementExecutesDeferredVerticallyEligibleSpawnSameFrame() {
+    public void s2ExecThenLoadBypassesVerticalFilterWithoutPreExecLoad() {
         Camera camera = GameServices.camera();
         camera.setMinY((short) 0);
         camera.setY((short) 0);
 
-        ObjectSpawn deferredSpawn = new ObjectSpawn(0x0200, 0x0280, 0x03, 0, 0, false, 0x0280);
+        ObjectSpawn highYSpawn = new ObjectSpawn(0x0200, 0x0700, 0x03, 0, 0, false, 0x0700);
         TrackingRegistry registry = new TrackingRegistry();
-        ObjectManager manager = new ObjectManager(List.of(deferredSpawn), registry, 0, null, null);
+        ObjectManager manager = new ObjectManager(List.of(highYSpawn), registry, 0, null, null);
         manager.enableExecThenLoadPlacement();
 
         manager.reset(0);
         assertEquals(0, registry.createCount,
-                "Spawn should be horizontally active but skipped while outside the vertical load window");
+                "Reset materialization must not pull high-Y S2 spawns ahead of the runtime ObjPosLoad pass");
 
-        camera.setY((short) 0x0080);
         manager.update(0, null, null, 1);
 
         assertEquals(1, registry.createCount,
-                "A previously active spawn should materialize once it enters the vertical load window");
-        assertEquals(1, registry.instances.get(deferredSpawn).updateCount,
-                "Deferred active spawns should execute in the same S2/S3K ExecuteObjects pass");
+                "S2 ChkLoadObj has no Camera_Y_pos filter during the single post-exec load");
+        assertEquals(0, registry.instances.get(highYSpawn).updateCount,
+                "S2's single post-exec load must not execute the newly loaded object until next frame");
+
+        manager.update(0, null, null, 2);
+
+        assertEquals(1, registry.instances.get(highYSpawn).updateCount,
+                "The high-Y spawn first executes on the frame after ObjPosLoad created it");
     }
 
     private static final class TestRegistry implements ObjectRegistry {

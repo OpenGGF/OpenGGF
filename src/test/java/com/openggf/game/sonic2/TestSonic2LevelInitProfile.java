@@ -54,8 +54,10 @@ public class TestSonic2LevelInitProfile {
     public void perTestResetOmitsAudioLevelManagerAndGraphics() {
         List<InitStep> steps = profile.perTestResetSteps();
 
-        // Per-test reset: 11 operations (no audio, no level manager, no graphics)
-        assertEquals(11, steps.size());
+        // Per-test reset: 12 operations (no audio, no level manager, no graphics).
+        // ResetWater is followed by ReloadWater because per-test reset reuses
+        // the loaded Level rather than running the full InitWater load step.
+        assertEquals(12, steps.size());
 
         assertEquals("ResetS2LevelEvents", steps.get(0).name());
         assertEquals("ResetCrossGameFeatures", steps.get(1).name());
@@ -67,7 +69,8 @@ public class TestSonic2LevelInitProfile {
         assertEquals("ResetGameState", steps.get(7).name());
         assertEquals("ResetTimers", steps.get(8).name());
         assertEquals("ResetWater", steps.get(9).name());
-        assertEquals("ResetDebugOverlay", steps.get(10).name());
+        assertEquals("ReloadWater", steps.get(10).name());
+        assertEquals("ResetDebugOverlay", steps.get(11).name());
     }
 
     @Test

@@ -149,17 +149,23 @@ public class TestDEZMechaSonic {
         java.lang.reflect.Field frameField =
                 Sonic2MechaSonicInstance.class.getDeclaredField("currentFrame");
         frameField.setAccessible(true);
+        java.lang.reflect.Field collisionFrameField =
+                Sonic2MechaSonicInstance.class.getDeclaredField("collisionFrame");
+        collisionFrameField.setAccessible(true);
 
         // Test FRAME_BALL_A (6)
         frameField.setInt(boss, 6);
+        collisionFrameField.setInt(boss, 6);
         assertEquals(COLLISION_BALL, boss.getCollisionFlags(), "Ball frame 6 collision should be $9A");
 
         // Test FRAME_BALL_B (7)
         frameField.setInt(boss, 7);
+        collisionFrameField.setInt(boss, 7);
         assertEquals(COLLISION_BALL, boss.getCollisionFlags(), "Ball frame 7 collision should be $9A");
 
         // Test FRAME_BALL_C (8)
         frameField.setInt(boss, 8);
+        collisionFrameField.setInt(boss, 8);
         assertEquals(COLLISION_BALL, boss.getCollisionFlags(), "Ball frame 8 collision should be $9A");
     }
 

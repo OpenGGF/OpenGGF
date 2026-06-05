@@ -2827,6 +2827,9 @@ public class ObjectManager {
         // gives the child a HIGHER slot (matching ROM's FindNextFreeObj).
         for (ObjectSpawn spawn : sortedNewSpawns) {
             if (!isSpawnVerticallyEligibleForLoad(spawn, allowVerticalLoadBypassForS2)) {
+                if (slotLayout.twoAxisCursorPlacement()) {
+                    placement.markDeferredVerticalLoad(spawn);
+                }
                 continue;
             }
             // Pre-allocate parent slot — consumed by AbstractObjectInstance's
@@ -2884,7 +2887,9 @@ public class ObjectManager {
             return false;
         }
         if (!isSpawnVerticallyEligibleForLoad(spawn, allowVerticalLoadBypassForS2)) {
-            placement.markDeferredVerticalLoad(spawn);
+            if (slotLayout.twoAxisCursorPlacement()) {
+                placement.markDeferredVerticalLoad(spawn);
+            }
             return false;
         }
         // Pre-allocate parent slot — consumed by AbstractObjectInstance's
@@ -3236,6 +3241,8 @@ public class ObjectManager {
                 }
 
                 long[] bits = captureOwnedUsedSlotBits();
+                com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SolidContactState solidContactState =
+                        solidContacts.captureRewindState();
 
                 return new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot(
                         bits,
@@ -3248,7 +3255,8 @@ public class ObjectManager {
                         List.copyOf(childSpawns),
                         List.copyOf(dynamicEntries),
                         placement.captureRewindState(twoAxisCameraYCoarse),
-                        solidContacts.captureRewindState(),
+                        solidContactState.riding(),
+                        solidContactState,
                         planeSwitchers != null
                                 ? planeSwitchers.captureRewindState()
                                 : com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherSnapshot.empty(),
@@ -3326,7 +3334,7 @@ public class ObjectManager {
                     twoAxisCameraYCoarse = placement.restoreRewindState(s.placement());
                 }
 
-                solidContacts.restoreRewindState(s.solidContactRiding());
+                solidContacts.restoreRewindState(s.solidContactState());
                 if (planeSwitchers != null) {
                     planeSwitchers.restoreRewindState(s.planeSwitchers());
                 }

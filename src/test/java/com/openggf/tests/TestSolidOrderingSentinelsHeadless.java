@@ -146,7 +146,10 @@ class TestSolidOrderingSentinelsHeadless {
         localPlayer.setCentreX((short) 0x0180);
         localFixture.stepFrame(false, false, false, false, false);
 
-        assertEquals(0, (int) getField(flipper, "playerFlipperState"),
+        @SuppressWarnings("unchecked")
+        java.util.IdentityHashMap<AbstractPlayableSprite, Integer> flipperState =
+                (java.util.IdentityHashMap<AbstractPlayableSprite, Integer>) getField(flipper, "playerFlipperState");
+        assertEquals(0, flipperState.getOrDefault(localPlayer, 0),
                 "Vertical flipper should clear same-frame standing state on an explicit no-contact result");
         assertFalse(localPlayer.isControlLocked(),
                 "Vertical flipper should clear the control lock on the same no-contact frame");

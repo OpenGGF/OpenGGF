@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.events;
 
-import com.openggf.game.GameServices;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
@@ -62,10 +61,10 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
 
     @Override
     public void update(int act, int frameCounter) {
-        if (act != 0 || !GameServices.hasRuntime()) {
+        if (act != 0 || !hasRuntime()) {
             return;
         }
-        LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(GameServices.zoneRuntimeRegistry()).orElse(null);
+        LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(zoneRuntimeRegistry()).orElse(null);
         AbstractPlayableSprite player = camera().getFocusedSprite();
         if (state == null || player == null) {
             return;
@@ -101,10 +100,10 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
      * has been cleared.
      */
     public void disableInteriorLayoutMod3() {
-        if (!GameServices.hasRuntime()) {
+        if (!hasRuntime()) {
             return;
         }
-        S3kRuntimeStates.currentLbz(GameServices.zoneRuntimeRegistry())
+        S3kRuntimeStates.currentLbz(zoneRuntimeRegistry())
                 .ifPresent(state -> state.setInteriorLayoutMod3Disabled(true));
     }
 

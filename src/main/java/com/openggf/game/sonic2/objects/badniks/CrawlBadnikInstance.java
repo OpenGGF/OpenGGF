@@ -9,6 +9,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -230,8 +231,9 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
     private AbstractPlayableSprite closestCharacter(AbstractPlayableSprite main) {
         AbstractPlayableSprite closest = main;
         int bestDist = main != null ? Math.abs(main.getCentreX() - currentX) : Integer.MAX_VALUE;
-        for (PlayableEntity entity : services().sidekicks()) {
-            if (!(entity instanceof AbstractPlayableSprite sidekick)) {
+        for (PlayableEntity entity :
+                services().playerQuery().playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (entity == main || !(entity instanceof AbstractPlayableSprite sidekick)) {
                 continue;
             }
             int dist = Math.abs(sidekick.getCentreX() - currentX);

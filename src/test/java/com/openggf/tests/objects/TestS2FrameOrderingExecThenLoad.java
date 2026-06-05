@@ -42,6 +42,8 @@ public class TestS2FrameOrderingExecThenLoad {
 
     /** Object x positions sit well inside the load window for cam=0 (window end >= 0x280). */
     private static final int IN_WINDOW_X = 200;
+    /** Outside the normal non-S2 vertical load band for camera Y=0. */
+    private static final int HIGH_Y_OUTSIDE_VERTICAL_BAND = 0x0700;
     private static final int PRESEEDED_ID = 0x40;
     private static final int WINDOWED_ID = 0x41;
 
@@ -66,8 +68,11 @@ public class TestS2FrameOrderingExecThenLoad {
             }
         };
         // One windowed spawn whose creation is the engine's single per-frame load.
+        // S2 ChkLoadObj has no Camera_Y_pos gate, so the high Y must not defer
+        // this spawn into a later/pre-exec load path.
         ObjectSpawn windowedSpawn =
-                new ObjectSpawn(IN_WINDOW_X, 0, WINDOWED_ID, 0, 0, false, 0);
+                new ObjectSpawn(IN_WINDOW_X, HIGH_Y_OUTSIDE_VERTICAL_BAND,
+                        WINDOWED_ID, 0, 0, false, HIGH_Y_OUTSIDE_VERTICAL_BAND);
         objectManager = new ObjectManager(List.of(windowedSpawn), new RecordingS2Registry(),
                 0, null, null, null, GameServices.camera(), objectServices);
         // Put the placement in S2's exec-then-load mode (LevelManager calls this

@@ -18,6 +18,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.PerObjectRewindSnapshot.SidekickCpuRewindExtra;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.Direction;
+import com.openggf.physics.FrameCollisionPlan;
 import com.openggf.sprites.managers.SpriteManager;
 
 /**
@@ -2496,7 +2497,7 @@ public class SidekickCpuController {
                 leader.currentCollisionSystem(),
                 "CollisionSystem must be available during CARRYING state "
                         + "(Tails-carry post-parentage probe, sonic3k.asm:27330)");
-        collision.resolveAirCollision(leader, sprite -> {
+        collision.resolveAirCollision(FrameCollisionPlan.terrainOnly(), leader, sprite -> {
             // ROM Player_TouchFloor (sonic3k.asm:24366-24369):
             //   bclr #Status_InAir,status(a0)
             //   bclr #Status_Push,status(a0)
