@@ -8572,3 +8572,28 @@ First-divergence frontiers (correct zones, command: cmd //c mvn.cmd ... forkCoun
   ghz2 f615 y_speed | slz1 f723 x_speed | mz2 f1010 x_speed | mz1 f1260 rolling | ghz1 f1390 x_speed |
   mz3 f1702 y | fz (Final Zone, needs FZ-specific handling).
 These are the new S1 object-physics frontier targets (badnik hurts, monitor landings, rolling/x_speed gaps).
+## 2026-06-05 — s2 dez1 (DEZ Death Egg Robot): back-forearm punch one-shot fix
+
+Worktree .worktrees/trace-s2-dez1, branch bugfix/ai-trace-s2-dez1, forkCount=1, s2.gen.
+Command: `mvn -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=...s2.gen" "-Dtest=TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace" test`
+
+- BEFORE: 128 errors, first error frame 3580 (rolling, expected=1 actual=0). Spurious player
+  DEATH: the ObjC7 back-forearm punch was a sticky boolean latched true across the whole attack-4
+  prev_anim-6 phase, so the back forearm consumed the trigger TWICE and ran a second 256px punch
+  cycle that lunged west (currentX 0x804) into the ring-less rolling player's hurtbox at f3580,
+  routing to Touch_ChkHurt -> KillCharacter (ROM forearm s27 X is steady at 0x081A in that window;
+  no HURT contact).
+- FIX (Sonic2DeathEggRobotInstance.java, attack-4 prev_anim state machine): model ROM loc_3D89E
+  exactly. prev_anim 4 (loc_3D6C0, s2.asm:82647) advances 4->6 WITHOUT resetting anim_frame_duration,
+  so loc_3D89E (s2.asm:82848-82857) underflows on the first frame of prev_anim 6 and `bset p1_pushing`
+  fires the back punch ONCE at the 4->6 boundary, then resets the $40 timer for prev_anim 8.
+  Implemented as a one-shot edge consumed by the back forearm's test-and-clear (bclr, loc_3DD00,
+  s2.asm:83372), and added the missing prev_anim-8 $40 idle (loc_3D6C0) before the prev_anim-$A
+  walk-back. No more double-consume / lingering punch.
+- AFTER: 127 errors, first error frame 4007 (y_speed, expected=0x0140 actual=-0140). Death is gone;
+  frontier advanced 3580 -> 4007 (+427). New blocker is a DISTINCT jet-stomp timing-precision drift:
+  at f4007 the ROM body bounces the spinball (Touch_Enemy multi_sprite neg x_vel/neg y_vel) at
+  @07F0,013E; the engine body is now correctly near ground (@07F5,0144) but ~5px east / ~6px south
+  due to accumulated jet-stomp landing/walk-back timing drift, so the spinball overlap just misses
+  (scan ov=0). FOLLOW-UP: audit ObjC7 jet-stomp (attack 2) phase durations / sensor-wait / descent /
+  stand-up walk-cycle step counts against the ROM to close the residual offset.

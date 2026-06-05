@@ -55,6 +55,24 @@ All notable changes to the OpenGGF project are documented in this file.
   capture already aligns, so the skip is gated to the non-diagonal subtype.
   Advances the s2 cnz2 level-select trace frontier (first-error frame 4294 ->
   4295; 939 -> 840 errors).
+- **DEZ Death Egg Robot stomp-bombs back-punch is now a ROM one-shot edge, not a
+  sticky latch:** The attack-4 (`loc_3D83C`, `off_3D84A`) prev_anim state machine
+  in `Sonic2DeathEggRobotInstance` modelled the back-punch trigger as a boolean
+  latched true across the whole prev_anim-6 phase, so the back forearm
+  (`ObjC7_BackForearm`) consumed `p1_pushing` twice and ran a second 256px punch
+  cycle that lunged west into the ring-less rolling player and spuriously killed
+  them. The ROM fires the back punch ONCE: prev_anim 4 maps to `loc_3D6C0`
+  (`docs/s2disasm/s2.asm:82647`) which advances 4->6 WITHOUT resetting
+  `anim_frame_duration`, so prev_anim 6's `loc_3D89E`
+  (`docs/s2disasm/s2.asm:82848-82857`) underflows on the very first frame and
+  `bset #p1_pushing` fires at the 4->6 boundary, then resets the $40 timer for
+  prev_anim 8. The back forearm consumes the signal via a test-and-clear
+  (`bclr #p1_pushing`, `loc_3DD00`, `docs/s2disasm/s2.asm:83371-83373`), so it
+  never re-fires. Implemented as a one-shot edge plus the missing prev_anim-8
+  $40 idle before the prev_anim-$A walk-back. Advances the s2 dez1 ending
+  level-select trace frontier (first-error frame 3580 -> 4007; spurious player
+  death removed).
+
 - **OOZ Aquis (Obj50) on-screen activation and follow-timer now ROM-accurate:**
   `Obj50_CheckIfOnScreen` tests `render_flags.on_screen`
   (`docs/s2disasm/s2.asm:60607-60614`), which the engine models with the

@@ -859,27 +859,43 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
                     }
                 }
             }
-            case 4 -> { // Front punch pause ($40 frames), then advance to back punch phase
+            case 4 -> { // prev_anim 4 idle pause ($40 frames) — ROM loc_3D6C0
+                // ROM: prev_anim 4 just counts anim_frame_duration down, then
+                // advances prev_anim 4->6. No punch signal here.
                 actionTimer--;
                 if (actionTimer < 0) {
-                    // ROM: Advance prev_anim to 6. On the NEXT frame, loc_3D89E
-                    // runs and sets the back punch signal. 1-frame gap.
                     attackPhase = 6;
                     actionTimer = 0x40;
                 }
             }
-            case 6 -> { // Back punch display ($40 frames), then walk backward
-                // ROM: loc_3D89E — back punch signal fires on first frame of this phase
-                if (!backPunchTriggered) {
-                    backPunchTriggered = true;
-                }
+            case 6 -> { // prev_anim 6 — ROM loc_3D89E (s2.asm:82848-82857)
+                // ROM loc_3D89E: subq.b #1,anim_frame_duration; bmi.s + ; rts
+                //   On underflow: addq.b #2,prev_anim (6->8);
+                //                 bset #p1_pushing,status(a0) (BACK punch signal, ONCE);
+                //                 move.b #$40,anim_frame_duration.
+                // CRITICAL: prev_anim 4 (loc_3D6C0, s2.asm:82647) advances 4->6 WITHOUT
+                // resetting anim_frame_duration, so it enters prev_anim 6 already at -1.
+                // loc_3D89E's subq therefore underflows on the VERY FIRST frame of
+                // prev_anim 6, firing p1_pushing immediately (the 4->6 boundary) and
+                // resetting the $40 timer for prev_anim 8. So the back punch is a
+                // one-shot fired at the START of phase 6, NOT after a countdown.
+                // The back forearm consumes p1_pushing via test-and-clear (bclr,
+                // loc_3DD00, s2.asm:83372), so the one-shot never re-fires even if the
+                // forearm's own punch outlasts this phase.
+                backPunchTriggered = true; // one-shot edge, consumed by back forearm
+                attackPhase = 8;
+                actionTimer = 0x40;
+            }
+            case 8 -> { // prev_anim 8 idle pause ($40 frames) — ROM loc_3D6C0
+                // ROM: after p1_pushing fires (6->8), prev_anim 8 idles $40 frames
+                // before prev_anim $A walks backward. No punch signal here.
                 actionTimer--;
                 if (actionTimer < 0) {
-                    attackPhase = 8;
+                    attackPhase = 14;
                     resetGroupAnim();
                 }
             }
-            case 8 -> { // Walk backward (ROM: off_3E300 half-step backward)
+            case 14 -> { // prev_anim $A walk backward — ROM loc_3D8B8 (off_3E300)
                 if (stepGroupAnimation(SCRIPT_HALF_WALK_BWD)) {
                     bodyRoutine = BODY_SELECT_ATTACK;
                 }
