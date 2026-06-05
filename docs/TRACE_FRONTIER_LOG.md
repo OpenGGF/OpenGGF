@@ -33,6 +33,35 @@
 - Same-game regression guard (single-fork): EHZ1, SCZ, WFZ all GREEN (tests=1 failures=0 errors=0 each).
   No same-game green regressed. (`TestS2ArzLevelSelectTraceReplay`, the act-1 sibling, was already
   failing pre-fix at frame 2043 on an unrelated `tails_y_speed` Tails-CPU divergence and is unchanged.)
+## 2026-06-05 - cnz2 f2172->f2880: Sonic_Balance terrain edge-balance gated on CENTER floor distance >= $C
+
+- Branch `bugfix/ai-trace-s2-cnz2`, worktree `.worktrees/trace-s2-cnz2`.
+- Command (worktree, cmd mvn.cmd, forkCount=1):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** ADVANCED, genuine, zero same-game regressions.
+- **cnz2: f2172 -> f2880** (1271 -> 1066 errors). Verified A/B: HEAD baseline (fix file checked out
+  to HEAD, recompiled) first-diverges at f2172 `y_speed` expected=0x0000 actual=-0680 (jump=true: Sonic
+  jumped instead of charging a spindash); with the fix it first-diverges at **f2880**
+  `y mismatch (expected=0x03EC, actual=0x03DC)` — a downstream main-player `y` divergence, distinct from
+  the spindash/balance subsystem.
+- **Root cause:** `PlayableSpriteMovement.checkTerrainEdgeBalance()` S2/S3K (extendedEdgeBalance) branch
+  entered an edge-balance state whenever ONE of the ±9 side ground sensors ran off a solid edge while the
+  CENTER still had ground. ROM `Sonic_Balance` (docs/s2disasm/s2.asm:36647-36660) FIRST does
+  `jsr (ChkFloorEdge) / cmpi.w #$C,d1 / blt.w Sonic_Lookup` — a single CENTER-X probe (`ChkFloorEdge`
+  sets `d3 = x_pos(a0)`, s2.asm:44092-44093) — and only balances when the center floor distance >= $C;
+  otherwise it falls through to Sonic_Lookup/Sonic_Duck. The spurious balance set `isBalancing()`, which
+  blocks `updateCrouchState()` (PlayableSpriteMovement.java:3097 requires `!sprite.isBalancing()`), so the
+  Duck crouch animation never started; `Sonic_CheckSpindash` requires `anim == Duck`
+  (s2.asm:37548-37551), so a held Down+B fired a normal jump (the f2172 `y_speed=-0680` jump) instead of
+  charging a spin-dash. CNZ2 Sonic was standing on the left lip of a wide invisible solid block (Obj74).
+- **Fix:** add the same CENTER-floor `>= $C` gate the S1 (!extended) branch already applies — probe at
+  center (`groundSensors[0].scan(+9, 0)`) and early-return (no balance) when `centerDist < $C`, mirroring
+  ROM `cmpi.w #$C,d1 / blt Sonic_Lookup`. Inside the existing `extendedEdgeBalance()` PhysicsFeatureSet
+  branch (S2/S3K); not a gameId/zone/route/frame carve-out, no tolerance band, comparison-only.
+  File: `src/main/java/com/openggf/sprites/managers/PlayableSpriteMovement.java`.
+- **Same-game regression guard** (single-fork, separate run):
+  `mvn.cmd ... "-Dtest=TestS2Ehz1TraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`
+  — EHZ1 green, SCZ green, WFZ green. Zero same-game regressions.
 
 ## 2026-06-05 - wfz GREEN restored (was dez1-introduced f12886 regression); dez1 held at f2194
 
