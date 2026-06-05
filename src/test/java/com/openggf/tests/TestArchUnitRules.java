@@ -90,7 +90,7 @@ class TestArchUnitRules {
     private static final String SPECIAL_RENDER_EFFECT_REGISTRY = SpecialRenderEffectRegistry.class.getName();
     private static final String ADVANCED_RENDER_MODE_CONTROLLER = AdvancedRenderModeController.class.getName();
     private static final String REWIND_REGISTRY = RewindRegistry.class.getName();
-    private static final java.util.Set<String> CURRENT_TOP_LEVEL_CYCLE_SLICES = java.util.Set.of(
+    private static final java.util.Set<String> CORE_RUNTIME_CYCLE_CLUSTER_SLICES = java.util.Set.of(
             "audio",
             "camera",
             "control",
@@ -155,8 +155,8 @@ class TestArchUnitRules {
         };
     }
 
-    private static DescribedPredicate<JavaClass> inCurrentTopLevelCycleSlice() {
-        return new DescribedPredicate<>("in current top-level cycle baseline slices") {
+    private static DescribedPredicate<JavaClass> inCoreRuntimeCycleCluster() {
+        return new DescribedPredicate<>("cycle:core-runtime top-level slices") {
             @Override
             public boolean test(JavaClass input) {
                 String packageName = input.getPackageName();
@@ -167,7 +167,7 @@ class TestArchUnitRules {
                 String remainder = packageName.substring(prefix.length());
                 int dot = remainder.indexOf('.');
                 String topLevel = dot >= 0 ? remainder.substring(0, dot) : remainder;
-                return CURRENT_TOP_LEVEL_CYCLE_SLICES.contains(topLevel);
+                return CORE_RUNTIME_CYCLE_CLUSTER_SLICES.contains(topLevel);
             }
         };
     }
@@ -250,9 +250,9 @@ class TestArchUnitRules {
     static final ArchRule package_slices_are_free_of_cycles =
             FreezingArchRule.freeze(slices().matching("com.openggf.(*)..")
                             .should().beFreeOfCycles()
-                            .ignoreDependency(inCurrentTopLevelCycleSlice(), inCurrentTopLevelCycleSlice())
+                            .ignoreDependency(inCoreRuntimeCycleCluster(), inCoreRuntimeCycleCluster())
                             .as("top-level com.openggf package slices should be free of cycles"))
-                    .because("package cycles make ownership boundaries and migration work hard to reason about; current baseline ignores 16 existing top-level slices so newly introduced slices cannot join cycles");
+                    .because("package cycles make ownership boundaries and migration work hard to reason about; cycle:core-runtime freezes 16 existing top-level slices so new slices cannot join cycles");
 
     @ArchTest
     static final ArchRule low_level_layers_do_not_depend_on_runtime_layers =

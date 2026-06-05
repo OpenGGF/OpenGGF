@@ -2,10 +2,11 @@ package com.openggf.tests;
 
 import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -16,6 +17,12 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import static org.junit.jupiter.api.Assertions.fail;
 
 class TestBuildToolingGuard {
+
+    private static final List<String> TRACE_REPLAY_DIAGNOSTIC_EXCLUDES = List.of(
+            "**/Debug*.java",
+            "**/*Debug*.java",
+            "**/*Probe.java",
+            "**/*Probe*.java");
 
     @Test
     void surefireShouldPreloadMockitoAsJavaAgent() throws Exception {
@@ -75,6 +82,55 @@ class TestBuildToolingGuard {
         }
     }
 
+    @Test
+    void traceReplayProfileShouldExcludeDiagnosticTraceProbes() throws Exception {
+        String file = "pom.xml";
+        Document pom = parsePom(file);
+        Element profile = profileById(pom, "trace-replay");
+        List<String> violations = new ArrayList<>();
+
+        if (profile == null) {
+            violations.add(file + " does not define the trace-replay profile");
+        } else {
+            List<String> excludes = textValues(profile, "exclude");
+            for (String diagnosticExclude : TRACE_REPLAY_DIAGNOSTIC_EXCLUDES) {
+                if (!excludes.contains(diagnosticExclude)) {
+                    violations.add(file + " trace-replay profile does not exclude " + diagnosticExclude);
+                }
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            fail("trace-replay should not select diagnostic Debug*/Probe tests by default:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void traceReplayProfileShouldNotUseBroadTraceIncludeWithoutDiagnosticExcludes() throws Exception {
+        String file = "pom.xml";
+        Document pom = parsePom(file);
+        Element profile = profileById(pom, "trace-replay");
+        List<String> violations = new ArrayList<>();
+
+        if (profile == null) {
+            violations.add(file + " does not define the trace-replay profile");
+        } else {
+            List<String> includes = textValues(profile, "include");
+            List<String> excludes = textValues(profile, "exclude");
+            boolean hasBroadTraceInclude = includes.contains("**/tests/trace/**/*.java");
+            boolean hasAllDiagnosticExcludes = excludes.containsAll(TRACE_REPLAY_DIAGNOSTIC_EXCLUDES);
+            if (hasBroadTraceInclude && !hasAllDiagnosticExcludes) {
+                violations.add(file + " trace-replay profile uses the broad trace include without diagnostic excludes");
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            fail("trace-replay broad includes must be paired with diagnostic test excludes:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
     private static Document parsePom(String file) throws Exception {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         factory.setNamespaceAware(false);
@@ -98,5 +154,36 @@ class TestBuildToolingGuard {
             }
         }
         return false;
+    }
+
+    private static Element profileById(Document pom, String id) {
+        NodeList profiles = pom.getElementsByTagName("profile");
+        for (int i = 0; i < profiles.getLength(); i++) {
+            Element profile = (Element) profiles.item(i);
+            if (id.equals(directChildText(profile, "id"))) {
+                return profile;
+            }
+        }
+        return null;
+    }
+
+    private static List<String> textValues(Element root, String tagName) {
+        NodeList nodes = root.getElementsByTagName(tagName);
+        List<String> values = new ArrayList<>();
+        for (int i = 0; i < nodes.getLength(); i++) {
+            values.add(nodes.item(i).getTextContent().trim());
+        }
+        return values;
+    }
+
+    private static String directChildText(Element root, String tagName) {
+        NodeList children = root.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node child = children.item(i);
+            if (child instanceof Element element && tagName.equals(element.getTagName())) {
+                return element.getTextContent().trim();
+            }
+        }
+        return null;
     }
 }

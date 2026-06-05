@@ -6,7 +6,16 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.io.StringReader;
+import java.util.LinkedHashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -26,6 +35,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestArchitecturalReviewGuard {
 
     private static final Path PROJECT_ROOT = resolveProjectRoot();
+    private static final Pattern DOCUMENTED_BASELINE_COUNT = Pattern.compile(
+            "^- `([^`]+)`: (\\d+)\\s*$", Pattern.MULTILINE);
+    private static final Pattern STORED_RULE_BASELINE_COUNT = Pattern.compile(
+            "frozen baseline: (\\d+) violations?");
+    private static final Pattern DOCUMENTED_CYCLE_CLUSTER = Pattern.compile("`cycle:([a-z0-9_-]+)`");
+    private static final Map<String, String> DOCUMENTED_FROZEN_RULE_DESCRIPTIONS = Map.of(
+            "low_level_layers_do_not_depend_on_runtime_layers",
+            "audio, graphics, and data layers should not depend on runtime gameplay layers",
+            "shared_layers_do_not_depend_on_game_specific_packages",
+            "shared level and game layers should not depend on game-specific packages",
+            "per_game_packages_do_not_cross_depend",
+            "per-game packages should not cross-depend");
 
     private static Path resolveProjectRoot() {
         String basedir = System.getProperty("project.basedir");
@@ -56,6 +77,37 @@ class TestArchitecturalReviewGuard {
     }
 
     @Test
+    void archUnitPublishedBaselineCountsMatchFrozenStore() throws IOException {
+        Map<String, Integer> documentedCounts = documentedBaselineCounts();
+        Map<String, Integer> frozenCounts = frozenBaselineCounts();
+
+        assertEquals(frozenCounts, documentedCounts,
+                "docs/architecture/archunit-exceptions.md published baseline counts must match stored.rules");
+    }
+
+    @Test
+    void archUnitCycleClusterDocumentationHasMatchingRatchets() throws IOException {
+        String docs = readSource("docs/architecture/archunit-exceptions.md");
+        String archUnitRules = readSource("src/test/java/com/openggf/tests/TestArchUnitRules.java");
+        String storedRules = readSource("src/test/resources/archunit/frozen/stored.rules");
+        Set<String> documentedClusters = documentedCycleClusters(docs);
+
+        assertTrue(docs.contains("`package_slices_are_free_of_cycles`: 1 frozen top-level package cycle cluster"),
+                "Cycle ratchet docs should publish the current cluster count");
+        assertTrue(docs.contains("`cycle:core-runtime`"),
+                "Cycle ratchet docs should name the current core runtime cluster");
+        assertFalse(archUnitRules.contains("CURRENT_TOP_LEVEL_CYCLE_SLICES"),
+                "Package cycle ratchets should not use a broad current-slice allowlist");
+        assertFalse(archUnitRules.contains("inCurrentTopLevelCycleSlice"),
+                "Package cycle ratchets should use named frozen clusters, not a broad current-slice helper");
+
+        for (String cluster : documentedClusters) {
+            assertTrue(archUnitRules.contains(cluster) || storedRules.contains(cluster),
+                    "Documented package cycle cluster needs a matching ArchUnit ratchet: " + cluster);
+        }
+    }
+
+    @Test
     void traceReplayQuarantineIsExplicitAndNotGameSpecific() throws IOException {
         String pom = readSource("pom.xml");
 
@@ -70,4 +122,52 @@ class TestArchitecturalReviewGuard {
         assertFalse(pom.contains("**/trace/s1/TestS1*TraceReplay.java"));
     }
 
+    private static Map<String, Integer> documentedBaselineCounts() throws IOException {
+        String docs = readSource("docs/architecture/archunit-exceptions.md");
+        Matcher matcher = DOCUMENTED_BASELINE_COUNT.matcher(docs);
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        while (matcher.find()) {
+            String ruleName = matcher.group(1);
+            if (DOCUMENTED_FROZEN_RULE_DESCRIPTIONS.containsKey(ruleName)) {
+                counts.put(ruleName, Integer.parseInt(matcher.group(2)));
+            }
+        }
+        return counts;
+    }
+
+    private static Map<String, Integer> frozenBaselineCounts() throws IOException {
+        Properties storedRules = new Properties();
+        storedRules.load(new StringReader(readSource("src/test/resources/archunit/frozen/stored.rules")));
+
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (Map.Entry<String, String> documentedRule : DOCUMENTED_FROZEN_RULE_DESCRIPTIONS.entrySet()) {
+            String ruleName = documentedRule.getKey();
+            String ruleDescription = documentedRule.getValue();
+            counts.put(ruleName, storedBaselineCount(storedRules, ruleDescription));
+        }
+        return counts;
+    }
+
+    private static int storedBaselineCount(Properties storedRules, String ruleDescription) {
+        for (Object keyObject : storedRules.keySet()) {
+            String storedRule = keyObject.toString();
+            if (!storedRule.startsWith(ruleDescription)) {
+                continue;
+            }
+            Matcher matcher = STORED_RULE_BASELINE_COUNT.matcher(storedRule);
+            if (matcher.find()) {
+                return Integer.parseInt(matcher.group(1));
+            }
+        }
+        throw new AssertionError("No frozen baseline count found for stored rule: " + ruleDescription);
+    }
+
+    private static Set<String> documentedCycleClusters(String docs) {
+        Matcher matcher = DOCUMENTED_CYCLE_CLUSTER.matcher(docs);
+        Set<String> clusters = new HashSet<>();
+        while (matcher.find()) {
+            clusters.add(matcher.group(1));
+        }
+        return clusters;
+    }
 }
