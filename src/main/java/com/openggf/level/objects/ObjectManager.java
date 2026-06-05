@@ -67,8 +67,7 @@ public class ObjectManager {
     private static final int ANIM_SPINDASH = 0x09;
     /**
      * ROM Touch_ChkValue lost-ring re-collection gate (s2.asm:85196-85219): a spilled ring
-     * is only collected when {@code invulnerable_time < 90}. Mirrors the legacy
-     * {@code RingManager.LOST_RING_RECOLLECTION_INVULNERABLE_THRESHOLD}.
+     * is only collected when {@code invulnerable_time < 90}.
      */
     private static final int LOST_RING_INVULNERABLE_THRESHOLD = 90;
     private static final String S2_BUZZER_FLAME_CHILD_CLASS =
@@ -5449,10 +5448,10 @@ public class ObjectManager {
                 // drops below 90 while the player is still continuously overlapping.
                 // Keyed on the LostRingObjectInstance marker, NOT the 0x47 byte shape —
                 // so other SPECIAL objects sharing $47 (e.g. S1 placed rings) keep their
-                // own listener path. Ring crediting matches the legacy
-                // LostRingPool.checkCollection gate (RingManager.java:1313-1343): only the
-                // main character collects/credits (sidekick Tails does not pick up rings);
-                // BOTH players still break the loop (ROM rts on the first overlap).
+                // own listener path. Crediting gate (ROM Touch_ChkValue): only the main
+                // character collects/credits (sidekick Tails does not pick up rings);
+                // BOTH players still break the loop (ROM rts on the first overlap). This is
+                // now the sole lost-ring collection path — the legacy RingManager scan is gone.
                 if (instance instanceof LostRingObjectInstance lostRing && lostRing.isLostRingCollectible()) {
                     if (!isSidekick && player instanceof AbstractPlayableSprite aps) {
                         int invuln = aps.getInvulnerableFrames(); // AbstractPlayableSprite.java:2117

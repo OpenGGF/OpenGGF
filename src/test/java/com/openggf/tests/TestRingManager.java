@@ -152,52 +152,17 @@ public class TestRingManager {
     }
 
     @Test
-    public void testCpuSidekickObjectControlledRecoveryCannotCollectLostRings() throws Exception {
-        RingManager ringManager = buildRingManager(List.of());
-        TestPlayableSprite tails = new TestPlayableSprite((short) 0x03B7, (short) 0x025A);
-        tails.setCpuControlled(true);
-        tails.setObjectControlled(true);
-        tails.setControlLocked(true);
-        tails.setInvulnerableFrames(0);
-
-        configureSingleLostRing(ringManager, 0x03AE, 0x0261);
-        ringManager.checkLostRingCollection(tails);
-
-        assertEquals(0, tails.getRingCount(),
-                "CPU Tails recovery flight keeps object_control set and must not collect lost rings");
-    }
-
-    @Test
-    public void testLostRingCollectionUsesTouchPhaseInvulnerabilityThreshold() throws Exception {
-        RingManager ringManager = buildRingManager(List.of());
-        TestPlayableSprite player = new TestPlayableSprite((short) 0x03B7, (short) 0x025A);
-        player.setRolling(true);
-
-        player.setInvulnerableFrames(90);
-        configureSingleLostRing(ringManager, 0x03AE, 0x0261);
-        ringManager.checkLostRingCollection(player);
-        assertEquals(0, player.getRingCount(),
-                "Lost ring recollection should stay blocked while the ROM threshold is still active");
-
-        player.setInvulnerableFrames(89);
-        configureSingleLostRing(ringManager, 0x03AE, 0x0261);
-        ringManager.checkLostRingCollection(player);
-        assertEquals(1, player.getRingCount(),
-                "Lost ring recollection should award as soon as the touch-phase timer drops below the ROM threshold");
-    }
-
-    @Test
     public void testCollectedLostRingExpiresFromLogicWithoutRenderPass() throws Exception {
+        // Lost-ring collection now flows through the unified slot-ordered touch loop
+        // (see com.openggf.level.objects.TestLostRingTouchOrdering for the collect / invuln
+        // gate / sidekick-cannot-collect coverage). This test keeps the distinct concern:
+        // a *collected* spilled ring must leave the active logic pool on its own (sparkle +
+        // expiry) without a render pass, so headless replay matches ROM slot occupancy.
         RingManager ringManager = buildRingManager(List.of());
-        TestPlayableSprite player = new TestPlayableSprite((short) 0x03B7, (short) 0x025A);
-        player.setRolling(true);
-        player.setInvulnerableFrames(0);
         GameServices.camera().setMaxY((short) 0x7FFF);
 
-        configureSingleLostRing(ringManager, 0x03AE, 0x0261);
+        configureSingleCollectedLostRing(ringManager, 0x03AE, 0x0261);
 
-        ringManager.checkLostRingCollection(player);
-        assertEquals(1, player.getRingCount());
         assertEquals(1, ringManager.getActiveLostRings().size(),
                 "Freshly collected lost rings should remain active long enough to show their sparkle");
 
@@ -391,7 +356,7 @@ public class TestRingManager {
         return ringManager;
     }
 
-    private void configureSingleLostRing(RingManager ringManager, int x, int y) throws Exception {
+    private void configureSingleCollectedLostRing(RingManager ringManager, int x, int y) throws Exception {
         Field lostRingsField = RingManager.class.getDeclaredField("lostRings");
         lostRingsField.setAccessible(true);
         Object lostRings = lostRingsField.get(ringManager);
@@ -400,6 +365,9 @@ public class TestRingManager {
         ringPoolField.setAccessible(true);
         LostRing[] ringPool = (LostRing[]) ringPoolField.get(lostRings);
         ringPool[0].reset(0, x, y, 0, 0, 0xFF);
+        // Mark collected directly (collection itself is exercised by the unified touch-loop
+        // tests); here we only verify a collected ring sparkles then expires from logic.
+        ringPool[0].markCollected(0);
 
         Field activeRingCountField = lostRings.getClass().getDeclaredField("activeRingCount");
         activeRingCountField.setAccessible(true);

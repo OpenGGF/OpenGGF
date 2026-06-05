@@ -43,8 +43,6 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     private static final int RING_COLLISION_HALF = 6;
     // ROM: Obj_Attracted_Ring collision_flags $47 -> Touch_Sizes index 7 = 6x6.
     private static final int ATTRACT_TOUCH_RADIUS = 6;
-    // ROM: Touch_ChkValue blocks lost-ring pickup while invulnerable_time >= 90.
-    private static final int LOST_RING_RECOLLECTION_INVULNERABLE_THRESHOLD = 90;
 
     private final RingPlacement placement;
     private final RingRenderer renderer;
@@ -265,17 +263,6 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
     public void updateLostRingPhysics(int frameCounter) {
         lostRings.updatePhysics(frameCounter);
-    }
-
-    public void checkLostRingCollection(AbstractPlayableSprite player) {
-        lostRings.checkCollection(player);
-    }
-
-    /** @deprecated Use {@link #updateLostRingPhysics} + {@link #checkLostRingCollection} instead. */
-    @Deprecated
-    public void updateLostRings(AbstractPlayableSprite player, int frameCounter) {
-        lostRings.updatePhysics(frameCounter);
-        lostRings.checkCollection(player);
     }
 
     public void draw(int frameCounter) {
@@ -1310,38 +1297,6 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             }
         }
 
-        private void checkCollection(AbstractPlayableSprite player) {
-            if (activeRingCount == 0 || cannotCollectRings(player)) {
-                return;
-            }
-
-            int baseYRadius = Math.max(1, player.getYRadius() - 3);
-            int playerX = player.getCentreX() - 8;
-            // ROM: d3 = y_pos - (y_radius - 3) (s2.asm:84487-84493)
-            int playerY = player.getCentreY() - baseYRadius;
-            int playerHeight = baseYRadius * 2;
-            if (player.getCrouching()) {
-                playerY += 12;
-                playerHeight = 20;
-            }
-
-            int invulnerableFrames = player.getInvulnerableFrames();
-
-            for (int i = 0; i < activeRingCount; i++) {
-                LostRing ring = ringPool[i];
-                if (!ring.isActive() || ring.isCollected()) {
-                    continue;
-                }
-
-                if (invulnerableFrames < LOST_RING_RECOLLECTION_INVULNERABLE_THRESHOLD
-                        && ringOverlapsPlayer(playerX, playerY, playerHeight, ring)) {
-                    ring.markCollected(frameCounter);
-                    player.addRings(1);
-                    audioManager.playSfx(GameSound.RING);
-                }
-            }
-        }
-
         private int[] allocateSlotIndices(int count) {
             int[] slots = new int[count];
             Arrays.fill(slots, -1);
@@ -1459,32 +1414,6 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             int elapsed = Math.max(0, frameCounter - sparkleStartFrame);
             int sparkleFrameOffset = elapsed / renderer.getSparkleFrameDelay();
             return sparkleFrameOffset >= renderer.getSparkleFrameCount();
-        }
-
-        private boolean ringOverlapsPlayer(int playerX, int playerY, int playerHeight, LostRing ring) {
-            int width = touchResponseTable != null ? touchResponseTable.getWidthRadius(RING_TOUCH_SIZE_INDEX) : 6;
-            int height = touchResponseTable != null ? touchResponseTable.getHeightRadius(RING_TOUCH_SIZE_INDEX) : 6;
-            int dx = ring.getX() - width - playerX;
-            if (dx < 0) {
-                int sum = (dx & 0xFFFF) + ((width * 2) & 0xFFFF);
-                if (sum <= 0xFFFF) {
-                    return false;
-                }
-            } else if (dx > 0x10) {
-                return false;
-            }
-
-            int dy = ring.getY() - height - playerY;
-            if (dy < 0) {
-                int sum = (dy & 0xFFFF) + ((height * 2) & 0xFFFF);
-                if (sum <= 0xFFFF) {
-                    return false;
-                }
-            } else if (dy > playerHeight) {
-                return false;
-            }
-
-            return true;
         }
 
         private int ringCheckFloorDist(int x, int y) {

@@ -862,7 +862,10 @@ public class LevelManager {
             if (!ringManager.usesObjectTouchCollection()) {
                 ringManager.collectStageRings(playable, frameCounter + 1);
             }
-            ringManager.checkLostRingCollection(playable);
+            // Lost (spilled) ring collection now runs through the unified slot-ordered touch
+            // loop in ObjectManager.runTouchResponsesForPlayer (above) via the type-keyed
+            // LostRingObjectInstance branch — see ObjectManager Touch_ChkValue lost-ring gate.
+            // The legacy RingManager.checkLostRingCollection scan has been removed.
         }
     }
 
