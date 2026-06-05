@@ -62,6 +62,30 @@
 - **Same-game regression guard** (single-fork, separate run):
   `mvn.cmd ... "-Dtest=TestS2Ehz1TraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" test`
   — EHZ1 green, SCZ green, WFZ green. Zero same-game regressions.
+## 2026-06-05 - mcz1 f2522 -> f2757: S2 Tails respawn-counter freezes during the hurt routine
+
+- Branch `bugfix/ai-trace-s2-mcz1`, worktree `.worktrees/trace-s2-mcz1`.
+- Command (worktree, cmd mvn.cmd, forkCount=1):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2MczLevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** ADVANCED — genuine, zero same-game regressions.
+- **MCZ1:** first-error frame moved **2522 (`tails_air`) -> 2757 (`y`)**; target/trace-reports/s2_mcz1_report.json:
+  423 errors, total_frames 6083, first error frame 2757 `y` expected=0x0774 actual=0x076E.
+- **Root cause:** S2 CPU off-screen respawn/despawn timer `Tails_respawn_counter` (threshold `$12C`) is ticked
+  ONLY inside the normal CPU control path `TailsCPU_CheckDespawn` (docs/s2disasm/s2.asm:39403-39433). When Tails
+  is hurt, `Obj02_Index` dispatches `routine=4` to `Obj02_Hurt` (s2.asm:38887; body s2.asm:41057-41074), which
+  runs ObjectMove/Tails_HurtStop/Tails_LevelBound/Tails_RecordPos/Tails_Animate/LoadTailsDynPLC/DisplaySprite and
+  returns WITHOUT ever reaching `Obj02_Control -> TailsCPU_Control -> TailsCPU_CheckDespawn`. So the despawn
+  counter does NOT advance during the hurt routine. The engine kept ticking it during hurt frames, crossing
+  `$12C` early and spuriously despawning Tails after he was hurt off-screen (~45 frames in this trace).
+- **Fix:** flip `PhysicsFeatureSet.sidekickNormalCpuSkipsHurtRoutine` to `true` for S2 (S3K already `true`;
+  S1 stays `false` — no Tails CPU). `SidekickCpuController` already gates the despawn-counter skip on this flag.
+  Per-game divergence gated at `PhysicsFeatureSet` and branched on the flag — no zone/route/frame/gameId carve-out,
+  comparison-only invariant held.
+- Files: `src/main/java/com/openggf/game/PhysicsFeatureSet.java`,
+  `src/main/java/com/openggf/sprites/playable/SidekickCpuController.java`.
+- **Same-game regression guard (single-fork):** EHZ1, SCZ, WFZ all GREEN (Tests run: 1, Failures: 0, Errors: 0 each).
+  Full S2 trace-sweep A/B (clean-HEAD baseline vs with-change): ONLY the MCZ1 first-error frame moved
+  (2522 -> 2757); every other S2 trace's first-error frame identical. Zero same-game regressions.
 
 ## 2026-06-05 - wfz GREEN restored (was dez1-introduced f12886 regression); dez1 held at f2194
 

@@ -1165,11 +1165,25 @@ public class SidekickCpuController {
         if (sidekick.isHurt()
                 && featureSet != null
                 && featureSet.sidekickNormalCpuSkipsHurtRoutine()) {
-            // S3K Tails_Index dispatches routine 4 to the hurt/object path
-            // instead of Tails_Control (docs/skdisasm/sonic3k.asm:26091-26096).
-            // The off-screen timeout lives under sub_13EFC, which is called only
-            // from Tails_Control's normal CPU route (sonic3k.asm:26159-26190,
-            // 26816-26833), so routine-4 frames must not tick despawnCounter.
+            // The off-screen respawn/despawn timer is owned by the CPU control
+            // path (TailsCPU_CheckDespawn). Both games dispatch a hurt sidekick
+            // to a routine that does NOT call that path, so the timer freezes
+            // while Tails is in the hurt routine:
+            //   - S3K Tails_Index dispatches routine 4 to the hurt/object path
+            //     instead of Tails_Control (docs/skdisasm/sonic3k.asm:26091-26096).
+            //     sub_13EFC is called only from Tails_Control's normal CPU route
+            //     (sonic3k.asm:26159-26190,26816-26833).
+            //   - S2 Obj02_Index dispatches routine 4 to Obj02_Hurt
+            //     (docs/s2disasm/s2.asm:38883-38891), which runs ObjectMove /
+            //     Tails_HurtStop / Tails_LevelBound / Tails_RecordPos / Animate /
+            //     DisplaySprite and returns WITHOUT ever reaching Obj02_Control ->
+            //     TailsCPU_Control -> TailsCPU_CheckDespawn
+            //     (docs/s2disasm/s2.asm:41057-41073, vs the normal-routine call at
+            //     38964/39268). So Tails_respawn_counter does NOT tick during the
+            //     hurt routine. Verified against the MCZ1 level-select BizHawk trace:
+            //     Tails is hurt off-screen for gfc 0x0967-0x0994 (~45 frames) and
+            //     Tails_respawn_counter freezes at 0xBA the whole time, leaving it
+            //     at 0xFF (255) < $12C (300) at the engine's spurious-despawn frame.
             updateNormalPushingGrace(currentPushing);
             finishNormalStepDiagnostics(diagnostics, "sidekick_hurt_object_routine", -1, -1,
                     0, 0, 0, 0, 0, false, 0);
