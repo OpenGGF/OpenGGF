@@ -1,0 +1,16 @@
+{
+  "game": "s1",
+  "zone": "slz",
+  "zone_id": 3,
+  "act": 2,
+  "bk2_frame_offset": 143290,
+  "trace_frame_count": 5894,
+  "start_x": "0x0040",
+  "start_y": "0x014C",
+  "recording_date": "2026-06-05",
+  "lua_script_version": "3.2",
+  "trace_schema": 3,
+  "csv_version": 4,
+  "rom_checksum": "",
+  "notes": ""
+}

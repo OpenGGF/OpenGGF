@@ -8490,3 +8490,22 @@ Follow-up to the entry above after a review challenge ("mz1 fails at frame 0 -- 
   20791, `vblank_counter=0x4FEB` at frame 0) reaches the same grounded frame-0 Marble state
   as the dedicated `mz1_fullrun` trace (offset 1075). No engine change. `zone()=1` retained
   (matches `TestS1Mz1TraceReplay`); comment expanded to call out the convention trap.
+
+## 2026-06-05 — S1 complete-run trace suite (18 acts from one TAS)
+
+Generated all 18 S1 gameplay acts from docs/BizHawk-2.11-win-x64/Movies/s1-complete-run.bk2 (Raiscan, REV01)
+via the auto-segment recorder tools/bizhawk/s1_complete_run_recorder.lua. NO mid-run bootstrap bug — the
+recorder's frame-0 arming makes each complete-run frame-0 row identical to a dedicated-bk2 trace; the native
+bootstrap (recordingStartFrame=bk2_frame_offset + start-position ground-snap) reaches the correct grounded
+frame-0 state even at large offsets (mz1 offset 20791, vblank 0x4FEB).
+CRITICAL WIRING NOTE: test zone() is the ENGINE gameplay-progression index, NOT the trace metadata ROM zone_id.
+Map ROM v_zone -> engine zone: {0->0(GHZ), 1->3(LZ), 2->1(MZ), 3->4(SLZ), 4->2(SYZ), 5->5(SBZ)}; FZ(rom z1 a4)->eng z6 a0.
+(Mapping zone_id straight to zone() loads the wrong level and produces a spurious frame-0 air mismatch — the
+s2-getzoneindex-returns-rom-zone-id pitfall.)
+
+First-divergence frontiers (correct zones, command: cmd //c mvn.cmd ... forkCount=1 -Ds1.rom.path=s1.gen):
+  syz2 f85 x_speed | lz1 f112 x_speed | syz1 f250 y_speed | slz3 f295 x | lz3 f331 x_speed | slz2 f333 x |
+  ghz3 f370 y_speed | syz3 f396 x_speed | sbz2 f361 rolling | lz2 f463 y_speed | sbz1 f513 x_speed |
+  ghz2 f615 y_speed | slz1 f723 x_speed | mz2 f1010 x_speed | mz1 f1260 rolling | ghz1 f1390 x_speed |
+  mz3 f1702 y | fz (Final Zone, needs FZ-specific handling).
+These are the new S1 object-physics frontier targets (badnik hurts, monitor landings, rolling/x_speed gaps).
