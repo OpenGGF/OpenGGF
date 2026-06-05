@@ -164,10 +164,9 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         // ROM parity: consume the pre-allocated slot so that getSlotIndex()
         // returns the correct value if the constructor spawns children.
         // Only the first super() call gets the slot; child constructors see null.
-        Integer preSlot = PRE_ALLOCATED_SLOT.get();
+        Integer preSlot = ObjectConstructionContext.consumePreAllocatedSlot();
         if (preSlot != null) {
             this.slotIndex = preSlot;
-            PRE_ALLOCATED_SLOT.remove(); // Consume — only first constructor gets it
         }
     }
 
@@ -427,14 +426,14 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * Must be paired with {@link #clearConstructionContext()} in a finally block.
      */
     protected static void setConstructionContext(ObjectServices services) {
-        CONSTRUCTION_CONTEXT.set(services);
+        ObjectConstructionContext.setConstructionContext(services);
     }
 
     /**
      * Clears the construction context after child object creation.
      */
     protected static void clearConstructionContext() {
-        CONSTRUCTION_CONTEXT.remove();
+        ObjectConstructionContext.clearConstructionContext();
     }
 
     /**
@@ -872,8 +871,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      */
     protected <T extends AbstractObjectInstance> T spawnChild(java.util.function.Supplier<T> factory) {
         ObjectServices svc = services();
-        CONSTRUCTION_CONTEXT.set(svc);
-        try {
+        return ObjectConstructionContext.construct(svc, () -> {
             T child = factory.get();
             ObjectManager om = svc.objectManager();
             if (om != null) {
@@ -884,9 +882,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
                 }
             }
             return child;
-        } finally {
-            CONSTRUCTION_CONTEXT.remove();
-        }
+        });
     }
 
     /**
@@ -903,17 +899,14 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      */
     protected <T extends AbstractObjectInstance> T spawnFreeChild(java.util.function.Supplier<T> factory) {
         ObjectServices svc = services();
-        CONSTRUCTION_CONTEXT.set(svc);
-        try {
+        return ObjectConstructionContext.construct(svc, () -> {
             T child = factory.get();
             ObjectManager om = svc.objectManager();
             if (om != null) {
                 om.addDynamicObject(child);
             }
             return child;
-        } finally {
-            CONSTRUCTION_CONTEXT.remove();
-        }
+        });
     }
 
     /**

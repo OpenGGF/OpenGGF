@@ -4,6 +4,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Object construction context installation is now scoped and nest-safe:** `ObjectConstructionContext.with(...)` saves and restores both `ObjectServices` and pre-allocated object slot state, so nested object creation restores the outer construction context instead of clearing it. `ObjectManager` placement, dynamic factory, rewind restore, child-spawn, and power-up construction paths now use the scoped helper; a source guard blocks new raw construction ThreadLocal set/remove sites outside `ObjectConstructionContext`.
+
 - **Collision frame orchestration now names its phases explicitly:** Added
   `FrameCollisionPlan` and routed the legacy playable collision pass plus the
   batched solid-object bridge through named terrain/solid phase plans. The
