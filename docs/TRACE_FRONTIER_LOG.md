@@ -86,6 +86,33 @@
 - **Same-game regression guard (single-fork):** EHZ1, SCZ, WFZ all GREEN (Tests run: 1, Failures: 0, Errors: 0 each).
   Full S2 trace-sweep A/B (clean-HEAD baseline vs with-change): ONLY the MCZ1 first-error frame moved
   (2522 -> 2757); every other S2 trace's first-error frame identical. Zero same-game regressions.
+## 2026-06-05 - mtz3 f7304->f7596: Slicer (ObjA1) honors ObjA1_Init routine-0 setup frame before moving
+
+- Branch `bugfix/ai-trace-s2-mtz3`, worktree `.worktrees/trace-s2-mtz3`.
+- Command (worktree, cmd mvn.cmd, forkCount=1):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** advanced — mtz3 first-error frame 7304 -> 7596; zero same-game regressions.
+- **mtz3:** `TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace`
+  - Before (HEAD baseline, A/B confirmed): 833 errors, first error **frame 7304** — `y_speed`
+    expected=-02C8 actual=-03C8, contact frame with `s48 0xA1 Slicer @1865,01CF`.
+  - After (fix): 813 errors, first error **frame 7596** — `y_speed` expected=0x0000 actual=0x0470
+    (new, later divergence in an on-object/landing situation; Slicer contact frame now matches).
+- **Root cause:** `SlicerBadnikInstance` started directly in `WALKING` (routine-2 behaviour) on its first
+  object frame, so it ran `ObjectMove` one frame earlier than the ROM. ROM `ObjA1_Init` (routine 0) calls
+  `LoadSubObject`, which sets mappings/art/velocity/radius and bumps `routine` by 2
+  (`addq.b #2,routine(a0)`, docs/s2disasm/s2.asm:72633) before `rts`, and returns WITHOUT calling
+  ObjectMove (`ObjA1_Init` body, docs/s2disasm/s2.asm:75777-75788). `ObjA1_Main` (routine 2, ending in
+  the `ObjectMove` at `loc_3841C`) therefore first moves the Slicer on the NEXT object frame. The early
+  move led the ROM Slicer x_pos by ~1px on the MTZ contact frame and suppressed the `Touch_KillEnemy`
+  bounce, diverging player `y_speed` at f7304.
+- **Fix:** add an `INIT` state to `SlicerBadnikInstance` that consumes the first object frame without
+  moving (modelling routine 0 -> 2), then transitions to `WALKING`. Models the actual ROM routine-counter
+  state for object id ObjA1 (routine 0 vs 2) — no zone/route/frame/gameId carve-out, comparison-only.
+- Files: `src/main/java/com/openggf/game/sonic2/objects/badniks/SlicerBadnikInstance.java`,
+  `src/test/java/com/openggf/game/sonic2/objects/TestSonic2TriggerParticipation.java` (unit test steps
+  the extra INIT frame; 40 tests green).
+- Same-game regression guard (each run single-fork, alone): EHZ1 GREEN (tests=1 failures=0),
+  SCZ GREEN (tests=1 failures=0), WFZ GREEN (tests=1 failures=0). No same-game green regressed.
 
 ## 2026-06-05 - wfz GREEN restored (was dez1-introduced f12886 regression); dez1 held at f2194
 

@@ -77,6 +77,7 @@ public class SlicerBadnikInstance extends AbstractBadnikInstance {
     private static final int PINCER_HOMING_TIMER = 0x78;
 
     private enum State {
+        INIT,       // Routine 0: ObjA1_Init — set up velocity/radius, no movement this frame
         WALKING,    // Routine 2: walk + detect player
         EDGE_WAIT,  // Routine 4: pause at edge, then reverse
         THROW_WINDUP, // Routine 6: raise arms, preparing to throw
@@ -99,7 +100,15 @@ public class SlicerBadnikInstance extends AbstractBadnikInstance {
         this.facingLeft = !xFlip;
         this.xVelocity = facingLeft ? -WALK_SPEED : WALK_SPEED;
 
-        this.state = State.WALKING;
+        // ROM ObjA1_Init (routine 0) runs as its own object frame: it sets
+        // velocity/radius via LoadSubObject (which does addq.b #2,routine) and
+        // returns WITHOUT calling ObjectMove. ObjA1_Main (routine 2) first runs
+        // — and first moves the Slicer — on the NEXT object frame.
+        // (docs/s2disasm/s2.asm:75777-75788 ObjA1_Init; LoadSubObject's
+        // addq.b #2,routine at s2.asm:72633.) Starting directly in WALKING would
+        // move the Slicer one frame early, leading its ROM x_pos by ~1px and
+        // suppressing the MTZ Touch_KillEnemy bounce on the contact frame.
+        this.state = State.INIT;
         this.timer = 0;
         this.walkAnimTimer = WALK_ANIM_SPEED;
         this.walkAnimToggle = false;
@@ -110,6 +119,9 @@ public class SlicerBadnikInstance extends AbstractBadnikInstance {
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
+            // Routine 0 -> 2 transition consumes a frame without moving, matching
+            // ObjA1_Init's addq.b #2,routine then rts (s2.asm:75777-75788).
+            case INIT -> state = State.WALKING;
             case WALKING -> updateWalking(player);
             case EDGE_WAIT -> updateEdgeWait();
             case THROW_WINDUP -> updateThrowWindup();

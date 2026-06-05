@@ -702,6 +702,11 @@ class TestSonic2TriggerParticipation {
         slicer.setServices(new QueryOnlyPlayerServices(main, List.of(tails)));
 
         try {
+            // ROM ObjA1_Init (routine 0) consumes the first object frame without
+            // running the throw-detection logic (s2.asm:75777-75788); ObjA1_Main
+            // (routine 2) first runs on the next frame. Step the INIT frame, then
+            // the WALKING frame that exercises Obj_GetOrientationToPlayer.
+            slicer.update(0, main);
             slicer.update(0, main);
 
             assertFalse("THROW_WINDUP".equals(field(slicer, "state").toString()),
