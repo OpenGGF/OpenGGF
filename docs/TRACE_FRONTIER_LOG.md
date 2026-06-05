@@ -8748,3 +8748,26 @@ Command: `mvn -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=...s2.gen"
   ground-to-air transition near an HTZ Barrier(0x2D)/InvisibleBlock(0x74) region (x~0x1A01), not the
   Tails spring oscillation. Verified no regression: clean-HEAD A/B for s2 cnz (f3906), htz2 (f2306),
   mcz (f3574) are byte-identical with and without this change.
+## 2026-06-05 — MTZ2: S2 control-lock latches logical pad word (advanced-with-regression)
+
+Worktree `.worktrees/trace-s2-mtz2`, branch `bugfix/ai-trace-s2-mtz2`, forkCount=1, reuseForks=true, s2.gen.
+Command (targeted):
+`mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=...\s2.gen" "-Dtest=TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace" test`
+
+Fix: `PhysicsFeatureSet.controlLockLatchesLogicalInput` flipped S2 false -> true. ROM `Obj01_Control`
+(s2.asm:36227-36229) skips copying `Ctrl_1` into `Ctrl_1_Logical` while `Control_Locked` is set;
+`Sonic_RecordPos` (s2.asm:36340-36346) stores the latched word into `Sonic_Stat_Record_Buf` for the
+delayed sidekick-CPU replay. Branched at `AbstractPlayableSprite.setLogicalInputState` on the flag — no
+zone/route/frame/gameId carve-out, comparison-only invariant held.
+
+- Status: advanced-with-regression. genuine=true (ROM short-circuit independently verified at s2.asm:36227-36229,36346).
+- **MTZ2 (target): f873 -> f1217** (`tails_x mismatch` expected=0x0497 actual=0x049D). errors 1860.
+  Baseline measured at HEAD (S2 flag=false) = f873; with fix = f1217.
+- **REGRESSION INTRODUCED: EHZ1 GREEN -> f5121** (`tails_x_speed mismatch` expected=-04EA actual=-0576). errors 113.
+  Verified A/B by restoring PhysicsFeatureSet.java to HEAD (EHZ1 green) vs fix (EHZ1 f5121); confirmed
+  stable in isolation (`-Dtest=TestS2Ehz1TraceReplay`). Cause: at the EHZ end-of-act goalplate the engine
+  sets `Control_Locked`; the now-latched held pad word feeds Tails' follow-history ring and over-drives
+  Tails left (engine xv -0576 vs ROM -04EA). FOLLOW-UP: the ROM latch is correct, so the EHZ divergence is a
+  downstream goalplate/control-lock Tails-follow parity gap — reconcile the engine's end-of-act
+  control-lock consumer so EHZ1 returns to green with the latch in place.
+- Held green (no regression): WFZ (level-select). Verified green at HEAD and with fix.

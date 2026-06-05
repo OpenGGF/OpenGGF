@@ -244,6 +244,20 @@ All notable changes to the OpenGGF project are documented in this file.
   Obj7B PipeExitSpring, ObjD6 PointPokey) opt out via `bypassesOffscreenSolidGate()`
   to match the ROM helper-routine split. Advances the s2 htz1 level-select trace
   frontier (first-error frame 5647 -> 5686).
+- **S2 control-lock latches the logical pad word (MTZ2 trace fix):** Set
+  `PhysicsFeatureSet.controlLockLatchesLogicalInput=true` for Sonic 2. ROM
+  `Obj01_Control` (s2.asm:36227-36229) skips `move.w (Ctrl_1).w,(Ctrl_1_Logical).w`
+  while `Control_Locked` is set, so the prior held-pad word persists;
+  `Sonic_RecordPos` (s2.asm:36340-36346) then stores that latched word into
+  `Sonic_Stat_Record_Buf`, which the sidekick CPU replays with the standard
+  delay. The engine previously zeroed the logical input the moment any object set
+  `controlLocked`, corrupting Tails' follow history. Required so the MTZ2
+  level-select trace keeps Tails accelerating off the replayed held input past a
+  wall-stopped, control-locked Sonic near the MTZ spin tube (first divergence
+  873 -> 1217). Gated per-game on `PhysicsFeatureSet`, branched at
+  `AbstractPlayableSprite.setLogicalInputState`. Known follow-up: re-engaging the
+  S2 latch regresses the EHZ1 trace at frame 5121 (end-of-act goalplate
+  control-lock Tails follow) — to investigate post-landing.
 
 - **Architecture roadmap completion:** Playable terrain collision paths now name
   `FrameCollisionPlan.terrainOnly()` at the call sites, with plan-aware
