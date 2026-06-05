@@ -114,8 +114,17 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
         this.velocity = 0;
         this.isPlayerTriggered = (spawn.subtype() != 0);
 
-        // ROM: subtype == 0 starts at mode 2 (timer), subtype != 0 starts at mode 4 (wait for player)
-        this.mode = isPlayerTriggered ? Mode.WAIT_FOR_PLAYER : Mode.TIMER_COUNTDOWN;
+        // ROM Obj33_Init (s2.asm:49653-49657): routine_secondary defaults to 2 (mode 2 =
+        // loc_23BEA pop-physics), and is only overridden to 4 (wait-for-player) when subtype != 0.
+        // For the auto-pop (subtype 0) variant, the ROM burns one mode-2 frame immediately after
+        // Init with objoff_32 (velocity) = 0: y stays at home, velocity becomes $3800 (< $10000),
+        // so it transitions back to mode 0 and applies the bounce, THEN mode 0 starts the $78 timer
+        // the next frame. Starting at TIMER_COUNTDOWN here would skip that single mode-2 frame and
+        // fire every auto-pop one frame early (observed: engine pops at 1133 vs ROM 1134), which
+        // drags the riding player down a frame too soon. updatePopPhysics() with velocity 0 already
+        // reproduces the ROM's immediate transition-to-timer + bounce, so start in POP_PHYSICS.
+        // (See s2.asm:49710-49728 loc_23BEA.)
+        this.mode = isPlayerTriggered ? Mode.WAIT_FOR_PLAYER : Mode.POP_PHYSICS;
 
         // Spawn flame child (ROM: AllocateObjectAfterCurrent)
         spawnFlameChild();

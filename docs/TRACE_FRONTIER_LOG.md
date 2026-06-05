@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+## 2026-06-05 - ooz1 f1133->f1756: OOZ popping platform (Obj33) auto-pop starts in mode 2 (one-frame-later pop)
+
+- Branch `bugfix/ai-trace-s2-ooz1`, worktree `.worktrees/trace-s2-ooz1`.
+- Command (worktree, cmd mvn.cmd, forkCount=1):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2OozLevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** advanced, genuine, zero same-game regressions.
+- 1052 errors / 0 warnings. First error frame 1133 -> frame 1756
+  (`tails_x` expected=0x0CF9, actual=0x0CF8 — a downstream sidekick CPU follow-steering off-by-one).
+- **Root cause:** `OOZPoppingPlatformObjectInstance` (Obj33, OOZ green burner lid) initialised the
+  auto-pop (subtype 0) variant directly into `TIMER_COUNTDOWN` (mode 0). ROM `Obj33_Init`
+  (docs/s2disasm/s2.asm:49653-49657) sets `routine_secondary` to **2** (`addq.b #2,routine_secondary`)
+  for **all** variants and only overrides it to 4 (wait-for-player) when `subtype != 0`. The auto-pop
+  variant therefore first runs one mode-2 frame (`loc_23BEA`, s2.asm:49710-49728) with `objoff_32`
+  (velocity) = 0: y stays at home, velocity becomes `$3800` (< `$10000`), so it does
+  `subq.b #2,routine_secondary` back to mode 0 and bounces — the `$78` timer countdown therefore starts
+  the *next* frame. Starting in mode 0 popped the platform one frame early, dragging the riding sidekick
+  down a frame too soon (f1133: ROM `y` 0x0664 vs engine 0x065A while riding the popping platform).
+- **Fix:** subtype-0 variant initialises to `POP_PHYSICS` (mode 2); `updatePopPhysics()` with velocity 0
+  already reproduces the ROM's immediate transition-to-timer + bounce. Per-object S2 change in Obj33's
+  own class, branching on the ROM `subtype` data field — no zone/route/frame/gameId carve-out, no shared
+  physics change, comparison-only.
+- File: `src/main/java/com/openggf/game/sonic2/objects/OOZPoppingPlatformObjectInstance.java`.
+- Same-game regression guard (single-fork): EHZ1, SCZ, WFZ all GREEN (tests=1 failures=0 errors=0 each);
+  no same-game green regressed.
+
 ## 2026-06-04 - arz2 f549->f566: ChopChop (Obj91) X movement via ObjectMove subpixel integration
 
 - Branch `bugfix/ai-trace-s2-arz2`, worktree `.worktrees/trace-s2-arz2` (off develop `868249c0f`).
