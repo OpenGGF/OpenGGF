@@ -88,6 +88,26 @@
 - **Same-game regression check (run individually):** `TestS2Ehz1TraceReplay` PASS (Tests run: 1,
   Failures: 0); `TestS2WfzLevelSelectTraceReplay` PASS (Tests run: 1, Failures: 0). ARZ1 is a non-green
   frontier trace; unchanged. No previously-green same-game trace regressed.
+## 2026-06-06 - ooz2 f489->f1070: CPZ/OOZ rising platform sub-pixel integration
+
+- Branch `bugfix/ai-trace-s2-ooz2`, worktree `.worktrees/trace-s2-ooz2`.
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status: ADVANCED (still failing).** First-error frame **489 (y mismatch) -> 1070 (air mismatch, expected=0 actual=1)**, error count **952 -> 844**.
+  Surefire: `Tests run: 1, Failures: 1`.
+- **Root cause:** `CPZPlatformObjectInstance` auto-rise (Obj19_MoveRoutine5/6) used
+  `y += yVel >> 8`, dropping the sub-pixel fraction so the platform stepped a full pixel
+  every frame instead of accumulating sub-pixels. ROM `ObjectMove` (s2.asm:30185-30198)
+  integrates velocity into the 32-bit `y_pos:y_sub` longword (`ext.l`/`asl.l #8`/`add.l`),
+  and Obj19_MoveRoutine5/6 (s2.asm:~48036-48066) use an unsigned `bhs` accel compare,
+  `add.w` 16-bit-wrapping velocity update, and a word-`bne` subtype-increment test.
+- **Fix:** added a `ySub` accumulator; the rise routine now does the longword add
+  `(y<<16|ySub) += sign_extend(yVel)<<8`, the unsigned `(target&0xFFFF)<(y&0xFFFF)` accel
+  flip, `(short)(yVel+accel)` wrap, and `(yVel&0xFFFF)==0` subtype test.
+  Files: `src/main/java/com/openggf/game/sonic2/objects/CPZPlatformObjectInstance.java`.
+- **Same-game regression guard** (EHZ1, WFZ, ARZ): all PASS. A/B at HEAD vs fix confirms
+  CNZ (`TestS2CnzLevelSelectTraceReplay`, first error frame 3906 tails_y) is **pre-existing
+  failing**, identical with and without this change — NOT a regression.
 
 ## 2026-06-05 - ooz2 f389->f489: Aquis (Obj50) on-screen activation + follow-timer underflow
 

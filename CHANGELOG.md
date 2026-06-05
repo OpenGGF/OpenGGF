@@ -4,6 +4,16 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **OOZ/CPZ rising platform now integrates sub-pixels (ROM-accurate):**
+  `CPZPlatformObjectInstance` auto-rise (Obj19_MoveRoutine5/6) previously did
+  `y += yVel >> 8`, dropping the sub-pixel fraction and stepping a full pixel
+  every frame. The ROM `ObjectMove` (s2.asm:30185-30198) treats `y_pos:y_sub`
+  as a 32-bit longword and adds `sign_extend(y_vel) << 8` into it, so a small
+  velocity only crosses a pixel boundary once enough sub-pixels accumulate. The
+  instance now keeps a `ySub` accumulator and performs the longword add, plus
+  the unsigned `bhs` accel compare, `add.w` 16-bit wrap, and word-`bne` subtype
+  test exactly as Obj19_MoveRoutine5/6 (s2.asm:~48036-48066). Advances the OOZ2
+  level-select trace from first-error frame 489 to 1070.
 - **Trace test-mode picker now scrolls:** `TestModeTracePicker` windows the trace
   list through a pixel-accurate scrolling viewport that follows the cursor, so a
   large/growing catalog no longer overruns the screen or the selected-entry info
