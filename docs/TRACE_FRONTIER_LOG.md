@@ -8470,3 +8470,23 @@ was an ACCIDENTAL REVERT of a genuine MTZ2 fix — it only regressed mtz2 (873�
   diverged at frame 3192 — run-variance in the same Batbrain region). Not a regression from this
   branch (additive test resources only; no src/main change).
 - No engine change required: the mid-run bootstrap is already correct.
+
+## 2026-06-05 — S1 complete-run mid-run bootstrap: confirmed NO bug (zone-index convention)
+
+Follow-up to the entry above after a review challenge ("mz1 fails at frame 0 -- air").
+
+- **The reported frame-0 failure was a test mis-configuration, not a bootstrap bug.**
+  Setting `zone()=2` on `TestS1Mz1CompleteRunTraceReplay` loads **Spring Yard**
+  (`S1_SPRING_YARD_1`), not Marble: `Sonic1ZoneRegistry` uses gameplay-progression
+  order (GHZ=0, **MZ=1**, SYZ=2, LZ=3), while the trace metadata `zone_id=2` is the ROM
+  v_zone convention (Marble=2). Loading Spring Yard's collision under Marble's spawn
+  (0x30,0x266) leaves the player in mid-air → `frame 0 -- air mismatch (expected=0,
+  actual=1)`. This is the documented two-zone-numbering pitfall (MEMORY: s2-getzoneindex).
+- Proof (engine load log, worktree `.worktrees/s1-bootstrap`, s1.gen):
+  - `zone()=2`: `Set player position ... level: S1_SPRING_YARD_1` → first error frame 0 (air).
+  - `zone()=1`: `Set player position ... level: S1_MARBLE_1` → `(no bootstrap divergences)`,
+    **byte-exact through frame 1259**, first error frame 1260 (Monitor obj 0x26 landing).
+- **Conclusion: the mid-run bootstrap is correct.** The complete-run mz1 trace (BK2 offset
+  20791, `vblank_counter=0x4FEB` at frame 0) reaches the same grounded frame-0 Marble state
+  as the dedicated `mz1_fullrun` trace (offset 1075). No engine change. `zone()=1` retained
+  (matches `TestS1Mz1TraceReplay`); comment expanded to call out the convention trap.

@@ -26,8 +26,11 @@ public class TestS1Mz1CompleteRunTraceReplay extends AbstractTraceReplayTest {
     @Override
     protected SonicGame game() { return SonicGame.SONIC_1; }
 
-    // Engine zone index 1 = Marble Zone (gameplay progression order: GHZ=0, MZ=1, ...).
-    // NOT the ROM's v_zone value (MZ=2). Matches TestS1Mz1TraceReplay.
+    // Engine zone index 1 = Marble Zone (gameplay progression order: GHZ=0, MZ=1,
+    // SYZ=2, LZ=3, ... per Sonic1ZoneRegistry). This is NOT the ROM v_zone value
+    // (where Marble=2); the trace metadata's zone_id=2 is the ROM convention.
+    // Loading zone()=2 here would wrongly load Spring Yard and put the Marble
+    // spawn (0x30,0x266) in mid-air. Matches TestS1Mz1TraceReplay.
     @Override
     protected int zone() { return 1; }
 
