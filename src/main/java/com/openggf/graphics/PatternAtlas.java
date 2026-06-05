@@ -69,8 +69,7 @@ public class PatternAtlas {
 
     /**
      * Registers a virtual pattern ID range for collision detection.
-     * Logs a warning if the range overlaps an existing registered range.
-     * Diagnostic only — does not prevent allocation.
+     * Fails fast if the range overlaps an existing registered range.
      *
      * @param base     the starting pattern ID
      * @param size     the number of patterns in this range
@@ -80,8 +79,8 @@ public class PatternAtlas {
         int newEnd = base + size;
         for (PatternRange existing : registeredRanges) {
             int existingEnd = existing.base() + existing.size();
-            if (base < existingEnd && newEnd > existing.base()) {
-                LOGGER.warning("Pattern range collision: " + category
+            if (base < existingEnd && existing.base() < newEnd) {
+                throw new IllegalArgumentException("Pattern range collision: " + category
                     + " [0x" + Integer.toHexString(base) + "-0x" + Integer.toHexString(newEnd)
                     + "] overlaps " + existing.category()
                     + " [0x" + Integer.toHexString(existing.base())
