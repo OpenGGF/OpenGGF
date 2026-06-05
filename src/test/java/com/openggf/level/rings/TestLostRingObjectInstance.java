@@ -97,6 +97,50 @@ class TestLostRingObjectInstance {
                 "spawn should reset the shared spill-spin counter to 0xFF");
     }
 
+    @Test
+    void spawnStopsOnAllocationFailureAndCapsAt32() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        ObjectManager objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);
+        setField(levelManager, "objectManager", objectManager);
+
+        RingManager ringManager = buildRingManagerWithLevelManager(levelManager);
+        setField(levelManager, "ringManager", ringManager);
+
+        SpawnTestPlayableSprite player = new SpawnTestPlayableSprite((short) 0x100, (short) 0x100);
+
+        // Pre-fill the dynamic slot pool so only 3 slots remain free.
+        objectManager.reserveAllButNFreeSlots(3);
+        ringManager.spawnLostRings(player, 10, 0);
+
+        List<LostRingObjectInstance> rings =
+                objectManager.activeObjectsOfType(LostRingObjectInstance.class);
+        assertEquals(3, rings.size(),
+                "spawn must stop on the first -1 allocation, leaving exactly the 3 allocatable rings");
+        for (int i = 1; i < rings.size(); i++) {
+            assertTrue(rings.get(i).getSlotIndex() > rings.get(i - 1).getSlotIndex(),
+                    "successfully-allocated rings must occupy ascending slots");
+        }
+    }
+
+    @Test
+    void neverSpawnsMoreThanRomCapOf32() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        ObjectManager objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);
+        setField(levelManager, "objectManager", objectManager);
+
+        RingManager ringManager = buildRingManagerWithLevelManager(levelManager);
+        setField(levelManager, "ringManager", ringManager);
+
+        SpawnTestPlayableSprite player = new SpawnTestPlayableSprite((short) 0x100, (short) 0x100);
+
+        // Leave 64 free slots; request 50 → capped at the ROM 0x20 (32) limit.
+        objectManager.reserveAllButNFreeSlots(64);
+        ringManager.spawnLostRings(player, 50, 0);
+
+        assertEquals(0x20, objectManager.activeObjectsOfType(LostRingObjectInstance.class).size(),
+                "spilled rings must never exceed the ROM cap of 0x20 (32)");
+    }
+
     private RingManager buildRingManagerWithLevelManager(LevelManager levelManager) {
         Pattern pattern = new Pattern();
         pattern.setPixel(0, 0, (byte) 1);

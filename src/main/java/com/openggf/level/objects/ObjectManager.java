@@ -1906,6 +1906,23 @@ public class ObjectManager {
     }
 
     /**
+     * Test helper: reserve dynamic slots (from the front of the pool) until exactly
+     * {@code freeSlots} remain free. Used by the spilled-ring atomic-allocation tests
+     * to drive {@code allocateSlotAfter} into returning {@code -1} (slot exhaustion)
+     * after a known number of successful ring allocations. No-op once the pool already
+     * has {@code <= freeSlots} free.
+     */
+    public void reserveAllButNFreeSlots(int freeSlots) {
+        int target = Math.max(0, freeSlots);
+        while ((slotLayout.dynamicSlotCount() - slotAllocator.activeCount()) > target) {
+            int slot = slotAllocator.allocate();
+            if (slot < 0) {
+                break;
+            }
+        }
+    }
+
+    /**
      * Allocates the next available dynamic slot index for the current game's layout.
      * Equivalent to ROM's FindFreeObj — searches from the first dynamic slot forward.
      * Returns -1 if all slots are in use (overflow).

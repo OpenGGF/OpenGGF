@@ -34,6 +34,7 @@ import java.util.List;
  * Handles ring collection state, sparkle animation, rendering, and lost-ring behavior.
  */
 public class RingManager implements RewindSnapshottable<RingSnapshot> {
+    private static final System.Logger LOG = System.getLogger(RingManager.class.getName());
     private static final int MAX_ATTRACTED_RINGS = 32;
     // ROM: AttractedRing_Move — base acceleration is $30 subpixels/frame²
     private static final int ATTRACT_ACCEL = 0x30;
@@ -1146,13 +1147,12 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             if (ringCount <= 0) {
                 return;
             }
-            int count = Math.min(ringCount, MAX_LOST_RINGS);
+            // ROM Obj37_Init (s2.asm:25127-25130): cap spilled rings at $20 (32).
+            int toSpawn = Math.min(ringCount, MAX_LOST_RINGS);
             int angle = 0x288;
             int xVel = 0;
             int yVel = 0;
             reset();
-            int[] slotIndices = allocateSlotIndices(count);
-            int[] slotPhases = computeSlotPhases(slotIndices);
             // ROM: Ring_spill_anim_counter = $FF, accumulator reset
             spillAnimCounter = LIFETIME_FRAMES;
             spillAnimAccum = 0;
@@ -1161,7 +1161,16 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             spillAnimation.reset();
             ObjectManager objectManager = levelManager != null ? levelManager.getObjectManager() : null;
 
-            for (int i = 0; i < count; i++) {
+            // Atomic stop-on-(-1) slot-allocation contract (ROM Obj37_Init s2.asm:25137-25138:
+            // `bsr.w AllocateObject; bne.w +++` — a failed AllocateObject branches PAST the
+            // spill loop, truncating the spill). Allocate-then-construct in a single loop so a
+            // failed allocation never leaves a reserved-but-unused slot and slot order never
+            // diverges. Spilling runs outside the object exec cursor (player hurt handler), so the
+            // allocation predecessor is the fixed anchor 31 — slot $20 (32) is the first dynamic
+            // slot probed, matching today's trace-validated placement.
+            int previousSlot = 31;
+            int spawned = 0;
+            for (int i = 0; i < toSpawn; i++) {
                 if (angle >= 0) {
                     int sin = calcSine(angle & 0xFF);
                     int cos = calcCosine(angle & 0xFF);
@@ -1181,8 +1190,20 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                         }
                     }
                 }
-                int slotIndex = slotIndices[activeRingCount];
-                int phase = slotPhases[activeRingCount];
+
+                int slotIndex = objectManager != null
+                        ? objectManager.allocateSlotAfter(previousSlot)
+                        : -1;
+                if (slotIndex < 0) {
+                    // ROM: no free slot → stop spilling (truncate the remainder).
+                    int truncated = toSpawn - spawned;
+                    LOG.log(System.Logger.Level.DEBUG, () -> "spawnLostRings: dynamic slot pool "
+                            + "exhausted; " + truncated + " of " + toSpawn + " rings truncated");
+                    break;
+                }
+
+                // phaseOffset matches the legacy computeSlotPhases mapping (127 - slot).
+                int phase = 127 - slotIndex;
                 LostRing ring = ringPool[activeRingCount];
                 ring.reset(phase, player.getCentreX(), player.getCentreY(),
                         xVel, yVel, LIFETIME_FRAMES);
@@ -1190,13 +1211,15 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 // Parallel object path: register a LostRingObjectInstance twin onto the
                 // SAME reserved slot (no second allocation). The legacy LostRing remains
                 // the OWNER of collection/rewind during this stage; the object is exec-only.
-                if (objectManager != null && slotIndex >= 0) {
+                if (objectManager != null) {
                     LostRingObjectInstance ringObject = LostRingObjectInstance.spawn(
                             player.getCentreX(), player.getCentreY(), xVel, yVel,
                             phase, LIFETIME_FRAMES, spillAnimation);
                     objectManager.spawnLostRingObjectAtSlot(ringObject, slotIndex);
                 }
                 activeRingCount++;
+                previousSlot = slotIndex;
+                spawned++;
                 xVel = -xVel;
                 angle = -angle;
             }
@@ -1297,24 +1320,6 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             }
         }
 
-        private int[] allocateSlotIndices(int count) {
-            int[] slots = new int[count];
-            Arrays.fill(slots, -1);
-            ObjectManager objectManager = levelManager != null ? levelManager.getObjectManager() : null;
-            if (objectManager == null) {
-                return slots;
-            }
-            int previousSlot = 31;
-            for (int i = 0; i < count; i++) {
-                int slot = objectManager.allocateSlotAfter(previousSlot);
-                slots[i] = slot;
-                if (slot >= 0) {
-                    previousSlot = slot;
-                }
-            }
-            return slots;
-        }
-
         private void deactivateRing(LostRing ring, ObjectManager objectManager) {
             if (ring == null || !ring.isActive()) {
                 return;
@@ -1348,14 +1353,6 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 }
             }
             return List.copyOf(active);
-        }
-
-        private int[] computeSlotPhases(int[] slots) {
-            int[] phases = new int[slots.length];
-            for (int i = 0; i < slots.length; i++) {
-                phases[i] = slots[i] >= 0 ? 127 - slots[i] : i;
-            }
-            return phases;
         }
 
         private void draw(int frameCounter) {
