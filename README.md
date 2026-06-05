@@ -209,6 +209,18 @@ behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **S2 trace-fleet pass 7 — 9 genuine advances, 1 accepted+queued regression (2026-06-05).** Second
+  16-trace S2 pass under the land-genuine/investigate-regressions-after policy. 9 ROM-cited advances:
+  two universal player-physics corrections cited across all three games — variable jump-height cap
+  gates on `jumping(a0)` not the held button (cnz2 1784→2172), and standing-still duck/look-up reads
+  pre-friction inertia (mcz1 2362→2522) — plus OOZ popping platform (ooz1 1133→1756), CPZ spin-tube
+  waypoint preserve (cpz2 2542→2888), SpinyOnWall detection (cpz1 3303→3329), Monitor inclusive right
+  edge (mcz2 4252→4485), per-test water reload (arz2 566→669), MTZ3 Spring-Wall flush-side bounce
+  (mtz3 6913→**7304**), and the boss-defeat routine-read-once one-frame deferral (dez1 1366→2194). The
+  dez1 deferral lives in the shared `AbstractBossInstance`, so it also shifts WFZ's boss (ObjC5,
+  `routine_secondary=$1E` defeat) by one frame: **WFZ green→f12886** — accepted and queued for a
+  follow-up that scopes the deferral to the touch-triggered main-routine defeat path. Combined sweep:
+  no other regression; EHZ1/SCZ stay green; the two shared physics changes regressed nothing. See `CHANGELOG.md`.
 - **S2 trace-fleet pass 6 — 10 genuine object/boss/sidekick advances (2026-06-04).** A 16-trace S2
   fleet pass (per-trace worktree + triage/fix/verify agents, land-genuine/investigate-regressions-after
   policy) landed 10 ROM-cited per-object fixes, each in its own object/boss class: ChopChop subpixel
