@@ -109,6 +109,35 @@
   `TestS2WfzLevelSelectTraceReplay` all GREEN. Swept-in CPZ2 (f2542 `tails_y_speed`) and HTZ2
   (f2306 `tails_rolling`) are pre-existing failures, frontier unchanged with vs without the fix
   (verified by stash baseline run). No same-game green regressed.
+## 2026-06-05 - mtz3 f6913->f7304: Spring Wall flush-side bounce (barely-poking solid overlap resolves as SIDE in S1/S2)
+
+- Branch `bugfix/ai-trace-s2-mtz3`, worktree `.worktrees/trace-s2-mtz3`.
+- Command (cmd.exe mvn inside worktree):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** advanced, genuine, zero same-game regressions.
+- **Error count:** 833 errors (was failing earlier at f6913). First error frame/field: **f6913 -> f7304** (y_speed mismatch; new owner is an unrelated main-player `y_speed` divergence, expected=-02C8 actual=-03C8).
+- **Root cause:** `ObjectManager.SolidContacts` resolved a barely-poking solid-object overlap
+  (vertical penetration `d1<=4`, horizontal `<= vertical`) only via the engine `absDistY > 4` gate,
+  sending it to the vertical landing path. ROM `SolidObject_cont` diverges per game: S1/S2
+  `cmpi.w #4,d1 / bls.s SolidObject_SideAir` (s2.asm:35411-35412; s1 SolidObject.asm:183-184) route
+  `d1<=4` to SideAir, which does `bsr Solid_NotPushing` then `moveq #1,d4` = SIDE contact, NO
+  position/speed change (s2.asm:35447-35453; s1 SolidObject.asm:211-213). S3K routes `d1<=4` to
+  `loc_1E0D4`, the TOP/BOTTOM path (sonic3k.asm:41465-41466,41541-41546). MTZ Spring Wall (Obj66)
+  `Obj66_Main` fires its `-$800,-$800` diagonal bounce only when SolidObject returns `d4==1` (side)
+  AND player `in_air` (s2.asm:53221-53232; `loc_2704C` s2.asm:53283-53340); without SideAir the
+  flush airborne side overlap was misclassified as a landing and the spring wall never bounced.
+- **Fix:** new `PhysicsFeatureSet.solidObjectBarelyPokingResolvesAsSide` (S1/S2 true, S3K false) and a
+  dedicated early-return in `SolidContacts.classify` returning `SolidContact.side(false, distX,
+  movingInto)` for the barely-poking case. Gated on the per-game flag, NOT gameId/zone/route/frame;
+  comparison-only; S3K byte-unchanged (flag false -> existing absDistY>4 path).
+- **Same-game regression guard (single-fork):** EHZ1, SCZ, WFZ all GREEN. No same-game green regressed.
+- **Pre-existing failures (NOT regressions, baseline-confirmed with fix stashed):** S3K aiz f8941,
+  cnz f17276, mgz f4124 — byte-identical first-error frames at HEAD without the change (S3K flag=false,
+  no-op for S3K). Not same-game (S3K vs S2 target).
+- Files: `src/main/java/com/openggf/level/objects/ObjectManager.java`,
+  `src/main/java/com/openggf/game/PhysicsFeatureSet.java`,
+  `src/main/java/com/openggf/game/CrossGameFeatureProvider.java`,
+  `src/test/java/com/openggf/game/TestHybridPhysicsFeatureSet.java`.
 
 ## 2026-06-04 - arz2 f549->f566: ChopChop (Obj91) X movement via ObjectMove subpixel integration
 
