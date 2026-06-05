@@ -376,18 +376,41 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
             // SolidObject_cont before checking roll anim (docs/s2disasm/s2.asm:25459-25466).
             return true;
         }
-        // ROM: SolidObject_Monitor_Sonic (s2disasm/s2.asm:25448-25453):
+        // ROM: SolidObject_Monitor_Sonic (s2disasm/s2.asm:25586-25616):
         //   btst d6,status(a0)              ; is Sonic already standing on the monitor?
         //   bne.s Obj26_ChkOverEdge         ; if yes → carry him regardless of rolling
-        //   cmpi.b #AniIDSonAni_Roll,anim(a1) ; is Sonic spinning?
-        //   bne.w SolidObject_cont           ; if not spinning → solid
-        //   rts                              ; if spinning → not solid (new landing blocked)
+        //   cmpi.b #AniIDSonAni_Roll,anim(a1) ; is Sonic's ANIMATION the ball/jump anim?
+        //   bne.w SolidObject_cont           ; if not → solid
+        //   rts                              ; if so → not solid (new landing blocked)
         // The rolling gate only blocks NEW landings. A player already standing
         // bypasses the check and goes straight to the edge/carry path.
-        if (mainCharacterStanding) {
+        //
+        // ROM keys this on the anim(a1) BYTE, not on the status.rolling bit. The two
+        // agree on the ground, but a rolling jump stays anim==Roll for its whole
+        // airborne arc (Sonic_Jump writes anim=Roll, Sonic_MdAir never re-runs
+        // Sonic_Move; s2.asm:37387-37388,36791+). Touch_Monitor's break gate also
+        // tests anim==Roll (s2.asm:85245-85255), so both the solidity gate and the
+        // break gate MUST consume the same anim signal or a rolling-jump player can
+        // land-without-breaking when the engine's rolling status bit is cleared a
+        // frame before the anim. Using getAnimationId() here keeps land-vs-break
+        // consistent. S1 (s1disasm/_incObj: SolidObject_Monitor / Touch_Monitor) and
+        // S3K (sonic3k.asm Touch_Monitor / SolidObject_Monitor) gate on the same
+        // Roll anim, so this is a universal correction.
+        // ROM btst d6,status(a0): the "already standing on this monitor" bypass is a
+        // LIVE per-frame status bit, not a persistent latch. It is only true while the
+        // player is actually riding THIS monitor; the moment the player jumps,
+        // Sonic_Jump's clearRidingObjectForJump drops the riding link and the bit is
+        // gone, so a subsequent rolling jump is gated purely by the anim==Roll check.
+        // Using the sticky mainCharacterStanding flag here instead let a stale standing
+        // latch (set on an earlier landing and never cleared on take-off) keep the
+        // monitor solid, so a later rolling jump landed on it instead of breaking it.
+        ObjectManager objectManager = services().objectManager();
+        boolean currentlyRidingThisMonitor = objectManager != null
+                && objectManager.isRidingObject(player, this);
+        if (currentlyRidingThisMonitor) {
             return true;
         }
-        return !player.getRolling();
+        return player.getAnimationId() != Sonic2AnimationIds.ROLL.id();
     }
 
     @Override

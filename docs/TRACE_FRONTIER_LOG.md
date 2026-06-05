@@ -62,6 +62,32 @@
 - A/B baseline measured by copying the changed file aside, `git checkout -- <path>` to HEAD
   (clean f4294/939), then restoring the fix (f4295/840). No `git stash` used (shared worktree
   stack).
+## 2026-06-06 - mcz1 f2757->f3574: Monitor solidity/break gates on the player anim byte, not the rolling status bit
+
+- Branch `bugfix/ai-trace-s2-mcz1`, worktree `.worktrees/trace-s2-mcz1` (off develop `bed67c62e`).
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2MczLevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status: ADVANCED (still failing).** First-error frame **2757 -> 3574** (g_speed mismatch,
+  expected=0x0000 actual=0x0297), error count **212** (target/trace-reports/s2_mcz1_report.json).
+  Surefire: `Tests run: 1, Failures: 1`.
+- **Root cause:** A rolling jump landed on (instead of breaking) an MCZ monitor. `SolidObject_Monitor_Sonic`
+  gates new landings on `cmpi.b #AniIDSonAni_Roll,anim(a1)` — the player's ANIM BYTE, not the
+  `status.player.rolling` bit (docs/s2disasm/s2.asm:25606-25612). `Sonic_Jump` writes `anim=Roll` and
+  sets the rolling bit together (s2.asm:37387-37388) and `Sonic_MdAir` never re-runs `Sonic_Move`
+  (s2.asm:36791+), so the anim byte stays Roll for the whole airborne arc while the engine's
+  rolling/rollingJump bookkeeping can be cleared mid-air by object/platform code the ROM never keys
+  the anim on. `Touch_Monitor`'s break gate also tests `anim==AniIDSonAni_Roll` (s2.asm:37375), so
+  land-vs-break must consume the same signal.
+- **Fix:** `MonitorObjectInstance.isSolidFor` now returns `getAnimationId() != ROLL` and replaces the
+  sticky `mainCharacterStanding` latch with the live `isRidingObject(player, this)` bypass (ROM
+  `btst d6,status(a0)` is a per-frame riding bit dropped at take-off). `ScriptedVelocityAnimationProfile`
+  now resolves the airborne anim to `Roll` whenever `Status_Roll` is set and `flip_angle == 0` (the
+  flip_angle!=0 tumble-handler exception, e.g. S3K CNZ hover fans, is preserved). Universal correction:
+  S1 `26 Monitor.asm:100` and S3K `sonic3k.asm:40562,40588,20859,20882` gate on the same Roll anim, so
+  no `PhysicsFeatureSet` gate. Files: `MonitorObjectInstance.java`, `ScriptedVelocityAnimationProfile.java`.
+- **Same-game regression check (run individually):** `TestS2Ehz1TraceReplay` PASS (Tests run: 1,
+  Failures: 0); `TestS2WfzLevelSelectTraceReplay` PASS (Tests run: 1, Failures: 0). ARZ1 is a non-green
+  frontier trace; unchanged. No previously-green same-game trace regressed.
 
 ## 2026-06-05 - ooz2 f389->f489: Aquis (Obj50) on-screen activation + follow-timer underflow
 

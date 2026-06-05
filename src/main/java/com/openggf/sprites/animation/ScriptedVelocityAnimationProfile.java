@@ -131,13 +131,33 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             // ROM: Sonic_MdAir/Sonic_MdJump do NOT call Sonic_Move, so the anim
             // field is never overwritten while airborne. Only the ground routine
             // (Sonic_MdNormal) calls Sonic_Move which selects walk/run/idle anim.
-            // When jumping=false and roll-jump=false, the player was placed into
-            // the air by an external force. S3K CNZ hover fans clear those bits
-            // but leave Status_Roll alone, so the object-written walk animation
-            // must persist instead of resolving back to roll.
-            // Exception: a slide launch (status_secondary.sliding) keeps the player
-            // in id_Roll on the way up — jumping off a water slide carries the roll
-            // animation into the air even though jump/roll-jump are clear.
+            //
+            // The ROM anim byte stays AniIDSonAni_Roll for the WHOLE airborne arc
+            // of any roll/jump: Sonic_Jump writes anim=Roll + sets status.rolling
+            // together (s2.asm:37387-37388), Sonic_RollJump only sets the
+            // rolljumping bit and leaves the already-Roll anim alone
+            // (s2.asm:37395-37397), and Sonic_MdAir never re-runs Sonic_Move
+            // (s2.asm:36791+). So the engine model is: while airborne, if the
+            // Status_Roll bit is set, the animation is Roll — independent of the
+            // engine's jumping/rollingJump bookkeeping, which can be cleared mid-air
+            // by platform/slot/object code that the ROM does not key the anim on.
+            // This is what lets a rolling jump break a Monitor on the way down
+            // (Touch_Monitor / SolidObject_Monitor_Sonic gate on
+            // anim==AniIDSonAni_Roll, s2.asm:25611-25616,85245-85255); S1 and S3K
+            // monitor roll gates match (s1disasm/_incObj/26 Monitor.asm,
+            // sonic3k.asm Touch_Monitor), so this is a universal correction.
+            //
+            // Exception: a non-zero flip_angle means a tumble/flip handler owns the
+            // frame selection (e.g. S3K CNZ hover fans clear jumping/rollingJump
+            // but set flip_angle + an object-written walk/tumble anim, s3.asm
+            // sub_31E96). Fall through to the object-anim / walk-tumble path so the
+            // fan's frames persist instead of snapping back to the ball.
+            if (sprite.getRolling() && sprite.getFlipAngle() == 0) {
+                return rollAnimId;
+            }
+            // When jumping=false and roll-jump=false (and not rolling/sliding), the
+            // player was placed into the air by an external force; keep its
+            // object-written animation rather than resolving back to walk/roll.
             if (!sprite.isJumping() && !sprite.getRollingJump() && !sprite.isSliding()) {
                 return null;
             }

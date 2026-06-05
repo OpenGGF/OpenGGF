@@ -72,6 +72,27 @@ All notable changes to the OpenGGF project are documented in this file.
   $40 idle before the prev_anim-$A walk-back. Advances the s2 dez1 ending
   level-select trace frontier (first-error frame 3580 -> 4007; spurious player
   death removed).
+- **Monitor roll-break/solidity now keys on the player's anim byte, not the
+  rolling status bit (S1/S2/S3K universal):** `SolidObject_Monitor_Sonic`
+  branches on `cmpi.b #AniIDSonAni_Roll,anim(a1)` — the player's animation byte,
+  not `status.player.rolling` (docs/s2disasm/s2.asm:25606-25612). `Sonic_Jump`
+  writes `anim=Roll` and sets the rolling bit together
+  (docs/s2disasm/s2.asm:37387-37388), and `Sonic_MdAir` never re-runs
+  `Sonic_Move` (docs/s2disasm/s2.asm:36791+), so the anim byte stays `Roll` for
+  the whole airborne arc while the engine's rolling/rollingJump bookkeeping can
+  be cleared mid-air by object/platform code the ROM does not key the anim on.
+  `MonitorObjectInstance.isSolidFor` now gates on `getAnimationId() != ROLL` and
+  replaces the sticky `mainCharacterStanding` latch with the live
+  `isRidingObject(player, this)` standing bypass (ROM `btst d6,status(a0)` is a
+  per-frame riding bit, dropped at take-off); `ScriptedVelocityAnimationProfile`
+  now resolves the airborne anim to `Roll` whenever `Status_Roll` is set and
+  `flip_angle == 0`. The break gate (`Touch_Monitor`) already tests
+  `anim==AniIDSonAni_Roll` (docs/s2disasm/s2.asm:37375), so land-vs-break now
+  consume the same signal. S1 `26 Monitor.asm:100` (`cmpi.b #id_Roll,obAnim`) and
+  S3K `SolidObject_Monitor`/`Touch_Monitor`
+  (docs/skdisasm/sonic3k.asm:40562,40588,20859,20882) match, so this is a
+  universal correction (no `PhysicsFeatureSet` gate). Advances the s2 mcz1
+  level-select trace frontier (first-error frame 2757 -> 3574).
 
 - **OOZ Aquis (Obj50) on-screen activation and follow-timer now ROM-accurate:**
   `Obj50_CheckIfOnScreen` tests `render_flags.on_screen`
