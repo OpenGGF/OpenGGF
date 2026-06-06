@@ -4,6 +4,17 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K LBZ cup elevator (Obj $18) fling spin now completes and the cup flickers
+  away:** the `LBZCupElev_Spin1`/`Spin2` angle step read the low byte of the
+  `spinSpeed` word, but the ROM's `move.b $2E(a0),d0` reads the high byte on the
+  big-endian 68000. The low-byte read spun wildly ("too fast") and froze at
+  `$1000` (low byte `$00`), so the cup never reached its exit-angle window and
+  trapped the rider. The step now uses `(spinSpeed >> 8)`, matching the ROM's
+  smooth `$06..$10` ramp that keeps rotating at max speed until the fling fires.
+  `Obj_LBZElevatorCupFlicker` also now runs `MoveSprite` with gravity ($38),
+  blinks every other frame, and removes itself once off-screen, so the ejected
+  cup arcs away and disappears instead of sliding flat until it culls later.
+
 - **S3K LBZ trigger bridge (Obj $14) now has a dedicated implementation:**
   The S3KL Launch Base trigger bridge now uses the ROM `byte_25F2A`
   positioning/state table, `Level_trigger_array` open/close transitions,

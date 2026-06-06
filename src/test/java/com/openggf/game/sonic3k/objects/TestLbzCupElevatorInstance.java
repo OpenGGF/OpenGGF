@@ -13,6 +13,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.sprites.playable.Sonic;
 import org.junit.jupiter.api.Test;
@@ -122,6 +123,76 @@ class TestLbzCupElevatorInstance {
     }
 
     @Test
+    void flingSpinReachesFlingRoutineWithSmoothMaxSpeedSteps() throws Exception {
+        // Variant $83: bit7 set => fling at end, low nibble 3 => travel $120, flip set => flies right.
+        LbzCupElevatorInstance elevator = new LbzCupElevatorInstance(new ObjectSpawn(
+                0x1800, 0x0600, Sonic3kObjectIds.LBZ_CUP_ELEVATOR, 0x83, 1, false, 0));
+
+        // Drop the cup straight into LBZCupElev_Spin1 with $2E=$600, matching the MoveUp->Spin1 handoff.
+        setPrivateInt(elevator, "routine", 0x0C);
+        setPrivateInt(elevator, "spinSpeed", 0x600);
+        setPrivateInt(elevator, "angleWord", 0x7F00);
+
+        Method updateAction = LbzCupElevatorInstance.class.getDeclaredMethod("updateAction");
+        updateAction.setAccessible(true);
+
+        int maxStep = 0;
+        int previousAngle = elevator.getAngleForTest() & 0xFF;
+        int flingRoutine = -1;
+        for (int frame = 0; frame < 600; frame++) {
+            updateAction.invoke(elevator);
+            int routine = elevator.getRoutineForTest();
+            if (routine != 0x0C) {
+                flingRoutine = routine;
+                break;
+            }
+            int angle = elevator.getAngleForTest() & 0xFF;
+            int step = (angle - previousAngle) & 0xFF;
+            maxStep = Math.max(maxStep, step);
+            previousAngle = angle;
+        }
+
+        assertEquals(0x10, flingRoutine,
+                "LBZCupElev_Spin1 flip branch does addq #4 -> $36=$10 (LBZCupElev_Fling2, flings right); "
+                        + "the cup must leave the spin instead of freezing");
+        assertTrue(maxStep <= 0x10,
+                "Per-frame angle advance is move.b angle+$2E high byte (<=$10); reading the low byte"
+                        + " produces wild steps up to $F0 and freezes at $1000 (angle was stepping by " + maxStep + ")");
+    }
+
+    @Test
+    void flungCupArcsAwayUnderGravityInsteadOfSlidingFlat() throws Exception {
+        // Variant $83 + flip lands in LBZCupElev_Fling2; place the anchor at the fling target so
+        // updateAction hands straight off to Obj_LBZElevatorCupFlicker.
+        LbzCupElevatorInstance elevator = new LbzCupElevatorInstance(new ObjectSpawn(
+                0x1800, 0x0600, Sonic3kObjectIds.LBZ_CUP_ELEVATOR, 0x83, 1, false, 0));
+        setPrivateInt(elevator, "routine", 0x10);
+        setPrivateInt(elevator, "anchorX", 0x2AE0);
+
+        Method updateAction = LbzCupElevatorInstance.class.getDeclaredMethod("updateAction");
+        updateAction.setAccessible(true);
+        updateAction.invoke(elevator);
+
+        assertTrue(getPrivateBoolean(elevator, "flickerMode"),
+                "LBZCupElev_Fling2 switches the cup to Obj_LBZElevatorCupFlicker");
+        assertEquals(0x200, getPrivateInt(elevator, "xVel"),
+                "Fling2 launches the cup to the right (x_vel #$200)");
+        assertEquals(0, getPrivateInt(elevator, "yVel"),
+                "Fling2 starts the flicker with y_vel 0; gravity builds from there");
+
+        Method updateFlicker = LbzCupElevatorInstance.class.getDeclaredMethod("updateFlicker");
+        updateFlicker.setAccessible(true);
+        int startY = elevator.getY();
+        for (int frame = 1; frame <= 8; frame++) {
+            updateFlicker.invoke(elevator);
+            assertEquals(frame * SubpixelMotion.S3K_GRAVITY, getPrivateInt(elevator, "yVel"),
+                    "MoveSprite adds gravity ($38) to y_vel every flicker frame");
+        }
+        assertTrue(elevator.getY() > startY,
+                "Gravity must drag the cup downward so it falls off-screen, not slide flat");
+    }
+
+    @Test
     void attachChildUsesRomFrameAndPositionFormula() {
         int anchorX = 0x1800;
 
@@ -173,6 +244,18 @@ class TestLbzCupElevatorInstance {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.setInt(target, value);
+    }
+
+    private static int getPrivateInt(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getInt(target);
+    }
+
+    private static boolean getPrivateBoolean(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getBoolean(target);
     }
 
     private static Object getPrivateField(Object target, String fieldName) throws Exception {
