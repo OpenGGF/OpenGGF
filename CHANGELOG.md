@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Lost-ring Obj37 rendering now follows the object-loop owner:** spilled rings
+  now draw from `LostRingObjectInstance`, the same object that owns their
+  per-ring physics, instead of the retired legacy `LostRingPool` draw path. This
+  fixes the visible stack of rotating rings at the hit/contact point while the
+  actual moving spilled-ring objects were invisible. The shared
+  `Ring_spill_anim_*` decelerating spin still drives every live ring's displayed
+  frame.
+
 - **S1 GHZ1/MZ1 trace fleet fixes cherry-picked into develop:** S1 Crabmeat
   projectiles now use the ROM `ObjectFall` old-velocity-then-gravity order,
   defer same-frame execution after spawn, and keep hurt collision inactive until

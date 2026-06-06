@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.StubObjectServices;
 import com.openggf.physics.Sensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestEnvironment;
@@ -23,6 +24,11 @@ import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
 class TestLostRingObjectInstance {
 
@@ -146,6 +152,47 @@ class TestLostRingObjectInstance {
         assertEquals((0x100 << 8) + 0x0200, ring.getXSubpixelForTest()); // 0x10200
         assertEquals((0x100 << 8) + (-0x0400), ring.getYSubpixelForTest()); // 0x0FC00
         assertEquals(-0x0400 + 0x18, ring.getYVelForTest());
+    }
+
+    @Test
+    void appendRenderCommandsDrawsMovingLostRingObjectWithSharedSpillFrame() {
+        RingManager ringManager = spy(buildRingManagerWithLevelManager(null));
+        SpillAnimationState animation = new SpillAnimationState();
+        animation.reset();
+        for (int i = 0; i < 4; i++) {
+            animation.tick();
+        }
+        assertEquals(1, animation.frame(), "test setup should advance shared spill frame");
+
+        LostRingObjectInstance ring = LostRingObjectInstance.spawn(
+                0x120, 0x140, 0, 0, 2, 0xFF, animation);
+        ring.setServices(new StubObjectServices() {
+            @Override
+            public RingManager ringManager() {
+                return ringManager;
+            }
+        });
+
+        ring.appendRenderCommands(new ArrayList<>());
+
+        verify(ringManager).drawRingFrameAt(0x120, 0x140, 3);
+        verify(ringManager, never()).drawRingAt(anyInt(), anyInt(), anyInt());
+    }
+
+    @Test
+    void ringManagerDoesNotDrawRetiredLegacyLostRingPoolAtSpawnPoint() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        ObjectManager objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);
+        setField(levelManager, "objectManager", objectManager);
+
+        RingManager ringManager = spy(buildRingManagerWithLevelManager(levelManager));
+        SpawnTestPlayableSprite player = new SpawnTestPlayableSprite((short) 0x100, (short) 0x100);
+        ringManager.spawnLostRings(player, 3, 0);
+
+        ringManager.drawLostRings(12);
+
+        verify(ringManager, never()).drawRingFrameAt(anyInt(), anyInt(), anyInt());
+        verify(ringManager, never()).drawRingAt(anyInt(), anyInt(), anyInt());
     }
 
     @BeforeEach

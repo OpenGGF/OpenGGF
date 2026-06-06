@@ -328,7 +328,10 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     }
 
     public void drawLostRings(int frameCounter) {
-        lostRings.draw(frameCounter);
+        // Per-ring Obj37 rendering now belongs to LostRingObjectInstance, the
+        // same owner that advances per-ring physics. The legacy pool still owns
+        // allocation/spawn bookkeeping during the cutover, but drawing it here
+        // would render stale spawn-point positions.
     }
 
     /**
@@ -345,6 +348,22 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         }
         int spinFrameIndex = renderer.getSpinFrameIndex(frameCounter);
         renderer.drawFrameIndex(spinFrameIndex, x, y);
+    }
+
+    /**
+     * Draw a ring sprite using an exact spin-frame index.
+     * Used by spilled rings, whose display frame is driven by the shared
+     * decelerating Ring_spill_anim_* state rather than a constant frame timer.
+     */
+    public void drawRingFrameAt(int x, int y, int spinFrameIndex) {
+        if (renderer == null) {
+            return;
+        }
+        int spinCount = renderer.getSpinFrameCount();
+        if (spinCount <= 0) {
+            return;
+        }
+        renderer.drawFrameIndex(Math.floorMod(spinFrameIndex, spinCount), x, y);
     }
 
     /**
