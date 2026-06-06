@@ -5,8 +5,8 @@ Generated: 2026-06-04 15:26:08
 ## Summary
 
 - **Total unique objects found:** 303
-- **Implemented:** 145 (47.9%)
-- **Unimplemented:** 158 (52.1%)
+- **Implemented:** 146 (48.2%)
+- **Unimplemented:** 157 (51.8%)
 
 ## Implemented Objects
 
@@ -124,6 +124,7 @@ Generated: 2026-06-04 15:26:08
 | 0xBD | ICZEndBoss | 1 |  | ICZ2 |
 | 0x10 | LBZTubeElevator | 7 |  | LBZ1 |
 | 0x11 | LBZMovingPlatform | 50 |  | LBZ1, LBZ2 |
+| 0x13 | LBZExplodingTrigger | 11 |  | LBZ1, LBZ2 |
 | 0x15 | LBZPlayerLauncher | 24 |  | LBZ1, LBZ2 |
 | 0x17 | LBZRideGrapple | 13 |  | LBZ1, LBZ2 |
 | 0x18 | LBZCupElevator | 22 |  | LBZ1, LBZ2 |
@@ -232,7 +233,6 @@ Generated: 2026-06-04 15:26:08
 | 0x79 | Object | FBZDisappearingPlatform | 11 |  | FBZ1, FBZ2 |
 | 0x7C | Object | FBZPropeller | 11 |  | FBZ1 |
 | 0x8A | Object | FBZExitHall | 11 |  | FBZ2 |
-| 0x13 | Object | LBZExplodingTrigger | 11 |  | LBZ1, LBZ2 |
 | 0x14 | Object | LBZTriggerBridge | 11 |  | LBZ1, LBZ2 |
 | 0x17 | Object | LRZSinkingRock | 11 |  | LRZ1 |
 | 0x79 | Object | SSZHPZTeleporter | 11 |  | SSZ1, SSZ2 |
@@ -842,7 +842,7 @@ Total: 430 objects | Implemented: 24 | Unimplemented: 8
 - [x] 0x0F CollapsingBridge (x19) [4 subtypes]
 - [x] 0x10 LBZTubeElevator (x7) [6 subtypes]
 - [x] 0x11 LBZMovingPlatform (x30) [9 subtypes]
-- [ ] 0x13 LBZExplodingTrigger (x8) [7 subtypes]
+- [x] 0x13 LBZExplodingTrigger (x8) [7 subtypes]
 - [ ] 0x14 LBZTriggerBridge (x7) [7 subtypes]
 - [x] 0x15 LBZPlayerLauncher (x6) [0x00]
 - [ ] 0x16 LBZFlameThrower (x11) [0x20, 0x00]
@@ -885,7 +885,7 @@ Total: 489 objects | Implemented: 22 | Unimplemented: 13
 - [x] 0x0D BreakableWall (x2) [0x00]
 - [x] 0x0F CollapsingBridge (x13) [4 subtypes]
 - [x] 0x11 LBZMovingPlatform (x20) [7 subtypes]
-- [ ] 0x13 LBZExplodingTrigger (x3) [0x08, 0x09, 0x0A]
+- [x] 0x13 LBZExplodingTrigger (x3) [0x08, 0x09, 0x0A]
 - [ ] 0x14 LBZTriggerBridge (x4) [4 subtypes]
 - [x] 0x15 LBZPlayerLauncher (x18) [0x00]
 - [ ] 0x16 LBZFlameThrower (x14) [4 subtypes]

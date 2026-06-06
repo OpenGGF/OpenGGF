@@ -181,6 +181,9 @@ public class Sonic3kConstants {
     public static final int MAP_ICZ_CORK_FLOOR_ADDR = 0x229CE0;   // Map_ICZCorkFloor (12 frames: 6 intact pairs + break frames)
     public static final int MAP_LBZ_CORK_FLOOR_ADDR = 0x229EE8;   // Map_LBZCorkFloor (2 frames, 8/16 pieces)
     public static final int MAP_LBZ_MOVING_PLATFORM_ADDR = 0x025338; // Map_LBZMovingPlatform (3 frames, S&K-side)
+    // Map_LBZExplodingTrigger (1 frame). LBZ S3-era misc mapping referenced by Obj_LBZExplodingTrigger;
+    // no S&K-side duplicate exists, verified by RomArtIntakeTool + byte search at 0x2249A8.
+    public static final int MAP_LBZ_EXPLODING_TRIGGER_ADDR = 0x2249A8;
     public static final int MAP_LBZ_PLAYER_LAUNCHER_ADDR = 0x22534C; // Map_LBZPlayerLauncher (2 frames, S3K lock-on data)
     public static final int MAP_LBZ_RIDE_GRAPPLE_ADDR = 0x026930; // Map_LBZRideGrapple (3 frames, S&K-side)
     // Map_LBZCupElevator (5 frames). LockOn data include; verified by ROM byte

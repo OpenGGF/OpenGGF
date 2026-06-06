@@ -250,6 +250,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     if (zoneSet == S3kZoneSet.SKL && currentRomZoneId() == Sonic3kZoneIds.ZONE_MHZ) {
                         return new MhzMushroomCatapultObjectInstance(spawn);
                     }
+                    if (zoneSet == S3kZoneSet.S3KL && currentRomZoneId() == Sonic3kZoneIds.ZONE_LBZ) {
+                        return new LbzExplodingTriggerInstance(spawn);
+                    }
                     return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                 });
         factories.put(Sonic3kObjectIds.UPDRAFT,
