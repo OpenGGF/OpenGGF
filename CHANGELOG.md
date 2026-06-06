@@ -104,6 +104,28 @@ All notable changes to the OpenGGF project are documented in this file.
   universal correction (no `PhysicsFeatureSet` gate). Advances the s2 mcz1
   level-select trace frontier (first-error frame 2757 -> 3574).
 
+- **CNZ LauncherSpring (Obj85) compression countdown `objoff_32` is now a carried
+  residual, not zeroed on capture/decompression:** ROM `objoff_32` (the per-spring
+  compression countdown) is only ever written by `Obj85_Init`'s spawn-clear (0) and
+  by `loc_2ADB0`'s underflow reset to 3 (`subq.b #1,objoff_32 / bpl / move.b #3`,
+  `docs/s2disasm/s2.asm:57998-58000`). The EMPTY->STANDING capture routine
+  `loc_2AD2A` (`docs/s2disasm/s2.asm:57951-57968`) sets `obj_control`, rolling,
+  radii and `objoff_36` (0->1 at its tail, `addq.b #1,(a2)`, line 57968) but never
+  touches `objoff_32`/`objoff_38`; the empty-spring decompression path `loc_2AD14`
+  (`docs/s2disasm/s2.asm:57937-57941`) decays only `objoff_38`, also leaving
+  `objoff_32` alone. So a spring that has compressed at least once retains its
+  `objoff_32` residual across decompression and re-capture, which makes the FIRST
+  compression increment after a re-capture land a partial interval later than a
+  fresh-spawn spring. `LauncherSpringObjectInstance` no longer resets
+  `compressionFrameCounter` on capture (`enterSpring`) or decompression
+  (`resetAnimationState`), and drops the earlier explicit `capturedThisFrame`
+  per-player skip latch: the capture frame's "free" frame (ROM runs `loc_2AD2A`,
+  not `loc_2ADB0`, because `objoff_36` was zero at the start of `loc_2AD26`,
+  `move.b (a2),d0 / bne loc_2AD7A`, `docs/s2disasm/s2.asm:57948-57949`) is already
+  reproduced structurally by capture happening in `onSolidContact` (after `update()`
+  runs `handleCompression` while still EMPTY) so an extra latch double-counted the
+  free frame. Advances the s2 cnz2 level-select trace frontier (first-error frame
+  4295 -> 4418; 840 -> 798 errors).
 - **OOZ Aquis (Obj50) on-screen activation and follow-timer now ROM-accurate:**
   `Obj50_CheckIfOnScreen` tests `render_flags.on_screen`
   (`docs/s2disasm/s2.asm:60607-60614`), which the engine models with the

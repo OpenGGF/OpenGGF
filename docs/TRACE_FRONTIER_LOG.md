@@ -31,6 +31,34 @@
 - A/B baseline measured by copying the changed file aside, `git checkout -- <path>` to HEAD,
   running the trace (clean f857), then restoring the fix (f899). No `git stash` used (shared
   worktree stack).
+## 2026-06-06 - cnz2 f4295->f4418: LauncherSpring (Obj85) objoff_32 carried as residual (skip-latch removed)
+
+- Branch `bugfix/ai-trace-s2-cnz2`, worktree `.worktrees/trace-s2-cnz2`.
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status: ADVANCED (still failing).** First-error frame **4295 -> 4418**, error count **840 -> 798**.
+  Surefire: `Tests run: 1, Failures: 1`. New first error: `frame 4418 -- tails_y mismatch
+  (expected=0x02F0, actual=0x02F1)` (1-subpixel Tails Y on a post-launch CNZBigBlock landing).
+- **Root cause:** ROM `objoff_32` (Obj85 compression countdown) is only written by `Obj85_Init`'s
+  spawn-clear (0) and by `loc_2ADB0`'s underflow reset to 3 (`subq.b #1,objoff_32 / bpl / move.b #3`,
+  `docs/s2disasm/s2.asm:57998-58000`). The capture routine `loc_2AD2A`
+  (`docs/s2disasm/s2.asm:57951-57968`) and the empty-spring decompression path `loc_2AD14`
+  (`docs/s2disasm/s2.asm:57937-57941`) both leave `objoff_32` untouched, so it is a residual
+  countdown carried across decompression and re-capture. The previous fix zeroed
+  `compressionFrameCounter` on capture/decompression AND added a `capturedThisFrame` skip latch;
+  that double-counted the capture "free" frame (ROM runs `loc_2AD2A` not `loc_2ADB0` on the capture
+  frame because `objoff_36` was zero at the start of `loc_2AD26`,
+  `move.b (a2),d0 / bne loc_2AD7A`, `docs/s2disasm/s2.asm:57948-57949`), landing the first
+  compression increment one held-jump frame too late. `LauncherSpringObjectInstance` now stops
+  zeroing `compressionFrameCounter` and removes the skip latch — the free frame is reproduced
+  structurally because capture happens in `onSolidContact` (after `update()`/`handleCompression`
+  ran that frame while still EMPTY). No zone/route/frame/gameId carve-out; `isDiagonal()` only
+  distinguishes the two genuinely-distinct ROM routines (`Obj85_Up` vs `Obj85_Diagonal`).
+- **Same-game regression guard (all PASS, zero regressions):**
+  `mvn.cmd ... "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2WfzLevelSelectTraceReplay" test`
+  -> BUILD SUCCESS (exit 0), no `<<< FAILURE` markers.
+- A/B verified: HEAD (`efa7015bc`, prior latch approach) = f4295/840 errors; working tree = f4418/798 errors.
+
 ## 2026-06-05 - cnz2 f4294->f4295: LauncherSpring (Obj85) vertical capture-frame compression skip
 
 - Branch `bugfix/ai-trace-s2-cnz2`, worktree `.worktrees/trace-s2-cnz2`.

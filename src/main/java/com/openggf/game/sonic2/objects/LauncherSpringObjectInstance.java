@@ -79,17 +79,6 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         int state = STATE_EMPTY;
         int launchCooldown = 0;
         boolean pinballBeforeCapture = false;
-        /**
-         * ROM objoff_36/objoff_37 only become nonzero at the END of the capture
-         * routine loc_2AD2A (s2.asm:57968 addq.b #1,(a2)). The compression timer
-         * path loc_2ADB0 is reached on a frame ONLY when objoff_36 was already
-         * nonzero at frame start (loc_2AD7A is entered via "move.b (a2),d0 /
-         * bne loc_2AD7A", s2.asm:57948-57949). So the EMPTY->STANDING transition
-         * frame runs loc_2AD2A, NOT loc_2ADB0, and never decrements objoff_32 or
-         * advances objoff_38 that frame. This flag reproduces that one-frame
-         * "captured this frame, no compression yet" skip.
-         */
-        boolean capturedThisFrame = false;
     }
 
     // Per-player state map (ROM: objoff_36 for P1, objoff_37 for P2)
@@ -295,33 +284,37 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         // reached only when objoff_36 was already nonzero at the START of the
         // object update ("move.b (a2),d0 / bne loc_2AD7A", s2.asm:57948-57949),
         // so the EMPTY->STANDING capture frame runs loc_2AD2A and never advances
-        // objoff_38 that frame. Reproduce that one-frame skip.
-        //
-        // This is scoped to the vertical routine (Obj85_Up). The diagonal
-        // routine Obj85_Diagonal (loc_2AF06, s2.asm:58106-58135) has the same
-        // structure, but the engine's diagonal capture fires on a different
-        // object-update phase (side-push conversion at loc_2AF2E,
-        // s2.asm:58114-58135), so its first-compression frame is already aligned
-        // without the skip; applying the skip there would push the diagonal head
-        // one compression-step behind ROM (s2 cnz2 frame 928). The two are
-        // distinct ROM routines, so modelling the skip per-routine is accurate.
-        if (!isDiagonal()) {
-            ps.capturedThisFrame = true;
-        }
+        // objoff_38 that frame -- the capture frame is "free" (no objoff_32
+        // decrement). The engine reproduces that free frame structurally rather
+        // than with an explicit per-player skip flag: capture happens in
+        // onSolidContact (collision resolution, which runs AFTER the object
+        // update() for the frame), so on the capture frame handleCompression has
+        // already run while state==EMPTY and did nothing; the first objoff_32
+        // decrement happens on the NEXT frame's update(). An additional
+        // "captured this frame" skip on top of that ordering double-counted the
+        // free frame and made the first compression increment land one held-jump
+        // frame too late once objoff_32 is carried as a residual (s2 cnz2 frame
+        // 4296), so no extra skip is applied.
 
-        // Reset compression only if no other player is on the spring.
-        // objoff_32 (compressionFrameCounter) is reset to 0 here, matching the
-        // spawn-cleared object RAM that ROM relies on for a fresh spring: ROM
-        // Obj85_Init never initializes objoff_32 and the capture routine
-        // loc_2AD2A/loc_2AF2E does not touch it, so a never-yet-compressed
-        // spring has objoff_32 == 0. The capturedThisFrame skip above then
-        // reproduces ROM's one-frame "no compression on the capture frame"
-        // delay (objoff_36 only becomes nonzero at the loc_2AD2A tail,
-        // s2.asm:57968), so the FIRST decrement underflows 0->-1 and compresses
-        // on the frame AFTER capture, not on the capture frame.
+        // ROM Obj85 capture (loc_2AD2A, s2.asm:57951-57968) sets obj_control,
+        // rolling, radii and objoff_36, but NEVER writes objoff_32 (the
+        // compression countdown) or objoff_38 (the compression accumulator).
+        // objoff_32 is therefore carried as a residual from the previous
+        // compression cycle (it is only spawn-cleared to 0, or reset to 3 on a
+        // loc_2ADB0 underflow, s2.asm:58000). That residual is what makes the
+        // FIRST compression increment after a re-capture land a partial interval
+        // later than a fresh-spawn spring would, instead of underflowing 0->-1 on
+        // the first held-jump frame. Do NOT reset compressionFrameCounter here.
+        //
+        // compression (objoff_38) is left as a defensive 0 only when the spring
+        // currently has no players AND has already decompressed: ROM loc_2AD14
+        // decays objoff_38 to 0 over time while empty (s2.asm:57937-57941), so a
+        // truly fresh capture sees objoff_38 == 0. (In practice ps.state was just
+        // set to STANDING above, so hasAnyPlayerOnSpring() is normally true here
+        // and this branch is a no-op; it is retained for the all-players-left
+        // edge case only.)
         if (!hasAnyPlayerOnSpring()) {
             compression = 0;
-            compressionFrameCounter = 0;
         }
         animationTimer = getMaxCompression() / 2;  // Initialize timer for animation
     }
@@ -378,16 +371,11 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
     private boolean handleCompression(AbstractPlayableSprite player, PlayerState ps) {
         boolean jumpPressed = player.isJumpPressed();
 
-        // ROM: the compression timer path loc_2ADB0 is only reached when
-        // objoff_36 was already nonzero at the start of this object update.
-        // On the frame the player was captured (objoff_36 0->1 inside
-        // loc_2AD2A, s2.asm:57968), the routine fell through loc_2AD2A and
-        // never ran loc_2ADB0, so no objoff_32 decrement / objoff_38 increment
-        // happened. Skip exactly that one frame, then resume next frame.
-        if (ps.capturedThisFrame) {
-            ps.capturedThisFrame = false;
-            return jumpPressed;
-        }
+        // The capture frame's "free" frame (ROM loc_2AD2A runs instead of
+        // loc_2ADB0, so objoff_32 is not decremented that frame, s2.asm:57948-
+        // 57968) is reproduced structurally by the capture-in-onSolidContact /
+        // update() ordering -- see enterSpring. No explicit per-player skip is
+        // applied here.
 
         if (jumpPressed) {
             // ROM: tst.b objoff_3A(a0) / bne.s loc_2ADFE - skip if already processed this frame
@@ -602,7 +590,15 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
      * Called when all players have left the spring.
      */
     private void resetAnimationState() {
-        compressionFrameCounter = 0;
+        // ROM loc_2AD14 (s2.asm:57937-57941) handles spring decompression by only
+        // resetting mainspr_mapframe (move.b #1,mainspr_mapframe) and decaying
+        // objoff_38 by 4 per frame. It does NOT touch objoff_32 (the compression
+        // countdown). objoff_32 is only written by Obj85_Init's spawn-clear (0) and
+        // by loc_2ADB0's underflow reset to 3 (s2.asm:58000). So a spring that has
+        // compressed at least once retains objoff_32's residual countdown across
+        // decompression and re-capture, which is what makes the FIRST compression
+        // increment after a re-capture land a partial interval later than a
+        // fresh-spawn spring would. Do NOT zero compressionFrameCounter here.
         mainSpriteFrame = 1;
         animationTimer = getMaxCompression() / 2;
         // Note: currentSpriteX/Y are NOT reset here - they update based on compression in update()
