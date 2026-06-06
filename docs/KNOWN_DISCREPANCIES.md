@@ -29,6 +29,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 16. [S2 Tornado Ride-Start Trace Bootstrap Contract](#s2-tornado-ride-start-trace-bootstrap-contract)
 17. [S2 CNZ Slot-Machine Trace Bootstrap Contract](#s2-cnz-slot-machine-trace-bootstrap-contract)
 18. [S3K Sidekick Seed-Frame Trace Bootstrap Debt](#s3k-sidekick-seed-frame-trace-bootstrap-debt)
+19. [Sonic 1 Embedded Runtime Data Ratchet](#sonic-1-embedded-runtime-data-ratchet)
 
 ---
 
@@ -791,16 +792,20 @@ level-select fixtures.
 
 `TraceReplayBootstrap` keeps a single predicate named
 `isLegacyS3kAizIntroTrace(...)` to recognize that one fixture shape and apply
-the older bootstrap assumptions. The predicate is intentionally bounded to S3K
-AIZ intro metadata, and `TestBuildToolingGuard` rejects growth beyond the one
-accepted legacy trace predicate.
+the older bootstrap assumptions for focused diagnostics. The inherited full-run
+`replayMatchesTrace` parity test in `TestS3kAizTraceReplay` is disabled as
+diagnostic-only until the trace is regenerated; release validation must not
+count this fixture as proof of end-to-end AIZ parity. The predicate is
+intentionally bounded to S3K AIZ intro metadata, and `TestBuildToolingGuard`
+rejects growth beyond the one accepted legacy trace predicate.
 
 ### Rationale
 
 This is accepted Phase 1 release debt because removing it requires either
 re-recording the legacy fixture or replacing the compatibility branch with a
 ROM-state-driven intro bootstrap model. The release hardening requirement is
-that the exception is visible, bounded, and prevented from expanding silently.
+that the exception is visible, bounded, diagnostic-only for the legacy full-run
+fixture, and prevented from expanding silently.
 
 ### Removal Condition
 
@@ -894,3 +899,32 @@ guards `TraceReplayBootstrap` against regaining the retired shape inference.
 Replace the ad hoc fixture capability string with recorder-emitted ROM phase
 metadata for sidekick seed/history setup, then update replay bootstrap to
 consume that richer phase contract.
+
+---
+
+## Sonic 1 Embedded Runtime Data Ratchet
+
+**Location:** `Sonic1PaletteCycler`, `Sonic1LZConveyorObjectInstance`,
+`Sonic1SpinConveyorObjectInstance`, `Sonic1BridgeObjectInstance`,
+`Sonic1ObjectArtProvider`, `Sonic1BossMappings`
+**Scope:** Sonic 1 runtime data source debt.
+
+### Current State
+
+The runtime does not read gameplay asset bytes from `docs/` disassembly trees,
+but several Sonic 1 tables are still embedded directly in production source:
+palette-cycle rows, LZ/SBZ conveyor waypoint and spawner tables, GHZ bridge
+bend tables, and handwritten object/boss mapping pieces.
+
+### Release Boundary
+
+This is accepted release debt only as a bounded legacy exception. New gameplay
+runtime asset data must still be ROM-backed. `TestArchitecturalSourceGuard`
+locks the current exception counts for these files so this debt cannot expand
+silently under the release branch.
+
+### Removal Condition
+
+Replace each embedded table with ROM-backed loaders or generated mappings
+through the normal user-supplied ROM pipeline, then reduce or remove the
+`sonic1EmbeddedRuntimeDataExceptionsStayDocumentedAndBounded` ratchet.

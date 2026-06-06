@@ -49,6 +49,9 @@ public class SpikyBlockObjectInstance extends AbstractObjectInstance
     // From disassembly: move.b #4,priority(a0)
     private static final int PRIORITY = 4;
 
+    // ROM Obj68_Init: move.b #4,mapping_frame(a0) for the parent block sprite.
+    private static final int BLOCK_MAPPING_FRAME = 4;
+
     private boolean childSpawned;
 
     public SpikyBlockObjectInstance(ObjectSpawn spawn, String name) {
@@ -135,8 +138,7 @@ public class SpikyBlockObjectInstance extends AbstractObjectInstance
 
         PatternSpriteRenderer renderer = renderManager.getRenderer(Sonic2ObjectArtKeys.MTZ_SPIKE_BLOCK);
         if (renderer != null && renderer.isReady()) {
-            // Frame 0 in the block sheet (corresponds to mapping frame 4 in shared Map_obj68)
-            renderer.drawFrameIndex(0, spawn.x(), spawn.y(), false, false);
+            renderer.drawFrameIndex(BLOCK_MAPPING_FRAME, spawn.x(), spawn.y(), false, false);
         }
     }
 

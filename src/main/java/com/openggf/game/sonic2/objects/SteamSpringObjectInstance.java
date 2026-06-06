@@ -67,6 +67,9 @@ public class SteamSpringObjectInstance extends AbstractObjectInstance
     // ROM: addi.w #$28,x_pos(a1) / subi.w #$28,x_pos(a1) - steam puff X offsets
     private static final int STEAM_PUFF_X_OFFSET = 0x28;
 
+    // ROM Obj42_Init: move.b #7,mapping_frame(a0) for the level-art piston head.
+    private static final int PISTON_MAPPING_FRAME = 7;
+
     // State machine (routine_secondary values, divided by 2 for indexing)
     private static final int STATE_WAIT_BEFORE_RISE = 0;
     private static final int STATE_RISING = 1;
@@ -317,8 +320,7 @@ public class SteamSpringObjectInstance extends AbstractObjectInstance
         if (renderManager != null) {
             PatternSpriteRenderer renderer = renderManager.getRenderer(Sonic2ObjectArtKeys.MTZ_STEAM_PISTON);
             if (renderer != null && renderer.isReady()) {
-                // Render piston body at current position (frame 0 = the only frame in piston sheet)
-                renderer.drawFrameIndex(0, spawn.x(), baseY + yOffset, false, false);
+                renderer.drawFrameIndex(PISTON_MAPPING_FRAME, spawn.x(), baseY + yOffset, false, false);
                 return;
             }
         }

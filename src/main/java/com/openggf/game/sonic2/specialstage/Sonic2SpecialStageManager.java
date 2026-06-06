@@ -1659,6 +1659,7 @@ public class Sonic2SpecialStageManager {
 
         boolean renderPlaneB = planeDebugMode.renderPlaneB();
         boolean renderPlaneA = planeDebugMode.renderPlaneA();
+        renderer.setFrameCounter(frameCounter);
 
         if (renderPlaneB) {
             // Use shader-based background rendering if available

@@ -3,23 +3,28 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
+import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.PlayableEntity;
+import com.openggf.graphics.GLCommand;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidRoutineKind;
 import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -57,6 +62,49 @@ class TestSonic2ObjectBugFixes {
         assertFalse(player.isOnObject(),
                 "Obj42 spring launch must clear status.player.on_object like ROM loc_26798");
         verify(objectManager).clearRidingObject(player);
+    }
+
+    @Test
+    void steamSpringRendersPistonMappingFrameSeven() {
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        when(renderer.isReady()).thenReturn(true);
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        when(renderManager.getRenderer(Sonic2ObjectArtKeys.MTZ_STEAM_PISTON)).thenReturn(renderer);
+
+        SteamSpringObjectInstance spring = new SteamSpringObjectInstance(
+                new ObjectSpawn(0x2000, 0x0400, Sonic2ObjectIds.STEAM_SPRING, 0x00, 0, false, 0));
+        spring.setServices(new StubObjectServices() {
+            @Override
+            public ObjectRenderManager renderManager() {
+                return renderManager;
+            }
+        });
+
+        spring.appendRenderCommands(new ArrayList<GLCommand>());
+
+        verify(renderer).drawFrameIndex(7, 0x2000, 0x0410, false, false);
+    }
+
+    @Test
+    void spikyBlockRendersParentBlockMappingFrameFour() {
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        when(renderer.isReady()).thenReturn(true);
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        when(renderManager.getRenderer(Sonic2ObjectArtKeys.MTZ_SPIKE_BLOCK)).thenReturn(renderer);
+
+        SpikyBlockObjectInstance block = new SpikyBlockObjectInstance(
+                new ObjectSpawn(0x1800, 0x0500, Sonic2ObjectIds.SPIKY_BLOCK, 0x00, 0, false, 0),
+                "SpikyBlock");
+        block.setServices(new StubObjectServices() {
+            @Override
+            public ObjectRenderManager renderManager() {
+                return renderManager;
+            }
+        });
+
+        block.appendRenderCommands(new ArrayList<GLCommand>());
+
+        verify(renderer).drawFrameIndex(4, 0x1800, 0x0500, false, false);
     }
 
     @Test

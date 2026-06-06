@@ -4,9 +4,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.sonic2.Sonic2ZoneRegistry;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.graphics.RgbaImage;
+import com.openggf.tests.LogCaptureHandler;
 import com.openggf.version.AppVersion;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -21,9 +23,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -84,6 +90,43 @@ class TestS2DataSelectImageCacheManager {
                 mapper);
 
         assertTrue(manager.cacheValid());
+    }
+
+    @Test
+    void failedAsyncGenerationIsLoggedRetainedAndNonFatal() throws Exception {
+        Path cacheRoot = tempDir.resolve("cache-root-is-file");
+        Files.writeString(cacheRoot, "not a directory");
+        Logger logger = Logger.getLogger(S2DataSelectImageCacheManager.class.getName());
+        LogCaptureHandler handler = new LogCaptureHandler();
+        boolean previousUseParentHandlers = logger.getUseParentHandlers();
+        Level previousLevel = logger.getLevel();
+        logger.addHandler(handler);
+        logger.setUseParentHandlers(false);
+        logger.setLevel(Level.ALL);
+
+        try (var donor = org.mockito.Mockito.mockStatic(CrossGameFeatureProvider.class)) {
+            donor.when(CrossGameFeatureProvider::isS3kDonorActive).thenReturn(true);
+            S2DataSelectImageCacheManager manager = new S2DataSelectImageCacheManager(
+                    cacheRoot,
+                    config,
+                    () -> "async-failure-sha",
+                    mapper);
+
+            assertDoesNotThrow(() -> {
+                manager.ensureGenerationStarted();
+                manager.awaitGenerationIfRunning();
+            });
+
+            assertFalse(manager.isGenerationRunning());
+            assertFalse(manager.cacheValid());
+            assertNotNull(manager.getLastGenerationFailure());
+            assertTrue(handler.countAtOrAbove(Level.WARNING) >= 1,
+                    "Async generation failure should be visible in diagnostics");
+        } finally {
+            logger.removeHandler(handler);
+            logger.setUseParentHandlers(previousUseParentHandlers);
+            logger.setLevel(previousLevel);
+        }
     }
 
     @Test

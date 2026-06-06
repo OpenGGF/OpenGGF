@@ -126,4 +126,14 @@ class TestSaveManager {
         assertEquals(0, s1.payload().get("zone"));
         assertEquals(3, s2.payload().get("zone"));
     }
+
+    @Test
+    void writeSlot_usesTempFileAndAtomicMove() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/game/save/SaveManager.java"));
+
+        assertTrue(source.contains("StandardCopyOption.ATOMIC_MOVE"),
+                "writeSlot must publish saves with an atomic move");
+        assertTrue(source.contains(".tmp"),
+                "writeSlot must write the envelope to a sibling temp file before publishing");
+    }
 }

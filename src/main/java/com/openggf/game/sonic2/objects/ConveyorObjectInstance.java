@@ -8,9 +8,11 @@ import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -298,7 +300,7 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
                 new ConveyorObjectInstance(firstSpawn, "Conveyor", parentX, parentY);
 
         // Remaining children: spawn as dynamic objects with parent's x/y as base.
-        if (manager != null) {
+        if (manager != null && !ObjectConstructionContext.isRewindActiveRestore()) {
             for (int i = 1; i < layout.length; i++) {
                 int[] child = layout[i];
                 int childX = parentX + signExtend16(child[0]);
@@ -319,6 +321,49 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
         }
 
         return firstInstance;
+    }
+
+    static ConveyorObjectInstance recreateForRewind(ObjectSpawn spawn, PerObjectRewindSnapshot snapshot) {
+        if (snapshot != null && snapshot.objectSubclassExtra() instanceof ConveyorRewindExtra extra) {
+            return new ConveyorObjectInstance(spawn, "Conveyor", extra.baseX(), extra.baseY());
+        }
+        return new ConveyorObjectInstance(spawn, "Conveyor");
+    }
+
+    @Override
+    public PerObjectRewindSnapshot captureRewindState() {
+        return super.captureRewindState().withObjectSubclassExtra(
+                new ConveyorRewindExtra(
+                        x,
+                        y,
+                        baseX,
+                        baseY,
+                        targetX,
+                        targetY,
+                        waypointOffset,
+                        waypointDelta,
+                        xVel,
+                        yVel,
+                        xSub,
+                        ySub));
+    }
+
+    @Override
+    public void restoreRewindState(PerObjectRewindSnapshot snapshot) {
+        super.restoreRewindState(snapshot);
+        if (snapshot.objectSubclassExtra() instanceof ConveyorRewindExtra extra) {
+            x = extra.x();
+            y = extra.y();
+            targetX = extra.targetX();
+            targetY = extra.targetY();
+            waypointOffset = extra.waypointOffset();
+            waypointDelta = extra.waypointDelta();
+            xVel = extra.xVel();
+            yVel = extra.yVel();
+            xSub = extra.xSub();
+            ySub = extra.ySub();
+            updateDynamicSpawn(x, y);
+        }
     }
 
     @Override
@@ -535,5 +580,21 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
      */
     private static int signExtend16(int value) {
         return (short) value;
+    }
+
+    private record ConveyorRewindExtra(
+            int x,
+            int y,
+            int baseX,
+            int baseY,
+            int targetX,
+            int targetY,
+            int waypointOffset,
+            int waypointDelta,
+            int xVel,
+            int yVel,
+            int xSub,
+            int ySub
+    ) implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {
     }
 }

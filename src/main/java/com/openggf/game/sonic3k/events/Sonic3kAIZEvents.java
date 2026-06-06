@@ -40,6 +40,7 @@ import com.openggf.level.resources.ResourceLoader;
 import com.openggf.level.WaterSystem;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 
 import java.io.IOException;
 import java.util.List;
@@ -482,6 +483,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             // ROM: SpawnLevelMainSprites clears Level_started_flag as part of the
             // intro bootstrap, before Obj_intPlane executes its first update.
             camera().setLevelStarted(false);
+            applyIntroSidekickDormantMarkersForBootstrap();
             introSpawned = spawnIntroObject();
         } else if (act == 0) {
             // Skip-intro: apply main-level terrain overlays and palette now
@@ -490,7 +492,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 loadPaletteFromPalPointers(PAL_AIZ_INDEX);
                 paletteSwapped = true;
             }
-            AizIntroTerrainSwap.applyMainLevelOverlays();
+            AizIntroTerrainSwap.applyMainLevelOverlaysFromRuntime();
             AizPlaneIntroInstance.setMainLevelPhaseActive(true);
         }
     }
@@ -765,6 +767,19 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         return sidekick != null
                 && shouldSpawnIntro(0)
                 && playerCharacter() == PlayerCharacter.SONIC_AND_TAILS;
+    }
+
+    private void applyIntroSidekickDormantMarkersForBootstrap() {
+        SpriteManager sm = spriteManager();
+        if (sm == null || playerCharacter() != PlayerCharacter.SONIC_AND_TAILS) {
+            return;
+        }
+        for (AbstractPlayableSprite sidekick : sm.getRegisteredSidekicks()) {
+            SidekickCpuController controller = sidekick.getCpuController();
+            if (controller != null && shouldEnterIntroSidekickDormantMarker(sidekick)) {
+                controller.applyLevelEventDormantMarkerForBootstrap();
+            }
+        }
     }
 
     private boolean spawnIntroObject() {

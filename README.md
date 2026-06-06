@@ -22,7 +22,7 @@ modding and customisation.
 > legally obtained ROM files to use this software.
 >
 > The disclaimer is also shown in-engine on startup; it can be disabled by setting
-> `SHOW_LEGAL_DISCLAIMER_ON_STARTUP=false` in `config.json`.
+> `startup.legalDisclaimer: false` in `config.yaml`.
 
 ## User Guide
 
@@ -36,8 +36,9 @@ Contributor tests are JUnit 5 / Jupiter only. Do not add JUnit 4 tests, rules, r
 
 ## Configuration
 
-The engine reads runtime settings from `config.json`. Key bindings can be written either as GLFW
-integer codes or as human-readable names such as `"SPACE"`, `"Q"`, or `"F9"`. See
+The engine reads runtime settings from `config.yaml` in the working directory. A legacy
+`config.json` is migrated automatically on first run. Key bindings can be written either as GLFW
+integer codes or as human-readable names such as `SPACE`, `Q`, or `F9`. See
 [`CONFIGURATION.md`](CONFIGURATION.md) and the player guide for the full reference.
 
 ## Controls
@@ -73,7 +74,7 @@ integer codes or as human-readable names such as `"SPACE"`, `"Q"`, or `"F9"`. Se
 
 | Key | Action |
 |-----|--------|
-| Shift+Tab | Toggle between gameplay and the experimental editor overlay (`EDITOR_ENABLED` must be `true`) |
+| Shift+Tab | Toggle between gameplay and the experimental editor overlay (`debug.flags.editor` must be `true`) |
 | F5 | Restart the playtest from editor mode |
 
 ## FAQ
@@ -135,7 +136,7 @@ these specific revisions, placed in the working directory:
 
 Other revisions (REV00, etc.) are untested and will likely produce incorrect results, as
 ROM addresses are verified against these specific builds. ROM filenames are configurable via
-`config.json` (see `SONIC_1_ROM`, `SONIC_2_ROM`, `SONIC_3K_ROM` keys).
+`config.yaml` (see `roms.sonic1`, `roms.sonic2`, and `roms.sonic3k`).
 
 ### What is cross-game feature donation?
 
@@ -146,14 +147,13 @@ sidekick AI — and when S3K is the donor, you also get the full S3K data select
 save slots and team selection before gameplay begins.
 When S3K is the donor, that donated data select now also uses host-specific emerald presentation
 and runtime-generated S1/S2 zone preview screenshots. Data select donation is only enabled when
-`CROSS_GAME_FEATURES_ENABLED` is `true` and `CROSS_GAME_SOURCE` is `"s3k"`. Enable it in
-`config.json`:
+`crossGame.enabled` is `true` and `crossGame.source` is `"s3k"`. Enable it in
+`config.yaml`:
 
-```json
-{
-  "CROSS_GAME_FEATURES_ENABLED": true,
-  "CROSS_GAME_SOURCE": "s3k"
-}
+```yaml
+crossGame:
+  enabled: true
+  source: "s3k"
 ```
 
 Both the base game ROM and the donor game ROM must be present.

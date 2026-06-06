@@ -10,7 +10,6 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -37,9 +36,6 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/88 Ending Sequence Emeralds.asm
  */
 public class Sonic1EndingEmeraldsObjectInstance extends AbstractObjectInstance {
-
-    /** All live emerald instances for bulk destruction. */
-    private static final List<Sonic1EndingEmeraldsObjectInstance> ALL_EMERALDS = new ArrayList<>();
 
     // ========================================================================
     // ROM Constants
@@ -89,10 +85,6 @@ public class Sonic1EndingEmeraldsObjectInstance extends AbstractObjectInstance {
         this.frameId = frame;
         this.currentX = centerX;
         this.currentY = centerY;
-
-        synchronized (ALL_EMERALDS) {
-            ALL_EMERALDS.add(this);
-        }
     }
 
     private void ensureRenderer() {
@@ -159,16 +151,6 @@ public class Sonic1EndingEmeraldsObjectInstance extends AbstractObjectInstance {
     /** Check if this emerald's radius has reached maximum ($2000). */
     public boolean hasReachedMaxRadius() {
         return radius >= MAX_VALUE;
-    }
-
-    /** Destroy all active emerald instances (ROM: Obj87_ClrObjRam loop). */
-    public static void destroyAllEmeralds() {
-        synchronized (ALL_EMERALDS) {
-            for (Sonic1EndingEmeraldsObjectInstance em : ALL_EMERALDS) {
-                em.setDestroyed(true);
-            }
-            ALL_EMERALDS.clear();
-        }
     }
 
     // ========================================================================

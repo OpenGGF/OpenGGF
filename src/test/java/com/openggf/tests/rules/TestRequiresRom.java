@@ -59,6 +59,14 @@ class TestRequiresRom {
         assertSame(target.rom(), com.openggf.tests.TestEnvironment.currentRom());
     }
 
+    @Test
+    void requiresRomAnnotationIsInheritedByTraceReplaySubclasses() {
+        RequiresRom inherited = InheritedRequiresRomTest.class.getAnnotation(RequiresRom.class);
+
+        assertEquals(SonicGame.SONIC_2, inherited.value(),
+                "Concrete trace subclasses must inherit the ROM gate from abstract trace bases");
+    }
+
     private TestTarget selectAvailableTarget() {
         for (SonicGame game : SonicGame.values()) {
             Rom rom = RomCache.getRom(game);
@@ -138,6 +146,13 @@ class TestRequiresRom {
 
     @RequiresRom(SonicGame.SONIC_3K)
     private static final class RequiresS3kRomTest {
+    }
+
+    @RequiresRom(SonicGame.SONIC_2)
+    private abstract static class AbstractRequiresRomTest {
+    }
+
+    private static final class InheritedRequiresRomTest extends AbstractRequiresRomTest {
     }
 
     private record TestTarget(Class<?> testClass, String expectedModuleId, Rom rom) {

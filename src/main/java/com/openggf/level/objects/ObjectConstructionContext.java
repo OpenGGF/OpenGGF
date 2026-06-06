@@ -11,6 +11,8 @@ public final class ObjectConstructionContext {
     private ObjectConstructionContext() {
     }
 
+    private static final ThreadLocal<Boolean> REWIND_ACTIVE_RESTORE = new ThreadLocal<>();
+
     public static <T> T construct(ObjectServices services, Supplier<T> factory) {
         return with(services, -1, factory);
     }
@@ -57,6 +59,24 @@ public final class ObjectConstructionContext {
 
     public static void clearConstructionContext() {
         AbstractObjectInstance.CONSTRUCTION_CONTEXT.remove();
+    }
+
+    public static <T> T withRewindActiveRestore(Supplier<T> supplier) {
+        Boolean previous = REWIND_ACTIVE_RESTORE.get();
+        REWIND_ACTIVE_RESTORE.set(Boolean.TRUE);
+        try {
+            return supplier.get();
+        } finally {
+            if (previous != null) {
+                REWIND_ACTIVE_RESTORE.set(previous);
+            } else {
+                REWIND_ACTIVE_RESTORE.remove();
+            }
+        }
+    }
+
+    public static boolean isRewindActiveRestore() {
+        return Boolean.TRUE.equals(REWIND_ACTIVE_RESTORE.get());
     }
 
     static Integer consumePreAllocatedSlot() {

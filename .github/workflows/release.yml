@@ -41,6 +41,48 @@ jobs:
       - name: Run trace replay policy tests
         run: mvn test -Ptrace-replay -B
 
+      - name: Assert trace replay coverage
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import re
+          import sys
+          from pathlib import Path
+
+          reports = sorted(Path("target/surefire-reports").glob("com.openggf.tests.trace*.txt"))
+          total = 0
+          skipped = 0
+          for report in reports:
+              text = report.read_text(encoding="utf-8", errors="replace")
+              match = re.search(r"Tests run: (\d+), Failures: \d+, Errors: \d+, Skipped: (\d+)", text)
+              if match:
+                  total += int(match.group(1))
+                  skipped += int(match.group(2))
+
+          executed = total - skipped
+          if executed == 0:
+              print("Trace replay profile produced no executed ROM-backed trace tests", file=sys.stderr)
+              print(f"trace_reports={len(reports)} total={total} skipped={skipped}", file=sys.stderr)
+              sys.exit(1)
+
+          warning_reports = []
+          for report in sorted(Path("target/trace-reports").glob("*_report.json")):
+              data = json.loads(report.read_text(encoding="utf-8"))
+              warning_count = int(data.get("warning_count", 0))
+              if warning_count > 0:
+                  warning_reports.append((report, warning_count))
+
+          if warning_reports:
+              print("Trace replay warnings are release-blocking; warning-only fields do not certify parity",
+                    file=sys.stderr)
+              for report, warning_count in warning_reports:
+                  print(f"{report}: warning_count={warning_count}", file=sys.stderr)
+              sys.exit(1)
+
+          print(f"Trace replay coverage: executed={executed} total={total} skipped={skipped}")
+          PY
+
   build:
     needs: test
     strategy:
@@ -107,7 +149,7 @@ jobs:
 
   release:
     needs: build
-    if: github.event_name == 'push'
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: write

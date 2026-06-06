@@ -115,7 +115,8 @@ public class DefaultObjectServices implements ObjectServices {
                                  ParallaxManager parallaxManager) {
         this(levelManager, camera, gameState, spriteManager, fadeManager, waterSystem,
                 parallaxManager, legacyCollisionSystem(), null, new GameRng(GameRng.Flavour.S1_S2),
-                new ZoneRuntimeRegistry(), null, new ZoneLayoutMutationPipeline(), SolidExecutionRegistry.inert(),
+                legacyZoneRuntimeRegistry(), legacyPaletteOwnershipRegistry(), legacyZoneLayoutMutationPipeline(),
+                SolidExecutionRegistry.inert(),
                 engineServicesFromGameServices(), NoOpBonusStageProvider.INSTANCE);
     }
 
@@ -170,6 +171,24 @@ public class DefaultObjectServices implements ObjectServices {
         return GameServices.hasRuntime()
                 ? GameServices.collision()
                 : new CollisionSystem(new TerrainCollisionManager());
+    }
+
+    private static ZoneRuntimeRegistry legacyZoneRuntimeRegistry() {
+        return GameServices.hasRuntime()
+                ? GameServices.zoneRuntimeRegistry()
+                : new ZoneRuntimeRegistry();
+    }
+
+    private static PaletteOwnershipRegistry legacyPaletteOwnershipRegistry() {
+        return GameServices.hasRuntime()
+                ? GameServices.paletteOwnershipRegistryOrNull()
+                : null;
+    }
+
+    private static ZoneLayoutMutationPipeline legacyZoneLayoutMutationPipeline() {
+        return GameServices.hasRuntime()
+                ? GameServices.zoneLayoutMutationPipeline()
+                : new ZoneLayoutMutationPipeline();
     }
 
     private LevelManager lm() {

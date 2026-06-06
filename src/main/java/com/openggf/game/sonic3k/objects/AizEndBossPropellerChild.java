@@ -2,9 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
-import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -295,11 +293,8 @@ public class AizEndBossPropellerChild extends AbstractBossChild {
 
     /** Spawn a flame projectile child. */
     private void spawnFlameProjectile() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            AizEndBossFlameChild flame = new AizEndBossFlameChild(
-                    boss, this, boss.getAngle());
-            objectManager.addDynamicObject(flame);
+        if (services().objectManager() != null) {
+            spawnChild(() -> new AizEndBossFlameChild(boss, this, boss.getAngle()));
         }
     }
 

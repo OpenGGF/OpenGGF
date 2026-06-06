@@ -2,6 +2,7 @@ package com.openggf.capture;
 
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -45,5 +46,16 @@ class FfmpegEncoderCommandTest {
     @Test
     void findFfmpegReturnsEmptyForBogusPath() {
         assertTrue(FfmpegEncoder.findFfmpegOnPath("").isEmpty());
+    }
+
+    @Test
+    void finishClosesAudioOutputBeforeCheckingVideoExit() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/capture/FfmpegEncoder.java"));
+
+        assertFalse(source.contains("if (vexit != 0) throw new CaptureException(\"ffmpeg video exited \" + vexit);\n"
+                        + "            audioOut.close();"),
+                "finish must close audioOut even when the video ffmpeg process exits non-zero");
+        assertTrue(source.contains("closeAudioOut();"),
+                "finish should route audio cleanup through a guarded helper");
     }
 }

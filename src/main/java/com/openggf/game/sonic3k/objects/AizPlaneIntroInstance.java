@@ -6,7 +6,6 @@ import com.openggf.game.sonic3k.Sonic3kPlayerArt;
 import com.openggf.game.sonic3k.Sonic3kSuperStateController;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.BootstrapObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.physics.SwingMotion;
@@ -574,7 +573,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance {
             mainLevelTerrainSwapAttempted = true;
             boolean swapped = activeIntroInstance != null
                     ? activeIntroInstance.applyMainLevelOverlaysFromServices()
-                    : AizIntroTerrainSwap.applyMainLevelOverlays(new BootstrapObjectServices());
+                    : AizIntroTerrainSwap.applyMainLevelOverlaysFromRuntime();
             if (swapped) {
                 LOG.info("AIZ intro: main-level terrain overlays applied");
             } else {

@@ -1,12 +1,18 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * MGZ2 post-results palette fade to CNZ.
@@ -16,44 +22,11 @@ import java.util.List;
  * it runs {@code StartNewLevel #$300}, entering CNZ Act 1.
  */
 public class Mgz2PostBossPaletteFadeController extends AbstractObjectInstance {
+    private static final Logger LOG = Logger.getLogger(Mgz2PostBossPaletteFadeController.class.getName());
     private static final int PALETTE_LINE_4_INDEX = 3;
     private static final int[] STEP_DELAYS = {
             0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A,
             0x0A, 0x64, 0x05, 0x05, 0x05, 0x05, 0x14, 0x00,
-    };
-    private static final int[][] PAL_MGZ_FADE_CNZ = {
-            {0x0000, 0x0ECA, 0x0EA8, 0x0E88, 0x0E66, 0x0E44, 0x0488, 0x00A8,
-                    0x0084, 0x0062, 0x0042, 0x08AA, 0x0888, 0x0868, 0x0646, 0x0624},
-            {0x0000, 0x0CAA, 0x0CA8, 0x0C88, 0x0C66, 0x0C44, 0x0488, 0x0086,
-                    0x0084, 0x0062, 0x0042, 0x08AA, 0x0888, 0x0868, 0x0646, 0x0624},
-            {0x0000, 0x0C6A, 0x0A68, 0x0C48, 0x0A48, 0x0A46, 0x0488, 0x0086,
-                    0x0064, 0x0242, 0x0042, 0x08AA, 0x0888, 0x0868, 0x0646, 0x0624},
-            {0x0000, 0x0C6A, 0x0A68, 0x0C48, 0x0A48, 0x0A46, 0x0488, 0x0286,
-                    0x0264, 0x0242, 0x0042, 0x08AA, 0x0888, 0x0868, 0x0646, 0x0624},
-            {0x0000, 0x0868, 0x0868, 0x0A48, 0x0848, 0x0846, 0x0488, 0x0266,
-                    0x0264, 0x0242, 0x0042, 0x08AA, 0x0888, 0x0646, 0x0646, 0x0424},
-            {0x0000, 0x0868, 0x0868, 0x0A48, 0x0848, 0x0846, 0x0488, 0x0266,
-                    0x0244, 0x0242, 0x0042, 0x08AA, 0x0888, 0x0646, 0x0646, 0x0424},
-            {0x0000, 0x0668, 0x0668, 0x0848, 0x0648, 0x0646, 0x0488, 0x0246,
-                    0x0244, 0x0242, 0x0042, 0x08AA, 0x0888, 0x0646, 0x0424, 0x0424},
-            {0x0000, 0x0668, 0x0668, 0x084A, 0x0648, 0x0646, 0x0488, 0x0244,
-                    0x0244, 0x0224, 0x0222, 0x08AA, 0x0888, 0x0646, 0x0424, 0x0424},
-            {0x0000, 0x0468, 0x0468, 0x064A, 0x044A, 0x0448, 0x0488, 0x0424,
-                    0x0424, 0x0224, 0x0222, 0x08AA, 0x0888, 0x0424, 0x0424, 0x0224},
-            {0x0000, 0x0448, 0x0248, 0x044A, 0x024A, 0x0248, 0x0488, 0x0424,
-                    0x0424, 0x0224, 0x0222, 0x08AA, 0x0888, 0x0424, 0x0424, 0x0224},
-            {0x0000, 0x0448, 0x0248, 0x0448, 0x0248, 0x0248, 0x0488, 0x0424,
-                    0x0424, 0x0224, 0x0222, 0x08AA, 0x0888, 0x0424, 0x0424, 0x0224},
-            {0x0000, 0x0446, 0x0246, 0x0448, 0x0248, 0x0246, 0x0488, 0x0424,
-                    0x0424, 0x0224, 0x0222, 0x08AA, 0x0888, 0x0424, 0x0424, 0x0224},
-            {0x0000, 0x0424, 0x0624, 0x0424, 0x0424, 0x0224, 0x0488, 0x0424,
-                    0x0424, 0x0224, 0x0222, 0x08AA, 0x0888, 0x0424, 0x0222, 0x0222},
-            {0x0000, 0x0424, 0x0424, 0x0624, 0x0424, 0x0224, 0x0488, 0x0422,
-                    0x0422, 0x0222, 0x0222, 0x08AA, 0x0888, 0x0422, 0x0222, 0x0222},
-            {0x0000, 0x0422, 0x0422, 0x0622, 0x0422, 0x0222, 0x0488, 0x0422,
-                    0x0422, 0x0222, 0x0222, 0x08AA, 0x0888, 0x0422, 0x0222, 0x0222},
-            {0x0000, 0x0422, 0x0422, 0x0622, 0x0422, 0x0222, 0x0488, 0x0422,
-                    0x0422, 0x0222, 0x0222, 0x08AA, 0x0888, 0x0422, 0x0222, 0x0222},
     };
 
     private int timer;
@@ -85,30 +58,43 @@ public class Mgz2PostBossPaletteFadeController extends AbstractObjectInstance {
     }
 
     private void applyFadeStep() {
-        if (step >= PAL_MGZ_FADE_CNZ.length) {
+        if (step >= Sonic3kConstants.PAL_MGZ_FADE_CNZ_ROWS) {
             requestCnzAct1();
             return;
         }
 
-        services().updatePalette(PALETTE_LINE_4_INDEX, encodePaletteRow(PAL_MGZ_FADE_CNZ[step]));
+        byte[] row = readFadeRow(step);
+        S3kPaletteWriteSupport.applyLine(
+                services().paletteOwnershipRegistryOrNull(),
+                services().currentLevel(),
+                services().graphicsManager(),
+                S3kPaletteOwners.MGZ_POST_BOSS_FADE,
+                S3kPaletteOwners.PRIORITY_CUTSCENE_OVERRIDE,
+                PALETTE_LINE_4_INDEX,
+                row,
+                true);
         timer = STEP_DELAYS[Math.min(step, STEP_DELAYS.length - 1)];
         step++;
-        if (step >= PAL_MGZ_FADE_CNZ.length) {
+        if (step >= Sonic3kConstants.PAL_MGZ_FADE_CNZ_ROWS) {
             requestCnzAct1();
+        }
+    }
+
+    private byte[] readFadeRow(int row) {
+        ObjectServices services = services();
+        try {
+            return services.rom().readBytes(
+                    Sonic3kConstants.PAL_MGZ_FADE_CNZ_ADDR
+                            + row * Sonic3kConstants.PAL_MGZ_FADE_CNZ_ROW_SIZE,
+                    Sonic3kConstants.PAL_MGZ_FADE_CNZ_ROW_SIZE);
+        } catch (IOException e) {
+            LOG.fine(() -> "Mgz2PostBossPaletteFadeController.readFadeRow: " + e.getMessage());
+            return null;
         }
     }
 
     private void requestCnzAct1() {
         services().requestZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0, true);
         setDestroyed(true);
-    }
-
-    private static byte[] encodePaletteRow(int[] words) {
-        byte[] row = new byte[words.length * 2];
-        for (int i = 0; i < words.length; i++) {
-            row[i * 2] = (byte) ((words[i] >>> 8) & 0xFF);
-            row[i * 2 + 1] = (byte) (words[i] & 0xFF);
-        }
-        return row;
     }
 }

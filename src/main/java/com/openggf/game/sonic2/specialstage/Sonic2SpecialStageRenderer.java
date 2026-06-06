@@ -55,6 +55,7 @@ public class Sonic2SpecialStageRenderer {
 
     // Checkpoint system
     private Sonic2SpecialStageCheckpoint checkpoint;
+    private int frameCounter;
 
     /**
      * START banner sprite-piece definition (Obj5F frame0 from obj5F_a.asm).
@@ -118,6 +119,10 @@ public class Sonic2SpecialStageRenderer {
 
     public void setPlayers(List<Sonic2SpecialStagePlayer> players) {
         this.players = players != null ? players : new ArrayList<>();
+    }
+
+    public void setFrameCounter(int frameCounter) {
+        this.frameCounter = frameCounter;
     }
 
     public void setIntro(Sonic2SpecialStageIntro intro) {
@@ -577,7 +582,7 @@ public class Sonic2SpecialStageRenderer {
             graphicsManager.beginShadowBatch();
             for (Sonic2SpecialStagePlayer player : sortedPlayers) {
                 // Don't render shadow when invulnerability flash is active
-                if (player.isInvulnerable() && (System.currentTimeMillis() & 0x80) != 0) {
+                if (isInvulnerabilityFlashHidden(player)) {
                     continue;
                 }
                 renderPlayerShadow(player);
@@ -588,7 +593,7 @@ public class Sonic2SpecialStageRenderer {
         // Render players on top of shadows using normal pattern batch
         graphicsManager.beginPatternBatch();
         for (Sonic2SpecialStagePlayer player : sortedPlayers) {
-            if (player.isInvulnerable() && (System.currentTimeMillis() & 0x80) != 0) {
+            if (isInvulnerabilityFlashHidden(player)) {
                 continue;
             }
 
@@ -779,7 +784,7 @@ public class Sonic2SpecialStageRenderer {
         graphicsManager.beginPatternBatch();
 
         for (Sonic2SpecialStagePlayer player : sortedPlayers) {
-            if (player.isInvulnerable() && (System.currentTimeMillis() & 0x80) != 0) {
+            if (isInvulnerabilityFlashHidden(player)) {
                 continue;
             }
 
@@ -823,6 +828,10 @@ public class Sonic2SpecialStageRenderer {
         }
 
         graphicsManager.flushPatternBatch();
+    }
+
+    private boolean isInvulnerabilityFlashHidden(Sonic2SpecialStagePlayer player) {
+        return player.isInvulnerable() && ((frameCounter >> 3) & 1) != 0;
     }
 
     // ========== Intro UI Rendering ==========

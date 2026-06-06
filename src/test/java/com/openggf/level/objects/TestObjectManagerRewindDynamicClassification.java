@@ -1,6 +1,7 @@
 package com.openggf.level.objects;
 
 import com.openggf.tests.TestEnvironment;
+import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.PlayableEntity;
@@ -10,7 +11,9 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.sonic2.objects.CheckpointDongleInstance;
 import com.openggf.game.sonic2.objects.CheckpointObjectInstance;
 import com.openggf.game.sonic2.objects.CheckpointStarInstance;
+import com.openggf.game.sonic2.objects.ConveyorObjectInstance;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
+import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance;
 import com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance;
 import com.openggf.graphics.GLCommand;
@@ -145,6 +148,56 @@ class TestObjectManagerRewindDynamicClassification {
     }
 
     @Test
+    void sonic2ConveyorCohortRestoresCapturedPlatformPositions() {
+        GameServices.camera().resetState();
+        Sonic2ObjectRegistry registry = new Sonic2ObjectRegistry();
+        ObjectSpawn parentSpawn = new ObjectSpawn(
+                0x0200, 0x0400,
+                Sonic2ObjectIds.CONVEYOR,
+                0x80,
+                0,
+                false,
+                0x0400);
+
+        final ObjectManager[] managerRef = new ObjectManager[1];
+        ObjectServices services = new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return managerRef[0];
+            }
+
+            @Override
+            public com.openggf.camera.Camera camera() {
+                return GameServices.camera();
+            }
+        };
+        ObjectManager manager = new ObjectManager(
+                List.of(parentSpawn), registry, 0,
+                null, null, null,
+                GameServices.camera(),
+                services);
+        managerRef[0] = manager;
+        manager.enableExecThenLoadPlacement();
+
+        manager.update(0, null, List.of(), 1, false);
+        for (int frame = 2; frame < 12; frame++) {
+            manager.update(0, null, List.of(), frame, false);
+        }
+        List<ConveyorState> before = conveyorStates(manager);
+        assertEquals(8, before.size(), "MTZ conveyor parent should own exactly eight platform children");
+
+        ObjectManagerSnapshot snapshot = manager.rewindSnapshottable().capture();
+        for (int frame = 12; frame < 24; frame++) {
+            manager.update(0, null, List.of(), frame, false);
+        }
+
+        manager.rewindSnapshottable().restore(snapshot);
+
+        assertEquals(before, conveyorStates(manager),
+                "rewind restore must preserve every conveyor child platform's captured position");
+    }
+
+    @Test
     void dynamicSnapshotHonorsLegacyNoArgSubclassCaptureOverride() {
         ObjectSpawn spawn = new ObjectSpawn(0x100, 0x180, 0x01, 0, 0, false, 0);
         ObjectManager manager = new ObjectManager(List.of(), null, 0, null, null);
@@ -265,6 +318,31 @@ class TestObjectManagerRewindDynamicClassification {
     void skidDustDynamicObjectIsRewindRestorable() {
         assertTrue(ObjectManager.isRewindRestorableDynamicObject(
                 new SkidDustObjectInstance(0x120, 0x1A0, null, true)));
+    }
+
+    private static List<ConveyorState> conveyorStates(ObjectManager manager) {
+        return manager.getActiveObjects().stream()
+                .filter(ConveyorObjectInstance.class::isInstance)
+                .map(ConveyorObjectInstance.class::cast)
+                .map(object -> new ConveyorState(
+                        object.getSlotIndex(),
+                        object.getSpawn().subtype(),
+                        object.getX(),
+                        object.getY()))
+                .sorted()
+                .toList();
+    }
+
+    private record ConveyorState(int slotIndex, int subtype, int x, int y)
+            implements Comparable<ConveyorState> {
+        @Override
+        public int compareTo(ConveyorState other) {
+            int slotCompare = Integer.compare(slotIndex, other.slotIndex);
+            if (slotCompare != 0) {
+                return slotCompare;
+            }
+            return Integer.compare(subtype, other.subtype);
+        }
     }
 
     private static final class TestDynamicObject extends AbstractObjectInstance {

@@ -2383,10 +2383,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			//     / blt.s Player_Boundary_Bottom (sonic3k.asm:23195).
 			//   S3K Tails_Check_Screen_Boundaries loc_14F30: cmp.w y_pos(a0),d0
 			//     / blt.s loc_14F56 (sonic3k.asm:28430-28431).
-			// PhysicsFeatureSet.levelBoundaryUsesCentreY gates centre-Y for the
-			// games whose player trace baselines have been validated against ROM
-			// parity (currently only SONIC_3K). S1/S2 players stay on top-left until
-			// their trace baselines are re-recorded.
+			// PhysicsFeatureSet.levelBoundaryUsesCentreY gates centre-Y semantics
+			// for each game. S1/S2/S3K all enable it because their ROM routines
+			// compare y_pos(a0)/obY(a0), which maps to engine centre-Y.
 			//
 			// CPU sidekicks always use centre-Y to match ROM Tails_LevelBound
 			// behavior regardless of game: MCZ1 F398 (S2 level-select trace, recorded

@@ -920,6 +920,16 @@ public class SidekickCpuController {
     }
 
     /**
+     * Applies the AIZ1 level-event dormant marker during level bootstrap, before
+     * visual trace playback can render skipped pre-LevelLoop frames.
+     */
+    public void applyLevelEventDormantMarkerForBootstrap() {
+        initializeLevelStartSidekickPlacementIfNeeded();
+        applyLevelEventDormantMarker();
+        aizIntroDormantMarkerPrimed = false;
+    }
+
+    /**
      * Returns true when {@link #updateDeadFallingDeferredS2()} ran the
      * below-threshold Obj02_Dead continuation step this frame. The S2
      * deferred-despawn flow keeps Tails in DEAD_FALLING for N+1..N+threshold

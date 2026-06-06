@@ -136,6 +136,15 @@ class TestObjectServicesMigrationGuard {
             approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
                     "GameServices.collision()",
                     "legacy fallback constructor bridges active collision service into ObjectServices"),
+            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
+                    "GameServices.zoneRuntimeRegistry()",
+                    "legacy fallback constructor bridges active zone runtime registry into ObjectServices"),
+            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
+                    "GameServices.paletteOwnershipRegistryOrNull()",
+                    "legacy fallback constructor bridges active palette ownership registry into ObjectServices"),
+            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
+                    "GameServices.zoneLayoutMutationPipeline()",
+                    "legacy fallback constructor bridges active mutation pipeline into ObjectServices"),
             approved("com.openggf.level.objects.ObjectManager", "EngineServices.",
                     "EngineServices.current()",
                     "ObjectServices composition boundary"),
@@ -147,10 +156,10 @@ class TestObjectServicesMigrationGuard {
                     "legacy Sonic 2 object render context wiring"),
             approved("com.openggf.game.sonic3k.objects.AizIntroTerrainSwap", "GameServices.",
                     "GameServices.hasRuntime()",
-                    "static AIZ intro terrain-swap bootstrap helper"),
+                    "static AIZ intro terrain-swap runtime helper"),
             approved("com.openggf.game.sonic3k.objects.AizIntroTerrainSwap", "GameServices.",
-                    "GameServices.zoneLayoutMutationPipeline()",
-                    "static AIZ intro terrain-swap bootstrap helper")
+                    "GameServices.zoneLayoutMutationPipelineOrNull()",
+                    "static AIZ intro terrain-swap runtime helper")
     );
 
     private static final Set<String> SHARED_OBJECT_SOURCE_EXCEPTIONS = Set.of(
@@ -437,17 +446,28 @@ class TestObjectServicesMigrationGuard {
     }
 
     @Test
-    void objectPackages_shouldNotCallAizTerrainSwapNoArgHelper() throws IOException {
-        Path source = Path.of(
-                "src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java");
-        if (!Files.isRegularFile(source)) {
+    void productionCode_shouldNotCallAizTerrainSwapNoArgHelper() throws IOException {
+        Path srcMain = Path.of("src/main/java");
+        if (!Files.isDirectory(srcMain)) {
             return;
         }
 
-        String content = Files.readString(source);
-        if (content.contains("AizIntroTerrainSwap.applyMainLevelOverlays();")) {
-            fail("AizPlaneIntroInstance must route terrain swap through services():\n  "
-                    + "AizIntroTerrainSwap.applyMainLevelOverlays(services())");
+        List<String> violations = new ArrayList<>();
+        try (Stream<Path> files = Files.walk(srcMain)) {
+            files.filter(path -> path.toString().endsWith(".java"))
+                    .forEach(path -> {
+                        try {
+                            String content = Files.readString(path);
+                            if (content.contains("AizIntroTerrainSwap.applyMainLevelOverlays();")) {
+                                violations.add(srcMain.relativize(path).toString());
+                            }
+                        } catch (IOException ignored) {
+                        }
+                    });
+        }
+        if (!violations.isEmpty()) {
+            fail("AIZ terrain swap must use explicit ObjectServices or applyMainLevelOverlaysFromRuntime():\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
 

@@ -1344,6 +1344,9 @@ public class Sonic3kConstants {
     public static final int ARTTILE_MGZ_ENDBOSS_SCALED = 0x0469;
     public static final int MAP_MGZ_ENDBOSS_ADDR = 0x362608;
     public static final int PAL_MGZ_ENDBOSS_ADDR = 0x06D97C;
+    public static final int PAL_MGZ_FADE_CNZ_ADDR = 0x364896;
+    public static final int PAL_MGZ_FADE_CNZ_ROW_SIZE = 32;
+    public static final int PAL_MGZ_FADE_CNZ_ROWS = 16;
     public static final int ART_KOSM_MGZ_ENDBOSS_DEBRIS_ADDR = 0x36D572;
     public static final int MAP_MGZ_ENDBOSS_DEBRIS_ADDR = 0x3637D6;
 

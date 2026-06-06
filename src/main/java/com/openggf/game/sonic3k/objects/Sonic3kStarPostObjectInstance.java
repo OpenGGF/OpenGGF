@@ -8,7 +8,6 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -287,9 +286,8 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance {
      * ROM: AllocateObject, set routine=6, center at (x, y-0x14), mapping_frame=2, lifetime=0x20.
      */
     private void spawnStarChild() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.addDynamicObject(new Sonic3kStarPostStarChild(this));
+        if (services().objectManager() != null) {
+            spawnChild(() -> new Sonic3kStarPostStarChild(this));
         }
     }
 
@@ -316,8 +314,7 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance {
      * Star art variant is determined by ring count formula (loc_2D436).
      */
     private void spawnBonusStars(int ringCount) {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
+        if (services().objectManager() == null) {
             return;
         }
         BonusStarVariant variant = computeBonusStarVariant(ringCount);
@@ -326,8 +323,7 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance {
         // ROM: moveq #4-1,d1 / moveq #0,d2 / ... / addi.w #$40,d2 / dbf d1,...
         for (int i = 0; i < 4; i++) {
             int angleOffset = i * 0x40;
-            objectManager.addDynamicObject(
-                    new Sonic3kStarPostBonusStarChild(this, angleOffset, variant));
+            spawnChild(() -> new Sonic3kStarPostBonusStarChild(this, angleOffset, variant));
         }
     }
 

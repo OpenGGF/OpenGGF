@@ -2,9 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
-import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -83,10 +81,8 @@ public class AizEndBossArmChild extends AbstractBossChild {
         switch (routine) {
             case ROUTINE_INIT -> {
                 // Spawn propeller child (ROM: ChildObjDat_69D26, offset -$1C, 0)
-                ObjectManager objectManager = services().objectManager();
-                if (objectManager != null) {
-                    propeller = new AizEndBossPropellerChild(boss, this, subtype);
-                    objectManager.addDynamicObject(propeller);
+                if (services().objectManager() != null) {
+                    propeller = spawnChild(() -> new AizEndBossPropellerChild(boss, this, subtype));
                 }
                 routine = ROUTINE_WAIT_REVEAL;
             }
