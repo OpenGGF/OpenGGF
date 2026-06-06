@@ -145,7 +145,9 @@ public final class LbzExplodingTriggerInstance extends AbstractObjectInstance
 
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.LBZ_EXPLODING_TRIGGER);
         if (renderer != null) {
-            renderer.drawFrameIndex(0, spawn.x(), spawn.y(), false, false);
+            boolean hFlip = (spawn.renderFlags() & 0x01) != 0;
+            boolean vFlip = (spawn.renderFlags() & 0x02) != 0;
+            renderer.drawFrameIndex(0, spawn.x(), spawn.y(), hFlip, vFlip);
         }
     }
 

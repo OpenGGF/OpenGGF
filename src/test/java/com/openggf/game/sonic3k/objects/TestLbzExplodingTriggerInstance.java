@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
 import com.openggf.level.objects.TestObjectServices;
@@ -15,6 +16,7 @@ import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Sonic;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +27,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class TestLbzExplodingTriggerInstance {
 
@@ -72,6 +78,25 @@ class TestLbzExplodingTriggerInstance {
         assertTrue(profile.requiresRenderFlagForTouch());
         assertEquals(TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS,
                 profile.stopAfterFirstOverlapPolicy());
+    }
+
+    @Test
+    void renderUsesObjectPlacementFlipBits() {
+        PatternSpriteRenderer leftFacingRenderer = readyRenderer();
+        LbzExplodingTriggerInstance leftFacing = triggerForRenderFlags(0);
+        leftFacing.setServices(new RenderingServices(rendererManager(leftFacingRenderer)));
+
+        leftFacing.appendRenderCommands(new java.util.ArrayList<>());
+
+        verify(leftFacingRenderer).drawFrameIndex(eq(0), eq(0x1800), eq(0x0600), eq(false), eq(false));
+
+        PatternSpriteRenderer rightFacingRenderer = readyRenderer();
+        LbzExplodingTriggerInstance rightFacing = triggerForRenderFlags(1);
+        rightFacing.setServices(new RenderingServices(rendererManager(rightFacingRenderer)));
+
+        rightFacing.appendRenderCommands(new java.util.ArrayList<>());
+
+        verify(rightFacingRenderer).drawFrameIndex(eq(0), eq(0x1800), eq(0x0600), eq(true), eq(false));
     }
 
     @Test
@@ -158,6 +183,36 @@ class TestLbzExplodingTriggerInstance {
 
     private static AbstractPlayableSprite s3kPlayer() {
         return new Sonic("sonic", (short) 0x1800, (short) 0x0600);
+    }
+
+    private static LbzExplodingTriggerInstance triggerForRenderFlags(int renderFlags) {
+        return new LbzExplodingTriggerInstance(new ObjectSpawn(
+                0x1800, 0x0600, 0x13, 0, renderFlags, false, 0));
+    }
+
+    private static PatternSpriteRenderer readyRenderer() {
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        when(renderer.isReady()).thenReturn(true);
+        return renderer;
+    }
+
+    private static ObjectRenderManager rendererManager(PatternSpriteRenderer renderer) {
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.LBZ_EXPLODING_TRIGGER)).thenReturn(renderer);
+        return renderManager;
+    }
+
+    private static final class RenderingServices extends TestObjectServices {
+        private final ObjectRenderManager renderManager;
+
+        private RenderingServices(ObjectRenderManager renderManager) {
+            this.renderManager = renderManager;
+        }
+
+        @Override
+        public ObjectRenderManager renderManager() {
+            return renderManager;
+        }
     }
 
     private static final class ZoneForTestRegistry extends Sonic3kObjectRegistry {

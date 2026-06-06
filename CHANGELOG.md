@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K LBZ exploding trigger (Obj $13) now honors placement flip flags:**
+  the visible trigger frame now passes the object-position h/v flip bits through
+  to the renderer, so right-facing placements no longer draw with the raw
+  left-facing LBZ misc mapping.
+
 - **S3K LBZ cup elevator (Obj $18) fling spin now completes and the cup flickers
   away:** the `LBZCupElev_Spin1`/`Spin2` angle step read the low byte of the
   `spinSpeed` word, but the ROM's `move.b $2E(a0),d0` reads the high byte on the
