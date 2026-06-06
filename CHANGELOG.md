@@ -13,6 +13,19 @@ All notable changes to the OpenGGF project are documented in this file.
   now targets the actual Final Zone segment instead of the stale truncated
   SBZ3 data. Both traces execute against the shared movie and currently expose
   genuine engine parity frontiers.
+- **S1 Purple Rock (Obj3B) top-landing width now uses ROM `obActWid` ($13):**
+  `Sonic1RockObjectInstance` overrides `getTopLandingHalfWidth()` to return the
+  ROM `obActWid` of `$13` rather than letting the generic landing gate derive it
+  as `collisionHalfWidth - sonic_solid_width` (`$1B - $B = $10`). The rock's
+  collision half-width `d1 = $10 + sonic_solid_width` (`$1B`) and its standable
+  `obActWid` (`$13`, set in `Rock_Main`) are authored independently, so the
+  generic derivation under-sized the standable top surface and rejected the GHZ2
+  air-roll top-landing one frame late. `Solid_Landed` re-reads `obActWid(a0)` for
+  new landings (`docs/s1disasm/_incObj/sub SolidObject.asm:267-277`;
+  `docs/s1disasm/_incObj/3B Purple Rock.asm:20,24-28`). S1-only per-object hook;
+  no shared collision code touched. Advances the S1 GHZ2 complete-run trace from
+  first-error frame 1104 to 1409 (next blocker is distinct Obj15 SwingingPlatform
+  continued-ride parity).
 - **S1 GHZ2 bridge landing now stages fresh airborne catches like ROM Obj11:**
   `Sonic1BridgeObjectInstance` now separates the read-only `Bri_Solid` /
   `Platform3` catch detection pass from the land-applying checkpoint on the

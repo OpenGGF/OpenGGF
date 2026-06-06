@@ -18,6 +18,35 @@
   frame 277 (`air`, expected `0`, actual `1`). Treat these as genuine parity frontiers, not
   bad-recording/setup failures.
 
+## 2026-06-06 - s1 ghz2 f1104->f1409: Obj3B PurpleRock top-landing width is obActWid ($13), not d1-$B ($10)
+
+- Branch `bugfix/ai-trace-s1-ghz2`, worktree `.worktrees/trace-s1-ghz2`.
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" "-Dtest=TestS1Ghz2CompleteRunTraceReplay#replayMatchesTrace" test`
+- **Status: ADVANCED (still failing).** First-error frame **1104 -> 1409**, error count 196 -> 350
+  (count up only because more frames now replay before the next, distinct divergence).
+  Surefire: `Tests run: 1, Failures: 1`. New first error is `y` expected `0x01AC` actual `0x01AD`.
+- **Root cause:** the engine's `isWithinTopLandingWidth` derives the ROM `obActWid` (the standable
+  top-surface half-width re-read by `Solid_Landed`) as `collisionHalfWidth - sonic_solid_width`
+  (`$1B - $B = $10`). Obj3B PurpleRock passes collision `d1 = $10 + sonic_solid_width` ($1B) but its
+  `obActWid` is authored INDEPENDENTLY as `$13` (Rock_Main, `move.b #$13,obActWid(a0)`), so the
+  derivation under-sizes the landing surface to $10. At f1104 the air-roll player (y_radius $E) is at
+  relX=8 (player center exactly at the obActWid left edge): ROM `Solid_Landed` d1 = playerX+obActWid-objX
+  = 0 (in [0,2*obActWid)) -> lands; engine d1 = -3 -> rejects, landing slipped one frame late.
+- **Fix:** `Sonic1RockObjectInstance` overrides `getTopLandingHalfWidth()` to return the real
+  obActWid `$13`, so the narrow landing gate matches `Solid_Landed`. S1-only object; no shared
+  collision code touched. GHZ1 first-error frame unchanged at 1390 (no regression; its error count
+  271 -> 266).
+- **Disasm cites:** `docs/s1disasm/_incObj/sub SolidObject.asm:267-277` (Solid_Landed obActWid d1
+  window), `docs/s1disasm/_incObj/3B Purple Rock.asm:20,24-28` (obActWid=$13, d1=$10+sonic_solid_width).
+- **Next blocker (f1409):** distinct Obj15 SwingingPlatform continued-ride parity. ROM `Swing_Action2`
+  (routine 4) does `move.b obHeight(a0),d3; addq.b #1,d3` so MvSonicOnPtfm carries the rider at
+  `objY - (obHeight+1) - y_radius` = `objY - 9 - y_radius`, matching its own new-landing snap; the
+  engine's shared continued-ride uses `objY - groundHalfHeight(8) - y_radius` = 1px low. Fixing needs
+  a per-provider continued-ride surface-offset hook (distinct from new-landing geometry), out of scope
+  for a single clean rock change. Cites: `docs/s1disasm/_incObj/15 Swinging Platforms.asm:145-153`
+  (Swing_Action2 obHeight+1), `.../sub PlatformObject.asm:114-127` (Swing_Solid -> Platform3 new-land).
+
 ## 2026-06-06 - s1 ghz2 f615->f1104: Obj11 bridge fresh airborne catch defers land apply one object pass
 
 - Branch `bugfix/ai-trace-s1-ghz2`, worktree `.worktrees/trace-s1-ghz2`.
