@@ -4,6 +4,19 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 GHZ/SLZ/MZ Obj18 Platform fresh-landing timing now follows its routine split:**
+  `Sonic1PlatformObjectInstance` now models Obj18's routine-2
+  `PlatformObject` pass as occurring before `Plat_Move` / `Plat_Nudge`, while
+  preserving routine-4 continued riding through the later
+  `ExitPlatform -> Plat_Move -> Plat_Nudge -> MvSonicOnPtfm2` order. Fresh
+  top-solid landings use Obj18's `obActWid` as the standable half-width, gate
+  the catch against the previous sampled player position, and snap through the
+  `PlatformObject` `obY - 8` surface instead of the continued-ride `obY - 9`
+  surface (`docs/s1disasm/_incObj/18 Platforms.asm:54-87`;
+  `docs/s1disasm/_incObj/sub PlatformObject.asm:5-42`;
+  `docs/s1disasm/_incObj/15 Swinging Platforms.asm:177-194`). This advances
+  `TestS1Ghz2CompleteRunTraceReplay` from first-error frame 2369 to 2370; the
+  new frontier is a remaining 1px Obj18 platform riding Y mismatch.
 - **S1 Chopper leap integration now follows ROM `SpeedToPos`:**
   `Sonic1ChopperBadnikInstance` now updates vertical position through the
   ROM-style 16.16 `SpeedToPos` path, applies Chopper's `$18` gravity after

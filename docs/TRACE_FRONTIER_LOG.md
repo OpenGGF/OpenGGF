@@ -1,5 +1,38 @@
 # Trace Frontier Log
 
+## 2026-06-06 - s1 ghz2 f2369->f2370: Obj18 fresh landing uses pre-move PlatformObject geometry
+
+- Branch `bugfix/ai-trace-s1-r4-ghz2`, worktree `.worktrees/trace-s1-r4-ghz2`.
+- Target command:
+  `mvn "-Dtest=TestS1Ghz2CompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+- S1 green guard command:
+  `mvn clean test "-Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestS1Ghz1TraceReplay" "-DfailIfNoTests=false"`
+  passed: `MSE:OK modules=1 passed=9 failed=0 errors=0 skipped=0`.
+- **Status: ADVANCED (still failing).** First-error frame **2369 -> 2370**.
+  Surefire: `Tests run: 1, Failures: 1`. New first error is `y` expected
+  `0x0267`, actual `0x0266`, with Sonic riding Obj18 Platform slot 42.
+- **Root cause:** S1 Obj18 uses different geometry and timing for a new
+  landing than for continued riding. Routine 2 passes `obActWid` directly to
+  `PlatformObject` before Obj18 runs `Plat_Move` / `Plat_Nudge`, so the fresh
+  catch observes the pre-move platform sample and the `obY - 8` entry surface.
+  Routine 4 handles an existing rider after `ExitPlatform`, movement, and
+  nudge, then carries Sonic through `MvSonicOnPtfm2`'s `obY - 9` surface.
+- **Fix:** `Sonic1PlatformObjectInstance` now opts into the Obj18
+  standable-width contract, gates new top-solid landings with the prior sampled
+  player position, keeps pre-update object coordinates for the fresh contact
+  pass, and applies a one-pixel first-landing snap adjustment while preserving
+  routine-4 continued-riding behavior.
+- **Disasm cites:** `docs/s1disasm/_incObj/18 Platforms.asm:54-87`
+  (`Plat_Solid` before movement, `Plat_Action2` continued ride after
+  movement), `docs/s1disasm/_incObj/sub PlatformObject.asm:5-42`
+  (`PlatformObject` X/Y gate and snap), and
+  `docs/s1disasm/_incObj/15 Swinging Platforms.asm:177-194`
+  (`MvSonicOnPtfm2` continued-ride surface).
+- Genuineness gate: PASS. The fix is scoped to S1 Obj18 object behavior, adds
+  no trace hydration, no tolerance, and no zone/route/frame carve-out. Same-game
+  guard passed with zero regressions; the target remains red at the next
+  one-frame frontier.
+
 ## 2026-06-06 - s1 ghz2 f1690->f2369: Chopper uses 16.16 SpeedToPos state
 
 - Branch `bugfix/ai-trace-s1-r3-ghz2`, worktree `.worktrees/trace-s1-r3-ghz2`.
