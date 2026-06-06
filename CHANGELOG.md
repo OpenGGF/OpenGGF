@@ -13,6 +13,16 @@ All notable changes to the OpenGGF project are documented in this file.
   now targets the actual Final Zone segment instead of the stale truncated
   SBZ3 data. Both traces execute against the shared movie and currently expose
   genuine engine parity frontiers.
+- **S1 Button (Obj32) now uses the ROM full `SolidObject` contract:**
+  `Sonic1ButtonObjectInstance` now exposes a full solid profile instead of
+  top-solid-only behavior. The S1 Button routine passes
+  `d1 = $10 + sonic_solid_width` (`$1B`) and `d2/d3 = 5`, then calls
+  `SolidObject`, whose side-contact path stops horizontal velocity, corrects
+  `obX`, and sets push status (`docs/s1disasm/_incObj/32 Button.asm:31-38`;
+  `docs/s1disasm/_Constants.asm:192`;
+  `docs/s1disasm/_incObj/sub SolidObject.asm:151-208`). The object still
+  preserves its narrower `obActWid` top-landing half-width `$10`. Advances
+  `TestS1Sbz3CompleteRunTraceReplay` from first-error frame 45 to 839.
 - **S1 Purple Rock (Obj3B) top-landing width now uses ROM `obActWid` ($13):**
   `Sonic1RockObjectInstance` overrides `getTopLandingHalfWidth()` to return the
   ROM `obActWid` of `$13` rather than letting the generic landing gate derive it

@@ -18,6 +18,28 @@
   frame 277 (`air`, expected `0`, actual `1`). Treat these as genuine parity frontiers, not
   bad-recording/setup failures.
 
+## 2026-06-06 - s1 sbz3 f45->f839: Obj32 Button uses full SolidObject side contract
+
+- Branch `bugfix/ai-trace-s1-r2-sbz3`, worktree `.worktrees/trace-s1-r2-sbz3`.
+- Command:
+  `mvn "-Dtest=TestS1Sbz3CompleteRunTraceReplay" "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" test`
+- **Status: ADVANCED (still failing).** First-error frame **45 -> 839**, error count **4801** at the
+  new frontier. Surefire: `Tests run: 1, Failures: 1`. New first error is `camera_y`
+  expected=`0x029C` actual=`0x0298`; the earlier button-side-contact `x` mismatch is gone.
+- **Root cause:** S1 Obj32 Button routine 2 calls the generic `SolidObject` routine, not the
+  top-only platform path. It passes `d1 = $10 + sonic_solid_width` (`$1B`) and `d2/d3 = 5`,
+  then `SolidObject` handles side contacts by stopping horizontal velocity, correcting
+  `obX`, and setting push status when appropriate
+  (`docs/s1disasm/_incObj/32 Button.asm:31-38`,
+  `docs/s1disasm/_Constants.asm:192`,
+  `docs/s1disasm/_incObj/sub SolidObject.asm:151-208`). The engine exposed the Button as
+  top-solid-only, so side contact was ignored. The fix switches Obj32 to the full solid
+  profile while preserving its separate `obActWid` top-landing half-width `$10`.
+- **Same-game regression guard (PASS, zero regressions):**
+  `mvn "-Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestS1Ghz1TraceReplay" "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" test`
+  -> 9 passed, 0 failed, 0 errors, 0 skipped after clearing stale local Surefire reports.
+- Focused unit guard: `TestSonic1ButtonObjectInstance` PASS (`tests=1`, `failures=0`, `errors=0`).
+
 ## 2026-06-06 - s1 ghz2 f1104->f1409: Obj3B PurpleRock top-landing width is obActWid ($13), not d1-$B ($10)
 
 - Branch `bugfix/ai-trace-s1-ghz2`, worktree `.worktrees/trace-s1-ghz2`.
