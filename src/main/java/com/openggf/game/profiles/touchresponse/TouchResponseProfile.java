@@ -89,11 +89,15 @@ public record TouchResponseProfile(
     }
 
     private static TouchCategoryDecodeMode decodeMode(TouchResponseProvider provider) {
+        boolean sonic1 = provider.usesSonic1TouchSpecialPropertyResponse();
         boolean sonic2 = provider.usesSonic2TouchSpecialPropertyResponse();
         boolean s3k = provider.usesS3kTouchSpecialPropertyResponse();
-        if (sonic2 && s3k) {
+        if ((sonic1 ? 1 : 0) + (sonic2 ? 1 : 0) + (s3k ? 1 : 0) > 1) {
             throw new IllegalArgumentException(
-                    "Touch special-property decode mode must be Sonic 2 or S3K, not both");
+                    "Touch special-property decode mode must be Sonic 1, Sonic 2, or S3K");
+        }
+        if (sonic1) {
+            return TouchCategoryDecodeMode.S1_SPECIAL_PROPERTY;
         }
         if (sonic2) {
             return TouchCategoryDecodeMode.SONIC2_SPECIAL_PROPERTY;

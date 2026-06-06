@@ -91,12 +91,6 @@ public class Sonic1LZWaterEvents {
      */
     private boolean waterSlideActive;
 
-    /**
-     * Small hysteresis for slide exit to prevent one-frame animation pops when
-     * chunk sampling briefly misses during movement.
-     */
-    private int slideExitGraceFrames;
-
     // =========================================================================
     // Wind tunnel region definitions (ROM: LZWind_Data, lines 377-383)
     //
@@ -169,7 +163,6 @@ public class Sonic1LZWaterEvents {
      * Positive = rightward, negative = leftward (and sets facing-left flag).
      */
     private static final int[] SLIDE_SPEEDS = {10, -11, 10, -10, -11, -12, 11};
-    private static final int SLIDE_EXIT_GRACE_MAX = 6;
 
     // Layout gap position: v_lvllayout + $80*2 + 6 = FG row 2, column 6.
     // Shared by DynWater_LZ3 routine 0 (writes $4B) and DLE_LZ3 (writes 7).
@@ -223,7 +216,6 @@ public class Sonic1LZWaterEvents {
         this.windTunnelPreserveGroundContact = false;
         this.windTunnelDisabled = false;
         this.waterSlideActive = false;
-        this.slideExitGraceFrames = 0;
     }
 
     /**
@@ -987,12 +979,10 @@ public class Sonic1LZWaterEvents {
      * <p>Slide speeds (ROM: Slide_Speeds): 10, -11, 10, -10, -11, -12, 11
      * <p>Positive speed = rightward, negative = leftward.
      *
-     * @param chunkIdAtPlayer primary 128x128 block ID sample at player position,
+     * @param chunkIdAtPlayer 128x128 block ID sampled from ROM obX/obY,
      *                        or -1 if not available
-     * @param fallbackChunkId secondary block ID sample used to reduce transient
-     *                        detection misses from coordinate differences, or -1
      */
-    public void checkWaterSlide(int chunkIdAtPlayer, int fallbackChunkId) {
+    public void checkWaterSlide(int chunkIdAtPlayer) {
         AbstractPlayableSprite player = camera().getFocusedSprite();
         if (player == null) {
             return;
@@ -1014,19 +1004,13 @@ public class Sonic1LZWaterEvents {
         // We only attempt chunk matching while grounded and with a valid chunk ID.
         if (!player.getAir()) {
             matchIndex = findSlideChunkIndex(chunkIdAtPlayer);
-            if (matchIndex < 0 && fallbackChunkId >= 0 && fallbackChunkId != chunkIdAtPlayer) {
-                matchIndex = findSlideChunkIndex(fallbackChunkId);
-            }
         }
 
         if (matchIndex < 0) {
-            // No slide chunk matched
-            if (waterSlideActive && slideExitGraceFrames > 0) {
-                slideExitGraceFrames--;
-                player.setSliding(true);
-                player.setAnimationId(Sonic1AnimationIds.WATER_SLIDE);
-                return;
-            }
+            // ROM loc_3F6A immediately clears f_slidemode on the first
+            // non-matching chunk after a slide (docs/s1disasm/_inc/
+            // LZWaterFeatures.asm:408-415). Keeping slide mode alive for
+            // hysteresis skips Sonic_Move input longer than the ROM.
             handleSlideExit(player);
             return;
         }
@@ -1057,7 +1041,6 @@ public class Sonic1LZWaterEvents {
 
         // ROM: move.b #1,(f_slidemode).w
         waterSlideActive = true;
-        slideExitGraceFrames = SLIDE_EXIT_GRACE_MAX;
 
         // ROM: play waterfall SFX every $20 (32) frames
         // move.b (v_vbla_byte).w,d0 / andi.b #$1F,d0 / bne.s locret_3FBE
@@ -1086,7 +1069,6 @@ public class Sonic1LZWaterEvents {
 
         // ROM: clr.b (f_slidemode).w
         waterSlideActive = false;
-        slideExitGraceFrames = 0;
         player.setSliding(false);
     }
 

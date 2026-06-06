@@ -247,8 +247,9 @@ public class Sonic1FanObjectInstance extends AbstractObjectInstance {
             pushStrength = -pushStrength;
         }
 
-        // .movesonic: add.w d0,obX(a1) — push Sonic away from the fan
-        player.setCentreX((short) (player.getCentreX() + pushStrength));
+        // .movesonic: add.w d0,obX(a1) — push Sonic's x_pos word only
+        // (docs/s1disasm/_incObj/5D Fan.asm:75), preserving x_sub.
+        player.shiftX(pushStrength);
     }
 
     /**

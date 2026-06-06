@@ -90,16 +90,18 @@ public class Sonic1ChopperBadnikInstance extends AbstractBadnikInstance {
         motion.y = currentY;
         motion.xVel = 0;
         motion.yVel = yVelocity;
-        SubpixelMotion.moveSprite(motion, GRAVITY);
+        SubpixelMotion.speedToPosY(motion);
         currentY = motion.y;
-        yVelocity = motion.yVel;
+        yVelocity += GRAVITY;
 
         // cmp.w obY(a0),d0 / bhs.s .chganimation
         // Has Chopper fallen back to or below its original position?
         if (currentY >= origY) {
-            // move.w d0,obY(a0) - snap to origin
+            // move.w d0,obY(a0) - snap only the high position word to origin.
+            // SpeedToPos uses obY as a 32-bit value; the ROM write leaves the
+            // low word intact for the next leap.
             currentY = origY;
-            motion.ySub = 0;
+            motion.y = currentY;
             // move.w #-$700,obVelY(a0) - reset velocity for next jump
             yVelocity = INITIAL_Y_VELOCITY;
         }

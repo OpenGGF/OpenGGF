@@ -234,7 +234,7 @@ public class Sonic1ButtonObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isTopSolidOnly() {
-        return true;
+        return false;
     }
 
     @Override

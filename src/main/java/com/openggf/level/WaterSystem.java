@@ -583,9 +583,10 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
     }
 
     /**
-     * Get water surface Y position in world coordinates.
-     * This is the fixed/gameplay water level used for detecting if Sonic is
-     * underwater.
+     * Get the current/base water surface Y position in world coordinates.
+     * This corresponds to the non-oscillated runtime water register such as
+     * S1/S2 {@code v_waterpos2}/{@code Water_Level_2} or S3K
+     * {@code Mean_water_level}.
      * 
      * @return Water level Y in pixels, or 0 if no water
      */
@@ -599,6 +600,25 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
         // Fallback to static config
         WaterConfig config = waterConfigs.get(key);
         return config != null ? config.getWaterLevelY() : 0;
+    }
+
+    /**
+     * Get the gameplay waterline used by player/object water-state checks.
+     * <p>
+     * Some games derive this from the current/base level each frame. In S1,
+     * {@code LZWaterFeatures} writes {@code v_waterpos1 = v_waterpos2 +
+     * (v_oscillate+2)/2}, and {@code Sonic_Water} compares Sonic against
+     * {@code v_waterpos1} (docs/s1disasm/_inc/LZWaterFeatures.asm:19-25;
+     * docs/s1disasm/_incObj/01 Sonic.asm:222-247).
+     */
+    public int getGameplayWaterLevelY(int zoneId, int actId) {
+        int baseLevel = getWaterLevelY(zoneId, actId);
+        if (baseLevel == 0) {
+            return 0;
+        }
+        WaterDataProvider provider = GameServices.module().getWaterDataProvider();
+        int offset = provider != null ? provider.getGameplayWaterLevelOffset(zoneId, actId) : 0;
+        return baseLevel + offset;
     }
 
     /**
@@ -616,8 +636,7 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
      *   add.w  (v_waterpos2).w,d0      ; add to base water position
      * </pre>
      * <p>
-     * Note: This does NOT affect gameplay - Sonic's underwater detection uses
-     * the fixed water level from {@link #getWaterLevelY(int, int)}.
+     * Gameplay water-state checks use {@link #getGameplayWaterLevelY(int, int)}.
      *
      * @return Visual water level Y in pixels with oscillation offset applied
      */

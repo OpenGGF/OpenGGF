@@ -223,6 +223,44 @@ public class Sonic1PlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // Plat_Solid passes obActWid directly as PlatformObject's d1
+        // (docs/s1disasm/_incObj/18 Platforms.asm:59-62), so the collision
+        // half-width is already the standable width and must not receive the
+        // generic SolidObject +$B narrowing.
+        return true;
+    }
+
+    @Override
+    public boolean usesPreUpdatePositionForSolidContact(PlayableEntity player) {
+        // S1 Obj18 routine 2 calls PlatformObject before Plat_Move and
+        // Plat_Nudge (docs/s1disasm/_incObj/18 Platforms.asm:54-67).
+        // Continued riding still observes the post-move/post-nudge surface
+        // through routine 4's ExitPlatform -> Plat_Move -> Plat_Nudge ->
+        // MvSonicOnPtfm2 order (same file:74-87).
+        return true;
+    }
+
+    @Override
+    public boolean gatesNewTopSolidLandingWithPreviousPosition() {
+        // PlatformObject samples a narrow top-entry window before Obj18's own
+        // movement/nudge body runs (docs/s1disasm/_incObj/sub PlatformObject.asm:5-42;
+        // docs/s1disasm/_incObj/18 Platforms.asm:54-67). The engine player has
+        // already advanced for this object pass, so require the previous sampled
+        // position to be inside the same entry window before creating a new ride.
+        return true;
+    }
+
+    @Override
+    public int getTopLandingSnapAdjustment(PlayableEntity player, int solidTopYRadius) {
+        // PlatformObject builds its entry surface from obY-8 and then snaps via
+        // add.w d0,d2 / addq.w #3,d2 (docs/s1disasm/_incObj/sub PlatformObject.asm:17-42).
+        // Continued riding still uses MvSonicOnPtfm2's obY-9 surface; this
+        // adjustment applies only to the first landing snap.
+        return -1;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Standing state is managed via isPlayerRiding() check in update()

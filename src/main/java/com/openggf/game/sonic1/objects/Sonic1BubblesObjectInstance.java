@@ -398,8 +398,11 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
 
             typeCounter = rawRng & 7;
 
-            // andi.w #$C,d1 ; select table offset (0, 4, 8, or 12) from same random
-            typeTableOffset = (rawRng >> 2) & 0x0C;
+            // docs/s1disasm/_incObj/64 Bubbles.asm:141-151 copies the
+            // same RandomNumber word to d1, then uses andi.w #$C,d1 for the
+            // Bub_BblTypes pointer. Do not shift; bits 2-3 select offsets
+            // 0, 4, 8, or 12, while bits 0-2 still seed objoff_34.
+            typeTableOffset = rawRng & 0x0C;
 
             // subq.b #1,bub_time(a0)
             spawnTime--;
@@ -450,28 +453,35 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
             bubbleSubtype = 0;
         }
 
+        // docs/s1disasm/_incObj/64 Bubbles.asm:166-177 consumes the spawn
+        // delay random word, then the X-offset random word, before any
+        // large-bubble override test at lines 182-196. Keep that order so
+        // the subtype-2 cadence stays aligned with the ROM.
+        int xOffset = rng.nextBits(0x0F) - 8;
+        int spawnX = origX + xOffset;
+
         // Check for large bubble override
         // btst #7,objoff_36(a0) / beq.s .fail
         if ((productionFlags & 0x80) != 0) {
-            // ~25% chance to spawn type 2 (large breathable)
-            if (rng.nextBits(3) == 0) {
+            // docs/s1disasm/_incObj/64 Bubbles.asm:181-187 masks the
+            // RandomNumber word with #3, so only the low two bits drive this
+            // 25% large-bubble override. Consuming/testing three bits shifts
+            // later Obj64 subtype cadence.
+            if (rng.nextBits(0x03) == 0) {
                 if ((productionFlags & 0x40) == 0) {
                     productionFlags |= 0x40;
                     bubbleSubtype = 2;
                 }
             }
-        }
 
-        // Additional type-2 check when counter is at 0
-        if (typeCounter == 0 && (productionFlags & 0x40) == 0) {
-            productionFlags |= 0x40;
-            bubbleSubtype = 2;
+            // docs/s1disasm/_incObj/64 Bubbles.asm:182-196 keeps the
+            // forced last-bubble type-2 check inside the bit-7 large-mode
+            // branch. Ordinary bursts can end on their table subtype.
+            if (typeCounter == 0 && (productionFlags & 0x40) == 0) {
+                productionFlags |= 0x40;
+                bubbleSubtype = 2;
+            }
         }
-
-        // Spawn position: original X ± random(-8 to +7), original Y
-        // jsr (RandomNumber).l / andi.w #$F,d0 / subq.w #8,d0
-        int xOffset = rng.nextBits(0x0F) - 8;
-        int spawnX = origX + xOffset;
 
         ObjectSpawn childSpawn = new ObjectSpawn(
                 spawnX, spawn.y(),
@@ -568,8 +578,15 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
             return false;
         }
 
-        int playerX = player.getCentreX();
-        int playerY = player.getCentreY();
+        // S1 Obj64 runs Bub_ChkSonic from the bubble object's ExecuteObjects
+        // slot before the bubble's own SpeedToPos step
+        // (docs/s1disasm/_incObj/64 Bubbles.asm:77-105). The engine's S1
+        // object pass runs after player physics for inline solid parity, so use
+        // the sprite-history pre-current-movement centre for this standalone
+        // object collision check instead of letting a post-movement edge contact
+        // overwrite Sonic with id_GetAir/locktime=35.
+        int playerX = player.getCentreX(1);
+        int playerY = player.getCentreY(1);
 
         // X check: subi.w #$10,d1 / cmp.w d0,d1 / bhs.s .no
         //   bhs branches when bubbleLeft >= playerX → no collision

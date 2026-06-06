@@ -199,6 +199,17 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     }
 
     @Override
+    public boolean isPersistent() {
+        // ROM DLE_FZ_Boss spawns Obj85 as soon as camera reaches boss_fz_x-$150,
+        // then BossFinal_Main initializes the whole boss group before any standard
+        // out_of_range tail call (_inc/DynamicLevelEvents.asm:770-779,
+        // _incObj/85 Boss - Final.asm:41-79). The parent starts at x=$25B0,
+        // outside the generic S1 window, but its cylinder children must exist
+        // immediately to run SolidObject at x=$24D0/$2550.
+        return true;
+    }
+
+    @Override
     public int getCollisionFlags() {
         // ROM: FZ boss never uses standard touch response (obColType is never set
         // during combat). Damage is handled via SolidObject push + roll check.
