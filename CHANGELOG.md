@@ -25,6 +25,16 @@ All notable changes to the OpenGGF project are documented in this file.
   (`docs/s1disasm/_incObj/64 Bubbles.asm:141-151,166-196`). This advances
   `TestS1Sbz3CompleteRunTraceReplay` from first-error frame 839 to 1420; the
   new frontier is a separate player `y` mismatch near bubbles/Jaws contact.
+- **S1 LZ water-slide detection now samples ROM `obX`/`obY` only:** The LZ
+  water-slide event no longer checks a secondary sprite-origin chunk or keeps a
+  slide-exit grace window. S1 `LZWaterSlides` samples `v_lvllayout` using
+  Sonic's `obX`/`obY` fields and clears `f_slidemode` immediately on the first
+  non-matching chunk (`docs/s1disasm/_inc/LZWaterFeatures.asm:392-415`). In the
+  engine those ROM fields map to centre coordinates, so the provider now passes
+  only the centre-coordinate block ID into `Sonic1LZWaterEvents`. This advances
+  `TestS1Lz2CompleteRunTraceReplay` from first-error frame 463 to 1089; the new
+  frontier is a separate `y` mismatch around later LZ object/ring/bubble
+  interaction on the integrated stack.
 - **S1 Chopper leap integration now follows ROM `SpeedToPos`:**
   `Sonic1ChopperBadnikInstance` now updates vertical position through the
   ROM-style 16.16 `SpeedToPos` path, applies Chopper's `$18` gravity after

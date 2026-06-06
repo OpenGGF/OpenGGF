@@ -64,6 +64,41 @@
   present in this worktree; the root cause is documented here and in the
   changelog.
 
+## 2026-06-06 - s1 lz2 f463->f1089: LZ water slide uses centre `obX`/`obY` layout sample
+
+- Branch `bugfix/ai-trace-s1-r4-lz2`, worktree `.worktrees/trace-s1-r4-lz2`.
+- Target command:
+  `mvn "-Dtest=TestS1Lz2CompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+- **Status: ADVANCED (still failing).** First-error frame **463 -> 1089** on
+  the integrated round4 stack. Surefire: `Tests run: 1, Failures: 1`. New first
+  error is `y` expected `0x03A8`, actual `0x03AD`, with 2178 errors and 0
+  warnings in `target/trace-reports/s1_lz2_report.json`.
+- **Root cause:** the engine retained two non-ROM conveniences in LZ water-slide
+  handling: a sprite-origin fallback layout sample and a six-frame slide-exit
+  grace window. ROM `LZWaterSlides` reads the layout only from Sonic's
+  `obX`/`obY` fields and clears `f_slidemode` immediately when the current chunk
+  is not a slide chunk.
+- **Fix:** `Sonic1ZoneFeatureProvider` now samples the block ID from
+  `getCentreX()`/`getCentreY()` only, matching the engine's centre-coordinate
+  mapping for ROM `obX`/`obY`, and `Sonic1LZWaterEvents` clears slide state on
+  the first non-slide chunk instead of preserving a local hysteresis window.
+- **Disasm cites:** `docs/s1disasm/_inc/LZWaterFeatures.asm:392-415`
+  (`LZWaterSlides` layout sample and `f_slidemode` clear),
+  `docs/s1disasm/_inc/LZWaterFeatures.asm:418-438` (`Slide_Speeds` dispatch),
+  `docs/s1disasm/_incObj/01 Sonic.asm:283-291` and
+  `docs/s1disasm/_incObj/01 Sonic.asm:1246-1263` (`f_slidemode` skips
+  `Sonic_Move` while slide mode is set).
+- **Same-game regression guard (PASS, zero regressions):**
+  `mvn "-Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestS1Ghz1TraceReplay" "-DfailIfNoTests=false" test`
+  -> all requested report XML files show `failures=0`, `errors=0`.
+- Comparison-only guard:
+  `mvn "-Dtest=TestTraceReplayInvariantGuard" "-DfailIfNoTests=false" test`
+  -> PASS for `TestTraceReplayInvariantGuard` (`tests=4`, `failures=0`,
+  `errors=0`).
+- Genuineness gate: PASS. The fix is S1 LZ event-state behavior driven by ROM
+  chunk sampling and `f_slidemode`; it adds no trace hydration, no tolerance,
+  and no route/frame/known-failing-trace carve-out.
+
 ## 2026-06-06 - s1 ghz2 f1690->f2369: Chopper uses 16.16 SpeedToPos state
 
 - Branch `bugfix/ai-trace-s1-r3-ghz2`, worktree `.worktrees/trace-s1-r3-ghz2`.
