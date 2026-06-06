@@ -34,6 +34,21 @@ All notable changes to the OpenGGF project are documented in this file.
   (s2.asm:39291-39294) into a FollowLeft steering branch that unrolled Tails one
   frame early. Advances the HTZ level-select trace from first-error frame 5686 to
   6114.
+- **MCZ drawbridge (Obj81) is now a full LRB SolidObject with angle-selected
+  bounding box (ROM-accurate):** `MCZDrawbridgeObjectInstance` was modelled as a
+  top-solid-only platform whose collision width was chosen by a `bridgeDown`
+  boolean. The ROM `Obj81` (the "Long invisible vertical barrier",
+  `docs/s2disasm/s2.asm:30044`) calls plain `JmpTo22_SolidObject`
+  (`docs/s2disasm/s2.asm:57000`) — a full left/right/bottom SolidObject — and
+  `loc_2A18A` (`docs/s2disasm/s2.asm:56982-57000`) selects d1/d2/d3 from the
+  current `angle` byte, not a down-flag: defaults `$13/$40/$41` (raised vertical
+  wall) are kept when `angle == $40` or `angle >= $C0`, otherwise (angle `$00`,
+  `$80`, or any mid-rotation angle) it uses `$4B/8/9` (wide flat platform). The
+  instance now overrides `getSolidParams()` to choose `PARAMS_RAISED`/
+  `PARAMS_LOWERED` by angle and returns `isTopSolidOnly()=false`, so the raised
+  bridge stops the player horizontally via `SolidObject_StopCharacter` instead of
+  being walked through. Advances the MCZ level-select trace from first-error
+  frame 3574 (player retained ground speed against the wall) to 4513.
 - **OOZ/CPZ rising platform now integrates sub-pixels (ROM-accurate):**
   `CPZPlatformObjectInstance` auto-rise (Obj19_MoveRoutine5/6) previously did
   `y += yVel >> 8`, dropping the sub-pixel fraction and stepping a full pixel

@@ -46,10 +46,13 @@ import java.util.logging.Logger;
  *   <li>Rotation completes when angle reaches 0x00 or 0x80 (signed: 0 or -128)</li>
  * </ul>
  * <p>
- * <b>Collision:</b>
+ * <b>Collision (full LRB SolidObject, selected by angle in loc_2A18A,
+ * docs/s2disasm/s2.asm:56982-57000):</b>
  * <ul>
- *   <li>When up (vertical): width = 8 pixels</li>
- *   <li>When down (horizontal): width = 64 pixels</li>
+ *   <li>Raised (vertical wall, angle $40 / $C0..$FF): d1/d2/d3 = $13/$40/$41
+ *       => halfWidth 19, airHalfHeight 64, groundHalfHeight 65.</li>
+ *   <li>Lowered (flat platform, angle $00 / $80 / mid-rotation): d1/d2/d3 =
+ *       $4B/8/9 => halfWidth 75, airHalfHeight 8, groundHalfHeight 9.</li>
  * </ul>
  */
 public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
@@ -66,17 +69,22 @@ public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
     private static final int ANGLE_COMPLETE_ZERO = 0x00;
     private static final int ANGLE_COMPLETE_180 = 0x80;  // -128 as signed byte
 
-    // Collision parameters
-    // When up (vertical): narrow collision (width_pixels=$08)
-    // ROM: move.b #8,width_pixels(a0) at init
-    private static final SolidObjectParams PARAMS_UP = new SolidObjectParams(8, 64, 65);
-    // When down (horizontal): wide collision (width_pixels=$40)
-    // ROM: move.b #$40,width_pixels(a0) when bridge is down
-    // ROM loc_2A1A8 (s2.asm:56578): move.w #$4B, d1 → halfWidth = 0x4B = 75.
-    // The narrower $40=64 width_pixels value in the object header is used only
-    // for SolidObject_Landed's secondary hit-width check, not for the primary
-    // detection/riding width passed to JmpTo22_SolidObject in d1.
-    private static final SolidObjectParams PARAMS_DOWN = new SolidObjectParams(75, 8, 9);
+    // Collision parameters. Obj81 selects d1/d2/d3 (x_radius/halfWidth,
+    // y_radius/airHalfHeight, y_radius+1/groundHalfHeight) by ANGLE, not by a
+    // bridge-down boolean, in loc_2A18A (docs/s2disasm/s2.asm:56982-57000).
+    //
+    // RAISED / vertical wall (loc_2A18A defaults; reached when angle == $40 or
+    // angle in $C0..$FF): move.w #$13,d1 / move.w #$40,d2 / move.w #$41,d3
+    //   => halfWidth=$13=19, airHalfHeight=$40=64, groundHalfHeight=$41=65.
+    // This is the "long invisible vertical barrier" (ObjPtr_MCZDrawbridge
+    // comment, docs/s2disasm/s2.asm:30044). The object-header width_pixels=8
+    // (Obj81_Init, s2.asm:56892) is display-culling only and is NOT the solid
+    // d1 — using it as halfWidth let the player run straight through the wall.
+    private static final SolidObjectParams PARAMS_RAISED = new SolidObjectParams(0x13, 0x40, 0x41);
+    // LOWERED / flat platform (loc_2A1A8; reached when angle == 0 or $80 or any
+    // mid-rotation angle): move.w #$4B,d1 / move.w #8,d2 / move.w #9,d3
+    //   => halfWidth=$4B=75, airHalfHeight=8, groundHalfHeight=9.
+    private static final SolidObjectParams PARAMS_LOWERED = new SolidObjectParams(0x4B, 0x08, 0x09);
 
     // Initial Y offset when spawned (bridge starts offset from spawn position)
     // ROM: subi.w #$48,y_pos(a0) (line 56457)
@@ -285,13 +293,32 @@ public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        // Return different collision params based on bridge state
-        return bridgeDown ? PARAMS_DOWN : PARAMS_UP;
+        // ROM loc_2A18A (docs/s2disasm/s2.asm:56982-56996) selects the solid
+        // bounding box from the CURRENT angle byte, not a bridge-down flag:
+        //   d1/d2/d3 default to $13/$40/$41 (raised vertical wall);
+        //   move.b angle(a0),d0
+        //   beq.s   loc_2A1A8   ; angle == $00  -> wide flat (loc_2A1A8)
+        //   cmpi.b  #$40,d0
+        //   beq.s   loc_2A1B4   ; angle == $40  -> keep raised defaults
+        //   cmpi.b  #-$40,d0
+        //   bhs.s   loc_2A1B4   ; angle >= $C0  -> keep raised defaults
+        //   ; else (angle $01..$3F or $41..$BF, incl. $80) fall through to
+        //   ; loc_2A1A8 -> wide flat ($4B/8/9).
+        int a = angle & 0xFF;
+        boolean raised = (a == 0x40) || (a >= 0xC0);
+        return raised ? PARAMS_RAISED : PARAMS_LOWERED;
     }
 
     @Override
     public boolean isTopSolidOnly() {
-        return true;  // Bridge is only solid from top
+        // ROM Obj81 calls plain JmpTo22_SolidObject (docs/s2disasm/s2.asm:57000),
+        // i.e. a full LRB SolidObject. In its raised state it is a "long
+        // invisible vertical barrier" (ObjPtr_MCZDrawbridge comment,
+        // docs/s2disasm/s2.asm:30044) that stops the player horizontally via
+        // SolidObject_LeftRight -> SolidObject_StopCharacter (zeroes inertia +
+        // x_vel and pushes x_pos out, docs/s2disasm/s2.asm:35407-35444).
+        // It is NOT a top-solid-only platform.
+        return false;
     }
 
     @Override
@@ -301,11 +328,11 @@ public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM: Obj81 uses JmpTo22_SolidObject (s2.asm:56584), which routes through
-     * SolidObject_Landed (s2.asm:35368-35387). SolidObject_Landed branches when
-     * d3 (relY) in [0, 15] via "blo.s SolidObject_Landed" (unsigned lower), so
-     * distY==0 is an accepted landing — unlike PlatformObject_ChkYRange which
-     * has an additional gate. Allow zero-distance landings here to match ROM.
+     * ROM: Obj81 calls plain JmpTo22_SolidObject (docs/s2disasm/s2.asm:57000).
+     * A top-landing reaches SolidObject_Landed via SolidObject_TopBottom, whose
+     * "cmpi.w #$10,d3 / blo.s SolidObject_Landed" (unsigned lower-than $10,
+     * docs/s2disasm/s2.asm:35488-35494) covers d3 (relY) == 0. So distY==0 is an
+     * accepted landing. Allow zero-distance landings here to match ROM.
      */
     @Override
     public boolean allowsZeroDistanceTopSolidLanding(PlayableEntity player) {
@@ -313,11 +340,12 @@ public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM: Obj81 uses SolidObject_Landed (s2.asm:35368-35387), not
-     * PlatformObject_ChkYRange (s2.asm:35696-35712). The SolidObject_Landed
-     * formula (playerY - relY + 3) is already implemented by resolveContactInternal;
-     * the PlatformObject absolute snap (anchorY - groundHalfHeight - yRadius - 1)
-     * does not apply here.
+     * ROM: Obj81 uses the full SolidObject routine (JmpTo22_SolidObject,
+     * docs/s2disasm/s2.asm:57000), not PlatformObject_ChkYRange
+     * (s2.asm:35696-35712). A top landing is resolved by SolidObject_Landed,
+     * whose formula (playerY - relY + 3) is already implemented by
+     * resolveContactInternal; the PlatformObject absolute snap
+     * (anchorY - groundHalfHeight - yRadius - 1) must not be applied.
      */
     @Override
     public boolean usesPlatformObjectLandingSnap() {

@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-06-06 - s2 mcz f3574->f4513: drawbridge (Obj81) now a full LRB wall, not top-solid-only
+
+- Branch `bugfix/ai-trace-s2-mcz`, worktree `.worktrees/trace-s2-mcz`.
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2MczLevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status: ADVANCED (still failing).** First-error frame **3574 -> 4513**, error count **212 -> 295**.
+  Surefire: `Tests run: 1, Failures: 1`.
+- **Root cause:** `MCZDrawbridgeObjectInstance` was a top-solid-only platform with a
+  `bridgeDown`-boolean width. ROM `Obj81` (the "Long invisible vertical barrier",
+  `docs/s2disasm/s2.asm:30044`) calls plain `JmpTo22_SolidObject`
+  (`docs/s2disasm/s2.asm:57000`) — a full L/R/B SolidObject — and `loc_2A18A`
+  (`docs/s2disasm/s2.asm:56982-57000`) selects d1/d2/d3 from the current `angle`
+  byte: defaults `$13/$40/$41` (raised vertical wall) kept when `angle == $40` or
+  `angle >= $C0`, else (`$00`, `$80`, mid-rotation) `$4B/8/9` (wide flat platform).
+  `SolidObject_TopBottom`'s `cmpi.w #$10,d3 / blo.s SolidObject_Landed`
+  (`docs/s2disasm/s2.asm:35488-35494`) accepts d3==0 top-landings.
+  Fix overrides `getSolidParams()` to choose by angle and returns
+  `isTopSolidOnly()=false`. Semantic ROM-state predicate (object `angle` byte), no
+  zone/route/frame/gameId carve-out, per-object override (narrowest abstraction),
+  comparison-only invariant held.
+- Baseline f3574 = `g_speed` mismatch expected=`0x0000` actual=`0x0297`: player
+  (status=06 rolling) near drawbridge s21 0x81; ROM stops ground speed against the
+  raised wall, engine let the player keep speed. New f4513 = `y_speed` mismatch
+  (expected=`0x03D0` actual=`0x04D0`), an unrelated later divergence.
+- A/B verified in worktree: HEAD (fix reverted) f3574/212 errors; with fix f4513/295 errors.
+- Same-game regression guard (`TestS2ArzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2WfzLevelSelectTraceReplay`):
+  all 3 PASS (0 failures each). No regressions introduced.
+
 ## 2026-06-05 - s2 arz2 f857->f899: water profile not applied on a hurt-landing frame
 
 - Branch `bugfix/ai-trace-s2-arz2`, worktree `.worktrees/trace-s2-arz2`.
