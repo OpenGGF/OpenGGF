@@ -4,6 +4,23 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 GHZ1/MZ1 trace fleet fixes cherry-picked into develop:** S1 Crabmeat
+  projectiles now use the ROM `ObjectFall` old-velocity-then-gravity order,
+  defer same-frame execution after spawn, and keep hurt collision inactive until
+  the later rendered-frame pass (`docs/s1disasm/_incObj/sub ObjectFall.asm:5-19`;
+  `docs/s1disasm/_incObj/1F Crabmeat.asm:80-100,187-219`). S1 enemy explosion
+  score popups now follow the ROM Obj27 -> Obj28 -> Obj29 handoff instead of
+  spawning points directly, inline-order touch scans can use the frame-start
+  object snapshot for S1, and lost-ring reset no longer releases still-owned
+  Obj37 SST slots (`docs/s1disasm/_incObj/24, 27 & 3F Explosions.asm:53-60`;
+  `docs/s1disasm/_incObj/28 Animals.asm:163-168`;
+  `docs/s1disasm/_inc/ExecuteObjects.asm:11-31`;
+  `docs/s1disasm/_incObj/01 Sonic.asm:87-90`;
+  `docs/s1disasm/_incObj/25 & 37 Rings.asm:199-219,284-313`). This advances
+  `TestS1Ghz1CompleteRunTraceReplay` from f1390 to f1394 and
+  `TestS1Mz1TraceReplay` from f3192 to f6210; both remain red at their next
+  object-contact frontiers.
+
 - **S1 complete-run SBZ3/Final-Zone split (fixes the FZ f0 bootstrap; adds the
   19th per-act trace):** the original `fz_completerun` data was mislabeled — it
   was actually Scrap Brain Act 3, so `TestS1FzCompleteRunTraceReplay` diverged at

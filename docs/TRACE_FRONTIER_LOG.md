@@ -1,5 +1,58 @@
 # Trace Frontier Log
 
+## 2026-06-06 - s1 ghz1 complete f1390->f1394 and mz1 level-select f3192->f6210: object spawn/touch ordering cherry-picked into develop
+
+- Branch/worktree: `develop`, worktree `.worktrees/develop-s1-trace-merge`.
+  Cherry-picked the useful, validated pieces from `bugfix/ai-trace-s1-ghz1` and
+  `bugfix/ai-trace-s1-mz1`; discarded unrelated branch assumptions that either
+  did not advance their target or regressed focused guards.
+- Target commands:
+  - `mvn "-Dtest=TestS1Ghz1CompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+  - `mvn "-Dtest=TestS1Mz1TraceReplay" "-DfailIfNoTests=false" test`
+  - `mvn "-Dtest=TestS1Mz1CompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+- **Status: ADVANCED (still failing).**
+  - `TestS1Ghz1CompleteRunTraceReplay`: first-error frame **1390 -> 1394**,
+    still red at a Crabmeat-ball/lost-ring contact `x_speed` mismatch
+    (`expected=0x0000`, `actual=-0200`; 292 errors).
+  - `TestS1Mz1TraceReplay`: first-error frame **3192 -> 6210**, still red at a
+    Batbrain contact `y_speed` mismatch (`expected=-01F0`, `actual=0x01F0`;
+    274 errors).
+  - `TestS1Mz1CompleteRunTraceReplay`: held at first-error frame **1260**
+    (`rolling` mismatch), so the MZ1 level-select advance did not mask the
+    complete-run frontier.
+- **Root causes/fixes:**
+  - S1 Crabmeat projectiles now model ROM `ObjectFall`: move X/Y with the old
+    velocity, then add gravity to `obVelY`; first tick seeds `obVelY`/collision
+    from `Crab_BallMain` instead of using same-frame spawn state. Disasm:
+    `docs/s1disasm/_incObj/sub ObjectFall.asm:5-19` and
+    `docs/s1disasm/_incObj/1F Crabmeat.asm:80-100,187-219`.
+  - Obj27 explosion item now allocates Obj28 and passes the score-chain value;
+    Obj28 allocates Obj29 during its own routine 0. Disasm:
+    `docs/s1disasm/_incObj/24, 27 & 3F Explosions.asm:53-60` and
+    `docs/s1disasm/_incObj/28 Animals.asm:163-168`.
+  - S1 inline-order touch responses scan the frame-start object snapshot,
+    matching `ExecuteObjects` running Sonic's slot before later object slots and
+    `Sonic_Control` calling `ReactToItem`. Disasm:
+    `docs/s1disasm/_inc/ExecuteObjects.asm:11-31` and
+    `docs/s1disasm/_incObj/01 Sonic.asm:87-90`.
+  - Lost-ring pool reset no longer releases Obj37 slots; spilled rings are SST
+    objects allocated by `FindFreeObj`, and RingLoss does not sweep existing
+    Obj37 slots before creating new rings. Disasm:
+    `docs/s1disasm/_incObj/25 & 37 Rings.asm:199-219,284-313`.
+- Regression guards:
+  - `mvn "-Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestS1Ghz1TraceReplay" "-DfailIfNoTests=false" test`
+    exited 0. The MSE aggregate printed known red S1 complete-run tests, but
+    individual Surefire XML reports for all nine guard classes were freshly
+    written at 2026-06-06 18:22 and show `failures="0"` / `errors="0"`.
+  - Focused unit guards: `TestRingManager` (9/9), `TestTouchResponseManager`
+    (35/35), `TestObjectManagerChildSlotAllocation` (6/6), and
+    `TestNoRendererCaptureInUnsafeSpawn` (1/1) all passed with zero
+    failures/errors.
+- Genuineness gate: PASS. The changes are ROM-state/object-order corrections,
+  comparison-only, and add no trace hydration, tolerance, zone/route/frame
+  carve-out, or game-name branch. The target traces remain red at later
+  frontiers.
+
 ## 2026-06-06 - s1 SBZ3/FZ complete-run split: FZ f0->f277 (bootstrap fixed), SBZ3 new f45
 
 - Worktree `C:/tmp/wt-s1fz`, off develop d811dd085. Coherent fixture set taken from Codex's S1 commits c7ea38340 + b3a8909b6 (sbz3+fz metadata/physics, both test classes, the re-recorded shared `_movies/s1-complete-run.bk2`, level-map).

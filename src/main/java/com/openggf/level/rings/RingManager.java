@@ -1114,7 +1114,17 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         }
 
         private void reset() {
-            releaseReservedSlots();
+            // Obj37 slots are owned by LostRingObjectInstance now. S1 RingLoss
+            // creates new spilled rings with FindFreeObj and resets the shared
+            // v_ani3_time, but it does not sweep existing Obj37 slots first
+            // (docs/s1disasm/_incObj/25 & 37 Rings.asm:199-219,284-313).
+            // Releasing the legacy LostRing slot here can mark a still-live or
+            // later-reused SST slot free, corrupting the allocator before the
+            // next ObjPosLoad.
+            for (LostRing ring : ringPool) {
+                ring.deactivate();
+                ring.setSlotIndex(-1);
+            }
             activeRingCount = 0;
         }
 

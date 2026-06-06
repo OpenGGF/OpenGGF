@@ -27,6 +27,8 @@ public abstract class AbstractProjectileInstance extends AbstractObjectInstance
     protected final int gravity;
     protected final int collisionSizeIndex;
     protected final int offScreenMargin;
+    protected boolean touchCollisionActive = true;
+    protected boolean deferSameFrameUpdateAfterSpawn = false;
 
     /**
      * Creates a projectile with the given motion parameters.
@@ -115,12 +117,17 @@ public abstract class AbstractProjectileInstance extends AbstractObjectInstance
     @Override
     public int getCollisionFlags() {
         // HURT category ($80) + size index
-        return 0x80 | (collisionSizeIndex & 0x3F);
+        return touchCollisionActive ? 0x80 | (collisionSizeIndex & 0x3F) : 0;
     }
 
     @Override
     public int getCollisionProperty() {
         return 0;
+    }
+
+    @Override
+    protected boolean skipsSameFrameUpdateAfterSpawn() {
+        return deferSameFrameUpdateAfterSpawn;
     }
 
     @Override

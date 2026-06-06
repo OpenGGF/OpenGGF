@@ -859,7 +859,10 @@ public class LevelManager {
      */
     public void applyTouchResponses(PlayableEntity player) {
         if (objectManager != null) {
-            objectManager.runTouchResponsesForPlayer(player, frameCounter + 1);
+            objectManager.runTouchResponsesForPlayer(
+                    player,
+                    frameCounter + 1,
+                    objectsExecuteAfterPlayerPhysics());
         }
         if (ringManager != null && player instanceof AbstractPlayableSprite playable && !playable.getDead()) {
             if (!ringManager.usesObjectTouchCollection()) {

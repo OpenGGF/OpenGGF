@@ -1,6 +1,5 @@
 package com.openggf.game.sonic1.objects;
 
-import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.ExplosionObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -44,19 +43,11 @@ public class Sonic1ExplosionItemObjectInstance extends ExplosionObjectInstance {
 
         int x = spawn.x();
         int y = spawn.y();
-        // ROM parity: ExplosionItem allocates these children into SST slots in
-        // the same frame, but they do not execute until the next frame.
-        objectManager.addDynamicObjectNextFrame(new Sonic1AnimalsObjectInstance(
-                new ObjectSpawn(x, y, 0x28, 0, 0, false, 0)));
-
-        GameStateManager gameState = svc.gameState();
-        if (gameState != null && gameState.isBossFightActive()) {
-            return;
-        }
-        if (svc.renderManager() == null) {
-            return;
-        }
-        objectManager.addDynamicObjectNextFrame(new Sonic1PointsObjectInstance(
-                new ObjectSpawn(x, y, 0x29, 0, 0, false, 0), svc, pointsValue));
+        // ROM parity: ExplosionItem routine 0 only allocates Obj28 with FindFreeObj
+        // and copies objoff_3E into it. Obj28 then allocates Obj29 during its own
+        // routine 0 (docs/s1disasm/_incObj/24, 27 & 3F Explosions.asm:53-60;
+        // docs/s1disasm/_incObj/28 Animals.asm:163-168).
+        objectManager.addDynamicObject(new Sonic1AnimalsObjectInstance(
+                new ObjectSpawn(x, y, 0x28, 0, 0, false, 0), pointsValue));
     }
 }
