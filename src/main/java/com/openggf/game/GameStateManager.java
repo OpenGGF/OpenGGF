@@ -108,6 +108,28 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      */
     private boolean endOfLevelFlag;
 
+    /**
+     * In-game pause flag (ROM: Game_paused at $FFFFF63A for S3K, $FFFFFE5C for
+     * S1, $FFFFFF7E for S2). Distinct from the loop/timing-level window-focus and
+     * keyboard-toggle pauses in {@link com.openggf.GameLoop}: when this flag is
+     * set the whole level update (objects, physics, camera, scroll) is skipped for
+     * the frame while the V-int / frame counter still advances, exactly matching
+     * the ROM {@code Pause_Loop} which only runs the V-int routine while paused.
+     * <p>
+     * ROM pause routines (universal across all three games — the trigger and
+     * unpause are a Start-press edge in every case; per-game divergences are
+     * debug-only cheats gated by Slow_motion_flag and are inert in normal play):
+     * <ul>
+     *   <li>S1 {@code PauseGame} / {@code Pause_Loop} —
+     *       {@code docs/s1disasm/_inc/PauseGame.asm:5-54}</li>
+     *   <li>S2 {@code PauseGame} / {@code Pause_Loop} —
+     *       {@code docs/s2disasm/s2.asm:1585-1633}</li>
+     *   <li>S3K {@code Pause_Game} / {@code Pause_Loop} —
+     *       {@code docs/skdisasm/s3.asm:1690-1761}</li>
+     * </ul>
+     */
+    private boolean gamePaused;
+
     public GameStateManager() {
         configureSpecialStageProgress(DEFAULT_SPECIAL_STAGE_COUNT, DEFAULT_CHAOS_EMERALD_COUNT);
         resetSession();
@@ -142,6 +164,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         this.collectedSpecialRings = 0;
         this.endOfLevelActive = false;
         this.endOfLevelFlag = false;
+        this.gamePaused = false;
     }
 
     /**
@@ -161,6 +184,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
     public void resetForLevel() {
         endOfLevelActive = false;
         endOfLevelFlag = false;
+        gamePaused = false;
     }
 
     public int getScore() {
@@ -586,6 +610,61 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      * ROM: move.b #1,(End_of_level_flag).w
      */
     public void setEndOfLevelFlag(boolean flag) { this.endOfLevelFlag = flag; }
+
+    /**
+     * Whether the game is currently in-game paused (ROM {@code Game_paused != 0}).
+     *
+     * @return true if the level update should be skipped this frame
+     */
+    public boolean isGamePaused() { return gamePaused; }
+
+    /**
+     * Sets the in-game pause flag directly. Prefer {@link #applyPauseToggle(boolean)}
+     * from the frame loop so the Start-edge toggle semantics are modelled in one
+     * place; this setter exists for tests and bootstrap.
+     */
+    public void setGamePaused(boolean paused) { this.gamePaused = paused; }
+
+    /**
+     * Applies one frame of ROM {@code Pause_Game} toggle logic and reports whether
+     * the level update should run this frame.
+     * <p>
+     * Mirrors the universal Start-edge toggle (S1 {@code PauseGame}
+     * {@code docs/s1disasm/_inc/PauseGame.asm:5-54}; S2 {@code PauseGame}
+     * {@code docs/s2disasm/s2.asm:1585-1633}; S3K {@code Pause_Game}
+     * {@code docs/skdisasm/s3.asm:1690-1761}):
+     * <ul>
+     *   <li>The pause is gated on {@code Life_count != 0} (a Game Over screen
+     *       cannot be paused) — {@code tst.b (Life_count).w / beq Unpause}.</li>
+     *   <li>{@code Pause_Game} sits at the very top of {@code LevelLoop}
+     *       ({@code docs/skdisasm/sonic3k.asm:7884-7894}). On the press frame it
+     *       enters {@code Pause_Loop}, which runs only the V-int until Start is
+     *       pressed again, so the rest of the level update never runs while
+     *       paused. On the unpause-press frame it clears {@code Game_paused} and
+     *       {@code rts}, and the remainder of {@code LevelLoop} (objects, physics,
+     *       camera, scroll) <em>does</em> run that frame.</li>
+     * </ul>
+     * Therefore: the level update is skipped this frame iff the game is paused
+     * <em>after</em> applying this frame's toggle.
+     *
+     * @param startEdgePressed true on the single frame Start transitions from
+     *                         released to pressed (ROM {@code Ctrl_x_pressed} &
+     *                         Start). Held Start across multiple frames must
+     *                         report false except on the leading edge.
+     * @return true if the level update should be skipped this frame (game is
+     *         paused), false if it should run normally.
+     */
+    public boolean applyPauseToggle(boolean startEdgePressed) {
+        if (lives <= 0) {
+            // ROM: a paused state cannot persist once lives hit zero; clear it.
+            gamePaused = false;
+            return false;
+        }
+        if (startEdgePressed) {
+            gamePaused = !gamePaused;
+        }
+        return gamePaused;
+    }
 
     @Override
     public String key() {

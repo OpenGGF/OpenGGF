@@ -14,6 +14,7 @@ import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RgbaImage;
 import com.openggf.graphics.ScreenshotCapture;
+import com.openggf.tests.LogCaptureHandler;
 import com.openggf.version.AppVersion;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -220,6 +223,43 @@ public class TestS1DataSelectImageCacheManager {
             assertNull(readInFlight(manager));
             blocked.complete(new RgbaImage(1, 1, new int[] {0xFFFFFFFF}));
             manager.awaitGenerationIfRunning();
+        }
+    }
+
+    @Test
+    void failedAsyncGenerationIsLoggedRetainedAndNonFatal() throws Exception {
+        Path cacheRoot = tempDir.resolve("cache-root-is-file");
+        Files.writeString(cacheRoot, "not a directory");
+        Logger logger = Logger.getLogger(S1DataSelectImageCacheManager.class.getName());
+        LogCaptureHandler handler = new LogCaptureHandler();
+        boolean previousUseParentHandlers = logger.getUseParentHandlers();
+        Level previousLevel = logger.getLevel();
+        logger.addHandler(handler);
+        logger.setUseParentHandlers(false);
+        logger.setLevel(Level.ALL);
+
+        try (var donor = org.mockito.Mockito.mockStatic(CrossGameFeatureProvider.class)) {
+            donor.when(CrossGameFeatureProvider::isS3kDonorActive).thenReturn(true);
+            S1DataSelectImageCacheManager manager = new S1DataSelectImageCacheManager(
+                    cacheRoot,
+                    config,
+                    () -> "async-failure-sha",
+                    mapper);
+
+            assertDoesNotThrow(() -> {
+                manager.ensureGenerationStarted();
+                manager.awaitGenerationIfRunning();
+            });
+
+            assertFalse(manager.isGenerationRunning());
+            assertFalse(manager.cacheValid());
+            assertNotNull(manager.getLastGenerationFailure());
+            assertTrue(handler.countAtOrAbove(Level.WARNING) >= 1,
+                    "Async generation failure should be visible in diagnostics");
+        } finally {
+            logger.removeHandler(handler);
+            logger.setUseParentHandlers(previousUseParentHandlers);
+            logger.setLevel(previousLevel);
         }
     }
 

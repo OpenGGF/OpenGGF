@@ -8,6 +8,9 @@ import com.openggf.game.save.SaveSessionContext;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.camera.Camera;
+import com.openggf.graphics.FadeManager;
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
@@ -182,6 +185,22 @@ class TestSessionManager {
                 new SelectedTeam("sonic", java.util.List.of("tails")), 0, 0);
         GameplayModeContext gameplay = SessionManager.openGameplaySession(module, ctx);
         assertEquals(1, gameplay.getWorldSession().getSaveSessionContext().activeSlot().orElseThrow());
+    }
+
+    @Test
+    void closeGameplaySessionClearsWorldAndRuntimeGraphicsReferences() {
+        SessionManager.openGameplaySession(new Sonic2GameModule());
+        GraphicsManager graphics = EngineServices.current().graphics();
+        FadeManager bootstrapFade = graphics.getFadeManager();
+        FadeManager runtimeFade = new FadeManager();
+        graphics.bindRuntimeManagedReferences(new Camera(EngineServices.current().configuration()), runtimeFade);
+
+        SessionManager.closeGameplaySession();
+
+        assertNull(SessionManager.getCurrentGameplayMode());
+        assertNull(SessionManager.getCurrentEditorMode());
+        assertNull(SessionManager.getCurrentWorldSession());
+        assertSame(bootstrapFade, graphics.getFadeManager());
     }
 }
 

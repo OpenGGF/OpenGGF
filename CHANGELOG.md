@@ -57,6 +57,53 @@ All notable changes to the OpenGGF project are documented in this file.
   Updates the S3K object checklist from 147 to 148 implemented objects.
 
 - **S3K Corkey (Obj $C1) now has a dedicated LBZ badnik implementation:**
+- **CPU sidekick (Tails) keeps its carried-in follow state across an S3K
+  mid-run zone entry instead of being re-spawned:** the S3K complete-run
+  per-zone segments enter a zone mid-run from the previous zone's seamless
+  handoff, where ROM preserves the CPU sidekick's `Tails_CPU_routine`,
+  position, velocity, and the spawn-anchored `Sonic_Pos_Record_Buf` ring across
+  the boundary (only a fresh spawn with `Tails_CPU_routine == 0` re-runs the
+  `SpawnLevelMainSprites` placement, sonic3k.asm:8359-8369). The engine reset
+  its sidekick controller to `INIT` on every level (re)load and re-anchored
+  Tails to the live (already-moved) leader, so the delayed follow produced a
+  1px drift and an over-applied gravity tick at frame 1 (HCZ `tails_x`, LBZ
+  `tails_y`, plus the ICZ off-screen snowboard-intro dormant marker running
+  physics it should not). `SidekickCpuController` now, for a directly-compared
+  mid-run seed entry, (a) re-enters the ROM dormant marker (`Tails_CPU_routine
+  == $0A`, locret_13FC0) when the sidekick is parked at the off-screen
+  despawn sentinel, and (b) for an established follower (`Tails_CPU_routine ==
+  6`) preserves the carried position/velocity, applies only the centre-based
+  spawn-anchor placement, and prefills the leader Pos_table ring from the
+  captured level-load spawn anchor (`LevelManager.spawnSidekicks` →
+  `captureLevelStartLeaderAnchor`) so the delayed-follow target reproduces
+  ROM's "Tails held still for 16 frames" entry. Gated on the semantic
+  seed-compare/sentinel state, never a zone/frame/route, and inert for
+  natively-driven entries (MGZ/CNZ fall-in) and fresh level loads, so the
+  dedicated S3K AIZ (f8941), CNZ (f17276), MGZ (f4124) and S2 EHZ1 trace
+  frontiers are unchanged. HCZ advances f1 → f125; ICZ/LBZ clear the
+  Tails-dormancy frame-1 failure (their remaining frame-1 divergence is the
+  separate player-descent/camera inter-zone gap shared with CNZ/MHZ).
+- **S3K complete-run per-zone traces clear their frame-0 bootstrap mismatches
+  via a one-time mid-run start seed:** the per-zone S3K complete-run segments
+  arm at each zone's first control-unlocked frame, but five of the seven zones
+  (CNZ, MHZ, ICZ, HCZ, LBZ) are entered mid-run from the previous zone's
+  seamless act/zone handoff, so their recorded frame-0 row carries residual
+  entry state a freshly loaded zone cannot derive: a frozen pre-LevelLoop
+  airborne descent (CNZ/MHZ `y_speed==0`), a held mid-roll with carried object
+  velocity (ICZ), the inter-zone camera position the handoff left behind (MHZ
+  `camera_x`), and an exact Tails follow position (HCZ/LBZ). This is the
+  velocity/status/camera/sidekick analogue of the position/RNG/oscillation
+  pre-trace seeds the replay bootstrap already applies - a single "load the save
+  state at the BK2 start" write in
+  `TraceReplaySessionBootstrap.seedS3kCompleteRunStartState`, performed once
+  before replay begins and never per frame, so trace replay stays
+  comparison-only. The seed is keyed off the recorded frame-0 ROM-state shape
+  (airborne-with-zero-y-speed, rolling, or a present sidekick that the native
+  first step would re-anchor) rather than any zone id; cleanly reproducible
+  entries (AIZ first-zone start, MGZ vertical fall-in) are left untouched on the
+  native drive path, so the dedicated S3K AIZ/CNZ/MGZ and S2 EHZ1 trace
+  frontiers are unchanged. All seven complete-run zones now clear frame 0 and
+  advance to a real per-frame frontier.
   Corkey is registered for the S3KL object table and now uses ROM-backed Corkey
   art for its parent body, nozzle child, and three-shot firing cycle. The port
   follows the disassembly patrol timer/latch flow, uses the ROM projectile
@@ -79,6 +126,26 @@ All notable changes to the OpenGGF project are documented in this file.
   `TestS1Ghz1CompleteRunTraceReplay` from f1390 to f1394 and
   `TestS1Mz1TraceReplay` from f3192 to f6210; both remain red at their next
   object-contact frontiers.
+- **ROM-accurate in-game pause (`Game_paused` / `Pause_Loop`) in the
+  level-frame tick:** modelled the universal Start-edge pause that all three
+  games share (S1 `PauseGame` `docs/s1disasm/_inc/PauseGame.asm:5-54`; S2
+  `PauseGame` `docs/s2disasm/s2.asm:1585-1633`; S3K `Pause_Game` at the top of
+  `LevelLoop`, `docs/skdisasm/s3.asm:1690-1761` /
+  `docs/skdisasm/sonic3k.asm:7884-7894`). A P1 Start-press edge during level
+  gameplay (lives > 0) toggles a gameplay-scoped `GameStateManager.gamePaused`
+  flag; while paused the entire level update (objects, physics, camera, scroll)
+  is skipped for the frame — matching `Pause_Loop` running only the V-int — while
+  the frame counter and input cursor still advance, so a paused window stays
+  frame-aligned. A second Start press resumes and the rest of that frame runs.
+  This is distinct from the existing loop/timing-level window-focus and
+  keyboard-toggle pauses, which also halt audio. The pause is driven purely from
+  the input stream (live keys or the BK2 P1 Start bit) — never from trace data —
+  keeping trace replay comparison-only, and it is inert unless Start is pressed
+  during gameplay, so existing S1/S2/S3K trace frontiers are unchanged. Added a
+  player-1 `START` keybinding (default Backspace) and the
+  `LevelFrameStep.executeWithPause` entry point used by both `GameLoop` and the
+  headless test runner; supports the S3K HCZ complete-run trace's accidental
+  in-game pause.
 
 - **S1 complete-run SBZ3/Final-Zone split (fixes the FZ f0 bootstrap; adds the
   19th per-act trace):** the original `fz_completerun` data was mislabeled — it

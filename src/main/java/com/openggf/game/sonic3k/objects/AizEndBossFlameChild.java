@@ -2,10 +2,8 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
-import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchActorContextPolicy;
@@ -124,11 +122,9 @@ public class AizEndBossFlameChild extends AbstractObjectInstance implements Touc
 
     /** ROM: ChildObjDat_69D56 — Spawn bomb projectile at flame position. */
     private void spawnBomb() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) return;
+        if (services().objectManager() == null) return;
 
-        AizEndBossBombChild bomb = new AizEndBossBombChild(boss, currentX, currentY, angle);
-        objectManager.addDynamicObject(bomb);
+        spawnChild(() -> new AizEndBossBombChild(boss, currentX, currentY, angle));
     }
 
     @Override

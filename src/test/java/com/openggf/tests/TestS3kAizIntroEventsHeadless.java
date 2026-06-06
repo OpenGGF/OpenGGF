@@ -89,6 +89,26 @@ public class TestS3kAizIntroEventsHeadless {
     }
 
     @Test
+    void aizIntroBootstrapParksTailsBeforeFirstVisualReplayTick() {
+        assertFalse(GameServices.sprites().getSidekicks().isEmpty(),
+                "Sonic+Tails AIZ intro should register Player_2");
+        AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+        SidekickCpuController controller = tails.getCpuController();
+        assertNotNull(controller, "CPU Tails should have a controller");
+
+        assertEquals(SidekickCpuController.State.DORMANT_MARKER, controller.getState(),
+                "Visual trace replay renders skipped pre-LevelLoop frames before the first CPU tick");
+        assertEquals(0x7F00, tails.getCentreX() & 0xFFFF,
+                "AIZ intro Tails must already be parked at the ROM dormant marker");
+        assertEquals(0, tails.getCentreY() & 0xFFFF,
+                "AIZ intro Tails must not render from normal level-start placement during visual replay");
+        assertTrue(tails.isObjectControlled(),
+                "ROM object_control=$83 keeps dormant intro Tails under object control");
+        assertTrue(tails.isControlLocked(),
+                "Dormant intro Tails should be locked before the first replay frame renders");
+    }
+
+    @Test
     void aizIntroSidekickBootstrapParksTailsAtDormantMarkerUntilResizeRelease() {
         assertFalse(GameServices.sprites().getSidekicks().isEmpty(),
                 "Sonic+Tails AIZ intro should register Player_2");

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.game.dataselect.DataSelectGameProfile;
 
 import java.io.IOException;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,7 +33,17 @@ public final class SaveManager {
         Files.createDirectories(file.getParent());
         String payloadJson = mapper.writeValueAsString(payload);
         SaveEnvelope env = new SaveEnvelope(1, game, slot, payload, sha256(payloadJson));
-        mapper.writeValue(file.toFile(), env);
+        Path temp = Files.createTempFile(file.getParent(), file.getFileName().toString(), ".tmp");
+        try {
+            mapper.writeValue(temp.toFile(), env);
+            try {
+                Files.move(temp, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException ex) {
+                Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } finally {
+            Files.deleteIfExists(temp);
+        }
     }
 
     public SaveSlotSummary readSlotSummary(String game, int slot) throws IOException {

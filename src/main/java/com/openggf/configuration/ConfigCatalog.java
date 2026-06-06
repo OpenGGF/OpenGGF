@@ -63,6 +63,7 @@ public final class ConfigCatalog {
         put(LEFT, of("input.player1", "left", KEY, "Player 1: move left"));
         put(RIGHT, of("input.player1", "right", KEY, "Player 1: move right"));
         put(JUMP, of("input.player1", "jump", KEY, "Player 1: jump"));
+        put(START, of("input.player1", "start", KEY, "Player 1: start (in-game pause)"));
         put(P2_UP, of("input.player2", "up", KEY, "Player 2: look up"));
         put(P2_DOWN, of("input.player2", "down", KEY, "Player 2: crouch/roll"));
         put(P2_LEFT, of("input.player2", "left", KEY, "Player 2: move left"));

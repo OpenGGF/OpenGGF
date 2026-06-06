@@ -77,10 +77,8 @@ public final class SessionManager {
     }
 
     public static synchronized void closeGameplaySession() {
-        if (currentGameplayMode != null) {
-            currentGameplayMode.destroy();
-            currentGameplayMode = null;
-        }
+        destroyCurrentMode();
+        currentWorldSession = null;
     }
 
     public static synchronized GameModule requireCurrentGameModule() {

@@ -473,17 +473,14 @@ public record PhysicsFeatureSet(
          * replicated by {@code AbstractPlayableSprite.applyDeath} and
          * {@code SidekickCpuController.beginLevelBoundaryKill}).
          *
-         * <p>S3K: {@code true}. Required to fix AIZ trace replay F7171
+         * <p>S1/S2/S3K: {@code true}. S1/S2/S3K all compare the ROM
+         * {@code y_pos(a0)} word rather than sprite bounds. This keeps the
+         * engine's boundary death semantics aligned with the coordinate rule
+         * that ROM {@code y_pos} maps to {@code getCentreY()}.
+         *
+         * <p>S3K: Required to fix AIZ trace replay F7171
          * sidekick boundary kill (Tails {@code y_pos = 0x047E} versus the
          * ROM kill-plane the engine missed by 12 px).
-         *
-         * <p>S1/S2: {@code false} for now. The S1 GHZ/MZ1 and S2 EHZ trace
-         * baselines were recorded against the engine's existing top-left
-         * compare; flipping the global default in the same change risks
-         * unrelated regressions. Once S3K AIZ/CNZ progress past their
-         * current blockers, S1/S2 should be re-recorded or re-validated
-         * and the flag flipped to {@code true} for all three games (ROM
-         * parity for S1 and S2 is already established by the cites above).
          */
         boolean levelBoundaryUsesCentreY,
         /**
@@ -885,7 +882,7 @@ public record PhysicsFeatureSet(
             false /* sidekickCpuUsesLevelFrameCounter: S1 has no Tails CPU */,
             false /* landingRollClearUsesCurrentYRadiusDelta: S1 Sonic_ResetOnFloor applies fixed subq.w #5, obY(a0) when clearing ball state */,
             false /* levelBoundaryRightStrict: S1 uses bls.s (non-strict, predicted >= right) at s1disasm/_incObj/01 Sonic.asm:998 */,
-            false /* levelBoundaryUsesCentreY: S1 ROM uses centre-Y at s1disasm/_incObj/01 Sonic.asm:1014, but S1 trace baselines (GHZ/MZ1) were calibrated against engine top-left compare; defer flip until S1 traces are re-validated */,
+            true /* levelBoundaryUsesCentreY: S1 ROM compares obY(a0), i.e. centre-Y, at s1disasm/_incObj/01 Sonic.asm:1014 */,
             false /* solidObjectTopBranchAlwaysLiftsOnUpwardVelocity: S1 Solid_Landed (s1disasm/_incObj/sub SolidObject.asm:278-289) tests y_vel before any lift and returns Solid_Miss when upward */,
             false /* sidekickNormalCpuSkipsHurtRoutine: S1 has no Tails CPU */,
             false /* controlLockLatchesLogicalInput: S1 uses separate Ctrl_Lock_byte; preserve baseline */,
@@ -930,7 +927,7 @@ public record PhysicsFeatureSet(
             false /* sidekickCpuUsesLevelFrameCounter: preserve existing S2 trace cadence */,
             false /* landingRollClearUsesCurrentYRadiusDelta: S2 Sonic_ResetOnFloor applies fixed subq.w #5, y_pos(a0) when clearing rolling */,
             false /* levelBoundaryRightStrict: S2 uses bls.s (non-strict, predicted >= right) at s2.asm:36933 */,
-            false /* levelBoundaryUsesCentreY: S2 ROM uses centre-Y at s2.asm:36950, but S2 EHZ trace baseline was calibrated against engine top-left compare; defer flip until S2 traces are re-validated */,
+            true /* levelBoundaryUsesCentreY: S2 ROM compares y_pos(a0), i.e. centre-Y, at s2.asm:36950 */,
             false /* solidObjectTopBranchAlwaysLiftsOnUpwardVelocity: S2 SolidObject_Landed (s2.asm:35379-35380) tests y_vel before lift and branches to SolidObject_Miss when upward */,
             true /* sidekickNormalCpuSkipsHurtRoutine: S2 Obj02_Index routes routine 4 to Obj02_Hurt (s2.asm:38883-38891), which never reaches Obj02_Control->TailsCPU_Control->TailsCPU_CheckDespawn (s2.asm:41057-41073), so Tails_respawn_counter freezes during the hurt routine. Verified on the MCZ1 level-select trace: Tails hurt off-screen ~45 frames, counter frozen at 0xBA, so it is only 0xFF (<$12C) when the engine spuriously despawned. */,
             true /* controlLockLatchesLogicalInput: ROM Obj01_Control (s2.asm:36227-36229) skips copying Ctrl_1 into Ctrl_1_Logical while Control_Locked is set, latching the prior held pad word; Sonic_RecordPos (s2.asm:36340-36346) then stores that latched word into Sonic_Stat_Record_Buf, and TailsCPU_Normal (s2.asm:38939-38953) replays it $11 frames later. The post-lock animation gating the 4 S2 setControlLocked sites (FlipperObjectInstance, CPZSpinTubeObjectInstance, Sonic2DeathEggRobotInstance, SignpostObjectInstance) and PlayableSpriteMovement rely on reads the EFFECTIVE (post-mute) input via isMovementInputActive() (PlayableSpriteMovement:465), NOT the latched logical word, so the latch only feeds the follow-history ring. The prior universal flip (f3347ea89, reverted 9793e4617) regressed EHZ because it latched for ALL games; gating it to S2 keeps the latch off the S3K-shaped path. Required for MTZ2 trace f873 where Tails over-runs a wall-stopped control-locked Sonic toward the MTZ spin tube and must keep accelerating RIGHT off the replayed held input. */,

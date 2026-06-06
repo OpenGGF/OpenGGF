@@ -1,7 +1,8 @@
 # Configuration
 
-The engine reads settings from `config.json` in the working directory (next to the JAR).
-If the file does not exist, built-in defaults are used. This page answers common setup
+The engine reads settings from `config.yaml` in the working directory (next to the JAR).
+If the file does not exist, the bundled default template is used. A legacy `config.json`
+is migrated automatically on first run. This page answers common setup
 questions. For the full reference of every key, see the
 [Configuration Reference](../../../CONFIGURATION.md).
 
@@ -9,57 +10,62 @@ questions. For the full reference of every key, see the
 
 ## How do I change the window size?
 
-Set `SCREEN_WIDTH` and `SCREEN_HEIGHT` to the window dimensions you want in OS pixels.
+Set `display.windowAutosize` to `false`, then set `debug.window.width` and
+`debug.window.height` to the window dimensions you want in OS pixels.
 For pixel-perfect 2x scaling of the native 320x224 resolution:
 
-```json
-{
-  "SCREEN_WIDTH": 640,
-  "SCREEN_HEIGHT": 448
-}
+```yaml
+display:
+  windowAutosize: false
+debug:
+  window:
+    width: 640
+    height: 448
 ```
 
 For 3x:
 
-```json
-{
-  "SCREEN_WIDTH": 960,
-  "SCREEN_HEIGHT": 672
-}
+```yaml
+display:
+  windowAutosize: false
+debug:
+  window:
+    width: 960
+    height: 672
 ```
 
-Do not change `SCREEN_WIDTH_PIXELS` or `SCREEN_HEIGHT_PIXELS` unless you understand the
-implications -- these control the logical resolution, not the window size.
+Do not change the derived logical pixel dimensions unless you understand the implications.
+They control the Mega Drive logical resolution, not the OS window size.
 
 ## How do I skip the title screen?
 
 To skip the master title screen (game picker) and boot directly into a game:
 
-```json
-{
-  "MASTER_TITLE_SCREEN_ON_STARTUP": false,
-  "DEFAULT_ROM": "s2"
-}
+```yaml
+startup:
+  masterTitleScreen: false
+roms:
+  default: "s2"
 ```
 
 To also skip the game's own title screen and go straight to gameplay:
 
-```json
-{
-  "MASTER_TITLE_SCREEN_ON_STARTUP": false,
-  "TITLE_SCREEN_ON_STARTUP": false,
-  "DEFAULT_ROM": "s2"
-}
+```yaml
+startup:
+  masterTitleScreen: false
+  titleScreen: false
+roms:
+  default: "s2"
 ```
 
 ## How do I start on a specific zone?
 
 Enable the level select screen:
 
-```json
-{
-  "LEVEL_SELECT_ON_STARTUP": true
-}
+```yaml
+debug:
+  startup:
+    levelSelectOnStartup: true
 ```
 
 This opens the game's level select menu instead of starting from the first zone.
@@ -68,10 +74,9 @@ This opens the game's level select menu instead of starting from the first zone.
 
 Set the sidekick character:
 
-```json
-{
-  "SIDEKICK_CHARACTER_CODE": "tails"
-}
+```yaml
+players:
+  sidekick: "tails"
 ```
 
 Tails will appear as a CPU-controlled follower alongside Sonic. Set to `""` (empty) to
@@ -83,11 +88,10 @@ Cross-game feature donation lets a donor game provide player sprites, spindash, 
 SFX while you play a different base game. For example, playing Sonic 1 with Sonic 2's
 sprites and spindash:
 
-```json
-{
-  "CROSS_GAME_FEATURES_ENABLED": true,
-  "CROSS_GAME_SOURCE": "s2"
-}
+```yaml
+crossGame:
+  enabled: true
+  source: "s2"
 ```
 
 Both the base game ROM and the donor game ROM must be present.
@@ -129,20 +133,20 @@ Common key codes:
 
 Example: rebind jump to the A key:
 
-```json
-{
-  "JUMP": "A"
-}
+```yaml
+controls:
+  jump: "A"
 ```
 
-See [Controls](controls.md) for the full list of bindable actions.
+See [Controls](controls.md) for the full list of bindable actions and
+`CONFIGURATION.md` for current YAML key names.
 
 ## How do I enable the editor overlay?
 
-```json
-{
-  "EDITOR_ENABLED": true
-}
+```yaml
+debug:
+  flags:
+    editor: true
 ```
 
 With that enabled, press `Shift+Tab` during gameplay to enter the experimental editor overlay,
@@ -152,14 +156,13 @@ and press `Shift+Tab` again to resume playtesting.
 
 Live rewind is an experimental gameplay debugging feature. Enable it explicitly:
 
-```json
-{
-  "LIVE_REWIND_ENABLED": true,
-  "LIVE_REWIND_KEY": "R"
-}
+```yaml
+rewind:
+  liveEnabled: true
+  liveKey: R
 ```
 
-With that enabled, hold `LIVE_REWIND_KEY` during normal level play to rewind the live
+With that enabled, hold the configured live rewind key during normal level play to rewind the live
 gameplay buffer. The on-screen live rewind HUD is hidden during ordinary play and
 appears only while the key is held, showing the current rewind frame. Rewind history
 resets at committed level and act transition boundaries.
@@ -170,20 +173,19 @@ game resumes normal forward audio/fade presentation when the key is released.
 
 Held rewind defaults to one rewind step per visual frame and stops immediately when
 released. Experimental tape-coast rewind is available only when
-`LIVE_REWIND_TAPE_COAST_ENABLED` is set to `true`. With coast enabled, the rewind
-speed starts at `LIVE_REWIND_TAPE_COAST_MIN_STEPS` on press (values below 1.0 give
+`rewind.tapeCoastEnabled` is set to `true`. With coast enabled, the rewind
+speed starts at `rewind.tapeCoastMinSteps` on press (values below 1.0 give
 a slow-motion start), accelerates while held using
-`LIVE_REWIND_TAPE_COAST_ACCELERATION` up to `LIVE_REWIND_TAPE_COAST_MAX_STEPS`,
-and decays after release using `LIVE_REWIND_TAPE_COAST_DECELERATION`. Reverse audio
+`rewind.tapeCoastAcceleration` up to `rewind.tapeCoastMaxSteps`,
+and decays after release using `rewind.tapeCoastDeceleration`. Reverse audio
 is resampled in lockstep with the current rewind speed, so fast rewind pitches up
 and slow-motion rewind plays back lower and stretched in time.
 
 ## How do I mute audio?
 
-```json
-{
-  "AUDIO_ENABLED": false
-}
+```yaml
+audio:
+  enabled: false
 ```
 
 ## How do I make colors less bright?
@@ -191,16 +193,15 @@ and slow-motion rewind plays back lower and stretched in time.
 The default display profile is the raw RGB expansion of Mega Drive palette values. You can
 select a darker analog-style presentation, or a slightly softer NTSC-style presentation:
 
-```json
-{
-  "DISPLAY_COLOR_PROFILE": "MD_ANALOG"
-}
+```yaml
+display:
+  colorProfile: "MD_ANALOG"
 ```
 
 Accepted values are `"RAW_RGB"`, `"MD_ANALOG"`, and `"NTSC_SOFT"`. During play, press
-`V` to cycle profiles; the selected profile is saved to `config.json` and a short
+`V` to cycle profiles; the selected profile is saved to `config.yaml` and a short
 confirmation appears in the bottom-left corner. The key can be rebound with
-`DISPLAY_COLOR_PROFILE_TOGGLE_KEY`.
+`display.colorProfileToggleKey`.
 
 ## How do I use a wider display aspect? (experimental)
 
@@ -212,10 +213,9 @@ confirmation appears in the bottom-left corner. The key can be rebound with
 
 To try a widescreen preset anyway:
 
-```json
-{
-  "DISPLAY_ASPECT": "WIDE_16_9"
-}
+```yaml
+display:
+  aspect: "WIDE_16_9"
 ```
 
 Available presets:
@@ -228,17 +228,16 @@ Available presets:
 | `"ULTRA_21_9"` | 528 | Experimental |
 | `"SUPER_32_9"` | 800 | Experimental |
 
-By default (`DISPLAY_WINDOW_AUTOSIZE: true`), the OS window is automatically sized to
+By default (`display.windowAutosize: true`), the OS window is automatically sized to
 twice the preset pixel width (e.g. `WIDE_16_9` → 800×448). To keep a custom window size,
-set `DISPLAY_WINDOW_AUTOSIZE` to `false` and configure `SCREEN_WIDTH`/`SCREEN_HEIGHT`
-manually.
+set `display.windowAutosize` to `false` and configure `debug.window.width` /
+`debug.window.height` manually.
 
 ## How do I switch between NTSC and PAL?
 
-```json
-{
-  "REGION": "PAL"
-}
+```yaml
+display:
+  region: "PAL"
 ```
 
 PAL runs at 50 Hz instead of 60 Hz and affects audio timing. The default is `"NTSC"`.
@@ -247,22 +246,21 @@ PAL runs at 50 Hz instead of 60 Hz and affects audio timing. The default is `"NT
 
 If your ROM files have different names from the defaults:
 
-```json
-{
-  "SONIC_1_ROM": "my-sonic1.bin",
-  "SONIC_2_ROM": "my-sonic2.bin",
-  "SONIC_3K_ROM": "my-s3k.bin"
-}
+```yaml
+roms:
+  sonic1: "my-sonic1.bin"
+  sonic2: "my-sonic2.bin"
+  sonic3k: "my-s3k.bin"
 ```
 
 Paths are relative to the working directory.
 
 ## How do I skip S3K intro cutscenes?
 
-```json
-{
-  "S3K_SKIP_INTROS": true
-}
+```yaml
+debug:
+  startup:
+    s3kSkipIntros: true
 ```
 
 This skips sequences like the AIZ biplane intro and boots straight into gameplay.

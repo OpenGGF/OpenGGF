@@ -22,7 +22,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Owns the runtime-generated Sonic 1 selected-slot preview cache used by donated S3K Data Select.
@@ -33,6 +36,7 @@ import java.util.function.Supplier;
  */
 public class S1DataSelectImageCacheManager {
 	static final int GENERATOR_FORMAT_VERSION = 5;
+	private static final Logger LOGGER = Logger.getLogger(S1DataSelectImageCacheManager.class.getName());
 	private static final String MANIFEST_FILE_NAME = "manifest.json";
 	private static final Set<String> EXPECTED_ZONE_KEYS = Set.of(
 			"ghz",
@@ -50,6 +54,7 @@ public class S1DataSelectImageCacheManager {
 	private final S1DataSelectImageGenerator generator;
 
 	private volatile CompletableFuture<Void> inFlight;
+	private volatile Throwable lastGenerationFailure;
 
 	public S1DataSelectImageCacheManager(Path cacheRoot, SonicConfigurationService config,
 			Supplier<String> romSha256Supplier, ObjectMapper mapper) {
@@ -73,13 +78,21 @@ public class S1DataSelectImageCacheManager {
 	public void awaitGenerationIfRunning() {
 		CompletableFuture<Void> future = inFlight;
 		if (future != null) {
-			future.join();
+			try {
+				future.join();
+			} catch (CompletionException e) {
+				recordGenerationFailure(e);
+			}
 		}
 	}
 
 	public boolean isGenerationRunning() {
 		CompletableFuture<Void> future = inFlight;
 		return future != null && !future.isDone();
+	}
+
+	public Throwable getLastGenerationFailure() {
+		return lastGenerationFailure;
 	}
 
 	/**
@@ -165,6 +178,7 @@ public class S1DataSelectImageCacheManager {
 			return;
 		}
 
+		lastGenerationFailure = null;
 		CompletableFuture<Void> next = CompletableFuture.runAsync(() -> {
 			try {
 				generator.generateAll();
@@ -174,12 +188,34 @@ public class S1DataSelectImageCacheManager {
 		});
 		inFlight = next;
 		next.whenComplete((ignored, ignoredThrowable) -> {
+			if (ignoredThrowable != null) {
+				recordGenerationFailure(ignoredThrowable);
+			}
 			synchronized (S1DataSelectImageCacheManager.this) {
 				if (inFlight == next) {
 					inFlight = null;
 				}
 			}
 		});
+	}
+
+	private synchronized void recordGenerationFailure(Throwable throwable) {
+		Throwable failure = unwrapCompletionException(throwable);
+		if (lastGenerationFailure == failure) {
+			return;
+		}
+		lastGenerationFailure = failure;
+		LOGGER.log(Level.WARNING,
+				"Failed to generate Sonic 1 donated data-select preview cache at " + cacheRoot,
+				failure);
+	}
+
+	private Throwable unwrapCompletionException(Throwable throwable) {
+		Throwable current = throwable;
+		while (current instanceof CompletionException && current.getCause() != null) {
+			current = current.getCause();
+		}
+		return current;
 	}
 
 	private boolean isEligibleForDonatedS3k() {

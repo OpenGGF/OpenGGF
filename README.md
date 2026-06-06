@@ -22,7 +22,7 @@ modding and customisation.
 > legally obtained ROM files to use this software.
 >
 > The disclaimer is also shown in-engine on startup; it can be disabled by setting
-> `SHOW_LEGAL_DISCLAIMER_ON_STARTUP=false` in `config.json`.
+> `startup.legalDisclaimer: false` in `config.yaml`.
 
 ## User Guide
 
@@ -36,8 +36,9 @@ Contributor tests are JUnit 5 / Jupiter only. Do not add JUnit 4 tests, rules, r
 
 ## Configuration
 
-The engine reads runtime settings from `config.json`. Key bindings can be written either as GLFW
-integer codes or as human-readable names such as `"SPACE"`, `"Q"`, or `"F9"`. See
+The engine reads runtime settings from `config.yaml` in the working directory. A legacy
+`config.json` is migrated automatically on first run. Key bindings can be written either as GLFW
+integer codes or as human-readable names such as `SPACE`, `Q`, or `F9`. See
 [`CONFIGURATION.md`](CONFIGURATION.md) and the player guide for the full reference.
 
 ## Controls
@@ -73,7 +74,7 @@ integer codes or as human-readable names such as `"SPACE"`, `"Q"`, or `"F9"`. Se
 
 | Key | Action |
 |-----|--------|
-| Shift+Tab | Toggle between gameplay and the experimental editor overlay (`EDITOR_ENABLED` must be `true`) |
+| Shift+Tab | Toggle between gameplay and the experimental editor overlay (`debug.flags.editor` must be `true`) |
 | F5 | Restart the playtest from editor mode |
 
 ## FAQ
@@ -115,12 +116,15 @@ Current migration status is intentionally partial rather than universal. Sonic 2
 Near-term S3K work should be planned as playable route slices with explicit gates: required traversal objects and badniks, event/camera behavior, scroll/parallax, animated tiles, palette and PLC state, bosses or transitions, rewind coverage where state is gameplay-relevant, trace replay for known blockers, and visual validation against stable-retro where practical. The first target route is AIZ through HCZ, with CNZ/MGZ/ICZ work feeding the same slice-driven standard instead of a checklist-only rollout.
 
 Work is ongoing across all three games. Recent branch work spans S3K route
-bring-up (AIZ, CNZ, MGZ, ICZ, and Mushroom Hill), S2 trace-frontier closures
-(Sky Chase and Casino Night level-select replays), object-physics
-standardization onto shared contracts, expanded rewind coverage, and
-architecture-guard hardening across runtime ownership, trace/rewind invariants,
-and object-service boundaries. See CHANGELOG.md for the detailed, per-merge
-history.
+bring-up (AIZ, CNZ, MGZ, ICZ, and Mushroom Hill), an S3K complete-run per-zone
+trace suite (one Sonic+Tails AIZ->Doomsday movie segmented per zone, each trace
+spanning the act1->act2 transition through the zone-exit handoff) with
+ROM-accurate in-game pause modelling and one-time mid-run-entry bootstrap
+seeding, S2 trace-frontier closures (Sky Chase and Casino Night level-select
+replays), object-physics standardization onto shared contracts, expanded rewind
+coverage, and architecture-guard hardening across runtime ownership, trace/rewind
+invariants, and object-service boundaries. See CHANGELOG.md for the detailed,
+per-merge history.
 
 ### Where do I get ROMs?
 
@@ -135,7 +139,7 @@ these specific revisions, placed in the working directory:
 
 Other revisions (REV00, etc.) are untested and will likely produce incorrect results, as
 ROM addresses are verified against these specific builds. ROM filenames are configurable via
-`config.json` (see `SONIC_1_ROM`, `SONIC_2_ROM`, `SONIC_3K_ROM` keys).
+`config.yaml` (see `roms.sonic1`, `roms.sonic2`, and `roms.sonic3k`).
 
 ### What is cross-game feature donation?
 
@@ -146,14 +150,13 @@ sidekick AI — and when S3K is the donor, you also get the full S3K data select
 save slots and team selection before gameplay begins.
 When S3K is the donor, that donated data select now also uses host-specific emerald presentation
 and runtime-generated S1/S2 zone preview screenshots. Data select donation is only enabled when
-`CROSS_GAME_FEATURES_ENABLED` is `true` and `CROSS_GAME_SOURCE` is `"s3k"`. Enable it in
-`config.json`:
+`crossGame.enabled` is `true` and `crossGame.source` is `"s3k"`. Enable it in
+`config.yaml`:
 
-```json
-{
-  "CROSS_GAME_FEATURES_ENABLED": true,
-  "CROSS_GAME_SOURCE": "s3k"
-}
+```yaml
+crossGame:
+  enabled: true
+  source: "s3k"
 ```
 
 Both the base game ROM and the donor game ROM must be present.

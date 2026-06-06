@@ -4,6 +4,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.level.LevelManager;
+import com.openggf.game.GroundMode;
 import com.openggf.game.PlayableEntity;
 import com.openggf.physics.*;
 import com.openggf.level.objects.ObjectInstance;
@@ -612,6 +613,56 @@ public class CollisionSystemTest {
         assertEquals(0, readProbeInt(probe, "dynamicYOffset"));
     }
 
+    @Test
+    public void oddRightWallAngleFallbackIsSensorDrivenNotCoordinateWindow() {
+        AbstractPlayableSprite player = newCollisionTestSprite();
+        player.setGroundMode(GroundMode.RIGHTWALL);
+        player.setCentreX((short) 0x0100);
+        player.setCentreY((short) 0x0400);
+
+        SensorResult selectedOddWall = new SensorResult((byte) 0xFF, (byte) 0, 0x10, Direction.DOWN);
+        SensorResult alternateEvenWall = new SensorResult((byte) 0x20, (byte) 2, 0x11, Direction.DOWN);
+
+        invokeSelectSensorWithAngle(player, alternateEvenWall, selectedOddWall);
+        invokeSelectSensorWithAngle(player, alternateEvenWall, selectedOddWall);
+
+        assertEquals(0x20, player.getAngle() & 0xFF,
+                "Odd right-wall contact should reuse the even alternate sensor on the next zero-distance frame "
+                        + "without depending on SBZ coordinates");
+    }
+
+    @Test
+    public void oddRightWallAngleFallbackIgnoresDistantAlternateSensor() {
+        AbstractPlayableSprite player = newCollisionTestSprite();
+        player.setGroundMode(GroundMode.RIGHTWALL);
+
+        SensorResult selectedOddWall = new SensorResult((byte) 0xFF, (byte) 0, 0x10, Direction.DOWN);
+        SensorResult distantAlternate = new SensorResult((byte) 0x20, (byte) 3, 0x11, Direction.DOWN);
+
+        invokeSelectSensorWithAngle(player, distantAlternate, selectedOddWall);
+        invokeSelectSensorWithAngle(player, distantAlternate, selectedOddWall);
+
+        assertEquals(0x00, player.getAngle() & 0xFF,
+                "Right-wall fallback must not reuse alternates outside the ROM-shaped near-contact range");
+    }
+
+    @Test
+    public void floorLipSlopeUsesAlternateSensorPatternOutsideSbzCoordinates() {
+        AbstractPlayableSprite player = newCollisionTestSprite();
+        player.setGroundMode(GroundMode.GROUND);
+        player.setCentreX((short) 0x0100);
+        player.setCentreY((short) 0x0400);
+
+        SensorResult selectedOddFloor = new SensorResult((byte) 0xFF, (byte) 0, 0x10, Direction.DOWN);
+        SensorResult alternateSlope = new SensorResult((byte) 0x08, (byte) 3, 0x11, Direction.DOWN);
+
+        SensorResult result = invokeSelectSensorWithAngle(player, selectedOddFloor, alternateSlope);
+
+        assertSame(alternateSlope, result,
+                "Floor lip selection should choose the ROM-shaped alternate slope sensor by sensor result pattern");
+        assertEquals(0x08, player.getAngle() & 0xFF);
+    }
+
     private static Object describeCalcRoomInFrontProbe(int angle, short gSpeed) {
         try {
             Method method = CollisionSystem.class.getDeclaredMethod(
@@ -621,6 +672,35 @@ public class CollisionSystemTest {
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Failed to invoke describeCalcRoomInFrontProbe", e);
         }
+    }
+
+    private SensorResult invokeSelectSensorWithAngle(AbstractPlayableSprite player,
+                                                     SensorResult rightSensor,
+                                                     SensorResult leftSensor) {
+        try {
+            Method method = CollisionSystem.class.getDeclaredMethod(
+                    "selectSensorWithAngle", AbstractPlayableSprite.class, SensorResult.class, SensorResult.class);
+            method.setAccessible(true);
+            return (SensorResult) method.invoke(collisionSystem, player, rightSensor, leftSensor);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Failed to invoke selectSensorWithAngle", e);
+        }
+    }
+
+    private static AbstractPlayableSprite newCollisionTestSprite() {
+        return new AbstractPlayableSprite("collision-test", (short) 0, (short) 0) {
+            @Override
+            protected void defineSpeeds() {
+            }
+
+            @Override
+            protected void createSensorLines() {
+            }
+
+            @Override
+            public void draw() {
+            }
+        };
     }
 
     private static Object[] describeCalcRoomOverHeadProbes(AbstractPlayableSprite player, int quadrant) {

@@ -130,6 +130,14 @@ class TestObjectServicesExpansion {
     }
 
     @Test
+    void bootstrapObjectServices_usesRuntimeOwnedMutationPipeline() {
+        BootstrapObjectServices services = new BootstrapObjectServices();
+
+        assertSame(GameServices.zoneLayoutMutationPipeline(), services.zoneLayoutMutationPipeline(),
+                "bootstrap object services must not create a private mutation pipeline when runtime exists");
+    }
+
+    @Test
     void defaultObjectServices_bonusStageActionsUseInjectedGameplayProviderNotActiveSession() {
         // After the activeBonusStageProvider migration to GameplayModeContext,
         // the provider is gameplay-scoped. DefaultObjectServices

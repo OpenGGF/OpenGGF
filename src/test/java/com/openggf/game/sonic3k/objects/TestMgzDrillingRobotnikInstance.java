@@ -12,6 +12,10 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.palette.PaletteSurface;
+import com.openggf.game.palette.PaletteWriteSupport;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -843,14 +847,17 @@ class TestMgzDrillingRobotnikInstance {
             controller.update(frame, null);
         }
 
-        assertTrue(services.paletteUpdates >= 16,
-                "loc_6D104 applies all 16 Pal_MGZFadeCNZ rows before StartNewLevel #$300");
-        assertEquals(3, services.lastPaletteIndex,
-                "Normal_palette_line_4 maps to palette line index 3");
-        assertEquals(0x00, services.firstPaletteRow[0] & 0xFF);
-        assertEquals(0x00, services.firstPaletteRow[1] & 0xFF);
-        assertEquals(0x0E, services.firstPaletteRow[2] & 0xFF);
-        assertEquals(0xCA, services.firstPaletteRow[3] & 0xFF);
+        for (int i = 0; i < Sonic3kConstants.PAL_MGZ_FADE_CNZ_ROWS; i++) {
+            verify(services.rom).readBytes(
+                    Sonic3kConstants.PAL_MGZ_FADE_CNZ_ADDR
+                            + i * Sonic3kConstants.PAL_MGZ_FADE_CNZ_ROW_SIZE,
+                    Sonic3kConstants.PAL_MGZ_FADE_CNZ_ROW_SIZE);
+        }
+        assertEquals(S3kPaletteOwners.MGZ_POST_BOSS_FADE,
+                services.registry.ownerAt(PaletteSurface.NORMAL, 3, 1),
+                "MGZ2 Pal_MGZFadeCNZ rows should claim line 4 through palette ownership");
+        assertEquals(0x0EAA, PaletteWriteSupport.segaWordFromColor(services.paletteLine3.getColor(1)),
+                "The final Pal_MGZFadeCNZ ROM row should resolve into palette line 4");
         assertEquals(3, services.requestedZone,
                 "StartNewLevel #$300 transitions from MGZ2 to CNZ1");
         assertEquals(0, services.requestedAct);
@@ -1260,6 +1267,9 @@ class TestMgzDrillingRobotnikInstance {
         private final Level level;
         private final Palette paletteLine0 = new Palette();
         private final Palette paletteLine1 = new Palette();
+        private final Palette paletteLine2 = new Palette();
+        private final Palette paletteLine3 = new Palette();
+        private final PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
         private final ObjectManager objectManager;
         private final ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
         private final RecordingGraphics graphics = new RecordingGraphics();
@@ -1303,9 +1313,11 @@ class TestMgzDrillingRobotnikInstance {
             normalLine[29] = 0x66;
             paletteLine1.fromSegaFormat(normalLine);
 
-            when(level.getPaletteCount()).thenReturn(2);
+            when(level.getPaletteCount()).thenReturn(4);
             when(level.getPalette(0)).thenReturn(paletteLine0);
             when(level.getPalette(1)).thenReturn(paletteLine1);
+            when(level.getPalette(2)).thenReturn(paletteLine2);
+            when(level.getPalette(3)).thenReturn(paletteLine3);
 
             when(drillRenderer.isReady()).thenReturn(true);
             when(shipRenderer.isReady()).thenReturn(true);
@@ -1327,6 +1339,18 @@ class TestMgzDrillingRobotnikInstance {
             mgzLine[3] = 0x4A;
             when(rom.readBytes(Sonic3kConstants.PAL_MGZ_ENDBOSS_ADDR, 32)).thenReturn(bossLine);
             when(rom.readBytes(Sonic3kConstants.PAL_MGZ_ADDR, 32)).thenReturn(mgzLine);
+            for (int i = 0; i < Sonic3kConstants.PAL_MGZ_FADE_CNZ_ROWS; i++) {
+                byte[] fadeRow = new byte[Sonic3kConstants.PAL_MGZ_FADE_CNZ_ROW_SIZE];
+                fadeRow[0] = 0x00;
+                fadeRow[1] = 0x00;
+                fadeRow[2] = 0x0E;
+                fadeRow[3] = (byte) (0xCA - i);
+                when(rom.readBytes(
+                        Sonic3kConstants.PAL_MGZ_FADE_CNZ_ADDR
+                                + i * Sonic3kConstants.PAL_MGZ_FADE_CNZ_ROW_SIZE,
+                        Sonic3kConstants.PAL_MGZ_FADE_CNZ_ROW_SIZE))
+                        .thenReturn(fadeRow);
+            }
             when(rom.readBytes(Sonic3kConstants.ART_UNC_MGZ_ENDBOSS_SCALED_ADDR,
                     Sonic3kConstants.ART_UNC_MGZ_ENDBOSS_SCALED_SIZE))
                     .thenReturn(new byte[Sonic3kConstants.ART_UNC_MGZ_ENDBOSS_SCALED_SIZE]);
@@ -1402,6 +1426,11 @@ class TestMgzDrillingRobotnikInstance {
         @Override
         public Rom rom() {
             return rom;
+        }
+
+        @Override
+        public PaletteOwnershipRegistry paletteOwnershipRegistryOrNull() {
+            return registry;
         }
 
         RecordingServices withLevelEventProvider(LevelEventProvider levelEventProvider) {

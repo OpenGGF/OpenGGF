@@ -64,6 +64,14 @@ public enum SonicConfiguration {
 	 * Key to jump etc.
 	 */
 	JUMP,
+	/**
+	 * Player 1 Start. Drives ROM in-game pause (Game_paused / Pause_Loop): a
+	 * Start-press edge during level gameplay freezes the level update for the
+	 * frame while the frame counter still advances, then a second press resumes.
+	 * Distinct from {@link #PAUSE_KEY}, which is the engine's loop/timing-level
+	 * window/keyboard pause that also halts audio.
+	 */
+	START,
 	P2_UP,
 	P2_DOWN,
 	P2_LEFT,

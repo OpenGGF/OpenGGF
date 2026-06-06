@@ -50,6 +50,15 @@ public class SidekickCpuController {
     private static final int PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y = 0x80;
     private static final int LEVEL_START_X_OFFSET = -0x20;
     private static final int LEVEL_START_Y_OFFSET = 4;
+    /**
+     * Distance band (pixels) around the spawn-relative placement target inside
+     * which a present sidekick at a zone entry is treated as an already
+     * established follower (see {@link #isEstablishedFollowerEntry()}). Sized to
+     * the ROM follow envelope (the $20 lead offset plus the $30 S3K steering
+     * snap threshold, sonic3k.asm:26694,26712,26729) so a genuine carried-in
+     * follower passes while a sidekick that still needs a fresh spawn does not.
+     */
+    private static final int ESTABLISHED_FOLLOWER_ENTRY_BAND = 0x40;
     private static final int DESPAWN_TIMEOUT = 300;
     private static final int MANUAL_CONTROL_FRAMES = 600;
     /**
@@ -174,6 +183,43 @@ public class SidekickCpuController {
     // every CPU update tick.
     private boolean deferredDespawnDeadFallContinuingThisFrame;
     private boolean bootstrapPreludePlacementApplied;
+    /**
+     * Leader centre coordinates captured at level-load time
+     * ({@link #captureLevelStartLeaderAnchor()}, invoked from
+     * {@code LevelManager.spawnSidekicks} — the engine analogue of ROM
+     * {@code SpawnLevelMainSprites_SpawnPlayers}, sonic3k.asm:8359-8369). ROM
+     * places the CPU sidekick at {@code Player_1 - $20, +4} and prefills
+     * {@code Sonic_Pos_Record_Buf} while the leader still sits at its spawn
+     * position, BEFORE the first {@code LevelLoop}/{@code Obj01} physics tick
+     * moves it. The engine's {@link #updateInit()} placement is deferred to the
+     * sidekick controller's first tick, which on a mid-run zone entry happens
+     * AFTER the leader has already moved a pixel under held input; using the
+     * live leader centre there shifts the spawn anchor (and the delayed-follow
+     * Pos_table prefill) by that movement. Anchoring to the captured spawn
+     * coordinates reproduces the ROM placement regardless of when the controller
+     * first ticks. {@link Integer#MIN_VALUE} means "not captured" — fall back to
+     * the live leader centre (the historical behaviour for paths that never run
+     * {@code spawnSidekicks}, e.g. focused unit tests).
+     */
+    private int levelStartLeaderCentreX = Integer.MIN_VALUE;
+    private int levelStartLeaderCentreY = Integer.MIN_VALUE;
+    /**
+     * Set by the trace-replay bootstrap orchestration when the segment's frame 0
+     * is a one-time directly-compared seed (S3K complete-run mid-run zone entry
+     * that carries residual sidekick follow state from the previous zone's exit
+     * — HCZ/ICZ/LBZ). In that case the recorded frame-0 kinematic state has
+     * already been seeded onto the sidekick and the leader has NOT been driven
+     * through frame 0, so the controller's first tick (trace frame 1) must
+     * continue from that seeded state rather than re-running the
+     * SpawnLevelMainSprites placement reset (which would zero the carried-in
+     * velocity / re-anchor the position). For natively-driven entries (MGZ/CNZ
+     * fall-in, fresh level loads) this stays false and the normal spawn
+     * placement runs, so those baselines are unaffected. Not a zone carve-out:
+     * it reflects whether a mid-run residual entry state was loaded, the same
+     * "load the save state at the BK2 start" signal the rest of the bootstrap
+     * uses.
+     */
+    private boolean enteredFromSeedCompareFrame0;
     private boolean cpuFrameCounterFromStoredLevelFrame;
     private int nextCpuFrameCounterOverride = -1;
     private int catchUpFrameCounterOverride = -1;
@@ -739,7 +785,41 @@ public class SidekickCpuController {
         }
 
         aizIntroDormantMarkerPrimed = false;
-        initializeLevelStartSidekickPlacementIfNeeded();
+
+        if (isDormantMarkerSentinelEntry()) {
+            // ROM keeps the CPU sidekick at the off-screen dormant-marker
+            // sentinel ($7F00,0 via sub_13ECA, sonic3k.asm:26800-26809) with
+            // Tails_CPU_routine == $0A (locret_13FC0, an empty rts —
+            // sonic3k.asm:26374) when she enters a zone parked off-screen, e.g.
+            // the ICZ snowboard intro. ROM runs no movement or physics on the
+            // marker until a later routine flips her to catch-up flight. The
+            // engine resets the controller to INIT on every level (re)load, so
+            // a sidekick that entered already at the sentinel must re-enter the
+            // dormant marker rather than the normal spawn placement (which would
+            // re-anchor her to the leader and apply gravity). Semantic predicate
+            // (no zone carve-out): the sidekick's carried-in centre is the
+            // off-screen despawn sentinel.
+            applyLevelEventDormantMarker();
+            return;
+        }
+
+        if (isEstablishedFollowerEntry()) {
+            // ROM only runs SpawnLevelMainSprites' Tails placement / kinematic
+            // reset for a fresh spawn with Tails_CPU_routine == 0
+            // (sonic3k.asm:8359-8369). When Tails is already an established CPU
+            // follower at a mid-run zone entry (Tails_CPU_routine == 6, present
+            // and within follow range of the leader), ROM preserves her
+            // position, velocity, and status across the handoff and her CPU slot
+            // simply continues TailsCPU_Normal. The engine resets the controller
+            // to INIT on every level (re)load, so reproduce ROM by skipping the
+            // destructive spawn-reset here: keep the carried-in position /
+            // velocity / air state and only prefill the leader Pos_table from the
+            // captured spawn anchor so the delayed-follow target reproduces ROM's
+            // spawn-anchored ring (Tails held still for 16 frames).
+            establishFollowerWithoutSpawnReset();
+        } else {
+            initializeLevelStartSidekickPlacementIfNeeded();
+        }
 
         state = State.NORMAL;
 
@@ -789,12 +869,26 @@ public class SidekickCpuController {
 
     private void applyLevelStartSidekickPlacement(boolean useRomAccuratePrefill) {
         // S2 InitPlayers (s2.asm:5192-5195) and S3K SpawnLevelMainSprites
-        // (s3.asm:6334-6337) place Player_2 with centre coordinates at
-        // Player_1 - $20 X, +4 Y. The engine's level-load reanchor path uses
-        // sprite top-left coordinates, so correct the first native CPU tick
-        // before follow AI reads the sidekick position.
-        sidekick.setCentreXPreserveSubpixel((short) (leader.getCentreX() + LEVEL_START_X_OFFSET));
-        sidekick.setCentreYPreserveSubpixel((short) (leader.getCentreY() + LEVEL_START_Y_OFFSET));
+        // (s3.asm:6334-6337, sonic3k.asm:8364-8367) place Player_2 with centre
+        // coordinates at Player_1 - $20 X, +4 Y. The engine's level-load
+        // reanchor path uses sprite top-left coordinates, so correct the first
+        // native CPU tick before follow AI reads the sidekick position.
+        //
+        // ROM runs this placement inside SpawnLevelMainSprites at level-load,
+        // while the leader is still at its spawn position, BEFORE the first
+        // LevelLoop physics tick moves it. The engine defers this to the
+        // sidekick controller's first updateInit tick, which on a mid-run zone
+        // entry can land AFTER the leader has already moved a pixel under held
+        // input — so anchor to the leader's captured spawn centre when
+        // available rather than the live (already-moved) centre.
+        int anchorX = levelStartLeaderCentreX != Integer.MIN_VALUE
+                ? levelStartLeaderCentreX
+                : leader.getCentreX();
+        int anchorY = levelStartLeaderCentreY != Integer.MIN_VALUE
+                ? levelStartLeaderCentreY
+                : leader.getCentreY();
+        sidekick.setCentreXPreserveSubpixel((short) (anchorX + LEVEL_START_X_OFFSET));
+        sidekick.setCentreYPreserveSubpixel((short) (anchorY + LEVEL_START_Y_OFFSET));
 
         controlCounter = 0;
         despawnCounter = 0;
@@ -868,6 +962,128 @@ public class SidekickCpuController {
         sidekick.setAir(false);
     }
 
+    /**
+     * True when the CPU sidekick enters this zone already established as a
+     * follower, so ROM does NOT re-run SpawnLevelMainSprites' placement /
+     * kinematic reset (that only happens for a fresh spawn with
+     * {@code Tails_CPU_routine == 0}, sonic3k.asm:8359-8369).
+     *
+     * <p>Semantic predicate (no zone/route/frame carve-out): the sidekick is
+     * present (not parked at the off-screen despawn sentinel) and already sits
+     * within follow range of where the spawn placement would put it relative to
+     * the leader's captured spawn anchor. A genuinely fresh spawn has just been
+     * placed at exactly that offset by {@code spawnSidekicks}; a level-event
+     * intro routine (AIZ dormant marker / MGZ fall-in / CNZ carry) is filtered
+     * out earlier in {@code updateInit} before this is reached. This only
+     * suppresses the destructive reset; the normal follow routine still runs.
+     */
+    /**
+     * True when the CPU sidekick enters this zone parked at the off-screen
+     * dormant-marker sentinel (ROM {@code Tails_CPU_routine == $0A},
+     * x_pos = $7F00 from sub_13ECA, sonic3k.asm:26800-26809,26374). Only
+     * considered when a level-start spawn anchor was captured (so focused unit
+     * tests that bypass {@code spawnSidekicks} keep the historical path) and the
+     * sidekick CPU enters via the catch-up-flight feature set (S3K). Gated on
+     * the semantic sentinel position, not the zone.
+     */
+    private boolean isDormantMarkerSentinelEntry() {
+        if (!enteredFromSeedCompareFrame0 || levelStartLeaderCentreX == Integer.MIN_VALUE) {
+            return false;
+        }
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        if (fs == null || !fs.sidekickRespawnEntersCatchUpFlight()) {
+            return false;
+        }
+        return sidekick.getCentreX() == resolveDespawnX();
+    }
+
+    private boolean isEstablishedFollowerEntry() {
+        if (!enteredFromSeedCompareFrame0 || levelStartLeaderCentreX == Integer.MIN_VALUE) {
+            // Not a mid-run seed-compared entry, or no captured spawn anchor
+            // (focused unit tests that bypass spawnSidekicks): keep the
+            // historical fresh-spawn placement path so natively-driven entries
+            // (MGZ/CNZ fall-in, fresh level loads) and unit tests are unchanged.
+            return false;
+        }
+        short despawnSentinelX = resolveDespawnX();
+        if (sidekick.getCentreX() == despawnSentinelX) {
+            // Parked at the off-screen sentinel ($7F00 etc.): not a live
+            // follower — let the normal init/dormant paths handle it.
+            return false;
+        }
+        int placementTargetX = levelStartLeaderCentreX + LEVEL_START_X_OFFSET;
+        int placementTargetY = levelStartLeaderCentreY + LEVEL_START_Y_OFFSET;
+        // Within a small follow envelope of the spawn-relative placement target.
+        // A fresh spawn lands exactly on it; an established follower carried in
+        // from the prior zone is within a few pixels of it (the delayed-follow
+        // ring keeps Tails near the leader's spawn offset for the first frames).
+        int dxToTarget = Math.abs(sidekick.getCentreX() - placementTargetX);
+        int dyToTarget = Math.abs(sidekick.getCentreY() - placementTargetY);
+        return dxToTarget <= ESTABLISHED_FOLLOWER_ENTRY_BAND
+                && dyToTarget <= ESTABLISHED_FOLLOWER_ENTRY_BAND;
+    }
+
+    /**
+     * Establishes the follower for a mid-run zone entry without running the
+     * SpawnLevelMainSprites kinematic reset: preserves the carried-in
+     * position / velocity / air state and only prefills the leader Pos_table
+     * from the captured spawn anchor (sonic3k.asm:8359-8369,22166-22193) so the
+     * delayed-follow target reproduces ROM's spawn-anchored ring.
+     */
+    private void establishFollowerWithoutSpawnReset() {
+        // Apply the same centre-based spawn-anchor placement as a fresh spawn
+        // (so the sidekick sits at the ROM centre coordinates Player_1 - $20, +4,
+        // sonic3k.asm:8364-8367) and clear the transient CPU counters, but
+        // PRESERVE the carried-in kinematic state (velocity / air). ROM does not
+        // re-run SpawnLevelMainSprites' velocity reset for an established CPU
+        // follower across a mid-run handoff — only her slot's TailsCPU_Normal
+        // continues — so a Tails that entered already falling (HCZ, y_vel = $38)
+        // keeps that velocity, while a freshly placed Tails (whose velocity is
+        // already zero from spawnSidekicks) is unaffected.
+        short carriedXSpeed = sidekick.getXSpeed();
+        short carriedYSpeed = sidekick.getYSpeed();
+        short carriedGSpeed = sidekick.getGSpeed();
+        boolean carriedAir = sidekick.getAir();
+        // The leader Pos_table ring was already prefilled from the spawn anchor
+        // at level-load (captureLevelStartLeaderAnchor) and has since taken the
+        // leader's real per-frame records; pass useRomAccuratePrefill=false so
+        // the spawn-anchor branch does not re-prefill and clobber those recorded
+        // slots (which would shift the delayed follow by a frame). With a
+        // captured anchor present, that branch only re-establishes the spawn ring
+        // when no live records exist — here they do, so guard it.
+        applyEstablishedFollowerCentrePlacement();
+        sidekick.setXSpeed(carriedXSpeed);
+        sidekick.setYSpeed(carriedYSpeed);
+        sidekick.setGSpeed(carriedGSpeed);
+        sidekick.setAir(carriedAir);
+    }
+
+    /**
+     * Centre-based spawn-anchor placement for an established follower: positions
+     * the sidekick at the captured spawn anchor + level-start offset and clears
+     * the transient CPU counters, WITHOUT resetting the leader Pos_table (it was
+     * already prefilled at level-load and has taken live records since).
+     */
+    private void applyEstablishedFollowerCentrePlacement() {
+        int anchorX = levelStartLeaderCentreX != Integer.MIN_VALUE
+                ? levelStartLeaderCentreX
+                : leader.getCentreX();
+        int anchorY = levelStartLeaderCentreY != Integer.MIN_VALUE
+                ? levelStartLeaderCentreY
+                : leader.getCentreY();
+        sidekick.setCentreXPreserveSubpixel((short) (anchorX + LEVEL_START_X_OFFSET));
+        sidekick.setCentreYPreserveSubpixel((short) (anchorY + LEVEL_START_Y_OFFSET));
+        controlCounter = 0;
+        despawnCounter = 0;
+        normalFrameCount = 0;
+        jumpingFlag = false;
+        lastInteractObjectId = -1; // ROM Tails_interact_ID unset until next UpdateObjInteract
+        sidekick.setForcedAnimationId(-1);
+        sidekick.setControlLocked(false);
+        ObjectControlState.none().applyTo(sidekick);
+        bootstrapPreludePlacementApplied = true;
+    }
+
     private boolean shouldEnterLevelEventDormantMarker() {
         PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
         if (fs == null || !fs.sidekickRespawnEntersCatchUpFlight()) {
@@ -917,6 +1133,16 @@ public class SidekickCpuController {
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         sidekick.setForcedAnimationId(flyAnimId);
         lastInteractObjectId = -1; // ROM Tails_interact_ID unset until next UpdateObjInteract
+    }
+
+    /**
+     * Applies the AIZ1 level-event dormant marker during level bootstrap, before
+     * visual trace playback can render skipped pre-LevelLoop frames.
+     */
+    public void applyLevelEventDormantMarkerForBootstrap() {
+        initializeLevelStartSidekickPlacementIfNeeded();
+        applyLevelEventDormantMarker();
+        aizIntroDormantMarkerPrimed = false;
     }
 
     /**
@@ -3596,6 +3822,50 @@ public class SidekickCpuController {
 
     public int getMaxYBound(int fallback) {
         return maxYBound == Integer.MIN_VALUE ? fallback : maxYBound;
+    }
+
+    /**
+     * Captures the leader's current centre coordinates as the level-start spawn
+     * anchor. Invoked from {@code LevelManager.spawnSidekicks} (the engine
+     * analogue of ROM {@code SpawnLevelMainSprites_SpawnPlayers},
+     * sonic3k.asm:8359-8369), while the leader is still at its spawn position
+     * before any LevelLoop physics tick. {@link #applyLevelStartSidekickPlacement}
+     * then anchors the deferred sidekick placement and Pos_table prefill to
+     * these coordinates instead of the live (possibly already-moved) leader
+     * centre. See {@link #levelStartLeaderCentreX}.
+     */
+    public void captureLevelStartLeaderAnchor(int leaderCentreX, int leaderCentreY) {
+        this.levelStartLeaderCentreX = leaderCentreX;
+        this.levelStartLeaderCentreY = leaderCentreY;
+    }
+
+    /**
+     * Marks that this sidekick entered via a one-time directly-compared frame-0
+     * seed that loaded residual mid-run follow state (see
+     * {@link #enteredFromSeedCompareFrame0}). Called by the trace-replay
+     * bootstrap orchestration when an S3K complete-run segment's frame 0 is
+     * seed-compared.
+     */
+    public void setEnteredFromSeedCompareFrame0(boolean value) {
+        this.enteredFromSeedCompareFrame0 = value;
+        if (value && levelStartLeaderCentreX != Integer.MIN_VALUE && leader != null) {
+            // Prefill the leader Pos_table ring with the captured spawn anchor at
+            // bootstrap time (before any frame is driven), mirroring ROM filling
+            // Sonic_Pos_Record_Buf with the spawn position at level-load
+            // (SpawnLevelMainSprites / Reset_Player_Position_Array,
+            // sonic3k.asm:8359-8369,22166-22193). For a seed-compared mid-run
+            // entry the leader is not driven through frame 0, so the first live
+            // Sonic_RecordPos write happens on trace frame 1 and lands on the next
+            // ring slot on top of this spawn fill — the delayed-follow target then
+            // stays at the spawn-anchored position until the ring rotates to the
+            // leader's real positions ~16 frames later, reproducing ROM's
+            // "Tails held still for 16 frames" entry. Doing this here (not in the
+            // controller's first tick, which runs after the leader's frame-1
+            // record) avoids clobbering that already-written record.
+            leader.prefillPositionHistoryWithCentre(
+                    (short) levelStartLeaderCentreX,
+                    (short) levelStartLeaderCentreY);
+        }
     }
 
     public void setLevelBounds(Integer minX, Integer maxX, Integer maxY) {

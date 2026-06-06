@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -95,6 +96,7 @@ public class Sonic1EndingSonicObjectInstance extends AbstractObjectInstance {
 
     /** Reference to the spawned emerald master for radius checking. */
     private Sonic1EndingEmeraldsObjectInstance emeraldMaster;
+    private final List<Sonic1EndingEmeraldsObjectInstance> emeralds = new ArrayList<>(6);
 
     public Sonic1EndingSonicObjectInstance(int x, int y) {
         super(null, "EndSonic");
@@ -317,6 +319,7 @@ public class Sonic1EndingSonicObjectInstance extends AbstractObjectInstance {
             final int emeraldFrame = i + 1; // frames 1-6
             Sonic1EndingEmeraldsObjectInstance emerald = spawnFreeChild(() ->
                     new Sonic1EndingEmeraldsObjectInstance(currentX, currentY, angleOffset, emeraldFrame));
+            emeralds.add(emerald);
             if (i == 0) {
                 emeraldMaster = emerald;
             }
@@ -349,13 +352,13 @@ public class Sonic1EndingSonicObjectInstance extends AbstractObjectInstance {
     }
 
     private void clearEmeralds() {
-        // Signal all emerald instances to remove themselves
-        if (emeraldMaster != null) {
-            emeraldMaster = null;
+        for (Sonic1EndingEmeraldsObjectInstance emerald : emeralds) {
+            emerald.setDestroyed(true);
         }
+        emeralds.clear();
+        emeraldMaster = null;
         // Emeralds are cleared via ObjectManager — they check a flag or we mark them destroyed
         // The ROM clears object RAM directly. We use the destroy mechanism.
-        Sonic1EndingEmeraldsObjectInstance.destroyAllEmeralds();
     }
 
     private void spawnSTH() {
@@ -405,5 +408,10 @@ public class Sonic1EndingSonicObjectInstance extends AbstractObjectInstance {
     /** Returns current mapping frame index (used by emerald spawn trigger). */
     public int getCurrentFrame() {
         return currentFrame;
+    }
+
+    @Override
+    public void onUnload() {
+        clearEmeralds();
     }
 }

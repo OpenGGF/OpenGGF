@@ -201,16 +201,13 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild {
     }
 
     private void spawnShot(AizMinibossBarrelShotChild.Mode mode) {
-        var objectManager = services().objectManager();
-        if (objectManager == null) {
+        if (services().objectManager() == null) {
             return;
         }
         // ROM ChildObjDat_6909A / ChildObjDat_690A8 spawn a short muzzle-flare child
         // alongside the main shot object.
-        objectManager.addDynamicObject(
-                new AizMinibossBarrelShotFlareChild(this));
-        objectManager.addDynamicObject(
-                new AizMinibossBarrelShotChild(parent, this, currentX, currentY + 4, mode));
+        spawnChild(() -> new AizMinibossBarrelShotFlareChild(this));
+        spawnChild(() -> new AizMinibossBarrelShotChild(parent, this, currentX, currentY + 4, mode));
     }
 
     private void enterClosingAnimation() {

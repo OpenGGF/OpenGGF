@@ -149,8 +149,8 @@ public final class FfmpegEncoder implements CaptureEncoder {
             videoStdin.close();              // EOF -> ffmpeg finalizes video
             int vexit = videoProc.waitFor();
             if (stderrDrain != null) stderrDrain.join(2000);
+            closeAudioOut();
             if (vexit != 0) throw new CaptureException("ffmpeg video exited " + vexit);
-            audioOut.close();
             // phase 2 mux
             ProcessBuilder pb = new ProcessBuilder(
                     phase2MuxCommand(ffmpeg, tempVideo, tempAudio, sampleRate, finalOut));
@@ -167,6 +167,7 @@ public final class FfmpegEncoder implements CaptureEncoder {
             Thread.currentThread().interrupt();
             throw new CaptureException("interrupted during ffmpeg finish", e);
         } finally {
+            closeAudioOutQuietly();
             deleteQuietly(tempVideo);
             deleteQuietly(tempAudio);
         }
@@ -175,7 +176,7 @@ public final class FfmpegEncoder implements CaptureEncoder {
     @Override
     public void abort() {
         try { if (videoStdin != null) videoStdin.close(); } catch (IOException ignored) { }
-        try { if (audioOut != null) audioOut.close(); } catch (IOException ignored) { }
+        closeAudioOutQuietly();
         if (videoProc != null) videoProc.destroyForcibly();
         deleteQuietly(tempVideo);
         deleteQuietly(tempAudio);
@@ -194,6 +195,20 @@ public final class FfmpegEncoder implements CaptureEncoder {
         t.setDaemon(true);
         t.start();
         return t;
+    }
+
+    private void closeAudioOut() throws IOException {
+        if (audioOut != null) {
+            audioOut.close();
+            audioOut = null;
+        }
+    }
+
+    private void closeAudioOutQuietly() {
+        try {
+            closeAudioOut();
+        } catch (IOException ignored) {
+        }
     }
 
     private static void deleteQuietly(Path p) {

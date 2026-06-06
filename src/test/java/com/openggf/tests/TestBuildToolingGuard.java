@@ -197,6 +197,66 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void releaseWorkflowShouldAssertTraceReplayCoverageWasNotSkipped() throws Exception {
+        String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
+        List<String> violations = new ArrayList<>();
+
+        if (!workflow.contains("Assert trace replay coverage")) {
+            violations.add(".github/workflows/release.yml does not assert trace replay coverage after running the profile");
+        }
+        if (!workflow.contains("com.openggf.tests.trace*.txt")) {
+            violations.add(".github/workflows/release.yml does not inspect trace replay surefire reports");
+        }
+        if (!workflow.contains("Trace replay profile produced no executed ROM-backed trace tests")) {
+            violations.add(".github/workflows/release.yml does not fail when every ROM-backed trace test is absent/skipped");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("release trace validation must prove ROM-backed trace tests actually executed:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void releaseWorkflowShouldFailTraceReplayWarnings() throws Exception {
+        String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
+        List<String> violations = new ArrayList<>();
+
+        if (!workflow.contains("target/trace-reports")) {
+            violations.add(".github/workflows/release.yml does not inspect trace replay divergence reports");
+        }
+        if (!workflow.contains("warning_count")) {
+            violations.add(".github/workflows/release.yml does not check trace replay warning counts");
+        }
+        if (!workflow.contains("Trace replay warnings are release-blocking")) {
+            violations.add(".github/workflows/release.yml does not fail release validation on trace warnings");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("release trace validation must not certify warning-only trace parity fields:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void releaseWorkflowShouldNotPublishStaticPrereleaseOnEveryMasterPush() throws Exception {
+        String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
+        List<String> violations = new ArrayList<>();
+
+        if (!workflow.contains("release:\n    needs: build\n    if: github.event_name == 'workflow_dispatch'")) {
+            violations.add(".github/workflows/release.yml release job must be gated to manual workflow_dispatch");
+        }
+        if (workflow.contains("release:\n    needs: build\n    if: github.event_name == 'push'")) {
+            violations.add(".github/workflows/release.yml still publishes releases automatically on every master push");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("release publishing must be deliberate while the pom version is a static prerelease tag:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
     void branchPolicyShouldValidateCommitTrailersForMasterPullRequests() throws Exception {
         String shellPolicy = Files.readString(Path.of(".githooks/validate-policy.sh"));
         String powershellPolicy = Files.readString(Path.of(".githooks/validate-policy.ps1"));
@@ -308,9 +368,34 @@ class TestBuildToolingGuard {
         if (!roadmap.contains("Accepted Phase 1 release debt: legacy S3K AIZ intro trace bootstrap")) {
             violations.add("docs/RELEASE_READINESS_ROADMAP.md does not classify the legacy S3K AIZ trace exception as accepted Phase 1 debt");
         }
+        if (!discrepancies.contains("diagnostic-only") || !roadmap.contains("diagnostic-only")) {
+            violations.add("legacy S3K AIZ trace docs must state that the old full-run fixture is diagnostic-only");
+        }
 
         if (!violations.isEmpty()) {
             fail("trace replay exceptions must be explicitly documented and bounded before release:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void legacyS3kAizFullRunReplayIsDiagnosticOnly() throws Exception {
+        String file = "src/test/java/com/openggf/tests/trace/s3k/TestS3kAizTraceReplay.java";
+        String source = Files.readString(Path.of(file));
+        List<String> violations = new ArrayList<>();
+
+        if (!source.contains("public void replayMatchesTrace() throws Exception")) {
+            violations.add(file + " does not override the inherited full replay parity test");
+        }
+        if (!source.contains("@Disabled(\"Legacy AIZ end-to-end trace uses fixture-shaped bootstrap; diagnostic-only until regenerated\")")) {
+            violations.add(file + " does not mark the legacy full replay as diagnostic-only");
+        }
+        if (!source.contains("super.replayMatchesTrace();")) {
+            violations.add(file + " override should delegate to the base implementation when explicitly enabled locally");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("legacy S3K AIZ full-run replay must not be counted as release parity coverage:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }

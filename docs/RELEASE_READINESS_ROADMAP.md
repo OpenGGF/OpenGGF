@@ -189,14 +189,15 @@ Work:
 - Accepted Phase 1 release debt: legacy S3K AIZ intro trace bootstrap.
   - `TraceReplayBootstrap.isLegacyS3kAizIntroTrace` remains as one bounded
     fixture-compatibility predicate for the old AIZ intro trace.
-  - It is documented in `docs/KNOWN_DISCREPANCIES.md`; the release guard rejects
+  - It is documented in `docs/KNOWN_DISCREPANCIES.md`; the old full-run AIZ
+    replay is diagnostic-only until regenerated, and the release guard rejects
     growth beyond this one accepted legacy trace predicate.
   - Future trace cleanup should re-record the fixture or model the missing ROM
     intro state and then remove the predicate.
-- Decide how to handle S1/S2 bottom-boundary centre-Y parity.
-  - Current risk: comments document ROM centre-Y behavior, but S1/S2 feature
-    flags intentionally preserve top-left trace baselines.
-  - Do not flip this casually; revalidate affected S1/S2 trace frontiers.
+- Completed: S1/S2 bottom-boundary centre-Y parity.
+  - `PhysicsFeatureSet.SONIC_1` and `SONIC_2` now use centre-Y for the
+    bottom-boundary death check, matching the ROM `obY` / `y_pos` coordinate.
+  - Focused `TestPlayableSpriteMovement` coverage guards both games.
 - Classified: S2 Tornado ride-start bootstrap is an explicit trace comparison
   contract.
   - The bootstrap is a deterministic native prelude selected by the live ObjB2

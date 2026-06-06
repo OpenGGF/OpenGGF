@@ -24,6 +24,12 @@ class TestArchitecturalSourceGuard {
     private static final String GAME_LOOP_PATH = "com/openggf/GameLoop.java";
     private static final String OBJECT_MANAGER_PATH = "com/openggf/level/objects/ObjectManager.java";
     private static final int OBJECT_MANAGER_MAX_LINES = 3900;
+    private static final Map<String, Integer> RELEASE_CRITICAL_CLASS_LINE_BUDGETS = Map.of(
+            "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java", 8410,
+            "com/openggf/sprites/playable/AbstractPlayableSprite.java", 4882,
+            "com/openggf/level/LevelManager.java", 4066,
+            GAME_LOOP_PATH, 3827
+    );
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
     private static final Map<String, Integer> ROOT_CONCRETE_SONIC_REFERENCE_BUDGETS = Map.of(
@@ -105,11 +111,17 @@ class TestArchitecturalSourceGuard {
             "com/openggf/game/sonic2/objects/bosses/Sonic2MechaSonicInstance.java",
             "com/openggf/game/sonic2/objects/bosses/Sonic2MCZBossInstance.java",
             "com/openggf/game/sonic2/objects/bosses/Sonic2MTZBossInstance.java",
+            "com/openggf/game/sonic3k/objects/AizEndBossArmChild.java",
             "com/openggf/game/sonic3k/objects/AizEndBossBombChild.java",
+            "com/openggf/game/sonic3k/objects/AizEndBossFlameChild.java",
+            "com/openggf/game/sonic3k/objects/AizEndBossPropellerChild.java",
             "com/openggf/game/sonic3k/objects/AizBgTreeSpawnerInstance.java",
             "com/openggf/game/sonic3k/objects/AizShipBombInstance.java",
+            "com/openggf/game/sonic3k/objects/AizMinibossBarrelShotChild.java",
+            "com/openggf/game/sonic3k/objects/AizMinibossFlameBarrelChild.java",
             "com/openggf/game/sonic3k/objects/CnzBumperObjectInstance.java",
             "com/openggf/game/sonic3k/objects/MGZHeadTriggerObjectInstance.java",
+            "com/openggf/game/sonic3k/objects/Sonic3kStarPostObjectInstance.java",
             "com/openggf/game/sonic3k/objects/badniks/AbstractS3kBadnikInstance.java",
             "com/openggf/game/sonic3k/objects/badniks/BlastoidBadnikInstance.java",
             "com/openggf/game/sonic3k/objects/badniks/BuggernautBadnikInstance.java",
@@ -263,6 +275,71 @@ class TestArchitecturalSourceGuard {
         }
 
         assertNoViolations("Runtime production code must load gameplay assets from ROM, not docs disassembly trees",
+                violations);
+    }
+
+    @Test
+    void sonic1EmbeddedRuntimeDataExceptionsStayDocumentedAndBounded() throws IOException {
+        String discrepancies = Files.readString(Path.of("docs", "KNOWN_DISCREPANCIES.md"));
+        List<String> violations = new ArrayList<>();
+        if (!discrepancies.contains("Sonic 1 Embedded Runtime Data Ratchet")) {
+            violations.add("docs/KNOWN_DISCREPANCIES.md must document the bounded Sonic 1 embedded runtime data debt");
+        }
+
+        List<EmbeddedRuntimeDataBudget> budgets = List.of(
+                new EmbeddedRuntimeDataBudget(
+                        "com/openggf/game/sonic1/Sonic1PaletteCycler.java",
+                        "embedded Sonic 1 palette-cycle arrays",
+                        Pattern.compile("private\\s+static\\s+final\\s+byte\\s*\\[\\s*]\\s+PAL_"),
+                        18),
+                new EmbeddedRuntimeDataBudget(
+                        "com/openggf/game/sonic1/objects/Sonic1LZConveyorObjectInstance.java",
+                        "embedded LZ conveyor waypoint tables",
+                        Pattern.compile("private\\s+static\\s+final\\s+int\\s*\\[\\s*]\\s*\\[\\s*]\\s+PATH_"),
+                        6),
+                new EmbeddedRuntimeDataBudget(
+                        "com/openggf/game/sonic1/objects/Sonic1LZConveyorObjectInstance.java",
+                        "embedded LZ conveyor spawner switch tables",
+                        Pattern.compile("case\\s+\\d+\\s+->\\s+new\\s+int\\s*\\[\\s*]\\s*\\[\\s*]"),
+                        6),
+                new EmbeddedRuntimeDataBudget(
+                        "com/openggf/game/sonic1/objects/Sonic1SpinConveyorObjectInstance.java",
+                        "embedded SBZ spin-conveyor waypoint tables",
+                        Pattern.compile("private\\s+static\\s+final\\s+int\\s*\\[\\s*]\\s*\\[\\s*]\\s+PATH_"),
+                        6),
+                new EmbeddedRuntimeDataBudget(
+                        "com/openggf/game/sonic1/objects/Sonic1SpinConveyorObjectInstance.java",
+                        "embedded SBZ spin-conveyor spawner tables",
+                        Pattern.compile("private\\s+static\\s+final\\s+int\\s*\\[\\s*]\\s*\\[\\s*]\\s+SPAWN_DATA_"),
+                        6),
+                new EmbeddedRuntimeDataBudget(
+                        "com/openggf/game/sonic1/objects/Sonic1BridgeObjectInstance.java",
+                        "embedded GHZ bridge bend tables",
+                        Pattern.compile("private\\s+static\\s+final\\s+int\\s*\\[\\s*]\\s*\\[\\s*]\\s+BEND_DATA_"),
+                        2),
+                new EmbeddedRuntimeDataBudget(
+                        "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java",
+                        "handwritten Sonic 1 object mapping pieces",
+                        Pattern.compile("new\\s+SpriteMappingPiece\\s*\\("),
+                        1461),
+                new EmbeddedRuntimeDataBudget(
+                        "com/openggf/game/sonic1/objects/bosses/Sonic1BossMappings.java",
+                        "handwritten Sonic 1 boss mapping pieces",
+                        Pattern.compile("new\\s+SpriteMappingPiece\\s*\\("),
+                        218)
+        );
+
+        for (EmbeddedRuntimeDataBudget budget : budgets) {
+            String source = Files.readString(SRC_MAIN.resolve(budget.relativePath()));
+            int actual = countMatches(budget.pattern(), source);
+            if (actual != budget.expectedCount()) {
+                violations.add(budget.relativePath() + " has " + actual + " "
+                        + budget.description() + "; expected exactly " + budget.expectedCount()
+                        + ". ROM-back this data before adding new embedded runtime tables.");
+            }
+        }
+
+        assertNoViolations("Sonic 1 embedded runtime data exceptions must stay documented and bounded",
                 violations);
     }
 
@@ -466,6 +543,22 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
+    void releaseCriticalLargeClassesDoNotGrowWithoutExtraction() throws IOException {
+        List<String> violations = new ArrayList<>();
+        for (Map.Entry<String, Integer> budget : RELEASE_CRITICAL_CLASS_LINE_BUDGETS.entrySet()) {
+            String relative = budget.getKey();
+            int lineCount = SourceFile.read(SRC_MAIN.resolve(relative)).lines().size();
+            if (lineCount > budget.getValue()) {
+                violations.add(relative + " is " + lineCount + " lines; budget is "
+                        + budget.getValue()
+                        + ". Extract focused collaborators before growing this release-critical file.");
+            }
+        }
+
+        assertNoViolations("Release-critical large class size ratchet failed", violations);
+    }
+
+    @Test
     void objectArtDataDoesNotGainNewGameOrZoneSpecificSurface() throws IOException {
         String source = stripCommentsAndStrings(Files.readString(
                 SRC_MAIN.resolve("com/openggf/level/objects/ObjectArtData.java")));
@@ -632,6 +725,28 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
+    void collisionSystemDoesNotContainSbzCoordinateWindows() throws IOException {
+        String relative = "com/openggf/physics/CollisionSystem.java";
+        String stripped = stripCommentsAndStrings(Files.readString(SRC_MAIN.resolve(relative)));
+        List<String> violations = new ArrayList<>();
+        for (String forbidden : List.of(
+                "isS1Sbz1RightWallLipWindow",
+                "s1Sbz1FloorLipSlopeResult",
+                "0x1694",
+                "0x1720",
+                "0x172B",
+                "0x029C",
+                "0x02AC")) {
+            if (stripped.contains(forbidden)) {
+                violations.add(relative + " - " + forbidden);
+            }
+        }
+
+        assertNoViolations("Shared collision must use sensor/ROM-state predicates, not SBZ coordinate windows",
+                violations);
+    }
+
+    @Test
     void migratedObjectChildSpawnsStayOnManagedHelpers() throws IOException {
         List<String> violations = new ArrayList<>();
         for (String relative : OBJECT_CHILD_SPAWN_MIGRATED_FILES) {
@@ -661,6 +776,21 @@ class TestArchitecturalSourceGuard {
 
         assertNoViolations("Registry-backed S3K palette cycles must let PaletteOwnershipRegistry own GPU upload",
                 violations);
+    }
+
+    @Test
+    void mgzPostBossPaletteFadeUsesRomRowsAndOwnershipRegistry() throws IOException {
+        String relative = "com/openggf/game/sonic3k/objects/Mgz2PostBossPaletteFadeController.java";
+        String stripped = stripCommentsAndStrings(Files.readString(SRC_MAIN.resolve(relative)));
+
+        assertTrue(!stripped.contains("updatePalette("),
+                "MGZ2 post-boss fade should not bypass PaletteOwnershipRegistry with updatePalette(...)");
+        assertTrue(stripped.contains("S3kPaletteWriteSupport.applyLine("),
+                "MGZ2 post-boss fade should route line writes through S3kPaletteWriteSupport");
+        assertTrue(stripped.contains("PAL_MGZ_FADE_CNZ_ADDR"),
+                "MGZ2 post-boss fade rows should be loaded from the ROM-backed Pal_MGZFadeCNZ constant");
+        assertTrue(!stripped.contains("int[][]"),
+                "MGZ2 post-boss fade should not embed Pal_MGZFadeCNZ palette rows in source");
     }
 
     @Test
@@ -962,6 +1092,15 @@ class TestArchitecturalSourceGuard {
         return violations;
     }
 
+    private static int countMatches(Pattern pattern, String source) {
+        Matcher matcher = pattern.matcher(source);
+        int count = 0;
+        while (matcher.find()) {
+            count++;
+        }
+        return count;
+    }
+
     private record ClassBody(String source, int startOffset) {
     }
 
@@ -1130,6 +1269,13 @@ class TestArchitecturalSourceGuard {
     }
 
     private record MethodBudget(String relativePath, String methodName, int maxLines) {
+    }
+
+    private record EmbeddedRuntimeDataBudget(
+            String relativePath,
+            String description,
+            Pattern pattern,
+            int expectedCount) {
     }
 
     private record SourceFile(String text, List<String> lines) {

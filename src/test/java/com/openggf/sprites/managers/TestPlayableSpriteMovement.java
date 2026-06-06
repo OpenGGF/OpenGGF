@@ -433,12 +433,10 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
-        public void s2BottomLevelBoundaryStaysOnTopLeftCompareUntilTraceRevalidation() throws Exception {
-                // S2 ROM uses centre-Y at s2.asm:36950, but S2 trace baselines
-                // (EHZ) were calibrated against the engine's top-left compare;
-                // the levelBoundaryUsesCentreY flag is FALSE for SONIC_2 to
-                // preserve those baselines until they are re-validated.
-                // Kill must NOT fire for the same centreY-just-past geometry.
+        public void s2BottomLevelBoundaryUsesCentreY() throws Exception {
+                // S2 ROM uses centre-Y at s2.asm:36950. Kill must fire for the
+                // same centreY-just-past geometry even when top-left getY()
+                // remains below the threshold.
                 setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
                 mockSprite.setHeight(24);
 
@@ -457,24 +455,23 @@ public class TestPlayableSpriteMovement {
                 mockSprite.setGSpeed((short) 0);
                 mockSprite.setCentreX((short) 0x1000);
 
-                assertFalse(PhysicsFeatureSet.SONIC_2.levelBoundaryUsesCentreY(),
-                                "S2 flag must remain false until S2 traces are re-validated");
+                assertTrue(PhysicsFeatureSet.SONIC_2.levelBoundaryUsesCentreY(),
+                                "S2 must compare ROM y_pos(a0), which maps to engine centre-Y");
                 assertTrue(mockSprite.getY() <= killThreshold,
-                                "Top-left getY must NOT exceed threshold (S2 keeps top-left compare)");
+                                "Top-left getY must NOT exceed threshold so this proves centre-Y comparison");
 
                 Method method = PlayableSpriteMovement.class.getDeclaredMethod("doLevelBoundary");
                 method.setAccessible(true);
                 method.invoke(manager);
 
-                assertFalse(mockSprite.getDead(),
-                                "S2 keeps the engine's top-left compare; this geometry must not kill");
+                assertTrue(mockSprite.getDead(),
+                                "S2 centre-Y boundary kill should fire when centreY > maxY+0xE0 "
+                                                + "(s2.asm:36950 cmp.w y_pos(a0),d0 / blt.s)");
         }
 
         @Test
-        public void s1BottomLevelBoundaryStaysOnTopLeftCompareUntilTraceRevalidation() throws Exception {
-                // S1 ROM uses centre-Y at s1disasm/_incObj/01 Sonic.asm:1014,
-                // but S1 trace baselines (GHZ/MZ1) were calibrated against the
-                // engine's top-left compare; flag is FALSE for SONIC_1.
+        public void s1BottomLevelBoundaryUsesCentreY() throws Exception {
+                // S1 ROM uses centre-Y at s1disasm/_incObj/01 Sonic.asm:1014.
                 setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_1);
                 mockSprite.setHeight(40); // Sonic height_pixels = 0x28
 
@@ -495,17 +492,18 @@ public class TestPlayableSpriteMovement {
                 mockSprite.setGSpeed((short) 0);
                 mockSprite.setCentreX((short) 0x1000);
 
-                assertFalse(PhysicsFeatureSet.SONIC_1.levelBoundaryUsesCentreY(),
-                                "S1 flag must remain false until S1 traces are re-validated");
+                assertTrue(PhysicsFeatureSet.SONIC_1.levelBoundaryUsesCentreY(),
+                                "S1 must compare ROM obY(a0), which maps to engine centre-Y");
                 assertTrue(mockSprite.getY() <= killThreshold,
-                                "Top-left getY must NOT exceed threshold (S1 keeps top-left compare)");
+                                "Top-left getY must NOT exceed threshold so this proves centre-Y comparison");
 
                 Method method = PlayableSpriteMovement.class.getDeclaredMethod("doLevelBoundary");
                 method.setAccessible(true);
                 method.invoke(manager);
 
-                assertFalse(mockSprite.getDead(),
-                                "S1 keeps the engine's top-left compare; this geometry must not kill");
+                assertTrue(mockSprite.getDead(),
+                                "S1 centre-Y boundary kill should fire when centreY > maxY+0xE0 "
+                                                + "(s1disasm/_incObj/01 Sonic.asm:1014 cmp.w obY(a0),d0 / blt.s)");
         }
 
         @Test

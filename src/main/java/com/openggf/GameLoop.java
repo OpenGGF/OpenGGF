@@ -957,8 +957,19 @@ public class GameLoop {
             if (!skipGameplay) {
                 // Canonical level tick sequence — see LevelFrameStep for ordering rationale.
                 spriteManager.publishHeldInputForLevelEvents(inputHandler);
-                LevelFrameStep.execute(LevelFrameContext.from(gameplayMode),
+                // ROM in-game pause (Game_paused / Pause_Loop): the P1 Start leading
+                // edge (isKeyPressed = just-pressed this frame, edge-detected against
+                // the previous frame inside InputHandler) routes through
+                // executeWithPause so a pause freezes the level update for the frame
+                // while the frame counter still advances. Universal across S1/S2/S3K
+                // (the trigger and unpause are a Start-press edge in every game;
+                // per-game pause divergences are debug-only cheats inert in normal
+                // play).
+                boolean startEdge = inputHandler.isKeyPressed(
+                        configService.getInt(SonicConfiguration.START));
+                LevelFrameStep.executeWithPause(LevelFrameContext.from(gameplayMode),
                         levelManager, camera, () -> spriteManager.update(inputHandler),
+                        startEdge,
                         (name, step) -> {
                             profiler.beginSection(name);
                             step.run();

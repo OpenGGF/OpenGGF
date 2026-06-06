@@ -245,8 +245,7 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance implement
     }
 
     private void spawnImpactFlames() {
-        var objectManager = services().objectManager();
-        if (objectManager == null) {
+        if (services().objectManager() == null) {
             return;
         }
         boolean hazardous = mode == Mode.ADVANCED_COLLIDING;
@@ -254,8 +253,7 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance implement
             int x = currentX + IMPACT_X_OFFSETS[i];
             int y = currentY + IMPACT_Y_OFFSETS[i];
             int subtype = i * 2; // loc_68D9C -> sub_68928 delay source
-            objectManager.addDynamicObject(
-                    new AizMinibossImpactFlameChild(x, y, subtype, hazardous));
+            spawnChild(() -> new AizMinibossImpactFlameChild(x, y, subtype, hazardous));
         }
     }
 

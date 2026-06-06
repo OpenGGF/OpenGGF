@@ -2964,8 +2964,9 @@ public class ObjectManager {
                     ObjectSpawn spawn = entry.spawn();
                     int targetSlot = entry.slotIndex();
                     // Use PRE_ALLOCATED_SLOT so the constructor picks up the correct slot
-                    ObjectInstance inst = ObjectConstructionContext.with(objectServices, targetSlot,
-                            () -> registry != null ? registry.create(spawn) : null);
+                    ObjectInstance inst = ObjectConstructionContext.withRewindActiveRestore(
+                            () -> ObjectConstructionContext.with(objectServices, targetSlot,
+                                    () -> registry != null ? registry.create(spawn) : null));
                     if (inst instanceof AbstractObjectInstance aoi) {
                         aoi.setServices(objectServices);
                         if (aoi.getSlotIndex() < 0 && targetSlot >= 0) {
