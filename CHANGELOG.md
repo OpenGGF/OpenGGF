@@ -13,6 +13,19 @@ All notable changes to the OpenGGF project are documented in this file.
   now targets the actual Final Zone segment instead of the stale truncated
   SBZ3 data. Both traces execute against the shared movie and currently expose
   genuine engine parity frontiers.
+- **S1 GHZ2 bridge landing now stages fresh airborne catches like ROM Obj11:**
+  `Sonic1BridgeObjectInstance` now separates the read-only `Bri_Solid` /
+  `Platform3` catch detection pass from the land-applying checkpoint on the
+  first flush airborne bridge contact. The ROM bridge routine checks downward
+  velocity and the subtype-derived X window (`docs/s1disasm/_incObj/11 Bridge.asm:98-114`),
+  then `Platform3` performs the Y-window test, seats Sonic, and advances the
+  bridge routine (`docs/s1disasm/_incObj/sub PlatformObject.asm:23-42`); the
+  already-riding path remains the later `Plat_NoCheck`/walk-off support path
+  (`docs/s1disasm/_incObj/sub PlatformObject.asm:45-67`). The engine's solid
+  checkpoint previously surfaced a flush fresh landing one object pass too soon.
+  The new deferral is gated on ROM object state and geometry, not a trace frame,
+  route, zone, tolerance, or trace hydration. Advances the S1 GHZ2 complete-run
+  trace from first-error frame 615 to 1104.
 - **OOZ/CPZ rising platform now integrates sub-pixels (ROM-accurate):**
   `CPZPlatformObjectInstance` auto-rise (Obj19_MoveRoutine5/6) previously did
   `y += yVel >> 8`, dropping the sub-pixel fraction and stepping a full pixel

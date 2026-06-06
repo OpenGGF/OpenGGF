@@ -18,37 +18,32 @@
   frame 277 (`air`, expected `0`, actual `1`). Treat these as genuine parity frontiers, not
   bad-recording/setup failures.
 
-## 2026-06-06 - s1 ghz2 f615 (triage only, no engine edit): GHZ bridge lands Sonic one frame early
+## 2026-06-06 - s1 ghz2 f615->f1104: Obj11 bridge fresh airborne catch defers land apply one object pass
 
 - Branch `bugfix/ai-trace-s1-ghz2`, worktree `.worktrees/trace-s1-ghz2`.
 - Command (worktree, cmd mvn.cmd, single fork):
   `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" "-Dtest=TestS1Ghz2CompleteRunTraceReplay#replayMatchesTrace" test`
-- **Status: triage only (still failing).** First-error frame **615**, field **y_speed**
-  (expected=0x0568, actual=0x0000), 476 errors. Surefire: `Tests run: 1, Failures: 1`.
-- **Symptom:** Frames 595-614 match exactly while Sonic is airborne+rolling, falling onto a GHZ
-  log bridge (Obj11, near slot s46 `0x11 Bridge @05A8,0118`). At f614 both ROM/engine are
-  air=1, rolling=1, y=0x00F9, y_speed=0x0530 (gravity +0x38/frame). At f615 ROM continues
-  airborne (air=1, y_speed=0x0568 = 0x0530+0x38, y=0x00FE); the engine has already landed
-  (air=0, rolling=0, y_speed=0x0000, g_speed=0x02A1, ride=1 onSlot=46(0x11), Y snapped
-  0xFE->0xFC). ROM lands at f616 (air=0). The engine applies the bridge landing/Y-snap/
-  velocity-zero one frame before the ROM.
-- **Hypothesis (ROM-cited, no fix landed yet):** ROM bridge landing is two-routine staged.
-  `Bri_Action` (routine 2) calls `Bri_Solid` -> `PlatformObject`/`Platform3`
-  (docs/s1disasm/_incObj/11 Bridge.asm:83-114, docs/s1disasm/_incObj/sub PlatformObject.asm:19-42):
-  Y-range catch `d1=SonicY+obHeight+4; d0=(obY-8)-d1; bhi Plat_Exit; cmpi.w #-$10,d0; blo Plat_Exit`
-  with rolling obHeight=0xE (docs/s1disasm/_Constants.asm:189-191) lands when
-  `SonicY in [0xFE,0x10E]` for bridge top 0x110. On the landing frame `Plat_NoCheck`
-  (sub PlatformObject.asm:45-77) sets on-object, zeroes obVelY, copies inertia, and
-  `addq.b #2,obRoutine(a0)` advances the bridge to routine 4; `Bri_MoveSonic`
-  (11 Bridge.asm:163-177) only finalizes Sonic's Y the FOLLOWING frame. The engine's
-  `Sonic1BridgeObjectInstance` uses `SolidExecutionMode.MANUAL_CHECKPOINT` and lands+snaps in a
-  single `checkpointAll()` pass with no routine-2->4 staging delay, so its air->0/Y-snap/
-  velocity-zero surfaces one frame early relative to the ROM recorder's V-int sample phase.
-  Likely fix area: `Sonic1BridgeObjectInstance` landing/checkpoint timing (defer the apply by one
-  object pass to mirror the ROM routine staging) -- to be confirmed against the snapshot ordering in
-  the fix stage. Comparison-only; no zone/route/frame/gameId carve-out.
-- Files: `src/main/java/com/openggf/game/sonic1/objects/Sonic1BridgeObjectInstance.java`,
-  `src/main/java/com/openggf/level/objects/ObjectSolidContactController.java` (generic sloped landing).
+- **Status: ADVANCED (still failing).** First-error frame **615 -> 1104**, error count **196** after the fix.
+  Surefire: `Tests run: 1, Failures: 1`. New first error is `y_speed` expected=`0x0000`
+  actual=`0x047D`, with `air`/`rolling`/`y` also diverging on the same frame near Obj36
+  spikes and Obj3B PurpleRock; this is a separate solid/support landing mismatch.
+- **Root cause:** the engine applied the first flush airborne bridge landing in the same
+  object pass that detected it. ROM Obj11 `Bri_Solid` first checks falling/non-rising
+  player velocity and the subtype-derived X range (`docs/s1disasm/_incObj/11 Bridge.asm:98-114`),
+  then `Platform3` checks the Y window, seats Sonic, and advances the bridge routine
+  (`docs/s1disasm/_incObj/sub PlatformObject.asm:23-42`). The standing/riding path that
+  refreshes support is the later `Plat_NoCheck` branch (`docs/s1disasm/_incObj/sub PlatformObject.asm:45-67`).
+  The fix adds a read-only catch probe for the fresh airborne, falling, flush-edge case and
+  defers the land-applying checkpoint until the next bridge object pass. Already-riding carry
+  is not deferred. The predicate is ROM object state/geometry (`air`, `y_speed`, bridge subtype
+  width, centre coordinates, player height), not a zone/route/frame/gameId carve-out, tolerance
+  band, or trace hydration.
+- **Same-game regression guard (PASS, zero regressions):**
+  `-Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestS1Ghz1TraceReplay`
+  -> all requested report XML files show `Failures: 0, Errors: 0`.
+- Focused unit guard: `TestSonic1BridgeObjectInstance` PASS (`tests=3`, `failures=0`, `errors=0`).
+- Note: Maven Silent Extension printed stale failures from older complete-run report files in
+  `target/surefire-reports`; the requested guard XML files were freshly written and green.
 
 ## 2026-06-05 - s2 arz2 f857->f899: water profile not applied on a hurt-landing frame
 
