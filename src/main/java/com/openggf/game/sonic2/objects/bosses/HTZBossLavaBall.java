@@ -125,9 +125,8 @@ public class HTZBossLavaBall extends AbstractBossChild implements TouchResponseP
 
             // Spawn ground fire at impact point with 3-deep spread chain
             // ROM: objoff_36(a0) = 3
-            HtzGroundFireObjectInstance groundFire = new HtzGroundFireObjectInstance(
-                    currentX, floorY, spreadDir, 3);
-            services().objectManager().addDynamicObject(groundFire);
+            spawnFreeChild(() -> new HtzGroundFireObjectInstance(
+                    currentX, floorY, spreadDir, 3));
 
             setDestroyed(true);
             return;

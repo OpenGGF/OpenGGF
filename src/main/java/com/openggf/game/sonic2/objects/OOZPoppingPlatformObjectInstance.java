@@ -126,19 +126,21 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
         // (See s2.asm:49710-49728 loc_23BEA.)
         this.mode = isPlayerTriggered ? Mode.WAIT_FOR_PLAYER : Mode.POP_PHYSICS;
 
-        // Spawn flame child (ROM: AllocateObjectAfterCurrent)
-        spawnFlameChild();
         updateDynamicSpawn(x, currentY);
     }
 
-    private void spawnFlameChild() {
+    private void ensureFlameChildSpawned() {
+        if (flameChild != null || services().objectManager() == null) {
+            return;
+        }
+
         // Flame position: same X as parent, Y = parent Y - $10 (16 pixels above)
         int flameX = x;
         int flameY = homeY - 0x10;
         ObjectSpawn flameSpawn = new ObjectSpawn(flameX, flameY, spawn.objectId(), spawn.subtype(),
                 spawn.renderFlags(), false, spawn.rawYWord());
-        flameChild = new OOZBurnerFlameObjectInstance(flameSpawn, this);
-        services().objectManager().addDynamicObject(flameChild);
+        // ROM Obj33_Init uses AllocateObjectAfterCurrent.
+        flameChild = spawnChild(() -> new OOZBurnerFlameObjectInstance(flameSpawn, this));
     }
 
     @Override
@@ -157,6 +159,7 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        ensureFlameChildSpawned();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (mode) {
             case TIMER_COUNTDOWN -> updateTimerCountdown();

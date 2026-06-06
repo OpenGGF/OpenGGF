@@ -154,8 +154,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             loadHczEndBossArt();
             loadHczGeyserCutsceneArt();
         } else if (zoneIndex == 0x03) {
-            // Task 6 scope: register the CNZ teleporter and boss art paths now,
-            // but keep the actual object behavior for Tasks 7 and 8.
+            // CNZ teleporter, miniboss, and end-boss wrappers all share these
+            // ROM-backed art paths.
             loadCnzTeleporterArt();
             loadSharedBossExplosionArt();
             loadCnzMinibossArtFromPlc();
@@ -1233,8 +1233,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      * {@code PLC_5C_5D -> ArtTile_CNZMiniboss / ArtNem_CNZMiniboss} path.
      *
      * <p>Entry 0 is the dedicated miniboss body art and entry 1 is the shared
-     * boss explosion art. Task 6 only registers renderer infrastructure; the
-     * actual miniboss object implementation remains deferred to Task 7.
+     * boss explosion art used by the concrete CNZ miniboss wrapper.
      */
     private void loadCnzMinibossArtFromPlc() {
         try {
@@ -1331,9 +1330,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      * Loads CNZ end-boss art via PLC 0x6E, matching the ROM's setup path.
      *
      * <p>PLC_6E loads the CNZ end-boss body, shared Robotnik ship art, shared
-     * boss explosion art, and the shared egg capsule art. Task 6 only registers
-     * those renderers so Task 8 can attach real behavior later without needing
-     * more infrastructure churn.
+     * boss explosion art, and the shared egg capsule art used by the bounded
+     * CNZ end-boss wrapper.
      */
     private void loadCnzEndBossArt() {
         try {

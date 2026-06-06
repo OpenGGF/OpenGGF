@@ -683,9 +683,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance {
         // Generate random X position in [DEBRIS_MIN_X, DEBRIS_MAX_X]
         int x = Sonic2Rng.nextMczDebrisX(services().rng());
 
-        MCZFallingDebrisInstance debris = new MCZFallingDebrisInstance(
-                x, DEBRIS_SPAWN_Y, isSpike);
-        services().objectManager().addDynamicObject(debris);
+        spawnFreeChild(() -> new MCZFallingDebrisInstance(x, DEBRIS_SPAWN_Y, isSpike));
     }
 
     /**

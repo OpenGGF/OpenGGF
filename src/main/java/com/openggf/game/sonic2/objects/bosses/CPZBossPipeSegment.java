@@ -94,8 +94,7 @@ public class CPZBossPipeSegment extends AbstractObjectInstance {
         }
         var motion = randomPipeMotion();
         ObjectSpawn partSpawn = new ObjectSpawn(x, y, Sonic2ObjectIds.CPZ_BOSS, 0, renderFlags, false, 0);
-        CPZBossFallingPart part = new CPZBossFallingPart(partSpawn, 1, motion.xVel(), motion.timer());
-        services().objectManager().addDynamicObject(part);
+        spawnChild(() -> new CPZBossFallingPart(partSpawn, 1, motion.xVel(), motion.timer()));
     }
 
     private Sonic2Rng.PipeShardMotion randomPipeMotion() {

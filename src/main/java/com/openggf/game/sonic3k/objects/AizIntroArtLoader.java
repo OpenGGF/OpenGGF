@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GraphicsManager;
@@ -671,16 +672,13 @@ public class AizIntroArtLoader {
                 services != null ? services.paletteOwnershipRegistryOrNull() : null,
                 services != null ? services.currentLevel() : null,
                 gm,
-                "s3k.cutscene-knuckles",
-                200,
+                S3kPaletteOwners.AIZ_INTRO_CUTSCENE_KNUCKLES,
+                S3kPaletteOwners.PRIORITY_CUTSCENE_OVERRIDE,
                 1,
                 data,
                 true);
         if (services == null || services.currentLevel() == null) {
-            if (gm == null || !gm.isGlInitialized()) return;
-            Palette palette = new Palette();
-            palette.fromSegaFormat(data);
-            gm.cachePaletteTexture(palette, 1);
+            S3kPaletteWriteSupport.cacheStandaloneLine(gm, 1, data);
         }
     }
 
@@ -698,10 +696,19 @@ public class AizIntroArtLoader {
         byte[] data = getEmeraldPalette();
         if (data == null || data.length == 0) return;
         GraphicsManager gm = graphicsManager(services);
-        if (gm == null || !gm.isGlInitialized()) return;
-        Palette palette = new Palette();
-        palette.fromSegaFormat(data);
-        gm.cachePaletteTexture(palette, 3);
+        if (services != null && services.currentLevel() != null) {
+            S3kPaletteWriteSupport.applyLine(
+                    services.paletteOwnershipRegistryOrNull(),
+                    services.currentLevel(),
+                    gm,
+                    S3kPaletteOwners.AIZ_INTRO_EMERALD_PALETTE,
+                    S3kPaletteOwners.PRIORITY_CUTSCENE_OVERRIDE,
+                    3,
+                    data,
+                    true);
+        } else {
+            S3kPaletteWriteSupport.cacheStandaloneLine(gm, 3, data);
+        }
     }
 
     // -----------------------------------------------------------------------

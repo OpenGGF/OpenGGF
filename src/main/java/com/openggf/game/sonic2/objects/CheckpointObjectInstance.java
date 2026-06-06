@@ -5,7 +5,6 @@ import com.openggf.game.CheckpointState;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 
@@ -195,10 +194,7 @@ public class CheckpointObjectInstance extends BoxObjectInstance {
     }
 
     private void spawnDongle() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.addDynamicObject(new CheckpointDongleInstance(this));
-        }
+        spawnFreeChild(() -> new CheckpointDongleInstance(this));
     }
 
     private boolean shouldSpawnStars(AbstractPlayableSprite player) {
@@ -229,14 +225,10 @@ public class CheckpointObjectInstance extends BoxObjectInstance {
     }
 
     private void spawnStars() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
-            return;
-        }
         // Spawn 4 stars at angle offsets 0, 0x40, 0x80, 0xC0
         for (int i = 0; i < 4; i++) {
             int angleOffset = i * 0x40;
-            objectManager.addDynamicObject(new CheckpointStarInstance(this, angleOffset));
+            spawnFreeChild(() -> new CheckpointStarInstance(this, angleOffset));
         }
     }
 

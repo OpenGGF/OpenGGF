@@ -253,6 +253,92 @@ All notable changes to the OpenGGF project are documented in this file.
   the unsigned `bhs` accel compare, `add.w` 16-bit wrap, and word-`bne` subtype
   test exactly as Obj19_MoveRoutine5/6 (s2.asm:~48036-48066). Advances the OOZ2
   level-select trace from first-error frame 489 to 1070.
+- **Started Phase 2 release-readiness cleanup:** converted the named
+  object-owned raw child spawns for `AbstractS3kBadnikInstance`,
+  `AizBgTreeSpawnerInstance`, `AizEndBossBombChild`,
+  `AizShipBombInstance`, `ArrowShooterObjectInstance`,
+  `BlastoidBadnikInstance`, `BuggernautBadnikInstance`,
+  `BubbleGeneratorObjectInstance`,
+  `BumperObjectInstance`, `BonusBlockObjectInstance`,
+  `CaterkillerJrHeadInstance`, `CheckpointObjectInstance`,
+  `BreakableBlockObjectInstance`, `BreakablePlatingObjectInstance`,
+  `CluckerBadnikInstance`,
+  `CNZBossElectricBall`, `CnzBumperObjectInstance`, `CoconutsBadnikInstance`,
+  `CollapsingPlatformObjectInstance`, `ConveyorObjectInstance`,
+  `CPZBossContainer`, `CPZBossContainerExtend`, `CPZBossFallingPart`,
+  `CPZBossGunk`, `CPZBossPipe`, `CPZBossPipeSegment`, `CPZBossPump`,
+  `EggPrisonObjectInstance`,
+  `FallingPillarObjectInstance`,
+  `GrounderBadnikInstance`, `HTZBossLavaBall`, `HTZLiftObjectInstance`,
+  `LeavesGeneratorObjectInstance`,
+  `MGZHeadTriggerObjectInstance`, `MonitorObjectInstance`, `NebulaBadnikInstance`,
+  `OctusBadnikInstance`, `OOZLauncherObjectInstance`,
+  `OOZPoppingPlatformObjectInstance`, `PointPokeyObjectInstance`,
+  `RexonBadnikInstance`, `RexonHeadObjectInstance`,
+  `RisingPillarObjectInstance`, `RivetObjectInstance`,
+  `SeesawObjectInstance`, `SmallMetalPformObjectInstance`,
+  `SidewaysPformObjectInstance`, `SignpostObjectInstance`, `Sonic2ARZBossInstance`,
+  `Sonic2CNZBossInstance`, `Sonic2CPZBossInstance`,
+  `Sonic2DeathEggRobotInstance`, `Sonic2DEZEggmanInstance`,
+  `Sonic2EHZBossInstance`, `Sonic2HTZBossInstance`, `Sonic2MCZBossInstance`,
+  `Sonic2MechaSonicInstance`, `Sonic2MTZBossInstance`,
+  `SmashableGroundObjectInstance`,
+  `SpikerBadnikInstance`,
+  `SpinyBadnikInstance`, and `SteamSpringObjectInstance`, `TornadoObjectInstance`,
+  `TiltingPlatformObjectInstance`, `TurtloidBadnikInstance` onto managed
+  `spawnChild`/`spawnFreeChild` helpers, added ratchets for migrated
+  child-spawn files, direct map-mutation aliases, trace bootstrap policy
+  signals, registry-backed S3K palette-cycle uploads, and virtual pattern
+  sub-range bases,
+  added MHZ animated-tile phase caches to the S3K pattern animator rewind
+  snapshot, migrated AIZ2 torch, BPZ/CGZ/EMZ/ICZ/LBZ/LRZ palette cycles plus the
+  ICZ startup palette patch, HCZ event palette mutation, and CNZ/MGZ miniboss
+  plus MGZ Tunnelbot hit-flash/restore colors onto
+  `PaletteOwnershipRegistry` claims, added a generic ownership-backed fallback
+  for shared boss hit flashing, moved AIZ1/AIZ2 AnPal water/torch cycles onto
+  explicit ownership claims, completed Slots/Pachinko palette-cycle ownership
+  migration, routed the HCZ miniboss underwater palette install through shared
+  ownership support, moved the AIZ intro Super Sonic palette cycle onto an
+  explicit cutscene ownership claim, routed S3K Super Sonic palette frames
+  through shared ownership-aware support, moved AIZ/CNZ/MHZ cutscene palette
+  installs and restores onto shared ownership helpers, and corrected stale S3K
+  object/provenance comments with source guards, documented the accepted raw
+  dynamic-object bridge boundaries, removed the unused S3K zone-event direct
+  palette texture upload fallback helper, wrapped S3K Knuckles water-palette
+  construction in a loader-local helper, corrected stale HCZ end-boss
+  implementation and child-spawn docs, corrected stale MGZ end-boss handoff
+  docs, narrowed stale S3K monitor `PlayerCharacter` wording to the actual
+  Knuckles glide/slide parity gap, moved S3K AIZ intro cache reset behind a
+  module-scoped `GameModule` hook to keep `Engine` free of new concrete S3K
+  dependencies, moved S3K special-stage manager palette mutation/upload paths
+  behind local palette helpers, routed special-stage
+  results palette decoding through the shared `PaletteLoader`, centralized S3K
+  frontend/menu palette uploads behind `S3kFrontendPaletteUploader`, routed
+  special-stage results palette uploads through the local special-stage
+  uploader, moved S3K special-stage palette construction/rotation patches onto
+  palette accessors, extended S3K zone runtime adapter coverage to include LBZ
+  and MHZ, added a trace-row hydration source guard for replay bootstrap,
+  split S2 Tornado replay bootstrap metadata eligibility from live ObjB2
+  runtime-object authority with a clearer candidate API and source guard,
+  moved the S2 slot-machine replay prelude check onto generic
+  `TraceMetadata.hasPerFrameSlotMachineState()` capability metadata with a
+  deprecated CNZ schema alias,
+  replaced the S3K sidekick seed-frame movement-shape bootstrap heuristic with
+  explicit `sidekick_seed_frame_prelude` fixture capability metadata,
+  wired S3K subtype-9 super monitors into the existing Super-state controller
+  without double-awarding rings, and replaced stale CNZ task-scaffold/provenance
+  comments with current art, module, and object-scope wording,
+  and left higher-risk palette ownership cleanup tracked in the
+  release-readiness roadmap.
+- **Release hardening work started:** added a release-readiness roadmap and
+  closed the first hidden-failure gaps before the release candidate. Release PRs
+  now run branch-policy validation, ROM-gated tests validate configured ROMs by
+  game header instead of file existence alone, the S3K life-icon address test
+  uses the resolved ROM path and skips cleanly without local disassembly
+  fixtures, constructor-time Turtloid/Sol child spawns moved onto the managed
+  `spawnChild` lifecycle path, and lightning-shield spark tiles now use a
+  dedicated transient-effects virtual pattern range instead of overlapping
+  shared object art.
 - **Trace test-mode picker now scrolls:** `TestModeTracePicker` windows the trace
   list through a pixel-accurate scrolling viewport that follows the cursor, so a
   large/growing catalog no longer overruns the screen or the selected-entry info
@@ -1468,6 +1554,13 @@ All notable changes to the OpenGGF project are documented in this file.
   `restore()` requires explicit `RewindSnapshottable.resetForMissingSnapshot()` (default throws, so
   subsystems fail closed) instead of silently skipping missing entries that masked coverage gaps.
   `GameplayModeContext.isGameplayRuntimeReady()` returns `false` once `tearDownManagers()` has run.
+  Release validation now runs the trace-replay Maven profile, stale `@Disabled("Currently failing")`
+  annotations were removed from the S3K AIZ/CNZ keep-green tests after forced-on verification, and
+  `TestBuildToolingGuard` documents and bounds the one accepted legacy S3K AIZ trace bootstrap plus
+  the S2 Tornado ride-start trace contract. AIZ intro terrain swap cache state is reset across game
+  bootstrap and routes immediate mutations through injected `ObjectServices`, while ICZ now installs
+  typed runtime state consumed by palette/animated-tile code and MHZ runtime-state refresh recognizes
+  its current event-backed adapter.
   MGZ scroll-event state (screen shake, BG rise routine/offset, boss BG scroll offset) moved off
   direct `SwScrlMgz` setters onto a new `MgzZoneRuntimeState` adapter installed through
   `ZoneRuntimeRegistry` (`SwScrlMgz.update()` reads runtime state at frame time, `init()` clears

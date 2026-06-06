@@ -263,7 +263,7 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
                 // ROM sub_32F56 adds the bumper score, then AllocateObject
                 // creates Obj_EnemyScore at the bumper coordinates.
                 // docs/skdisasm/sonic3k.asm:68980-68989
-                svc.objectManager().addDynamicObject(new Sonic3kPointsObjectInstance(
+                spawnFreeChild(() -> new Sonic3kPointsObjectInstance(
                         new ObjectSpawn(currentX, currentY, 0x29, 0, 0, false, 0),
                         svc,
                         SCORE_PER_HIT));

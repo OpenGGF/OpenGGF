@@ -18,6 +18,7 @@ import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * DEZ Silver Sonic / Mecha Sonic (Object 0xAF).
@@ -231,21 +232,15 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance {
     }
 
     private void spawnChildObjects() {
-        var objectManager = services().objectManager();
-        if (objectManager == null) {
-            return;
-        }
-        ledWindow = new MechaSonicLEDWindow(this);
-        childComponents.add(ledWindow);
-        objectManager.addDynamicObject(ledWindow);
+        ledWindow = spawnTrackedFreeChild(() -> new MechaSonicLEDWindow(this));
+        targetingSensor = spawnTrackedFreeChild(() -> new MechaSonicTargetingSensor(this));
+        dezWindow = spawnTrackedFreeChild(() -> new MechaSonicDEZWindow(this));
+    }
 
-        targetingSensor = new MechaSonicTargetingSensor(this);
-        childComponents.add(targetingSensor);
-        objectManager.addDynamicObject(targetingSensor);
-
-        dezWindow = new MechaSonicDEZWindow(this);
-        childComponents.add(dezWindow);
-        objectManager.addDynamicObject(dezWindow);
+    private <T extends AbstractBossChild> T spawnTrackedFreeChild(Supplier<T> factory) {
+        T child = spawnFreeChild(factory);
+        childComponents.add(child);
+        return child;
     }
 
     @Override
@@ -859,17 +854,16 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance {
     }
 
     private void fireSpikeballs() {
-        if (services().objectManager() == null) return;
         for (int i = 0; i < 8; i++) {
             int xOffset = SPIKEBALL_DATA[i][0];
             int yOffset = SPIKEBALL_DATA[i][1];
             int xVelData = SPIKEBALL_DATA[i][2];
             int yVelData = SPIKEBALL_DATA[i][3];
             int mappingFrame = SPIKEBALL_DATA[i][4];
-            MechaSonicSpikeball spikeball = new MechaSonicSpikeball(
-                    this, state.x + xOffset, state.y + yOffset,
-                    xVelData, yVelData, mappingFrame);
-            services().objectManager().addDynamicObject(spikeball);
+            int startX = state.x + xOffset;
+            int startY = state.y + yOffset;
+            spawnFreeChild(() -> new MechaSonicSpikeball(
+                    this, startX, startY, xVelData, yVelData, mappingFrame));
         }
     }
 
@@ -991,16 +985,24 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance {
      * Note: ($3F8, $160) is the solid wall child position, NOT Eggman's own position.
      */
     private void spawnEggmanTransition() {
-        if (services().objectManager() == null) return;
-        Sonic2DEZEggmanInstance eggman = new Sonic2DEZEggmanInstance(0x440, 0x168);
-        // Wire direct reference to Death Egg Robot for boarding signal
-        for (var obj : services().objectManager().getActiveObjects()) {
-            if (obj instanceof Sonic2DeathEggRobotInstance der) {
-                eggman.setDeathEggRobot(der);
-                break;
+        var objectManager = services().objectManager();
+        Sonic2DeathEggRobotInstance deathEggRobot = null;
+        if (objectManager != null) {
+            for (var obj : objectManager.getActiveObjects()) {
+                if (obj instanceof Sonic2DeathEggRobotInstance der) {
+                    deathEggRobot = der;
+                    break;
+                }
             }
         }
-        services().objectManager().addDynamicObject(eggman);
+        Sonic2DeathEggRobotInstance targetRobot = deathEggRobot;
+        spawnFreeChild(() -> {
+            Sonic2DEZEggmanInstance eggman = new Sonic2DEZEggmanInstance(0x440, 0x168);
+            if (targetRobot != null) {
+                eggman.setDeathEggRobot(targetRobot);
+            }
+            return eggman;
+        });
     }
 
     // ========================================================================

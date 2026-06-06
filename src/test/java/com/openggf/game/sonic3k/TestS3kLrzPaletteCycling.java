@@ -8,6 +8,8 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.palette.PaletteSurface;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
@@ -29,6 +31,7 @@ import com.openggf.tests.rules.SonicGame;
 import java.io.IOException;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -53,6 +56,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class TestS3kLrzPaletteCycling {
     private static final int ZONE_LRZ = 0x09;
     private static final int ACT_1 = 0;
+    private static final int ACT_2 = 1;
 
     private static SharedLevel sharedLevel;
 
@@ -188,6 +192,47 @@ public class TestS3kLrzPaletteCycling {
         int b = color11.b & 0xFF;
         assertTrue(r > 0 || g > 0 || b > 0, "LRZ lava glow color 11 should be non-zero after first tick, got ("
                 + r + "," + g + "," + b + ")");
+    }
+
+    @Test
+    public void lrz1CycleSubmitsPaletteOwnershipClaims() throws IOException {
+        GraphicsManager.getInstance().initHeadless();
+        LrzStubLevel stubLevel = new LrzStubLevel();
+        PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
+        RomByteReader reader = RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom());
+
+        Sonic3kPaletteCycler cycler = new Sonic3kPaletteCycler(
+                reader, stubLevel, ZONE_LRZ, ACT_1, registry, null);
+
+        cycler.update();
+
+        for (int c = 1; c <= 4; c++) {
+            assertEquals(S3kPaletteOwners.LRZ_ZONE_CYCLE, registry.ownerAt(PaletteSurface.NORMAL, 2, c));
+        }
+        assertEquals(S3kPaletteOwners.LRZ_ZONE_CYCLE, registry.ownerAt(PaletteSurface.NORMAL, 2, 11));
+        assertEquals(S3kPaletteOwners.LRZ_ZONE_CYCLE, registry.ownerAt(PaletteSurface.NORMAL, 3, 1));
+        assertEquals(S3kPaletteOwners.LRZ_ZONE_CYCLE, registry.ownerAt(PaletteSurface.NORMAL, 3, 2));
+    }
+
+    @Test
+    public void lrz2CycleSubmitsPaletteOwnershipClaims() throws IOException {
+        GraphicsManager.getInstance().initHeadless();
+        LrzStubLevel stubLevel = new LrzStubLevel();
+        PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
+        RomByteReader reader = RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom());
+
+        Sonic3kPaletteCycler cycler = new Sonic3kPaletteCycler(
+                reader, stubLevel, ZONE_LRZ, ACT_2, registry, null);
+
+        cycler.update();
+
+        for (int c = 1; c <= 4; c++) {
+            assertEquals(S3kPaletteOwners.LRZ_ZONE_CYCLE, registry.ownerAt(PaletteSurface.NORMAL, 2, c));
+        }
+        for (int c : new int[] {1, 2, 11, 12, 13, 14}) {
+            assertEquals(S3kPaletteOwners.LRZ_ZONE_CYCLE, registry.ownerAt(PaletteSurface.NORMAL, 3, c),
+                    "LRZ2 palette line 4 color " + c + " should be owned by the zone cycle");
+        }
     }
 
     /**

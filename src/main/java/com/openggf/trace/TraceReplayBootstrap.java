@@ -283,7 +283,7 @@ public final class TraceReplayBootstrap {
         if (!"s2".equals(meta.game()) || !meta.nativePreludeMode()) {
             return 0;
         }
-        if (!meta.hasPerFrameCnzSlotMachineState()) {
+        if (!meta.hasPerFrameSlotMachineState()) {
             return 0;
         }
         return 4;
@@ -375,7 +375,7 @@ public final class TraceReplayBootstrap {
     }
 
     public static int s2TornadoTitleCardPreludeFramesForTraceReplay(TraceData trace) {
-        return usesS2TornadoRideStartForTraceReplay(trace)
+        return isS2TornadoRideStartMetadataCandidate(trace)
                 ? resolveS2TitleCardPreludeFrames(trace)
                 : 0;
     }
@@ -394,7 +394,7 @@ public final class TraceReplayBootstrap {
      *
      * <p>The caller must only use this when the live object manager did not
      * select a route-specific Tornado object prelude. The metadata-level
-     * {@link #usesS2TornadoRideStartForTraceReplay(TraceData)} predicate is
+     * {@link #isS2TornadoRideStartMetadataCandidate(TraceData)} predicate is
      * intentionally broad because the live ObjB2 shape is the real authority;
      * treating that predicate alone as "Tornado active" suppresses the generic
      * title-card ticks for normal S2 routes such as MTZ.
@@ -434,7 +434,7 @@ public final class TraceReplayBootstrap {
                 && !isLegacyS3kAizIntroTrace(trace);
     }
 
-    public static boolean usesS2TornadoRideStartForTraceReplay(TraceData trace) {
+    public static boolean isS2TornadoRideStartMetadataCandidate(TraceData trace) {
         if (trace == null || trace.frameCount() == 0) {
             return false;
         }
@@ -447,6 +447,15 @@ public final class TraceReplayBootstrap {
         return metadata.nativePreludeMode()
                 && "level_gated_reset_aware".equals(metadata.traceProfile())
                 && !metadata.recordedSidekicks().isEmpty();
+    }
+
+    /**
+     * @deprecated Use {@link #isS2TornadoRideStartMetadataCandidate(TraceData)}.
+     * This metadata-only predicate is not live ObjB2 authority.
+     */
+    @Deprecated
+    public static boolean usesS2TornadoRideStartForTraceReplay(TraceData trace) {
+        return isS2TornadoRideStartMetadataCandidate(trace);
     }
 
     public static int strictStartTraceIndexForTraceReplay(TraceData trace) {
@@ -580,20 +589,7 @@ public final class TraceReplayBootstrap {
         if (!hasS3kSidekickTitleCardPrelude(trace)) {
             return false;
         }
-        TraceFrame firstFrame = trace.getFrame(0);
-        // S3K Sonic+Tails starts spawn the sidekick from Player_1 before the
-        // first LevelLoop (docs/skdisasm/sonic3k.asm:8357-8369), and LevelLoop
-        // then increments Level_frame_counter before Process_Sprites
-        // (docs/skdisasm/sonic3k.asm:7888-7894). Some level-select traces
-        // expose a strict frame-0 seed row before Sonic's own movement has
-        // advanced. MGZ frame 0 is different: Sonic has already run
-        // Sonic_Control/Sonic_MdAir and MoveSprite_TestGravity
-        // (docs/skdisasm/sonic3k.asm:21967-21985, 22350-22361,
-        // 36068-36077), so its nonzero primary speed/subpixel state must be
-        // produced by driving the first BK2 input natively rather than
-        // seed-compared against post-load state. This is timing classification
-        // only; no recorded player or sidekick values are hydrated.
-        return !firstFramePrimaryMovementAdvanced(firstFrame);
+        return trace.metadata().hasSidekickSeedFramePrelude();
     }
 
     private static boolean hasS3kSidekickTitleCardPrelude(TraceData trace) {
@@ -615,14 +611,6 @@ public final class TraceReplayBootstrap {
         // prelude to advance Tails from Obj_Tails routine 0 to routine 2
         // (docs/skdisasm/sonic3k.asm:26085-26156) before the first driven row.
         return firstFrame.gameplayFrameCounter() == 1;
-    }
-
-    private static boolean firstFramePrimaryMovementAdvanced(TraceFrame firstFrame) {
-        return firstFrame.xSpeed() != 0
-                || firstFrame.ySpeed() != 0
-                || firstFrame.gSpeed() != 0
-                || firstFrame.xSub() != 0
-                || firstFrame.ySub() != 0;
     }
 
     /**

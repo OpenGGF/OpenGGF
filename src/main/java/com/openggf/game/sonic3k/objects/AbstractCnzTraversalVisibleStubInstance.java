@@ -10,13 +10,13 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * Shared render scaffold for visible CNZ traversal objects claimed before their
- * ROM-accurate behavior lands.
+ * Legacy render fallback for visible CNZ traversal objects when a concrete
+ * implementation wants to reuse a ROM-backed sheet before providing bespoke
+ * draw logic.
  *
- * <p>Task 1 intentionally ports registry ownership and ROM-backed sheets ahead
- * of gameplay logic, but visible objects still need to draw their first mapped
- * frame so the level does not regress from placeholder visuals to invisibility.
- * Concrete tasks replace this scaffold with full stateful behavior later.
+ * <p>No current CNZ traversal implementation extends this class, but keeping
+ * the fallback available avoids reintroducing placeholder visuals if a future
+ * visible controller needs a temporary first-frame renderer.
  */
 abstract class AbstractCnzTraversalVisibleStubInstance extends AbstractObjectInstance {
 
@@ -48,10 +48,9 @@ abstract class AbstractCnzTraversalVisibleStubInstance extends AbstractObjectIns
     }
 
     /**
-     * Returns the frame used by the Task 1 visual scaffold.
+     * Returns the frame used by this fallback renderer.
      *
-     * <p>Later tasks replace this with full routine-driven animation, but the
-     * stopgap render path should still honor any ROM-defined initial mapping
+     * <p>The fallback path should still honor any ROM-defined initial mapping
      * frame or subtype-based starting frame.
      */
     protected int initialFrameIndex() {

@@ -59,7 +59,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -695,7 +694,7 @@ class TestArchUnitRules {
                             .and().doNotHaveFullyQualifiedName("com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry")
                             .should().accessClassesThat().haveFullyQualifiedName(GameServices.class.getName())
                             .as("object packages should not access global GameServices except approved bridges"))
-                    .because("object instances should use injected ObjectServices; frozen baseline: 2 violations");
+                    .because("object instances should use injected ObjectServices; frozen baseline: 0 violations");
 
     @ArchTest
     static final ArchRule shared_layers_do_not_depend_on_game_specific_packages =
@@ -741,8 +740,6 @@ class TestArchUnitRules {
     @ArchTest
     static void virtual_pattern_base_fields_are_backed_by_pattern_atlas_range(JavaClasses classes)
             throws ReflectiveOperationException {
-        Map<Integer, String> documentedBases = Arrays.stream(PatternAtlasRange.values())
-                .collect(java.util.stream.Collectors.toMap(PatternAtlasRange::base, PatternAtlasRange::name));
         List<String> violations = new java.util.ArrayList<>();
         for (com.tngtech.archunit.core.domain.JavaClass javaClass : classes) {
             for (JavaField javaField : javaClass.getFields()) {
@@ -758,17 +755,19 @@ class TestArchUnitRules {
                 }
                 field.setAccessible(true);
                 int value = field.getInt(null);
-                String rangeName = documentedBases.get(value);
-                if (rangeName != null
+                PatternAtlasRange range = patternAtlasRangeFor(value);
+                if (range != null
                         && !owner.equals(PatternAtlasRange.class)
-                        && !fieldInitializesFromPatternAtlasRange(javaField, rangeName)) {
-                    violations.add(javaField.getFullName() + " duplicates PatternAtlasRange." + rangeName
-                            + " base 0x" + Integer.toHexString(value));
+                        && !fieldInitializesFromPatternAtlasRange(javaField, range.name())) {
+                    violations.add(javaField.getFullName() + " hard-codes virtual pattern id 0x"
+                            + Integer.toHexString(value) + " inside PatternAtlasRange." + range.name()
+                            + " [0x" + Integer.toHexString(range.base()) + ", 0x"
+                            + Integer.toHexString(range.endExclusive()) + ")");
                 }
             }
         }
         assertTrue(violations.isEmpty(),
-                "Virtual pattern base fields should reference PatternAtlasRange instead of duplicating documented bases:\n"
+                "Virtual pattern base fields should reference PatternAtlasRange instead of hard-coding documented ranges:\n"
                         + String.join("\n", violations));
     }
 
@@ -823,5 +822,12 @@ class TestArchUnitRules {
         } catch (java.io.IOException e) {
             throw new IllegalStateException("Unable to inspect pattern range field source: " + source, e);
         }
+    }
+
+    private static PatternAtlasRange patternAtlasRangeFor(int value) {
+        return Arrays.stream(PatternAtlasRange.values())
+                .filter(range -> value >= range.base() && value < range.endExclusive())
+                .findFirst()
+                .orElse(null);
     }
 }

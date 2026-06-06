@@ -38,8 +38,9 @@ import java.util.logging.Logger;
  * ROM addresses for all level resources, then using LevelResourcePlan to
  * compose them via the standard resource loading pipeline.
  *
- * <p>Phase 1 supports terrain, collision, and basic palettes. No objects,
- * rings, or zone-specific features.
+ * <p>The current module loads level resources, objects, rings, animation and
+ * palette providers, zone features, and bonus-stage coordination through the
+ * shared runtime pipeline.
  */
 public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDustArtProvider,
         DynamicStartPositionProvider, AnimatedPatternProvider, AnimatedPaletteProvider {
@@ -358,23 +359,32 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         if (zone == Sonic3kZoneIds.ZONE_ICZ && act == 0) {
             // Lockon S3/Screen Events.asm ICZ1_SetIntroPal updates line 4 after
             // Pal_ICZ1 loads; without it the opening mountain BG uses the cave colors.
-            applyPaletteWords(level.getPalette(3), 1,
-                    ICZ1_LOCK_ON_INTRO_PALETTE_LINE4_COLORS_1_TO_15);
             GraphicsManager graphics = GameServices.graphics();
-            if (graphics.isGlInitialized()) {
-                graphics.cachePaletteTexture(level.getPalette(3), 3);
-            }
+            S3kPaletteWriteSupport.applyContiguousPatch(
+                    GameServices.paletteOwnershipRegistryOrNull(),
+                    level,
+                    graphics,
+                    S3kPaletteOwners.ICZ_STARTUP_PALETTE,
+                    S3kPaletteOwners.PRIORITY_ZONE_EVENT,
+                    3,
+                    1,
+                    paletteWordsToBytes(ICZ1_LOCK_ON_INTRO_PALETTE_LINE4_COLORS_1_TO_15));
+            S3kPaletteWriteSupport.resolvePendingWritesNow(
+                    GameServices.paletteOwnershipRegistryOrNull(),
+                    level,
+                    graphics);
         }
     }
 
-    private static void applyPaletteWords(Palette palette, int firstColorIndex, int[] segaWords) {
-        byte[] colorData = new byte[Palette.BYTES_PER_COLOR];
+    private static byte[] paletteWordsToBytes(int[] segaWords) {
+        byte[] colorData = new byte[segaWords.length * Palette.BYTES_PER_COLOR];
         for (int i = 0; i < segaWords.length; i++) {
             int segaWord = segaWords[i];
-            colorData[0] = (byte) ((segaWord >>> 8) & 0xFF);
-            colorData[1] = (byte) (segaWord & 0xFF);
-            palette.getColor(firstColorIndex + i).fromSegaFormat(colorData, 0);
+            int offset = i * Palette.BYTES_PER_COLOR;
+            colorData[offset] = (byte) ((segaWord >>> 8) & 0xFF);
+            colorData[offset + 1] = (byte) (segaWord & 0xFF);
         }
+        return colorData;
     }
 
     @Override

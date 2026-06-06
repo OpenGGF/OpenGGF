@@ -7,7 +7,6 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
@@ -104,7 +103,9 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance {
      * </pre>
      */
     private void spawnChild() {
-        ObjectManager manager = services().objectManager();
+        if (services().objectManager() == null) {
+            return;
+        }
         ObjectSpawn childSpawn = new ObjectSpawn(
                 spawn.x(), spawn.y(),
                 Sonic2ObjectIds.SMALL_METAL_PFORM,
@@ -112,11 +113,10 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance {
                 spawn.renderFlags(),
                 false,
                 spawn.rawYWord());
-        SmallMetalPformChildInstance child = new SmallMetalPformChildInstance(
-                childSpawn, (spawn.renderFlags() & 0x01) != 0);
         // ROM: loc_3BCF8 uses AllocateObjectAfterCurrent. The child then
         // runs its own loc_3BC6C init routine when its slot is reached.
-        manager.addDynamicObjectAfterCurrent(child);
+        spawnChild(() -> new SmallMetalPformChildInstance(
+                childSpawn, (spawn.renderFlags() & 0x01) != 0));
     }
 
     // ========================================================================

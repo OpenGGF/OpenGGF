@@ -51,6 +51,65 @@ public final class S3kPaletteWriteSupport {
         cachePaletteTextureIfReady(graphics, palette, paletteIndex);
     }
 
+    public static void applyPaletteLine(PaletteOwnershipRegistry registry,
+                                        Level level,
+                                        GraphicsManager graphics,
+                                        String ownerId,
+                                        int priority,
+                                        int paletteIndex,
+                                        Palette sourcePalette,
+                                        boolean resolveImmediately) {
+        if (sourcePalette == null) {
+            return;
+        }
+        byte[] lineData = paletteLineBytes(sourcePalette);
+        applyLine(registry, level, graphics, ownerId, priority, paletteIndex, lineData, resolveImmediately);
+    }
+
+    public static void cacheStandaloneLine(GraphicsManager graphics, int paletteIndex, byte[] lineData) {
+        if (lineData == null || graphics == null || !graphics.isGlInitialized()) {
+            return;
+        }
+        Palette palette = new Palette();
+        for (int i = 0; i < lineData.length / 2; i++) {
+            palette.getColor(i).fromSegaFormat(lineData, i * 2);
+        }
+        graphics.cachePaletteTexture(palette, paletteIndex);
+    }
+
+    public static void applyUnderwaterLine(PaletteOwnershipRegistry registry,
+                                           Level level,
+                                           GraphicsManager graphics,
+                                           Palette[] underwaterPalettes,
+                                           String ownerId,
+                                           int priority,
+                                           int paletteIndex,
+                                           byte[] lineData,
+                                           boolean resolveImmediately) {
+        if (lineData == null || underwaterPalettes == null
+                || paletteIndex < 0 || paletteIndex >= underwaterPalettes.length) {
+            return;
+        }
+        if (registry != null) {
+            registry.submit(PaletteWrite.underwater(ownerId, priority, paletteIndex, 0, lineData.clone()));
+            if (resolveImmediately && level != null) {
+                registry.resolveInto(levelPalettes(level), underwaterPalettes, graphics, level.getPalette(0));
+            }
+            return;
+        }
+        Palette palette = underwaterPalettes[paletteIndex];
+        if (palette == null) {
+            palette = new Palette();
+            underwaterPalettes[paletteIndex] = palette;
+        }
+        for (int i = 0; i < lineData.length / 2; i++) {
+            palette.getColor(i).fromSegaFormat(lineData, i * 2);
+        }
+        if (graphics != null && graphics.isGlInitialized() && level != null) {
+            graphics.cacheUnderwaterPaletteTexture(underwaterPalettes, level.getPalette(0));
+        }
+    }
+
     public static void applyContiguousPatch(PaletteOwnershipRegistry registry,
                                             Level level,
                                             GraphicsManager graphics,
@@ -74,6 +133,29 @@ public final class S3kPaletteWriteSupport {
             palette.getColor(startColor + i).fromSegaFormat(segaData, i * 2);
         }
         cachePaletteTextureIfReady(graphics, palette, paletteIndex);
+    }
+
+    public static void applyContiguousPatchToPalette(PaletteOwnershipRegistry registry,
+                                                     Level level,
+                                                     GraphicsManager graphics,
+                                                     Palette targetPalette,
+                                                     int gpuLine,
+                                                     String ownerId,
+                                                     int priority,
+                                                     int startColor,
+                                                     byte[] segaData) {
+        if (targetPalette == null || segaData == null) {
+            return;
+        }
+        if (registry != null && level != null && gpuLine >= 0 && gpuLine < level.getPaletteCount()
+                && targetPalette == level.getPalette(gpuLine)) {
+            registry.submit(PaletteWrite.normal(ownerId, priority, gpuLine, startColor, segaData.clone()));
+            return;
+        }
+        for (int i = 0; i < segaData.length / 2; i++) {
+            targetPalette.getColor(startColor + i).fromSegaFormat(segaData, i * 2);
+        }
+        cachePaletteTextureIfReady(graphics, targetPalette, gpuLine);
     }
 
     public static void applyColors(PaletteOwnershipRegistry registry,
@@ -152,5 +234,15 @@ public final class S3kPaletteWriteSupport {
                 (byte) ((segaWord >>> 8) & 0xFF),
                 (byte) (segaWord & 0xFF)
         };
+    }
+
+    private static byte[] paletteLineBytes(Palette palette) {
+        byte[] data = new byte[palette.getColorCount() * 2];
+        for (int i = 0; i < palette.getColorCount(); i++) {
+            int segaWord = com.openggf.game.palette.PaletteWriteSupport.segaWordFromColor(palette.getColor(i));
+            data[i * 2] = (byte) ((segaWord >>> 8) & 0xFF);
+            data[i * 2 + 1] = (byte) (segaWord & 0xFF);
+        }
+        return data;
     }
 }

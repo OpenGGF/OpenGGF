@@ -3,11 +3,12 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
-import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -304,15 +305,19 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance {
      * {@code PalLoad_Line1}.
      */
     private void restoreLevelPaletteLine1() {
-        GraphicsManager gm = services().graphicsManager();
-        if (gm == null || !gm.isGlInitialized()) {
-            return;
-        }
         Level level = services().currentLevel();
         if (level == null || level.getPaletteCount() <= 1) {
             return;
         }
-        gm.cachePaletteTexture(level.getPalette(1), 1);
+        S3kPaletteWriteSupport.applyPaletteLine(
+                services().paletteOwnershipRegistryOrNull(),
+                level,
+                services().graphicsManager(),
+                S3kPaletteOwners.CNZ2_CUTSCENE_RESTORE,
+                S3kPaletteOwners.PRIORITY_CUTSCENE_OVERRIDE,
+                1,
+                level.getPalette(1),
+                true);
     }
 
     private void restoreStoredCameraBounds() {

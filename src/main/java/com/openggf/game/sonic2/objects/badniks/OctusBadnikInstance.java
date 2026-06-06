@@ -8,7 +8,6 @@ import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -182,16 +181,11 @@ public class OctusBadnikInstance extends AbstractBadnikInstance {
         }
         bulletFired = true;
 
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
-            return;
-        }
-
         // Bullet fires in the direction the octus is facing
         int bulletXVel = facingLeft ? -BULLET_X_VEL : BULLET_X_VEL;
         boolean bulletHFlip = !facingLeft;
 
-        BadnikProjectileInstance bullet = new BadnikProjectileInstance(
+        spawnFreeChild(() -> new BadnikProjectileInstance(
                 spawn,
                 BadnikProjectileInstance.ProjectileType.OCTUS_BULLET,
                 currentX,
@@ -200,8 +194,7 @@ public class OctusBadnikInstance extends AbstractBadnikInstance {
                 0,          // No vertical velocity
                 false,      // No gravity
                 bulletHFlip,
-                BULLET_DELAY);
-        objectManager.addDynamicObject(bullet);
+                BULLET_DELAY));
     }
 
     @Override

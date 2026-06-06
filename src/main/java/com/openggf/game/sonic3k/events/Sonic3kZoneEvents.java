@@ -130,13 +130,6 @@ public abstract class Sonic3kZoneEvents {
         return GameServices.paletteOwnershipRegistryOrNull();
     }
 
-    protected void cachePaletteTextureIfReady(Palette palette, int paletteLine) {
-        GraphicsManager graphicsManager = graphics();
-        if (graphicsManager.isGlInitialized()) {
-            graphicsManager.cachePaletteTexture(palette, paletteLine);
-        }
-    }
-
     protected PlayerCharacter playerCharacter() {
         return S3kRuntimeStates.resolvePlayerCharacter(
                 GameServices.hasRuntime() ? GameServices.zoneRuntimeRegistry() : null,

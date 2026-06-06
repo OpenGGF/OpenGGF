@@ -239,16 +239,16 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance {
 
         // CreateChild5_ComplexAdjusted does NOT copy render_flags bit 0 to child;
         // SetUp_ObjAttributes only sets bit 2 (world coords). Projectile never H-flips.
-        BlastoidProjectile projectile = new BlastoidProjectile(
-                spawn,
-                currentX + xOff,
-                currentY + PROJECTILE_Y_OFFSET,
-                xVel,
-                PROJECTILE_Y_VEL);
-
+        int finalXOff = xOff;
+        int finalXVel = xVel;
         ObjectServices svc = tryServices();
         if (svc != null && svc.objectManager() != null) {
-            svc.objectManager().addDynamicObject(projectile);
+            spawnFreeChild(() -> new BlastoidProjectile(
+                    spawn,
+                    currentX + finalXOff,
+                    currentY + PROJECTILE_Y_OFFSET,
+                    finalXVel,
+                    PROJECTILE_Y_VEL));
         }
     }
 

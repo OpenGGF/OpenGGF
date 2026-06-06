@@ -104,7 +104,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
 
     // GPU cache base IDs (avoids collision with level 0x20000, SS 0x10000, HUD 0x28000).
     private static final int PATTERN_BASE = PatternAtlasRange.TITLE_CARDS.base();
-    private static final int EMERALD_PATTERN_BASE = 0x41000;
+    private static final int EMERALD_PATTERN_BASE = PatternAtlasRange.TITLE_CARDS.base() + 0x1000;
 
     // Score digit copy constants (matching Sonic1ObjectArtProvider).
     private static final int RESULTS_SCORE_DIGIT_PAIR_COUNT = 8;

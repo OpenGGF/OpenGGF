@@ -304,19 +304,7 @@ public class SidewaysPformObjectInstance extends AbstractObjectInstance
                 spawn.rawYWord()
         );
 
-        // Create child platform and register it
-        setConstructionContext(services());
-        try {
-            SidewaysPformObjectInstance child = new SidewaysPformObjectInstance(
-                    childSpawn, name + "_child", this);
-
-            // Add child to object manager
-            if (services().objectManager() != null) {
-                services().objectManager().addDynamicObject(child);
-            }
-        } finally {
-            clearConstructionContext();
-        }
+        spawnFreeChild(() -> new SidewaysPformObjectInstance(childSpawn, name + "_child", this));
     }
 
     /**

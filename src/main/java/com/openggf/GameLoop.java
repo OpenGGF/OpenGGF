@@ -263,7 +263,7 @@ public class GameLoop {
         GameplayModeContext currentGameplayMode = gameplayMode != null
                 ? gameplayMode
                 : SessionManager.getCurrentGameplayMode();
-        if (currentGameplayMode == null || currentGameplayMode.getCamera() == null) {
+        if (currentGameplayMode == null || !currentGameplayMode.isGameplayRuntimeReady()) {
             // Gameplay mode has been torn down (e.g. trace teardown returning to
             // master title). Clear cached references so resolveFadeManager()
             // falls back to the graphics-owned bootstrap manager rather than
@@ -289,6 +289,10 @@ public class GameLoop {
         this.fadeManager = currentGameplayMode.getFadeManager();
         this.waterSystem = currentGameplayMode.getWaterSystem();
         engineServices.graphics().bindRuntimeManagedReferences(this.camera, this.fadeManager);
+    }
+
+    public void resetModuleScopedProviders() {
+        titleCardProvider = null;
     }
 
     public void setInputHandler(InputHandler inputHandler) {

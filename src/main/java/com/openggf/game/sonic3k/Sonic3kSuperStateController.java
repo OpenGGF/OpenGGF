@@ -6,8 +6,6 @@ import com.openggf.game.PhysicsProfile;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
-import com.openggf.graphics.GraphicsManager;
-import com.openggf.level.Palette;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -311,16 +309,17 @@ public class Sonic3kSuperStateController extends SuperStateController {
         PaletteTarget target = resolvePaletteTarget(SONIC_PALETTE_INDEX);
         if (target == null) return;
 
-        Palette palette = target.palette();
-
-        for (int i = 0; i < COLORS_PER_FRAME; i++) {
-            palette.getColor(FIRST_COLOR_INDEX + i)
-                    .fromSegaFormat(paletteData, frameOffset + i * 2);
-        }
-
-        GraphicsManager gfx = GameServices.graphics();
-        if (gfx.isGlInitialized()) {
-            gfx.cachePaletteTexture(palette, target.gpuLine());
-        }
+        byte[] patch = new byte[BYTES_PER_FRAME];
+        System.arraycopy(paletteData, frameOffset, patch, 0, patch.length);
+        S3kPaletteWriteSupport.applyContiguousPatchToPalette(
+                GameServices.paletteOwnershipRegistryOrNull(),
+                GameServices.levelOrNull() != null ? GameServices.levelOrNull().getCurrentLevel() : null,
+                GameServices.graphics(),
+                target.palette(),
+                target.gpuLine(),
+                S3kPaletteOwners.SUPER_PALETTE,
+                S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                FIRST_COLOR_INDEX,
+                patch);
     }
 }

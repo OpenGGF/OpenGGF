@@ -3,6 +3,8 @@ package com.openggf.game.sonic3k;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.data.RomByteReader;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.palette.PaletteSurface;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Block;
@@ -21,6 +23,7 @@ import com.openggf.tests.rules.SonicGame;
 import java.io.IOException;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -278,6 +281,28 @@ public class TestS3kEmzPaletteCycling {
                 + distinctCount);
     }
 
+    @Test
+    public void emzCycleSubmitsPaletteOwnershipClaims() throws IOException {
+        GraphicsManager.getInstance().initHeadless();
+        EmzStubLevel level = new EmzStubLevel();
+        PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
+        RomByteReader cyclerReader = RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom());
+
+        Sonic3kPaletteCycler cycler = new Sonic3kPaletteCycler(cyclerReader, level, 0x11, 0, registry, null);
+
+        registry.beginFrame();
+        cycler.update();
+        registry.resolveInto(level.palettes(), null, null, null);
+
+        assertEquals(S3kPaletteOwners.EMZ_ZONE_CYCLE, registry.ownerAt(PaletteSurface.NORMAL, 2, 14));
+        assertEquals(S3kPaletteOwners.EMZ_ZONE_CYCLE, registry.ownerAt(PaletteSurface.NORMAL, 3, 9));
+        assertEquals(S3kPaletteOwners.EMZ_ZONE_CYCLE, registry.ownerAt(PaletteSurface.NORMAL, 3, 10));
+        assertTrue((level.getPalette(2).getColor(14).r & 0xFF) > 50,
+                "EMZ owned glow color should resolve from ROM frame 0");
+        assertTrue((level.getPalette(3).getColor(10).r & 0xFF) > 200,
+                "EMZ owned background color should resolve from ROM frame 0");
+    }
+
     /**
      * Minimal Level stub for EMZ palette cycling tests.
      */
@@ -288,6 +313,10 @@ public class TestS3kEmzPaletteCycling {
             for (int i = 0; i < palettes.length; i++) {
                 palettes[i] = new Palette();
             }
+        }
+
+        Palette[] palettes() {
+            return palettes;
         }
 
         @Override public int getPaletteCount() { return palettes.length; }

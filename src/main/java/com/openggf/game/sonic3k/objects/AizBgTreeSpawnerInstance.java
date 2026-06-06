@@ -94,11 +94,7 @@ public class AizBgTreeSpawnerInstance extends AbstractObjectInstance {
             }
 
             // Spawn a tree with the current smooth scroll X as its baseline
-            AizBgTreeInstance tree = new AizBgTreeInstance(currentSmooth);
-            var objManager = services().objectManager();
-            if (objManager != null) {
-                objManager.addDynamicObject(tree);
-            }
+            spawnFreeChild(() -> new AizBgTreeInstance(currentSmooth));
 
             scriptIndex++;
         }

@@ -4,6 +4,7 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic3k.S3kSpriteDataLoader;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Pattern;
 import com.openggf.level.Level;
 import com.openggf.level.objects.ObjectServices;
@@ -21,8 +22,8 @@ import java.util.logging.Logger;
 public final class IczSnowboardArtLoader {
     private static final Logger LOG = Logger.getLogger(IczSnowboardArtLoader.class.getName());
 
-    private static final int SONIC_SNOWBOARD_PATTERN_BASE = 0x4A000;
-    private static final int SNOWBOARD_PATTERN_BASE = 0x4C000;
+    private static final int SONIC_SNOWBOARD_PATTERN_BASE = PatternAtlasRange.TRANSIENT_EFFECTS.base() + 0x2000;
+    private static final int SNOWBOARD_PATTERN_BASE = PatternAtlasRange.TRANSIENT_EFFECTS.base() + 0x4000;
 
     private static PatternSpriteRenderer sonicRenderer;
     private static PatternSpriteRenderer snowboardRenderer;

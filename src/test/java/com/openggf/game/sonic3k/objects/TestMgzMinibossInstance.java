@@ -5,8 +5,17 @@ import com.openggf.tests.TestEnvironment;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.palette.PaletteSurface;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.level.Block;
+import com.openggf.level.Chunk;
+import com.openggf.level.Level;
+import com.openggf.level.Map;
+import com.openggf.level.Palette;
+import com.openggf.level.Pattern;
+import com.openggf.level.SolidTile;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -19,6 +28,8 @@ import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.objects.boss.BossStateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.level.rings.RingSpawn;
+import com.openggf.level.rings.RingSpriteSheet;
 import com.openggf.tests.FullReset;
 import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestablePlayableSprite;
@@ -52,6 +63,10 @@ class TestMgzMinibossInstance {
 
     private static final TouchResponseResult ENEMY_HIT =
             new TouchResponseResult(0x10, 0, 0, TouchCategory.ENEMY);
+    private static final String MGZ_MINIBOSS_PALETTE_OWNER = "s3k.mgz.miniboss";
+    private static final int[] FLASH_INDICES = {12, 13, 14};
+    private static final int[] FLASH_BRIGHT = {0x0EEE, 0x0EEE, 0x0EEE};
+    private static final int[] ORIGINAL_WORDS = {0x0222, 0x0644, 0x0AAA};
 
     private Camera camera;
 
@@ -103,6 +118,52 @@ class TestMgzMinibossInstance {
 
         boss.onPlayerAttack(player, ENEMY_HIT);
         assertEquals(0, boss.getCollisionFlags(), "Body collision should disable during custom flash");
+    }
+
+    @Test
+    void hitFlashSubmitsMgzMinibossPaletteOwnershipClaims() {
+        RecordingServices services = new RecordingServices(camera);
+        MgzMinibossInstance boss = createBoss(services);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2D00, (short) 0x0100);
+
+        boss.update(0, player);
+        boss.onPlayerAttack(player, ENEMY_HIT);
+
+        services.paletteRegistry.beginFrame();
+        boss.update(1, player);
+        services.paletteRegistry.resolveInto(services.level.palettes(), null, null, null);
+
+        for (int i = 0; i < FLASH_INDICES.length; i++) {
+            int colorIndex = FLASH_INDICES[i];
+            assertEquals(MGZ_MINIBOSS_PALETTE_OWNER,
+                    services.paletteRegistry.ownerAt(PaletteSurface.NORMAL, 1, colorIndex),
+                    "MGZ miniboss flash color " + colorIndex + " should be owned by the miniboss palette writer");
+            assertColorWord(services.level.getPalette(1), colorIndex, FLASH_BRIGHT[i]);
+        }
+    }
+
+    @Test
+    void hitFlashRestoreSubmitsMgzMinibossPaletteOwnershipClaims() throws Exception {
+        RecordingServices services = new RecordingServices(camera);
+        seedOriginalBossFlashColors(services.level.getPalette(1));
+        MgzMinibossInstance boss = createBoss(services);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2D00, (short) 0x0100);
+
+        boss.update(0, player);
+        boss.onPlayerAttack(player, ENEMY_HIT);
+        bossState(boss).invulnerabilityTimer = 1;
+
+        services.paletteRegistry.beginFrame();
+        boss.update(1, player);
+        services.paletteRegistry.resolveInto(services.level.palettes(), null, null, null);
+
+        for (int i = 0; i < FLASH_INDICES.length; i++) {
+            int colorIndex = FLASH_INDICES[i];
+            assertEquals(MGZ_MINIBOSS_PALETTE_OWNER,
+                    services.paletteRegistry.ownerAt(PaletteSurface.NORMAL, 1, colorIndex),
+                    "MGZ miniboss restore color " + colorIndex + " should be owned by the miniboss palette writer");
+            assertColorWord(services.level.getPalette(1), colorIndex, ORIGINAL_WORDS[i]);
+        }
     }
 
     @Test
@@ -375,9 +436,38 @@ class TestMgzMinibossInstance {
         return field.getBoolean(target);
     }
 
+    private static void seedOriginalBossFlashColors(Palette palette) {
+        for (int i = 0; i < FLASH_INDICES.length; i++) {
+            palette.getColor(FLASH_INDICES[i]).fromSegaFormat(segaWordBytes(ORIGINAL_WORDS[i]), 0);
+        }
+    }
+
+    private static void assertColorWord(Palette palette, int colorIndex, int segaWord) {
+        byte highByte = (byte) ((segaWord >> 8) & 0xFF);
+        byte lowByte = (byte) (segaWord & 0xFF);
+        int r3 = (lowByte >> 1) & 0x07;
+        int g3 = (lowByte >> 5) & 0x07;
+        int b3 = (highByte >> 1) & 0x07;
+        int expectedR = (r3 * 255 + 3) / 7;
+        int expectedG = (g3 * 255 + 3) / 7;
+        int expectedB = (b3 * 255 + 3) / 7;
+        assertEquals(expectedR, palette.getColor(colorIndex).r & 0xFF);
+        assertEquals(expectedG, palette.getColor(colorIndex).g & 0xFF);
+        assertEquals(expectedB, palette.getColor(colorIndex).b & 0xFF);
+    }
+
+    private static byte[] segaWordBytes(int segaWord) {
+        return new byte[] {
+                (byte) ((segaWord >> 8) & 0xFF),
+                (byte) (segaWord & 0xFF)
+        };
+    }
+
     private static final class RecordingServices extends StubObjectServices {
         private final Camera camera;
         private final GameStateManager gameState = new GameStateManager();
+        private final StubLevel level = new StubLevel();
+        private final PaletteOwnershipRegistry paletteRegistry = new PaletteOwnershipRegistry();
         private final List<Integer> playedMusic = new ArrayList<>();
         private final List<ObjectInstance> spawnedChildren = new ArrayList<>();
         private final ObjectManager objectManager;
@@ -408,6 +498,16 @@ class TestMgzMinibossInstance {
         }
 
         @Override
+        public Level currentLevel() {
+            return level;
+        }
+
+        @Override
+        public PaletteOwnershipRegistry paletteOwnershipRegistryOrNull() {
+            return paletteRegistry;
+        }
+
+        @Override
         public ObjectManager objectManager() {
             return objectManager;
         }
@@ -431,5 +531,34 @@ class TestMgzMinibossInstance {
         public int getCurrentLevelMusicId() {
             return Sonic3kMusic.MGZ1.id;
         }
+    }
+
+    private static final class StubLevel implements Level {
+        private final Palette[] palettes = new Palette[] {
+                new Palette(), new Palette(), new Palette(), new Palette()
+        };
+
+        Palette[] palettes() {
+            return palettes;
+        }
+
+        @Override public int getPaletteCount() { return palettes.length; }
+        @Override public Palette getPalette(int index) { return palettes[index]; }
+        @Override public int getPatternCount() { return 0; }
+        @Override public Pattern getPattern(int index) { throw new UnsupportedOperationException(); }
+        @Override public int getChunkCount() { return 0; }
+        @Override public Chunk getChunk(int index) { throw new UnsupportedOperationException(); }
+        @Override public int getBlockCount() { return 0; }
+        @Override public Block getBlock(int index) { throw new UnsupportedOperationException(); }
+        @Override public SolidTile getSolidTile(int index) { throw new UnsupportedOperationException(); }
+        @Override public Map getMap() { return null; }
+        @Override public List<ObjectSpawn> getObjects() { return List.of(); }
+        @Override public List<RingSpawn> getRings() { return List.of(); }
+        @Override public RingSpriteSheet getRingSpriteSheet() { return null; }
+        @Override public int getMinX() { return 0; }
+        @Override public int getMaxX() { return 0; }
+        @Override public int getMinY() { return 0; }
+        @Override public int getMaxY() { return 0; }
+        @Override public int getZoneIndex() { return 0; }
     }
 }

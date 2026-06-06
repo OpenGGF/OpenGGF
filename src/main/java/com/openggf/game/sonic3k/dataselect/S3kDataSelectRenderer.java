@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.dataselect;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.dataselect.HostSlotPreview;
+import com.openggf.game.sonic3k.S3kFrontendPaletteUploader;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Palette;
@@ -348,7 +349,7 @@ public class S3kDataSelectRenderer {
             }
         }
         if (cachedIconPalette != null) {
-            graphics.cachePaletteTexture(cachedIconPalette, cachedIconPaletteLine);
+            S3kFrontendPaletteUploader.cacheLine(graphics, cachedIconPalette, cachedIconPaletteLine);
         }
     }
 
@@ -1038,7 +1039,7 @@ public class S3kDataSelectRenderer {
     private void cachePalette(GraphicsManager graphics, byte[] segaBytes, int paletteLine, int startColorIndex) {
         Palette palette = paletteFromBytes(segaBytes, startColorIndex);
         if (palette != null) {
-            graphics.cachePaletteTexture(palette, paletteLine);
+            S3kFrontendPaletteUploader.cacheLine(graphics, palette, paletteLine);
         }
     }
 
@@ -1076,10 +1077,10 @@ public class S3kDataSelectRenderer {
         }
         // Re-upload cached palettes (cheap GPU call, no object allocation)
         if (cachedCharLine1 != null) {
-            graphics.cachePaletteTexture(cachedCharLine1, 1);
+            S3kFrontendPaletteUploader.cacheLine(graphics, cachedCharLine1, 1);
         }
         if (cachedCharLine2 != null) {
-            graphics.cachePaletteTexture(cachedCharLine2, 2);
+            S3kFrontendPaletteUploader.cacheLine(graphics, cachedCharLine2, 2);
         }
     }
 

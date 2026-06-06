@@ -189,18 +189,19 @@ public class NebulaBadnikInstance extends AbstractBadnikInstance {
     private void dropBomb() {
         bombDropped = true;
 
-        BadnikProjectileInstance bomb = new BadnikProjectileInstance(
-                spawn,
-                BadnikProjectileInstance.ProjectileType.NEBULA_BOMB,
-                currentX,
-                currentY + BOMB_Y_OFFSET,
-                0, // No initial X velocity
-                0, // No initial Y velocity (gravity accelerates it)
-                true, // Apply gravity (ObjectMoveAndFall)
-                false);
-        bomb.deferFirstMovementForLoadSubObjectInit();
-
-        services().objectManager().addDynamicObject(bomb);
+        spawnFreeChild(() -> {
+            BadnikProjectileInstance bomb = new BadnikProjectileInstance(
+                    spawn,
+                    BadnikProjectileInstance.ProjectileType.NEBULA_BOMB,
+                    currentX,
+                    currentY + BOMB_Y_OFFSET,
+                    0, // No initial X velocity
+                    0, // No initial Y velocity (gravity accelerates it)
+                    true, // Apply gravity (ObjectMoveAndFall)
+                    false);
+            bomb.deferFirstMovementForLoadSubObjectInit();
+            return bomb;
+        });
     }
 
     @Override

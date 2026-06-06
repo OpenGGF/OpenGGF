@@ -9,7 +9,6 @@ import com.openggf.level.objects.AnimalObjectInstance;
 import com.openggf.level.objects.DestructionEffects;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.level.objects.ObjectLifetimeOps;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
@@ -94,10 +93,8 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
     }
 
     protected final void spawnProjectile(S3kBadnikProjectileInstance projectile) {
-        ObjectServices svc = tryServices();
-        ObjectManager objectManager = svc != null ? svc.objectManager() : null;
-        if (objectManager != null) {
-            objectManager.addDynamicObject(projectile);
+        if (tryServices() != null && services().objectManager() != null) {
+            spawnFreeChild(() -> projectile);
         }
     }
 

@@ -54,6 +54,13 @@ public class TestNoServicesInObjectConstructors {
             "AizTreeRevealControlObjectInstance"
     );
 
+    private static final Set<String> LEGACY_CONSTRUCTOR_RAW_CHILD_REGISTRATION = Set.of(
+            // Phase 2 cleanup: boss scrap setup still uses spawnDynamicObject during construction.
+            "Sonic1ScrapEggmanInstance",
+            // Phase 2 cleanup: bridge zone config path still reaches raw child registration.
+            "CollapsingBridgeObjectInstance"
+    );
+
     /**
      * Detects {@code spawnDynamicObject(new X(...))} patterns in source code.
      * These are dangerous when the constructed object calls services() in its
@@ -178,6 +185,41 @@ public class TestNoServicesInObjectConstructors {
             fail("Object classes whose constructor chain can reach services() must be created "
                     + "through ObjectManager construction context. Direct new X(...) leaves "
                     + "ObjectServices unavailable during construction.\n\n  "
+                    + String.join("\n  ", violations));
+        }
+    }
+
+    @Test
+    public void constructors_mustNotRegisterChildObjectsThroughRawObjectManagerCalls() throws IOException {
+        Path srcMain = Path.of("src/main/java");
+        if (!Files.isDirectory(srcMain)) {
+            return;
+        }
+
+        Map<String, ClassSource> classes = loadObjectClassSources(srcMain);
+        List<String> violations = new ArrayList<>();
+
+        for (ClassSource source : classes.values()) {
+            if (LEGACY_CONSTRUCTOR_RAW_CHILD_REGISTRATION.contains(source.className())) {
+                continue;
+            }
+            Set<String> rawRegistrationMethods = findMethodsCallingRawObjectRegistration(
+                    source.content(), source.className());
+            for (ConstructorCall call : findConstructorCalls(source)) {
+                if ("addDynamicObject".equals(call.methodName())
+                        || "spawnDynamicObject".equals(call.methodName())
+                        || rawRegistrationMethods.contains(call.methodName())) {
+                    violations.add(source.fileName() + ": " + source.className()
+                            + " constructor reaches " + call.methodName()
+                            + "(), which registers children before the parent is fully manager-owned");
+                }
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            fail("Object constructors must not register child objects through raw ObjectManager paths. "
+                    + "Defer child creation until after parent registration and use spawnChild()/spawnFreeChild() "
+                    + "so construction context and child lifecycle ownership are preserved.\n\n  "
                     + String.join("\n  ", violations));
         }
     }
@@ -431,6 +473,59 @@ public class TestNoServicesInObjectConstructors {
                 if (callers.contains(entry.getKey())) continue;
                 for (String caller : callers) {
                     // Check if this method's body calls a known services-calling method
+                    if (Pattern.compile("(?<![.\\w])" + Pattern.quote(caller) + "\\s*\\(")
+                            .matcher(entry.getValue()).find()) {
+                        callers.add(entry.getKey());
+                        changed = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return callers;
+    }
+
+    private static Set<String> findMethodsCallingRawObjectRegistration(String content, String className) {
+        Map<String, String> methodBodies = new HashMap<>();
+        Pattern methodDecl = Pattern.compile(
+                "(?:public|protected|private|)\\s+"
+                        + "(?:static\\s+)?(?:final\\s+)?(?:synchronized\\s+)?"
+                        + "\\S+\\s+(\\w+)\\s*\\([^)]*\\)\\s*"
+                        + "(?:throws\\s+[^{]+)?\\{");
+
+        Matcher m = methodDecl.matcher(content);
+        while (m.find()) {
+            String methodName = m.group(1);
+            if (methodName.equals(className)) continue;
+
+            int start = m.end();
+            int braceDepth = 1;
+            int end = start;
+            while (end < content.length() && braceDepth > 0) {
+                char c = content.charAt(end);
+                if (c == '{') braceDepth++;
+                else if (c == '}') braceDepth--;
+                end++;
+            }
+            methodBodies.put(methodName, content.substring(start, end));
+        }
+
+        Pattern rawRegistration = Pattern.compile(
+                "(?<![\\w])(?:\\w+\\.)?(?:addDynamicObject|spawnDynamicObject)\\s*\\(");
+        Set<String> callers = new HashSet<>();
+        for (var entry : methodBodies.entrySet()) {
+            if (rawRegistration.matcher(entry.getValue()).find()) {
+                callers.add(entry.getKey());
+            }
+        }
+
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            for (var entry : methodBodies.entrySet()) {
+                if (callers.contains(entry.getKey())) continue;
+                for (String caller : callers) {
                     if (Pattern.compile("(?<![.\\w])" + Pattern.quote(caller) + "\\s*\\(")
                             .matcher(entry.getValue()).find()) {
                         callers.add(entry.getKey());

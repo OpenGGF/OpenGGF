@@ -247,18 +247,19 @@ public class CluckerBadnikInstance extends AbstractBadnikInstance {
             xOffset = SHOT_X_OFFSET;
         }
 
-        BadnikProjectileInstance projectile = new BadnikProjectileInstance(
-                spawn,
-                BadnikProjectileInstance.ProjectileType.CLUCKER_SHOT,
-                currentX + xOffset,
-                currentY + SHOT_Y_OFFSET,
-                xVel,
-                0, // y_vel = 0 (Obj98_CluckerShotMove uses ObjectMove, no gravity)
-                false,
-                !facingLeft);
-        projectile.deferFirstMovementForLoadSubObjectInit();
-
-        services().objectManager().addDynamicObjectAfterCurrent(projectile);
+        spawnChild(() -> {
+            BadnikProjectileInstance projectile = new BadnikProjectileInstance(
+                    spawn,
+                    BadnikProjectileInstance.ProjectileType.CLUCKER_SHOT,
+                    currentX + xOffset,
+                    currentY + SHOT_Y_OFFSET,
+                    xVel,
+                    0, // y_vel = 0 (Obj98_CluckerShotMove uses ObjectMove, no gravity)
+                    false,
+                    !facingLeft);
+            projectile.deferFirstMovementForLoadSubObjectInit();
+            return projectile;
+        });
     }
 
     /**

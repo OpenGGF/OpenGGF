@@ -33,6 +33,7 @@ import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SuperStateController;
 import com.openggf.game.ShieldType;
 
 import java.util.List;
@@ -242,7 +243,8 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         // broader rolling status bit. The animation can lag the status byte by
         // a frame during object releases, which affects monitor break timing.
         boolean canBreak = player.getAnimationId() == Sonic3kAnimationIds.ROLL.id();
-        // Knuckles glide/slide check requires PlayerCharacter system (not yet implemented)
+        // Knuckles glide/slide break parity still needs a ROM-state-backed
+        // character/move-state query at this touch-response site.
         // canBreak |= (player.getCharacter() == PlayerCharacter.KNUCKLES
         //              && (player.getDoubleJumpFlag() == 1 || player.getDoubleJumpFlag() == 3));
 
@@ -357,9 +359,13 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
                 }
             }
             case SUPER -> {
-                // Award 50 rings; super transformation system not yet implemented
                 player.addRings(SUPER_RING_REWARD);
-                LOGGER.info("Super monitor collected — 50 rings awarded (super transformation TODO)");
+                SuperStateController superState = player.getSuperStateController();
+                if (superState != null && superState.activateFromMonitor()) {
+                    LOGGER.info("Super monitor collected - 50 rings awarded and transformation started");
+                } else {
+                    LOGGER.info("Super monitor collected - 50 rings awarded");
+                }
             }
         }
     }

@@ -19,6 +19,7 @@ import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * EHZ Act 2 Boss (Object 0x56) - Drill car boss with 6 child components.
@@ -119,22 +120,19 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance {
     }
 
     private void spawnChildComponents() {
-        List<AbstractBossChild> spawned = List.of(
-                new EHZBossVehicleTop(this),
-                new EHZBossGroundVehicle(this),
-                new EHZBossPropeller(this),
-                new EHZBossWheel(this, 0, 0x1C, 3),   // Front wheel: +28 (near side - in front of body)
-                new EHZBossWheel(this, 1, -0x0C, 3),  // Front wheel: -12 (near side - in front of body)
-                new EHZBossWheel(this, 2, -0x2C, 5),  // Rear wheel: -44 (far side - behind body)
-                new EHZBossSpike(this)
-        );
+        spawnBossChild(() -> new EHZBossVehicleTop(this));
+        spawnBossChild(() -> new EHZBossGroundVehicle(this));
+        spawnBossChild(() -> new EHZBossPropeller(this));
+        spawnBossChild(() -> new EHZBossWheel(this, 0, 0x1C, 3));  // Front wheel: +28 (near side - in front of body)
+        spawnBossChild(() -> new EHZBossWheel(this, 1, -0x0C, 3)); // Front wheel: -12 (near side - in front of body)
+        spawnBossChild(() -> new EHZBossWheel(this, 2, -0x2C, 5)); // Rear wheel: -44 (far side - behind body)
+        spawnBossChild(() -> new EHZBossSpike(this));
+    }
 
-        for (AbstractBossChild child : spawned) {
-            childComponents.add(child);
-            if (services().objectManager() != null) {
-                services().objectManager().addDynamicObject(child);
-            }
-        }
+    private <T extends AbstractBossChild> T spawnBossChild(Supplier<T> factory) {
+        T child = spawnChild(factory);
+        childComponents.add(child);
+        return child;
     }
 
     @Override
@@ -333,11 +331,7 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance {
                 return;
             }
         }
-        EHZBossPropeller propeller = new EHZBossPropeller(this);
-        childComponents.add(propeller);
-        if (services().objectManager() != null) {
-            services().objectManager().addDynamicObject(propeller);
-        }
+        spawnBossChild(() -> new EHZBossPropeller(this));
     }
 
     private void spawnEggPrison() {

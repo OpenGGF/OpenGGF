@@ -406,10 +406,10 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance
         services().gameState().addScore(points);
 
         // Spawn floating points display
-        PointsObjectInstance pointsObj = new PointsObjectInstance(
+        int awardedPoints = points;
+        spawnFreeChild(() -> new PointsObjectInstance(
                 new ObjectSpawn(spawn.x(), spawn.y(), 0x29, 0, 0, false, 0),
-                services(), points);
-        services().objectManager().addDynamicObject(pointsObj);
+                services(), awardedPoints));
 
         // Trigger hit animation
         if (!isDestroyed()) {

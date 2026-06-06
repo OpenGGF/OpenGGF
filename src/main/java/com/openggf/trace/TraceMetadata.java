@@ -294,13 +294,23 @@ public record TraceMetadata(
     }
 
     /**
-     * Whether the trace emits per-frame S2 SlotMachine state snapshots. This
-     * identifies traces whose title-card replay needs the native slot-machine
-     * short init window before comparison begins.
+     * Whether the trace emits per-frame slot-machine feature state snapshots.
+     * This identifies traces whose title-card replay needs the native
+     * slot-machine short init window before comparison begins.
      */
-    public boolean hasPerFrameCnzSlotMachineState() {
+    public boolean hasPerFrameSlotMachineState() {
         return auxSchemaExtras != null
                 && auxSchemaExtras.contains("cnz_slot_machine_state_per_frame");
+    }
+
+    /**
+     * @deprecated Use {@link #hasPerFrameSlotMachineState()}. The current
+     * recorder schema name is still CNZ-specific, but replay policy should
+     * consume the generic feature capability.
+     */
+    @Deprecated
+    public boolean hasPerFrameCnzSlotMachineState() {
+        return hasPerFrameSlotMachineState();
     }
 
     /**
@@ -347,6 +357,17 @@ public record TraceMetadata(
     public boolean hasPerFrameAizHandoffTerrainState() {
         return auxSchemaExtras != null
                 && auxSchemaExtras.contains("aiz_handoff_terrain_state_per_frame");
+    }
+
+    /**
+     * Whether the fixture explicitly records that trace frame 0 is a
+     * sidekick-only seed row requiring one native sidekick setup tick before
+     * comparison continues. This is replay phase metadata, not a diagnostic
+     * aux-event stream.
+     */
+    public boolean hasSidekickSeedFramePrelude() {
+        return auxSchemaExtras != null
+                && auxSchemaExtras.contains("sidekick_seed_frame_prelude");
     }
 
     /** Load metadata from a metadata.json file. */

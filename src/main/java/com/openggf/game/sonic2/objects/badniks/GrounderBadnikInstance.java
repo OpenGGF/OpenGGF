@@ -179,8 +179,8 @@ public class GrounderBadnikInstance extends AbstractBadnikInstance {
             int[] offset = GrounderWallInstance.WALL_OFFSETS[i];
             int wallX = currentX + offset[0];
             int wallY = currentY + offset[1];
-            GrounderWallInstance wall = new GrounderWallInstance(wallX, wallY, i, this);
-            services().objectManager().addDynamicObject(wall);
+            int wallIndex = i;
+            spawnChild(() -> new GrounderWallInstance(wallX, wallY, wallIndex, this));
         }
     }
 
@@ -190,8 +190,8 @@ public class GrounderBadnikInstance extends AbstractBadnikInstance {
      */
     private void spawnRocks() {
         for (int i = 0; i < 5; i++) {
-            GrounderRockProjectile rock = new GrounderRockProjectile(currentX, currentY, i, this);
-            services().objectManager().addDynamicObject(rock);
+            int rockIndex = i;
+            spawnChild(() -> new GrounderRockProjectile(currentX, currentY, rockIndex, this));
         }
     }
 

@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k;
 
 import com.openggf.data.RomByteReader;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.palette.PaletteSurface;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
@@ -248,7 +250,36 @@ public class TestS3kBpzPaletteCycling {
         assertNonZeroColor("palette[2] color 13 after 60 frames", level.getPalette(2).getColor(13));
     }
 
+    @Test
+    public void bpzCycleSubmitsPaletteOwnershipClaims() {
+        PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
+        StubLevel ownedLevel = new StubLevel(4);
+        Sonic3kPaletteCycler ownedCycler = new Sonic3kPaletteCycler(
+                readerWithBpzData(), ownedLevel, ZONE_BPZ, 0, registry, null);
+
+        registry.beginFrame();
+        ownedCycler.update();
+        registry.resolveInto(ownedLevel.palettes(), null, null, null);
+
+        for (int c = 13; c <= 15; c++) {
+            assertEquals(S3kPaletteOwners.BPZ_ZONE_CYCLE, registry.ownerAt(PaletteSurface.NORMAL, 2, c));
+        }
+        for (int c = 2; c <= 4; c++) {
+            assertEquals(S3kPaletteOwners.BPZ_ZONE_CYCLE, registry.ownerAt(PaletteSurface.NORMAL, 3, c));
+        }
+        assertNonZeroColor("owned BPZ palette[2] color 13", ownedLevel.getPalette(2).getColor(13));
+        assertNonZeroColor("owned BPZ palette[3] color 2", ownedLevel.getPalette(3).getColor(2));
+    }
+
     // ========== Helpers ==========
+
+    private static RomByteReader readerWithBpzData() {
+        int romSize = 0x0034DE + BPZ_2_DATA.length + 16;
+        byte[] romBytes = new byte[romSize];
+        System.arraycopy(BPZ_1_DATA, 0, romBytes, 0x0034CC, BPZ_1_DATA.length);
+        System.arraycopy(BPZ_2_DATA, 0, romBytes, 0x0034DE, BPZ_2_DATA.length);
+        return new RomByteReader(romBytes);
+    }
 
     private static Palette.Color copyColor(Palette.Color src) {
         return new Palette.Color(src.r, src.g, src.b);
@@ -272,6 +303,10 @@ public class TestS3kBpzPaletteCycling {
             for (int i = 0; i < paletteCount; i++) {
                 palettes[i] = new Palette();
             }
+        }
+
+        Palette[] palettes() {
+            return palettes;
         }
 
         @Override

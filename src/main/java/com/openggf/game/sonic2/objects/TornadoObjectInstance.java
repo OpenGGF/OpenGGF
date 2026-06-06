@@ -1311,7 +1311,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         ObjectSpawn smokeSpawn = new ObjectSpawn(
                 currentX, currentY, Sonic2ObjectIds.TORNADO_SMOKE, 0x90, spawn.renderFlags(), false, spawn.rawYWord());
         int randomOffset = Sonic2Rng.nextTornadoSmokeOffset(services().rng());
-        manager.addDynamicObject(new TornadoSmokeObjectInstance(smokeSpawn, randomOffset));
+        spawnFreeChild(() -> new TornadoSmokeObjectInstance(smokeSpawn, randomOffset));
     }
 
     private TornadoObjectInstance spawnTornadoChild(int childSubtype, int x, int y) {

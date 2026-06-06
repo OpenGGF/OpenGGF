@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
@@ -119,7 +121,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
     private boolean knucklesRecovery;
     private boolean flashColorsSaved;
     private boolean defeatHandoffQueued;
-    private final Palette.Color[] savedFlashColors = new Palette.Color[FLASH_INDICES.length];
+    private final int[] savedFlashSegaWords = new int[FLASH_INDICES.length];
     private S3kBossExplosionController defeatExplosionController;
     private DrillArmChild leftArm;
     private DrillArmChild rightArm;
@@ -532,18 +534,13 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
         if (!flashColorsSaved) {
             for (int i = 0; i < FLASH_INDICES.length; i++) {
                 Palette.Color existing = palette.getColor(FLASH_INDICES[i]);
-                savedFlashColors[i] = new Palette.Color(existing.r, existing.g, existing.b);
+                savedFlashSegaWords[i] = segaWordFromColor(existing);
             }
             flashColorsSaved = true;
         }
 
         int[] colors = ((state.invulnerabilityTimer & 1) != 0) ? FLASH_DARK : FLASH_BRIGHT;
-        for (int i = 0; i < FLASH_INDICES.length; i++) {
-            palette.setColor(FLASH_INDICES[i], colorFromGenesisWord(colors[i]));
-        }
-        if (services().graphicsManager() != null && services().graphicsManager().isGlInitialized()) {
-            services().graphicsManager().cachePaletteTexture(palette, 1);
-        }
+        applyFlashColors(colors);
 
         state.invulnerabilityTimer--;
         if (state.invulnerabilityTimer <= 0) {
@@ -562,13 +559,20 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
             return;
         }
         Palette palette = level.getPalette(1);
-        for (int i = 0; i < FLASH_INDICES.length; i++) {
-            palette.setColor(FLASH_INDICES[i], savedFlashColors[i]);
-        }
-        if (services().graphicsManager() != null && services().graphicsManager().isGlInitialized()) {
-            services().graphicsManager().cachePaletteTexture(palette, 1);
-        }
+        applyFlashColors(savedFlashSegaWords);
         flashColorsSaved = false;
+    }
+
+    private void applyFlashColors(int[] segaWords) {
+        S3kPaletteWriteSupport.applyColors(
+                services().paletteOwnershipRegistryOrNull(),
+                services().currentLevel(),
+                services().graphicsManager(),
+                S3kPaletteOwners.MGZ_MINIBOSS,
+                S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                1,
+                FLASH_INDICES,
+                segaWords);
     }
 
     private void applyContinuousShake(int frameCounter) {
@@ -624,11 +628,15 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
                 signpostX, services().currentAct(), S3kBossDefeatSignpostFlow.CleanupAction.NONE));
     }
 
-    private static Palette.Color colorFromGenesisWord(int word) {
-        Palette.Color color = new Palette.Color();
-        byte[] bytes = {(byte) ((word >> 8) & 0xFF), (byte) (word & 0xFF)};
-        color.fromSegaFormat(bytes, 0);
-        return color;
+    private static int segaWordFromColor(Palette.Color color) {
+        int r3 = quantizeSegaComponent(color.r);
+        int g3 = quantizeSegaComponent(color.g);
+        int b3 = quantizeSegaComponent(color.b);
+        return (b3 << 9) | (g3 << 5) | (r3 << 1);
+    }
+
+    private static int quantizeSegaComponent(byte component) {
+        return (((component & 0xFF) * 7) + 127) / 255;
     }
 
     @Override

@@ -272,8 +272,7 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
 
         ObjectRenderManager renderManager = services().renderManager();
         if (renderManager != null) {
-            services().objectManager().addDynamicObject(
-                    new ExplosionObjectInstance(0x27, spawn.x(), spawn.y(), renderManager));
+            spawnFreeChild(() -> new ExplosionObjectInstance(0x27, spawn.x(), spawn.y(), renderManager));
         }
         services().playSfx(Sonic2Sfx.EXPLOSION.id);
     }

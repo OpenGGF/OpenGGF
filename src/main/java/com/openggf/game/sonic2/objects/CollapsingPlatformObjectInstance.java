@@ -404,9 +404,9 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         for (int i = 0; i < delayData.length; i++) {
             int delay = delayData[i];
 
-            CollapsingPlatformFragmentInstance fragment = new CollapsingPlatformFragmentInstance(
-                    spawn.x(), spawn.y(), delay, i, config, renderManager, hFlip, vFlip);
-            objectManager.addDynamicObject(fragment);
+            final int pieceIndex = i;
+            spawnFreeChild(() -> new CollapsingPlatformFragmentInstance(
+                    spawn.x(), spawn.y(), delay, pieceIndex, config, renderManager, hFlip, vFlip));
         }
     }
 
