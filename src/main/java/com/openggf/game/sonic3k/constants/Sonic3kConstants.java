@@ -184,6 +184,9 @@ public class Sonic3kConstants {
     // Map_LBZExplodingTrigger (1 frame). LBZ S3-era misc mapping referenced by Obj_LBZExplodingTrigger;
     // no S&K-side duplicate exists, verified by RomArtIntakeTool + byte search at 0x2249A8.
     public static final int MAP_LBZ_EXPLODING_TRIGGER_ADDR = 0x2249A8;
+    // Map_LBZTriggerBridge (24 frames). Address derived from first frame label
+    // Frame_224E16 minus 24 word offsets in the mapping table.
+    public static final int MAP_LBZ_TRIGGER_BRIDGE_ADDR = 0x224DE6;
     public static final int MAP_LBZ_PLAYER_LAUNCHER_ADDR = 0x22534C; // Map_LBZPlayerLauncher (2 frames, S3K lock-on data)
     public static final int MAP_LBZ_RIDE_GRAPPLE_ADDR = 0x026930; // Map_LBZRideGrapple (3 frames, S&K-side)
     // Map_LBZCupElevator (5 frames). LockOn data include; verified by ROM byte

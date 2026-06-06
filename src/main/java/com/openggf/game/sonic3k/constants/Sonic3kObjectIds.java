@@ -37,6 +37,8 @@ public final class Sonic3kObjectIds {
     // S3KL object table: Obj_LBZExplodingTrigger.
     public static final int LBZ_EXPLODING_TRIGGER = 0x13;
     public static final int MHZ_MUSHROOM_CATAPULT = 0x13;
+    // S3KL object table: Obj_LBZTriggerBridge. SKL reuses $14 for Obj_Updraft.
+    public static final int LBZ_TRIGGER_BRIDGE = 0x14;
     public static final int UPDRAFT = 0x14;
     // S3KL object table: Obj_LBZPlayerLauncher.
     public static final int LBZ_PLAYER_LAUNCHER = 0x15;

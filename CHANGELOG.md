@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K LBZ trigger bridge (Obj $14) now has a dedicated implementation:**
+  The S3KL Launch Base trigger bridge now uses the ROM `byte_25F2A`
+  positioning/state table, `Level_trigger_array` open/close transitions,
+  `SolidObjectFull2` dimensions, child bridge handoff pieces, saved-X despawn
+  checks, and resident LBZ misc level art. Slot `$14` remains zone-set-aware so
+  SKL still resolves it as Updraft.
+
 - **S3K SnaleBlaster (Obj $BE) now has a dedicated LBZ badnik implementation:**
   SnaleBlaster is registered for the S3KL object table and now models the ROM
   shell wait/open-close cycle, rolling-player early-close branch, child shooter
