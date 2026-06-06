@@ -42,6 +42,8 @@ public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance {
     private State state = State.INIT;
     private int movementStep;
     private int movementTimer;
+    private int patrolTurnaroundTimer;
+    private int patrolTurnaroundReset;
     private boolean firingLatch;
 
     public CorkeyBadnikInstance(ObjectSpawn spawn) {
@@ -65,6 +67,8 @@ public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance {
     private void initialize() {
         // loc_8C746: render_flags bit 0 flips the one-pixel patrol direction.
         movementStep = facingLeft ? -1 : 1;
+        patrolTurnaroundTimer = spawn.subtype();
+        patrolTurnaroundReset = (spawn.subtype() << 1) & 0xFF;
         spawnChild(() -> new CorkeyNozzleChild(buildSpawnAt(currentX, currentY + NOZZLE_Y_OFFSET), this));
         resetMovementTimer();
         state = State.PATROL;
@@ -78,6 +82,16 @@ public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance {
             return;
         }
         currentX += movementStep;
+        updatePatrolTurnaround();
+    }
+
+    private void updatePatrolTurnaround() {
+        patrolTurnaroundTimer--;
+        if (patrolTurnaroundTimer >= 0) {
+            return;
+        }
+        movementStep = -movementStep;
+        patrolTurnaroundTimer = patrolTurnaroundReset;
     }
 
     private void updateWaitForNozzle() {

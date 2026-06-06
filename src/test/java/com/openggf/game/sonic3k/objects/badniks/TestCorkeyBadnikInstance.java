@@ -83,7 +83,7 @@ class TestCorkeyBadnikInstance {
     }
 
     @Test
-    void flippedSpawnPatrolsRight() {
+    void flippedSpawnPatrolsRightThenSubtypeZeroImmediatelyReverses() {
         AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 1024, 0);
         CorkeyBadnikInstance corkey = create(1);
         corkey.setServices(servicesWithObjectManager());
@@ -91,8 +91,26 @@ class TestCorkeyBadnikInstance {
         corkey.update(0, null);
         corkey.update(1, null);
 
-        assertEquals(1, corkey.movementStepForTesting());
+        assertEquals(-1, corkey.movementStepForTesting(),
+                "subtype 0 leaves Obj_Wait's word countdown at zero, so it reverses after every patrol move");
         assertEquals(0x0201, corkey.getX());
+    }
+
+    @Test
+    void subtypeControlsPatrolTurnaround() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 1024, 0);
+        CorkeyBadnikInstance corkey = createWithSubtype(2, 0);
+        corkey.setServices(servicesWithObjectManager());
+
+        corkey.update(0, null);
+        corkey.update(1, null);
+        corkey.update(2, null);
+        corkey.update(3, null);
+
+        assertEquals(1, corkey.movementStepForTesting(),
+                "Obj_Wait calls loc_8C7BC after the subtype countdown expires, reversing $40");
+        assertEquals(0x01FD, corkey.getX(),
+                "The ROM reverses after moving on the expiry frame, not before");
     }
 
     @Test
@@ -145,8 +163,12 @@ class TestCorkeyBadnikInstance {
     }
 
     private static CorkeyBadnikInstance create(int renderFlags) {
+        return createWithSubtype(0, renderFlags);
+    }
+
+    private static CorkeyBadnikInstance createWithSubtype(int subtype, int renderFlags) {
         return new CorkeyBadnikInstance(
-                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.CORKEY, 0, renderFlags, false, 0));
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.CORKEY, subtype, renderFlags, false, 0));
     }
 
     private static ObjectServices servicesWithObjectManager() {
