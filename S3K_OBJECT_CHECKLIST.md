@@ -5,8 +5,8 @@ Generated: 2026-06-04 15:26:08
 ## Summary
 
 - **Total unique objects found:** 303
-- **Implemented:** 149 (49.2%)
-- **Unimplemented:** 154 (50.8%)
+- **Implemented:** 150 (49.5%)
+- **Unimplemented:** 153 (50.5%)
 
 ## Implemented Objects
 
@@ -127,6 +127,7 @@ Generated: 2026-06-04 15:26:08
 | 0x13 | LBZExplodingTrigger | 11 |  | LBZ1, LBZ2 |
 | 0x14 | LBZTriggerBridge | 11 |  | LBZ1, LBZ2 |
 | 0x15 | LBZPlayerLauncher | 24 |  | LBZ1, LBZ2 |
+| 0x16 | LBZFlameThrower | 25 |  | LBZ1, LBZ2 |
 | 0x17 | LBZRideGrapple | 13 |  | LBZ1, LBZ2 |
 | 0x18 | LBZCupElevator | 22 |  | LBZ1, LBZ2 |
 | 0x19 | LBZCupElevatorPole | 72 |  | LBZ1, LBZ2 |
@@ -196,7 +197,6 @@ Generated: 2026-06-04 15:26:08
 | 0x7D | Object | SSZBouncyCloud | 27 |  | SSZ1 |
 | 0x19 | Object | LRZDoor | 26 |  | LRZ1, LRZ2 |
 | 0xA0 | Boss | EggRobo | 26 |  | SSZ1 |
-| 0x16 | Object | LBZFlameThrower | 25 |  | LBZ1, LBZ2 |
 | 0x41 | Object | SOZLightSwitch | 25 |  | SOZ2 |
 | 0x20 | Object | LRZSwingingSpikeBall | 25 |  | LRZ1, LRZ2 |
 | 0x7E | Object | SSZCollapsingColumn | 25 |  | SSZ1 |
@@ -821,7 +821,7 @@ Total: 356 objects | Implemented: 29 | Unimplemented: 0
 
 #### Act 1
 
-Total: 430 objects | Implemented: 27 | Unimplemented: 5
+Total: 430 objects | Implemented: 28 | Unimplemented: 4
 
 **Badniks:**
 - [x] 0xBE SnaleBlaster (x5) [0x00]
@@ -845,7 +845,7 @@ Total: 430 objects | Implemented: 27 | Unimplemented: 5
 - [x] 0x13 LBZExplodingTrigger (x8) [7 subtypes]
 - [x] 0x14 LBZTriggerBridge (x7) [7 subtypes]
 - [x] 0x15 LBZPlayerLauncher (x6) [0x00]
-- [ ] 0x16 LBZFlameThrower (x11) [0x20, 0x00]
+- [x] 0x16 LBZFlameThrower (x11) [0x20, 0x00]
 - [x] 0x17 LBZRideGrapple (x7) [7 subtypes]
 - [x] 0x18 LBZCupElevator (x12) [10 subtypes]
 - [x] 0x19 LBZCupElevatorPole (x41) [4 subtypes]
@@ -863,7 +863,7 @@ Total: 430 objects | Implemented: 27 | Unimplemented: 5
 
 #### Act 2
 
-Total: 489 objects | Implemented: 25 | Unimplemented: 10
+Total: 489 objects | Implemented: 26 | Unimplemented: 9
 
 **Badniks:**
 - [x] 0xBE SnaleBlaster (x7) [0x00]
@@ -888,7 +888,7 @@ Total: 489 objects | Implemented: 25 | Unimplemented: 10
 - [x] 0x13 LBZExplodingTrigger (x3) [0x08, 0x09, 0x0A]
 - [x] 0x14 LBZTriggerBridge (x4) [4 subtypes]
 - [x] 0x15 LBZPlayerLauncher (x18) [0x00]
-- [ ] 0x16 LBZFlameThrower (x14) [4 subtypes]
+- [x] 0x16 LBZFlameThrower (x14) [4 subtypes]
 - [x] 0x17 LBZRideGrapple (x6) [6 subtypes]
 - [x] 0x18 LBZCupElevator (x10) [6 subtypes]
 - [x] 0x19 LBZCupElevatorPole (x31) [0x00, 0x01]

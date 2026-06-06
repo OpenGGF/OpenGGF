@@ -188,6 +188,8 @@ public class Sonic3kConstants {
     // Frame_224E16 minus 24 word offsets in the mapping table.
     public static final int MAP_LBZ_TRIGGER_BRIDGE_ADDR = 0x224DE6;
     public static final int MAP_LBZ_PLAYER_LAUNCHER_ADDR = 0x22534C; // Map_LBZPlayerLauncher (2 frames, S3K lock-on data)
+    // Map_LBZFlameThrower (9 frames). LockOn S3 data; Obj_LBZFlameThrower in sonic3k.asm references this S3-half table.
+    public static final int MAP_LBZ_FLAME_THROWER_ADDR = 0x22544E;
     public static final int MAP_LBZ_RIDE_GRAPPLE_ADDR = 0x026930; // Map_LBZRideGrapple (3 frames, S&K-side)
     // Map_LBZCupElevator (5 frames). LockOn data include; verified by ROM byte
     // search for offset-table prefix 00 0A 00 18 00 20 00 2E 00 42.

@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K LBZ flame thrower (Obj $16) now has a dedicated implementation:**
+  S3KL slot `$16` now routes to `Obj_LBZFlameThrower`, using ROM-backed LBZ
+  misc level art, the ROM 128-frame subtype-offset fire cadence, full-solid
+  emitter bounds, fire-shield reaction flags, and the `Ani_LBZFlameThrower`
+  child flame sequence.
+
 - **S3K LBZ exploding trigger (Obj $13) now honors placement flip flags:**
   the visible trigger frame now passes the object-position h/v flip bits through
   to the renderer, so right-facing placements no longer draw with the raw

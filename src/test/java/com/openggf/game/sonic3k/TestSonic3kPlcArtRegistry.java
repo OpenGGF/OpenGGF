@@ -224,6 +224,20 @@ public class TestSonic3kPlcArtRegistry {
     }
 
     @Test
+    public void lbzPlanIncludesFlameThrowerLevelArt() {
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x06, 0);
+
+        Sonic3kPlcArtRegistry.LevelArtEntry flameThrower = plan.levelArt().stream()
+                .filter(e -> e.key().equals(Sonic3kObjectArtKeys.LBZ_FLAME_THROWER))
+                .findFirst().orElse(null);
+
+        assertNotNull(flameThrower, "Obj_LBZFlameThrower uses resident LBZ misc art and must be in the LBZ level-art plan");
+        assertEquals(Sonic3kConstants.MAP_LBZ_FLAME_THROWER_ADDR, flameThrower.mappingAddr());
+        assertEquals(Sonic3kConstants.ARTTILE_LBZ_MISC - 0x17, flameThrower.artTileBase());
+        assertEquals(2, flameThrower.palette());
+    }
+
+    @Test
     public void lbzPlanIncludesTubeElevatorLevelArt() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x06, 0);
 
@@ -272,6 +286,29 @@ public class TestSonic3kPlcArtRegistry {
             assertRideGrapplePiece(frames.get(0), 2, 2, 0);
             assertRideGrapplePiece(frames.get(1), 1, 1, 4);
             assertRideGrapplePiece(frames.get(2), 2, 2, 5);
+        }
+    }
+
+    @Test
+    public void lbzFlameThrowerMappingsMatchRomShape() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            var frames = S3kSpriteDataLoader.loadMappingFrames(reader, Sonic3kConstants.MAP_LBZ_FLAME_THROWER_ADDR);
+
+            assertEquals(9, frames.size(), "Map_LBZFlameThrower has the nozzle plus eight flame frames");
+            assertLbzFlameThrowerFrame(frames.get(0), new int[][]{{4, 4, 0x3B}});
+            assertLbzFlameThrowerFrame(frames.get(1), new int[][]{{2, 1, 0x4B}, {2, 1, 0x4D}});
+            assertLbzFlameThrowerFrame(frames.get(2), new int[][]{{2, 1, 0x4D}, {2, 1, 0x4F}, {2, 1, 0x51}, {2, 2, 0x57}});
+            assertLbzFlameThrowerFrame(frames.get(3), new int[][]{{2, 1, 0x4B}, {2, 1, 0x4D}, {2, 1, 0x4F}, {2, 1, 0x51}, {2, 2, 0x53}, {2, 2, 0x57}});
+            assertLbzFlameThrowerFrame(frames.get(4), new int[][]{{2, 1, 0x4B}, {2, 1, 0x4D}, {2, 1, 0x4F}, {2, 1, 0x51}, {2, 2, 0x53}, {2, 2, 0x57}});
+            assertLbzFlameThrowerFrame(frames.get(5), new int[][]{{2, 1, 0x4D}, {2, 1, 0x4F}, {2, 1, 0x51}, {2, 2, 0x53}, {2, 2, 0x53}, {2, 2, 0x5B}});
+            assertLbzFlameThrowerFrame(frames.get(6), new int[][]{{2, 1, 0x4D}, {2, 1, 0x4F}, {2, 1, 0x51}, {2, 2, 0x53}, {2, 2, 0x53}, {2, 2, 0x5B}});
+            assertLbzFlameThrowerFrame(frames.get(7), new int[][]{{2, 1, 0x4B}, {2, 1, 0x4D}, {2, 1, 0x4F}, {2, 2, 0x5B}});
+            assertLbzFlameThrowerFrame(frames.get(8), new int[][]{{2, 1, 0x4B}, {2, 1, 0x5F}});
         }
     }
 
@@ -714,6 +751,16 @@ public class TestSonic3kPlcArtRegistry {
         assertEquals(widthTiles, piece.widthTiles());
         assertEquals(heightTiles, piece.heightTiles());
         assertEquals(tileIndex, piece.tileIndex());
+    }
+
+    private static void assertLbzFlameThrowerFrame(SpriteMappingFrame frame, int[][] expectedPieces) {
+        assertEquals(expectedPieces.length, frame.pieces().size(), "LBZ flame thrower frame piece count");
+        for (int i = 0; i < expectedPieces.length; i++) {
+            SpriteMappingPiece piece = frame.pieces().get(i);
+            assertEquals(expectedPieces[i][0], piece.widthTiles(), "LBZ flame thrower piece " + i + " width");
+            assertEquals(expectedPieces[i][1], piece.heightTiles(), "LBZ flame thrower piece " + i + " height");
+            assertEquals(expectedPieces[i][2], piece.tileIndex(), "LBZ flame thrower piece " + i + " tile");
+        }
     }
 
     private static void assertSaneObjectSpriteSheet(String context, ObjectSpriteSheet sheet) {

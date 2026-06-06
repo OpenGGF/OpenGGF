@@ -1414,6 +1414,13 @@ public final class Sonic3kPlcArtRegistry {
                 2,
                 null));
 
+        // Flame Thrower (Object 0x16): make_art_tile(ArtTile_LBZMisc-$17, 2, 0)
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.LBZ_FLAME_THROWER,
+                Sonic3kConstants.MAP_LBZ_FLAME_THROWER_ADDR,
+                Sonic3kConstants.ARTTILE_LBZ_MISC - 0x17,
+                2,
+                null));
+
         // Ride Grapple: make_art_tile(ArtTile_LBZMisc+$70, 1, 0)
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.LBZ_RIDE_GRAPPLE,
                 Sonic3kConstants.MAP_LBZ_RIDE_GRAPPLE_ADDR,

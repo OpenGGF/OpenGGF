@@ -99,6 +99,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                 0x11, // LBZMovingPlatform
                 0x13, // LBZExplodingTrigger
                 0x14, // LBZTriggerBridge
+                0x16, // LBZFlameThrower
                 0x17, // LBZRideGrapple
                 0x18, // LBZCupElevator
                 0x19, // LBZCupElevatorPole
