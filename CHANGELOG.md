@@ -4,7 +4,27 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
-- **S3K Corkey (Obj $C1) now has a dedicated LBZ badnik implementation:**
+- **S3K complete-run per-zone traces clear their frame-0 bootstrap mismatches
+  via a one-time mid-run start seed:** the per-zone S3K complete-run segments
+  arm at each zone's first control-unlocked frame, but five of the seven zones
+  (CNZ, MHZ, ICZ, HCZ, LBZ) are entered mid-run from the previous zone's
+  seamless act/zone handoff, so their recorded frame-0 row carries residual
+  entry state a freshly loaded zone cannot derive: a frozen pre-LevelLoop
+  airborne descent (CNZ/MHZ `y_speed==0`), a held mid-roll with carried object
+  velocity (ICZ), the inter-zone camera position the handoff left behind (MHZ
+  `camera_x`), and an exact Tails follow position (HCZ/LBZ). This is the
+  velocity/status/camera/sidekick analogue of the position/RNG/oscillation
+  pre-trace seeds the replay bootstrap already applies - a single "load the save
+  state at the BK2 start" write in
+  `TraceReplaySessionBootstrap.seedS3kCompleteRunStartState`, performed once
+  before replay begins and never per frame, so trace replay stays
+  comparison-only. The seed is keyed off the recorded frame-0 ROM-state shape
+  (airborne-with-zero-y-speed, rolling, or a present sidekick that the native
+  first step would re-anchor) rather than any zone id; cleanly reproducible
+  entries (AIZ first-zone start, MGZ vertical fall-in) are left untouched on the
+  native drive path, so the dedicated S3K AIZ/CNZ/MGZ and S2 EHZ1 trace
+  frontiers are unchanged. All seven complete-run zones now clear frame 0 and
+  advance to a real per-frame frontier.
   Corkey is registered for the S3KL object table and now uses ROM-backed Corkey
   art for its parent body, nozzle child, and three-shot firing cycle. The port
   follows the disassembly patrol timer/latch flow, uses the ROM projectile

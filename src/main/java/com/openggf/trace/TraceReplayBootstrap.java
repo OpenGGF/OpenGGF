@@ -105,6 +105,45 @@ public final class TraceReplayBootstrap {
 
     public static ReplayStartState applyReplayStartStateForTraceReplay(TraceData trace,
                                                                        TraceReplayFixture fixture) {
+        return applyReplayStartStateForTraceReplay(trace, fixture, false);
+    }
+
+    /**
+     * @param seededS3kCompleteRunStart true when
+     *        {@link com.openggf.trace.replay.TraceReplaySessionBootstrap
+     *        #seedS3kCompleteRunStartState} applied a one-time frame-0 seed for
+     *        this S3K complete-run segment. When set, frame 0 is compared
+     *        directly against the seeded engine state (no driven physics tick)
+     *        and replay drives natively from trace frame 1.
+     */
+    public static ReplayStartState applyReplayStartStateForTraceReplay(TraceData trace,
+                                                                       TraceReplayFixture fixture,
+                                                                       boolean seededS3kCompleteRunStart) {
+        if (seededS3kCompleteRunStart) {
+            // S3K per-zone complete-run segments arm at a zone's first
+            // control-unlocked frame, but five of the seven zones are entered
+            // mid-run from the previous zone's seamless act/zone handoff. The
+            // recorded frame-0 row therefore carries residual entry state -
+            // scripted/object descent velocity (CNZ, MHZ), a held mid-roll
+            // (ICZ), or an exact Tails follow position (HCZ, LBZ) - that a
+            // freshly loaded zone cannot derive natively, because the engine
+            // never ran the previous zone's exit. This is the same situation
+            // the position/RNG/oscillation pre-trace seed already handles:
+            // "load a save state at the BK2 start". The recorded frame-0
+            // primary + sidekick state has been applied once by
+            // TraceReplaySessionBootstrap.seedS3kCompleteRunStartState, so frame
+            // 0 is compared directly against that seeded engine state and the
+            // BK2 input stream then drives every later frame natively. No
+            // per-frame writeback occurs.
+            if (fixture != null) {
+                // Consume BK2 input 0 so trace frame 1 uses BK2 input 1, exactly
+                // like the sidekick-seed path below. The frame-0 row is the
+                // seeded state, not the product of a driven physics tick.
+                int seedInput = fixture.consumeRecordingFrameInputOnly();
+                recordSeedFrameInputHistory(fixture.sprite(), seedInput);
+            }
+            return new ReplayStartState(1, 0);
+        }
         if (usesSidekickTitleCardSeedFrame(trace)) {
             if (fixture != null) {
                 // The frame-0 row is reproduced by the native sidekick-only
@@ -576,7 +615,38 @@ public final class TraceReplayBootstrap {
         return gameplayStartFrame >= 0 && current.frame() <= gameplayStartFrame;
     }
 
+    /**
+     * Identifies an S3K Sonic+Tails complete-run per-zone segment. These
+     * fixtures arm at a zone's first control-unlocked frame; five of the seven
+     * are entered mid-run from the previous zone's seamless act/zone handoff.
+     * The predicate keys off the recording's structural identity - S3K, a
+     * recorded sidekick, and the {@code complete_run} trace profile - never a
+     * zone id, route, or frame number. The legacy AIZ intro full-run trace
+     * drives its cutscene prefix from trace frame 0 and is excluded.
+     */
+    public static boolean isS3kCompleteRunSegment(TraceData trace) {
+        if (trace == null || trace.frameCount() == 0) {
+            return false;
+        }
+        TraceMetadata metadata = trace.metadata();
+        if (metadata == null
+                || !"s3k".equals(metadata.game())
+                || metadata.recordedSidekicks().isEmpty()
+                || !"complete_run".equals(metadata.traceProfile())
+                || isLegacyS3kAizIntroTrace(trace)) {
+            return false;
+        }
+        return replaySeedTraceIndexForTraceReplay(trace) == 0;
+    }
+
     private static boolean usesSidekickTitleCardSeedFrame(TraceData trace) {
+        if (isS3kCompleteRunSegment(trace)) {
+            // Complete-run segments own frame-0 reproduction through the
+            // engine-state-compared start seed (see
+            // TraceReplaySessionBootstrap.seedS3kCompleteRunStartState); the
+            // gfc==1 sidekick-only prelude path must not also fire for them.
+            return false;
+        }
         if (!hasS3kSidekickTitleCardPrelude(trace)) {
             return false;
         }
