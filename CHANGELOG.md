@@ -4,6 +4,16 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 Chopper leap integration now follows ROM `SpeedToPos`:**
+  `Sonic1ChopperBadnikInstance` now updates vertical position through the
+  ROM-style 16.16 `SpeedToPos` path, applies Chopper's `$18` gravity after
+  movement, and preserves the low Y accumulator when snapping the high word
+  back to `chop_origY`. The S1 routine calls `SpeedToPos`, then increments
+  `obVelY`, and its origin snap writes only `obY.w`
+  (`docs/s1disasm/_incObj/2B Chopper.asm:24-38`;
+  `docs/s1disasm/_incObj/sub SpeedToPos.asm:5-17`). This advances
+  `TestS1Ghz2CompleteRunTraceReplay` from first-error frame 1690 to 2369; the
+  new frontier is a separate Obj18 platform landing/riding mismatch.
 - **S1 GHZ/MZ Swinging Platform continued-ride height now matches Obj15:**
   `Sonic1SwingingPlatformObjectInstance` now separates the ROM's fresh-landing
   surface from the continued-riding surface. `Swing_SetSolid` passes

@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-06-06 - s1 ghz2 f1690->f2369: Chopper uses 16.16 SpeedToPos state
+
+- Branch `bugfix/ai-trace-s1-r3-ghz2`, worktree `.worktrees/trace-s1-r3-ghz2`.
+- Target command:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \"-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen\" \"-Dtest=TestS1Ghz2CompleteRunTraceReplay\" test"`
+- S1 green guard command:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \"-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen\" \"-Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestS1Ghz1TraceReplay\" test"`
+  passed: `MSE:OK modules=1 passed=9 failed=0 errors=0 skipped=0`.
+- **Status: ADVANCED (still failing).** First-error frame **1690 -> 2369**.
+  Surefire: `Tests run: 1, Failures: 1`. New first error is `y`
+  expected `0x0268`, actual `0x0265`, while landing/riding Obj18 Platform.
+- **Root cause:** Chopper's ROM routine calls `SpeedToPos`, then adds `$18` to
+  `obVelY`, and when returning to origin writes only `obY.w` before resetting
+  `obVelY`. The engine used the 16:8 `moveSprite` helper and cleared the low
+  Y accumulator on the origin snap, making the leap cadence reach the GHZ2
+  enemy-bounce overlap one frame early.
+- **Fix:** `Sonic1ChopperBadnikInstance` now uses the existing 16.16
+  `SubpixelMotion.speedToPosY` path, applies Chopper gravity after movement,
+  and preserves the low Y accumulator when snapping the high position word to
+  `chop_origY`.
+- **Disasm cites:** `docs/s1disasm/_incObj/2B Chopper.asm:24-38`
+  (`obColType`, `SpeedToPos`, `$18` gravity, high-word origin snap),
+  `docs/s1disasm/_incObj/sub SpeedToPos.asm:5-17` (32-bit
+  `obY += obVelY << 8`), `docs/s1disasm/_incObj/sub ReactToItem.asm:173-232`
+  (`React_Enemy` bounce timing).
+- Genuineness gate: PASS. The fix is object-behavior driven, adds no trace
+  hydration, no tolerance, and no zone/route/frame carve-out.
+
 ## 2026-06-06 - s1 ghz2 f1409->f1690: Obj15 SwingingPlatform continued-ride surface is obHeight+1
 
 - Branch `bugfix/ai-trace-s1-r2-ghz2`, worktree `.worktrees/trace-s1-r2-ghz2`.
