@@ -463,8 +463,11 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
         // Check for large bubble override
         // btst #7,objoff_36(a0) / beq.s .fail
         if ((productionFlags & 0x80) != 0) {
-            // ~25% chance to spawn type 2 (large breathable)
-            if (rng.nextBits(3) == 0) {
+            // docs/s1disasm/_incObj/64 Bubbles.asm:181-187 masks the
+            // RandomNumber word with #3, so only the low two bits drive this
+            // 25% large-bubble override. Consuming/testing three bits shifts
+            // later Obj64 subtype cadence.
+            if (rng.nextBits(0x03) == 0) {
                 if ((productionFlags & 0x40) == 0) {
                     productionFlags |= 0x40;
                     bubbleSubtype = 2;
@@ -575,8 +578,15 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
             return false;
         }
 
-        int playerX = player.getCentreX();
-        int playerY = player.getCentreY();
+        // S1 Obj64 runs Bub_ChkSonic from the bubble object's ExecuteObjects
+        // slot before the bubble's own SpeedToPos step
+        // (docs/s1disasm/_incObj/64 Bubbles.asm:77-105). The engine's S1
+        // object pass runs after player physics for inline solid parity, so use
+        // the sprite-history pre-current-movement centre for this standalone
+        // object collision check instead of letting a post-movement edge contact
+        // overwrite Sonic with id_GetAir/locktime=35.
+        int playerX = player.getCentreX(1);
+        int playerY = player.getCentreY(1);
 
         // X check: subi.w #$10,d1 / cmp.w d0,d1 / bhs.s .no
         //   bhs branches when bubbleLeft >= playerX → no collision

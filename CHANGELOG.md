@@ -25,6 +25,13 @@ All notable changes to the OpenGGF project are documented in this file.
   (`docs/s1disasm/_incObj/64 Bubbles.asm:141-151,166-196`). This advances
   `TestS1Sbz3CompleteRunTraceReplay` from first-error frame 839 to 1420; the
   new frontier is a separate player `y` mismatch near bubbles/Jaws contact.
+  A follow-up Obj64 correction now masks the large-bubble override RNG word
+  with `#3` and samples Sonic's sprite-history centre for `Bub_ChkSonic`, so
+  the engine's post-physics object pass does not fire the standalone bubble
+  contact one frame earlier than the ROM
+  (`docs/s1disasm/_incObj/64 Bubbles.asm:77-105,181-187`). This advances the
+  same trace from frame 1420 to 1421; the new frontier is a camera-Y mismatch
+  after the breathing-bubble contact timing.
 - **S1 LZ water-slide detection now samples ROM `obX`/`obY` only:** The LZ
   water-slide event no longer checks a secondary sprite-origin chunk or keeps a
   slide-exit grace window. S1 `LZWaterSlides` samples `v_lvllayout` using

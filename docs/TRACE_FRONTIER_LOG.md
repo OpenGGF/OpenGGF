@@ -64,6 +64,44 @@
   present in this worktree; the root cause is documented here and in the
   changelog.
 
+## 2026-06-06 - s1 sbz3 f1420->f1421: Obj64 Bub_ChkSonic uses pre-current player centre
+
+- Branch `bugfix/ai-trace-s1-r5-sbz3`, worktree `.worktrees/trace-s1-r5-sbz3`.
+- Target command:
+  `mvn "-Dtest=TestS1Sbz3CompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+- **Status: ADVANCED (still failing).** First-error frame **1420 -> 1421**,
+  error count **4686** at the new frontier. Surefire: `Tests run: 1,
+  Failures: 1`. New first error is `camera_y` expected `0x038C`, actual
+  `0x0388`, after the Obj64/breathing-bubble contact area.
+- **Root cause:** S1 Obj64 runs `Bub_ChkSonic` from the bubble object's
+  `ExecuteObjects` slot before the bubble's own `SpeedToPos` step. The engine's
+  S1 object pass runs after player physics for inline solid parity, so the
+  standalone Obj64 bubble contact check was observing the post-movement Sonic
+  centre and firing the `id_GetAir` / `locktime=35` branch one frame early.
+  Separately, the large-bubble override masks the `RandomNumber` word with
+  `#3`; consuming/testing three low bits shifted the later Obj64 subtype
+  cadence.
+- **Fix:** `Sonic1BubblesObjectInstance` now checks `Bub_ChkSonic` against the
+  sprite-history pre-current-movement player centre and uses `rng.nextBits(0x03)`
+  for the large-bubble override test.
+- **Disasm cites:** `docs/s1disasm/_incObj/64 Bubbles.asm:77-105`
+  (`Bub_ChkSonic` and the `id_GetAir`/locktime path) and
+  `docs/s1disasm/_incObj/64 Bubbles.asm:181-187` (`RandomNumber` masked by
+  `andi.w #3` for the large-bubble override).
+- **Same-game regression guard (PASS, zero regressions):**
+  `mvn "-Dsurefire.forkCount=1" "-Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestS1Ghz1TraceReplay" "-DfailIfNoTests=false" test`
+  -> `MSE:OK modules=1 passed=9 failed=0 errors=0 skipped=0`. The default
+  four-fork guard attempt hit a Windows LWJGL native-DLL lock before most
+  classes executed, so the serial rerun is the parity signal.
+- Optional LZ2 check:
+  `mvn "-Dsurefire.forkCount=1" "-Dtest=TestS1Lz2CompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+  remains at the already-logged LZ2 frontier, frame 1089 `y` mismatch
+  (`expected=0x03A8`, `actual=0x03AD`).
+- Genuineness gate: PASS. The fix is ROM object-routine/RNG-state driven, adds
+  no trace hydration, no tolerance, and no zone/route/frame/known-trace
+  carve-out. The S1 object pitfall catalogue file named by the trace workflow is
+  not present in this worktree, so no skill catalogue update was applicable.
+
 ## 2026-06-06 - s1 lz2 f463->f1089: LZ water slide uses centre `obX`/`obY` layout sample
 
 - Branch `bugfix/ai-trace-s1-r4-lz2`, worktree `.worktrees/trace-s1-r4-lz2`.
