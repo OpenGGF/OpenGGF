@@ -8692,3 +8692,31 @@ Command: `cmd //c mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=t
   fix. Frontier advanced 3329 -> 3365 (+36).
 - Same-game regression guard (TestS2ArzLevelSelectTraceReplay, TestS2Ehz1TraceReplay,
   TestS2WfzLevelSelectTraceReplay): all PASS, zero regressions.
+## 2026-06-06 — s2 htz (HTZ level-select): Obj36 spike pushing-latch keyed by live instance
+
+Worktree .worktrees/trace-s2-htz, branch bugfix/ai-trace-s2-htz, forkCount=1, s2.gen.
+Command: `mvn -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=...s2.gen" "-Dtest=TestS2HtzLevelSelectTraceReplay#replayMatchesTrace" test`
+
+- BEFORE: 348 errors, first error frame 5686 (tails_y_speed expected=-000B actual=-0008; controlling
+  divergence one frame later at 5687 tails_rolling 1->0 / tails_air 0->1). Rolling CPU Tails pushing
+  an Obj41 up-spring oscillates inertia 0<->0x7A every other frame (ROM s2.asm:40050-40092). The
+  engine unrolled one frame early because Tails' Status_Push bit dropped, flipping TailsCPU_Normal
+  out of the "Tails pushing & Sonic not pushing" skip (s2.asm:39291-39294) into FollowLeft steering,
+  which fed a LEFT input that failed to brake the leftward inertia and decayed g_speed to 0 ->
+  Tails_CheckRollStop unrolled.
+- ROOT CAUSE: the nearby moving Obj36 spike (extends/retracts in place, rebuilding its engine
+  ObjectSpawn position) fragmented the engine's object-pushing-bit latch across two value-distinct
+  spawn keys. ROM keeps that bit in the single SST byte status(a0) (set SolidObject_AtEdge
+  s2.asm:35438, cleared SolidObject_TestClearPush s2.asm:35480, and TestClearPush is a no-op unless
+  that bit is set: s2.asm:35459). The stale spawn-keyed latch fired TestClearPush much later during
+  the spring oscillation, clearing the Status_Push that terrain Obj02_CheckWallsOnGround had set
+  (s2.asm:36849,36859) on a frame ROM leaves it untouched (inertia==0 early-return s2.asm:36828-36829).
+- FIX (SpikeObjectInstance.java): override usesInstanceSolidStateLatchKey()=true so the S2 spike's
+  pushing/standing latch is keyed by the stable live instance (ROM single-SST-bit semantics): set
+  once on side contact, cleared exactly once on the first no-contact frame, never spuriously
+  re-triggered. Per-object, S2 Obj36 only; S1/S3K use their own spike classes.
+- AFTER: 269 errors, first error frame 6114 (Sonic air expected=1 actual=0); frontier advanced
+  5686 -> 6114 (+428). The new blocker is a DISTINCT, unrelated Sonic high-speed (g~0x056B)
+  ground-to-air transition near an HTZ Barrier(0x2D)/InvisibleBlock(0x74) region (x~0x1A01), not the
+  Tails spring oscillation. Verified no regression: clean-HEAD A/B for s2 cnz (f3906), htz2 (f2306),
+  mcz (f3574) are byte-identical with and without this change.

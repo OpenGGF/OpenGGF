@@ -17,6 +17,23 @@ All notable changes to the OpenGGF project are documented in this file.
   to attack WITHOUT moving that frame), then the reversal-timer decrement, then
   ObjectMove. Advances the CPZ level-select trace from first-error frame 3329 to
   3365.
+- **S2 spike (Obj36) pushing/standing latch now keyed by the live object
+  (ROM single-SST-bit semantics):** `SpikeObjectInstance` overrides
+  `usesInstanceSolidStateLatchKey()` so its solid-contact pushing/standing latch
+  follows the live instance rather than its value-equal `ObjectSpawn` record.
+  S2 spikes extend/retract in place, rebuilding their engine spawn position as
+  they move, which fragmented the spawn-keyed latch into distinct keys per
+  position. The ROM keeps the pushing/standing bit in the single object SST byte
+  `status(a0)` (set `SolidObject_AtEdge` s2.asm:35438, cleared
+  `SolidObject_TestClearPush` s2.asm:35480, no-op unless set s2.asm:35459), so
+  the bit belongs to the slot, not a position snapshot. The stale spawn-keyed
+  latch spuriously fired `SolidObject_TestClearPush` during the HTZ up-spring
+  roll-oscillation, dropping CPU Tails' `Status_Push` (set by terrain
+  `Obj02_CheckWallsOnGround` s2.asm:36849,36859) and flipping
+  `TailsCPU_Normal` out of the "Tails pushing & Sonic not pushing" skip
+  (s2.asm:39291-39294) into a FollowLeft steering branch that unrolled Tails one
+  frame early. Advances the HTZ level-select trace from first-error frame 5686 to
+  6114.
 - **OOZ/CPZ rising platform now integrates sub-pixels (ROM-accurate):**
   `CPZPlatformObjectInstance` auto-rise (Obj19_MoveRoutine5/6) previously did
   `y += yVel >> 8`, dropping the sub-pixel fraction and stepping a full pixel
