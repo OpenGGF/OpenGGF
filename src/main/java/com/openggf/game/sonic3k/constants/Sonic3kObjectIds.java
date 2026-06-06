@@ -202,6 +202,8 @@ public final class Sonic3kObjectIds {
     public static final int ICZ_MINIBOSS = 0xBC;
     // S3KL object table: Obj_ICZEndBoss.
     public static final int ICZ_END_BOSS = 0xBD;
+    // S3KL object table: Obj_SnaleBlaster.
+    public static final int SNALE_BLASTER = 0xBE;
     // S3KL object table: Obj_Ribot.
     public static final int RIBOT = 0xBF;
     // S3KL object table: Obj_Orbinaut.

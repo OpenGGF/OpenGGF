@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K SnaleBlaster (Obj $BE) now has a dedicated LBZ badnik implementation:**
+  SnaleBlaster is registered for the S3KL object table and now models the ROM
+  shell wait/open-close cycle, rolling-player early-close branch, child shooter
+  animations, projectile SFX, hurt projectile movement, and shield deflection.
+  Updates the S3K object checklist from 147 to 148 implemented objects.
+
 - **S3K Corkey (Obj $C1) now has a dedicated LBZ badnik implementation:**
   Corkey is registered for the S3KL object table and now uses ROM-backed Corkey
   art for its parent body, nozzle child, and three-shot firing cycle. The port
