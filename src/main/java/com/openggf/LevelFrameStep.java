@@ -2,6 +2,8 @@ package com.openggf;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.BonusStageProvider;
+import com.openggf.game.GameServices;
+import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.managers.SpriteManager;
@@ -37,6 +39,12 @@ public final class LevelFrameStep {
 
     private static final StepWrapper DIRECT = (name, step) -> step.run();
 
+    /**
+     * Public no-op step wrapper for callers (e.g. the headless test runner) that
+     * route through {@link #executeWithPause} but do not need profiling.
+     */
+    public static final StepWrapper DIRECT_WRAPPER = DIRECT;
+
     private LevelFrameStep() {
         // Utility class
     }
@@ -53,6 +61,35 @@ public final class LevelFrameStep {
     public static void execute(LevelFrameContext context, LevelManager levelManager, Camera camera,
                                Runnable spriteUpdate) {
         execute(context, levelManager, camera, spriteUpdate, DIRECT);
+    }
+
+    /**
+     * Executes one frame of level-mode updates, applying ROM in-game pause first.
+     * <p>
+     * This is the gameplay-loop entry point that honours {@code Game_paused}. The
+     * Start-press edge is supplied by the caller from the live/replay input stream
+     * (never from trace data) and toggles {@link GameStateManager#applyPauseToggle}.
+     * When the game is paused after the toggle, the entire level update body is
+     * skipped for this frame — exactly as ROM {@code Pause_Loop} runs only the
+     * V-int (the caller still advances its frame counter and consumes the input
+     * row), so a paused window stays frame-aligned.
+     *
+     * @param startEdgePressed true only on the leading edge of a Start press
+     * @return true if the level update ran, false if it was skipped due to pause
+     */
+    public static boolean executeWithPause(LevelFrameContext context, LevelManager levelManager,
+                                           Camera camera, Runnable spriteUpdate,
+                                           boolean startEdgePressed, StepWrapper wrapper) {
+        GameStateManager gameState = GameServices.gameStateOrNull();
+        if (gameState != null && gameState.applyPauseToggle(startEdgePressed)) {
+            // Paused: ROM Pause_Loop runs only the V-int. Skip the level update
+            // entirely (objects, physics, camera, scroll). The caller's frame
+            // counter / input cursor still advanced before this call, so the
+            // paused window stays frame-aligned with the recorded ROM run.
+            return false;
+        }
+        execute(context, levelManager, camera, spriteUpdate, wrapper);
+        return true;
     }
 
     /**

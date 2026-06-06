@@ -239,6 +239,7 @@ The tables below list each key's name, default code, and the human-readable key 
 | `LEFT` | `input.player1.left` | `263` | ← Arrow | Move left. |
 | `RIGHT` | `input.player1.right` | `262` | → Arrow | Move right. |
 | `JUMP` | `input.player1.jump` | `32` | Space | Jump / action button. |
+| `START` | `input.player1.start` | `259` | Backspace | Player 1 Start: ROM-accurate in-game pause (`Game_paused` / `Pause_Loop`). A press during level gameplay freezes the level update for the frame while the frame counter still advances; press again to resume. Distinct from `PAUSE_KEY`, which is the loop/timing-level pause that also halts audio. |
 | `PAUSE_KEY` | `input.pause` | `257` | Enter | Pause / unpause the game. |
 | `FRAME_STEP_KEY` | `debug.keys.frameStep` | `81` | Q | Advance one frame while paused. |
 | `TRACE_REWIND_KEY` | `debug.traceRewind.key` | `82` | R | Hold during visual Trace Test Mode replay to rewind deterministic engine state in real time, including reverse audio presentation and restored fade snapshots. |
@@ -315,6 +316,7 @@ input:
     left: LEFT   # Player 1: move left
     right: RIGHT   # Player 1: move right
     jump: SPACE   # Player 1: jump
+    start: BACKSPACE   # Player 1: start (in-game pause)
   player2:
     up: I   # Player 2: look up
     down: K   # Player 2: crouch/roll
