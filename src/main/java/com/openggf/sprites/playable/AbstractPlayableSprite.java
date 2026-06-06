@@ -3069,7 +3069,21 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public void setLogicalInputState(boolean up, boolean down, boolean left, boolean right, boolean jump,
                         boolean jumpPress) {
+                // ROM Obj01_Control skips re-copying Ctrl_1 into Ctrl_1_Logical while
+                // Control_Locked is set (s2.asm:36227-36229, sonic3k.asm equivalent), so a
+                // previously held pad word is latched. BUT an object/event that explicitly
+                // writes Ctrl_1_Logical during the lock (e.g. the end-of-act signpost
+                // Obj0D_Main_State3 forcing RIGHT, s2.asm:34825-34826) overwrites that word,
+                // and the short-circuit preserves the new value. The engine models such a
+                // write as forcedInputMask; when one is active we must publish the forced
+                // word (SpriteManager already folds it into the logical args) rather than
+                // latch the stale pre-lock state. Latching over a forced write corrupted
+                // Tails' follow-history at the EHZ end-of-act goalplate (tails_x_speed -0576
+                // vs ROM -04EA): Tails replayed the stale LEFT and accelerated instead of
+                // turning right. Universal correction (S2 + S3K both run the latch); keyed
+                // on the semantic forced-input state, not a zone/route.
                 if (isControlLocked()
+                                && getForcedInputMask() == 0
                                 && physicsFeatureSet != null
                                 && physicsFeatureSet.controlLockLatchesLogicalInput()) {
                         return;

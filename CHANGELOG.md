@@ -4,6 +4,21 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Control-lock logical-input latch no longer clobbers an object's forced-input
+  write (resolves the EHZ1 regression from the MTZ2 latch):** ROM `Obj01_Control`
+  skips re-copying `Ctrl_1` into `Ctrl_1_Logical` while `Control_Locked` is set
+  (`docs/s2disasm/s2.asm:36227-36229`), latching the prior held pad word — but an
+  object that explicitly writes `Ctrl_1_Logical` during the lock (the end-of-act
+  signpost `Obj0D_Main_State3` forcing RIGHT, `docs/s2disasm/s2.asm:34825-34826`)
+  overwrites it, and the short-circuit preserves the new value. The engine's latch
+  in `AbstractPlayableSprite.setLogicalInputState` discarded that forced write,
+  leaving the stale pre-lock word; at the EHZ end-of-act goalplate Tails' delayed
+  follow-history then replayed the stale LEFT and accelerated (`tails_x_speed`
+  -0576) instead of turning right (`-04EA`), failing the EHZ1 trace at f5121. The
+  latch now skips when `getForcedInputMask() != 0`, publishing the forced word —
+  keyed on the semantic forced-input state, not a zone/route, and applied at the
+  shared hook (universal correction; S2 and S3K both run the latch). EHZ1 returns
+  to green; MTZ2 holds its f1217 advance; arz2/wfz and S3K aiz/cnz/mgz unchanged.
 - **CPZ wall Spiny (ObjA6) reversal/detect timing now models the word-write
   byte-decrement quirk (ROM-accurate):** `SpinyOnWallBadnikInstance` previously
   reversed direction every 128 frames and ran detection from spawn. ROM

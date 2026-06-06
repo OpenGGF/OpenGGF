@@ -1,5 +1,16 @@
 # Trace Frontier Log
 
+## 2026-06-06 - s2 EHZ1 f5121->GREEN: control-lock latch no longer clobbers a forced-input write (resolves MTZ2 regression)
+
+- Worktree `C:/tmp/wt-ehz1-fix`, branch `ai-fix-ehz1-forced-input`, off develop 37dd3d532.
+- Resolves the **REGRESSION INTRODUCED** by the 2026-06-05 MTZ2 latch (commit 37dd3d532 / aaee3491): EHZ1 GREEN -> f5121 (`tails_x_speed` exp=-04EA act=-0576) at the end-of-act goalplate control-lock.
+- Root cause: `AbstractPlayableSprite.setLogicalInputState` latched the pre-lock logical word for ALL control-locked frames. ROM `Obj01_Control` skips the raw->logical copy while locked (s2.asm:36227-36229) BUT the signpost `Obj0D_Main_State3` explicitly writes `Ctrl_1_Logical=RIGHT` (s2.asm:34825-34826), which the short-circuit preserves; `Sonic_RecordPos` (s2.asm:36340-36346) records it and `TailsCPU_Normal` (s2.asm:38939-38953) replays it. The latch discarded that forced RIGHT, so Tails' follow-history replayed the stale LEFT and accelerated instead of turning right.
+- Fix: latch is bypassed when `getForcedInputMask() != 0` (the engine's model of an object's `Ctrl_1_Logical` write). Comparison-only; keyed on semantic forced-input state, no zone/route/frame/gameId carve-out; shared hook, no new flag (universal — S2 + S3K both run the latch).
+- Verification (worktree mvn, single fork; A/B vs develop 37dd3d532):
+  - **EHZ1: f5121 -> GREEN** (`TestS2Ehz1TraceReplay` Tests run: 1, Failures: 0).
+  - MTZ2 held at f1217; arz2 held f899; wfz held GREEN.
+  - S3K A/B identical baseline-vs-fix: aiz f8941, cnz f17276, mgz f4124 (no regression from the forced-input path change).
+
 ## 2026-06-06 - s2 mcz f3574->f4513: drawbridge (Obj81) now a full LRB wall, not top-solid-only
 
 - Branch `bugfix/ai-trace-s2-mcz`, worktree `.worktrees/trace-s2-mcz`.
