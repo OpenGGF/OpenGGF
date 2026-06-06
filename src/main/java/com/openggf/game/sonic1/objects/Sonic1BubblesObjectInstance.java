@@ -398,8 +398,11 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
 
             typeCounter = rawRng & 7;
 
-            // andi.w #$C,d1 ; select table offset (0, 4, 8, or 12) from same random
-            typeTableOffset = (rawRng >> 2) & 0x0C;
+            // docs/s1disasm/_incObj/64 Bubbles.asm:141-151 copies the
+            // same RandomNumber word to d1, then uses andi.w #$C,d1 for the
+            // Bub_BblTypes pointer. Do not shift; bits 2-3 select offsets
+            // 0, 4, 8, or 12, while bits 0-2 still seed objoff_34.
+            typeTableOffset = rawRng & 0x0C;
 
             // subq.b #1,bub_time(a0)
             spawnTime--;
@@ -450,6 +453,13 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
             bubbleSubtype = 0;
         }
 
+        // docs/s1disasm/_incObj/64 Bubbles.asm:166-177 consumes the spawn
+        // delay random word, then the X-offset random word, before any
+        // large-bubble override test at lines 182-196. Keep that order so
+        // the subtype-2 cadence stays aligned with the ROM.
+        int xOffset = rng.nextBits(0x0F) - 8;
+        int spawnX = origX + xOffset;
+
         // Check for large bubble override
         // btst #7,objoff_36(a0) / beq.s .fail
         if ((productionFlags & 0x80) != 0) {
@@ -460,18 +470,15 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
                     bubbleSubtype = 2;
                 }
             }
-        }
 
-        // Additional type-2 check when counter is at 0
-        if (typeCounter == 0 && (productionFlags & 0x40) == 0) {
-            productionFlags |= 0x40;
-            bubbleSubtype = 2;
+            // docs/s1disasm/_incObj/64 Bubbles.asm:182-196 keeps the
+            // forced last-bubble type-2 check inside the bit-7 large-mode
+            // branch. Ordinary bursts can end on their table subtype.
+            if (typeCounter == 0 && (productionFlags & 0x40) == 0) {
+                productionFlags |= 0x40;
+                bubbleSubtype = 2;
+            }
         }
-
-        // Spawn position: original X ± random(-8 to +7), original Y
-        // jsr (RandomNumber).l / andi.w #$F,d0 / subq.w #8,d0
-        int xOffset = rng.nextBits(0x0F) - 8;
-        int spawnX = origX + xOffset;
 
         ObjectSpawn childSpawn = new ObjectSpawn(
                 spawnX, spawn.y(),

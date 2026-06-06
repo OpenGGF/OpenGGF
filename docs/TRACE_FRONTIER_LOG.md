@@ -33,6 +33,37 @@
   guard passed with zero regressions; the target remains red at the next
   one-frame frontier.
 
+## 2026-06-06 - s1 sbz3 f839->f1420: Obj64 bubble maker preserves RNG call cadence
+
+- Branch `bugfix/ai-trace-s1-r4-sbz3`, worktree `.worktrees/trace-s1-r4-sbz3`.
+- Target command:
+  `mvn "-Dtest=TestS1Sbz3CompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+- **Status: ADVANCED (still failing).** First-error frame **839 -> 1420**,
+  error count **4730** at the new frontier. Surefire: `Tests run: 1,
+  Failures: 1`. New first error is `y` expected `0x03E7`, actual `0x03EC`,
+  near Obj64 bubbles and Obj2C Jaws contact diagnostics.
+- **Root cause:** S1 Obj64 copies one `RandomNumber` word into both `d0` and
+  `d1`; `d0 & 7` seeds `objoff_34`, while unshifted `d1 & $C` selects the
+  `Bub_BblTypes` table pointer. During spawning, Obj64 consumes the spawn-delay
+  RNG word, then the X-offset RNG word, and only then runs the bit-7 large-bubble
+  override. The forced last subtype-2 bubble is inside that bit-7 branch, so
+  ordinary bursts can end on their table subtype.
+- **Fix:** `Sonic1BubblesObjectInstance` now uses `rawRng & 0x0C` for the type
+  table offset, consumes the X-offset RNG before any large-bubble override RNG,
+  and gates the forced final subtype-2 bubble on Obj64 large-mode bit 7.
+- **Disasm cites:** `docs/s1disasm/_incObj/64 Bubbles.asm:141-151`
+  (`RandomNumber`, `objoff_34`, `Bub_BblTypes` offset),
+  `:166-177` (spawn-delay and X-offset RNG order), and `:182-196`
+  (bit-7 large-bubble override and final subtype-2 fallback).
+- **Same-game regression guard (PASS, zero regressions):**
+  `mvn clean test "-Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestS1Ghz1TraceReplay" "-DfailIfNoTests=false"`
+  -> `MSE:OK modules=1 passed=9 failed=0 errors=0 skipped=0`.
+- Genuineness gate: PASS. The fix is ROM object-state/RNG-cadence driven, adds
+  no trace hydration, no tolerance, and no zone/route/frame carve-out. The
+  optional S1 object pitfall catalogue file named by the trace workflow is not
+  present in this worktree; the root cause is documented here and in the
+  changelog.
+
 ## 2026-06-06 - s1 ghz2 f1690->f2369: Chopper uses 16.16 SpeedToPos state
 
 - Branch `bugfix/ai-trace-s1-r3-ghz2`, worktree `.worktrees/trace-s1-r3-ghz2`.

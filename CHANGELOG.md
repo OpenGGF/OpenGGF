@@ -17,6 +17,14 @@ All notable changes to the OpenGGF project are documented in this file.
   `docs/s1disasm/_incObj/15 Swinging Platforms.asm:177-194`). This advances
   `TestS1Ghz2CompleteRunTraceReplay` from first-error frame 2369 to 2370; the
   new frontier is a remaining 1px Obj18 platform riding Y mismatch.
+- **S1 SBZ3 bubble maker RNG cadence now follows Obj64:**
+  `Sonic1BubblesObjectInstance` now keeps the ROM's unshifted `RandomNumber`
+  word bits for the `Bub_BblTypes` table offset, consumes the X-offset random
+  word before the large-bubble override test, and keeps the forced final
+  subtype-2 bubble inside Obj64's bit-7 large-mode branch
+  (`docs/s1disasm/_incObj/64 Bubbles.asm:141-151,166-196`). This advances
+  `TestS1Sbz3CompleteRunTraceReplay` from first-error frame 839 to 1420; the
+  new frontier is a separate player `y` mismatch near bubbles/Jaws contact.
 - **S1 Chopper leap integration now follows ROM `SpeedToPos`:**
   `Sonic1ChopperBadnikInstance` now updates vertical position through the
   ROM-style 16.16 `SpeedToPos` path, applies Chopper's `$18` gravity after
