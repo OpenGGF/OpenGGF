@@ -129,15 +129,27 @@ public class TestSonic1LabyrinthObjectsBasic {
     }
 
     private static void setPrivateInt(Object target, String fieldName, int value) throws Exception {
-        Field field = target.getClass().getDeclaredField(fieldName);
+        Field field = findField(target.getClass(), fieldName);
         field.setAccessible(true);
         field.setInt(target, value);
     }
 
     private static int getPrivateInt(Object target, String fieldName) throws Exception {
-        Field field = target.getClass().getDeclaredField(fieldName);
+        Field field = findField(target.getClass(), fieldName);
         field.setAccessible(true);
         return field.getInt(target);
+    }
+
+    private static Field findField(Class<?> type, String fieldName) throws NoSuchFieldException {
+        Class<?> current = type;
+        while (current != null) {
+            try {
+                return current.getDeclaredField(fieldName);
+            } catch (NoSuchFieldException ignored) {
+                current = current.getSuperclass();
+            }
+        }
+        throw new NoSuchFieldException(fieldName);
     }
 
 }
