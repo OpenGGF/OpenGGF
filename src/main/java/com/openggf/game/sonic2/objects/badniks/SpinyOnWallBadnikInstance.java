@@ -35,12 +35,27 @@ public class SpinyOnWallBadnikInstance extends AbstractBadnikInstance {
 
     // Movement constants
     private static final int Y_VEL = 0x40;        // Movement speed (subpixels)
-    private static final int MOVE_TIMER = 0x80;   // Frames before reversing (128)
+    // ROM reversal-timer quirk (s2.asm:76434, 76452, 76454), identical to the
+    // floor Spiny (ObjA5) modelled in SpinyBadnikInstance:
+    //   ObjA6_Init:  `move.w #$80,objoff_2A(a0)` (a WORD write)
+    //   loc_38BC8:   `subq.b #1,objoff_2A(a0)`   (a BYTE decrement)
+    // objoff_2A is a single byte at $2A. The big-endian word write $0080 sets
+    // byte[$2A] (the high byte the BYTE subq decrements) to $00 and byte[$2B]
+    // (the adjacent detect-lockout byte) to $80. Decrementing the high byte from
+    // $00 wraps $00->$FF->...->$01->$00, taking 256 (0x100) decrements to reach
+    // zero and reverse y_vel — NOT 128. The low byte $80 lands in objoff_2B,
+    // imposing a 128-frame detect lockout at spawn and after every reversal.
+    private static final int MOVE_TIMER = 0x100;  // Move-frames before reversing (256, see above)
 
     // Attack constants
     private static final int ATTACK_TIMER = 0x28;   // Attack duration (40 frames)
     private static final int FIRE_FRAME = 0x14;     // Fire at this remaining (20 frames)
     private static final int ATTACK_LOCKOUT = 0x40; // Cooldown after attack (64 frames)
+    // Side effect of the `move.w #$80,objoff_2A` quirk above: the word write's
+    // low byte ($80) lands in objoff_2B (the detect-lockout byte at $2B). So at
+    // spawn AND on every direction reversal, the spiny gets a 128-frame window
+    // where loc_38BAC skips detection (objoff_2B != 0 -> decrement, bra loc_38BC8).
+    private static final int INITIAL_LOCKOUT = 0x80; // Detect lockout from word write (128)
 
     // Detection range. ROM loc_38BBA (s2.asm:76445-76449) calls
     // Obj_GetOrientationToPlayer, then: addi.w #$60,d2 / cmpi.w #$C0,d2 / blo.
@@ -80,8 +95,10 @@ public class SpinyOnWallBadnikInstance extends AbstractBadnikInstance {
         this.state = State.PATROLLING;
         this.moveCounter = MOVE_TIMER;
         this.attackTimer = 0;
-        this.attackLockout = 0;
-        this.movingUp = true;      // Start moving up (negative Y)
+        // ROM ObjA6_Init `move.w #$80,objoff_2A` also seeds objoff_2B=$80, giving
+        // a 128-frame initial detect lockout (s2.asm:76434; see INITIAL_LOCKOUT).
+        this.attackLockout = INITIAL_LOCKOUT;
+        this.movingUp = true;      // Start moving up (negative Y, y_vel = -$40)
         this.hasFired = false;
         this.ySubpixel = 0;
         // Preserve spawn's render_flags for initial facing direction (x_flip bit)
@@ -97,9 +114,47 @@ public class SpinyOnWallBadnikInstance extends AbstractBadnikInstance {
         }
     }
 
+    /**
+     * Mirrors ROM loc_38BAC -> loc_38BC8 (s2.asm:76438-76460). The order is
+     * critical for matching ROM badnik Y position over the patrol window:
+     *   1. loc_38BAC: if objoff_2B != 0, decrement it and skip detection
+     *      (bra loc_38BC8). Otherwise run detection; if in range, jump to
+     *      attack (loc_38BEA) WITHOUT running loc_38BC8 this frame.
+     *   2. loc_38BC8: subq.b #1,objoff_2A; on hitting zero reseed objoff_2A to
+     *      $80 (word write -> 256-frame reversal period + 128-frame lockout in
+     *      objoff_2B) and neg.w y_vel; then ObjectMove applies y_vel.
+     * Unlike the floor Spiny, movement (loc_38BC8) runs every patrol frame,
+     * including during the detect lockout.
+     */
     private void updatePatrolling(AbstractPlayableSprite player) {
-        // Apply movement velocity using subpixel accumulation
-        // Y_VEL = 0x40 = 64 subpixels per frame = 0.25 pixels per frame
+        // Step 1: detect lockout (objoff_2B). While non-zero, decrement and skip
+        // detection (ROM bra loc_38BC8). loc_38BC8 still runs below.
+        boolean skipDetection;
+        if (attackLockout > 0) {
+            attackLockout--;
+            skipDetection = true;
+        } else {
+            skipDetection = false;
+        }
+
+        // Step 2: detection against closest player. If in range, ROM jumps to
+        // loc_38BEA (attack) and does NOT run loc_38BC8 (no move) this frame.
+        if (!skipDetection && player != null && isPlayerInRange(player)) {
+            startAttack();
+            return;
+        }
+
+        // Step 3: loc_38BC8 reversal timer (objoff_2A). subq.b #1; on zero reseed
+        // to $80 (256-frame period via word-write quirk, + 128-frame detect
+        // lockout in objoff_2B) and neg.w y_vel.
+        moveCounter--;
+        if (moveCounter <= 0) {
+            movingUp = !movingUp;
+            moveCounter = MOVE_TIMER;
+            attackLockout = INITIAL_LOCKOUT;
+        }
+
+        // Step 4: ObjectMove. Y_VEL = 0x40 = 64 subpixels/frame = 0.25 px/frame.
         ySubpixel += Y_VEL;
         while (ySubpixel >= 256) {
             ySubpixel -= 256;
@@ -108,24 +163,6 @@ public class SpinyOnWallBadnikInstance extends AbstractBadnikInstance {
             } else {
                 currentY++;
             }
-        }
-
-        // Decrement move counter
-        moveCounter--;
-        if (moveCounter <= 0) {
-            // Reverse direction
-            movingUp = !movingUp;
-            moveCounter = MOVE_TIMER;
-        }
-
-        // Decrement attack lockout
-        if (attackLockout > 0) {
-            attackLockout--;
-        }
-
-        // Check for player in attack range
-        if (player != null && attackLockout == 0 && isPlayerInRange(player)) {
-            startAttack();
         }
     }
 

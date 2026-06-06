@@ -4,6 +4,19 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **CPZ wall Spiny (ObjA6) reversal/detect timing now models the word-write
+  byte-decrement quirk (ROM-accurate):** `SpinyOnWallBadnikInstance` previously
+  reversed direction every 128 frames and ran detection from spawn. ROM
+  `ObjA6_Init` does `move.w #$80,objoff_2A(a0)` (a WORD write) while the patrol
+  loop `loc_38BC8` does `subq.b #1,objoff_2A` (a BYTE decrement) — s2.asm:76434,
+  76452-76454. The big-endian word sets byte[$2A]=$00 (the high byte the BYTE
+  subq decrements, wrapping $00->$FF->...->$00 over 256 frames, NOT 128) and
+  byte[$2B]=$80 (the detect-lockout byte), giving a 256-frame reversal period
+  plus a 128-frame detect lockout at spawn and after every reversal. The instance
+  now matches the ROM order: detect-lockout decrement, then detection (which jumps
+  to attack WITHOUT moving that frame), then the reversal-timer decrement, then
+  ObjectMove. Advances the CPZ level-select trace from first-error frame 3329 to
+  3365.
 - **OOZ/CPZ rising platform now integrates sub-pixels (ROM-accurate):**
   `CPZPlatformObjectInstance` auto-rise (Obj19_MoveRoutine5/6) previously did
   `y += yVel >> 8`, dropping the sub-pixel fraction and stepping a full pixel

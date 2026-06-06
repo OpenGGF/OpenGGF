@@ -8671,3 +8671,24 @@ Command: `mvn -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=...s2.gen"
   due to accumulated jet-stomp landing/walk-back timing drift, so the spinball overlap just misses
   (scan ov=0). FOLLOW-UP: audit ObjC7 jet-stomp (attack 2) phase durations / sensor-wait / descent /
   stand-up walk-cycle step counts against the ROM to close the residual offset.
+
+## 2026-06-06 — s2 cpz (CPZ wall Spiny ObjA6): reversal/detect timing word-write quirk
+
+Worktree .worktrees/trace-s2-cpz, branch bugfix/ai-trace-s2-cpz, forkCount=1, s2.gen.
+Command: `cmd //c mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=...s2.gen" "-Dtest=TestS2CpzLevelSelectTraceReplay#replayMatchesTrace" test`
+
+- BEFORE: first error frame 3329.
+- FIX (SpinyOnWallBadnikInstance.java): ObjA6 reversal/detect timing modelled the
+  `move.w #$80,objoff_2A` word write vs `subq.b #1,objoff_2A` byte decrement quirk
+  (s2.asm:76434, 76452-76454). High byte at $2A wraps over 256 frames (reversal
+  period = 0x100, not 0x80); low byte $80 lands in objoff_2B giving a 128-frame
+  detect lockout at spawn and after every reversal. Ordering: detect-lockout
+  decrement -> detection (jump-to-attack skips move this frame) -> reversal-timer
+  decrement -> ObjectMove. Per-object ROM model in the object class; no
+  zone/gameId/frame carve-out.
+- AFTER: PASS=advanced. 284 errors, first error frame 3365 -- tails_x mismatch
+  (expected=0x24AB actual=0x24AA), a DISTINCT Tails sidekick 1-subpixel divergence
+  (eng tails sub x 3F00 vs rom 3F00 but pixel 24AA vs 24AB) unrelated to the Spiny
+  fix. Frontier advanced 3329 -> 3365 (+36).
+- Same-game regression guard (TestS2ArzLevelSelectTraceReplay, TestS2Ehz1TraceReplay,
+  TestS2WfzLevelSelectTraceReplay): all PASS, zero regressions.
