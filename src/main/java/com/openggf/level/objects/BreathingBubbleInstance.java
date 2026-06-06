@@ -120,16 +120,17 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
         lifetime++;
 
         // Check if we've exited water (bubble pops)
-        // ROM: Bub_ChkWater compares against v_waterpos1 (gameplay water level),
-        // NOT the visual level with oscillation. Use getFeatureZoneId/ActId to
-        // match the keys WaterSystem stores configs under (important for SBZ3).
+        // ROM: Bub_ChkWater compares against the gameplay waterline
+        // (S1 v_waterpos1, docs/s1disasm/_incObj/64 Bubbles.asm:57-70).
+        // Use getFeatureZoneId/ActId to match the keys WaterSystem stores
+        // configs under (important for SBZ3).
         if (services().currentLevel() != null) {
             WaterSystem waterSystem = services().waterSystem();
             int zoneId = services().featureZoneId();
             int actId = services().featureActId();
 
             if (waterSystem.hasWater(zoneId, actId)) {
-                int waterY = waterSystem.getWaterLevelY(zoneId, actId);
+                int waterY = waterSystem.getGameplayWaterLevelY(zoneId, actId);
                 if (currentY <= waterY) {
                     // Bubble has reached the water surface - destroy it
                     setDestroyed(true);

@@ -39,6 +39,16 @@ All notable changes to the OpenGGF project are documented in this file.
   The new deferral is gated on ROM object state and geometry, not a trace frame,
   route, zone, tolerance, or trace hydration. Advances the S1 GHZ2 complete-run
   trace from first-error frame 615 to 1104.
+- **S1 LZ gameplay waterline now follows the ROM oscillator:** Player
+  underwater entry/exit and breathing-bubble surface checks now use a
+  provider-owned gameplay waterline instead of the non-oscillated base water
+  level. S1 LZ/SBZ3 derive that line from `v_waterpos2 + ((v_oscillate+2) >> 1)`,
+  matching `LZWaterFeatures` and the `Sonic_Water` / bubble comparisons
+  (`docs/s1disasm/_inc/LZWaterFeatures.asm:19-25`,
+  `docs/s1disasm/_incObj/01 Sonic.asm:222-247`,
+  `docs/s1disasm/_incObj/64 Bubbles.asm:57-70`). This advances
+  `TestS1Lz1CompleteRunTraceReplay` from first-error frame 112 to 302; the new
+  frontier is a separate Burrobot touch/bounce mismatch.
 - **OOZ/CPZ rising platform now integrates sub-pixels (ROM-accurate):**
   `CPZPlatformObjectInstance` auto-rise (Obj19_MoveRoutine5/6) previously did
   `y += yVel >> 8`, dropping the sub-pixel fraction and stepping a full pixel

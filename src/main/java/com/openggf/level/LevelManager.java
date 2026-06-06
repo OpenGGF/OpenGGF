@@ -1096,7 +1096,7 @@ public class LevelManager {
         if (playable == null) {
             return;
         }
-        int waterY = waterSystem.getWaterLevelY(featureZone, featureAct);
+        int waterY = waterSystem.getGameplayWaterLevelY(featureZone, featureAct);
         updatePlayableWaterStates(playable, waterY);
     }
 
@@ -1107,7 +1107,7 @@ public class LevelManager {
                 || playable == null) {
             return;
         }
-        int waterY = waterSystem.getWaterLevelY(featureZone, featureAct);
+        int waterY = waterSystem.getGameplayWaterLevelY(featureZone, featureAct);
         updatePlayableWaterState(playable, waterY);
     }
 

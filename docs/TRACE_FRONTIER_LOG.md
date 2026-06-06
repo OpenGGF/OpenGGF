@@ -73,6 +73,34 @@
 - Focused unit guard: `TestSonic1BridgeObjectInstance` PASS (`tests=3`, `failures=0`, `errors=0`).
 - Note: Maven Silent Extension printed stale failures from older complete-run report files in
   `target/surefire-reports`; the requested guard XML files were freshly written and green.
+## 2026-06-06 - s1 lz1 f112->f302: oscillated S1 gameplay waterline
+
+- Branch `bugfix/ai-trace-s1-lz1`, worktree `.worktrees/trace-s1-lz1`.
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" "-Dtest=TestS1Lz1CompleteRunTraceReplay#replayMatchesTrace" test`
+- **Status: ADVANCED (still failing).** First-error frame **112 -> 302**, error count **2718 -> 2639**.
+  Surefire: `Tests run: 1, Failures: 1`.
+- **Root cause:** S1 `LZWaterFeatures` writes `v_waterpos1 = v_waterpos2 + ((v_oscillate+2) >> 1)`
+  after dynamic-water updates, and `Sonic_Water` compares Sonic's `obY` against `v_waterpos1`
+  (`docs/s1disasm/_inc/LZWaterFeatures.asm:19-25`; `docs/s1disasm/_incObj/01 Sonic.asm:222-247`).
+  The engine was using the fixed/current water level (`v_waterpos2` equivalent) for player water-state
+  checks, so it entered water at frame 112 instead of the ROM frame 117 and immediately halved
+  `x_speed` / quartered `y_speed`.
+- **Fix:** added a provider-owned gameplay waterline offset, left the default at zero, and made S1
+  return the same oscillator-derived offset used for `v_waterpos1`. Player water-state checks and
+  breathing-bubble surface checks now read the gameplay waterline. No trace state is hydrated or
+  synced; no zone/route/frame carve-outs.
+- New frontier f302 = `y_speed` mismatch expected=`-0100` actual=`0x0000` during a Burrobot touch.
+  The trace fixture lacks per-frame object snapshots, so this branch does not land a speculative
+  enemy-bounce or Burrobot movement change.
+- **Same-game regression guard (PASS, zero regressions):**
+  `-Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestS1Ghz1TraceReplay`
+  -> all nine guard XML reports have no `<failure>` or `<error>` entries. The Maven extension also
+  echoed the earlier targeted LZ1 failure from the report directory; that stale report was not part
+  of the requested guard set.
+- **Focused water tests (PASS):**
+  `-Dtest=TestSonic1WaterDataProvider,WaterSystemTest,TestWaterSystemRewindSnapshot` -> focused XML
+  reports have no `<failure>` or `<error>` entries.
 
 ## 2026-06-05 - s2 arz2 f857->f899: water profile not applied on a hurt-landing frame
 
