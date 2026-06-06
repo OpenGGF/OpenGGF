@@ -3,6 +3,7 @@ package com.openggf.level.objects;
 public enum TouchCategoryDecodeMode {
     NORMAL,
     FORCE_ENEMY,
+    S1_SPECIAL_PROPERTY,
     SONIC2_SPECIAL_PROPERTY,
     S3K_SPECIAL_PROPERTY;
 

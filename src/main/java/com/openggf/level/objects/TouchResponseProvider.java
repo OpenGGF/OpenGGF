@@ -43,6 +43,14 @@ public interface TouchResponseProvider {
     }
 
     /**
+     * Returns whether Sonic 1 {@code React_Special} property-style {@code 0xC0}
+     * collision flags should dispatch as listener-only special callbacks.
+     */
+    default boolean usesSonic1TouchSpecialPropertyResponse() {
+        return false;
+    }
+
+    /**
      * Returns whether Sonic 2 {@code Touch_Special} property-style {@code 0xC0}
      * collision flags should dispatch as listener-only special callbacks.
      */

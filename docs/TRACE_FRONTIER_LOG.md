@@ -142,14 +142,35 @@
 - New frontier f651 = `g_speed` mismatch expected=`0x1000` actual=`0x10AE`, with matching subpixel
   block `sub=(5E00,F400)` and nearby SLZ collapsing floors. This is a later collapsing-floor/contact
   frontier, not the fan x drift fixed here.
+## 2026-06-06 - s1 syz2 f85->f1088: Obj47 bumper collision-property touch route
+
+- Branch `bugfix/ai-trace-s1-syz2`, worktree `.worktrees/trace-s1-syz2`.
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" "-Dtest=TestS1Syz2CompleteRunTraceReplay#replayMatchesTrace" test`
+- **Status: ADVANCED (still failing).** First-error frame **85 -> 1088**, error count **336** after the fix.
+  Surefire: `Tests run: 1, Failures: 1`. New first error is `x_speed` expected=`0x02E8`
+  actual=`0x02F4` near Obj56/Obj57 (`SpikedBallChain` / `FloatingBlock` diagnostics).
+- **Root cause:** S1 Obj47 sets `obColType=$D7` (`docs/s1disasm/_incObj/47 Bumper.asm:22`).
+  The ROM touch loop routes this through `React_Special`, which checks the low six collision bits
+  and increments `obColProp` only for `$17` and `$21` (`docs/s1disasm/_incObj/sub ReactToItem.asm:377-427`).
+  `Bump_Hit` then tests and clears `obColProp` before applying the radial bounce, status changes,
+  hit animation, sound, and score path (`docs/s1disasm/_incObj/47 Bumper.asm:24-47`). The engine's
+  direct overlap/cooldown path could bounce on the wrong frame. The bumper also used a visible-X
+  deletion gate, while ROM display uses `out_of_range.s` and clears the remembered-object state bit
+  in `.resetcount` before `DeleteObject` (`docs/s1disasm/_incObj/47 Bumper.asm:66-79`).
+- **Fix:** added an S1 special-property decode mode to the shared touch-response profile surface,
+  scoped by object provider capability and S1's `$17/$21` size-index list. `Sonic1BumperObjectInstance`
+  now implements the provider/listener path with collision byte `$D7`, consumes the property signal in
+  update, and deletes through the offscreen lifecycle helper. This is a semantic object collision-property
+  predicate, not a zone/route/frame/gameId carve-out, and the trace comparison remains read-only.
 - **Same-game regression guard (PASS, zero regressions):**
   `TestS1Credits00Ghz1TraceReplay`, `TestS1Credits01Mz2TraceReplay`,
   `TestS1Credits02Syz3TraceReplay`, `TestS1Credits03Lz3TraceReplay`,
   `TestS1Credits04Slz3TraceReplay`, `TestS1Credits05Sbz1TraceReplay`,
-  `TestS1Credits06Sbz2TraceReplay`, `TestS1Credits07Ghz1bTraceReplay`,
-  `TestS1Ghz1TraceReplay` -> `MSE:OK modules=1 passed=9 failed=0 errors=0 skipped=0`.
-- No focused Electrocuter object test exists; narrow compile check passed:
-  `mvn.cmd -q -Dmse=relaxed -DskipTests compile` -> `MSE:OK`.
+  `TestS1Credits06Sbz2TraceReplay`, `TestS1Credits07Ghz1bTraceReplay`, and
+  `TestS1Ghz1TraceReplay` all wrote fresh surefire XML with `failures="0"`.
+- **Focused profile test:** `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Dtest=TestTouchResponseProfileMapping" test`
+  passed; surefire reports `tests="17" failures="0"`.
 
 ## 2026-06-05 - s2 arz2 f857->f899: water profile not applied on a hurt-landing frame
 

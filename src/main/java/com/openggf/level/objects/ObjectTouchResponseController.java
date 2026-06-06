@@ -783,6 +783,7 @@ final class ObjectTouchResponseController {
         }
         if (categoryBits == 0xC0 && profile != null) {
             boolean propertySpecial = switch (profile.categoryDecodeMode()) {
+                case S1_SPECIAL_PROPERTY -> isSonic1TouchSpecialPropertyIndex(sizeIndex);
                 case S3K_SPECIAL_PROPERTY -> isS3kTouchSpecialPropertyIndex(sizeIndex);
                 case SONIC2_SPECIAL_PROPERTY -> isSonic2TouchSpecialPropertyIndex(sizeIndex);
                 case NORMAL, FORCE_ENEMY -> false;
@@ -796,6 +797,15 @@ final class ObjectTouchResponseController {
             case 0x40 -> TouchCategory.SPECIAL;
             case 0x80 -> TouchCategory.HURT;
             default -> TouchCategory.BOSS;
+        };
+    }
+
+    private boolean isSonic1TouchSpecialPropertyIndex(int sizeIndex) {
+        return switch (sizeIndex) {
+            // S1 React_Special increments obColProp for $D7 and $E1 only:
+            // docs/s1disasm/_incObj/sub ReactToItem.asm:377-427.
+            case 0x17, 0x21 -> true;
+            default -> false;
         };
     }
 
