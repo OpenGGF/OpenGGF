@@ -5,8 +5,8 @@ Generated: 2026-06-04 15:26:08
 ## Summary
 
 - **Total unique objects found:** 303
-- **Implemented:** 145 (47.9%)
-- **Unimplemented:** 158 (52.1%)
+- **Implemented:** 149 (49.2%)
+- **Unimplemented:** 154 (50.8%)
 
 ## Implemented Objects
 
@@ -124,6 +124,8 @@ Generated: 2026-06-04 15:26:08
 | 0xBD | ICZEndBoss | 1 |  | ICZ2 |
 | 0x10 | LBZTubeElevator | 7 |  | LBZ1 |
 | 0x11 | LBZMovingPlatform | 50 |  | LBZ1, LBZ2 |
+| 0x13 | LBZExplodingTrigger | 11 |  | LBZ1, LBZ2 |
+| 0x14 | LBZTriggerBridge | 11 |  | LBZ1, LBZ2 |
 | 0x15 | LBZPlayerLauncher | 24 |  | LBZ1, LBZ2 |
 | 0x17 | LBZRideGrapple | 13 |  | LBZ1, LBZ2 |
 | 0x18 | LBZCupElevator | 22 |  | LBZ1, LBZ2 |
@@ -134,6 +136,8 @@ Generated: 2026-06-04 15:26:08
 | 0x31 | LBZRollingDrum | 24 |  | LBZ1, LBZ2 |
 | 0xBF | Ribot | 31 |  | LBZ1, LBZ2 |
 | 0xC0 | Orbinaut | 21 |  | LBZ1, LBZ2 |
+| 0xC1 | Corkey | 13 |  | LBZ1, LBZ2 |
+| 0xBE | SnaleBlaster | 12 |  | LBZ1, LBZ2 |
 | 0xC2 | Flybot767 | 12 |  | LBZ2 |
 | 0x03 | MHZTwistedVine | 11 |  | MHZ1, MHZ2 |
 | 0x06 | MHZPulleyLift | 8 |  | MHZ1, MHZ2 |
@@ -221,19 +225,15 @@ Generated: 2026-06-04 15:26:08
 | 0x18 | Object | LRZFallingSpike | 15 |  | LRZ1 |
 | 0x21 | Object | LRZSmashingSpikePlatform | 15 |  | LRZ1 |
 | 0x6F | Object | FBZWireCage | 13 |  | FBZ1, FBZ2 |
-| 0xC1 | Badnik | Corkey | 13 |  | LBZ1, LBZ2 |
 | 0x50 | Object | DEZConveyorBelt | 13 |  | DEZ1, DEZ2 |
 | 0x5D | Object | DEZRetractingSpring | 13 |  | DEZ2 |
 | 0xE2 | Object | FBZElevator | 12 |  | FBZ2 |
-| 0xBE | Badnik | SnaleBlaster | 12 |  | LBZ1, LBZ2 |
 | 0x1B | Object | LBZPipePlug | 12 |  | LBZ2 |
 | 0x48 | Object | SOZRapelWire | 12 |  | SOZ1, SOZ2 |
 | 0x2B | Object | LRZOrbitingSpikeBallH | 12 |  | LRZ2 |
 | 0x79 | Object | FBZDisappearingPlatform | 11 |  | FBZ1, FBZ2 |
 | 0x7C | Object | FBZPropeller | 11 |  | FBZ1 |
 | 0x8A | Object | FBZExitHall | 11 |  | FBZ2 |
-| 0x13 | Object | LBZExplodingTrigger | 11 |  | LBZ1, LBZ2 |
-| 0x14 | Object | LBZTriggerBridge | 11 |  | LBZ1, LBZ2 |
 | 0x17 | Object | LRZSinkingRock | 11 |  | LRZ1 |
 | 0x79 | Object | SSZHPZTeleporter | 11 |  | SSZ1, SSZ2 |
 | 0x5E | Object | DEZHoverMachine | 11 |  | DEZ1 |
@@ -821,13 +821,13 @@ Total: 356 objects | Implemented: 29 | Unimplemented: 0
 
 #### Act 1
 
-Total: 430 objects | Implemented: 24 | Unimplemented: 8
+Total: 430 objects | Implemented: 27 | Unimplemented: 5
 
 **Badniks:**
-- [ ] 0xBE SnaleBlaster (x5) [0x00]
+- [x] 0xBE SnaleBlaster (x5) [0x00]
 - [x] 0xBF Ribot (x14) [0x00, 0x04]
 - [x] 0xC0 Orbinaut (x10) [0x00]
-- [ ] 0xC1 Corkey (x10) [5 subtypes]
+- [x] 0xC1 Corkey (x10) [5 subtypes]
 
 **Bosses:**
 - [ ] 0xC3 LBZ1Robotnik (x1) [0x00]
@@ -842,8 +842,8 @@ Total: 430 objects | Implemented: 24 | Unimplemented: 8
 - [x] 0x0F CollapsingBridge (x19) [4 subtypes]
 - [x] 0x10 LBZTubeElevator (x7) [6 subtypes]
 - [x] 0x11 LBZMovingPlatform (x30) [9 subtypes]
-- [ ] 0x13 LBZExplodingTrigger (x8) [7 subtypes]
-- [ ] 0x14 LBZTriggerBridge (x7) [7 subtypes]
+- [x] 0x13 LBZExplodingTrigger (x8) [7 subtypes]
+- [x] 0x14 LBZTriggerBridge (x7) [7 subtypes]
 - [x] 0x15 LBZPlayerLauncher (x6) [0x00]
 - [ ] 0x16 LBZFlameThrower (x11) [0x20, 0x00]
 - [x] 0x17 LBZRideGrapple (x7) [7 subtypes]
@@ -863,13 +863,13 @@ Total: 430 objects | Implemented: 24 | Unimplemented: 8
 
 #### Act 2
 
-Total: 489 objects | Implemented: 22 | Unimplemented: 13
+Total: 489 objects | Implemented: 25 | Unimplemented: 10
 
 **Badniks:**
-- [ ] 0xBE SnaleBlaster (x7) [0x00]
+- [x] 0xBE SnaleBlaster (x7) [0x00]
 - [x] 0xBF Ribot (x17) [0x00, 0x02, 0x04]
 - [x] 0xC0 Orbinaut (x11) [0x00]
-- [ ] 0xC1 Corkey (x3) [0x20, 0x18]
+- [x] 0xC1 Corkey (x3) [0x20, 0x18]
 - [x] 0xC2 Flybot767 (x12) [0x00]
 
 **Bosses:**
@@ -885,8 +885,8 @@ Total: 489 objects | Implemented: 22 | Unimplemented: 13
 - [x] 0x0D BreakableWall (x2) [0x00]
 - [x] 0x0F CollapsingBridge (x13) [4 subtypes]
 - [x] 0x11 LBZMovingPlatform (x20) [7 subtypes]
-- [ ] 0x13 LBZExplodingTrigger (x3) [0x08, 0x09, 0x0A]
-- [ ] 0x14 LBZTriggerBridge (x4) [4 subtypes]
+- [x] 0x13 LBZExplodingTrigger (x3) [0x08, 0x09, 0x0A]
+- [x] 0x14 LBZTriggerBridge (x4) [4 subtypes]
 - [x] 0x15 LBZPlayerLauncher (x18) [0x00]
 - [ ] 0x16 LBZFlameThrower (x14) [4 subtypes]
 - [x] 0x17 LBZRideGrapple (x6) [6 subtypes]

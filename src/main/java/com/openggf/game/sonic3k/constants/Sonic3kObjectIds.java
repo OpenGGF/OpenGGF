@@ -34,7 +34,11 @@ public final class Sonic3kObjectIds {
     public static final int LBZ_MOVING_PLATFORM = 0x11;
     public static final int MHZ_MUSHROOM_PLATFORM = 0x11;
     public static final int MHZ_MUSHROOM_PARACHUTE = 0x12;
+    // S3KL object table: Obj_LBZExplodingTrigger.
+    public static final int LBZ_EXPLODING_TRIGGER = 0x13;
     public static final int MHZ_MUSHROOM_CATAPULT = 0x13;
+    // S3KL object table: Obj_LBZTriggerBridge. SKL reuses $14 for Obj_Updraft.
+    public static final int LBZ_TRIGGER_BRIDGE = 0x14;
     public static final int UPDRAFT = 0x14;
     // S3KL object table: Obj_LBZPlayerLauncher.
     public static final int LBZ_PLAYER_LAUNCHER = 0x15;
@@ -161,6 +165,7 @@ public final class Sonic3kObjectIds {
     public static final int MHZ_MINIBOSS = 0x92;
     public static final int JAWZ = 0x93;
     public static final int MHZ_END_BOSS = 0x93;
+    public static final int CORKEY = 0xC1;
     public static final int PACHINKO_TRIANGLE_BUMPER = 0xE6;
     public static final int PACHINKO_FLIPPER = 0xE7;
     public static final int PACHINKO_ENERGY_TRAP = 0xE8;
@@ -199,6 +204,8 @@ public final class Sonic3kObjectIds {
     public static final int ICZ_MINIBOSS = 0xBC;
     // S3KL object table: Obj_ICZEndBoss.
     public static final int ICZ_END_BOSS = 0xBD;
+    // S3KL object table: Obj_SnaleBlaster.
+    public static final int SNALE_BLASTER = 0xBE;
     // S3KL object table: Obj_Ribot.
     public static final int RIBOT = 0xBF;
     // S3KL object table: Obj_Orbinaut.

@@ -12,6 +12,37 @@ All notable changes to the OpenGGF project are documented in this file.
   `Ring_spill_anim_*` decelerating spin still drives every live ring's displayed
   frame.
 
+- **S3K LBZ cup elevator (Obj $18) fling spin now completes and the cup flickers
+  away:** the `LBZCupElev_Spin1`/`Spin2` angle step read the low byte of the
+  `spinSpeed` word, but the ROM's `move.b $2E(a0),d0` reads the high byte on the
+  big-endian 68000. The low-byte read spun wildly ("too fast") and froze at
+  `$1000` (low byte `$00`), so the cup never reached its exit-angle window and
+  trapped the rider. The step now uses `(spinSpeed >> 8)`, matching the ROM's
+  smooth `$06..$10` ramp that keeps rotating at max speed until the fling fires.
+  `Obj_LBZElevatorCupFlicker` also now runs `MoveSprite` with gravity ($38),
+  blinks every other frame, and removes itself once off-screen, so the ejected
+  cup arcs away and disappears instead of sliding flat until it culls later.
+
+- **S3K LBZ trigger bridge (Obj $14) now has a dedicated implementation:**
+  The S3KL Launch Base trigger bridge now uses the ROM `byte_25F2A`
+  positioning/state table, `Level_trigger_array` open/close transitions,
+  `SolidObjectFull2` dimensions, child bridge handoff pieces, saved-X despawn
+  checks, and resident LBZ misc level art. Slot `$14` remains zone-set-aware so
+  SKL still resolves it as Updraft.
+
+- **S3K SnaleBlaster (Obj $BE) now has a dedicated LBZ badnik implementation:**
+  SnaleBlaster is registered for the S3KL object table and now models the ROM
+  shell wait/open-close cycle, rolling-player early-close branch, child shooter
+  animations, projectile SFX, hurt projectile movement, and shield deflection.
+  Updates the S3K object checklist from 147 to 148 implemented objects.
+
+- **S3K Corkey (Obj $C1) now has a dedicated LBZ badnik implementation:**
+  Corkey is registered for the S3KL object table and now uses ROM-backed Corkey
+  art for its parent body, nozzle child, and three-shot firing cycle. The port
+  follows the disassembly patrol timer/latch flow, uses the ROM projectile
+  animation scripts and laser SFX, exposes the $A0 hurt-shot collision, and
+  updates the S3K object checklist from 146 to 147 implemented objects.
+
 - **S1 GHZ1/MZ1 trace fleet fixes cherry-picked into develop:** S1 Crabmeat
   projectiles now use the ROM `ObjectFall` old-velocity-then-gravity order,
   defer same-frame execution after spawn, and keep hurt collision inactive until
@@ -598,6 +629,12 @@ All notable changes to the OpenGGF project are documented in this file.
   Entering the ROM trigger rectangles now copies the hidden staging chunk cells
   into the visible foreground layout, and leaving the corresponding exit ranges
   restores the covered cells.
+
+- Implemented S3K LBZ exploding trigger Obj13. S3KL slot `$13` now routes to
+  `Obj_LBZExplodingTrigger`, using ROM-backed LBZ misc art/mappings, S3K
+  `Touch_Special` collision-property bits for native P1/P2, rolling-player
+  velocity reversal, subtype-indexed level-trigger bit toggling, and the
+  explosion slot handoff while preserving the SKL/MHZ mushroom-catapult remap.
 
 - **OOZ popping platform (Obj33) auto-pop starts in mode 2 not mode 0 — fires one frame later, matching ROM routine_secondary init (advances OOZ1 f1133→f1756):** `OOZPoppingPlatformObjectInstance` (Obj33, OOZ green burner lid) initialised the auto-pop (subtype 0) variant directly into `TIMER_COUNTDOWN` (mode 0). ROM `Obj33_Init` (docs/s2disasm/s2.asm:49653-49657) sets `routine_secondary` to **2** (`addq.b #2,routine_secondary`) for **all** variants, and only overrides it to 4 (wait-for-player) when `subtype != 0`. So the auto-pop variant first runs one mode-2 frame (`loc_23BEA`, s2.asm:49710-49728) with `objoff_32` (velocity) = 0: y stays at home, velocity becomes `$3800` (< `$10000`), so it does `subq.b #2,routine_secondary` back to mode 0 and applies the bounce — the `$78` timer countdown therefore starts the *next* frame, making every auto-pop fire one frame later than starting straight in the timer. Starting in mode 0 popped the platform a frame early, dragging the riding sidekick down a frame too soon (OOZ1 f1133: `y` 0x0664 vs 0x065A while riding the popping platform). Fix: subtype-0 variant now initialises to `POP_PHYSICS` (mode 2); `updatePopPhysics()` with velocity 0 already reproduces the ROM's immediate transition-to-timer + bounce. Per-object S2 change in Obj33's own class, branching on the ROM `subtype` data field — no zone/route/frame/gameId carve-out, no shared physics change, comparison-only. OOZ1 f1133→f1756 (new divergence is an unrelated sidekick CPU `tails_x` follow-steering off-by-one). Same-game regression guard single-fork: EHZ1/SCZ/WFZ all green, zero regressions. See docs/TRACE_FRONTIER_LOG.md.
 - **CPZ spin tube (Obj1E) waypoint subpixel + Timer_second entry-path parity (advances CPZ2 f2542→f2888):** `CPZSpinTubeObjectInstance` snapped each captured waypoint with `setCentreX`/`setCentreY`, which zero the player's 16-bit subpixel fraction. ROM `Obj1E` writes every waypoint with a word `move.w d4,x_pos(a1)` / `move.w d5,y_pos(a1)` (loc_22688 docs/s2disasm/s2.asm:48531-48545, loc_2271A s2.asm:48577-48586, loc_227FE s2.asm:48655-48662) — preserving the subpixel low word that the loc_22902 velocity recompute (`sub.w x_pos(a1),d0`, s2.asm:48761-48815) integrates over. The four waypoint snaps now use `setCentreXPreserveSubpixel`/`setCentreYPreserveSubpixel`. Separately, the timer-alternated entry-path selector (`byte_2266E` value 2 → `move.b (Timer_second).w,d2 / andi.b #1,d2`, loc_2265E s2.asm:48499-48503) read the live on-screen TIME seconds digit; the engine derived it from the raw replay frame counter (`frameCounter/60`), which diverges whenever the act starts with a non-zero level timer and flips the path parity. `update()` now reads `services().levelGamestate().getElapsedSeconds()` (== ROM Timer_second, and `& 1` is parity-equal since 60 is even). S2-only object class; no zone/route/frame/gameId carve-out, comparison-only (no trace hydration). New f2888 divergence is post-tube-exit sidekick `tails_x` follow physics, a distinct subsystem. Same-game regression guard single-fork: EHZ1/SCZ/WFZ all green, no regression. See docs/TRACE_FRONTIER_LOG.md.

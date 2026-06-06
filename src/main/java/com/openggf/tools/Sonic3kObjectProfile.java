@@ -97,6 +97,8 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                 0x0C, // AIZGiantRideVine
                 0x10, // LBZTubeElevator
                 0x11, // LBZMovingPlatform
+                0x13, // LBZExplodingTrigger
+                0x14, // LBZTriggerBridge
                 0x17, // LBZRideGrapple
                 0x18, // LBZCupElevator
                 0x19, // LBZCupElevatorPole
@@ -184,8 +186,10 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                 0xBB, // ICZIceBlock
                 0xBC, // ICZMiniboss
                 0xBD, // ICZEndBoss
+                0xBE, // SnaleBlaster
                 0xBF, // Ribot
                 0xC0, // Orbinaut
+                0xC1, // Corkey
                 0xC2  // Flybot767
         ));
         S3KL_IMPLEMENTED_IDS = Set.copyOf(s3kl);

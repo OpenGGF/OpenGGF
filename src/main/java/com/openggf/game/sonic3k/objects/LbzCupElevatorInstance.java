@@ -13,6 +13,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
@@ -79,9 +80,10 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance impleme
     private int priorityBucket = PRIORITY_LOW;
     private int xVel;
     private int yVel;
-    private long fixedX;
-    private long fixedY;
+    private int xSub;
+    private int ySub;
     private boolean flickerMode;
+    private boolean flickerHidden;
     private boolean attachHidden;
     @RewindTransient(reason = "Structural child reference; the attachment child is spawned from parent state.")
     private AttachChild attachChild;
@@ -160,6 +162,13 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance impleme
         ensureChildren();
         if (flickerMode) {
             updateFlicker();
+            // Obj_LBZElevatorCupFlicker flickers every other frame (Level_frame_counter+1 bit 0)
+            // and parks itself far away once it leaves the screen (move.w #$7FFF,x_pos).
+            flickerHidden = (frameCounter & 1) != 0;
+            if (!isOnScreen(WIDTH_PIXELS)) {
+                setDestroyed(true);
+                return;
+            }
             updateDynamicSpawn(x, y);
             return;
         }
@@ -172,6 +181,9 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance impleme
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        if (flickerMode && flickerHidden) {
+            return;
+        }
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.LBZ_CUP_ELEVATOR);
         if (renderer != null) {
             renderer.drawFrameIndex(0, x, y, hFlip, false);
@@ -336,7 +348,7 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance impleme
         } else {
             spinSpeed += 0x10;
         }
-        setAngleByte(angleByte() + (spinSpeed & 0xFF));
+        setAngleByte(angleByte() + spinSpeedAngleStep());
         updatePriorityOnAngleCrossing();
     }
 
@@ -352,8 +364,19 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance impleme
         } else {
             spinSpeed += 0x10;
         }
-        setAngleByte(angleByte() - (spinSpeed & 0xFF));
+        setAngleByte(angleByte() - spinSpeedAngleStep());
         updatePriorityOnAngleCrossing();
+    }
+
+    /**
+     * Per-frame angle advance during a spin. ROM does {@code move.b $2E(a0),d0}, which on the
+     * big-endian 68000 reads the <em>high</em> byte of the {@code spinSpeed} word. The cup therefore
+     * ramps smoothly ($06..$10 per frame) and keeps rotating once {@code spinSpeed} pins at $1000
+     * ($10 per frame) until the exit-angle window is crossed. Reading the low byte instead spins
+     * wildly and freezes at $1000 (low byte $00), trapping the rider forever.
+     */
+    private int spinSpeedAngleStep() {
+        return (spinSpeed >> 8) & 0xFF;
     }
 
     private void updateFling1() {
@@ -387,18 +410,25 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance impleme
         flickerMode = true;
         xVel = launchXVel;
         yVel = 0;
-        fixedX = (long) x << 16;
-        fixedY = (long) y << 16;
+        xSub = 0;
+        ySub = 0;
         playSfx(Sonic3kSfx.DEATH.id);
         flingPlayer(p1, mainPlayerOrNull(), -0x300);
         flingPlayer(p2, nativeP2OrNull(), -0x400);
     }
 
+    /**
+     * Obj_LBZElevatorCupFlicker runs {@code MoveSprite}: the cup arcs away on its launch x velocity
+     * while gravity ({@code $38}) drags it down, so it falls off-screen instead of sliding flat.
+     */
     private void updateFlicker() {
-        fixedX += (long) xVel << 8;
-        fixedY += (long) yVel << 8;
-        x = (int) (fixedX >> 16);
-        y = (int) (fixedY >> 16);
+        SubpixelMotion.State state = new SubpixelMotion.State(x, y, xSub, ySub, xVel, yVel);
+        SubpixelMotion.moveSprite(state, SubpixelMotion.S3K_GRAVITY);
+        x = state.x;
+        y = state.y;
+        xSub = state.xSub;
+        ySub = state.ySub;
+        yVel = state.yVel;
     }
 
     private void applyOrbitalX() {

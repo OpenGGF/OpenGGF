@@ -1435,6 +1435,20 @@ public final class Sonic3kPlcArtRegistry {
                 2,
                 null));
 
+        // Exploding Trigger (Object 0x13): make_art_tile(ArtTile_LBZMisc+$70, 2, 0)
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.LBZ_EXPLODING_TRIGGER,
+                Sonic3kConstants.MAP_LBZ_EXPLODING_TRIGGER_ADDR,
+                Sonic3kConstants.ARTTILE_LBZ_MISC + 0x70,
+                2,
+                null));
+
+        // Trigger Bridge (Object 0x14): make_art_tile(ArtTile_LBZMisc, 2, 0)
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.LBZ_TRIGGER_BRIDGE,
+                Sonic3kConstants.MAP_LBZ_TRIGGER_BRIDGE_ADDR,
+                Sonic3kConstants.ARTTILE_LBZ_MISC,
+                2,
+                null));
+
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.SNALE_BLASTER,
                 Sonic3kConstants.ART_KOSM_SNALE_BLASTER_ADDR,
