@@ -60,6 +60,12 @@ All notable changes to the OpenGGF project are documented in this file.
   `docs/s1disasm/_anim/Electrocuter.asm:13-15`). The object now resolves the
   gameplay-owned object frame counter for that cadence. Advances
   `TestS1Sbz2CompleteRunTraceReplay` from first-error frame 361 to 576.
+- **S1 SLZ2 fan push now preserves Sonic's x_sub:** `Sonic1FanObjectInstance`
+  now applies the fan's word-position push with `shiftX(...)` instead of
+  `setCentreX(...)`, matching the ROM `add.w d0,obX(a1)` in
+  `docs/s1disasm/_incObj/5D Fan.asm:75`. This preserves the accumulated
+  `x_sub` fraction instead of zeroing it during the fan push. Advances
+  `TestS1Slz2CompleteRunTraceReplay` from first-error frame 333 to 651.
 - **OOZ/CPZ rising platform now integrates sub-pixels (ROM-accurate):**
   `CPZPlatformObjectInstance` auto-rise (Obj19_MoveRoutine5/6) previously did
   `y += yVel >> 8`, dropping the sub-pixel fraction and stepping a full pixel

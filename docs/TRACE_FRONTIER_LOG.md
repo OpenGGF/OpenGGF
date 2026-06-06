@@ -122,6 +122,26 @@
   no tolerance band, no trace hydration.
 - New frontier f576 = `y` mismatch expected=`0x0763` actual=`0x075C`, with nearby RunningDisc
   terrain/contact context (`eng-near s49/s98 0x67 RunningDisc`) and Electrocuter collision clear.
+## 2026-06-06 - s1 slz2 f333->f651: Fan word-position push preserves x_sub
+
+- Branch `bugfix/ai-trace-s1-slz2`, worktree `.worktrees/trace-s1-slz2`.
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" "-Dtest=TestS1Slz2CompleteRunTraceReplay#replayMatchesTrace" test`
+- **Status: ADVANCED (still failing).** First-error frame **333 -> 651**, error count **270** at the
+  new frontier. Surefire: `Tests run: 1, Failures: 1`.
+- **Root cause:** S1 Fan computes a signed push amount and applies it with a word add to Sonic's
+  position, `add.w d0,obX(a1)` (`docs/s1disasm/_incObj/5D Fan.asm:40-75`). A 68000 word add to
+  `obX` changes the pixel word only and leaves the adjacent subpixel word intact. The engine used
+  `setCentreX(...)`, which zeroed `x_sub` every fan-push frame. `Sonic1FanObjectInstance` now uses
+  `shiftX(...)`, the existing ROM-word-position helper that preserves subpixel state. This is object
+  behavior from the fan routine, not a zone/route/frame/gameId carve-out, tolerance, trace hydration,
+  or no-op.
+- Supporting ROM context: `ObjectFall` shows the paired `obX`/`obY` longword position format and
+  subpixel-preserving movement (`docs/s1disasm/_incObj/sub ObjectFall.asm:5-18`); Sonic wall-graze
+  alignment also uses word-position adjustment (`docs/s1disasm/_incObj/01 Sonic.asm:1688-1698`).
+- New frontier f651 = `g_speed` mismatch expected=`0x1000` actual=`0x10AE`, with matching subpixel
+  block `sub=(5E00,F400)` and nearby SLZ collapsing floors. This is a later collapsing-floor/contact
+  frontier, not the fan x drift fixed here.
 - **Same-game regression guard (PASS, zero regressions):**
   `TestS1Credits00Ghz1TraceReplay`, `TestS1Credits01Mz2TraceReplay`,
   `TestS1Credits02Syz3TraceReplay`, `TestS1Credits03Lz3TraceReplay`,
