@@ -55,6 +55,14 @@ public class HeadlessTestRunner {
     private final int p2StartKey = GameServices.configuration().getInt(SonicConfiguration.P2_START);
     private int frameCounter = 0;
 
+    /**
+     * Previous-frame P1 Start state, used to derive the leading-edge Start press
+     * that drives ROM in-game pause ({@code Ctrl_1_pressed} & Start). Tracked
+     * purely from the input stream (live keys or BK2 movie) — never from trace
+     * data — so replay stays comparison-only.
+     */
+    private boolean p1StartHeldPrev = false;
+
     // BK2 recording playback fields
     private Bk2Movie bk2Movie;
     private int bk2StartIndex;
@@ -86,6 +94,16 @@ public class HeadlessTestRunner {
     }
 
     /**
+     * Convenience overload that also carries P1 Start, used by tests exercising
+     * ROM in-game pause. Equivalent to the 7-arg overload with no P2 input and
+     * the given P1 Start state.
+     */
+    public void stepFrame(boolean up, boolean down, boolean left, boolean right, boolean jump,
+                          boolean p1Start) {
+        stepFrame(up, down, left, right, jump, /* p2Mask */ 0, /* p2Start */ false, p1Start);
+    }
+
+    /**
      * Steps one frame with both P1 and P2 input. The P2 input is delivered by
      * pressing/releasing the configured P2 keybindings in the same shared
      * {@link InputHandler} instance, so {@code SpriteManager.update} reads it
@@ -101,7 +119,23 @@ public class HeadlessTestRunner {
      */
     public void stepFrame(boolean up, boolean down, boolean left, boolean right, boolean jump,
                           int p2Mask, boolean p2Start) {
+        stepFrame(up, down, left, right, jump, p2Mask, p2Start, /* p1Start */ false);
+    }
+
+    /**
+     * Full-input step overload, including P1 Start so ROM in-game pause can be
+     * exercised from both unit tests and BK2 replay. The Start <em>edge</em>
+     * (released→pressed) is derived here from {@code p1Start} versus the previous
+     * frame's Start state and fed to {@link LevelFrameStep#executeWithPause}; when
+     * the resulting state is paused the level update is skipped while the frame
+     * counter and input still advance — exactly as ROM {@code Pause_Loop} runs
+     * only the V-int.
+     */
+    public void stepFrame(boolean up, boolean down, boolean left, boolean right, boolean jump,
+                          int p2Mask, boolean p2Start, boolean p1Start) {
         frameCounter++;
+        boolean startEdge = p1Start && !p1StartHeldPrev;
+        p1StartHeldPrev = p1Start;
         updateActiveTitleCardOverlay();
         if (applyPendingSeamlessTransition()) {
             return;
@@ -121,9 +155,11 @@ public class HeadlessTestRunner {
         setKeyState(p2StartKey, p2Start);
 
         GameServices.sprites().publishHeldInputForLevelEvents(inputHandler);
-        LevelFrameStep.execute(LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
+        LevelFrameStep.executeWithPause(
+                LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
                 levelManager, GameServices.camera(),
-                () -> GameServices.sprites().update(inputHandler));
+                () -> GameServices.sprites().update(inputHandler),
+                startEdge, LevelFrameStep.DIRECT_WRAPPER);
         inputHandler.update();
     }
 
@@ -290,7 +326,13 @@ public class HeadlessTestRunner {
         boolean right = (mask & AbstractPlayableSprite.INPUT_RIGHT) != 0;
         boolean jump = (mask & AbstractPlayableSprite.INPUT_JUMP) != 0;
 
-        stepFrame(up, down, left, right, jump, p2Mask, p2Start);
+        // P1 Start drives ROM in-game pause (Game_paused). Read it straight from
+        // the BK2 movie row — never from the trace CSV/aux — so a paused movie
+        // segment freezes the engine for exactly the paused frames and stays
+        // frame-aligned. The Start edge is computed inside stepFrame().
+        boolean p1Start = frameInput.p1StartPressed();
+
+        stepFrame(up, down, left, right, jump, p2Mask, p2Start, p1Start);
         currentBk2Index++;
 
         return mask;
@@ -319,6 +361,12 @@ public class HeadlessTestRunner {
         if (frameInput.p1ActionMask() != 0) {
             mask |= AbstractPlayableSprite.INPUT_JUMP;
         }
+
+        // Keep the Start-edge tracker in sync across lag frames so a Start press
+        // straddling a lag frame is still detected as a single edge on the next
+        // real gameplay frame. ROM Pause_Game lives inside LevelLoop, which does
+        // not run on lag frames, so no pause toggle happens here.
+        p1StartHeldPrev = frameInput.p1StartPressed();
 
         // Advance BK2 index without calling stepFrame() - no physics processed.
         currentBk2Index++;

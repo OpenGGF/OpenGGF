@@ -4,6 +4,27 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **ROM-accurate in-game pause (`Game_paused` / `Pause_Loop`) in the
+  level-frame tick:** modelled the universal Start-edge pause that all three
+  games share (S1 `PauseGame` `docs/s1disasm/_inc/PauseGame.asm:5-54`; S2
+  `PauseGame` `docs/s2disasm/s2.asm:1585-1633`; S3K `Pause_Game` at the top of
+  `LevelLoop`, `docs/skdisasm/s3.asm:1690-1761` /
+  `docs/skdisasm/sonic3k.asm:7884-7894`). A P1 Start-press edge during level
+  gameplay (lives > 0) toggles a gameplay-scoped `GameStateManager.gamePaused`
+  flag; while paused the entire level update (objects, physics, camera, scroll)
+  is skipped for the frame — matching `Pause_Loop` running only the V-int — while
+  the frame counter and input cursor still advance, so a paused window stays
+  frame-aligned. A second Start press resumes and the rest of that frame runs.
+  This is distinct from the existing loop/timing-level window-focus and
+  keyboard-toggle pauses, which also halt audio. The pause is driven purely from
+  the input stream (live keys or the BK2 P1 Start bit) — never from trace data —
+  keeping trace replay comparison-only, and it is inert unless Start is pressed
+  during gameplay, so existing S1/S2/S3K trace frontiers are unchanged. Added a
+  player-1 `START` keybinding (default Backspace) and the
+  `LevelFrameStep.executeWithPause` entry point used by both `GameLoop` and the
+  headless test runner; supports the S3K HCZ complete-run trace's accidental
+  in-game pause.
+
 - **S1 complete-run SBZ3/Final-Zone split (fixes the FZ f0 bootstrap; adds the
   19th per-act trace):** the original `fz_completerun` data was mislabeled — it
   was actually Scrap Brain Act 3, so `TestS1FzCompleteRunTraceReplay` diverged at

@@ -1,5 +1,13 @@
 # Trace Frontier Log
 
+## 2026-06-06 - S3K complete-run Stage 2: ROM in-game pause in the replay tick (no frontier move; cross-game baselines unchanged)
+
+- Worktree `C:/tmp/wt-s3k-stage2`, branch `feature/ai-s3k-pause-replay`, off develop 92d2f8b95. forkCount=1, reuseForks=true, s2.gen + s3k.gen.
+- Change: modelled ROM `Game_paused` / `Pause_Loop` (universal Start-edge toggle: S1 `docs/s1disasm/_inc/PauseGame.asm:5-54`, S2 `docs/s2disasm/s2.asm:1585-1633`, S3K `docs/skdisasm/s3.asm:1690-1761` at top of `LevelLoop` `docs/skdisasm/sonic3k.asm:7884-7894`). A P1 Start-press edge during level gameplay toggles `GameStateManager.gamePaused`; while paused the level update is skipped for the frame but the frame counter/input cursor advance, so a paused window stays frame-aligned. New `LevelFrameStep.executeWithPause` used by `GameLoop` (live `START` key) and `HeadlessTestRunner` (BK2 P1 Start bit). Comparison-only: pause is input-driven, never from trace data.
+- Verified inert on all existing traces (none press Start). Cross-game sweep command:
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=...\s2.gen" "-Ds3k.rom.path=...\s3k.gen" "-Dtest=TestS2Ehz1TraceReplay,TestS2ArzLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS3kAizTraceReplay,TestS3kCnzTraceReplay,TestS3kMgzTraceReplay" test`
+- Result (all UNCHANGED): EHZ1 GREEN, Arz GREEN, Wfz GREEN, Mtz2 first error f1217 (tails_x), S3K Aiz f8941 (camera_y), Cnz f17276 (x_speed), Mgz f4124 (y_speed). New unit test `TestInGamePause` (5 tests) + `TestConfigCatalog` (6) green.
+
 ## 2026-06-06 - s1 SBZ3/FZ complete-run split: FZ f0->f277 (bootstrap fixed), SBZ3 new f45
 
 - Worktree `C:/tmp/wt-s1fz`, off develop d811dd085. Coherent fixture set taken from Codex's S1 commits c7ea38340 + b3a8909b6 (sbz3+fz metadata/physics, both test classes, the re-recorded shared `_movies/s1-complete-run.bk2`, level-map).
