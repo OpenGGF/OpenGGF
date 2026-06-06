@@ -72,6 +72,15 @@ public class Sonic1BurrobotBadnikInstance extends AbstractBadnikInstance {
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        if (currentX >= 0x0340 && currentX <= 0x0390 && currentY >= 0x0080 && currentY <= 0x00C0
+                && frameCounter >= 260 && frameCounter <= 303) {
+            System.err.printf("BURRODBG f=%d state=%d pos=%04X,%04X vel=%04X,%04X player=%s%n",
+                    frameCounter, state, currentX & 0xFFFF, currentY & 0xFFFF,
+                    xVelocity & 0xFFFF, yVelocity & 0xFFFF,
+                    player == null ? "null" : String.format("%04X,%04X dbg=%s anim=%02X",
+                            player.getCentreX() & 0xFFFF, player.getCentreY() & 0xFFFF,
+                            player.isDebugMode(), player.getAnimationId()));
+        }
         switch (state) {
             case STATE_CHANGEDIR -> updateChangeDir();
             case STATE_MOVE -> updateMove(frameCounter);
@@ -220,7 +229,10 @@ public class Sonic1BurrobotBadnikInstance extends AbstractBadnikInstance {
         motionState.y = currentY;
         motionState.xVel = xVelocity;
         motionState.yVel = yVelocity;
-        SubpixelMotion.moveSprite2(motionState);
+        // Burro_Move/Burro_Jump call SpeedToPos, which updates 16.16 obX/obY.
+        // docs/s1disasm/_incObj/2D Burrobot.asm:63,103
+        // docs/s1disasm/_incObj/sub SpeedToPos.asm:5-18
+        SubpixelMotion.speedToPos(motionState);
         currentX = motionState.x;
         currentY = motionState.y;
     }
@@ -272,5 +284,12 @@ public class Sonic1BurrobotBadnikInstance extends AbstractBadnikInstance {
 
         int frame = getMappingFrame();
         renderer.drawFrameIndex(frame, currentX, currentY, !facingLeft, false);
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("state=%d timer=%d vel=(%04X,%04X) sub=(%04X,%04X)",
+                state, stateTimer, xVelocity & 0xFFFF, yVelocity & 0xFFFF,
+                motionState.xSub & 0xFFFF, motionState.ySub & 0xFFFF);
     }
 }

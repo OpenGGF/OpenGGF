@@ -451,7 +451,8 @@ final class ObjectTouchResponseController {
                         : -1;
                 debugState.addHit(
                         new TouchResponseDebugHit(slotIndex, instance.getSpawn(), objX, objY, flags, sizeIndex,
-                                width, height, category, overlap));
+                                width, height, category, overlap,
+                                instance instanceof AbstractObjectInstance aoi ? aoi.traceDebugDetails() : ""));
             }
             if (!overlap) {
                 continue;

@@ -209,6 +209,12 @@ behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **S1 trace-fleet integration branch (2026-06-06).** Merged
+  `bugfix/ai-s1-trace-fleet-integration`, preserving the release-readiness
+  roadmap and the accepted trace/debug harness work from the main workspace.
+  The branch carries the S1 Chopper subpixel-origin behavior, Burrobot touch
+  response coverage, inline-order object touch diagnostics, Labyrinth object
+  tests, and the checked-in S3K complete-run BK2 needed by the trace catalog.
 - **S1 trace-fleet frontier pass (2026-06-06).** Merged
   `bugfix/ai-s1-trace-round4` after validating the accepted Codex fleet fixes
   against the S1 green guard set. The pass advances GHZ2 Obj18 platform timing

@@ -101,7 +101,6 @@ public class Sonic1ChopperBadnikInstance extends AbstractBadnikInstance {
             // SpeedToPos uses obY as a 32-bit value; the ROM write leaves the
             // low word intact for the next leap.
             currentY = origY;
-            motion.y = currentY;
             // move.w #-$700,obVelY(a0) - reset velocity for next jump
             yVelocity = INITIAL_Y_VELOCITY;
         }
