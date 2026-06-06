@@ -4,6 +4,17 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 GHZ/MZ Swinging Platform continued-ride height now matches Obj15:**
+  `Sonic1SwingingPlatformObjectInstance` now separates the ROM's fresh-landing
+  surface from the continued-riding surface. `Swing_SetSolid` passes
+  `obHeight` into `Swing_Solid`/`Platform3`, while `Swing_Action2` re-runs
+  `Swing_Move` and passes `obHeight + 1` into `MvSonicOnPtfm`
+  (`docs/s1disasm/_incObj/15 Swinging Platforms.asm:128-154`,
+  `docs/s1disasm/_incObj/sub PlatformObject.asm:114-127`). This keeps the
+  initial landing geometry at height 8 for GHZ/MZ platforms but carries an
+  existing rider at height 9, advancing `TestS1Ghz2CompleteRunTraceReplay`
+  from first-error frame 1409 to 1690. The new frontier is a separate
+  Chopper/enemy-bounce `y_speed` mismatch.
 - **S1 complete-run trace data now separates SBZ3 and Final Zone correctly:**
   `s1-complete-run.bk2` has been replaced with a movie that reaches the real
   end of the game, and the BizHawk complete-run trace resources now split the

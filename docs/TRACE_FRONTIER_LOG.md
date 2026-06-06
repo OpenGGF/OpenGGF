@@ -1,5 +1,42 @@
 # Trace Frontier Log
 
+## 2026-06-06 - s1 ghz2 f1409->f1690: Obj15 SwingingPlatform continued-ride surface is obHeight+1
+
+- Branch `bugfix/ai-trace-s1-r2-ghz2`, worktree `.worktrees/trace-s1-r2-ghz2`.
+- Target command:
+  `mvn "-Dtest=TestS1Ghz2CompleteRunTraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" test`
+- **Status: ADVANCED (still failing).** First-error frame **1409 -> 1690**.
+  Surefire: `Tests run: 1, Failures: 1`. New first error is `y_speed`
+  expected `0x03D0`, actual `-03D0`, near a Chopper/enemy-bounce contact; this
+  is outside the SwingingPlatform surface-height ownership scope.
+- **Root cause:** the engine used one platform surface height for both fresh
+  airborne landing and continued riding. ROM Obj15 uses two heights. `Swing_SetSolid`
+  passes `obActWid` and `obHeight` into `Swing_Solid`; `Swing_Solid` subtracts
+  that `d3` directly before falling through to `Platform3` for new landing.
+  After Sonic is already riding, `Swing_Action2` calls `ExitPlatform`, saves
+  `obX`, runs `Swing_Move`, then sets `d3 = obHeight + 1` before
+  `MvSonicOnPtfm`, which computes Sonic's carried `obY` from `obY(a0) - d3 -
+  player_obHeight` and applies X carry from the saved old platform X.
+- **Fix:** `Sonic1SwingingPlatformObjectInstance` now returns
+  `SolidObjectParams(halfWidth, halfHeight, halfHeight + 1)` and opts out of
+  landing snap from the continued-ride height, so fresh landing keeps the
+  `Swing_Solid`/`Platform3` geometry while continued riding uses the
+  `MvSonicOnPtfm` surface.
+- **Disasm cites:** `docs/s1disasm/_incObj/15 Swinging Platforms.asm:128-134`
+  (`Swing_SetSolid`), `:144-154` (`Swing_Action2`), `:170-194`
+  (`MvSonicOnPtfm`), and `docs/s1disasm/_incObj/sub PlatformObject.asm:114-127`
+  (`Swing_Solid` top offset).
+- **Same-game regression guard (PASS, zero regressions):**
+  `mvn "-Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestS1Ghz1TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" test`
+  -> all requested report XML files show `failures=0`, `errors=0`.
+- Focused unit guard:
+  `mvn "-Dmse=off" "-Dtest=TestS1SwingingPlatformSurfaceRegression" "-DfailIfNoTests=false" test`
+  -> PASS (`Tests run: 1, Failures: 0, Errors: 0`).
+- Genuineness gate: PASS. The fix is ROM-state/object-behavior driven, adds no
+  trace hydration, no tolerance, and no zone/route/frame carve-out. The optional
+  S1 object pitfall catalogue file named by the trace workflow is not present in
+  this worktree; the root cause is documented here and in the changelog.
+
 ## 2026-06-06 - S1 complete-run SBZ3/FZ movie split regenerated
 
 - User replaced `src/test/resources/traces/s1/_movies/s1-complete-run.bk2` with a TAS that now completes the game.
