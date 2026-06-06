@@ -1,5 +1,15 @@
 # Trace Frontier Log
 
+## 2026-06-06 - s1 SBZ3/FZ complete-run split: FZ f0->f277 (bootstrap fixed), SBZ3 new f45
+
+- Worktree `C:/tmp/wt-s1fz`, off develop d811dd085. Coherent fixture set taken from Codex's S1 commits c7ea38340 + b3a8909b6 (sbz3+fz metadata/physics, both test classes, the re-recorded shared `_movies/s1-complete-run.bk2`, level-map).
+- Root cause: the original `fz_completerun` data was mislabeled Scrap Brain Act 3, so `TestS1FzCompleteRunTraceReplay` (engine zone 6 act 0) diverged at frame 0. Re-recorded the TAS to reach the real Final Zone and split the data: `sbz3_completerun` (engine zone 5 act 2, bk2_frame_offset 181004) and `fz_completerun` (engine zone 6 act 0, bk2_frame_offset 189578).
+- Verification (worktree mvn single fork, s1.gen):
+  - **FZ CompleteRun: f0 -> f277** (`TestS1FzCompleteRunTraceReplay`).
+  - **SBZ3 CompleteRun: skipped(no fixture) -> f45** (`TestS1Sbz3CompleteRunTraceReplay`, now the 19th active per-act trace).
+  - bk2 re-record is a clean superset — other acts unchanged: ghz1 f1390, mz1 f1260, mz3 f1702, sbz1 f513, syz2 f85.
+- Note: S1 complete-run suite is Codex's active domain; this slip-in lands the SBZ3/FZ split fixtures only, no engine change.
+
 ## 2026-06-06 - s2 EHZ1 f5121->GREEN: control-lock latch no longer clobbers a forced-input write (resolves MTZ2 regression)
 
 - Worktree `C:/tmp/wt-ehz1-fix`, branch `ai-fix-ehz1-forced-input`, off develop 37dd3d532.

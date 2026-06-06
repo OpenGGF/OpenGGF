@@ -4,6 +4,17 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 complete-run SBZ3/Final-Zone split (fixes the FZ f0 bootstrap; adds the
+  19th per-act trace):** the original `fz_completerun` data was mislabeled — it
+  was actually Scrap Brain Act 3, so `TestS1FzCompleteRunTraceReplay` diverged at
+  frame 0. The complete-run TAS was re-recorded to reach the real Final Zone (the
+  shared `_movies/s1-complete-run.bk2` grew accordingly) and the data split into
+  correct `sbz3_completerun` (Scrap Brain 3, engine zone 5 act 2) and
+  `fz_completerun` (Final Zone, engine zone 6 act 0) fixtures. SBZ3 now pins a
+  real frontier (f45) and FZ advances f0 -> f277. The re-record is a clean
+  superset: the other 17 complete-run acts hold their exact frontiers (verified
+  ghz1 f1390, mz1 f1260, mz3 f1702, sbz1 f513, syz2 f85).
+
 - **Control-lock logical-input latch no longer clobbers an object's forced-input
   write (resolves the EHZ1 regression from the MTZ2 latch):** ROM `Obj01_Control`
   skips re-copying `Ctrl_1` into `Ctrl_1_Logical` while `Control_Locked` is set
