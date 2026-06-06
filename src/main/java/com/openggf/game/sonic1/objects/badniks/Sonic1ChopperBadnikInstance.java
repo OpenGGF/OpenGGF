@@ -99,7 +99,6 @@ public class Sonic1ChopperBadnikInstance extends AbstractBadnikInstance {
         if (currentY >= origY) {
             // move.w d0,obY(a0) - snap to origin
             currentY = origY;
-            motion.ySub = 0;
             // move.w #-$700,obVelY(a0) - reset velocity for next jump
             yVelocity = INITIAL_Y_VELOCITY;
         }

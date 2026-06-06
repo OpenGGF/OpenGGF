@@ -10,6 +10,7 @@ public record TouchResponseDebugHit(
         int width,
         int height,
         TouchCategory category,
-        boolean overlapping
+        boolean overlapping,
+        String debugDetails
 ) {
 }

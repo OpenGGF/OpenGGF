@@ -570,6 +570,18 @@ public class TestTouchResponseManager {
     }
 
     @Test
+    public void s1RenderFlagTouchSkipsSingleRegionFirstFrameObject() {
+        MockFirstFrameTouchObject chopperLike = new MockFirstFrameTouchObject(160, 112, 0x09);
+        setupTableSize(9, 12, 16);
+        objectManager.addDynamicObject(chopperLike);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        assertFalse(chopperLike.wasTouched,
+                "S1 ReactToItem gates single-region touch on obRender bit 7; first-frame objects have not been displayed yet");
+    }
+
+    @Test
     public void testRunTouchResponsesForPlayerUsesLiveCurrentObjectPosition() {
         // Current position barely overlaps; pre-update position does not.
         MockTrackedTouchObject obj = new MockTrackedTouchObject(174, 112, 176, 112, 0x48);
@@ -786,6 +798,17 @@ public class TestTouchResponseManager {
         @Override
         public TouchResponseProvider.TouchRegion[] getMultiTouchRegions() {
             return regions;
+        }
+    }
+
+    private static final class MockFirstFrameTouchObject extends MockTouchObject {
+        private MockFirstFrameTouchObject(int x, int y, int flags) {
+            super(x, y, flags);
+        }
+
+        @Override
+        public boolean isSkipSolidContactThisFrame() {
+            return true;
         }
     }
 

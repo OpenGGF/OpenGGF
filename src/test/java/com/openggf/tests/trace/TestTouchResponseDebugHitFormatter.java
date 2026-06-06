@@ -25,7 +25,8 @@ class TestTouchResponseDebugHitFormatter {
                 6,
                 6,
                 TouchCategory.HURT,
-                false);
+                false,
+                "");
 
         assertEquals(
                 "scan s41 0x23 HURT ov=0 sz=6x6 obj=@024C,0384 sp=@0244,038C",
@@ -44,10 +45,31 @@ class TestTouchResponseDebugHitFormatter {
                 16,
                 16,
                 TouchCategory.ENEMY,
-                true);
+                true,
+                "");
 
         assertEquals(
                 "touch s35 0x40 ENEMY obj=@0259,03B5 sp=@025B,03B7",
+                TouchResponseDebugHitFormatter.summariseOverlaps(List.of(hit)));
+    }
+
+    @Test
+    void includesDebugDetailsWhenPresent() {
+        TouchResponseDebugHit hit = new TouchResponseDebugHit(
+                32,
+                new ObjectSpawn(0x037F, 0x00AC, 0x2D, 0, 0, true, 0),
+                0x037F,
+                0x00AC,
+                0x05,
+                5,
+                12,
+                18,
+                TouchCategory.ENEMY,
+                true,
+                "state=3 timer=0");
+
+        assertEquals(
+                "touch s32 0x2D ENEMY obj=@037F,00AC state=3 timer=0",
                 TouchResponseDebugHitFormatter.summariseOverlaps(List.of(hit)));
     }
 }

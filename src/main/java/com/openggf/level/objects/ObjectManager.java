@@ -325,6 +325,18 @@ public class ObjectManager {
      * after their physics but before other objects' solid checks.
      */
     public void runTouchResponsesForPlayer(PlayableEntity player, int touchFrameCounter) {
+        runTouchResponsesForPlayer(player, touchFrameCounter, false);
+    }
+
+    /**
+     * Run touch responses for a single player outside the main update loop.
+     * ROM order: S1's player slot runs ReactToItem before later object slots
+     * execute (docs/s1disasm/_inc/ExecuteObjects.asm:11-31 and
+     * docs/s1disasm/_incObj/01 Sonic.asm:87-90), so inline-order modules must
+     * scan the frame-start object snapshot captured before player physics.
+     */
+    public void runTouchResponsesForPlayer(PlayableEntity player, int touchFrameCounter,
+            boolean usePreUpdateState) {
         if (touchResponses == null) {
             return;
         }
@@ -334,9 +346,9 @@ public class ObjectManager {
         // (knockback only, no ring scatter or death). Must dispatch to updateSidekick
         // to avoid routing through the main player's applyHurtOrDeath path.
         if (player.isCpuControlled()) {
-            touchResponses.updateSidekick(player, touchFrameCounter, false);
+            touchResponses.updateSidekick(player, touchFrameCounter, usePreUpdateState);
         } else {
-            touchResponses.update(player, touchFrameCounter, false);
+            touchResponses.update(player, touchFrameCounter, usePreUpdateState);
         }
     }
 
