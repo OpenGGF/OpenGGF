@@ -180,6 +180,31 @@ class TestLostRingObjectInstance {
     }
 
     @Test
+    void appendRenderCommandsDrawsEachMovedLostRingObjectWithItsOwnPhase() {
+        RingManager ringManager = spy(buildRingManagerWithLevelManager(null));
+        SpillAnimationState animation = new SpillAnimationState();
+        animation.reset();
+        for (int i = 0; i < 4; i++) {
+            animation.tick();
+        }
+        assertEquals(1, animation.frame(), "test setup should advance shared spill frame");
+
+        LostRingObjectInstance rightMovingRing = lostRingWithRingManager(
+                0x120, 0x140, 0x0200, 0, 0, animation, ringManager);
+        LostRingObjectInstance leftMovingRing = lostRingWithRingManager(
+                0x120, 0x140, -0x0300, 0, 2, animation, ringManager);
+
+        rightMovingRing.stepPhysicsForTest(0x18, false);
+        leftMovingRing.stepPhysicsForTest(0x18, false);
+        rightMovingRing.appendRenderCommands(new ArrayList<>());
+        leftMovingRing.appendRenderCommands(new ArrayList<>());
+
+        verify(ringManager).drawRingFrameAt(0x122, 0x140, 1);
+        verify(ringManager).drawRingFrameAt(0x11D, 0x140, 3);
+        verify(ringManager, never()).drawRingAt(anyInt(), anyInt(), anyInt());
+    }
+
+    @Test
     void ringManagerDoesNotDrawRetiredLegacyLostRingPoolAtSpawnPoint() throws Exception {
         LevelManager levelManager = GameServices.level();
         ObjectManager objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);
@@ -295,6 +320,20 @@ class TestLostRingObjectInstance {
                 List.of(), spriteSheet, levelManager, null, GameServices.audio());
         ringManager.ensurePatternsCached(GraphicsManager.getInstance(), 0);
         return ringManager;
+    }
+
+    private LostRingObjectInstance lostRingWithRingManager(int xPixel, int yPixel, int xVel, int yVel,
+                                                           int phaseOffset, SpillAnimationState animation,
+                                                           RingManager ringManager) {
+        LostRingObjectInstance ring = LostRingObjectInstance.spawn(
+                xPixel, yPixel, xVel, yVel, phaseOffset, 0xFF, animation);
+        ring.setServices(new StubObjectServices() {
+            @Override
+            public RingManager ringManager() {
+                return ringManager;
+            }
+        });
+        return ring;
     }
 
     private void setField(Object target, String fieldName, Object value) throws Exception {
