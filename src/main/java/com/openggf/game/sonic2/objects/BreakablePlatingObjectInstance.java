@@ -407,10 +407,10 @@ public class BreakablePlatingObjectInstance extends AbstractObjectInstance
             int fragX = x + FRAGMENT_OFFSETS[i][0];
             int fragY = y + FRAGMENT_OFFSETS[i][1];
 
-            BreakablePlatingObjectInstance fragment = new BreakablePlatingObjectInstance(
+            final int delay = FRAGMENT_DELAYS[i];
+            spawnChild(() -> new BreakablePlatingObjectInstance(
                     spawn, fragX, fragY, FRAGMENT_X_VEL, FRAGMENT_Y_VEL,
-                    FRAGMENT_DELAYS[i], fragPriority);
-            objectManager.addDynamicObject(fragment);
+                    delay, fragPriority));
         }
 
         // ROM: move.w #SndID_SlowSmash,d0 / jmp (PlaySound).l

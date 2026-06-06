@@ -165,10 +165,9 @@ public class LeavesGeneratorObjectInstance extends AbstractObjectInstance {
             // Random initial oscillation angle
             int initialAngle = leafRandom.angle();
 
-            LeafParticleObjectInstance leaf = new LeafParticleObjectInstance(
-                    leafX, leafY, xVel, yVel, initialFrame, initialAngle);
-
-            services().objectManager().addDynamicObject(leaf);
+            int finalXVel = xVel;
+            spawnFreeChild(() -> new LeafParticleObjectInstance(
+                    leafX, leafY, finalXVel, yVel, initialFrame, initialAngle));
         }
 
         // Play leaves sound

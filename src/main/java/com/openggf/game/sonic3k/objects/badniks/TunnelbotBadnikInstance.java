@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kLevelTriggerManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -8,6 +10,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.Palette;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -130,6 +133,8 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
     private static final int FLASH_PALETTE_LINE = 1;
     private static final int FLASH_COLOR_START = 12;
     private static final int FLASH_COLOR_COUNT = 3;
+    private static final int[] FLASH_COLOR_INDICES = {12, 13, 14};
+    private static final int[] FLASH_WHITE_WORDS = {0x0EEE, 0x0EEE, 0x0EEE};
 
     // ── Arm child offsets (ChildObjDat_88B2C) ────────────────────────────
 
@@ -186,7 +191,7 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
     // Hit flash state (sub_88A62)
     private int hitFlashTimer;      // ROM: $20(a0) — counts down from $20 (32)
     private boolean hitFlashActive;
-    private final com.openggf.level.Palette.Color[] savedColors = new com.openggf.level.Palette.Color[FLASH_COLOR_COUNT];
+    private final int[] savedFlashSegaWords = new int[FLASH_COLOR_COUNT];
 
     // Children
     private TunnelbotArm leftArm;
@@ -689,48 +694,49 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
         var palette = level.getPalette(FLASH_PALETTE_LINE);
         for (int i = 0; i < FLASH_COLOR_COUNT; i++) {
             var c = palette.getColor(FLASH_COLOR_START + i);
-            savedColors[i] = new com.openggf.level.Palette.Color(c.r, c.g, c.b);
+            savedFlashSegaWords[i] = segaWordFromColor(c);
         }
     }
 
     private void restorePaletteColors() {
         var level = services().currentLevel();
         if (level == null || level.getPaletteCount() <= FLASH_PALETTE_LINE) return;
-        var palette = level.getPalette(FLASH_PALETTE_LINE);
-        for (int i = 0; i < FLASH_COLOR_COUNT; i++) {
-            if (savedColors[i] != null) {
-                palette.setColor(FLASH_COLOR_START + i, savedColors[i]);
-            }
-        }
-        uploadFlashPalette(palette);
+        applyFlashColors(savedFlashSegaWords);
     }
 
     private void applyFlashPalette(boolean white) {
         var level = services().currentLevel();
         if (level == null || level.getPaletteCount() <= FLASH_PALETTE_LINE) return;
-        var palette = level.getPalette(FLASH_PALETTE_LINE);
         if (white) {
             // ROM: move.w #$EEE → white
-            var whiteColor = new com.openggf.level.Palette.Color((byte) 0xEE, (byte) 0xEE, (byte) 0xEE);
-            for (int i = 0; i < FLASH_COLOR_COUNT; i++) {
-                palette.setColor(FLASH_COLOR_START + i, whiteColor);
-            }
+            applyFlashColors(FLASH_WHITE_WORDS);
         } else {
             // Restore normal colors
-            for (int i = 0; i < FLASH_COLOR_COUNT; i++) {
-                if (savedColors[i] != null) {
-                    palette.setColor(FLASH_COLOR_START + i, savedColors[i]);
-                }
-            }
+            applyFlashColors(savedFlashSegaWords);
         }
-        uploadFlashPalette(palette);
     }
 
-    private void uploadFlashPalette(com.openggf.level.Palette palette) {
-        var gm = services().graphicsManager();
-        if (gm != null && gm.isGlInitialized()) {
-            gm.cachePaletteTexture(palette, FLASH_PALETTE_LINE);
-        }
+    private void applyFlashColors(int[] segaWords) {
+        S3kPaletteWriteSupport.applyColors(
+                services().paletteOwnershipRegistryOrNull(),
+                services().currentLevel(),
+                services().graphicsManager(),
+                S3kPaletteOwners.MGZ_TUNNELBOT,
+                S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                FLASH_PALETTE_LINE,
+                FLASH_COLOR_INDICES,
+                segaWords);
+    }
+
+    private static int segaWordFromColor(Palette.Color color) {
+        int r3 = quantizeSegaComponent(color.r);
+        int g3 = quantizeSegaComponent(color.g);
+        int b3 = quantizeSegaComponent(color.b);
+        return (b3 << 9) | (g3 << 5) | (r3 << 1);
+    }
+
+    private static int quantizeSegaComponent(byte component) {
+        return (((component & 0xFF) * 7) + 127) / 255;
     }
 
     // ── Rendering ───────────────────────────────────────────────────────

@@ -3,7 +3,6 @@ package com.openggf.game.sonic3k.objects.badniks;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.physics.SwingMotion;
@@ -87,13 +86,14 @@ public final class CaterkillerJrHeadInstance extends AbstractS3kBadnikInstance {
     }
 
     private void spawnBodySegments() {
-        ObjectManager objectManager = services().objectManager();
-
         for (int i = 0; i < BODY_SEGMENT_COUNT; i++) {
-            CaterkillerJrBodyInstance segment = new CaterkillerJrBodyInstance(
-                    spawn, i, SEGMENT_WAIT_DELAYS[i]);
-            bodySegments.add(segment);
-            objectManager.addDynamicObject(segment);
+            int segmentIndex = i;
+            CaterkillerJrBodyInstance segment = spawnFreeChild(
+                    () -> new CaterkillerJrBodyInstance(
+                            spawn, segmentIndex, SEGMENT_WAIT_DELAYS[segmentIndex]));
+            if (!segment.isDestroyed() && segment.getSlotIndex() >= 0) {
+                bodySegments.add(segment);
+            }
         }
         bodySpawned = true;
     }

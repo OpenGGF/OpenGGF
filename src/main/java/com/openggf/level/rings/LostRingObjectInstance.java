@@ -64,6 +64,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     private int phaseOffset;
     private boolean collected;
     private int sparkleStartFrame = -1;
+    private int lastFrameCounter;
 
     /**
      * Shared spin owner; the displayed frame = owner.frame() + phaseOffset. This is
@@ -227,6 +228,13 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         if (isDestroyed()) {
             return;
         }
+        lastFrameCounter = frameCounter;
+
+        if (collected && collectedSparkleFinished(frameCounter)) {
+            setDestroyed(true);
+            return;
+        }
+
         updateMovement();
 
         // Obj37_CheckBoundary: shared Ring_spill_anim_counter == 0 → delete.
@@ -416,6 +424,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     public void markCollected(int frameCounter) {
         collected = true;
         sparkleStartFrame = frameCounter;
+        lastFrameCounter = frameCounter;
     }
 
     public int getSparkleStartFrame() {
@@ -442,8 +451,50 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        // Full spilled-ring draw (shared spin frame + phaseOffset) relocates here in a
-        // later task; no-op until the spawn/render path is wired.
+        if (isDestroyed()) {
+            return;
+        }
+        ObjectServices services = servicesOrNull();
+        RingManager ringManager = services != null ? services.ringManager() : null;
+        if (ringManager == null || !ringManager.canRenderRings()) {
+            return;
+        }
+
+        if (collected) {
+            drawSparkle(ringManager);
+            return;
+        }
+
+        SpillAnimationState animation = spillAnimation != null
+                ? spillAnimation
+                : ringManager.getSpillAnimationState();
+        int spinFrame = (animation != null ? animation.frame() : 0) + phaseOffset;
+        ringManager.drawRingFrameAt(getX(), getY(), spinFrame);
+    }
+
+    private void drawSparkle(RingManager ringManager) {
+        if (sparkleStartFrame < 0 || ringManager.getSparkleFrameCount() <= 0) {
+            return;
+        }
+        int elapsed = Math.max(0, lastFrameCounter - sparkleStartFrame);
+        int sparkleFrameOffset = elapsed / ringManager.getSparkleFrameDelay();
+        if (sparkleFrameOffset >= ringManager.getSparkleFrameCount()) {
+            return;
+        }
+        ringManager.drawSparkleAt(getX(), getY(), sparkleFrameOffset);
+    }
+
+    private boolean collectedSparkleFinished(int frameCounter) {
+        if (sparkleStartFrame < 0) {
+            return false;
+        }
+        ObjectServices services = servicesOrNull();
+        RingManager ringManager = services != null ? services.ringManager() : null;
+        if (ringManager == null || ringManager.getSparkleFrameCount() <= 0) {
+            return true;
+        }
+        int elapsed = Math.max(0, frameCounter - sparkleStartFrame);
+        return elapsed / ringManager.getSparkleFrameDelay() >= ringManager.getSparkleFrameCount();
     }
 
     // ── Test accessors (fixed-point, so the sub-pixel carry is exercised exactly) ──

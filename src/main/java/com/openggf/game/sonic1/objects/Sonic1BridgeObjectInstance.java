@@ -107,6 +107,16 @@ public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
     private int[] logYOffsets;       // Current Y offset for each log (pixels below base Y)
     private byte[] slopeData;        // Slope data for collision system
     private boolean playerOnBridge;  // Whether player is currently on the bridge
+    // ROM Bri_Action runs in routine 2 (Bri_Solid -> Platform3); on the catch
+    // frame Platform3 bumps the bridge to routine 4 (addq.b #2,obRoutine(a0),
+    // sub PlatformObject.asm:42) and only Bri_MoveSonic finalises Sonic's Y on
+    // the FOLLOWING object pass (11 Bridge.asm:163-177). The BizHawk recorder
+    // samples the player at V-int (before that frame's object loop), so the ROM
+    // land detected during frame N first appears in the frame N+1 sample. This
+    // engine's checkpointAll() applies the land in the same pass it is detected,
+    // surfacing it one frame early. landingDeferred reproduces the ROM's
+    // detect-this-pass / apply-next-pass staging for a fresh airborne catch.
+    private boolean landingDeferred;
 
     public Sonic1BridgeObjectInstance(ObjectSpawn spawn) {
         super(spawn, "Bridge");
@@ -226,11 +236,88 @@ public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
         // Update slope data for collision system
         updateSlopeData();
 
+        // ROM routine-2 -> routine-4 landing stage (see landingDeferred field).
+        // On the FIRST object pass where an airborne, falling player enters the
+        // Platform3 catch window (and nobody is already riding), Bri_Solid /
+        // Platform3 (11 Bridge.asm:108-114; sub PlatformObject.asm:23-42) detect
+        // the landing and advance the bridge to routine 4, but Sonic's landed
+        // state only becomes visible to the V-int recorder on the NEXT frame's
+        // sample. Mirror that by deferring the apply one pass: skip the
+        // land-applying checkpoint this pass, then run it normally next pass.
+        // Already-riding carry (the Bri_WalkOff/Bri_MoveSonic path) is never
+        // deferred, so a standing rider keeps being carried every frame.
+        if (!landingDeferred && !playerOnBridge && hasPendingAirborneCatch()) {
+            landingDeferred = true;
+            return;
+        }
+        landingDeferred = false;
+
         // Manual checkpoints replace the legacy post-pass callback. Already-riding
         // players update the log index before bending above; new contacts latch here
         // for the next frame's Bri_WalkOff-equivalent bend.
         SolidCheckpointBatch batch = checkpointAll();
         updateStandingState(batch);
+    }
+
+    /**
+     * ROM Platform3 catch detector (read-only), used to stage the one-frame
+     * landing deferral without applying the land. Mirrors the ROM checks in
+     * Bri_Solid (X range + falling test) and Platform3 (Y range):
+     * <ul>
+     *   <li>{@code tst.w obVelY(a1); bmi Plat_Exit} — player must be falling
+     *       (y_speed &gt;= 0). 11 Bridge.asm:104.</li>
+     *   <li>X range {@code d1 = subtype*8 + 8}, {@code d2 = subtype*16};
+     *       {@code d0 = SonicX - bridgeX + d1}; reject if {@code d0 < 0} or
+     *       {@code d0 >= d2}. 11 Bridge.asm:96-114.</li>
+     *   <li>Y range {@code d0 = (obY-8) - (SonicY + obHeight + 4)}; catch when
+     *       {@code -0x10 <= d0 <= 0}. sub PlatformObject.asm:23-42. obHeight is
+     *       the player's y_radius ($E rolling / $13 standing). 11 Bridge.asm
+     *       passes the raw object Y, so the unbent spawn Y is used here.</li>
+     * </ul>
+     *
+     * <p><b>Why the deferral is gated on {@code d0 == 0} (the exact top edge),
+     * not the whole catch window.</b> The BizHawk recorder samples the player at
+     * V-int (before that frame's object loop), so a land Platform3 detects during
+     * frame N first becomes visible in the frame N+1 sample. The engine's
+     * checkpointAll() applies the land in the same pass it is detected.
+     * When the falling player's collision-box bottom lands flush with the surface
+     * ({@code d0 == 0}: {@code SonicBottom + 4 == surfaceTop}) the player is only
+     * just entering the window this frame, so the engine surfaces the land one
+     * frame ahead of the recorder — defer one pass to realign. When the player
+     * has already penetrated the surface ({@code d0 < 0}, e.g. a fast running
+     * approach that skips the exact-edge integer Y), the engine and recorder
+     * already agree on the land frame, so no deferral is applied.</p>
+     *
+     * <p>Only fires for a freshly airborne player; the standing/riding carry path
+     * keeps running through checkpointAll() every frame.</p>
+     */
+    private boolean hasPendingAirborneCatch() {
+        for (PlayableEntity candidate : services().playerQuery().playersFor(PLAYER_PARTICIPATION)) {
+            if (!(candidate instanceof AbstractPlayableSprite sprite)) {
+                continue;
+            }
+            if (!sprite.getAir()) {
+                continue; // ROM routine-2 catch only seats airborne players.
+            }
+            // tst.w obVelY(a1); bmi Plat_Exit — must be moving down (or level).
+            if (sprite.getYSpeed() < 0) {
+                continue;
+            }
+            // Bri_Solid X-range: d1 = subtype*8 + 8, d2 = subtype*16.
+            int d1 = (logCount * 8) + 8;
+            int d2 = logCount * 16;
+            int dx = sprite.getCentreX() - spawn.x() + d1;
+            if (dx < 0 || dx >= d2) {
+                continue;
+            }
+            // Platform3 Y-range: d0 = (obY - 8) - (SonicY + obHeight + 4).
+            // Defer only the flush-edge landing (d0 == 0); see Javadoc above.
+            int d0 = (spawn.y() - 8) - (sprite.getCentreY() + sprite.getYRadius() + 4);
+            if (d0 == 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private AbstractPlayableSprite firstStandingPlayer(SolidCheckpointBatch batch) {

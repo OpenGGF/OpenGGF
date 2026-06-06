@@ -7,7 +7,6 @@ import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -199,14 +198,7 @@ public class ArrowShooterObjectInstance extends AbstractObjectInstance {
         // Using addDynamicObjectNextFrame replicates this 1-frame gap: the arrow object is added
         // to the active list for the next frame, so its first update (Obj22_Arrow_Init + ObjectMove)
         // runs on the same frame as it would in the ROM.
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
-            return;
-        }
-
-        ArrowProjectileInstance arrow = new ArrowProjectileInstance(
-                spawn, currentX, currentY, hFlip);
-        objectManager.addDynamicObjectNextFrame(arrow);
+        spawnChild(() -> new ArrowProjectileInstance(spawn, currentX, currentY, hFlip));
     }
 
     @Override

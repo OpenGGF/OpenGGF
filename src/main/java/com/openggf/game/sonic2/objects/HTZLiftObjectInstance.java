@@ -243,11 +243,6 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
         }
         scenerySpawned = true;
 
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
-            return;
-        }
-
         int currentX = xFixed >> 8;
         int currentY = yFixed >> 8;
 
@@ -262,8 +257,7 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
                 false,
                 0);
 
-        BridgeStakeObjectInstance stake = new BridgeStakeObjectInstance(scenerySpawn, "BridgeStake");
-        objectManager.addDynamicObject(stake);
+        spawnFreeChild(() -> new BridgeStakeObjectInstance(scenerySpawn, "BridgeStake"));
 
         LOGGER.fine(() -> String.format("HTZLift spawned scenery at (%d,%d)", currentX, currentY));
     }

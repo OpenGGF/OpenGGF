@@ -271,11 +271,7 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
         int sparkleX = spawn.x() + offset[0];
         int sparkleY = spawn.y() + offset[1];
 
-        SignpostSparkleObjectInstance sparkle = new SignpostSparkleObjectInstance(sparkleX, sparkleY);
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.addDynamicObject(sparkle);
-        }
+        spawnFreeChild(() -> new SignpostSparkleObjectInstance(sparkleX, sparkleY));
 
         // ROM stores the byte offset into Obj0D_RingSparklePositions, so
         // addq.b #2 / andi.b #$E advances through the eight x/y pairs.
@@ -355,11 +351,9 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
         boolean allRingsCollected = services().areAllRingsCollected();
 
         // Spawn the results screen
-        ResultsScreenObjectInstance resultsScreen = new ResultsScreenObjectInstance(
-                elapsedSeconds, ringCount, actNumber, allRingsCollected);
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.addDynamicObject(resultsScreen);
+        if (services().objectManager() != null) {
+            spawnFreeChild(() -> new ResultsScreenObjectInstance(
+                    elapsedSeconds, ringCount, actNumber, allRingsCollected));
             LOGGER.info("Results screen spawned");
         }
     }

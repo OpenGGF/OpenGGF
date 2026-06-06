@@ -5,6 +5,10 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -177,6 +181,15 @@ public class TestSonic3kWaterDataProvider {
     public void outOfBoundsZoneReturnsDefaultHeight() {
         assertEquals(0x0600, provider.getStartingWaterLevel(-1, 0), "Zone -1 should return default");
         assertEquals(0x0600, provider.getStartingWaterLevel(99, 0), "Zone 99 should return default");
+    }
+
+    @Test
+    public void waterPaletteLoaderDoesNotPatchThroughPublicColorArray() throws IOException {
+        String source = Files.readString(Path.of(
+                "src/main/java/com/openggf/game/sonic3k/Sonic3kWaterDataProvider.java"));
+
+        assertFalse(source.contains(".colors[colorIndex]"),
+                "Sonic3kWaterDataProvider should patch loader-local palette colors through a helper/accessor");
     }
 }
 

@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.titlescreen;
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.S3kFrontendPaletteUploader;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Palette;
@@ -434,9 +435,7 @@ public class Sonic3kTitleScreenDataLoader {
                     byte[] lineData = new byte[Palette.PALETTE_SIZE_IN_ROM];
                     System.arraycopy(palData, line * Palette.PALETTE_SIZE_IN_ROM, lineData, 0,
                             Palette.PALETTE_SIZE_IN_ROM);
-                    Palette palette = new Palette();
-                    palette.fromSegaFormat(lineData);
-                    gm.cachePaletteTexture(palette, line);
+                    S3kFrontendPaletteUploader.cacheLineFromBytes(gm, lineData, line);
                 }
             } else {
                 // Frames 1-C: 64 bytes = 2 palette lines (lines 0 and 1)
@@ -444,9 +443,7 @@ public class Sonic3kTitleScreenDataLoader {
                     byte[] lineData = new byte[Palette.PALETTE_SIZE_IN_ROM];
                     System.arraycopy(palData, line * Palette.PALETTE_SIZE_IN_ROM, lineData, 0,
                             Palette.PALETTE_SIZE_IN_ROM);
-                    Palette palette = new Palette();
-                    palette.fromSegaFormat(lineData);
-                    gm.cachePaletteTexture(palette, line);
+                    S3kFrontendPaletteUploader.cacheLineFromBytes(gm, lineData, line);
                 }
             }
         }
@@ -487,9 +484,7 @@ public class Sonic3kTitleScreenDataLoader {
                 byte[] lineData = new byte[Palette.PALETTE_SIZE_IN_ROM];
                 System.arraycopy(palData, line * Palette.PALETTE_SIZE_IN_ROM, lineData, 0,
                         Palette.PALETTE_SIZE_IN_ROM);
-                Palette palette = new Palette();
-                palette.fromSegaFormat(lineData);
-                gm.cachePaletteTexture(palette, line);
+                S3kFrontendPaletteUploader.cacheLineFromBytes(gm, lineData, line);
             }
         }
 

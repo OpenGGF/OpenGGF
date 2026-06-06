@@ -9,7 +9,6 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -143,12 +142,10 @@ public class FallingPillarObjectInstance extends AbstractObjectInstance
     }
 
     private void spawnChild() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
+        if (services().objectManager() == null) {
             return;
         }
-        FallingPillarObjectInstance child = createChild();
-        objectManager.addDynamicObject(child);
+        FallingPillarObjectInstance child = spawnChild(this::createChild);
         markChildSpawned(child);
     }
 

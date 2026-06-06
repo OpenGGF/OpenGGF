@@ -560,13 +560,11 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance {
 
         ObjectSpawn leftSpawn = new ObjectSpawn(LEFT_PILLAR_X, PILLAR_START_Y,
                 Sonic2ObjectIds.ARZ_BOSS, 0x04, 0, false, spawn.rawYWord());
-        ARZBossPillar left = new ARZBossPillar(leftSpawn, this);
-        services().objectManager().addDynamicObject(left);
+        spawnFreeChild(() -> new ARZBossPillar(leftSpawn, this));
 
         ObjectSpawn rightSpawn = new ObjectSpawn(RIGHT_PILLAR_X, PILLAR_START_Y,
                 Sonic2ObjectIds.ARZ_BOSS, 0x04, RENDER_X_FLIP, false, spawn.rawYWord());
-        ARZBossPillar right = new ARZBossPillar(rightSpawn, this);
-        services().objectManager().addDynamicObject(right);
+        spawnFreeChild(() -> new ARZBossPillar(rightSpawn, this));
     }
 
     /**
@@ -584,13 +582,11 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance {
 
         ObjectSpawn eyesSpawn = new ObjectSpawn(eyesX, eyesY, Sonic2ObjectIds.ARZ_BOSS,
                 0x08, eyesFlags, false, spawn.rawYWord());
-        ARZBossEyes eyes = new ARZBossEyes(eyesSpawn);
-        services().objectManager().addDynamicObject(eyes);
+        ARZBossEyes eyes = spawnFreeChild(() -> new ARZBossEyes(eyesSpawn));
 
         ObjectSpawn arrowSpawn = new ObjectSpawn(eyesX, eyesY, Sonic2ObjectIds.ARZ_BOSS,
                 0x06, eyesFlags, false, spawn.rawYWord());
-        ARZBossArrow arrow = new ARZBossArrow(arrowSpawn, this, eyes, !leftPillar);
-        services().objectManager().addDynamicObject(arrow);
+        spawnFreeChild(() -> new ARZBossArrow(arrowSpawn, this, eyes, !leftPillar));
     }
 
     // ========================================================================

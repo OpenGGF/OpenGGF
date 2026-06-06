@@ -7,7 +7,14 @@ import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
-import com.openggf.level.objects.*;
+import com.openggf.level.objects.BoxObjectInstance;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SlopedSolidProvider;
+import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidExecutionMode;
+import com.openggf.level.objects.SolidObjectListener;
+import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -117,23 +124,21 @@ public class SeesawObjectInstance extends BoxObjectInstance
         if (isFlippedHorizontal()) {
             ballX = spawn.x() - 0x28;
         }
+        final int childBallX = ballX;
+        final int childBallY = ballY;
 
-        ball = new SeesawBallObjectInstance(
-                spawn.x(), // Seesaw center X for reference
-                spawn.y() + 0x10, // Bottom of seesaw Y
-                ballX,
-                ballY,
-                this,
-                isFlippedHorizontal()
-        );
-
-        // Register the ball with ObjectManager
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
+        if (services().objectManager() != null) {
             // ROM Obj14_Init uses AllocateObjectAfterCurrent for the ball child
             // (docs/s2disasm/s2.asm:47020), so the child executes after the
             // parent in the same object pass when a higher slot is available.
-            objectManager.addDynamicObjectAfterCurrent(ball);
+            ball = spawnChild(() -> new SeesawBallObjectInstance(
+                    spawn.x(), // Seesaw center X for reference
+                    spawn.y() + 0x10, // Bottom of seesaw Y
+                    childBallX,
+                    childBallY,
+                    this,
+                    isFlippedHorizontal()
+            ));
         }
     }
 

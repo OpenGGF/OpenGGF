@@ -421,18 +421,20 @@ function Validate-CommitMsgHook([string]$MessageFile) {
 }
 
 function Validate-CiPr([string]$BaseSha, [string]$HeadSha, [string]$BaseRef, [string]$HeadRef) {
-    if ($BaseRef -ne "develop") {
+    if ($BaseRef -ne "develop" -and $BaseRef -ne "master") {
         return
     }
 
     $rangeFiles = Invoke-GitLines @("diff", "--name-only", "--diff-filter=ACMR", "$BaseSha...$HeadSha")
 
-    if ($HeadRef -ne "master" -and -not (Test-HasExact $rangeFiles "README.md")) {
-        Fail "PRs from non-master branches into develop must update README.md with a brief branch summary."
-    }
+    if ($BaseRef -eq "develop") {
+        if ($HeadRef -ne "master" -and -not (Test-HasExact $rangeFiles "README.md")) {
+            Fail "PRs from non-master branches into develop must update README.md with a brief branch summary."
+        }
 
-    if ($HeadRef -eq "master") {
-        return
+        if ($HeadRef -eq "master") {
+            return
+        }
     }
 
     $commits = Invoke-GitLines @("rev-list", "--reverse", "--no-merges", "$BaseSha..$HeadSha")

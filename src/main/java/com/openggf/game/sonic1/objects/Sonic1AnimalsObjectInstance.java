@@ -6,7 +6,9 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -92,6 +94,7 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance {
     private PatternSpriteRenderer zoneAnimalRenderer;
     private PatternSpriteRenderer endingAnimalRenderer;
     private final int subtype;
+    private final int pointsValue;
 
     private int currentX;
     private int currentY;
@@ -117,10 +120,15 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance {
     private boolean initialized;
 
     public Sonic1AnimalsObjectInstance(ObjectSpawn spawn) {
+        this(spawn, 100);
+    }
+
+    public Sonic1AnimalsObjectInstance(ObjectSpawn spawn, int pointsValue) {
         super(spawn, "Animals");
         this.currentX = spawn.x();
         this.currentY = spawn.y();
         this.subtype = spawn.subtype() & 0xFF;
+        this.pointsValue = pointsValue;
     }
 
     private void ensureInitialized() {
@@ -174,6 +182,18 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance {
             this.routine = ROUTINE_PRISON_WAIT;
             this.prisonWaitTimer = PRISON_WAIT_FRAMES;
             this.xVelocity = 0;
+            return;
+        }
+
+        // ROM Anml_FromEnemy allocates Obj29 from the animal's own routine 0
+        // with FindFreeObj, using the copied objoff_3E score-chain value
+        // (docs/s1disasm/_incObj/28 Animals.asm:163-168).
+        ObjectServices svc = tryServices();
+        ObjectManager objectManager = svc != null ? svc.objectManager() : null;
+        if (objectManager != null && svc.renderManager() != null) {
+            objectManager.addDynamicObject(new Sonic1PointsObjectInstance(
+                    new ObjectSpawn(currentX, currentY, 0x29, 0, 0, false, 0),
+                    svc, pointsValue));
         }
     }
 

@@ -41,7 +41,6 @@ import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.data.RomManager;
-import com.openggf.game.sonic3k.objects.AizIntroArtLoader;
 import com.openggf.game.save.SaveManager;
 import com.openggf.game.save.SaveSlotSummary;
 import com.openggf.game.save.SelectedTeam;
@@ -536,6 +535,7 @@ public class Engine {
 	}
 
 	private void resetForGameplayFromMasterTitle() {
+		GameModuleRegistry.getCurrent().resetModuleScopedState();
 		SessionManager.clear();
 		romManager.close();
 		GameModuleRegistry.reset();
@@ -543,7 +543,7 @@ public class Engine {
 		crossGameFeatureProvider.resetState();
 		debugOverlayManager.resetState();
 		RenderContext.reset();
-		AizIntroArtLoader.reset();
+		gameLoop.resetModuleScopedProviders();
 	}
 
 	/**

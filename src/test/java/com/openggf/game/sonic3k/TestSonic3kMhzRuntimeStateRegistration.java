@@ -5,6 +5,7 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kMHZEvents;
+import com.openggf.game.sonic3k.runtime.IczZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
 import com.openggf.game.sonic3k.scroll.SwScrlMhz;
 import com.openggf.game.zone.ZoneRuntimeState;
@@ -45,6 +46,38 @@ class TestSonic3kMhzRuntimeStateRegistration {
         assertEquals(Sonic3kZoneIds.ZONE_MHZ, current.zoneIndex());
         assertEquals(0, current.actIndex());
         assertEquals("s3k", current.gameId());
+    }
+
+    @Test
+    void initLevelInstallsIczRuntimeState() throws Exception {
+        Sonic3kLevelEventManager manager =
+                (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+
+        manager.initLevel(Sonic3kZoneIds.ZONE_ICZ, 0);
+
+        ZoneRuntimeState current = GameServices.zoneRuntimeRegistry().current();
+        assertInstanceOf(IczZoneRuntimeState.class, current);
+        assertEquals(Sonic3kZoneIds.ZONE_ICZ, current.zoneIndex());
+        assertEquals(0, current.actIndex());
+        assertEquals("s3k", current.gameId());
+    }
+
+    @Test
+    void updateRuntimeStateKeepsInstalledMhzAndIczAdaptersBackedByCurrentEvents() throws Exception {
+        Sonic3kLevelEventManager manager =
+                (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+
+        manager.initLevel(Sonic3kZoneIds.ZONE_MHZ, 0);
+        ZoneRuntimeState mhz = GameServices.zoneRuntimeRegistry().current();
+        manager.ensureZoneRuntimeStateInstalled();
+        assertEquals(mhz, GameServices.zoneRuntimeRegistry().current(),
+                "MHZ runtime state should be recognized as current when backed by the active event instance");
+
+        manager.initLevel(Sonic3kZoneIds.ZONE_ICZ, 0);
+        ZoneRuntimeState icz = GameServices.zoneRuntimeRegistry().current();
+        manager.ensureZoneRuntimeStateInstalled();
+        assertEquals(icz, GameServices.zoneRuntimeRegistry().current(),
+                "ICZ runtime state should be recognized as current when backed by the active event instance");
     }
 
     @Test

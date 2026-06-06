@@ -101,16 +101,55 @@ public class TestSonic1LabyrinthObjectsBasic {
         Assertions.assertEquals(0x0B, orbinaut.getCollisionFlags());
     }
 
+    @Test
+    public void burrobotJumpsWhenSonicIsAboveWithinRange() throws Exception {
+        Sonic1BurrobotBadnikInstance burrobot = new Sonic1BurrobotBadnikInstance(
+                new ObjectSpawn(0x037F, 0x00AC, Sonic1ObjectIds.BURROBOT, 0, 0, true, 0));
+        burrobot.setServices(new TestObjectServices());
+
+        TestPlayableSprite player = new TestPlayableSprite();
+        player.setCentreX((short) 0x0365);
+        player.setCentreY((short) 0x0091);
+
+        burrobot.update(1, player);
+
+        assertEquals(2, getPrivateInt(burrobot, "state"),
+                "Burro_ChkSonic should enter Burro_Jump when Sonic is within $60 X and -$80..-1 Y");
+        assertEquals(-0x80, getPrivateInt(burrobot, "xVelocity"),
+                "Burro_ChkSonic2 should face and jump toward Sonic");
+        assertEquals(-0x400, getPrivateInt(burrobot, "yVelocity"),
+                "Burro_ChkSonic stores -$400 in obVelY before the next Burro_Jump frame");
+
+        burrobot.update(2, player);
+
+        assertEquals(0x00A8, burrobot.getY(),
+                "Burro_Jump should apply SpeedToPos before adding $18 gravity");
+        assertEquals(-0x3E8, getPrivateInt(burrobot, "yVelocity"),
+                "Burro_Jump should add $18 to obVelY after moving");
+    }
+
     private static void setPrivateInt(Object target, String fieldName, int value) throws Exception {
-        Field field = target.getClass().getDeclaredField(fieldName);
+        Field field = findField(target.getClass(), fieldName);
         field.setAccessible(true);
         field.setInt(target, value);
     }
 
     private static int getPrivateInt(Object target, String fieldName) throws Exception {
-        Field field = target.getClass().getDeclaredField(fieldName);
+        Field field = findField(target.getClass(), fieldName);
         field.setAccessible(true);
         return field.getInt(target);
+    }
+
+    private static Field findField(Class<?> type, String fieldName) throws NoSuchFieldException {
+        Class<?> current = type;
+        while (current != null) {
+            try {
+                return current.getDeclaredField(fieldName);
+            } catch (NoSuchFieldException ignored) {
+                current = current.getSuperclass();
+            }
+        }
+        throw new NoSuchFieldException(fieldName);
     }
 
 }

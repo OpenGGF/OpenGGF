@@ -198,7 +198,9 @@ public class Sonic3kConstants {
 
     // ===== Breakable Wall mappings (Obj_BreakableWall, ID 0x0D) =====
     // Each zone has its own mapping table: even frames = intact, odd frames = broken fragments.
-    // S3 half (>= 0x200000) addresses for S3-era zones, S&K half for S&K-era zones.
+    // Provenance is per mapping table: AIZ/HCZ/MGZ/LBZ currently use lock-on
+    // S3-side tables; CNZ/SOZ, MHZ, and LRZ use S&K-side tables. Verify labels
+    // and ROM bytes before changing an address rather than inferring from zone era.
     public static final int MAP_AIZ_BREAKABLE_WALL_ADDR = 0x21FD52;     // Map_AIZBreakableWall (6 frames)
     public static final int MAP_HCZ_BREAKABLE_WALL_ADDR = 0x21FFD8;     // Map_HCZBreakableWall (4 frames)
     public static final int MAP_MGZ_BREAKABLE_WALL_ADDR = 0x21FF18;     // Map_MGZBreakableWall (4 frames)
@@ -1369,7 +1371,8 @@ public class Sonic3kConstants {
     public static final int MAP_CNZ_BUMPER_ADDR = 0x2322CE; // Map_Bumper (2 frames)
 
     // Verified final lock-on offsets for the dedicated CNZ cannon art block.
-    // The Cannon.bin data lives in the S&K half of the combined ROM.
+    // The Cannon.bin data lives at the S3-side lock-on offset below; the DPLC
+    // table remains S&K-side.
     public static final int ART_UNC_CNZ_CANNON_ADDR = 0x28CE74;
     public static final int ART_UNC_CNZ_CANNON_SIZE = 0x2AE6;
     // DPLC_CNZCannon is the S&K-side inline table used by Obj_CNZCannon in
@@ -1604,11 +1607,11 @@ public class Sonic3kConstants {
      */
     public static final int MAP_HCZ_WATERWALL_ADDR = 0x22EE10;
 
-    // ===== CNZ Teleporter / Miniboss / End Boss (Task 6 infrastructure only) =====
+    // ===== CNZ Teleporter / Miniboss / End Boss art and PLC metadata =====
     // The CNZ teleporter route is split across Obj_CNZTeleporter and the shared
-    // Obj_TeleporterBeam routines in sonic3k.asm. Unlike the future Tasks 7/8
-    // behavior work, Task 6 only needs the art/mapping/PLC metadata so the
-    // renderer registrations exist before any route scripting is implemented.
+    // Obj_TeleporterBeam routines in sonic3k.asm. These constants back the
+    // concrete CNZ teleporter, miniboss, and end-boss wrappers while keeping
+    // art/mapping/PLC provenance separate from route scripting.
 
     // ArtKosM_CNZTeleport - dedicated Kosinski Moduled art queued by Obj_CNZTeleporter.
     // Verified with RomOffsetFinder against the S&K-side label:
@@ -1799,8 +1802,7 @@ public class Sonic3kConstants {
     public static final int CNZ_MINIBOSS_TOP_FLOOR_PROBE_DY = 0x08;
 
     // PLC 0x6E loads ArtNem_CNZEndBoss, ArtNem_RobotnikShip, ArtNem_BossExplosion,
-    // and ArtNem_EggCapsule for Obj_CNZEndBoss. Task 6 only needs the body sheet and
-    // shared support art registrations; the control handoff stays deferred to Task 8.
+    // and ArtNem_EggCapsule for the bounded Obj_CNZEndBoss wrapper.
     public static final int PLC_CNZ_END_BOSS = 0x6E;
 
     // Map_CNZEndBoss - CNZ end-boss mappings. The include file has 13 dc.w entries

@@ -19,6 +19,7 @@ import com.openggf.game.EndingPhase;
 import com.openggf.game.EndingProvider;
 import com.openggf.game.TitleScreenProvider;
 import com.openggf.game.TitleScreenProvider.TitleScreenAction;
+import com.openggf.game.TitleCardProvider;
 import com.openggf.game.save.SaveSessionContext;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.session.GameplayModeContext;
@@ -251,6 +252,43 @@ public class TestGameLoop {
         resolve.setAccessible(true);
         assertSame(bootstrapFade, resolve.invoke(gameLoop),
                 "resolveFadeManager must fall back to the bootstrap FadeManager once gameplay is gone");
+    }
+
+    @Test
+    public void testSetGameplayModeRejectsTornDownContextWithNonNullManagers() throws Exception {
+        GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
+        gameLoop.setGameplayMode(gameplayMode);
+        assertNotNull(getPrivateField(gameLoop, "camera"),
+                "Test setup should bind runtime managers before teardown");
+
+        gameplayMode.tearDownManagers();
+        gameLoop.setGameplayMode(gameplayMode);
+
+        assertNull(getPrivateField(gameLoop, "gameplayMode"),
+                "Torn-down gameplay contexts must not stay cached even if manager fields remain non-null");
+        assertNull(getPrivateField(gameLoop, "camera"),
+                "Torn-down gameplay contexts must not rebind stale camera references");
+        assertNull(getPrivateField(gameLoop, "fadeManager"),
+                "Torn-down gameplay contexts must not rebind stale fade managers");
+    }
+
+    @Test
+    public void testModuleScopedTitleCardProviderCanBeResetAfterModuleSwitch() {
+        GameModule module1 = new Sonic1GameModule();
+        TitleCardProvider provider1 = module1.getTitleCardProvider();
+        TestEnvironment.configureGameModuleFixture(module1);
+
+        GameLoop loop = new GameLoop(mockInputHandler);
+        assertSame(provider1, loop.getTitleCardProvider());
+
+        GameModule module2 = new Sonic2GameModule();
+        TitleCardProvider provider2 = module2.getTitleCardProvider();
+        TestEnvironment.configureGameModuleFixture(module2);
+
+        loop.resetModuleScopedProviders();
+
+        assertSame(provider2, loop.getTitleCardProvider(),
+                "module reset must clear cached title-card provider so the new module supplies it");
     }
 
     // ==================== Game Mode Listener Tests ====================
@@ -1543,6 +1581,13 @@ public class TestGameLoop {
                 mock(com.openggf.physics.CollisionSystem.class),
                 spriteManager,
                 levelManager);
+        gameplayMode.attachSharedRegistries(
+                new com.openggf.game.zone.ZoneRuntimeRegistry(),
+                new com.openggf.game.palette.PaletteOwnershipRegistry(),
+                new com.openggf.game.animation.AnimatedTileChannelGraph(),
+                new com.openggf.game.render.SpecialRenderEffectRegistry(),
+                new com.openggf.game.render.AdvancedRenderModeController(),
+                new com.openggf.game.mutation.ZoneLayoutMutationPipeline());
         gameLoop.setGameplayMode(gameplayMode);
     }
 

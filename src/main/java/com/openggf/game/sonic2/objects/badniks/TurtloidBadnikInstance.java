@@ -81,6 +81,7 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
     // Child references
     private TurtloidRiderInstance rider;
     private TurtloidJetInstance jet;
+    private boolean childrenSpawned;
 
     private final SolidObjectParams platformParams;
 
@@ -97,33 +98,30 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
         // PlatformObject: d1=$18 (half-width), d2=$8 (air half-height), d3=$E (ground half-height)
         this.platformParams = new SolidObjectParams(
                 PLATFORM_HALF_WIDTH, PLATFORM_Y_RADIUS, PLATFORM_Y_OFFSET);
-
-        spawnChildren();
     }
 
-    private void spawnChildren() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
+    private void ensureChildrenSpawned() {
+        if (childrenSpawned || services().objectManager() == null) {
             return;
         }
+        childrenSpawned = true;
 
         // Spawn rider (Obj9B) at offset (+4, -$18)
         int riderX = currentX + RIDER_X_OFFSET;
         int riderY = currentY + RIDER_Y_OFFSET;
-        rider = new TurtloidRiderInstance(
+        rider = spawnChild(() -> new TurtloidRiderInstance(
                 new ObjectSpawn(riderX, riderY, 0x9B, 0x18, 0, false, 0),
-                this);
-        objectManager.addDynamicObject(rider);
+                this));
 
         // Spawn jet exhaust (Obj9C) - follows parent and animates
-        jet = new TurtloidJetInstance(
+        jet = spawnChild(() -> new TurtloidJetInstance(
                 new ObjectSpawn(currentX, currentY, 0x9C, 0x1A, 0, false, 0),
-                this);
-        objectManager.addDynamicObject(jet);
+                this));
     }
 
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+        ensureChildrenSpawned();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
             case MOVING -> updateMoving(player);
@@ -232,15 +230,13 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
                 ? rider.getY() + SHOT_Y_OFFSET
                 : currentY + SHOT_Y_OFFSET;
 
-        BadnikProjectileInstance projectile = new BadnikProjectileInstance(
+        spawnFreeChild(() -> new BadnikProjectileInstance(
                 spawn,
                 BadnikProjectileInstance.ProjectileType.TURTLOID_SHOT,
                 shotX, shotY,
                 SHOT_X_VEL, 0,
                 false,  // No gravity
-                false); // No H-flip
-
-        services().objectManager().addDynamicObject(projectile);
+                false)); // No H-flip
     }
 
     void onRiderDestroyed(int riderX, int riderY, AbstractPlayableSprite player) {
@@ -251,13 +247,11 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
             return;
         }
 
-        ExplosionObjectInstance explosion = new ExplosionObjectInstance(
-                0x27, riderX, riderY, services().renderManager());
-        objectManager.addDynamicObject(explosion);
+        spawnFreeChild(() -> new ExplosionObjectInstance(
+                0x27, riderX, riderY, services().renderManager()));
 
-        AnimalObjectInstance animal = new AnimalObjectInstance(
-                new ObjectSpawn(riderX, riderY, 0x28, 0, 0, false, 0), services());
-        objectManager.addDynamicObject(animal);
+        spawnFreeChild(() -> new AnimalObjectInstance(
+                new ObjectSpawn(riderX, riderY, 0x28, 0, 0, false, 0), services()));
 
         int pointsValue = 100;
         if (player != null) {
@@ -265,9 +259,9 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
             services().gameState().addScore(pointsValue);
         }
 
-        PointsObjectInstance points = new PointsObjectInstance(
-                new ObjectSpawn(riderX, riderY, 0x29, 0, 0, false, 0), services(), pointsValue);
-        objectManager.addDynamicObject(points);
+        int finalPointsValue = pointsValue;
+        spawnFreeChild(() -> new PointsObjectInstance(
+                new ObjectSpawn(riderX, riderY, 0x29, 0, 0, false, 0), services(), finalPointsValue));
 
         services().playSfx(Sonic2Sfx.EXPLOSION.id);
     }

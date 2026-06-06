@@ -382,7 +382,7 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
         int projXVel = xDir * PROJECTILE_X_VELOCITY;
         int projYVel = PROJECTILE_Y_VELOCITY;
 
-        BadnikProjectileInstance projectile = new BadnikProjectileInstance(
+        spawnFreeChild(() -> new BadnikProjectileInstance(
                 spawn,
                 BadnikProjectileInstance.ProjectileType.REXON_FIREBALL,
                 projX,
@@ -391,9 +391,7 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
                 projYVel,
                 false,  // No gravity - original uses ObjectMove, not ObjectMoveAndFall
                 xFlip
-        );
-
-        services().objectManager().addDynamicObject(projectile);
+        ));
     }
 
     private void updateDeathDrop() {
@@ -463,14 +461,12 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
         setDestroyed(true);
 
         // Spawn explosion
-        ExplosionObjectInstance explosion = new ExplosionObjectInstance(0x27, currentX, currentY,
-                services().renderManager());
-        services().objectManager().addDynamicObject(explosion);
+        spawnFreeChild(() -> new ExplosionObjectInstance(0x27, currentX, currentY,
+                services().renderManager()));
 
         // Spawn animal
-        AnimalObjectInstance animal = new AnimalObjectInstance(
-                new ObjectSpawn(currentX, currentY, 0x28, 0, 0, false, 0), services());
-        services().objectManager().addDynamicObject(animal);
+        spawnFreeChild(() -> new AnimalObjectInstance(
+                new ObjectSpawn(currentX, currentY, 0x28, 0, 0, false, 0), services()));
 
         // Calculate and award points
         int pointsValue = 100;
@@ -480,9 +476,9 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
         }
 
         // Spawn points display
-        PointsObjectInstance points = new PointsObjectInstance(
-                new ObjectSpawn(currentX, currentY, 0x29, 0, 0, false, 0), services(), pointsValue);
-        services().objectManager().addDynamicObject(points);
+        int finalPointsValue = pointsValue;
+        spawnFreeChild(() -> new PointsObjectInstance(
+                new ObjectSpawn(currentX, currentY, 0x29, 0, 0, false, 0), services(), finalPointsValue));
 
         // Play explosion SFX
         services().playSfx(Sonic2Sfx.EXPLOSION.id);

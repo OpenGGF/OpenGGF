@@ -15,13 +15,18 @@ class TestS3kHczPaletteOwnershipMigrationGuard {
 
     private static final String[] GUARDED_FILES = {
             "src/main/java/com/openggf/game/sonic3k/objects/bosses/HczEndBossInstance.java",
-            "src/main/java/com/openggf/game/sonic3k/objects/HczMinibossInstance.java"
+            "src/main/java/com/openggf/game/sonic3k/objects/HczMinibossInstance.java",
+            "src/main/java/com/openggf/game/sonic3k/events/Sonic3kHCZEvents.java"
     };
 
     private static final String[] FORBIDDEN_SNIPPETS = {
             "services().updatePalette(",
             "palette.getColor(FLASH_INDICES[i]).fromSegaFormat(",
-            "graphics.cachePaletteTexture(palette, 1);"
+            "graphics.cachePaletteTexture(palette, 1);",
+            "palette.setColor(PALETTE_COLOR_OFFSET + i, color);",
+            "cachePaletteTextureIfReady(palette, PALETTE_LINE);",
+            "bossPal.fromSegaFormat(line);",
+            "graphics.cacheUnderwaterPaletteTexture(uwPalettes, level.getPalette(0));"
     };
 
     @Test

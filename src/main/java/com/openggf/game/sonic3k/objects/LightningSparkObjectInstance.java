@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Pattern;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -34,8 +35,8 @@ public class LightningSparkObjectInstance extends AbstractObjectInstance {
     /** Animation script index for sparks */
     private static final int SPARK_ANIM_SCRIPT = 0;
 
-    /** Pattern atlas base ID for spark tiles (in GUI ID range to avoid VDP conflicts). */
-    private static final int SPARK_PATTERN_BASE = 0x20100;
+    /** Pattern atlas base ID for spark tiles, isolated from level object art. */
+    private static final int SPARK_PATTERN_BASE = PatternAtlasRange.TRANSIENT_EFFECTS.base();
 
     /** Shared descriptor for spark tiles: palette 0, no flip, no priority. */
     private static final PatternDesc SPARK_DESC = new PatternDesc(0);

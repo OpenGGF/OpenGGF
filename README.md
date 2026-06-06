@@ -209,6 +209,32 @@ behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **S1 trace-fleet integration branch (2026-06-06).** Merged
+  `bugfix/ai-s1-trace-fleet-integration`, preserving the release-readiness
+  roadmap and the accepted trace/debug harness work from the main workspace.
+  The branch carries the S1 Chopper subpixel-origin behavior, Burrobot touch
+  response coverage, inline-order object touch diagnostics, Labyrinth object
+  tests, and the checked-in S3K complete-run BK2 needed by the trace catalog.
+- **S1 trace-fleet frontier pass (2026-06-06).** Merged
+  `bugfix/ai-s1-trace-round4` after validating the accepted Codex fleet fixes
+  against the S1 green guard set. The pass advances GHZ2 Obj18 platform timing
+  (f615->f2370 through bridge, rock, swinging-platform, Chopper, and Obj18
+  fixes), LZ water and slide behavior (LZ1 f112->f302, LZ2 f463->f1089), SBZ2
+  Electrocuter and SLZ2 fan object frontiers, SBZ3 button and Obj64 bubble
+  timing (f45->f1421), and the real Final Zone trace (f277->f713) without
+  regressing the nine S1 guard traces. Remaining red frontiers are documented in
+  `docs/TRACE_FRONTIER_LOG.md`.
+- **Release hardening branch (2026-06-06).** Started the no-known-hidden-failures
+  release pass: documented the two-phase roadmap, enabled branch-policy checks
+  for release PRs, made ROM-gated tests reject invalid configured ROM files,
+  moved Turtloid/Sol constructor child spawns onto managed lifecycle helpers, and
+  isolated lightning-shield spark virtual patterns from shared object art.
+- **Release hardening validation (2026-06-06).** The same branch now keeps the
+  S3K AIZ/CNZ known-failing tests enabled, runs trace-replay policy tests in
+  release CI, bounds the one legacy S3K AIZ trace bootstrap, documents the S2
+  Tornado trace contract, resets the AIZ intro terrain-swap cache across game
+  bootstrap, and routes ICZ palette/animated-tile consumers through typed
+  runtime state.
 - **S1 complete-run trace suite — 18 acts from one TAS (2026-06-05).** A single complete-run BizHawk
   movie (Raiscan, every level start-to-finish) is auto-segmented by a new recorder
   (`tools/bizhawk/s1_complete_run_recorder.lua`) into a per-act trace for **all 18 S1 gameplay acts**

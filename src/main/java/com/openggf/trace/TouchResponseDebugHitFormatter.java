@@ -26,6 +26,7 @@ public final class TouchResponseDebugHitFormatter {
             }
             appendPrefix(sb, "touch", hit);
             appendObjectPosition(sb, hit);
+            appendDebugDetails(sb, hit);
             shown++;
             if (shown >= 3) {
                 break;
@@ -54,6 +55,7 @@ public final class TouchResponseDebugHitFormatter {
                     hit.width(),
                     hit.height()));
             appendObjectPosition(sb, hit);
+            appendDebugDetails(sb, hit);
             shown++;
             if (shown >= 4) {
                 break;
@@ -91,6 +93,12 @@ public final class TouchResponseDebugHitFormatter {
             sb.append(String.format(" sp=@%04X,%04X",
                     spawn.x() & 0xFFFF,
                     spawn.y() & 0xFFFF));
+        }
+    }
+
+    private static void appendDebugDetails(StringBuilder sb, TouchResponseDebugHit hit) {
+        if (hit.debugDetails() != null && !hit.debugDetails().isBlank()) {
+            sb.append(' ').append(hit.debugDetails());
         }
     }
 }

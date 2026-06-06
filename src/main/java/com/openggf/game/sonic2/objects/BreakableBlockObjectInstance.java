@@ -197,10 +197,9 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
 
         // Spawn points display popup
         if (objectManager != null) {
-            PointsObjectInstance points = new PointsObjectInstance(
+            spawnFreeChild(() -> new PointsObjectInstance(
                     new ObjectSpawn(spawn.x(), spawn.y(), 0x29, 0, 0, false, 0),
-                    services(), 100);
-            objectManager.addDynamicObject(points);
+                    services(), 100));
         }
 
         // Mark this object as destroyed so it stops rendering/updating
@@ -242,14 +241,15 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
 
             for (int i = 0; i < count; i++) {
                 SpriteMappingPiece piece = pieces.get(i);
-                BreakableBlockFragmentInstance fragment = new BreakableBlockFragmentInstance(
+                int velX = velocities[i][0];
+                int velY = velocities[i][1];
+                spawnFreeChild(() -> new BreakableBlockFragmentInstance(
                         spawn.x(),
                         spawn.y(),
-                        velocities[i][0],
-                        velocities[i][1],
+                        velX,
+                        velY,
                         piece,
-                        renderer);
-                objectManager.addDynamicObject(fragment);
+                        renderer));
             }
             return;
         }
@@ -260,9 +260,8 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
             int velY = CPZ_FRAGMENT_VELOCITIES[i][1];
             int frameIndex = FRAME_FRAGMENT_BASE + i;
 
-            BreakableBlockFragmentInstance fragment = new BreakableBlockFragmentInstance(
-                    spawn.x(), spawn.y(), velX, velY, frameIndex, renderManager);
-            objectManager.addDynamicObject(fragment);
+            spawnFreeChild(() -> new BreakableBlockFragmentInstance(
+                    spawn.x(), spawn.y(), velX, velY, frameIndex, renderManager));
         }
     }
 

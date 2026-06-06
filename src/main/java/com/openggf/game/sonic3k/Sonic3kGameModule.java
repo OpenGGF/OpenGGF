@@ -32,6 +32,8 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.BonusStageProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.sonic3k.events.S3kSeamlessMutationExecutor;
+import com.openggf.game.sonic3k.objects.AizIntroArtLoader;
+import com.openggf.game.sonic3k.objects.AizIntroTerrainSwap;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.scroll.Sonic3kScrollHandlerProvider;
 import com.openggf.game.sonic3k.sidekick.Sonic3kCnzCarryTrigger;
@@ -73,8 +75,8 @@ import java.util.logging.Logger;
 /**
  * GameModule for Sonic 3 &amp; Knuckles.
  *
- * <p>Provides audio, zone registry, scroll handlers, and level loading.
- * Phase 1: terrain/collision only. Objects, rings, and zone features are deferred.
+ * <p>Provides audio, zone registry, scroll handlers, object/art providers,
+ * data select, special/bonus-stage providers, and level initialization hooks.
  */
 public class Sonic3kGameModule implements GameModule {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kGameModule.class.getName());
@@ -306,6 +308,12 @@ public class Sonic3kGameModule implements GameModule {
     @Override
     public void applySeamlessMutation(LevelManager levelManager, String mutationKey) {
         S3kSeamlessMutationExecutor.apply(levelManager, mutationKey);
+    }
+
+    @Override
+    public void resetModuleScopedState() {
+        AizIntroArtLoader.reset();
+        AizIntroTerrainSwap.reset();
     }
 
     @SuppressWarnings("unchecked")

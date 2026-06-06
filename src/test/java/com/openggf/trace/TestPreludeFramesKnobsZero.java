@@ -35,7 +35,24 @@ class TestPreludeFramesKnobsZero {
     @Test
     void s3kSonicAndTailsSeedFrameReturnsOneSidekickSetupTick() {
         // Mirrors the S3K CNZ Sonic+Tails level-select trace. Frame 0 remains
-        // a seed comparison row after one native sidekick setup tick.
+        // a seed comparison row after one native sidekick setup tick when the
+        // fixture explicitly advertises that replay phase.
+        TraceFrame seed = buildFrame(0, /* gfc */ 1,
+                /* xSpeed */ (short) 0, /* ySpeed */ (short) 0, /* gSpeed */ (short) 0,
+                /* xSub */ 0, /* ySub */ 0);
+        TraceFrame next = buildFrame(1, /* gfc */ 2,
+                (short) 0, (short) 0, (short) 0, 0, 0);
+        TraceData trace = TraceFixtures.trace(
+                metadata("s3k", "cnz", 5, 0, List.of("sonic", "tails"),
+                        List.of("sidekick_seed_frame_prelude")),
+                List.of(seed, next));
+
+        assertEquals(1, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace));
+        assertEquals(0, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace));
+    }
+
+    @Test
+    void s3kSonicAndTailsSeedFrameShapeWithoutExplicitMetadataReturnsZero() {
         TraceFrame seed = buildFrame(0, /* gfc */ 1,
                 /* xSpeed */ (short) 0, /* ySpeed */ (short) 0, /* gSpeed */ (short) 0,
                 /* xSub */ 0, /* ySub */ 0);
@@ -45,8 +62,9 @@ class TestPreludeFramesKnobsZero {
                 metadata("s3k", "cnz", 5, 0, List.of("sonic", "tails")),
                 List.of(seed, next));
 
-        assertEquals(1, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace));
-        assertEquals(0, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace));
+        assertEquals(0, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace),
+                "S3K sidekick seed-frame prelude should come from explicit fixture capability metadata, "
+                        + "not first-frame movement shape.");
     }
 
     @Test
@@ -170,6 +188,12 @@ class TestPreludeFramesKnobsZero {
 
     private static TraceMetadata metadata(String game, String zone, int zoneId, int act,
                                            List<String> characters) {
+        return metadata(game, zone, zoneId, act, characters, null);
+    }
+
+    private static TraceMetadata metadata(String game, String zone, int zoneId, int act,
+                                           List<String> characters,
+                                           List<String> auxSchemaExtras) {
         return new TraceMetadata(
                 game,
                 zone,
@@ -186,7 +210,7 @@ class TestPreludeFramesKnobsZero {
                 /* traceProfile */ null,
                 /* bizhawkVersion */ null,
                 /* genesisCore */ null,
-                /* auxSchemaExtras */ null,
+                /* auxSchemaExtras */ auxSchemaExtras,
                 /* romZoneId */ null,
                 /* route */ null,
                 /* sourceBk2 */ null,

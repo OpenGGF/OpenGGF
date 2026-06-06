@@ -69,4 +69,44 @@ class TestS3kRuntimeStateReadGuard {
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
+
+    @Test
+    void iczPaletteCycler_shouldReadIndoorCycleGateFromRuntimeState() throws IOException {
+        String file = "src/main/java/com/openggf/game/sonic3k/Sonic3kPaletteCycler.java";
+        String content = Files.readString(Path.of(file));
+        List<String> violations = new ArrayList<>();
+
+        if (content.contains("manager.getIczEvents()")) {
+            violations.add(file + " still reads ICZ palette gate through Sonic3kLevelEventManager.getIczEvents()");
+        }
+        if (!content.contains("S3kRuntimeStates.currentIcz(")) {
+            violations.add(file + " does not read the ICZ palette gate through S3kRuntimeStates.currentIcz(...)");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("ICZ palette cycling should consume typed runtime state instead of event-manager internals:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void iczPatternAnimator_shouldReadScrollPhasesFromRuntimeState() throws IOException {
+        String file = "src/main/java/com/openggf/game/sonic3k/Sonic3kPatternAnimator.java";
+        String content = Files.readString(Path.of(file));
+        List<String> violations = new ArrayList<>();
+
+        if (!content.contains("S3kRuntimeStates.currentIcz(")) {
+            violations.add(file + " does not read ICZ scroll phases through S3kRuntimeStates.currentIcz(...)");
+        }
+        if (!content.contains("state.iczBgCameraX(")
+                || !content.contains("state.iczEventsBg10(")
+                || !content.contains("state.iczAct1BgCameraY(")) {
+            violations.add(file + " does not route ICZ phase inputs through IczZoneRuntimeState");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("ICZ animated tiles should consume typed runtime state for scroll-derived phase inputs:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
 }

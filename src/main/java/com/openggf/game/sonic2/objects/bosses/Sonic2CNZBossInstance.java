@@ -685,8 +685,7 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance {
         // ROM: move.b #4,boss_subtype(a1) / move.l a0,objoff_34(a1)
         // The spawn coordinates are informational - ball uses parent position directly
         ObjectSpawn ballSpawn = new ObjectSpawn(state.x, state.y, Sonic2ObjectIds.CNZ_BOSS, 4, 0, false, 0);
-        CNZBossElectricBall ball = new CNZBossElectricBall(ballSpawn, this);
-        services().objectManager().addDynamicObject(ball);
+        spawnFreeChild(() -> new CNZBossElectricBall(ballSpawn, this));
     }
 
     // ========================================================================

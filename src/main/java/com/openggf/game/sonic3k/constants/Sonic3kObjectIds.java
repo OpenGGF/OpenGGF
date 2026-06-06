@@ -98,11 +98,11 @@ public final class Sonic3kObjectIds {
     public static final int CNZ_HOVER_FAN = 0x46;
     // S3KL object table: Obj_CNZCylinder.
     public static final int CNZ_CYLINDER = 0x47;
-    // S3KL object table: Obj_CNZVacuumTube. Controller-only scaffold for Task 1.
+    // S3KL object table: Obj_CNZVacuumTube. Controller-only object; no separate mapping/art owner.
     public static final int CNZ_VACUUM_TUBE = 0x48;
     // S3KL object table: Obj_CNZGiantWheel.
     public static final int CNZ_GIANT_WHEEL = 0x49;
-    // S3KL object table: Obj_CNZSpiralTube. Controller-only scaffold for Task 1.
+    // S3KL object table: Obj_CNZSpiralTube. Controller-only object; no separate mapping/art owner.
     public static final int CNZ_SPIRAL_TUBE = 0x4C;
     // S3KL object table: Obj_CNZBarberPoleSprite.
     public static final int CNZ_BARBER_POLE = 0x4D;

@@ -5,6 +5,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameServices;
 import com.openggf.game.TitleScreenProvider;
+import com.openggf.game.sonic3k.S3kFrontendPaletteUploader;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.audio.Sonic3kSmpsConstants;
@@ -609,9 +610,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         // Overwrite colors 0-6 (14 bytes) with transition data
         System.arraycopy(transitionData, offset, line0Data, 0, PAL_TRANSITION_BYTES_PER_STEP);
 
-        Palette palette = new Palette();
-        palette.fromSegaFormat(line0Data);
-        gm.cachePaletteTexture(palette, 0);
+        S3kFrontendPaletteUploader.cacheLineFromBytes(gm, line0Data, 0);
     }
 
     private void updateSonicAnimation(InputHandler input) {
@@ -1062,9 +1061,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         }
 
         // Re-upload palette line 2 (0-indexed)
-        Palette palette = new Palette();
-        palette.fromSegaFormat(lineData);
-        gm.cachePaletteTexture(palette, 2);
+        S3kFrontendPaletteUploader.cacheLineFromBytes(gm, lineData, 2);
     }
 
     // -----------------------------------------------------------------------

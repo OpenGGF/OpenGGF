@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.data.Rom;
-import com.openggf.game.GameServices;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
@@ -39,6 +38,10 @@ public final class AizIntroTerrainSwap {
     private static OverlayData cachedOverlayData;
 
     private AizIntroTerrainSwap() {
+    }
+
+    public static synchronized void reset() {
+        cachedOverlayData = null;
     }
 
     /**
@@ -127,7 +130,7 @@ public final class AizIntroTerrainSwap {
         }
 
         OverlayData overlayData = overlay;
-        applyImmediateMutation(levelManager, level, context -> {
+        applyImmediateMutation(services, levelManager, level, context -> {
             sonic3kLevel.applyChunkOverlay(
                     overlayData.mainLevelBlocks16x16(),
                     overlayData.chunkOverlayOffsetBytes());
@@ -172,17 +175,14 @@ public final class AizIntroTerrainSwap {
     }
 
     private static void applyImmediateMutation(
+            ObjectServices services,
             LevelManager levelManager,
             Level level,
             com.openggf.game.mutation.LayoutMutationIntent intent) {
         LayoutMutationContext context = new LayoutMutationContext(
                 LevelMutationSurface.forLevel(level),
                 levelManager::applyMutationEffects);
-        if (GameServices.hasRuntime()) {
-            GameServices.zoneLayoutMutationPipeline().applyImmediately(intent, context);
-            return;
-        }
-        levelManager.applyMutationEffects(intent.apply(context));
+        services.zoneLayoutMutationPipeline().applyImmediately(intent, context);
     }
 
     private static OverlayData loadOverlayData(ObjectServices services) throws IOException {

@@ -249,7 +249,7 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
      * The engine mirrors this by returning the first child as the factory's
      * instance (occupying the parent spawn's slot in {@code activeObjects} so
      * placement does not re-trigger the spawn every frame) and spawning the
-     * remaining children via {@link ObjectManager#addDynamicObject}.
+     * remaining children via {@link ObjectManager#createDynamicObject}.
      *
      * @param spawn The parent spawner's ObjectSpawn
      * @return The first child instance (or an individual platform when bit 7 is clear)
@@ -313,9 +313,8 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
                         false,
                         spawn.rawYWord());
 
-                ConveyorObjectInstance childInstance =
-                        new ConveyorObjectInstance(childSpawn, "Conveyor", parentX, parentY);
-                manager.addDynamicObject(childInstance);
+                manager.createDynamicObject(() ->
+                        new ConveyorObjectInstance(childSpawn, "Conveyor", parentX, parentY));
             }
         }
 

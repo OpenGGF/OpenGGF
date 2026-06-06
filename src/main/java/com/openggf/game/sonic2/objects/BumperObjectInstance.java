@@ -238,10 +238,9 @@ public class BumperObjectInstance extends AbstractObjectInstance
 
         // Award 10 points and spawn points display (ROM: lines 44675-44683)
         services().gameState().addScore(10);
-        PointsObjectInstance pointsObj = new PointsObjectInstance(
+        spawnFreeChild(() -> new PointsObjectInstance(
                 new ObjectSpawn(spawn.x(), spawn.y(), 0x29, 0, 0, false, 0),
-                services(), 10);
-        services().objectManager().addDynamicObject(pointsObj);
+                services(), 10));
     }
 
     @Override

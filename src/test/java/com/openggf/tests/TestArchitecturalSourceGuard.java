@@ -47,6 +47,74 @@ class TestArchitecturalSourceGuard {
             "com/openggf/graphics",
             "com/openggf/audio"
     );
+    private static final List<String> OBJECT_CHILD_SPAWN_MIGRATED_FILES = List.of(
+            "com/openggf/game/sonic2/objects/CheckpointObjectInstance.java",
+            "com/openggf/game/sonic2/objects/ArrowShooterObjectInstance.java",
+            "com/openggf/game/sonic2/objects/BubbleGeneratorObjectInstance.java",
+            "com/openggf/game/sonic2/objects/BonusBlockObjectInstance.java",
+            "com/openggf/game/sonic2/objects/BreakableBlockObjectInstance.java",
+            "com/openggf/game/sonic2/objects/BreakablePlatingObjectInstance.java",
+            "com/openggf/game/sonic2/objects/BumperObjectInstance.java",
+            "com/openggf/game/sonic2/objects/CollapsingPlatformObjectInstance.java",
+            "com/openggf/game/sonic2/objects/ConveyorObjectInstance.java",
+            "com/openggf/game/sonic2/objects/EggPrisonObjectInstance.java",
+            "com/openggf/game/sonic2/objects/FallingPillarObjectInstance.java",
+            "com/openggf/game/sonic2/objects/LeavesGeneratorObjectInstance.java",
+            "com/openggf/game/sonic2/objects/MonitorObjectInstance.java",
+            "com/openggf/game/sonic2/objects/OOZLauncherObjectInstance.java",
+            "com/openggf/game/sonic2/objects/OOZPoppingPlatformObjectInstance.java",
+            "com/openggf/game/sonic2/objects/PointPokeyObjectInstance.java",
+            "com/openggf/game/sonic2/objects/RivetObjectInstance.java",
+            "com/openggf/game/sonic2/objects/RisingPillarObjectInstance.java",
+            "com/openggf/game/sonic2/objects/SeesawObjectInstance.java",
+            "com/openggf/game/sonic2/objects/HTZLiftObjectInstance.java",
+            "com/openggf/game/sonic2/objects/SidewaysPformObjectInstance.java",
+            "com/openggf/game/sonic2/objects/SignpostObjectInstance.java",
+            "com/openggf/game/sonic2/objects/SmashableGroundObjectInstance.java",
+            "com/openggf/game/sonic2/objects/SmallMetalPformObjectInstance.java",
+            "com/openggf/game/sonic2/objects/SteamSpringObjectInstance.java",
+            "com/openggf/game/sonic2/objects/TiltingPlatformObjectInstance.java",
+            "com/openggf/game/sonic2/objects/TornadoObjectInstance.java",
+            "com/openggf/game/sonic2/objects/badniks/CluckerBadnikInstance.java",
+            "com/openggf/game/sonic2/objects/badniks/CoconutsBadnikInstance.java",
+            "com/openggf/game/sonic2/objects/badniks/GrounderBadnikInstance.java",
+            "com/openggf/game/sonic2/objects/badniks/NebulaBadnikInstance.java",
+            "com/openggf/game/sonic2/objects/badniks/OctusBadnikInstance.java",
+            "com/openggf/game/sonic2/objects/badniks/RexonBadnikInstance.java",
+            "com/openggf/game/sonic2/objects/badniks/RexonHeadObjectInstance.java",
+            "com/openggf/game/sonic2/objects/badniks/SolBadnikInstance.java",
+            "com/openggf/game/sonic2/objects/badniks/SpikerBadnikInstance.java",
+            "com/openggf/game/sonic2/objects/badniks/SpinyBadnikInstance.java",
+            "com/openggf/game/sonic2/objects/badniks/TurtloidBadnikInstance.java",
+            "com/openggf/game/sonic2/objects/bosses/CNZBossElectricBall.java",
+            "com/openggf/game/sonic2/objects/bosses/CPZBossContainer.java",
+            "com/openggf/game/sonic2/objects/bosses/CPZBossContainerExtend.java",
+            "com/openggf/game/sonic2/objects/bosses/CPZBossFallingPart.java",
+            "com/openggf/game/sonic2/objects/bosses/CPZBossGunk.java",
+            "com/openggf/game/sonic2/objects/bosses/CPZBossPipe.java",
+            "com/openggf/game/sonic2/objects/bosses/CPZBossPipeSegment.java",
+            "com/openggf/game/sonic2/objects/bosses/CPZBossPump.java",
+            "com/openggf/game/sonic2/objects/bosses/HTZBossLavaBall.java",
+            "com/openggf/game/sonic2/objects/bosses/Sonic2ARZBossInstance.java",
+            "com/openggf/game/sonic2/objects/bosses/Sonic2CNZBossInstance.java",
+            "com/openggf/game/sonic2/objects/bosses/Sonic2CPZBossInstance.java",
+            "com/openggf/game/sonic2/objects/bosses/Sonic2DEZEggmanInstance.java",
+            "com/openggf/game/sonic2/objects/bosses/Sonic2DeathEggRobotInstance.java",
+            "com/openggf/game/sonic2/objects/bosses/Sonic2EHZBossInstance.java",
+            "com/openggf/game/sonic2/objects/bosses/Sonic2HTZBossInstance.java",
+            "com/openggf/game/sonic2/objects/bosses/Sonic2MechaSonicInstance.java",
+            "com/openggf/game/sonic2/objects/bosses/Sonic2MCZBossInstance.java",
+            "com/openggf/game/sonic2/objects/bosses/Sonic2MTZBossInstance.java",
+            "com/openggf/game/sonic3k/objects/AizEndBossBombChild.java",
+            "com/openggf/game/sonic3k/objects/AizBgTreeSpawnerInstance.java",
+            "com/openggf/game/sonic3k/objects/AizShipBombInstance.java",
+            "com/openggf/game/sonic3k/objects/CnzBumperObjectInstance.java",
+            "com/openggf/game/sonic3k/objects/MGZHeadTriggerObjectInstance.java",
+            "com/openggf/game/sonic3k/objects/badniks/AbstractS3kBadnikInstance.java",
+            "com/openggf/game/sonic3k/objects/badniks/BlastoidBadnikInstance.java",
+            "com/openggf/game/sonic3k/objects/badniks/BuggernautBadnikInstance.java",
+            "com/openggf/game/sonic3k/objects/badniks/CaterkillerJrHeadInstance.java"
+    );
 
     private static final Set<String> GAME_ID_BRANCH_APPROVED_FILES = Set.of(
             "com/openggf/Engine.java",
@@ -126,6 +194,18 @@ class TestArchitecturalSourceGuard {
                     + "|specialRenderEffectRegistry|advancedRenderModeController)\\s*\\(");
     private static final Pattern GAME_MODULE_REGISTRY_MUTATION = Pattern.compile(
             "\\bGameModuleRegistry\\s*\\.\\s*(?:setCurrent|detectAndSetModule)\\s*\\(");
+    private static final Pattern RAW_OBJECT_CHILD_SPAWN = Pattern.compile(
+            "\\b(?:addDynamicObject(?:NextFrame|AfterCurrent(?:NextFrame)?)?|ObjectLifetimeOps\\s*\\.\\s*assignFindNextFreeChildSlot)\\s*\\(");
+    private static final Set<String> REGISTRY_BACKED_PALETTE_CYCLE_CLASSES = Set.of(
+            "IczCycle",
+            "LbzCycle",
+            "Lrz1Cycle",
+            "Lrz2Cycle",
+            "BpzCycle",
+            "CgzCycle",
+            "EmzCycle"
+    );
+    private static final Pattern DIRECT_CACHE_PALETTE_TEXTURE = Pattern.compile("\\.\\s*cachePaletteTexture\\s*\\(");
     private static final Pattern PLAYER_TOP_LEFT_ACCESS = Pattern.compile(
             "\\b(?:player|playable|entity|sonic|tails|knuckles)\\s*\\.\\s*get[XY]\\s*\\(\\s*\\)");
     private static final Pattern COORDINATE_CONTEXT = Pattern.compile(
@@ -410,6 +490,101 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
+    void sonic3kObjectRegistryDocsDoNotClaimPlaceholderOnlyCoverage() throws IOException {
+        String source = Files.readString(SRC_MAIN.resolve(
+                "com/openggf/game/sonic3k/objects/Sonic3kObjectRegistry.java"));
+
+        assertTrue(!source.contains("Currently all objects use")
+                        && !source.contains("all objects use PlaceholderObjectInstance"),
+                "Sonic3kObjectRegistry docs must not claim placeholder-only coverage after concrete S3K factories exist");
+    }
+
+    @Test
+    void sonic3kConstantsDoNotInferLockOnHalfFromZoneEra() throws IOException {
+        String source = Files.readString(SRC_MAIN.resolve(
+                "com/openggf/game/sonic3k/constants/Sonic3kConstants.java"));
+
+        assertTrue(!source.contains("S3 half (>= 0x200000) addresses for S3-era zones")
+                        && !source.contains("S&K half for S&K-era zones"),
+                "S3K ROM address comments must document the verified source half per table, "
+                + "not infer S3/S&K half from zone era");
+    }
+
+    @Test
+    void sonic3kBossDocsDoNotDescribeImplementedHczEndBossAsStubbed() throws IOException {
+        String source = Files.readString(SRC_MAIN.resolve(
+                "com/openggf/game/sonic3k/objects/bosses/HczEndBossInstance.java"));
+
+        assertTrue(!source.contains("routines and defeat logic are stubbed for later tasks."),
+                "HczEndBossInstance docs must not describe implemented movement/defeat logic as stubbed");
+        assertTrue(!source.contains("Child spawning (placeholders for Tasks 3-5)"),
+                "HczEndBossInstance docs must not describe implemented child spawning as placeholder-only");
+        assertTrue(!source.contains("Children will be spawned when their classes are created:"),
+                "HczEndBossInstance docs must not claim existing child classes are still pending");
+    }
+
+    @Test
+    void sonic3kMgzDocsDoNotDescribeImplementedEndBossAsStubbed() throws IOException {
+        String source = Files.readString(SRC_MAIN.resolve(
+                "com/openggf/game/sonic3k/events/Sonic3kMGZEvents.java"));
+
+        assertTrue(!source.contains("(currently unimplemented) end-of-act boss"),
+                "Sonic3kMGZEvents docs must not describe implemented MGZ end-boss handoff as unimplemented");
+        assertTrue(!source.contains("for that stubbed step."),
+                "Sonic3kMGZEvents docs must not describe implemented MGZ boss handoff as stubbed");
+        assertTrue(!source.contains("end boss not yet implemented"),
+                "Sonic3kMGZEvents logs must not describe implemented MGZ end-boss path as unimplemented");
+    }
+
+    @Test
+    void sonic3kMonitorDocsDoNotClaimPlayerCharacterSystemIsMissing() throws IOException {
+        String source = Files.readString(SRC_MAIN.resolve(
+                "com/openggf/game/sonic3k/objects/Sonic3kMonitorObjectInstance.java"));
+
+        assertTrue(!source.contains("PlayerCharacter system (not yet implemented)"),
+                "Sonic3kMonitorObjectInstance docs must not claim the PlayerCharacter system is missing");
+    }
+
+    @Test
+    void sonic3kCnzDocsDoNotClaimImplementedObjectsAreStillTaskScaffolds() throws IOException {
+        List<String> files = List.of(
+                "com/openggf/game/sonic3k/constants/Sonic3kConstants.java",
+                "com/openggf/game/sonic3k/constants/Sonic3kObjectIds.java",
+                "com/openggf/game/sonic3k/Sonic3k.java",
+                "com/openggf/game/sonic3k/Sonic3kGameModule.java",
+                "com/openggf/game/sonic3k/Sonic3kObjectArt.java",
+                "com/openggf/game/sonic3k/Sonic3kObjectArtProvider.java",
+                "com/openggf/game/sonic3k/objects/AbstractCnzTraversalVisibleStubInstance.java"
+        );
+        List<String> stalePhrases = List.of(
+                "Task 6 infrastructure only",
+                "behavior work, Task 6 only needs",
+                "Task 6 only needs the renderer",
+                "object behavior for Tasks 7 and 8",
+                "actual miniboss object implementation remains deferred to Task 7",
+                "Task 8 can attach real behavior later",
+                "Controller-only scaffold for Task 1",
+                "Phase 1 supports terrain, collision",
+                "Phase 1: terrain/collision only",
+                "Task 1 visual scaffold",
+                "Cannon.bin data lives in the S&K half"
+        );
+        List<String> violations = new ArrayList<>();
+
+        for (String relative : files) {
+            String source = Files.readString(SRC_MAIN.resolve(relative));
+            for (String stalePhrase : stalePhrases) {
+                if (source.contains(stalePhrase)) {
+                    violations.add(relative + " - " + stalePhrase);
+                }
+            }
+        }
+
+        assertNoViolations("S3K CNZ/module docs must not describe implemented objects as pending task scaffolds",
+                violations);
+    }
+
+    @Test
     void objectArtDataDoesNotExposeSonic2ProviderSpecificFields() throws IOException {
         String source = stripCommentsAndStrings(Files.readString(
                 SRC_MAIN.resolve("com/openggf/level/objects/ObjectArtData.java")));
@@ -454,6 +629,122 @@ class TestArchitecturalSourceGuard {
         }
 
         assertNoViolations("Production code must not call deprecated CollisionSystem.step()", violations);
+    }
+
+    @Test
+    void migratedObjectChildSpawnsStayOnManagedHelpers() throws IOException {
+        List<String> violations = new ArrayList<>();
+        for (String relative : OBJECT_CHILD_SPAWN_MIGRATED_FILES) {
+            violations.addAll(scanPattern(relative,
+                    Files.readString(SRC_MAIN.resolve(relative)),
+                    RAW_OBJECT_CHILD_SPAWN));
+        }
+
+        assertNoViolations("Migrated object child spawns must use spawnChild()/spawnFreeChild() helpers",
+                violations);
+    }
+
+    @Test
+    void registryBackedS3kPaletteCyclesDoNotDirectlyUploadTextures() throws IOException {
+        String relative = "com/openggf/game/sonic3k/Sonic3kPaletteCycler.java";
+        String source = Files.readString(SRC_MAIN.resolve(relative));
+        String stripped = stripCommentsAndStrings(source);
+        List<String> violations = new ArrayList<>();
+        for (String className : REGISTRY_BACKED_PALETTE_CYCLE_CLASSES) {
+            ClassBody body = classBody(stripped, className);
+            Matcher matcher = DIRECT_CACHE_PALETTE_TEXTURE.matcher(body.source());
+            while (matcher.find()) {
+                violations.add(relative + ":" + lineNumberForOffset(stripped, body.startOffset() + matcher.start())
+                        + " - " + className + " calls cachePaletteTexture directly after ownership migration");
+            }
+        }
+
+        assertNoViolations("Registry-backed S3K palette cycles must let PaletteOwnershipRegistry own GPU upload",
+                violations);
+    }
+
+    @Test
+    void specialStageManagerRoutesPaletteWritesThroughLocalPaletteModel() throws IOException {
+        String relative = "com/openggf/game/sonic3k/specialstage/Sonic3kSpecialStageManager.java";
+        String source = Files.readString(SRC_MAIN.resolve(relative));
+        String stripped = stripCommentsAndStrings(source);
+        List<String> violations = new ArrayList<>();
+
+        Matcher uploadMatcher = DIRECT_CACHE_PALETTE_TEXTURE.matcher(stripped);
+        while (uploadMatcher.find()) {
+            violations.add(relative + ":" + lineNumberForOffset(stripped, uploadMatcher.start())
+                    + " - route special-stage palette uploads through the local palette helper");
+        }
+
+        Pattern directColorArray = Pattern.compile("\\.\\s*colors\\s*\\[");
+        Matcher colorMatcher = directColorArray.matcher(stripped);
+        while (colorMatcher.find()) {
+            violations.add(relative + ":" + lineNumberForOffset(stripped, colorMatcher.start())
+                    + " - keep special-stage color mutation inside Sonic3kSpecialStagePalette");
+        }
+
+        assertNoViolations("S3K special-stage manager should not own direct palette mutation/upload",
+                violations);
+    }
+
+    @Test
+    void specialStageResultsScreenUsesSharedPaletteDecoder() throws IOException {
+        String relative = "com/openggf/game/sonic3k/specialstage/S3kSpecialStageResultsScreen.java";
+        String source = Files.readString(SRC_MAIN.resolve(relative));
+        String stripped = stripCommentsAndStrings(source);
+
+        assertTrue(!stripped.contains(".setColor("),
+                "S3K special-stage results palette should use the shared Sega palette decoder");
+        assertTrue(stripped.contains("PaletteLoader.fromBytes("),
+                "S3K special-stage results palette should decode Pal_Results through PaletteLoader");
+        assertTrue(!stripped.contains(".cachePaletteTexture("),
+                "S3K special-stage results palette upload should use Sonic3kSpecialStagePaletteUploader");
+    }
+
+    @Test
+    void specialStagePaletteCodeUsesPaletteAccessorsInsteadOfPublicColorArray() throws IOException {
+        List<String> files = List.of(
+                "com/openggf/game/sonic3k/specialstage/Sonic3kSpecialStageDataLoader.java",
+                "com/openggf/game/sonic3k/specialstage/Sonic3kSpecialStagePalette.java"
+        );
+        List<String> violations = new ArrayList<>();
+
+        Pattern publicColorArray = Pattern.compile("\\.\\s*colors\\s*\\[");
+        for (String relative : files) {
+            String stripped = stripCommentsAndStrings(Files.readString(SRC_MAIN.resolve(relative)));
+            Matcher matcher = publicColorArray.matcher(stripped);
+            while (matcher.find()) {
+                violations.add(relative + ":" + lineNumberForOffset(stripped, matcher.start())
+                        + " - use Palette.getColor(...) for special-stage palette construction/mutation");
+            }
+        }
+
+        assertNoViolations("S3K special-stage palette code should not access Palette.colors[] directly",
+                violations);
+    }
+
+    @Test
+    void sonic3kFrontendScreensRoutePaletteUploadsThroughLocalHelper() throws IOException {
+        List<String> files = List.of(
+                "com/openggf/game/sonic3k/dataselect/S3kDataSelectRenderer.java",
+                "com/openggf/game/sonic3k/levelselect/Sonic3kLevelSelectDataLoader.java",
+                "com/openggf/game/sonic3k/levelselect/Sonic3kLevelSelectManager.java",
+                "com/openggf/game/sonic3k/titlescreen/Sonic3kTitleScreenDataLoader.java",
+                "com/openggf/game/sonic3k/titlescreen/Sonic3kTitleScreenManager.java"
+        );
+        List<String> violations = new ArrayList<>();
+
+        for (String relative : files) {
+            String stripped = stripCommentsAndStrings(Files.readString(SRC_MAIN.resolve(relative)));
+            Matcher matcher = DIRECT_CACHE_PALETTE_TEXTURE.matcher(stripped);
+            while (matcher.find()) {
+                violations.add(relative + ":" + lineNumberForOffset(stripped, matcher.start())
+                        + " - route S3K frontend palette uploads through S3kFrontendPaletteUploader");
+            }
+        }
+
+        assertNoViolations("S3K frontend/menu screens should centralize palette texture uploads",
+                violations);
     }
 
     @Test
@@ -558,6 +849,19 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
+    void sampleScannerDetectsNextFrameRawObjectChildSpawn() {
+        List<String> violations = scanPattern("sample/Object.java", """
+                class Object {
+                    void spawn(ObjectManager objectManager, ObjectInstance child) {
+                        objectManager.addDynamicObjectNextFrame(child);
+                    }
+                }
+                """, RAW_OBJECT_CHILD_SPAWN);
+
+        assertEquals(List.of("sample/Object.java:3 - addDynamicObjectNextFrame("), violations);
+    }
+
+    @Test
     void sampleScannerDetectsGameModuleRegistryMutation() {
         List<String> violations = scanPattern("sample/Runtime.java", """
                 class Runtime {
@@ -656,6 +960,33 @@ class TestArchitecturalSourceGuard {
                     + " - " + matcher.group().replaceAll("\\s+", ""));
         }
         return violations;
+    }
+
+    private record ClassBody(String source, int startOffset) {
+    }
+
+    private static ClassBody classBody(String source, String className) {
+        Matcher matcher = Pattern.compile("\\bclass\\s+" + Pattern.quote(className) + "\\b").matcher(source);
+        if (!matcher.find()) {
+            throw new AssertionError("Could not find class " + className);
+        }
+        int openBrace = source.indexOf('{', matcher.end());
+        if (openBrace < 0) {
+            throw new AssertionError("Could not find body for class " + className);
+        }
+        int depth = 0;
+        for (int i = openBrace; i < source.length(); i++) {
+            char c = source.charAt(i);
+            if (c == '{') {
+                depth++;
+            } else if (c == '}') {
+                depth--;
+                if (depth == 0) {
+                    return new ClassBody(source.substring(openBrace + 1, i), openBrace + 1);
+                }
+            }
+        }
+        throw new AssertionError("Could not find closing brace for class " + className);
     }
 
     private static List<String> objectArtDataSurfaceNames(String source) {

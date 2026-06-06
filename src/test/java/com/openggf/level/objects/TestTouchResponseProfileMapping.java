@@ -61,6 +61,13 @@ class TestTouchResponseProfileMapping {
     }
 
     @Test
+    void sonic1SpecialPropertyProviderMapsToSonic1DecodeMode() {
+        TouchResponseProfile profile = TouchResponseProfile.fromProvider(new Sonic1SpecialProvider());
+
+        assertEquals(TouchCategoryDecodeMode.S1_SPECIAL_PROPERTY, profile.categoryDecodeMode());
+    }
+
+    @Test
     void s3kSpecialPropertyProviderMapsToS3kDecodeMode() {
         TouchResponseProfile profile = TouchResponseProfile.fromProvider(new S3kSpecialProvider());
 
@@ -166,6 +173,13 @@ class TestTouchResponseProfileMapping {
     private static final class Sonic2SpecialProvider extends DefaultProvider {
         @Override
         public boolean usesSonic2TouchSpecialPropertyResponse() {
+            return true;
+        }
+    }
+
+    private static final class Sonic1SpecialProvider extends DefaultProvider {
+        @Override
+        public boolean usesSonic1TouchSpecialPropertyResponse() {
             return true;
         }
     }

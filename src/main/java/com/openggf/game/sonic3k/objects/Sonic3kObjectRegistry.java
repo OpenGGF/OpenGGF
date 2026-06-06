@@ -52,9 +52,11 @@ import java.util.function.Function;
 /**
  * Object registry for Sonic 3 &amp; Knuckles.
  *
- * <p>Currently all objects use {@link PlaceholderObjectInstance} for debug
- * rendering. Object names are derived from the SK Set 1 pointer table
- * ({@code Object pointers - SK Set 1.asm}) in the S3K disassembly.
+ * <p>Route-critical objects, bosses, badniks, and cutscene controllers are
+ * registered as concrete factories as they are ported. Remaining unknown or
+ * low-priority object IDs still fall back to {@link PlaceholderObjectInstance}
+ * for debug rendering. Object names are derived from the SK Set 1 pointer
+ * table ({@code Object pointers - SK Set 1.asm}) in the S3K disassembly.
  *
  * <p>S3K uses two zone-set pointer tables (SK Set 1 for S&amp;K zones,
  * S3 Set for S3 zones) which remap some IDs above 110. The names here

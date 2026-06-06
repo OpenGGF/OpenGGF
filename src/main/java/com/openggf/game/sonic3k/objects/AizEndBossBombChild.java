@@ -5,7 +5,6 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchActorContextPolicy;
@@ -170,12 +169,10 @@ public class AizEndBossBombChild extends AbstractObjectInstance implements Touch
     }
 
     private void spawnSmoke() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) return;
+        if (services().objectManager() == null) return;
 
-        AizEndBossSmokeChild smoke = new AizEndBossSmokeChild(
-                boss, currentX, currentY, xVel != 0);
-        objectManager.addDynamicObject(smoke);
+        spawnFreeChild(() -> new AizEndBossSmokeChild(
+                boss, currentX, currentY, xVel != 0));
     }
 
     @Override

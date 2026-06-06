@@ -71,6 +71,7 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
     private final int chainCount;     // Number of chain segments (bits 0-3 of subtype)
     private int halfWidth;      // obActWid
     private int halfHeight;     // obHeight
+    private int continuedRideSurfaceHeight; // Swing_Action2 passes obHeight+1 to MvSonicOnPtfm
     private boolean isSolid;    // Whether this variant is top-solid
     private int priority;       // obPriority
 
@@ -119,6 +120,7 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
             this.variant = ZoneVariant.SBZ;
             this.halfWidth = 0x18;
             this.halfHeight = 0x18;
+            this.continuedRideSurfaceHeight = halfHeight + 1;
             this.isSolid = false;
             this.priority = 3;
             this.artKey = ObjectArtKeys.SWING_SBZ_BALL;
@@ -128,6 +130,7 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
             this.variant = ZoneVariant.SLZ;
             this.halfWidth = 0x20;
             this.halfHeight = 0x10;
+            this.continuedRideSurfaceHeight = halfHeight + 1;
             this.isSolid = true;
             this.priority = 3;
             this.artKey = ObjectArtKeys.SWING_SLZ;
@@ -138,6 +141,7 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
             this.variant = ZoneVariant.GIANT_BALL;
             this.halfWidth = 0x18;
             this.halfHeight = 0x18;
+            this.continuedRideSurfaceHeight = halfHeight + 1;
             this.isSolid = false;
             this.priority = 2;
             this.artKey = ObjectArtKeys.SWING_GIANT_BALL;
@@ -148,6 +152,7 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
             this.variant = ZoneVariant.GHZ_MZ;
             this.halfWidth = 0x18;
             this.halfHeight = 8;
+            this.continuedRideSurfaceHeight = halfHeight + 1;
             this.isSolid = true;
             this.priority = 3;
             this.artKey = ObjectArtKeys.SWING_GHZ;
@@ -338,7 +343,17 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(halfWidth, halfHeight, halfHeight);
+        return new SolidObjectParams(halfWidth, halfHeight, continuedRideSurfaceHeight);
+    }
+
+    @Override
+    public boolean usesPlatformObjectLandingSnap() {
+        // Swing_SetSolid passes d3=obHeight into Swing_Solid/Platform3, but
+        // Swing_Action2 passes d3=obHeight+1 to MvSonicOnPtfm for continued
+        // riding (docs/s1disasm/_incObj/15 Swinging Platforms.asm:128-154).
+        // Let resolveContactInternal keep the Platform3 landing snap from
+        // airHalfHeight while groundHalfHeight models the continued ride path.
+        return false;
     }
 
     @Override

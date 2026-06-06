@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -75,6 +76,36 @@ class TestSonic1BridgeObjectInstance {
                 "Already-riding query-only sidekick should drive Bri_WalkOff-equivalent log tracking");
     }
 
+    @Test
+    void freshAirborneFlushCatchDefersCheckpointUntilNextObjectPass() throws Exception {
+        TestPlayableSprite main = new TestPlayableSprite();
+        main.setAir(true);
+        main.setYSpeed((short) 0x0100);
+        main.setCentreX((short) 0x0100);
+        // Platform3 d0 = (obY - 8) - (SonicY + obHeight + 4) == 0.
+        main.setCentreY((short) (0x0100 - 8 - main.getYRadius() - 4));
+
+        TestableSonic1BridgeObjectInstance bridge = new TestableSonic1BridgeObjectInstance(
+                new ObjectSpawn(0x0100, 0x0100, 0x11, 0x08, 0, false, 0));
+        bridge.setCheckpointBatch(new SolidCheckpointBatch(bridge, Map.of(
+                main, standingContact()
+        )));
+        bridge.setServices(new QueryOnlyPlayerServices(main, List.of()));
+
+        bridge.update(1, main);
+
+        assertEquals(0, bridge.checkpointRequests,
+                "S1 Obj11 fresh airborne catch should stage Platform3 this pass, not apply it");
+        assertTrue((boolean) fieldValue(bridge, "landingDeferred"));
+        assertFalse((boolean) fieldValue(bridge, "playerOnBridge"));
+
+        bridge.update(2, main);
+
+        assertEquals(1, bridge.checkpointRequests);
+        assertFalse((boolean) fieldValue(bridge, "landingDeferred"));
+        assertTrue((boolean) fieldValue(bridge, "playerOnBridge"));
+    }
+
     private static Object fieldValue(Sonic1BridgeObjectInstance bridge, String name) throws Exception {
         Field field = Sonic1BridgeObjectInstance.class.getDeclaredField(name);
         field.setAccessible(true);
@@ -93,6 +124,7 @@ class TestSonic1BridgeObjectInstance {
 
     private static final class TestableSonic1BridgeObjectInstance extends Sonic1BridgeObjectInstance {
         private SolidCheckpointBatch checkpointBatch;
+        private int checkpointRequests;
 
         private TestableSonic1BridgeObjectInstance(ObjectSpawn spawn) {
             super(spawn);
@@ -104,6 +136,7 @@ class TestSonic1BridgeObjectInstance {
 
         @Override
         protected SolidCheckpointBatch checkpointAll() {
+            checkpointRequests++;
             return checkpointBatch;
         }
     }

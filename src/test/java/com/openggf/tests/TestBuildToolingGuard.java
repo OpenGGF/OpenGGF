@@ -11,9 +11,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 class TestBuildToolingGuard {
@@ -23,6 +27,28 @@ class TestBuildToolingGuard {
             "**/*Debug*.java",
             "**/*Probe.java",
             "**/*Probe*.java");
+    private static final List<Pattern> TRACE_BOOTSTRAP_POLICY_SIGNALS = List.of(
+            Pattern.compile("\\b(?:meta|metadata)\\s*\\.\\s*(?:zoneId|act|traceProfile)\\s*\\("),
+            Pattern.compile("\\bhasPerFrameSlotMachineState\\s*\\("),
+            Pattern.compile("\\bfindCheckpointFrame\\s*\\("),
+            Pattern.compile("\\bcheckpoint\\s*\\.\\s*name\\s*\\("),
+            Pattern.compile("\\bcurrent\\s*\\.\\s*frame\\s*\\(\\s*\\)\\s*(?:[<>=!]=?|\\+|-)"));
+    private static final Pattern TRACE_ROW_PLAYER_SETTER_HYDRATION = Pattern.compile(
+            "\\.\\s*set(?:CentreX|CentreY|XSpeed|YSpeed|GSpeed|Angle|Air|Rolling|SubpixelRaw)\\s*\\("
+                    + ".*\\b(?:current|previous|firstFrame|expected|traceFrame|frame)\\s*\\.\\s*"
+                    + "(?:x|y|xSpeed|ySpeed|gSpeed|angle|air|rolling|xSub|ySub)\\s*\\(");
+    private static final Set<String> ACCEPTED_TRACE_BOOTSTRAP_POLICY_SIGNALS = Set.of(
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:286 - if (!meta.hasPerFrameSlotMachineState()) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:448 - && \"level_gated_reset_aware\".equals(metadata.traceProfile())",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:479 - && current.frame() < findFirstLevelGameplayFrame(trace)) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:493 - if (current.frame() < firstLevelFrame) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:503 - if (current.frame() == firstLevelFrame) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:584 - int gameplayStartFrame = findCheckpointFrame(trace, \"gameplay_start\");",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:585 - return gameplayStartFrame >= 0 && current.frame() <= gameplayStartFrame;",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:655 - if (metadata.zoneId() == null || metadata.zoneId() != 0 || metadata.act() != 1) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:661 - .anyMatch(checkpoint -> \"intro_begin\".equals(checkpoint.name()));",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:665 - private static int findCheckpointFrame(TraceData trace, String checkpointName) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:669 - && checkpointName.equals(checkpoint.name())) {");
 
     @Test
     void surefireShouldPreloadMockitoAsJavaAgent() throws Exception {
@@ -131,6 +157,282 @@ class TestBuildToolingGuard {
         }
     }
 
+    @Test
+    void releaseWorkflowShouldRunBranchPolicyOnMasterPullRequests() throws Exception {
+        String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
+        List<String> violations = new ArrayList<>();
+
+        if (!workflow.contains("Validate branch policy")) {
+            violations.add(".github/workflows/release.yml does not define a branch policy validation step");
+        }
+        if (!workflow.contains(".githooks/validate-policy.sh ci-pr")) {
+            violations.add(".github/workflows/release.yml does not run validate-policy.sh ci-pr for release PRs");
+        }
+        if (!workflow.contains("fetch-depth: 0")) {
+            violations.add(".github/workflows/release.yml policy checkout must use fetch-depth: 0 for commit range validation");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("release PRs into master must not bypass branch policy validation:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void releaseWorkflowShouldRunTraceReplayPolicyProfile() throws Exception {
+        String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
+        List<String> violations = new ArrayList<>();
+
+        if (!workflow.contains("-Ptrace-replay")) {
+            violations.add(".github/workflows/release.yml does not run the trace-replay profile during release validation");
+        }
+        if (!workflow.contains("Run trace replay policy tests")) {
+            violations.add(".github/workflows/release.yml should name the trace policy step explicitly");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("release validation must exercise the trace replay policy profile, not only the default suite:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void branchPolicyShouldValidateCommitTrailersForMasterPullRequests() throws Exception {
+        String shellPolicy = Files.readString(Path.of(".githooks/validate-policy.sh"));
+        String powershellPolicy = Files.readString(Path.of(".githooks/validate-policy.ps1"));
+        List<String> violations = new ArrayList<>();
+
+        if (!shellPolicy.contains("if [ \"$base_ref\" != \"develop\" ] && [ \"$base_ref\" != \"master\" ]; then")) {
+            violations.add(".githooks/validate-policy.sh ci-pr mode must continue for base_ref=master");
+        }
+        if (!powershellPolicy.contains("if ($BaseRef -ne \"develop\" -and $BaseRef -ne \"master\") {")) {
+            violations.add(".githooks/validate-policy.ps1 ci-pr mode must continue for BaseRef=master");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("release PR commits must receive the same non-master branch trailer checks as develop PRs:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void romGatedTestsShouldUseResolvedRomPathsAndAssumeReferenceFixtures() throws Exception {
+        String file = "src/test/java/com/openggf/game/sonic3k/TestSonic3kLifeIconAddresses.java";
+        String source = Files.readString(Path.of(file));
+        List<String> violations = new ArrayList<>();
+
+        if (source.contains("rom.open(\"Sonic and Knuckles & Sonic 3 (W) [!].gen\")")) {
+            violations.add(file + " opens the default S3K ROM filename instead of the @RequiresRom resolved path");
+        }
+        if (!source.contains("RomTestUtils.ensureSonic3kRomAvailable()")) {
+            violations.add(file + " does not use RomTestUtils.ensureSonic3kRomAvailable()");
+        }
+        if (!source.contains("assumeTrue(Files.exists(TAILS_LIFE_ICON_BIN)")) {
+            violations.add(file + " does not skip cleanly when the disassembly fixture is absent");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("@RequiresRom tests should honor configured ROM paths and optional local reference fixtures:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void lightningSparkPatternsShouldUseDedicatedVirtualPatternRange() throws Exception {
+        String file = "src/main/java/com/openggf/game/sonic3k/objects/LightningSparkObjectInstance.java";
+        String source = Files.readString(Path.of(file));
+        List<String> violations = new ArrayList<>();
+
+        if (source.contains("SPARK_PATTERN_BASE = 0x20100")) {
+            violations.add(file + " allocates spark tiles inside PatternAtlasRange.OBJECTS");
+        }
+        if (!source.contains("PatternAtlasRange.TRANSIENT_EFFECTS.base()")) {
+            violations.add(file + " should allocate spark tiles from PatternAtlasRange.TRANSIENT_EFFECTS");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("Lightning shield spark patterns must not collide with shared object art allocation:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void releaseTestsShouldNotHideKnownFailingScenariosBehindDisabledAnnotations() throws Exception {
+        List<String> violations = new ArrayList<>();
+        try (Stream<Path> paths = Files.walk(Path.of("src/test/java"))) {
+            paths.filter(path -> path.toString().endsWith(".java"))
+                    .forEach(path -> {
+                        try {
+                            String source = Files.readString(path);
+                            if (source.contains("@Disabled(\"Currently failing")) {
+                                violations.add(path.toString().replace('\\', '/'));
+                            }
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+        }
+
+        if (!violations.isEmpty()) {
+            fail("known-failing release tests must be fixed, converted to explicit accepted-debt docs, or moved out of the release suite:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void traceReplayLegacyExceptionsShouldBeDocumentedAndBounded() throws Exception {
+        String bootstrap = Files.readString(Path.of("src/main/java/com/openggf/trace/TraceReplayBootstrap.java"));
+        String discrepancies = Files.readString(Path.of("docs/KNOWN_DISCREPANCIES.md"));
+        String roadmap = Files.readString(Path.of("docs/RELEASE_READINESS_ROADMAP.md"));
+        List<String> violations = new ArrayList<>();
+
+        long legacyTracePredicates = Pattern.compile("\\bboolean\\s+isLegacy\\w*Trace\\s*\\(")
+                .matcher(bootstrap)
+                .results()
+                .count();
+        if (legacyTracePredicates != 1) {
+            violations.add("TraceReplayBootstrap should expose exactly one accepted legacy trace predicate");
+        }
+        if (!discrepancies.contains("Legacy S3K AIZ Intro Trace Replay Bootstrap")) {
+            violations.add("docs/KNOWN_DISCREPANCIES.md does not document the accepted legacy S3K AIZ trace bootstrap");
+        }
+        if (!discrepancies.contains("S2 Tornado Ride-Start Trace Bootstrap Contract")) {
+            violations.add("docs/KNOWN_DISCREPANCIES.md does not document the S2 Tornado ride-start bootstrap contract");
+        }
+        if (!discrepancies.contains("S2 CNZ Slot-Machine Trace Bootstrap Contract")) {
+            violations.add("docs/KNOWN_DISCREPANCIES.md does not document the S2 CNZ slot-machine trace bootstrap contract");
+        }
+        if (!discrepancies.contains("S3K Sidekick Seed-Frame Trace Bootstrap Debt")) {
+            violations.add("docs/KNOWN_DISCREPANCIES.md does not document the S3K sidekick seed-frame trace bootstrap debt");
+        }
+        if (!roadmap.contains("Accepted Phase 1 release debt: legacy S3K AIZ intro trace bootstrap")) {
+            violations.add("docs/RELEASE_READINESS_ROADMAP.md does not classify the legacy S3K AIZ trace exception as accepted Phase 1 debt");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("trace replay exceptions must be explicitly documented and bounded before release:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void traceReplayBootstrapPolicySignalsStayBounded() throws Exception {
+        Set<String> signals = new TreeSet<>();
+        for (String relative : List.of(
+                "src/main/java/com/openggf/trace/TraceReplayBootstrap.java",
+                "src/main/java/com/openggf/trace/replay/TraceReplaySessionBootstrap.java")) {
+            signals.addAll(traceBootstrapPolicySignals(relative, Files.readString(Path.of(relative))));
+        }
+
+        if (!signals.equals(new TreeSet<>(ACCEPTED_TRACE_BOOTSTRAP_POLICY_SIGNALS))) {
+            Set<String> added = new TreeSet<>(signals);
+            added.removeAll(ACCEPTED_TRACE_BOOTSTRAP_POLICY_SIGNALS);
+            Set<String> removed = new TreeSet<>(ACCEPTED_TRACE_BOOTSTRAP_POLICY_SIGNALS);
+            removed.removeAll(signals);
+            fail("trace replay bootstrap policy signals changed; document and justify any new "
+                    + "zone/profile/checkpoint/frame-shape carve-out before release"
+                    + "\n  added:\n  " + String.join("\n  ", added)
+                    + "\n  removed:\n  " + String.join("\n  ", removed));
+        }
+    }
+
+    @Test
+    void traceReplayBootstrapMustNotHydrateEngineStateFromTraceRows() throws Exception {
+        List<String> violations = new ArrayList<>();
+        for (String relative : List.of(
+                "src/main/java/com/openggf/trace/TraceReplayBootstrap.java",
+                "src/main/java/com/openggf/trace/replay/TraceReplaySessionBootstrap.java")) {
+            violations.addAll(traceRowHydrationSignals(relative, Files.readString(Path.of(relative))));
+        }
+
+        if (!violations.isEmpty()) {
+            fail("trace replay bootstrap must not copy trace-row player state back into engine state:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void s2TornadoReplayBootstrapKeepsMetadataCandidateSeparateFromLiveObjectAuthority() throws Exception {
+        String sessionBootstrap = Files.readString(Path.of(
+                "src/main/java/com/openggf/trace/replay/TraceReplaySessionBootstrap.java"));
+
+        if (sessionBootstrap.contains("usesS2TornadoRideStartForTraceReplay(")) {
+            fail("TraceReplaySessionBootstrap must use the metadata-candidate helper name and then "
+                    + "narrow through the live ObjB2 Tornado instance before applying Tornado ride-start state");
+        }
+        if (!sessionBootstrap.contains("isS2TornadoRideStartMetadataCandidate(")) {
+            fail("TraceReplaySessionBootstrap should make the metadata/live-object split explicit with "
+                    + "isS2TornadoRideStartMetadataCandidate(...)");
+        }
+    }
+
+    @Test
+    void slotMachineReplayBootstrapUsesGenericRuntimeFeatureCapability() throws Exception {
+        String bootstrap = Files.readString(Path.of("src/main/java/com/openggf/trace/TraceReplayBootstrap.java"));
+
+        if (bootstrap.contains("hasPerFrameCnzSlotMachineState(")) {
+            fail("TraceReplayBootstrap should consume generic slot-machine feature capability metadata, "
+                    + "not a CNZ-named fixture predicate.");
+        }
+        if (!bootstrap.contains("hasPerFrameSlotMachineState(")) {
+            fail("TraceReplayBootstrap should use TraceMetadata.hasPerFrameSlotMachineState() "
+                    + "for the native slot-machine title-card prelude.");
+        }
+    }
+
+    @Test
+    void s3kSidekickSeedReplayBootstrapUsesExplicitFixtureCapability() throws Exception {
+        String bootstrap = Files.readString(Path.of("src/main/java/com/openggf/trace/TraceReplayBootstrap.java"));
+
+        if (!bootstrap.contains("hasSidekickSeedFramePrelude()")) {
+            fail("TraceReplayBootstrap should use explicit sidekick seed-frame fixture capability metadata.");
+        }
+        if (bootstrap.contains("firstFramePrimaryMovementAdvanced(")) {
+            fail("TraceReplayBootstrap must not infer S3K sidekick seed-frame prelude from "
+                    + "first-frame player movement shape.");
+        }
+    }
+
+    @Test
+    void sampleScannerDetectsTraceBootstrapPolicySignalsButIgnoresComments() {
+        List<String> signals = traceBootstrapPolicySignals("sample/TraceReplayBootstrap.java", """
+                class TraceReplayBootstrap {
+                    /* metadata.zoneId() in docs should not count. */
+                    void ok() {
+                        // metadata.traceProfile() should not count.
+                    }
+                    void bad(TraceMetadata metadata, TraceFrame current) {
+                        if (metadata.zoneId() == 0 && current.frame() < 4) {
+                            run();
+                        }
+                    }
+                }
+                """);
+
+        assertEquals(List.of(
+                "sample/TraceReplayBootstrap.java:7 - if (metadata.zoneId() == 0 && current.frame() < 4) {"),
+                signals);
+    }
+
+    @Test
+    void sampleScannerDetectsTraceRowHydrationButIgnoresComparisonAndComments() {
+        List<String> signals = traceRowHydrationSignals("sample/TraceReplaySessionBootstrap.java", """
+                class TraceReplaySessionBootstrap {
+                    /* player.setXSpeed(current.xSpeed()) in docs should not count. */
+                    void compare(TraceFrame current) {
+                        ReplayPrimaryState.fromTraceFrame(current, "trace-vblank");
+                    }
+                    void bad(TraceFrame current, AbstractPlayableSprite player) {
+                        player.setXSpeed(current.xSpeed());
+                    }
+                }
+                """);
+
+        assertEquals(List.of(
+                "sample/TraceReplaySessionBootstrap.java:7 - player.setXSpeed(current.xSpeed());"),
+                signals);
+    }
+
     private static Document parsePom(String file) throws Exception {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         factory.setNamespaceAware(false);
@@ -154,6 +456,84 @@ class TestBuildToolingGuard {
             }
         }
         return false;
+    }
+
+    private static List<String> traceBootstrapPolicySignals(String relative, String source) {
+        String stripped = stripComments(source);
+        List<String> signals = new ArrayList<>();
+        String[] lines = stripped.split("\\R", -1);
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i].strip();
+            if (line.isEmpty()) {
+                continue;
+            }
+            for (Pattern pattern : TRACE_BOOTSTRAP_POLICY_SIGNALS) {
+                if (pattern.matcher(line).find()) {
+                    signals.add(relative + ":" + (i + 1) + " - " + line.replaceAll("\\s+", " "));
+                    break;
+                }
+            }
+        }
+        return signals;
+    }
+
+    private static List<String> traceRowHydrationSignals(String relative, String source) {
+        String stripped = stripComments(source);
+        List<String> signals = new ArrayList<>();
+        String[] lines = stripped.split("\\R", -1);
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i].strip();
+            if (line.isEmpty()) {
+                continue;
+            }
+            if (TRACE_ROW_PLAYER_SETTER_HYDRATION.matcher(line).find()) {
+                signals.add(relative + ":" + (i + 1) + " - " + line.replaceAll("\\s+", " "));
+            }
+        }
+        return signals;
+    }
+
+    private static String stripComments(String source) {
+        StringBuilder stripped = new StringBuilder(source.length());
+        boolean inLineComment = false;
+        boolean inBlockComment = false;
+        for (int i = 0; i < source.length(); i++) {
+            char current = source.charAt(i);
+            char next = i + 1 < source.length() ? source.charAt(i + 1) : '\0';
+            if (inLineComment) {
+                if (current == '\n' || current == '\r') {
+                    inLineComment = false;
+                    stripped.append(current);
+                } else {
+                    stripped.append(' ');
+                }
+                continue;
+            }
+            if (inBlockComment) {
+                if (current == '*' && next == '/') {
+                    stripped.append("  ");
+                    i++;
+                    inBlockComment = false;
+                } else {
+                    stripped.append(current == '\n' || current == '\r' ? current : ' ');
+                }
+                continue;
+            }
+            if (current == '/' && next == '/') {
+                stripped.append("  ");
+                i++;
+                inLineComment = true;
+                continue;
+            }
+            if (current == '/' && next == '*') {
+                stripped.append("  ");
+                i++;
+                inBlockComment = true;
+                continue;
+            }
+            stripped.append(current);
+        }
+        return stripped.toString();
     }
 
     private static Element profileById(Document pom, String id) {

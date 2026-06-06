@@ -225,8 +225,7 @@ public class CPZBossGunk extends AbstractObjectInstance implements TouchResponse
         }
         var velocity = Sonic2Rng.nextCpzGunkDropletVelocity(services().rng(), yVel);
 
-        CPZBossGunk droplet = new CPZBossGunk(spawn, mainBoss, x, y, velocity.xVel(), velocity.yVel(), renderFlags);
-        services().objectManager().addDynamicObject(droplet);
+        spawnChild(() -> new CPZBossGunk(spawn, mainBoss, x, y, velocity.xVel(), velocity.yVel(), renderFlags));
     }
 
     private void applyMove() {

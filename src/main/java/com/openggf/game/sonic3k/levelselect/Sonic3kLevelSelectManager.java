@@ -7,6 +7,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.LevelSelectProvider;
 import com.openggf.game.sonic2.menu.MenuBackgroundAnimator;
 
+import com.openggf.game.sonic3k.S3kFrontendPaletteUploader;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSoundTestCatalog;
 import com.openggf.graphics.GLCommand;
@@ -314,7 +315,7 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
         if (iconIndex >= 0) {
             Palette iconPalette = dataLoader.getIconPalette(iconIndex);
             if (iconPalette != null) {
-                gm.cachePaletteTexture(iconPalette, ICON_RENDER_PALETTE);
+                S3kFrontendPaletteUploader.cacheLine(gm, iconPalette, ICON_RENDER_PALETTE);
             }
         }
 

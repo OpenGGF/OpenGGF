@@ -11,7 +11,6 @@ import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -129,7 +128,6 @@ class TestS3kCnzCarryHeadless {
     }
 
     @Test
-    @Disabled("Currently failing: frame 96 carry velocity is 0x0130 instead of the recorded 0x0148.")
     void cnz1CarryVelocityAccumulatesSyntheticRightPresses() {
         AbstractPlayableSprite sonic = fixture.sprite();
 

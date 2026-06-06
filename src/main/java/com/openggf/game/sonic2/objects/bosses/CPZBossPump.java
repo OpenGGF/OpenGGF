@@ -74,8 +74,8 @@ public class CPZBossPump extends AbstractObjectInstance {
         for (int i = 0; i < 3; i++) {
             var motion = randomPipeMotion();
             ObjectSpawn pieceSpawn = new ObjectSpawn(x, y, Sonic2ObjectIds.CPZ_BOSS, 0, renderFlags, false, 0);
-            CPZBossFallingPart piece = new CPZBossFallingPart(pieceSpawn, 0x22 + i, motion.xVel(), motion.timer());
-            services().objectManager().addDynamicObject(piece);
+            int mappingFrame = 0x22 + i;
+            spawnChild(() -> new CPZBossFallingPart(pieceSpawn, mappingFrame, motion.xVel(), motion.timer()));
         }
 
         setDestroyed(true);

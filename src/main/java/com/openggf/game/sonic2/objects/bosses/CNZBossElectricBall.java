@@ -211,8 +211,7 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
         if (services().objectManager() == null) {
             return;
         }
-        CNZBossElectricBall clone = new CNZBossElectricBall(x, y, 0x100, -0x300, mainBoss);
-        services().objectManager().addDynamicObject(clone);
+        spawnFreeChild(() -> new CNZBossElectricBall(x, y, 0x100, -0x300, mainBoss));
     }
 
     @Override

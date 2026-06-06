@@ -3,6 +3,8 @@ package com.openggf.game.sonic3k.events;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -12,7 +14,6 @@ import com.openggf.game.sonic3k.objects.HCZ2WallObjectInstance;
 import com.openggf.game.sonic3k.scroll.SwScrlHcz;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
-import com.openggf.level.Palette;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -458,22 +459,20 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         if (lm == null) return;
         Level level = lm.getCurrentLevel();
         if (level == null) return;
-        Palette palette = level.getPalette(PALETTE_LINE);
-        if (palette == null) return;
-
-        for (int i = 0; i < mdColors.length; i++) {
-            // Convert Mega Drive color word to 2-byte big-endian array
-            byte[] segaBytes = {
-                    (byte) ((mdColors[i] >> 8) & 0xFF),
-                    (byte) (mdColors[i] & 0xFF)
-            };
-            Palette.Color color = new Palette.Color();
-            color.fromSegaFormat(segaBytes, 0);
-            palette.setColor(PALETTE_COLOR_OFFSET + i, color);
-        }
-
-        // Refresh the GPU palette texture
-        cachePaletteTextureIfReady(palette, PALETTE_LINE);
+        S3kPaletteWriteSupport.applyColors(
+                paletteRegistryOrNull(),
+                level,
+                graphics(),
+                S3kPaletteOwners.HCZ_EVENT_PALETTE,
+                S3kPaletteOwners.PRIORITY_ZONE_EVENT,
+                PALETTE_LINE,
+                new int[] {
+                        PALETTE_COLOR_OFFSET,
+                        PALETTE_COLOR_OFFSET + 1,
+                        PALETTE_COLOR_OFFSET + 2
+                },
+                mdColors);
+        S3kPaletteWriteSupport.resolvePendingWritesNow(paletteRegistryOrNull(), level, graphics());
     }
 
     // =========================================================================

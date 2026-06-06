@@ -474,15 +474,14 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance {
 
         boolean flipped = (getCustomFlag(OBJOFF_SIDE_FLAG) == 0); // Left side = flipped
 
-        HTZBossFlamethrower flamethrower = new HTZBossFlamethrower(
+        HTZBossFlamethrower flamethrower = spawnChild(() -> new HTZBossFlamethrower(
                 this,
                 state.x,
                 state.y - 0x1C,  // ROM: subi.w #$1C,y_pos(a1)
                 flipped
-        );
+        ));
 
         childComponents.add(flamethrower);
-        services().objectManager().addDynamicObject(flamethrower);
     }
 
     /**
@@ -497,26 +496,24 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance {
         boolean leftSide = (getCustomFlag(OBJOFF_SIDE_FLAG) == 0);
 
         // Spawn left ball
-        HTZBossLavaBall leftBall = new HTZBossLavaBall(
+        HTZBossLavaBall leftBall = spawnChild(() -> new HTZBossLavaBall(
                 this,
                 state.x,
                 state.y,
                 true,  // Left ball
                 leftSide
-        );
+        ));
         childComponents.add(leftBall);
-        services().objectManager().addDynamicObject(leftBall);
 
         // Spawn right ball
-        HTZBossLavaBall rightBall = new HTZBossLavaBall(
+        HTZBossLavaBall rightBall = spawnChild(() -> new HTZBossLavaBall(
                 this,
                 state.x,
                 state.y,
                 false, // Right ball
                 leftSide
-        );
+        ));
         childComponents.add(rightBall);
-        services().objectManager().addDynamicObject(rightBall);
     }
 
     /**
@@ -528,12 +525,10 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance {
             return;
         }
 
-        HTZBossSmokeParticle smoke = new HTZBossSmokeParticle(
+        spawnFreeChild(() -> new HTZBossSmokeParticle(
                 state.x,
                 state.y - 0x28
-        );
-
-        services().objectManager().addDynamicObject(smoke);
+        ));
     }
 
     // Note: The ROM does NOT spawn an EggPrison from the HTZ boss code.

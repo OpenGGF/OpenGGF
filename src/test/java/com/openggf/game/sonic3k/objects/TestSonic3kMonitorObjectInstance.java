@@ -8,6 +8,7 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic3k.Sonic3kSuperStateController;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectManager;
@@ -22,6 +23,7 @@ import com.openggf.physics.Sensor;
 import com.openggf.physics.SensorResult;
 import com.openggf.sprites.managers.PlayableSpriteMovement;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SuperState;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -130,6 +132,25 @@ class TestSonic3kMonitorObjectInstance {
     }
 
     @Test
+    void superMonitorAwardsRingsAndStartsTransformationWithoutDebugDoubleAward() {
+        Sonic3kMonitorObjectInstance monitor = new Sonic3kMonitorObjectInstance(
+                new ObjectSpawn(0x0100, 0x0050, 0x01, 0x09, 0, false, 0));
+        monitor.setServices(new TestObjectServices());
+        DummyPlayer player = new DummyPlayer();
+        player.setSuperStateController(new Sonic3kSuperStateController(player));
+        player.setRingCount(0);
+
+        monitor.applyPowerup(player);
+
+        assertEquals(50, player.getRingCount(),
+                "Monitor_Give_SuperSonic adds 50 rings once before starting the transform");
+        assertTrue(player.isSuperSonic(),
+                "S3K subtype 9 monitors should trigger the Super/Hyper transformation path");
+        assertEquals(SuperState.TRANSFORMING, player.getSuperStateController().getState(),
+                "Monitor-triggered transformation should start immediately without jump/emerald preconditions");
+    }
+
+    @Test
     void breakWithPriorPushingContactReleasesPlayerIntoAir() {
         Sonic3kMonitorObjectInstance monitor = monitor();
         DummyPlayer player = new DummyPlayer();
@@ -216,8 +237,25 @@ class TestSonic3kMonitorObjectInstance {
     }
 
     private static final class DummyPlayer extends AbstractPlayableSprite {
+        private int localRings;
+
         private DummyPlayer() {
             super("sonic", (short) 0x1E30, (short) 0x0500);
+        }
+
+        @Override
+        public int getRingCount() {
+            return localRings;
+        }
+
+        @Override
+        public void setRingCount(int ringCount) {
+            localRings = ringCount;
+        }
+
+        @Override
+        public void addRings(int delta) {
+            localRings += delta;
         }
 
         @Override

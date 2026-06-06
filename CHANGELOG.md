@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Lost-ring Obj37 rendering now follows the object-loop owner:** spilled rings
+  now draw from `LostRingObjectInstance`, the same object that owns their
+  per-ring physics, instead of the retired legacy `LostRingPool` draw path. This
+  fixes the visible stack of rotating rings at the hit/contact point while the
+  actual moving spilled-ring objects were invisible. The shared
+  `Ring_spill_anim_*` decelerating spin still drives every live ring's displayed
+  frame.
+
 - **S3K LBZ flame thrower (Obj $16) now has a dedicated implementation:**
   S3KL slot `$16` now routes to `Obj_LBZFlameThrower`, using ROM-backed LBZ
   misc level art, the ROM 128-frame subtype-offset fire cadence, full-solid
@@ -45,6 +53,23 @@ All notable changes to the OpenGGF project are documented in this file.
   follows the disassembly patrol timer/latch flow, uses the ROM projectile
   animation scripts and laser SFX, exposes the $A0 hurt-shot collision, and
   updates the S3K object checklist from 146 to 147 implemented objects.
+
+- **S1 GHZ1/MZ1 trace fleet fixes cherry-picked into develop:** S1 Crabmeat
+  projectiles now use the ROM `ObjectFall` old-velocity-then-gravity order,
+  defer same-frame execution after spawn, and keep hurt collision inactive until
+  the later rendered-frame pass (`docs/s1disasm/_incObj/sub ObjectFall.asm:5-19`;
+  `docs/s1disasm/_incObj/1F Crabmeat.asm:80-100,187-219`). S1 enemy explosion
+  score popups now follow the ROM Obj27 -> Obj28 -> Obj29 handoff instead of
+  spawning points directly, inline-order touch scans can use the frame-start
+  object snapshot for S1, and lost-ring reset no longer releases still-owned
+  Obj37 SST slots (`docs/s1disasm/_incObj/24, 27 & 3F Explosions.asm:53-60`;
+  `docs/s1disasm/_incObj/28 Animals.asm:163-168`;
+  `docs/s1disasm/_inc/ExecuteObjects.asm:11-31`;
+  `docs/s1disasm/_incObj/01 Sonic.asm:87-90`;
+  `docs/s1disasm/_incObj/25 & 37 Rings.asm:199-219,284-313`). This advances
+  `TestS1Ghz1CompleteRunTraceReplay` from f1390 to f1394 and
+  `TestS1Mz1TraceReplay` from f3192 to f6210; both remain red at their next
+  object-contact frontiers.
 
 - **S1 complete-run SBZ3/Final-Zone split (fixes the FZ f0 bootstrap; adds the
   19th per-act trace):** the original `fz_completerun` data was mislabeled — it
@@ -117,6 +142,157 @@ All notable changes to the OpenGGF project are documented in this file.
   bridge stops the player horizontally via `SolidObject_StopCharacter` instead of
   being walked through. Advances the MCZ level-select trace from first-error
   frame 3574 (player retained ground speed against the wall) to 4513.
+- **S1 Final Zone boss setup now survives the pre-arena spawn window:**
+  `Sonic1FZBossInstance` now keeps the DLE-spawned Obj85 parent alive long
+  enough to initialize the ROM boss group, including Obj84 cylinder solids at
+  `boss_fz_x+$80/$100`, and `FZPlasmaBall` now follows the shipped non-FixBugs
+  Obj86 left-overshoot branch when reaching its target
+  (`docs/s1disasm/_inc/DynamicLevelEvents.asm:770-779`;
+  `docs/s1disasm/_incObj/85 Boss - Final.asm:41-79`;
+  `docs/s1disasm/_incObj/84 FZ Eggman's Cylinders.asm:20-24,82-86`;
+  `docs/s1disasm/_incObj/86 FZ Plasma Ball Launcher.asm:166-177`). This
+  advances `TestS1FzCompleteRunTraceReplay` from first-error frame 277 to 713;
+  the new frontier is a plasma-ball hurt `y_speed` mismatch.
+- **S1 GHZ/SLZ/MZ Obj18 Platform fresh-landing timing now follows its routine split:**
+  `Sonic1PlatformObjectInstance` now models Obj18's routine-2
+  `PlatformObject` pass as occurring before `Plat_Move` / `Plat_Nudge`, while
+  preserving routine-4 continued riding through the later
+  `ExitPlatform -> Plat_Move -> Plat_Nudge -> MvSonicOnPtfm2` order. Fresh
+  top-solid landings use Obj18's `obActWid` as the standable half-width, gate
+  the catch against the previous sampled player position, and snap through the
+  `PlatformObject` `obY - 8` surface instead of the continued-ride `obY - 9`
+  surface (`docs/s1disasm/_incObj/18 Platforms.asm:54-87`;
+  `docs/s1disasm/_incObj/sub PlatformObject.asm:5-42`;
+  `docs/s1disasm/_incObj/15 Swinging Platforms.asm:177-194`). This advances
+  `TestS1Ghz2CompleteRunTraceReplay` from first-error frame 2369 to 2370; the
+  new frontier is a remaining 1px Obj18 platform riding Y mismatch.
+- **S1 SBZ3 bubble maker RNG cadence now follows Obj64:**
+  `Sonic1BubblesObjectInstance` now keeps the ROM's unshifted `RandomNumber`
+  word bits for the `Bub_BblTypes` table offset, consumes the X-offset random
+  word before the large-bubble override test, and keeps the forced final
+  subtype-2 bubble inside Obj64's bit-7 large-mode branch
+  (`docs/s1disasm/_incObj/64 Bubbles.asm:141-151,166-196`). This advances
+  `TestS1Sbz3CompleteRunTraceReplay` from first-error frame 839 to 1420; the
+  new frontier is a separate player `y` mismatch near bubbles/Jaws contact.
+  A follow-up Obj64 correction now masks the large-bubble override RNG word
+  with `#3` and samples Sonic's sprite-history centre for `Bub_ChkSonic`, so
+  the engine's post-physics object pass does not fire the standalone bubble
+  contact one frame earlier than the ROM
+  (`docs/s1disasm/_incObj/64 Bubbles.asm:77-105,181-187`). This advances the
+  same trace from frame 1420 to 1421; the new frontier is a camera-Y mismatch
+  after the breathing-bubble contact timing.
+- **S1 LZ water-slide detection now samples ROM `obX`/`obY` only:** The LZ
+  water-slide event no longer checks a secondary sprite-origin chunk or keeps a
+  slide-exit grace window. S1 `LZWaterSlides` samples `v_lvllayout` using
+  Sonic's `obX`/`obY` fields and clears `f_slidemode` immediately on the first
+  non-matching chunk (`docs/s1disasm/_inc/LZWaterFeatures.asm:392-415`). In the
+  engine those ROM fields map to centre coordinates, so the provider now passes
+  only the centre-coordinate block ID into `Sonic1LZWaterEvents`. This advances
+  `TestS1Lz2CompleteRunTraceReplay` from first-error frame 463 to 1089; the new
+  frontier is a separate `y` mismatch around later LZ object/ring/bubble
+  interaction on the integrated stack.
+- **S1 Chopper leap integration now follows ROM `SpeedToPos`:**
+  `Sonic1ChopperBadnikInstance` now updates vertical position through the
+  ROM-style 16.16 `SpeedToPos` path, applies Chopper's `$18` gravity after
+  movement, and preserves the low Y accumulator when snapping the high word
+  back to `chop_origY`. The S1 routine calls `SpeedToPos`, then increments
+  `obVelY`, and its origin snap writes only `obY.w`
+  (`docs/s1disasm/_incObj/2B Chopper.asm:24-38`;
+  `docs/s1disasm/_incObj/sub SpeedToPos.asm:5-17`). This advances
+  `TestS1Ghz2CompleteRunTraceReplay` from first-error frame 1690 to 2369; the
+  new frontier is a separate Obj18 platform landing/riding mismatch.
+- **S1 GHZ/MZ Swinging Platform continued-ride height now matches Obj15:**
+  `Sonic1SwingingPlatformObjectInstance` now separates the ROM's fresh-landing
+  surface from the continued-riding surface. `Swing_SetSolid` passes
+  `obHeight` into `Swing_Solid`/`Platform3`, while `Swing_Action2` re-runs
+  `Swing_Move` and passes `obHeight + 1` into `MvSonicOnPtfm`
+  (`docs/s1disasm/_incObj/15 Swinging Platforms.asm:128-154`,
+  `docs/s1disasm/_incObj/sub PlatformObject.asm:114-127`). This keeps the
+  initial landing geometry at height 8 for GHZ/MZ platforms but carries an
+  existing rider at height 9, advancing `TestS1Ghz2CompleteRunTraceReplay`
+  from first-error frame 1409 to 1690. The new frontier is a separate
+  Chopper/enemy-bounce `y_speed` mismatch.
+- **S1 complete-run trace data now separates SBZ3 and Final Zone correctly:**
+  `s1-complete-run.bk2` has been replaced with a movie that reaches the real
+  end of the game, and the BizHawk complete-run trace resources now split the
+  late-game route into `sbz3_completerun` (ROM LZ act 4 / SBZ3) and
+  `fz_completerun` (ROM SBZ act 3 / Final Zone). `TestS1Sbz3CompleteRunTraceReplay`
+  covers the newly materialized SBZ3 segment, while `TestS1FzCompleteRunTraceReplay`
+  now targets the actual Final Zone segment instead of the stale truncated
+  SBZ3 data. Both traces execute against the shared movie and currently expose
+  genuine engine parity frontiers.
+- **S1 Button (Obj32) now uses the ROM full `SolidObject` contract:**
+  `Sonic1ButtonObjectInstance` now exposes a full solid profile instead of
+  top-solid-only behavior. The S1 Button routine passes
+  `d1 = $10 + sonic_solid_width` (`$1B`) and `d2/d3 = 5`, then calls
+  `SolidObject`, whose side-contact path stops horizontal velocity, corrects
+  `obX`, and sets push status (`docs/s1disasm/_incObj/32 Button.asm:31-38`;
+  `docs/s1disasm/_Constants.asm:192`;
+  `docs/s1disasm/_incObj/sub SolidObject.asm:151-208`). The object still
+  preserves its narrower `obActWid` top-landing half-width `$10`. Advances
+  `TestS1Sbz3CompleteRunTraceReplay` from first-error frame 45 to 839.
+- **S1 Purple Rock (Obj3B) top-landing width now uses ROM `obActWid` ($13):**
+  `Sonic1RockObjectInstance` overrides `getTopLandingHalfWidth()` to return the
+  ROM `obActWid` of `$13` rather than letting the generic landing gate derive it
+  as `collisionHalfWidth - sonic_solid_width` (`$1B - $B = $10`). The rock's
+  collision half-width `d1 = $10 + sonic_solid_width` (`$1B`) and its standable
+  `obActWid` (`$13`, set in `Rock_Main`) are authored independently, so the
+  generic derivation under-sized the standable top surface and rejected the GHZ2
+  air-roll top-landing one frame late. `Solid_Landed` re-reads `obActWid(a0)` for
+  new landings (`docs/s1disasm/_incObj/sub SolidObject.asm:267-277`;
+  `docs/s1disasm/_incObj/3B Purple Rock.asm:20,24-28`). S1-only per-object hook;
+  no shared collision code touched. Advances the S1 GHZ2 complete-run trace from
+  first-error frame 1104 to 1409 (next blocker is distinct Obj15 SwingingPlatform
+  continued-ride parity).
+- **S1 GHZ2 bridge landing now stages fresh airborne catches like ROM Obj11:**
+  `Sonic1BridgeObjectInstance` now separates the read-only `Bri_Solid` /
+  `Platform3` catch detection pass from the land-applying checkpoint on the
+  first flush airborne bridge contact. The ROM bridge routine checks downward
+  velocity and the subtype-derived X window (`docs/s1disasm/_incObj/11 Bridge.asm:98-114`),
+  then `Platform3` performs the Y-window test, seats Sonic, and advances the
+  bridge routine (`docs/s1disasm/_incObj/sub PlatformObject.asm:23-42`); the
+  already-riding path remains the later `Plat_NoCheck`/walk-off support path
+  (`docs/s1disasm/_incObj/sub PlatformObject.asm:45-67`). The engine's solid
+  checkpoint previously surfaced a flush fresh landing one object pass too soon.
+  The new deferral is gated on ROM object state and geometry, not a trace frame,
+  route, zone, tolerance, or trace hydration. Advances the S1 GHZ2 complete-run
+  trace from first-error frame 615 to 1104.
+- **S1 LZ gameplay waterline now follows the ROM oscillator:** Player
+  underwater entry/exit and breathing-bubble surface checks now use a
+  provider-owned gameplay waterline instead of the non-oscillated base water
+  level. S1 LZ/SBZ3 derive that line from `v_waterpos2 + ((v_oscillate+2) >> 1)`,
+  matching `LZWaterFeatures` and the `Sonic_Water` / bubble comparisons
+  (`docs/s1disasm/_inc/LZWaterFeatures.asm:19-25`,
+  `docs/s1disasm/_incObj/01 Sonic.asm:222-247`,
+  `docs/s1disasm/_incObj/64 Bubbles.asm:57-70`). This advances
+  `TestS1Lz1CompleteRunTraceReplay` from first-error frame 112 to 302; the new
+  frontier is a separate Burrobot touch/bounce mismatch.
+- **S1 SBZ Electrocuter discharge cadence now uses the ROM gameplay frame counter:**
+  `Sonic1ElectrocuterObjectInstance` previously keyed its zap cadence from the
+  VBla clock passed into `update(...)`, which could start the discharge animation
+  early and hurt Sonic before the ROM object would. S1 Obj6E loads
+  `v_framecount`, masks it with the subtype-derived `elec_freq`, starts the zap
+  animation only on matching frames, and enables the `$A4` hurt collision only
+  while animation frame 4 is displayed
+  (`docs/s1disasm/_incObj/6E Electrocuter.asm:23-46`,
+  `docs/s1disasm/_anim/Electrocuter.asm:13-15`). The object now resolves the
+  gameplay-owned object frame counter for that cadence. Advances
+  `TestS1Sbz2CompleteRunTraceReplay` from first-error frame 361 to 576.
+- **S1 SLZ2 fan push now preserves Sonic's x_sub:** `Sonic1FanObjectInstance`
+  now applies the fan's word-position push with `shiftX(...)` instead of
+  `setCentreX(...)`, matching the ROM `add.w d0,obX(a1)` in
+  `docs/s1disasm/_incObj/5D Fan.asm:75`. This preserves the accumulated
+  `x_sub` fraction instead of zeroing it during the fan push. Advances
+  `TestS1Slz2CompleteRunTraceReplay` from first-error frame 333 to 651.
+- **S1 SYZ bumpers now use the ROM collision-property touch path:** Obj47
+  Bumper no longer performs a bespoke player overlap/cooldown check. It exposes
+  collision byte `$D7` through the shared touch-response profile system, where
+  S1 `React_Special` treats only size indices `$17/$21` as property callbacks
+  (`docs/s1disasm/_incObj/sub ReactToItem.asm:377-427`). `Bump_Hit` then consumes
+  `obColProp`, applies the ROM radial bounce, and uses the chunk-aligned
+  `out_of_range`/resetcount deletion path (`docs/s1disasm/_incObj/47 Bumper.asm:22-47,66-79`).
+  Advances `TestS1Syz2CompleteRunTraceReplay` from first-error frame 85 to 1088;
+  the remaining frontier is a later `x_speed` mismatch near Obj56/Obj57.
 - **OOZ/CPZ rising platform now integrates sub-pixels (ROM-accurate):**
   `CPZPlatformObjectInstance` auto-rise (Obj19_MoveRoutine5/6) previously did
   `y += yVel >> 8`, dropping the sub-pixel fraction and stepping a full pixel
@@ -127,6 +303,92 @@ All notable changes to the OpenGGF project are documented in this file.
   the unsigned `bhs` accel compare, `add.w` 16-bit wrap, and word-`bne` subtype
   test exactly as Obj19_MoveRoutine5/6 (s2.asm:~48036-48066). Advances the OOZ2
   level-select trace from first-error frame 489 to 1070.
+- **Started Phase 2 release-readiness cleanup:** converted the named
+  object-owned raw child spawns for `AbstractS3kBadnikInstance`,
+  `AizBgTreeSpawnerInstance`, `AizEndBossBombChild`,
+  `AizShipBombInstance`, `ArrowShooterObjectInstance`,
+  `BlastoidBadnikInstance`, `BuggernautBadnikInstance`,
+  `BubbleGeneratorObjectInstance`,
+  `BumperObjectInstance`, `BonusBlockObjectInstance`,
+  `CaterkillerJrHeadInstance`, `CheckpointObjectInstance`,
+  `BreakableBlockObjectInstance`, `BreakablePlatingObjectInstance`,
+  `CluckerBadnikInstance`,
+  `CNZBossElectricBall`, `CnzBumperObjectInstance`, `CoconutsBadnikInstance`,
+  `CollapsingPlatformObjectInstance`, `ConveyorObjectInstance`,
+  `CPZBossContainer`, `CPZBossContainerExtend`, `CPZBossFallingPart`,
+  `CPZBossGunk`, `CPZBossPipe`, `CPZBossPipeSegment`, `CPZBossPump`,
+  `EggPrisonObjectInstance`,
+  `FallingPillarObjectInstance`,
+  `GrounderBadnikInstance`, `HTZBossLavaBall`, `HTZLiftObjectInstance`,
+  `LeavesGeneratorObjectInstance`,
+  `MGZHeadTriggerObjectInstance`, `MonitorObjectInstance`, `NebulaBadnikInstance`,
+  `OctusBadnikInstance`, `OOZLauncherObjectInstance`,
+  `OOZPoppingPlatformObjectInstance`, `PointPokeyObjectInstance`,
+  `RexonBadnikInstance`, `RexonHeadObjectInstance`,
+  `RisingPillarObjectInstance`, `RivetObjectInstance`,
+  `SeesawObjectInstance`, `SmallMetalPformObjectInstance`,
+  `SidewaysPformObjectInstance`, `SignpostObjectInstance`, `Sonic2ARZBossInstance`,
+  `Sonic2CNZBossInstance`, `Sonic2CPZBossInstance`,
+  `Sonic2DeathEggRobotInstance`, `Sonic2DEZEggmanInstance`,
+  `Sonic2EHZBossInstance`, `Sonic2HTZBossInstance`, `Sonic2MCZBossInstance`,
+  `Sonic2MechaSonicInstance`, `Sonic2MTZBossInstance`,
+  `SmashableGroundObjectInstance`,
+  `SpikerBadnikInstance`,
+  `SpinyBadnikInstance`, and `SteamSpringObjectInstance`, `TornadoObjectInstance`,
+  `TiltingPlatformObjectInstance`, `TurtloidBadnikInstance` onto managed
+  `spawnChild`/`spawnFreeChild` helpers, added ratchets for migrated
+  child-spawn files, direct map-mutation aliases, trace bootstrap policy
+  signals, registry-backed S3K palette-cycle uploads, and virtual pattern
+  sub-range bases,
+  added MHZ animated-tile phase caches to the S3K pattern animator rewind
+  snapshot, migrated AIZ2 torch, BPZ/CGZ/EMZ/ICZ/LBZ/LRZ palette cycles plus the
+  ICZ startup palette patch, HCZ event palette mutation, and CNZ/MGZ miniboss
+  plus MGZ Tunnelbot hit-flash/restore colors onto
+  `PaletteOwnershipRegistry` claims, added a generic ownership-backed fallback
+  for shared boss hit flashing, moved AIZ1/AIZ2 AnPal water/torch cycles onto
+  explicit ownership claims, completed Slots/Pachinko palette-cycle ownership
+  migration, routed the HCZ miniboss underwater palette install through shared
+  ownership support, moved the AIZ intro Super Sonic palette cycle onto an
+  explicit cutscene ownership claim, routed S3K Super Sonic palette frames
+  through shared ownership-aware support, moved AIZ/CNZ/MHZ cutscene palette
+  installs and restores onto shared ownership helpers, and corrected stale S3K
+  object/provenance comments with source guards, documented the accepted raw
+  dynamic-object bridge boundaries, removed the unused S3K zone-event direct
+  palette texture upload fallback helper, wrapped S3K Knuckles water-palette
+  construction in a loader-local helper, corrected stale HCZ end-boss
+  implementation and child-spawn docs, corrected stale MGZ end-boss handoff
+  docs, narrowed stale S3K monitor `PlayerCharacter` wording to the actual
+  Knuckles glide/slide parity gap, moved S3K AIZ intro cache reset behind a
+  module-scoped `GameModule` hook to keep `Engine` free of new concrete S3K
+  dependencies, moved S3K special-stage manager palette mutation/upload paths
+  behind local palette helpers, routed special-stage
+  results palette decoding through the shared `PaletteLoader`, centralized S3K
+  frontend/menu palette uploads behind `S3kFrontendPaletteUploader`, routed
+  special-stage results palette uploads through the local special-stage
+  uploader, moved S3K special-stage palette construction/rotation patches onto
+  palette accessors, extended S3K zone runtime adapter coverage to include LBZ
+  and MHZ, added a trace-row hydration source guard for replay bootstrap,
+  split S2 Tornado replay bootstrap metadata eligibility from live ObjB2
+  runtime-object authority with a clearer candidate API and source guard,
+  moved the S2 slot-machine replay prelude check onto generic
+  `TraceMetadata.hasPerFrameSlotMachineState()` capability metadata with a
+  deprecated CNZ schema alias,
+  replaced the S3K sidekick seed-frame movement-shape bootstrap heuristic with
+  explicit `sidekick_seed_frame_prelude` fixture capability metadata,
+  wired S3K subtype-9 super monitors into the existing Super-state controller
+  without double-awarding rings, and replaced stale CNZ task-scaffold/provenance
+  comments with current art, module, and object-scope wording,
+  and left higher-risk palette ownership cleanup tracked in the
+  release-readiness roadmap.
+- **Release hardening work started:** added a release-readiness roadmap and
+  closed the first hidden-failure gaps before the release candidate. Release PRs
+  now run branch-policy validation, ROM-gated tests validate configured ROMs by
+  game header instead of file existence alone, the S3K life-icon address test
+  uses the resolved ROM path and skips cleanly without local disassembly
+  fixtures, constructor-time Turtloid/Sol child spawns moved onto the managed
+  `spawnChild` lifecycle path, and lightning-shield spark tiles now use a
+  dedicated transient-effects virtual pattern range instead of overlapping
+  shared object art.
 - **Trace test-mode picker now scrolls:** `TestModeTracePicker` windows the trace
   list through a pixel-accurate scrolling viewport that follows the cursor, so a
   large/growing catalog no longer overruns the screen or the selected-entry info
@@ -1348,6 +1610,13 @@ All notable changes to the OpenGGF project are documented in this file.
   `restore()` requires explicit `RewindSnapshottable.resetForMissingSnapshot()` (default throws, so
   subsystems fail closed) instead of silently skipping missing entries that masked coverage gaps.
   `GameplayModeContext.isGameplayRuntimeReady()` returns `false` once `tearDownManagers()` has run.
+  Release validation now runs the trace-replay Maven profile, stale `@Disabled("Currently failing")`
+  annotations were removed from the S3K AIZ/CNZ keep-green tests after forced-on verification, and
+  `TestBuildToolingGuard` documents and bounds the one accepted legacy S3K AIZ trace bootstrap plus
+  the S2 Tornado ride-start trace contract. AIZ intro terrain swap cache state is reset across game
+  bootstrap and routes immediate mutations through injected `ObjectServices`, while ICZ now installs
+  typed runtime state consumed by palette/animated-tile code and MHZ runtime-state refresh recognizes
+  its current event-backed adapter.
   MGZ scroll-event state (screen shake, BG rise routine/offset, boss BG scroll offset) moved off
   direct `SwScrlMgz` setters onto a new `MgzZoneRuntimeState` adapter installed through
   `ZoneRuntimeRegistry` (`SwScrlMgz.update()` reads runtime state at frame time, `init()` clears

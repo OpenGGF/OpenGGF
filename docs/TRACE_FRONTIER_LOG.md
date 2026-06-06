@@ -1,5 +1,58 @@
 # Trace Frontier Log
 
+## 2026-06-06 - s1 ghz1 complete f1390->f1394 and mz1 level-select f3192->f6210: object spawn/touch ordering cherry-picked into develop
+
+- Branch/worktree: `develop`, worktree `.worktrees/develop-s1-trace-merge`.
+  Cherry-picked the useful, validated pieces from `bugfix/ai-trace-s1-ghz1` and
+  `bugfix/ai-trace-s1-mz1`; discarded unrelated branch assumptions that either
+  did not advance their target or regressed focused guards.
+- Target commands:
+  - `mvn "-Dtest=TestS1Ghz1CompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+  - `mvn "-Dtest=TestS1Mz1TraceReplay" "-DfailIfNoTests=false" test`
+  - `mvn "-Dtest=TestS1Mz1CompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+- **Status: ADVANCED (still failing).**
+  - `TestS1Ghz1CompleteRunTraceReplay`: first-error frame **1390 -> 1394**,
+    still red at a Crabmeat-ball/lost-ring contact `x_speed` mismatch
+    (`expected=0x0000`, `actual=-0200`; 292 errors).
+  - `TestS1Mz1TraceReplay`: first-error frame **3192 -> 6210**, still red at a
+    Batbrain contact `y_speed` mismatch (`expected=-01F0`, `actual=0x01F0`;
+    274 errors).
+  - `TestS1Mz1CompleteRunTraceReplay`: held at first-error frame **1260**
+    (`rolling` mismatch), so the MZ1 level-select advance did not mask the
+    complete-run frontier.
+- **Root causes/fixes:**
+  - S1 Crabmeat projectiles now model ROM `ObjectFall`: move X/Y with the old
+    velocity, then add gravity to `obVelY`; first tick seeds `obVelY`/collision
+    from `Crab_BallMain` instead of using same-frame spawn state. Disasm:
+    `docs/s1disasm/_incObj/sub ObjectFall.asm:5-19` and
+    `docs/s1disasm/_incObj/1F Crabmeat.asm:80-100,187-219`.
+  - Obj27 explosion item now allocates Obj28 and passes the score-chain value;
+    Obj28 allocates Obj29 during its own routine 0. Disasm:
+    `docs/s1disasm/_incObj/24, 27 & 3F Explosions.asm:53-60` and
+    `docs/s1disasm/_incObj/28 Animals.asm:163-168`.
+  - S1 inline-order touch responses scan the frame-start object snapshot,
+    matching `ExecuteObjects` running Sonic's slot before later object slots and
+    `Sonic_Control` calling `ReactToItem`. Disasm:
+    `docs/s1disasm/_inc/ExecuteObjects.asm:11-31` and
+    `docs/s1disasm/_incObj/01 Sonic.asm:87-90`.
+  - Lost-ring pool reset no longer releases Obj37 slots; spilled rings are SST
+    objects allocated by `FindFreeObj`, and RingLoss does not sweep existing
+    Obj37 slots before creating new rings. Disasm:
+    `docs/s1disasm/_incObj/25 & 37 Rings.asm:199-219,284-313`.
+- Regression guards:
+  - `mvn "-Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestS1Ghz1TraceReplay" "-DfailIfNoTests=false" test`
+    exited 0. The MSE aggregate printed known red S1 complete-run tests, but
+    individual Surefire XML reports for all nine guard classes were freshly
+    written at 2026-06-06 18:22 and show `failures="0"` / `errors="0"`.
+  - Focused unit guards: `TestRingManager` (9/9), `TestTouchResponseManager`
+    (35/35), `TestObjectManagerChildSlotAllocation` (6/6), and
+    `TestNoRendererCaptureInUnsafeSpawn` (1/1) all passed with zero
+    failures/errors.
+- Genuineness gate: PASS. The changes are ROM-state/object-order corrections,
+  comparison-only, and add no trace hydration, tolerance, zone/route/frame
+  carve-out, or game-name branch. The target traces remain red at later
+  frontiers.
+
 ## 2026-06-06 - s1 SBZ3/FZ complete-run split: FZ f0->f277 (bootstrap fixed), SBZ3 new f45
 
 - Worktree `C:/tmp/wt-s1fz`, off develop d811dd085. Coherent fixture set taken from Codex's S1 commits c7ea38340 + b3a8909b6 (sbz3+fz metadata/physics, both test classes, the re-recorded shared `_movies/s1-complete-run.bk2`, level-map).
@@ -48,6 +101,436 @@
 - A/B verified in worktree: HEAD (fix reverted) f3574/212 errors; with fix f4513/295 errors.
 - Same-game regression guard (`TestS2ArzLevelSelectTraceReplay,TestS2Ehz1TraceReplay,TestS2WfzLevelSelectTraceReplay`):
   all 3 PASS (0 failures each). No regressions introduced.
+## 2026-06-06 - s1 fz f277->f713: FZ boss children persist and plasma overshoot matches non-FixBugs ROM
+
+- Branch `bugfix/ai-trace-s1-r5-fz`, worktree `.worktrees/trace-s1-r5-fz`.
+- Target command:
+  `mvn "-Dtest=TestS1FzCompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+- S1 green guard command:
+  `mvn "-Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestS1Ghz1TraceReplay" "-DfailIfNoTests=false" test`
+  exited 0. Individual Surefire XML reports for all nine guard classes have
+  `failures="0"` / `errors="0"`, including `TestS1Credits05Sbz1TraceReplay`.
+  The MSE aggregate printed the prior targeted FZ failure from stale
+  `target/surefire-reports`, so it was not counted as a guard regression.
+- **Status: ADVANCED (still failing).** First-error frame **277 -> 713**.
+  Surefire: `Tests run: 1, Failures: 1`. New first error is `y_speed`
+  expected `0x0000`, actual `-0700`, after an Obj86 plasma-ball hurt contact.
+- **Root cause:** the DLE-spawned Obj85 FZ boss parent starts outside the
+  generic S1 offscreen window, but the ROM immediately initializes the child
+  boss group after `DLE_FZ_Boss` spawns Obj85. The engine culled the parent
+  before the Obj84 cylinder solids could exist. The later Obj86 plasma-ball
+  approach also snapped left-moving overshoot to the target instead of taking
+  the non-FixBugs `add.w d0,obX(a0)` path that pushes the overshot ball farther
+  left before chase.
+- **Fix:** `Sonic1FZBossInstance` is persistent so pre-arena Obj84 cylinder
+  children spawn and run `SolidObject` at the ROM positions. `FZPlasmaBall`
+  now stops only after the left-moving target subtraction borrows and applies
+  the signed overshoot delta like the shipped non-FixBugs build.
+- **Disasm cites:** `docs/s1disasm/_inc/DynamicLevelEvents.asm:770-779`,
+  `docs/s1disasm/_incObj/85 Boss - Final.asm:41-79`,
+  `docs/s1disasm/_incObj/84 FZ Eggman's Cylinders.asm:20-24`,
+  `docs/s1disasm/_incObj/84 FZ Eggman's Cylinders.asm:82-86`, and
+  `docs/s1disasm/_incObj/86 FZ Plasma Ball Launcher.asm:166-177`.
+- Genuineness gate: PASS. The fix is scoped to S1 FZ object routines, adds no
+  trace hydration, no tolerance, and no zone/route/frame carve-out. Same-game
+  guard passed with zero regressions; the target remains red at the next object
+  contact frontier.
+
+## 2026-06-06 - s1 ghz2 f2369->f2370: Obj18 fresh landing uses pre-move PlatformObject geometry
+
+- Branch `bugfix/ai-trace-s1-r4-ghz2`, worktree `.worktrees/trace-s1-r4-ghz2`.
+- Target command:
+  `mvn "-Dtest=TestS1Ghz2CompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+- S1 green guard command:
+  `mvn clean test "-Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestS1Ghz1TraceReplay" "-DfailIfNoTests=false"`
+  passed: `MSE:OK modules=1 passed=9 failed=0 errors=0 skipped=0`.
+- **Status: ADVANCED (still failing).** First-error frame **2369 -> 2370**.
+  Surefire: `Tests run: 1, Failures: 1`. New first error is `y` expected
+  `0x0267`, actual `0x0266`, with Sonic riding Obj18 Platform slot 42.
+- **Root cause:** S1 Obj18 uses different geometry and timing for a new
+  landing than for continued riding. Routine 2 passes `obActWid` directly to
+  `PlatformObject` before Obj18 runs `Plat_Move` / `Plat_Nudge`, so the fresh
+  catch observes the pre-move platform sample and the `obY - 8` entry surface.
+  Routine 4 handles an existing rider after `ExitPlatform`, movement, and
+  nudge, then carries Sonic through `MvSonicOnPtfm2`'s `obY - 9` surface.
+- **Fix:** `Sonic1PlatformObjectInstance` now opts into the Obj18
+  standable-width contract, gates new top-solid landings with the prior sampled
+  player position, keeps pre-update object coordinates for the fresh contact
+  pass, and applies a one-pixel first-landing snap adjustment while preserving
+  routine-4 continued-riding behavior.
+- **Disasm cites:** `docs/s1disasm/_incObj/18 Platforms.asm:54-87`
+  (`Plat_Solid` before movement, `Plat_Action2` continued ride after
+  movement), `docs/s1disasm/_incObj/sub PlatformObject.asm:5-42`
+  (`PlatformObject` X/Y gate and snap), and
+  `docs/s1disasm/_incObj/15 Swinging Platforms.asm:177-194`
+  (`MvSonicOnPtfm2` continued-ride surface).
+- Genuineness gate: PASS. The fix is scoped to S1 Obj18 object behavior, adds
+  no trace hydration, no tolerance, and no zone/route/frame carve-out. Same-game
+  guard passed with zero regressions; the target remains red at the next
+  one-frame frontier.
+
+## 2026-06-06 - s1 sbz3 f839->f1420: Obj64 bubble maker preserves RNG call cadence
+
+- Branch `bugfix/ai-trace-s1-r4-sbz3`, worktree `.worktrees/trace-s1-r4-sbz3`.
+- Target command:
+  `mvn "-Dtest=TestS1Sbz3CompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+- **Status: ADVANCED (still failing).** First-error frame **839 -> 1420**,
+  error count **4730** at the new frontier. Surefire: `Tests run: 1,
+  Failures: 1`. New first error is `y` expected `0x03E7`, actual `0x03EC`,
+  near Obj64 bubbles and Obj2C Jaws contact diagnostics.
+- **Root cause:** S1 Obj64 copies one `RandomNumber` word into both `d0` and
+  `d1`; `d0 & 7` seeds `objoff_34`, while unshifted `d1 & $C` selects the
+  `Bub_BblTypes` table pointer. During spawning, Obj64 consumes the spawn-delay
+  RNG word, then the X-offset RNG word, and only then runs the bit-7 large-bubble
+  override. The forced last subtype-2 bubble is inside that bit-7 branch, so
+  ordinary bursts can end on their table subtype.
+- **Fix:** `Sonic1BubblesObjectInstance` now uses `rawRng & 0x0C` for the type
+  table offset, consumes the X-offset RNG before any large-bubble override RNG,
+  and gates the forced final subtype-2 bubble on Obj64 large-mode bit 7.
+- **Disasm cites:** `docs/s1disasm/_incObj/64 Bubbles.asm:141-151`
+  (`RandomNumber`, `objoff_34`, `Bub_BblTypes` offset),
+  `:166-177` (spawn-delay and X-offset RNG order), and `:182-196`
+  (bit-7 large-bubble override and final subtype-2 fallback).
+- **Same-game regression guard (PASS, zero regressions):**
+  `mvn clean test "-Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestS1Ghz1TraceReplay" "-DfailIfNoTests=false"`
+  -> `MSE:OK modules=1 passed=9 failed=0 errors=0 skipped=0`.
+- Genuineness gate: PASS. The fix is ROM object-state/RNG-cadence driven, adds
+  no trace hydration, no tolerance, and no zone/route/frame carve-out. The
+  optional S1 object pitfall catalogue file named by the trace workflow is not
+  present in this worktree; the root cause is documented here and in the
+  changelog.
+
+## 2026-06-06 - s1 sbz3 f1420->f1421: Obj64 Bub_ChkSonic uses pre-current player centre
+
+- Branch `bugfix/ai-trace-s1-r5-sbz3`, worktree `.worktrees/trace-s1-r5-sbz3`.
+- Target command:
+  `mvn "-Dtest=TestS1Sbz3CompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+- **Status: ADVANCED (still failing).** First-error frame **1420 -> 1421**,
+  error count **4686** at the new frontier. Surefire: `Tests run: 1,
+  Failures: 1`. New first error is `camera_y` expected `0x038C`, actual
+  `0x0388`, after the Obj64/breathing-bubble contact area.
+- **Root cause:** S1 Obj64 runs `Bub_ChkSonic` from the bubble object's
+  `ExecuteObjects` slot before the bubble's own `SpeedToPos` step. The engine's
+  S1 object pass runs after player physics for inline solid parity, so the
+  standalone Obj64 bubble contact check was observing the post-movement Sonic
+  centre and firing the `id_GetAir` / `locktime=35` branch one frame early.
+  Separately, the large-bubble override masks the `RandomNumber` word with
+  `#3`; consuming/testing three low bits shifted the later Obj64 subtype
+  cadence.
+- **Fix:** `Sonic1BubblesObjectInstance` now checks `Bub_ChkSonic` against the
+  sprite-history pre-current-movement player centre and uses `rng.nextBits(0x03)`
+  for the large-bubble override test.
+- **Disasm cites:** `docs/s1disasm/_incObj/64 Bubbles.asm:77-105`
+  (`Bub_ChkSonic` and the `id_GetAir`/locktime path) and
+  `docs/s1disasm/_incObj/64 Bubbles.asm:181-187` (`RandomNumber` masked by
+  `andi.w #3` for the large-bubble override).
+- **Same-game regression guard (PASS, zero regressions):**
+  `mvn "-Dsurefire.forkCount=1" "-Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestS1Ghz1TraceReplay" "-DfailIfNoTests=false" test`
+  -> `MSE:OK modules=1 passed=9 failed=0 errors=0 skipped=0`. The default
+  four-fork guard attempt hit a Windows LWJGL native-DLL lock before most
+  classes executed, so the serial rerun is the parity signal.
+- Optional LZ2 check:
+  `mvn "-Dsurefire.forkCount=1" "-Dtest=TestS1Lz2CompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+  remains at the already-logged LZ2 frontier, frame 1089 `y` mismatch
+  (`expected=0x03A8`, `actual=0x03AD`).
+- Genuineness gate: PASS. The fix is ROM object-routine/RNG-state driven, adds
+  no trace hydration, no tolerance, and no zone/route/frame/known-trace
+  carve-out. The S1 object pitfall catalogue file named by the trace workflow is
+  not present in this worktree, so no skill catalogue update was applicable.
+
+## 2026-06-06 - s1 lz2 f463->f1089: LZ water slide uses centre `obX`/`obY` layout sample
+
+- Branch `bugfix/ai-trace-s1-r4-lz2`, worktree `.worktrees/trace-s1-r4-lz2`.
+- Target command:
+  `mvn "-Dtest=TestS1Lz2CompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+- **Status: ADVANCED (still failing).** First-error frame **463 -> 1089** on
+  the integrated round4 stack. Surefire: `Tests run: 1, Failures: 1`. New first
+  error is `y` expected `0x03A8`, actual `0x03AD`, with 2178 errors and 0
+  warnings in `target/trace-reports/s1_lz2_report.json`.
+- **Root cause:** the engine retained two non-ROM conveniences in LZ water-slide
+  handling: a sprite-origin fallback layout sample and a six-frame slide-exit
+  grace window. ROM `LZWaterSlides` reads the layout only from Sonic's
+  `obX`/`obY` fields and clears `f_slidemode` immediately when the current chunk
+  is not a slide chunk.
+- **Fix:** `Sonic1ZoneFeatureProvider` now samples the block ID from
+  `getCentreX()`/`getCentreY()` only, matching the engine's centre-coordinate
+  mapping for ROM `obX`/`obY`, and `Sonic1LZWaterEvents` clears slide state on
+  the first non-slide chunk instead of preserving a local hysteresis window.
+- **Disasm cites:** `docs/s1disasm/_inc/LZWaterFeatures.asm:392-415`
+  (`LZWaterSlides` layout sample and `f_slidemode` clear),
+  `docs/s1disasm/_inc/LZWaterFeatures.asm:418-438` (`Slide_Speeds` dispatch),
+  `docs/s1disasm/_incObj/01 Sonic.asm:283-291` and
+  `docs/s1disasm/_incObj/01 Sonic.asm:1246-1263` (`f_slidemode` skips
+  `Sonic_Move` while slide mode is set).
+- **Same-game regression guard (PASS, zero regressions):**
+  `mvn "-Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestS1Ghz1TraceReplay" "-DfailIfNoTests=false" test`
+  -> all requested report XML files show `failures=0`, `errors=0`.
+- Comparison-only guard:
+  `mvn "-Dtest=TestTraceReplayInvariantGuard" "-DfailIfNoTests=false" test`
+  -> PASS for `TestTraceReplayInvariantGuard` (`tests=4`, `failures=0`,
+  `errors=0`).
+- Genuineness gate: PASS. The fix is S1 LZ event-state behavior driven by ROM
+  chunk sampling and `f_slidemode`; it adds no trace hydration, no tolerance,
+  and no route/frame/known-failing-trace carve-out.
+
+## 2026-06-06 - s1 ghz2 f1690->f2369: Chopper uses 16.16 SpeedToPos state
+
+- Branch `bugfix/ai-trace-s1-r3-ghz2`, worktree `.worktrees/trace-s1-r3-ghz2`.
+- Target command:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \"-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen\" \"-Dtest=TestS1Ghz2CompleteRunTraceReplay\" test"`
+- S1 green guard command:
+  `cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \"-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen\" \"-Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestS1Ghz1TraceReplay\" test"`
+  passed: `MSE:OK modules=1 passed=9 failed=0 errors=0 skipped=0`.
+- **Status: ADVANCED (still failing).** First-error frame **1690 -> 2369**.
+  Surefire: `Tests run: 1, Failures: 1`. New first error is `y`
+  expected `0x0268`, actual `0x0265`, while landing/riding Obj18 Platform.
+- **Root cause:** Chopper's ROM routine calls `SpeedToPos`, then adds `$18` to
+  `obVelY`, and when returning to origin writes only `obY.w` before resetting
+  `obVelY`. The engine used the 16:8 `moveSprite` helper and cleared the low
+  Y accumulator on the origin snap, making the leap cadence reach the GHZ2
+  enemy-bounce overlap one frame early.
+- **Fix:** `Sonic1ChopperBadnikInstance` now uses the existing 16.16
+  `SubpixelMotion.speedToPosY` path, applies Chopper gravity after movement,
+  and preserves the low Y accumulator when snapping the high position word to
+  `chop_origY`.
+- **Disasm cites:** `docs/s1disasm/_incObj/2B Chopper.asm:24-38`
+  (`obColType`, `SpeedToPos`, `$18` gravity, high-word origin snap),
+  `docs/s1disasm/_incObj/sub SpeedToPos.asm:5-17` (32-bit
+  `obY += obVelY << 8`), `docs/s1disasm/_incObj/sub ReactToItem.asm:173-232`
+  (`React_Enemy` bounce timing).
+- Genuineness gate: PASS. The fix is object-behavior driven, adds no trace
+  hydration, no tolerance, and no zone/route/frame carve-out.
+
+## 2026-06-06 - s1 ghz2 f1409->f1690: Obj15 SwingingPlatform continued-ride surface is obHeight+1
+
+- Branch `bugfix/ai-trace-s1-r2-ghz2`, worktree `.worktrees/trace-s1-r2-ghz2`.
+- Target command:
+  `mvn "-Dtest=TestS1Ghz2CompleteRunTraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" test`
+- **Status: ADVANCED (still failing).** First-error frame **1409 -> 1690**.
+  Surefire: `Tests run: 1, Failures: 1`. New first error is `y_speed`
+  expected `0x03D0`, actual `-03D0`, near a Chopper/enemy-bounce contact; this
+  is outside the SwingingPlatform surface-height ownership scope.
+- **Root cause:** the engine used one platform surface height for both fresh
+  airborne landing and continued riding. ROM Obj15 uses two heights. `Swing_SetSolid`
+  passes `obActWid` and `obHeight` into `Swing_Solid`; `Swing_Solid` subtracts
+  that `d3` directly before falling through to `Platform3` for new landing.
+  After Sonic is already riding, `Swing_Action2` calls `ExitPlatform`, saves
+  `obX`, runs `Swing_Move`, then sets `d3 = obHeight + 1` before
+  `MvSonicOnPtfm`, which computes Sonic's carried `obY` from `obY(a0) - d3 -
+  player_obHeight` and applies X carry from the saved old platform X.
+- **Fix:** `Sonic1SwingingPlatformObjectInstance` now returns
+  `SolidObjectParams(halfWidth, halfHeight, halfHeight + 1)` and opts out of
+  landing snap from the continued-ride height, so fresh landing keeps the
+  `Swing_Solid`/`Platform3` geometry while continued riding uses the
+  `MvSonicOnPtfm` surface.
+- **Disasm cites:** `docs/s1disasm/_incObj/15 Swinging Platforms.asm:128-134`
+  (`Swing_SetSolid`), `:144-154` (`Swing_Action2`), `:170-194`
+  (`MvSonicOnPtfm`), and `docs/s1disasm/_incObj/sub PlatformObject.asm:114-127`
+  (`Swing_Solid` top offset).
+- **Same-game regression guard (PASS, zero regressions):**
+  `mvn "-Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestS1Ghz1TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" test`
+  -> all requested report XML files show `failures=0`, `errors=0`.
+- Focused unit guard:
+  `mvn "-Dmse=off" "-Dtest=TestS1SwingingPlatformSurfaceRegression" "-DfailIfNoTests=false" test`
+  -> PASS (`Tests run: 1, Failures: 0, Errors: 0`).
+- Genuineness gate: PASS. The fix is ROM-state/object-behavior driven, adds no
+  trace hydration, no tolerance, and no zone/route/frame carve-out. The optional
+  S1 object pitfall catalogue file named by the trace workflow is not present in
+  this worktree; the root cause is documented here and in the changelog.
+
+## 2026-06-06 - S1 complete-run SBZ3/FZ movie split regenerated
+
+- User replaced `src/test/resources/traces/s1/_movies/s1-complete-run.bk2` with a TAS that now completes the game.
+- Re-recorded the complete-run movie with `tools/bizhawk/s1_complete_run_recorder.lua`.
+- The previous `fz_completerun` resource was actually the LZ act-4/SBZ3 segment and ended early:
+  `bk2_frame_offset=181004`, `trace_frame_count=3234`.
+- New split:
+  - `sbz3_completerun`: ROM slot `lz` act 4, `bk2_frame_offset=181004`, `trace_frame_count=8354`.
+  - `fz_completerun`: ROM slot `sbz` act 3, `bk2_frame_offset=189578`, `trace_frame_count=4457`.
+- Added `TestS1Sbz3CompleteRunTraceReplay`; updated `TestS1FzCompleteRunTraceReplay` and
+  `tools/bizhawk/s1-complete-run-level-map.txt`.
+- Focused verification command:
+  `mvn.cmd -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" "-Dtest=com.openggf.tests.trace.s1.TestS1Sbz3CompleteRunTraceReplay,com.openggf.tests.trace.s1.TestS1FzCompleteRunTraceReplay" test`
+- Result: both tests execute against the new movie/trace data, but remain RED on engine parity.
+  SBZ3 first error is frame 45 (`x`, expected `0x0B4B`, actual `0x0B48`); FZ first error is
+  frame 277 (`air`, expected `0`, actual `1`). Treat these as genuine parity frontiers, not
+  bad-recording/setup failures.
+
+## 2026-06-06 - s1 sbz3 f45->f839: Obj32 Button uses full SolidObject side contract
+
+- Branch `bugfix/ai-trace-s1-r2-sbz3`, worktree `.worktrees/trace-s1-r2-sbz3`.
+- Command:
+  `mvn "-Dtest=TestS1Sbz3CompleteRunTraceReplay" "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" test`
+- **Status: ADVANCED (still failing).** First-error frame **45 -> 839**, error count **4801** at the
+  new frontier. Surefire: `Tests run: 1, Failures: 1`. New first error is `camera_y`
+  expected=`0x029C` actual=`0x0298`; the earlier button-side-contact `x` mismatch is gone.
+- **Root cause:** S1 Obj32 Button routine 2 calls the generic `SolidObject` routine, not the
+  top-only platform path. It passes `d1 = $10 + sonic_solid_width` (`$1B`) and `d2/d3 = 5`,
+  then `SolidObject` handles side contacts by stopping horizontal velocity, correcting
+  `obX`, and setting push status when appropriate
+  (`docs/s1disasm/_incObj/32 Button.asm:31-38`,
+  `docs/s1disasm/_Constants.asm:192`,
+  `docs/s1disasm/_incObj/sub SolidObject.asm:151-208`). The engine exposed the Button as
+  top-solid-only, so side contact was ignored. The fix switches Obj32 to the full solid
+  profile while preserving its separate `obActWid` top-landing half-width `$10`.
+- **Same-game regression guard (PASS, zero regressions):**
+  `mvn "-Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestS1Ghz1TraceReplay" "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" test`
+  -> 9 passed, 0 failed, 0 errors, 0 skipped after clearing stale local Surefire reports.
+- Focused unit guard: `TestSonic1ButtonObjectInstance` PASS (`tests=1`, `failures=0`, `errors=0`).
+
+## 2026-06-06 - s1 ghz2 f1104->f1409: Obj3B PurpleRock top-landing width is obActWid ($13), not d1-$B ($10)
+
+- Branch `bugfix/ai-trace-s1-ghz2`, worktree `.worktrees/trace-s1-ghz2`.
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" "-Dtest=TestS1Ghz2CompleteRunTraceReplay#replayMatchesTrace" test`
+- **Status: ADVANCED (still failing).** First-error frame **1104 -> 1409**, error count 196 -> 350
+  (count up only because more frames now replay before the next, distinct divergence).
+  Surefire: `Tests run: 1, Failures: 1`. New first error is `y` expected `0x01AC` actual `0x01AD`.
+- **Root cause:** the engine's `isWithinTopLandingWidth` derives the ROM `obActWid` (the standable
+  top-surface half-width re-read by `Solid_Landed`) as `collisionHalfWidth - sonic_solid_width`
+  (`$1B - $B = $10`). Obj3B PurpleRock passes collision `d1 = $10 + sonic_solid_width` ($1B) but its
+  `obActWid` is authored INDEPENDENTLY as `$13` (Rock_Main, `move.b #$13,obActWid(a0)`), so the
+  derivation under-sizes the landing surface to $10. At f1104 the air-roll player (y_radius $E) is at
+  relX=8 (player center exactly at the obActWid left edge): ROM `Solid_Landed` d1 = playerX+obActWid-objX
+  = 0 (in [0,2*obActWid)) -> lands; engine d1 = -3 -> rejects, landing slipped one frame late.
+- **Fix:** `Sonic1RockObjectInstance` overrides `getTopLandingHalfWidth()` to return the real
+  obActWid `$13`, so the narrow landing gate matches `Solid_Landed`. S1-only object; no shared
+  collision code touched. GHZ1 first-error frame unchanged at 1390 (no regression; its error count
+  271 -> 266).
+- **Disasm cites:** `docs/s1disasm/_incObj/sub SolidObject.asm:267-277` (Solid_Landed obActWid d1
+  window), `docs/s1disasm/_incObj/3B Purple Rock.asm:20,24-28` (obActWid=$13, d1=$10+sonic_solid_width).
+- **Next blocker (f1409):** distinct Obj15 SwingingPlatform continued-ride parity. ROM `Swing_Action2`
+  (routine 4) does `move.b obHeight(a0),d3; addq.b #1,d3` so MvSonicOnPtfm carries the rider at
+  `objY - (obHeight+1) - y_radius` = `objY - 9 - y_radius`, matching its own new-landing snap; the
+  engine's shared continued-ride uses `objY - groundHalfHeight(8) - y_radius` = 1px low. Fixing needs
+  a per-provider continued-ride surface-offset hook (distinct from new-landing geometry), out of scope
+  for a single clean rock change. Cites: `docs/s1disasm/_incObj/15 Swinging Platforms.asm:145-153`
+  (Swing_Action2 obHeight+1), `.../sub PlatformObject.asm:114-127` (Swing_Solid -> Platform3 new-land).
+
+## 2026-06-06 - s1 ghz2 f615->f1104: Obj11 bridge fresh airborne catch defers land apply one object pass
+
+- Branch `bugfix/ai-trace-s1-ghz2`, worktree `.worktrees/trace-s1-ghz2`.
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" "-Dtest=TestS1Ghz2CompleteRunTraceReplay#replayMatchesTrace" test`
+- **Status: ADVANCED (still failing).** First-error frame **615 -> 1104**, error count **196** after the fix.
+  Surefire: `Tests run: 1, Failures: 1`. New first error is `y_speed` expected=`0x0000`
+  actual=`0x047D`, with `air`/`rolling`/`y` also diverging on the same frame near Obj36
+  spikes and Obj3B PurpleRock; this is a separate solid/support landing mismatch.
+- **Root cause:** the engine applied the first flush airborne bridge landing in the same
+  object pass that detected it. ROM Obj11 `Bri_Solid` first checks falling/non-rising
+  player velocity and the subtype-derived X range (`docs/s1disasm/_incObj/11 Bridge.asm:98-114`),
+  then `Platform3` checks the Y window, seats Sonic, and advances the bridge routine
+  (`docs/s1disasm/_incObj/sub PlatformObject.asm:23-42`). The standing/riding path that
+  refreshes support is the later `Plat_NoCheck` branch (`docs/s1disasm/_incObj/sub PlatformObject.asm:45-67`).
+  The fix adds a read-only catch probe for the fresh airborne, falling, flush-edge case and
+  defers the land-applying checkpoint until the next bridge object pass. Already-riding carry
+  is not deferred. The predicate is ROM object state/geometry (`air`, `y_speed`, bridge subtype
+  width, centre coordinates, player height), not a zone/route/frame/gameId carve-out, tolerance
+  band, or trace hydration.
+- **Same-game regression guard (PASS, zero regressions):**
+  `-Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestS1Ghz1TraceReplay`
+  -> all requested report XML files show `Failures: 0, Errors: 0`.
+- Focused unit guard: `TestSonic1BridgeObjectInstance` PASS (`tests=3`, `failures=0`, `errors=0`).
+- Note: Maven Silent Extension printed stale failures from older complete-run report files in
+  `target/surefire-reports`; the requested guard XML files were freshly written and green.
+## 2026-06-06 - s1 lz1 f112->f302: oscillated S1 gameplay waterline
+
+- Branch `bugfix/ai-trace-s1-lz1`, worktree `.worktrees/trace-s1-lz1`.
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" "-Dtest=TestS1Lz1CompleteRunTraceReplay#replayMatchesTrace" test`
+- **Status: ADVANCED (still failing).** First-error frame **112 -> 302**, error count **2718 -> 2639**.
+  Surefire: `Tests run: 1, Failures: 1`.
+- **Root cause:** S1 `LZWaterFeatures` writes `v_waterpos1 = v_waterpos2 + ((v_oscillate+2) >> 1)`
+  after dynamic-water updates, and `Sonic_Water` compares Sonic's `obY` against `v_waterpos1`
+  (`docs/s1disasm/_inc/LZWaterFeatures.asm:19-25`; `docs/s1disasm/_incObj/01 Sonic.asm:222-247`).
+  The engine was using the fixed/current water level (`v_waterpos2` equivalent) for player water-state
+  checks, so it entered water at frame 112 instead of the ROM frame 117 and immediately halved
+  `x_speed` / quartered `y_speed`.
+- **Fix:** added a provider-owned gameplay waterline offset, left the default at zero, and made S1
+  return the same oscillator-derived offset used for `v_waterpos1`. Player water-state checks and
+  breathing-bubble surface checks now read the gameplay waterline. No trace state is hydrated or
+  synced; no zone/route/frame carve-outs.
+- New frontier f302 = `y_speed` mismatch expected=`-0100` actual=`0x0000` during a Burrobot touch.
+  The trace fixture lacks per-frame object snapshots, so this branch does not land a speculative
+  enemy-bounce or Burrobot movement change.
+- **Same-game regression guard (PASS, zero regressions):**
+  `-Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestS1Ghz1TraceReplay`
+  -> all nine guard XML reports have no `<failure>` or `<error>` entries. The Maven extension also
+  echoed the earlier targeted LZ1 failure from the report directory; that stale report was not part
+  of the requested guard set.
+- **Focused water tests (PASS):**
+  `-Dtest=TestSonic1WaterDataProvider,WaterSystemTest,TestWaterSystemRewindSnapshot` -> focused XML
+  reports have no `<failure>` or `<error>` entries.
+## 2026-06-06 - s1 sbz2 f361->f576: Electrocuter cadence uses v_framecount
+
+- Branch `bugfix/ai-trace-s1-sbz2`, worktree `.worktrees/trace-s1-sbz2`.
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" "-Dtest=TestS1Sbz2CompleteRunTraceReplay#replayMatchesTrace" test`
+- **Status: ADVANCED (still failing).** First-error frame **361 -> 576**, error count **993** at the
+  new frontier. Surefire: `Tests run: 1, Failures: 1`.
+- **Root cause:** S1 Electrocuter Obj6E derives `elec_freq` from subtype (`subtype << 4) - 1`
+  and, in routine 2, reads `v_framecount` before masking it with `elec_freq`
+  (`docs/s1disasm/_incObj/6E Electrocuter.asm:23-34`). The engine was using the
+  VBla clock passed into `update(...)`, so the zap animation could begin on an
+  engine-only cadence and expose the `$A4` hurt collision before the ROM would.
+  The ROM then runs `AnimateSprite`, clears collision, and only restores `$A4`
+  when mapping frame 4 is displayed (`docs/s1disasm/_incObj/6E Electrocuter.asm:40-46`;
+  discharge animation frame sequence in `docs/s1disasm/_anim/Electrocuter.asm:13-15`).
+- **Fix:** `Sonic1ElectrocuterObjectInstance` now resolves the ObjectManager gameplay frame
+  counter, which models `v_framecount`, for the cadence mask, with the incoming update clock only
+  as a no-services fallback. Semantic ROM counter predicate; no zone/route/frame/gameId carve-out,
+  no tolerance band, no trace hydration.
+- New frontier f576 = `y` mismatch expected=`0x0763` actual=`0x075C`, with nearby RunningDisc
+  terrain/contact context (`eng-near s49/s98 0x67 RunningDisc`) and Electrocuter collision clear.
+## 2026-06-06 - s1 slz2 f333->f651: Fan word-position push preserves x_sub
+
+- Branch `bugfix/ai-trace-s1-slz2`, worktree `.worktrees/trace-s1-slz2`.
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" "-Dtest=TestS1Slz2CompleteRunTraceReplay#replayMatchesTrace" test`
+- **Status: ADVANCED (still failing).** First-error frame **333 -> 651**, error count **270** at the
+  new frontier. Surefire: `Tests run: 1, Failures: 1`.
+- **Root cause:** S1 Fan computes a signed push amount and applies it with a word add to Sonic's
+  position, `add.w d0,obX(a1)` (`docs/s1disasm/_incObj/5D Fan.asm:40-75`). A 68000 word add to
+  `obX` changes the pixel word only and leaves the adjacent subpixel word intact. The engine used
+  `setCentreX(...)`, which zeroed `x_sub` every fan-push frame. `Sonic1FanObjectInstance` now uses
+  `shiftX(...)`, the existing ROM-word-position helper that preserves subpixel state. This is object
+  behavior from the fan routine, not a zone/route/frame/gameId carve-out, tolerance, trace hydration,
+  or no-op.
+- Supporting ROM context: `ObjectFall` shows the paired `obX`/`obY` longword position format and
+  subpixel-preserving movement (`docs/s1disasm/_incObj/sub ObjectFall.asm:5-18`); Sonic wall-graze
+  alignment also uses word-position adjustment (`docs/s1disasm/_incObj/01 Sonic.asm:1688-1698`).
+- New frontier f651 = `g_speed` mismatch expected=`0x1000` actual=`0x10AE`, with matching subpixel
+  block `sub=(5E00,F400)` and nearby SLZ collapsing floors. This is a later collapsing-floor/contact
+  frontier, not the fan x drift fixed here.
+## 2026-06-06 - s1 syz2 f85->f1088: Obj47 bumper collision-property touch route
+
+- Branch `bugfix/ai-trace-s1-syz2`, worktree `.worktrees/trace-s1-syz2`.
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" "-Dtest=TestS1Syz2CompleteRunTraceReplay#replayMatchesTrace" test`
+- **Status: ADVANCED (still failing).** First-error frame **85 -> 1088**, error count **336** after the fix.
+  Surefire: `Tests run: 1, Failures: 1`. New first error is `x_speed` expected=`0x02E8`
+  actual=`0x02F4` near Obj56/Obj57 (`SpikedBallChain` / `FloatingBlock` diagnostics).
+- **Root cause:** S1 Obj47 sets `obColType=$D7` (`docs/s1disasm/_incObj/47 Bumper.asm:22`).
+  The ROM touch loop routes this through `React_Special`, which checks the low six collision bits
+  and increments `obColProp` only for `$17` and `$21` (`docs/s1disasm/_incObj/sub ReactToItem.asm:377-427`).
+  `Bump_Hit` then tests and clears `obColProp` before applying the radial bounce, status changes,
+  hit animation, sound, and score path (`docs/s1disasm/_incObj/47 Bumper.asm:24-47`). The engine's
+  direct overlap/cooldown path could bounce on the wrong frame. The bumper also used a visible-X
+  deletion gate, while ROM display uses `out_of_range.s` and clears the remembered-object state bit
+  in `.resetcount` before `DeleteObject` (`docs/s1disasm/_incObj/47 Bumper.asm:66-79`).
+- **Fix:** added an S1 special-property decode mode to the shared touch-response profile surface,
+  scoped by object provider capability and S1's `$17/$21` size-index list. `Sonic1BumperObjectInstance`
+  now implements the provider/listener path with collision byte `$D7`, consumes the property signal in
+  update, and deletes through the offscreen lifecycle helper. This is a semantic object collision-property
+  predicate, not a zone/route/frame/gameId carve-out, and the trace comparison remains read-only.
+- **Same-game regression guard (PASS, zero regressions):**
+  `TestS1Credits00Ghz1TraceReplay`, `TestS1Credits01Mz2TraceReplay`,
+  `TestS1Credits02Syz3TraceReplay`, `TestS1Credits03Lz3TraceReplay`,
+  `TestS1Credits04Slz3TraceReplay`, `TestS1Credits05Sbz1TraceReplay`,
+  `TestS1Credits06Sbz2TraceReplay`, `TestS1Credits07Ghz1bTraceReplay`, and
+  `TestS1Ghz1TraceReplay` all wrote fresh surefire XML with `failures="0"`.
+- **Focused profile test:** `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Dtest=TestTouchResponseProfileMapping" test`
+  passed; surefire reports `tests="17" failures="0"`.
 
 ## 2026-06-05 - s2 arz2 f857->f899: water profile not applied on a hurt-landing frame
 

@@ -791,8 +791,8 @@ public class Sonic3kObjectArt {
      * <p>ROM behavior:
      * {@code Obj_CNZTeleporter} queues {@code ArtKosM_CNZTeleport} directly rather
      * than relying on a zone PLC, then both the teleporter and beam objects render
-     * through {@code Map_SSZHPZTeleporter}. Task 6 only needs the renderer
-     * registration; the palette write and control-lock behavior stay in Task 8.
+     * through {@code Map_SSZHPZTeleporter}. Palette writes and control-lock
+     * timing are owned by the concrete CNZ teleporter route objects.
      */
     public ObjectSpriteSheet loadCnzTeleporterSheet(Rom rom) {
         if (rom == null || reader == null) {

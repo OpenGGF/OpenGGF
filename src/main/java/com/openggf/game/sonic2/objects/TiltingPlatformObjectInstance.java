@@ -639,9 +639,7 @@ public class TiltingPlatformObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        VerticalLaserObjectInstance laser = new VerticalLaserObjectInstance(
-                spawn, spawn.x(), spawn.y());
-        services().objectManager().addDynamicObject(laser);
+        spawnChild(() -> new VerticalLaserObjectInstance(spawn, spawn.x(), spawn.y()));
     }
 
     /**

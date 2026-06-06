@@ -859,7 +859,10 @@ public class LevelManager {
      */
     public void applyTouchResponses(PlayableEntity player) {
         if (objectManager != null) {
-            objectManager.runTouchResponsesForPlayer(player, frameCounter + 1);
+            objectManager.runTouchResponsesForPlayer(
+                    player,
+                    frameCounter + 1,
+                    objectsExecuteAfterPlayerPhysics());
         }
         if (ringManager != null && player instanceof AbstractPlayableSprite playable && !playable.getDead()) {
             if (!ringManager.usesObjectTouchCollection()) {
@@ -1096,7 +1099,7 @@ public class LevelManager {
         if (playable == null) {
             return;
         }
-        int waterY = waterSystem.getWaterLevelY(featureZone, featureAct);
+        int waterY = waterSystem.getGameplayWaterLevelY(featureZone, featureAct);
         updatePlayableWaterStates(playable, waterY);
     }
 
@@ -1107,7 +1110,7 @@ public class LevelManager {
                 || playable == null) {
             return;
         }
-        int waterY = waterSystem.getWaterLevelY(featureZone, featureAct);
+        int waterY = waterSystem.getGameplayWaterLevelY(featureZone, featureAct);
         updatePlayableWaterState(playable, waterY);
     }
 

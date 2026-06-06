@@ -48,6 +48,9 @@ class TestS3kZoneEventPaletteOwnership {
         if (content.contains("levelManager.updatePalette(")) {
             violations.add("Sonic3kZoneEvents still calls levelManager.updatePalette(...) directly");
         }
+        if (content.contains("cachePaletteTextureIfReady(")) {
+            violations.add("Sonic3kZoneEvents still has a direct palette texture upload fallback helper");
+        }
         if (!content.contains("S3kPaletteWriteSupport.applyLine(")) {
             violations.add("Sonic3kZoneEvents does not route palette loads through S3kPaletteWriteSupport");
         }

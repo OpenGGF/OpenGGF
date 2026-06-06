@@ -159,6 +159,31 @@ class TestS3kPaletteWriteSupport {
         assertColorWord(level.getPalette(1), 2, 0x0644);
     }
 
+    @Test
+    void applyContiguousPatchSubmitsOwnershipClaimsWhenRegistryPresent() {
+        StubLevel level = new StubLevel();
+        PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
+
+        S3kPaletteWriteSupport.applyContiguousPatch(
+                registry,
+                level,
+                null,
+                S3kPaletteOwners.LBZ_ZONE_CYCLE,
+                S3kPaletteOwners.PRIORITY_ZONE_CYCLE,
+                2,
+                8,
+                new byte[] {0x0A, (byte) 0xAA, 0x06, 0x44, 0x02, 0x22});
+
+        registry.resolveInto(level.palettes(), null, null, null);
+
+        assertEquals(S3kPaletteOwners.LBZ_ZONE_CYCLE, registry.ownerAt(PaletteSurface.NORMAL, 2, 8));
+        assertEquals(S3kPaletteOwners.LBZ_ZONE_CYCLE, registry.ownerAt(PaletteSurface.NORMAL, 2, 9));
+        assertEquals(S3kPaletteOwners.LBZ_ZONE_CYCLE, registry.ownerAt(PaletteSurface.NORMAL, 2, 10));
+        assertColorWord(level.getPalette(2), 8, 0x0AAA);
+        assertColorWord(level.getPalette(2), 9, 0x0644);
+        assertColorWord(level.getPalette(2), 10, 0x0222);
+    }
+
     private static void assertColorWord(Palette palette, int colorIndex, int segaWord) {
         byte highByte = (byte) ((segaWord >> 8) & 0xFF);
         byte lowByte = (byte) (segaWord & 0xFF);

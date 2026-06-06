@@ -93,6 +93,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean inputUp, inputDown, inputLeft, inputRight;
 	private boolean inputJump, inputJumpPress;
 	private boolean inputRawLeft, inputRawRight;
+	private boolean slopeResistAppliedThisFrame;
 	private boolean facingFlipForcesPushClearAfterGroundWall;
 	private boolean wasCrouching;
 	// ROM Sonic_Move/Tails_Move decide the standing-still duck/look-up/balance
@@ -144,6 +145,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		inputJumpPress = false;
 		inputRawLeft = false;
 		inputRawRight = false;
+		slopeResistAppliedThisFrame = false;
 		facingFlipForcesPushClearAfterGroundWall = false;
 		wasCrouching = false;
 		staleHorizontalInputRideSlotIndex = -1;
@@ -343,6 +345,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Invalidate the pre-friction inertia snapshot at frame start; doGroundMove
 		// repopulates it before updateCrouchState consumes it (see field comment).
 		preFrictionGroundSpeed = NO_PRE_FRICTION_SNAPSHOT;
+		slopeResistAppliedThisFrame = false;
 
 		// Snapshot pre-physics state for per-object hooks running AFTER
 		// physics in the engine's frame order. ROM order runs cage/object
@@ -586,6 +589,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		doLevelBoundary();
 		sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
 		doAnglePosWithSensorUpdate(originalX, originalY);
+		applyMissedDetachSlopeResist();
 		doSlopeRepel();
 		updateCrouchState();
 	}
@@ -1743,11 +1747,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	/** Sonic_SlopeResist: Apply slope factor when walking (s2.asm:37360) */
 	private void doSlopeResist() {
-		int hexAngle = sprite.getAngle() & 0xFF;
+		applySlopeResistForAngle(sprite.getAngle() & 0xFF, false);
+	}
+
+	private boolean applySlopeResistForAngle(int hexAngle, boolean moveByVelocityDelta) {
 		short gSpeed = sprite.getGSpeed();
 
 		if (isOnSteepSurface(hexAngle)) {
-			return;
+			return false;
 		}
 
 		int slopeEffect = (slopeRunning * TrigLookupTable.sinHex(hexAngle)) >> 8;
@@ -1761,10 +1768,42 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
 			boolean s3kKickAtRest = fs != null && fs.slopeResistAppliesAtZeroInertia();
 			if (!s3kKickAtRest || Math.abs(slopeEffect) < 0x0D) {
-				return;
+				return false;
 			}
 		}
-		sprite.setGSpeed((short) (gSpeed + slopeEffect));
+		short adjustedGSpeed = (short) (gSpeed + slopeEffect);
+		if (moveByVelocityDelta) {
+			short oldXSpeed = (short) ((gSpeed * TrigLookupTable.cosHex(hexAngle)) >> 8);
+			short oldYSpeed = (short) ((gSpeed * TrigLookupTable.sinHex(hexAngle)) >> 8);
+			short newXSpeed = (short) ((adjustedGSpeed * TrigLookupTable.cosHex(hexAngle)) >> 8);
+			short newYSpeed = (short) ((adjustedGSpeed * TrigLookupTable.sinHex(hexAngle)) >> 8);
+			sprite.move((short) (newXSpeed - oldXSpeed), (short) (newYSpeed - oldYSpeed));
+			sprite.setXSpeed(newXSpeed);
+			sprite.setYSpeed(newYSpeed);
+		}
+		sprite.setGSpeed(adjustedGSpeed);
+		slopeResistAppliedThisFrame = true;
+		return true;
+	}
+
+	private void applyMissedDetachSlopeResist() {
+		if (!sprite.getAir()
+				|| slopeResistAppliedThisFrame
+				|| sprite.wasPrePhysicsAir()) {
+			return;
+		}
+		int prePhysicsAngle = sprite.getPrePhysicsAngle() & 0xFF;
+		if (prePhysicsAngle == (sprite.getAngle() & 0xFF)) {
+			return;
+		}
+		// S1/S2/S3K run walking slope resist before SpeedToPos/MoveSprite2 and
+		// before AnglePos can detach the player (S1 01 Sonic.asm:283-291,
+		// 1246-1263; S2 s2.asm:36464-36477,37703-37723; S3K
+		// sonic3k.asm:21620-21630,23821-23856). If engine ground attachment
+		// has already switched to air on this final grounded frame, replay the
+		// missing pre-move slope step using the frame-start angle and add only
+		// the velocity delta that ROM would have moved with this frame.
+		applySlopeResistForAngle(prePhysicsAngle, true);
 	}
 
 	/** Sonic_Move: Ground input handling, accel/decel, wall collision (s2.asm:36220) */

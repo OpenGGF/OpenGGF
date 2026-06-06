@@ -38,7 +38,8 @@ class TestS3kAizMutationPipeline {
     void aizIntroTerrainSwapShouldRouteImmediateApplyThroughPipelineAndKeepTilemapFallback() throws IOException {
         String content = Files.readString(INTRO_TERRAIN_SWAP);
 
-        assertContains(content, "GameServices.zoneLayoutMutationPipeline().applyImmediately(");
+        assertDoesNotContain(content, "GameServices.zoneLayoutMutationPipeline().applyImmediately(");
+        assertContains(content, "services.zoneLayoutMutationPipeline().applyImmediately(");
         assertContains(content, "new LayoutMutationContext(");
         assertContains(content, "levelManager::applyMutationEffects");
 
@@ -46,6 +47,16 @@ class TestS3kAizMutationPipeline {
         assertContains(content, "Sonic3kPlcLoader.refreshAffectedRenderers(modifiedRanges, levelManager);");
         assertContains(content, "if (!levelManager.swapToPrebuiltTilemaps()) {");
         assertContains(content, "levelManager.invalidateAllTilemaps();");
+    }
+
+    @Test
+    void aizIntroTerrainSwapCacheShouldResetAcrossGameBootstrap() throws IOException {
+        String terrainSwap = Files.readString(INTRO_TERRAIN_SWAP);
+        String engine = Files.readString(Path.of("src/main/java/com/openggf/Engine.java"));
+
+        assertContains(terrainSwap, "public static synchronized void reset()");
+        assertContains(terrainSwap, "cachedOverlayData = null;");
+        assertContains(engine, "AizIntroTerrainSwap.reset();");
     }
 
     @Test
@@ -62,5 +73,9 @@ class TestS3kAizMutationPipeline {
 
     private static void assertContains(String content, String expected) {
         assertTrue(content.contains(expected), () -> "Expected source to contain: " + expected);
+    }
+
+    private static void assertDoesNotContain(String content, String unexpected) {
+        assertFalse(content.contains(unexpected), () -> "Expected source not to contain: " + unexpected);
     }
 }
