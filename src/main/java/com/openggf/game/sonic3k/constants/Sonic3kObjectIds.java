@@ -163,6 +163,7 @@ public final class Sonic3kObjectIds {
     public static final int MHZ_MINIBOSS = 0x92;
     public static final int JAWZ = 0x93;
     public static final int MHZ_END_BOSS = 0x93;
+    public static final int CORKEY = 0xC1;
     public static final int PACHINKO_TRIANGLE_BUMPER = 0xE6;
     public static final int PACHINKO_FLIPPER = 0xE7;
     public static final int PACHINKO_ENERGY_TRAP = 0xE8;

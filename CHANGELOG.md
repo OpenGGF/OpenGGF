@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K Corkey (Obj $C1) now has a dedicated LBZ badnik implementation:**
+  Corkey is registered for the S3KL object table and now uses ROM-backed Corkey
+  art for its parent body, nozzle child, and three-shot firing cycle. The port
+  follows the disassembly patrol timer/latch flow, uses the ROM projectile
+  animation scripts and laser SFX, exposes the $A0 hurt-shot collision, and
+  updates the S3K object checklist from 146 to 147 implemented objects.
+
 - **S1 complete-run SBZ3/Final-Zone split (fixes the FZ f0 bootstrap; adds the
   19th per-act trace):** the original `fz_completerun` data was mislabeled — it
   was actually Scrap Brain Act 3, so `TestS1FzCompleteRunTraceReplay` diverged at

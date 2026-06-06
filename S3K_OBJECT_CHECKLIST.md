@@ -5,8 +5,8 @@ Generated: 2026-06-04 15:26:08
 ## Summary
 
 - **Total unique objects found:** 303
-- **Implemented:** 146 (48.2%)
-- **Unimplemented:** 157 (51.8%)
+- **Implemented:** 147 (48.5%)
+- **Unimplemented:** 156 (51.5%)
 
 ## Implemented Objects
 
@@ -135,6 +135,7 @@ Generated: 2026-06-04 15:26:08
 | 0x31 | LBZRollingDrum | 24 |  | LBZ1, LBZ2 |
 | 0xBF | Ribot | 31 |  | LBZ1, LBZ2 |
 | 0xC0 | Orbinaut | 21 |  | LBZ1, LBZ2 |
+| 0xC1 | Corkey | 13 |  | LBZ1, LBZ2 |
 | 0xC2 | Flybot767 | 12 |  | LBZ2 |
 | 0x03 | MHZTwistedVine | 11 |  | MHZ1, MHZ2 |
 | 0x06 | MHZPulleyLift | 8 |  | MHZ1, MHZ2 |
@@ -222,7 +223,6 @@ Generated: 2026-06-04 15:26:08
 | 0x18 | Object | LRZFallingSpike | 15 |  | LRZ1 |
 | 0x21 | Object | LRZSmashingSpikePlatform | 15 |  | LRZ1 |
 | 0x6F | Object | FBZWireCage | 13 |  | FBZ1, FBZ2 |
-| 0xC1 | Badnik | Corkey | 13 |  | LBZ1, LBZ2 |
 | 0x50 | Object | DEZConveyorBelt | 13 |  | DEZ1, DEZ2 |
 | 0x5D | Object | DEZRetractingSpring | 13 |  | DEZ2 |
 | 0xE2 | Object | FBZElevator | 12 |  | FBZ2 |
@@ -821,13 +821,13 @@ Total: 356 objects | Implemented: 29 | Unimplemented: 0
 
 #### Act 1
 
-Total: 430 objects | Implemented: 24 | Unimplemented: 8
+Total: 430 objects | Implemented: 25 | Unimplemented: 7
 
 **Badniks:**
 - [ ] 0xBE SnaleBlaster (x5) [0x00]
 - [x] 0xBF Ribot (x14) [0x00, 0x04]
 - [x] 0xC0 Orbinaut (x10) [0x00]
-- [ ] 0xC1 Corkey (x10) [5 subtypes]
+- [x] 0xC1 Corkey (x10) [5 subtypes]
 
 **Bosses:**
 - [ ] 0xC3 LBZ1Robotnik (x1) [0x00]
@@ -863,13 +863,13 @@ Total: 430 objects | Implemented: 24 | Unimplemented: 8
 
 #### Act 2
 
-Total: 489 objects | Implemented: 22 | Unimplemented: 13
+Total: 489 objects | Implemented: 23 | Unimplemented: 12
 
 **Badniks:**
 - [ ] 0xBE SnaleBlaster (x7) [0x00]
 - [x] 0xBF Ribot (x17) [0x00, 0x02, 0x04]
 - [x] 0xC0 Orbinaut (x11) [0x00]
-- [ ] 0xC1 Corkey (x3) [0x20, 0x18]
+- [x] 0xC1 Corkey (x3) [0x20, 0x18]
 - [x] 0xC2 Flybot767 (x12) [0x00]
 
 **Bosses:**

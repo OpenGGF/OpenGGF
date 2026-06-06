@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.objects.badniks.BuggernautBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.ButterdroidBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance;
 import com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.Flybot767BadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.JawzBadnikInstance;
@@ -1109,6 +1110,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                         return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                     }
                     return new RibotBadnikInstance(spawn);
+                });
+        factories.put(Sonic3kObjectIds.CORKEY,
+                (spawn, registry) -> {
+                    S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet != S3kZoneSet.S3KL) {
+                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                    }
+                    return new CorkeyBadnikInstance(spawn);
                 });
         factories.put(Sonic3kObjectIds.FLYBOT_767,
                 (spawn, registry) -> {
