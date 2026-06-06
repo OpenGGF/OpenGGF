@@ -4,6 +4,17 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 Final Zone boss setup now survives the pre-arena spawn window:**
+  `Sonic1FZBossInstance` now keeps the DLE-spawned Obj85 parent alive long
+  enough to initialize the ROM boss group, including Obj84 cylinder solids at
+  `boss_fz_x+$80/$100`, and `FZPlasmaBall` now follows the shipped non-FixBugs
+  Obj86 left-overshoot branch when reaching its target
+  (`docs/s1disasm/_inc/DynamicLevelEvents.asm:770-779`;
+  `docs/s1disasm/_incObj/85 Boss - Final.asm:41-79`;
+  `docs/s1disasm/_incObj/84 FZ Eggman's Cylinders.asm:20-24,82-86`;
+  `docs/s1disasm/_incObj/86 FZ Plasma Ball Launcher.asm:166-177`). This
+  advances `TestS1FzCompleteRunTraceReplay` from first-error frame 277 to 713;
+  the new frontier is a plasma-ball hurt `y_speed` mismatch.
 - **S1 GHZ/SLZ/MZ Obj18 Platform fresh-landing timing now follows its routine split:**
   `Sonic1PlatformObjectInstance` now models Obj18's routine-2
   `PlatformObject` pass as occurring before `Plat_Move` / `Plat_Nudge`, while

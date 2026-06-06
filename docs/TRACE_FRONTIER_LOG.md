@@ -1,5 +1,40 @@
 # Trace Frontier Log
 
+## 2026-06-06 - s1 fz f277->f713: FZ boss children persist and plasma overshoot matches non-FixBugs ROM
+
+- Branch `bugfix/ai-trace-s1-r5-fz`, worktree `.worktrees/trace-s1-r5-fz`.
+- Target command:
+  `mvn "-Dtest=TestS1FzCompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+- S1 green guard command:
+  `mvn "-Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestS1Ghz1TraceReplay" "-DfailIfNoTests=false" test`
+  exited 0. Individual Surefire XML reports for all nine guard classes have
+  `failures="0"` / `errors="0"`, including `TestS1Credits05Sbz1TraceReplay`.
+  The MSE aggregate printed the prior targeted FZ failure from stale
+  `target/surefire-reports`, so it was not counted as a guard regression.
+- **Status: ADVANCED (still failing).** First-error frame **277 -> 713**.
+  Surefire: `Tests run: 1, Failures: 1`. New first error is `y_speed`
+  expected `0x0000`, actual `-0700`, after an Obj86 plasma-ball hurt contact.
+- **Root cause:** the DLE-spawned Obj85 FZ boss parent starts outside the
+  generic S1 offscreen window, but the ROM immediately initializes the child
+  boss group after `DLE_FZ_Boss` spawns Obj85. The engine culled the parent
+  before the Obj84 cylinder solids could exist. The later Obj86 plasma-ball
+  approach also snapped left-moving overshoot to the target instead of taking
+  the non-FixBugs `add.w d0,obX(a0)` path that pushes the overshot ball farther
+  left before chase.
+- **Fix:** `Sonic1FZBossInstance` is persistent so pre-arena Obj84 cylinder
+  children spawn and run `SolidObject` at the ROM positions. `FZPlasmaBall`
+  now stops only after the left-moving target subtraction borrows and applies
+  the signed overshoot delta like the shipped non-FixBugs build.
+- **Disasm cites:** `docs/s1disasm/_inc/DynamicLevelEvents.asm:770-779`,
+  `docs/s1disasm/_incObj/85 Boss - Final.asm:41-79`,
+  `docs/s1disasm/_incObj/84 FZ Eggman's Cylinders.asm:20-24`,
+  `docs/s1disasm/_incObj/84 FZ Eggman's Cylinders.asm:82-86`, and
+  `docs/s1disasm/_incObj/86 FZ Plasma Ball Launcher.asm:166-177`.
+- Genuineness gate: PASS. The fix is scoped to S1 FZ object routines, adds no
+  trace hydration, no tolerance, and no zone/route/frame carve-out. Same-game
+  guard passed with zero regressions; the target remains red at the next object
+  contact frontier.
+
 ## 2026-06-06 - s1 ghz2 f2369->f2370: Obj18 fresh landing uses pre-move PlatformObject geometry
 
 - Branch `bugfix/ai-trace-s1-r4-ghz2`, worktree `.worktrees/trace-s1-r4-ghz2`.

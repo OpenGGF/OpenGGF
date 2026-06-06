@@ -115,13 +115,15 @@ public class FZPlasmaBall extends AbstractObjectInstance implements TouchRespons
             posXFixed += (xVel << 8);
             posX = posXFixed >> 16;
 
-            // ROM: Check if reached target (overshot)
-            // ROM: move.w obX(a1),d0 / sub.w objoff_30(a1),d0 / bcc.s (unsigned >= 0)
+            // ROM: BossPlasma_Drop keeps moving while obX-targetX has no
+            // borrow, and only stops after the left-moving ball overshoots
+            // below targetX. The non-FixBugs build then adds the negative
+            // overshoot delta to obX (_incObj/86 FZ Plasma Ball Launcher.asm:166-177).
             int dist = posX - targetX;
-            if (dist >= 0) {
+            if (dist < 0) {
                 // Reached target
                 xVel = 0;
-                posX = targetX;
+                posX += dist;
                 posXFixed = posX << 16;
                 // ROM: subq.w #1,objoff_32(a1) — decrement launcher's ball counter
             }
