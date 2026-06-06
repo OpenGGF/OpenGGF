@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.RomByteReader;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.palette.PaletteSurface;
 import com.openggf.game.GameServices;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Block;
@@ -29,6 +31,7 @@ import com.openggf.tests.rules.SonicGame;
 import java.io.IOException;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -212,6 +215,31 @@ public class TestS3kLbzPaletteCycling {
                 + "but only " + nonZeroCount + " are non-zero");
     }
 
+    @Test
+    public void lbzCycleSubmitsPaletteOwnershipClaims() throws IOException {
+        GraphicsManager.getInstance().initHeadless();
+        LbzStubLevel stubLevel = new LbzStubLevel();
+        PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
+        RomByteReader reader = RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom());
+
+        Sonic3kPaletteCycler cycler = new Sonic3kPaletteCycler(reader, stubLevel, ZONE_LBZ, ACT_1, registry, null);
+
+        registry.beginFrame();
+        cycler.update();
+        registry.resolveInto(stubLevel.palettes(), null, null, null);
+
+        assertEquals(S3kPaletteOwners.LBZ_ZONE_CYCLE, registry.ownerAt(PaletteSurface.NORMAL, 2, 8));
+        assertEquals(S3kPaletteOwners.LBZ_ZONE_CYCLE, registry.ownerAt(PaletteSurface.NORMAL, 2, 9));
+        assertEquals(S3kPaletteOwners.LBZ_ZONE_CYCLE, registry.ownerAt(PaletteSurface.NORMAL, 2, 10));
+        for (int c = 8; c <= 10; c++) {
+            int r = stubLevel.getPalette(2).getColor(c).r & 0xFF;
+            int g = stubLevel.getPalette(2).getColor(c).g & 0xFF;
+            int b = stubLevel.getPalette(2).getColor(c).b & 0xFF;
+            assertTrue(r > 0 || g > 0 || b > 0,
+                    "LBZ owned palette color " + c + " should resolve from ROM data");
+        }
+    }
+
     /**
      * Minimal Level stub for direct LBZ palette cycling tests.
      */
@@ -222,6 +250,10 @@ public class TestS3kLbzPaletteCycling {
             for (int i = 0; i < palettes.length; i++) {
                 palettes[i] = new Palette();
             }
+        }
+
+        Palette[] palettes() {
+            return palettes;
         }
 
         @Override public int getPaletteCount() { return palettes.length; }

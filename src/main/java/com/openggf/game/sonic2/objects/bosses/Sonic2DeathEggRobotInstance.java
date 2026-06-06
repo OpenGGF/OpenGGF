@@ -11,7 +11,6 @@ import com.openggf.game.sonic2.scroll.SwScrlDez;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossChild;
@@ -503,13 +502,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     }
 
     private <T extends AbstractBossChild> T createPermanentChild(Supplier<T> factory) {
-        var svc = tryServices();
-        T child = svc != null ? ObjectConstructionContext.construct(svc, factory) : factory.get();
-        var objectManager = svc != null ? svc.objectManager() : null;
-        if (objectManager != null) {
-            objectManager.addDynamicObject(child);
-        }
-        return child;
+        return spawnFreeChild(factory);
     }
 
     @Override
@@ -1404,23 +1397,19 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
         int spawnX = state.x + (BOMB_SPAWN_DX * xSign);
         int spawnY = state.y + BOMB_SPAWN_DY;
 
-        BombChild bomb1 = new BombChild(this, spawnX, spawnY, 0x60 * xSign, -0x800);
+        BombChild bomb1 = spawnFreeChild(() -> new BombChild(this, spawnX, spawnY, 0x60 * xSign, -0x800));
         childComponents.add(bomb1);
-        services().objectManager().addDynamicObject(bomb1);
 
-        BombChild bomb2 = new BombChild(this, spawnX, spawnY, 0xC0 * xSign, -0xA00);
+        BombChild bomb2 = spawnFreeChild(() -> new BombChild(this, spawnX, spawnY, 0xC0 * xSign, -0xA00));
         childComponents.add(bomb2);
-        services().objectManager().addDynamicObject(bomb2);
     }
 
     /** Spawn the targeting sensor child */
     private void spawnSensor(AbstractPlayableSprite player) {
         if (player == null) return;
-        sensorChild = new SensorChild(this, player.getCentreX(), player.getCentreY());
-        // Register with ObjectManager for rendering if available
-        if (services().objectManager() != null) {
-            services().objectManager().addDynamicObject(sensorChild);
-        }
+        int playerX = player.getCentreX();
+        int playerY = player.getCentreY();
+        sensorChild = spawnFreeChild(() -> new SensorChild(this, playerX, playerY));
     }
 
     /** Report player X from targeting sensor */

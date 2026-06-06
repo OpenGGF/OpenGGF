@@ -55,6 +55,20 @@ public abstract class SuperStateController {
         LOGGER.info("Debug: Super Sonic transformation started");
     }
 
+    /**
+     * Starts a monitor-triggered transformation after the monitor has already
+     * awarded its rings. S3K subtype 9 monitors bypass the normal jump and
+     * emerald checks; this entry point deliberately does not add rings.
+     */
+    public boolean activateFromMonitor() {
+        if (state != SuperState.NORMAL || player.isSuperSonic()
+                || player.getDead() || player.isHurt() || player.isDebugMode()) {
+            return false;
+        }
+        startTransformation();
+        return true;
+    }
+
     public void debugDeactivate() {
         if (state == SuperState.NORMAL) return;
         revertToNormal();

@@ -170,13 +170,12 @@ public class SpikerBadnikInstance extends AbstractBadnikInstance {
                 renderFlags,
                 false,
                 spawn.rawYWord());
-        SpikerDrillObjectInstance drill = new SpikerDrillObjectInstance(
+        spawnFreeChild(() -> new SpikerDrillObjectInstance(
                 drillSpawn,
                 currentX,
                 currentY,
                 xFlipFlag,
-                yFlipFlag);
-        services().objectManager().addDynamicObject(drill);
+                yFlipFlag));
     }
 
     @Override

@@ -288,11 +288,10 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
             // Fragment position is object position + piece offset
             // In ROM, fragments are created at object position and inherit the piece offset
             // from their mapping data for rendering
-            SmashableGroundFragmentInstance fragment = new SmashableGroundFragmentInstance(
+            spawnFreeChild(() -> new SmashableGroundFragmentInstance(
                     spawn.x(),  // Object center X
                     spawn.y(),  // Object center Y
-                    velX, velY, piece, renderer);
-            objectManager.addDynamicObject(fragment);
+                    velX, velY, piece, renderer));
         }
     }
 
@@ -332,10 +331,10 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
         // Spawn points display popup
         ObjectManager objectManager = services().objectManager();
         if (objectManager != null) {
-            PointsObjectInstance pointsObj = new PointsObjectInstance(
+            int finalPoints = points;
+            spawnFreeChild(() -> new PointsObjectInstance(
                     new ObjectSpawn(spawn.x(), spawn.y(), 0x29, 0, 0, false, 0),
-                    services(), points);
-            objectManager.addDynamicObject(pointsObj);
+                    services(), finalPoints));
         }
     }
 

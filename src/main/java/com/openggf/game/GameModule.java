@@ -291,6 +291,15 @@ public interface GameModule {
     }
 
     /**
+     * Called before a gameplay session is fully torn down to clear
+     * module-scoped static caches or other process-wide helper state.
+     * Default implementation does nothing.
+     */
+    default void resetModuleScopedState() {
+        // Default no-op
+    }
+
+    /**
      * Supplies the sidekick-carry trigger for this game module. Defaults to
      * {@code null} (no carry mechanic). Only Sonic 3 &amp; Knuckles overrides
      * this to port the Tails-carry-Sonic CNZ1 intro.

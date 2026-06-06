@@ -278,8 +278,7 @@ public class CPZBossPipe extends AbstractObjectInstance {
             return;
         }
         ObjectSpawn segSpawn = new ObjectSpawn(x, y, Sonic2ObjectIds.CPZ_BOSS, 0, renderFlags, false, 0);
-        CPZBossPipeSegment segment = new CPZBossPipeSegment(segSpawn, mainBoss, this, offset);
-        services().objectManager().addDynamicObject(segment);
+        CPZBossPipeSegment segment = spawnChild(() -> new CPZBossPipeSegment(segSpawn, mainBoss, this, offset));
         segments.add(segment);
     }
 
@@ -288,8 +287,7 @@ public class CPZBossPipe extends AbstractObjectInstance {
             return;
         }
         ObjectSpawn pumpSpawn = new ObjectSpawn(x, y, Sonic2ObjectIds.CPZ_BOSS, 0, renderFlags, false, 0);
-        CPZBossPipePump pump = new CPZBossPipePump(pumpSpawn, mainBoss, this);
-        services().objectManager().addDynamicObject(pump);
+        spawnChild(() -> new CPZBossPipePump(pumpSpawn, mainBoss, this));
     }
 
     private void spawnDripper() {
@@ -297,8 +295,7 @@ public class CPZBossPipe extends AbstractObjectInstance {
             return;
         }
         ObjectSpawn dripperSpawn = new ObjectSpawn(x, y, Sonic2ObjectIds.CPZ_BOSS, 0, renderFlags, false, 0);
-        CPZBossDripper dripper = new CPZBossDripper(dripperSpawn, mainBoss, this);
-        services().objectManager().addDynamicObject(dripper);
+        spawnChild(() -> new CPZBossDripper(dripperSpawn, mainBoss, this));
     }
 
     private void spawnFallingPart() {
@@ -307,8 +304,7 @@ public class CPZBossPipe extends AbstractObjectInstance {
         }
         var motion = randomPipeMotion();
         ObjectSpawn partSpawn = new ObjectSpawn(x, y + yOffset, Sonic2ObjectIds.CPZ_BOSS, 0, renderFlags, false, 0);
-        CPZBossFallingPart part = new CPZBossFallingPart(partSpawn, 1, motion.xVel(), motion.timer());
-        services().objectManager().addDynamicObject(part);
+        spawnChild(() -> new CPZBossFallingPart(partSpawn, 1, motion.xVel(), motion.timer()));
     }
 
     private Sonic2Rng.PipeShardMotion randomPipeMotion() {

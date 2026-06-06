@@ -7,6 +7,8 @@ import com.openggf.game.GameServices;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.RomByteReader;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.palette.PaletteSurface;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.Palette;
@@ -283,6 +285,26 @@ public class TestS3kIczPaletteCycling {
             int b = pal3.getColor(c).b & 0xFF;
             assertTrue(r > 0 || g > 0 || b > 0, "ICZ channel 3 color " + c + " should be non-zero after first tick, got ("
                     + r + "," + g + "," + b + ")");
+        }
+    }
+
+    @Test
+    public void iczCycleSubmitsPaletteOwnershipClaims() throws Exception {
+        enableIndoorPaletteCycling();
+        PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
+        RomByteReader reader = RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom());
+        Sonic3kPaletteCycler ownedCycler = new Sonic3kPaletteCycler(
+                reader, level, ZONE_ICZ, ACT_1, registry, null);
+
+        ownedCycler.update();
+
+        for (int c = 12; c <= 15; c++) {
+            assertEquals(S3kPaletteOwners.ICZ_ZONE_CYCLE,
+                    registry.ownerAt(PaletteSurface.NORMAL, 2, c),
+                    "ICZ palette line 3 color " + c + " should be owned by the zone cycle");
+            assertEquals(S3kPaletteOwners.ICZ_ZONE_CYCLE,
+                    registry.ownerAt(PaletteSurface.NORMAL, 3, c),
+                    "ICZ indoor palette line 4 color " + c + " should be owned by the zone cycle");
         }
     }
 

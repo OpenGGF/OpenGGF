@@ -7,6 +7,7 @@ import com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
@@ -25,6 +26,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 
@@ -78,7 +80,7 @@ class TestSonic3kPatternAnimatorRewindSnapshot {
         Sonic3kPatternAnimator anim = buildAnimator(0, 1); // AIZ2
         PatternAnimatorSnapshot snap = anim.capture();
         assertNotNull(snap.extra(), "S3K animator should pack scalar state into extra blob");
-        assertEquals(45, snap.extra().length, "Extra blob should be 45 bytes (1 bool + 11 ints)");
+        assertEquals(53, snap.extra().length, "Extra blob should be 53 bytes (1 bool + 13 ints)");
     }
 
     @Test
@@ -136,6 +138,24 @@ class TestSonic3kPatternAnimatorRewindSnapshot {
                 "Extra scalar blob must survive a restore round-trip");
     }
 
+    @Test
+    void roundTripMhzBackgroundPhaseCaches() throws Exception {
+        Sonic3kPatternAnimator anim = buildAnimator(Sonic3kZoneIds.ZONE_MHZ, 0);
+        setIntField(anim, "lastMhzBg1Phase", 0x12);
+        setIntField(anim, "lastMhzBg2Phase", 0x34);
+        PatternAnimatorSnapshot before = anim.capture();
+
+        setIntField(anim, "lastMhzBg1Phase", 0x56);
+        setIntField(anim, "lastMhzBg2Phase", 0x78);
+
+        anim.restore(before);
+
+        assertEquals(0x12, getIntField(anim, "lastMhzBg1Phase"),
+                "MHZ BG1 phase cache must rewind with the pattern animator");
+        assertEquals(0x34, getIntField(anim, "lastMhzBg2Phase"),
+                "MHZ BG2 phase cache must rewind with the pattern animator");
+    }
+
     // ===== Helpers =====
 
     private static Sonic3kPatternAnimator buildAnimator(int zone, int act) throws IOException {
@@ -143,6 +163,18 @@ class TestSonic3kPatternAnimatorRewindSnapshot {
                 com.openggf.tests.TestEnvironment.currentRom());
         TestLevel level = new TestLevel(1024);
         return new Sonic3kPatternAnimator(reader, level, zone, act, true);
+    }
+
+    private static int getIntField(Sonic3kPatternAnimator animator, String fieldName) throws Exception {
+        Field field = Sonic3kPatternAnimator.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getInt(animator);
+    }
+
+    private static void setIntField(Sonic3kPatternAnimator animator, String fieldName, int value) throws Exception {
+        Field field = Sonic3kPatternAnimator.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.setInt(animator, value);
     }
 
     /** Minimal Level stub — patterns only. */

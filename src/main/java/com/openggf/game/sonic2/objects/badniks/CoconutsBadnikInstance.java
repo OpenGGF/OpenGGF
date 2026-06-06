@@ -203,7 +203,7 @@ public class CoconutsBadnikInstance extends AbstractBadnikInstance {
             xVel = THROW_X_VEL;
         }
 
-        BadnikProjectileInstance projectile = new BadnikProjectileInstance(
+        spawnFreeChild(() -> new BadnikProjectileInstance(
                 spawn,
                 BadnikProjectileInstance.ProjectileType.COCONUT,
                 currentX + xOffset,
@@ -211,9 +211,7 @@ public class CoconutsBadnikInstance extends AbstractBadnikInstance {
                 xVel,
                 THROW_Y_VEL,
                 true,
-                !facingLeft);
-
-        services().objectManager().addDynamicObject(projectile);
+                !facingLeft));
     }
 
     @Override

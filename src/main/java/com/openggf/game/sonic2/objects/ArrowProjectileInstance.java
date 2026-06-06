@@ -76,6 +76,11 @@ public class ArrowProjectileInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean skipsSameFrameUpdateAfterSpawn() {
+        return true;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!initialized) {

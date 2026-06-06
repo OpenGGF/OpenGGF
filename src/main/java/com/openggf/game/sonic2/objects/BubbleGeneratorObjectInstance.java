@@ -227,10 +227,10 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance {
         if (bubbleSubtype == 2) {
             bubbleSize = 5; // Large breathable bubble needs size >= 3
         }
+        int finalBubbleSize = bubbleSize;
 
         int wobbleAngle = rng.nextByte();
-        BubbleObjectInstance bubble = new BubbleObjectInstance(spawnX, spawnY, bubbleSize, wobbleAngle);
-        services().objectManager().addDynamicObject(bubble);
+        spawnFreeChild(() -> new BubbleObjectInstance(spawnX, spawnY, finalBubbleSize, wobbleAngle));
 
         // ROM: Decrement bubble counter
         // subq.b #1,objoff_34(a0) / bpl.s loc_1FAC2

@@ -52,6 +52,69 @@ provider, service context, codec registry, or mode collaborator. Raising a
 budget should be treated like accepting a new architecture exception: document
 the reason and the next removal step in the same commit.
 
+## Raw Dynamic Object Bridge Exceptions
+
+`TestArchitecturalSourceGuard#migratedObjectChildSpawnsStayOnManagedHelpers`
+ratchets specific migrated object instance files so they cannot return to
+context-less `new ...` plus `ObjectManager.addDynamicObject*` child spawning.
+The remaining production raw dynamic-object calls are accepted only at these
+bridge boundaries:
+
+- `ObjectManager` owns the slot allocator and the `addDynamicObject*` API family.
+- `AbstractObjectInstance` owns `spawnChild`, `spawnFreeChild`, and legacy
+  dynamic-spawn helper wrappers.
+- `ObjectLifetimeOps` owns transferred-slot and reserved-slot lifecycle helpers.
+- `DefaultPowerUpSpawner` is the shared power-up visual bridge. It already
+  constructs object instances under `ObjectConstructionContext` when services
+  are available, then delegates final slot placement through `ObjectManager` or
+  `ObjectLifetimeOps`.
+- `DestructionEffects` is the shared badnik death bridge. It handles in-place
+  explosion replacement, animal release, and points popups across game-specific
+  factories.
+- `AbstractBossInstance#spawnDefeatExplosion` is the shared boss defeat helper
+  for subclasses that use the base defeat sequencer.
+- `SkidDustObjectInstance.spawn` is a static convenience bridge from playable
+  sprite movement into the object manager.
+
+New object-owned child/projectile/debris spawns should not be added to these
+exceptions. Prefer instance-owned `spawnChild` / `spawnFreeChild`, or
+`ObjectManager.createDynamicObject` only for static factory paths that have an
+active construction context but no object instance to call through.
+
+## Palette Ownership Bridge Exceptions
+
+Gameplay-time S3K level palette mutations should flow through
+`PaletteOwnershipRegistry` using `S3kPaletteWriteSupport` or the shared
+`PaletteWriteSupport` helper. Direct palette writes remain accepted only at
+these boundaries:
+
+- `S3kPaletteWriteSupport`, `PaletteWriteSupport`, `PaletteOwnershipRegistry`,
+  and `Palette` are the abstraction boundary for applying ownership claims,
+  fallback writes, and color decoding.
+- `Sonic3kPaletteCycler.cacheFallbackPaletteTexture` is a null-registry
+  fallback for standalone/test construction paths. Remove this exception when
+  runtime-owned registries are always supplied.
+- `AizIntroArtLoader` may cache standalone intro-art palette lines when no
+  level/runtime services are available during bootstrap.
+- `Sonic3kLevel` initial palette construction/upload is load-time
+  initialization, not a runtime multi-writer gameplay mutation.
+- `Sonic3kWaterDataProvider` builds returned underwater palette data; it should
+  use loader-local helpers and palette accessors, not gameplay ownership claims.
+- S3K data select, level select, and title screen are frontend/menu rendering
+  contexts. Their palette uploads route through `S3kFrontendPaletteUploader`
+  until a broader menu palette abstraction exists.
+- S3K special stage owns its own palette/fade/rotation model outside normal
+  gameplay level runtime. Manager-owned fade/rotation uploads now route through
+  a special-stage-local palette uploader, and results-screen uploads use that
+  same boundary; any remaining special-stage palette work should use local
+  helpers before considering `PaletteOwnershipRegistry`.
+- `Sonic3k` / `Sonic3kGameModule` standalone character and host-compatible
+  palette construction is out of the gameplay palette ownership surface.
+
+New S3K gameplay object, event, palette-cycle, boss, or badnik palette writes
+should not be added to these exceptions. Route them through ownership claims so
+normal and underwater surfaces compose consistently.
+
 ## Published Baseline Counts
 
 These counts are mechanically checked against `src/test/resources/archunit/frozen/stored.rules`
@@ -100,17 +163,13 @@ Allowed bridge classes are excluded directly in the ArchUnit rule:
 
 Frozen violations:
 
-- `AizIntroTerrainSwap` still reaches `GameServices.hasRuntime()` and
-  `GameServices.zoneLayoutMutationPipeline()` during immediate terrain mutation.
-- `ObjectManager.SolidContacts` reaches `GameServices.collision()` from shared
-  object collision resolution.
-- `ObjectManager.TouchResponses` reaches `GameServices.spritesOrNull()` while
-  restoring rewind overlap state.
+- None. The previous `AizIntroTerrainSwap` immediate-mutation bridge now routes
+  through injected `ObjectServices`.
 
 Target direction:
 
-- Route mutation/collision/sprite dependencies through injected object or manager
-  collaborators.
+- Keep mutation/collision/sprite dependencies routed through injected object or
+  manager collaborators.
 - Keep `ObjectServices` as the object-instance dependency boundary.
 
 ### Shared Layers Must Not Depend On Game-Specific Packages

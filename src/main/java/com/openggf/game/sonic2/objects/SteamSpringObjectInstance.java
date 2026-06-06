@@ -184,24 +184,15 @@ public class SteamSpringObjectInstance extends AbstractObjectInstance
      * First puff at x+0x28, second at x-0x28 (with x_flip).
      */
     private void spawnSteamPuffs() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
-            return;
-        }
-
         int cx = spawn.x();
         int cy = baseY; // ROM: move.w objoff_34(a0),y_pos(a1)
 
         // Right puff (normal orientation)
-        SteamPuffObjectInstance rightPuff = new SteamPuffObjectInstance(
-                cx + STEAM_PUFF_X_OFFSET, cy, false);
-        objectManager.addDynamicObject(rightPuff);
+        spawnFreeChild(() -> new SteamPuffObjectInstance(cx + STEAM_PUFF_X_OFFSET, cy, false));
 
         // Left puff (x-flipped)
         // ROM: subi.w #$28,x_pos(a1) / bset #render_flags.x_flip,render_flags(a1)
-        SteamPuffObjectInstance leftPuff = new SteamPuffObjectInstance(
-                cx - STEAM_PUFF_X_OFFSET, cy, true);
-        objectManager.addDynamicObject(leftPuff);
+        spawnFreeChild(() -> new SteamPuffObjectInstance(cx - STEAM_PUFF_X_OFFSET, cy, true));
     }
 
     // --- Solid object interface ---

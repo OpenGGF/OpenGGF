@@ -479,18 +479,20 @@ validate_ci_pr() {
     base_ref=$3
     head_ref=$4
 
-    if [ "$base_ref" != "develop" ]; then
+    if [ "$base_ref" != "develop" ] && [ "$base_ref" != "master" ]; then
         return 0
     fi
 
     range_files=$(git diff --name-only --diff-filter=ACMR "$base_sha...$head_sha")
 
-    if [ "$head_ref" != "master" ] && ! has_exact "$range_files" "README.md"; then
-        die "PRs from non-master branches into develop must update README.md with a brief branch summary."
-    fi
+    if [ "$base_ref" = "develop" ]; then
+        if [ "$head_ref" != "master" ] && ! has_exact "$range_files" "README.md"; then
+            die "PRs from non-master branches into develop must update README.md with a brief branch summary."
+        fi
 
-    if [ "$head_ref" = "master" ]; then
-        return 0
+        if [ "$head_ref" = "master" ]; then
+            return 0
+        fi
     fi
 
     for commit in $(git rev-list --reverse --no-merges "$base_sha..$head_sha"); do

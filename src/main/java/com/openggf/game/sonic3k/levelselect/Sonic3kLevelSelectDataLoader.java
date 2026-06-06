@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.levelselect;
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.S3kFrontendPaletteUploader;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Palette;
@@ -460,11 +461,7 @@ public class Sonic3kLevelSelectDataLoader {
 
         // Cache menu palettes (lines 0-3)
         if (menuPalettes != null) {
-            for (int i = 0; i < menuPalettes.length; i++) {
-                if (menuPalettes[i] != null) {
-                    graphicsManager.cachePaletteTexture(menuPalettes[i], i);
-                }
-            }
+            S3kFrontendPaletteUploader.cacheAll(graphicsManager, menuPalettes);
         }
 
         // Cache all patterns

@@ -209,6 +209,17 @@ behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Release hardening branch (2026-06-06).** Started the no-known-hidden-failures
+  release pass: documented the two-phase roadmap, enabled branch-policy checks
+  for release PRs, made ROM-gated tests reject invalid configured ROM files,
+  moved Turtloid/Sol constructor child spawns onto managed lifecycle helpers, and
+  isolated lightning-shield spark virtual patterns from shared object art.
+- **Release hardening validation (2026-06-06).** The same branch now keeps the
+  S3K AIZ/CNZ known-failing tests enabled, runs trace-replay policy tests in
+  release CI, bounds the one legacy S3K AIZ trace bootstrap, documents the S2
+  Tornado trace contract, resets the AIZ intro terrain-swap cache across game
+  bootstrap, and routes ICZ palette/animated-tile consumers through typed
+  runtime state.
 - **S1 complete-run trace suite — 18 acts from one TAS (2026-06-05).** A single complete-run BizHawk
   movie (Raiscan, every level start-to-finish) is auto-segmented by a new recorder
   (`tools/bizhawk/s1_complete_run_recorder.lua`) into a per-act trace for **all 18 S1 gameplay acts**

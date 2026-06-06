@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.specialstage;
 
 import com.openggf.data.RomByteReader;
+import com.openggf.data.PaletteLoader;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.ResultsScreen;
@@ -901,25 +902,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
     private void loadPalette(com.openggf.data.Rom rom) {
         try {
             byte[] paletteData = rom.readBytes(Sonic3kConstants.PAL_RESULTS_ADDR, 128);
-
-            resultsPalettes = new Palette[4];
-            for (int line = 0; line < 4; line++) {
-                resultsPalettes[line] = new Palette();
-                int offset = line * 32; // 32 bytes per line (16 colors x 2 bytes)
-                for (int c = 0; c < 16; c++) {
-                    int byteOffset = offset + (c * 2);
-                    if (byteOffset + 1 < paletteData.length) {
-                        // Big-endian Genesis color: ----BBB0GGG0RRR0
-                        int genesisColor = ((paletteData[byteOffset] & 0xFF) << 8) |
-                                (paletteData[byteOffset + 1] & 0xFF);
-                        int r = ((genesisColor >> 1) & 0x7) * 36;
-                        int g = ((genesisColor >> 5) & 0x7) * 36;
-                        int b = ((genesisColor >> 9) & 0x7) * 36;
-                        resultsPalettes[line].setColor(c,
-                                new Palette.Color((byte) r, (byte) g, (byte) b));
-                    }
-                }
-            }
+            resultsPalettes = PaletteLoader.fromBytes(paletteData);
             paletteLoaded = true;
         } catch (Exception e) {
             LOG.warning("Failed to load SS results palette: " + e.getMessage());
@@ -943,11 +926,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
 
         // Cache palettes (ROM line 63110: Pal_Results → all 4 palette lines)
         if (paletteLoaded && resultsPalettes != null) {
-            for (int i = 0; i < resultsPalettes.length; i++) {
-                if (resultsPalettes[i] != null) {
-                    gm.cachePaletteTexture(resultsPalettes[i], i);
-                }
-            }
+            Sonic3kSpecialStagePaletteUploader.cacheAll(gm, resultsPalettes);
         }
 
         artCached = true;

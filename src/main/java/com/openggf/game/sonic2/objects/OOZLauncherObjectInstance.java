@@ -244,11 +244,11 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
 
         for (int i = 0; i < count; i++) {
             SpriteMappingPiece piece = pieces.get(i);
-            LauncherFragmentInstance fragment = new LauncherFragmentInstance(
+            final int index = i;
+            spawnFreeChild(() -> new LauncherFragmentInstance(
                     spawn.x(), spawn.y(),
-                    FRAGMENT_VELOCITIES[i][0], FRAGMENT_VELOCITIES[i][1],
-                    piece, renderer);
-            objectManager.addDynamicObject(fragment);
+                    FRAGMENT_VELOCITIES[index][0], FRAGMENT_VELOCITIES[index][1],
+                    piece, renderer));
         }
     }
 

@@ -342,10 +342,9 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
             services().gameState().addScore(100);
 
             // Spawn floating "100" points sprite at cage position
-            PointsObjectInstance points = new PointsObjectInstance(
+            spawnFreeChild(() -> new PointsObjectInstance(
                     new ObjectSpawn(spawn.x(), spawn.y(), 0x29, 0, 0, false, 0),
-                    services(), 100);
-            services().objectManager().addDynamicObject(points);
+                    services(), 100));
         }
 
         // ObjD6 decrements the timer, then releases only when the signed
@@ -538,17 +537,15 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
 
         if (slotReward < 0) {
             // Bombs
-            BombPrizeObjectInstance bomb = new BombPrizeObjectInstance(
+            spawnFreeChild(() -> new BombPrizeObjectInstance(
                     startX, startY, spawn.x(), spawn.y(),
-                    displayDelay, activePrizeCount);
-            objectManager.addDynamicObject(bomb);
+                    displayDelay, activePrizeCount));
             prizeAngle += BOMB_ANGLE_INCREMENT;
         } else {
             // Rings
-            RingPrizeObjectInstance ring = new RingPrizeObjectInstance(
+            spawnFreeChild(() -> new RingPrizeObjectInstance(
                     startX, startY, spawn.x(), spawn.y(),
-                    displayDelay, activePrizeCount);
-            objectManager.addDynamicObject(ring);
+                    displayDelay, activePrizeCount));
             prizeAngle += RING_ANGLE_INCREMENT;
         }
 

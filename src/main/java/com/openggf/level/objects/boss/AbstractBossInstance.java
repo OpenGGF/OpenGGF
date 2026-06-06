@@ -1,7 +1,7 @@
 package com.openggf.level.objects.boss;
 
 import com.openggf.debug.DebugRenderContext;
-import com.openggf.graphics.GraphicsManager;
+import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -35,6 +35,11 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
     protected static final int DEFAULT_INVULNERABILITY_DURATION = 32;
     /** Boss explosion spawn interval (every 8 frames) */
     protected static final int EXPLOSION_INTERVAL = 8;
+    private static final String BOSS_FLASH_PALETTE_OWNER = "boss.flash";
+    private static final int BOSS_FLASH_PALETTE_PRIORITY = 200;
+    private static final int BOSS_FLASH_COLOR_INDEX = 1;
+    private static final int BOSS_FLASH_BLACK_WORD = 0x0000;
+    private static final int BOSS_FLASH_WHITE_WORD = 0x0EEE;
 
     protected final BossStateContext state;
     protected final BossHitHandler hitHandler;
@@ -370,14 +375,9 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
      * ROM Reference: s2.asm:60748-60754 (Boss_HandleHits palette flash)
      */
     protected class BossPaletteFlasher {
-        // ROM: s2.asm:60749 - moveq #0,d0 (black = 0x0000)
-        private static final Palette.Color BLACK = new Palette.Color((byte) 0, (byte) 0, (byte) 0);
-        // ROM: s2.asm:60752 - move.w #$EEE,d0 (white = 0x0EEE)
-        private static final Palette.Color WHITE = new Palette.Color((byte) 255, (byte) 255, (byte) 255); // 0xEEE scaled to RGB
-
         private boolean flashing;
         private int flashFrame;
-        private Palette.Color originalColor;
+        private int originalColorWord;
         private boolean colorStored;
         private boolean useWhite; // Internal toggle - immune to external palette modifications
 
@@ -390,13 +390,7 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
 
         public void stopFlash() {
             if (flashing && colorStored) {
-                // Restore original color
-                Palette palette = getPaletteForFlash();
-                if (palette != null) {
-                    palette.setColor(1, originalColor);
-                    // Upload restored palette to GPU
-                    uploadPaletteToGpu(palette);
-                }
+                applyFlashColor(originalColorWord);
             }
             flashing = false;
             flashFrame = 0;
@@ -415,30 +409,30 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
 
             // Store original color on first flash (make a copy to avoid reference issues)
             if (!colorStored) {
-                Palette.Color orig = palette.getColor(1);
-                originalColor = new Palette.Color(orig.r, orig.g, orig.b);
+                originalColorWord = PaletteWriteSupport.segaWordFromColor(palette.getColor(BOSS_FLASH_COLOR_INDEX));
                 colorStored = true;
             }
 
             // ROM: s2.asm:60749-60754 - Toggle between black (0x0000) and white (0x0EEE)
             // Use internal toggle state to ensure reliable alternation even if
             // palette cyclers or other systems modify the palette between frames
-            Palette.Color newColor = useWhite ? WHITE : BLACK;
-            palette.setColor(1, newColor);
+            int newColor = useWhite ? BOSS_FLASH_WHITE_WORD : BOSS_FLASH_BLACK_WORD;
+            applyFlashColor(newColor);
             useWhite = !useWhite; // Toggle for next frame
-
-            // Upload modified palette to GPU so the change is visible
-            uploadPaletteToGpu(palette);
 
             flashFrame++;
         }
 
-        private void uploadPaletteToGpu(Palette palette) {
-            GraphicsManager gm = services().graphicsManager();
-            if (gm.isGlInitialized()) {
-                int paletteIndex = getPaletteLineForFlash();
-                gm.cachePaletteTexture(palette, paletteIndex);
-            }
+        private void applyFlashColor(int segaWord) {
+            PaletteWriteSupport.applyColor(
+                    services().paletteOwnershipRegistryOrNull(),
+                    services().currentLevel(),
+                    services().graphicsManager(),
+                    BOSS_FLASH_PALETTE_OWNER,
+                    BOSS_FLASH_PALETTE_PRIORITY,
+                    getPaletteLineForFlash(),
+                    BOSS_FLASH_COLOR_INDEX,
+                    segaWord);
         }
 
         private Palette getPaletteForFlash() {

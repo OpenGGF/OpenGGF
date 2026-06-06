@@ -129,6 +129,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
     // Button state (now managed by separate button object)
     private EggPrisonButtonObjectInstance buttonObject;
     private boolean buttonTriggered = false;  // objoff_32
+    private boolean buttonSpawned = false;
 
     // Lock state
     private int lockX;
@@ -157,10 +158,6 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         // Initialize lock position (24 pixels above main body)
         this.lockX = spawn.x();
         this.lockY = spawn.y() - LOCK_Y_OFFSET;
-
-        // Spawn button as a separate object with full solid collision
-        // This matches the ROM structure where button is a child object with routine 4
-        spawnButtonObject();
     }
 
     /**
@@ -168,13 +165,12 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
      * ROM: Button is child object 2 with routine 4 (loc_3F354).
      */
     private void spawnButtonObject() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
+        if (buttonSpawned || services().objectManager() == null) {
             return;
         }
 
-        buttonObject = new EggPrisonButtonObjectInstance(spawn, this);
-        objectManager.addDynamicObject(buttonObject);
+        buttonSpawned = true;
+        buttonObject = spawnChild(() -> new EggPrisonButtonObjectInstance(spawn, this));
     }
 
     /**
@@ -202,6 +198,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
 
         this.lastPlayer = player;
         this.globalFrameCounter = frameCounter;
+        spawnButtonObject();
 
         // Update each sub-object according to its routine
         updateBody(player);
@@ -467,8 +464,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        ExplosionObjectInstance explosion = new ExplosionObjectInstance(0x27, x, y, renderManager, Sonic2Sfx.EXPLOSION.id);
-        objectManager.addDynamicObject(explosion);
+        spawnFreeChild(() -> new ExplosionObjectInstance(0x27, x, y, renderManager, Sonic2Sfx.EXPLOSION.id));
     }
 
     /**
@@ -481,9 +477,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        DestroyedEggPrisonObjectInstance destroyedCapsule =
-                new DestroyedEggPrisonObjectInstance(spawn, spawn.x(), spawn.y());
-        objectManager.addDynamicObject(destroyedCapsule);
+        spawnFreeChild(() -> new DestroyedEggPrisonObjectInstance(spawn, spawn.x(), spawn.y()));
     }
 
     /**
@@ -531,11 +525,10 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         int actNumber = services().currentAct() + 1;
         boolean allRingsCollected = services().areAllRingsCollected();
 
-        ResultsScreenObjectInstance resultsScreen = new ResultsScreenObjectInstance(
-                elapsedSeconds, ringCount, actNumber, allRingsCollected);
         ObjectManager objectManager = services().objectManager();
         if (objectManager != null) {
-            objectManager.addDynamicObject(resultsScreen);
+            spawnFreeChild(() -> new ResultsScreenObjectInstance(
+                    elapsedSeconds, ringCount, actNumber, allRingsCollected));
         }
 
         // Spawn static destroyed capsule visual before destroying main object

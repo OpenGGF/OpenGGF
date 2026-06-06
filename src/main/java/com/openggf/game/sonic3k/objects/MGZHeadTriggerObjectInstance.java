@@ -449,7 +449,7 @@ public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
         ObjectManager om = svc.objectManager();
         ObjectRenderManager rm = svc.renderManager();
         if (om != null && rm != null && rm.getExplosionRenderer() != null) {
-            om.addDynamicObject(new ExplosionObjectInstance(
+            spawnFreeChild(() -> new ExplosionObjectInstance(
                     0x27, spawn.x(), spawn.y(), rm));
         }
     }

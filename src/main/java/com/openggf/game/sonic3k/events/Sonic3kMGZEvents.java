@@ -60,8 +60,8 @@ import java.util.logging.Logger;
  * player entering specific boxes. Each appearance locks the camera into
  * a mini-arena, spawns Robotnik with screen shake, then releases when
  * the player moves past a release threshold. The third appearance's
- * release fires {@link #onMgz2BossArenaReached()} — the hook for the
- * (currently unimplemented) end-of-act boss.
+ * release fires {@link #onMgz2BossArenaReached()} as a route-transition
+ * marker. The end-boss spawn itself is owned by the MGZ2_Resize path.
  *
  */
 public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
@@ -668,8 +668,9 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     /**
      * ROM: MGZ2_QuakeEvent3Cont (sonic3k.asm:106775-106778). Release when the
      * player moves back past {@link #EVENT3_CONT_RELEASE_X}. In the ROM this
-     * is where the end-of-act boss fight would begin; the engine fires
-     * {@link #onMgz2BossArenaReached()} for that stubbed step.
+     * is where the end-of-act boss route continues; the engine fires
+     * {@link #onMgz2BossArenaReached()} as a route-transition marker while
+     * the later MGZ2_Resize path owns the actual boss spawn.
      */
     private void quakeEvent3Cont(int playerX) {
         if (playerX >= EVENT3_CONT_RELEASE_X) {
@@ -1862,13 +1863,12 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
 
     /**
      * Hook fired when the third drilling Robotnik mini-event completes its
-     * flee sequence (ROM: QuakeEvent3Cont — where the end-of-act boss fight
-     * normally begins). The default implementation logs and does nothing;
-     * when the MGZ2 end boss is implemented, override this to spawn the
-     * boss and set up its arena.
+     * flee sequence (ROM: QuakeEvent3Cont). The default implementation logs
+     * this route transition; the MGZ2_Resize path owns the end-boss spawn and
+     * arena setup.
      */
     protected void onMgz2BossArenaReached() {
-        LOG.info("MGZ2 boss arena reached — end boss not yet implemented");
+        LOG.info("MGZ2 drilling Robotnik third release reached; MGZ2_Resize owns end-boss spawn");
     }
 
     private void updateAct1Bg() {

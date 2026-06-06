@@ -3,6 +3,8 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.GameModule;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
@@ -12,7 +14,6 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.graphics.GLCommand;
-import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.ObjectSpawn;
@@ -258,7 +259,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
     private boolean statusBit6TopHit;
     /** ROM: {@code $20(a0)} damage flash/stun counter for non-final top hits. */
     private int topHitStunTimer;
-    private final Palette.Color[] savedBossFlashColors = new Palette.Color[BOSS_FLASH_PALETTE_INDICES.length];
+    private final int[] savedBossFlashSegaWords = new int[BOSS_FLASH_PALETTE_INDICES.length];
     private boolean bossFlashColorsSaved;
 
     /**
@@ -472,14 +473,11 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
         if (!bossFlashColorsSaved) {
             for (int i = 0; i < BOSS_FLASH_PALETTE_INDICES.length; i++) {
                 Palette.Color existing = palette.getColor(BOSS_FLASH_PALETTE_INDICES[i]);
-                savedBossFlashColors[i] = new Palette.Color(existing.r, existing.g, existing.b);
+                savedBossFlashSegaWords[i] = segaWordFromColor(existing);
             }
             bossFlashColorsSaved = true;
         }
-        for (int i = 0; i < BOSS_FLASH_PALETTE_INDICES.length; i++) {
-            palette.setColor(BOSS_FLASH_PALETTE_INDICES[i], colorFromSega(segaColors[i]));
-        }
-        cachePaletteLine1(palette);
+        applyBossFlashColors(segaColors);
     }
 
     private void restoreBossFlashColors() {
@@ -496,25 +494,31 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
             bossFlashColorsSaved = false;
             return;
         }
-        for (int i = 0; i < BOSS_FLASH_PALETTE_INDICES.length; i++) {
-            palette.setColor(BOSS_FLASH_PALETTE_INDICES[i], savedBossFlashColors[i]);
-        }
-        cachePaletteLine1(palette);
+        applyBossFlashColors(savedBossFlashSegaWords);
         bossFlashColorsSaved = false;
     }
 
-    private void cachePaletteLine1(Palette palette) {
-        GraphicsManager graphics = services().graphicsManager();
-        if (graphics != null && graphics.isGlInitialized()) {
-            graphics.cachePaletteTexture(palette, 1);
-        }
+    private void applyBossFlashColors(int[] segaWords) {
+        S3kPaletteWriteSupport.applyColors(
+                services().paletteOwnershipRegistryOrNull(),
+                services().currentLevel(),
+                services().graphicsManager(),
+                S3kPaletteOwners.CNZ_MINIBOSS,
+                S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                1,
+                BOSS_FLASH_PALETTE_INDICES,
+                segaWords);
     }
 
-    private static Palette.Color colorFromSega(int value) {
-        byte[] bytes = {(byte) ((value >> 8) & 0xFF), (byte) (value & 0xFF)};
-        Palette.Color color = new Palette.Color();
-        color.fromSegaFormat(bytes, 0);
-        return color;
+    private static int segaWordFromColor(Palette.Color color) {
+        int r3 = quantizeSegaComponent(color.r);
+        int g3 = quantizeSegaComponent(color.g);
+        int b3 = quantizeSegaComponent(color.b);
+        return (b3 << 9) | (g3 << 5) | (r3 << 1);
+    }
+
+    private static int quantizeSegaComponent(byte component) {
+        return (((component & 0xFF) * 7) + 127) / 255;
     }
 
     @Override

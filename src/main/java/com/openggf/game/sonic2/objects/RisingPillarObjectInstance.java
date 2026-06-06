@@ -303,9 +303,8 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
                 int vy = DEBRIS_DATA[i][1];
                 int delay = DEBRIS_DATA[i][2];
 
-                RisingPillarDebrisInstance debris = new RisingPillarDebrisInstance(
-                        x, y, vx, vy, piece, delay);
-                objectManager.addDynamicObject(debris);
+                spawnFreeChild(() -> new RisingPillarDebrisInstance(
+                        x, y, vx, vy, piece, delay));
             }
         }
 

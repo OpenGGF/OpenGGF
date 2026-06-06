@@ -272,9 +272,8 @@ public class RivetObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        ExplosionObjectInstance explosion = new ExplosionObjectInstance(
-                Sonic2ObjectIds.EXPLOSION, spawn.x(), spawn.y(), renderManager);
-        objectManager.addDynamicObject(explosion);
+        spawnFreeChild(() -> new ExplosionObjectInstance(
+                Sonic2ObjectIds.EXPLOSION, spawn.x(), spawn.y(), renderManager));
     }
 
     // ========================================================================

@@ -6,6 +6,8 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.palette.PaletteSurface;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Block;
@@ -106,6 +108,24 @@ public class TestS3kSlotsPaletteCycling {
         }
 
         assertTrue(distinctCount >= 3, "Expected multiple idle slot palette states over 24 frames, got " + distinctCount);
+    }
+
+    @Test
+    public void idleCycleSubmitsPaletteOwnershipClaims() throws IOException {
+        PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
+        RomByteReader reader = RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom());
+        Sonic3kPaletteCycler registryCycler = new Sonic3kPaletteCycler(reader, level, 0x15, 0, registry, null);
+
+        registryCycler.update();
+
+        for (int color = 10; color <= 14; color++) {
+            assertEquals(S3kPaletteOwners.SLOTS_ZONE_CYCLE,
+                    registry.ownerAt(PaletteSurface.NORMAL, 2, color),
+                    "Slots idle cycle should claim palette[2] color " + color);
+        }
+        assertEquals(S3kPaletteOwners.SLOTS_ZONE_CYCLE,
+                registry.ownerAt(PaletteSurface.NORMAL, 3, 14),
+                "Slots idle cycle should claim the shared line-4 accent");
     }
 
     @Test

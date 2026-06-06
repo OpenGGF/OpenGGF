@@ -111,8 +111,7 @@ public class CPZBossContainerExtend extends AbstractObjectInstance {
             return;
         }
         ObjectSpawn gunkSpawn = new ObjectSpawn(x, y, Sonic2ObjectIds.CPZ_BOSS, 0, renderFlags, false, 0);
-        CPZBossGunk gunk = new CPZBossGunk(gunkSpawn, mainBoss, false);
-        services().objectManager().addDynamicObject(gunk);
+        spawnChild(() -> new CPZBossGunk(gunkSpawn, mainBoss, false));
     }
 
     private void animate() {

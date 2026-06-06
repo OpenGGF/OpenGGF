@@ -3,7 +3,6 @@ package com.openggf.tests;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
@@ -137,7 +136,6 @@ public class TestS3kAiz1SkipHeadless {
     private static final int TOP_EXIT_CHECK_MAX_X = AIZ_MINIBOSS_TRIGGER_X - 0x20;
 
     @Test
-    @Disabled("Currently failing: hollow-log traversal no longer reaches the top exit height before stalling near the bottom.")
     public void hollowLogTraversal_regressionScenario_fromDebugCoords() {
         applyDebugStartState();
 
@@ -374,7 +372,6 @@ public class TestS3kAiz1SkipHeadless {
     }
 
     @Test
-    @Disabled("Currently failing: first hollow-log pass does not complete ascent, so re-entry parity cannot be asserted.")
     public void hollowLogTraversal_reentryLandsOnBottomFloor() {
         applyDebugStartState();
 
@@ -417,7 +414,6 @@ public class TestS3kAiz1SkipHeadless {
     }
 
     @Test
-    @Disabled("Currently failing: hollow-log ascent does not reach top-exit height before the momentum check.")
     public void hollowLogTraversal_topExitMaintainsForwardTraversal() {
         applyDebugStartState();
 

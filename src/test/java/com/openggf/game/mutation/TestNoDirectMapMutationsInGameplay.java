@@ -6,9 +6,12 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
@@ -28,6 +31,8 @@ class TestNoDirectMapMutationsInGameplay {
 
     private static final Pattern DIRECT_MAP_SETVALUE = Pattern.compile(
             "\\bgetMap\\s*\\(\\s*\\)\\s*\\.\\s*setValue\\s*\\(");
+    private static final Pattern LEVEL_MAP_ALIAS = Pattern.compile(
+            "\\b([A-Za-z_$][\\w$]*)\\s*=\\s*[^;\\r\\n]*\\.\\s*getMap\\s*\\(\\s*\\)\\s*;");
 
     private static final String[] SCAN_ROOTS = {
             "src/main/java/com/openggf/game/sonic1",
@@ -65,7 +70,7 @@ class TestNoDirectMapMutationsInGameplay {
                             // false positives on documentation that mentions
                             // the old pattern.
                             String stripped = stripCommentsAndStrings(content);
-                            if (DIRECT_MAP_SETVALUE.matcher(stripped).find()) {
+                            if (hasDirectMapMutation(stripped)) {
                                 violations.add(p.toString());
                             }
                         } catch (IOException e) {
@@ -80,6 +85,56 @@ class TestNoDirectMapMutationsInGameplay {
                     + "ZoneLayoutMutationPipeline.\n  "
                     + String.join("\n  ", violations));
         }
+    }
+
+    @Test
+    void detectsDirectChainedMapMutation() {
+        assertTrue(hasDirectMapMutation("""
+                class GameplayMutation {
+                    void apply(Level level) {
+                        level.getMap().setValue(0, 0, 1);
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void detectsMapAliasMutationFromLevelMap() {
+        assertTrue(hasDirectMapMutation("""
+                class GameplayMutation {
+                    void apply(Level level) {
+                        Map map = level.getMap();
+                        map.setValue(0, 0, 1);
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void ignoresMapMutationTextInCommentsAndStrings() {
+        String stripped = stripCommentsAndStrings("""
+                class Example {
+                    // level.getMap().setValue(0, 0, 1);
+                    String text = "Map map = level.getMap(); map.setValue(0, 0, 1);";
+                }
+                """);
+        assertFalse(hasDirectMapMutation(stripped));
+    }
+
+    private static boolean hasDirectMapMutation(String strippedSource) {
+        if (DIRECT_MAP_SETVALUE.matcher(strippedSource).find()) {
+            return true;
+        }
+        Matcher aliasMatcher = LEVEL_MAP_ALIAS.matcher(strippedSource);
+        while (aliasMatcher.find()) {
+            String alias = aliasMatcher.group(1);
+            Pattern aliasSetValue = Pattern.compile("\\b" + Pattern.quote(alias)
+                    + "\\s*\\.\\s*setValue\\s*\\(");
+            if (aliasSetValue.matcher(strippedSource).find()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

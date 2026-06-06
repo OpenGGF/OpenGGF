@@ -14,7 +14,15 @@ public final class S3kPaletteOwners {
     public static final String AIZ_MINIBOSS = "s3k.aiz.miniboss";
     public static final String AIZ_MINIBOSS_CUTSCENE = "s3k.aiz.minibossCutscene";
     public static final String AIZ_END_BOSS = "s3k.aiz.endBoss";
+    public static final String AIZ_INTRO_SUPER_PALETTE = "s3k.aiz.introSuperPalette";
+    public static final String AIZ_INTRO_CUTSCENE_KNUCKLES = "s3k.aiz.introCutsceneKnuckles";
+    public static final String AIZ_INTRO_EMERALD_PALETTE = "s3k.aiz.introEmeraldPalette";
+    public static final String SUPER_PALETTE = "s3k.super.palette";
+    public static final String AIZ1_ANPAL = "s3k.aiz1.anpal";
+    public static final String AIZ2_WATER_CYCLE = "s3k.aiz2.waterCycle";
+    public static final String AIZ2_TORCH_CYCLE = "s3k.aiz2.torchCycle";
     public static final String ZONE_EVENT_PALETTE_LOAD = "s3k.zoneEvents.paletteLoad";
+    public static final String HCZ_EVENT_PALETTE = "s3k.hcz.eventPalette";
     public static final String HCZ_WATER_CYCLE = "s3k.hcz.waterCycle";
     public static final String HCZ_CAVE_LIGHTING = "s3k.hcz.caveLighting";
     public static final String HCZ_MINIBOSS = "s3k.hcz.miniboss";
@@ -22,7 +30,19 @@ public final class S3kPaletteOwners {
     public static final String MHZ_MINIBOSS = "s3k.mhz.miniboss";
     public static final String MHZ_END_BOSS = "s3k.mhz.endBoss";
     public static final String MHZ_END_BOSS_DEFEAT_FADE = "s3k.mhz.endBossDefeatFade";
+    public static final String MGZ_MINIBOSS = "s3k.mgz.miniboss";
+    public static final String MGZ_TUNNELBOT = "s3k.mgz.tunnelbot";
     public static final String MGZ_END_BOSS = "s3k.mgz.endBoss";
+    public static final String MHZ1_CUTSCENE_RESTORE = "s3k.mhz1.cutsceneRestore";
+    public static final String LBZ_ZONE_CYCLE = "s3k.lbz.zoneCycle";
+    public static final String BPZ_ZONE_CYCLE = "s3k.bpz.zoneCycle";
+    public static final String CGZ_ZONE_CYCLE = "s3k.cgz.zoneCycle";
+    public static final String EMZ_ZONE_CYCLE = "s3k.emz.zoneCycle";
+    public static final String SLOTS_ZONE_CYCLE = "s3k.slots.zoneCycle";
+    public static final String PACHINKO_ZONE_CYCLE = "s3k.pachinko.zoneCycle";
+    public static final String ICZ_STARTUP_PALETTE = "s3k.icz.startupPalette";
+    public static final String ICZ_ZONE_CYCLE = "s3k.icz.zoneCycle";
+    public static final String LRZ_ZONE_CYCLE = "s3k.lrz.zoneCycle";
     /**
      * CNZ AnPal palette ownership for the bumper, background, and tertiary
      * animation tables.
@@ -43,6 +63,7 @@ public final class S3kPaletteOwners {
      * can observe the explicit owner.
      */
     public static final String CNZ_MINIBOSS = "s3k.cnz.miniboss";
+    public static final String CNZ2_CUTSCENE_RESTORE = "s3k.cnz2.cutsceneRestore";
     public static final String ICZ_MINIBOSS = "s3k.icz.miniboss";
     public static final String ICZ_END_BOSS = "s3k.icz.endBoss";
     /**

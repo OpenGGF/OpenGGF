@@ -180,10 +180,10 @@ class TestTraceReplayStartPositionPolicy {
         TraceData scz = TraceData.load(Path.of("src/test/resources/traces/s2/scz"));
         TraceData wfz = TraceData.load(Path.of("src/test/resources/traces/s2/wfz"));
 
-        assertTrue(TraceReplayBootstrap.usesS2TornadoRideStartForTraceReplay(scz),
-                "SCZ starts on ObjB2 after the native title-card object prelude, not as a ground spawn.");
-        assertTrue(TraceReplayBootstrap.usesS2TornadoRideStartForTraceReplay(wfz),
-                "WFZ starts on ObjB2 after the native title-card object prelude, not as a ground spawn.");
+        assertTrue(TraceReplayBootstrap.isS2TornadoRideStartMetadataCandidate(scz),
+                "SCZ metadata is eligible for the ObjB2-authorized Tornado ride-start prelude.");
+        assertTrue(TraceReplayBootstrap.isS2TornadoRideStartMetadataCandidate(wfz),
+                "WFZ metadata is eligible for the ObjB2-authorized Tornado ride-start prelude.");
     }
 
     @Test
@@ -191,7 +191,8 @@ class TestTraceReplayStartPositionPolicy {
         TraceData slotMachineTrace = TraceData.load(Path.of("src/test/resources/traces/s2/cnz"));
         TraceData tornadoTrace = TraceData.load(Path.of("src/test/resources/traces/s2/scz"));
 
-        assertTrue(slotMachineTrace.metadata().hasPerFrameCnzSlotMachineState());
+        assertTrue(slotMachineTrace.metadata().hasPerFrameSlotMachineState(),
+                "Replay policy should consume generic slot-machine recorder capability metadata.");
         assertEquals(4,
                 TraceReplayBootstrap.zoneFeatureTitleCardPreludeFramesForTraceReplay(slotMachineTrace),
                 "SlotMachine state traces need the native short init window before comparison.");
@@ -209,6 +210,6 @@ class TestTraceReplayStartPositionPolicy {
     void ordinaryS2TraceDoesNotUseTornadoRideStart() throws Exception {
         TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s2/ehz1_fullrun"));
 
-        assertFalse(TraceReplayBootstrap.usesS2TornadoRideStartForTraceReplay(trace));
+        assertFalse(TraceReplayBootstrap.isS2TornadoRideStartMetadataCandidate(trace));
     }
 }

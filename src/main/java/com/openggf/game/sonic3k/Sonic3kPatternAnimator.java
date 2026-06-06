@@ -9,6 +9,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.IczZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
@@ -1155,6 +1156,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
 
     private int resolveIczBgCameraX() {
         int cameraX = getCameraX();
+        IczZoneRuntimeState state = currentIczState();
+        if (state != null) {
+            return state.iczBgCameraX(cameraX, getCameraY());
+        }
         if (actIndex == 0) {
             int x = cameraX & 0xFFFF;
             if (x < 0x3940) {
@@ -1177,6 +1182,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     }
 
     private int resolveIczEventsBg10(int bgCameraX) {
+        IczZoneRuntimeState state = currentIczState();
+        if (state != null) {
+            return state.iczEventsBg10(getCameraX(), getCameraY());
+        }
         if (actIndex == 0) {
             int cameraX = getCameraX() & 0xFFFF;
             if (cameraX < 0x3940) {
@@ -1202,6 +1211,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     private int resolveIczAct1BgCameraY() {
         int cameraY = getCameraY();
         int cameraX = getCameraX() & 0xFFFF;
+        IczZoneRuntimeState state = currentIczState();
+        if (state != null) {
+            return state.iczAct1BgCameraY(cameraX, cameraY);
+        }
         if (cameraX < 0x3940) {
             return asrWordValue(cameraY, 7);
         }
@@ -1460,6 +1473,14 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             return null;
         }
         return S3kRuntimeStates.currentMhz(GameServices.zoneRuntimeRegistry())
+                .orElse(null);
+    }
+
+    private IczZoneRuntimeState currentIczState() {
+        if (!GameServices.hasRuntime()) {
+            return null;
+        }
+        return S3kRuntimeStates.currentIcz(GameServices.zoneRuntimeRegistry())
                 .orElse(null);
     }
 
@@ -2030,14 +2051,16 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             sc[i] = new com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot.ScriptCounter(
                     s.getTimer(), s.getFrameIndex());
         }
-        // Scalar state packed into extra blob (45 bytes: 1 bool + 11 ints)
-        java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(45);
+        // Scalar state packed into extra blob (53 bytes: 1 bool + 13 ints)
+        java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(53);
         buf.put((byte) (firstTreeApplied ? 1 : 0));
         buf.putInt(lastHcz1WaterlineDelta);
         buf.putInt(lastHcz2SmallBgLineValue);
         buf.putInt(lastHcz2Art2Value);
         buf.putInt(lastHcz2Art3Value);
         buf.putInt(lastHcz2Art4Value);
+        buf.putInt(lastMhzBg1Phase);
+        buf.putInt(lastMhzBg2Phase);
         buf.putInt(pachinkoPhase);
         buf.putInt(pachinkoSourceOffset);
         buf.putInt(pachinkoStripeOffset);
@@ -2068,6 +2091,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             lastHcz2Art2Value        = buf.getInt();
             lastHcz2Art3Value        = buf.getInt();
             lastHcz2Art4Value        = buf.getInt();
+            if (extra.length >= 53) {
+                lastMhzBg1Phase       = buf.getInt();
+                lastMhzBg2Phase       = buf.getInt();
+            }
             pachinkoPhase            = buf.getInt();
             pachinkoSourceOffset     = buf.getInt();
             pachinkoStripeOffset     = buf.getInt();

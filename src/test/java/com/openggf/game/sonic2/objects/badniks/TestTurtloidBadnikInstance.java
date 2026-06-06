@@ -61,6 +61,7 @@ public class TestTurtloidBadnikInstance {
             ObjectConstructionContext.clearConstructionContext();
         }
         base.setServices(services);
+        spawnInitialChildren(base);
 
         TurtloidRiderInstance rider = (TurtloidRiderInstance) getField(base, "rider");
         assertNotNull(rider, "Turtloid should spawn a rider child");
@@ -105,6 +106,7 @@ public class TestTurtloidBadnikInstance {
             ObjectConstructionContext.clearConstructionContext();
         }
         base.setServices(services);
+        spawnInitialChildren(base);
 
         TurtloidRiderInstance rider = (TurtloidRiderInstance) getField(base, "rider");
         assertNotNull(rider, "Turtloid should spawn a rider child");
@@ -178,6 +180,7 @@ public class TestTurtloidBadnikInstance {
             base = new TurtloidBadnikInstance(
                     new ObjectSpawn(0x200, 0x100, Sonic2ObjectIds.TURTLOID, 0x18, 0, false, 0));
             base.setServices(services);
+            spawnInitialChildren(base);
         } finally {
             ObjectConstructionContext.clearConstructionContext();
         }
@@ -212,9 +215,20 @@ public class TestTurtloidBadnikInstance {
             TurtloidBadnikInstance base = new TurtloidBadnikInstance(
                     new ObjectSpawn(0x200, 0x100, Sonic2ObjectIds.TURTLOID, 0x18, 0, false, 0));
             base.setServices(services);
+            spawnInitialChildren(base);
             return base;
         } finally {
             ObjectConstructionContext.clearConstructionContext();
+        }
+    }
+
+    private static void spawnInitialChildren(TurtloidBadnikInstance base) {
+        try {
+            Method ensureChildrenSpawned = TurtloidBadnikInstance.class.getDeclaredMethod("ensureChildrenSpawned");
+            ensureChildrenSpawned.setAccessible(true);
+            ensureChildrenSpawned.invoke(base);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to drive Turtloid child-spawn lifecycle", e);
         }
     }
 

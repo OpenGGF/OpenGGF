@@ -8,7 +8,6 @@ import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -48,6 +47,7 @@ public class SolBadnikInstance extends AbstractBadnikInstance {
     private int fireballsRemaining;
     private final SubpixelMotion.State motionState;
     private State state;
+    private boolean fireballsSpawned;
 
     public SolBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Sol", Sonic2BadnikConfig.DESTRUCTION);
@@ -59,11 +59,11 @@ public class SolBadnikInstance extends AbstractBadnikInstance {
         this.afterAnimation = new ObjectAnimationState(FIREBALL_ANIMATIONS, 0, 3);
         this.state = resolveInitialState(spawn.subtype());
         this.motionState = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
-        spawnFireballs();
     }
 
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+        ensureFireballsSpawned();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
             case WAIT_FOR_PLAYER -> {
@@ -111,17 +111,17 @@ public class SolBadnikInstance extends AbstractBadnikInstance {
         currentX = motionState.x;
     }
 
-    private void spawnFireballs() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
+    private void ensureFireballsSpawned() {
+        if (fireballsSpawned || services().objectManager() == null) {
             return;
         }
+        fireballsSpawned = true;
         int[] angles = { 0x00, 0x40, 0x80, 0xC0 };
         for (int angle : angles) {
-            SolFireballObjectInstance fireball = new SolFireballObjectInstance(spawn, this, angle);
+            SolFireballObjectInstance fireball = spawnChild(
+                    () -> new SolFireballObjectInstance(spawn, this, angle));
             fireballs.add(fireball);
             fireballsRemaining++;
-            objectManager.addDynamicObject(fireball);
         }
     }
 

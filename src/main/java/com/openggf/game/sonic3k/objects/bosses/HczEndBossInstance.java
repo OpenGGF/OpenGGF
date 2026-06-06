@@ -32,11 +32,12 @@ import java.util.logging.Logger;
  * descends from above, patrols horizontally with spinning blades, and has
  * a water column suction attack. Defeated after 8 hits.
  *
- * <p>This shell provides the state machine skeleton, camera lock mechanism,
- * collision, rendering, palette flash, and timer/callback utilities. Movement
- * routines and defeat logic are stubbed for later tasks.
+ * <p>This implementation provides the state machine, camera lock mechanism,
+ * movement routines, collision, rendering, palette flash, timer/callback
+ * utilities, and custom defeat/flee sequence.
  *
- * <p>Child objects (turbine, blades, visual child) are spawned in later tasks.
+ * <p>Child objects (turbine, blades, visual child) are implemented separately
+ * and follow the boss through explicit parent links.
  */
 public class HczEndBossInstance extends AbstractBossInstance {
     private static final Logger LOG = Logger.getLogger(HczEndBossInstance.class.getName());
@@ -677,19 +678,15 @@ public class HczEndBossInstance extends AbstractBossInstance {
     }
 
     // =========================================================================
-    // Child spawning (placeholders for Tasks 3-5)
+    // Child spawning
     // =========================================================================
 
     /**
      * Spawns all child objects for the boss.
-     * ROM: ChildObjDat_6BD8A — spawns Robotnik ship, 3 blades, visual child, turbine.
+     * ROM: ChildObjDat_6BD8A spawns Robotnik ship, turbine, and blade children.
      *
-     * <p>Children will be spawned when their classes are created:
-     * <ul>
-     *   <li>Task 3: Propeller turbine child at (0, 0x24)</li>
-     *   <li>Task 4: Blade children at (0x23, 0x12), (0x1B, 0x0A), (0x13, 0x0A)</li>
-     *   <li>Task 5: Water column visual child</li>
-     * </ul>
+     * <p>The water column visual child is owned by the turbine and spawned
+     * lazily when the turbine enters its active state.
      */
     private void spawnChildren() {
         // Robotnik ship cockpit at offset (0, 0x0C) — Obj_RobotnikShip2 subtype 5

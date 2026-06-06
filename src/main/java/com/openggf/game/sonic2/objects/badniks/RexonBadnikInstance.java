@@ -159,16 +159,15 @@ public class RexonBadnikInstance extends AbstractBadnikInstance
         // Spawn 5 head segments with indices 0, 2, 4, 6, 8
         for (int i = 0; i < 5; i++) {
             int headIndex = i * 2;  // 0, 2, 4, 6, 8
-            RexonHeadObjectInstance head = new RexonHeadObjectInstance(
+            RexonHeadObjectInstance head = spawnChild(() -> new RexonHeadObjectInstance(
                     spawn,
                     this,
                     currentX,
                     currentY,
                     headIndex,
                     xFlipFlag
-            );
+            ));
             heads.add(head);
-            services().objectManager().addDynamicObject(head);
         }
 
         // Set up head chain linking (s2.asm:73786-73795)

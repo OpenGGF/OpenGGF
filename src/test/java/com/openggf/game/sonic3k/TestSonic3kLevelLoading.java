@@ -9,6 +9,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
+import com.openggf.game.palette.PaletteSurface;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.graphics.GraphicsManager;
@@ -184,6 +185,9 @@ class TestSonic3kLevelLoading {
         for (int i = 0; i < introPaletteLine4.length; i++) {
             assertColorWord(line4.getColor(i + 1), introPaletteLine4[i],
                     "ICZ1 intro mountain palette line 4 color " + (i + 1));
+            assertEquals(S3kPaletteOwners.ICZ_STARTUP_PALETTE,
+                    GameServices.paletteOwnershipRegistry().ownerAt(PaletteSurface.NORMAL, 3, i + 1),
+                    "ICZ1 intro mountain palette line 4 color " + (i + 1) + " owner");
         }
     }
 

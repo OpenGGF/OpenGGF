@@ -168,9 +168,6 @@ public class AizShipBombInstance extends AbstractObjectInstance implements Touch
     }
 
     private void spawnExplosionFragments() {
-        var om = services().objectManager();
-        if (om == null) return;
-
         int[][] fragmentData = {
                 {0, -0x3C, 0, 0x0A},
                 {0, -0x0C, 1, 0x09},
@@ -185,12 +182,11 @@ public class AizShipBombInstance extends AbstractObjectInstance implements Touch
         for (int[] data : fragmentData) {
             int fragX = getX() + data[0];
             int fragY = currentY + data[1];
-            AizBombExplosionInstance fragment = new AizBombExplosionInstance(
-                    fragX, fragY, data[2], data[3]);
             // ROM Obj_AIZShipBomb uses AllocateObjectAfterCurrent for each
             // fragment (sonic3k.asm:105424), so children consume slots after
             // the bomb and may still execute later in the same object pass.
-            om.addDynamicObjectAfterCurrent(fragment);
+            spawnChild(() -> new AizBombExplosionInstance(
+                    fragX, fragY, data[2], data[3]));
         }
     }
 

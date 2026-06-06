@@ -8,6 +8,8 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.palette.PaletteSurface;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
@@ -29,6 +31,7 @@ import com.openggf.tests.rules.SonicGame;
 import java.io.IOException;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -185,6 +188,101 @@ public class TestS3kAiz2PaletteCycling {
         assertTrue(r > 0, "Torch color 1 should have R > 0 after first tick, got " + r);
         assertTrue(r >= g, "Torch fire color should have R >= G (warm tone), got R=" + r + " G=" + g);
         assertTrue(r >= b, "Torch fire color should have R >= B (warm tone), got R=" + r + " B=" + b);
+    }
+
+    @Test
+    public void torchGlowCycleSubmitsPaletteOwnershipClaim() throws IOException {
+        GraphicsManager.getInstance().initHeadless();
+        Aiz2StubLevel stubLevel = new Aiz2StubLevel();
+        PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
+        RomByteReader reader = RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom());
+
+        Sonic3kPaletteCycler cycler = new Sonic3kPaletteCycler(
+                reader, stubLevel, ZONE_AIZ, ACT_2, registry, null);
+
+        cycler.update();
+
+        assertEquals(S3kPaletteOwners.AIZ2_TORCH_CYCLE,
+                registry.ownerAt(PaletteSurface.NORMAL, 3, 1));
+    }
+
+    @Test
+    public void waterCycleSubmitsPaletteOwnershipClaims() throws IOException {
+        GraphicsManager.getInstance().initHeadless();
+        Aiz2StubLevel stubLevel = new Aiz2StubLevel();
+        PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
+        RomByteReader reader = RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom());
+
+        Sonic3kPaletteCycler cycler = new Sonic3kPaletteCycler(
+                reader, stubLevel, ZONE_AIZ, ACT_2, registry, null);
+
+        cycler.update();
+
+        for (int color = 12; color <= 15; color++) {
+            assertEquals(S3kPaletteOwners.AIZ2_WATER_CYCLE,
+                    registry.ownerAt(PaletteSurface.NORMAL, 3, color),
+                    "AIZ2 water cycle should claim palette[3] color " + color);
+        }
+        assertEquals(S3kPaletteOwners.AIZ2_WATER_CYCLE,
+                registry.ownerAt(PaletteSurface.NORMAL, 2, 4));
+        assertEquals(S3kPaletteOwners.AIZ2_WATER_CYCLE,
+                registry.ownerAt(PaletteSurface.NORMAL, 2, 8));
+        assertEquals(S3kPaletteOwners.AIZ2_WATER_CYCLE,
+                registry.ownerAt(PaletteSurface.NORMAL, 2, 14));
+        assertEquals(S3kPaletteOwners.AIZ2_WATER_CYCLE,
+                registry.ownerAt(PaletteSurface.NORMAL, 3, 11));
+    }
+
+    @Test
+    public void aiz1IntroCycleSubmitsPaletteOwnershipClaims() throws IOException {
+        GraphicsManager.getInstance().initHeadless();
+        GameServices.camera().setX((short) 0);
+        GameServices.camera().setLevelStarted(false);
+        Aiz2StubLevel stubLevel = new Aiz2StubLevel();
+        PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
+        RomByteReader reader = RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom());
+
+        Sonic3kPaletteCycler cycler = new Sonic3kPaletteCycler(
+                reader, stubLevel, ZONE_AIZ, 0, registry, null);
+
+        cycler.update();
+
+        for (int color = 2; color <= 5; color++) {
+            assertEquals(S3kPaletteOwners.AIZ1_ANPAL,
+                    registry.ownerAt(PaletteSurface.NORMAL, 3, color),
+                    "AIZ1 intro cycle should claim palette[3] color " + color);
+        }
+        for (int color = 13; color <= 15; color++) {
+            assertEquals(S3kPaletteOwners.AIZ1_ANPAL,
+                    registry.ownerAt(PaletteSurface.NORMAL, 3, color),
+                    "AIZ1 intro cycle should claim palette[3] color " + color);
+        }
+    }
+
+    @Test
+    public void aiz1GameplayCycleSubmitsPaletteOwnershipClaims() throws IOException {
+        GraphicsManager.getInstance().initHeadless();
+        GameServices.camera().setX((short) 0x1000);
+        GameServices.camera().setLevelStarted(true);
+        Aiz2StubLevel stubLevel = new Aiz2StubLevel();
+        PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
+        RomByteReader reader = RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom());
+
+        Sonic3kPaletteCycler cycler = new Sonic3kPaletteCycler(
+                reader, stubLevel, ZONE_AIZ, 0, registry, null);
+
+        cycler.update();
+
+        for (int color = 11; color <= 14; color++) {
+            assertEquals(S3kPaletteOwners.AIZ1_ANPAL,
+                    registry.ownerAt(PaletteSurface.NORMAL, 2, color),
+                    "AIZ1 gameplay cycle should claim palette[2] color " + color);
+        }
+        for (int color = 12; color <= 14; color++) {
+            assertEquals(S3kPaletteOwners.AIZ1_ANPAL,
+                    registry.ownerAt(PaletteSurface.NORMAL, 3, color),
+                    "AIZ1 gameplay cycle should claim palette[3] color " + color);
+        }
     }
 
     /**

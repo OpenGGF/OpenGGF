@@ -423,11 +423,7 @@ public class Sonic3kSpecialStageManager {
         palette.initialize(dataLoader, currentStage & 7,
                 playerCharacter == PlayerCharacter.KNUCKLES, skPalettes);
         com.openggf.level.Palette[] palLines = palette.getPalettes();
-        for (int i = 0; i < palLines.length; i++) {
-            if (palLines[i] != null) {
-                gm.cachePaletteTexture(palLines[i], i);
-            }
-        }
+        Sonic3kSpecialStagePaletteUploader.cacheAll(gm, palLines);
         LOGGER.fine("Cached " + palLines.length + " SS palette lines");
 
         // Mark art as loaded
@@ -596,22 +592,8 @@ public class Sonic3kSpecialStageManager {
                 // Checks R first, then G, then B. Only the first non-maxed channel
                 // is incremented. One MD step = 255/7 ≈ 37 in 0-255 range.
                 int step = 37;
-                for (int line = 0; line < 4; line++) {
-                    com.openggf.level.Palette pal = palette.getPalette(line);
-                    for (int c = 0; c < 16; c++) {
-                        int r = pal.colors[c].r & 0xFF;
-                        int g = pal.colors[c].g & 0xFF;
-                        int b = pal.colors[c].b & 0xFF;
-                        if (r < 255) {
-                            pal.colors[c].r = (byte) Math.min(255, r + step);
-                        } else if (g < 255) {
-                            pal.colors[c].g = (byte) Math.min(255, g + step);
-                        } else if (b < 255) {
-                            pal.colors[c].b = (byte) Math.min(255, b + step);
-                        }
-                    }
-                    GameServices.graphics().cachePaletteTexture(pal, line);
-                }
+                palette.fadeTowardWhiteOneStep(step);
+                Sonic3kSpecialStagePaletteUploader.cacheAll(GameServices.graphics(), palette.getPalettes());
             }
         }
 
@@ -636,7 +618,7 @@ public class Sonic3kSpecialStageManager {
                     perspective.getPaletteFrame(),
                     player.getTurning() < 0);
             // Push updated palette line 3 to graphics manager each frame
-            GameServices.graphics().cachePaletteTexture(palette.getPalette(3), 3);
+            Sonic3kSpecialStagePaletteUploader.cacheLine(GameServices.graphics(), palette.getPalette(3), 3);
         }
 
         // Background scroll

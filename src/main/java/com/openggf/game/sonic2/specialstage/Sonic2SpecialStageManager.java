@@ -10,6 +10,7 @@ import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic2.debug.Sonic2SpecialStageSpriteDebug;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 
@@ -78,7 +79,7 @@ public class Sonic2SpecialStageManager {
     private byte[] skydomeScrollTable;
     private Palette[] palettes;
 
-    private static final int SS_PATTERN_BASE = 0x1000;
+    private static final int SS_PATTERN_BASE = PatternAtlasRange.LEVEL_TILES.base() + 0x1000;
     private int backgroundPatternBase;
     private int trackPatternBase;
     private int playerPatternBase;

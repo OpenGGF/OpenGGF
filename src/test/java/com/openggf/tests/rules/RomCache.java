@@ -1,6 +1,10 @@
 package com.openggf.tests.rules;
 
 import com.openggf.data.Rom;
+import com.openggf.game.RomDetector;
+import com.openggf.game.sonic1.Sonic1RomDetector;
+import com.openggf.game.sonic2.Sonic2RomDetector;
+import com.openggf.game.sonic3k.Sonic3kRomDetector;
 import com.openggf.tests.RomTestUtils;
 
 import java.io.File;
@@ -49,8 +53,22 @@ final class RomCache {
             return null;
         }
         Rom rom = new Rom();
-        rom.open(romFile.getAbsolutePath());
+        if (!rom.open(romFile.getAbsolutePath())) {
+            return null;
+        }
+        if (!detectorFor(game).canHandle(rom)) {
+            rom.close();
+            return null;
+        }
         return rom;
+    }
+
+    private static RomDetector detectorFor(SonicGame game) {
+        return switch (game) {
+            case SONIC_1 -> new Sonic1RomDetector();
+            case SONIC_2 -> new Sonic2RomDetector();
+            case SONIC_3K -> new Sonic3kRomDetector();
+        };
     }
 }
 

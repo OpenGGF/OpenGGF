@@ -339,7 +339,7 @@ public final class TraceReplaySessionBootstrap {
     }
 
     private static void applyS2TornadoTitleCardScrollPrelude(TraceData trace, ObjectManager objectManager) {
-        if (!TraceReplayBootstrap.usesS2TornadoRideStartForTraceReplay(trace)
+        if (!TraceReplayBootstrap.isS2TornadoRideStartMetadataCandidate(trace)
                 || objectManager == null) {
             return;
         }
@@ -368,7 +368,7 @@ public final class TraceReplaySessionBootstrap {
     }
 
     private static int s2TornadoObjectPreludeFrames(TraceData trace, ObjectManager objectManager) {
-        if (!TraceReplayBootstrap.usesS2TornadoRideStartForTraceReplay(trace)
+        if (!TraceReplayBootstrap.isS2TornadoRideStartMetadataCandidate(trace)
                 || objectManager == null) {
             return 0;
         }
@@ -515,7 +515,7 @@ public final class TraceReplaySessionBootstrap {
     }
 
     private static void applyS2TornadoRideStart(TraceData trace, TraceReplayFixture fixture) {
-        if (!TraceReplayBootstrap.usesS2TornadoRideStartForTraceReplay(trace)
+        if (!TraceReplayBootstrap.isS2TornadoRideStartMetadataCandidate(trace)
                 || fixture == null
                 || fixture.sprite() == null) {
             return;

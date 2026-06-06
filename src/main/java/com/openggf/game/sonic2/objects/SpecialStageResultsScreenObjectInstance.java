@@ -129,7 +129,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     private static final int VRAM_END = 0x0710;        // End of HUD region (generous)
 
     private static final int PATTERN_BASE = PatternAtlasRange.TITLE_CARDS.base();
-    private static final int SOURCE_DIGITS_PATTERN_BASE = 0x41000;  // Separate base for preserved source digits
+    private static final int SOURCE_DIGITS_PATTERN_BASE = PatternAtlasRange.TITLE_CARDS.base() + 0x1000;
 
     // State tracking
     private int state = STATE_SLIDE_IN;

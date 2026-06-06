@@ -214,10 +214,7 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance {
         // using ObjC6_MapUnc_3D1DE (construction stripes), priority 1,
         // solid dimensions: half-width=$13, half-height=$20/$20.
         // This blocks the player from running past Eggman.
-        barrierWall = new BarrierWall(WALL_X, WALL_Y);
-        if (services().objectManager() != null) {
-            services().objectManager().addDynamicObject(barrierWall);
-        }
+        barrierWall = spawnChild(() -> new BarrierWall(WALL_X, WALL_Y));
 
         routineSecondary = STATE_WAIT_PLAYER;
         currentFrame = FRAME_STANDING;

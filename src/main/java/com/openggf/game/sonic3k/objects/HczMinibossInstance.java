@@ -1348,11 +1348,17 @@ public class HczMinibossInstance extends AbstractBossInstance {
             var level = services().currentLevel();
             Palette[] uwPalettes = waterSystem.getUnderwaterPalette(
                     services().featureZoneId(), services().featureActId());
-            if (uwPalettes != null && uwPalettes.length > 1 && graphics != null && level != null) {
-                Palette bossPal = new Palette();
-                bossPal.fromSegaFormat(line);
-                uwPalettes[1] = bossPal;
-                graphics.cacheUnderwaterPaletteTexture(uwPalettes, level.getPalette(0));
+            if (uwPalettes != null && uwPalettes.length > 1 && level != null) {
+                S3kPaletteWriteSupport.applyUnderwaterLine(
+                        services().paletteOwnershipRegistryOrNull(),
+                        level,
+                        graphics,
+                        uwPalettes,
+                        S3kPaletteOwners.HCZ_MINIBOSS,
+                        S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                        1,
+                        line,
+                        true);
             }
             waterPaletteLoaded = true;
         } catch (Exception e) {

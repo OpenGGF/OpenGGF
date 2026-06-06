@@ -4,7 +4,6 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectInstance;
-import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -323,20 +322,11 @@ public final class BuggernautBadnikInstance extends AbstractS3kBadnikInstance {
     private void spawnBaby() {
         int babyX = currentX + BABY_SPAWN_X_OFFSET;
         int babyY = currentY;
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
-            return;
+        BuggernautBabyInstance baby = spawnChild(
+                () -> new BuggernautBabyInstance(spawn, babyX, babyY, this));
+        if (!baby.isDestroyed() && baby.getSlotIndex() >= 0) {
+            childCount++;
         }
-
-        BuggernautBabyInstance baby =
-                new BuggernautBabyInstance(spawn, babyX, babyY, this);
-        int parentSlot = getSlotIndex();
-        if (parentSlot >= 0
-                && ObjectLifetimeOps.assignFindNextFreeChildSlot(objectManager, baby, parentSlot) < 0) {
-            return;
-        }
-        objectManager.addDynamicObject(baby);
-        childCount++;
     }
 
     // ── Player proximity (Find_SonicTails) ───────────────────────────────

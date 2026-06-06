@@ -10,7 +10,8 @@ public enum PatternAtlasRange {
     HUD(0x28000, 0x08000, "HUD"),
     WATER_SURFACE(0x30000, 0x08000, "Water surface"),
     SIDEKICK_BANKS(0x38000, 0x08000, "Sidekick banks"),
-    TITLE_CARDS(0x40000, 0x08000, "Title cards");
+    TITLE_CARDS(0x40000, 0x08000, "Title cards"),
+    TRANSIENT_EFFECTS(0x48000, 0x08000, "Transient effects");
 
     private final int base;
     private final int size;

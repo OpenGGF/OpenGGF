@@ -269,24 +269,20 @@ public class SpinyBadnikInstance extends AbstractBadnikInstance {
         // spike moves one frame early, arriving in the player/sidekick touchbox a
         // frame ahead of the ROM. Mirror CluckerBadnikInstance/NebulaBadnikInstance:
         // build with construction context, defer the init frame, add-after-current.
-        BadnikProjectileInstance spike = services().objectManager().createDynamicObject(
-                () -> new BadnikProjectileInstance(
-                        spawn,
-                        BadnikProjectileInstance.ProjectileType.SPINY_SPIKE,
-                        spawnX,
-                        spawnY,
-                        fireXVel,
-                        SPIKE_Y_VEL,
-                        true,  // Apply gravity (Obj98_SpinyShotFall)
-                        false  // No initial flip
-                ));
-        if (spike != null) {
-            // Remove the slot assigned by addDynamicObject and re-add after the
-            // current exec slot so the spike runs its no-move init frame this frame.
-            services().objectManager().removeDynamicObject(spike);
+        spawnChild(() -> {
+            BadnikProjectileInstance spike = new BadnikProjectileInstance(
+                    spawn,
+                    BadnikProjectileInstance.ProjectileType.SPINY_SPIKE,
+                    spawnX,
+                    spawnY,
+                    fireXVel,
+                    SPIKE_Y_VEL,
+                    true,  // Apply gravity (Obj98_SpinyShotFall)
+                    false  // No initial flip
+            );
             spike.deferFirstMovementForLoadSubObjectInit();
-            services().objectManager().addDynamicObjectAfterCurrent(spike);
-        }
+            return spike;
+        });
     }
 
     @Override

@@ -6,12 +6,13 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.RespawnState;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.save.SaveReason;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
-import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -211,15 +212,15 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance {
         if (level == null || level.getPaletteCount() <= CUTSCENE_PALETTE_LINE) {
             return;
         }
-        Palette target = level.getPalette(CUTSCENE_PALETTE_LINE);
-        for (int i = 0; i < savedPaletteLine1.getColorCount(); i++) {
-            Palette.Color color = savedPaletteLine1.getColor(i);
-            target.setColor(i, new Palette.Color(color.r, color.g, color.b));
-        }
-        GraphicsManager graphics = services().graphicsManager();
-        if (graphics != null && graphics.isGlInitialized()) {
-            graphics.cachePaletteTexture(target, CUTSCENE_PALETTE_LINE);
-        }
+        S3kPaletteWriteSupport.applyPaletteLine(
+                services().paletteOwnershipRegistryOrNull(),
+                level,
+                services().graphicsManager(),
+                S3kPaletteOwners.MHZ1_CUTSCENE_RESTORE,
+                S3kPaletteOwners.PRIORITY_CUTSCENE_OVERRIDE,
+                CUTSCENE_PALETTE_LINE,
+                savedPaletteLine1,
+                true);
     }
 
     private void savePostCutsceneRestartPoint(Camera camera) {
