@@ -2948,6 +2948,20 @@ public class LevelManager {
                         (int) camera.getMinX(),
                         (int) camera.getMaxX(),
                         (int) Math.max(camera.getMaxY(), camera.getMaxYTarget()));
+                // Capture the leader's spawn centre as the level-start anchor for
+                // the deferred sidekick placement / Pos_table prefill. ROM
+                // SpawnLevelMainSprites_SpawnPlayers places the CPU sidekick and
+                // fills Sonic_Pos_Record_Buf while the leader is at its spawn
+                // position, before the first LevelLoop physics tick
+                // (sonic3k.asm:8359-8369). The engine's controller placement is
+                // deferred to its first updateInit tick, which can land after the
+                // leader has moved on a mid-run zone entry, so anchor to this
+                // captured spawn centre rather than the live (moved) one.
+                if (player instanceof AbstractPlayableSprite leaderSprite) {
+                    sidekick.getCpuController().captureLevelStartLeaderAnchor(
+                            leaderSprite.getCentreX(),
+                            leaderSprite.getCentreY());
+                }
             }
         }
     }

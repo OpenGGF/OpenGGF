@@ -4,6 +4,32 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **CPU sidekick (Tails) keeps its carried-in follow state across an S3K
+  mid-run zone entry instead of being re-spawned:** the S3K complete-run
+  per-zone segments enter a zone mid-run from the previous zone's seamless
+  handoff, where ROM preserves the CPU sidekick's `Tails_CPU_routine`,
+  position, velocity, and the spawn-anchored `Sonic_Pos_Record_Buf` ring across
+  the boundary (only a fresh spawn with `Tails_CPU_routine == 0` re-runs the
+  `SpawnLevelMainSprites` placement, sonic3k.asm:8359-8369). The engine reset
+  its sidekick controller to `INIT` on every level (re)load and re-anchored
+  Tails to the live (already-moved) leader, so the delayed follow produced a
+  1px drift and an over-applied gravity tick at frame 1 (HCZ `tails_x`, LBZ
+  `tails_y`, plus the ICZ off-screen snowboard-intro dormant marker running
+  physics it should not). `SidekickCpuController` now, for a directly-compared
+  mid-run seed entry, (a) re-enters the ROM dormant marker (`Tails_CPU_routine
+  == $0A`, locret_13FC0) when the sidekick is parked at the off-screen
+  despawn sentinel, and (b) for an established follower (`Tails_CPU_routine ==
+  6`) preserves the carried position/velocity, applies only the centre-based
+  spawn-anchor placement, and prefills the leader Pos_table ring from the
+  captured level-load spawn anchor (`LevelManager.spawnSidekicks` →
+  `captureLevelStartLeaderAnchor`) so the delayed-follow target reproduces
+  ROM's "Tails held still for 16 frames" entry. Gated on the semantic
+  seed-compare/sentinel state, never a zone/frame/route, and inert for
+  natively-driven entries (MGZ/CNZ fall-in) and fresh level loads, so the
+  dedicated S3K AIZ (f8941), CNZ (f17276), MGZ (f4124) and S2 EHZ1 trace
+  frontiers are unchanged. HCZ advances f1 → f125; ICZ/LBZ clear the
+  Tails-dormancy frame-1 failure (their remaining frame-1 divergence is the
+  separate player-descent/camera inter-zone gap shared with CNZ/MHZ).
 - **S3K complete-run per-zone traces clear their frame-0 bootstrap mismatches
   via a one-time mid-run start seed:** the per-zone S3K complete-run segments
   arm at each zone's first control-unlocked frame, but five of the seven zones

@@ -136,6 +136,17 @@ public final class TraceReplayBootstrap {
             // BK2 input stream then drives every later frame natively. No
             // per-frame writeback occurs.
             if (fixture != null) {
+                // Tell each sidekick CPU controller that its frame-0 kinematic
+                // state was loaded by the directly-compared mid-run seed, so its
+                // first tick (trace frame 1) continues from that carried-in
+                // follow state instead of re-running the SpawnLevelMainSprites
+                // placement reset. This also prefills the leader Pos_table ring
+                // from the captured spawn anchor — and MUST run BEFORE the
+                // seed-frame leader record below so that record lands on the
+                // freshly prefilled ring (slot 0) rather than being overwritten.
+                // Natively-driven complete-run entries (MGZ/CNZ) never reach this
+                // branch, so their baselines are unaffected.
+                markSidekicksEnteredFromSeedCompareFrame0(fixture);
                 // Consume BK2 input 0 so trace frame 1 uses BK2 input 1, exactly
                 // like the sidekick-seed path below. The frame-0 row is the
                 // seeded state, not the product of a driven physics tick.
@@ -591,6 +602,27 @@ public final class TraceReplayBootstrap {
         }
 
         return current.withVisualDiagnosticsFrom(next);
+    }
+
+    /**
+     * Flags every registered CPU sidekick controller that its frame-0 kinematic
+     * state was loaded by the directly-compared mid-run complete-run seed, so its
+     * first tick continues from that carried-in follow state instead of running
+     * the SpawnLevelMainSprites placement reset. See
+     * {@link com.openggf.sprites.playable.SidekickCpuController#setEnteredFromSeedCompareFrame0(boolean)}.
+     */
+    private static void markSidekicksEnteredFromSeedCompareFrame0(
+            com.openggf.trace.replay.TraceReplayFixture fixture) {
+        if (fixture == null || fixture.gameplayMode() == null
+                || fixture.gameplayMode().getSpriteManager() == null) {
+            return;
+        }
+        for (AbstractPlayableSprite sidekick
+                : fixture.gameplayMode().getSpriteManager().getRegisteredSidekicks()) {
+            if (sidekick.getCpuController() != null) {
+                sidekick.getCpuController().setEnteredFromSeedCompareFrame0(true);
+            }
+        }
     }
 
     private static void recordSeedFrameInputHistory(AbstractPlayableSprite sprite, int inputMask) {

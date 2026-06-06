@@ -4202,8 +4202,24 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * write goes to slot 0.
          */
         public void prefillPositionHistoryWithOffset(int xOffset, int yOffset) {
-                short prefillX = (short) (getCentreX() + xOffset);
-                short prefillY = (short) (getCentreY() + yOffset);
+                prefillPositionHistoryWithCentre(
+                                (short) (getCentreX() + xOffset),
+                                (short) (getCentreY() + yOffset));
+        }
+
+        /**
+         * Fills the entire delayed Pos_table ring with an explicit centre
+         * coordinate (rather than the live centre {@link #resetPositionHistory()}
+         * uses). Mirrors ROM filling {@code Sonic_Pos_Record_Buf} with the
+         * leader's spawn position at level-load
+         * (SpawnLevelMainSprites / Reset_Player_Position_Array,
+         * sonic3k.asm:8359-8369,22166-22193) before the leader's first physics
+         * tick moves it. Used by the deferred sidekick placement so the
+         * delayed-follow target reproduces the ROM "frozen for 16 frames"
+         * spawn-anchored ring even when the controller first ticks after the
+         * leader has already moved.
+         */
+        public void prefillPositionHistoryWithCentre(short prefillX, short prefillY) {
                 for (int i = 0; i < xHistory.length; i++) {
                         xHistory[i] = prefillX;
                         yHistory[i] = prefillY;
