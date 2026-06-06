@@ -1,5 +1,55 @@
 # Trace Frontier Log
 
+## 2026-06-06 - S1 complete-run SBZ3/FZ movie split regenerated
+
+- User replaced `src/test/resources/traces/s1/_movies/s1-complete-run.bk2` with a TAS that now completes the game.
+- Re-recorded the complete-run movie with `tools/bizhawk/s1_complete_run_recorder.lua`.
+- The previous `fz_completerun` resource was actually the LZ act-4/SBZ3 segment and ended early:
+  `bk2_frame_offset=181004`, `trace_frame_count=3234`.
+- New split:
+  - `sbz3_completerun`: ROM slot `lz` act 4, `bk2_frame_offset=181004`, `trace_frame_count=8354`.
+  - `fz_completerun`: ROM slot `sbz` act 3, `bk2_frame_offset=189578`, `trace_frame_count=4457`.
+- Added `TestS1Sbz3CompleteRunTraceReplay`; updated `TestS1FzCompleteRunTraceReplay` and
+  `tools/bizhawk/s1-complete-run-level-map.txt`.
+- Focused verification command:
+  `mvn.cmd -q "-Dmse=relaxed" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" "-Dtest=com.openggf.tests.trace.s1.TestS1Sbz3CompleteRunTraceReplay,com.openggf.tests.trace.s1.TestS1FzCompleteRunTraceReplay" test`
+- Result: both tests execute against the new movie/trace data, but remain RED on engine parity.
+  SBZ3 first error is frame 45 (`x`, expected `0x0B4B`, actual `0x0B48`); FZ first error is
+  frame 277 (`air`, expected `0`, actual `1`). Treat these as genuine parity frontiers, not
+  bad-recording/setup failures.
+
+## 2026-06-06 - s1 ghz2 f615 (triage only, no engine edit): GHZ bridge lands Sonic one frame early
+
+- Branch `bugfix/ai-trace-s1-ghz2`, worktree `.worktrees/trace-s1-ghz2`.
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" "-Dtest=TestS1Ghz2CompleteRunTraceReplay#replayMatchesTrace" test`
+- **Status: triage only (still failing).** First-error frame **615**, field **y_speed**
+  (expected=0x0568, actual=0x0000), 476 errors. Surefire: `Tests run: 1, Failures: 1`.
+- **Symptom:** Frames 595-614 match exactly while Sonic is airborne+rolling, falling onto a GHZ
+  log bridge (Obj11, near slot s46 `0x11 Bridge @05A8,0118`). At f614 both ROM/engine are
+  air=1, rolling=1, y=0x00F9, y_speed=0x0530 (gravity +0x38/frame). At f615 ROM continues
+  airborne (air=1, y_speed=0x0568 = 0x0530+0x38, y=0x00FE); the engine has already landed
+  (air=0, rolling=0, y_speed=0x0000, g_speed=0x02A1, ride=1 onSlot=46(0x11), Y snapped
+  0xFE->0xFC). ROM lands at f616 (air=0). The engine applies the bridge landing/Y-snap/
+  velocity-zero one frame before the ROM.
+- **Hypothesis (ROM-cited, no fix landed yet):** ROM bridge landing is two-routine staged.
+  `Bri_Action` (routine 2) calls `Bri_Solid` -> `PlatformObject`/`Platform3`
+  (docs/s1disasm/_incObj/11 Bridge.asm:83-114, docs/s1disasm/_incObj/sub PlatformObject.asm:19-42):
+  Y-range catch `d1=SonicY+obHeight+4; d0=(obY-8)-d1; bhi Plat_Exit; cmpi.w #-$10,d0; blo Plat_Exit`
+  with rolling obHeight=0xE (docs/s1disasm/_Constants.asm:189-191) lands when
+  `SonicY in [0xFE,0x10E]` for bridge top 0x110. On the landing frame `Plat_NoCheck`
+  (sub PlatformObject.asm:45-77) sets on-object, zeroes obVelY, copies inertia, and
+  `addq.b #2,obRoutine(a0)` advances the bridge to routine 4; `Bri_MoveSonic`
+  (11 Bridge.asm:163-177) only finalizes Sonic's Y the FOLLOWING frame. The engine's
+  `Sonic1BridgeObjectInstance` uses `SolidExecutionMode.MANUAL_CHECKPOINT` and lands+snaps in a
+  single `checkpointAll()` pass with no routine-2->4 staging delay, so its air->0/Y-snap/
+  velocity-zero surfaces one frame early relative to the ROM recorder's V-int sample phase.
+  Likely fix area: `Sonic1BridgeObjectInstance` landing/checkpoint timing (defer the apply by one
+  object pass to mirror the ROM routine staging) -- to be confirmed against the snapshot ordering in
+  the fix stage. Comparison-only; no zone/route/frame/gameId carve-out.
+- Files: `src/main/java/com/openggf/game/sonic1/objects/Sonic1BridgeObjectInstance.java`,
+  `src/main/java/com/openggf/level/objects/ObjectSolidContactController.java` (generic sloped landing).
+
 ## 2026-06-05 - s2 arz2 f857->f899: water profile not applied on a hurt-landing frame
 
 - Branch `bugfix/ai-trace-s2-arz2`, worktree `.worktrees/trace-s2-arz2`.

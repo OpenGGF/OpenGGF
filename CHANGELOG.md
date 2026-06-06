@@ -4,6 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 complete-run trace data now separates SBZ3 and Final Zone correctly:**
+  `s1-complete-run.bk2` has been replaced with a movie that reaches the real
+  end of the game, and the BizHawk complete-run trace resources now split the
+  late-game route into `sbz3_completerun` (ROM LZ act 4 / SBZ3) and
+  `fz_completerun` (ROM SBZ act 3 / Final Zone). `TestS1Sbz3CompleteRunTraceReplay`
+  covers the newly materialized SBZ3 segment, while `TestS1FzCompleteRunTraceReplay`
+  now targets the actual Final Zone segment instead of the stale truncated
+  SBZ3 data. Both traces execute against the shared movie and currently expose
+  genuine engine parity frontiers.
 - **OOZ/CPZ rising platform now integrates sub-pixels (ROM-accurate):**
   `CPZPlatformObjectInstance` auto-rise (Obj19_MoveRoutine5/6) previously did
   `y += yVel >> 8`, dropping the sub-pixel fraction and stepping a full pixel

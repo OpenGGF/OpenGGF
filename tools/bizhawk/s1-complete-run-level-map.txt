@@ -19,5 +19,6 @@ slz2    3/1           143290       5894
 slz3    3/2           149403       13732
 sbz1    5/0           163354       7619
 sbz2    5/1           171193       9594
-fz      1/3           181004       3234
-# movie length = 184239 frames; 18 gameplay acts total.
+sbz3    1/3           181004       8354
+fz      5/2           189578       4457
+# movie length = 195493 frames; 19 gameplay acts total.
