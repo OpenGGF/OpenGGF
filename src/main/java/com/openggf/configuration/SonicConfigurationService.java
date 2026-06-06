@@ -405,6 +405,7 @@ public class SonicConfigurationService {
 		putDefaultKey(SonicConfiguration.LEFT, GLFW_KEY_LEFT);
 		putDefaultKey(SonicConfiguration.RIGHT, GLFW_KEY_RIGHT);
 		putDefaultKey(SonicConfiguration.JUMP, GLFW_KEY_SPACE);
+		putDefaultKey(SonicConfiguration.START, GLFW_KEY_BACKSPACE);
 		putDefaultKey(SonicConfiguration.P2_UP, GLFW_KEY_I);
 		putDefaultKey(SonicConfiguration.P2_DOWN, GLFW_KEY_K);
 		putDefaultKey(SonicConfiguration.P2_LEFT, GLFW_KEY_J);

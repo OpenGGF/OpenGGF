@@ -52,6 +52,22 @@
   comparison-only, and add no trace hydration, tolerance, zone/route/frame
   carve-out, or game-name branch. The target traces remain red at later
   frontiers.
+## 2026-06-07 - S3K complete-run Stage 3: CPU Tails mid-run dormancy/established-follower entry (HCZ f1->f125; ICZ/LBZ Tails f1 cleared)
+
+- Worktree `C:/tmp/wt-s3k-integ`, branch `feature/ai-s3k-complete-run` (off the merged complete-run integration HEAD 0fa4125c7). forkCount=1, reuseForks=false, `-Xshare:off -Xmx3g`, s3k.gen (+ s2.gen for EHZ1).
+- Root cause: the S3K complete-run per-zone segments enter a zone mid-run from the previous zone's seamless handoff, where ROM preserves the CPU sidekick's `Tails_CPU_routine`/position/velocity and the spawn-anchored `Sonic_Pos_Record_Buf` ring. `SpawnLevelMainSprites_SpawnPlayers` only re-places Tails for a fresh spawn with `Tails_CPU_routine == 0` (`docs/skdisasm/sonic3k.asm:8359-8369`); a routine-6 follower keeps going through `TailsCPU_Normal` (`loc_13DA6`, sonic3k.asm:26682-26741) and the off-screen routine-$0A marker (`locret_13FC0`, sonic3k.asm:26374,26800-26809) runs no physics. The engine reset its controller to INIT each load and re-anchored Tails to the live (already-moved) leader → frame-1 `tails_x`/`tails_y` drift (HCZ/LBZ) and gravity applied to the ICZ off-screen dormant marker.
+- Change (engine, comparison-only): `SidekickCpuController` re-enters the dormant marker when seeded at the despawn sentinel, and for an established follower preserves carried position/velocity + only the centre-based spawn-anchor placement, prefilling the leader Pos_table ring from a level-load spawn anchor captured by `LevelManager.spawnSidekicks`/`captureLevelStartLeaderAnchor`. Gated on the semantic seed-compare/sentinel state (set by the bootstrap orchestration, NOT the seed method) + `PhysicsFeatureSet.sidekickRespawnEntersCatchUpFlight()`; never a zone/frame/route. Inert for natively-driven entries (MGZ/CNZ fall-in) and fresh loads.
+- Command: `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Ds3k.rom.path=...\s3k.gen" -Dtest=<class> test`
+- Targets moved: **HCZ CompleteRun f1 -> f125** (`tails_air`; now a Tails terrain walk-off frontier, well past the dormancy entry). **ICZ CompleteRun** Tails-dormancy f1 (`tails_y_speed`) cleared -> f1 `y_speed` (player snowboard descent, separate object-driven gap). **LBZ CompleteRun** Tails-dormancy f1 (`tails_y`) cleared -> f1 `camera_y` (camera settle, separate gap). HCZ does NOT yet reach its accidental-pause window (~f25478); f125 is a separate Tails/terrain frontier outside the dormancy fix.
+- No-regression (all UNCHANGED at baseline): S3K dedicated Aiz f8941 (camera_y), Cnz f17276 (x_speed; the 3 deep-CNZ2 slot-pressure sub-tests at f17995+ remain pre-existing failures past the frontier), Mgz f4124 (y_speed); S2 EHZ1 GREEN. Complete-run AIZ f1095 (x_speed), MGZ f219 (rings), CNZ f1 (y), MHZ f1 (y) UNCHANGED. Must-keep-green S3K (TestS3kAiz1SkipHeadless, TestSonic3kLevelLoading, TestSonic3kBootstrapResolver, TestSonic3kDecodingUtils) GREEN; sidekick unit tests (TestSidekickCpuFollowParity, TestSidekickCpuControllerCatchUpFlight, TestSidekickCpuDespawnParity) GREEN.
+
+## 2026-06-06 - S3K complete-run Stage 2: ROM in-game pause in the replay tick (no frontier move; cross-game baselines unchanged)
+
+- Worktree `C:/tmp/wt-s3k-stage2`, branch `feature/ai-s3k-pause-replay`, off develop 92d2f8b95. forkCount=1, reuseForks=true, s2.gen + s3k.gen.
+- Change: modelled ROM `Game_paused` / `Pause_Loop` (universal Start-edge toggle: S1 `docs/s1disasm/_inc/PauseGame.asm:5-54`, S2 `docs/s2disasm/s2.asm:1585-1633`, S3K `docs/skdisasm/s3.asm:1690-1761` at top of `LevelLoop` `docs/skdisasm/sonic3k.asm:7884-7894`). A P1 Start-press edge during level gameplay toggles `GameStateManager.gamePaused`; while paused the level update is skipped for the frame but the frame counter/input cursor advance, so a paused window stays frame-aligned. New `LevelFrameStep.executeWithPause` used by `GameLoop` (live `START` key) and `HeadlessTestRunner` (BK2 P1 Start bit). Comparison-only: pause is input-driven, never from trace data.
+- Verified inert on all existing traces (none press Start). Cross-game sweep command:
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=...\s2.gen" "-Ds3k.rom.path=...\s3k.gen" "-Dtest=TestS2Ehz1TraceReplay,TestS2ArzLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS3kAizTraceReplay,TestS3kCnzTraceReplay,TestS3kMgzTraceReplay" test`
+- Result (all UNCHANGED): EHZ1 GREEN, Arz GREEN, Wfz GREEN, Mtz2 first error f1217 (tails_x), S3K Aiz f8941 (camera_y), Cnz f17276 (x_speed), Mgz f4124 (y_speed). New unit test `TestInGamePause` (5 tests) + `TestConfigCatalog` (6) green.
 
 ## 2026-06-06 - s1 SBZ3/FZ complete-run split: FZ f0->f277 (bootstrap fixed), SBZ3 new f45
 
@@ -9275,3 +9291,40 @@ zone/route/frame/gameId carve-out, comparison-only invariant held.
   downstream goalplate/control-lock Tails-follow parity gap — reconcile the engine's end-of-act
   control-lock consumer so EHZ1 returns to green with the latch in place.
 - Held green (no regression): WFZ (level-select). Verified green at HEAD and with fix.
+
+## 2026-06-06 — S3K complete-run frame-0 bootstrap seed (5 zones cleared frame 0)
+
+Worktree `C:/tmp/wt-s3k-integ`, branch `feature/ai-s3k-complete-run`, forkCount=1, reuseForks=false,
+`-Xshare:off -Xmx3g`, s3k.gen. Command (the 7 new S3K complete-run per-zone fixtures):
+`mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=false "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Ds3k.rom.path=...\s3k.gen" "-Dtest=TestS3kAizCompleteRunTraceReplay,TestS3kHczCompleteRunTraceReplay,TestS3kMgzCompleteRunTraceReplay,TestS3kCnzCompleteRunTraceReplay,TestS3kIczCompleteRunTraceReplay,TestS3kLbzCompleteRunTraceReplay,TestS3kMhzCompleteRunTraceReplay" test`
+
+Fix (comparison-only, one-time pre-trace seed): `TraceReplaySessionBootstrap.seedS3kCompleteRunStartState`
+applies the recorded frame-0 player velocity/rolling/air + camera + sidekick (Tails) position once before
+replay, paired with `TraceReplayBootstrap.applyReplayStartStateForTraceReplay(..., seeded)` returning
+`ReplayStartState(1,0)` so frame 0 is compared directly against the seeded engine state and frame 1+ drive
+natively from BK2. Selected by recorded frame-0 ROM-state shape (airborne+y_speed==0, rolling, or a present
+near-leader sidekick the native first step would re-anchor) and the `complete_run` profile + recorded
+sidekick — never a zone id/route/frame. No per-frame writeback. Files: `TraceReplaySessionBootstrap.java`,
+`TraceReplayBootstrap.java`.
+
+- Status: frame-0 bootstrap mismatches cleared on all 7; 5 mid-run zones advanced to a new per-frame frontier.
+- AIZ complete-run: f1095 (unchanged baseline — native drive, not seeded).
+- MGZ complete-run: f219 (unchanged baseline — native drive, not seeded).
+- CNZ complete-run: f0 (y_speed) -> f1 (`y` exp 0x061C act 0x0600). New frontier = object-driven inter-zone
+  descent the engine does not model at this entry.
+- MHZ complete-run: f0 (y_speed) -> f1 (`y` exp 0x051C act 0x0500). Same class as CNZ; camera_x frame-0 also
+  cleared by the camera seed.
+- ICZ complete-run: f0 (rolling) -> f1 (`tails_y_speed` exp 0 act 0x0038). New frontier = engine animates the
+  still-parked snowboard-intro Tails one frame before ROM.
+- HCZ complete-run: f0 (tails_x) -> f1 (`tails_x` exp 0x0260 act 0x025F). New frontier = engine runs Tails
+  horizontal CPU follow during the HCZ falling intro while ROM keeps CPU Tails dormant (x frozen at 0x0260).
+  NOTE: HCZ does NOT yet reach its accidental in-game pause window (~f23511); the f1 intro-fall sidekick
+  divergence is a separate per-frame sidekick-AI parity gap, not a bootstrap issue, and was deliberately not
+  hacked.
+- LBZ complete-run: f0 (tails_y) -> f1 (`tails_y` exp 0x0654 act 0x0650). New frontier = engine re-grounds the
+  spawn +4 CPU Tails on the first frame; ROM holds the +4 (CPU Tails not yet ground-checked).
+- No regression (clean A/B, same worktree): dedicated S3K AIZ f8941, CNZ f17276, MGZ f4124; S2 EHZ1 GREEN.
+
+Follow-up (out of scope here, requires sidekick-AI / object work, not a one-time seed): model S3K mid-run
+sidekick dormancy (HCZ/MGZ intro-fall straight-drop with no horizontal CPU follow; ICZ parked-Tails; LBZ
+spawn-offset hold) and the CNZ/MHZ inter-zone object-driven descent so these advance past f1.

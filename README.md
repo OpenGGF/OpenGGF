@@ -116,12 +116,15 @@ Current migration status is intentionally partial rather than universal. Sonic 2
 Near-term S3K work should be planned as playable route slices with explicit gates: required traversal objects and badniks, event/camera behavior, scroll/parallax, animated tiles, palette and PLC state, bosses or transitions, rewind coverage where state is gameplay-relevant, trace replay for known blockers, and visual validation against stable-retro where practical. The first target route is AIZ through HCZ, with CNZ/MGZ/ICZ work feeding the same slice-driven standard instead of a checklist-only rollout.
 
 Work is ongoing across all three games. Recent branch work spans S3K route
-bring-up (AIZ, CNZ, MGZ, ICZ, and Mushroom Hill), S2 trace-frontier closures
-(Sky Chase and Casino Night level-select replays), object-physics
-standardization onto shared contracts, expanded rewind coverage, and
-architecture-guard hardening across runtime ownership, trace/rewind invariants,
-and object-service boundaries. See CHANGELOG.md for the detailed, per-merge
-history.
+bring-up (AIZ, CNZ, MGZ, ICZ, and Mushroom Hill), an S3K complete-run per-zone
+trace suite (one Sonic+Tails AIZ->Doomsday movie segmented per zone, each trace
+spanning the act1->act2 transition through the zone-exit handoff) with
+ROM-accurate in-game pause modelling and one-time mid-run-entry bootstrap
+seeding, S2 trace-frontier closures (Sky Chase and Casino Night level-select
+replays), object-physics standardization onto shared contracts, expanded rewind
+coverage, and architecture-guard hardening across runtime ownership, trace/rewind
+invariants, and object-service boundaries. See CHANGELOG.md for the detailed,
+per-merge history.
 
 ### Where do I get ROMs?
 
