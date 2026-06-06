@@ -4,6 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K LBZ Act 1 interior reveals 2 and 4 now open the door instead of walling
+  it off:** the `LBZ1_CheckLayoutMod` foreground copies for mods 2 and 4 wrote
+  the revealed interior chunks into the hidden staging rows (the source row, 9
+  and 12) rather than the visible door rows. The ROM `LBZ1_DoMod2`/`DoMod4`
+  routines always write into `(a3)` (FG row 0); only the staging *source* row
+  differs. The visible door chunk was therefore never swapped, so the door
+  stayed solid and ejected the player. Destination rows are now anchored to the
+  visible FG rows (mods 1/2/3/4 → rows 2/0/0/0) per the disassembly.
+
 - **Lost-ring Obj37 rendering now follows the object-loop owner:** spilled rings
   now draw from `LostRingObjectInstance`, the same object that owns their
   per-ring physics, instead of the retired legacy `LostRingPool` draw path. This

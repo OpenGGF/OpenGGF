@@ -26,7 +26,15 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     /**
      * S3K layout row pointers are interleaved FG/BG word pairs. In the ROM,
      * {@code a3 + 4 * row} addresses an FG row pointer after {@code a3} is set
-     * to {@code Level_layout_main}.
+     * to {@code Level_layout_main}, so {@link CopySpec} {@code sourceY}/{@code destY}
+     * are absolute FG block rows.
+     *
+     * <p>The ROM {@code LBZ1_DoModN} routines copy hidden staging rows into the
+     * <em>visible</em> foreground: mods 2/3/4 write into {@code (a3)} (FG row 0)
+     * and mod 1 into {@code 8(a3)} (FG row 2), regardless of which staging row
+     * they read from. Destination rows must therefore stay anchored to the
+     * visible door rows (0/2) and never track the source staging row, or the
+     * door chunks are never swapped and the door stays solid.
      */
     private static final LayoutMod[] LBZ1_LAYOUT_MODS = {
             new LayoutMod(
@@ -40,8 +48,8 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
                     2,
                     new TriggerRange(0x2160, 0x2520, 0x0000, 0x0700),
                     new ExitRange(0x20F6, 0x258A),
-                    new CopySpec(0x80, 9, 0x42, 9, 10, 14),
-                    new CopySpec(0x8A, 9, 0x42, 9, 10, 14),
+                    new CopySpec(0x80, 9, 0x42, 0, 10, 14),
+                    new CopySpec(0x8A, 9, 0x42, 0, 10, 14),
                     false),
             new LayoutMod(
                     3,
@@ -54,8 +62,8 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
                     4,
                     new TriggerRange(0x3DE0, 0x3FA0, 0x0000, 0x0300),
                     new ExitRange(0x3D76, 0x400A),
-                    new CopySpec(0x94, 12, 0x7A, 12, 6, 6),
-                    new CopySpec(0x9A, 12, 0x7A, 12, 6, 6),
+                    new CopySpec(0x94, 12, 0x7A, 0, 6, 6),
+                    new CopySpec(0x9A, 12, 0x7A, 0, 6, 6),
                     false)
     };
 

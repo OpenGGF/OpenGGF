@@ -53,6 +53,32 @@ class TestSonic3kLbzInteriorRevealEvents {
     }
 
     @Test
+    void enteringSecondInteriorRangeCopiesRevealedForegroundLayout() {
+        // ROM LBZ1_DoMod2 (docs/skdisasm/s3.asm): source = FG row 9 + $80,
+        // destination = FG row 0 + $42, 10 cols x 14 rows. The reveal must land
+        // in visible FG row 0 (the door), not the hidden staging row 9, or the
+        // door stays solid and ejects the player.
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 0)
+                .startPosition((short) 0x2300, (short) 0x0300)
+                .startPositionIsCentre()
+                .build();
+        Map map = GameServices.level().getCurrentLevel().getMap();
+
+        int[] covered = readRect(map, 0x42, 0x00, 10, 14);
+
+        fixture.stepIdleFrames(1);
+
+        int[] revealed = readRect(map, 0x42, 0x00, 10, 14);
+        int[] revealSource = readRect(map, 0x80, 0x09, 10, 14);
+
+        assertNotEquals(checksum(covered), checksum(revealed),
+                "entering LBZ1 layout mod 2 should alter the visible foreground cells");
+        assertArrayEquals(revealSource, revealed,
+                "LBZ1 layout mod 2 should copy ROM staging cells at map x=$80,y=9 into visible x=$42,y=0");
+    }
+
+    @Test
     void leavingFirstInteriorRangeRestoresCoveredForegroundLayout() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 0)
