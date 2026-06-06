@@ -1,11 +1,11 @@
 package com.openggf.game.sonic1.objects;
 
-import com.openggf.audio.AudioManager;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -20,7 +20,7 @@ import java.util.List;
  * <p>
  * Electrocution orbs that periodically zap with an electrical discharge.
  * The subtype controls the zap frequency: the orb zaps when
- * {@code (frameCounter & frequency) == 0}, where frequency is
+ * {@code (v_framecount & frequency) == 0}, where frequency is
  * {@code (subtype * 0x10) - 1}.
  * <p>
  * During the zap animation, frame 4 (the peak discharge) hurts Sonic
@@ -89,7 +89,10 @@ public class Sonic1ElectrocuterObjectInstance extends AbstractObjectInstance
         //   tst.b  obRender(a0)
         //   bpl.s  .animate
         //   play electricity sound
-        if ((frameCounter & frequencyMask) == 0) {
+        // ObjectManager passes the VBla clock into update(...), but this S1 routine
+        // reads the gameplay frame counter instead (docs/s1disasm/_incObj/6E Electrocuter.asm:29-34).
+        int vFrameCounter = resolveVFrameCounter(frameCounter);
+        if ((vFrameCounter & frequencyMask) == 0) {
             if (animationId != 1) {
                 animationId = 1;
                 animFrameIndex = 0;
@@ -101,6 +104,11 @@ public class Sonic1ElectrocuterObjectInstance extends AbstractObjectInstance
         }
 
         animate();
+    }
+
+    private int resolveVFrameCounter(int fallbackFrameCounter) {
+        ObjectManager objectManager = services().objectManager();
+        return objectManager != null ? objectManager.getFrameCounter() : fallbackFrameCounter;
     }
 
     private void animate() {

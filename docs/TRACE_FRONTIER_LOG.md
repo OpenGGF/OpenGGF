@@ -101,6 +101,35 @@
 - **Focused water tests (PASS):**
   `-Dtest=TestSonic1WaterDataProvider,WaterSystemTest,TestWaterSystemRewindSnapshot` -> focused XML
   reports have no `<failure>` or `<error>` entries.
+## 2026-06-06 - s1 sbz2 f361->f576: Electrocuter cadence uses v_framecount
+
+- Branch `bugfix/ai-trace-s1-sbz2`, worktree `.worktrees/trace-s1-sbz2`.
+- Command (worktree, cmd mvn.cmd, single fork):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds1.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s1.gen" "-Dtest=TestS1Sbz2CompleteRunTraceReplay#replayMatchesTrace" test`
+- **Status: ADVANCED (still failing).** First-error frame **361 -> 576**, error count **993** at the
+  new frontier. Surefire: `Tests run: 1, Failures: 1`.
+- **Root cause:** S1 Electrocuter Obj6E derives `elec_freq` from subtype (`subtype << 4) - 1`
+  and, in routine 2, reads `v_framecount` before masking it with `elec_freq`
+  (`docs/s1disasm/_incObj/6E Electrocuter.asm:23-34`). The engine was using the
+  VBla clock passed into `update(...)`, so the zap animation could begin on an
+  engine-only cadence and expose the `$A4` hurt collision before the ROM would.
+  The ROM then runs `AnimateSprite`, clears collision, and only restores `$A4`
+  when mapping frame 4 is displayed (`docs/s1disasm/_incObj/6E Electrocuter.asm:40-46`;
+  discharge animation frame sequence in `docs/s1disasm/_anim/Electrocuter.asm:13-15`).
+- **Fix:** `Sonic1ElectrocuterObjectInstance` now resolves the ObjectManager gameplay frame
+  counter, which models `v_framecount`, for the cadence mask, with the incoming update clock only
+  as a no-services fallback. Semantic ROM counter predicate; no zone/route/frame/gameId carve-out,
+  no tolerance band, no trace hydration.
+- New frontier f576 = `y` mismatch expected=`0x0763` actual=`0x075C`, with nearby RunningDisc
+  terrain/contact context (`eng-near s49/s98 0x67 RunningDisc`) and Electrocuter collision clear.
+- **Same-game regression guard (PASS, zero regressions):**
+  `TestS1Credits00Ghz1TraceReplay`, `TestS1Credits01Mz2TraceReplay`,
+  `TestS1Credits02Syz3TraceReplay`, `TestS1Credits03Lz3TraceReplay`,
+  `TestS1Credits04Slz3TraceReplay`, `TestS1Credits05Sbz1TraceReplay`,
+  `TestS1Credits06Sbz2TraceReplay`, `TestS1Credits07Ghz1bTraceReplay`,
+  `TestS1Ghz1TraceReplay` -> `MSE:OK modules=1 passed=9 failed=0 errors=0 skipped=0`.
+- No focused Electrocuter object test exists; narrow compile check passed:
+  `mvn.cmd -q -Dmse=relaxed -DskipTests compile` -> `MSE:OK`.
 
 ## 2026-06-05 - s2 arz2 f857->f899: water profile not applied on a hurt-landing frame
 

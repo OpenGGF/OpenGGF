@@ -49,6 +49,17 @@ All notable changes to the OpenGGF project are documented in this file.
   `docs/s1disasm/_incObj/64 Bubbles.asm:57-70`). This advances
   `TestS1Lz1CompleteRunTraceReplay` from first-error frame 112 to 302; the new
   frontier is a separate Burrobot touch/bounce mismatch.
+- **S1 SBZ Electrocuter discharge cadence now uses the ROM gameplay frame counter:**
+  `Sonic1ElectrocuterObjectInstance` previously keyed its zap cadence from the
+  VBla clock passed into `update(...)`, which could start the discharge animation
+  early and hurt Sonic before the ROM object would. S1 Obj6E loads
+  `v_framecount`, masks it with the subtype-derived `elec_freq`, starts the zap
+  animation only on matching frames, and enables the `$A4` hurt collision only
+  while animation frame 4 is displayed
+  (`docs/s1disasm/_incObj/6E Electrocuter.asm:23-46`,
+  `docs/s1disasm/_anim/Electrocuter.asm:13-15`). The object now resolves the
+  gameplay-owned object frame counter for that cadence. Advances
+  `TestS1Sbz2CompleteRunTraceReplay` from first-error frame 361 to 576.
 - **OOZ/CPZ rising platform now integrates sub-pixels (ROM-accurate):**
   `CPZPlatformObjectInstance` auto-rise (Obj19_MoveRoutine5/6) previously did
   `y += yVel >> 8`, dropping the sub-pixel fraction and stepping a full pixel
