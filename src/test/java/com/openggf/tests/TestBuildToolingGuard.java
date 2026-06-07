@@ -362,6 +362,27 @@ class TestBuildToolingGuard {
         if (!workflow.contains("com.openggf.tests.trace.s3k.TestS3kAizTraceReplay.txt")) {
             violations.add(".github/workflows/release.yml does not explicitly scope the diagnostic-only AIZ trace skip");
         }
+        if (!workflow.contains("required_rom_backed_trace_reports")) {
+            violations.add(".github/workflows/release.yml does not declare explicit ROM-backed trace reports");
+        }
+        if (!workflow.contains("TEST-com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay.xml")) {
+            violations.add(".github/workflows/release.yml does not require the S1 GHZ1 ROM-backed trace report");
+        }
+        if (!workflow.contains("TEST-com.openggf.tests.trace.s1.TestS1Mz1TraceReplay.xml")) {
+            violations.add(".github/workflows/release.yml does not require the S1 MZ1 ROM-backed trace report");
+        }
+        if (!workflow.contains("TEST-com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay.xml")) {
+            violations.add(".github/workflows/release.yml does not require the S2 EHZ1 ROM-backed trace report");
+        }
+        if (!workflow.contains("TEST-com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay.xml")) {
+            violations.add(".github/workflows/release.yml does not require the S3K CNZ ROM-backed trace report");
+        }
+        if (!workflow.contains("Missing required ROM-backed trace report")) {
+            violations.add(".github/workflows/release.yml does not fail when an explicit ROM-backed trace report is missing");
+        }
+        if (!workflow.contains("Required ROM-backed trace report did not execute")) {
+            violations.add(".github/workflows/release.yml does not fail when an explicit ROM-backed trace report is skipped");
+        }
 
         if (!violations.isEmpty()) {
             fail("release trace validation must prove ROM-backed trace tests actually executed:\n  "
@@ -503,6 +524,27 @@ class TestBuildToolingGuard {
 
         if (!violations.isEmpty()) {
             fail("develop -> master release PR policy must skip only pre-cutover historical commits while validating new work:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void hookDispatcherShouldProbePwshBeforeSkippingPowerShellFallback() throws Exception {
+        String runPolicy = Files.readString(Path.of(".githooks/run-policy"));
+        List<String> violations = new ArrayList<>();
+
+        if (!runPolicy.contains("for candidate in pwsh powershell.exe")) {
+            violations.add(".githooks/run-policy does not iterate over pwsh and powershell.exe candidates");
+        }
+        if (!runPolicy.contains("-Command \"exit 0\"")) {
+            violations.add(".githooks/run-policy does not probe whether the PowerShell candidate can actually launch");
+        }
+        if (!runPolicy.contains("continue")) {
+            violations.add(".githooks/run-policy does not continue to powershell.exe when pwsh is present but unusable");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("Windows hook dispatch must not stop at a broken pwsh shim before trying powershell.exe:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }

@@ -51,8 +51,8 @@ integer codes or as human-readable names such as `SPACE`, `Q`, or `F9`. See
 |-----|--------|
 | Arrow Keys | Movement |
 | Space | Jump |
-| Z | Cycle Acts |
-| X | Cycle Zones |
+| Enter | Pause / unpause |
+| Backspace | Player 1 start / in-game pause |
 
 ### Debug Controls
 
@@ -65,10 +65,16 @@ integer codes or as human-readable names such as `SPACE`, `Q`, or `F9`. See
 | F5 | Show/Hide Object Labels |
 | F6 | Show/Hide Camera Bounds |
 | F7 | Show/Hide Player Bounds |
+| F8 | Show/Hide Object Points |
 | F9 | Show/Hide Ring Bounds |
 | F10 | Show/Hide Plane Switchers |
 | F11 | Show/Hide Touch Response |
 | F12 | Show/Hide Art Viewer |
+| Page Up | Cycle Acts (`debug.keys.nextAct`) |
+| Page Down | Cycle Zones (`debug.keys.nextZone`) |
+
+`F9` is also the default level-select shortcut (`debug.keys.levelSelect`), so it
+can both open level select and toggle ring bounds while debug overlays are enabled.
 
 ### Editor Controls
 
@@ -406,7 +412,7 @@ live in `CHANGELOG.md`; this README keeps only the high-level shape of the relea
   `NTSC_SOFT`, persisted), S3K SMPS pitch/modulation/1-up restore timing fixes, and foreground-mask
   water alignment against the rendered viewport.
 - **Rewind framework.** Gameplay-scoped keyframe capture, deterministic seek/replay, held-rewind
-  trace debugging, opt-in live-play rewind (`LIVE_REWIND_ENABLED`) with reverse audio and a HUD,
+  trace debugging, opt-in live-play rewind (`rewind.liveEnabled`) with reverse audio and a HUD,
   and broad coverage across player/sidekick/object/level/registry state via audit-first generic
   capture, stable identity ids, and compact schema codecs.
 - **Trace replay and diagnostics.** Stronger recorder schemas, comparison-only aux streams,

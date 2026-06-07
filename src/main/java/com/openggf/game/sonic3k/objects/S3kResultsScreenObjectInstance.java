@@ -13,6 +13,7 @@ import com.openggf.game.sonic3k.events.S3kTransitionWriteSupport;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.tools.NemesisReader;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -63,7 +64,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
     private static final int SLIDE_OUT_SPEED = 32;  // move.w #-$20,d0
 
     // Pattern caching
-    private static final int PATTERN_BASE = 0x60000;  // High ID to avoid conflicts
+    private static final int PATTERN_BASE = PatternAtlasRange.RESULTS_SCREENS.base();
 
     // Digit rendering constants
     private static final int DIGIT_OFFSET_X = -0x38;  // Digits start 0x38 pixels left of element X

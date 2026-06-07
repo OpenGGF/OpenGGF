@@ -34,8 +34,8 @@ S3K playable vertical-slice parity. Close AIZ → HCZ route blockers first, then
 
 Git hooks in `.githooks/` and CI enforce the branch policy below. A Maven build auto-installs them during the `validate` phase by pointing `core.hooksPath` at `.githooks` (the `install-git-hooks` antrun execution in `pom.xml`); run `git config core.hooksPath .githooks` manually only if you commit without building first. The hook entrypoints dispatch through `.githooks/run-policy`: on Windows they call `validate-policy.ps1`, and on macOS/Linux they call `validate-policy.sh`.
 
-- Every non-`master` branch commit must include these trailers (each starting with `updated` or `n/a`): `Changelog`, `Guide`, `Known-Discrepancies`, `S3K-Known-Discrepancies`, `Agent-Docs`, `Configuration-Docs`, `Skills`.
-- `prepare-commit-msg` auto-appends the trailer block on non-merge commits. Do not delete it; fill it in.
+- Every non-`master` branch non-merge commit must include these trailers (each starting with `updated` or `n/a`): `Changelog`, `Guide`, `Known-Discrepancies`, `S3K-Known-Discrepancies`, `Agent-Docs`, `Configuration-Docs`, `Skills`.
+- `prepare-commit-msg` auto-appends the trailer block on non-merge commits. Merge commits skip trailer validation and are covered by the merge policy below. Do not delete the trailer block on ordinary commits; fill it in.
 - Each trailer maps to a file/dir (e.g. `Changelog` → `CHANGELOG.md`, `Agent-Docs` → both `AGENTS.md` and `CLAUDE.md`, `Skills` → both `.agents/skills/` and `.claude/skills/`). If the mapped files are staged, the trailer must not say `n/a`. See `.githooks/run-policy` for the authoritative mapping.
 - **Changelog justification on engine changes:** A `feat`/`fix`/`perf` commit that touches `src/main/` must either set `Changelog: updated` (and stage `CHANGELOG.md`) or justify the skip with an explicit reason after `n/a`, e.g. `Changelog: n/a: test-only helper`. A bare `Changelog: n/a` on such a commit is rejected by the `commit-msg` hook and CI (`validate_changelog_justification`). The base trailer gate only checks staged↔trailer consistency, so this extra check exists to catch a wrong `n/a` on a changelog-worthy engine change. Commits with other subjects, or that don't touch `src/main/`, are unaffected.
 - When merging a non-`master` branch into `develop`, stage a `README.md` update summarizing the branch change in the release/change log section. Hooks and CI block the merge otherwise.
@@ -59,7 +59,7 @@ Git hooks in `.githooks/` and CI enforce the branch policy below. A Maven build 
     *   `configuration` – `SonicConfiguration` / `SonicConfigurationService`. Dev-only: `TEST_MODE_ENABLED` (replaces master-title game-select with a trace picker, needs `TRACE_CATALOG_DIR`), `TRACE_CATALOG_DIR` (default `src/test/resources/traces`).
     *   `LevelFrameStep` lives at the `com.openggf` package root, not under `level`.
 
-**Startup order:** `Engine.init()` now boots through `GameMode.LEGAL_DISCLAIMER` first when `SHOW_LEGAL_DISCLAIMER_ON_STARTUP=true` (the default). The disclaimer screen owns a `FadeManager` reveal, a 5-second readability gate, and a fade-to-black on dismiss; control then chains into the existing `MASTER_TITLE_SCREEN` or direct-gameplay path inside `Engine.exitLegalDisclaimer()`. Set the flag `false` in tests that boot the full `Engine`.
+**Startup order:** `Engine.init()` now boots through `GameMode.LEGAL_DISCLAIMER` first when `startup.legalDisclaimer=true` (the default). The disclaimer screen owns a `FadeManager` reveal, a 5-second readability gate, and a fade-to-black on dismiss; control then chains into the existing master-title or direct-gameplay path inside `Engine.exitLegalDisclaimer()`. Set the flag `false` in tests that boot the full `Engine`.
 *   **Tests:** Live under `src/test/java/com/openggf/tests` and cover ROM loading, decompression, collision, singleton lifecycle, and services migration. New or updated tests must use JUnit 5 / Jupiter only; do not add JUnit 4 tests, rules, runners, or `org.junit.*` imports.
 
 ## Coordinate Semantics
@@ -136,7 +136,7 @@ Editor entry/exit tears down and rebuilds the mode context while `WorldSession` 
 
 ### Level Editor (`com.openggf.editor` + `GameMode.EDITOR`)
 
-The in-engine level editor MVP lives in `com.openggf.editor`: `LevelEditorController`, `EditorInputHandler`, `EditorMouseTransform`, `EditorHistory` (+ `commands.*` for undoable strokes), `persistence.EditorSaveManager` / `EditorSaveEnvelope` / `EditorSavePayload`, and `render.EditorToolbarRenderer`. A `GameMode.EDITOR` is integrated into `Engine` and `SessionManager`. While playing with `EDITOR_ENABLED`, toggle into edit mode mid-play, paint chunks with the mouse, undo/redo strokes via `Block.saveState()` / `restoreState()`, and persist edits through the editor save envelope. Editor enter/exit rides the teardown+rebuild session path above (the `WorldSession` survives and `MutableLevel` edits are re-applied on resume). The editor's in-mode key/mouse bindings are hardcoded in `EditorInputHandler` — see `CONFIGURATION.md`.
+The in-engine level editor MVP lives in `com.openggf.editor`: `LevelEditorController`, `EditorInputHandler`, `EditorMouseTransform`, `EditorHistory` (+ `commands.*` for undoable strokes), `persistence.EditorSaveManager` / `EditorSaveEnvelope` / `EditorSavePayload`, and `render.EditorToolbarRenderer`. A `GameMode.EDITOR` is integrated into `Engine` and `SessionManager`. While playing with `debug.flags.editor` enabled in `config.yaml`, toggle into edit mode mid-play, paint chunks with the mouse, undo/redo strokes via `Block.saveState()` / `restoreState()`, and persist edits through the editor save envelope. Editor enter/exit rides the teardown+rebuild session path above (the `WorldSession` survives and `MutableLevel` edits are re-applied on resume). The editor's in-mode key/mouse bindings are hardcoded in `EditorInputHandler` — see `CONFIGURATION.md`.
 
 ### Runtime-Shared Framework Stack
 
@@ -162,7 +162,7 @@ Manager classes consolidated for reduced complexity:
 
 ## Multi-Sidekick System
 
-The engine extends the ROM's single CPU-controlled sidekick (Tails at `$FFFFB040`) to support an arbitrary number of sidekick characters configured via comma-separated `SIDEKICK_CHARACTER_CODE` (e.g. `"tails,knuckles,sonic,sonic"`). This is a novelty feature — not present in any official Sonic game.
+The engine extends the ROM's single CPU-controlled sidekick (Tails at `$FFFFB040`) to support an arbitrary number of sidekick characters configured via comma-separated `characters.sidekick` in `config.yaml` (e.g. `"tails,knuckles,sonic,sonic"`). This is a novelty feature — not present in any official Sonic game.
 
 ### Key Classes
 
@@ -372,7 +372,7 @@ Five `com.openggf.tools` CLIs reduce context loss when implementing objects/zone
     *   **Chunk:** A 16x16 pixel tile, composed of Patterns.
     *   **Block:** A 128x128 pixel area, composed of Chunks.
 *   **Dependencies:** Running the engine requires LWJGL (OpenGL, OpenAL, GLFW bindings) and JOML (math library), already declared as dependencies in `pom.xml`.
-*   **Debug:** `DEBUG_VIEW_ENABLED` (true by default) overlays sensor and collision info during gameplay.
+*   **Debug:** `debug.flags.debugView` (true by default) overlays sensor and collision info during gameplay.
 *   **Level Loading:** Performed by `LevelManager`, which reads from the ROM through classes in `com.openggf.data`.
 *   **Conditional Tests**: `TestCollisionLogic` uses `Assume.assumeTrue` to skip when a ROM file is not present. This is a known and accepted conditional skip, not a hard `@Ignore`.
 *   **File Endings**: Ensure all source code files end with a newline character.

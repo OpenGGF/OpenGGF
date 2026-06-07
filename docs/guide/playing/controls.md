@@ -1,6 +1,6 @@
 # Controls Reference
 
-All controls are keyboard-based. Key bindings can be changed in `config.json`
+All controls are keyboard-based. Key bindings can be changed in `config.yaml`
 (see [Configuration](configuration.md)) using either GLFW integer codes or
 human-readable key names such as `"SPACE"` and `"F9"`.
 
@@ -11,17 +11,18 @@ human-readable key names such as `"SPACE"` and `"F9"`.
 | Arrow Keys | Move left/right, look up, crouch/roll |
 | Space | Jump |
 | Enter | Pause / unpause |
+| Backspace | Player 1 start / in-game pause |
 | Q | Advance one frame (while paused) |
 
 ## Rewind
 
-Live rewind is only active when `LIVE_REWIND_ENABLED` is `true` in `config.json`.
-Visual Trace Test Mode uses the same default key through `TRACE_REWIND_KEY`.
+Live rewind is only active when `rewind.liveEnabled` is `true` in `config.yaml`.
+Visual Trace Test Mode uses the same default key through `debug.traceRewind.key`.
 
 | Key | Action |
 |-----|--------|
-| R | Hold to rewind live gameplay (`LIVE_REWIND_KEY`) |
-| R | Hold to rewind visual trace playback (`TRACE_REWIND_KEY`) |
+| R | Hold to rewind live gameplay (`rewind.liveKey`) |
+| R | Hold to rewind visual trace playback (`debug.traceRewind.key`) |
 
 ## Zone Navigation
 
@@ -29,13 +30,18 @@ These shortcuts let you move through the game quickly during development or expl
 
 | Key | Action |
 |-----|--------|
-| Z | Cycle to the next zone |
-| X | Cycle to the next act within the current zone |
+| Page Down | Cycle to the next zone (`debug.keys.nextZone`) |
+| Page Up | Cycle to the next act within the current zone (`debug.keys.nextAct`) |
+| F9 | Open the level select screen (`debug.keys.levelSelect`) |
+
+`F9` also toggles the ring-bounds debug overlay. That overlap is current engine
+behavior: the level-select shortcut is configurable, while the overlay toggle is
+hardcoded in the debug overlay subsystem.
 
 ## Debug Overlays
 
 These toggle visual debug information drawn over the game scene. They require
-`DEBUG_VIEW_ENABLED` to be `true` in config (it is by default).
+`debug.flags.debugView` to be `true` in config (it is by default).
 
 | Key | Overlay |
 |-----|---------|
@@ -46,6 +52,7 @@ These toggle visual debug information drawn over the game scene. They require
 | F5 | **Object labels** -- Names and positions of active objects |
 | F6 | **Camera bounds** -- Current camera boundary rectangle |
 | F7 | **Player bounds** -- Player collision bounding box |
+| F8 | **Object points** -- Object origin and debug points |
 | F9 | **Ring bounds** -- Ring collision areas |
 | F10 | **Plane switchers** -- Plane switcher trigger zones |
 | F11 | **Touch response** -- Object touch/collision areas |
@@ -60,7 +67,7 @@ These toggle visual debug information drawn over the game scene. They require
 
 ## Experimental Editor
 
-These controls are only active when `EDITOR_ENABLED` is `true` in `config.json`.
+These controls are only active when `debug.flags.editor` is `true` in `config.yaml`.
 
 | Key | Action |
 |-----|--------|

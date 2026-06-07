@@ -93,7 +93,7 @@ public final class SpecialRenderEffectRegistry
 
     @Override
     public SpecialRenderEffectSnapshot capture() {
-        return new SpecialRenderEffectSnapshot(effectsByStage);
+        return new SpecialRenderEffectSnapshot(effectsByStage, captureEffectStates());
     }
 
     @Override
@@ -106,5 +106,57 @@ public final class SpecialRenderEffectRegistry
                 e.getValue().addAll(saved);
             }
         }
+        restoreEffectStates(s);
+    }
+
+    private Map<SpecialRenderEffectStage, List<SpecialRenderEffectSnapshot.EffectState>> captureEffectStates() {
+        EnumMap<SpecialRenderEffectStage, List<SpecialRenderEffectSnapshot.EffectState>> states =
+                new EnumMap<>(SpecialRenderEffectStage.class);
+        for (Map.Entry<SpecialRenderEffectStage, List<SpecialRenderEffect>> entry : effectsByStage.entrySet()) {
+            List<SpecialRenderEffectSnapshot.EffectState> stageStates = new ArrayList<>();
+            List<SpecialRenderEffect> effects = entry.getValue();
+            for (int i = 0; i < effects.size(); i++) {
+                SpecialRenderEffect effect = effects.get(i);
+                if (effect instanceof RewindSnapshottable<?> snapshottable) {
+                    stageStates.add(new SpecialRenderEffectSnapshot.EffectState(
+                            i,
+                            snapshottable.key(),
+                            Objects.requireNonNull(snapshottable.capture(),
+                                    "Special render effect snapshot must not be null for key: "
+                                            + snapshottable.key())));
+                }
+            }
+            if (!stageStates.isEmpty()) {
+                states.put(entry.getKey(), stageStates);
+            }
+        }
+        return states;
+    }
+
+    private void restoreEffectStates(SpecialRenderEffectSnapshot snapshot) {
+        for (Map.Entry<SpecialRenderEffectStage, List<SpecialRenderEffectSnapshot.EffectState>> entry
+                : snapshot.effectStatesByStage().entrySet()) {
+            List<SpecialRenderEffect> effects = effectsByStage.get(entry.getKey());
+            if (effects == null) {
+                continue;
+            }
+            for (SpecialRenderEffectSnapshot.EffectState state : entry.getValue()) {
+                if (state.index() < 0 || state.index() >= effects.size()) {
+                    throw new IllegalStateException("Missing special render effect for snapshot key: " + state.key());
+                }
+                SpecialRenderEffect effect = effects.get(state.index());
+                if (!(effect instanceof RewindSnapshottable<?> snapshottable)
+                        || !snapshottable.key().equals(state.key())) {
+                    throw new IllegalStateException("Cannot restore special render effect snapshot for key: "
+                            + state.key());
+                }
+                restoreRaw(snapshottable, state.snapshot());
+            }
+        }
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static void restoreRaw(RewindSnapshottable snapshottable, Object snapshot) {
+        snapshottable.restore(snapshot);
     }
 }

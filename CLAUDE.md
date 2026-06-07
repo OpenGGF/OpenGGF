@@ -44,7 +44,8 @@ error count, and first-error frame/field.
 
 Tracked Git hooks live in `.githooks/`. A Maven build (`mvn`, `mvn test`, etc.) auto-installs them during the `validate` phase by pointing `core.hooksPath` at `.githooks` (the `install-git-hooks` antrun execution in `pom.xml`); this is idempotent and a no-op outside a git checkout. If you commit without building first, run `git config core.hooksPath .githooks` once manually. CI mirrors the same rules on PRs into `develop`. The hook entrypoints dispatch through `.githooks/run-policy`: Windows uses `validate-policy.ps1`, while macOS/Linux use `validate-policy.sh`.
 
-- Every non-`master` branch commit must carry these commit-message trailers, each starting with `updated` or `n/a`: `Changelog`, `Guide`, `Known-Discrepancies`, `S3K-Known-Discrepancies`, `Agent-Docs`, `Configuration-Docs`, `Skills`.
+- Every non-`master` branch non-merge commit must carry these commit-message trailers, each starting with `updated` or `n/a`: `Changelog`, `Guide`, `Known-Discrepancies`, `S3K-Known-Discrepancies`, `Agent-Docs`, `Configuration-Docs`, `Skills`.
+- Merge commits skip trailer validation; merges into `develop` are covered by the README update rule below.
 - `prepare-commit-msg` auto-appends the trailer block on non-merge commits. Fill it in rather than removing it. Each trailer maps to a file/dir (e.g. `Changelog` → `CHANGELOG.md`, `Agent-Docs` → both `AGENTS.md` and `CLAUDE.md`, `Skills` → staged files under both `.agents/skills/` and `.claude/skills/`). If the mapped files are staged, the trailer must not say `n/a`. See `.githooks/run-policy` for the authoritative mapping.
 - **Changelog justification on engine changes:** A `feat`/`fix`/`perf` commit that touches `src/main/` must set `Changelog: updated` (and stage `CHANGELOG.md`) or justify the skip with an explicit reason after `n/a`, e.g. `Changelog: n/a: <reason>`. A bare `Changelog: n/a` on such a commit is now rejected by the `commit-msg` hook and CI (`validate_changelog_justification` in `validate-policy.sh` / `.ps1`). The base trailer gate only checks staged↔trailer consistency, so this added check catches a wrong `n/a` on a changelog-worthy engine change. Commits with other subject prefixes, or that do not touch `src/main/`, are unaffected.
 - When merging a non-`master` branch into `develop`, stage a `README.md` update summarizing the branch change in the release/change log section.
@@ -105,7 +106,7 @@ Editor entry/exit uses teardown+rebuild (no parking): the mode context is destro
 
 ### Level Editor (`com.openggf.editor` + `GameMode.EDITOR`)
 
-The in-engine level editor MVP lives in the `com.openggf.editor` package: `LevelEditorController`, `EditorInputHandler`, `EditorMouseTransform`, `EditorHistory` (+ `commands.*` undoable strokes), `persistence.EditorSaveManager` / `EditorSaveEnvelope` / `EditorSavePayload`, and `render.EditorToolbarRenderer`. A `GameMode.EDITOR` is integrated into `Engine` and `SessionManager`. With `EDITOR_ENABLED`, toggle into edit mode mid-play, paint chunks with the mouse, undo/redo strokes via `Block.saveState()`/`restoreState()`, and persist edits through the editor save envelope. Editor enter/exit rides the teardown+rebuild session path above (`WorldSession` survives, `MutableLevel` edits re-applied on resume). The editor's in-mode key/mouse bindings are hardcoded in `EditorInputHandler` — see [CONFIGURATION.md](CONFIGURATION.md).
+The in-engine level editor MVP lives in the `com.openggf.editor` package: `LevelEditorController`, `EditorInputHandler`, `EditorMouseTransform`, `EditorHistory` (+ `commands.*` undoable strokes), `persistence.EditorSaveManager` / `EditorSaveEnvelope` / `EditorSavePayload`, and `render.EditorToolbarRenderer`. A `GameMode.EDITOR` is integrated into `Engine` and `SessionManager`. With `debug.flags.editor` enabled in `config.yaml`, toggle into edit mode mid-play, paint chunks with the mouse, undo/redo strokes via `Block.saveState()`/`restoreState()`, and persist edits through the editor save envelope. Editor enter/exit rides the teardown+rebuild session path above (`WorldSession` survives, `MutableLevel` edits re-applied on resume). The editor's in-mode key/mouse bindings are hardcoded in `EditorInputHandler` — see [CONFIGURATION.md](CONFIGURATION.md).
 
 ### Runtime-Shared Framework Stack
 
@@ -193,13 +194,13 @@ Package names are generally self-describing; a few with non-obvious facts:
 - **Block** = 128x128 pixel area (composed of Chunks)
 
 ### Configuration
-`SonicConfigurationService` loads from `config.json`. Key bindings are stored as GLFW key-name strings (e.g. `"D"` / `"GLFW_KEY_D"`) and resolved to integer key codes at lookup. See [CONFIGURATION.md](CONFIGURATION.md) for the full key list. Two flags worth flagging:
+`SonicConfigurationService` loads from `config.yaml` and migrates a legacy `config.json` to YAML on first run. Key bindings are stored as GLFW key-name strings (e.g. `"D"` / `"GLFW_KEY_D"`) and resolved to integer key codes at lookup. See [CONFIGURATION.md](CONFIGURATION.md) for the full key list. Two settings worth flagging:
 
-- `SHOW_LEGAL_DISCLAIMER_ON_STARTUP` — boot through `GameMode.LEGAL_DISCLAIMER` first (default `true`). Set `false` in tests that boot the full `Engine`.
-- `TEST_MODE_ENABLED` — replaces the master-title game-select with a trace picker (dev-only; requires `TRACE_CATALOG_DIR`).
-- `TRACE_CATALOG_DIR` — directory scanned by `TraceCatalog` (default `src/test/resources/traces`).
+- `startup.legalDisclaimer` — boot through `GameMode.LEGAL_DISCLAIMER` first (default `true`). Set `false` in tests that boot the full `Engine`.
+- `debug.testMode.enabled` — replaces the master-title game-select with a trace picker (dev-only; requires `debug.testMode.catalogDir`).
+- `debug.testMode.catalogDir` — directory scanned by `TraceCatalog` (default `src/test/resources/traces`).
 
-**Startup order:** `Engine.init()` now boots through `GameMode.LEGAL_DISCLAIMER` first when `SHOW_LEGAL_DISCLAIMER_ON_STARTUP=true` (the default). The disclaimer screen owns a `FadeManager` reveal, a 5-second readability gate, and a fade-to-black on dismiss; control then chains into the existing `MASTER_TITLE_SCREEN` or direct-gameplay path inside `Engine.exitLegalDisclaimer()`. Set the flag `false` in tests that boot the full `Engine`.
+**Startup order:** `Engine.init()` now boots through `GameMode.LEGAL_DISCLAIMER` first when `startup.legalDisclaimer=true` (the default). The disclaimer screen owns a `FadeManager` reveal, a 5-second readability gate, and a fade-to-black on dismiss; control then chains into the existing master-title or direct-gameplay path inside `Engine.exitLegalDisclaimer()`. Set the flag `false` in tests that boot the full `Engine`.
 
 ## Level Resource Overlay System
 

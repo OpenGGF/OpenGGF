@@ -1057,7 +1057,7 @@ every nearby-object position every frame through a 20-minute run.
 **`.github/workflows/ci.yml`** runs on every PR into `develop`. Two jobs:
 
 1. **`policy`** — validates the branch trailer/file policy. On the PR, checks that every
-   new commit carries the required trailers (`Changelog`, `Guide`, `Known-Discrepancies`,
+   new non-merge commit carries the required trailers (`Changelog`, `Guide`, `Known-Discrepancies`,
    `S3K-Known-Discrepancies`, `Agent-Docs`, `Configuration-Docs`, `Skills`) with `updated`
    or `n/a`, and cross-checks trailer ↔ file staging (e.g. `Changelog: updated` requires
    `CHANGELOG.md` to be in the diff). Runs via `bash .githooks/validate-policy.sh ci-pr ...`.

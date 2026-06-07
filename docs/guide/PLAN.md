@@ -136,8 +136,8 @@ Contents:
    gameplay. One or two sentences per step. Mention that the engine boots to the master
    title screen by default and you pick a game from there.
 
-4. **Choosing a game** — Brief note that `DEFAULT_ROM` in config.json controls which game
-   boots, and `MASTER_TITLE_SCREEN_ON_STARTUP` controls whether you see the picker.
+4. **Choosing a game** — Brief note that `roms.default` in `config.yaml` controls which game
+   boots, and `startup.masterTitleScreen` controls whether you see the picker.
 
 5. **What if it doesn't work?** — Link to troubleshooting.md.
 
@@ -210,7 +210,7 @@ Sections:
 
 - **Black screen / crash on startup** — Wrong ROM revision, missing ROM, OpenGL version
   too low, Java version too old.
-- **No sound** — `AUDIO_ENABLED` config, system audio driver issues.
+- **No sound** — `audio.enabled` config, system audio driver issues.
 - **Wrong colors or garbled graphics** — GPU driver issues, scale factor misconfiguration.
 - **Game runs too fast or too slow** — FPS setting, NTSC vs PAL region.
 - **"Object registry missing id" warnings** — Normal for incomplete zones; not a bug.

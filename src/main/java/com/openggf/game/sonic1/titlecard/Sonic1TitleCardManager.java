@@ -9,6 +9,7 @@ import com.openggf.game.titlecard.TitleCardMappings;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.graphics.TitleCardSpriteRenderer;
 import com.openggf.level.Pattern;
 import com.openggf.util.PatternDecompressor;
@@ -54,7 +55,7 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
     private static final int DISPLAY_HOLD_DURATION = 60;
 
     /** Pattern base ID for S1 title card art (high to avoid conflicts with S2's 0x40000) */
-    private static final int PATTERN_BASE = 0x50000;
+    private static final int PATTERN_BASE = PatternAtlasRange.MENU_AND_DATA_SELECT.base();
 
     /** Native game width (320-pixel frame everything is authored for). */
     private static final int SCREEN_WIDTH = 320;

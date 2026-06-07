@@ -5,6 +5,7 @@ import com.openggf.game.dataselect.HostSlotPreview;
 import com.openggf.game.sonic3k.S3kFrontendPaletteUploader;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.PatternDesc;
@@ -107,7 +108,7 @@ public class S3kDataSelectRenderer {
     private static final float SELECTED_ICON_TARGET_WIDTH = 80f;
     private static final float SELECTED_ICON_TARGET_HEIGHT = 56f;
 
-    private static final int DATA_SELECT_PATTERN_BASE = 0x50000;
+    private static final int DATA_SELECT_PATTERN_BASE = PatternAtlasRange.MENU_AND_DATA_SELECT.base();
     private static final int TILE_WORD_FLAGS = 0xA000;
     private static final int SAVE_TEXT_WORD_BASE = Sonic3kConstants.ARTTILE_SAVE_TEXT - 0x10 + TILE_WORD_FLAGS;
     private static final int SAVE_SCREEN_OBJECT_BASE_DESC = 0x8000;

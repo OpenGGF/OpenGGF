@@ -25,6 +25,11 @@ public final class PaletteOwnershipRegistry implements RewindSnapshottable<Palet
         resetOwners();
     }
 
+    public void clear() {
+        beginFrame();
+        paletteRotationDisabled = false;
+    }
+
     public void submit(PaletteWrite write) {
         writes.add(write);
     }

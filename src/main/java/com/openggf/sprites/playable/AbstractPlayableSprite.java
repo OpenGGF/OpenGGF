@@ -3077,11 +3077,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // and the short-circuit preserves the new value. The engine models such a
                 // write as forcedInputMask; when one is active we must publish the forced
                 // word (SpriteManager already folds it into the logical args) rather than
-                // latch the stale pre-lock state. Latching over a forced write corrupted
-                // Tails' follow-history at the EHZ end-of-act goalplate (tails_x_speed -0576
-                // vs ROM -04EA): Tails replayed the stale LEFT and accelerated instead of
-                // turning right. Universal correction (S2 + S3K both run the latch); keyed
-                // on the semantic forced-input state, not a zone/route.
+                // latch the stale pre-lock state. The forced-write bypass is kept here so
+                // any game that enables controlLockLatchesLogicalInput preserves explicit
+                // object writes instead of stale history. S2 deliberately leaves that flag
+                // disabled for now; see PhysicsFeatureSet.SONIC_2 for the bounded defer.
                 if (isControlLocked()
                                 && getForcedInputMask() == 0
                                 && physicsFeatureSet != null

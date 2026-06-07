@@ -11,7 +11,12 @@ public enum PatternAtlasRange {
     WATER_SURFACE(0x30000, 0x08000, "Water surface"),
     SIDEKICK_BANKS(0x38000, 0x08000, "Sidekick banks"),
     TITLE_CARDS(0x40000, 0x08000, "Title cards"),
-    TRANSIENT_EFFECTS(0x48000, 0x08000, "Transient effects");
+    TRANSIENT_EFFECTS(0x48000, 0x08000, "Transient effects"),
+    MENU_AND_DATA_SELECT(0x50000, 0x08000, "Menu and data select"),
+    RESULTS_SCREENS(0x60000, 0x08000, "Results screens"),
+    SPECIAL_STAGE_RESULTS(0x70000, 0x08000, "Special stage results"),
+    S3K_TITLE_SCREEN_ANIMATION(0xE0000, 0x08000, "S3K title screen animation"),
+    S3K_TITLE_SCREEN_SPRITES(0xE8000, 0x08000, "S3K title screen sprites");
 
     private final int base;
     private final int size;

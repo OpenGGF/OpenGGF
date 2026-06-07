@@ -818,7 +818,9 @@ class TestArchUnitRules {
         }
         try {
             String text = Files.readString(source);
-            return text.contains(javaField.getName() + " = PatternAtlasRange." + rangeName + ".base()");
+              String initializer = javaField.getName() + " = PatternAtlasRange." + rangeName + ".base()";
+              return text.contains(initializer)
+                      || text.contains(initializer + " +");
         } catch (java.io.IOException e) {
             throw new IllegalStateException("Unable to inspect pattern range field source: " + source, e);
         }

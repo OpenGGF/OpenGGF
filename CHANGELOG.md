@@ -4,6 +4,17 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Trace release policy tracker slice closed for TMP-002/TMP-003/TMP-011/TMP-012:**
+  S2 control-lock logical-input latching remains an explicit deferred policy
+  (`PhysicsFeatureSet.SONIC_2=false`, S3K=true) with the stale playable-sprite
+  comment corrected and a guard pinning the defer. Trace replay bootstrap
+  state seeding remains disabled by invariant tests; S2 Tornado replay is
+  limited to metadata start centre plus live ObjB2-authorized native setup, and
+  S3K complete-run segments document the remaining metadata-start bootstrap as
+  bounded frame-zero debt. Recorded sidekick CSV fields are guarded as strict
+  parity errors; per-slot SST frame-zero comparison remains diagnostic debt
+  until native SST/CPU snapshot extraction is plumbed.
+
 - **Master title game selection now opens gameplay sessions cleanly from
   bootstrap startup:** exiting the pre-ROM master title screen no longer tries
   to read `GameServices.module()` before `SessionManager` has opened a

@@ -10,13 +10,15 @@ run_powershell() {
         script_path="$(cygpath -w "$script_path")"
     fi
 
-    if command -v pwsh >/dev/null 2>&1; then
-        exec pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File "$script_path" "$@"
-    fi
-
-    if command -v powershell.exe >/dev/null 2>&1; then
-        exec powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "$script_path" "$@"
-    fi
+    for candidate in pwsh powershell.exe; do
+        if ! command -v "$candidate" >/dev/null 2>&1; then
+            continue
+        fi
+        if ! "$candidate" -NoLogo -NoProfile -Command "exit 0" >/dev/null 2>&1; then
+            continue
+        fi
+        exec "$candidate" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "$script_path" "$@"
+    done
 
     return 1
 }

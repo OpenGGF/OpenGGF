@@ -75,7 +75,7 @@ This opens the game's level select menu instead of starting from the first zone.
 Set the sidekick character:
 
 ```yaml
-players:
+characters:
   sidekick: "tails"
 ```
 
@@ -134,8 +134,9 @@ Common key codes:
 Example: rebind jump to the A key:
 
 ```yaml
-controls:
-  jump: "A"
+input:
+  player1:
+    jump: "A"
 ```
 
 See [Controls](controls.md) for the full list of bindable actions and
@@ -236,7 +237,7 @@ set `display.windowAutosize` to `false` and configure `debug.window.width` /
 ## How do I switch between NTSC and PAL?
 
 ```yaml
-display:
+audio:
   region: "PAL"
 ```
 

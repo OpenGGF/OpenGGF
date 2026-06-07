@@ -78,9 +78,35 @@ jobs:
           import json
           import re
           import sys
+          import xml.etree.ElementTree as ET
           from pathlib import Path
 
-          reports = sorted(Path("target/surefire-reports").glob("com.openggf.tests.trace*TraceReplay.txt"))
+          surefire_dir = Path("target/surefire-reports")
+          required_rom_backed_trace_reports = {
+              "TEST-com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay.xml": "s1-ghz1",
+              "TEST-com.openggf.tests.trace.s1.TestS1Mz1TraceReplay.xml": "s1-mz1",
+              "TEST-com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay.xml": "s2-ehz1",
+              "TEST-com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay.xml": "s3k-cnz",
+          }
+          required_executed = 0
+          for report_name, label in sorted(required_rom_backed_trace_reports.items()):
+              report = surefire_dir / report_name
+              if not report.exists():
+                  print(f"Missing required ROM-backed trace report: {report} ({label})", file=sys.stderr)
+                  sys.exit(1)
+              root = ET.parse(report).getroot()
+              tests = int(root.attrib.get("tests", "0"))
+              skipped_count = int(root.attrib.get("skipped", "0"))
+              executed_count = tests - skipped_count
+              if executed_count <= 0:
+                  print(
+                      f"Required ROM-backed trace report did not execute: {report} "
+                      f"({label}) tests={tests} skipped={skipped_count}",
+                      file=sys.stderr)
+                  sys.exit(1)
+              required_executed += executed_count
+
+          reports = sorted(surefire_dir.glob("com.openggf.tests.trace*TraceReplay.txt"))
           total = 0
           skipped = 0
           skipped_reports = []
@@ -130,7 +156,10 @@ jobs:
                   print(f"{report}: warning_count={warning_count}", file=sys.stderr)
               sys.exit(1)
 
-          print(f"Trace replay coverage: executed={executed} total={total} skipped={skipped}")
+          print(
+              f"Trace replay coverage: executed={executed} total={total} skipped={skipped} "
+              f"required_rom_backed_executed={required_executed} "
+              f"required_rom_backed_reports={len(required_rom_backed_trace_reports)}")
           PY
 
   build:

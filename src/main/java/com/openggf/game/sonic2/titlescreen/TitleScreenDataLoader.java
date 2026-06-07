@@ -5,6 +5,7 @@ import com.openggf.data.RomManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.tools.EnigmaReader;
@@ -42,10 +43,10 @@ public class TitleScreenDataLoader {
     private static final Logger LOGGER = Logger.getLogger(TitleScreenDataLoader.class.getName());
 
     /** Pattern base ID for GPU caching (unique, avoids level select 0x50000, title card 0x40000). */
-    static final int PATTERN_BASE = 0x60000;
+    static final int PATTERN_BASE = PatternAtlasRange.RESULTS_SCREENS.base();
 
     /** Pattern base ID for sprite art (separate from background). */
-    static final int SPRITE_PATTERN_BASE = 0x70000;
+    static final int SPRITE_PATTERN_BASE = PatternAtlasRange.SPECIAL_STAGE_RESULTS.base();
 
     /** Pattern base ID for credit text art (separate from background and sprites). */
     static final int CREDIT_TEXT_PATTERN_BASE = 0x80000;

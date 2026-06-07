@@ -10,7 +10,10 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * Unified UI render pipeline that ensures correct ordering:
  * 1. Scene (rendered by LevelManager/GraphicsManager before this)
  * 2. Overlay (HUD, debug info)
- * 3. Fade pass (screen transitions - always last)
+ * 3. Fade pass (screen transitions; final pass within the normal scene/UI pipeline)
+ *
+ * Engine-owned post-fade diagnostic overlays may render after this pipeline so trace,
+ * debug, and alignment status stays readable during fade-to-black teardown.
  *
  * This consolidates FadeManager and HudRenderManager into a single
  * orchestration point to prevent render order bugs.
@@ -87,7 +90,8 @@ public class UiRenderPipeline {
     }
 
     /**
-     * Render the fade pass. Must be called after all other rendering.
+     * Render the fade pass. Must be called after normal scene/HUD rendering.
+     * Explicit diagnostic overlays owned by Engine may render after this pass.
      */
     public void renderFadePass() {
         if (fadeEnabled && fadeManager != null && fadeManager.isActive()) {

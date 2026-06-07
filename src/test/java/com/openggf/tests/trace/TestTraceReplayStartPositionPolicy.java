@@ -167,6 +167,28 @@ class TestTraceReplayStartPositionPolicy {
     }
 
     @Test
+    void s3kCompleteRunSegmentsDoNotSeedFrameZeroTraceState() throws Exception {
+        for (String route : java.util.List.of("aiz_completerun", "hcz_completerun",
+                "mgz_completerun", "cnz_completerun")) {
+            TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k", route));
+
+            assertTrue(TraceReplayBootstrap.isS3kCompleteRunSegment(trace),
+                    route + " must be recognized as a complete-run segment.");
+            assertTrue(TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace),
+                    route + " still uses the metadata start centre as bounded frame-zero bootstrap debt.");
+            assertFalse(TraceReplayBootstrap.shouldSeedFrameZeroForTraceReplay(trace),
+                    route + " must not copy recorded frame-zero player state into the engine.");
+            assertFalse(TraceReplayBootstrap.shouldSeedReplayStartStateForTraceReplay(trace, 0),
+                    route + " must not copy recorded replay-start state into the engine.");
+            assertEquals(TraceReplayBootstrap.ReplayStartState.DEFAULT,
+                    TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, null),
+                    route + " drives and compares from trace frame 0 using native replay state.");
+            assertEquals(0, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace),
+                    route + " complete-run segments must not receive the sidekick seed-row prelude.");
+        }
+    }
+
+    @Test
     void s3kGameplayTraceStillDoesNotSeedFrameZeroWhenObjectSnapshotsExist() throws Exception {
         TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/cnz"));
 

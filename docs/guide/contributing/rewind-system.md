@@ -16,7 +16,7 @@ Good uses:
 
 - Trace visualisation and trace replay tooling.
 - Headless tests that need to seek backward and replay a deterministic segment.
-- Live gameplay rewind when `LIVE_REWIND_ENABLED` is true.
+- Live gameplay rewind when `rewind.liveEnabled` is true.
 - Rewind determinism debugging for player, sidekick, object, ring, level, palette,
   parallax, and zone-runtime state.
 - Presentation debugging for reverse audio and graphical fades during live and
@@ -38,18 +38,19 @@ Avoid using it for:
 Visual Trace Test Mode installs the rewind controller automatically after a trace
 launches. To use it:
 
-1. Enable Trace Test Mode in `config.json`:
+1. Enable Trace Test Mode in `config.yaml`:
 
-   ```json
-   {
-     "MASTER_TITLE_SCREEN_ON_STARTUP": true,
-     "TEST_MODE_ENABLED": true,
-     "TRACE_CATALOG_DIR": "src/test/resources/traces"
-   }
+   ```yaml
+   startup:
+     masterTitleScreen: true
+   debug:
+     testMode:
+       enabled: true
+       catalogDir: "src/test/resources/traces"
    ```
 
 2. Launch the engine and choose a trace from the picker with `Enter`.
-3. Hold `TRACE_REWIND_KEY` while the trace is running. The default key is `R`.
+3. Hold `debug.traceRewind.key` while the trace is running. The default key is `R`.
 
 The HUD shows `Hold R Rewind` while rewind is available and changes to `REWIND <frame>`
 while the key is held. Releasing the key resumes the BK2-driven replay from the
@@ -67,24 +68,23 @@ of continuing forward.
 
 Live gameplay rewind is disabled by default. To enable it:
 
-```json
-{
-  "LIVE_REWIND_ENABLED": true,
-  "LIVE_REWIND_KEY": "R"
-}
+```yaml
+rewind:
+  liveEnabled: true
+  liveKey: R
 ```
 
-While playing a level, hold `LIVE_REWIND_KEY` to step backward through the live
+While playing a level, hold `rewind.liveKey` to step backward through the live
 gameplay buffer. Releasing the key resumes normal gameplay from the restored frame.
 The small live HUD is hidden during ordinary play and appears only while the key is
 held, showing `LIVE REWIND` plus `REWIND <frame>`.
 
 By default live rewind steps backward one frame per visual frame while the key is
 held, with no movement after release. The experimental tape-coast layer remains
-opt-in through `LIVE_REWIND_TAPE_COAST_ENABLED`; when enabled, the speed starts at
-`LIVE_REWIND_TAPE_COAST_MIN_STEPS`, accelerates via `LIVE_REWIND_TAPE_COAST_ACCELERATION`
-up to `LIVE_REWIND_TAPE_COAST_MAX_STEPS`, and decays via
-`LIVE_REWIND_TAPE_COAST_DECELERATION` after release. The `RewindSpeedController`
+opt-in through `rewind.tapeCoastEnabled`; when enabled, the speed starts at
+`rewind.tapeCoastMinSteps`, accelerates via `rewind.tapeCoastAcceleration`
+up to `rewind.tapeCoastMaxSteps`, and decays via
+`rewind.tapeCoastDeceleration` after release. The `RewindSpeedController`
 keeps a fractional accumulator so sub-1.0 speeds produce slow-motion rewind
 (physics steps land on the visual frames where the accumulator crosses 1.0).
 `LiveRewindManager` pushes the current speed into `AudioManager.setReversePlaybackRate`

@@ -7,6 +7,7 @@ import com.openggf.game.titlecard.TitleCardMappings;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.graphics.TitleCardSpriteRenderer;
 import com.openggf.level.Pattern;
 import com.openggf.tools.KosinskiReader;
@@ -78,7 +79,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     }
 
     // Pattern base ID for GPU caching (high to avoid conflicts)
-    private static final int PATTERN_BASE = 0x50000;
+    private static final int PATTERN_BASE = PatternAtlasRange.MENU_AND_DATA_SELECT.base();
 
     // VRAM base tile for title card art
     private static final int VRAM_BASE = Sonic3kConstants.VRAM_TITLE_CARD_BASE;

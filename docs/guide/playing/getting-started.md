@@ -22,7 +22,7 @@ incorrect results.
 | Sonic 2 | `Sonic The Hedgehog 2 (W) (REV01) [!].gen` | World, Revision 01 |
 | Sonic 3&K | `Sonic and Knuckles & Sonic 3 (W) [!].gen` | World (lock-on combined ROM) |
 
-ROM filenames can be changed in `config.json` if yours differ. See
+ROM filenames can be changed in `config.yaml` if yours differ. See
 [Configuration](configuration.md) for details.
 
 ## Install and Run
@@ -69,17 +69,17 @@ If a ROM file is missing for the game you selected, the engine will show an erro
 
 ## Quick Configuration
 
-The engine reads settings from `config.json` in the working directory. If the file
+The engine reads settings from `config.yaml` in the working directory. If the file
 does not exist, defaults are used. A few settings you might want to change immediately:
 
 | Setting | What it does | Default |
 |---------|-------------|---------|
-| `DEFAULT_ROM` | Which game boots first (`"s1"`, `"s2"`, or `"s3k"`) | `"s1"` |
-| `MASTER_TITLE_SCREEN_ON_STARTUP` | Show game picker on launch | `true` |
-| `SCREEN_WIDTH` / `SCREEN_HEIGHT` | Window size in pixels | `640` x `448` |
-| `AUDIO_ENABLED` | Enable or disable sound | `true` |
-| `SIDEKICK_CHARACTER_CODE` | Add Tails as a CPU sidekick (`"tails"` or `""`) | `""` |
-| `EDITOR_ENABLED` | Allow `Shift+Tab` to open the experimental editor overlay | `false` |
+| `roms.default` | Which game boots first (`"s1"`, `"s2"`, or `"s3k"`) | `"s3k"` |
+| `startup.masterTitleScreen` | Show game picker on launch | `true` |
+| `display.windowAutosize` | Derive the window size from the aspect preset | `true` |
+| `audio.enabled` | Enable or disable sound | `true` |
+| `characters.sidekick` | Add Tails as a CPU sidekick (`"tails"` or `""`) | `"tails"` |
+| `debug.flags.editor` | Allow `Shift+Tab` to open the experimental editor overlay | `false` |
 
 Key bindings can be written as names like `"SPACE"` and `"F9"` instead of raw numeric key codes.
 

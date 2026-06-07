@@ -6,6 +6,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.S3kFrontendPaletteUploader;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.tools.EnigmaReader;
@@ -59,10 +60,10 @@ public class Sonic3kTitleScreenDataLoader {
     private static final int MAP_HEIGHT = 28;
 
     /** Virtual pattern ID base for animation frame art. */
-    static final int ANIM_PATTERN_BASE = 0xE0000;
+    static final int ANIM_PATTERN_BASE = PatternAtlasRange.S3K_TITLE_SCREEN_ANIMATION.base();
 
     /** Virtual pattern ID base for combined sprite art (Sonic sprites + &Knuckles + banner + menu). */
-    static final int SPRITE_PATTERN_BASE = 0xE8000;
+    static final int SPRITE_PATTERN_BASE = PatternAtlasRange.S3K_TITLE_SCREEN_SPRITES.base();
 
     // ---- Loaded animation data (indexed 0-12, representing frames 1-D) ----
 

@@ -6,16 +6,36 @@ import com.openggf.game.BonusStageState;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.animation.AnimatedTileCachePolicy;
+import com.openggf.game.animation.AnimatedTileChannel;
+import com.openggf.game.animation.AnimatedTileChannelGraph;
+import com.openggf.game.animation.DestinationPlan;
+import com.openggf.game.mutation.MutationEffects;
+import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
 import com.openggf.game.NoOpBonusStageProvider;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.RewindRegistry;
+import com.openggf.game.render.AdvancedRenderFrameState;
+import com.openggf.game.render.AdvancedRenderMode;
+import com.openggf.game.render.AdvancedRenderModeContext;
+import com.openggf.game.render.AdvancedRenderModeController;
+import com.openggf.game.render.SpecialRenderEffect;
+import com.openggf.game.render.SpecialRenderEffectContext;
+import com.openggf.game.render.SpecialRenderEffectRegistry;
+import com.openggf.game.render.SpecialRenderEffectStage;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.zone.NoOpZoneRuntimeState;
+import com.openggf.game.zone.ZoneRuntimeRegistry;
+import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.graphics.FadeManager;
 import com.openggf.timer.TimerManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -136,6 +156,180 @@ class TestGameplayModeContextRewindRegistry {
         assertNotSame(first, second, "Re-attach should produce a new RewindRegistry instance");
         // New registry should have the same 7 keys
         assertEquals(7, second.capture().entries().keySet().size());
+    }
+
+    @Test
+    void sharedRuntimeRegistriesAreRewindRegisteredAfterAttach() {
+        GameplayModeContext ctx = buildAttachedContext();
+        attachSharedRegistries(ctx);
+
+        CompositeSnapshot snapshot = ctx.getRewindRegistry().capture();
+
+        assertTrue(snapshot.entries().keySet().containsAll(Set.of(
+                "zone-runtime",
+                "palette-ownership",
+                "animated-tile-channels",
+                "special-render",
+                "advanced-render-mode",
+                "mutation-pipeline")),
+                "Expected all runtime-owned registry adapters, got: " + snapshot.entries().keySet());
+    }
+
+    @Test
+    void tearDownClearsAllAttachedSharedRegistryState() {
+        GameplayModeContext ctx = buildAttachedContext();
+        ZoneRuntimeRegistry zoneRuntime = new ZoneRuntimeRegistry();
+        PaletteOwnershipRegistry paletteOwnership = new PaletteOwnershipRegistry();
+        AnimatedTileChannelGraph animatedTiles = new AnimatedTileChannelGraph();
+        SpecialRenderEffectRegistry specialRender = new SpecialRenderEffectRegistry();
+        AdvancedRenderModeController advancedRender = new AdvancedRenderModeController();
+        ZoneLayoutMutationPipeline mutationPipeline = new ZoneLayoutMutationPipeline();
+
+        ctx.attachSharedRegistries(zoneRuntime, paletteOwnership, animatedTiles,
+                specialRender, advancedRender, mutationPipeline);
+
+        zoneRuntime.install(new MutableZoneRuntimeState());
+        paletteOwnership.setPaletteRotationDisabled(true);
+        animatedTiles.install(List.of(dummyChannel()));
+        specialRender.register(new StatefulEffect());
+        advancedRender.register(new StatefulMode());
+        mutationPipeline.queue(context -> MutationEffects.redrawAllTilemaps());
+
+        ctx.tearDownManagers();
+
+        assertSame(NoOpZoneRuntimeState.INSTANCE, zoneRuntime.current());
+        assertFalse(paletteOwnership.isPaletteRotationDisabled(),
+                "palette rotation disable state must not leak after gameplay teardown");
+        assertTrue(animatedTiles.channels().isEmpty());
+        assertTrue(specialRender.isEmpty());
+        assertTrue(advancedRender.isEmpty());
+        assertTrue(mutationPipeline.isEmpty());
+    }
+
+    @Test
+    void specialRenderRegistryRestoresStatefulEffectSnapshots() {
+        SpecialRenderEffectRegistry registry = new SpecialRenderEffectRegistry();
+        StatefulEffect effect = new StatefulEffect();
+        registry.register(effect);
+        effect.value = 7;
+
+        var snapshot = registry.capture();
+        effect.value = 11;
+
+        registry.restore(snapshot);
+
+        assertEquals(7, effect.value);
+    }
+
+    @Test
+    void advancedRenderControllerRestoresStatefulModeSnapshots() {
+        AdvancedRenderModeController controller = new AdvancedRenderModeController();
+        StatefulMode mode = new StatefulMode();
+        controller.register(mode);
+        mode.value = 5;
+
+        var snapshot = controller.capture();
+        mode.value = 9;
+
+        controller.restore(snapshot);
+
+        assertEquals(5, mode.value);
+    }
+
+    private static void attachSharedRegistries(GameplayModeContext ctx) {
+        ctx.attachSharedRegistries(
+                new ZoneRuntimeRegistry(),
+                new PaletteOwnershipRegistry(),
+                new AnimatedTileChannelGraph(),
+                new SpecialRenderEffectRegistry(),
+                new AdvancedRenderModeController(),
+                new ZoneLayoutMutationPipeline());
+    }
+
+    private static AnimatedTileChannel dummyChannel() {
+        return new AnimatedTileChannel(
+                "dummy",
+                () -> true,
+                context -> 0,
+                DestinationPlan.single(0),
+                AnimatedTileCachePolicy.ALWAYS,
+                context -> {
+                });
+    }
+
+    private static final class MutableZoneRuntimeState implements ZoneRuntimeState {
+        @Override
+        public String gameId() {
+            return "s2";
+        }
+
+        @Override
+        public int zoneIndex() {
+            return 0;
+        }
+
+        @Override
+        public int actIndex() {
+            return 0;
+        }
+    }
+
+    private static final class StatefulEffect
+            implements SpecialRenderEffect, RewindSnapshottable<Integer> {
+        private int value;
+
+        @Override
+        public SpecialRenderEffectStage stage() {
+            return SpecialRenderEffectStage.AFTER_BACKGROUND;
+        }
+
+        @Override
+        public void render(SpecialRenderEffectContext context) {
+        }
+
+        @Override
+        public String key() {
+            return "stateful-effect";
+        }
+
+        @Override
+        public Integer capture() {
+            return value;
+        }
+
+        @Override
+        public void restore(Integer snapshot) {
+            value = snapshot;
+        }
+    }
+
+    private static final class StatefulMode
+            implements AdvancedRenderMode, RewindSnapshottable<Integer> {
+        private int value;
+
+        @Override
+        public String id() {
+            return "stateful-mode";
+        }
+
+        @Override
+        public void contribute(AdvancedRenderModeContext context, AdvancedRenderFrameState.Builder builder) {
+        }
+
+        @Override
+        public String key() {
+            return "stateful-mode";
+        }
+
+        @Override
+        public Integer capture() {
+            return value;
+        }
+
+        @Override
+        public void restore(Integer snapshot) {
+            value = snapshot;
+        }
     }
 
     private static final class StubBonusStageProvider implements BonusStageProvider {

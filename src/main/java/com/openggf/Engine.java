@@ -1280,10 +1280,14 @@ public class Engine {
 			uiPipeline.renderFadePass();
 		}
 
+		// Post-fade diagnostic overlays: intentionally outside UiRenderPipeline so
+		// trace/debug status remains visible during fade-to-black teardown. Keep
+		// this block diagnostic-only unless an explicit render-order exception is
+		// documented and guarded.
 		renderDisplayColorProfileNotification();
 
-		// Trace Test Mode HUD: drawn AFTER the fade pass so counters and
-		// TRACE COMPLETE remain readable during fade-to-black teardown.
+		// Trace Test Mode HUD and live rewind HUD: drawn after the fade pass so
+		// counters and TRACE COMPLETE remain readable during fade-to-black teardown.
 		TraceSessionLauncher traceSession = TraceSessionLauncher.active();
 		if (traceSession != null) {
 			traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
@@ -1295,6 +1299,9 @@ public class Engine {
 		if (getCurrentGameMode() == GameMode.CREDITS_DEMO) {
 			EndingProvider provider = gameLoop.getEndingProvider();
 			if (provider != null && provider.shouldRenderDemoSpritesOverFade()) {
+				// Credits demo exception: the original ending presentation keeps
+				// demo sprites visible over fade while the diagnostic overlays remain
+				// readable. Guard tests keep this the only gameplay sprite pass here.
 				// Reset shader/texture state before the post-fade sprite pass: the fade
 				// shader binds a program and modifies blend/depth state, and even though
 				// FadeManager restores blend on its own, we must not rely on the next pass

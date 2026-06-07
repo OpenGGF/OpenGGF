@@ -63,12 +63,49 @@ public final class AdvancedRenderModeController
 
     @Override
     public AdvancedRenderModeSnapshot capture() {
-        return new AdvancedRenderModeSnapshot(modes);
+        return new AdvancedRenderModeSnapshot(modes, captureModeStates());
     }
 
     @Override
     public void restore(AdvancedRenderModeSnapshot s) {
         modes.clear();
         modes.addAll(s.modes());
+        restoreModeStates(s);
+    }
+
+    private List<AdvancedRenderModeSnapshot.ModeState> captureModeStates() {
+        List<AdvancedRenderModeSnapshot.ModeState> states = new ArrayList<>();
+        for (int i = 0; i < modes.size(); i++) {
+            AdvancedRenderMode mode = modes.get(i);
+            if (mode instanceof RewindSnapshottable<?> snapshottable) {
+                states.add(new AdvancedRenderModeSnapshot.ModeState(
+                        i,
+                        snapshottable.key(),
+                        Objects.requireNonNull(snapshottable.capture(),
+                                "Advanced render mode snapshot must not be null for key: "
+                                        + snapshottable.key())));
+            }
+        }
+        return states;
+    }
+
+    private void restoreModeStates(AdvancedRenderModeSnapshot snapshot) {
+        for (AdvancedRenderModeSnapshot.ModeState state : snapshot.modeStates()) {
+            if (state.index() < 0 || state.index() >= modes.size()) {
+                throw new IllegalStateException("Missing advanced render mode for snapshot key: " + state.key());
+            }
+            AdvancedRenderMode mode = modes.get(state.index());
+            if (!(mode instanceof RewindSnapshottable<?> snapshottable)
+                    || !snapshottable.key().equals(state.key())) {
+                throw new IllegalStateException("Cannot restore advanced render mode snapshot for key: "
+                        + state.key());
+            }
+            restoreRaw(snapshottable, state.snapshot());
+        }
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static void restoreRaw(RewindSnapshottable snapshottable, Object snapshot) {
+        snapshottable.restore(snapshot);
     }
 }

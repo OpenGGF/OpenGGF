@@ -566,8 +566,8 @@ you will need to add the art to the PLC registry. The pattern is:
 
 1. Build: `mvn package`
 2. Run the engine and select Sonic 2.
-3. Navigate to Aquatic Ruin Zone (use Z/X to cycle zones, or set
-   `LEVEL_SELECT_ON_STARTUP` to `true` in `config.json`).
+3. Navigate to Aquatic Ruin Zone (use Page Down/Page Up to cycle zones/acts, or set
+   `debug.startup.levelSelectOnStartup` to `true` in `config.yaml`).
 4. Find an ArrowShooter in the level (they are embedded in stone pillars).
 5. Verify:
    - The shooter animates when you approach within ~64 pixels.

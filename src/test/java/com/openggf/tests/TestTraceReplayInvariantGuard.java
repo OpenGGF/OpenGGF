@@ -1,6 +1,13 @@
 package com.openggf.tests;
 
+import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.trace.FrameComparison;
+import com.openggf.trace.Severity;
 import com.openggf.trace.ToleranceConfig;
+import com.openggf.trace.TraceBinder;
+import com.openggf.trace.TraceCharacterState;
+import com.openggf.trace.TraceFrame;
+import com.openggf.trace.TraceReplayBootstrap;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -15,6 +22,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 class TestTraceReplayInvariantGuard {
@@ -78,6 +87,50 @@ class TestTraceReplayInvariantGuard {
         assertEquals(1, defaults.cameraError(), "camera delta of one must be an error");
         assertEquals(ToleranceConfig.RingCountMode.FORCE_ERROR, defaults.ringCountMode(),
                 "ring count mismatch must default to error; opt into WARN_ONLY explicitly");
+    }
+
+    @Test
+    void s2ControlLockLogicalLatchRemainsExplicitlyDeferred() {
+        assertFalse(PhysicsFeatureSet.SONIC_2.controlLockLatchesLogicalInput(),
+                "S2 control-lock logical-input latching is deferred until the remaining "
+                        + "Tails follow-history call sites can be validated without "
+                        + "regressing EHZ/MTZ trace frontiers.");
+        assertTrue(PhysicsFeatureSet.SONIC_3K.controlLockLatchesLogicalInput(),
+                "S3K keeps the ROM Ctrl_1_locked logical-input latch enabled.");
+    }
+
+    @Test
+    void traceReplayBootstrapDoesNotEnableRecordedFrameZeroStateSeeding() {
+        assertFalse(TraceReplayBootstrap.shouldUseTraceStartBootstrapForTraceReplay(null),
+                "Trace-start state bootstrap must stay disabled by default.");
+        assertFalse(TraceReplayBootstrap.shouldSeedFrameZeroForTraceReplay(null),
+                "Frame-zero trace rows are comparison data, not engine seed data.");
+        assertFalse(TraceReplayBootstrap.shouldSeedReplayStartStateForTraceReplay(null, 0),
+                "Replay-start trace rows are comparison data, not engine seed data.");
+    }
+
+    @Test
+    void recordedSidekickFieldsAreStrictParityErrors() {
+        TraceCharacterState expectedTails = traceCharacter(
+                (short) 0x0050, (short) 0x0288, (short) 0x0010);
+        TraceCharacterState actualTails = traceCharacter(
+                (short) 0x0051, (short) 0x0288, (short) 0x0010);
+        TraceFrame frame = new TraceFrame(0, 0,
+                (short) 0x0060, (short) 0x0290,
+                (short) 0, (short) 0, (short) 0,
+                (byte) 0, false, false, 0,
+                0, 0, -1, -1, -1, 0, 0,
+                0, 0, 0, 0, expectedTails);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison comparison = binder.compareFrame(frame,
+                (short) 0x0060, (short) 0x0290,
+                (short) 0, (short) 0, (short) 0,
+                (byte) 0, false, false, 0,
+                null, null, "tails", actualTails);
+
+        assertEquals(Severity.ERROR, comparison.fields().get("tails_x").severity(),
+                "Recorded sidekick position deltas must be release-blocking errors.");
     }
 
     @Test
@@ -175,6 +228,12 @@ class TestTraceReplayInvariantGuard {
                 .filter(path -> !isAllowedTraceSupportSource(path))
                 .sorted(Comparator.comparing(TestTraceReplayInvariantGuard::normalize))
                 .toList();
+    }
+
+    private static TraceCharacterState traceCharacter(short x, short y, short xSpeed) {
+        return new TraceCharacterState(true, x, y, xSpeed,
+                (short) 0, (short) 0, (byte) 0,
+                false, false, 0, 0, 0, 2, 0, 0);
     }
 
     private static boolean isAllowedTraceSupportSource(Path source) {

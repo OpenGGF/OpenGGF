@@ -127,6 +127,55 @@ class TestArchitecturalSourceGuard {
             "com/openggf/game/sonic3k/objects/badniks/BuggernautBadnikInstance.java",
             "com/openggf/game/sonic3k/objects/badniks/CaterkillerJrHeadInstance.java"
     );
+    private static final Map<String, Integer> AIZ_RAW_OBJECT_SPAWN_REVIEWED_BUDGETS = Map.of(
+            "com/openggf/game/sonic3k/objects/AizBattleshipInstance.java", 1,
+            "com/openggf/game/sonic3k/objects/AizEndBossDebrisChild.java", 1,
+            "com/openggf/game/sonic3k/objects/AizEndBossInstance.java", 10,
+            "com/openggf/game/sonic3k/objects/AizMinibossCutsceneInstance.java", 3,
+            "com/openggf/game/sonic3k/objects/AizMinibossInstance.java", 3
+    );
+    private static final Map<String, Integer> SONIC2_NATIVE_LEVEL_ART_RENDER_PATTERN_BUDGETS = Map.ofEntries(
+            Map.entry("com/openggf/game/sonic2/objects/ARZPlatformObjectInstance.java", 1),
+            Map.entry("com/openggf/game/sonic2/objects/ARZRotPformsObjectInstance.java", 1),
+            Map.entry("com/openggf/game/sonic2/objects/CollapsingPlatformObjectInstance.java", 2),
+            Map.entry("com/openggf/game/sonic2/objects/FallingPillarObjectInstance.java", 1),
+            Map.entry("com/openggf/game/sonic2/objects/GrounderWallInstance.java", 1),
+            Map.entry("com/openggf/game/sonic2/objects/LargeRotPformObjectInstance.java", 1),
+            Map.entry("com/openggf/game/sonic2/objects/MCZBrickObjectInstance.java", 1),
+            Map.entry("com/openggf/game/sonic2/objects/MCZRotPformsObjectInstance.java", 1),
+            Map.entry("com/openggf/game/sonic2/objects/MTZLongPlatformObjectInstance.java", 1),
+            Map.entry("com/openggf/game/sonic2/objects/MTZPlatformObjectInstance.java", 1),
+            Map.entry("com/openggf/game/sonic2/objects/MTZTwinStompersObjectInstance.java", 1),
+            Map.entry("com/openggf/game/sonic2/objects/RisingPillarObjectInstance.java", 2),
+            Map.entry("com/openggf/game/sonic2/objects/SidewaysPformObjectInstance.java", 1),
+            Map.entry("com/openggf/game/sonic2/objects/SlidingSpikesObjectInstance.java", 1),
+            Map.entry("com/openggf/game/sonic2/objects/StomperObjectInstance.java", 1),
+            Map.entry("com/openggf/game/sonic2/objects/SwingingPformObjectInstance.java", 1),
+            Map.entry("com/openggf/game/sonic2/objects/SwingingPlatformObjectInstance.java", 1)
+    );
+    private static final List<SourceSignal> S3K_PATTERN_ATLAS_RANGE_SIGNALS = List.of(
+            new SourceSignal(
+                    "com/openggf/game/sonic3k/dataselect/S3kDataSelectRenderer.java",
+                    "DATA_SELECT_PATTERN_BASE = PatternAtlasRange.MENU_AND_DATA_SELECT.base()"),
+            new SourceSignal(
+                    "com/openggf/game/sonic3k/titlecard/Sonic3kTitleCardManager.java",
+                    "PATTERN_BASE = PatternAtlasRange.MENU_AND_DATA_SELECT.base()"),
+            new SourceSignal(
+                    "com/openggf/game/sonic3k/levelselect/Sonic3kLevelSelectConstants.java",
+                    "PATTERN_BASE = PatternAtlasRange.MENU_AND_DATA_SELECT.base()"),
+            new SourceSignal(
+                    "com/openggf/game/sonic3k/objects/S3kResultsScreenObjectInstance.java",
+                    "PATTERN_BASE = PatternAtlasRange.RESULTS_SCREENS.base()"),
+            new SourceSignal(
+                    "com/openggf/game/sonic3k/specialstage/S3kSpecialStageResultsScreen.java",
+                    "PATTERN_BASE = PatternAtlasRange.SPECIAL_STAGE_RESULTS.base()"),
+            new SourceSignal(
+                    "com/openggf/game/sonic3k/titlescreen/Sonic3kTitleScreenDataLoader.java",
+                    "ANIM_PATTERN_BASE = PatternAtlasRange.S3K_TITLE_SCREEN_ANIMATION.base()"),
+            new SourceSignal(
+                    "com/openggf/game/sonic3k/titlescreen/Sonic3kTitleScreenDataLoader.java",
+                    "SPRITE_PATTERN_BASE = PatternAtlasRange.S3K_TITLE_SCREEN_SPRITES.base()")
+    );
 
     private static final Set<String> GAME_ID_BRANCH_APPROVED_FILES = Set.of(
             "com/openggf/Engine.java",
@@ -208,6 +257,7 @@ class TestArchitecturalSourceGuard {
             "\\bGameModuleRegistry\\s*\\.\\s*(?:setCurrent|detectAndSetModule)\\s*\\(");
     private static final Pattern RAW_OBJECT_CHILD_SPAWN = Pattern.compile(
             "\\b(?:addDynamicObject(?:NextFrame|AfterCurrent(?:NextFrame)?)?|ObjectLifetimeOps\\s*\\.\\s*assignFindNextFreeChildSlot)\\s*\\(");
+    private static final Pattern RAW_RENDER_PATTERN = Pattern.compile("\\.\\s*renderPattern\\s*\\(");
     private static final Set<String> REGISTRY_BACKED_PALETTE_CYCLE_CLASSES = Set.of(
             "IczCycle",
             "LbzCycle",
@@ -222,6 +272,18 @@ class TestArchitecturalSourceGuard {
             "\\b(?:player|playable|entity|sonic|tails|knuckles)\\s*\\.\\s*get[XY]\\s*\\(\\s*\\)");
     private static final Pattern COORDINATE_CONTEXT = Pattern.compile(
             "(?i)\\b(rom|parity|x_pos|y_pos|distance|threshold|trigger|dx|dy|Math\\s*\\.\\s*abs|>=|<=|>|<)\\b");
+    private static final Pattern RAW_LEVEL_MUTATOR = Pattern.compile(
+            "\\b(?:map|level\\s*\\.\\s*getMap\\s*\\(\\s*\\)|block|chunk|blocks\\s*\\[[^]]+]|chunks\\s*\\[[^]]+])"
+                    + "\\s*\\.\\s*(?:setValue|setChunkDesc|setPatternDesc|setSolidTileIndex|setSolidTileAltIndex)"
+                    + "\\s*\\(");
+    private static final Set<String> RAW_LEVEL_MUTATOR_ALLOWED_FILES = Set.of(
+            "com/openggf/level/Map.java",
+            "com/openggf/level/Block.java",
+            "com/openggf/level/Chunk.java",
+            "com/openggf/level/MutableLevel.java",
+            "com/openggf/game/mutation/DirectLevelMutationSurface.java",
+            "com/openggf/game/sonic3k/Sonic3kLevel.java"
+    );
 
     @Test
     void productionGameIdBehaviorBranchesStayInRoutingAndCompositionCode() throws IOException {
@@ -760,6 +822,160 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
+    void reviewedAizRawObjectSpawnsStayBoundedAndDocumented() throws IOException {
+        String discrepancies = Files.readString(Path.of("docs", "S3K_KNOWN_DISCREPANCIES.md"));
+        List<String> violations = new ArrayList<>();
+        if (!discrepancies.contains("AIZ Boss and Miniboss Raw Spawn Debt")) {
+            violations.add("docs/S3K_KNOWN_DISCREPANCIES.md must document the reviewed AIZ raw-spawn debt");
+        }
+
+        for (Map.Entry<String, Integer> budget : AIZ_RAW_OBJECT_SPAWN_REVIEWED_BUDGETS.entrySet()) {
+            String source = stripCommentsAndStrings(Files.readString(SRC_MAIN.resolve(budget.getKey())));
+            int actual = countMatches(RAW_OBJECT_CHILD_SPAWN, source);
+            if (actual != budget.getValue()) {
+                violations.add(budget.getKey() + " has " + actual
+                        + " raw object-spawn calls; expected exactly " + budget.getValue()
+                        + ". Migrate new child spawns through spawnChild()/spawnFreeChild() instead of growing debt.");
+            }
+        }
+
+        assertNoViolations("Reviewed AIZ raw object spawns must stay bounded and documented", violations);
+    }
+
+    @Test
+    void s3kUiPatternBasesStayCentralizedInPatternAtlasRange() throws IOException {
+        List<String> violations = new ArrayList<>();
+        String ranges = Files.readString(SRC_MAIN.resolve("com/openggf/graphics/PatternAtlasRange.java"));
+        for (String rangeName : List.of(
+                "MENU_AND_DATA_SELECT",
+                "RESULTS_SCREENS",
+                "SPECIAL_STAGE_RESULTS",
+                "S3K_TITLE_SCREEN_ANIMATION",
+                "S3K_TITLE_SCREEN_SPRITES")) {
+            if (!ranges.contains(rangeName)) {
+                violations.add("PatternAtlasRange is missing " + rangeName);
+            }
+        }
+        for (SourceSignal signal : S3K_PATTERN_ATLAS_RANGE_SIGNALS) {
+            String source = Files.readString(SRC_MAIN.resolve(signal.relativePath()));
+            if (!source.contains(signal.requiredText())) {
+                violations.add(signal.relativePath() + " must allocate its virtual pattern base through "
+                        + signal.requiredText());
+            }
+        }
+
+        assertNoViolations("S3K UI/result virtual pattern bases must be owned by PatternAtlasRange",
+                violations);
+    }
+
+    @Test
+    void sonic3kHczStandaloneMappingsStayRomBacked() throws IOException {
+        String provider = Files.readString(SRC_MAIN.resolve("com/openggf/game/sonic3k/Sonic3kObjectArtProvider.java"));
+        String constants = Files.readString(SRC_MAIN.resolve(
+                "com/openggf/game/sonic3k/constants/Sonic3kConstants.java"));
+        String discrepancies = Files.readString(Path.of("docs", "S3K_KNOWN_DISCREPANCIES.md"));
+        List<String> violations = new ArrayList<>();
+        for (String constant : List.of(
+                "MAP_HCZ_MINIBOSS_ADDR",
+                "MAP_HCZ_END_BOSS_ADDR",
+                "MAP_HCZ_WATERWALL_ADDR")) {
+            if (!provider.contains("Sonic3kConstants." + constant)) {
+                violations.add("Sonic3kObjectArtProvider must load " + constant + " through ROM-backed mappings");
+            }
+            if (!constants.contains("public static final int " + constant)) {
+                violations.add("Sonic3kConstants must expose ROM address " + constant);
+            }
+            if (!discrepancies.contains(constant)) {
+                violations.add("docs/S3K_KNOWN_DISCREPANCIES.md must document " + constant);
+            }
+        }
+
+        assertNoViolations("HCZ standalone object mappings must stay ROM-backed, not handwritten runtime data",
+                violations);
+    }
+
+    @Test
+    void enginePostFadeRenderingStaysDiagnosticOnly() throws IOException {
+        String source = Files.readString(SRC_MAIN.resolve(ENGINE_PATH));
+        int fadeCall = source.indexOf("uiPipeline.renderFadePass();");
+        int screenshotMarker = source.indexOf("// F12 screenshot capture", fadeCall);
+        assertTrue(fadeCall >= 0 && screenshotMarker > fadeCall,
+                "Engine.display() must keep a recognizable post-fade block before screenshot capture");
+
+        String postFadeBlock = source.substring(fadeCall, screenshotMarker);
+        List<String> violations = new ArrayList<>();
+        for (String forbidden : List.of(
+                "drawActiveLevelTitleCardOverlay(",
+                "levelManager.draw(",
+                "levelManager.drawWithSpritePriority(")) {
+            if (postFadeBlock.contains(forbidden)) {
+                violations.add("post-fade block contains general gameplay rendering call " + forbidden);
+            }
+        }
+        if (!postFadeBlock.contains("Post-fade diagnostic overlays")) {
+            violations.add("post-fade block must be explicitly labeled as diagnostic-only");
+        }
+        if (!postFadeBlock.contains("shouldRenderDemoSpritesOverFade()")
+                || !postFadeBlock.contains("levelManager.renderSpriteObjectPass(spriteManager, true)")) {
+            violations.add("credits-demo sprite-over-fade exception must remain explicit and guarded");
+        }
+
+        assertNoViolations("Engine post-fade rendering must stay diagnostic-only except the credits-demo pass",
+                violations);
+    }
+
+    @Test
+    void mgz2QuakeChunkS3HalfAddressIsReviewedAndDocumented() throws IOException {
+        String source = Files.readString(SRC_MAIN.resolve(
+                "com/openggf/game/sonic3k/events/Sonic3kMGZEvents.java"));
+        String discrepancies = Files.readString(Path.of("docs", "S3K_KNOWN_DISCREPANCIES.md"));
+        List<String> violations = new ArrayList<>();
+        if (!source.contains("MGZ_QUAKE_CHUNK_ROM_ADDR = 0x3CBBB4")) {
+            violations.add("Sonic3kMGZEvents.MGZ_QUAKE_CHUNK_ROM_ADDR must stay at reviewed ROM address 0x3CBBB4");
+        }
+        if (!discrepancies.contains("MGZ2 Quake Chunk Source Address")
+                || !discrepancies.contains("0x3CBBB4")) {
+            violations.add("docs/S3K_KNOWN_DISCREPANCIES.md must document the MGZ2 quake chunk address exception");
+        }
+
+        assertNoViolations("MGZ2 quake chunk S3-half address must stay reviewed and documented", violations);
+    }
+
+    @Test
+    void sonic2ObjectRawPatternDrawsStayNativeLevelArtOnly() throws IOException {
+        List<String> violations = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        for (Path file : productionFilesUnder("com/openggf/game/sonic2/objects")) {
+            String relative = relative(file);
+            String stripped = stripCommentsAndStrings(Files.readString(file));
+            int actual = countMatches(RAW_RENDER_PATTERN, stripped);
+            if (actual == 0) {
+                continue;
+            }
+            seen.add(relative);
+            Integer expected = SONIC2_NATIVE_LEVEL_ART_RENDER_PATTERN_BUDGETS.get(relative);
+            if (expected == null) {
+                violations.add(relative + " has " + actual
+                        + " raw renderPattern calls. Use renderPatternWithId for virtual pattern IDs, "
+                        + "or document and budget native level-art rendering explicitly.");
+            } else if (actual != expected) {
+                violations.add(relative + " has " + actual
+                        + " raw renderPattern calls; expected exactly " + expected
+                        + " reviewed native level-art calls.");
+            }
+        }
+        for (String relative : SONIC2_NATIVE_LEVEL_ART_RENDER_PATTERN_BUDGETS.keySet()) {
+            if (!seen.contains(relative)) {
+                violations.add(relative + " no longer has its reviewed native level-art renderPattern call; "
+                        + "remove it from the guard budget.");
+            }
+        }
+
+        assertNoViolations("Sonic 2 object raw renderPattern calls must stay bounded to native level art",
+                violations);
+    }
+
+    @Test
     void registryBackedS3kPaletteCyclesDoNotDirectlyUploadTextures() throws IOException {
         String relative = "com/openggf/game/sonic3k/Sonic3kPaletteCycler.java";
         String source = Files.readString(SRC_MAIN.resolve(relative));
@@ -791,6 +1007,26 @@ class TestArchitecturalSourceGuard {
                 "MGZ2 post-boss fade rows should be loaded from the ROM-backed Pal_MGZFadeCNZ constant");
         assertTrue(!stripped.contains("int[][]"),
                 "MGZ2 post-boss fade should not embed Pal_MGZFadeCNZ palette rows in source");
+    }
+
+    @Test
+    void productionGameplayCodeDoesNotBypassLevelMutationSurfaceWithRawLevelMutators() throws IOException {
+        List<String> violations = new ArrayList<>();
+        for (Path file : productionFiles()) {
+            String relative = relative(file);
+            if (RAW_LEVEL_MUTATOR_ALLOWED_FILES.contains(relative)) {
+                continue;
+            }
+            String stripped = stripCommentsAndStrings(Files.readString(file));
+            Matcher matcher = RAW_LEVEL_MUTATOR.matcher(stripped);
+            while (matcher.find()) {
+                violations.add(relative + ":" + lineNumberForOffset(stripped, matcher.start())
+                        + " - raw level mutator " + matcher.group().replaceAll("\\s+", ""));
+            }
+        }
+
+        assertNoViolations("Gameplay/runtime code must route level edits through MutableLevel or "
+                + "LevelMutationSurface so rewind copy-on-write isolation cannot be bypassed", violations);
     }
 
     @Test
@@ -1276,6 +1512,9 @@ class TestArchitecturalSourceGuard {
             String description,
             Pattern pattern,
             int expectedCount) {
+    }
+
+    private record SourceSignal(String relativePath, String requiredText) {
     }
 
     private record SourceFile(String text, List<String> lines) {

@@ -155,7 +155,7 @@ We use **extended pattern ID ranges** with fixed bases that don't overlap:
 |------|----------|-------|
 | `0x00000` | Level tiles | Corresponds to VRAM tile indices (0-~2047) |
 | `0x01000` | Special Stage | Track, objects, HUD for special stages |
-| `0x10000` | Results Screen | End-of-act results screen patterns |
+| `0x10000` | Reserved legacy results range | Historical docs referenced results here; current release-screen allocations are registered under `PatternAtlasRange.RESULTS_SCREENS` at `0x60000` |
 | `0x20000` | Objects | Monitors, springs, badniks, zone-specific objects |
 | `0x28000` | HUD | Score, time, rings display (fixed base) |
 | `0x30000` | Water surface | Underwater palette transition patterns |
@@ -164,6 +164,12 @@ We use **extended pattern ID ranges** with fixed bases that don't overlap:
 | `0x39000+` | Sidekick tail appendages | Extra banks for duplicate Tails tail sprites (Obj05) |
 | `0x40000` | Title Card / S1 SS Results / S3K AIZ Intro | Shared base; mutually-exclusive game contexts (see below) |
 | `0x50000` | Level Select / S1 Title Card / S3K Title Card / S3K Data Select | Shared base; mutually-exclusive game contexts (see below) |
+| `0x60000` | Results screens | S1 Try Again Eggman, S2 title-screen background, S3K level results; registered as `PatternAtlasRange.RESULTS_SCREENS` |
+| `0x61000` | Results-screen suballocation | S1 Try Again emerald art (`PatternAtlasRange.RESULTS_SCREENS.base() + 0x1000`) |
+| `0x70000` | Special-stage results / S2 title sprites | Shared base in mutually-exclusive contexts; registered as `PatternAtlasRange.SPECIAL_STAGE_RESULTS` |
+| `0x80000` | S2 title-screen credit text | Separate title-screen text allocation |
+| `0xE0000` | S2 credits / S3K title animation | Shared base in mutually-exclusive contexts; registered as `PatternAtlasRange.S3K_TITLE_SCREEN_ANIMATION` |
+| `0xE8000` | S3K title sprites | Registered as `PatternAtlasRange.S3K_TITLE_SCREEN_SPRITES` |
 
 **Shared-base contexts** (`0x40000`):
 - S2 Title Card (`TitleCardManager.PATTERN_BASE`) — gameplay scope, not active during cutscenes
@@ -179,6 +185,12 @@ We use **extended pattern ID ranges** with fixed bases that don't overlap:
 - S3K Data Select (`S3kDataSelectRenderer.DATA_SELECT_PATTERN_BASE`)
 
 These bases are reused across game-context-mutually-exclusive subsystems (e.g., title card vs. level select vs. data select are never active in the same frame). `PatternAtlas.registerRange(...)` provides a diagnostic collision detector but is not yet enforced at every call site — adding bootstrap-time `registerRange` calls in each owning subsystem is a follow-up.
+
+The source-level ownership for documented ranges is now guarded by
+`TestArchUnitRules.virtual_pattern_base_fields_are_backed_by_pattern_atlas_range`
+and the S3K frontend range signals in `TestArchitecturalSourceGuard`, so new
+`*_PATTERN_BASE` constants inside a registered range must reference
+`PatternAtlasRange` instead of hard-coding the numeric base.
 
 ```java
 // LevelManager.java

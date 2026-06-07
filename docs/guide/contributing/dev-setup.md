@@ -81,7 +81,7 @@ absent.
 ```
 sonic-engine/
   pom.xml                    -- Maven build file
-  config.json                -- Runtime configuration (gitignored if custom)
+  config.yaml                -- Runtime configuration (gitignored if custom)
   src/
     main/java/com/openggf/   -- Engine source code
     main/resources/           -- Bundled default config, shaders

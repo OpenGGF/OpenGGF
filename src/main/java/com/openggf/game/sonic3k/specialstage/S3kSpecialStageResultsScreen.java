@@ -11,6 +11,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -71,7 +72,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
     private static final int VDP_OFFSET = 128;
 
     // ---- Pattern caching ----
-    private static final int PATTERN_BASE = 0x70000;  // High ID to avoid conflicts with level results
+    private static final int PATTERN_BASE = PatternAtlasRange.SPECIAL_STAGE_RESULTS.base();
 
     // ---- Digit rendering (shared with LevResults_DisplayScore) ----
     private static final int[] DIVISORS = {1000000, 100000, 10000, 1000, 100, 10, 1};

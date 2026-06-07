@@ -535,7 +535,7 @@ public final class GameplayModeContext implements ModeContext {
             advancedRenderModeController.clear();
         }
         if (paletteOwnershipRegistry != null) {
-            paletteOwnershipRegistry.beginFrame();
+            paletteOwnershipRegistry.clear();
         }
         if (zoneRuntimeRegistry != null) {
             zoneRuntimeRegistry.clear();

@@ -122,7 +122,7 @@ expectations honestly -- what works well, what is incomplete, and what you might
 
 ### Level Editor Overlay
 
-An experimental editor overlay is now available behind `EDITOR_ENABLED` in `config.json`.
+An experimental editor overlay is now available behind `debug.flags.editor` in `config.yaml`.
 When enabled, use `Shift+Tab` during gameplay to park the current playtest and enter the editor
 overlay, then use the same shortcut to resume. The current snapshot supports:
 
@@ -148,7 +148,7 @@ sprites, spindash mechanics, and sound effects while you play a different base g
 | S3K Data Select donated to S1/S2 | Working |
 | S3K sprites in S1/S2 | Experimental |
 
-Enable with `CROSS_GAME_FEATURES_ENABLED` and `CROSS_GAME_SOURCE` in config.json.
+Enable with `crossGame.enabled` and `crossGame.source` in `config.yaml`.
 
 When S3K donates the Data Select frontend, the save screen stays visually S3K-native,
 but save semantics remain host-owned. Slot routing, progression, clear-restart rules,
