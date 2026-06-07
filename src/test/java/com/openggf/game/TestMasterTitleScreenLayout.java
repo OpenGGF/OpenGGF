@@ -111,20 +111,60 @@ class TestMasterTitleScreenLayout {
 
     @Test
     void missingRomPrompt_showsRequiredRomLineAndSelectedFilename() {
-        assertEquals("requires the following ROM:",
+        assertEquals("Requires the following ROM:",
                 MasterTitleScreen.missingRomPromptLine());
         assertEquals("Sonic The Hedgehog 2 (W) (REV01) [!].gen",
                 MasterTitleScreen.missingRomFilenameLine(MasterTitleScreen.GameEntry.SONIC_2));
     }
 
     @Test
-    void menuTextColor_keepsUnavailableSelectedGamesGreyedOut() {
-        float[] color = MasterTitleScreen.menuTextColor(false, true, 0);
+    void menuTextColor_keepsUnavailableUnselectedGamesGreyedOut() {
+        float[] color = MasterTitleScreen.menuTextColor(false, false, 0);
 
         assertEquals(0.4f, color[0], 0f);
         assertEquals(0.4f, color[1], 0f);
         assertEquals(0.4f, color[2], 0f);
         assertEquals(0.7f, color[3], 0f);
+    }
+
+    @Test
+    void menuTextColor_highlightsUnavailableSelectedGamesWhileDisabled() {
+        float[] color = MasterTitleScreen.menuTextColor(false, true, 0);
+
+        assertEquals(0.72f, color[0], 0f);
+        assertEquals(0.72f, color[1], 0f);
+        assertEquals(0.72f, color[2], 0f);
+        assertEquals(0.85f, color[3], 0f);
+    }
+
+    @Test
+    void romPreviewLayoutRendersNativeTitleScreensAtNativeSize() {
+        MasterTitleScreen.PreviewLayout layout = MasterTitleScreen.romPreviewLayout(320, 224, 320);
+
+        assertEquals(320, layout.width());
+        assertEquals(224, layout.height());
+        assertEquals(0f, layout.x(), 0f);
+        assertEquals(0f, layout.y(), 0f);
+    }
+
+    @Test
+    void romPreviewLayoutStaysCenteredInWideViewports() {
+        MasterTitleScreen.PreviewLayout layout = MasterTitleScreen.romPreviewLayout(320, 224, 400);
+
+        assertEquals(320, layout.width());
+        assertEquals(224, layout.height());
+        assertEquals(40f, layout.x(), 0f);
+    }
+
+    @Test
+    void titleLogoYPlacesOpenGgfLogoOneTileHigher() {
+        assertEquals(180f, MasterTitleScreen.titleLogoY(42), 0f);
+    }
+
+    @Test
+    void titleLogoScaleReducesOpenGgfLogoToNineTenths() {
+        assertEquals(63, MasterTitleScreen.titleLogoScaledWidth(200));
+        assertEquals(31, MasterTitleScreen.titleLogoScaledHeight(100));
     }
 
     @Test

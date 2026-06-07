@@ -6,6 +6,7 @@ import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -74,6 +75,37 @@ class TestMasterTitleRomPreview {
     }
 
     @Test
+    void overlaySpriteFrameClipped_hidesMaskedDestinationPixels() {
+        MasterTitleRomPreview.Image image = new MasterTitleRomPreview.Image(16, 16, new byte[16 * 16 * 4]);
+        Pattern pattern = new Pattern();
+        pattern.setPixel(0, 0, (byte) 1);
+        pattern.setPixel(0, 1, (byte) 1);
+        Palette palette = palette(0x00_00_00, 0xAA_00_00);
+        SpriteMappingFrame frame = new SpriteMappingFrame(List.of(
+                new SpriteMappingPiece(0, 0, 1, 1, 0, false, false, 0, false)));
+
+        MasterTitleRomPreview.overlaySpriteFrameClipped(image, new Pattern[] { pattern }, new Palette[] { palette },
+                frame, 4, 5, 0, (x, y) -> y < 6);
+
+        assertPixel(image, 4, 5, 0xAA, 0x00, 0x00, 0xFF);
+        assertPixel(image, 4, 6, 0x00, 0x00, 0x00, 0x00);
+    }
+
+    @Test
+    void scaleImageIntoNativeCanvas_usesAreaSamplingWhenDownscaling() throws Exception {
+        MasterTitleRomPreview.Image source = new MasterTitleRomPreview.Image(2, 2, new byte[] {
+                (byte) 0xFF, 0x00, 0x00, (byte) 0xFF,
+                0x00, (byte) 0xFF, 0x00, (byte) 0xFF,
+                0x00, 0x00, (byte) 0xFF, (byte) 0xFF,
+                (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF
+        });
+
+        MasterTitleRomPreview.Image scaled = invokeScaleHelper(source, 1, 1);
+
+        assertPixel(scaled, 0, 0, 0x80, 0x80, 0x80, 0xFF);
+    }
+
+    @Test
     void loadFor_returnsEmptyWhenRomPathIsMissing() {
         assertTrue(MasterTitleRomPreview.loadFor(
                 MasterTitleScreen.GameEntry.SONIC_2,
@@ -104,18 +136,60 @@ class TestMasterTitleRomPreview {
     }
 
     @Test
-    void sonic2PreviewTimelineStartsWithHiddenSonicAndSettlesToFinalFrame() {
+    void sonic2PreviewTimelineStartsWithCharacterEntryAndSettlesToFinalFrame() {
         assertEquals(5, MasterTitleRomPreview.sonic2PreviewSonicFrameAt(0));
-        assertEquals(96 + MasterTitleRomPreview.sonic2PreviewCharacterYOffset(),
+        assertEquals(80 + MasterTitleRomPreview.sonic2PreviewCharacterYOffset(),
                 MasterTitleRomPreview.sonic2PreviewSonicYAt(0));
 
-        assertEquals(5, MasterTitleRomPreview.sonic2PreviewSonicFrameAt(128));
-        assertEquals(80 + MasterTitleRomPreview.sonic2PreviewCharacterYOffset(),
-                MasterTitleRomPreview.sonic2PreviewSonicYAt(128));
+        assertEquals(5, MasterTitleRomPreview.sonic2PreviewSonicFrameAt(4));
+        assertEquals(64 + MasterTitleRomPreview.sonic2PreviewCharacterYOffset(),
+                MasterTitleRomPreview.sonic2PreviewSonicYAt(4));
 
-        assertEquals(0x12, MasterTitleRomPreview.sonic2PreviewSonicFrameAt(288));
+        assertEquals(0x12, MasterTitleRomPreview.sonic2PreviewSonicFrameAt(160));
         assertEquals(24 + MasterTitleRomPreview.sonic2PreviewCharacterYOffset(),
-                MasterTitleRomPreview.sonic2PreviewSonicYAt(288));
+                MasterTitleRomPreview.sonic2PreviewSonicYAt(160));
+    }
+
+    @Test
+    void sonic1PreviewSettledLoopKeepsAlternatingFinalFrames() throws Exception {
+        int token = invokeIntHelper("sonic1PreviewTokenAt", 152);
+
+        assertEquals(6, invokeIntHelper("sonic1PreviewSonicFrameAt", token));
+    }
+
+    @Test
+    void sonic3kPreviewStartsAtFinalSceneFingerWag() throws Exception {
+        assertEquals(0x0D, invokeIntHelper("s3kPreviewFrameAt", 0));
+        assertEquals(4, invokeIntHelper("s3kPreviewFingerFrameAt", 0));
+        assertEquals(4, invokeIntHelper("s3kPreviewFingerFrameAt", 35));
+        assertEquals(0, invokeIntHelper("s3kPreviewFingerFrameAt", 36));
+        assertEquals(4, invokeIntHelper("s3kPreviewFingerFrameAt", 42));
+        assertEquals(1, invokeIntHelper("s3kPreviewFingerFrameAt", 48));
+    }
+
+    @Test
+    void sonic3kPreviewFingerOverlayIsLoweredToMatchFinalTitlePose() {
+        assertEquals(92, MasterTitleRomPreview.sonic3kPreviewFingerY());
+    }
+
+    @Test
+    void sonic3kPreviewIncludesTitleWinkAnimation() throws Exception {
+        assertEquals(2, invokeIntHelper("s3kPreviewWinkFrameAt", 0));
+        assertEquals(3, invokeIntHelper("s3kPreviewWinkFrameAt", 2));
+        assertEquals(2, invokeIntHelper("s3kPreviewWinkFrameAt", 10));
+        assertEquals(4, invokeIntHelper("s3kPreviewWinkFrameAt", 16));
+        assertEquals(2, invokeIntHelper("s3kPreviewWinkFrameAt", 168));
+    }
+
+    @Test
+    void sonic3kPreviewWinkOverlayIsLoweredAgainstScaledFinalTitlePose() {
+        assertEquals(72, MasterTitleRomPreview.sonic3kPreviewWinkY());
+    }
+
+    @Test
+    void sonic3kPreviewIsInsetInsideNativeCanvas() {
+        assertEquals(224, MasterTitleRomPreview.sonic3kPreviewScaledWidth());
+        assertEquals(156, MasterTitleRomPreview.sonic3kPreviewScaledHeight());
     }
 
     @Test
@@ -127,7 +201,7 @@ class TestMasterTitleRomPreview {
     void sonic1PreviewUsesNativeScreenAndRuntimePlaneAOffset() {
         assertEquals(320, MasterTitleRomPreview.sonic1PreviewWidth());
         assertEquals(224, MasterTitleRomPreview.sonic1PreviewHeight());
-        assertEquals(24, MasterTitleRomPreview.sonic1PlaneAX());
+        assertEquals(32, MasterTitleRomPreview.sonic1PlaneAX());
         assertEquals(32, MasterTitleRomPreview.sonic1PlaneAY());
     }
 
@@ -136,6 +210,14 @@ class TestMasterTitleRomPreview {
         assertEquals(104, MasterTitleRomPreview.sonic2LogoOcclusionStartPixel(159));
         assertEquals(120, MasterTitleRomPreview.sonic2LogoOcclusionStartPixel(0));
         assertEquals(120, MasterTitleRomPreview.sonic2LogoOcclusionStartPixel(319));
+    }
+
+    @Test
+    void sonic2PreviewBodyClipFollowsCurvedLogoBoundary() {
+        assertTrue(MasterTitleRomPreview.sonic2PreviewBodyPixelVisible(159, 103));
+        assertFalse(MasterTitleRomPreview.sonic2PreviewBodyPixelVisible(159, 104));
+        assertTrue(MasterTitleRomPreview.sonic2PreviewBodyPixelVisible(0, 119));
+        assertFalse(MasterTitleRomPreview.sonic2PreviewBodyPixelVisible(0, 120));
     }
 
     @Test
@@ -199,6 +281,21 @@ class TestMasterTitleRomPreview {
                     (byte) (rgb & 0xFF)));
         }
         return palette;
+    }
+
+    private static int invokeIntHelper(String methodName, int value) throws Exception {
+        Method method = MasterTitleRomPreview.class.getDeclaredMethod(methodName, int.class);
+        method.setAccessible(true);
+        return (int) method.invoke(null, value);
+    }
+
+    private static MasterTitleRomPreview.Image invokeScaleHelper(MasterTitleRomPreview.Image source,
+                                                                 int scaledWidth,
+                                                                 int scaledHeight) throws Exception {
+        Method method = MasterTitleRomPreview.class.getDeclaredMethod(
+                "scaleImageIntoNativeCanvas", MasterTitleRomPreview.Image.class, int.class, int.class);
+        method.setAccessible(true);
+        return (MasterTitleRomPreview.Image) method.invoke(null, source, scaledWidth, scaledHeight);
     }
 
     private static void assertPixel(MasterTitleRomPreview.Image image,

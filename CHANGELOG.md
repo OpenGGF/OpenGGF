@@ -11,7 +11,9 @@ All notable changes to the OpenGGF project are documented in this file.
   ROM's title-screen patterns, mappings, and palettes. Those previews now
   animate from the corresponding title-screen intro frames and restart from the
   beginning whenever a game is reselected. Missing games are greyed out and show
-  the exact required ROM filename in red.
+  the exact required ROM filename in red; the selected-but-missing entry keeps a
+  brighter disabled highlight, and the Sonic 3&K preview uses a smoother
+  downscaled final-title loop with ROM-derived finger and wink animation.
 
 - **S3K Launch Base Act 1 now runs the Sonic/Knuckles blockade sequence:**
   LBZ1 registers the cutscene Knuckles and Robotnik event controllers, loads the

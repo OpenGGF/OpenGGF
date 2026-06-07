@@ -40,7 +40,14 @@ public class MasterTitleScreen {
     private static final Logger LOGGER = Logger.getLogger(MasterTitleScreen.class.getName());
     static final int SCREEN_W = 320;
     private static final int SCREEN_H = 224;
-    private static final String MISSING_ROM_PROMPT = "requires the following ROM:";
+    private static final String MISSING_ROM_PROMPT = "Requires the following ROM:";
+    private static final int TITLE_LOGO_BASE_SCALE_NUMERATOR = 35;
+    private static final int TITLE_LOGO_BASE_SCALE_DENOMINATOR = 100;
+    private static final int TITLE_LOGO_SCALE_NUMERATOR = 9;
+    private static final int TITLE_LOGO_SCALE_DENOMINATOR = 10;
+
+    record PreviewLayout(int width, int height, float x, float y) {
+    }
 
     // Short labels for the menu (fit within 320px when laid out horizontally)
     private static final String[] MENU_LABELS = { "Sonic 1", "Sonic 2", "Sonic 3K" };
@@ -362,11 +369,10 @@ public class MasterTitleScreen {
         // 3. Compute title text position.
         //    Foreground elements are centered on viewportWidth/2.
         //    At native 320: centerX(w, 320) == (320-w)/2 == existing literal. Byte-identical.
-        float titleScale = 0.35f;
-        int scaledTitleW = (int)(titleTextWidth * titleScale);
-        int scaledTitleH = (int)(titleTextHeight * titleScale);
+        int scaledTitleW = titleLogoScaledWidth(titleTextWidth);
+        int scaledTitleH = titleLogoScaledHeight(titleTextHeight);
         float titleX = centerX(scaledTitleW, viewportWidth);
-        float titleGlY = SCREEN_H - 10 - scaledTitleH; // 10px from top
+        float titleGlY = titleLogoY(scaledTitleH);
 
         // 4. ROM-derived title preview, shown only when the selected ROM exists.
         drawSelectedRomPreview();
@@ -476,12 +482,8 @@ public class MasterTitleScreen {
         }
         int previewW = romPreviewWidths[selectedIndex];
         int previewH = romPreviewHeights[selectedIndex];
-        float scale = Math.min(220f / previewW, 112f / previewH);
-        int scaledW = Math.max(1, Math.round(previewW * scale));
-        int scaledH = Math.max(1, Math.round(previewH * scale));
-        float x = centerX(scaledW, viewportWidth);
-        float y = SCREEN_H - 60 - scaledH;
-        renderer.drawTexture(textureId, x, y, scaledW, scaledH);
+        PreviewLayout layout = romPreviewLayout(previewW, previewH, viewportWidth);
+        renderer.drawTexture(textureId, layout.x(), layout.y(), layout.width(), layout.height());
     }
 
     private void updateSelectedRomPreviewTexture() {
@@ -565,6 +567,33 @@ public class MasterTitleScreen {
         return (vpWidth - elementWidth) / 2f;
     }
 
+    static PreviewLayout romPreviewLayout(int previewW, int previewH, int vpWidth) {
+        int width = Math.max(1, previewW);
+        int height = Math.max(1, previewH);
+        return new PreviewLayout(width, height, centerX(width, vpWidth), 0);
+    }
+
+    static float titleLogoY(int titleHeight) {
+        return SCREEN_H - 2 - titleHeight;
+    }
+
+    static int titleLogoScaledWidth(int sourceWidth) {
+        return scaledTitleLogoDimension(sourceWidth);
+    }
+
+    static int titleLogoScaledHeight(int sourceHeight) {
+        return scaledTitleLogoDimension(sourceHeight);
+    }
+
+    private static int scaledTitleLogoDimension(int sourceDimension) {
+        int scaled = sourceDimension
+                * TITLE_LOGO_BASE_SCALE_NUMERATOR
+                * TITLE_LOGO_SCALE_NUMERATOR
+                / TITLE_LOGO_BASE_SCALE_DENOMINATOR
+                / TITLE_LOGO_SCALE_DENOMINATOR;
+        return Math.max(1, scaled);
+    }
+
     static String expectedRomFilename(GameEntry entry) {
         return entry.expectedRomFilename;
     }
@@ -579,6 +608,9 @@ public class MasterTitleScreen {
 
     static float[] menuTextColor(boolean available, boolean selected, int frameCounter) {
         if (!available) {
+            if (selected) {
+                return new float[] { 0.72f, 0.72f, 0.72f, 0.85f };
+            }
             return new float[] { 0.4f, 0.4f, 0.4f, 0.7f };
         }
         if (selected) {

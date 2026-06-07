@@ -63,8 +63,9 @@ final class MasterTitleRomPreview {
     private static final int S3K_TITLE_WIDTH_TILES = 40;
     private static final int S3K_TITLE_HEIGHT_TILES = 28;
     private static final int S1_PLANE_A_SPLIT_ROW = 9;
-    private static final int S1_PLANE_A_PIXEL_X = 24;
+    private static final int S1_PLANE_A_PIXEL_X = 32;
     private static final int S1_PLANE_A_PIXEL_Y = 32;
+    private static final int S1_SONIC_MASK_Y = S1_PLANE_A_PIXEL_Y + S1_PLANE_A_SPLIT_ROW * Pattern.PATTERN_HEIGHT;
     private static final int S1_PREVIEW_SONIC_FRAME = 6;
     private static final int S1_SONIC_X = 0xF0 - 128;
     private static final int S1_SONIC_START_Y = 0xDE;
@@ -79,10 +80,28 @@ final class MasterTitleRomPreview {
     private static final int S2_LOGO_OCCLUSION_CURVE_PIXELS = 16;
     private static final int S2_SCREEN_WIDTH = 320;
     private static final int S2_LOGO_OCCLUSION_HALF_WIDTH = 104;
-    private static final int S2_SONIC_START_TICK = 128;
-    private static final int S2_TAILS_START_TICK = 192;
+    private static final int S2_SONIC_START_TICK = 0;
+    private static final int S2_TAILS_START_TICK = 64;
+    private static final int S2_SETTLED_TICK = 160;
     private static final int S3K_PREVIEW_BANNER_Y = 112;
+    private static final int S3K_PREVIEW_FINGER_X = 0x148 - 128;
+    private static final int S3K_PREVIEW_FINGER_Y = 0xDC - 16 - 128 + Pattern.PATTERN_HEIGHT * 2;
+    private static final int S3K_PREVIEW_FINGER_FRAME_DURATION = 6;
+    private static final int S3K_PREVIEW_WINK_X = 0xF8 - 128;
+    private static final int S3K_PREVIEW_WINK_Y = 0xC8 - 16 - 128 + Pattern.PATTERN_HEIGHT * 2;
+    private static final int S3K_PREVIEW_SCALE_NUMERATOR = 7;
+    private static final int S3K_PREVIEW_SCALE_DENOMINATOR = 10;
     private static final boolean S3K_PREVIEW_DRAWS_MENU_SELECTION = false;
+    private static final int[] S3K_PREVIEW_FINGER_WAG_FRAMES = {
+            4, 4, 4, 4, 4, 4, 0, 4, 1, 4, 0, 4, 1, 4, 0, 4, 1, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4
+    };
+    private static final int[] S3K_PREVIEW_WINK_DATA = {
+            2, 1,
+            3, 7,
+            2, 5,
+            4, 0x67,
+            4, 0x2F
+    };
     private static final int[] S2_ANIM_SONIC = { 5, 6, 7 };
     private static final int[] S2_ANIM_TAILS = { 0, 1, 2, 3, 4 };
     private static final int[][] S2_SONIC_POSITIONS = {
@@ -138,6 +157,11 @@ final class MasterTitleRomPreview {
     };
 
     private MasterTitleRomPreview() {
+    }
+
+    @FunctionalInterface
+    interface PixelClip {
+        boolean visible(int x, int y);
     }
 
     record Image(int width, int height, byte[] rgba) {
@@ -351,12 +375,34 @@ final class MasterTitleRomPreview {
         return S2_LOGO_OCCLUSION_BASE_Y + curveOffset;
     }
 
+    static boolean sonic2PreviewBodyPixelVisible(int screenX, int screenY) {
+        return screenY < sonic2LogoOcclusionStartPixel(screenX);
+    }
+
     static boolean sonic3kPreviewDrawsMenuSelection() {
         return S3K_PREVIEW_DRAWS_MENU_SELECTION;
     }
 
     static int sonic3kPreviewBannerY() {
         return S3K_PREVIEW_BANNER_Y;
+    }
+
+    static int sonic3kPreviewFingerY() {
+        return S3K_PREVIEW_FINGER_Y;
+    }
+
+    static int sonic3kPreviewWinkY() {
+        return S3K_PREVIEW_WINK_Y;
+    }
+
+    static int sonic3kPreviewScaledWidth() {
+        return S3K_TITLE_WIDTH_TILES * Pattern.PATTERN_WIDTH
+                * S3K_PREVIEW_SCALE_NUMERATOR / S3K_PREVIEW_SCALE_DENOMINATOR;
+    }
+
+    static int sonic3kPreviewScaledHeight() {
+        return S3K_TITLE_HEIGHT_TILES * Pattern.PATTERN_HEIGHT
+                * S3K_PREVIEW_SCALE_NUMERATOR / S3K_PREVIEW_SCALE_DENOMINATOR;
     }
 
     static Image composeTilemapImage(Pattern[] patterns,
@@ -416,11 +462,23 @@ final class MasterTitleRomPreview {
                                    int originX,
                                    int originY,
                                    int tileIndexBase) {
+        overlaySpriteFrameClipped(image, patterns, palettes, frame, originX, originY, tileIndexBase,
+                (x, y) -> true);
+    }
+
+    static void overlaySpriteFrameClipped(Image image,
+                                          Pattern[] patterns,
+                                          Palette[] palettes,
+                                          SpriteMappingFrame frame,
+                                          int originX,
+                                          int originY,
+                                          int tileIndexBase,
+                                          PixelClip clip) {
         if (image == null || patterns == null || palettes == null || frame == null || frame.pieces() == null) {
             return;
         }
         for (int i = frame.pieces().size() - 1; i >= 0; i--) {
-            overlaySpritePiece(image, patterns, palettes, frame.pieces().get(i), originX, originY, tileIndexBase);
+            overlaySpritePiece(image, patterns, palettes, frame.pieces().get(i), originX, originY, tileIndexBase, clip);
         }
     }
 
@@ -452,8 +510,9 @@ final class MasterTitleRomPreview {
                 S1_PLANE_A_PIXEL_X, S1_PLANE_A_PIXEL_Y);
         SpriteMappingFrame sonic = Sonic1TitleScreenMappings.createFrames()
                 .get(sonic1PreviewSonicFrameAt(tick));
-        overlaySpriteFrame(image, sonicPatterns, new Palette[] { palettes[1] }, sonic,
-                S1_SONIC_X, sonic1PreviewSonicYAt(tick) - 128, 0);
+        overlaySpriteFrameClipped(image, sonicPatterns, new Palette[] { palettes[1] }, sonic,
+                S1_SONIC_X, sonic1PreviewSonicYAt(tick) - 128, 0,
+                MasterTitleRomPreview::sonic1PreviewSonicPixelVisible);
         overlayTilemapRows(image, patterns, palettes, map, S1_TITLE_WIDTH_TILES,
                 S1_PLANE_A_SPLIT_ROW, S1_TITLE_HEIGHT_TILES, Sonic1Constants.ARTTILE_TITLE_FOREGROUND,
                 S1_PLANE_A_PIXEL_X, S1_PLANE_A_PIXEL_Y);
@@ -477,7 +536,7 @@ final class MasterTitleRomPreview {
         Image logo = composeTilemapImage(patterns, palettes, map, S2_TITLE_WIDTH_TILES, S2_TITLE_HEIGHT_TILES);
         clearSonic2LogoChromaGreen(image);
         clearSonic2LogoChromaGreen(logo);
-        int stillTick = 288;
+        int stillTick = S2_SETTLED_TICK;
         return new GeneratedPreviewSequence(image.width(), image.height(), stillTick,
                 MasterTitleRomPreview::sonic2PreviewTokenAt,
                 tick -> composeSonic2Preview(image, logo, combinedSpritePatterns, palettes, tick));
@@ -492,13 +551,15 @@ final class MasterTitleRomPreview {
         var frames = TitleScreenMappings.createFrames();
         if (tick >= S2_SONIC_START_TICK) {
             int[] sonic = sonic2PositionAt(tick, S2_SONIC_START_TICK, S2_SONIC_POSITIONS);
-            overlaySpriteFrame(image, spritePatterns, palettes, frames.get(sonic2PreviewSonicFrameAt(tick)),
-                    sonic[0], sonic[1] + S2_CHARACTER_PREVIEW_Y_OFFSET, 0);
+            overlaySpriteFrameClipped(image, spritePatterns, palettes, frames.get(sonic2PreviewSonicFrameAt(tick)),
+                    sonic[0], sonic[1] + S2_CHARACTER_PREVIEW_Y_OFFSET, 0,
+                    MasterTitleRomPreview::sonic2PreviewBodyPixelVisible);
         }
         if (tick >= S2_TAILS_START_TICK) {
             int[] tails = sonic2PositionAt(tick, S2_TAILS_START_TICK, S2_TAILS_POSITIONS);
-            overlaySpriteFrame(image, spritePatterns, palettes, frames.get(sonic2PreviewTailsFrameAt(tick)),
-                    tails[0], tails[1] + S2_CHARACTER_PREVIEW_Y_OFFSET, 0);
+            overlaySpriteFrameClipped(image, spritePatterns, palettes, frames.get(sonic2PreviewTailsFrameAt(tick)),
+                    tails[0], tails[1] + S2_CHARACTER_PREVIEW_Y_OFFSET, 0,
+                    MasterTitleRomPreview::sonic2PreviewBodyPixelVisible);
         }
         int sonicHandStart = sonic2SonicAnimationStartTick() + S2_ANIM_SONIC.length * 2;
         if (tick >= sonicHandStart) {
@@ -517,25 +578,6 @@ final class MasterTitleRomPreview {
     }
 
     private static PreviewSequence loadSonic3kSequence(Rom rom) throws IOException {
-        Pattern[][] animPatterns = new Pattern[S3K_FINAL_FRAME_INDEX][];
-        int[][] animMaps = new int[S3K_FINAL_FRAME_INDEX][];
-        Palette[][] animPalettes = new Palette[S3K_FINAL_FRAME_INDEX][];
-        Pattern[] sharedSonic1Art = PatternDecompressor.kosinski(rom, Sonic3kConstants.ART_KOS_TITLE_SONIC1_ADDR);
-        for (int i = 0; i < S3K_FINAL_FRAME_INDEX; i++) {
-            int frameIndex = i + 1;
-            animPatterns[i] = frameIndex <= 7
-                    ? sharedSonic1Art
-                    : PatternDecompressor.kosinski(rom, S3K_FRAME_ART_ADDRS[i]);
-            int startingArtTile = frameIndex == S3K_FINAL_FRAME_INDEX ? 0x8000 : 0;
-            animMaps[i] = loadEnigmaMap(rom, S3K_FRAME_MAP_ADDRS[i],
-                    startingArtTile, Sonic3kConstants.MAP_ENI_TITLE_READ_SIZE);
-            int paletteAddress = frameIndex == S3K_FINAL_FRAME_INDEX
-                    ? Sonic3kConstants.PAL_TITLE_SONIC_D_ADDR
-                    : Sonic3kConstants.PAL_TITLE_SONIC1_ADDR + (frameIndex - 1) * 0x20;
-            int paletteSize = frameIndex == S3K_FINAL_FRAME_INDEX ? Sonic3kConstants.PAL_TITLE_SONIC_D_SIZE : 64;
-            animPalettes[i] = loadPaletteLines(rom.readBytes(paletteAddress, paletteSize));
-        }
-
         Pattern[] patterns = PatternDecompressor.kosinski(rom, Sonic3kConstants.ART_KOS_TITLE_SONIC_D_ADDR);
         Pattern[] spritePatterns = loadSonic3kSpritePatterns(rom);
         int[] map = loadEnigmaMap(rom, Sonic3kConstants.MAP_ENI_TITLE_SONIC_D_ADDR,
@@ -543,22 +585,31 @@ final class MasterTitleRomPreview {
         Palette[] palettes = loadPaletteLines(rom.readBytes(
                 Sonic3kConstants.PAL_TITLE_SONIC_D_ADDR,
                 Sonic3kConstants.PAL_TITLE_SONIC_D_SIZE));
-        Image finalPreview = composeSonic3kFinalPreview(patterns, spritePatterns, map, palettes);
-        int stillTick = s3kAnimationTotalTicks();
-        return new GeneratedPreviewSequence(finalPreview.width(), finalPreview.height(), stillTick,
-                tick -> s3kPreviewFrameAt(tick),
-                frame -> frame == S3K_FINAL_FRAME_INDEX
-                        ? finalPreview
-                        : composeTilemapImage(animPatterns[frame - 1], animPalettes[frame - 1],
-                                animMaps[frame - 1], S3K_TITLE_WIDTH_TILES, S3K_TITLE_HEIGHT_TILES));
+        Image finalScene = composeTilemapImage(patterns, palettes, map, S3K_TITLE_WIDTH_TILES, S3K_TITLE_HEIGHT_TILES);
+        int stillTick = 0;
+        return new GeneratedPreviewSequence(finalScene.width(), finalScene.height(), stillTick,
+                MasterTitleRomPreview::s3kPreviewTokenAt,
+                token -> composeSonic3kFinalPreview(finalScene, spritePatterns, palettes,
+                        s3kPreviewFingerFrameFromToken(token), s3kPreviewWinkFrameFromToken(token)));
     }
 
-    private static Image composeSonic3kFinalPreview(Pattern[] patterns,
+    private static Image composeSonic3kFinalPreview(Image finalScene,
                                                     Pattern[] spritePatterns,
-                                                    int[] map,
-                                                    Palette[] palettes) {
-        Image image = composeTilemapImage(patterns, palettes, map, S3K_TITLE_WIDTH_TILES, S3K_TITLE_HEIGHT_TILES);
+                                                    Palette[] palettes,
+                                                    int fingerFrame,
+                                                    int winkFrame) {
+        Image image = copyImage(finalScene);
 
+        if (winkFrame >= 0) {
+            overlaySpriteFrame(image, spritePatterns, palettes,
+                    Sonic3kTitleScreenMappings.createSonicAnimFrames().get(winkFrame),
+                    S3K_PREVIEW_WINK_X, S3K_PREVIEW_WINK_Y, 0);
+        }
+        if (fingerFrame >= 0) {
+            overlaySpriteFrame(image, spritePatterns, palettes,
+                    Sonic3kTitleScreenMappings.createSonicAnimFrames().get(fingerFrame),
+                    S3K_PREVIEW_FINGER_X, S3K_PREVIEW_FINGER_Y, 0);
+        }
         int bannerY = sonic3kPreviewBannerY();
         overlaySpriteFrame(image, spritePatterns, palettes, Sonic3kTitleScreenMappings.createBannerFrames().get(0),
                 0x120 - 128, bannerY, 0);
@@ -570,11 +621,87 @@ final class MasterTitleRomPreview {
         }
         overlaySpriteFrame(image, spritePatterns, palettes, Sonic3kTitleScreenMappings.createCopyrightFrame().get(0),
                 0x158 - 128, 0x14C - 128, 0);
-        return image;
+        return scaleImageIntoNativeCanvas(image, sonic3kPreviewScaledWidth(), sonic3kPreviewScaledHeight());
     }
 
     private static Image copyImage(Image image) {
         return new Image(image.width(), image.height(), Arrays.copyOf(image.rgba(), image.rgba().length));
+    }
+
+    private static Image scaleImageIntoNativeCanvas(Image source, int scaledWidth, int scaledHeight) {
+        int width = source.width();
+        int height = source.height();
+        byte[] scaled = new byte[source.rgba().length];
+        int offsetX = (width - scaledWidth) / 2;
+        int offsetY = (height - scaledHeight) / 2;
+        double scaleX = width / (double) scaledWidth;
+        double scaleY = height / (double) scaledHeight;
+        for (int y = 0; y < scaledHeight; y++) {
+            double sourceY0 = y * scaleY;
+            double sourceY1 = (y + 1) * scaleY;
+            for (int x = 0; x < scaledWidth; x++) {
+                double sourceX0 = x * scaleX;
+                double sourceX1 = (x + 1) * scaleX;
+                int destOffset = (((offsetY + y) * width) + offsetX + x) * 4;
+                writeAreaSample(source, sourceX0, sourceX1, sourceY0, sourceY1, scaled, destOffset);
+            }
+        }
+        return new Image(width, height, scaled);
+    }
+
+    private static void writeAreaSample(Image source,
+                                        double sourceX0,
+                                        double sourceX1,
+                                        double sourceY0,
+                                        double sourceY1,
+                                        byte[] dest,
+                                        int destOffset) {
+        int width = source.width();
+        int height = source.height();
+        byte[] rgba = source.rgba();
+        int startX = Math.max(0, (int) Math.floor(sourceX0));
+        int endX = Math.min(width, (int) Math.ceil(sourceX1));
+        int startY = Math.max(0, (int) Math.floor(sourceY0));
+        int endY = Math.min(height, (int) Math.ceil(sourceY1));
+        double red = 0;
+        double green = 0;
+        double blue = 0;
+        double alpha = 0;
+        double coverage = 0;
+
+        for (int sy = startY; sy < endY; sy++) {
+            double overlapY = Math.min(sy + 1.0, sourceY1) - Math.max(sy, sourceY0);
+            if (overlapY <= 0) {
+                continue;
+            }
+            for (int sx = startX; sx < endX; sx++) {
+                double overlapX = Math.min(sx + 1.0, sourceX1) - Math.max(sx, sourceX0);
+                if (overlapX <= 0) {
+                    continue;
+                }
+                double weight = overlapX * overlapY;
+                int sourceOffset = ((sy * width) + sx) * 4;
+                double sourceAlpha = (rgba[sourceOffset + 3] & 0xFF) / 255.0;
+                red += (rgba[sourceOffset] & 0xFF) * sourceAlpha * weight;
+                green += (rgba[sourceOffset + 1] & 0xFF) * sourceAlpha * weight;
+                blue += (rgba[sourceOffset + 2] & 0xFF) * sourceAlpha * weight;
+                alpha += sourceAlpha * weight;
+                coverage += weight;
+            }
+        }
+
+        if (coverage <= 0 || alpha <= 0) {
+            return;
+        }
+        dest[destOffset] = roundedByte(red / alpha);
+        dest[destOffset + 1] = roundedByte(green / alpha);
+        dest[destOffset + 2] = roundedByte(blue / alpha);
+        dest[destOffset + 3] = roundedByte((alpha / coverage) * 255.0);
+    }
+
+    private static byte roundedByte(double value) {
+        int rounded = Math.max(0, Math.min(255, (int) Math.round(value)));
+        return (byte) rounded;
     }
 
     private static int sonic1PreviewSonicYAt(int tick) {
@@ -586,17 +713,20 @@ final class MasterTitleRomPreview {
     }
 
     private static int sonic1PreviewTokenAt(int tick) {
-        int clamped = Math.min(Math.max(0, tick), 128);
-        if (clamped < S1_SONIC_DELAY_FRAMES) {
+        int normalized = Math.max(0, tick);
+        if (normalized < S1_SONIC_DELAY_FRAMES) {
             return 0;
         }
         int finalTick = S1_SONIC_DELAY_FRAMES + ((S1_SONIC_START_Y - S1_SONIC_FINAL_Y) / S1_SONIC_MOVE_STEP);
-        if (clamped < finalTick) {
-            return clamped;
+        if (normalized < finalTick) {
+            return normalized;
         }
-        int frameTick = finalTick + ((clamped - finalTick) / (S1_SONIC_ANIM_DURATION + 1))
-                * (S1_SONIC_ANIM_DURATION + 1);
-        return Math.min(frameTick, 128);
+        int frame = (normalized - finalTick) / (S1_SONIC_ANIM_DURATION + 1);
+        if (frame <= Sonic1TitleScreenMappings.FRAME_TITLE_SONIC_7) {
+            return finalTick + frame * (S1_SONIC_ANIM_DURATION + 1);
+        }
+        int loopFrame = 6 + ((frame - 8) & 1);
+        return finalTick + loopFrame * (S1_SONIC_ANIM_DURATION + 1);
     }
 
     private static int sonic1PreviewSonicFrameAt(int tick) {
@@ -644,7 +774,7 @@ final class MasterTitleRomPreview {
     }
 
     private static int sonic2PreviewTokenAt(int tick) {
-        int clamped = Math.min(Math.max(0, tick), 288);
+        int clamped = Math.min(Math.max(0, tick), S2_SETTLED_TICK);
         if (clamped < S2_SONIC_START_TICK) {
             return 0;
         }
@@ -672,25 +802,48 @@ final class MasterTitleRomPreview {
             return tailsHandStart + Math.min((clamped - tailsHandStart) / 4,
                     S2_TAILS_HAND_POSITIONS.length - 1) * 4;
         }
-        return 288;
+        return S2_SETTLED_TICK;
     }
 
     private static int s3kPreviewFrameAt(int tick) {
-        int remaining = Math.max(0, tick);
-        for (int i = 0; i < S3K_SONIC_FRAME_INDEX_TABLE.length; i++) {
-            int duration = S3K_ANIM_FRAME_DURATIONS[Math.min(i, S3K_ANIM_FRAME_DURATIONS.length - 1)];
-            if (remaining < duration) {
-                return S3K_SONIC_FRAME_INDEX_TABLE[i];
-            }
-            remaining -= duration;
-        }
         return S3K_FINAL_FRAME_INDEX;
     }
 
-    private static int s3kAnimationTotalTicks() {
+    private static int s3kPreviewTokenAt(int tick) {
+        return (s3kPreviewWinkFrameAt(tick) << 8) | s3kPreviewFingerFrameAt(tick);
+    }
+
+    private static int s3kPreviewFingerFrameFromToken(int token) {
+        return token & 0xFF;
+    }
+
+    private static int s3kPreviewWinkFrameFromToken(int token) {
+        return (token >> 8) & 0xFF;
+    }
+
+    private static int s3kPreviewFingerFrameAt(int tick) {
+        int index = (Math.max(0, tick) / S3K_PREVIEW_FINGER_FRAME_DURATION)
+                % S3K_PREVIEW_FINGER_WAG_FRAMES.length;
+        return S3K_PREVIEW_FINGER_WAG_FRAMES[index];
+    }
+
+    private static int s3kPreviewWinkFrameAt(int tick) {
+        int normalized = Math.max(0, tick) % s3kPreviewWinkCycleTicks();
+        for (int i = 0; i < S3K_PREVIEW_WINK_DATA.length; i += 2) {
+            int frame = S3K_PREVIEW_WINK_DATA[i];
+            int duration = S3K_PREVIEW_WINK_DATA[i + 1] + 1;
+            if (normalized < duration) {
+                return frame;
+            }
+            normalized -= duration;
+        }
+        return 4;
+    }
+
+    private static int s3kPreviewWinkCycleTicks() {
         int total = 0;
-        for (int duration : S3K_ANIM_FRAME_DURATIONS) {
-            total += duration;
+        for (int i = 1; i < S3K_PREVIEW_WINK_DATA.length; i += 2) {
+            total += S3K_PREVIEW_WINK_DATA[i] + 1;
         }
         return total;
     }
@@ -874,7 +1027,8 @@ final class MasterTitleRomPreview {
                                            SpriteMappingPiece piece,
                                            int originX,
                                            int originY,
-                                           int tileIndexBase) {
+                                           int tileIndexBase,
+                                           PixelClip clip) {
         SpritePieceRenderer.renderPiece(piece, originX, originY, -tileIndexBase, -1, false, false,
                 (patternIndex, hFlip, vFlip, paletteIndex, drawX, drawY) -> {
                     Palette palette = paletteIndex < palettes.length ? palettes[paletteIndex] : null;
@@ -883,7 +1037,7 @@ final class MasterTitleRomPreview {
                         return;
                     }
                     blitPattern(image.rgba, image.width, drawX, drawY,
-                            patterns[patternIndex], palette, hFlip, vFlip);
+                            patterns[patternIndex], palette, hFlip, vFlip, clip);
                 });
     }
 
@@ -895,6 +1049,18 @@ final class MasterTitleRomPreview {
                                     Palette palette,
                                     boolean hFlip,
                                     boolean vFlip) {
+        blitPattern(rgba, imageWidth, dstX, dstY, pattern, palette, hFlip, vFlip, (x, y) -> true);
+    }
+
+    private static void blitPattern(byte[] rgba,
+                                    int imageWidth,
+                                    int dstX,
+                                    int dstY,
+                                    Pattern pattern,
+                                    Palette palette,
+                                    boolean hFlip,
+                                    boolean vFlip,
+                                    PixelClip clip) {
         for (int y = 0; y < Pattern.PATTERN_HEIGHT; y++) {
             int sourceY = vFlip ? Pattern.PATTERN_HEIGHT - 1 - y : y;
             for (int x = 0; x < Pattern.PATTERN_WIDTH; x++) {
@@ -908,6 +1074,9 @@ final class MasterTitleRomPreview {
                 if (outX < 0 || outY < 0 || outX >= imageWidth || outY >= rgba.length / 4 / imageWidth) {
                     continue;
                 }
+                if (clip != null && !clip.visible(outX, outY)) {
+                    continue;
+                }
                 Palette.Color color = palette.getColor(colorIndex);
                 int offset = ((outY * imageWidth) + outX) * 4;
                 rgba[offset] = color.r;
@@ -916,5 +1085,9 @@ final class MasterTitleRomPreview {
                 rgba[offset + 3] = (byte) 0xFF;
             }
         }
+    }
+
+    private static boolean sonic1PreviewSonicPixelVisible(int screenX, int screenY) {
+        return screenY < S1_SONIC_MASK_Y;
     }
 }
