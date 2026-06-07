@@ -40,23 +40,32 @@ public class MasterTitleScreen {
     private static final Logger LOGGER = Logger.getLogger(MasterTitleScreen.class.getName());
     static final int SCREEN_W = 320;
     private static final int SCREEN_H = 224;
+    private static final String MISSING_ROM_PROMPT = "requires the following ROM:";
 
     // Short labels for the menu (fit within 320px when laid out horizontally)
     private static final String[] MENU_LABELS = { "Sonic 1", "Sonic 2", "Sonic 3K" };
 
     public enum GameEntry {
-        SONIC_1("Sonic The Hedgehog", "s1", SonicConfiguration.SONIC_1_ROM),
-        SONIC_2("Sonic The Hedgehog 2", "s2", SonicConfiguration.SONIC_2_ROM),
-        SONIC_3K("Sonic 3 & Knuckles", "s3k", SonicConfiguration.SONIC_3K_ROM);
+        SONIC_1("Sonic The Hedgehog", "s1", SonicConfiguration.SONIC_1_ROM,
+                "Sonic The Hedgehog (W) (REV01) [!].gen"),
+        SONIC_2("Sonic The Hedgehog 2", "s2", SonicConfiguration.SONIC_2_ROM,
+                "Sonic The Hedgehog 2 (W) (REV01) [!].gen"),
+        SONIC_3K("Sonic 3 & Knuckles", "s3k", SonicConfiguration.SONIC_3K_ROM,
+                "Sonic and Knuckles & Sonic 3 (W) [!].gen");
 
         public final String displayName;
         public final String gameId;
         public final SonicConfiguration romConfigKey;
+        public final String expectedRomFilename;
 
-        GameEntry(String displayName, String gameId, SonicConfiguration romConfigKey) {
+        GameEntry(String displayName,
+                  String gameId,
+                  SonicConfiguration romConfigKey,
+                  String expectedRomFilename) {
             this.displayName = displayName;
             this.gameId = gameId;
             this.romConfigKey = romConfigKey;
+            this.expectedRomFilename = expectedRomFilename;
         }
     }
 
@@ -112,14 +121,15 @@ public class MasterTitleScreen {
     private TestModeTracePicker tracePicker;
     private int bgTextureId;
     private int solidWhiteTextureId; // 1x1 white texture for solid color overlays
-    private int emblemTextureId;
-    private int emblemWidth, emblemHeight;
     private int titleTextId;
     private int titleTextWidth, titleTextHeight;
     private int cloudLargeTextureId;
     private int cloudLargeWidth, cloudLargeHeight;
     private int cloudSmallTextureId;
     private int cloudSmallWidth, cloudSmallHeight;
+    private final int[] romPreviewTextureIds = new int[GameEntry.values().length];
+    private final int[] romPreviewWidths = new int[GameEntry.values().length];
+    private final int[] romPreviewHeights = new int[GameEntry.values().length];
 
     private final List<CloudSprite> clouds = new ArrayList<>();
     private final SonicConfigurationService configService;
@@ -164,11 +174,6 @@ public class MasterTitleScreen {
             // Create 1x1 solid white texture for overlays
             solidWhiteTextureId = createSolidWhiteTexture();
 
-            // Load emblem
-            emblemTextureId = PngTextureLoader.loadTexture("titlescreen/title-emblem.png");
-            emblemWidth = PngTextureLoader.getLastWidth();
-            emblemHeight = PngTextureLoader.getLastHeight();
-
             // Load title text
             titleTextId = PngTextureLoader.loadTexture("titlescreen/titletext.png");
             titleTextWidth = PngTextureLoader.getLastWidth();
@@ -196,6 +201,8 @@ public class MasterTitleScreen {
                 float speed = 0.08f + rng.nextFloat() * 0.4f; // speed 0.08-0.48
                 clouds.add(new CloudSprite(texId, x, y, speed, cw, ch));
             }
+
+            loadRomPreviews();
 
             state = State.FADE_IN;
             LOGGER.info("Master title screen initialized");
@@ -344,7 +351,7 @@ public class MasterTitleScreen {
                 1f, 1f, 1f, 0.85f);
         }
 
-        // 3. Compute title text position (needed for emblem placement).
+        // 3. Compute title text position.
         //    Foreground elements are centered on viewportWidth/2.
         //    At native 320: centerX(w, 320) == (320-w)/2 == existing literal. Byte-identical.
         float titleScale = 0.35f;
@@ -353,15 +360,10 @@ public class MasterTitleScreen {
         float titleX = centerX(scaledTitleW, viewportWidth);
         float titleGlY = SCREEN_H - 10 - scaledTitleH; // 10px from top
 
-        // 4. Emblem (centered, below title text) - drawn before title so title appears in front
-        float emblemScale = 0.7f;
-        int scaledEmblemW = (int)(emblemWidth * emblemScale);
-        int scaledEmblemH = (int)(emblemHeight * emblemScale);
-        float emblemX = centerX(scaledEmblemW, viewportWidth);
-        float emblemGlY = titleGlY - scaledEmblemH + 12;
-        renderer.drawTexture(emblemTextureId, emblemX, emblemGlY, scaledEmblemW, scaledEmblemH);
+        // 4. ROM-derived title preview, shown only when the selected ROM exists.
+        drawSelectedRomPreview();
 
-        // 5. Title text "OpenGGF" (centered, top) - drawn after emblem so it appears in front
+        // 5. Title text "OpenGGF" (centered, top) - drawn after preview so it appears in front
         renderer.drawTexture(titleTextId, titleX, titleGlY, scaledTitleW, scaledTitleH);
 
         // All foreground text (subtitle + game menu + nav hints) shares the font atlas,
@@ -376,6 +378,9 @@ public class MasterTitleScreen {
         int line2X = titleRightEdge - font.measureWidth("Sonic Engine");
         font.drawText("Open-Source", line1X, subtitleY-8, 0.8f, 0.8f, 0.8f, 0.9f);
         font.drawText("Sonic Engine", line2X, subtitleY + 2, 0.8f, 0.8f, 0.8f, 0.9f);
+
+        // 7. Missing-ROM prompt occupies the old emblem area when no ROM preview is available.
+        drawSelectedMissingRomPrompt();
 
         // 7. Game selection menu at bottom — centered on viewportWidth.
         drawGameMenu();
@@ -429,33 +434,57 @@ public class MasterTitleScreen {
         int cursorX = startX;
 
         for (int i = 0; i < entries.length; i++) {
-            float r, g, b, a;
+            float[] color = menuTextColor(romAvailable[i], i == selectedIndex, frameCounter);
 
-            if (i == selectedIndex) {
-                // Pulsing brightness for selected item
-                float pulse = 0.5f + 0.5f * (float) Math.sin(frameCounter * 0.05);
-                float brightness = 1.0f + 0.3f * pulse;
-                r = brightness;
-                g = brightness;
-                b = brightness;
-                a = 1.0f;
-            } else if (!romAvailable[i]) {
-                // Greyed out for unavailable
-                r = 0.4f;
-                g = 0.4f;
-                b = 0.4f;
-                a = 0.7f;
-            } else {
-                // Normal unselected
-                r = 0.8f;
-                g = 0.8f;
-                b = 0.8f;
-                a = 1.0f;
-            }
-
-            font.drawText(MENU_LABELS[i], cursorX, menuY, r, g, b, a);
+            font.drawText(MENU_LABELS[i], cursorX, menuY, color[0], color[1], color[2], color[3]);
             cursorX += widths[i] + spacing;
         }
+    }
+
+    private void loadRomPreviews() {
+        GameEntry[] entries = GameEntry.values();
+        for (int i = 0; i < entries.length; i++) {
+            if (!romAvailable[i]) {
+                continue;
+            }
+            GameEntry entry = entries[i];
+            Path path = Path.of(configService.getString(entry.romConfigKey));
+            MasterTitleRomPreview.loadFor(entry, path).ifPresent(image -> {
+                int index = entry.ordinal();
+                romPreviewTextureIds[index] = MasterTitleRomPreview.uploadTexture(image);
+                romPreviewWidths[index] = image.width();
+                romPreviewHeights[index] = image.height();
+            });
+        }
+    }
+
+    private void drawSelectedRomPreview() {
+        int textureId = romPreviewTextureIds[selectedIndex];
+        if (textureId == 0) {
+            return;
+        }
+        int previewW = romPreviewWidths[selectedIndex];
+        int previewH = romPreviewHeights[selectedIndex];
+        float scale = Math.min(220f / previewW, 112f / previewH);
+        int scaledW = Math.max(1, Math.round(previewW * scale));
+        int scaledH = Math.max(1, Math.round(previewH * scale));
+        float x = centerX(scaledW, viewportWidth);
+        float y = SCREEN_H - 60 - scaledH;
+        renderer.drawTexture(textureId, x, y, scaledW, scaledH);
+    }
+
+    private void drawSelectedMissingRomPrompt() {
+        if (romAvailable[selectedIndex]) {
+            return;
+        }
+        GameEntry entry = GameEntry.values()[selectedIndex];
+        font.drawTextCentered(MISSING_ROM_PROMPT, viewportWidth, 82, 1f, 0.25f, 0.25f, 1f);
+
+        String filename = missingRomFilenameLine(entry);
+        float filenameScale = Math.min(0.72f, (viewportWidth - 36f) / Math.max(1, font.measureWidth(filename)));
+        int filenameWidth = font.measureWidth(filename, filenameScale);
+        float filenameX = centerX(filenameWidth, viewportWidth);
+        font.drawText(filename, filenameX, 98, filenameScale, 1f, 0.55f, 0.55f, 1f);
     }
 
     // Audio stubs
@@ -510,6 +539,30 @@ public class MasterTitleScreen {
         return (vpWidth - elementWidth) / 2f;
     }
 
+    static String expectedRomFilename(GameEntry entry) {
+        return entry.expectedRomFilename;
+    }
+
+    static String missingRomPromptLine() {
+        return MISSING_ROM_PROMPT;
+    }
+
+    static String missingRomFilenameLine(GameEntry entry) {
+        return expectedRomFilename(entry);
+    }
+
+    static float[] menuTextColor(boolean available, boolean selected, int frameCounter) {
+        if (!available) {
+            return new float[] { 0.4f, 0.4f, 0.4f, 0.7f };
+        }
+        if (selected) {
+            float pulse = 0.5f + 0.5f * (float) Math.sin(frameCounter * 0.05);
+            float brightness = 1.0f + 0.3f * pulse;
+            return new float[] { brightness, brightness, brightness, 1.0f };
+        }
+        return new float[] { 0.8f, 0.8f, 0.8f, 1.0f };
+    }
+
     public void setProjectionMatrix(float[] projectionMatrix) {
         if (renderer != null && projectionMatrix != null) {
             renderer.setProjectionMatrix(projectionMatrix);
@@ -549,10 +602,12 @@ public class MasterTitleScreen {
         }
         PngTextureLoader.deleteTexture(bgTextureId);
         PngTextureLoader.deleteTexture(solidWhiteTextureId);
-        PngTextureLoader.deleteTexture(emblemTextureId);
         PngTextureLoader.deleteTexture(titleTextId);
         PngTextureLoader.deleteTexture(cloudLargeTextureId);
         PngTextureLoader.deleteTexture(cloudSmallTextureId);
+        for (int textureId : romPreviewTextureIds) {
+            PngTextureLoader.deleteTexture(textureId);
+        }
         if (renderer != null) renderer.cleanup();
         state = State.INACTIVE;
         LOGGER.info("Master title screen cleaned up");

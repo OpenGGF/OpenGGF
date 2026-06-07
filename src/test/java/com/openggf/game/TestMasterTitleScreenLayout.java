@@ -97,4 +97,32 @@ class TestMasterTitleScreenLayout {
         // This is a smoke-test; the behavioral proof is in centerX tests above.
         assertEquals(320, MasterTitleScreen.SCREEN_W);
     }
+
+    @Test
+    void expectedRomFilename_usesProjectRootDefaultsForEachGame() {
+        assertEquals("Sonic The Hedgehog (W) (REV01) [!].gen",
+                MasterTitleScreen.expectedRomFilename(MasterTitleScreen.GameEntry.SONIC_1));
+        assertEquals("Sonic The Hedgehog 2 (W) (REV01) [!].gen",
+                MasterTitleScreen.expectedRomFilename(MasterTitleScreen.GameEntry.SONIC_2));
+        assertEquals("Sonic and Knuckles & Sonic 3 (W) [!].gen",
+                MasterTitleScreen.expectedRomFilename(MasterTitleScreen.GameEntry.SONIC_3K));
+    }
+
+    @Test
+    void missingRomPrompt_showsRequiredRomLineAndSelectedFilename() {
+        assertEquals("requires the following ROM:",
+                MasterTitleScreen.missingRomPromptLine());
+        assertEquals("Sonic The Hedgehog 2 (W) (REV01) [!].gen",
+                MasterTitleScreen.missingRomFilenameLine(MasterTitleScreen.GameEntry.SONIC_2));
+    }
+
+    @Test
+    void menuTextColor_keepsUnavailableSelectedGamesGreyedOut() {
+        float[] color = MasterTitleScreen.menuTextColor(false, true, 0);
+
+        assertEquals(0.4f, color[0], 0f);
+        assertEquals(0.4f, color[1], 0f);
+        assertEquals(0.4f, color[2], 0f);
+        assertEquals(0.7f, color[3], 0f);
+    }
 }

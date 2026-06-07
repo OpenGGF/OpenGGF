@@ -120,11 +120,12 @@ bring-up (AIZ, CNZ, MGZ, ICZ, and Mushroom Hill), an S3K complete-run per-zone
 trace suite (one Sonic+Tails AIZ->Doomsday movie segmented per zone, each trace
 spanning the act1->act2 transition through the zone-exit handoff) with
 ROM-accurate in-game pause modelling and one-time mid-run-entry bootstrap
-seeding, S2 trace-frontier closures (Sky Chase and Casino Night level-select
-replays), object-physics standardization onto shared contracts, expanded rewind
-coverage, and architecture-guard hardening across runtime ownership, trace/rewind
-invariants, and object-service boundaries. See CHANGELOG.md for the detailed,
-per-merge history.
+seeding, ROM-derived master-title game previews that replace the bundled title
+emblem resource, S2 trace-frontier closures (Sky Chase and Casino Night
+level-select replays), object-physics standardization onto shared contracts,
+expanded rewind coverage, and architecture-guard hardening across runtime
+ownership, trace/rewind invariants, and object-service boundaries. See
+CHANGELOG.md for the detailed, per-merge history.
 
 ### Where do I get ROMs?
 

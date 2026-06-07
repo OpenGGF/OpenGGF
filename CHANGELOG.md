@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **The master title selector now renders ROM-derived title previews instead of
+  a bundled emblem image:** the copyrighted `title-emblem.png` resource has
+  been removed. When the expected Sonic 1, Sonic 2, or Sonic 3&K ROM is present
+  in the project directory, the selector builds an in-memory preview from that
+  ROM's title-screen patterns, mappings, and palettes. Missing games are greyed
+  out and show the exact required ROM filename in red.
+
 - **S3K LBZ Act 1 interior reveals 2 and 4 now open the door instead of walling
   it off:** the `LBZ1_CheckLayoutMod` foreground copies for mods 2 and 4 wrote
   the revealed interior chunks into the hidden staging rows (the source row, 9
