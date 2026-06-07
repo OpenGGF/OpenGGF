@@ -535,7 +535,10 @@ public class Engine {
 	}
 
 	private void resetForGameplayFromMasterTitle() {
-		GameServices.module().resetModuleScopedState();
+		var worldSession = SessionManager.getCurrentWorldSession();
+		if (worldSession != null) {
+			worldSession.getGameModule().resetModuleScopedState();
+		}
 		SessionManager.clear();
 		romManager.close();
 		GameModuleRegistry.reset();

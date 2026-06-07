@@ -195,6 +195,21 @@ class TestEngine {
     }
 
     @Test
+    void exitMasterTitleScreenFromBootstrapDoesNotRequireActiveWorldSession() throws Exception {
+        SessionManager.clear();
+        try (BootstrapHarness harness = createBootstrapHarness(false)) {
+            MasterTitleScreen masterTitleScreen = mock(MasterTitleScreen.class);
+            setPrivateField(harness.engine, "masterTitleScreen", masterTitleScreen);
+
+            assertDoesNotThrow(() -> harness.engine.exitMasterTitleScreen("s2"));
+
+            verify(masterTitleScreen).cleanup();
+            assertEquals("s2", SonicConfigurationService.getInstance()
+                    .getConfigValue(SonicConfiguration.DEFAULT_ROM));
+        }
+    }
+
+    @Test
     void createDataSelectSaveContext_preservesClearSaveStateFromPayload() throws Exception {
         Path saveRoot = Files.createTempDirectory("engine-dataselect-save");
         SaveManager saveManager = new SaveManager(saveRoot);

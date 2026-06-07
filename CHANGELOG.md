@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Master title game selection now opens gameplay sessions cleanly from
+  bootstrap startup:** exiting the pre-ROM master title screen no longer tries
+  to read `GameServices.module()` before `SessionManager` has opened a
+  `WorldSession`, fixing the crash that occurred after selecting a game from
+  the master title selector.
+
 - **The master title selector now renders ROM-derived title previews instead of
   a bundled emblem image:** the copyrighted `title-emblem.png` resource has
   been removed. When the expected Sonic 1, Sonic 2, or Sonic 3&K ROM is present
