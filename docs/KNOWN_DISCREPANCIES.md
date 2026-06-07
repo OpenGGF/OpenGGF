@@ -29,7 +29,9 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 16. [S2 Tornado Ride-Start Trace Bootstrap Contract](#s2-tornado-ride-start-trace-bootstrap-contract)
 17. [S2 CNZ Slot-Machine Trace Bootstrap Contract](#s2-cnz-slot-machine-trace-bootstrap-contract)
 18. [S3K Sidekick Seed-Frame Trace Bootstrap Debt](#s3k-sidekick-seed-frame-trace-bootstrap-debt)
-19. [Sonic 1 Embedded Runtime Data Ratchet](#sonic-1-embedded-runtime-data-ratchet)
+19. [S3K Complete-Run Segment Start-Position Bootstrap Debt](#s3k-complete-run-segment-start-position-bootstrap-debt)
+20. [Frame-0 Trace Bootstrap Snapshot Coverage Debt](#frame-0-trace-bootstrap-snapshot-coverage-debt)
+21. [Sonic 1 Embedded Runtime Data Ratchet](#sonic-1-embedded-runtime-data-ratchet)
 
 ---
 
@@ -804,20 +806,23 @@ level-select fixtures.
 
 `TraceReplayBootstrap` keeps a single predicate named
 `isLegacyS3kAizIntroTrace(...)` to recognize that one fixture shape and apply
-the older bootstrap assumptions for focused diagnostics. The inherited full-run
-`replayMatchesTrace` parity test in `TestS3kAizTraceReplay` is disabled as
-diagnostic-only until the trace is regenerated; release validation must not
-count this fixture as proof of end-to-end AIZ parity. The predicate is
-intentionally bounded to S3K AIZ intro metadata, and `TestBuildToolingGuard`
-rejects growth beyond the one accepted legacy trace predicate.
+the older cursor/phase assumptions for focused diagnostics. It no longer turns
+trace rows into actual player state for comparison; pre-level rows are advanced
+as VBlank-only and skipped until the first comparable level frame. The inherited
+full-run `replayMatchesTrace` parity test in `TestS3kAizTraceReplay` is
+disabled as diagnostic-only until the trace is regenerated; release validation
+must not count this fixture as proof of end-to-end AIZ parity. The predicate is
+intentionally bounded to S3K AIZ intro metadata, and trace policy tests reject
+any new trace-row-to-actual-primary-state substitution.
 
 ### Rationale
 
-This is accepted Phase 1 release debt because removing it requires either
-re-recording the legacy fixture or replacing the compatibility branch with a
-ROM-state-driven intro bootstrap model. The release hardening requirement is
-that the exception is visible, bounded, diagnostic-only for the legacy full-run
-fixture, and prevented from expanding silently.
+This is deferred release debt because removing the fixture-identity predicate
+requires either re-recording the legacy fixture or replacing the compatibility
+branch with a ROM-state-driven intro bootstrap model. The release hardening
+requirement is that the exception is visible, bounded, diagnostic-only for the
+legacy full-run fixture, and prevented from expanding silently. It is not a full
+trace-policy fix and must not be described as proof of strict AIZ intro parity.
 
 ### Removal Condition
 
@@ -911,6 +916,78 @@ guards `TraceReplayBootstrap` against regaining the retired shape inference.
 Replace the ad hoc fixture capability string with recorder-emitted ROM phase
 metadata for sidekick seed/history setup, then update replay bootstrap to
 consume that richer phase contract.
+
+---
+
+## S3K Complete-Run Segment Start-Position Bootstrap Debt
+
+**Location:** `TraceReplayBootstrap.isS3kCompleteRunSegment`,
+`TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap`
+**Scope:** Sonic 3 and Knuckles complete-run trace replay setup only.
+
+### Current Boundary
+
+S3K complete-run per-zone segments no longer seed frame-zero player, sidekick,
+camera, object, or CPU state from trace rows. They drive and compare from trace
+frame 0 with `ReplayStartState.DEFAULT`; `shouldSeedFrameZeroForTraceReplay`
+and `shouldSeedReplayStartStateForTraceReplay` both remain false. The remaining
+fixture dependency is narrower: replay setup applies the metadata start centre
+coordinates once, then runs the same ground-snap/camera/event initialization
+path used by ordinary trace fixtures.
+
+### Rationale
+
+These segments arm at a zone handoff or first controllable frame from a longer
+complete-run movie, so the fixture metadata supplies the save-state entry
+position for the segment. That is accepted frame-zero bootstrap debt, not
+per-frame trace hydration, and it must not expand into copying recorded trace
+rows or sidekick/camera state back into the engine.
+
+### Verification
+
+`TestTraceReplayStartPositionPolicy.s3kCompleteRunSegmentsDoNotSeedFrameZeroTraceState`
+checks current complete-run fixtures use metadata start position only, keep an
+unseeded replay start, and do not receive the S3K sidekick seed-row prelude.
+`TestBuildToolingGuard.traceReplayLegacyExceptionsShouldBeDocumentedAndBounded`
+keeps this release-debt entry present.
+
+### Removal Condition
+
+Replace per-segment metadata start positions with a native ROM-state handoff
+model or regenerate complete-run fixtures so the replay can enter each segment
+from the real preceding state without fixture-provided start coordinates.
+
+---
+
+## Frame-0 Trace Bootstrap Snapshot Coverage Debt
+
+**Location:** `AbstractTraceReplayTest.captureEngineSnapshot`,
+`TraceBinder.compareBootstrapFrame0`
+**Scope:** Trace replay verification coverage only; not live gameplay.
+
+### Current Boundary
+
+The frame-0 bootstrap comparator is comparison-only: it never hydrates engine
+state from `player_history_snapshot`, `cpu_state_snapshot`, or
+`object_state_snapshot` events. However, the engine snapshot currently supplies
+player history only. Sidekick CPU views and per-slot SST snapshots are left
+empty because the needed live accessors are outside the release-review patch
+scope. When a trace records those views and the engine cannot provide them, the
+comparator emits bootstrap warnings rather than strict errors.
+
+### Release Meaning
+
+This is not a full sidekick/SST parity proof. A trace run with zero per-frame
+errors but bootstrap warnings proves only the currently compared fields. Release
+validation may treat warnings as blocking, but until engine-side sidekick CPU
+and object-slot snapshot extraction is implemented, warning-free frame-0
+sidekick/SST coverage is not guaranteed by this comparator.
+
+### Removal Condition
+
+Add native engine snapshot accessors for the sidekick CPU fields and cardinal
+per-slot object SST fields, wire them into `AbstractTraceReplayTest`, then make
+missing engine views for recorded native-prelude traces strict failures.
 
 ---
 

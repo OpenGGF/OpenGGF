@@ -11,7 +11,7 @@ human-readable key names such as `"SPACE"` and `"F9"`.
 | Arrow Keys | Move left/right, look up, crouch/roll |
 | Space | Jump |
 | Enter | Pause / unpause |
-| Backspace | Player 1 start / in-game pause |
+| Backspace | Player 1 start / in-game pause (engine default; add `input.player1.start` to `config.yaml` to override) |
 | Q | Advance one frame (while paused) |
 
 ## Rewind

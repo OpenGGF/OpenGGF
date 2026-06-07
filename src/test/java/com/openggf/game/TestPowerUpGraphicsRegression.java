@@ -11,14 +11,17 @@ import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.sprites.playable.Sonic;
+import com.openggf.tests.RomTestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -58,6 +61,34 @@ class TestPowerUpGraphicsRegression {
                 "Persistent insta-shield object should have donor art renderer ready");
     }
 
+    @Test
+    void sonic2RomLookupHonorsConfiguredMavenPropertyPath() throws Exception {
+        Path configuredRom = Files.createTempFile("openggf-configured-sonic2", ".gen");
+        String previous = System.getProperty("sonic2.rom.path");
+        System.setProperty("sonic2.rom.path", configuredRom.toString());
+        try {
+            assertEquals(configuredRom.toFile(), resolveSonic2RomFile(),
+                    "release CI passes SONIC2_ROM_PATH through -Dsonic2.rom.path; this regression must not fall back to root filenames");
+        } finally {
+            restoreProperty("sonic2.rom.path", previous);
+            Files.deleteIfExists(configuredRom);
+        }
+    }
+
+    @Test
+    void s3kDonorRomLookupHonorsConfiguredMavenPropertyPath() throws Exception {
+        Path configuredRom = Files.createTempFile("openggf-configured-s3k", ".gen");
+        String previous = System.getProperty("s3k.rom.path");
+        System.setProperty("s3k.rom.path", configuredRom.toString());
+        try {
+            assertEquals(configuredRom.toFile(), resolveSonic3kRomFile(),
+                    "release CI passes S3K_ROM_PATH through -Ds3k.rom.path; cross-game donor setup must use that path");
+        } finally {
+            restoreProperty("s3k.rom.path", previous);
+            Files.deleteIfExists(configuredRom);
+        }
+    }
+
     private Sonic loadSonic2Player(boolean crossGame) throws Exception {
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.resetToDefaults();
@@ -70,13 +101,14 @@ class TestPowerUpGraphicsRegression {
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
         TestEnvironment.activeGameplayMode();
 
-        Rom primaryRom = openRom("Sonic The Hedgehog 2 (W) (REV01) [!].gen",
-                "Sonic The Hedgehog 2 (W) (REV00) [!].gen");
+        Rom primaryRom = openRom(resolveSonic2RomFile());
         RomManager.getInstance().setRom(primaryRom);
 
         if (crossGame) {
-            assumeTrue(Files.exists(Path.of("Sonic and Knuckles & Sonic 3 (W) [!].gen")),
+            File s3kRom = resolveSonic3kRomFile();
+            assumeTrue(s3kRom != null,
                     "S3K donor ROM is required for cross-game insta-shield regression coverage");
+            config.setConfigValue(SonicConfiguration.SONIC_3K_ROM, s3kRom.getPath());
             CrossGameFeatureProvider.getInstance().resetState();
             CrossGameFeatureProvider.getInstance().initialize("s3k");
         }
@@ -90,18 +122,34 @@ class TestPowerUpGraphicsRegression {
         return player;
     }
 
-    private static Rom openRom(String... candidates) throws IOException {
-        for (String candidate : candidates) {
-            if (!Files.exists(Path.of(candidate))) {
-                continue;
-            }
-            Rom rom = new Rom();
-            if (rom.open(candidate)) {
-                return rom;
-            }
+    private static File resolveSonic2RomFile() {
+        File configured = RomTestUtils.ensureSonic2RomAvailable();
+        if (configured != null) {
+            return configured;
         }
-        assumeTrue(false, "Required ROM not available: " + String.join(", ", candidates));
+        File legacyRev00 = Path.of("Sonic The Hedgehog 2 (W) (REV00) [!].gen").toFile();
+        return legacyRev00.exists() ? legacyRev00 : null;
+    }
+
+    private static File resolveSonic3kRomFile() {
+        return RomTestUtils.ensureSonic3kRomAvailable();
+    }
+
+    private static Rom openRom(File romFile) throws IOException {
+        assumeTrue(romFile != null, "Required Sonic 2 ROM not available");
+        Rom rom = new Rom();
+        if (rom.open(romFile.getPath())) {
+            return rom;
+        }
         throw new IOException("ROM unavailable");
+    }
+
+    private static void restoreProperty(String key, String previous) {
+        if (previous == null) {
+            System.clearProperty(key);
+        } else {
+            System.setProperty(key, previous);
+        }
     }
 
     private static Object readField(Object target, String fieldName) throws Exception {

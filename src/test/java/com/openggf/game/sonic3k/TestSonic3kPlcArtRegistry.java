@@ -43,10 +43,6 @@ public class TestSonic3kPlcArtRegistry {
             "level:" + Sonic3kObjectArtKeys.AIZ1_TREE + ":buildAiz1TreeSheet",
             "level:" + Sonic3kObjectArtKeys.AIZ1_ZIPLINE_PEG + ":buildAiz1ZiplinePegSheet",
             "level:" + Sonic3kObjectArtKeys.AIZ_FOREGROUND_PLANT + ":buildAizForegroundPlantSheet",
-            "standalone:" + Sonic3kObjectArtKeys.BUBBLER + ":mappingAddr<=0",
-            "standalone:" + Sonic3kObjectArtKeys.HCZ_WATER_RUSH + ":mappingAddr<=0",
-            "standalone:" + Sonic3kObjectArtKeys.HCZ_WATER_SPLASH + ":mappingAddr<=0",
-            "standalone:" + Sonic3kObjectArtKeys.HCZ_GEYSER_SPRAY + ":mappingAddr<=0",
             "standalone:" + Sonic3kObjectArtKeys.MGZ_ENDBOSS_SCALED + ":mappingAddr<=0",
             "provider:" + ObjectArtKeys.EXPLOSION + ":loadExplosionArt",
             "provider:" + Sonic3kObjectArtKeys.MONITOR + ":buildMonitorMappingFrames",
@@ -716,6 +712,36 @@ public class TestSonic3kPlcArtRegistry {
     }
 
     @Test
+    public void sharedBubblerUsesRomBackedMappings() {
+        Sonic3kPlcArtRegistry.StandaloneArtEntry bubbler =
+                requireStandaloneArt(Sonic3kPlcArtRegistry.getPlan(Sonic3kZoneIds.ZONE_HCZ, 0),
+                        Sonic3kObjectArtKeys.BUBBLER);
+
+        assertEquals(Sonic3kConstants.MAP_BUBBLER_ADDR, bubbler.mappingAddr());
+        assertEquals(22, bubbler.mappingFrameCount());
+    }
+
+    @Test
+    public void hczWaterRushUsesRomBackedMappings() {
+        Sonic3kPlcArtRegistry.StandaloneArtEntry waterRush =
+                requireStandaloneArt(Sonic3kPlcArtRegistry.getPlan(Sonic3kZoneIds.ZONE_HCZ, 0),
+                        Sonic3kObjectArtKeys.HCZ_WATER_RUSH);
+
+        assertEquals(Sonic3kConstants.MAP_HCZ_WATER_RUSH_ADDR, waterRush.mappingAddr());
+        assertEquals(4, waterRush.mappingFrameCount());
+    }
+
+    @Test
+    public void hczWaterSplashUsesRomBackedMappings() {
+        Sonic3kPlcArtRegistry.StandaloneArtEntry waterSplash =
+                requireStandaloneArt(Sonic3kPlcArtRegistry.getPlan(Sonic3kZoneIds.ZONE_HCZ, 0),
+                        Sonic3kObjectArtKeys.HCZ_WATER_SPLASH);
+
+        assertEquals(Sonic3kConstants.MAP_HCZ_WATER_SPLASH_ADDR, waterSplash.mappingAddr());
+        assertEquals(4, waterSplash.mappingFrameCount());
+    }
+
+    @Test
     public void hczBubblesUseRomBackedWaterWallMappings() {
         Sonic3kPlcArtRegistry.StandaloneArtEntry bubbles =
                 requireStandaloneArt(Sonic3kPlcArtRegistry.getPlan(Sonic3kZoneIds.ZONE_HCZ, 0),
@@ -743,6 +769,11 @@ public class TestSonic3kPlcArtRegistry {
                 requireStandaloneArt(plan, Sonic3kObjectArtKeys.HCZ_GEYSER_DEBRIS);
         assertEquals(Sonic3kConstants.MAP_HCZ_WATERWALL_DEBRIS_ADDR, debris.mappingAddr());
         assertEquals(0x58, debris.mappingTileOffset());
+
+        Sonic3kPlcArtRegistry.StandaloneArtEntry spray =
+                requireStandaloneArt(plan, Sonic3kObjectArtKeys.HCZ_GEYSER_SPRAY);
+        assertEquals(Sonic3kConstants.MAP_HCZ_WATERWALL_ADDR, spray.mappingAddr());
+        assertEquals(0x30, spray.mappingTileOffset());
     }
 
     @Test

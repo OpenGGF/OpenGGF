@@ -92,19 +92,14 @@ final class AizFireCurtainRenderer {
                 return buildSampledPlan(state, screenWidth, screenHeight);
             }
             CurtainCompositionPlan bgPlan = buildBackgroundSampledPlan(state, screenWidth, screenHeight);
-            if (bgPlan.columns().isEmpty() && state.fireOverlayTileCount() > 0) {
-                return buildFireOverlayTilePlan(state, screenWidth, screenHeight);
-            }
             return bgPlan;
         }
         // Post-mutation: use cached BG descriptors if available (preserves real
-        // fire tile layout across the mutation).  Falls back to synthetic overlay
-        // tiles if the cache wasn't populated during RISING.
+        // fire tile layout across the mutation). If no cache exists, fail closed
+        // rather than synthesizing descriptors that were not sourced from the ROM
+        // layout.
         if (fireDescriptorsCached) {
             return buildCachedPlan(state, screenWidth, screenHeight);
-        }
-        if (state.fireOverlayTileCount() > 0) {
-            return buildFireOverlayTilePlan(state, screenWidth, screenHeight);
         }
         if (sampler != null) {
             return buildSampledPlan(state, screenWidth, screenHeight);
@@ -226,11 +221,6 @@ final class AizFireCurtainRenderer {
                     }
                     if (patternIndex >= tileBase && patternIndex < tileBase + tileCount) {
                         draws.add(new TileDraw(forceFirePalette(descriptor), patternIndex, drawX, drawY));
-                    } else if (tileCount > 0) {
-                        int fallbackIdx = ((drawX / TILE_SIZE) + (bgRow & 0x7F)) % tileCount;
-                        int fallbackPattern = tileBase + fallbackIdx;
-                        int fallbackDesc = (FIRE_PALETTE_INDEX << 13) | (fallbackPattern & 0x7FF);
-                        draws.add(new TileDraw(fallbackDesc, fallbackPattern, drawX, drawY));
                     }
                 }
             }
@@ -262,10 +252,6 @@ final class AizFireCurtainRenderer {
                 }
                 if (patternIndex >= tileBase && patternIndex < tileBase + tileCount) {
                     cachedFireDescriptors[row][col] = forceFirePalette(descriptor);
-                } else if (tileCount > 0) {
-                    int fallbackIdx = (col + (row & 0x7F)) % tileCount;
-                    int fallbackPattern = tileBase + fallbackIdx;
-                    cachedFireDescriptors[row][col] = (FIRE_PALETTE_INDEX << 13) | (fallbackPattern & 0x7FF);
                 }
             }
         }
@@ -342,72 +328,8 @@ final class AizFireCurtainRenderer {
         return new CurtainCompositionPlan(screenWidth, screenHeight, columns);
     }
 
-    /**
-     * Builds a fire curtain plan using the fire overlay tiles directly.
-     * Used as a fallback when cached descriptors aren't available.
-     */
-    private CurtainCompositionPlan buildFireOverlayTilePlan(FireCurtainRenderState state,
-                                                             int screenWidth, int screenHeight) {
-        int tileBase = state.fireOverlayTileBase();
-        int tileCount = state.fireOverlayTileCount();
-        if (tileCount <= 0) {
-            return new CurtainCompositionPlan(screenWidth, screenHeight, List.of());
-        }
-
-        int[] columnWaveOffsets = state.columnWaveOffsetsPx();
-        int bgY = state.sourceWorldY();
-        List<ColumnRenderPlan> columns = new ArrayList<>(COLUMN_COUNT);
-        int baseTop = clamp(screenHeight - state.coverHeightPx(), 0, screenHeight);
-
-        for (int columnIndex = 0; columnIndex < COLUMN_COUNT; columnIndex++) {
-            int columnLeft = (columnIndex * screenWidth) / COLUMN_COUNT;
-            int columnRight = ((columnIndex + 1) * screenWidth) / COLUMN_COUNT;
-            int columnWidth = Math.max(1, columnRight - columnLeft);
-            int waveOffset = columnIndex < columnWaveOffsets.length ? columnWaveOffsets[columnIndex] : 0;
-            int clipTop = clamp(baseTop + waveOffset, 0, screenHeight);
-            if (clipTop >= screenHeight) {
-                continue;
-            }
-
-            int columnVScroll = bgY + waveOffset;
-            int bgAtBottom = columnVScroll + screenHeight;
-            int bgAtClipTop = columnVScroll + clipTop;
-            int bgRowBottom = Math.floorDiv(bgAtBottom - 1, TILE_SIZE);
-            int bgRowTop = Math.floorDiv(bgAtClipTop - TILE_SIZE, TILE_SIZE);
-
-            List<TileDraw> draws = new ArrayList<>();
-            int subColumns = Math.max(1, (columnWidth + TILE_SIZE - 1) / TILE_SIZE);
-            for (int bgRow = bgRowBottom; bgRow >= bgRowTop; bgRow--) {
-                int bgTileY = bgRow * TILE_SIZE;
-                int wrappedTileY = wrapFireTileY(bgTileY, state.wrapFireTiles());
-                if (wrappedTileY < 0) {
-                    continue;
-                }
-                int drawY = bgTileY - columnVScroll;
-                if (drawY >= screenHeight || drawY + TILE_SIZE <= clipTop) {
-                    continue;
-                }
-                int wrappedRowIndex = wrappedTileY / TILE_SIZE;
-                for (int subColumn = 0; subColumn < subColumns; subColumn++) {
-                    int drawX = columnLeft + subColumn * TILE_SIZE;
-                    if (drawX >= columnRight) {
-                        continue;
-                    }
-                    int tileIndex = ((drawX / TILE_SIZE) + (wrappedRowIndex & 0x7F)) % tileCount;
-                    int patternIndex = tileBase + tileIndex;
-                    int descriptor = (FIRE_PALETTE_INDEX << 13) | (patternIndex & 0x7FF);
-                    draws.add(new TileDraw(descriptor, patternIndex, drawX, drawY));
-                }
-            }
-            if (!draws.isEmpty()) {
-                columns.add(new ColumnRenderPlan(columnIndex, columnLeft, columnWidth, clipTop, screenHeight, draws));
-            }
-        }
-        return new CurtainCompositionPlan(screenWidth, screenHeight, columns);
-    }
-
     private static int sampleBackgroundStripDescriptor(int sourceX, int sourceY) {
-        LevelManager levelManager = GameServices.level();
+        LevelManager levelManager = GameServices.levelOrNull();
         if (levelManager == null || levelManager.getCurrentLevel() == null) {
             return 0;
         }

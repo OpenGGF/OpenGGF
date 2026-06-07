@@ -4,6 +4,16 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Develop release-sweep hardening closed the latest architecture review
+  findings:** startup and audio teardown now fail closed on partial native
+  initialization, incomplete FBO creation cleans up and disables priority
+  rendering, S3K HCZ/AIZ visual paths no longer synthesize runtime mapping or
+  fire-curtain data outside ROM-backed sources, virtual pattern IDs are
+  governed by `PatternAtlasRange`, and post-fade diagnostics are explicit
+  render phases. Release docs, ROM-fixture tests, trace-policy debt, runtime
+  registry lifecycle guards, and branch/controls documentation were updated and
+  verified through the focused release-sweep gates plus `mvn package`.
+
 - **Trace release policy tracker slice closed for TMP-002/TMP-003/TMP-011/TMP-012:**
   S2 control-lock logical-input latching remains an explicit deferred policy
   (`PhysicsFeatureSet.SONIC_2=false`, S3K=true) with the stale playable-sprite

@@ -2,6 +2,7 @@ package com.openggf.tests.graphics;
 
 import org.junit.jupiter.api.Test;
 import com.openggf.graphics.PatternAtlas;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Pattern;
 
 import java.lang.reflect.Field;
@@ -42,7 +43,7 @@ public class PatternAtlasFallbackTest {
         Pattern pattern = new Pattern();
         pattern.setPixel(1, 6, (byte) 5);
 
-        PatternAtlas.Entry entry = atlas.cachePatternHeadless(pattern, 0x12345);
+        PatternAtlas.Entry entry = atlas.cachePatternHeadless(pattern, PatternAtlasRange.OBJECTS.base());
         assertNotNull(entry);
 
         Method uploadPattern = PatternAtlas.class.getDeclaredMethod("uploadPattern", Pattern.class, PatternAtlas.Entry.class);

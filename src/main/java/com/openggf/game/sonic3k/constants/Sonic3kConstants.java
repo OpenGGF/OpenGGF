@@ -293,6 +293,8 @@ public class Sonic3kConstants {
     public static final int ARTTILE_HCZ_WATER_RUSH = 0x037A;
     // WaterRushBlock uses ArtTile_HCZMisc + $A = 0x03D4 (level-loaded art)
     public static final int ARTTILE_HCZ_WATER_RUSH_BLOCK = 0x03CA + 0xA; // 0x03D4
+    // Map_HCZWaterRush: 4 frames. LockOn data referenced by sonic3k.asm Obj_HCZWaterRush.
+    public static final int MAP_HCZ_WATER_RUSH_ADDR = 0x22E60C;
     // Map_HCZWaterRushBlock: 2 frames. LockOn data (S3 half).
     public static final int MAP_HCZ_WATER_RUSH_BLOCK_ADDR = 0x22E76C;
 
@@ -337,6 +339,12 @@ public class Sonic3kConstants {
     // ArtUnc_HCZWaterSplash: uncompressed, 3072 bytes (96 tiles), 4 frames × 24 tiles (subtype 0, not used here)
     public static final int ART_UNC_HCZ_WATER_SPLASH_ADDR = 0x392B14;
     public static final int ART_UNC_HCZ_WATER_SPLASH_SIZE = 3072;
+    // Map_HCZWaterSplash: 4 active subtype-0 frames plus an unused empty frame.
+    // LockOn data referenced by sonic3k.asm Obj_HCZWaterSplash.
+    public static final int MAP_HCZ_WATER_SPLASH_ADDR = 0x237C60;
+    // Map_HCZWaterSplash2: 5 active skim frames plus an empty frame that points
+    // two bytes before this table (the empty frame shared with Map_HCZWaterSplash).
+    public static final int MAP_HCZ_WATER_SPLASH2_ADDR = 0x237C7A;
     // VRAM tile indices from sonic3k.constants.asm
     public static final int ARTTILE_HCZ1_WATER_SPLASH2 = 0x0344;
     public static final int ARTTILE_HCZ2_WATER_SPLASH2 = 0x036E;

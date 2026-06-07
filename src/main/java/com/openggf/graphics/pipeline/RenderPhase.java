@@ -7,5 +7,6 @@ package com.openggf.graphics.pipeline;
 public enum RenderPhase {
     SCENE,      // Level, sprites, objects
     OVERLAY,    // HUD, debug overlay
-    FADE_PASS   // Screen fade effects; diagnostic Engine overlays may render after this phase
+    FADE_PASS,  // Screen fade effects; final pass in the normal UI pipeline
+    POST_FADE_DIAGNOSTIC // Explicit Engine-owned diagnostics and documented exceptions
 }

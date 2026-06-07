@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Pattern;
 
 import java.io.IOException;
@@ -184,7 +185,7 @@ public class Sonic3kSpecialStageManager {
     }
 
     /** Pattern ID base for special stage art (avoids conflicts with level patterns). */
-    private static final int SS_PATTERN_BASE = 0x3000;
+    private static final int SS_PATTERN_BASE = PatternAtlasRange.SPECIAL_STAGE_PLAYFIELD.base();
 
     /**
      * Load all ROM data: layouts, art, palettes, perspective maps.

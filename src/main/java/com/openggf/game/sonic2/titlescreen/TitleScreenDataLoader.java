@@ -49,7 +49,7 @@ public class TitleScreenDataLoader {
     static final int SPRITE_PATTERN_BASE = PatternAtlasRange.SPECIAL_STAGE_RESULTS.base();
 
     /** Pattern base ID for credit text art (separate from background and sprites). */
-    static final int CREDIT_TEXT_PATTERN_BASE = 0x80000;
+    static final int CREDIT_TEXT_PATTERN_BASE = PatternAtlasRange.SONIC2_TITLE_CREDIT_TEXT.base();
 
     // Loaded art patterns
     private Pattern[] titlePatterns;

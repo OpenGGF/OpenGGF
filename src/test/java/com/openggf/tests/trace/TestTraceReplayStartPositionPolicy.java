@@ -6,6 +6,7 @@ import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -114,6 +115,30 @@ class TestTraceReplayStartPositionPolicy {
     }
 
     @Test
+    void traceReplayBootstrapNeverReportsTraceFrameAsActualPrimaryState() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/trace/TraceReplayBootstrap.java"));
+
+        assertFalse(source.contains("fromTraceFrame"),
+                "Trace rows are comparison input only; replay bootstrap must not expose a helper "
+                        + "that can turn a TraceFrame into the actual engine primary state.");
+        assertFalse(source.contains("trace-vblank"),
+                "Legacy pre-level rows may be skipped for comparison, but must not be reported "
+                        + "as actual player state.");
+    }
+
+    @Test
+    void frameZeroSidekickAndObjectBootstrapCoverageIsDocumentedAsPartial() throws Exception {
+        String testBase = Files.readString(Path.of(
+                "src/test/java/com/openggf/tests/trace/AbstractTraceReplayTest.java"));
+        String releaseIssues = Files.readString(Path.of("docs/release-architecture-review-issues.md"));
+
+        assertTrue(testBase.contains("SidekickCpuView and per-slot SST snapshots are left null/empty"),
+                "The trace test base must keep the missing frame-0 sidekick/SST views visible.");
+        assertTrue(releaseIssues.contains("not a full sidekick/SST parity proof"),
+                "Release notes must not claim warning-only bootstrap gaps prove strict parity.");
+    }
+
+    @Test
     void s3kGameplayTraceSeedsFrameZeroAfterSidekickOnlyPrelude() throws Exception {
         TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/cnz"));
 
@@ -186,6 +211,29 @@ class TestTraceReplayStartPositionPolicy {
             assertEquals(0, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace),
                     route + " complete-run segments must not receive the sidekick seed-row prelude.");
         }
+    }
+
+    @Test
+    void s3kCompleteRunBootstrapDebtStaysNarrowAndDocumented() throws Exception {
+        String replayBootstrap = Files.readString(Path.of(
+                "src/main/java/com/openggf/trace/TraceReplayBootstrap.java"));
+        String sessionBootstrap = Files.readString(Path.of(
+                "src/main/java/com/openggf/trace/replay/TraceReplaySessionBootstrap.java"));
+        String discrepancies = Files.readString(Path.of("docs/KNOWN_DISCREPANCIES.md"));
+        String releaseIssues = Files.readString(Path.of("docs/release-architecture-review-issues.md"));
+
+        assertFalse(sessionBootstrap.contains("seedS3kCompleteRunStartState"),
+                "The retired S3K complete-run trace-state seed helper must not return.");
+        assertTrue(replayBootstrap.matches(
+                        "(?s).*public static boolean shouldSeedFrameZeroForTraceReplay\\(TraceData trace\\) \\{\\s*return false;\\s*\\}.*"),
+                "TraceReplayBootstrap should keep frame-zero trace-row state seeding disabled.");
+        assertTrue(replayBootstrap.matches(
+                        "(?s).*public static boolean shouldSeedReplayStartStateForTraceReplay\\(TraceData trace,\\s*int requestedSeedTraceIndex\\) \\{\\s*return false;\\s*\\}.*"),
+                "TraceReplayBootstrap should keep replay-start trace-row state seeding disabled.");
+        assertTrue(discrepancies.contains("S3K Complete-Run Segment Start-Position Bootstrap Debt"),
+                "The remaining metadata start-position bootstrap debt must stay documented.");
+        assertTrue(releaseIssues.contains("| REL-034 | resolved | Trace policy |"),
+                "REL-034 should remain resolved only while the seed path is removed or narrowed.");
     }
 
     @Test

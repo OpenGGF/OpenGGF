@@ -190,10 +190,20 @@ Work:
   - `TraceReplayBootstrap.isLegacyS3kAizIntroTrace` remains as one bounded
     fixture-compatibility predicate for the old AIZ intro trace.
   - It is documented in `docs/KNOWN_DISCREPANCIES.md`; the old full-run AIZ
-    replay is diagnostic-only until regenerated, and the release guard rejects
-    growth beyond this one accepted legacy trace predicate.
+    replay is diagnostic-only until regenerated, and trace policy tests reject
+    trace-row-to-actual-primary-state substitution.
+  - The remaining fixture-identity phase/cursor predicate is deferred release
+    debt, not proof of strict AIZ intro parity.
   - Future trace cleanup should re-record the fixture or model the missing ROM
     intro state and then remove the predicate.
+- Deferred release debt: frame-0 bootstrap sidekick/SST snapshot coverage.
+  - `AbstractTraceReplayTest.captureEngineSnapshot()` currently captures player
+    history only; sidekick CPU and per-slot SST engine views remain absent.
+  - Bootstrap warnings for missing engine views mean the run is not a full
+    sidekick/SST parity proof, even when per-frame errors are zero.
+  - Removal requires live engine accessors for those views and strict failures
+    when a native-prelude trace records snapshots that the engine cannot
+    compare.
 - Completed: S1/S2 bottom-boundary centre-Y parity.
   - `PhysicsFeatureSet.SONIC_1` and `SONIC_2` now use centre-Y for the
     bottom-boundary death check, matching the ROM `obY` / `y_pos` coordinate.
@@ -488,6 +498,9 @@ Work:
     sidekick seed-frame bootstrap heuristic as accepted trace replay debt in
     `docs/KNOWN_DISCREPANCIES.md`, with removal conditions and a guard that
     keeps the documentation present.
+  - documented the remaining S3K complete-run segment metadata start-position
+    bootstrap as bounded frame-zero debt; complete-run replay no longer seeds
+    frame-zero player/sidekick/camera state from trace rows.
   - converted the S2 slot-machine prelude check from direct CNZ-named replay
     bootstrap usage to generic `TraceMetadata.hasPerFrameSlotMachineState()`
     capability metadata, keeping the old CNZ API as a deprecated recorder-schema
@@ -499,7 +512,13 @@ Work:
     `sidekick_seed_frame_prelude`, and added a source guard that prevents
     `TraceReplayBootstrap` from inferring this prelude from frame-0 player
     movement shape.
-- Remaining cleanup: none for this section.
+  - removed the remaining trace-row primary-state substitution path from
+    `TraceReplayBootstrap`; comparison now uses live engine sprite state only.
+- Remaining cleanup:
+  - Replace `isLegacyS3kAizIntroTrace(...)` with regenerated fixture metadata or
+    ROM-state phase metadata.
+  - Add engine-side sidekick CPU and per-slot SST frame-0 snapshot views so
+    bootstrap warnings can become strict comparisons.
 
 Recommended order:
 

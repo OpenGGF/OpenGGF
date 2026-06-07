@@ -4,8 +4,10 @@ This page gets you from zero to playing in under five minutes.
 
 ## What You Need
 
-- **Java 21 or later.** Download from [Adoptium](https://adoptium.net/) or your preferred
-  distribution. Run `java -version` to check.
+- **For downloaded releases:** no separate Java install is required; release packages include a
+  native OpenGGF executable for your platform.
+- **For source builds:** Java 21 or later. Download from [Adoptium](https://adoptium.net/) or
+  your preferred distribution. Run `java -version` to check.
 - **A GPU that supports OpenGL 4.1.** Any discrete GPU from the last decade will work.
   Integrated graphics (Intel HD 4000+, Apple Silicon) are fine.
 - **ROM files** for the games you want to play. The engine does not include any game data.
@@ -29,14 +31,28 @@ ROM filenames can be changed in `config.yaml` if yours differ. See
 
 ### Option A: Download a Release
 
-1. Download the latest release ZIP from the Releases page.
+1. Download the latest release package for your platform from the Releases page:
+   - Windows: `OpenGGF-windows.zip`
+   - macOS: `OpenGGF-macos.zip`
+   - Linux: `OpenGGF-linux.tar.gz`
 2. Extract it to a folder.
-3. Place your ROM files in the same folder as the JAR file.
-4. Double-click the JAR, or run from a terminal:
+3. Place your ROM files next to the editable `config.yaml` included in the package.
+4. Start OpenGGF:
+   - Windows: double-click `OpenGGF.exe`, or run it from a terminal.
+   - macOS: open `OpenGGF.app`.
+   - Linux: run `./OpenGGF` from the extracted `OpenGGF` directory.
+5. If your ROM filenames differ from the defaults, edit `config.yaml` in the extracted package.
+
+Windows terminal example:
    ```
-   java -jar openggf.jar
+   .\OpenGGF.exe
    ```
-   On Windows, you can also use the included `run.cmd`.
+
+Linux terminal example:
+   ```
+   cd OpenGGF
+   ./OpenGGF
+   ```
 
 ### Option B: Build from Source
 

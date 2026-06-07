@@ -5,6 +5,7 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.*;
 import com.openggf.graphics.*;
+import com.openggf.graphics.pipeline.RenderOrderRecorder;
 import com.openggf.version.AppVersion;
 import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.*;
@@ -136,6 +137,7 @@ public class Engine {
 
 	// GLFW window handle
 	private long window;
+	private boolean glfwInitialized;
 
 	// Window dimensions
 	private int windowWidth;
@@ -241,8 +243,12 @@ public class Engine {
 	}
 
 	public void run() {
-		init();
-		try { loop(); } finally { cleanup(); }
+		try {
+			init();
+			loop();
+		} finally {
+			cleanup();
+		}
 	}
 
 	private static boolean isNativeImage() {
@@ -251,7 +257,6 @@ public class Engine {
 
 	private void init() {
 		// === PHASE 1: Window, GL context, input (always runs) ===
-
 		// Setup an error callback
 		GLFWErrorCallback.createPrint(System.err).set();
 
@@ -259,6 +264,7 @@ public class Engine {
 		if (!glfwInit()) {
 			throw new IllegalStateException("Unable to initialize GLFW");
 		}
+		glfwInitialized = true;
 
 		// Configure GLFW
 		glfwDefaultWindowHints();
@@ -1279,11 +1285,15 @@ public class Engine {
 		if (uiPipeline != null) {
 			uiPipeline.renderFadePass();
 		}
+		RenderOrderRecorder postFadeRecorder = uiPipeline != null ? uiPipeline.getRenderOrderRecorder() : null;
 
 		// Post-fade diagnostic overlays: intentionally outside UiRenderPipeline so
 		// trace/debug status remains visible during fade-to-black teardown. Keep
 		// this block diagnostic-only unless an explicit render-order exception is
 		// documented and guarded.
+		if (postFadeRecorder != null) {
+			postFadeRecorder.recordPostFadeDiagnostic("DisplayColorProfileNotification");
+		}
 		renderDisplayColorProfileNotification();
 
 		// Trace Test Mode HUD and live rewind HUD: drawn after the fade pass so
@@ -1291,9 +1301,15 @@ public class Engine {
 		TraceSessionLauncher traceSession = TraceSessionLauncher.active();
 		if (traceSession != null) {
 			traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+			if (postFadeRecorder != null) {
+				postFadeRecorder.recordPostFadeDiagnostic("TraceHud");
+			}
 			traceSession.render(traceHudTextRenderer);
 		} else if (gameLoop != null) {
 			traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+			if (postFadeRecorder != null) {
+				postFadeRecorder.recordPostFadeDiagnostic("LiveRewindHud");
+			}
 			gameLoop.renderLiveRewindHud(traceHudTextRenderer);
 		}
 		if (getCurrentGameMode() == GameMode.CREDITS_DEMO) {
@@ -1307,6 +1323,9 @@ public class Engine {
 				// FadeManager restores blend on its own, we must not rely on the next pass
 				// inheriting whatever shader/texture bindings the fade pass left active.
 				graphicsManager.resetForFixedFunction();
+				if (postFadeRecorder != null) {
+					postFadeRecorder.recordPostFadeDiagnostic("CreditsDemoSprites");
+				}
 				levelManager.renderSpriteObjectPass(spriteManager, true);
 				graphicsManager.flush();
 			}
@@ -1324,12 +1343,21 @@ public class Engine {
 		if (getCurrentGameMode() == GameMode.SPECIAL_STAGE) {
 			SpecialStageProvider ssProvider = gameLoop.getActiveSpecialStageProvider();
 			if (ssProvider.isAlignmentTestMode()) {
+				if (postFadeRecorder != null) {
+					postFadeRecorder.recordPostFadeDiagnostic("SpecialStageDiagnosticOverlay");
+				}
 				ssProvider.renderAlignmentOverlay(windowWidth, windowHeight);
 			} else {
+				if (postFadeRecorder != null) {
+					postFadeRecorder.recordPostFadeDiagnostic("SpecialStageDiagnosticOverlay");
+				}
 				ssProvider.renderLagCompensationOverlay(windowWidth, windowHeight);
 			}
 		} else if (debugViewEnabled || playbackHud) {
 			getDebugRenderer().updateViewport(viewportWidth, viewportHeight);
+			if (postFadeRecorder != null) {
+				postFadeRecorder.recordPostFadeDiagnostic("DebugOverlay");
+			}
 			getDebugRenderer().renderDebugInfo();
 
 			// Clean up GL state after debug rendering to prevent macOS event loop issues
@@ -1691,28 +1719,46 @@ public class Engine {
 	}
 
 	private void cleanup() {
-		SessionManager.clear();
-		audioManager.clearDonorAudio();
-		crossGameFeatureProvider.resetState();
-		RenderContext.reset();
-		if (masterTitleScreen != null) {
-			masterTitleScreen.cleanup();
-			masterTitleScreen = null;
-		}
-		traceHudTextRenderer.cleanup();
-		graphicsManager.cleanup();
-		gameLoop.closePresence();
-		audioManager.destroy();
+		cleanupStep("session state", SessionManager::clear);
+		cleanupStep("donor audio", audioManager::clearDonorAudio);
+		cleanupStep("cross-game features", crossGameFeatureProvider::resetState);
+		cleanupStep("render context", RenderContext::reset);
+		cleanupStep("master title screen", () -> {
+			if (masterTitleScreen != null) {
+				masterTitleScreen.cleanup();
+				masterTitleScreen = null;
+			}
+		});
+		cleanupStep("trace HUD renderer", traceHudTextRenderer::cleanup);
+		cleanupStep("graphics manager", graphicsManager::cleanup);
+		cleanupStep("presence", gameLoop::closePresence);
+		cleanupStep("audio manager", audioManager::destroy);
+		cleanupStep("GLFW window", () -> {
+			if (window != NULL) {
+				glfwFreeCallbacks(window);
+				glfwDestroyWindow(window);
+				window = NULL;
+			}
+		});
+		cleanupStep("GLFW termination", () -> {
+			if (glfwInitialized) {
+				glfwTerminate();
+				glfwInitialized = false;
+			}
+		});
+		cleanupStep("GLFW error callback", () -> {
+			GLFWErrorCallback callback = glfwSetErrorCallback(null);
+			if (callback != null) {
+				callback.free();
+			}
+		});
+	}
 
-		// Free the window callbacks and destroy the window
-		glfwFreeCallbacks(window);
-		glfwDestroyWindow(window);
-
-		// Terminate GLFW and free the error callback
-		glfwTerminate();
-		GLFWErrorCallback callback = glfwSetErrorCallback(null);
-		if (callback != null) {
-			callback.free();
+	private void cleanupStep(String description, Runnable cleanup) {
+		try {
+			cleanup.run();
+		} catch (Throwable t) {
+			LOGGER.log(java.util.logging.Level.WARNING, "Cleanup failed for " + description, t);
 		}
 	}
 

@@ -6,6 +6,9 @@ import com.openggf.graphics.pipeline.RenderPhase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -156,6 +159,7 @@ public class RenderOrderTest {
         // Verify enum ordinals are correct for comparison
         assertTrue(RenderPhase.SCENE.ordinal() < RenderPhase.OVERLAY.ordinal());
         assertTrue(RenderPhase.OVERLAY.ordinal() < RenderPhase.FADE_PASS.ordinal());
+        assertTrue(RenderPhase.FADE_PASS.ordinal() < RenderPhase.POST_FADE_DIAGNOSTIC.ordinal());
     }
     
     @Test
@@ -179,6 +183,67 @@ public class RenderOrderTest {
         
         List<String> violations = recorder.verifyOrder();
         assertTrue(violations.isEmpty(), "Multiple OVERLAY components should be allowed");
+    }
+
+    @Test
+    public void testExplicitPostFadeDiagnosticsAreAllowedAfterFade() {
+        recorder.record(RenderPhase.SCENE, "Level");
+        recorder.record(RenderPhase.OVERLAY, "HUD");
+        recorder.record(RenderPhase.FADE_PASS, "Fade");
+        recorder.recordPostFadeDiagnostic("TraceHud");
+
+        assertTrue(recorder.verifyOrder().isEmpty(), "Post-fade diagnostic phase follows fade");
+        assertTrue(recorder.verifyPostFadeDiagnosticsAllowed(List.of("TraceHud")).isEmpty(),
+                "Registered post-fade diagnostic should be allowed");
+    }
+
+    @Test
+    public void testUnregisteredPostFadeDiagnosticsAreReported() {
+        recorder.record(RenderPhase.SCENE, "Level");
+        recorder.record(RenderPhase.FADE_PASS, "Fade");
+        recorder.recordPostFadeDiagnostic("NewOverlay");
+
+        List<String> violations = recorder.verifyPostFadeDiagnosticsAllowed(List.of("TraceHud"));
+        assertEquals(1, violations.size());
+        assertTrue(violations.get(0).contains("NewOverlay"), "Violation should name the unregistered overlay");
+    }
+
+    @Test
+    public void testEnginePostFadeOverlaysAreRecordedAsExplicitExceptions() throws IOException {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/Engine.java"));
+
+        assertPostFadeExceptionRecordedBefore(source,
+                "recordPostFadeDiagnostic(\"DisplayColorProfileNotification\")",
+                "renderDisplayColorProfileNotification();");
+        assertPostFadeExceptionRecordedBefore(source,
+                "recordPostFadeDiagnostic(\"TraceHud\")",
+                "traceSession.render(traceHudTextRenderer);");
+        assertPostFadeExceptionRecordedBefore(source,
+                "recordPostFadeDiagnostic(\"LiveRewindHud\")",
+                "gameLoop.renderLiveRewindHud(traceHudTextRenderer);");
+        assertPostFadeExceptionRecordedBefore(source,
+                "recordPostFadeDiagnostic(\"CreditsDemoSprites\")",
+                "levelManager.renderSpriteObjectPass(spriteManager, true);");
+        assertPostFadeExceptionRecordedBefore(source,
+                "recordPostFadeDiagnostic(\"SpecialStageDiagnosticOverlay\")",
+                "ssProvider.renderAlignmentOverlay(windowWidth, windowHeight);");
+        assertPostFadeExceptionRecordedBefore(source,
+                "recordPostFadeDiagnostic(\"SpecialStageDiagnosticOverlay\")",
+                "ssProvider.renderLagCompensationOverlay(windowWidth, windowHeight);");
+        assertPostFadeExceptionRecordedBefore(source,
+                "recordPostFadeDiagnostic(\"DebugOverlay\")",
+                "getDebugRenderer().renderDebugInfo();");
+    }
+
+    private static void assertPostFadeExceptionRecordedBefore(String source,
+                                                              String recorderCall,
+                                                              String renderCall) {
+        int renderIndex = source.indexOf(renderCall);
+        assertTrue(renderIndex >= 0, "Expected Engine display render call: " + renderCall);
+
+        int recorderIndex = source.lastIndexOf(recorderCall, renderIndex);
+        assertTrue(recorderIndex >= 0,
+                "Expected " + recorderCall + " before " + renderCall);
     }
 }
 

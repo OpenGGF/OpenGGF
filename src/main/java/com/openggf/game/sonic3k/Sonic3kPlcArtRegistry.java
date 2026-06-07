@@ -216,9 +216,10 @@ public final class Sonic3kPlcArtRegistry {
                     Sonic3kConstants.ART_NEM_BUBBLES_ADDR,
                     CompressionType.NEMESIS,
                     0,
-                    -1,
+                    Sonic3kConstants.MAP_BUBBLER_ADDR,
                     0,
-                    -1
+                    -1,
+                    22
             ),
             // PLC_EndSignStuff - end sign face (uncompressed art + DPLC remap)
             // ROM: loaded by AfterBoss_Cleanup for all zones with minibosses
@@ -681,9 +682,10 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.ART_NEM_HCZ_WATER_RUSH_ADDR,
                 CompressionType.NEMESIS,
                 0,
-                0,
+                Sonic3kConstants.MAP_HCZ_WATER_RUSH_ADDR,
                 2,
-                -1
+                -1,
+                4
         ));
 
         // Water Rush Block: ArtTile_HCZMisc + $A, palette 2
@@ -702,9 +704,10 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.ART_UNC_HCZ_WATER_SPLASH_ADDR,
                 CompressionType.UNCOMPRESSED,
                 Sonic3kConstants.ART_UNC_HCZ_WATER_SPLASH_SIZE,
-                0,
+                Sonic3kConstants.MAP_HCZ_WATER_SPLASH_ADDR,
                 2,
-                -1
+                -1,
+                4
         ));
 
         // Water Drop (Obj_WaterDrop, ID 0x6E): ArtTile_HCZ2Slide = $035C, palette 1
@@ -833,9 +836,11 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.ART_KOSM_HCZ_GEYSER_HORZ_ADDR,
                 CompressionType.KOSINSKI_MODULED,
                 0,
-                0,
+                Sonic3kConstants.MAP_HCZ_WATERWALL_ADDR,
                 2,
-                -1
+                -1,
+                11,
+                0x30
         ));
 
         // Collapsing Bridge (Object 0x0F): make_art_tile($001, 2, 1)

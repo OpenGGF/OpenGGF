@@ -138,7 +138,17 @@ public class LWJGLAudioBackend extends AbstractSmpsAudioBackend {
 
         } catch (Throwable t) {
             LOGGER.log(Level.SEVERE, "LWJGL OpenAL Init failed", t);
+            destroyDeviceAfterFailedInit(t);
             throw new RuntimeException(t);
+        }
+    }
+
+    private void destroyDeviceAfterFailedInit(Throwable primary) {
+        try {
+            hookDestroyDevice();
+        } catch (Throwable cleanupFailure) {
+            primary.addSuppressed(cleanupFailure);
+            LOGGER.log(Level.WARNING, "Failed to clean up partial LWJGL OpenAL init", cleanupFailure);
         }
     }
 
@@ -395,6 +405,7 @@ public class LWJGLAudioBackend extends AbstractSmpsAudioBackend {
 
         // Destroy context and close device
         if (context != 0) {
+            alcMakeContextCurrent(0);
             alcDestroyContext(context);
             context = 0;
         }

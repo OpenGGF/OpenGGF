@@ -27,6 +27,7 @@ public class PatternAtlas {
     public static final int TILE_SIZE = Pattern.PATTERN_WIDTH;
     private static final float UV_INSET_PIXELS = 0.01f;
     private static final int MAX_ATLASES = 2;
+    private static final int NATIVE_PATTERN_ID_MAX = 0x7FF;
 
     private final int atlasWidth;
     private final int atlasHeight;
@@ -336,6 +337,7 @@ public class PatternAtlas {
     }
 
     private Entry ensureEntry(int patternId, boolean headless) {
+        validatePatternIdGovernance(patternId);
         Entry existing = getEntry(patternId);
         if (existing != null) {
             return existing;
@@ -366,6 +368,18 @@ public class PatternAtlas {
         Entry entry = new Entry(patternId, page.atlasIndex(), slot, tileX, tileY, u0, v0, u1, v1);
         putEntry(patternId, entry);
         return entry;
+    }
+
+    private void validatePatternIdGovernance(int patternId) {
+        if (patternId <= NATIVE_PATTERN_ID_MAX) {
+            return;
+        }
+        if (PatternAtlasRange.forPatternId(patternId) != null) {
+            return;
+        }
+        throw new IllegalArgumentException("Virtual pattern ID 0x"
+                + Integer.toHexString(patternId)
+                + " is outside PatternAtlasRange governance");
     }
 
     private void putEntry(int patternId, Entry entry) {

@@ -40,7 +40,6 @@ class TestBuildToolingGuard {
     private static final Set<String> ACCEPTED_TRACE_BOOTSTRAP_POLICY_SIGNALS = Set.of(
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - if (!meta.hasPerFrameSlotMachineState()) {",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - && \"level_gated_reset_aware\".equals(metadata.traceProfile())",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - && current.frame() < findFirstLevelGameplayFrame(trace)) {",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - if (current.frame() < firstLevelFrame) {",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - if (current.frame() == firstLevelFrame) {",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - int gameplayStartFrame = findCheckpointFrame(trace, \"gameplay_start\");",
@@ -726,8 +725,14 @@ class TestBuildToolingGuard {
         if (!discrepancies.contains("S3K Sidekick Seed-Frame Trace Bootstrap Debt")) {
             violations.add("docs/KNOWN_DISCREPANCIES.md does not document the S3K sidekick seed-frame trace bootstrap debt");
         }
+        if (!discrepancies.contains("S3K Complete-Run Segment Start-Position Bootstrap Debt")) {
+            violations.add("docs/KNOWN_DISCREPANCIES.md does not document the S3K complete-run start-position bootstrap debt");
+        }
         if (!roadmap.contains("Accepted Phase 1 release debt: legacy S3K AIZ intro trace bootstrap")) {
             violations.add("docs/RELEASE_READINESS_ROADMAP.md does not classify the legacy S3K AIZ trace exception as accepted Phase 1 debt");
+        }
+        if (!roadmap.contains("S3K complete-run segment metadata start-position")) {
+            violations.add("docs/RELEASE_READINESS_ROADMAP.md does not classify the S3K complete-run start-position bootstrap as bounded debt");
         }
         if (!discrepancies.contains("diagnostic-only") || !roadmap.contains("diagnostic-only")) {
             violations.add("legacy S3K AIZ trace docs must state that the old full-run fixture is diagnostic-only");

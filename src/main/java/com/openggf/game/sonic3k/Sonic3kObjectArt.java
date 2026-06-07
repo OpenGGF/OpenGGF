@@ -842,20 +842,8 @@ public class Sonic3kObjectArt {
                 }
                 return new ObjectSpriteSheet(generatedBank, mappings, entry.palette(), 1);
             }
-            List<SpriteMappingFrame> hardcoded = switch (entry.key()) {
-                case Sonic3kObjectArtKeys.HCZ_WATER_RUSH -> buildHczWaterRushMappings();
-                case Sonic3kObjectArtKeys.HCZ_WATER_SPLASH -> buildHczWaterSplashMappings();
-                case Sonic3kObjectArtKeys.HCZ_GEYSER_SPRAY -> buildHczGeyserSprayMappings();
-                case Sonic3kObjectArtKeys.BUBBLER -> buildBubblerMappings();
-                default -> null;
-            };
-            if (hardcoded == null || hardcoded.isEmpty()) {
-                LOG.warning("No hardcoded mappings for standalone '" + entry.key() + "'");
-                return null;
-            }
-            hardcoded = normalizeStandaloneMappings(entry, patterns, hardcoded);
-            validateStandaloneMappings(entry, patterns, hardcoded);
-            return new ObjectSpriteSheet(patterns, hardcoded, entry.palette(), 1);
+            LOG.warning("Standalone object art '" + entry.key() + "' has no ROM mapping address");
+            return null;
         }
 
         List<SpriteMappingFrame> mappings = entry.mappingFrameCount() > 0
@@ -869,6 +857,12 @@ public class Sonic3kObjectArt {
             mappings = selectFramesPreservingIndices(mappings, 2, 3, 4);
         } else if (Sonic3kObjectArtKeys.MHZ_SHIP_PROPELLER.equals(entry.key())) {
             mappings = selectFramesPreservingIndices(mappings, 5, 6, 7);
+        } else if (Sonic3kObjectArtKeys.HCZ_GEYSER_SPRAY.equals(entry.key())) {
+            mappings = selectFramesPreservingIndices(mappings, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+        } else if (Sonic3kObjectArtKeys.BUBBLER.equals(entry.key())) {
+            mappings = blankFrames(mappings, 9, 18);
+        } else if (Sonic3kObjectArtKeys.HCZ_WATER_SPLASH.equals(entry.key())) {
+            mappings = offsetDmaWindowFrames(mappings, 24);
         }
 
         if (entry.dplcAddr() > 0) {
@@ -946,6 +940,30 @@ public class Sonic3kObjectArt {
             }
         }
         return selected;
+    }
+
+    private static List<SpriteMappingFrame> blankFrames(
+            List<SpriteMappingFrame> mappings, int firstFrame, int lastFrame) {
+        if (mappings == null || mappings.isEmpty()) {
+            return mappings;
+        }
+        List<SpriteMappingFrame> adjusted = new ArrayList<>(mappings);
+        for (int i = Math.max(0, firstFrame); i <= lastFrame && i < adjusted.size(); i++) {
+            adjusted.set(i, new SpriteMappingFrame(List.of()));
+        }
+        return adjusted;
+    }
+
+    private static List<SpriteMappingFrame> offsetDmaWindowFrames(
+            List<SpriteMappingFrame> mappings, int tilesPerFrame) {
+        if (mappings == null || mappings.isEmpty() || tilesPerFrame == 0) {
+            return mappings;
+        }
+        List<SpriteMappingFrame> adjusted = new ArrayList<>(mappings.size());
+        for (int i = 0; i < mappings.size(); i++) {
+            adjusted.add(adjustTileIndices(List.of(mappings.get(i)), i * tilesPerFrame).get(0));
+        }
+        return adjusted;
     }
 
     private static void validateStandaloneMappings(
@@ -1491,123 +1509,6 @@ public class Sonic3kObjectArt {
             adjusted.add(new SpriteMappingFrame(adjustedPieces));
         }
         return adjusted;
-    }
-
-    List<SpriteMappingFrame> buildHczWaterRushMappings() {
-        SpriteMappingFrame frame0 = new SpriteMappingFrame(List.of(new SpriteMappingPiece(-64, -32, 4, 4, 0x00, false, false, 0), new SpriteMappingPiece(-32, -32, 2, 4, 0x10, false, false, 0), new SpriteMappingPiece(-16, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(16, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(48, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(80, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(112, -32, 2, 4, 0x18, false, false, 0), new SpriteMappingPiece(-48, 0, 4, 4, 0x00, false, false, 0), new SpriteMappingPiece(-16, 0, 2, 4, 0x28, false, false, 0), new SpriteMappingPiece(0, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(32, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(64, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(96, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(-32, 32, 4, 4, 0x00, false, false, 0), new SpriteMappingPiece(0, 32, 2, 4, 0x28, false, false, 0), new SpriteMappingPiece(16, 32, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(48, 32, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(80, 32, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(112, 32, 2, 4, 0x30, false, false, 0)));
-        SpriteMappingFrame frame1 = new SpriteMappingFrame(List.of(new SpriteMappingPiece(-48, -32, 4, 4, 0x00, false, false, 0), new SpriteMappingPiece(-16, -32, 2, 4, 0x40, false, false, 0), new SpriteMappingPiece(0, -32, 2, 4, 0x20, false, false, 0), new SpriteMappingPiece(16, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(48, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(80, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(112, -32, 2, 4, 0x18, false, false, 0), new SpriteMappingPiece(-32, 0, 4, 4, 0x00, false, false, 0), new SpriteMappingPiece(0, 0, 2, 4, 0x48, false, false, 0), new SpriteMappingPiece(16, 0, 2, 4, 0x38, false, false, 0), new SpriteMappingPiece(32, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(64, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(96, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(-16, 32, 4, 4, 0x00, false, false, 0), new SpriteMappingPiece(16, 32, 2, 4, 0x48, false, false, 0), new SpriteMappingPiece(32, 32, 2, 4, 0x38, false, false, 0), new SpriteMappingPiece(48, 32, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(80, 32, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(112, 32, 2, 4, 0x30, false, false, 0)));
-        SpriteMappingFrame frame2 = new SpriteMappingFrame(List.of(new SpriteMappingPiece(-32, -32, 2, 4, 0x20, false, false, 0), new SpriteMappingPiece(-16, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(16, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(48, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(-32, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(0, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(32, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(64, 0, 2, 4, 0x30, false, false, 0)));
-        SpriteMappingFrame frame3 = new SpriteMappingFrame(List.of(new SpriteMappingPiece(-32, -32, 2, 4, 0x20, false, false, 0), new SpriteMappingPiece(-16, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(16, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(48, -32, 4, 4, 0x18, false, false, 0), new SpriteMappingPiece(-64, 0, 4, 4, 0x00, false, false, 0), new SpriteMappingPiece(-32, 0, 2, 4, 0x48, false, false, 0), new SpriteMappingPiece(-16, 0, 2, 4, 0x38, false, false, 0), new SpriteMappingPiece(0, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(32, 0, 4, 4, 0x30, false, false, 0), new SpriteMappingPiece(64, 0, 2, 4, 0x30, false, false, 0)));
-        return List.of(frame0, frame1, frame2, frame3);
-    }
-
-    /**
-     * Builds hardcoded mappings for HCZ Water Splash subtype 0 (Map_HCZWaterSplash).
-     * <p>
-     * From the disassembly (Map - Water Splash.asm):
-     * Frames 0-3 all share Frame_237C6A layout (2 pieces, 24 tiles per frame).
-     * DMA in ROM swaps art per frame; we pre-load all 96 tiles and offset per frame.
-     * <pre>
-     * Frame_237C6A: 2 pieces
-     *   piece 0: y=$F0(-16), size=$0B(3w×4h=12 tiles), tile=0, x=$FFE8(-24)
-     *   piece 1: y=$F0(-16), size=$0B(3w×4h=12 tiles), tile=$0C, x=$0000(0)
-     * Size $0B: bits 2-3=2 → width=3 tiles, bits 0-1=3 → height=4 tiles
-     * (matches S3kSpriteDataLoader: width = ((size>>2)&3)+1, height = (size&3)+1)
-     * </pre>
-     */
-    List<SpriteMappingFrame> buildHczWaterSplashMappings() {
-        // 4 animation frames, each uses 24 tiles. Frame N starts at tile N*24.
-        List<SpriteMappingFrame> frames = new java.util.ArrayList<>(4);
-        for (int f = 0; f < 4; f++) {
-            int tileBase = f * 24;
-            frames.add(new SpriteMappingFrame(List.of(
-                    // Piece 0: 3 wide × 4 tall (12 tiles) at (-24, -16)
-                    new SpriteMappingPiece(-24, -16, 3, 4, tileBase, false, false, 0, false),
-                    // Piece 1: 3 wide × 4 tall (12 tiles) at (0, -16)
-                    new SpriteMappingPiece(0, -16, 3, 4, tileBase + 12, false, false, 0, false)
-            )));
-        }
-        return frames;
-    }
-
-    /**
-     * Builds the subset of Map_Bubbler frames used by Obj_Bubbler.
-     * <p>
-     * The object only references frames 0-8 (bubble growth/burst) and 19-21
-     * (floor vent animation). Frames 9-18 reference high VRAM countdown tiles
-     * and are left blank here because the Bubbler object never animates through them.
-     * <p>
-     * ROM: General/Sprites/Bubbles/Map - Bubbler.asm
-     */
-    List<SpriteMappingFrame> buildBubblerMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>(22);
-
-        frames.add(single(-4, -4, 1, 1, 0x00));   // 0
-        frames.add(single(-4, -4, 1, 1, 0x01));   // 1
-        frames.add(single(-4, -4, 1, 1, 0x02));   // 2
-        frames.add(single(-8, -8, 2, 2, 0x03));   // 3
-        frames.add(single(-8, -8, 2, 2, 0x07));   // 4
-        frames.add(single(-12, -12, 3, 3, 0x0B)); // 5
-        frames.add(single(-16, -16, 4, 4, 0x14)); // 6
-        frames.add(new SpriteMappingFrame(List.of( // 7
-                new SpriteMappingPiece(-16, -16, 2, 2, 0x24, false, false, 0),
-                new SpriteMappingPiece(0, -16, 2, 2, 0x24, true, false, 0),
-                new SpriteMappingPiece(-16, 0, 2, 2, 0x24, false, true, 0),
-                new SpriteMappingPiece(0, 0, 2, 2, 0x24, true, true, 0))));
-        frames.add(new SpriteMappingFrame(List.of( // 8
-                new SpriteMappingPiece(-16, -16, 2, 2, 0x28, false, false, 0),
-                new SpriteMappingPiece(0, -16, 2, 2, 0x28, true, false, 0),
-                new SpriteMappingPiece(-16, 0, 2, 2, 0x28, false, true, 0),
-                new SpriteMappingPiece(0, 0, 2, 2, 0x28, true, true, 0))));
-
-        for (int i = 9; i <= 18; i++) {
-            frames.add(new SpriteMappingFrame(List.of()));
-        }
-
-        frames.add(single(-8, -8, 2, 2, 0x2C));   // 19
-        frames.add(single(-8, -8, 2, 2, 0x30));   // 20
-        frames.add(single(-8, -8, 2, 2, 0x34));   // 21
-
-        return frames;
-    }
-
-    private SpriteMappingFrame single(int x, int y, int w, int h, int tile) {
-        return new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(x, y, w, h, tile, false, false, 0)));
-    }
-
-    /**
-     * Builds mappings for HCZ geyser spray/splash art.
-     * ROM: spray children use art_tile = ArtTile_HCZGeyser+$30, meaning all mapping
-     * tile indices are relative to offset $30 within the decompressed geyser patterns.
-     * Since our standalone sheets index from 0, we add $30 to every tile index.
-     * Only frames 2-10 are used by spray/splash children.
-     */
-    List<SpriteMappingFrame> buildHczGeyserSprayMappings() {
-        int ofs = 0x30; // ArtTile_HCZGeyser+$30 offset
-        // Frame 0 and 1 are unused placeholders (spray only uses frames 2-10)
-        SpriteMappingFrame placeholder = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(0, 0, 1, 1, ofs, false, false, 0)));
-        // Frames 2-10: same layout as main geyser but tile indices + $30
-        SpriteMappingFrame f2 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-4, -4, 1, 1, ofs + 0x00, false, false, 0)));
-        SpriteMappingFrame f3 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, ofs + 0x1A, false, false, 0)));
-        SpriteMappingFrame f4 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, ofs + 0x1E, false, false, 0)));
-        SpriteMappingFrame f5 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, ofs + 0x22, false, false, 0)));
-        SpriteMappingFrame f6 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-4, -4, 1, 1, ofs + 0x26, false, false, 0)));
-        SpriteMappingFrame f7 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-4, -4, 1, 1, ofs + 0x27, false, false, 0)));
-        SpriteMappingFrame f8 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -6, 2, 1, ofs + 0x00, false, false, 0)));
-        SpriteMappingFrame f9 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-16, -22, 4, 3, ofs + 0x02, false, false, 0)));
-        SpriteMappingFrame f10 = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-16, -22, 4, 3, ofs + 0x0E, false, false, 0)));
-        return List.of(placeholder, placeholder, f2, f3, f4, f5, f6, f7, f8, f9, f10);
     }
 
     /**

@@ -29,9 +29,9 @@ These come from [`CLAUDE.md`](../../../CLAUDE.md) and [`AGENTS.md`](../../../AGE
 8. **Tests are JUnit 5 / Jupiter only.** No `org.junit.*` (JUnit 4) imports, rules, or runners.
 9. **Mirror skills.** If you create/modify a file under `.agents/skills/` or `.claude/skills/`, make the identical change in the mirrored tree.
 
-## Commit-trailer obligations (every non-`master` commit)
+## Commit-trailer obligations (non-merge, non-`master` commits)
 
-Each non-`master` commit must carry these trailers, each starting with `updated` or `n/a` (the `prepare-commit-msg` hook auto-appends the block — fill it in):
+Each non-merge commit on a non-`master` branch must carry these trailers, each starting with `updated` or `n/a` (the `prepare-commit-msg` hook auto-appends the block — fill it in). Merge commits skip trailer validation and are covered by the merge policy in `AGENTS.md` / `CLAUDE.md`:
 
 `Changelog`, `Guide`, `Known-Discrepancies`, `S3K-Known-Discrepancies`, `Agent-Docs`, `Configuration-Docs`, `Skills`.
 

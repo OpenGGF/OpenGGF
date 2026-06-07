@@ -52,7 +52,11 @@ integer codes or as human-readable names such as `SPACE`, `Q`, or `F9`. See
 | Arrow Keys | Movement |
 | Space | Jump |
 | Enter | Pause / unpause |
-| Backspace | Player 1 start / in-game pause |
+
+The bundled `config.yaml` exposes these under `input.pause` and `input.player1`.
+Additional bindable controller inputs, including Player 1 Start, are documented in
+[`CONFIGURATION.md`](CONFIGURATION.md); keys omitted from the template still use the
+engine defaults until added explicitly.
 
 ### Debug Controls
 

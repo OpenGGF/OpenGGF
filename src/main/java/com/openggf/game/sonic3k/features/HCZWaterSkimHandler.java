@@ -2,7 +2,9 @@ package com.openggf.game.sonic3k.features;
 
 import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
+import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.S3kSpriteDataLoader;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GraphicsManager;
@@ -97,7 +99,7 @@ public final class HCZWaterSkimHandler {
         actId = act;
         try {
             Pattern[] patterns = loadSplashPatterns(rom);
-            List<SpriteMappingFrame> frames = buildSplashMappings();
+            List<SpriteMappingFrame> frames = loadSplashMappings(RomByteReader.fromRom(rom));
             splashRenderer = new PatternSpriteRenderer(
                     new ObjectSpriteSheet(patterns, frames, 0, 0));
             LOGGER.info(String.format("HCZ water skim: loaded %d patterns, %d mapping frames",
@@ -426,39 +428,35 @@ public final class HCZWaterSkimHandler {
         return patterns;
     }
 
-    /**
-     * Build mapping frames from Map_HCZWaterSplash2 assembly data.
-     * <p>
-     * From the disassembly (Map - Water Splash 2.asm):
-     * <pre>
-     * Frame 0-4: all point to Frame_237C86 (2 pieces):
-     *   piece 0: y=$F0(-16), size=$0D(4w×2h), tile=$0000, x=$FFC8(-56)
-     *   piece 1: y=$F0(-16), size=$05(2w×2h), tile=$0008, x=$FFE8(-24)
-     * Frame 5: points to Frame_247C78 from Map_HCZWaterSplash (0 pieces = empty)
-     * </pre>
-     */
-    private static List<SpriteMappingFrame> buildSplashMappings() {
-        // All 5 active frames share the same mapping layout (different art via DMA in ROM;
-        // we pre-load all 5 frames' art and offset tile indices per frame).
-        // Frame 5 = exit frame (empty).
-
-        // Each frame uses 12 tiles of art data. Frame N starts at tile N*12.
-        java.util.List<SpriteMappingFrame> frames = new java.util.ArrayList<>();
-        for (int f = 0; f < SPLASH_ANIM_FRAMES; f++) {
-            int tileBase = f * 12;
-            List<SpriteMappingPiece> pieces = List.of(
-                    // Piece 0: size $0D = 4 wide × 2 tall (8 tiles), at (-56, -16)
-                    new SpriteMappingPiece(-56, -16, 4, 2, tileBase, false, false, 0, false),
-                    // Piece 1: size $05 = 2 wide × 2 tall (4 tiles), at (-24, -16)
-                    // Tile $08 in original is relative to DMA base; we offset per frame.
-                    new SpriteMappingPiece(-24, -16, 2, 2, tileBase + 8, false, false, 0, false)
-            );
-            frames.add(new SpriteMappingFrame(pieces));
+    private static List<SpriteMappingFrame> loadSplashMappings(RomByteReader reader) {
+        List<SpriteMappingFrame> romFrames = S3kSpriteDataLoader.loadMappingFrames(
+                reader, Sonic3kConstants.MAP_HCZ_WATER_SPLASH2_ADDR, SPLASH_ANIM_FRAMES);
+        List<SpriteMappingFrame> frames = new java.util.ArrayList<>(SPLASH_EXIT_FRAME + 1);
+        for (int i = 0; i < romFrames.size(); i++) {
+            frames.add(offsetFrameTiles(romFrames.get(i), i * 12));
         }
-        // Frame 5: empty (exit splash — no sprites drawn)
         frames.add(new SpriteMappingFrame(List.of()));
-
         return frames;
+    }
+
+    private static SpriteMappingFrame offsetFrameTiles(SpriteMappingFrame frame, int tileOffset) {
+        if (tileOffset == 0) {
+            return frame;
+        }
+        List<SpriteMappingPiece> pieces = new java.util.ArrayList<>(frame.pieces().size());
+        for (SpriteMappingPiece piece : frame.pieces()) {
+            pieces.add(new SpriteMappingPiece(
+                    piece.xOffset(),
+                    piece.yOffset(),
+                    piece.widthTiles(),
+                    piece.heightTiles(),
+                    piece.tileIndex() + tileOffset,
+                    piece.hFlip(),
+                    piece.vFlip(),
+                    piece.paletteIndex(),
+                    piece.priority()));
+        }
+        return new SpriteMappingFrame(pieces);
     }
 
     private static int getWaterLevel() {

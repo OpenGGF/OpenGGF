@@ -208,9 +208,7 @@ public class AudioManager {
     }
 
     public void setBackend(AudioBackend backend) {
-        if (this.backend != null) {
-            this.backend.destroy();
-        }
+        destroyBackendQuietly(this.backend, "previous AudioBackend");
         this.backend = backend;
         try {
             this.backend.init();
@@ -219,7 +217,22 @@ public class AudioManager {
             LOGGER.info("AudioBackend initialized: " + backend.getClass().getSimpleName());
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Failed to initialize AudioBackend", e);
+            destroyBackendQuietly(this.backend, "failed AudioBackend");
             this.backend = new NullAudioBackend();
+            this.backend.init();
+            this.backend.setAudioProfile(audioProfile);
+            configureDeterministicRuntimeForBackend();
+        }
+    }
+
+    private static void destroyBackendQuietly(AudioBackend backend, String description) {
+        if (backend == null) {
+            return;
+        }
+        try {
+            backend.destroy();
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to destroy " + description, e);
         }
     }
 

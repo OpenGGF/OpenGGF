@@ -11,6 +11,7 @@ import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.rings.RingSpriteSheet;
@@ -39,7 +40,7 @@ public final class Sonic1SpecialStageManager {
     private static final Logger LOGGER = Logger.getLogger(Sonic1SpecialStageManager.class.getName());
 
     // Pattern atlas base for SS art (above normal level art range)
-    private static final int SS_PATTERN_BASE = 0x10000;
+    private static final int SS_PATTERN_BASE = PatternAtlasRange.SONIC1_SPECIAL_STAGE.base();
     private static final int SS_ROLL_SPEED_SWITCH = 0x600;
     private static final int DEBUG_MOVE_SPEED = 3;
 

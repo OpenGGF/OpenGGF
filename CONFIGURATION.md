@@ -316,7 +316,6 @@ input:
     left: LEFT   # Player 1: move left
     right: RIGHT   # Player 1: move right
     jump: SPACE   # Player 1: jump
-    start: BACKSPACE   # Player 1: start (in-game pause)
   player2:
     up: I   # Player 2: look up
     down: K   # Player 2: crouch/roll

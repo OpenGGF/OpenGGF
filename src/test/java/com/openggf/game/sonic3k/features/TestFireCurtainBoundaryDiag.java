@@ -42,8 +42,8 @@ public class TestFireCurtainBoundaryDiag {
      */
     @Test
     public void diagRisingTopEdge() {
-        // No-arg constructor: sampler=null â†’ exercises buildBackgroundSampledPlan
-        // (falls back to buildFireOverlayTilePlan since BG returns 0 in headless)
+        // No-arg constructor: sampler=null, and the headless BG returns empty
+        // descriptors. The renderer must fail closed instead of synthesizing fire.
         AizFireCurtainRenderer renderer = new AizFireCurtainRenderer();
         FireCurtainRenderState state = new FireCurtainRenderState(
                 true,
@@ -87,10 +87,8 @@ public class TestFireCurtainBoundaryDiag {
                     + Integer.toHexString(col0.draws().get(col0.draws().size() - 1).renderPatternId()));
         }
 
-        // The overlay should produce draws. If it doesn't, the fire curtain
-        // is invisible and the user only sees the BG plane.
-        assertFalse(plan.columns().isEmpty(), "Overlay should produce draws for RISING");
-        assertTrue(totalDraws > 0, "Should have draws");
+        assertTrue(plan.columns().isEmpty(), "Headless no-ROM path should fail closed for RISING");
+        assertEquals(0, totalDraws, "No synthetic draws should be emitted");
     }
 
     /**
@@ -111,7 +109,7 @@ public class TestFireCurtainBoundaryDiag {
                 0,        // wavePhase
                 60,       // frameCounter
                 0x1000,   // sourceWorldX
-                0x240,    // sourceWorldY (bgY) â€” fire near exit
+                0x240,    // sourceWorldY (bgY) - fire near exit
                 new int[20], // flat wave
                 FireCurtainStage.AIZ1_REFRESH,
                 0x500,
@@ -149,7 +147,7 @@ public class TestFireCurtainBoundaryDiag {
             // 0x318 is outside even padded filter. But 216+8=224=screenHeight so covered.
         }
 
-        assertFalse(plan.columns().isEmpty(), "Overlay should produce draws for EXIT");
+        assertTrue(plan.columns().isEmpty(), "Headless no-ROM path should fail closed for EXIT");
     }
 
     /**

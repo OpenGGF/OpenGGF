@@ -756,6 +756,11 @@ class TestArchUnitRules {
                 field.setAccessible(true);
                 int value = field.getInt(null);
                 PatternAtlasRange range = patternAtlasRangeFor(value);
+                if (range == null && value > 0x7FF) {
+                    violations.add(javaField.getFullName() + " hard-codes ungoverned virtual pattern id 0x"
+                            + Integer.toHexString(value));
+                    continue;
+                }
                 if (range != null
                         && !owner.equals(PatternAtlasRange.class)
                         && !fieldInitializesFromPatternAtlasRange(javaField, range.name())) {
@@ -767,7 +772,7 @@ class TestArchUnitRules {
             }
         }
         assertTrue(violations.isEmpty(),
-                "Virtual pattern base fields should reference PatternAtlasRange instead of hard-coding documented ranges:\n"
+                "Virtual pattern base fields should reference PatternAtlasRange instead of hard-coding or bypassing documented ranges:\n"
                         + String.join("\n", violations));
     }
 
