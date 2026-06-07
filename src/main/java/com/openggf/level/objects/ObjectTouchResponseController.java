@@ -104,7 +104,7 @@ final class ObjectTouchResponseController {
         bufferB.clear();
         overlapping = bufferA;
         building = bufferB;
-        sidekickOverlaps.values().forEach(OverlapBufferPair::reset);
+        sidekickOverlaps.clear();
         lastSpecialTouchFrame.clear();
         currentFrameCounter = 0;
     }
@@ -302,11 +302,10 @@ final class ObjectTouchResponseController {
     void updateSidekick(PlayableEntity sidekick, int frameCounter, boolean usePreUpdateState) {
         currentPlayer = null; // Sidekick doesn't get insta-shield
         currentFrameCounter = frameCounter;
-        OverlapBufferPair buffers = sidekickOverlaps.computeIfAbsent(sidekick, k -> new OverlapBufferPair());
         if (sidekick == null || objectManager == null || sidekick.getDead() || table == null) {
-            buffers.overlapping.clear();
             return;
         }
+        OverlapBufferPair buffers = sidekickOverlaps.computeIfAbsent(sidekick, k -> new OverlapBufferPair());
 
         if (sidekick.isDebugMode()) {
             buffers.overlapping.clear();
@@ -380,15 +379,6 @@ final class ObjectTouchResponseController {
             TouchResponseProfile touchProfile = regions != null
                     ? provider.getTouchResponseProfile(true)
                     : provider.getTouchResponseProfile();
-            if (regions != null) {
-                boolean hit = processMultiRegionTouch(player, playerX, playerY, playerHeight,
-                        instance, provider, touchProfile, regions, playerWidth,
-                        buildingSet, overlappingSet, isSidekick);
-                if (hit) {
-                    break;
-                }
-                continue;
-            }
 
             // ROM parity (S1-specific provenance):
             // S1's ReactToItem (docs/s1disasm/_incObj/sub ReactToItem.asm:26-27)
@@ -417,6 +407,15 @@ final class ObjectTouchResponseController {
             if (touchProfile.requiresRenderFlagForTouch()
                     && instance instanceof AbstractObjectInstance aoi
                     && !aoi.isOnScreenForTouch()) {
+                continue;
+            }
+            if (regions != null) {
+                boolean hit = processMultiRegionTouch(player, playerX, playerY, playerHeight,
+                        instance, provider, touchProfile, regions, playerWidth,
+                        buildingSet, overlappingSet, isSidekick);
+                if (hit) {
+                    break;
+                }
                 continue;
             }
             int flags;
@@ -560,6 +559,7 @@ final class ObjectTouchResponseController {
             // ROM: HURT is continuous (same as BOSS) — see processCollisionLoop comment
             boolean shouldTrigger = category == TouchCategory.BOSS
                     || category == TouchCategory.HURT
+                    || category == TouchCategory.ENEMY
                     || profile.continuousCallbacks()
                     || !overlappingSet.contains(instance);
             if (shouldTrigger) {
@@ -575,7 +575,7 @@ final class ObjectTouchResponseController {
             // ROM parity: ReactToItem ALWAYS exits on first overlap, even
             // when the response is edge-trigger suppressed. Match the
             // single-region break-on-first-overlap behaviour.
-            return !isSidekick;
+            return true;
         }
         return false; // No region overlapped
     }

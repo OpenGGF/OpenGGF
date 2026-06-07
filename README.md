@@ -214,6 +214,13 @@ behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Release-readiness review and AIZ intro fix branch (2026-06-07).** Merged
+  the release hardening pass for branch-policy hooks, release CI, trace/rewind
+  invariants, ROM-backed S3K object art coverage, static-state reset coverage,
+  and build/tooling guards. The branch also fixes the AIZ Sonic+Tails intro
+  bootstrap so Player 2 Tails is re-parked in the ROM dormant marker after the
+  production `spawnSidekick` step, preventing him from appearing flying at the
+  start of the intro pan.
 - **S1 trace-fleet integration branch (2026-06-06).** Merged
   `bugfix/ai-s1-trace-fleet-integration`, preserving the release-readiness
   roadmap and the accepted trace/debug harness work from the main workspace.

@@ -570,6 +570,7 @@ public final class GameplayModeContext implements ModeContext {
         if (camera != null) {
             camera.resetState();
         }
+        activeBonusStageProvider = NoOpBonusStageProvider.INSTANCE;
         rewindController = null;
         playbackController = null;
         rewindRegistry = null;

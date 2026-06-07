@@ -37,11 +37,33 @@ public final class ZoneRuntimeRegistry implements RewindSnapshottable<ZoneRuntim
 
     @Override
     public ZoneRuntimeSnapshot capture() {
-        return new ZoneRuntimeSnapshot(current.captureBytes());
+        return new ZoneRuntimeSnapshot(
+                current.getClass().getName(),
+                current.gameId(),
+                current.zoneIndex(),
+                current.actIndex(),
+                current.captureBytes());
     }
 
     @Override
     public void restore(ZoneRuntimeSnapshot s) {
+        Objects.requireNonNull(s, "s");
+        validateSnapshotIdentity(s);
         current.restoreBytes(s.stateBytes());
+    }
+
+    private void validateSnapshotIdentity(ZoneRuntimeSnapshot s) {
+        String currentType = current.getClass().getName();
+        if (!currentType.equals(s.stateType())
+                || !Objects.equals(current.gameId(), s.gameId())
+                || current.zoneIndex() != s.zoneIndex()
+                || current.actIndex() != s.actIndex()) {
+            throw new IllegalStateException(
+                    "Cannot restore zone runtime snapshot for "
+                            + s.stateType() + "[" + s.gameId() + ":"
+                            + s.zoneIndex() + "/" + s.actIndex() + "] into "
+                            + currentType + "[" + current.gameId() + ":"
+                            + current.zoneIndex() + "/" + current.actIndex() + "]");
+        }
     }
 }

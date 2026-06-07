@@ -45,6 +45,9 @@ public class MasterTitleScreen {
     private static final int TITLE_LOGO_BASE_SCALE_DENOMINATOR = 100;
     private static final int TITLE_LOGO_SCALE_NUMERATOR = 9;
     private static final int TITLE_LOGO_SCALE_DENOMINATOR = 10;
+    private static final int TOP_UI_MATTE_HEIGHT = 0;
+    private static final int BOTTOM_UI_MATTE_HEIGHT = 48;
+    private static final float BOTTOM_UI_MATTE_ALPHA = 0.68f;
 
     record PreviewLayout(int width, int height, float x, float y) {
     }
@@ -376,6 +379,7 @@ public class MasterTitleScreen {
 
         // 4. ROM-derived title preview, shown only when the selected ROM exists.
         drawSelectedRomPreview();
+        drawRomPreviewUiMattes();
 
         // 5. Title text "OpenGGF" (centered, top) - drawn after preview so it appears in front
         renderer.drawTexture(titleTextId, titleX, titleGlY, scaledTitleW, scaledTitleH);
@@ -486,6 +490,22 @@ public class MasterTitleScreen {
         renderer.drawTexture(textureId, layout.x(), layout.y(), layout.width(), layout.height());
     }
 
+    private void drawRomPreviewUiMattes() {
+        if (romPreviewTextureIds[selectedIndex] == 0) {
+            return;
+        }
+        PreviewLayout bottom = bottomUiMatteLayout(viewportWidth);
+        drawMatte(bottom, BOTTOM_UI_MATTE_ALPHA);
+    }
+
+    private void drawMatte(PreviewLayout layout, float alpha) {
+        if (layout.height() <= 0 || layout.width() <= 0) {
+            return;
+        }
+        renderer.drawTexture(solidWhiteTextureId, layout.x(), layout.y(), layout.width(), layout.height(),
+                0f, 0f, 0f, alpha);
+    }
+
     private void updateSelectedRomPreviewTexture() {
         MasterTitleRomPreview.PreviewSequence sequence = romPreviewSequences[selectedIndex];
         int textureId = romPreviewTextureIds[selectedIndex];
@@ -571,6 +591,16 @@ public class MasterTitleScreen {
         int width = Math.max(1, previewW);
         int height = Math.max(1, previewH);
         return new PreviewLayout(width, height, centerX(width, vpWidth), 0);
+    }
+
+    static PreviewLayout topUiMatteLayout(int vpWidth) {
+        int width = Math.max(SCREEN_W, vpWidth);
+        return new PreviewLayout(width, TOP_UI_MATTE_HEIGHT, 0, SCREEN_H - TOP_UI_MATTE_HEIGHT);
+    }
+
+    static PreviewLayout bottomUiMatteLayout(int vpWidth) {
+        int width = Math.max(SCREEN_W, vpWidth);
+        return new PreviewLayout(width, BOTTOM_UI_MATTE_HEIGHT, 0, 0);
     }
 
     static float titleLogoY(int titleHeight) {

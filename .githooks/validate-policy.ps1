@@ -10,6 +10,7 @@ param(
 $ErrorActionPreference = "Stop"
 $script:GithubFileSizeLimitBytes = 100000000
 $script:TraceCompressionThresholdBytes = 1048576
+$script:ReleaseTrailerCutoverBase = "677447024a08db9e25f3461588d661c23ba26848"
 
 function Fail([string]$Message) {
     [Console]::Error.WriteLine("policy: $Message")
@@ -40,6 +41,11 @@ function Invoke-GitLines([string[]]$Arguments, [switch]$AllowFailure) {
         return @()
     }
     return ($text -split "`r?`n") | Where-Object { $_ -ne "" }
+}
+
+function Test-GitSuccess([string[]]$Arguments) {
+    & git @Arguments *> $null
+    return ($LASTEXITCODE -eq 0)
 }
 
 function Get-CurrentBranch() {
@@ -425,7 +431,8 @@ function Validate-CiPr([string]$BaseSha, [string]$HeadSha, [string]$BaseRef, [st
         return
     }
 
-    $rangeFiles = Invoke-GitLines @("diff", "--name-only", "--diff-filter=ACMR", "$BaseSha...$HeadSha")
+    $effectiveBaseSha = Get-EffectiveBaseForCiPr $BaseSha $HeadSha $BaseRef $HeadRef
+    $rangeFiles = Invoke-GitLines @("diff", "--name-only", "--diff-filter=ACMR", "$effectiveBaseSha...$HeadSha")
 
     if ($BaseRef -eq "develop") {
         if ($HeadRef -ne "master" -and -not (Test-HasExact $rangeFiles "README.md")) {
@@ -437,7 +444,7 @@ function Validate-CiPr([string]$BaseSha, [string]$HeadSha, [string]$BaseRef, [st
         }
     }
 
-    $commits = Invoke-GitLines @("rev-list", "--reverse", "--no-merges", "$BaseSha..$HeadSha")
+    $commits = Invoke-GitLines @("rev-list", "--reverse", "--no-merges", "$effectiveBaseSha..$HeadSha")
     foreach ($commit in $commits) {
         $message = Invoke-GitText @("show", "-s", "--format=%B", $commit)
         $files = Get-CommitFiles $commit
@@ -464,6 +471,22 @@ function Validate-CiPr([string]$BaseSha, [string]$HeadSha, [string]$BaseRef, [st
             exit $LASTEXITCODE
         }
     }
+}
+
+function Get-EffectiveBaseForCiPr([string]$BaseSha, [string]$HeadSha, [string]$BaseRef, [string]$HeadRef) {
+    if ($BaseRef -ne "master") {
+        return $BaseSha
+    }
+    if ([string]::IsNullOrWhiteSpace($script:ReleaseTrailerCutoverBase)) {
+        return $BaseSha
+    }
+    if (-not (Test-GitSuccess @("merge-base", "--is-ancestor", $script:ReleaseTrailerCutoverBase, $HeadSha))) {
+        Fail "release trailer cutover baseline $script:ReleaseTrailerCutoverBase is not reachable from PR head $HeadSha."
+    }
+    if (Test-GitSuccess @("merge-base", "--is-ancestor", $BaseSha, $script:ReleaseTrailerCutoverBase)) {
+        return $script:ReleaseTrailerCutoverBase
+    }
+    return $BaseSha
 }
 
 switch ($Mode) {

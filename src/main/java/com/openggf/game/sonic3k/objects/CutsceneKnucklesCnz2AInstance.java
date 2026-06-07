@@ -100,8 +100,12 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance {
         return blockingWall;
     }
 
-    public static void clearActiveInstanceForTests() {
+    public static void clearActiveInstance() {
         activeInstance = null;
+    }
+
+    public static void clearActiveInstanceForTests() {
+        clearActiveInstance();
     }
 
     public static void setActiveInstanceForTests(CutsceneKnucklesCnz2AInstance instance) {

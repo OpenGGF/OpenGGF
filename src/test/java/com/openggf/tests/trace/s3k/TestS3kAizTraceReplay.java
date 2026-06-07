@@ -75,16 +75,6 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
     }
 
     @Override
-    protected ToleranceConfig tolerances() {
-        // Known ring-count parity gap: AIZ trace begins to diverge in ring
-        // collection before the current physics frontier. Downgrade ring
-        // mismatches to warnings so the current f19714 x_speed frontier stays
-        // visible; this does not certify ring-count parity.
-        return ToleranceConfig.DEFAULT.withRingCountMode(
-                ToleranceConfig.RingCountMode.WARN_ONLY);
-    }
-
-    @Override
     @Test
     @Disabled("Legacy AIZ end-to-end trace uses fixture-shaped bootstrap; diagnostic-only until regenerated")
     public void replayMatchesTrace() throws Exception {

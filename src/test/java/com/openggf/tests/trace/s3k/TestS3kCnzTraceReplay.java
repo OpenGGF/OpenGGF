@@ -22,7 +22,6 @@ import com.openggf.tests.SharedLevel;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFrame;
-import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import com.openggf.tests.rules.RequiresRom;
@@ -78,16 +77,6 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
     @Override
     protected Path traceDirectory() {
         return TRACE_DIR;
-    }
-
-    @Override
-    protected ToleranceConfig tolerances() {
-        // Known ring-count parity gap: CNZ trace records ring divergences
-        // before the current physics frontier. Downgrade ring mismatches to
-        // warnings so the f22036 y_speed frontier stays visible; this does not
-        // certify ring-count parity.
-        return ToleranceConfig.DEFAULT.withRingCountMode(
-                ToleranceConfig.RingCountMode.WARN_ONLY);
     }
 
     @Override

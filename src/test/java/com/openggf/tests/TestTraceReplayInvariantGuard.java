@@ -81,6 +81,27 @@ class TestTraceReplayInvariantGuard {
     }
 
     @Test
+    void traceReplayParityTestsDoNotDowngradeRingMismatchesToWarnings() throws IOException {
+        List<String> violations = new ArrayList<>();
+        for (Path source : javaSources(Path.of("src/test/java/com/openggf/tests/trace"))) {
+            String normalized = normalize(source);
+            if (normalized.equals("src/test/java/com/openggf/tests/trace/TestTraceBinder.java")) {
+                continue;
+            }
+            String text = Files.readString(source);
+            if (text.contains("RingCountMode.WARN_ONLY")) {
+                violations.add(normalized);
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            fail("Release trace replay parity must treat ring-count mismatches as errors; "
+                    + "WARN_ONLY is reserved for TraceBinder unit coverage:\n"
+                    + String.join("\n", violations));
+        }
+    }
+
+    @Test
     void traceParserDataAndCatalogStayIndependentOfEngineRuntime()
             throws IOException {
         List<String> violations = new ArrayList<>();
@@ -287,6 +308,8 @@ class TestTraceReplayInvariantGuard {
     private static boolean readsTraceState(String expression) {
         return expression.contains("state.")
                 || expression.contains("frame.")
+                || expression.contains("frameZero.")
+                || expression.contains("recordedSidekick.")
                 || expression.contains("snapshot.")
                 || expression.contains("aux.")
                 || expression.contains("fields.get(")

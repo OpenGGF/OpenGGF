@@ -10,6 +10,23 @@ All notable changes to the OpenGGF project are documented in this file.
   `WorldSession`, fixing the crash that occurred after selecting a game from
   the master title selector.
 
+- **Release-readiness hardening for trace replay, rewind snapshots, and
+  runtime teardown:** trace bootstrap no longer seeds S3K complete-run frame-0
+  player/camera/sidekick state from recorded trace rows; those segments now stay
+  on native setup and comparison-only replay. Trace replay parity tests may no
+  longer downgrade ring-count mismatches to WARN_ONLY outside `TraceBinder` unit
+  coverage. `ZoneRuntimeSnapshot` now carries state identity and defensively
+  copies its byte payload so rewind cannot restore bytes into a different zone
+  runtime implementation. Gameplay teardown clears the active bonus-stage
+  provider back to `NoOpBonusStageProvider`, and S3K event reset now clears
+  pending post-transition HCZ/MGZ/CNZ handoff state. The S3K intro art loader
+  now releases its temporary object-service reference on reset, release tooling
+  ratchets the remaining S3K static session-state debt, and S3K spring,
+  HCZ/CNZ/DEZ door, HCZ fan-bubble, HCZ geyser/bubbles, and HCZ
+  water-drop/water-rush block object sheets now use ROM-backed mappings while
+  the remaining hardcoded runtime mapping debt is explicitly reviewed and
+  guarded.
+
 - **The master title selector now renders ROM-derived title previews instead of
   a bundled emblem image:** the copyrighted `title-emblem.png` resource has
   been removed. When the expected Sonic 1, Sonic 2, or Sonic 3&K ROM is present
@@ -107,27 +124,13 @@ All notable changes to the OpenGGF project are documented in this file.
   frontiers are unchanged. HCZ advances f1 → f125; ICZ/LBZ clear the
   Tails-dormancy frame-1 failure (their remaining frame-1 divergence is the
   separate player-descent/camera inter-zone gap shared with CNZ/MHZ).
-- **S3K complete-run per-zone traces clear their frame-0 bootstrap mismatches
-  via a one-time mid-run start seed:** the per-zone S3K complete-run segments
-  arm at each zone's first control-unlocked frame, but five of the seven zones
-  (CNZ, MHZ, ICZ, HCZ, LBZ) are entered mid-run from the previous zone's
-  seamless act/zone handoff, so their recorded frame-0 row carries residual
-  entry state a freshly loaded zone cannot derive: a frozen pre-LevelLoop
-  airborne descent (CNZ/MHZ `y_speed==0`), a held mid-roll with carried object
-  velocity (ICZ), the inter-zone camera position the handoff left behind (MHZ
-  `camera_x`), and an exact Tails follow position (HCZ/LBZ). This is the
-  velocity/status/camera/sidekick analogue of the position/RNG/oscillation
-  pre-trace seeds the replay bootstrap already applies - a single "load the save
-  state at the BK2 start" write in
-  `TraceReplaySessionBootstrap.seedS3kCompleteRunStartState`, performed once
-  before replay begins and never per frame, so trace replay stays
-  comparison-only. The seed is keyed off the recorded frame-0 ROM-state shape
-  (airborne-with-zero-y-speed, rolling, or a present sidekick that the native
-  first step would re-anchor) rather than any zone id; cleanly reproducible
-  entries (AIZ first-zone start, MGZ vertical fall-in) are left untouched on the
-  native drive path, so the dedicated S3K AIZ/CNZ/MGZ and S2 EHZ1 trace
-  frontiers are unchanged. All seven complete-run zones now clear frame 0 and
-  advance to a real per-frame frontier.
+- **Removed the S3K complete-run frame-0 trace-state seed before release:** the
+  earlier complete-run bootstrap wrote recorded player/camera/sidekick frame-0
+  state into the engine once before comparison. Even though it was one-time, it
+  violated the comparison-only trace contract, so the path has been removed and
+  guarded. The affected complete-run segments now expose their native frame-0
+  divergence again until the underlying mid-run handoff, sidekick dormancy, and
+  object-driven descent states are modelled by engine systems.
   Corkey is registered for the S3KL object table and now uses ROM-backed Corkey
   art for its parent body, nozzle child, and three-shot firing cycle. The port
   follows the disassembly patrol timer/latch flow, uses the ROM projectile

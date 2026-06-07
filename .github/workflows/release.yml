@@ -23,7 +23,11 @@ jobs:
         run: bash .githooks/validate-policy.sh ci-pr "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" "${{ github.base_ref }}" "${{ github.head_ref }}"
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, release-fixtures]
+    env:
+      SONIC1_ROM_PATH: ${{ vars.SONIC1_ROM_PATH }}
+      SONIC2_ROM_PATH: ${{ vars.SONIC2_ROM_PATH }}
+      S3K_ROM_PATH: ${{ vars.S3K_ROM_PATH }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -35,11 +39,37 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Verify trace replay ROM paths
+        shell: bash
+        run: |
+          missing=0
+          for var in SONIC1_ROM_PATH SONIC2_ROM_PATH S3K_ROM_PATH; do
+            value="${!var:-}"
+            if [ -z "$value" ]; then
+              echo "::error ::$var must point to a release-validation ROM fixture."
+              missing=1
+            elif [ ! -f "$value" ]; then
+              echo "::error ::$var points to '$value', but that file does not exist."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
       - name: Run tests
-        run: mvn test -B
+        shell: bash
+        run: |
+          mvn -Dmse=off test -B \
+            -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
+            -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
+            -Ds3k.rom.path="${S3K_ROM_PATH}"
 
       - name: Run trace replay policy tests
-        run: mvn test -Ptrace-replay -B
+        shell: bash
+        run: |
+          mvn -Dmse=off test -Ptrace-replay -B \
+            -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
+            -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
+            -Ds3k.rom.path="${S3K_ROM_PATH}"
 
       - name: Assert trace replay coverage
         shell: bash
@@ -50,20 +80,40 @@ jobs:
           import sys
           from pathlib import Path
 
-          reports = sorted(Path("target/surefire-reports").glob("com.openggf.tests.trace*.txt"))
+          reports = sorted(Path("target/surefire-reports").glob("com.openggf.tests.trace*TraceReplay.txt"))
           total = 0
           skipped = 0
+          skipped_reports = []
           for report in reports:
               text = report.read_text(encoding="utf-8", errors="replace")
               match = re.search(r"Tests run: (\d+), Failures: \d+, Errors: \d+, Skipped: (\d+)", text)
               if match:
-                  total += int(match.group(1))
-                  skipped += int(match.group(2))
+                  run_count = int(match.group(1))
+                  skipped_count = int(match.group(2))
+                  total += run_count
+                  skipped += skipped_count
+                  if skipped_count > 0:
+                      skipped_reports.append((report, skipped_count))
 
           executed = total - skipped
           if executed == 0:
               print("Trace replay profile produced no executed ROM-backed trace tests", file=sys.stderr)
               print(f"trace_reports={len(reports)} total={total} skipped={skipped}", file=sys.stderr)
+              sys.exit(1)
+
+          allowed_skipped_reports = {
+              "com.openggf.tests.trace.s3k.TestS3kAizTraceReplay.txt",
+          }
+          unexpected_skipped = [
+              (report, skipped_count)
+              for report, skipped_count in skipped_reports
+              if report.name not in allowed_skipped_reports
+          ]
+          if unexpected_skipped:
+              print("Trace replay skipped tests are release-blocking unless explicitly allowlisted as diagnostic-only debt",
+                    file=sys.stderr)
+              for report, skipped_count in unexpected_skipped:
+                  print(f"{report}: skipped={skipped_count}", file=sys.stderr)
               sys.exit(1)
 
           warning_reports = []
@@ -110,7 +160,7 @@ jobs:
           cache: maven
 
       - name: Build native image
-        run: mvn package -Pnative -DskipTests -B
+        run: mvn -Dmse=off package -Pnative -DskipTests -B
 
       - name: Package (Windows)
         if: matrix.platform == 'windows'
@@ -151,7 +201,7 @@ jobs:
 
   release:
     needs: build
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     permissions:
       contents: write

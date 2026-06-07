@@ -87,3 +87,44 @@ tools/bizhawk/trace_output/
 /.cp
 /.tmp_*
 /*.bk2
+/docs/shader-src/RetroArch/filters/video/Blargg_NTSC_Genesis_Bad_Composite_CyberLab_Special_Edition_III.filt
+/docs/shader-src/RetroArch/filters/video/Blargg_NTSC_Genesis_RF_CyberLab_Special_Edition_III.filt
+/docs/shader-src/RetroArch/filters/video/Blargg_NTSC_Genesis_S-Video_CyberLab_Special_Edition_III.filt
+/docs/shader-src/RetroArch/filters/video/Blargg_NTSC_Turbo_Duo_SNES_3D_Comb_Filter_CyberLab_Special_Edition_III.filt
+/docs/shader-src/RetroArch/filters/video/Blargg_NTSC_Turbo_Duo_SNES_Bad_Composite_CyberLab_Special_Edition_III.filt
+/docs/shader-src/RetroArch/filters/video/Blargg_NTSC_Turbo_Duo_SNES_Composite_CyberLab_Special_Edition_III.filt
+/docs/shader-src/RetroArch/filters/video/Blargg_NTSC_Turbo_Duo_SNES_HiFi_S-Video_CyberLab_Special_Edition_III.filt
+/docs/shader-src/RetroArch/filters/video/Blargg_NTSC_Turbo_Duo_SNES_RF_CyberLab_Special_Edition_III.filt
+/docs/shader-src/RetroArch/filters/video/Blargg_NTSC_Turbo_Duo_SNES_RGB_CyberLab_Special_Edition_III.filt
+/docs/shader-src/RetroArch/filters/video/Blargg_NTSC_Turbo_Duo_SNES_S-Video_CyberLab_Special_Edition_III.filt
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 4K Arcade.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 4K Arcade Fine.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 4K Arcade Super Fine.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 4K Arcade Ultra Fine.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 4K Genesis - CyberLab Blargg NTSC Filter Recommended.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 4K Genesis Fine - CyberLab Blargg NTSC Filter Recommended.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 4K Genesis Sharp - CyberLab Blargg NTSC Filter Recommended.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 4K Genesis Sharp Fine - CyberLab Blargg NTSC Filter Recommended.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 4K N64_Saturn.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 4K N64_Saturn Fine.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 4K NES_N64_Saturn Bad Composite.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 4K NES_N64_Saturn Bad Composite Fine.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 4K NES_N64_Saturn Sharp - Core Blargg NTSC Filter Recommended.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 4K NES_N64_Saturn Sharp Fine - Core Blargg NTSC Filter Recommended.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 4K SNES_PSX.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 4K SNES_PSX Fine.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 4K SNES_PSX Sharp.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 4K SNES_PSX Sharp Fine.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 4K Turbo Duo_DC - CyberLab Blargg NTSC Filter Recommended.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 4K Turbo Duo_DC Fine - CyberLab Blargg NTSC Filter Recommended.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 4K Turbo Duo_DC Sharp - CyberLab Blargg NTSC Filter Recommended.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 4K Turbo Duo_DC Sharp Fine - CyberLab Blargg NTSC Filter Recommended.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 1080p Arcade.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 1080p Genesis - CyberLab Blargg NTSC Filter Recommended.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 1080p N64_Saturn.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 1080p NES_N64_Saturn Bad Composite.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 1080p NES_N64_Saturn Sharp - Core Blargg NTSC Filter Recommended.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 1080p SNES_PSX Fine.slangp
+/docs/shader-src/RetroArch/shaders/CyberLab CRT-Royale 1080p Turbo Duo_DC - CyberLab Blargg NTSC Filter Recommended.slangp
+/docs/shader-src/License.txt
+/docs/shader-src/Readme.txt

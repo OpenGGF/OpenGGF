@@ -92,7 +92,7 @@ class TestMasterTitleRomPreview {
     }
 
     @Test
-    void scaleImageIntoNativeCanvas_usesAreaSamplingWhenDownscaling() throws Exception {
+    void scaleImageIntoNativeCanvas_usesAreaSamplingWhenDownscalingSmallText() throws Exception {
         MasterTitleRomPreview.Image source = new MasterTitleRomPreview.Image(2, 2, new byte[] {
                 (byte) 0xFF, 0x00, 0x00, (byte) 0xFF,
                 0x00, (byte) 0xFF, 0x00, (byte) 0xFF,
@@ -169,7 +169,7 @@ class TestMasterTitleRomPreview {
 
     @Test
     void sonic3kPreviewFingerOverlayIsLoweredToMatchFinalTitlePose() {
-        assertEquals(92, MasterTitleRomPreview.sonic3kPreviewFingerY());
+        assertEquals(76, MasterTitleRomPreview.sonic3kPreviewFingerY());
     }
 
     @Test
@@ -183,13 +183,20 @@ class TestMasterTitleRomPreview {
 
     @Test
     void sonic3kPreviewWinkOverlayIsLoweredAgainstScaledFinalTitlePose() {
-        assertEquals(72, MasterTitleRomPreview.sonic3kPreviewWinkY());
+        assertEquals(56, MasterTitleRomPreview.sonic3kPreviewWinkY());
     }
 
     @Test
-    void sonic3kPreviewIsInsetInsideNativeCanvas() {
-        assertEquals(224, MasterTitleRomPreview.sonic3kPreviewScaledWidth());
-        assertEquals(156, MasterTitleRomPreview.sonic3kPreviewScaledHeight());
+    void sonic3kPreviewUsesNativeCanvasWithoutResampling() {
+        assertEquals(320, MasterTitleRomPreview.sonic3kPreviewScaledWidth());
+        assertEquals(224, MasterTitleRomPreview.sonic3kPreviewScaledHeight());
+    }
+
+    @Test
+    void sonic3kPreviewUsesSettledPlaneAVerticalScroll() {
+        assertEquals(16, MasterTitleRomPreview.sonic3kPreviewVScroll());
+        assertEquals(76, MasterTitleRomPreview.sonic3kPreviewFingerY());
+        assertEquals(56, MasterTitleRomPreview.sonic3kPreviewWinkY());
     }
 
     @Test
@@ -254,8 +261,13 @@ class TestMasterTitleRomPreview {
     }
 
     @Test
-    void sonic3kPreviewLowersBannerBelowSonicFace() {
-        assertEquals(112, MasterTitleRomPreview.sonic3kPreviewBannerY());
+    void sonic3kPreviewUsesSettledTitleBannerPosition() {
+        assertEquals(84, MasterTitleRomPreview.sonic3kPreviewBannerY());
+    }
+
+    @Test
+    void sonic3kPreviewSuppressesCopyrightInMasterComposition() {
+        assertFalse(MasterTitleRomPreview.sonic3kPreviewDrawsCopyright());
     }
 
     @Test

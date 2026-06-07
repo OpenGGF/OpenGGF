@@ -3,6 +3,8 @@ package com.openggf.game.sonic3k;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
@@ -16,6 +18,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -34,6 +37,26 @@ public class TestSonic3kPlcArtRegistry {
             reviewedS3SideReference(Sonic3kObjectArtKeys.CUTSCENE_KNUCKLES, "artAddr", 0x382DC6),
             reviewedS3SideReference(Sonic3kObjectArtKeys.CUTSCENE_KNUCKLES, "mappingAddr", 0x364016),
             reviewedS3SideReference(Sonic3kObjectArtKeys.CUTSCENE_KNUCKLES, "dplcAddr", 0x36430E)
+    );
+    private static final Set<String> REVIEWED_HARDCODED_MAPPING_DEBT = Set.of(
+            "level:" + Sonic3kObjectArtKeys.SPIKES + ":buildSpikesSheet",
+            "level:" + Sonic3kObjectArtKeys.AIZ1_TREE + ":buildAiz1TreeSheet",
+            "level:" + Sonic3kObjectArtKeys.AIZ1_ZIPLINE_PEG + ":buildAiz1ZiplinePegSheet",
+            "level:" + Sonic3kObjectArtKeys.AIZ_FOREGROUND_PLANT + ":buildAizForegroundPlantSheet",
+            "standalone:" + Sonic3kObjectArtKeys.BUBBLER + ":mappingAddr<=0",
+            "standalone:" + Sonic3kObjectArtKeys.HCZ_WATER_RUSH + ":mappingAddr<=0",
+            "standalone:" + Sonic3kObjectArtKeys.HCZ_WATER_SPLASH + ":mappingAddr<=0",
+            "standalone:" + Sonic3kObjectArtKeys.HCZ_GEYSER_SPRAY + ":mappingAddr<=0",
+            "standalone:" + Sonic3kObjectArtKeys.MGZ_ENDBOSS_SCALED + ":mappingAddr<=0",
+            "provider:" + ObjectArtKeys.EXPLOSION + ":loadExplosionArt",
+            "provider:" + Sonic3kObjectArtKeys.MONITOR + ":buildMonitorMappingFrames",
+            "provider:" + Sonic3kObjectArtKeys.MONITOR + ":buildMonitorAnimations"
+    );
+    private static final Set<String> HARDCODED_MAPPING_BUILDERS = Set.of(
+            "buildSpikesSheet",
+            "buildAiz1TreeSheet",
+            "buildAiz1ZiplinePegSheet",
+            "buildAizForegroundPlantSheet"
     );
 
     @Test
@@ -545,7 +568,181 @@ public class TestSonic3kPlcArtRegistry {
         assertTrue(violations.isEmpty(),
                 "SKL object art registry contains standalone Sonic 3 addresses. S3KL zones may legitimately reference "
                         + "the Sonic 3 half, but SKL/S&K-zone object art needs either an S&K-half address or an "
-                        + "explicit reviewed exception:\n" + String.join("\n", violations));
+                + "explicit reviewed exception:\n" + String.join("\n", violations));
+    }
+
+    @Test
+    public void hardcodedRuntimeMappingDebtDoesNotGrow() {
+        Set<String> actual = new HashSet<>();
+        for (int zone = 0x00; zone <= 0x0D; zone++) {
+            for (int act = 0; act <= 1; act++) {
+                Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(zone, act);
+                for (Sonic3kPlcArtRegistry.LevelArtEntry entry : plan.levelArt()) {
+                    if (entry.builderName() != null
+                            && HARDCODED_MAPPING_BUILDERS.contains(entry.builderName())) {
+                        actual.add("level:" + entry.key() + ":" + entry.builderName());
+                    }
+                }
+                for (Sonic3kPlcArtRegistry.StandaloneArtEntry entry : plan.standaloneArt()) {
+                    if (entry.mappingAddr() <= 0) {
+                        actual.add("standalone:" + entry.key() + ":mappingAddr<=0");
+                    }
+                }
+            }
+        }
+        actual.addAll(providerLocalHardcodedMappingDebt());
+
+        Set<String> unexpected = new HashSet<>(actual);
+        unexpected.removeAll(REVIEWED_HARDCODED_MAPPING_DEBT);
+        Set<String> stale = new HashSet<>(REVIEWED_HARDCODED_MAPPING_DEBT);
+        stale.removeAll(actual);
+
+        assertTrue(unexpected.isEmpty() && stale.isEmpty(),
+                "S3K runtime object mappings should be ROM-backed. Reviewed hardcoded mapping debt changed."
+                        + "\nUnexpected:\n" + String.join("\n", new TreeSet<>(unexpected))
+                        + "\nStale:\n" + String.join("\n", new TreeSet<>(stale)));
+    }
+
+    private static Set<String> providerLocalHardcodedMappingDebt() {
+        Set<String> actual = new HashSet<>();
+        try {
+            String source = java.nio.file.Files.readString(java.nio.file.Path.of(
+                    "src/main/java/com/openggf/game/sonic3k/Sonic3kObjectArtProvider.java"));
+            if (source.contains("private void loadExplosionArt()")) {
+                actual.add("provider:" + ObjectArtKeys.EXPLOSION + ":loadExplosionArt");
+            }
+            if (methodBody(source, "buildMonitorMappingFrames").contains("new SpriteMappingFrame")) {
+                actual.add("provider:" + Sonic3kObjectArtKeys.MONITOR + ":buildMonitorMappingFrames");
+            }
+            if (methodBody(source, "buildMonitorAnimations").contains("List.of")) {
+                actual.add("provider:" + Sonic3kObjectArtKeys.MONITOR + ":buildMonitorAnimations");
+            }
+        } catch (IOException e) {
+            throw new AssertionError("Failed to scan Sonic3kObjectArtProvider", e);
+        }
+        return actual;
+    }
+
+    private static String methodBody(String source, String methodName) {
+        int nameIndex = source.indexOf(methodName + "(");
+        if (nameIndex < 0) {
+            return "";
+        }
+        int openBrace = source.indexOf('{', nameIndex);
+        if (openBrace < 0) {
+            return "";
+        }
+        int depth = 0;
+        for (int i = openBrace; i < source.length(); i++) {
+            char c = source.charAt(i);
+            if (c == '{') {
+                depth++;
+            } else if (c == '}') {
+                depth--;
+                if (depth == 0) {
+                    return source.substring(openBrace, i + 1);
+                }
+            }
+        }
+        return source.substring(openBrace);
+    }
+
+    @Test
+    public void hczWaterDropUsesRomBackedFilteredMappings() {
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(Sonic3kZoneIds.ZONE_HCZ, 0);
+        Sonic3kPlcArtRegistry.LevelArtEntry waterDrop = plan.levelArt().stream()
+                .filter(entry -> Sonic3kObjectArtKeys.HCZ_WATER_DROP.equals(entry.key()))
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(Sonic3kConstants.MAP_HCZ_WATER_DROP_ADDR, waterDrop.mappingAddr());
+        assertNull(waterDrop.builderName());
+        assertArrayEquals(new int[] {0, 1, 2, 3, 4, 5}, waterDrop.frameFilter(),
+                "Frame 6 references the ROM's static drip tile source and should not be folded into the level-art sheet");
+    }
+
+    @Test
+    public void hczWaterRushBlockUsesRomBackedMappings() {
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(Sonic3kZoneIds.ZONE_HCZ, 0);
+        Sonic3kPlcArtRegistry.LevelArtEntry waterRushBlock = plan.levelArt().stream()
+                .filter(entry -> Sonic3kObjectArtKeys.HCZ_WATER_RUSH_BLOCK.equals(entry.key()))
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(Sonic3kConstants.MAP_HCZ_WATER_RUSH_BLOCK_ADDR, waterRushBlock.mappingAddr());
+        assertNull(waterRushBlock.builderName());
+        assertNull(waterRushBlock.frameFilter());
+    }
+
+    @Test
+    public void doorSheetsUseRomBackedFilteredMappings() {
+        Sonic3kPlcArtRegistry.LevelArtEntry hczVertical =
+                requireLevelArt(Sonic3kPlcArtRegistry.getPlan(Sonic3kZoneIds.ZONE_HCZ, 0),
+                        Sonic3kObjectArtKeys.DOOR_VERTICAL_HCZ);
+        assertEquals(Sonic3kConstants.MAP_HCZ_CNZ_DEZ_DOOR_ADDR, hczVertical.mappingAddr());
+        assertNull(hczVertical.builderName());
+        assertArrayEquals(new int[] {0}, hczVertical.frameFilter());
+
+        Sonic3kPlcArtRegistry.LevelArtEntry cnzVertical =
+                requireLevelArt(Sonic3kPlcArtRegistry.getPlan(Sonic3kZoneIds.ZONE_CNZ, 0),
+                        Sonic3kObjectArtKeys.DOOR_VERTICAL_CNZ);
+        assertEquals(Sonic3kConstants.MAP_HCZ_CNZ_DEZ_DOOR_ADDR, cnzVertical.mappingAddr());
+        assertNull(cnzVertical.builderName());
+        assertArrayEquals(new int[] {1}, cnzVertical.frameFilter());
+
+        Sonic3kPlcArtRegistry.LevelArtEntry dezVertical =
+                requireLevelArt(Sonic3kPlcArtRegistry.getPlan(Sonic3kZoneIds.ZONE_DEZ, 0),
+                        Sonic3kObjectArtKeys.DOOR_VERTICAL_DEZ);
+        assertEquals(Sonic3kConstants.MAP_HCZ_CNZ_DEZ_DOOR_ADDR, dezVertical.mappingAddr());
+        assertNull(dezVertical.builderName());
+        assertArrayEquals(new int[] {2}, dezVertical.frameFilter());
+
+        Sonic3kPlcArtRegistry.LevelArtEntry cnzHorizontal =
+                requireLevelArt(Sonic3kPlcArtRegistry.getPlan(Sonic3kZoneIds.ZONE_CNZ, 0),
+                        Sonic3kObjectArtKeys.DOOR_HORIZONTAL);
+        assertEquals(Sonic3kConstants.MAP_CNZ_DOOR_HORIZONTAL_ADDR, cnzHorizontal.mappingAddr());
+        assertNull(cnzHorizontal.builderName());
+        assertNull(cnzHorizontal.frameFilter());
+    }
+
+    @Test
+    public void hczFanBubbleUsesRomBackedBubblerMappings() {
+        Sonic3kPlcArtRegistry.StandaloneArtEntry fanBubble =
+                requireStandaloneArt(Sonic3kPlcArtRegistry.getPlan(Sonic3kZoneIds.ZONE_HCZ, 0),
+                        Sonic3kObjectArtKeys.HCZ_FAN_BUBBLE);
+
+        assertEquals(Sonic3kConstants.MAP_BUBBLER_ADDR, fanBubble.mappingAddr());
+        assertEquals(6, fanBubble.mappingFrameCount());
+    }
+
+    @Test
+    public void hczBubblesUseRomBackedWaterWallMappings() {
+        Sonic3kPlcArtRegistry.StandaloneArtEntry bubbles =
+                requireStandaloneArt(Sonic3kPlcArtRegistry.getPlan(Sonic3kZoneIds.ZONE_HCZ, 0),
+                        Sonic3kObjectArtKeys.HCZ_BUBBLES);
+
+        assertEquals(Sonic3kConstants.MAP_HCZ_WATERWALL_ADDR, bubbles.mappingAddr());
+        assertEquals(0, bubbles.mappingTileOffset());
+    }
+
+    @Test
+    public void hczGeysersUseRomBackedMappingsWithTileOffsets() {
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(Sonic3kZoneIds.ZONE_HCZ, 0);
+
+        Sonic3kPlcArtRegistry.StandaloneArtEntry horizontal =
+                requireStandaloneArt(plan, Sonic3kObjectArtKeys.HCZ_GEYSER_HORZ);
+        assertEquals(Sonic3kConstants.MAP_HCZ_WATERWALL_ADDR, horizontal.mappingAddr());
+        assertEquals(0, horizontal.mappingTileOffset());
+
+        Sonic3kPlcArtRegistry.StandaloneArtEntry vertical =
+                requireStandaloneArt(plan, Sonic3kObjectArtKeys.HCZ_GEYSER_VERT);
+        assertEquals(Sonic3kConstants.MAP_HCZ_WATERWALL_ADDR, vertical.mappingAddr());
+        assertEquals(0, vertical.mappingTileOffset());
+
+        Sonic3kPlcArtRegistry.StandaloneArtEntry debris =
+                requireStandaloneArt(plan, Sonic3kObjectArtKeys.HCZ_GEYSER_DEBRIS);
+        assertEquals(Sonic3kConstants.MAP_HCZ_WATERWALL_DEBRIS_ADDR, debris.mappingAddr());
+        assertEquals(0x58, debris.mappingTileOffset());
     }
 
     @Test
@@ -808,6 +1005,23 @@ public class TestSonic3kPlcArtRegistry {
             assertEquals(expectedPieces[i][1], piece.heightTiles(), "LBZ flame thrower piece " + i + " height");
             assertEquals(expectedPieces[i][2], piece.tileIndex(), "LBZ flame thrower piece " + i + " tile");
         }
+    }
+
+    private static Sonic3kPlcArtRegistry.LevelArtEntry requireLevelArt(Sonic3kPlcArtRegistry.ZoneArtPlan plan,
+                                                                       String key) {
+        return plan.levelArt().stream()
+                .filter(entry -> key.equals(entry.key()))
+                .findFirst()
+                .orElseThrow();
+    }
+
+    private static Sonic3kPlcArtRegistry.StandaloneArtEntry requireStandaloneArt(
+            Sonic3kPlcArtRegistry.ZoneArtPlan plan,
+            String key) {
+        return plan.standaloneArt().stream()
+                .filter(entry -> key.equals(entry.key()))
+                .findFirst()
+                .orElseThrow();
     }
 
     private static void assertSaneObjectSpriteSheet(String context, ObjectSpriteSheet sheet) {

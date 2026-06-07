@@ -33,21 +33,30 @@ import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.game.sonic3k.features.HCZWaterSkimHandler;
 import com.openggf.game.sonic3k.features.HCZWaterTunnelHandler;
+import com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceState;
+import com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
+import com.openggf.game.sonic3k.objects.CutsceneKnucklesCnz2AInstance;
+import com.openggf.game.sonic3k.objects.CutsceneKnucklesCnz2BInstance;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesHcz2Instance;
 import com.openggf.game.sonic3k.objects.HCZConveyorBeltObjectInstance;
+import com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance;
 import com.openggf.game.sonic3k.objects.IczSnowboardArtLoader;
 import com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance;
 import com.openggf.game.sonic3k.objects.Lbz1GroundLaunchIntroInstance;
+import com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance;
 import com.openggf.game.sonic3k.objects.MhzPollenSpawnerInstance;
+import com.openggf.game.sonic3k.objects.S3kSignpostInstance;
 import com.openggf.camera.Camera;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
+import com.openggf.sprites.playable.SidekickCpuController;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -431,6 +440,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      *
      * <p>Zones handled:
      * <ul>
+     *   <li>AIZ1 ($0000): Sonic+Tails intro parks Player 2 in dormant marker state
+     *       while Obj_AIZPlaneIntro owns the opening pan</li>
      *   <li>HCZ1 ($0100): Sonic/Tails anim $1B (tumble), Knuckles anim $21 (glide drop)</li>
      *   <li>MGZ1 ($0200): anim $1B, airborne (loc_68A6)</li>
      *   <li>LRZ1 ($0900) Knuckles: anim $1B, airborne (loc_68A6)</li>
@@ -438,6 +449,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      * </ul>
      */
     public void applyZonePlayerState() {
+        if (currentZone == Sonic3kZoneIds.ZONE_AIZ && currentAct == 0
+                && AizPlaneIntroInstance.getActiveIntroInstance() != null) {
+            applyAizIntroSidekickDormantMarkersAfterSpawn();
+        }
         if (currentZone == Sonic3kZoneIds.ZONE_HCZ && currentAct == 0) {
             applyHcz1IntroState();
         }
@@ -461,6 +476,19 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             cnzEvents.spawnSoloLeaderCarryInTailsIfNeeded(currentAct);
         }
         // TODO: LRZ1 non-Knuckles, SSZ falling intros (same loc_68A6 path)
+    }
+
+    private void applyAizIntroSidekickDormantMarkersAfterSpawn() {
+        SpriteManager spriteManager = GameServices.spritesOrNull();
+        if (spriteManager == null) {
+            return;
+        }
+        for (AbstractPlayableSprite sidekick : spriteManager.getRegisteredSidekicks()) {
+            SidekickCpuController controller = sidekick.getCpuController();
+            if (controller != null && shouldEnterSidekickDormantMarker(sidekick)) {
+                controller.applyLevelEventDormantMarkerForBootstrap();
+            }
+        }
     }
 
     public void applyZonePlayerStateAfterTitleCard() {
@@ -1136,23 +1164,46 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     /**
-     * Resets mutable state including static/global state in AIZ event helpers.
+     * Resets mutable state including static/global state in S3K event helpers.
      * Extends the base {@link AbstractLevelEventManager#resetState()} to also
-     * clear fire wall handoff, tree reveal counter, and intro phase state that
-     * would otherwise leak across level loads and test iterations.
+     * clear cross-object cutscene refs, HCZ helper gates, AIZ fire/tree/intro
+     * state, and other runtime handoff state that would otherwise leak across
+     * level loads and test iterations.
      */
     @Override
     public void resetState() {
         super.resetState();
         introFallActiveOnPlayer = false;
         introFallActiveOnSidekick = false;
+        clearPostTransitionHandoffState();
         Sonic3kAIZEvents.resetGlobalState();
+        CutsceneKnucklesCnz2AInstance.clearActiveInstance();
+        CutsceneKnucklesCnz2BInstance.clearActiveInstance();
         CutsceneKnucklesHcz2Instance.clearActiveInstance();
+        Mhz1CutsceneKnucklesInstance.clearActiveInstance();
+        S3kSignpostInstance.clearActiveSignpost();
         HCZWaterTunnelHandler.reset();
+        HCZWaterSkimHandler.reset();
+        HCZWaterRushObjectInstance.HCZBreakableBarState.reset();
+        HCZWaterRushObjectInstance.HCZWaterRushPaletteCycleGate.reset();
         HCZConveyorBeltObjectInstance.resetLoadArray();
+        Aiz2BossEndSequenceState.reset();
+        AizCollapsingLogBridgeObjectInstance.setDrawBridgeBurnActive(false);
         AizHollowTreeObjectInstance.resetTreeRevealCounter();
         AizPlaneIntroInstance.resetIntroPhaseState();
         IczSnowboardArtLoader.reset();
+    }
+
+    private void clearPostTransitionHandoffState() {
+        hczPendingPostTransitionCutscene = false;
+        mgzPendingPostTransitionRelease = false;
+        cnzPendingPostTransitionReleaseFrames = 0;
+        cnzPendingPostTransitionAct2SizeFrames = 0;
+        cnzPostTransitionAct2SizeActive = false;
+        cnzAct2MinXAccumulator = 0;
+        cnzAct2MaxXAccumulator = 0;
+        cnzAct2MinYAccumulator = 0;
+        cnzAct2MaxYAccumulator = 0;
     }
     /**
      * Intercepts pit death in S3K bonus stages (Gumball, Pachinko, Slots).

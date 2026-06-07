@@ -439,6 +439,36 @@ public class TestTouchResponseManager {
     }
 
     @Test
+    public void testSidekickMultiRegionTouchResponseStopsAfterFirstOverlappingObject() {
+        when(player.getCentreX()).thenReturn((short) 500);
+
+        AbstractPlayableSprite sidekick = mock(AbstractPlayableSprite.class);
+        when(sidekick.getCentreX()).thenReturn((short) 160);
+        when(sidekick.getCentreY()).thenReturn((short) 112);
+        when(sidekick.getYRadius()).thenReturn((short) 20);
+        when(sidekick.getCrouching()).thenReturn(false);
+        when(sidekick.getDead()).thenReturn(false);
+        when(sidekick.getInvulnerable()).thenReturn(false);
+        when(sidekick.getInvincibleFrames()).thenReturn(0);
+        when(sidekick.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(sidekick.getAnimationId()).thenReturn(Sonic3kAnimationIds.ROLL.id());
+
+        MockMultiRegionTouchObject firstOverlap = new MockMultiRegionTouchObject(
+                new TouchResponseProvider.TouchRegion(160, 112, 0x48, 0));
+        MockMultiRegionTouchObject laterOverlap = new MockMultiRegionTouchObject(
+                new TouchResponseProvider.TouchRegion(160, 112, 0x48, 0));
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(firstOverlap);
+        objectManager.addDynamicObject(laterOverlap);
+
+        objectManager.update(0, player, List.of(sidekick), 1);
+
+        assertTrue(firstOverlap.wasTouched, "Sidekick should process the first overlapping multi-region object");
+        assertFalse(laterOverlap.wasTouched,
+                "ReactToItem returns after the first multi-region overlap, so later objects must not be scanned");
+    }
+
+    @Test
     public void testPlayerHurtWhenNotAttacking() {
         when(player.getRolling()).thenReturn(false);
         when(player.getSpindash()).thenReturn(false);
@@ -582,6 +612,36 @@ public class TestTouchResponseManager {
     }
 
     @Test
+    public void s1RenderFlagTouchSkipsMultiRegionFirstFrameObject() {
+        MockMultiRegionSnapshotTouchObject spikes = new MockMultiRegionSnapshotTouchObject(
+                new TouchResponseProvider.TouchRegion(160, 112, 0x88, 0));
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(spikes);
+
+        objectManager.runTouchResponsesForPlayer(player, 1);
+
+        assertFalse(spikes.wasTouched,
+                "S1 ReactToItem gates multi-region touch on obRender bit 7 just like single-region touch");
+    }
+
+    @Test
+    public void multiRegionEnemyTouchTriggersEveryOverlappingFrame() {
+        MockMultiRegionTouchObject enemy = new MockMultiRegionTouchObject(
+                new TouchResponseProvider.TouchRegion(160, 112, 0x08, 0));
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(enemy);
+
+        objectManager.update(0, player, List.of(), 1);
+        assertTrue(enemy.wasTouched, "First ENEMY overlap frame should dispatch touch");
+
+        enemy.wasTouched = false;
+        objectManager.update(0, player, List.of(), 2);
+
+        assertTrue(enemy.wasTouched,
+                "ENEMY touch must poll continuously for multi-region objects while overlap persists");
+    }
+
+    @Test
     public void testRunTouchResponsesForPlayerUsesLiveCurrentObjectPosition() {
         // Current position barely overlaps; pre-update position does not.
         MockTrackedTouchObject obj = new MockTrackedTouchObject(174, 112, 176, 112, 0x48);
@@ -671,6 +731,32 @@ public class TestTouchResponseManager {
         // Now touch should trigger again
         objectManager.update(0, player, List.of(), 1);
         assertTrue(obj.wasTouched, "Touch should trigger after reset even for same overlap");
+    }
+
+    @Test
+    public void testResetClearsSidekickOverlapEntries() {
+        AbstractPlayableSprite sidekick = mock(AbstractPlayableSprite.class);
+        when(sidekick.getCentreX()).thenReturn((short) 160);
+        when(sidekick.getCentreY()).thenReturn((short) 112);
+        when(sidekick.getYRadius()).thenReturn((short) 20);
+        when(sidekick.getCrouching()).thenReturn(false);
+        when(sidekick.getDead()).thenReturn(false);
+        when(sidekick.getInvulnerable()).thenReturn(false);
+        when(sidekick.getCode()).thenReturn("tails");
+
+        MockTouchObject obj = new MockTouchObject(160, 112, 0x48);
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(obj);
+
+        ObjectTouchResponseController controller = new ObjectTouchResponseController(objectManager, table);
+        controller.updateSidekick(sidekick, 1);
+        assertEquals(1, controller.captureRewindState().sidekickEntries().size(),
+                "Sidekick overlap tracking should be present before reset");
+
+        controller.reset();
+
+        assertTrue(controller.captureRewindState().sidekickEntries().isEmpty(),
+                "Reset should drop sidekick overlap entries instead of retaining stale sidekick references");
     }
 
     // ==================== Helper Classes ====================
@@ -911,6 +997,45 @@ public class TestTouchResponseManager {
         @Override
         public int getCollisionProperty() {
             return 0;
+        }
+
+        @Override
+        public void onTouchResponse(PlayableEntity player, TouchResponseResult result, int frameCounter) {
+            wasTouched = true;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+        }
+    }
+
+    private static final class MockMultiRegionSnapshotTouchObject extends AbstractObjectInstance
+            implements TouchResponseProvider, TouchResponseListener {
+        private final TouchResponseProvider.TouchRegion[] regions;
+        boolean wasTouched = false;
+
+        private MockMultiRegionSnapshotTouchObject(TouchResponseProvider.TouchRegion... regions) {
+            super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "MockMultiRegionSnapshotTouchObject");
+            this.regions = regions;
+        }
+
+        @Override
+        public int getCollisionFlags() {
+            return 0;
+        }
+
+        @Override
+        public int getCollisionProperty() {
+            return 0;
+        }
+
+        @Override
+        public TouchResponseProvider.TouchRegion[] getMultiTouchRegions() {
+            return regions;
         }
 
         @Override

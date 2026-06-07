@@ -218,9 +218,8 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
 
             // 9. Assert no errors
             if (report.hasErrors()) {
-                DivergenceGroup firstError = report.errors().get(0);
                 System.err.println("\n=== Context window around first error ===");
-                System.err.println(report.getContextWindow(firstError.startFrame(), 10));
+                System.err.println(report.getContextWindow(firstReportErrorFrame(report), 10));
                 fail(report.toSummary());
             }
         } finally {
@@ -425,14 +424,20 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
             Files.writeString(jsonPath, report.toJson());
 
             if (report.hasErrors()) {
-                DivergenceGroup firstError = report.errors().get(0);
                 Path contextPath = outDir.resolve(prefix + "_context.txt");
                 Files.writeString(contextPath,
-                    report.getContextWindow(firstError.startFrame(), 20));
+                    report.getContextWindow(firstReportErrorFrame(report), 20));
             }
         } catch (IOException e) {
             System.err.println("Warning: failed to write report: " + e.getMessage());
         }
+    }
+
+    private static int firstReportErrorFrame(DivergenceReport report) {
+        if (!report.errors().isEmpty()) {
+            return report.errors().get(0).startFrame();
+        }
+        return 0;
     }
 
     private static String combineDiagnostics(String base, String extra) {

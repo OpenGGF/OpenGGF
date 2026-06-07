@@ -3,7 +3,6 @@ package com.openggf.tests.trace.s3k;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.tests.trace.AbstractTraceReplayTest;
-import com.openggf.trace.ToleranceConfig;
 
 import java.nio.file.Path;
 
@@ -34,13 +33,4 @@ public class TestS3kMgzTraceReplay extends AbstractTraceReplayTest {
         return TRACE_DIR;
     }
 
-    @Override
-    protected ToleranceConfig tolerances() {
-        // Known ring-count parity gap: MGZ trace records ring divergences
-        // before the current physics frontier. Downgrade ring mismatches to
-        // warnings so the f4124 y_speed frontier stays visible; this does not
-        // certify ring-count parity.
-        return ToleranceConfig.DEFAULT.withRingCountMode(
-                ToleranceConfig.RingCountMode.WARN_ONLY);
-    }
 }

@@ -21,6 +21,13 @@ import java.util.List;
  * are added by {@link #addZoneEntries} (populated in later tasks).
  */
 public final class Sonic3kPlcArtRegistry {
+    private static final int[] SPRING_VERTICAL_FRAMES = {0, 1, 2};
+    private static final int[] SPRING_HORIZONTAL_FRAMES = {3, 4, 5};
+    private static final int[] SPRING_DIAGONAL_FRAMES = {7, 8, 9};
+    private static final int[] HCZ_WATER_DROP_VISIBLE_FRAMES = {0, 1, 2, 3, 4, 5};
+    private static final int[] DOOR_VERTICAL_HCZ_FRAMES = {0};
+    private static final int[] DOOR_VERTICAL_CNZ_FRAMES = {1};
+    private static final int[] DOOR_VERTICAL_DEZ_FRAMES = {2};
 
     private Sonic3kPlcArtRegistry() {
     }
@@ -36,6 +43,7 @@ public final class Sonic3kPlcArtRegistry {
      * @param palette      palette line (0-3)
      * @param dplcAddr     ROM address of DPLC table, or -1 if no DPLCs
      * @param mappingFrameCount explicit mapping frame count, or -1 to auto-detect
+     * @param mappingTileOffset tile offset to add after ROM mapping parse
      */
     public record StandaloneArtEntry(
             String key,
@@ -46,24 +54,31 @@ public final class Sonic3kPlcArtRegistry {
             int palette,
             int dplcAddr,
             S3kSpriteDataLoader.MappingFormat mappingFormat,
-            int mappingFrameCount
+            int mappingFrameCount,
+            int mappingTileOffset
     ) {
         public StandaloneArtEntry(String key, int artAddr, CompressionType compression, int artSize,
                 int mappingAddr, int palette, int dplcAddr) {
             this(key, artAddr, compression, artSize, mappingAddr, palette, dplcAddr,
-                    S3kSpriteDataLoader.MappingFormat.STANDARD, -1);
+                    S3kSpriteDataLoader.MappingFormat.STANDARD, -1, 0);
         }
 
         public StandaloneArtEntry(String key, int artAddr, CompressionType compression, int artSize,
                 int mappingAddr, int palette, int dplcAddr, int mappingFrameCount) {
             this(key, artAddr, compression, artSize, mappingAddr, palette, dplcAddr,
-                    S3kSpriteDataLoader.MappingFormat.STANDARD, mappingFrameCount);
+                    S3kSpriteDataLoader.MappingFormat.STANDARD, mappingFrameCount, 0);
         }
 
         public StandaloneArtEntry(String key, int artAddr, CompressionType compression, int artSize,
                 int mappingAddr, int palette, int dplcAddr, S3kSpriteDataLoader.MappingFormat mappingFormat) {
             this(key, artAddr, compression, artSize, mappingAddr, palette, dplcAddr,
-                    mappingFormat, -1);
+                    mappingFormat, -1, 0);
+        }
+
+        public StandaloneArtEntry(String key, int artAddr, CompressionType compression, int artSize,
+                int mappingAddr, int palette, int dplcAddr, int mappingFrameCount, int mappingTileOffset) {
+            this(key, artAddr, compression, artSize, mappingAddr, palette, dplcAddr,
+                    S3kSpriteDataLoader.MappingFormat.STANDARD, mappingFrameCount, mappingTileOffset);
         }
     }
 
@@ -125,45 +140,51 @@ public final class Sonic3kPlcArtRegistry {
             ),
             new LevelArtEntry(
                     Sonic3kObjectArtKeys.SPRING_VERTICAL,
-                    -1,
+                    Sonic3kConstants.MAP_SPRING_ADDR,
                     Sonic3kConstants.ARTTILE_SPIKES_SPRINGS + 0x10,
                     0,
-                    "buildSpringVerticalSheet"
+                    null,
+                    SPRING_VERTICAL_FRAMES
             ),
             new LevelArtEntry(
                     Sonic3kObjectArtKeys.SPRING_VERTICAL_YELLOW,
-                    -1,
+                    Sonic3kConstants.MAP_SPRING2_ADDR,
                     Sonic3kConstants.ARTTILE_SPIKES_SPRINGS + 0x10,
                     0,
-                    "buildSpringVerticalYellowSheet"
+                    null,
+                    SPRING_VERTICAL_FRAMES
             ),
             new LevelArtEntry(
                     Sonic3kObjectArtKeys.SPRING_HORIZONTAL,
-                    -1,
+                    Sonic3kConstants.MAP_SPRING_ADDR,
                     Sonic3kConstants.ARTTILE_SPIKES_SPRINGS + 0x20,
                     0,
-                    "buildSpringHorizontalSheet"
+                    null,
+                    SPRING_HORIZONTAL_FRAMES
             ),
             new LevelArtEntry(
                     Sonic3kObjectArtKeys.SPRING_HORIZONTAL_YELLOW,
-                    -1,
+                    Sonic3kConstants.MAP_SPRING2_ADDR,
                     Sonic3kConstants.ARTTILE_SPIKES_SPRINGS + 0x20,
                     0,
-                    "buildSpringHorizontalYellowSheet"
+                    null,
+                    SPRING_HORIZONTAL_FRAMES
             ),
             new LevelArtEntry(
                     Sonic3kObjectArtKeys.SPRING_DIAGONAL,
-                    -1,
+                    Sonic3kConstants.MAP_SPRING_ADDR,
                     Sonic3kConstants.ARTTILE_DIAGONAL_SPRING,
                     0,
-                    "buildSpringDiagonalSheet"
+                    null,
+                    SPRING_DIAGONAL_FRAMES
             ),
             new LevelArtEntry(
                     Sonic3kObjectArtKeys.SPRING_DIAGONAL_YELLOW,
-                    -1,
+                    Sonic3kConstants.MAP_SPRING2_ADDR,
                     Sonic3kConstants.ARTTILE_DIAGONAL_SPRING,
                     0,
-                    "buildSpringDiagonalYellowSheet"
+                    null,
+                    SPRING_DIAGONAL_FRAMES
             )
     );
 
@@ -665,13 +686,13 @@ public final class Sonic3kPlcArtRegistry {
                 -1
         ));
 
-        // Water Rush Block: ArtTile_HCZMisc + $A, palette 2 (hardcoded mappings)
+        // Water Rush Block: ArtTile_HCZMisc + $A, palette 2
         levelArt.add(new LevelArtEntry(
                 Sonic3kObjectArtKeys.HCZ_WATER_RUSH_BLOCK,
-                -1,
+                Sonic3kConstants.MAP_HCZ_WATER_RUSH_BLOCK_ADDR,
                 Sonic3kConstants.ARTTILE_HCZ_WATER_RUSH_BLOCK,
                 2,
-                "buildHczWaterRushBlockSheet"
+                null
         ));
 
         // Water Splash subtype 0: ArtUnc_HCZWaterSplash, uncompressed, palette 2
@@ -688,13 +709,14 @@ public final class Sonic3kPlcArtRegistry {
 
         // Water Drop (Obj_WaterDrop, ID 0x6E): ArtTile_HCZ2Slide = $035C, palette 1
         // ROM: make_art_tile(ArtTile_HCZ2Slide, 1, 0), Map_HCZWaterDrop (7 frames)
-        // Custom builder because frame 6 uses tile 0x0A4 (different VRAM source)
+        // Frame 6 uses the ROM's static drip tile source and is not part of this level-art sheet.
         levelArt.add(new LevelArtEntry(
                 Sonic3kObjectArtKeys.HCZ_WATER_DROP,
-                -1,
+                Sonic3kConstants.MAP_HCZ_WATER_DROP_ADDR,
                 Sonic3kConstants.ARTTILE_HCZ2_SLIDE,
                 1,
-                "buildHczWaterDropSheet"
+                null,
+                HCZ_WATER_DROP_VISIBLE_FRAMES
         ));
 
         // HCZ Hand Launcher: ArtTile_HCZMisc + $1A, palette 1
@@ -741,13 +763,13 @@ public final class Sonic3kPlcArtRegistry {
         ));
 
         // Geyser horizontal art (subtype 0 water wall)
-        // Hardcoded mappings (mappingAddr=0 triggers dispatch in loadStandaloneSheet)
+        // ROM: Map_HCZWaterWall, frame 0 is the wide horizontal wall.
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.HCZ_GEYSER_HORZ,
                 Sonic3kConstants.ART_KOSM_HCZ_GEYSER_HORZ_ADDR,
                 CompressionType.KOSINSKI_MODULED,
                 0,
-                0,
+                Sonic3kConstants.MAP_HCZ_WATERWALL_ADDR,
                 2,
                 -1
         ));
@@ -758,7 +780,7 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.ART_KOSM_HCZ_GEYSER_VERT_ADDR,
                 CompressionType.KOSINSKI_MODULED,
                 0,
-                0,
+                Sonic3kConstants.MAP_HCZ_WATERWALL_ADDR,
                 2,
                 -1
         ));
@@ -770,20 +792,22 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.ART_KOSM_HCZ_GEYSER_VERT_ADDR,
                 CompressionType.KOSINSKI_MODULED,
                 0,
-                0,
+                Sonic3kConstants.MAP_HCZ_WATERWALL_DEBRIS_ADDR,
                 2,
-                -1
+                -1,
+                -1,
+                0x58
         ));
 
         // Bubbles art (ArtNem_Bubbles) — Nemesis compressed, 56 tiles.
-        // Used by 25% of water wall spray particles. Same mapping frames as geyser
-        // (buildHczGeyserAllFrames) but tile indices reference bubble patterns.
+        // Used by 25% of water wall spray particles. Same Map_HCZWaterWall
+        // frames as geyser, but tile indices reference bubble patterns.
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.HCZ_BUBBLES,
                 Sonic3kConstants.ART_NEM_BUBBLES_ADDR,
                 CompressionType.NEMESIS,
                 0,
-                0,
+                Sonic3kConstants.MAP_HCZ_WATERWALL_ADDR,
                 2,
                 -1
         ));
@@ -795,9 +819,10 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.ART_NEM_BUBBLES_ADDR,
                 CompressionType.NEMESIS,
                 0,
-                0,
+                Sonic3kConstants.MAP_BUBBLER_ADDR,
                 0,  // palette 0 (ROM: make_art_tile(ArtTile_Bubbles, 0, 0))
-                -1
+                -1,
+                6
         ));
 
         // Geyser spray/splash art (ArtTile_HCZGeyser+$30 offset).
@@ -835,10 +860,11 @@ public final class Sonic3kPlcArtRegistry {
         // ROM: make_art_tile(ArtTile_HCZMisc+$A, 2, 0)
         levelArt.add(new LevelArtEntry(
                 Sonic3kObjectArtKeys.DOOR_VERTICAL_HCZ,
-                -1,
+                Sonic3kConstants.MAP_HCZ_CNZ_DEZ_DOOR_ADDR,
                 Sonic3kConstants.ARTTILE_HCZ_MISC + 0x0A,
                 2,
-                "buildDoorVerticalHczSheet"
+                null,
+                DOOR_VERTICAL_HCZ_FRAMES
         ));
 
     }
@@ -968,9 +994,15 @@ public final class Sonic3kPlcArtRegistry {
 
         // Diagonal spring override
         levelArt.removeIf(e -> e.key().equals(Sonic3kObjectArtKeys.SPRING_DIAGONAL));
-        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SPRING_DIAGONAL, -1, Sonic3kConstants.ARTTILE_MGZ_MHZ_DIAGONAL_SPRING, 0, "buildSpringDiagonalSheet"));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SPRING_DIAGONAL,
+                Sonic3kConstants.MAP_SPRING_ADDR,
+                Sonic3kConstants.ARTTILE_MGZ_MHZ_DIAGONAL_SPRING,
+                0, null, SPRING_DIAGONAL_FRAMES));
         levelArt.removeIf(e -> e.key().equals(Sonic3kObjectArtKeys.SPRING_DIAGONAL_YELLOW));
-        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SPRING_DIAGONAL_YELLOW, -1, Sonic3kConstants.ARTTILE_MGZ_MHZ_DIAGONAL_SPRING, 0, "buildSpringDiagonalYellowSheet"));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SPRING_DIAGONAL_YELLOW,
+                Sonic3kConstants.MAP_SPRING2_ADDR,
+                Sonic3kConstants.ARTTILE_MGZ_MHZ_DIAGONAL_SPRING,
+                0, null, SPRING_DIAGONAL_FRAMES));
 
         // Breakable Wall: art_tile = $001, palette 2
         levelArt.add(new LevelArtEntry(
@@ -1199,20 +1231,21 @@ public final class Sonic3kPlcArtRegistry {
         // ROM: make_art_tile(ArtTile_CNZMisc+$C5, 2, 0)
         levelArt.add(new LevelArtEntry(
                 Sonic3kObjectArtKeys.DOOR_VERTICAL_CNZ,
-                -1,
+                Sonic3kConstants.MAP_HCZ_CNZ_DEZ_DOOR_ADDR,
                 Sonic3kConstants.ARTTILE_CNZ_MISC + 0xC5,
                 2,
-                "buildDoorVerticalCnzSheet"
+                null,
+                DOOR_VERTICAL_CNZ_FRAMES
         ));
 
         // Door (Object 0x3C) horizontal: ArtTile_CNZMisc + $C5, palette 2
         // ROM: make_art_tile(ArtTile_CNZMisc+$C5, 2, 0)
         levelArt.add(new LevelArtEntry(
                 Sonic3kObjectArtKeys.DOOR_HORIZONTAL,
-                -1,
+                Sonic3kConstants.MAP_CNZ_DOOR_HORIZONTAL_ADDR,
                 Sonic3kConstants.ARTTILE_CNZ_MISC + 0xC5,
                 2,
-                "buildDoorHorizontalSheet"
+                null
         ));
     }
 
@@ -1677,9 +1710,15 @@ public final class Sonic3kPlcArtRegistry {
 
         // Diagonal spring override
         levelArt.removeIf(e -> e.key().equals(Sonic3kObjectArtKeys.SPRING_DIAGONAL));
-        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SPRING_DIAGONAL, -1, Sonic3kConstants.ARTTILE_MGZ_MHZ_DIAGONAL_SPRING, 0, "buildSpringDiagonalSheet"));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SPRING_DIAGONAL,
+                Sonic3kConstants.MAP_SPRING_ADDR,
+                Sonic3kConstants.ARTTILE_MGZ_MHZ_DIAGONAL_SPRING,
+                0, null, SPRING_DIAGONAL_FRAMES));
         levelArt.removeIf(e -> e.key().equals(Sonic3kObjectArtKeys.SPRING_DIAGONAL_YELLOW));
-        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SPRING_DIAGONAL_YELLOW, -1, Sonic3kConstants.ARTTILE_MGZ_MHZ_DIAGONAL_SPRING, 0, "buildSpringDiagonalYellowSheet"));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SPRING_DIAGONAL_YELLOW,
+                Sonic3kConstants.MAP_SPRING2_ADDR,
+                Sonic3kConstants.ARTTILE_MGZ_MHZ_DIAGONAL_SPRING,
+                0, null, SPRING_DIAGONAL_FRAMES));
 
         // Breakable Wall: art_tile = ArtTile_MHZMisc + $4 = $034B, palette 2
         levelArt.add(new LevelArtEntry(
@@ -2065,10 +2104,11 @@ public final class Sonic3kPlcArtRegistry {
         // ROM: make_art_tile(ArtTile_DEZMisc+$1E, 1, 0)
         levelArt.add(new LevelArtEntry(
                 Sonic3kObjectArtKeys.DOOR_VERTICAL_DEZ,
-                -1,
+                Sonic3kConstants.MAP_HCZ_CNZ_DEZ_DOOR_ADDR,
                 Sonic3kConstants.ARTTILE_DEZ_MISC + 0x1E,
                 1,
-                "buildDoorVerticalDezSheet"
+                null,
+                DOOR_VERTICAL_DEZ_FRAMES
         ));
     }
 

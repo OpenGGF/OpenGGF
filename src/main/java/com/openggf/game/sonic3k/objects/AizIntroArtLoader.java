@@ -178,6 +178,7 @@ public class AizIntroArtLoader {
         knucklesRenderer = null;
         corkFloorRenderer = null;
         renderersCached = false;
+        activeServices = null;
         loaded = false;
     }
 
