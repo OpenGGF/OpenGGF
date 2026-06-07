@@ -19,7 +19,6 @@ import com.openggf.physics.FrameCollisionPlan;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
-import com.openggf.trace.TraceCharacterState;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceMetadata;
@@ -284,13 +283,11 @@ public final class TraceReplaySessionBootstrap {
                     sidekickPreludeFrames,
                     gameplayMode.getLevelManager());
         }
-        boolean seededS3kCompleteRunStart = seedS3kCompleteRunStartState(trace, fixture);
         primeLeaderJumpEdgeFromBk2Prelude(fixture);
         TraceReplayBootstrap.SnapshotReport snapshotReport =
                 TraceReplayBootstrap.reportPreTraceObjectSnapshots(trace);
         TraceReplayBootstrap.ReplayStartState replayStart =
-                TraceReplayBootstrap.applyReplayStartStateForTraceReplay(
-                        trace, fixture, seededS3kCompleteRunStart);
+                TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, fixture);
         return new BootstrapResult(snapshotReport, replayStart);
     }
 
@@ -487,157 +484,6 @@ public final class TraceReplaySessionBootstrap {
             collision.resolveGroundAttachment(
                     FrameCollisionPlan.terrainOnly(), sprite, 14, () -> false);
         }
-    }
-
-    /**
-     * One-time pre-trace seed of the recorded frame-0 primary + sidekick state
-     * for S3K Sonic+Tails complete-run per-zone segments.
-     *
-     * <p>Five of the seven S3K complete-run zones (CNZ, MHZ, ICZ, HCZ, LBZ) are
-     * entered mid-run from the previous zone's seamless act/zone handoff, so the
-     * recorded frame-0 row holds residual entry state that a freshly loaded zone
-     * cannot derive: scripted/object descent velocity (CNZ/MHZ), a held mid-roll
-     * (ICZ), and the exact Tails follow position the previous zone left Tails in
-     * (HCZ/LBZ). The engine never ran the prior zone's exit, so there is no
-     * native code path that reaches this state.
-     *
-     * <p>This is the velocity/status/sidekick analogue of the position, RNG, and
-     * oscillation pre-trace seeds the bootstrap already applies - a single
-     * "load the save state at the BK2 start" write performed once before replay
-     * begins. It only seeds a character when the freshly-spawned engine state
-     * does not already match the recorded frame-0 row, so a cleanly reproducible
-     * entry (AIZ first-zone start, MGZ fall-in) is left entirely on the native
-     * drive path. When it does seed, it returns {@code true}; the caller then
-     * uses a {@code ReplayStartState(1, 0)} so frame 0 is compared directly
-     * against the seeded engine state and every later frame drives natively from
-     * the BK2 input stream. No recorded value is copied back into engine state
-     * during the per-frame comparison loop.
-     *
-     * <p>Runs after the fixture's build-time ground snap and after
-     * {@code applyStartPositionAndGroundSnap}, so it deliberately overrides the
-     * spawn ground attachment with the recorded airborne/rolling entry state.
-     *
-     * @return {@code true} when a frame-0 seed was applied (caller should
-     *         compare frame 0 directly and drive from frame 1)
-     */
-    public static boolean seedS3kCompleteRunStartState(TraceData trace,
-                                                        TraceReplayFixture fixture) {
-        if (fixture == null
-                || !TraceReplayBootstrap.isS3kCompleteRunSegment(trace)) {
-            return false;
-        }
-        TraceFrame frameZero = trace.getFrame(0);
-        AbstractPlayableSprite sprite = fixture.sprite();
-
-        // The player frame-0 is seeded and compared directly (no native first
-        // step) when the recorded entry is a mid-run handoff the engine cannot
-        // reproduce by a fresh spawn plus one physics tick. The distinguishing
-        // signal is the recorded frame-0 row, not the zone:
-        //   * a frozen pre-physics inter-zone handoff records air with
-        //     y_speed == 0 (the ROM sampled the row before its first LevelLoop
-        //     gravity tick during the handoff - CNZ, MHZ);
-        //   * a held mid-roll records rolling with carried object velocity
-        //     (ICZ);
-        //   * an entry that already has a recorded sidekick AND is either
-        //     holding input (so the leader moves frame 0 and the ROM CPU
-        //     sidekick lags one frame - HCZ) or is grounded at rest with the
-        //     sidekick still carrying its inter-zone follow offset (LBZ). In
-        //     those, a native first step would move the leader and re-anchor the
-        //     sidekick, desyncing both from the ROM's residual entry state.
-        // A clean first-zone start (AIZ - no recorded sidekick yet) and a pure
-        // vertical fall-in with no held input (MGZ - the native gravity tick
-        // reproduces y_speed == $38 and the CPU sidekick stays put) are left on
-        // the native drive path.
-        TraceCharacterState recordedSidekick = frameZero.sidekick();
-        // A genuine follower sits within a screen of the leader; the ROM parks
-        // an as-yet-unspawned sidekick at the off-screen sentinel
-        // x=$7F00 (e.g. the AIZ intro before Tails is placed), which must not be
-        // treated as a residual follow position.
-        boolean sidekickFollowing = recordedSidekick != null
-                && recordedSidekick.present()
-                && Math.abs(recordedSidekick.x() - frameZero.x()) < 0x100
-                && Math.abs(recordedSidekick.y() - frameZero.y()) < 0x100;
-        boolean frozenAirborneEntry = frameZero.air() && frameZero.ySpeed() == 0;
-        boolean heldRollEntry = frameZero.rolling();
-        boolean holdingInput = frameZero.input() != 0;
-        boolean residualSidekickEntry = sidekickFollowing
-                && (holdingInput || !frameZero.air());
-        boolean primaryNeedsSeed = sprite != null
-                && (frozenAirborneEntry || heldRollEntry || residualSidekickEntry);
-
-        if (primaryNeedsSeed) {
-            // Apply rolling/air first: setRolling swaps the collision radii and
-            // sprite height, which would otherwise shift the centre after a
-            // setCentreY call. Then set the ROM centre x_pos/y_pos + subpixel,
-            // and finally the recorded velocity.
-            sprite.setRolling(frameZero.rolling());
-            sprite.setAir(frameZero.air());
-            sprite.setCentreX(frameZero.x());
-            sprite.setCentreY(frameZero.y());
-            sprite.setSubpixelRaw(frameZero.xSub(), frameZero.ySub());
-            sprite.setXSpeed(frameZero.xSpeed());
-            sprite.setYSpeed(frameZero.ySpeed());
-            sprite.setGSpeed(frameZero.gSpeed());
-            sprite.setAngle(frameZero.angle());
-            // Seed Camera_X/Y_pos from the recorded frame-0 row. For a mid-run
-            // inter-zone handoff the ROM camera still holds the position it
-            // carried in from the previous zone (it has not re-centred on the
-            // freshly spawned player yet), so a fresh-load re-centre diverges
-            // (e.g. MHZ frame-0 camera_x). cameraX/cameraY are -1 when the row
-            // did not capture them, in which case fall back to a native re-snap.
-            var camera = GameServices.cameraOrNull();
-            if (camera != null) {
-                if (frameZero.cameraX() >= 0 && frameZero.cameraY() >= 0) {
-                    camera.setX((short) frameZero.cameraX());
-                    camera.setY((short) frameZero.cameraY());
-                } else {
-                    camera.updatePosition(true);
-                }
-            }
-        }
-        // Seed the recorded frame-0 sidekick (Tails) state. At a mid-run zone
-        // entry the ROM CPU Tails still holds the follow position the previous
-        // zone left it in (e.g. HCZ carries Tails one frame behind Sonic; LBZ
-        // keeps the +4 spawn offset because the CPU follower has not run its
-        // first ground check yet, docs/skdisasm/sonic3k.asm:8364-8367 +
-        // Tails_CPU). A freshly spawned engine sidekick re-anchors to the
-        // leader and so misses these few-pixel residuals. The seed is one-time
-        // and applies whether or not the player itself was seeded.
-        // Seed the sidekick when the player frame-0 is compared directly (then
-        // the recorded sidekick state - following or still parked at the
-        // off-screen sentinel during a snowboard/scripted intro - is the value
-        // compared, so it must be reproduced), or when a native-drive zone
-        // carries a genuine residual follower the first step would re-anchor.
-        AbstractPlayableSprite sidekick = firstSidekickOrNull(fixture);
-        if (sidekick != null
-                && recordedSidekick != null
-                && recordedSidekick.present()
-                && (primaryNeedsSeed || sidekickFollowing)) {
-            sidekick.setRolling(recordedSidekick.rolling());
-            sidekick.setAir(recordedSidekick.air());
-            sidekick.setCentreX(recordedSidekick.x());
-            sidekick.setCentreY(recordedSidekick.y());
-            sidekick.setSubpixelRaw(recordedSidekick.xSub(), recordedSidekick.ySub());
-            sidekick.setXSpeed(recordedSidekick.xSpeed());
-            sidekick.setYSpeed(recordedSidekick.ySpeed());
-            sidekick.setGSpeed(recordedSidekick.gSpeed());
-            sidekick.setAngle(recordedSidekick.angle());
-        }
-        // The return value (compare frame 0 directly, drive from frame 1) is
-        // governed solely by whether the player needed a seed. Native-player
-        // zones (AIZ/MGZ/HCZ/LBZ) keep their stepped frame-0 comparison; their
-        // seeded sidekick is held in place for that single step via the pin.
-        return primaryNeedsSeed;
-    }
-
-    private static AbstractPlayableSprite firstSidekickOrNull(TraceReplayFixture fixture) {
-        var gameplayMode = fixture.gameplayMode();
-        if (gameplayMode == null
-                || gameplayMode.getSpriteManager() == null
-                || gameplayMode.getSpriteManager().getSidekicks().isEmpty()) {
-            return null;
-        }
-        return gameplayMode.getSpriteManager().getSidekicks().getFirst();
     }
 
     /**

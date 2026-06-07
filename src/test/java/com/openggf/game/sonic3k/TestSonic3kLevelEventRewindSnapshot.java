@@ -7,6 +7,15 @@ import com.openggf.game.rewind.snapshot.LevelEventSnapshot;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.features.HCZWaterSkimHandler;
+import com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceState;
+import com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance;
+import com.openggf.game.sonic3k.objects.CutsceneKnucklesCnz2AInstance;
+import com.openggf.game.sonic3k.objects.CutsceneKnucklesCnz2BInstance;
+import com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance;
+import com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance;
+import com.openggf.game.sonic3k.objects.S3kSignpostInstance;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.Sonic;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -240,6 +249,94 @@ class TestSonic3kLevelEventRewindSnapshot {
     }
 
     @Test
+    void resetStateClearsPostTransitionHandoffState() throws Exception {
+        Sonic3kLevelEventManager mgr = new Sonic3kLevelEventManager();
+        mgr.initLevel(Sonic3kZoneIds.ZONE_CNZ, 1);
+
+        mgr.requestHczPostTransitionCutscene();
+        mgr.requestMgzPostTransitionRelease();
+        mgr.requestCnzPostTransitionRelease(12);
+        set(mgr, "cnzPostTransitionAct2SizeActive", true);
+        set(mgr, "cnzAct2MinXAccumulator", 1);
+        set(mgr, "cnzAct2MaxXAccumulator", 2);
+        set(mgr, "cnzAct2MinYAccumulator", 3);
+        set(mgr, "cnzAct2MaxYAccumulator", 4);
+
+        mgr.resetState();
+
+        assertFalse((boolean) get(mgr, "hczPendingPostTransitionCutscene"));
+        assertFalse((boolean) get(mgr, "mgzPendingPostTransitionRelease"));
+        assertEquals(0, get(mgr, "cnzPendingPostTransitionReleaseFrames"));
+        assertEquals(0, get(mgr, "cnzPendingPostTransitionAct2SizeFrames"));
+        assertFalse((boolean) get(mgr, "cnzPostTransitionAct2SizeActive"));
+        assertEquals(0, get(mgr, "cnzAct2MinXAccumulator"));
+        assertEquals(0, get(mgr, "cnzAct2MaxXAccumulator"));
+        assertEquals(0, get(mgr, "cnzAct2MinYAccumulator"));
+        assertEquals(0, get(mgr, "cnzAct2MaxYAccumulator"));
+    }
+
+    @Test
+    void resetStateClearsAiz2BossEndSequenceGlobals() {
+        Sonic3kLevelEventManager mgr = new Sonic3kLevelEventManager();
+        mgr.initLevel(Sonic3kZoneIds.ZONE_AIZ, 1);
+
+        Aiz2BossEndSequenceState.triggerBridgeDrop();
+        Aiz2BossEndSequenceState.pressButton();
+        Aiz2BossEndSequenceState.releaseEggCapsule();
+        Aiz2BossEndSequenceState.activateCutsceneOverrideObjects();
+
+        mgr.resetState();
+
+        assertFalse(Aiz2BossEndSequenceState.isBridgeDropTriggered());
+        assertFalse(Aiz2BossEndSequenceState.isButtonPressed());
+        assertFalse(Aiz2BossEndSequenceState.isEggCapsuleReleased());
+        assertFalse(Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive());
+        assertNull(Aiz2BossEndSequenceState.getActiveKnuckles());
+    }
+
+    @Test
+    void resetStateClearsAizDrawBridgeBurnTrigger() throws Exception {
+        Sonic3kLevelEventManager mgr = new Sonic3kLevelEventManager();
+        mgr.initLevel(Sonic3kZoneIds.ZONE_AIZ, 1);
+
+        AizCollapsingLogBridgeObjectInstance.setDrawBridgeBurnActive(true);
+
+        mgr.resetState();
+
+        assertFalse((boolean) getStatic(AizCollapsingLogBridgeObjectInstance.class, "drawBridgeBurnActive"));
+    }
+
+    @Test
+    void resetStateClearsStaticCutsceneSignpostAndHczWaterRefs() throws Exception {
+        Sonic3kLevelEventManager mgr = new Sonic3kLevelEventManager();
+        mgr.initLevel(Sonic3kZoneIds.ZONE_HCZ, 1);
+
+        setStatic(CutsceneKnucklesCnz2AInstance.class, "activeInstance",
+                new CutsceneKnucklesCnz2AInstance(new ObjectSpawn(0, 0, 0, 0, 0, false, 0)));
+        setStatic(CutsceneKnucklesCnz2BInstance.class, "activeInstance",
+                new CutsceneKnucklesCnz2BInstance(new ObjectSpawn(0, 0, 0, 0, 0, false, 0)));
+        setStatic(Mhz1CutsceneKnucklesInstance.class, "activeInstance",
+                new Mhz1CutsceneKnucklesInstance(new ObjectSpawn(0, 0, 0, 0, 0, false, 0)));
+        setStatic(S3kSignpostInstance.class, "activeSignpost",
+                new S3kSignpostInstance(0, 0));
+        HCZWaterRushObjectInstance.HCZBreakableBarState.setState(3);
+        HCZWaterRushObjectInstance.HCZWaterRushPaletteCycleGate.setActive(true);
+        setStatic(HCZWaterSkimHandler.class, "skimActiveP1", true);
+        setStatic(HCZWaterSkimHandler.class, "skimActiveP2", true);
+
+        mgr.resetState();
+
+        assertNull(getStatic(CutsceneKnucklesCnz2AInstance.class, "activeInstance"));
+        assertNull(getStatic(CutsceneKnucklesCnz2BInstance.class, "activeInstance"));
+        assertNull(getStatic(Mhz1CutsceneKnucklesInstance.class, "activeInstance"));
+        assertNull(getStatic(S3kSignpostInstance.class, "activeSignpost"));
+        assertEquals(0, HCZWaterRushObjectInstance.HCZBreakableBarState.getState());
+        assertFalse(HCZWaterRushObjectInstance.HCZWaterRushPaletteCycleGate.isActive());
+        assertFalse(HCZWaterSkimHandler.isSkimActiveP1());
+        assertFalse(HCZWaterSkimHandler.isSkimActiveP2());
+    }
+
+    @Test
     void handlerAbsentDoesNotCorruptBuffer() {
         // Snapshot in AIZ, restore in HCZ — AIZ handler present but hczEvents null.
         Sonic3kLevelEventManager mgr = new Sonic3kLevelEventManager();
@@ -350,5 +447,17 @@ class TestSonic3kLevelEventRewindSnapshot {
         Field field = target.getClass().getDeclaredField(name);
         field.setAccessible(true);
         return field.get(target);
+    }
+
+    private static Object getStatic(Class<?> type, String name) throws Exception {
+        Field field = type.getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(null);
+    }
+
+    private static void setStatic(Class<?> type, String name, Object value) throws Exception {
+        Field field = type.getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(null, value);
     }
 }

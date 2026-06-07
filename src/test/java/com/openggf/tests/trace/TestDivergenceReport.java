@@ -224,6 +224,54 @@ public class TestDivergenceReport {
         assertFalse(context.contains("Latest checkpoint:"));
     }
 
+    @Test
+    void testBootstrapErrorCountsAsReportError() {
+        BootstrapDivergence bootstrapError = new BootstrapDivergence(
+                "player_history.x[12]",
+                BootstrapDivergence.Severity.ERROR,
+                "0x1234",
+                "0x1200",
+                "history ring mismatch");
+
+        DivergenceReport report = new DivergenceReport(
+                List.of(),
+                null,
+                List.of(bootstrapError));
+
+        assertTrue(report.hasErrors());
+        assertFalse(report.hasWarnings());
+        assertTrue(report.errors().isEmpty());
+        assertTrue(report.toSummary().contains("1 bootstrap error"));
+        assertTrue(report.toSummary().contains("frame 0"));
+        assertTrue(report.toSummary().contains("player_history.x[12]"));
+        assertTrue(report.toJson().contains("\"error_count\" : 1"));
+        assertTrue(report.toJson().contains("\"warning_count\" : 0"));
+    }
+
+    @Test
+    void testBootstrapWarningCountsAsReportWarning() {
+        BootstrapDivergence bootstrapWarning = new BootstrapDivergence(
+                "object_slot[5]",
+                BootstrapDivergence.Severity.WARNING,
+                "present",
+                "unavailable",
+                "snapshot field not captured");
+
+        DivergenceReport report = new DivergenceReport(
+                List.of(),
+                null,
+                List.of(bootstrapWarning));
+
+        assertFalse(report.hasErrors());
+        assertTrue(report.hasWarnings());
+        assertTrue(report.warnings().isEmpty());
+        assertTrue(report.toSummary().contains("1 bootstrap warning"));
+        assertTrue(report.toSummary().contains("frame 0"));
+        assertTrue(report.toSummary().contains("object_slot[5]"));
+        assertTrue(report.toJson().contains("\"error_count\" : 0"));
+        assertTrue(report.toJson().contains("\"warning_count\" : 1"));
+    }
+
     private FrameComparison makeComparison(int frame, String field,
             Severity severity, String expected, String actual) {
         Map<String, FieldComparison> fields = new LinkedHashMap<>();

@@ -1,8 +1,12 @@
 package com.openggf.game.session;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.BonusStageProvider;
+import com.openggf.game.BonusStageState;
+import com.openggf.game.BonusStageType;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.NoOpBonusStageProvider;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
@@ -100,6 +104,19 @@ class TestGameplayModeContextRewindRegistry {
     }
 
     @Test
+    void tearDownClearsActiveBonusStageProvider() {
+        GameplayModeContext ctx = buildAttachedContext();
+        BonusStageProvider provider = new StubBonusStageProvider();
+        ctx.setActiveBonusStageProvider(provider);
+        assertSame(provider, ctx.getActiveBonusStageProvider());
+
+        ctx.tearDownManagers();
+
+        assertSame(NoOpBonusStageProvider.INSTANCE, ctx.getActiveBonusStageProvider(),
+                "A torn-down gameplay context must not retain a session-scoped bonus stage provider");
+    }
+
+    @Test
     void reattachRebuildsRegistry() {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry first = ctx.getRewindRegistry();
@@ -119,5 +136,58 @@ class TestGameplayModeContextRewindRegistry {
         assertNotSame(first, second, "Re-attach should produce a new RewindRegistry instance");
         // New registry should have the same 7 keys
         assertEquals(7, second.capture().entries().keySet().size());
+    }
+
+    private static final class StubBonusStageProvider implements BonusStageProvider {
+        @Override
+        public boolean hasBonusStages() {
+            return true;
+        }
+
+        @Override
+        public BonusStageType selectBonusStage(int ringCount) {
+            return BonusStageType.SLOT_MACHINE;
+        }
+
+        @Override
+        public void onEnter(BonusStageType type, BonusStageState savedState) {
+        }
+
+        @Override
+        public void onExit() {
+        }
+
+        @Override
+        public void onFrameUpdate() {
+        }
+
+        @Override
+        public boolean isStageComplete() {
+            return false;
+        }
+
+        @Override
+        public void requestExit() {
+        }
+
+        @Override
+        public BonusStageRewards getRewards() {
+            return BonusStageRewards.none();
+        }
+
+        @Override
+        public int getZoneId(BonusStageType type) {
+            return -1;
+        }
+
+        @Override
+        public int getMusicId(BonusStageType type) {
+            return -1;
+        }
+
+        @Override
+        public BonusStageState getSavedState() {
+            return null;
+        }
     }
 }

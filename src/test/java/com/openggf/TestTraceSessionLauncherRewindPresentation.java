@@ -31,6 +31,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
@@ -93,6 +94,29 @@ class TestTraceSessionLauncherRewindPresentation {
 
         assertFalse(fadeManager.isReversePresentationActive());
         assertTrue(backend.calls.contains("endReversePresentation"));
+    }
+
+    @Test
+    void traceBoundaryExternalFrameRerootsRewindBuffer() throws Exception {
+        TraceSessionLauncher launcher = newLauncher();
+        RewindController rewindController = new RewindController(
+                new RewindRegistry(),
+                new InMemoryKeyframeStore(),
+                new FakeInputSource(20),
+                in -> {},
+                3,
+                AudioManager.getInstance());
+        for (int i = 0; i < 5; i++) {
+            rewindController.recordExternalStep();
+        }
+        setField(launcher, "rewindController", rewindController);
+
+        launcher.recordExternalRewindFrameAtBoundary();
+
+        assertEquals(6, rewindController.currentFrame());
+        assertEquals(6, rewindController.earliestAvailableFrame());
+        assertFalse(rewindController.stepBackward(),
+                "Trace rewind must not cross a seamless transition boundary");
     }
 
     private static TraceSessionLauncher newLauncher() throws Exception {

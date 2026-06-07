@@ -1,5 +1,20 @@
 # Trace Frontier Log
 
+## 2026-06-07 - release-readiness trace bootstrap cleanup
+
+- Branch: `bugfix/ai-release-readiness-issues`.
+- Removed the one-time S3K complete-run frame-0 seed path from
+  `TraceReplaySessionBootstrap` / `TraceReplayBootstrap`. The removed path
+  copied recorded player, camera, and sidekick frame-0 state into the engine
+  before replay comparison; this branch restores the comparison-only invariant
+  and lets those complete-run segments fail at their native bootstrap/frontier
+  until the underlying ROM state is modelled by engine systems.
+- Tightened `TestTraceReplayInvariantGuard` so replay parity tests cannot use
+  `RingCountMode.WARN_ONLY`; ring-count mismatches now remain release-blocking
+  errors outside `TraceBinder` unit coverage.
+- Verification:
+  `mvn "-Dtest=com.openggf.tests.TestTraceReplayInvariantGuard" test` -> PASS.
+
 ## 2026-06-06 - s1 ghz1 complete f1390->f1394 and mz1 level-select f3192->f6210: object spawn/touch ordering cherry-picked into develop
 
 - Branch/worktree: `develop`, worktree `.worktrees/develop-s1-trace-merge`.

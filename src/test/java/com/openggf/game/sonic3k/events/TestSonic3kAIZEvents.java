@@ -9,6 +9,7 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameServices;
+import com.openggf.game.SidekickSpawnOffset;
 import com.openggf.game.save.SaveSessionContext;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.session.GameplayModeContext;
@@ -219,6 +220,11 @@ public class TestSonic3kAIZEvents {
         assertFalse(sidekicks.isEmpty(), "AIZ Sonic+Tails intro should spawn Player_2 before first frame");
         AbstractPlayableSprite tails = sidekicks.get(0);
 
+        assertEquals(0x7F00, tails.getCentreX() & 0xFFFF,
+                "AIZ intro bootstrap must park Tails before the first drawable gameplay frame");
+        assertEquals(0, tails.getCentreY() & 0xFFFF);
+        assertTrue(tails.getAir());
+
         fixture.stepFrame(false, false, false, false, false);
 
         assertEquals(0, sonic.getYSpeed() & 0xFFFF,
@@ -227,6 +233,27 @@ public class TestSonic3kAIZEvents {
                 "Obj_AIZPlaneIntro routine 0 should keep Sonic grounded for the first strict frame compare");
         assertEquals(0x7F00, tails.getCentreX() & 0xFFFF,
                 "Tails_CPU_Control loc_13A10 parks AIZ intro Tails on the first object tick");
+        assertEquals(0, tails.getCentreY() & 0xFFFF);
+        assertTrue(tails.getAir());
+    }
+
+    @Test
+    public void introSidekickDormantMarkerSurvivesProductionSidekickSpawnStep() {
+        Sonic3kLevelEventManager manager =
+                (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+
+        // Production order (Sonic3kLevelInitProfile):
+        manager.initLevel(0, 0);                                           // step: initLevelEvents
+        SidekickSpawnOffset offset = GameServices.module().getLevelInitProfile().sidekickSpawnOffset();
+        GameServices.level().spawnSidekicks(offset.xOffset(), offset.yOffset()); // step: spawnSidekick
+        manager.applyZonePlayerState();                                    // step: initZonePlayerState
+
+        List<AbstractPlayableSprite> sidekicks = GameServices.sprites().getRegisteredSidekicks();
+        assertFalse(sidekicks.isEmpty(), "AIZ Sonic+Tails intro should keep Player_2 registered");
+        AbstractPlayableSprite tails = sidekicks.get(0);
+
+        assertEquals(0x7F00, tails.getCentreX() & 0xFFFF,
+                "AIZ intro post-spawn state must park Tails before the first drawable gameplay frame");
         assertEquals(0, tails.getCentreY() & 0xFFFF);
         assertTrue(tails.getAir());
     }

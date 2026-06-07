@@ -892,7 +892,7 @@ public class GameLoop {
             playbackDebugManager.onLevelFrameAdvanced();
             TraceSessionLauncher traceSession = TraceSessionLauncher.active();
             if (traceSession != null) {
-                traceSession.recordExternalRewindFrame();
+                traceSession.recordExternalRewindFrameAtBoundary();
             } else {
                 liveRewindManager.resetBufferAtCurrentFrame(currentGameMode);
             }

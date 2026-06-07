@@ -280,6 +280,18 @@ public final class TraceSessionLauncher {
         rewindController.recordExternalStep();
     }
 
+    /**
+     * Records a transition-only replay frame, then reroots trace rewind so
+     * realtime rewind cannot cross the just-applied level boundary.
+     */
+    public void recordExternalRewindFrameAtBoundary() {
+        if (realtimeRewinding || rewindController == null || fadeStarted) {
+            return;
+        }
+        rewindController.recordExternalStep();
+        rewindController.resetBufferAtCurrentFrame();
+    }
+
     /** Called when Esc is pressed during a LEVEL tick. */
     public void requestEarlyExit() {
         if (comparator == null || fadeStarted) {

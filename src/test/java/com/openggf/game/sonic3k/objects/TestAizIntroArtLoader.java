@@ -11,7 +11,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
+
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
@@ -41,6 +44,19 @@ public class TestAizIntroArtLoader {
         PatternSpriteRenderer renderer = AizIntroArtLoader.getPlaneRenderer(services);
         assertNotNull(renderer);
         assertTrue(renderer.isReady());
+    }
+
+    @Test
+    public void resetClearsActiveObjectServicesReference() throws Exception {
+        DefaultObjectServices services = TestEnvironment.objectServices();
+        Field activeServices = AizIntroArtLoader.class.getDeclaredField("activeServices");
+        activeServices.setAccessible(true);
+        activeServices.set(null, services);
+
+        AizIntroArtLoader.reset();
+
+        assertNull(activeServices.get(null),
+                "reset must not retain a gameplay-scoped ObjectServices reference");
     }
 }
 

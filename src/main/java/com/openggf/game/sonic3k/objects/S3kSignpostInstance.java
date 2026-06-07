@@ -39,6 +39,10 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
         return activeSignpost;
     }
 
+    public static void clearActiveSignpost() {
+        activeSignpost = null;
+    }
+
     // ---- State machine ----
     private enum State { INIT, FALLING, LANDED, RESULTS, AFTER }
 

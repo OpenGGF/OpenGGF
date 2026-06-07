@@ -254,9 +254,8 @@ public abstract class AbstractTraceReplayTest {
 
             // 9. Assert no errors
             if (report.hasErrors()) {
-                DivergenceGroup firstError = report.errors().get(0);
                 System.err.println("\n=== Context window around first error ===");
-                System.err.println(report.getContextWindow(firstError.startFrame(), 10));
+                System.err.println(report.getContextWindow(firstReportErrorFrame(report), 10));
                 fail(report.toSummary());
             }
         } finally {
@@ -954,14 +953,20 @@ public abstract class AbstractTraceReplayTest {
             Files.writeString(jsonPath, report.toJson());
 
             if (report.hasErrors()) {
-                DivergenceGroup firstError = report.errors().get(0);
                 Path contextPath = outDir.resolve(prefix + "_context.txt");
                 int contextRadius = Integer.getInteger("trace.context.radius", 20);
                 Files.writeString(contextPath,
-                    report.getContextWindow(firstError.startFrame(), contextRadius));
+                    report.getContextWindow(firstReportErrorFrame(report), contextRadius));
             }
         } catch (IOException e) {
             System.err.println("Warning: failed to write report: " + e.getMessage());
         }
+    }
+
+    private static int firstReportErrorFrame(DivergenceReport report) {
+        if (!report.errors().isEmpty()) {
+            return report.errors().get(0).startFrame();
+        }
+        return 0;
     }
 }

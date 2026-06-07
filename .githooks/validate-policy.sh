@@ -4,6 +4,7 @@ set -eu
 
 GITHUB_FILE_SIZE_LIMIT_BYTES=100000000
 TRACE_COMPRESSION_THRESHOLD_BYTES=1048576
+RELEASE_TRAILER_CUTOVER_BASE=677447024a08db9e25f3461588d661c23ba26848
 
 die() {
     echo "policy: $*" >&2
@@ -50,6 +51,29 @@ staged_blob_size() {
 
 commit_blob_size() {
     git cat-file -s "$1:$2" 2>/dev/null || true
+}
+
+effective_base_for_ci_pr() {
+    base_sha=$1
+    head_sha=$2
+    base_ref=$3
+
+    if [ "$base_ref" != "master" ]; then
+        printf '%s\n' "$base_sha"
+        return 0
+    fi
+    if [ -z "$RELEASE_TRAILER_CUTOVER_BASE" ]; then
+        printf '%s\n' "$base_sha"
+        return 0
+    fi
+    if ! git merge-base --is-ancestor "$RELEASE_TRAILER_CUTOVER_BASE" "$head_sha"; then
+        die "release trailer cutover baseline $RELEASE_TRAILER_CUTOVER_BASE is not reachable from PR head $head_sha."
+    fi
+    if git merge-base --is-ancestor "$base_sha" "$RELEASE_TRAILER_CUTOVER_BASE"; then
+        printf '%s\n' "$RELEASE_TRAILER_CUTOVER_BASE"
+        return 0
+    fi
+    printf '%s\n' "$base_sha"
 }
 
 has_exact() {
@@ -161,7 +185,7 @@ validate_file_size_policy() {
         fi
 
         case "$path" in
-            */aux_state*.jsonl|*/physics*.csv)
+            aux_state*.jsonl|physics*.csv|*/aux_state*.jsonl|*/physics*.csv)
                 if [ "$size" -ge "$TRACE_COMPRESSION_THRESHOLD_BYTES" ]; then
                     append_error "\`$path\` is an uncompressed trace payload (${size} bytes). Run \`tools/traces/compress-traces.ps1\` and commit the \`.gz\` file instead."
                 fi
@@ -483,7 +507,8 @@ validate_ci_pr() {
         return 0
     fi
 
-    range_files=$(git diff --name-only --diff-filter=ACMR "$base_sha...$head_sha")
+    effective_base=$(effective_base_for_ci_pr "$base_sha" "$head_sha" "$base_ref")
+    range_files=$(git diff --name-only --diff-filter=ACMR "$effective_base...$head_sha")
 
     if [ "$base_ref" = "develop" ]; then
         if [ "$head_ref" != "master" ] && ! has_exact "$range_files" "README.md"; then
@@ -495,7 +520,7 @@ validate_ci_pr() {
         fi
     fi
 
-    for commit in $(git rev-list --reverse --no-merges "$base_sha..$head_sha"); do
+    for commit in $(git rev-list --reverse --no-merges "$effective_base..$head_sha"); do
         message=$(git show -s --format=%B "$commit")
         files=$(commit_files "$commit")
         ERRORS=""

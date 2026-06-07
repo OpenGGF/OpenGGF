@@ -38,18 +38,92 @@ class TestBuildToolingGuard {
                     + ".*\\b(?:current|previous|firstFrame|expected|traceFrame|frame)\\s*\\.\\s*"
                     + "(?:x|y|xSpeed|ySpeed|gSpeed|angle|air|rolling|xSub|ySub)\\s*\\(");
     private static final Set<String> ACCEPTED_TRACE_BOOTSTRAP_POLICY_SIGNALS = Set.of(
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:336 - if (!meta.hasPerFrameSlotMachineState()) {",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:498 - && \"level_gated_reset_aware\".equals(metadata.traceProfile())",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:529 - && current.frame() < findFirstLevelGameplayFrame(trace)) {",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:543 - if (current.frame() < firstLevelFrame) {",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:553 - if (current.frame() == firstLevelFrame) {",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:655 - int gameplayStartFrame = findCheckpointFrame(trace, \"gameplay_start\");",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:656 - return gameplayStartFrame >= 0 && current.frame() <= gameplayStartFrame;",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:676 - || !\"complete_run\".equals(metadata.traceProfile())",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:757 - if (metadata.zoneId() == null || metadata.zoneId() != 0 || metadata.act() != 1) {",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:763 - .anyMatch(checkpoint -> \"intro_begin\".equals(checkpoint.name()));",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:767 - private static int findCheckpointFrame(TraceData trace, String checkpointName) {",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:771 - && checkpointName.equals(checkpoint.name())) {");
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - if (!meta.hasPerFrameSlotMachineState()) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - && \"level_gated_reset_aware\".equals(metadata.traceProfile())",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - && current.frame() < findFirstLevelGameplayFrame(trace)) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - if (current.frame() < firstLevelFrame) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - if (current.frame() == firstLevelFrame) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - int gameplayStartFrame = findCheckpointFrame(trace, \"gameplay_start\");",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - return gameplayStartFrame >= 0 && current.frame() <= gameplayStartFrame;",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - || !\"complete_run\".equals(metadata.traceProfile())",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - if (metadata.zoneId() == null || metadata.zoneId() != 0 || metadata.act() != 1) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - .anyMatch(checkpoint -> \"intro_begin\".equals(checkpoint.name()));",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - private static int findCheckpointFrame(TraceData trace, String checkpointName) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - && checkpointName.equals(checkpoint.name())) {");
+    private static final Set<String> REVIEWED_S3K_STATIC_SESSION_STATE = Set.of(
+            "src/main/java/com/openggf/game/sonic3k/events/S3kSeamlessMutationExecutor.java - private static volatile AizFireOverlayData cachedAizFireOverlay;",
+            "src/main/java/com/openggf/game/sonic3k/events/Sonic3kAIZEvents.java - private static volatile PendingFireSequence pendingFireSequence;",
+            "src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static boolean skimActiveP1;",
+            "src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static boolean skimActiveP2;",
+            "src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static int splashAnimFrameP1;",
+            "src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static int splashAnimFrameP2;",
+            "src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static int splashAnimTimerP1;",
+            "src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static int splashAnimTimerP2;",
+            "src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static int frameCounter;",
+            "src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static PatternSpriteRenderer splashRenderer;",
+            "src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static boolean artLoaded;",
+            "src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static int actId;",
+            "src/main/java/com/openggf/game/sonic3k/features/HCZWaterTunnelHandler.java - private static boolean windTunnelFlagP1;",
+            "src/main/java/com/openggf/game/sonic3k/features/HCZWaterTunnelHandler.java - private static boolean windTunnelFlagP2;",
+            "src/main/java/com/openggf/game/sonic3k/features/HCZWaterTunnelHandler.java - private static int activeTunnelInfluenceP1;",
+            "src/main/java/com/openggf/game/sonic3k/features/HCZWaterTunnelHandler.java - private static int activeTunnelInfluenceP2;",
+            "src/main/java/com/openggf/game/sonic3k/features/HCZWaterTunnelHandler.java - private static int exitAnimTimerP1;",
+            "src/main/java/com/openggf/game/sonic3k/features/HCZWaterTunnelHandler.java - private static int exitAnimTimerP2;",
+            "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile boolean bridgeDropTriggered;",
+            "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile boolean buttonPressed;",
+            "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile boolean eggCapsuleReleased;",
+            "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile boolean cutsceneOverrideObjectsActive;",
+            "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile CutsceneKnucklesAiz2Instance activeKnuckles;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizCollapsingLogBridgeObjectInstance.java - private static volatile boolean drawBridgeBurnActive;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizHollowTreeObjectInstance.java - private static int eventsFg4;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static Pattern[] planePatterns;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static Pattern[] emeraldPatterns;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static Pattern[] introSpritesPatterns;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static Pattern[] knucklesPatterns;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static Pattern[] corkFloorPatterns;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static List<SpriteMappingFrame> planeMappings;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static List<SpriteMappingFrame> emeraldMappings;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static List<SpriteMappingFrame> waveMappings;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static List<SpriteMappingFrame> knucklesMappings;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static List<SpriteMappingFrame> corkFloorMappings;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static List<SpriteDplcFrame> knucklesDplcFrames;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static byte[] superSonicPaletteCycleData;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static byte[] cutsceneKnucklesPalette;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static byte[] emeraldPalette;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static ObjectSpriteSheet planeSheet;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static ObjectSpriteSheet emeraldSheet;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static ObjectSpriteSheet introSpritesSheet;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static ObjectSpriteSheet knucklesSheet;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static ObjectSpriteSheet corkFloorSheet;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static boolean loaded = false;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static ObjectServices activeServices;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static PatternSpriteRenderer planeRenderer;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static PatternSpriteRenderer emeraldRenderer;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static PatternSpriteRenderer introSpritesRenderer;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static PatternSpriteRenderer knucklesRenderer;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static PatternSpriteRenderer corkFloorRenderer;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroArtLoader.java - private static boolean renderersCached;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizIntroTerrainSwap.java - private static OverlayData cachedOverlayData;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java - private static int introScrollOffset = 0;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java - private static boolean mainLevelPhaseActive = false;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java - private static boolean mainLevelTerrainSwapAttempted = false;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java - private static int decompressionCountdown = 0;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java - private static AizPlaneIntroInstance activeIntroInstance;",
+            "src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java - private static boolean simulateDecompressionLoading = true;",
+            "src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesCnz2AInstance.java - private static volatile CutsceneKnucklesCnz2AInstance activeInstance;",
+            "src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesCnz2BInstance.java - private static volatile CutsceneKnucklesCnz2BInstance activeInstance;",
+            "src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesHcz2Instance.java - private static volatile CutsceneKnucklesHcz2Instance activeInstance;",
+            "src/main/java/com/openggf/game/sonic3k/objects/GumballMachineObjectInstance.java - private static volatile int debugBucketFilter = -1;",
+            "src/main/java/com/openggf/game/sonic3k/objects/GumballMachineObjectInstance.java - private static volatile int debugSourceFilter = -1;",
+            "src/main/java/com/openggf/game/sonic3k/objects/GumballMachineObjectInstance.java - private static GumballMachineObjectInstance currentInstance;",
+            "src/main/java/com/openggf/game/sonic3k/objects/HCZWaterRushObjectInstance.java - private static int state;",
+            "src/main/java/com/openggf/game/sonic3k/objects/HCZWaterRushObjectInstance.java - private static boolean active;",
+            "src/main/java/com/openggf/game/sonic3k/objects/IczSnowboardArtLoader.java - private static PatternSpriteRenderer sonicRenderer;",
+            "src/main/java/com/openggf/game/sonic3k/objects/IczSnowboardArtLoader.java - private static PatternSpriteRenderer snowboardRenderer;",
+            "src/main/java/com/openggf/game/sonic3k/objects/IczSnowboardArtLoader.java - private static PatternSpriteRenderer dustRenderer;",
+            "src/main/java/com/openggf/game/sonic3k/objects/IczSnowboardArtLoader.java - private static boolean loaded;",
+            "src/main/java/com/openggf/game/sonic3k/objects/Mhz1CutsceneKnucklesInstance.java - private static volatile Mhz1CutsceneKnucklesInstance activeInstance;",
+            "src/main/java/com/openggf/game/sonic3k/objects/S3kSignpostInstance.java - private static S3kSignpostInstance activeSignpost;");
 
     @Test
     void surefireShouldPreloadMockitoAsJavaAgent() throws Exception {
@@ -198,6 +272,71 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void releaseWorkflowShouldRequireRomPathsForTraceReplay() throws Exception {
+        String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
+        List<String> violations = new ArrayList<>();
+
+        if (!workflow.contains("Verify trace replay ROM paths")) {
+            violations.add(".github/workflows/release.yml does not fail early when release trace ROM paths are missing");
+        }
+        if (!workflow.contains("SONIC1_ROM_PATH")) {
+            violations.add(".github/workflows/release.yml does not expose a Sonic 1 ROM path for trace replay");
+        }
+        if (!workflow.contains("SONIC2_ROM_PATH")) {
+            violations.add(".github/workflows/release.yml does not expose a Sonic 2 ROM path for trace replay");
+        }
+        if (!workflow.contains("S3K_ROM_PATH")) {
+            violations.add(".github/workflows/release.yml does not expose an S3K ROM path for trace replay");
+        }
+        if (!workflow.contains("-Dsonic1.rom.path=\"${SONIC1_ROM_PATH}\"")) {
+            violations.add(".github/workflows/release.yml does not pass the Sonic 1 ROM path into Maven");
+        }
+        if (!workflow.contains("-Dsonic2.rom.path=\"${SONIC2_ROM_PATH}\"")) {
+            violations.add(".github/workflows/release.yml does not pass the Sonic 2 ROM path into Maven");
+        }
+        if (!workflow.contains("-Ds3k.rom.path=\"${S3K_ROM_PATH}\"")) {
+            violations.add(".github/workflows/release.yml does not pass the S3K ROM path into Maven");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("release trace replay validation must require explicit ROM-backed inputs:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void releaseWorkflowShouldRunBroadTestsWithRomFixturesAfterPathVerification() throws Exception {
+        String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
+        List<String> violations = new ArrayList<>();
+
+        if (!normalizeLineEndings(workflow).contains("test:\n    runs-on: [self-hosted, release-fixtures]")) {
+            violations.add(".github/workflows/release.yml test job must run on the self-hosted release fixture runner");
+        }
+        int verifyIndex = workflow.indexOf("Verify trace replay ROM paths");
+        int broadTestIndex = workflow.indexOf("Run tests");
+        if (verifyIndex < 0 || broadTestIndex < 0 || verifyIndex > broadTestIndex) {
+            violations.add(".github/workflows/release.yml must verify ROM paths before the broad test suite");
+        }
+        if (!workflow.contains("mvn -Dmse=off test -B")) {
+            violations.add(".github/workflows/release.yml broad test run must disable Maven Silent Extension");
+        }
+        if (!workflow.contains("-Dsonic1.rom.path=\"${SONIC1_ROM_PATH}\"")) {
+            violations.add(".github/workflows/release.yml broad test run must receive the Sonic 1 ROM path");
+        }
+        if (!workflow.contains("-Dsonic2.rom.path=\"${SONIC2_ROM_PATH}\"")) {
+            violations.add(".github/workflows/release.yml broad test run must receive the Sonic 2 ROM path");
+        }
+        if (!workflow.contains("-Ds3k.rom.path=\"${S3K_ROM_PATH}\"")) {
+            violations.add(".github/workflows/release.yml broad test run must receive the S3K ROM path");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("release validation must run default tests against the same verified ROM fixtures:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
     void releaseWorkflowShouldAssertTraceReplayCoverageWasNotSkipped() throws Exception {
         String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
         List<String> violations = new ArrayList<>();
@@ -205,11 +344,23 @@ class TestBuildToolingGuard {
         if (!workflow.contains("Assert trace replay coverage")) {
             violations.add(".github/workflows/release.yml does not assert trace replay coverage after running the profile");
         }
-        if (!workflow.contains("com.openggf.tests.trace*.txt")) {
+        if (!workflow.contains("target/surefire-reports")) {
             violations.add(".github/workflows/release.yml does not inspect trace replay surefire reports");
+        }
+        if (!workflow.contains("com.openggf.tests.trace*TraceReplay.txt")) {
+            violations.add(".github/workflows/release.yml does not narrow release coverage to TraceReplay reports");
         }
         if (!workflow.contains("Trace replay profile produced no executed ROM-backed trace tests")) {
             violations.add(".github/workflows/release.yml does not fail when every ROM-backed trace test is absent/skipped");
+        }
+        if (!workflow.contains("Trace replay skipped tests are release-blocking")) {
+            violations.add(".github/workflows/release.yml does not fail on unexpected skipped trace replay tests");
+        }
+        if (!workflow.contains("allowed_skipped_reports")) {
+            violations.add(".github/workflows/release.yml does not make skipped trace replay debt explicit");
+        }
+        if (!workflow.contains("com.openggf.tests.trace.s3k.TestS3kAizTraceReplay.txt")) {
+            violations.add(".github/workflows/release.yml does not explicitly scope the diagnostic-only AIZ trace skip");
         }
 
         if (!violations.isEmpty()) {
@@ -250,9 +401,37 @@ class TestBuildToolingGuard {
         if (workflow.contains("release:\n    needs: build\n    if: github.event_name == 'push'")) {
             violations.add(".github/workflows/release.yml still publishes releases automatically on every master push");
         }
+        if (!workflow.contains("release:\n    needs: build\n    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master'")) {
+            violations.add(".github/workflows/release.yml manual publishing must be restricted to refs/heads/master");
+        }
 
         if (!violations.isEmpty()) {
             fail("release publishing must be deliberate while the pom version is a static prerelease tag:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void ciAndReleaseMavenCommandsShouldDisableSilentExtension() throws Exception {
+        List<String> violations = new ArrayList<>();
+        String ci = Files.readString(Path.of(".github/workflows/ci.yml"));
+        String release = Files.readString(Path.of(".github/workflows/release.yml"));
+
+        if (!ci.contains("mvn -Dmse=off test -B")) {
+            violations.add(".github/workflows/ci.yml test command must pass -Dmse=off");
+        }
+        if (!release.contains("mvn -Dmse=off test -B")) {
+            violations.add(".github/workflows/release.yml broad test command must pass -Dmse=off");
+        }
+        if (!release.contains("mvn -Dmse=off test -Ptrace-replay -B")) {
+            violations.add(".github/workflows/release.yml trace replay command must pass -Dmse=off");
+        }
+        if (!release.contains("mvn -Dmse=off package -Pnative -DskipTests -B")) {
+            violations.add(".github/workflows/release.yml native package command must pass -Dmse=off");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("CI and release Maven logs must be unsuppressed for release diagnostics:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
@@ -293,6 +472,124 @@ class TestBuildToolingGuard {
 
         if (!violations.isEmpty()) {
             fail("release PR commits must receive the same non-master branch trailer checks as develop PRs:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void branchPolicyShouldUseReleaseTrailerCutoverForDevelopToMasterHistory() throws Exception {
+        String shellPolicy = Files.readString(Path.of(".githooks/validate-policy.sh"));
+        String powershellPolicy = Files.readString(Path.of(".githooks/validate-policy.ps1"));
+        List<String> violations = new ArrayList<>();
+
+        if (!shellPolicy.contains("RELEASE_TRAILER_CUTOVER_BASE=")) {
+            violations.add(".githooks/validate-policy.sh does not define the release trailer cutover baseline");
+        }
+        if (!shellPolicy.contains("effective_base_for_ci_pr")) {
+            violations.add(".githooks/validate-policy.sh does not route ci-pr ranges through an effective base helper");
+        }
+        if (!shellPolicy.contains("git merge-base --is-ancestor \"$RELEASE_TRAILER_CUTOVER_BASE\" \"$head_sha\"")) {
+            violations.add(".githooks/validate-policy.sh does not verify the cutover baseline is reachable from the PR head");
+        }
+        if (!powershellPolicy.contains("$script:ReleaseTrailerCutoverBase")) {
+            violations.add(".githooks/validate-policy.ps1 does not define the release trailer cutover baseline");
+        }
+        if (!powershellPolicy.contains("Get-EffectiveBaseForCiPr")) {
+            violations.add(".githooks/validate-policy.ps1 does not route ci-pr ranges through an effective base helper");
+        }
+        if (!powershellPolicy.contains("merge-base\", \"--is-ancestor\", $script:ReleaseTrailerCutoverBase, $HeadSha")) {
+            violations.add(".githooks/validate-policy.ps1 does not verify the cutover baseline is reachable from the PR head");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("develop -> master release PR policy must skip only pre-cutover historical commits while validating new work:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void repositoryShouldForceLfForHookAndWorkflowScripts() throws Exception {
+        String attributes = Files.exists(Path.of(".gitattributes"))
+                ? normalizeLineEndings(Files.readString(Path.of(".gitattributes")))
+                : "";
+        List<String> violations = new ArrayList<>();
+
+        if (!attributes.contains(".githooks/* text eol=lf")) {
+            violations.add(".gitattributes does not force LF for .githooks/*");
+        }
+        if (!attributes.contains("*.sh text eol=lf")) {
+            violations.add(".gitattributes does not force LF for shell scripts");
+        }
+        if (!attributes.contains(".github/workflows/*.yml text eol=lf")) {
+            violations.add(".gitattributes does not force LF for GitHub workflow YAML");
+        }
+        if (!attributes.contains(".mvn/maven.config text eol=lf")) {
+            violations.add(".gitattributes does not force LF for .mvn/maven.config");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("local hooks and CI scripts must not break under core.autocrlf=true:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void protectedShellAndWorkflowFilesShouldNotContainCarriageReturns() throws Exception {
+        List<String> violations = new ArrayList<>();
+        List<Path> protectedFiles = new ArrayList<>();
+        protectedFiles.add(Path.of(".github/workflows/ci.yml"));
+        protectedFiles.add(Path.of(".github/workflows/release.yml"));
+        protectedFiles.add(Path.of(".mvn/maven.config"));
+        protectedFiles.add(Path.of("src/packaging/assemble-macos-app.sh"));
+        try (Stream<Path> hooks = Files.walk(Path.of(".githooks"))) {
+            hooks.filter(Files::isRegularFile).forEach(protectedFiles::add);
+        }
+
+        for (Path path : protectedFiles) {
+            byte[] bytes = Files.readAllBytes(path);
+            for (byte b : bytes) {
+                if (b == '\r') {
+                    violations.add(path.toString().replace('\\', '/'));
+                    break;
+                }
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            fail("protected shell/workflow files must be LF-only in the working tree:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void branchPolicyShouldRejectRootTracePayloadsToo() throws Exception {
+        String shellPolicy = Files.readString(Path.of(".githooks/validate-policy.sh"));
+        List<String> violations = new ArrayList<>();
+
+        if (!shellPolicy.contains("aux_state*.jsonl|physics*.csv|*/aux_state*.jsonl|*/physics*.csv")) {
+            violations.add(".githooks/validate-policy.sh trace payload size case must match root and nested trace files");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("branch policy must reject uncompressed trace payloads at trace-directory roots and below:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void pomShouldDeclareUtf8BuildEncodings() throws Exception {
+        Document pom = parsePom("pom.xml");
+        List<String> violations = new ArrayList<>();
+
+        if (!"UTF-8".equals(property(pom, "project.build.sourceEncoding"))) {
+            violations.add("pom.xml must set project.build.sourceEncoding=UTF-8");
+        }
+        if (!"UTF-8".equals(property(pom, "project.reporting.outputEncoding"))) {
+            violations.add("pom.xml must set project.reporting.outputEncoding=UTF-8");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("Maven builds should not depend on platform-default encoding:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
@@ -401,6 +698,34 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void s3kStaticSessionStateDebtShouldNotGrow() throws Exception {
+        Set<String> signals = new TreeSet<>();
+        try (Stream<Path> paths = Files.walk(Path.of("src/main/java/com/openggf/game/sonic3k"))) {
+            paths.filter(path -> path.toString().endsWith(".java"))
+                    .forEach(path -> {
+                        try {
+                            signals.addAll(s3kStaticSessionStateSignals(
+                                    path.toString().replace('\\', '/'),
+                                    Files.readString(path)));
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+        }
+
+        if (!signals.equals(new TreeSet<>(REVIEWED_S3K_STATIC_SESSION_STATE))) {
+            Set<String> added = new TreeSet<>(signals);
+            added.removeAll(REVIEWED_S3K_STATIC_SESSION_STATE);
+            Set<String> removed = new TreeSet<>(REVIEWED_S3K_STATIC_SESSION_STATE);
+            removed.removeAll(signals);
+            fail("S3K static session state changed; migrate new active-object/phase bridges to runtime-owned state "
+                    + "or document why the release debt list changed"
+                    + "\n  added:\n  " + String.join("\n  ", added)
+                    + "\n  removed:\n  " + String.join("\n  ", removed));
+        }
+    }
+
+    @Test
     void legacyS3kAizFullRunReplayIsDiagnosticOnly() throws Exception {
         String file = "src/test/java/com/openggf/tests/trace/s3k/TestS3kAizTraceReplay.java";
         String source = Files.readString(Path.of(file));
@@ -430,12 +755,16 @@ class TestBuildToolingGuard {
                 "src/main/java/com/openggf/trace/replay/TraceReplaySessionBootstrap.java")) {
             signals.addAll(traceBootstrapPolicySignals(relative, Files.readString(Path.of(relative))));
         }
+        Set<String> signalKeys = new TreeSet<>();
+        for (String signal : signals) {
+            signalKeys.add(tracePolicySignalKey(signal));
+        }
 
-        if (!signals.equals(new TreeSet<>(ACCEPTED_TRACE_BOOTSTRAP_POLICY_SIGNALS))) {
-            Set<String> added = new TreeSet<>(signals);
+        if (!signalKeys.equals(new TreeSet<>(ACCEPTED_TRACE_BOOTSTRAP_POLICY_SIGNALS))) {
+            Set<String> added = new TreeSet<>(signalKeys);
             added.removeAll(ACCEPTED_TRACE_BOOTSTRAP_POLICY_SIGNALS);
             Set<String> removed = new TreeSet<>(ACCEPTED_TRACE_BOOTSTRAP_POLICY_SIGNALS);
-            removed.removeAll(signals);
+            removed.removeAll(signalKeys);
             fail("trace replay bootstrap policy signals changed; document and justify any new "
                     + "zone/profile/checkpoint/frame-shape carve-out before release"
                     + "\n  added:\n  " + String.join("\n  ", added)
@@ -588,6 +917,10 @@ class TestBuildToolingGuard {
         return signals;
     }
 
+    private static String tracePolicySignalKey(String signal) {
+        return signal.replaceFirst(":[0-9]+ - ", " - ");
+    }
+
     private static List<String> traceRowHydrationSignals(String relative, String source) {
         String stripped = stripComments(source);
         List<String> signals = new ArrayList<>();
@@ -600,6 +933,31 @@ class TestBuildToolingGuard {
             if (TRACE_ROW_PLAYER_SETTER_HYDRATION.matcher(line).find()) {
                 signals.add(relative + ":" + (i + 1) + " - " + line.replaceAll("\\s+", " "));
             }
+        }
+        return signals;
+    }
+
+    private static List<String> s3kStaticSessionStateSignals(String relative, String source) {
+        String normalizedRelative = relative.replace('\\', '/');
+        if (normalizedRelative.contains("/constants/")
+                || normalizedRelative.endsWith("Sonic3kLevelSelectManager.java")
+                || normalizedRelative.endsWith("Sonic3kTitleScreenManager.java")) {
+            return List.of();
+        }
+        String stripped = stripComments(source);
+        List<String> signals = new ArrayList<>();
+        String[] lines = stripped.split("\\R", -1);
+        for (String rawLine : lines) {
+            String line = rawLine.strip();
+            String lower = line.toLowerCase();
+            if (line.isEmpty()
+                    || !lower.contains("private static")
+                    || lower.contains(" final ")
+                    || lower.contains(" class ")
+                    || line.contains("(")) {
+                continue;
+            }
+            signals.add(normalizedRelative + " - " + line.replaceAll("\\s+", " "));
         }
         return signals;
     }

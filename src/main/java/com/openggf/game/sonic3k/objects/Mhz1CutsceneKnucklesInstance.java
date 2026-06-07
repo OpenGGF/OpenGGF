@@ -265,8 +265,12 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance {
         return activeInstance;
     }
 
-    static void clearActiveInstanceForTests() {
+    public static void clearActiveInstance() {
         activeInstance = null;
+    }
+
+    static void clearActiveInstanceForTests() {
+        clearActiveInstance();
     }
 
     void signalButtonCallback() {

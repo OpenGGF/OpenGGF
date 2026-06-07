@@ -77,8 +77,12 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance {
         return activeInstance;
     }
 
-    public static void clearActiveInstanceForTests() {
+    public static void clearActiveInstance() {
         activeInstance = null;
+    }
+
+    public static void clearActiveInstanceForTests() {
+        clearActiveInstance();
     }
 
     @Override

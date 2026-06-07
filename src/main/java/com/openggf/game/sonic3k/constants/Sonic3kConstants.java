@@ -293,6 +293,8 @@ public class Sonic3kConstants {
     public static final int ARTTILE_HCZ_WATER_RUSH = 0x037A;
     // WaterRushBlock uses ArtTile_HCZMisc + $A = 0x03D4 (level-loaded art)
     public static final int ARTTILE_HCZ_WATER_RUSH_BLOCK = 0x03CA + 0xA; // 0x03D4
+    // Map_HCZWaterRushBlock: 2 frames. LockOn data (S3 half).
+    public static final int MAP_HCZ_WATER_RUSH_BLOCK_ADDR = 0x22E76C;
 
     // ===== HCZ Hand Launcher (Obj_HCZHandLauncher, ID 0x3A) =====
     // Map_HCZHandLauncher: 8 frames (6-piece arm cycle x6, 3-piece cup, 1-piece compact).
@@ -339,6 +341,12 @@ public class Sonic3kConstants {
     public static final int ARTTILE_HCZ1_WATER_SPLASH2 = 0x0344;
     public static final int ARTTILE_HCZ2_WATER_SPLASH2 = 0x036E;
     public static final int ARTTILE_HCZ_WATER_SPLASH = 0x03B2;
+
+    // ===== HCZ/CNZ/DEZ Door (Obj_Door, ID 0x3C) =====
+    // Map_HCZCNZDEZDoor (vertical frames 0=HCZ, 1=CNZ, 2=DEZ), S&K side.
+    public static final int MAP_HCZ_CNZ_DEZ_DOOR_ADDR = 0x030F86;
+    // Map_CNZDoorHorizontal (horizontal frame), S&K side.
+    public static final int MAP_CNZ_DOOR_HORIZONTAL_ADDR = 0x031108;
     public static final int MAP_MGZ_FLOATING_PLATFORM_ADDR = 0x25654; // Map_MGZFloatingPlatform (1 frame, 8 pieces)
 
     // ===== ArtTile constants from sonic3k.constants.asm =====
@@ -400,6 +408,7 @@ public class Sonic3kConstants {
     public static final int ART_NEM_MONITORS_ADDR = 0x190F4A;
     public static final int ART_NEM_EXPLOSION_ADDR = 0x19200A;
     public static final int ART_NEM_BUBBLES_ADDR = 0x191B46;
+    public static final int MAP_BUBBLER_ADDR = 0x02FCB2; // Map_Bubbler (23 frames, S&K side)
     public static final int ART_NEM_RING_HUD_TEXT_ADDR = 0x192AEE;
     public static final int ART_NEM_ENEMY_PTS_STARPOST_ADDR = 0x192D2A;
     public static final int ART_NEM_STARPOST_ADDR = 0x35D8A2; // Dedicated StarPost art (20 tiles)
@@ -1627,6 +1636,8 @@ public class Sonic3kConstants {
      * ROM space.
      */
     public static final int MAP_HCZ_WATERWALL_ADDR = 0x22EE10;
+    // Map_HCZWaterWallDebris: 8 debris frames, table base from Frame_22EF1E - 0x10.
+    public static final int MAP_HCZ_WATERWALL_DEBRIS_ADDR = 0x22EF0E;
 
     // ===== CNZ Teleporter / Miniboss / End Boss art and PLC metadata =====
     // The CNZ teleporter route is split across Obj_CNZTeleporter and the shared
@@ -2081,6 +2092,7 @@ public class Sonic3kConstants {
 
     // Spring child object mappings (shared, used across all zones)
     public static final int MAP_SPRING_ADDR = 0x02375C;             // Map_Spring (11 frames, S3K mapping format)
+    public static final int MAP_SPRING2_ADDR = 0x023772;            // Map_Spring2 (yellow spring frames)
 
     // ArtNem_VerticalSpring — standalone red vertical spring art used by gumball bonus springs.
     // ROM: s3.asm:118453, 325 compressed bytes -> 512 bytes (8 tiles).

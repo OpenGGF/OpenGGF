@@ -60,8 +60,8 @@ public class DivergenceReport {
 
     public List<DivergenceGroup> errors() { return errors; }
     public List<DivergenceGroup> warnings() { return warnings; }
-    public boolean hasErrors() { return !errors.isEmpty(); }
-    public boolean hasWarnings() { return !warnings.isEmpty(); }
+    public boolean hasErrors() { return totalErrorCount() > 0; }
+    public boolean hasWarnings() { return totalWarningCount() > 0; }
 
     /** Bootstrap (frame-0) divergences, sorted ERROR-first then WARNING. */
     public List<BootstrapDivergence> bootstrapDivergences() {
@@ -73,27 +73,52 @@ public class DivergenceReport {
     }
 
     public String toSummary() {
-        int errorCount = errors.size();
-        int warningCount = warnings.size();
+        int errorCount = totalErrorCount();
+        int warningCount = totalWarningCount();
 
         if (errorCount == 0 && warningCount == 0) {
             return "All frames match trace. No divergences.";
         }
 
         StringBuilder sb = new StringBuilder();
+        int bootstrapErrorCount = bootstrapErrorCount();
+        int bootstrapWarningCount = bootstrapWarningCount();
+        if (bootstrapErrorCount > 0 || bootstrapWarningCount > 0) {
+            sb.append(String.format("%d bootstrap error%s, %d bootstrap warning%s. ",
+                bootstrapErrorCount, bootstrapErrorCount == 1 ? "" : "s",
+                bootstrapWarningCount, bootstrapWarningCount == 1 ? "" : "s"));
+        }
         sb.append(String.format("%d error%s, %d warning%s.",
             errorCount, errorCount == 1 ? "" : "s",
             warningCount, warningCount == 1 ? "" : "s"));
 
-        if (errorCount > 0) {
+        BootstrapDivergence firstBootstrapError = firstBootstrapDivergence(BootstrapDivergence.Severity.ERROR);
+        if (firstBootstrapError != null) {
+            appendBootstrapSummary(sb, "error", firstBootstrapError);
+        } else if (!errors.isEmpty()) {
             DivergenceGroup first = errors.get(0);
             sb.append(String.format(" First error: frame %d -- %s mismatch (expected=%s, actual=%s)",
                 first.startFrame(), first.field(), first.expectedAtStart(), first.actualAtStart()));
             appendFirstErrorDiagnostics(sb, first);
+        } else {
+            BootstrapDivergence firstBootstrapWarning =
+                    firstBootstrapDivergence(BootstrapDivergence.Severity.WARNING);
+            if (firstBootstrapWarning != null) {
+                appendBootstrapSummary(sb, "warning", firstBootstrapWarning);
+            }
         }
 
         appendTraceContextSummary(sb, summaryReferenceFrame());
         return sb.toString();
+    }
+
+    private void appendBootstrapSummary(StringBuilder sb, String label,
+                                        BootstrapDivergence divergence) {
+        sb.append(String.format(" First bootstrap %s: frame 0 -- %s mismatch (expected=%s, actual=%s)",
+            label, divergence.field(), divergence.expected(), divergence.actual()));
+        if (divergence.context() != null && !divergence.context().isBlank()) {
+            sb.append(" ").append(divergence.context());
+        }
     }
 
     /**
@@ -144,8 +169,10 @@ public class DivergenceReport {
             mapper.enable(SerializationFeature.INDENT_OUTPUT);
             ObjectNode root = mapper.createObjectNode();
 
-            root.put("error_count", errors.size());
-            root.put("warning_count", warnings.size());
+            root.put("error_count", totalErrorCount());
+            root.put("warning_count", totalWarningCount());
+            root.put("bootstrap_error_count", bootstrapErrorCount());
+            root.put("bootstrap_warning_count", bootstrapWarningCount());
             root.put("total_frames", allComparisons.size());
             root.put("summary", toSummary());
 
@@ -314,6 +341,9 @@ public class DivergenceReport {
     }
 
     private int summaryReferenceFrame() {
+        if (hasBootstrapDivergences()) {
+            return 0;
+        }
         if (!errors.isEmpty()) {
             return errors.get(0).startFrame();
         }
@@ -324,6 +354,43 @@ public class DivergenceReport {
             return allComparisons.get(allComparisons.size() - 1).frame();
         }
         return -1;
+    }
+
+    private int totalErrorCount() {
+        return errors.size() + bootstrapErrorCount();
+    }
+
+    private int totalWarningCount() {
+        return warnings.size() + bootstrapWarningCount();
+    }
+
+    private int bootstrapErrorCount() {
+        return (int) bootstrapDivergences.stream()
+                .filter(d -> d.severity() == BootstrapDivergence.Severity.ERROR)
+                .count();
+    }
+
+    private int bootstrapWarningCount() {
+        return (int) bootstrapDivergences.stream()
+                .filter(d -> d.severity() == BootstrapDivergence.Severity.WARNING)
+                .count();
+    }
+
+    public boolean hasBootstrapErrors() {
+        return bootstrapErrorCount() > 0;
+    }
+
+    public boolean hasBootstrapWarnings() {
+        return bootstrapWarningCount() > 0;
+    }
+
+    private BootstrapDivergence firstBootstrapDivergence(BootstrapDivergence.Severity severity) {
+        for (BootstrapDivergence divergence : bootstrapDivergences) {
+            if (divergence.severity() == severity) {
+                return divergence;
+            }
+        }
+        return null;
     }
 
     private TraceEvent.Checkpoint latestCheckpointAtOrBefore(int frame) {
