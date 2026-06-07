@@ -8,6 +8,7 @@ import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.Palette;
@@ -165,6 +166,10 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             loadSharedBossExplosionArt();
             loadIczMinibossArtFromPlc();
             loadIczEndBossArtFromPlc();
+        } else if (zoneIndex == 0x06) {
+            // LBZ1 start: Sonic is launched from the ground and a splash plays as
+            // he breaks the surface (Obj_DashDust anim 4 / ArtUnc_SplashDrown).
+            loadSurfaceSplashArt();
         }
 
         // Level-art sheets are registered later via registerLevelArtSheets()
@@ -759,6 +764,59 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         } catch (IOException e) {
             LOG.warning("Failed to load shield art: " + e.getMessage());
         }
+    }
+
+    /**
+     * Virtual pattern base for the surface-splash DPLC bank. Lives in the
+     * transient-effects range so it never collides with the player's dash-dust
+     * bank (water-surface range) or shield banks.
+     */
+    private static final int SURFACE_SPLASH_PATTERN_BASE = PatternAtlasRange.TRANSIENT_EFFECTS.base();
+
+    /**
+     * Loads the splash/drown art set used by {@code Obj_DashDust} animation 4
+     * ({@code Ani_DashSplashDrown} frames {@code $16-$1D}). This is the splash
+     * that appears when the player emerges from the surface at the LBZ1 start
+     * (ROM: {@code Obj_LevelIntro_PlayerLaunchFromGround} writes {@code anim=4}
+     * into the Dust object at {@code sonic3k.asm} loc_39AD2).
+     *
+     * <p>It reuses {@code Map_DashDust} + {@code DPLC_DashSplashDrown} (the same
+     * tables as the dash dust) but sources tiles from {@code ArtUnc_SplashDrown}
+     * instead of {@code ArtUnc_DashDust}. The DPLC frames {@code $16-$1D} index
+     * source tiles 0-123, exactly filling the 124-tile splash art.
+     */
+    private void loadSurfaceSplashArt() {
+        try {
+            Rom rom = GameServices.rom().getRom();
+            if (rom == null) {
+                return;
+            }
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            Pattern[] tiles = S3kSpriteDataLoader.loadArtTiles(reader,
+                    Sonic3kConstants.ART_UNC_SPLASH_DROWN_ADDR,
+                    Sonic3kConstants.ART_UNC_SPLASH_DROWN_SIZE);
+            List<SpriteMappingFrame> mappings = S3kSpriteDataLoader.loadMappingFrames(
+                    reader, Sonic3kConstants.MAP_DASH_DUST_ADDR);
+            List<SpriteDplcFrame> dplcs = S3kSpriteDataLoader.loadDplcFrames(
+                    reader, Sonic3kConstants.DPLC_DASH_DUST_ADDR);
+            int bankSize = S3kSpriteDataLoader.resolveBankSize(dplcs, mappings);
+
+            SpriteArtSet artSet = new SpriteArtSet(tiles, mappings, dplcs,
+                    0, SURFACE_SPLASH_PATTERN_BASE, 1, bankSize, null, null);
+            PlayerSpriteRenderer renderer = new PlayerSpriteRenderer(artSet);
+
+            shieldArtSets.put(Sonic3kObjectArtKeys.SURFACE_SPLASH, artSet);
+            dplcRenderers.put(Sonic3kObjectArtKeys.SURFACE_SPLASH, renderer);
+            LOG.info("Loaded S3K surface splash art: " + tiles.length + " tiles, "
+                    + mappings.size() + " mapping frames");
+        } catch (IOException e) {
+            LOG.warning("Failed to load surface splash art: " + e.getMessage());
+        }
+    }
+
+    /** Returns the DPLC-driven renderer for the surface-splash effect, or null. */
+    public PlayerSpriteRenderer getSurfaceSplashRenderer() {
+        return dplcRenderers.get(Sonic3kObjectArtKeys.SURFACE_SPLASH);
     }
 
     /**

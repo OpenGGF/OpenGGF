@@ -3,12 +3,14 @@ package com.openggf.game.sonic3k.events;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.level.Level;
 import com.openggf.level.Map;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.Arrays;
 import java.util.BitSet;
 
 /**
@@ -22,6 +24,31 @@ import java.util.BitSet;
  */
 public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private static final int FG_LAYER = 0;
+    private static final int ENDING_CLEAR_X = 0x74;
+    private static final int ENDING_CLEAR_Y = 0;
+    private static final int ENDING_CLEAR_WIDTH = 4;
+    private static final int ENDING_CLEAR_HEIGHT = 12;
+    private static final int ENDING_COPY_SOURCE_X = 0x98;
+    private static final int ENDING_COPY_SOURCE_Y = 0;
+    private static final int ENDING_COPY_DEST_X = 0x74;
+    private static final int ENDING_COPY_DEST_Y = 9;
+    private static final int ENDING_COPY_WIDTH = 4;
+    private static final int ENDING_COPY_HEIGHT = 3;
+    private static final int ENDING_COLLAPSE_START_X = 0x3B60;
+    private static final int ENDING_COLLAPSE_COLUMN_COUNT = 10;
+    private static final int ENDING_COLLAPSE_MAX_SCROLL = -0x300;
+    private static final int ENDING_COLLAPSE_GLOBAL_ACCEL = 0x100;
+    private static final int ENDING_COLLAPSE_RUMBLE_MASK = 0x0F;
+    private static final int[] ENDING_COLLAPSE_SCROLL_SPEED = {
+            0x1EE, 0x1F2, 0x0C7, 0x1B3, 0x1B7, 0x198, 0x00E, 0x139
+    };
+
+    private boolean endingCollapseActive;
+    private boolean endingCollapseFinished;
+    private int endingCollapseGlobalFixed;
+    private int endingCollapsePhase;
+    private final int[] endingCollapseFixed = new int[ENDING_COLLAPSE_COLUMN_COUNT];
+    private final int[] endingCollapseScroll = new int[ENDING_COLLAPSE_COLUMN_COUNT];
 
     /**
      * S3K layout row pointers are interleaved FG/BG word pairs. In the ROM,
@@ -72,9 +99,14 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         if (act != 0 || !hasRuntime()) {
             return;
         }
+        updateEndingCollapse(frameCounter);
+
         LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(zoneRuntimeRegistry()).orElse(null);
         AbstractPlayableSprite player = camera().getFocusedSprite();
         if (state == null || player == null) {
+            return;
+        }
+        if (endingCollapseActive) {
             return;
         }
 
@@ -112,7 +144,130 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
             return;
         }
         S3kRuntimeStates.currentLbz(zoneRuntimeRegistry())
-                .ifPresent(state -> state.setInteriorLayoutMod3Disabled(true));
+                .ifPresent(state -> {
+                    state.setInteriorLayoutMod3Disabled(true);
+                    if (state.getActiveInteriorLayoutMod() == 3) {
+                        state.setActiveInteriorLayoutMod(0);
+                    }
+                });
+    }
+
+    /**
+     * Applies the post-collapse LBZ1 boss-area building layout.
+     *
+     * <p>ROM: {@code LBZ1_ModEndingLayout} clears a 4x12 strip at FG columns
+     * {@code $74..$77}, then copies three lower rows from hidden staging columns
+     * {@code $98..$9B} into rows 9-11. It also disables layout mod 3 so the
+     * interior reveal logic cannot restore the demolished building.
+     */
+    public void applyEndingLayout() {
+        if (!hasRuntime()) {
+            return;
+        }
+        Level level = levelManager().getCurrentLevel();
+        if (level == null || level.getMap() == null) {
+            return;
+        }
+        LayoutMutationContext context = new LayoutMutationContext(
+                LevelMutationSurface.forLevel(level),
+                levelManager()::applyMutationEffects);
+        zoneLayoutMutationPipeline().applyImmediately(
+                mutationContext -> applyEndingLayout(level.getMap(), mutationContext.surface()),
+                context);
+        disableInteriorLayoutMod3();
+    }
+
+    /**
+     * ROM: {@code Events_fg_4 = -1} arms {@code LBZ1_EventVScroll}. The screen
+     * event animates ten foreground VScroll columns down to {@code -$300};
+     * {@code LBZ1_ModEndingLayout} is called only after every column has
+     * finished falling.
+     */
+    public void startEndingCollapse() {
+        if (!hasRuntime() || endingCollapseActive || endingCollapseFinished) {
+            return;
+        }
+        endingCollapseActive = true;
+        endingCollapseGlobalFixed = 0;
+        endingCollapsePhase = 0;
+        Arrays.fill(endingCollapseFixed, 0);
+        Arrays.fill(endingCollapseScroll, 0);
+    }
+
+    public boolean isEndingCollapseActive() {
+        return endingCollapseActive;
+    }
+
+    public boolean isEndingCollapseFinished() {
+        return endingCollapseFinished;
+    }
+
+    public int[] getEndingCollapseScrollForTest() {
+        return Arrays.copyOf(endingCollapseScroll, endingCollapseScroll.length);
+    }
+
+    public short[] buildEndingCollapseForegroundVScrollOverride(int cameraX) {
+        if (!endingCollapseActive) {
+            return null;
+        }
+
+        short[] override = new short[20];
+        int firstScreenColumn = (ENDING_COLLAPSE_START_X >> 4) - Math.floorDiv(cameraX + 15, 16);
+        boolean anyVisible = false;
+        boolean anyScrolled = false;
+        for (int i = 0; i < ENDING_COLLAPSE_COLUMN_COUNT; i++) {
+            int screenColumn = firstScreenColumn + i;
+            if (screenColumn < 0 || screenColumn >= override.length) {
+                continue;
+            }
+            int scroll = endingCollapseScroll[i];
+            override[screenColumn] = (short) scroll;
+            anyVisible = true;
+            anyScrolled |= scroll != 0;
+        }
+        return anyVisible && anyScrolled ? override : null;
+    }
+
+    private void updateEndingCollapse(int frameCounter) {
+        if (!endingCollapseActive) {
+            return;
+        }
+
+        int globalFixedDelta = endingCollapseGlobalFixed;
+        endingCollapseGlobalFixed += ENDING_COLLAPSE_GLOBAL_ACCEL;
+        int phaseWord = endingCollapsePhase >> 6;
+        endingCollapsePhase++;
+
+        int unfinishedColumns = ENDING_COLLAPSE_COLUMN_COUNT;
+        for (int i = 0; i < ENDING_COLLAPSE_COLUMN_COUNT; i++) {
+            int speedIndex = ((phaseWord + ((i + 1) * 2)) & 0x0E) >> 1;
+            int deltaFixed = (ENDING_COLLAPSE_SCROLL_SPEED[speedIndex] << 4) + globalFixedDelta;
+            endingCollapseFixed[i] -= deltaFixed;
+            int scroll = endingCollapseFixed[i] >> 16;
+            if (scroll <= ENDING_COLLAPSE_MAX_SCROLL) {
+                scroll = ENDING_COLLAPSE_MAX_SCROLL;
+                endingCollapseFixed[i] = ENDING_COLLAPSE_MAX_SCROLL << 16;
+                unfinishedColumns--;
+            }
+            endingCollapseScroll[i] = scroll;
+        }
+
+        camera().setShakeOffsets(0, (frameCounter & 1) == 0 ? 2 : -2);
+        if (((frameCounter - 1) & ENDING_COLLAPSE_RUMBLE_MASK) == 0 && unfinishedColumns > 0) {
+            audio().playSfx(Sonic3kSfx.BIG_RUMBLE.id);
+        }
+        if (unfinishedColumns == 0) {
+            finishEndingCollapse();
+        }
+    }
+
+    private void finishEndingCollapse() {
+        endingCollapseActive = false;
+        endingCollapseFinished = true;
+        camera().setShakeOffsets(0, 0);
+        Arrays.fill(endingCollapseScroll, 0);
+        applyEndingLayout();
+        audio().playSfx(Sonic3kSfx.CRASH.id);
     }
 
     private static LayoutMod modById(int id) {
@@ -146,6 +301,33 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
                         FG_LAYER,
                         spec.destX() + col,
                         spec.destY() + row,
+                        blockIndex));
+            }
+        }
+        return combined;
+    }
+
+    private static MutationEffects applyEndingLayout(Map map, LevelMutationSurface surface) {
+        MutationEffects combined = MutationEffects.NONE;
+        for (int row = 0; row < ENDING_CLEAR_HEIGHT; row++) {
+            for (int col = 0; col < ENDING_CLEAR_WIDTH; col++) {
+                combined = mergeEffects(combined, surface.setBlockInMap(
+                        FG_LAYER,
+                        ENDING_CLEAR_X + col,
+                        ENDING_CLEAR_Y + row,
+                        0));
+            }
+        }
+        for (int row = 0; row < ENDING_COPY_HEIGHT; row++) {
+            for (int col = 0; col < ENDING_COPY_WIDTH; col++) {
+                int blockIndex = map.getValue(
+                        FG_LAYER,
+                        ENDING_COPY_SOURCE_X + col,
+                        ENDING_COPY_SOURCE_Y + row) & 0xFF;
+                combined = mergeEffects(combined, surface.setBlockInMap(
+                        FG_LAYER,
+                        ENDING_COPY_DEST_X + col,
+                        ENDING_COPY_DEST_Y + row,
                         blockIndex));
             }
         }

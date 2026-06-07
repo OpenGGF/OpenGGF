@@ -11,6 +11,13 @@ All notable changes to the OpenGGF project are documented in this file.
   ROM's title-screen patterns, mappings, and palettes. Missing games are greyed
   out and show the exact required ROM filename in red.
 
+- **S3K Launch Base Act 1 now runs the Sonic/Knuckles blockade sequence:**
+  LBZ1 registers the cutscene Knuckles and Robotnik event controllers, loads the
+  ROM-backed Knuckles cutscene, bomb, and surface-splash assets, plays the thrown
+  bomb and staged ending-collapse foreground VScroll, applies the demolished
+  boss-area layout only after the collapse finishes, and gradually unlocks the
+  post-collapse camera using the ROM `Obj_IncLevEndXGradual` accumulator flow.
+
 - **S3K LBZ Act 1 interior reveals 2 and 4 now open the door instead of walling
   it off:** the `LBZ1_CheckLayoutMod` foreground copies for mods 2 and 4 wrote
   the revealed interior chunks into the hidden staging rows (the source row, 9

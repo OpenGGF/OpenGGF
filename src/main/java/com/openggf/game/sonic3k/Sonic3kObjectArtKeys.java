@@ -41,6 +41,8 @@ public final class Sonic3kObjectArtKeys {
     public static final String LIGHTNING_SPARK = "lightning_spark";
     public static final String BUBBLE_SHIELD = "bubble_shield";
     public static final String INSTA_SHIELD = "insta_shield";
+    /** Splash/drown effect (Obj_DashDust anim 4): LBZ1 surface emerge splash. */
+    public static final String SURFACE_SPLASH = "surface_splash";
     public static final String SS_ENTRY_RING = "ss_entry_ring";
     public static final String SS_ENTRY_FLASH = "ss_entry_flash";
     public static final String END_SIGN = "EndSign";
@@ -275,6 +277,7 @@ public final class Sonic3kObjectArtKeys {
     public static final String MHZ_END_BOSS = "mhz_end_boss";
     public static final String MHZ_END_BOSS_SPIKES = "mhz_end_boss_spikes";
     public static final String MHZ_END_BOSS_PILLAR = "mhz_end_boss_pillar";
+    public static final String LBZ1_CUTSCENE_KNUCKLES_BOMB = "lbz1_cutscene_knuckles_bomb";
     public static final String CUTSCENE_KNUCKLES = "cutscene_knuckles";
     public static final String MHZ1_CUTSCENE_KNUCKLES_PEER = "mhz1_cutscene_knuckles_peer";
     public static final String MHZ1_CUTSCENE_KNUCKLES_DOOR = "mhz1_cutscene_knuckles_door";

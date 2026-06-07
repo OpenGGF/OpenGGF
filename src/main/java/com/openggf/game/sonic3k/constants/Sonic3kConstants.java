@@ -429,6 +429,8 @@ public class Sonic3kConstants {
     // 0x4EE0 bytes = 631 tiles
     public static final int ART_UNC_CUTSCENE_KNUX_ADDR = 0x382DC6;
     public static final int ART_UNC_CUTSCENE_KNUX_SIZE = 0x4EE0;
+    // ArtNem_LBZKnuxBomb - PLC_60 child art for CutsceneKnux_LBZ1 thrown bomb.
+    public static final int ART_NEM_LBZ_KNUX_BOMB_ADDR = 0x3791DE;
 
     // --- Mapping addresses ---
     // Map_AIZIntroPlane - Tornado biplane sprite mappings (0xF2 bytes, 11 frames)
@@ -442,6 +444,9 @@ public class Sonic3kConstants {
 
     // Map_CutsceneKnux - Cutscene Knuckles sprite mappings (0x2F8 bytes)
     public static final int MAP_CUTSCENE_KNUX_ADDR = 0x364016;
+
+    // Map_LBZKnuxBomb - one-frame mapping immediately before Map_CutsceneKnux.
+    public static final int MAP_LBZ_KNUX_BOMB_ADDR = 0x36400C;
 
     // DPLC_CutsceneKnux - Cutscene Knuckles dynamic pattern load cues (0x162 bytes)
     public static final int DPLC_CUTSCENE_KNUX_ADDR = 0x36430E;
@@ -463,6 +468,9 @@ public class Sonic3kConstants {
     // PalPointers index for ICZ2 main palette (Pal_ICZ2 → palette lines 1-3).
     // AfterBoss_ICZ2 reloads the first line via PalLoad_Line1 after the miniboss.
     public static final int PAL_POINTERS_ICZ2_INDEX = 21;
+
+    // PalPointers index for LBZ1 main palette (Pal_LBZ1, palette lines 1-3).
+    public static final int PAL_POINTERS_LBZ1_INDEX = 22;
 
     // Pal_AIZIntroEmeralds - Emerald palette (32 bytes = 16 colors)
     public static final int PAL_AIZ_INTRO_EMERALDS_ADDR = 0x067AAA;
@@ -1149,6 +1157,16 @@ public class Sonic3kConstants {
     public static final int ART_UNC_DASH_DUST_SIZE = 5952;  // 186 tiles x 32 bytes
     public static final int MAP_DASH_DUST_ADDR = 0x018DF4;
     public static final int DPLC_DASH_DUST_ADDR = 0x018EE2;
+
+    // Splash/Drown art (ArtUnc_SplashDrown). Shares Map_DashDust + DPLC_DashSplashDrown
+    // (== DPLC_DASH_DUST_ADDR) with the dash dust; only the art source differs.
+    // Used by Obj_DashDust anim 4 (Ani_DashSplashDrown frames $16-$1D), e.g. the LBZ1
+    // surface emerge splash. This art exists ONLY in the lock-on (S3-half) data — there
+    // is no S&K-side equivalent (sonic3k.asm only bincludes ArtUnc_DashDust); the runtime
+    // resolves ArtUnc_SplashDrown to this lock-on address. ROM: General/Sprites/Dash Dust/
+    // Splash Drown.bin (Lockon S3 data). Verified via RomOffsetFinder --game s3k.
+    public static final int ART_UNC_SPLASH_DROWN_ADDR = 0x2C2280;
+    public static final int ART_UNC_SPLASH_DROWN_SIZE = 3968;  // 124 tiles x 32 bytes
 
     // Insta-Shield: 8 mapping frames, 8 DPLC frames, 2 animations
     // Verified by ROM binary search, 2026-03-18

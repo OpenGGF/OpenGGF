@@ -168,6 +168,8 @@ public final class Sonic3kObjectIds {
     public static final int JAWZ = 0x93;
     public static final int MHZ_END_BOSS = 0x93;
     public static final int CORKEY = 0xC1;
+    // S3KL object table: Obj_LBZ1Robotnik.
+    public static final int LBZ1_ROBOTNIK = 0xC3;
     public static final int PACHINKO_TRIANGLE_BUMPER = 0xE6;
     public static final int PACHINKO_FLIPPER = 0xE7;
     public static final int PACHINKO_ENERGY_TRAP = 0xE8;

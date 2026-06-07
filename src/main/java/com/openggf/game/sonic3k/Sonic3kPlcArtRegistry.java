@@ -1398,6 +1398,20 @@ public final class Sonic3kPlcArtRegistry {
     private static void addLbzEntries(int actIndex,
                                       List<StandaloneArtEntry> standalone,
                                       List<LevelArtEntry> levelArt) {
+        if (actIndex == 0) {
+            // PLC_60 / ObjDat3_6640E: ArtNem_LBZKnuxBomb + Map_LBZKnuxBomb,
+            // make_art_tile(ArtTile_LBZKnuxBomb,1,1).
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.LBZ1_CUTSCENE_KNUCKLES_BOMB,
+                    Sonic3kConstants.ART_NEM_LBZ_KNUX_BOMB_ADDR,
+                    CompressionType.NEMESIS,
+                    0,
+                    Sonic3kConstants.MAP_LBZ_KNUX_BOMB_ADDR,
+                    1,
+                    -1
+            ));
+        }
+
         // StillSprite groups: subtype 20 (pole), subtypes 21-23 (girders)
         // base 0x40D: subtype 20
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.STILL_LBZ_POLE,

@@ -1211,6 +1211,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     if (subtype == 16) {
                         return new CutsceneKnucklesCnz2BInstance(spawn);
                     }
+                    if (subtype == 0x14) {
+                        return new CutsceneKnucklesLbz1Instance(spawn);
+                    }
                     if (subtype == 0x1C) {
                         return new CutsceneKnucklesMhz1Instance(spawn);
                     }
@@ -1222,6 +1225,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     // Default: AIZ2 variant (handles subtypes 0 and 4)
                     return new CutsceneKnucklesAiz2Instance(spawn);
+                });
+        factories.put(Sonic3kObjectIds.LBZ1_ROBOTNIK,
+                (spawn, registry) -> {
+                    S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet == S3kZoneSet.S3KL && currentRomZoneId() == Sonic3kZoneIds.ZONE_LBZ) {
+                        return new Lbz1RobotnikEventController(spawn);
+                    }
+                    return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                 });
     }
 

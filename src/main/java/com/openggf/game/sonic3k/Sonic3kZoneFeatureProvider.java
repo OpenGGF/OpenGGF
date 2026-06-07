@@ -97,6 +97,29 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
             }
         }
     };
+    private final AdvancedRenderMode lbzEndingCollapseForegroundVScrollMode = new AdvancedRenderMode() {
+        @Override
+        public String id() {
+            return "s3k-lbz1-ending-collapse-foreground-vscroll";
+        }
+
+        @Override
+        public void contribute(AdvancedRenderModeContext context, AdvancedRenderFrameState.Builder builder) {
+            if (context.zoneIndex() != Sonic3kZoneIds.ZONE_LBZ || context.actIndex() != 0) {
+                return;
+            }
+            if (!(GameServices.module().getLevelEventProvider() instanceof Sonic3kLevelEventManager manager)
+                    || manager.getLbzEvents() == null) {
+                return;
+            }
+
+            short[] override = manager.getLbzEvents()
+                    .buildEndingCollapseForegroundVScrollOverride(context.camera().getX());
+            if (override != null) {
+                builder.setForegroundPerColumnVScrollOverride(override);
+            }
+        }
+    };
     private Sonic3kWaterSurfaceManager waterSurfaceManager;
     private final Set<AbstractPlayableSprite> forcedAizForestFrontPrioritySprites = new HashSet<>();
     private S3kSlotMachinePanelAnimator slotMachinePanelAnimator;
@@ -498,6 +521,9 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         }
         if (zoneIndex == Sonic3kZoneIds.ZONE_MGZ && actIndex == 1) {
             controller.register(mgzCollapseForegroundVScrollMode);
+        }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_LBZ && actIndex == 0) {
+            controller.register(lbzEndingCollapseForegroundVScrollMode);
         }
     }
 

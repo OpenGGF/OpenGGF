@@ -313,6 +313,53 @@ public class TestSonic3kPlcArtRegistry {
     }
 
     @Test
+    public void surfaceSplashArtMatchesRomShapeAndStaysWithinSplashSheet() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            RomByteReader reader = RomByteReader.fromRom(rom);
+
+            // ArtUnc_SplashDrown is 124 tiles; shares Map_DashDust + DPLC_DashSplashDrown.
+            var tiles = S3kSpriteDataLoader.loadArtTiles(reader,
+                    Sonic3kConstants.ART_UNC_SPLASH_DROWN_ADDR,
+                    Sonic3kConstants.ART_UNC_SPLASH_DROWN_SIZE);
+            var mappings = S3kSpriteDataLoader.loadMappingFrames(reader,
+                    Sonic3kConstants.MAP_DASH_DUST_ADDR);
+            var dplcs = S3kSpriteDataLoader.loadDplcFrames(reader,
+                    Sonic3kConstants.DPLC_DASH_DUST_ADDR);
+
+            assertEquals(124, tiles.length, "ArtUnc_SplashDrown is 124 tiles (3968 bytes).");
+            assertEquals(30, mappings.size(), "Map_DashDust has 30 frames ($00-$1D).");
+            assertEquals(30, dplcs.size(), "DPLC_DashSplashDrown has 30 frames ($00-$1D).");
+
+            // Anim 4 (Ani_DashSplashDrown byte_18DE8) plays mapping frames $16-$1D.
+            // ROM source tiles: $16->0(x12), $17->12, $18->28, $19->44, $1A->60,
+            // $1B->76, $1C->92, $1D->108(x16); 108+16 == 124 exactly.
+            int[] expectedStart = {0, 12, 28, 44, 60, 76, 92, 108};
+            for (int i = 0; i < expectedStart.length; i++) {
+                int frame = 0x16 + i;
+                var requests = dplcs.get(frame).requests();
+                assertEquals(1, requests.size(),
+                        "Splash frame 0x" + Integer.toHexString(frame) + " loads one tile run.");
+                var req = requests.get(0);
+                assertEquals(expectedStart[i], req.startTile(),
+                        "Splash frame 0x" + Integer.toHexString(frame) + " start tile.");
+                assertTrue(req.startTile() + req.count() <= tiles.length,
+                        "Splash frame 0x" + Integer.toHexString(frame)
+                                + " must stay within the 124-tile splash sheet (no art corruption).");
+                // Mapping for these frames references bank-relative tile 0.
+                for (SpriteMappingPiece piece : mappings.get(frame).pieces()) {
+                    assertEquals(0, piece.tileIndex(),
+                            "Splash mapping frame 0x" + Integer.toHexString(frame)
+                                    + " uses bank-relative tile indices.");
+                }
+            }
+        }
+    }
+
+    @Test
     public void lbzMovingPlatformMappingsMatchRomShape() throws IOException {
         File romFile = RomTestUtils.ensureSonic3kRomAvailable();
         assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");

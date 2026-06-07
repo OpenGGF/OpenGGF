@@ -181,6 +181,29 @@ class TestS3kLbz1GroundLaunchIntroHeadless {
                 "Release should leave the visible spring pose in place.");
     }
 
+    @Test
+    void lbz1PlaysSurfaceSplashOnDustControllerWithoutAddingAnSstObject() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 0)
+                .build();
+        AbstractPlayableSprite sonic = fixture.sprite();
+        applyTitleCardHandoff();
+
+        assertFalse(sonic.getSpindashDustController().isSurfaceSplashActive(),
+                "No surface splash before Sonic breaks the surface.");
+
+        for (int frame = 0; frame < 120 && sonic.isControlLocked(); frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+        }
+
+        assertFalse(sonic.isControlLocked(), "Sonic should be released after emerging.");
+        // The ROM reuses the fixed Dust object (no allocation); the engine drives the
+        // splash through the dust controller (not an ObjectManager/SST object), so it
+        // never appears in trace nearby-object snapshots.
+        assertTrue(sonic.getSpindashDustController().isSurfaceSplashActive(),
+                "Breaking the surface should start the ROM splash (Obj_DashDust anim 4) on the dust controller.");
+    }
+
     private boolean hasGroundLaunchIntro() {
         return GameServices.level().getObjectManager().getActiveObjects().stream()
                 .map(ObjectInstance::getName)
