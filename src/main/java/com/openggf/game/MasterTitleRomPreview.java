@@ -32,7 +32,6 @@ import java.util.function.IntUnaryOperator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static org.lwjgl.opengl.GL11.GL_LINEAR;
 import static org.lwjgl.opengl.GL11.GL_NEAREST;
 import static org.lwjgl.opengl.GL11.GL_RGBA;
 import static org.lwjgl.opengl.GL11.GL_TEXTURE_2D;
@@ -83,14 +82,18 @@ final class MasterTitleRomPreview {
     private static final int S2_SONIC_START_TICK = 0;
     private static final int S2_TAILS_START_TICK = 64;
     private static final int S2_SETTLED_TICK = 160;
-    private static final int S3K_PREVIEW_BANNER_Y = 112;
+    private static final int S3K_PREVIEW_BANNER_Y = 84;
+    private static final int S3K_PREVIEW_VSCROLL = 16;
     private static final int S3K_PREVIEW_FINGER_X = 0x148 - 128;
-    private static final int S3K_PREVIEW_FINGER_Y = 0xDC - 16 - 128 + Pattern.PATTERN_HEIGHT * 2;
+    private static final int S3K_PREVIEW_FINGER_Y = 0xDC - S3K_PREVIEW_VSCROLL - 128;
     private static final int S3K_PREVIEW_FINGER_FRAME_DURATION = 6;
     private static final int S3K_PREVIEW_WINK_X = 0xF8 - 128;
-    private static final int S3K_PREVIEW_WINK_Y = 0xC8 - 16 - 128 + Pattern.PATTERN_HEIGHT * 2;
-    private static final int S3K_PREVIEW_SCALE_NUMERATOR = 7;
-    private static final int S3K_PREVIEW_SCALE_DENOMINATOR = 10;
+    private static final int S3K_PREVIEW_WINK_Y = 0xC8 - S3K_PREVIEW_VSCROLL - 128;
+    private static final int S3K_PREVIEW_SCALE_NUMERATOR = 1;
+    private static final int S3K_PREVIEW_SCALE_DENOMINATOR = 1;
+    private static final int S3K_PREVIEW_COPYRIGHT_X = 8;
+    private static final int S3K_PREVIEW_COPYRIGHT_Y = 8;
+    private static final boolean S3K_PREVIEW_DRAWS_COPYRIGHT = false;
     private static final boolean S3K_PREVIEW_DRAWS_MENU_SELECTION = false;
     private static final int[] S3K_PREVIEW_FINGER_WAG_FRAMES = {
             4, 4, 4, 4, 4, 4, 0, 4, 1, 4, 0, 4, 1, 4, 0, 4, 1, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4
@@ -283,7 +286,7 @@ final class MasterTitleRomPreview {
             glBindTexture(GL_TEXTURE_2D, texId);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width, image.height,
                     0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
             glBindTexture(GL_TEXTURE_2D, 0);
             return texId;
@@ -383,8 +386,16 @@ final class MasterTitleRomPreview {
         return S3K_PREVIEW_DRAWS_MENU_SELECTION;
     }
 
+    static boolean sonic3kPreviewDrawsCopyright() {
+        return S3K_PREVIEW_DRAWS_COPYRIGHT;
+    }
+
     static int sonic3kPreviewBannerY() {
         return S3K_PREVIEW_BANNER_Y;
+    }
+
+    static int sonic3kPreviewVScroll() {
+        return S3K_PREVIEW_VSCROLL;
     }
 
     static int sonic3kPreviewFingerY() {
@@ -403,6 +414,14 @@ final class MasterTitleRomPreview {
     static int sonic3kPreviewScaledHeight() {
         return S3K_TITLE_HEIGHT_TILES * Pattern.PATTERN_HEIGHT
                 * S3K_PREVIEW_SCALE_NUMERATOR / S3K_PREVIEW_SCALE_DENOMINATOR;
+    }
+
+    static int sonic3kPreviewCopyrightX() {
+        return S3K_PREVIEW_COPYRIGHT_X;
+    }
+
+    static int sonic3kPreviewCopyrightY() {
+        return S3K_PREVIEW_COPYRIGHT_Y;
     }
 
     static Image composeTilemapImage(Pattern[] patterns,
@@ -585,7 +604,8 @@ final class MasterTitleRomPreview {
         Palette[] palettes = loadPaletteLines(rom.readBytes(
                 Sonic3kConstants.PAL_TITLE_SONIC_D_ADDR,
                 Sonic3kConstants.PAL_TITLE_SONIC_D_SIZE));
-        Image finalScene = composeTilemapImage(patterns, palettes, map, S3K_TITLE_WIDTH_TILES, S3K_TITLE_HEIGHT_TILES);
+        Image finalScene = shiftImage(composeTilemapImage(patterns, palettes, map,
+                S3K_TITLE_WIDTH_TILES, S3K_TITLE_HEIGHT_TILES), 0, -sonic3kPreviewVScroll());
         int stillTick = 0;
         return new GeneratedPreviewSequence(finalScene.width(), finalScene.height(), stillTick,
                 MasterTitleRomPreview::s3kPreviewTokenAt,
@@ -619,13 +639,38 @@ final class MasterTitleRomPreview {
             overlaySpriteFrame(image, spritePatterns, palettes, Sonic3kTitleScreenMappings.createSelectionFrames().get(0),
                     0xF0 - 128, 0x140 - 128, 0);
         }
-        overlaySpriteFrame(image, spritePatterns, palettes, Sonic3kTitleScreenMappings.createCopyrightFrame().get(0),
-                0x158 - 128, 0x14C - 128, 0);
+        if (sonic3kPreviewDrawsCopyright()) {
+            overlaySpriteFrame(image, spritePatterns, palettes, Sonic3kTitleScreenMappings.createCopyrightFrame().get(0),
+                    sonic3kPreviewCopyrightX(), sonic3kPreviewCopyrightY(), 0);
+        }
         return scaleImageIntoNativeCanvas(image, sonic3kPreviewScaledWidth(), sonic3kPreviewScaledHeight());
     }
 
     private static Image copyImage(Image image) {
         return new Image(image.width(), image.height(), Arrays.copyOf(image.rgba(), image.rgba().length));
+    }
+
+    private static Image shiftImage(Image source, int deltaX, int deltaY) {
+        byte[] shifted = new byte[source.rgba().length];
+        for (int y = 0; y < source.height(); y++) {
+            int destY = y + deltaY;
+            if (destY < 0 || destY >= source.height()) {
+                continue;
+            }
+            for (int x = 0; x < source.width(); x++) {
+                int destX = x + deltaX;
+                if (destX < 0 || destX >= source.width()) {
+                    continue;
+                }
+                int sourceOffset = ((y * source.width()) + x) * 4;
+                int destOffset = ((destY * source.width()) + destX) * 4;
+                shifted[destOffset] = source.rgba()[sourceOffset];
+                shifted[destOffset + 1] = source.rgba()[sourceOffset + 1];
+                shifted[destOffset + 2] = source.rgba()[sourceOffset + 2];
+                shifted[destOffset + 3] = source.rgba()[sourceOffset + 3];
+            }
+        }
+        return new Image(source.width(), source.height(), shifted);
     }
 
     private static Image scaleImageIntoNativeCanvas(Image source, int scaledWidth, int scaledHeight) {

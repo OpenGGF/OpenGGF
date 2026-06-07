@@ -157,6 +157,26 @@ class TestMasterTitleScreenLayout {
     }
 
     @Test
+    void romPreviewTopMatteIsDisabledForOpenGgfLogoArea() {
+        MasterTitleScreen.PreviewLayout layout = MasterTitleScreen.topUiMatteLayout(400);
+
+        assertEquals(400, layout.width());
+        assertEquals(0, layout.height());
+        assertEquals(0f, layout.x(), 0f);
+        assertEquals(224f, layout.y(), 0f);
+    }
+
+    @Test
+    void romPreviewBottomMatteCoversMenuArea() {
+        MasterTitleScreen.PreviewLayout layout = MasterTitleScreen.bottomUiMatteLayout(400);
+
+        assertEquals(400, layout.width());
+        assertEquals(48, layout.height());
+        assertEquals(0f, layout.x(), 0f);
+        assertEquals(0f, layout.y(), 0f);
+    }
+
+    @Test
     void titleLogoYPlacesOpenGgfLogoOneTileHigher() {
         assertEquals(180f, MasterTitleScreen.titleLogoY(42), 0f);
     }
