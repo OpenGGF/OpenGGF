@@ -8,8 +8,10 @@ All notable changes to the OpenGGF project are documented in this file.
   a bundled emblem image:** the copyrighted `title-emblem.png` resource has
   been removed. When the expected Sonic 1, Sonic 2, or Sonic 3&K ROM is present
   in the project directory, the selector builds an in-memory preview from that
-  ROM's title-screen patterns, mappings, and palettes. Missing games are greyed
-  out and show the exact required ROM filename in red.
+  ROM's title-screen patterns, mappings, and palettes. Those previews now
+  animate from the corresponding title-screen intro frames and restart from the
+  beginning whenever a game is reselected. Missing games are greyed out and show
+  the exact required ROM filename in red.
 
 - **S3K Launch Base Act 1 now runs the Sonic/Knuckles blockade sequence:**
   LBZ1 registers the cutscene Knuckles and Robotnik event controllers, loads the
