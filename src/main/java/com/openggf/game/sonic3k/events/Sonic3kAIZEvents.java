@@ -32,6 +32,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.level.objects.BootstrapObjectServices;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
@@ -492,7 +493,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 loadPaletteFromPalPointers(PAL_AIZ_INDEX);
                 paletteSwapped = true;
             }
-            AizIntroTerrainSwap.applyMainLevelOverlaysFromRuntime();
+            AizIntroTerrainSwap.applyMainLevelOverlays(new BootstrapObjectServices());
             AizPlaneIntroInstance.setMainLevelPhaseActive(true);
         }
     }

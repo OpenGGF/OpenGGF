@@ -41,6 +41,8 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/level/objects/AbstractMonitorObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/ARZPlatformObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/ARZPlatformObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic2/objects/ConveyorObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic2/objects/ConveyorObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/badniks/BadnikProjectileInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/badniks/BadnikProjectileInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/badniks/BuzzerBadnikInstance.java#captureRewindState", 2),

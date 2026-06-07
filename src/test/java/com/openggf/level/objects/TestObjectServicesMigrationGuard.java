@@ -153,13 +153,7 @@ class TestObjectServicesMigrationGuard {
                     "solid-contact trace emission through the active collision trace"),
             approved("com.openggf.game.sonic2.objects.Sonic2ObjectRegistry", "GameServices.",
                     "GameServices.level().getObjectRenderManager()",
-                    "legacy Sonic 2 object render context wiring"),
-            approved("com.openggf.game.sonic3k.objects.AizIntroTerrainSwap", "GameServices.",
-                    "GameServices.hasRuntime()",
-                    "static AIZ intro terrain-swap runtime helper"),
-            approved("com.openggf.game.sonic3k.objects.AizIntroTerrainSwap", "GameServices.",
-                    "GameServices.zoneLayoutMutationPipelineOrNull()",
-                    "static AIZ intro terrain-swap runtime helper")
+                    "legacy Sonic 2 object render context wiring")
     );
 
     private static final Set<String> SHARED_OBJECT_SOURCE_EXCEPTIONS = Set.of(
@@ -466,7 +460,7 @@ class TestObjectServicesMigrationGuard {
                     });
         }
         if (!violations.isEmpty()) {
-            fail("AIZ terrain swap must use explicit ObjectServices or applyMainLevelOverlaysFromRuntime():\n  "
+            fail("AIZ terrain swap must use explicit ObjectServices:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }

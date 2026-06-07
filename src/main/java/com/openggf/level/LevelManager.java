@@ -485,7 +485,12 @@ public class LevelManager {
         chunksPerBlockSide = newLevel.getChunksPerBlockSide();
         cacheLevelDimensions();
         initAnimatedContent();
-        invalidateForegroundTilemap();
+        if (tilemapManager != null) {
+            tilemapManager.updateGeometry(buildGeometry());
+            tilemapManager.invalidateAllTilemaps();
+        } else {
+            invalidateForegroundTilemap();
+        }
     }
 
     /**

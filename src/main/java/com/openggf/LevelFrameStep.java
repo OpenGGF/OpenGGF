@@ -2,7 +2,6 @@ package com.openggf;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.BonusStageProvider;
-import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.level.LevelManager;
@@ -80,7 +79,7 @@ public final class LevelFrameStep {
     public static boolean executeWithPause(LevelFrameContext context, LevelManager levelManager,
                                            Camera camera, Runnable spriteUpdate,
                                            boolean startEdgePressed, StepWrapper wrapper) {
-        GameStateManager gameState = GameServices.gameStateOrNull();
+        GameStateManager gameState = context.gameStateManager();
         if (gameState != null && gameState.applyPauseToggle(startEdgePressed)) {
             // Paused: ROM Pause_Loop runs only the V-int. Skip the level update
             // entirely (objects, physics, camera, scroll). The caller's frame

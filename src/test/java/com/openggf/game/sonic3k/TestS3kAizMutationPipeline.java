@@ -52,11 +52,12 @@ class TestS3kAizMutationPipeline {
     @Test
     void aizIntroTerrainSwapCacheShouldResetAcrossGameBootstrap() throws IOException {
         String terrainSwap = Files.readString(INTRO_TERRAIN_SWAP);
-        String engine = Files.readString(Path.of("src/main/java/com/openggf/Engine.java"));
+        String module = Files.readString(Path.of("src/main/java/com/openggf/game/sonic3k/Sonic3kGameModule.java"));
 
         assertContains(terrainSwap, "public static synchronized void reset()");
         assertContains(terrainSwap, "cachedOverlayData = null;");
-        assertContains(engine, "AizIntroTerrainSwap.reset();");
+        assertContains(module, "public void resetModuleScopedState()");
+        assertContains(module, "AizIntroTerrainSwap.reset();");
     }
 
     @Test

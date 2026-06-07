@@ -535,7 +535,7 @@ public class Engine {
 	}
 
 	private void resetForGameplayFromMasterTitle() {
-		GameModuleRegistry.getCurrent().resetModuleScopedState();
+		GameServices.module().resetModuleScopedState();
 		SessionManager.clear();
 		romManager.close();
 		GameModuleRegistry.reset();

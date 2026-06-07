@@ -709,7 +709,7 @@ class TestArchUnitRules {
                                     "com.openggf.game.sonic2..",
                                     "com.openggf.game.sonic3k..")
                     .as("shared level and game layers should not depend on game-specific packages"))
-                    .because("shared layers should depend on provider contracts or shared abstractions, not concrete game packages; frozen baseline: 11 violations");
+                    .because("shared layers should depend on provider contracts or shared abstractions, not concrete game packages; frozen baseline: 20 violations");
 
     @ArchTest
     static final ArchRule per_game_packages_do_not_cross_depend =

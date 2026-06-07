@@ -37,6 +37,9 @@ final class LostRingRewindCodec implements DynamicObjectRewindCodec {
             ObjectManagerSnapshot.DynamicObjectEntry entry) {
         LostRingObjectInstance ring = LostRingObjectInstance.create(entry.spawn());
         ring.setServices(context.objectServices());
+        if (context.objectServices().ringManager() != null) {
+            ring.setSpillAnimation(context.objectServices().ringManager().getSpillAnimationState());
+        }
         return ring;
     }
 }

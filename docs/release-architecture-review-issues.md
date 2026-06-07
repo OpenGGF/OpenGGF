@@ -7,6 +7,49 @@ This tracker records the issues found during the deep pre-release architecture a
 - `resolved`: code/docs changed and focused verification passed.
 - `deferred`: intentionally left for a later release with rationale.
 
+## 2026-06-07 Develop Release Review Addendum
+
+This addendum records the latest multi-agent release review against `develop`.
+It includes failures observed in the full local suite and architecture risks that
+should either be fixed or explicitly deferred before release.
+
+### Current Verification Baseline
+
+- `mvn -q -DskipTests compile`: passed before fixes.
+- `mvn -q test`: failed with 15 failures and 1 error across 6964 tests.
+- Focused architecture/build guard run failed with 5 guard failures.
+- Final verification after fixes: `mvn -q -DskipTests compile` passed; `mvn -q test` passed with 5987 tests, 0 failures, 0 errors, 977 skipped.
+- Working tree note before this addendum: unrelated `.gitignore` changes were already present.
+
+### Release Blockers / Active Fix List
+
+| ID | Status | Area | Issue | Evidence | Resolution Notes |
+| --- | --- | --- | --- | --- | --- |
+| REL-022 | resolved | Frame runtime ownership | `LevelFrameStep` still reads ambient `GameServices` for pause state instead of using its explicit frame context. | `src/main/java/com/openggf/LevelFrameStep.java`, `TestArchitecturalSourceGuard.levelFrameStepDoesNotUseAmbientGameServices` | `LevelFrameContext` now carries `GameStateManager` from `GameplayModeContext`; `LevelFrameStep.executeWithPause(...)` no longer imports or calls `GameServices`. Focused report: 1 test, 0 failures/errors. |
+| REL-023 | resolved | Collision parity | Collision tests and guards still detect coordinate-window behavior or stale sensor fallback semantics. | `CollisionSystemTest.floorLipSlopeUsesAlternateSensorPatternOutsideSbzCoordinates`, `CollisionSystemTest.oddRightWallAngleFallbackIsSensorDrivenNotCoordinateWindow`, `TestArchitecturalSourceGuard.collisionSystemDoesNotContainSbzCoordinateWindows` | Removed SBZ coordinate-window predicates from `CollisionSystem`; odd right-wall fallback and floor-lip slope selection are now driven by sensor result patterns. Focused reports: collision 3 tests, source guard 1 test, 0 failures/errors. |
+| REL-024 | resolved | Runtime level ownership | `LevelManager.setLevel()` can swap the active level without rebinding `LevelTilemapManager` geometry, leaving tilemap caches pointed at the previous level after editor resume or mutable-level restoration. | `LevelManager.restoreInheritedLevel()`, `LevelManager.setLevel()`, `LevelTilemapManager.updateGeometry(...)` | `setLevel(...)` now updates tilemap geometry and invalidates all tilemap caches; `TestLevelManagerSlotBackgroundCopy` covers replacement-level rebinding. Focused report: 3 tests, 0 failures/errors. |
+| REL-025 | resolved | Release packaging | Native Windows/Linux release packages omit `config.yaml`, but native config loading looks beside the executable. | `.github/workflows/release.yml`, `SonicConfigurationService`, native Maven copy step | Windows/Linux native packages now copy `target/config.yaml`; macOS zip includes the exported `config.yaml` beside `OpenGGF.app`. Guarded by `TestBuildToolingGuard.nativeReleasePackagesShouldIncludeEditableConfigYaml`. Focused report: 2 build-tooling tests, 0 failures/errors. |
+| REL-026 | open | Release trace gate | Release trace CI can still be satisfied by synthetic or skipped reports unless ROM-backed trace reports are counted explicitly. | `.github/workflows/release.yml`, `RequiresRomCondition`, `TestBuildToolingGuard.traceReplayBootstrapPolicySignalsStayBounded` | Tighten workflow/report checks and update guard baselines only after policy is explicit. |
+| REL-027 | open | Pattern atlas governance | Virtual pattern bases are allocated ad hoc outside `PatternAtlasRange`, and unregistered cache writes can overlap undetected. | `PatternAtlasRange`, `PatternAtlas.cachePattern(...)`, hardcoded bases in title/data-select/results/credits renderers | Centralize known ranges or add a ratchet that requires new hardcoded bases to be registered. |
+| REL-028 | open | Runtime assets | S3K HCZ standalone object mappings still use hardcoded runtime mapping data where mapping address is `0`. | `Sonic3kObjectArt.loadStandaloneSheet(...)`, `Sonic3kPlcArtRegistry` HCZ entries | Resolve ROM mapping addresses or document bounded release debt with a non-growth guard. |
+| REL-029 | open | Render pipeline | Fade is documented as the final pass, but `Engine.display()` draws several overlays after fade. | `UiRenderPipeline`, `Engine.display()` | Either move overlays before fade, route them through the pipeline deliberately, or correct the contract with tests. |
+| REL-030 | resolved | Rewind architecture | Object rewind override ratchet fails on new S2 conveyor overrides. | `TestRewindArchitectureGuard`, `Sonic2/objects/ConveyorObjectInstance` | Explicitly baselined the conveyor capture/restore overrides because the object snapshots path-following coordinates, waypoint progress, subpixel motion, and dynamic-spawn position beyond the generic object snapshot. |
+| REL-031 | resolved | Input parity | S2 logical input control lock latch test fails when the ROM flag clears. | `TestLogicalInputControlLockLatch.s2FlagClearedDoesNotLatchLogicalInput` | Kept S2 on the post-filtered zero-input baseline by clearing `controlLockLatchesLogicalInput` until the Tails follow-history latch can be validated without regressing EHZ/MTZ traces. |
+| REL-032 | resolved | Object profile standardization | S1 bumper declares continuous touch callbacks without the expected touch profile vocabulary. | `TestObjectPhysicsStandardizationGuard`, `Sonic1BumperObjectInstance` | Added an explicit S1 special-property touch profile for bumper behavior instead of growing the raw override baseline. |
+| REL-033 | resolved | Architectural baselines | Several architecture ratchets/freeze stores fail because counts drifted or obsolete violations were removed. | `TestBuildToolingGuard`, `TestArchUnitRules`, `TestSingletonLifecycleGuard`, line-count ratchets | Removed stale lifecycle/module violations, updated deterministic ArchUnit freeze counts, and left the expanded shared-layer dependency set as tracked architectural debt rather than hidden drift. |
+| REL-040 | resolved | Rewind determinism | Full-suite rewind torture found a lost-ring dynamic object missing after adjacent seek/replay around frame 3100. | `TestRewindTorture.tortureFixedAdjacent`, `LostRingRewindCodec` | Reattached recreated lost-ring objects to the session-owned `SpillAnimationState` through `ObjectServices.ringManager()` so dynamic Obj37 rings restore against the same shared spin owner as the ring-manager snapshot. Focused report: 1 test, 0 failures/errors. |
+
+### Additional Release Risks To Decide
+
+| ID | Status | Area | Issue | Evidence | Resolution Notes |
+| --- | --- | --- | --- | --- | --- |
+| REL-034 | open | Trace policy | S3K complete-run bootstrap seeds frame-zero player/sidekick/camera state from the trace fixture. This may be an intentional bootstrap contract, but it needs explicit release documentation because trace data must remain diagnostic input. | `TraceReplaySessionBootstrap.seedS3kCompleteRunStartState(...)` | Decide whether to remove, narrow, or document as bounded frame-zero bootstrap debt. |
+| REL-035 | open | Trace parity | S3K sidekick/SST trace comparison coverage remains partial and some warning-only gaps are not equivalent to strict parity. | `AbstractTraceReplayTest.captureEngineSnapshot()`, S3K trace tests | Treat warning-only reports as release blocking where appropriate or document frontier scope. |
+| REL-036 | open | Runtime snapshots | `SpecialRenderEffectRegistry` and `AdvancedRenderModeController` capture shallow identities, which is fragile for future stateful effects. | `SpecialRenderEffectRegistry.capture()`, `AdvancedRenderModeController.capture()` | Add stateful effect snapshot contracts or guard current effects as stateless. |
+| REL-037 | open | Runtime lifecycle coverage | Runtime-owned registry lifecycle tests do not cover all session-scoped registries. | `TestRuntimeOwnedRegistryLifecycle`, `GameplayModeContext` registry fields | Extend lifecycle tests for zone runtime state, palette ownership, animated tiles, and render-mode/effect registries. |
+| REL-038 | open | Documentation accuracy | README controls are stale relative to `config.yaml`. | `README.md`, `src/main/resources/config.yaml` | Update active setup/control docs and keep historical mentions scoped as history. |
+| REL-039 | open | Branch policy docs | Branch trailer docs imply every non-master commit is checked, but merge commits are skipped by hooks/CI. | `AGENTS.md`, `.githooks/run-policy` | Align docs with actual hook behavior or tighten hooks. |
+
 ## High Priority
 
 | ID | Status | Area | Issue | Evidence | Resolution Notes |

@@ -38,17 +38,18 @@ class TestBuildToolingGuard {
                     + ".*\\b(?:current|previous|firstFrame|expected|traceFrame|frame)\\s*\\.\\s*"
                     + "(?:x|y|xSpeed|ySpeed|gSpeed|angle|air|rolling|xSub|ySub)\\s*\\(");
     private static final Set<String> ACCEPTED_TRACE_BOOTSTRAP_POLICY_SIGNALS = Set.of(
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:286 - if (!meta.hasPerFrameSlotMachineState()) {",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:448 - && \"level_gated_reset_aware\".equals(metadata.traceProfile())",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:479 - && current.frame() < findFirstLevelGameplayFrame(trace)) {",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:493 - if (current.frame() < firstLevelFrame) {",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:503 - if (current.frame() == firstLevelFrame) {",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:584 - int gameplayStartFrame = findCheckpointFrame(trace, \"gameplay_start\");",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:585 - return gameplayStartFrame >= 0 && current.frame() <= gameplayStartFrame;",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:655 - if (metadata.zoneId() == null || metadata.zoneId() != 0 || metadata.act() != 1) {",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:661 - .anyMatch(checkpoint -> \"intro_begin\".equals(checkpoint.name()));",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:665 - private static int findCheckpointFrame(TraceData trace, String checkpointName) {",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:669 - && checkpointName.equals(checkpoint.name())) {");
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:336 - if (!meta.hasPerFrameSlotMachineState()) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:498 - && \"level_gated_reset_aware\".equals(metadata.traceProfile())",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:529 - && current.frame() < findFirstLevelGameplayFrame(trace)) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:543 - if (current.frame() < firstLevelFrame) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:553 - if (current.frame() == firstLevelFrame) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:655 - int gameplayStartFrame = findCheckpointFrame(trace, \"gameplay_start\");",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:656 - return gameplayStartFrame >= 0 && current.frame() <= gameplayStartFrame;",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:676 - || !\"complete_run\".equals(metadata.traceProfile())",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:757 - if (metadata.zoneId() == null || metadata.zoneId() != 0 || metadata.act() != 1) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:763 - .anyMatch(checkpoint -> \"intro_begin\".equals(checkpoint.name()));",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:767 - private static int findCheckpointFrame(TraceData trace, String checkpointName) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:771 - && checkpointName.equals(checkpoint.name())) {");
 
     @Test
     void surefireShouldPreloadMockitoAsJavaAgent() throws Exception {
@@ -240,7 +241,7 @@ class TestBuildToolingGuard {
 
     @Test
     void releaseWorkflowShouldNotPublishStaticPrereleaseOnEveryMasterPush() throws Exception {
-        String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
+        String workflow = normalizeLineEndings(Files.readString(Path.of(".github/workflows/release.yml")));
         List<String> violations = new ArrayList<>();
 
         if (!workflow.contains("release:\n    needs: build\n    if: github.event_name == 'workflow_dispatch'")) {
@@ -252,6 +253,27 @@ class TestBuildToolingGuard {
 
         if (!violations.isEmpty()) {
             fail("release publishing must be deliberate while the pom version is a static prerelease tag:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void nativeReleasePackagesShouldIncludeEditableConfigYaml() throws Exception {
+        String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
+        List<String> violations = new ArrayList<>();
+
+        if (!workflow.contains("Copy-Item \"target/config.yaml\" \"dist/OpenGGF/\"")) {
+            violations.add(".github/workflows/release.yml Windows package does not include target/config.yaml");
+        }
+        if (!workflow.contains("zip -r OpenGGF-macos.zip OpenGGF.app config.yaml")) {
+            violations.add(".github/workflows/release.yml macOS package does not include exported config.yaml");
+        }
+        if (!workflow.contains("cp target/config.yaml dist/OpenGGF/")) {
+            violations.add(".github/workflows/release.yml Linux package does not include target/config.yaml");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("native release packages must include editable config.yaml next to the executable/app:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
@@ -523,6 +545,10 @@ class TestBuildToolingGuard {
         factory.setNamespaceAware(false);
         factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
         return factory.newDocumentBuilder().parse(new InputSource(Files.newBufferedReader(Path.of(file))));
+    }
+
+    private static String normalizeLineEndings(String text) {
+        return text.replace("\r\n", "\n").replace('\r', '\n');
     }
 
     private static String property(Document pom, String name) {

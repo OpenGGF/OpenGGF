@@ -2,6 +2,7 @@ package com.openggf;
 
 import com.openggf.game.BonusStageProvider;
 import com.openggf.game.GameModule;
+import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.NoOpBonusStageProvider;
 import com.openggf.game.PhysicsFeatureSet;
@@ -15,7 +16,8 @@ public record LevelFrameContext(GameModule gameModule,
                                 PhysicsFeatureSet frameOrderFeatureSet,
                                 LevelEventProvider levelEventProvider,
                                 BonusStageProvider bonusStageProvider,
-                                SpriteManager spriteManager) {
+                                SpriteManager spriteManager,
+                                GameStateManager gameStateManager) {
 
     public LevelFrameContext {
         Objects.requireNonNull(gameModule, "gameModule");
@@ -34,6 +36,7 @@ public record LevelFrameContext(GameModule gameModule,
                 featureSet,
                 module.getLevelEventProvider(),
                 context.getActiveBonusStageProvider(),
-                context.getSpriteManager());
+                context.getSpriteManager(),
+                context.getGameStateManager());
     }
 }

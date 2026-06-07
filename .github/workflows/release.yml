@@ -118,6 +118,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path dist/OpenGGF
           Copy-Item "target/OpenGGF.exe" "dist/OpenGGF/"
+          Copy-Item "target/config.yaml" "dist/OpenGGF/"
           Copy-Item "target/native-libs/*.dll" "dist/OpenGGF/"
           Compress-Archive -Path "dist/OpenGGF" -DestinationPath "dist/OpenGGF-windows.zip"
           Remove-Item -Recurse -Force "dist/OpenGGF"
@@ -128,7 +129,7 @@ jobs:
           mkdir -p dist
           bash src/packaging/assemble-macos-app.sh target/OpenGGF dist
           cd dist
-          zip -r OpenGGF-macos.zip OpenGGF.app
+          zip -r OpenGGF-macos.zip OpenGGF.app config.yaml
           rm -rf OpenGGF.app
 
       - name: Package (Linux)
@@ -136,6 +137,7 @@ jobs:
         run: |
           mkdir -p dist/OpenGGF
           cp target/OpenGGF dist/OpenGGF/
+          cp target/config.yaml dist/OpenGGF/
           cp target/native-libs/*.so dist/OpenGGF/
           tar -czvf dist/OpenGGF-linux.tar.gz -C dist OpenGGF
           rm -rf dist/OpenGGF

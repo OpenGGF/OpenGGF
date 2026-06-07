@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.data.Rom;
-import com.openggf.game.GameServices;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
@@ -103,13 +102,6 @@ public final class AizIntroTerrainSwap {
         sonic3kLevel.restoreChunks(snapshot);
 
         LOG.info("AIZ intro transition tilemaps pre-computed successfully");
-    }
-
-    public static synchronized boolean applyMainLevelOverlaysFromRuntime() {
-        if (!GameServices.hasRuntime() || GameServices.zoneLayoutMutationPipelineOrNull() == null) {
-            return false;
-        }
-        return applyMainLevelOverlays(new BootstrapObjectServices());
     }
 
     public static synchronized boolean applyMainLevelOverlays(ObjectServices services) {
