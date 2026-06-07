@@ -1,5 +1,6 @@
 package com.openggf.game;
 
+import com.openggf.configuration.SonicConfigurationService;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -124,5 +125,29 @@ class TestMasterTitleScreenLayout {
         assertEquals(0.4f, color[1], 0f);
         assertEquals(0.4f, color[2], 0f);
         assertEquals(0.7f, color[3], 0f);
+    }
+
+    @Test
+    void previewAnimationFrame_advancesUntilSelectionChanges() {
+        MasterTitleScreen screen = new MasterTitleScreen(SonicConfigurationService.createStandalone());
+
+        screen.advancePreviewAnimationFrame();
+        screen.advancePreviewAnimationFrame();
+
+        assertEquals(2, screen.previewAnimationFrameForTest());
+
+        screen.setSelectedIndexForTest(MasterTitleScreen.GameEntry.SONIC_1.ordinal());
+
+        assertEquals(0, screen.previewAnimationFrameForTest());
+    }
+
+    @Test
+    void previewAnimationFrame_doesNotResetWhenSelectionStaysTheSame() {
+        MasterTitleScreen screen = new MasterTitleScreen(SonicConfigurationService.createStandalone());
+
+        screen.advancePreviewAnimationFrame();
+        screen.setSelectedIndexForTest(MasterTitleScreen.GameEntry.SONIC_2.ordinal());
+
+        assertEquals(1, screen.previewAnimationFrameForTest());
     }
 }

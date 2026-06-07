@@ -90,6 +90,35 @@ class TestMasterTitleRomPreview {
     }
 
     @Test
+    void previewSequence_clampsToLastFrameAfterTimelineCompletes() {
+        MasterTitleRomPreview.Image first = new MasterTitleRomPreview.Image(1, 1, new byte[] { 1, 0, 0, 1 });
+        MasterTitleRomPreview.Image second = new MasterTitleRomPreview.Image(1, 1, new byte[] { 2, 0, 0, 1 });
+        MasterTitleRomPreview.PreviewSequence sequence =
+                MasterTitleRomPreview.sequenceForTest(new MasterTitleRomPreview.Image[] { first, second });
+
+        assertEquals(0, sequence.frameTokenAt(0));
+        assertEquals(1, sequence.frameTokenAt(1));
+        assertEquals(1, sequence.frameTokenAt(99));
+        assertEquals(first, sequence.imageAt(0));
+        assertEquals(second, sequence.imageAt(99));
+    }
+
+    @Test
+    void sonic2PreviewTimelineStartsWithHiddenSonicAndSettlesToFinalFrame() {
+        assertEquals(5, MasterTitleRomPreview.sonic2PreviewSonicFrameAt(0));
+        assertEquals(96 + MasterTitleRomPreview.sonic2PreviewCharacterYOffset(),
+                MasterTitleRomPreview.sonic2PreviewSonicYAt(0));
+
+        assertEquals(5, MasterTitleRomPreview.sonic2PreviewSonicFrameAt(128));
+        assertEquals(80 + MasterTitleRomPreview.sonic2PreviewCharacterYOffset(),
+                MasterTitleRomPreview.sonic2PreviewSonicYAt(128));
+
+        assertEquals(0x12, MasterTitleRomPreview.sonic2PreviewSonicFrameAt(288));
+        assertEquals(24 + MasterTitleRomPreview.sonic2PreviewCharacterYOffset(),
+                MasterTitleRomPreview.sonic2PreviewSonicYAt(288));
+    }
+
+    @Test
     void sonic1PreviewUsesSettledIdleLoopFrame() {
         assertEquals(6, MasterTitleRomPreview.sonic1PreviewSonicFrameIndex());
     }

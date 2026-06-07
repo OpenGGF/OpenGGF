@@ -130,6 +130,10 @@ public class MasterTitleScreen {
     private final int[] romPreviewTextureIds = new int[GameEntry.values().length];
     private final int[] romPreviewWidths = new int[GameEntry.values().length];
     private final int[] romPreviewHeights = new int[GameEntry.values().length];
+    private final int[] romPreviewFrameTokens = new int[GameEntry.values().length];
+    private final MasterTitleRomPreview.PreviewSequence[] romPreviewSequences =
+            new MasterTitleRomPreview.PreviewSequence[GameEntry.values().length];
+    private int previewAnimationFrame = 0;
 
     private final List<CloudSprite> clouds = new ArrayList<>();
     private final SonicConfigurationService configService;
@@ -203,6 +207,7 @@ public class MasterTitleScreen {
             }
 
             loadRomPreviews();
+            resetRomPreviewTextureFrames();
 
             state = State.FADE_IN;
             LOGGER.info("Master title screen initialized");
@@ -234,6 +239,7 @@ public class MasterTitleScreen {
      */
     public void update(InputHandler inputHandler) {
         frameCounter++;
+        advancePreviewAnimationFrame();
 
         // Update cloud animation
         for (CloudSprite cloud : clouds) {
@@ -299,12 +305,14 @@ public class MasterTitleScreen {
         int jumpKey = configService.getInt(SonicConfiguration.JUMP);
 
         if (inputHandler.isKeyPressed(leftKey)) {
-            selectedIndex = Math.max(0, selectedIndex - 1);
-            playNavigateSound();
+            if (setSelectedIndex(selectedIndex - 1)) {
+                playNavigateSound();
+            }
         }
         if (inputHandler.isKeyPressed(rightKey)) {
-            selectedIndex = Math.min(GameEntry.values().length - 1, selectedIndex + 1);
-            playNavigateSound();
+            if (setSelectedIndex(selectedIndex + 1)) {
+                playNavigateSound();
+            }
         }
 
         // Confirm with Jump or Enter
@@ -449,16 +457,19 @@ public class MasterTitleScreen {
             }
             GameEntry entry = entries[i];
             Path path = Path.of(configService.getString(entry.romConfigKey));
-            MasterTitleRomPreview.loadFor(entry, path).ifPresent(image -> {
+            MasterTitleRomPreview.loadSequenceFor(entry, path).ifPresent(sequence -> {
                 int index = entry.ordinal();
-                romPreviewTextureIds[index] = MasterTitleRomPreview.uploadTexture(image);
-                romPreviewWidths[index] = image.width();
-                romPreviewHeights[index] = image.height();
+                romPreviewSequences[index] = sequence;
+                MasterTitleRomPreview.Image firstFrame = sequence.imageAt(0);
+                romPreviewTextureIds[index] = MasterTitleRomPreview.uploadTexture(firstFrame);
+                romPreviewWidths[index] = firstFrame.width();
+                romPreviewHeights[index] = firstFrame.height();
             });
         }
     }
 
     private void drawSelectedRomPreview() {
+        updateSelectedRomPreviewTexture();
         int textureId = romPreviewTextureIds[selectedIndex];
         if (textureId == 0) {
             return;
@@ -471,6 +482,21 @@ public class MasterTitleScreen {
         float x = centerX(scaledW, viewportWidth);
         float y = SCREEN_H - 60 - scaledH;
         renderer.drawTexture(textureId, x, y, scaledW, scaledH);
+    }
+
+    private void updateSelectedRomPreviewTexture() {
+        MasterTitleRomPreview.PreviewSequence sequence = romPreviewSequences[selectedIndex];
+        int textureId = romPreviewTextureIds[selectedIndex];
+        if (sequence == null || textureId == 0) {
+            return;
+        }
+        int token = sequence.frameTokenAt(previewAnimationFrame);
+        if (romPreviewFrameTokens[selectedIndex] == token) {
+            return;
+        }
+        MasterTitleRomPreview.Image frame = sequence.imageAt(previewAnimationFrame);
+        MasterTitleRomPreview.updateTexture(textureId, frame);
+        romPreviewFrameTokens[selectedIndex] = token;
     }
 
     private void drawSelectedMissingRomPrompt() {
@@ -507,7 +533,7 @@ public class MasterTitleScreen {
      */
     public void selectEntry(GameEntry entry) {
         Objects.requireNonNull(entry, "entry");
-        this.selectedIndex = entry.ordinal();
+        setSelectedIndex(entry.ordinal());
         if (!romAvailable[selectedIndex]) {
             throw new IllegalStateException("Selected ROM is unavailable: " + entry.gameId);
         }
@@ -561,6 +587,34 @@ public class MasterTitleScreen {
             return new float[] { brightness, brightness, brightness, 1.0f };
         }
         return new float[] { 0.8f, 0.8f, 0.8f, 1.0f };
+    }
+
+    boolean setSelectedIndex(int newIndex) {
+        int clamped = Math.max(0, Math.min(GameEntry.values().length - 1, newIndex));
+        if (clamped == selectedIndex) {
+            return false;
+        }
+        selectedIndex = clamped;
+        previewAnimationFrame = 0;
+        return true;
+    }
+
+    void advancePreviewAnimationFrame() {
+        if (previewAnimationFrame < Integer.MAX_VALUE) {
+            previewAnimationFrame++;
+        }
+    }
+
+    int previewAnimationFrameForTest() {
+        return previewAnimationFrame;
+    }
+
+    void setSelectedIndexForTest(int newIndex) {
+        setSelectedIndex(newIndex);
+    }
+
+    private void resetRomPreviewTextureFrames() {
+        java.util.Arrays.fill(romPreviewFrameTokens, Integer.MIN_VALUE);
     }
 
     public void setProjectionMatrix(float[] projectionMatrix) {
