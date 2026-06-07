@@ -25,11 +25,10 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 12. [S2 Music Offsets Resolved from Hardcoded REV01 Table](#s2-music-offsets-resolved-from-hardcoded-rev01-table)
 13. [Right-Boundary Is Viewport-Independent (Level Edge)](#right-boundary-is-viewport-independent-level-edge)
 14. [Object Despawn and Visibility Windows](#object-despawn-and-visibility-windows)
-15. [Legacy S3K AIZ Intro Trace Replay Bootstrap](#legacy-s3k-aiz-intro-trace-replay-bootstrap)
-16. [S2 Tornado Ride-Start Trace Bootstrap Contract](#s2-tornado-ride-start-trace-bootstrap-contract)
-17. [S2 CNZ Slot-Machine Trace Bootstrap Contract](#s2-cnz-slot-machine-trace-bootstrap-contract)
-18. [S3K Sidekick Seed-Frame Trace Bootstrap Debt](#s3k-sidekick-seed-frame-trace-bootstrap-debt)
-19. [Sonic 1 Embedded Runtime Data Ratchet](#sonic-1-embedded-runtime-data-ratchet)
+15. [S2 Tornado Ride-Start Trace Bootstrap Contract](#s2-tornado-ride-start-trace-bootstrap-contract)
+16. [S2 CNZ Slot-Machine Trace Bootstrap Contract](#s2-cnz-slot-machine-trace-bootstrap-contract)
+17. [S3K Sidekick Seed-Frame Trace Bootstrap Debt](#s3k-sidekick-seed-frame-trace-bootstrap-debt)
+18. [Sonic 1 Embedded Runtime Data Ratchet](#sonic-1-embedded-runtime-data-ratchet)
 
 ---
 
@@ -774,45 +773,6 @@ At widescreen viewport widths (e.g. `ULTRA_21_9` = 528 px) the ROM's hardcoded 6
 ### Removal Condition
 
 This entry should remain as long as widescreen `DISPLAY_ASPECT` presets are supported. It would only be removed if the engine reverted to a fixed 320 × 224 viewport assumption.
----
-
-## Legacy S3K AIZ Intro Trace Replay Bootstrap
-
-**Location:** `TraceReplayBootstrap.isLegacyS3kAizIntroTrace`
-**Scope:** Trace replay fixture compatibility only; not live gameplay.
-
-### Original State
-
-One legacy S3K AIZ intro replay fixture was recorded from the power-on/intro path
-before the current replay bootstrap contract was fully normalized. That fixture
-does not describe the same initial gameplay state as modern checkpoint or
-level-select fixtures.
-
-### Our Implementation
-
-`TraceReplayBootstrap` keeps a single predicate named
-`isLegacyS3kAizIntroTrace(...)` to recognize that one fixture shape and apply
-the older bootstrap assumptions for focused diagnostics. The inherited full-run
-`replayMatchesTrace` parity test in `TestS3kAizTraceReplay` is disabled as
-diagnostic-only until the trace is regenerated; release validation must not
-count this fixture as proof of end-to-end AIZ parity. The predicate is
-intentionally bounded to S3K AIZ intro metadata, and `TestBuildToolingGuard`
-rejects growth beyond the one accepted legacy trace predicate.
-
-### Rationale
-
-This is accepted Phase 1 release debt because removing it requires either
-re-recording the legacy fixture or replacing the compatibility branch with a
-ROM-state-driven intro bootstrap model. The release hardening requirement is
-that the exception is visible, bounded, diagnostic-only for the legacy full-run
-fixture, and prevented from expanding silently.
-
-### Removal Condition
-
-Re-record the affected AIZ intro trace with the current fixture format, or model
-the missing intro bootstrap state from ROM state rather than fixture identity.
-Then delete `isLegacyS3kAizIntroTrace(...)` and its guard allowance.
-
 ---
 
 ## S2 Tornado Ride-Start Trace Bootstrap Contract

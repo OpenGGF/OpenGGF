@@ -51,7 +51,7 @@ class TestTraceReplayStartPositionPolicy {
 
         assertFalse(
                 shouldApply,
-                "The legacy S3K AIZ full-run trace starts from power-on state, so replay must "
+                "The S3K AIZ end-to-end trace starts from power-on state, so replay must "
                         + "keep the engine's live intro spawn instead of applying frame-zero "
                         + "start_x/start_y from stale Player_1 RAM.");
     }
@@ -60,7 +60,6 @@ class TestTraceReplayStartPositionPolicy {
     void s3kEndToEndTraceStartsAtFrameZeroWithoutSkippingIntro() throws Exception {
         TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
 
-        assertFalse(TraceReplayBootstrap.shouldUseLegacyS3kAizIntroWarmup(trace));
         assertFalse(TraceReplayBootstrap.shouldSeedFrameZeroForTraceReplay(trace));
         assertEquals(0, TraceReplayBootstrap.replaySeedTraceIndexForTraceReplay(trace));
         // Strict comparison starts on the first real AIZ level frame, where
@@ -119,7 +118,6 @@ class TestTraceReplayStartPositionPolicy {
 
         assertFalse(trace.preTraceObjectSnapshots().isEmpty(),
                 "CNZ records object snapshots for randomised balloon bob phases.");
-        assertFalse(TraceReplayBootstrap.shouldUseLegacyS3kAizIntroWarmup(trace));
         assertEquals(0, TraceReplayBootstrap.replaySeedTraceIndexForTraceReplay(trace));
         assertFalse(TraceReplayBootstrap.shouldSeedFrameZeroForTraceReplay(trace));
         assertEquals(1,
@@ -140,7 +138,7 @@ class TestTraceReplayStartPositionPolicy {
                         + "OscillateNumDo tick.");
         assertEquals(0,
                 TraceReplayBootstrap.initialOscillationSuppressionFramesForTraceReplay(trace),
-                "Legacy AIZ full-intro replay now drives oscillator timing natively as well.");
+                "End-to-end pre-level prefix replay now drives oscillator timing natively as well.");
     }
 
     @Test

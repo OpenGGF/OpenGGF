@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K AIZ end-to-end trace regenerated; legacy trace exception removed:**
+  `aiz1_to_hcz_fullrun` now uses S3K recorder `6.25-s3k` output for
+  `metadata.json`, `physics.csv.gz`, and `aux_state.jsonl.gz`. Trace replay no
+  longer carries an AIZ `isLegacy...Trace` predicate; current intro rows are
+  classified by their recorded pre-level prefix shape and old-format fixtures
+  should be regenerated instead of supported as accepted debt.
+
 - **Lost-ring Obj37 rendering now follows the object-loop owner:** spilled rings
   now draw from `LostRingObjectInstance`, the same object that owns their
   per-ring physics, instead of the retired legacy `LostRingPool` draw path. This
@@ -1612,8 +1619,8 @@ All notable changes to the OpenGGF project are documented in this file.
   `GameplayModeContext.isGameplayRuntimeReady()` returns `false` once `tearDownManagers()` has run.
   Release validation now runs the trace-replay Maven profile, stale `@Disabled("Currently failing")`
   annotations were removed from the S3K AIZ/CNZ keep-green tests after forced-on verification, and
-  `TestBuildToolingGuard` documents and bounds the one accepted legacy S3K AIZ trace bootstrap plus
-  the S2 Tornado ride-start trace contract. AIZ intro terrain swap cache state is reset across game
+  `TestBuildToolingGuard` documents and bounds trace bootstrap contracts such as
+  the S2 Tornado ride-start path. AIZ intro terrain swap cache state is reset across game
   bootstrap and routes immediate mutations through injected `ObjectServices`, while ICZ now installs
   typed runtime state consumed by palette/animated-tile code and MHZ runtime-state refresh recognizes
   its current event-backed adapter.

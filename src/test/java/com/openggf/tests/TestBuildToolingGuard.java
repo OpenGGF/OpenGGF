@@ -38,17 +38,15 @@ class TestBuildToolingGuard {
                     + ".*\\b(?:current|previous|firstFrame|expected|traceFrame|frame)\\s*\\.\\s*"
                     + "(?:x|y|xSpeed|ySpeed|gSpeed|angle|air|rolling|xSub|ySub)\\s*\\(");
     private static final Set<String> ACCEPTED_TRACE_BOOTSTRAP_POLICY_SIGNALS = Set.of(
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:286 - if (!meta.hasPerFrameSlotMachineState()) {",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:448 - && \"level_gated_reset_aware\".equals(metadata.traceProfile())",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:479 - && current.frame() < findFirstLevelGameplayFrame(trace)) {",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:493 - if (current.frame() < firstLevelFrame) {",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:503 - if (current.frame() == firstLevelFrame) {",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:584 - int gameplayStartFrame = findCheckpointFrame(trace, \"gameplay_start\");",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:585 - return gameplayStartFrame >= 0 && current.frame() <= gameplayStartFrame;",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:655 - if (metadata.zoneId() == null || metadata.zoneId() != 0 || metadata.act() != 1) {",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:661 - .anyMatch(checkpoint -> \"intro_begin\".equals(checkpoint.name()));",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:665 - private static int findCheckpointFrame(TraceData trace, String checkpointName) {",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:669 - && checkpointName.equals(checkpoint.name())) {");
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:285 - if (!meta.hasPerFrameSlotMachineState()) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:443 - && \"level_gated_reset_aware\".equals(metadata.traceProfile())",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:474 - && current.frame() < findFirstLevelGameplayFrame(trace)) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:488 - if (current.frame() < firstLevelFrame) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:496 - if (current.frame() == firstLevelFrame) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:577 - int gameplayStartFrame = findCheckpointFrame(trace, \"gameplay_start\");",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:578 - return gameplayStartFrame >= 0 && current.frame() <= gameplayStartFrame;",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:664 - private static int findCheckpointFrame(TraceData trace, String checkpointName) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java:668 - && checkpointName.equals(checkpoint.name())) {");
 
     @Test
     void surefireShouldPreloadMockitoAsJavaAgent() throws Exception {
@@ -340,7 +338,7 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void traceReplayLegacyExceptionsShouldBeDocumentedAndBounded() throws Exception {
+    void traceReplayShouldNotCarryAcceptedLegacyTraceExceptions() throws Exception {
         String bootstrap = Files.readString(Path.of("src/main/java/com/openggf/trace/TraceReplayBootstrap.java"));
         String discrepancies = Files.readString(Path.of("docs/KNOWN_DISCREPANCIES.md"));
         String roadmap = Files.readString(Path.of("docs/RELEASE_READINESS_ROADMAP.md"));
@@ -350,11 +348,11 @@ class TestBuildToolingGuard {
                 .matcher(bootstrap)
                 .results()
                 .count();
-        if (legacyTracePredicates != 1) {
-            violations.add("TraceReplayBootstrap should expose exactly one accepted legacy trace predicate");
+        if (legacyTracePredicates != 0) {
+            violations.add("TraceReplayBootstrap must not accept legacy trace predicates; regenerate old fixtures instead");
         }
-        if (!discrepancies.contains("Legacy S3K AIZ Intro Trace Replay Bootstrap")) {
-            violations.add("docs/KNOWN_DISCREPANCIES.md does not document the accepted legacy S3K AIZ trace bootstrap");
+        if (discrepancies.contains("Legacy S3K AIZ Intro Trace Replay Bootstrap")) {
+            violations.add("docs/KNOWN_DISCREPANCIES.md still documents removed legacy S3K AIZ trace debt");
         }
         if (!discrepancies.contains("S2 Tornado Ride-Start Trace Bootstrap Contract")) {
             violations.add("docs/KNOWN_DISCREPANCIES.md does not document the S2 Tornado ride-start bootstrap contract");
@@ -365,37 +363,34 @@ class TestBuildToolingGuard {
         if (!discrepancies.contains("S3K Sidekick Seed-Frame Trace Bootstrap Debt")) {
             violations.add("docs/KNOWN_DISCREPANCIES.md does not document the S3K sidekick seed-frame trace bootstrap debt");
         }
-        if (!roadmap.contains("Accepted Phase 1 release debt: legacy S3K AIZ intro trace bootstrap")) {
-            violations.add("docs/RELEASE_READINESS_ROADMAP.md does not classify the legacy S3K AIZ trace exception as accepted Phase 1 debt");
-        }
-        if (!discrepancies.contains("diagnostic-only") || !roadmap.contains("diagnostic-only")) {
-            violations.add("legacy S3K AIZ trace docs must state that the old full-run fixture is diagnostic-only");
+        if (roadmap.contains("legacy S3K AIZ intro trace bootstrap")) {
+            violations.add("docs/RELEASE_READINESS_ROADMAP.md still classifies the removed legacy S3K AIZ trace exception as release debt");
         }
 
         if (!violations.isEmpty()) {
-            fail("trace replay exceptions must be explicitly documented and bounded before release:\n  "
+            fail("legacy trace replay exceptions must be removed instead of documented as accepted debt:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
 
     @Test
-    void legacyS3kAizFullRunReplayIsDiagnosticOnly() throws Exception {
+    void s3kAizFullRunReplayUsesCurrentRegeneratedTrace() throws Exception {
         String file = "src/test/java/com/openggf/tests/trace/s3k/TestS3kAizTraceReplay.java";
         String source = Files.readString(Path.of(file));
         List<String> violations = new ArrayList<>();
 
-        if (!source.contains("public void replayMatchesTrace() throws Exception")) {
-            violations.add(file + " does not override the inherited full replay parity test");
+        if (source.contains("Legacy AIZ end-to-end trace uses fixture-shaped bootstrap")) {
+            violations.add(file + " still marks the regenerated AIZ trace as legacy diagnostic-only");
         }
-        if (!source.contains("@Disabled(\"Legacy AIZ end-to-end trace uses fixture-shaped bootstrap; diagnostic-only until regenerated\")")) {
-            violations.add(file + " does not mark the legacy full replay as diagnostic-only");
+        if (source.contains("diagnostic-only until regenerated")) {
+            violations.add(file + " still carries the old regeneration TODO");
         }
-        if (!source.contains("super.replayMatchesTrace();")) {
-            violations.add(file + " override should delegate to the base implementation when explicitly enabled locally");
+        if (source.contains("legacy full replay")) {
+            violations.add(file + " still describes the AIZ full replay as legacy");
         }
 
         if (!violations.isEmpty()) {
-            fail("legacy S3K AIZ full-run replay must not be counted as release parity coverage:\n  "
+            fail("regenerated S3K AIZ full-run replay must not be treated as legacy debt:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }

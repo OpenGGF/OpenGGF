@@ -1,5 +1,23 @@
 # Trace Frontier Log
 
+## 2026-06-07 - s3k aiz current-recorder regeneration removes legacy bootstrap exception
+
+- Branch/worktree: `bugfix/ai-regenerate-legacy-traces`, main workspace.
+- Regenerated `src/test/resources/traces/s3k/aiz1_to_hcz_fullrun` from the
+  existing `s3-aiz1-2-sonictails.bk2` route using BizHawk 2.11 and
+  `tools/bizhawk/s3k_trace_recorder.lua` `lua_script_version=6.25-s3k`.
+  Copied the new `metadata.json`, `physics.csv.gz`, and `aux_state.jsonl.gz`
+  into the fixture directory.
+- Recorder output kept the route shape stable: `bk2_frame_offset=511`,
+  `trace_frame_count=20798`, `trace_schema=5`, `csv_version=5`,
+  `trace_profile=aiz_end_to_end`.
+- Removed the AIZ `isLegacy...Trace` replay predicate and changed the replay
+  policy to classify current intro rows as a recorded pre-level prefix shape.
+  Trace rows remain comparison-only: no player, sidekick, object, camera, RNG,
+  or CPU state is hydrated into the engine.
+- Release docs/guards now require old trace formats to be regenerated instead
+  of accepted as legacy trace debt.
+
 ## 2026-06-06 - s1 ghz1 complete f1390->f1394 and mz1 level-select f3192->f6210: object spawn/touch ordering cherry-picked into develop
 
 - Branch/worktree: `develop`, worktree `.worktrees/develop-s1-trace-merge`.

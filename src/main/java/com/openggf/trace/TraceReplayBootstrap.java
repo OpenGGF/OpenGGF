@@ -136,13 +136,13 @@ public final class TraceReplayBootstrap {
             return 0;
         }
         int seedTraceIndex = replaySeedTraceIndexForTraceReplay(trace);
-        if (isLegacyS3kAizIntroTrace(trace) && seedTraceIndex == 0) {
-            // The AIZ end-to-end recorder writes trace frame 0 in the same
-            // callback that arms recording, unlike level-gated traces which
-            // return and emit their first row after the next frameadvance().
-            // That row is therefore the state produced by the previous BK2
-            // input. Start the movie cursor one input frame earlier while still
-            // replaying the full trace prefix from trace frame 0.
+        if (recordsPreLevelPrefix(trace) && seedTraceIndex == 0) {
+            // End-to-end recorders can write trace frame 0 in the same callback
+            // that arms recording, unlike level-gated traces which return and
+            // emit their first row after the next frameadvance(). That row is
+            // therefore the state produced by the previous BK2 input. Start the
+            // movie cursor one input frame earlier while still replaying the
+            // full trace prefix from trace frame 0.
             return Math.max(0, trace.metadata().bk2FrameOffset() - 1);
         }
         return trace.metadata().bk2FrameOffset() + Math.max(0, seedTraceIndex - 1);
@@ -170,11 +170,12 @@ public final class TraceReplayBootstrap {
         if (trace == null || trace.frameCount() == 0) {
             return 0;
         }
-        if (isLegacyS3kAizIntroTrace(trace)) {
-            // The AIZ full-run fixture records the intro/cutscene timeline from its
-            // own frame 0. Replaying from the first in-level frame skips hundreds of
-            // recorded intro frames and loses global state that the seed frame alone
-            // cannot reconstruct (timers, title-card state, zone-event evolution).
+        if (recordsPreLevelPrefix(trace)) {
+            // End-to-end fixtures record the pre-LevelLoop timeline from their
+            // own frame 0. Replaying from the first in-level frame skips
+            // recorded intro frames and loses global state that the seed frame
+            // alone cannot reconstruct (timers, title-card state, zone-event
+            // evolution).
             return 0;
         }
         int firstLevelFrame = findFirstLevelGameplayFrame(trace);
@@ -193,8 +194,7 @@ public final class TraceReplayBootstrap {
         if (override >= 0) {
             return override;
         }
-        if (trace == null || trace.frameCount() == 0
-                || shouldUseLegacyS3kAizIntroWarmup(trace)) {
+        if (trace == null || trace.frameCount() == 0) {
             return 0;
         }
         int seedTraceIndex = replaySeedTraceIndexForTraceReplay(trace);
@@ -220,11 +220,10 @@ public final class TraceReplayBootstrap {
     }
 
     /**
-     * The legacy S3K AIZ end-to-end trace now drives its intro prefix from
-     * trace frame 0, including the first native LevelLoop oscillator tick.
-     * Applying an additional replay-local suppression would leave
-     * Obj_FloatingPlatform one oscillator frame behind the ROM by the first
-     * carry window.
+     * Current end-to-end traces drive their pre-level prefix from trace frame
+     * 0, including the first native LevelLoop oscillator tick. Applying an
+     * additional replay-local suppression would leave native objects one
+     * oscillator frame behind the ROM by the first carry window.
      */
     public static int initialOscillationSuppressionFramesForTraceReplay(TraceData trace) {
         if (trace == null || trace.frameCount() == 0) {
@@ -405,7 +404,7 @@ public final class TraceReplayBootstrap {
 
     /**
      * Returns false because trace start state is comparison data only. Kept as
-     * a named policy gate for callers that need to avoid legacy hydration paths.
+     * a named policy gate for callers that need to avoid trace hydration paths.
      */
     public static boolean shouldUseTraceStartBootstrapForTraceReplay(TraceData trace) {
         return false;
@@ -421,17 +420,13 @@ public final class TraceReplayBootstrap {
     }
 
     public static boolean requiresFreshLevelLoadForTraceReplay(TraceData trace) {
-        return isLegacyS3kAizIntroTrace(trace)
+        return recordsPreLevelPrefix(trace)
                 && replaySeedTraceIndexForTraceReplay(trace) == 0;
-    }
-
-    public static boolean shouldUseLegacyS3kAizIntroWarmup(TraceData trace) {
-        return false;
     }
 
     public static boolean shouldApplyMetadataStartPositionForTraceReplay(TraceData trace) {
         return replaySeedTraceIndexForTraceReplay(trace) == 0
-                && !isLegacyS3kAizIntroTrace(trace);
+                && !recordsPreLevelPrefix(trace);
     }
 
     public static boolean isS2TornadoRideStartMetadataCandidate(TraceData trace) {
@@ -462,7 +457,7 @@ public final class TraceReplayBootstrap {
         if (trace == null || trace.frameCount() == 0) {
             return 0;
         }
-        if (isLegacyS3kAizIntroTrace(trace)) {
+        if (recordsPreLevelPrefix(trace)) {
             return findFirstLevelGameplayFrame(trace);
         }
         return replaySeedTraceIndexForTraceReplay(trace);
@@ -474,12 +469,12 @@ public final class TraceReplayBootstrap {
         if (sprite == null) {
             throw new IllegalArgumentException("sprite must not be null");
         }
-        if (isLegacyS3kAizIntroTrace(trace)
+        if (recordsPreLevelPrefix(trace)
                 && current != null
                 && current.frame() < findFirstLevelGameplayFrame(trace)) {
-            // Pre-level AIZ full-run rows sample title/intro Player_1 RAM,
-            // not the loaded-level Sonic object. Keep this comparison-side
-            // only; never copy these fields back into engine state.
+            // Pre-level rows sample title/intro Player_1 RAM, not the
+            // loaded-level Sonic object. Keep this comparison-side only; never
+            // copy these fields back into engine state.
             return ReplayPrimaryState.fromTraceFrame(current, "trace-vblank");
         }
         return ReplayPrimaryState.fromSprite(sprite);
@@ -488,16 +483,14 @@ public final class TraceReplayBootstrap {
     public static TraceExecutionPhase phaseForReplay(TraceData trace,
                                                      TraceFrame previous,
                                                      TraceFrame current) {
-        if (shouldUseLegacyS3kAizIntroHeuristic(trace, current)) {
+        if (shouldUsePreLevelPrefixPhaseModel(trace, current)) {
             int firstLevelFrame = findFirstLevelGameplayFrame(trace);
             if (current.frame() < firstLevelFrame) {
-                // The AIZ end-to-end trace starts while Game_Mode is $4C
-                // (Level with transition bit set). Player_1/Player_2 RAM still
-                // contains title-screen objects such as Obj_TitleBanner and
-                // Obj_TitleSelection (sonic3k.asm:5995, 6168), not gameplay
-                // Sonic/Tails. Advance the BK2/VBlank cursor for these frames,
-                // but do not tick the loaded AIZ level until the first real
-                // Level frame at the Obj_AIZPlaneIntro spawn point.
+                // End-to-end traces can start before the first real LevelLoop
+                // row. Player_1/Player_2 RAM may still contain title/intro
+                // objects rather than gameplay Sonic/Tails. Advance the
+                // BK2/VBlank cursor for these frames, but do not tick the
+                // loaded level until the first real Level frame.
                 return TraceExecutionPhase.VBLANK_ONLY;
             }
             if (current.frame() == firstLevelFrame) {
@@ -518,7 +511,7 @@ public final class TraceReplayBootstrap {
                 // trace frame instead of double-counting the setup work.
                 return TraceExecutionPhase.VBLANK_ONLY;
             }
-            return deriveLegacyPhase(previous, current);
+            return derivePinnedCounterPrefixPhase(previous, current);
         }
         return TraceExecutionModel.forGame(trace.metadata().game()).phaseFor(previous, current);
     }
@@ -576,9 +569,9 @@ public final class TraceReplayBootstrap {
         sprite.endOfTick();
     }
 
-    private static boolean shouldUseLegacyS3kAizIntroHeuristic(TraceData trace,
-                                                                TraceFrame current) {
-        if (trace == null || current == null || !isLegacyS3kAizIntroTrace(trace)) {
+    private static boolean shouldUsePreLevelPrefixPhaseModel(TraceData trace,
+                                                             TraceFrame current) {
+        if (trace == null || current == null || !recordsPreLevelPrefix(trace)) {
             return false;
         }
         int gameplayStartFrame = findCheckpointFrame(trace, "gameplay_start");
@@ -596,7 +589,7 @@ public final class TraceReplayBootstrap {
         if (trace == null || trace.frameCount() < 2
                 || !"s3k".equals(trace.metadata().game())
                 || trace.metadata().recordedSidekicks().isEmpty()
-                || isLegacyS3kAizIntroTrace(trace)) {
+                || recordsPreLevelPrefix(trace)) {
             return false;
         }
         if (replaySeedTraceIndexForTraceReplay(trace) != 0) {
@@ -614,13 +607,13 @@ public final class TraceReplayBootstrap {
     }
 
     /**
-     * Legacy S3K AIZ intro traces keep gameplay_frame_counter pinned during the
+     * Pre-level prefix traces can keep gameplay_frame_counter pinned during an
      * opening cutscene, so the normal execution model misclassifies many real
-     * gameplay frames as VBlank-only. Use the old state-change heuristic for
-     * the intro window instead of forcing every frame to full execution.
+     * gameplay frames as VBlank-only. Use a state-change heuristic for the
+     * prefix window instead of forcing every frame to full execution.
      */
-    private static TraceExecutionPhase deriveLegacyPhase(TraceFrame previous,
-                                                         TraceFrame current) {
+    private static TraceExecutionPhase derivePinnedCounterPrefixPhase(TraceFrame previous,
+                                                                      TraceFrame current) {
         if (previous == null || current == null) {
             return TraceExecutionPhase.FULL_LEVEL_FRAME;
         }
@@ -644,23 +637,29 @@ public final class TraceReplayBootstrap {
                 : TraceExecutionPhase.FULL_LEVEL_FRAME;
     }
 
-    private static boolean isLegacyS3kAizIntroTrace(TraceData trace) {
-        if (trace == null) {
+    private static boolean recordsPreLevelPrefix(TraceData trace) {
+        if (trace == null || trace.frameCount() == 0) {
             return false;
         }
-        TraceMetadata metadata = trace.metadata();
-        if (!"s3k".equals(metadata.game())) {
-            return false;
-        }
-        if (metadata.zoneId() == null || metadata.zoneId() != 0 || metadata.act() != 1) {
+        int firstLevelFrame = findFirstLevelGameplayFrame(trace);
+        if (firstLevelFrame <= 0) {
             return false;
         }
         return trace.getEventsForFrame(0).stream()
-                .filter(TraceEvent.Checkpoint.class::isInstance)
-                .map(TraceEvent.Checkpoint.class::cast)
-                .anyMatch(checkpoint -> "intro_begin".equals(checkpoint.name()));
+                .anyMatch(TraceReplayBootstrap::isPreLevelModeEvent);
     }
 
+    private static boolean isPreLevelModeEvent(TraceEvent event) {
+        if (event instanceof TraceEvent.ZoneActState state
+                && state.gameMode() != null) {
+            return state.gameMode() != 12;
+        }
+        if (event instanceof TraceEvent.Checkpoint checkpoint
+                && checkpoint.gameMode() != null) {
+            return checkpoint.gameMode() != 12;
+        }
+        return false;
+    }
 
     private static int findCheckpointFrame(TraceData trace, String checkpointName) {
         for (int frame = 0; frame < trace.frameCount(); frame++) {

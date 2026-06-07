@@ -106,9 +106,8 @@ public final class TraceReplaySessionBootstrap {
     public static void prepareConfiguration(TraceData trace, TraceMetadata meta) {
         SonicConfigurationService config = GameServices.configuration();
 
-        // Team: the recorded trace dictates the team. If metadata
-        // didn't record one (legacy), force Sonic-solo - the trace
-        // can't expect anything else.
+        // Team: the recorded trace dictates the team. If metadata does not
+        // record one, force Sonic-solo; the trace cannot expect anything else.
         String main = meta.recordedMainCharacter();
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE,
                 main == null || main.isBlank() ? "sonic" : main);
@@ -382,8 +381,9 @@ public final class TraceReplaySessionBootstrap {
     /**
      * Live trace visualisation starts at trace frame 0 and must not consume
      * visible trace prefix frames before the first rendered frame. Headless
-     * replay may warm through legacy prefixes to align comparison, but doing
-     * that in the live launcher makes full-intro traces appear to skip ahead.
+     * replay may warm through pre-level prefixes to align comparison, but
+     * doing that in the live launcher makes full-intro traces appear to skip
+     * ahead.
      */
     public static BootstrapResult applyLiveBootstrap(TraceData trace,
                                                      TraceReplayFixture fixture,
@@ -432,9 +432,9 @@ public final class TraceReplaySessionBootstrap {
      *
      * <p>Gated on
      * {@link TraceReplayBootstrap#shouldApplyMetadataStartPositionForTraceReplay}
-     * (i.e. {@code replaySeedTraceIndex == 0 && !legacyS3kAizIntro}).
-     * Legacy-AIZ traces are short-circuited because their prefix is
-     * consumed by deterministic warmup.
+     * (i.e. {@code replaySeedTraceIndex == 0 && !preLevelPrefix}).
+     * Pre-level prefix traces are short-circuited because replay consumes the
+     * prefix from trace frame 0.
      */
     public static void applyStartPositionAndGroundSnap(TraceData trace,
                                                        TraceReplayFixture fixture) {

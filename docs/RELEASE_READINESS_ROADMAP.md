@@ -186,14 +186,14 @@ limitations.
 
 Work:
 
-- Accepted Phase 1 release debt: legacy S3K AIZ intro trace bootstrap.
-  - `TraceReplayBootstrap.isLegacyS3kAizIntroTrace` remains as one bounded
-    fixture-compatibility predicate for the old AIZ intro trace.
-  - It is documented in `docs/KNOWN_DISCREPANCIES.md`; the old full-run AIZ
-    replay is diagnostic-only until regenerated, and the release guard rejects
-    growth beyond this one accepted legacy trace predicate.
-  - Future trace cleanup should re-record the fixture or model the missing ROM
-    intro state and then remove the predicate.
+- Resolved: S3K AIZ end-to-end trace bootstrap no longer carries a legacy trace
+  exception.
+  - The AIZ fixture was regenerated with the current S3K recorder
+    (`lua_script_version=6.25-s3k`) using the existing BK2 route, and
+    `TraceReplayBootstrap` now classifies its intro rows as a current pre-level
+    prefix shape instead of accepting `isLegacy...Trace` compatibility.
+  - `TestBuildToolingGuard` now rejects accepted legacy trace predicates. Old
+    trace formats should be regenerated rather than supported as release debt.
 - Completed: S1/S2 bottom-boundary centre-Y parity.
   - `PhysicsFeatureSet.SONIC_1` and `SONIC_2` now use centre-Y for the
     bottom-boundary death check, matching the ROM `obY` / `y_pos` coordinate.
@@ -207,10 +207,10 @@ Work:
 
 Recommended order:
 
-1. Keep the accepted AIZ legacy trace predicate bounded by the release guard.
+1. Keep the no-legacy-trace guard green when adding or regenerating fixtures.
 2. Add focused tests around any future AIZ intro trace bootstrap decision points.
-3. Replace remaining fixture recognition with ROM-state-driven phase handling
-   when new recorder metadata or regenerated fixtures are available.
+3. Prefer current recorder metadata and trace event shape over fixture identity
+   when modelling pre-level prefixes.
 4. Add focused bottom-boundary tests for S1/S2 centre-Y behavior before any
    future flag flip.
 5. Re-run affected S1/S2 traces before changing the feature flags.

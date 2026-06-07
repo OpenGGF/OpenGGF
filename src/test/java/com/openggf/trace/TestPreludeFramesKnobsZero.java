@@ -146,8 +146,8 @@ class TestPreludeFramesKnobsZero {
     }
 
     @Test
-    void s3kAizIntroTraceStillReturnsZero() {
-        // Legacy AIZ intro trace path used to short-circuit to 0; verify that remains true.
+    void s3kPreLevelPrefixTraceStillReturnsZero() {
+        // Pre-level prefix traces drive their own prefix, so no extra title-card prelude applies here.
         TraceFrame seed = buildFrame(0, /* gfc */ 0,
                 (short) 0, (short) 0, (short) 0, 0, 0);
         TraceData trace = TraceFixtures.trace(

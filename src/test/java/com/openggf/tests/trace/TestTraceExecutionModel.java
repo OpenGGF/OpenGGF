@@ -67,17 +67,19 @@ class TestTraceExecutionModel {
     }
 
     @Test
-    void legacyS3kAizIntroTicksReplayAsFullFramesBeforeGameplayStart() throws Exception {
+    void s3kAizIntroTicksReplayAsFullFramesBeforeGameplayStart() throws Exception {
         TraceData trace = TraceData.load(
                 Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
-        // Frames 500/501 are well into the AIZ1 intro cutscene (past the first
+        // Frames 789/790 are well into the AIZ1 intro cutscene (past the first
         // in-level frame at 289, before gameplay_start at 1386). This section
-        // is native level execution, so it must tick as full frames even while
-        // player control is still locked by the intro object.
-        TraceFrame previous = trace.getFrame(500);
-        TraceFrame current = trace.getFrame(501);
+        // is native level execution, so state-changing rows must tick as full
+        // frames even while Level_frame_counter stays pinned and player control
+        // is still locked by the intro object.
+        TraceFrame previous = trace.getFrame(789);
+        TraceFrame current = trace.getFrame(790);
 
-        assertEquals(previous.gameplayFrameCounter() + 1, current.gameplayFrameCounter());
+        assertEquals(previous.gameplayFrameCounter(), current.gameplayFrameCounter());
+        assertNotEquals(previous.x(), current.x());
         assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
                 TraceReplayBootstrap.phaseForReplay(trace, previous, current));
     }
