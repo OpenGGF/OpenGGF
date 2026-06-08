@@ -378,7 +378,7 @@ class TestArchitecturalSourceGuard {
                         "com/openggf/game/sonic1/objects/Sonic1BridgeObjectInstance.java",
                         "embedded GHZ bridge bend tables",
                         Pattern.compile("private\\s+static\\s+final\\s+int\\s*\\[\\s*]\\s*\\[\\s*]\\s+BEND_DATA_"),
-                        2),
+                        0),
                 new EmbeddedRuntimeDataBudget(
                         "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java",
                         "handwritten Sonic 1 object mapping pieces",

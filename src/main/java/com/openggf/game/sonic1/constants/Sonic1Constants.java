@@ -257,6 +257,8 @@ public final class Sonic1Constants {
     // Nem_Bridge: Nemesis-compressed bridge art (GHZ, ~10 tiles: log, stump, rope)
     // Loaded via PLC_GHZ2: plcm Nem_Bridge, ArtTile_GHZ_Bridge
     public static final int ART_NEM_BRIDGE_ADDR = 0x2FA2C;
+    public static final int BRIDGE_BEND_Y_MAX_ADDR = 0x7D4A; // Bri_Data_Y_Max, 17 rows x 16 bytes
+    public static final int BRIDGE_BEND_ALIGN_ADDR = 0x7E5A; // Bri_Data_Align, 16 rows x 16 bytes
 
     // Nem_MzBlock: Nemesis-compressed MZ green pushable/smashable block art
     // ArtTile_MZ_Block = $2B8, loaded via PLC_MZ

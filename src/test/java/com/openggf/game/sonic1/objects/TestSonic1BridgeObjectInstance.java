@@ -1,6 +1,8 @@
 package com.openggf.game.sonic1.objects;
 
+import com.openggf.data.RomByteReader;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.SolidCheckpointBatch;
@@ -11,6 +13,7 @@ import com.openggf.level.objects.TestObjectServices;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -106,6 +109,19 @@ class TestSonic1BridgeObjectInstance {
         assertTrue((boolean) fieldValue(bridge, "playerOnBridge"));
     }
 
+    @Test
+    void bendDataLoaderReadsYMaxAndAlignTablesFromRomOffsets() {
+        byte[] rom = new byte[Sonic1Constants.BRIDGE_BEND_ALIGN_ADDR + 0x100];
+        rom[Sonic1Constants.BRIDGE_BEND_Y_MAX_ADDR + (16 * 16) + 15] = 0x22;
+        rom[Sonic1Constants.BRIDGE_BEND_ALIGN_ADDR + (15 * 16) + 15] = (byte) 0xFE;
+
+        Sonic1BridgeObjectInstance.BridgeBendData data =
+                Sonic1BridgeObjectInstance.loadBendData(new RomByteReader(rom));
+
+        assertEquals(0x22, data.yMax(16, 15));
+        assertEquals(0xFE, data.align(15, 15));
+    }
+
     private static Object fieldValue(Sonic1BridgeObjectInstance bridge, String name) throws Exception {
         Field field = Sonic1BridgeObjectInstance.class.getDeclaredField(name);
         field.setAccessible(true);
@@ -127,7 +143,7 @@ class TestSonic1BridgeObjectInstance {
         private int checkpointRequests;
 
         private TestableSonic1BridgeObjectInstance(ObjectSpawn spawn) {
-            super(spawn);
+            super(spawn, testBendData());
         }
 
         private void setCheckpointBatch(SolidCheckpointBatch checkpointBatch) {
@@ -139,6 +155,13 @@ class TestSonic1BridgeObjectInstance {
             checkpointRequests++;
             return checkpointBatch;
         }
+    }
+
+    private static Sonic1BridgeObjectInstance.BridgeBendData testBendData() {
+        byte[] yMax = new byte[17 * 16];
+        byte[] align = new byte[16 * 16];
+        Arrays.fill(align, (byte) 0xFF);
+        return new Sonic1BridgeObjectInstance.BridgeBendData(yMax, align);
     }
 
     private static final class QueryOnlyPlayerServices extends TestObjectServices {

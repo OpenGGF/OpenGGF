@@ -15,14 +15,15 @@ All notable changes to the OpenGGF project are documented in this file.
   Emerald collection paths cover HPZ routing, and small presentation/diagnostic
   gaps were guarded for S2 bridge stakes and S3K special-stage audio failures.
 
-- **Sonic 1 palette cycles and conveyor child spawn lists now come from ROM
-  data:** `Sonic1PaletteCycler` reads the GHZ/LZ/SLZ/SYZ/SBZ cycle rows from
-  ROM offsets, while LZ conveyor and SBZ spin-conveyor spawners read
-  `ObjPosLZPlatform_Index` / `ObjPosSBZPlatform_Index` through
-  `Sonic1ObjectPlacement` instead of carrying inline child position tables.
-  The embedded-runtime-data guard now ratchets those table families to zero;
-  larger S1 waypoint, bridge, and mapping migrations remain tracked release
-  debt.
+- **Sonic 1 palette cycles, bridge bend tables, and conveyor child spawn lists
+  now come from ROM data:** `Sonic1PaletteCycler` reads the
+  GHZ/LZ/SLZ/SYZ/SBZ cycle rows from ROM offsets, `Sonic1BridgeObjectInstance`
+  reads `Bri_Data_Y_Max` / `Bri_Data_Align` from the Obj11 ROM data, and LZ
+  conveyor plus SBZ spin-conveyor spawners read `ObjPosLZPlatform_Index` /
+  `ObjPosSBZPlatform_Index` through `Sonic1ObjectPlacement` instead of carrying
+  inline child position tables. The embedded-runtime-data guard now ratchets
+  those table families to zero; larger S1 waypoint and mapping migrations
+  remain tracked release debt.
 
 - **Develop release-sweep hardening closed the latest architecture review
   findings:** startup and audio teardown now fail closed on partial native
