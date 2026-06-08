@@ -1481,15 +1481,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
     }
 
     /**
-     * Loads Jaws art (Nem_Jaws) and creates S1-format sprite mappings.
-     * Mappings from docs/s1disasm/_maps/Jaws.asm (Map_Jaws_internal).
-     * 4 frames: open1, shut1, open2, shut2. Each has 2 pieces (body + tail).
-     * <p>
-     * From disassembly:
-     * <pre>
-     *   move.w  #make_art_tile(ArtTile_Jaws,1,0),obGfx(a0)
-     * </pre>
-     * ArtTile_Jaws = $486, palette line 1, priority 0.
+     * Loads Jaws art (Nem_Jaws) with ROM-parsed S1 mappings (Map_Jaws).
      */
     private void loadJawsArt(Sonic1ObjectArt art) {
         Pattern[] patterns = art.loadNemesisPatterns(
@@ -1499,58 +1491,10 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createJawsMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_JAWS_ADDR);
         // make_art_tile(ArtTile_Jaws, 1, 0) -> palette line 1, priority 0
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 1, 1);
         registerSheet(ObjectArtKeys.JAWS, sheet);
-    }
-
-    /**
-     * Creates Jaws sprite mappings from S1 disassembly Map_Jaws_internal.
-     * <p>
-     * spritePiece format: x, y, width, height, startTile, xflip, yflip, pal, pri
-     * <p>
-     * Frame 0 (.open1):
-     *   spritePiece -$10, -$C, 4, 3, 0,    0, 0, 0, 0  (body, mouth open)
-     *   spritePiece  $10, -$B, 2, 2, $18,   0, 0, 0, 0  (tail)
-     * Frame 1 (.shut1):
-     *   spritePiece -$10, -$C, 4, 3, $C,   0, 0, 0, 0  (body, mouth shut)
-     *   spritePiece  $10, -$B, 2, 2, $1C,   0, 0, 0, 0  (tail)
-     * Frame 2 (.open2):
-     *   spritePiece -$10, -$C, 4, 3, 0,    0, 0, 0, 0  (body, mouth open)
-     *   spritePiece  $10, -$B, 2, 2, $18,   0, 1, 0, 0  (tail, vFlip)
-     * Frame 3 (.shut2):
-     *   spritePiece -$10, -$C, 4, 3, $C,   0, 0, 0, 0  (body, mouth shut)
-     *   spritePiece  $10, -$B, 2, 2, $1C,   0, 1, 0, 0  (tail, vFlip)
-     */
-    private List<SpriteMappingFrame> createJawsMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.open1): body open + tail normal
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x0C, 4, 3, 0x00, false, false, 0, false),
-                new SpriteMappingPiece( 0x10, -0x0B, 2, 2, 0x18, false, false, 0, false)
-        )));
-
-        // Frame 1 (.shut1): body shut + tail normal
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x0C, 4, 3, 0x0C, false, false, 0, false),
-                new SpriteMappingPiece( 0x10, -0x0B, 2, 2, 0x1C, false, false, 0, false)
-        )));
-
-        // Frame 2 (.open2): body open + tail vFlipped
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x0C, 4, 3, 0x00, false, false, 0, false),
-                new SpriteMappingPiece( 0x10, -0x0B, 2, 2, 0x18, false, true,  0, false)
-        )));
-
-        // Frame 3 (.shut2): body shut + tail vFlipped
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x0C, 4, 3, 0x0C, false, false, 0, false),
-                new SpriteMappingPiece( 0x10, -0x0B, 2, 2, 0x1C, false, true,  0, false)
-        )));
-
-        return frames;
     }
 
     /**
