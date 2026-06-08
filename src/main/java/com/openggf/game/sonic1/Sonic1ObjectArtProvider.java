@@ -7318,24 +7318,26 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         // anchored at ArtTile_FZ_Boss ($300) and pre-resolve mapping words through the same
         // add.w behavior.
         List<SpriteMappingFrame> seggRawMappings =
-                Sonic1BossMappings.createSEggMappings();
-        Pattern[] seggSource = seggPatterns.length > 0 ? seggPatterns : fzPatterns;
-        int virtualBaseTile = Sonic1Constants.ART_TILE_FZ_BOSS;
-        int seggBaseOffset = Sonic1Constants.ART_TILE_FZ_EGGMAN_NO_VEHICLE - virtualBaseTile;
-        int combinedSeggSize = Math.max(fzPatterns.length, seggBaseOffset + seggSource.length);
-        Pattern[] seggCombined = new Pattern[combinedSeggSize];
-        for (int i = 0; i < seggCombined.length; i++) {
-            seggCombined[i] = new Pattern();
+                art.loadMappingFrames(Sonic1Constants.MAP_SEGG_ADDR);
+        if (!seggRawMappings.isEmpty()) {
+            Pattern[] seggSource = seggPatterns.length > 0 ? seggPatterns : fzPatterns;
+            int virtualBaseTile = Sonic1Constants.ART_TILE_FZ_BOSS;
+            int seggBaseOffset = Sonic1Constants.ART_TILE_FZ_EGGMAN_NO_VEHICLE - virtualBaseTile;
+            int combinedSeggSize = Math.max(fzPatterns.length, seggBaseOffset + seggSource.length);
+            Pattern[] seggCombined = new Pattern[combinedSeggSize];
+            for (int i = 0; i < seggCombined.length; i++) {
+                seggCombined[i] = new Pattern();
+            }
+            System.arraycopy(fzPatterns, 0, seggCombined, 0, fzPatterns.length);
+            System.arraycopy(seggSource, 0, seggCombined, seggBaseOffset, seggSource.length);
+            List<SpriteMappingFrame> seggMappings = remapMappingsForObjectBase(
+                    seggRawMappings,
+                    Sonic1Constants.ART_TILE_FZ_EGGMAN_NO_VEHICLE,
+                    virtualBaseTile
+            );
+            registerSheet(ObjectArtKeys.FZ_SEGG,
+                    new ObjectSpriteSheet(seggCombined, seggMappings, 0, seggMappings.size()));
         }
-        System.arraycopy(fzPatterns, 0, seggCombined, 0, fzPatterns.length);
-        System.arraycopy(seggSource, 0, seggCombined, seggBaseOffset, seggSource.length);
-        List<SpriteMappingFrame> seggMappings = remapMappingsForObjectBase(
-                seggRawMappings,
-                Sonic1Constants.ART_TILE_FZ_EGGMAN_NO_VEHICLE,
-                virtualBaseTile
-        );
-        registerSheet(ObjectArtKeys.FZ_SEGG,
-                new ObjectSpriteSheet(seggCombined, seggMappings, 0, seggMappings.size()));
 
         // FZ_CYLINDER: Crushing cylinders (Map_EggCyl)
         List<SpriteMappingFrame> cylMappings =
@@ -8004,64 +8006,18 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
     // ── SBZ2 cutscene art ──────────────────────────────────────────────
 
     /**
-     * Loads SBZ2 Eggman sprite art (Nem_Sbz2Eggman) with hardcoded Map_SEgg mappings.
+     * Loads SBZ2 Eggman sprite art (Nem_Sbz2Eggman) with ROM-backed Map_SEgg mappings.
      * obGfx = make_art_tile(ArtTile_Eggman,0,0) -> palette 0.
      * Frames 0-4 cover the SBZ2 cutscene sequence (stand, laugh1, laugh2, jump1, jump2).
      */
     private void loadSbz2EggmanArt(Sonic1ObjectArt art) {
-        List<SpriteMappingFrame> mappings = createSbz2EggmanMappings();
+        List<SpriteMappingFrame> allMappings = art.loadMappingFrames(Sonic1Constants.MAP_SEGG_ADDR);
+        if (allMappings.size() < 5) {
+            return;
+        }
+        List<SpriteMappingFrame> mappings = List.copyOf(allMappings.subList(0, 5));
         registerSheet(ObjectArtKeys.SBZ2_EGGMAN, art.buildArtSheet(
                 Sonic1Constants.ART_NEM_SBZ2_EGGMAN_ADDR, mappings, 0, 1));
-    }
-
-    /**
-     * Creates Map_SEgg sprite mappings for the SBZ2 cutscene Eggman.
-     * Hardcoded from docs/s1disasm/_maps/SBZ2 Eggman.asm (inline spritePiece macros).
-     * 5 frames: stand, laugh1, laugh2, jump1, jump2.
-     */
-    private List<SpriteMappingFrame> createSbz2EggmanMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (stand): 3 pieces
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x18, -4, 1, 1, 0x8F, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x18, 4, 3, 0, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, 0, 4, 4, 0x6F, false, false, 0, false)
-        )));
-
-        // Frame 1 (laugh1): 4 pieces
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x18, 4, 2, 0x0E, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x18, 4, 3, 0, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, 0, 4, 4, 0x6F, false, false, 0, false),
-                new SpriteMappingPiece(-0x18, -4, 1, 1, 0x8F, false, false, 0, false)
-        )));
-
-        // Frame 2 (laugh2): 4 pieces
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x17, 4, 2, 0x0E, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x17, 4, 3, 0, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, 1, 4, 4, 0x7F, false, false, 0, false),
-                new SpriteMappingPiece(-0x18, -3, 1, 1, 0x8F, false, false, 0, false)
-        )));
-
-        // Frame 3 (jump1): 4 pieces
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x0C, 4, 4, 0x20, true, false, 0, false),
-                new SpriteMappingPiece(0x10, -0x0B, 2, 1, 0x30, true, false, 0, false),
-                new SpriteMappingPiece(-0x10, 8, 3, 2, 0x4E, true, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x14, 4, 3, 0, false, false, 0, false)
-        )));
-
-        // Frame 4 (jump2): 4 pieces
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0x20, true, false, 0, false),
-                new SpriteMappingPiece(0x10, -0x0F, 2, 1, 0x30, true, false, 0, false),
-                new SpriteMappingPiece(-8, 8, 2, 3, 0x3E, true, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x18, 4, 3, 0, false, false, 0, false)
-        )));
-
-        return frames;
     }
 
     /**

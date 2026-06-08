@@ -44,6 +44,20 @@ public class TestSonic1FzRomMappings {
                 romFrames.get(11).pieces().get(1));
     }
 
+    @Test
+    public void seggRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_SEGG_ADDR);
+
+        assertEquals(List.of(3, 4, 4, 4, 4, 4, 7, 5, 6, 8, 3),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x18, -4, 1, 1, 0x8F, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x10, -0x20, 4, 2, 0x6F0, true, true, 1, false),
+                romFrames.get(9).pieces().get(4));
+    }
+
     private static int maxTileIndex(List<SpriteMappingFrame> frames) {
         int max = 0;
         for (SpriteMappingFrame frame : frames) {
