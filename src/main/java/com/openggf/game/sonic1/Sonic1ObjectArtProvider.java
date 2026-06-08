@@ -4025,64 +4025,10 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createMzGlassBlockMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_MZ_GLASS_ADDR);
         // make_art_tile(ArtTile_MZ_Glass_Pillar, 2, 1) -> palette line 2, priority 1
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
         registerSheet(ObjectArtKeys.MZ_GLASS_BLOCK, sheet);
-    }
-
-    /**
-     * MZ Green Glass Block mappings from docs/s1disasm/_maps/MZ Large Green Glass Blocks.asm.
-     * <p>
-     * S1 spritePiece macro: x, y, width, height, startTile, xflip, yflip, pal, pri
-     * <p>
-     * The glass block art (Nem_MzGlass) decompresses to 26 tiles ($1A).
-     * Tile 0-3: top/bottom edge caps (4 tiles).
-     * Tile 4-19: body fill (16 tiles, 4x4 repeated with h-flip).
-     * Tile 20-25 ($14-$19): shine overlay (6 tiles).
-     */
-    private List<SpriteMappingFrame> createMzGlassBlockMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.tall): Tall block, 12 pieces
-        // Total visual height: $48 + $48 = $90 (144px), width: $40 (64px)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x20, -0x48, 4, 1, 0, false, false, 0, false),
-                new SpriteMappingPiece(0, -0x48, 4, 1, 0, true, false, 0, false),
-                new SpriteMappingPiece(-0x20, -0x40, 4, 4, 4, false, false, 0, false),
-                new SpriteMappingPiece(0, -0x40, 4, 4, 4, true, false, 0, false),
-                new SpriteMappingPiece(-0x20, -0x20, 4, 4, 4, false, false, 0, false),
-                new SpriteMappingPiece(0, -0x20, 4, 4, 4, true, false, 0, false),
-                new SpriteMappingPiece(-0x20, 0, 4, 4, 4, false, false, 0, false),
-                new SpriteMappingPiece(0, 0, 4, 4, 4, true, false, 0, false),
-                new SpriteMappingPiece(-0x20, 0x20, 4, 4, 4, false, false, 0, false),
-                new SpriteMappingPiece(0, 0x20, 4, 4, 4, true, false, 0, false),
-                new SpriteMappingPiece(-0x20, 0x40, 4, 1, 0, false, true, 0, false),
-                new SpriteMappingPiece(0, 0x40, 4, 1, 0, true, true, 0, false)
-        )));
-
-        // Frame 1 (.shine): Reflected shine on block, 2 pieces
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, 8, 2, 3, 0x14, false, false, 0, false),
-                new SpriteMappingPiece(0, 0, 2, 3, 0x14, false, false, 0, false)
-        )));
-
-        // Frame 2 (.short): Short block, 10 pieces
-        // Total visual height: $38 + $38 = $70 (112px), width: $40 (64px)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x20, -0x38, 4, 1, 0, false, false, 0, false),
-                new SpriteMappingPiece(0, -0x38, 4, 1, 0, true, false, 0, false),
-                new SpriteMappingPiece(-0x20, -0x30, 4, 4, 4, false, false, 0, false),
-                new SpriteMappingPiece(0, -0x30, 4, 4, 4, true, false, 0, false),
-                new SpriteMappingPiece(-0x20, -0x10, 4, 4, 4, false, false, 0, false),
-                new SpriteMappingPiece(0, -0x10, 4, 4, 4, true, false, 0, false),
-                new SpriteMappingPiece(-0x20, 0x10, 4, 4, 4, false, false, 0, false),
-                new SpriteMappingPiece(0, 0x10, 4, 4, 4, true, false, 0, false),
-                new SpriteMappingPiece(-0x20, 0x30, 4, 1, 0, false, true, 0, false),
-                new SpriteMappingPiece(0, 0x30, 4, 1, 0, true, true, 0, false)
-        )));
-
-        return frames;
     }
 
     /**
