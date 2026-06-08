@@ -29,6 +29,7 @@ All notable changes to the OpenGGF project are documented in this file.
   MZ Basaran/Batbrain `Map_Bas`, MZ glass block `Map_Glass`, MZ lava geyser `Map_Geyser`, SYZ bumper
   `Map_Bump`, shared spring `Map_Spring`, SYZ Roller `Map_Roll`, SYZ Yadrin `Map_Yad`, GHZ Crabmeat `Map_Crab`, GHZ Motobug `Map_Moto`, GHZ Newtron
   `Map_Newt`, shared animal `Map_Animal1` / `Map_Animal2` / `Map_Animal3`,
+  special-stage result emerald `Map_SSRC`,
   shared score popup `Map_Poi`, hidden-bonus `Map_Bonus`, GHZ Buzz Bomber `Map_Buzz` / `Map_Missile`, shared shield and
   invincibility-star `Map_Shield`, GHZ/SLZ smash-wall `Map_Smash`, LZ/SLZ/SBZ Orbinaut `Map_Orb`, LZ harpoon `Map_Harp`, MZ/SBZ Caterkiller `Map_Cat`, SBZ Ball Hog
   `Map_Hog`, SBZ flamethrower `Map_Flame`, SLZ/SBZ Bomb `Map_Bomb`, SBZ saw/electrocuter and door/girder/platform tables `Map_Saw`

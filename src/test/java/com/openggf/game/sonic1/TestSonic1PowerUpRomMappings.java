@@ -110,4 +110,26 @@ public class TestSonic1PowerUpRomMappings {
         assertEquals(new SpriteMappingPiece(-8, -0x0C, 2, 3, 0x00, false, false, 0, false),
                 animal3Frames.get(2).pieces().get(0));
     }
+
+    @Test
+    public void specialStageResultEmeraldRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_SS_RESULT_EMERALDS_ADDR);
+
+        assertEquals(List.of(1, 1, 1, 1, 1, 1, 0),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-8, -8, 2, 2, 0x04, false, false, 1, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -8, 2, 2, 0x00, false, false, 0, false),
+                romFrames.get(1).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -8, 2, 2, 0x04, false, false, 2, false),
+                romFrames.get(2).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -8, 2, 2, 0x04, false, false, 3, false),
+                romFrames.get(3).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -8, 2, 2, 0x08, false, false, 1, false),
+                romFrames.get(4).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -8, 2, 2, 0x0C, false, false, 1, false),
+                romFrames.get(5).pieces().get(0));
+    }
 }

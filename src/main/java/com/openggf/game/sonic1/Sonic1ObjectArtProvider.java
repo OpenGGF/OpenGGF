@@ -824,22 +824,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        // Map_SSRC: each frame is a single 2x2 spritePiece(-8, -8, 2, 2, tile, pal)
-        // paletteIndex on each piece selects the emerald color from SS palettes.
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 4, false, false, 1))));  // 0: Blue
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 0, false, false, 0))));  // 1: Yellow
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 4, false, false, 2))));  // 2: Pink
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 4, false, false, 3))));  // 3: Green
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 8, false, false, 1))));  // 4: Orange
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 12, false, false, 1)))); // 5: Purple
-        frames.add(new SpriteMappingFrame(List.of()));                         // 6: Blank (flash)
+        List<SpriteMappingFrame> frames = art.loadMappingFrames(Sonic1Constants.MAP_SS_RESULT_EMERALDS_ADDR);
 
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(emeraldPatterns, frames, 0, 1);
         registerSheet(ObjectArtKeys.SS_RESULTS_EMERALDS, sheet);
