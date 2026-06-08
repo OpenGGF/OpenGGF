@@ -63,4 +63,20 @@ public class TestSonic1LzRomMappings {
         assertEquals(new SpriteMappingPiece(-0x0C, 0x04, 3, 2, 9, false, false, 0, false),
                 romFrames.get(6).pieces().get(1));
     }
+
+    @Test
+    public void flappingDoorRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_LZ_FLAPPING_DOOR_ADDR);
+
+        assertEquals(List.of(2, 2, 2),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-8, -0x20, 2, 4, 0, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-5, 6, 4, 4, 8, false, true, 0, false),
+                romFrames.get(1).pieces().get(1));
+        assertEquals(new SpriteMappingPiece(0, 0x18, 4, 2, 0x18, false, true, 0, false),
+                romFrames.get(2).pieces().get(1));
+    }
 }

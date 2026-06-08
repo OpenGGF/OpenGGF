@@ -1550,7 +1550,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
     }
 
     /**
-     * Loads LZ flapping door art (Nem_FlapDoor) and mappings from Map_Flap.
+     * Loads LZ flapping door art (Nem_FlapDoor) with ROM-parsed S1 mappings (Map_Flap).
      */
     private void loadLzFlappingDoorArt(Sonic1ObjectArt art) {
         Pattern[] patterns = art.loadNemesisPatterns(
@@ -1560,29 +1560,9 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, createLzFlappingDoorMappings(), 2, 1);
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_LZ_FLAPPING_DOOR_ADDR);
+        ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
         registerSheet(ObjectArtKeys.LZ_FLAPPING_DOOR, sheet);
-    }
-
-    private List<SpriteMappingFrame> createLzFlappingDoorMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>(3);
-
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x08, -0x20, 2, 4, 0x00, false, false, 0, false),
-                new SpriteMappingPiece(-0x08, 0x00, 2, 4, 0x00, false, true, 0, false)
-        )));
-
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x05, -0x26, 4, 4, 0x08, false, false, 0, false),
-                new SpriteMappingPiece(-0x05, 0x06, 4, 4, 0x08, false, true, 0, false)
-        )));
-
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(0x00, -0x28, 4, 2, 0x18, false, false, 0, false),
-                new SpriteMappingPiece(0x00, 0x18, 4, 2, 0x18, false, true, 0, false)
-        )));
-
-        return frames;
     }
 
     /**
