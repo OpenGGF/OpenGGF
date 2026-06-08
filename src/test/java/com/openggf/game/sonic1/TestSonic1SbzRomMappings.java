@@ -79,4 +79,20 @@ public class TestSonic1SbzRomMappings {
         assertEquals(new SpriteMappingPiece(0x40, 0, 4, 3, 6, false, true, 0, false),
                 romFrames.get(0).pieces().get(11));
     }
+
+    @Test
+    public void sbzTrapDoorRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_SBZ_TRAP_DOOR_ADDR);
+
+        assertEquals(List.of(4, 8, 4),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x40, -0x0C, 4, 3, 0, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x42, 0x12, 3, 3, 0x1C, true, true, 0, false),
+                romFrames.get(1).pieces().get(3));
+        assertEquals(new SpriteMappingPiece(0x34, 0x20, 3, 4, 0x25, false, true, 0, false),
+                romFrames.get(2).pieces().get(3));
+    }
 }

@@ -3971,55 +3971,10 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createSbzTrapDoorMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_SBZ_TRAP_DOOR_ADDR);
         // make_art_tile(ArtTile_SBZ_Trap_Door, 2, 0) -> palette line 2
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
         registerSheet(ObjectArtKeys.SBZ_TRAP_DOOR, sheet);
-    }
-
-    /**
-     * Creates SBZ Trap Door sprite mappings from
-     * docs/s1disasm/_maps/Trapdoor.asm (Map_Trap_internal).
-     * <p>
-     * Three frames:
-     * <ul>
-     *   <li>Frame 0 (.closed): 4 pieces of 4x3 (128x24 platform)</li>
-     *   <li>Frame 1 (.half): 8 pieces - doors partially open</li>
-     *   <li>Frame 2 (.open): 4 pieces of 3x4 - doors fully open/vertical</li>
-     * </ul>
-     */
-    private List<SpriteMappingFrame> createSbzTrapDoorMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.closed): 4 pieces of 4x3 tiles
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x40, -0xC, 4, 3, 0, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, -0xC, 4, 3, 0, true, false, 0, false),
-                new SpriteMappingPiece(0, -0xC, 4, 3, 0, false, false, 0, false),
-                new SpriteMappingPiece(0x20, -0xC, 4, 3, 0, true, false, 0, false)
-        )));
-
-        // Frame 1 (.half): 8 pieces - doors partially open
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x4A, -0xE, 4, 4, 0xC, false, false, 0, false),
-                new SpriteMappingPiece(-0x2A, 0x1A, 4, 4, 0xC, true, true, 0, false),
-                new SpriteMappingPiece(-0x2A, 0x02, 3, 3, 0x1C, false, false, 0, false),
-                new SpriteMappingPiece(-0x42, 0x12, 3, 3, 0x1C, true, true, 0, false),
-                new SpriteMappingPiece(0x2A, -0x0E, 4, 4, 0xC, true, false, 0, false),
-                new SpriteMappingPiece(0x0A, 0x1A, 4, 4, 0xC, false, true, 0, false),
-                new SpriteMappingPiece(0x12, 0x02, 3, 3, 0x1C, true, false, 0, false),
-                new SpriteMappingPiece(0x2A, 0x12, 3, 3, 0x1C, false, true, 0, false)
-        )));
-
-        // Frame 2 (.open): 4 pieces of 3x4 tiles - fully open
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x4C, 0, 3, 4, 0x25, false, false, 0, false),
-                new SpriteMappingPiece(-0x4C, 0x20, 3, 4, 0x25, false, true, 0, false),
-                new SpriteMappingPiece(0x34, 0, 3, 4, 0x25, false, false, 0, false),
-                new SpriteMappingPiece(0x34, 0x20, 3, 4, 0x25, false, true, 0, false)
-        )));
-
-        return frames;
     }
 
     /**
