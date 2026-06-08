@@ -5825,49 +5825,10 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createBumperMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_SYZ_BUMPER_ADDR);
         // make_art_tile(ArtTile_SYZ_Bumper,0,0) — palette line 0
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 0, 1);
         registerSheet(ObjectArtKeys.BUMPER, sheet);
-    }
-
-    /**
-     * Creates SYZ bumper sprite mappings from docs/s1disasm/_maps/Bumper.asm.
-     * <p>
-     * spritePiece format: x, y, width, height, startTile, xflip, yflip, pal, pri
-     * <p>
-     * Frame 0 (.normal):  2 pieces, 32x32 idle bumper
-     * Frame 1 (.bumped1): 2 pieces, 24x24 compressed (hit animation frame 1)
-     * Frame 2 (.bumped2): 2 pieces, 32x32 expanded (hit animation frame 2)
-     */
-    private List<SpriteMappingFrame> createBumperMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.normal): 32x32 idle
-        // spritePiece -$10, -$10, 2, 4, 0, 0, 0, 0, 0
-        // spritePiece   0, -$10, 2, 4, 0, 1, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 2, 4, 0, false, false, 0, false),
-                new SpriteMappingPiece(    0, -0x10, 2, 4, 0, true,  false, 0, false)
-        )));
-
-        // Frame 1 (.bumped1): 24x24 compressed hit
-        // spritePiece -$C, -$C, 2, 3, 8, 0, 0, 0, 0
-        // spritePiece   4, -$C, 1, 3, 8, 1, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0C, -0x0C, 2, 3, 8, false, false, 0, false),
-                new SpriteMappingPiece(  0x4, -0x0C, 1, 3, 8, true,  false, 0, false)
-        )));
-
-        // Frame 2 (.bumped2): 32x32 expanded hit
-        // spritePiece -$10, -$10, 2, 4, $E, 0, 0, 0, 0
-        // spritePiece    0, -$10, 2, 4, $E, 1, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 2, 4, 0x0E, false, false, 0, false),
-                new SpriteMappingPiece(    0, -0x10, 2, 4, 0x0E, true,  false, 0, false)
-        )));
-
-        return frames;
     }
 
     private void loadBigSpikedBallArt(Sonic1ObjectArt art) {
