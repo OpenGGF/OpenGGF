@@ -24,13 +24,15 @@ All notable changes to the OpenGGF project are documented in this file.
   `ObjPosLZPlatform_Index` / `ObjPosSBZPlatform_Index` child spawn lists instead
   of the conveyor objects carrying inline tables. `Sonic1ObjectArtProvider` now
   loads `Map_Seesaw`, `Map_SSawBall`, `Map_Fan`, `Map_Pylon`, `Map_Scen`, and
-  `Map_ExplodeItem` from verified ROM offsets. Shared boss `Map_Eggman` /
-  `Map_BossItems`, SBZ2/FZ `Map_SEgg`, plus the Final Zone plasma launcher,
-  plasma projectile, cylinder, escape-leg, and damaged-ship overlay mappings now
-  load from ROM offsets as well. The embedded-runtime-data guard now ratchets
-  those table families to zero, removes the legacy S1 boss mapping helper file,
-  and reduces the remaining S1 object mapping-piece budget; larger S1 mapping
-  migrations remain tracked release debt.
+  `Map_ExplodeItem` from verified ROM offsets. Shared button `Map_But`, SBZ2
+  `Map_FFloor`, shared boss `Map_Eggman` / `Map_BossItems`, SBZ2/FZ `Map_SEgg`,
+  plus the Final Zone plasma launcher, plasma projectile, cylinder, escape-leg,
+  and damaged-ship overlay mappings now load from ROM offsets as well. The S1
+  mapping parser now preserves the tile priority bit from ROM mapping words.
+  The embedded-runtime-data guard now ratchets those table families to zero,
+  removes the legacy S1 boss mapping helper file, and reduces the remaining S1
+  object mapping-piece budget; larger S1 mapping migrations remain tracked
+  release debt.
 
 - **Develop release-sweep hardening closed the latest architecture review
   findings:** startup and audio teardown now fail closed on partial native

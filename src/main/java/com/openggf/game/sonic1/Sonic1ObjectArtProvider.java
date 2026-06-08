@@ -2294,57 +2294,11 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             patterns = Arrays.copyOfRange(patterns, 4, patterns.length);
         }
 
-        List<SpriteMappingFrame> mappings = createButtonMappings();
-        ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, paletteIndex, 1);
-        registerSheet(ObjectArtKeys.BUTTON, sheet);
-    }
-
-    /**
-     * Creates button sprite mappings from S1 disassembly Map_But_internal.
-     * <p>
-     * spritePiece format: x, y, width, height, startTile, xflip, yflip, pal, pri
-     * <p>
-     * Frame 0 (unpressed):
-     *   spritePiece -$10, -$B, 2, 2, 0, 0, 0, 0, 0
-     *   spritePiece 0, -$B, 2, 2, 0, 1, 0, 0, 0
-     * Frame 1 (unpressed alternate / pressed with palette offset):
-     *   spritePiece -$10, -$B, 2, 2, 4, 0, 0, 0, 0
-     *   spritePiece 0, -$B, 2, 2, 4, 1, 0, 0, 0
-     * Frame 2 (pressed):
-     *   spritePiece -$10, -$B, 2, 2, $7FC, 1, 1, 3, 1
-     *   spritePiece 0, -$B, 2, 2, $7FC, 0, 0, 0, 0
-     * Frame 3 (reuses frame 1 data):
-     *   spritePiece -$10, -$B, 2, 2, 4, 0, 0, 0, 0
-     *   spritePiece 0, -$B, 2, 2, 4, 1, 0, 0, 0
-     */
-    private List<SpriteMappingFrame> createButtonMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0: Unpressed (tile 0, left + right mirrored)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x0B, 2, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(0x00, -0x0B, 2, 2, 0, true, false, 0, false)
-        )));
-
-        // Frame 1: Alternate unpressed (tile 4, left + right mirrored)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x0B, 2, 2, 4, false, false, 0, false),
-                new SpriteMappingPiece(0x00, -0x0B, 2, 2, 4, true, false, 0, false)
-        )));
-
-        // Frame 2: Pressed (tile $7FC with flips and alternate palette/priority)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x0B, 2, 2, 0x7FC, true, true, 3, true),
-                new SpriteMappingPiece(0x00, -0x0B, 2, 2, 0x7FC, false, false, 0, false)
-        )));
-
-        // Frame 3: Same as frame 1 (reuses byte_BEB7 data)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x0B, 2, 2, 4, false, false, 0, false),
-                new SpriteMappingPiece(0x00, -0x0B, 2, 2, 4, true, false, 0, false)
-        )));
-
-        return frames;
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_BUTTON_ADDR);
+        if (!mappings.isEmpty()) {
+            ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, paletteIndex, 1);
+            registerSheet(ObjectArtKeys.BUTTON, sheet);
+        }
     }
 
     /**
@@ -8024,97 +7978,39 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
     }
 
     /**
-     * Loads SBZ2 button sprite art (Nem_Button / LZ switch) with hardcoded Map_But mappings.
+     * Loads SBZ2 button sprite art (Nem_Button / LZ switch) with ROM-backed Map_But mappings.
      * obGfx = make_art_tile(ArtTile_SBZ2_Button,0,0) -> palette 0.
      * Shared Nemesis art with LZ switch (ART_NEM_LZ_SWITCH_ADDR).
      * 2 frames: unpressed, pressed.
      */
     private void loadSbz2ButtonArt(Sonic1ObjectArt art) {
-        List<SpriteMappingFrame> mappings = createSbz2ButtonMappings();
-        registerSheet(ObjectArtKeys.SBZ2_BUTTON, art.buildArtSheet(
-                Sonic1Constants.ART_NEM_LZ_SWITCH_ADDR, mappings, 0, 1));
+        Pattern[] patterns = art.loadNemesisPatterns(Sonic1Constants.ART_NEM_LZ_SWITCH_ADDR);
+        if (patterns.length <= 4) {
+            return;
+        }
+        patterns = Arrays.copyOfRange(patterns, 4, patterns.length);
+
+        List<SpriteMappingFrame> allMappings = art.loadMappingFrames(Sonic1Constants.MAP_BUTTON_ADDR);
+        if (allMappings.size() < 2) {
+            return;
+        }
+        List<SpriteMappingFrame> mappings = List.copyOf(allMappings.subList(0, 2));
+        registerSheet(ObjectArtKeys.SBZ2_BUTTON, new ObjectSpriteSheet(patterns, mappings, 0, 1));
     }
 
     /**
-     * Creates Map_But sprite mappings for the SBZ2 button.
-     * Hardcoded from docs/s1disasm/_maps/Button.asm (inline spritePiece macros).
-     * 2 frames: unpressed, pressed.
-     *
-     * PLC loads Nem_LzSwitch at ArtTile_Eggman_Button-4 ($4A0), but the object's
-     * obGfx base is ArtTile_Eggman_Button ($4A4). This 4-tile offset means
-     * Map_But tile index 0 maps to decompressed tile 4, and tile index 4 maps to
-     * decompressed tile 8. Since buildArtSheet indexes directly into the
-     * decompressed art array, we must add 4 to all tile indices.
-     */
-    private List<SpriteMappingFrame> createSbz2ButtonMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // PLC offset: art loaded 4 tiles before obGfx base
-        int tileOffset = 4;
-
-        // Frame 0 (unpressed): 2 pieces
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x0B, 2, 2, 0 + tileOffset, false, false, 0, false),
-                new SpriteMappingPiece(0, -0x0B, 2, 2, 0 + tileOffset, true, false, 0, false)
-        )));
-
-        // Frame 1 (pressed): 2 pieces
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x0B, 2, 2, 4 + tileOffset, false, false, 0, false),
-                new SpriteMappingPiece(0, -0x0B, 2, 2, 4 + tileOffset, true, false, 0, false)
-        )));
-
-        return frames;
-    }
-
-    /**
-     * Loads SBZ2 false floor art (Nem_SBZ_VanishingBlock) with hardcoded Map_FFloor mappings.
+     * Loads SBZ2 false floor art (Nem_SBZ_VanishingBlock) with ROM-backed Map_FFloor mappings.
      * obGfx = make_art_tile(ArtTile_Eggman_Trap_Floor,2,0) -> palette 2.
      * 5 frames: whole block, then 4 quarter-block fragments (TL, TR, BL, BR).
      */
     private void loadSbz2FalseFloorArt(Sonic1ObjectArt art) {
-        List<SpriteMappingFrame> mappings = createSbz2FalseFloorMappings();
-        registerSheet(ObjectArtKeys.SBZ2_FALSE_FLOOR, art.buildArtSheet(
-                Sonic1Constants.ART_NEM_SBZ_VANISHING_BLOCK_ADDR, mappings, 2, 1));
-    }
-
-    /**
-     * Creates Map_FFloor sprite mappings for the SBZ2 false floor blocks.
-     * Hardcoded from docs/s1disasm/_maps/False Floor.asm (inline spritePiece macros).
-     * 5 frames: whole block (4x4), then 4 quarter pieces (1x2 each pair).
-     */
-    private List<SpriteMappingFrame> createSbz2FalseFloorMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (wholeblock): 1 piece
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0, false, false, 0, false)
-        )));
-
-        // Frame 1 (topleft): 2 pieces
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 1, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(0, -8, 1, 2, 4, false, false, 0, false)
-        )));
-
-        // Frame 2 (topright): 2 pieces
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 1, 2, 8, false, false, 0, false),
-                new SpriteMappingPiece(0, -8, 1, 2, 0x0C, false, false, 0, false)
-        )));
-
-        // Frame 3 (bottomleft): 2 pieces
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 1, 2, 2, false, false, 0, false),
-                new SpriteMappingPiece(0, -8, 1, 2, 6, false, false, 0, false)
-        )));
-
-        // Frame 4 (bottomright): 2 pieces
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 1, 2, 0x0A, false, false, 0, false),
-                new SpriteMappingPiece(0, -8, 1, 2, 0x0E, false, false, 0, false)
-        )));
-
-        return frames;
+        ObjectSpriteSheet sheet = art.buildArtSheetFromRom(
+                Sonic1Constants.ART_NEM_SBZ_VANISHING_BLOCK_ADDR,
+                Sonic1Constants.MAP_SBZ_FALSE_FLOOR_ADDR,
+                2,
+                1);
+        if (sheet != null) {
+            registerSheet(ObjectArtKeys.SBZ2_FALSE_FLOOR, sheet);
+        }
     }
 }
