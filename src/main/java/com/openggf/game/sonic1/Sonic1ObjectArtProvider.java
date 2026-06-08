@@ -356,9 +356,8 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
     }
 
     /**
-     * Loads breakable wall art (Nem_GhzWall1 for GHZ, Nem_SlzWall for SLZ) and creates
-     * S1-format sprite mappings. 3 frames (left/middle/right sections) from
-     * docs/s1disasm/_maps/Smashable Walls.asm.
+     * Loads breakable wall art (Nem_GhzWall1 for GHZ, Nem_SlzWall for SLZ) with
+     * ROM-parsed S1 mappings (Map_Smash).
      * <p>
      * GHZ uses patterns at offset 0, SLZ loads separate art at +4 offset.
      * Each section is 32x64 pixels (2 columns × 4 rows of 2×2 tile pieces).
@@ -384,64 +383,11 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             patterns = padded;
         }
 
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_SMASH_ADDR);
+
         // Palette line 2 from disassembly: make_art_tile(ArtTile_GHZ_SLZ_Smashable_Wall,2,0)
         registerSheet(ObjectArtKeys.BREAKABLE_WALL,
-                new ObjectSpriteSheet(patterns, createBreakableWallMappings(), 2, 1));
-    }
-
-    /**
-     * Creates breakable wall sprite mappings from S1 disassembly Map_Smash_internal.
-     * <p>
-     * Three frames corresponding to subtypes 0/1/2 (left/middle/right wall sections).
-     * Each frame has 8 pieces (2 columns × 4 rows of 2×2 tiles = 32×64 pixels).
-     * <p>
-     * From _maps/Smashable Walls.asm:
-     * <pre>
-     * .left:   col0=tile 0, col1=tile 4
-     * .middle: col0=tile 4, col1=tile 4
-     * .right:  col0=tile 4, col1=tile 8
-     * </pre>
-     */
-    private List<SpriteMappingFrame> createBreakableWallMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.left): left column=tile 0, right column=tile 4
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x20, 2, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x10, 2, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(-0x10,     0, 2, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(-0x10,  0x10, 2, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(    0, -0x20, 2, 2, 4, false, false, 0, false),
-                new SpriteMappingPiece(    0, -0x10, 2, 2, 4, false, false, 0, false),
-                new SpriteMappingPiece(    0,     0, 2, 2, 4, false, false, 0, false),
-                new SpriteMappingPiece(    0,  0x10, 2, 2, 4, false, false, 0, false)
-        )));
-
-        // Frame 1 (.middle): both columns=tile 4
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x20, 2, 2, 4, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x10, 2, 2, 4, false, false, 0, false),
-                new SpriteMappingPiece(-0x10,     0, 2, 2, 4, false, false, 0, false),
-                new SpriteMappingPiece(-0x10,  0x10, 2, 2, 4, false, false, 0, false),
-                new SpriteMappingPiece(    0, -0x20, 2, 2, 4, false, false, 0, false),
-                new SpriteMappingPiece(    0, -0x10, 2, 2, 4, false, false, 0, false),
-                new SpriteMappingPiece(    0,     0, 2, 2, 4, false, false, 0, false),
-                new SpriteMappingPiece(    0,  0x10, 2, 2, 4, false, false, 0, false)
-        )));
-
-        // Frame 2 (.right): left column=tile 4, right column=tile 8
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x20, 2, 2, 4, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x10, 2, 2, 4, false, false, 0, false),
-                new SpriteMappingPiece(-0x10,     0, 2, 2, 4, false, false, 0, false),
-                new SpriteMappingPiece(-0x10,  0x10, 2, 2, 4, false, false, 0, false),
-                new SpriteMappingPiece(    0, -0x20, 2, 2, 8, false, false, 0, false),
-                new SpriteMappingPiece(    0, -0x10, 2, 2, 8, false, false, 0, false),
-                new SpriteMappingPiece(    0,     0, 2, 2, 8, false, false, 0, false),
-                new SpriteMappingPiece(    0,  0x10, 2, 2, 8, false, false, 0, false)
-        )));
-
-        return frames;
+                new ObjectSpriteSheet(patterns, mappings, 2, 1));
     }
 
     /**

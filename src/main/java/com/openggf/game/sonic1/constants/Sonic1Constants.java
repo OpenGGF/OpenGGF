@@ -92,6 +92,7 @@ public final class Sonic1Constants {
     public static final int MAP_PURPLE_ROCK_ADDR = 0x00D79C; // Map_PRock (Obj3B: 2 frames)
     public static final int MAP_CHOPPER_ADDR     = 0x00B254; // Map_Chop (Obj2B: 2 frames)
     public static final int MAP_BUTTON_ADDR      = 0x00C52E; // Map_But (Obj32/Obj82: 4 frames)
+    public static final int MAP_SMASH_ADDR       = 0x00D944; // Map_Smash (Obj2D: 3 frames)
     public static final int MAP_GHZ_EDGE_WALL_ADDR = 0x00E8DF; // Map_Edge (Obj44: 3 frames)
     public static final int MAP_BRIDGE_ADDR      = 0x007FB2; // Map_Bri (Obj11: 3 frames)
     public static final int MAP_SCENERY_ADDR     = 0x008ED4; // Map_Scen (Obj1C: 1 frame)
