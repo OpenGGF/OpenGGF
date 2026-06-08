@@ -388,11 +388,15 @@ class TestArchitecturalSourceGuard {
                         "com/openggf/game/sonic1/objects/bosses/Sonic1BossMappings.java",
                         "handwritten Sonic 1 boss mapping pieces",
                         Pattern.compile("new\\s+SpriteMappingPiece\\s*\\("),
-                        42)
+                        0)
         );
 
         for (EmbeddedRuntimeDataBudget budget : budgets) {
-            String source = Files.readString(SRC_MAIN.resolve(budget.relativePath()));
+            Path sourcePath = SRC_MAIN.resolve(budget.relativePath());
+            if (!Files.exists(sourcePath) && budget.expectedCount() == 0) {
+                continue;
+            }
+            String source = Files.readString(sourcePath);
             int actual = countMatches(budget.pattern(), source);
             if (actual != budget.expectedCount()) {
                 violations.add(budget.relativePath() + " has " + actual + " "

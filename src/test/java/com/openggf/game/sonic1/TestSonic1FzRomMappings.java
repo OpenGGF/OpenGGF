@@ -58,6 +58,34 @@ public class TestSonic1FzRomMappings {
                 romFrames.get(9).pieces().get(4));
     }
 
+    @Test
+    public void eggmanRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_EGGMAN_ADDR);
+
+        assertEquals(List.of(6, 2, 2, 3, 3, 3, 3, 4, 1, 1, 0, 2, 2),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x1C, -0x14, 1, 2, 0x0A, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(0x22, 8, 3, 1, 0x12A, false, true, 0, false),
+                romFrames.get(11).pieces().get(1));
+    }
+
+    @Test
+    public void bossItemsRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_BOSS_ITEMS_ADDR);
+
+        assertEquals(List.of(1, 2, 1, 1, 1, 4, 2, 2),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(0, -8, 1, 2, 0x13, true, false, 0, false),
+                romFrames.get(5).pieces().get(2));
+        assertEquals(new SpriteMappingPiece(0x10, 0, 3, 4, 0x1E, false, false, 0, false),
+                romFrames.get(7).pieces().get(1));
+    }
+
     private static int maxTileIndex(List<SpriteMappingFrame> frames) {
         int max = 0;
         for (SpriteMappingFrame frame : frames) {

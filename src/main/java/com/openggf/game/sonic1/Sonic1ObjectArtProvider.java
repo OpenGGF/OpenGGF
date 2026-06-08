@@ -5,7 +5,6 @@ import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
-import com.openggf.game.sonic1.objects.bosses.Sonic1BossMappings;
 import com.openggf.level.objects.HudStaticArt;
 import com.openggf.level.objects.AnimalType;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
@@ -7256,9 +7255,11 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             // Ship body pieces use palette 1, face pieces use palette 0
             // (palette per-piece is encoded in the mappings)
             List<SpriteMappingFrame> mappings =
-                    Sonic1BossMappings.createEggmanMappings();
-            ObjectSpriteSheet sheet = new ObjectSpriteSheet(mergedPatterns, mappings, 0, mappings.size());
-            registerSheet(ObjectArtKeys.EGGMAN, sheet);
+                    art.loadMappingFrames(Sonic1Constants.MAP_EGGMAN_ADDR);
+            if (!mappings.isEmpty()) {
+                ObjectSpriteSheet sheet = new ObjectSpriteSheet(mergedPatterns, mappings, 0, mappings.size());
+                registerSheet(ObjectArtKeys.EGGMAN, sheet);
+            }
         }
 
         // Nem_Weapons: Boss weapons art (chain anchor frames for ball/chain)
@@ -7266,9 +7267,11 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
                 Sonic1Constants.ART_NEM_BOSS_WEAPONS_ADDR);
         if (weaponsPatterns.length > 0) {
             List<SpriteMappingFrame> mappings =
-                    Sonic1BossMappings.createBossItemsMappings();
-            ObjectSpriteSheet sheet = new ObjectSpriteSheet(weaponsPatterns, mappings, 0, mappings.size());
-            registerSheet(ObjectArtKeys.BOSS_WEAPONS, sheet);
+                    art.loadMappingFrames(Sonic1Constants.MAP_BOSS_ITEMS_ADDR);
+            if (!mappings.isEmpty()) {
+                ObjectSpriteSheet sheet = new ObjectSpriteSheet(weaponsPatterns, mappings, 0, mappings.size());
+                registerSheet(ObjectArtKeys.BOSS_WEAPONS, sheet);
+            }
         }
 
         // GHZ Ball art (Nem_Ball) is already loaded by loadSwingingPlatformArt as SWING_GIANT_BALL.
