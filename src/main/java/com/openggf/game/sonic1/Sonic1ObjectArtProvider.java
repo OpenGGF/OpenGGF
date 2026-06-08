@@ -4436,7 +4436,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             Pattern[] patterns = art.loadNemesisPatterns(
                     Sonic1Constants.ART_NEM_SWING_ADDR);
             if (patterns.length > 0) {
-                List<SpriteMappingFrame> mappings = createSwingGhzMappings();
+                List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_SWING_GHZ_ADDR);
                 // make_art_tile(ArtTile_GHZ_MZ_Swing, 2, 0) — palette line 2
                 ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
                 registerSheet(ObjectArtKeys.SWING_GHZ, sheet);
@@ -4460,7 +4460,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             Pattern[] patterns = art.loadNemesisPatterns(
                     Sonic1Constants.ART_NEM_SLZ_SWING_ADDR);
             if (patterns.length > 0) {
-                List<SpriteMappingFrame> mappings = createSwingSlzMappings();
+                List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_SWING_SLZ_ADDR);
                 // make_art_tile(ArtTile_SLZ_Swing, 2, 0) — palette line 2
                 ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
                 registerSheet(ObjectArtKeys.SWING_SLZ, sheet);
@@ -4478,76 +4478,6 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
                 registerSheet(ObjectArtKeys.SWING_SBZ_BALL, sheet);
             }
         }
-    }
-
-    /**
-     * GHZ/MZ swinging platform mappings from docs/s1disasm/_maps/Swinging Platforms (GHZ).asm.
-     * <p>
-     * Frame 0 (.block):  Platform — 2 pieces (48x16)
-     * Frame 1 (.chain):  Chain link — 1 piece (16x16)
-     * Frame 2 (.anchor): Anchor point — 1 piece (16x16)
-     */
-    private List<SpriteMappingFrame> createSwingGhzMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0: .block — platform (2 pieces of 3x2 tiles)
-        // spritePiece -$18, -8, 3, 2, 4, 0, 0, 0, 0
-        // spritePiece    0, -8, 3, 2, 4, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x18, -8, 3, 2, 4, false, false, 0, false),
-                new SpriteMappingPiece(    0, -8, 3, 2, 4, false, false, 0, false)
-        )));
-
-        // Frame 1: .chain — chain link (1 piece of 2x2 tiles)
-        // spritePiece -8, -8, 2, 2, 0, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 0, false, false, 0, false)
-        )));
-
-        // Frame 2: .anchor — anchor point (1 piece of 2x2 tiles)
-        // spritePiece -8, -8, 2, 2, $A, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 0xA, false, false, 0, false)
-        )));
-
-        return frames;
-    }
-
-    /**
-     * SLZ swinging platform mappings from docs/s1disasm/_maps/Swinging Platforms (SLZ).asm.
-     * <p>
-     * Frame 0 (.block):  Platform — 8 pieces (larger 64x32 platform)
-     * Frame 1 (.chain):  Chain link — 1 piece (16x16, palette 2)
-     * Frame 2 (.anchor): Anchor point — 1 piece (16x16)
-     */
-    private List<SpriteMappingFrame> createSwingSlzMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0: .block — SLZ platform (8 pieces)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x20, -0x10, 4, 4,    4, false, false, 0, false),
-                new SpriteMappingPiece(    0, -0x10, 4, 4,    4, true,  false, 0, false),
-                new SpriteMappingPiece(-0x30, -0x10, 2, 2, 0x14, false, false, 0, false),
-                new SpriteMappingPiece( 0x20, -0x10, 2, 2, 0x14, true,  false, 0, false),
-                new SpriteMappingPiece(-0x20,  0x10, 2, 1, 0x18, false, false, 0, false),
-                new SpriteMappingPiece( 0x10,  0x10, 2, 1, 0x18, true,  false, 0, false),
-                new SpriteMappingPiece(   -8,  0x10, 1, 2, 0x1A, false, false, 0, false),
-                new SpriteMappingPiece(    0,  0x10, 1, 2, 0x1A, true,  false, 0, false)
-        )));
-
-        // Frame 1: .chain — chain link (1 piece, palette 2)
-        // spritePiece -8, -8, 2, 2, 0, 0, 0, 2, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 0, false, false, 2, false)
-        )));
-
-        // Frame 2: .anchor — anchor (1 piece)
-        // spritePiece -8, -8, 2, 2, $1C, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 0x1C, false, false, 0, false)
-        )));
-
-        return frames;
     }
 
     /**
