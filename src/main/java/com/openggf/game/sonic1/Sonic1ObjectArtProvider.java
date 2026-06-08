@@ -1833,9 +1833,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
     }
 
     /**
-     * Loads LZ Harpoon spike trap art (Nem_Harpoon).
-     * Mappings from docs/s1disasm/_maps/Harpoon.asm (Map_Harp_internal).
-     * 6 frames: 3 horizontal (retracted/middle/extended), 3 vertical (retracted/middle/extended).
+     * Loads LZ Harpoon spike trap art (Nem_Harpoon) with ROM-parsed S1 mappings (Map_Harp).
      */
     private void loadHarpoonArt(Sonic1ObjectArt art) {
         Pattern[] patterns = art.loadNemesisPatterns(
@@ -1844,69 +1842,10 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             LOGGER.warning("Failed to load LZ harpoon art");
             return;
         }
-        List<SpriteMappingFrame> mappings = createHarpoonMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_LZ_HARPOON_ADDR);
         // make_art_tile(ArtTile_LZ_Harpoon, 0, 0) -> palette line 0, priority 0
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 0, 1);
         registerSheet(ObjectArtKeys.LZ_HARPOON, sheet);
-    }
-
-    /**
-     * Creates harpoon sprite mappings from docs/s1disasm/_maps/Harpoon.asm (Map_Harp_internal).
-     * <p>
-     * 6 frames: 3 horizontal states, 3 vertical states.
-     * <ul>
-     *   <li>Frame 0 (.h_retracted): 2x1 at (-8, -4), tile 0</li>
-     *   <li>Frame 1 (.h_middle): 4x1 at (-8, -4), tile 2</li>
-     *   <li>Frame 2 (.h_extended): 3x1 at (-8, -4), tile 6 + 3x1 at ($10, -4), tile 3</li>
-     *   <li>Frame 3 (.v_retracted): 1x2 at (-4, -8), tile 9</li>
-     *   <li>Frame 4 (.v_middle): 1x4 at (-4, -$18), tile $B</li>
-     *   <li>Frame 5 (.v_extended): 1x3 at (-4, -$28), tile $B + 1x3 at (-4, -$10), tile $F</li>
-     * </ul>
-     */
-    private List<SpriteMappingFrame> createHarpoonMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.h_retracted): horizontal retracted - short spike tip
-        // spritePiece -8, -4, 2, 1, 0, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -4, 2, 1, 0x00, false, false, 0, false)
-        )));
-
-        // Frame 1 (.h_middle): horizontal middle - extending
-        // spritePiece -8, -4, 4, 1, 2, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -4, 4, 1, 0x02, false, false, 0, false)
-        )));
-
-        // Frame 2 (.h_extended): horizontal fully extended - two sprite pieces
-        // spritePiece -8, -4, 3, 1, 6, 0, 0, 0, 0
-        // spritePiece $10, -4, 3, 1, 3, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -4, 3, 1, 0x06, false, false, 0, false),
-                new SpriteMappingPiece(0x10, -4, 3, 1, 0x03, false, false, 0, false)
-        )));
-
-        // Frame 3 (.v_retracted): vertical retracted - short spike tip
-        // spritePiece -4, -8, 1, 2, 9, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-4, -8, 1, 2, 0x09, false, false, 0, false)
-        )));
-
-        // Frame 4 (.v_middle): vertical middle - extending
-        // spritePiece -4, -$18, 1, 4, $B, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-4, -0x18, 1, 4, 0x0B, false, false, 0, false)
-        )));
-
-        // Frame 5 (.v_extended): vertical fully extended - two sprite pieces
-        // spritePiece -4, -$28, 1, 3, $B, 0, 0, 0, 0
-        // spritePiece -4, -$10, 1, 3, $F, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-4, -0x28, 1, 3, 0x0B, false, false, 0, false),
-                new SpriteMappingPiece(-4, -0x10, 1, 3, 0x0F, false, false, 0, false)
-        )));
-
-        return frames;
     }
 
     /**

@@ -103,6 +103,7 @@ public final class Sonic1Constants {
     public static final int MAP_SLZ_FAN_ADDR     = 0x011CE4; // Map_Fan (Obj5D: 5 frames)
     public static final int MAP_SLZ_SEESAW_ADDR  = 0x012078; // Map_Seesaw (Obj5E: 4 frames)
     public static final int MAP_SLZ_SEESAW_BALL_ADDR = 0x0120BA; // Map_SSawBall (Obj5F: 2 frames)
+    public static final int MAP_LZ_HARPOON_ADDR  = 0x01266E; // Map_Harp (Obj16: 6 frames)
     public static final int MAP_EGGMAN_ADDR      = 0x0184B8; // Map_Eggman (bosses: 13 frames)
     public static final int MAP_BOSS_ITEMS_ADDR  = 0x018580; // Map_BossItems (boss extras: 8 frames)
     public static final int MAP_SEGG_ADDR        = 0x01A1E4; // Map_SEgg (Obj82/Obj85: 11 frames)
