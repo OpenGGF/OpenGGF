@@ -52,7 +52,7 @@ All notable changes to the OpenGGF project are documented in this file.
   / `Map_Elec` / `Map_ADoor` / `Map_Gird` / `Map_Trap` / `Map_Spin` / `Map_Stomp`, shared
   button `Map_But`, SBZ2
   `Map_FFloor`, shared boss `Map_Eggman` / `Map_BossItems`, SBZ2/FZ `Map_SEgg`,
-  ending emerald/STH mappings `Map_ECha` / `Map_ESth`,
+  ending Sonic/emerald/STH mappings `Map_ESon` / `Map_ECha` / `Map_ESth`,
   plus the Final Zone plasma launcher, plasma projectile, cylinder, escape-leg,
   and damaged-ship overlay mappings now load from ROM offsets as well. The S1
   mapping parser now preserves the tile priority bit from ROM mapping words.

@@ -1028,10 +1028,10 @@ large grassy platform `Map_LGrass` table, the SBZ
 vanishing platform `Map_VanP` table, the SYZ/SLZ/LZ floating block and door
 `Map_FBlock` table, the SBZ2
 `Map_FFloor` table, the shared boss `Map_Eggman` / `Map_BossItems` tables, the SBZ2/FZ `Map_SEgg` table, the ending
-`Map_ECha` / `Map_ESth` tables, plus the Final Zone
+`Map_ESon` / `Map_ECha` / `Map_ESth` tables, plus the Final Zone
 `Map_EggCyl` / `Map_PLaunch` / `Map_Plasma` / `Map_FZLegs` / `Map_FZDamaged`
 boss mapping slice, now load from the user-supplied ROM and their guard budgets
-have been ratcheted down. The current object-provider budget is 157 handwritten
+have been ratcheted down. The current object-provider budget is 112 handwritten
 mapping pieces; Sonic 1 boss mappings are ROM-backed and
 their separate handwritten budget is zero.
 

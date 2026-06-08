@@ -90,6 +90,7 @@ public final class Sonic1Constants {
     public static final int MAP_LAMPPOST_ADDR    = 0x0178A4; // Map_Lamp (Obj79: 4 frames)
     public static final int MAP_SIGNPOST_ADDR    = 0x00F3C4; // Map_Sign (Obj0D: 5 frames)
     public static final int MAP_END_EMERALDS_ADDR = 0x005788; // Map_ECha (Obj88: 7 frames)
+    public static final int MAP_END_SONIC_ADDR   = 0x00568E; // Map_ESon (Obj87: 8 frames)
     public static final int MAP_END_STH_ADDR     = 0x0057C0; // Map_ESth (Obj89: 1 frame)
     public static final int MAP_PURPLE_ROCK_ADDR = 0x00D79C; // Map_PRock (Obj3B: 2 frames)
     public static final int MAP_CHOPPER_ADDR     = 0x00B254; // Map_Chop (Obj2B: 2 frames)
