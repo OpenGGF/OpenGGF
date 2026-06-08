@@ -2,7 +2,6 @@ package com.openggf.trace.replay;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.game.GroundMode;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameServices;
 import com.openggf.game.InitStep;
@@ -11,7 +10,6 @@ import com.openggf.game.OscillationManager;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.sonic2.objects.TornadoObjectInstance;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
-import com.openggf.game.sonic2.trace.Sonic2TornadoRidePrelude;
 import com.openggf.level.LevelData;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -261,7 +259,6 @@ public final class TraceReplaySessionBootstrap {
                 objectManager.update(cameraX, null, List.of(), -(objectPreludeFrames - i), false);
             }
         }
-        applyS2TornadoRideStart(trace, fixture);
         refreshSidekickCpuBoundsFromCamera();
         if (sidekickPreludeFrames > 0
                 && gameplayMode != null
@@ -512,58 +509,6 @@ public final class TraceReplaySessionBootstrap {
                         maxY);
             }
         }
-    }
-
-    private static void applyS2TornadoRideStart(TraceData trace, TraceReplayFixture fixture) {
-        if (!TraceReplayBootstrap.isS2TornadoRideStartMetadataCandidate(trace)
-                || fixture == null
-                || fixture.sprite() == null) {
-            return;
-        }
-        var gameplayMode = fixture.gameplayMode();
-        if (gameplayMode == null
-                || gameplayMode.getLevelManager() == null
-                || gameplayMode.getLevelManager().getObjectManager() == null) {
-            return;
-        }
-        ObjectManager objectManager = gameplayMode.getLevelManager().getObjectManager();
-        TornadoObjectInstance tornado = findRideStartTornado(objectManager);
-        if (tornado == null) {
-            return;
-        }
-
-        AbstractPlayableSprite player = fixture.sprite();
-        TraceMetadata meta = trace.metadata();
-        short playerStartX = meta.startX();
-        player.setCentreX(playerStartX);
-        player.setCentreY(meta.startY());
-        if (!tornado.isRideStartPreludeObject()) {
-            return;
-        }
-        Sonic2TornadoRidePrelude.Seed seed = Sonic2TornadoRidePrelude.forTornado(tornado);
-        player.setSubpixelRaw(player.getXSubpixelRaw(), seed.playerYSubpixel());
-        player.setXSpeed((short) 0);
-        player.setYSpeed((short) 0);
-        player.setGSpeed((short) 0);
-        player.setAngle((byte) 0);
-        player.setRolling(false);
-        player.setAir(false);
-        player.setOnObject(true);
-        player.setGroundMode(GroundMode.GROUND);
-
-        tornado.primeRideStart(playerStartX, meta.startY(), seed.tornadoYSubpixel8());
-        if (tornado.isWfzStartRideStartPreludeObject()) {
-            // The 26-frame object prelude consumed by the engine collapses ROM's
-            // two ObjB2 init frames (ObjB2_Init at s2.asm:78271-78284 and
-            // ObjB2_Main_WFZ_Start_init at s2.asm:78368-78372) into one engine
-            // frame, leaving the WFZ Tornado one main-routine move ahead of ROM
-            // by frame -1. Roll the timer back by one tick so the
-            // WFZ_Start_main -> shot_down transition fires on the same trace
-            // frame as ROM (s2.asm:78375-78394).
-            tornado.compensateForCollapsedWfzInit();
-        }
-        objectManager.forceRidingObjectForBootstrap(player, tornado);
-        objectManager.refreshRidingTrackingPosition(tornado);
     }
 
     private static TornadoObjectInstance findRideStartTornado(ObjectManager objectManager) {

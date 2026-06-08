@@ -21,6 +21,7 @@ import com.openggf.level.render.SpriteMappingFrame;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -938,15 +939,27 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
     // ================================================================
 
     private void fadeOutMusic() {
-        try { GameServices.audio().fadeOutMusic(); } catch (Exception e) { /* ignore */ }
+        try {
+            GameServices.audio().fadeOutMusic();
+        } catch (Exception e) {
+            LOG.log(Level.WARNING, "Failed to fade out music for S3K special-stage results", e);
+        }
     }
 
     private void playMusic(int id) {
-        try { GameServices.audio().playMusic(id); } catch (Exception e) { /* ignore */ }
+        try {
+            GameServices.audio().playMusic(id);
+        } catch (Exception e) {
+            LOG.log(Level.WARNING, "Failed to play S3K special-stage results music " + id, e);
+        }
     }
 
     private void playSfx(int id) {
-        try { GameServices.audio().playSfx(id); } catch (Exception e) { /* ignore */ }
+        try {
+            GameServices.audio().playSfx(id);
+        } catch (Exception e) {
+            LOG.log(Level.WARNING, "Failed to play S3K special-stage results SFX " + id, e);
+        }
     }
 
     // ================================================================

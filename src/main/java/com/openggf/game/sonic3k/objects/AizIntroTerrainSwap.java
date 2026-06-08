@@ -10,7 +10,6 @@ import com.openggf.level.resources.PlcParser.PlcDefinition;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
-import com.openggf.level.objects.BootstrapObjectServices;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.resources.LoadOp;
 import com.openggf.level.resources.ResourceLoader;
@@ -48,8 +47,16 @@ public final class AizIntroTerrainSwap {
      * Pre-decompress the overlay data during level load so that the
      * transition frame doesn't pay the Kosinski decompression cost.
      */
-    public static synchronized void preloadOverlayData() {
-        preloadOverlayData(new BootstrapObjectServices());
+    public static synchronized void preloadOverlayData(Rom rom) {
+        if (cachedOverlayData != null) {
+            return;
+        }
+        try {
+            cachedOverlayData = loadOverlayData(rom);
+            LOG.info("AIZ intro overlay data pre-loaded successfully");
+        } catch (IOException e) {
+            LOG.warning("AIZ intro overlay preload failed (will retry on transition): " + e.getMessage());
+        }
     }
 
     public static synchronized void preloadOverlayData(ObjectServices services) {
@@ -57,7 +64,7 @@ public final class AizIntroTerrainSwap {
             return;
         }
         try {
-            cachedOverlayData = loadOverlayData(services);
+            cachedOverlayData = loadOverlayData(services.rom());
             LOG.info("AIZ intro overlay data pre-loaded successfully");
         } catch (IOException e) {
             LOG.warning("AIZ intro overlay preload failed (will retry on transition): " + e.getMessage());
@@ -69,10 +76,6 @@ public final class AizIntroTerrainSwap {
      * chunk overlay, building tilemaps, then restoring the original chunks.
      * This moves the expensive tilemap rebuild from the transition frame to level load.
      */
-    public static synchronized void precomputeTransitionTilemaps() {
-        precomputeTransitionTilemaps(new BootstrapObjectServices());
-    }
-
     public static synchronized void precomputeTransitionTilemaps(ObjectServices services) {
         preloadOverlayData(services);
         OverlayData overlay = cachedOverlayData;
@@ -117,7 +120,7 @@ public final class AizIntroTerrainSwap {
         OverlayData overlay = cachedOverlayData;
         if (overlay == null) {
             try {
-                overlay = loadOverlayData(services);
+                overlay = loadOverlayData(services.rom());
                 cachedOverlayData = overlay;
             } catch (IOException e) {
                 LOG.warning("AIZ intro terrain swap failed to load overlay data: " + e.getMessage());
@@ -161,7 +164,7 @@ public final class AizIntroTerrainSwap {
     private static List<Sonic3kPlcLoader.TileRange> applyZoneArtOverlays(
             Sonic3kLevel level, ObjectServices services) {
         try {
-            Rom rom = rom(services);
+            Rom rom = services.rom();
             PlcDefinition plc = Sonic3kPlcLoader.parsePlc(rom, 0x0B);
             return Sonic3kPlcLoader.applyToLevel(plc, level);
         } catch (IOException e) {
@@ -181,8 +184,7 @@ public final class AizIntroTerrainSwap {
         services.zoneLayoutMutationPipeline().applyImmediately(intent, context);
     }
 
-    private static OverlayData loadOverlayData(ObjectServices services) throws IOException {
-        Rom rom = rom(services);
+    private static OverlayData loadOverlayData(Rom rom) throws IOException {
         ResourceLoader loader = new ResourceLoader(rom);
 
         int baseEntryAddr = Sonic3kConstants.LEVEL_LOAD_BLOCK_ADDR;
@@ -214,10 +216,6 @@ public final class AizIntroTerrainSwap {
                 chunkOffset,
                 mainLevelTiles8x8,
                 mainLevelBlocks16x16);
-    }
-
-    private static Rom rom(ObjectServices services) throws IOException {
-        return services.rom();
     }
 
     private record OverlayData(

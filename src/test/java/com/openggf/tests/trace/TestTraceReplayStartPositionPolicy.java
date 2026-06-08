@@ -11,6 +11,7 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestTraceReplayStartPositionPolicy {
@@ -61,6 +62,9 @@ class TestTraceReplayStartPositionPolicy {
     void s3kEndToEndTraceStartsAtFrameZeroWithoutSkippingIntro() throws Exception {
         TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
 
+        assertFalse(TraceReplayBootstrap.releaseBlockersForTraceReplay(trace).isEmpty(),
+                "The legacy AIZ full-run fixture must be release-blocked until it is regenerated "
+                        + "without the route-shaped intro phase heuristic.");
         assertFalse(TraceReplayBootstrap.shouldUseLegacyS3kAizIntroWarmup(trace));
         assertFalse(TraceReplayBootstrap.shouldSeedFrameZeroForTraceReplay(trace));
         assertEquals(0, TraceReplayBootstrap.replaySeedTraceIndexForTraceReplay(trace));
@@ -87,31 +91,18 @@ class TestTraceReplayStartPositionPolicy {
     void s3kEndToEndTracePreLevelPrefixAdvancesMovieWithoutTickingLevel() throws Exception {
         TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
 
-        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
-                TraceReplayBootstrap.phaseForReplay(trace, null, trace.getFrame(0)),
-                "Frame 0 is Game_Mode 0x4C and Player_1/Player_2 RAM belongs to title-screen objects.");
-        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
-                TraceReplayBootstrap.phaseForReplay(trace, trace.getFrame(287), trace.getFrame(288)),
-                "The BK2 cursor should advance through the pre-level prefix without starting AIZ early.");
-        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
-                TraceReplayBootstrap.phaseForReplay(trace, trace.getFrame(288), trace.getFrame(289)),
-                "Frame 289 is the Game_Mode 0x0C setup boundary; native level playback starts "
-                        + "on the next LevelLoop row.");
+        assertThrows(IllegalStateException.class,
+                () -> TraceReplayBootstrap.phaseForReplay(trace, null, trace.getFrame(0)),
+                "Release replay must not silently use the legacy AIZ intro phase heuristic.");
     }
 
     @Test
     void vblankOnlyRowsAdvanceMovieButDoNotCompareGameplayState() throws Exception {
         TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
 
-        assertFalse(TraceReplayBootstrap.shouldCompareGameplayStateForReplay(
-                        TraceReplayBootstrap.phaseForReplay(trace, null, trace.getFrame(0))),
-                "Pre-level AIZ rows sample title/intro RAM, not loaded-level Sonic state.");
-        assertFalse(TraceReplayBootstrap.shouldCompareGameplayStateForReplay(
-                        TraceReplayBootstrap.phaseForReplay(trace, trace.getFrame(287), trace.getFrame(288))),
-                "VBLANK_ONLY rows should only advance BK2/VBlank timing.");
-        assertFalse(TraceReplayBootstrap.shouldCompareGameplayStateForReplay(
-                        TraceReplayBootstrap.phaseForReplay(trace, trace.getFrame(288), trace.getFrame(289))),
-                "The first Game_Mode 0x0C setup boundary is still VBLANK_ONLY for gameplay comparison.");
+        assertThrows(IllegalStateException.class,
+                () -> TraceReplayBootstrap.phaseForReplay(trace, trace.getFrame(287), trace.getFrame(288)),
+                "Legacy AIZ phase classification is diagnostic-only debt, not release replay policy.");
     }
 
     @Test
@@ -254,6 +245,10 @@ class TestTraceReplayStartPositionPolicy {
                 "SCZ metadata is eligible for the ObjB2-authorized Tornado ride-start prelude.");
         assertTrue(TraceReplayBootstrap.isS2TornadoRideStartMetadataCandidate(wfz),
                 "WFZ metadata is eligible for the ObjB2-authorized Tornado ride-start prelude.");
+        assertFalse(TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(scz),
+                "S2 Tornado release replay must not copy metadata start_x/start_y into the player.");
+        assertFalse(TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(wfz),
+                "S2 Tornado release replay must not copy metadata start_x/start_y into the player.");
     }
 
     @Test

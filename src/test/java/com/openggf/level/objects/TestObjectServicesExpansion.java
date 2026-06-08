@@ -95,24 +95,28 @@ class TestObjectServicesExpansion {
     }
 
     @Test
-    void defaultObjectServices_bootstrapConstructor_worldSessionAndGameModuleAreNullWithoutRuntime() {
-        DefaultObjectServices services = bootstrapConstructorServicesWithoutRuntime();
+    void defaultObjectServices_bootstrapConstructor_requiresActiveRuntime() {
+        LevelManager levelManager = GameServices.level();
+        Camera camera = GameServices.camera();
+        GameStateManager gameState = GameServices.gameState();
+        SpriteManager spriteManager = GameServices.sprites();
+        FadeManager fadeManager = GameServices.fade();
+        WaterSystem waterSystem = GameServices.water();
+        ParallaxManager parallaxManager = GameServices.parallax();
 
-        assertNull(services.worldSession(),
-                "bootstrap constructor should not require an active runtime world session");
-        assertNull(services.gameModule(),
-                "bootstrap constructor should return null game module when unavailable");
-    }
+        SessionManager.clear();
 
-    @Test
-    void defaultObjectServices_bootstrapConstructor_processServicesUseLegacyEngineServices() {
-        DefaultObjectServices services = bootstrapConstructorServicesWithoutRuntime();
-
-        assertSame(SonicConfigurationService.getInstance(), services.configuration());
-        assertSame(DebugOverlayManager.getInstance(), services.debugOverlay());
-        assertSame(RomManager.getInstance(), services.romManager());
-        assertSame(CrossGameFeatureProvider.getInstance(), services.crossGameFeatures());
-        assertNotNull(services.engineServices());
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> new DefaultObjectServices(
+                        levelManager,
+                        camera,
+                        gameState,
+                        spriteManager,
+                        fadeManager,
+                        waterSystem,
+                        parallaxManager));
+        assertTrue(ex.getMessage().contains("active gameplay runtime"),
+                "legacy constructor should fail before fabricating detached runtime-owned services");
     }
 
     @Test
@@ -243,29 +247,6 @@ class TestObjectServicesExpansion {
         public void setAwardedShield(com.openggf.game.ShieldType type) {
             shieldsSet++;
         }
-    }
-
-    private DefaultObjectServices bootstrapConstructorServicesWithoutRuntime() {
-        LevelManager levelManager = GameServices.level();
-        Camera camera = GameServices.camera();
-        GameStateManager gameState = GameServices.gameState();
-        SpriteManager spriteManager = GameServices.sprites();
-        FadeManager fadeManager = GameServices.fade();
-        WaterSystem waterSystem = GameServices.water();
-        ParallaxManager parallaxManager = GameServices.parallax();
-
-        SessionManager.clear();
-
-        DefaultObjectServices services = new DefaultObjectServices(
-                levelManager,
-                camera,
-                gameState,
-                spriteManager,
-                fadeManager,
-                waterSystem,
-                parallaxManager);
-        TestEnvironment.activeGameplayMode();
-        return services;
     }
 
     private DefaultObjectServices sessionServices() {

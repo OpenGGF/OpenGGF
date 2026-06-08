@@ -56,8 +56,9 @@ public class BridgeStakeObjectInstance extends AbstractObjectInstance {
                 renderer = renderManager.getRenderer(Sonic2ObjectArtKeys.HTZ_LIFT);
                 frame = 1;
             }
-            case 7, 8 -> {  // Ground edge (uses level art - skip for now)
-                return;  // TODO: Implement level art rendering
+            case 7, 8 -> {  // Ground edge level-art stand-in until direct level-art mappings are available
+                renderer = renderManager.getBridgeRenderer();
+                frame = 1;
             }
             default -> {  // EHZ bridge stake (subtype 2) and others
                 renderer = renderManager.getBridgeRenderer();

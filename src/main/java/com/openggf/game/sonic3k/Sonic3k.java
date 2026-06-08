@@ -343,13 +343,14 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         applyLockOnStartupPalette(level, zone, act);
 
         // Pre-decompress AIZ intro overlay data during level load so the
-        // terrain swap at camera X=0x1400 doesn't cause a frame hitch.
+        // terrain swap at camera X=0x1400 doesn't pay the Kosinski decode cost.
+        // This path also runs in raw level-loading tests without a gameplay
+        // runtime, so keep it ROM-backed rather than resolving ObjectServices.
         boolean isAizIntro = zone == 0 && act == 0
                 && bootstrap != null
                 && bootstrap.mode() == Sonic3kLoadBootstrap.Mode.INTRO;
         if (isAizIntro) {
-            AizIntroTerrainSwap.preloadOverlayData();
-            AizIntroTerrainSwap.precomputeTransitionTilemaps();
+            AizIntroTerrainSwap.preloadOverlayData(rom);
         }
 
         return level;

@@ -15,6 +15,8 @@ import java.util.List;
  * into the engine.
  */
 public final class TraceReplayBootstrap {
+    public static final String ALLOW_LEGACY_S3K_AIZ_DIAGNOSTIC_HEURISTIC_PROPERTY =
+            "openggf.trace.allowLegacyS3kAizDiagnosticHeuristic";
 
     public record ReplayStartState(int startingTraceIndex, int seededTraceIndex) {
         public static final ReplayStartState DEFAULT = new ReplayStartState(0, -1);
@@ -416,7 +418,17 @@ public final class TraceReplayBootstrap {
 
     public static boolean shouldApplyMetadataStartPositionForTraceReplay(TraceData trace) {
         return replaySeedTraceIndexForTraceReplay(trace) == 0
-                && !isLegacyS3kAizIntroTrace(trace);
+                && !isLegacyS3kAizIntroTrace(trace)
+                && !isS2TornadoRideStartMetadataCandidate(trace);
+    }
+
+    public static List<String> releaseBlockersForTraceReplay(TraceData trace) {
+        if (isLegacyS3kAizIntroTrace(trace)) {
+            return List.of("RRF-003: legacy S3K AIZ full-run trace requires the "
+                    + "diagnostic-only intro phase heuristic. Regenerate the fixture "
+                    + "before enabling it in release replay.");
+        }
+        return List.of();
     }
 
     public static boolean isS2TornadoRideStartMetadataCandidate(TraceData trace) {
@@ -557,6 +569,9 @@ public final class TraceReplayBootstrap {
                                                                 TraceFrame current) {
         if (trace == null || current == null || !isLegacyS3kAizIntroTrace(trace)) {
             return false;
+        }
+        if (!Boolean.getBoolean(ALLOW_LEGACY_S3K_AIZ_DIAGNOSTIC_HEURISTIC_PROPERTY)) {
+            throw new IllegalStateException(String.join("; ", releaseBlockersForTraceReplay(trace)));
         }
         int gameplayStartFrame = findCheckpointFrame(trace, "gameplay_start");
         return gameplayStartFrame >= 0 && current.frame() <= gameplayStartFrame;

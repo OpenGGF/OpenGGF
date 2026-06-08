@@ -4,6 +4,17 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Release-prep architecture review hardening closed the current blocker
+  set:** branch policy now runs for direct release-branch pushes, release trace
+  coverage is counted from generated reports, warning-only trace reports fail
+  by default outside explicit diagnostics, and legacy S3K AIZ full-run replay is
+  blocked from release replay unless the diagnostic override is set. S2 Tornado
+  trace bootstrap no longer seeds ride/player state from trace metadata, AIZ
+  intro preload uses runtime-owned object services, final level progression now
+  requests credits instead of wrapping, S3K special-stage entry rings and Super
+  Emerald collection paths cover HPZ routing, and small presentation/diagnostic
+  gaps were guarded for S2 bridge stakes and S3K special-stage audio failures.
+
 - **Develop release-sweep hardening closed the latest architecture review
   findings:** startup and audio teardown now fail closed on partial native
   initialization, incomplete FBO creation cleans up and disables priority

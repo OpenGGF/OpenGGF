@@ -1068,6 +1068,42 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
+    void specialStageResultsAudioFailuresAreLogged() throws IOException {
+        String relative = "com/openggf/game/sonic3k/specialstage/S3kSpecialStageResultsScreen.java";
+        String source = Files.readString(SRC_MAIN.resolve(relative));
+
+        assertTrue(!source.contains("catch (Exception e) { /* ignore */ }"),
+                "S3K special-stage results audio helper failures should be logged, not swallowed");
+        assertTrue(source.contains("LOG.log("),
+                "S3K special-stage results screen should report audio helper failures through its logger");
+    }
+
+    @Test
+    void sonic3kSpecialStageManagerSupportsSuperEmeraldArtAndState() throws IOException {
+        String relative = "com/openggf/game/sonic3k/specialstage/Sonic3kSpecialStageManager.java";
+        String source = Files.readString(SRC_MAIN.resolve(relative));
+        String stripped = stripCommentsAndStrings(source);
+
+        assertTrue(stripped.contains("getSuperEmeraldArt()"),
+                "S3K special-stage manager should load Super Emerald art for Super Emerald stages");
+        assertTrue(stripped.contains("CELL_SUPER_EMERALD"),
+                "S3K special-stage manager should place Super Emerald cells when in Super Emerald mode");
+        assertTrue(stripped.contains("markSuperEmeraldCollected("),
+                "S3K special-stage manager should mark Super Emerald collection separately from Chaos Emeralds");
+    }
+
+    @Test
+    void bridgeStakeGroundEdgeSubtypesDoNotRenderInvisible() throws IOException {
+        String relative = "com/openggf/game/sonic2/objects/BridgeStakeObjectInstance.java";
+        String source = Files.readString(SRC_MAIN.resolve(relative));
+        String stripped = stripCommentsAndStrings(source);
+        String compact = stripped.replaceAll("\\s+", "");
+
+        assertTrue(!compact.contains("case7,8->{return;}"),
+                "BridgeStake subtypes 7/8 should render a visible fallback instead of returning early");
+    }
+
+    @Test
     void specialStagePaletteCodeUsesPaletteAccessorsInsteadOfPublicColorArray() throws IOException {
         List<String> files = List.of(
                 "com/openggf/game/sonic3k/specialstage/Sonic3kSpecialStageDataLoader.java",

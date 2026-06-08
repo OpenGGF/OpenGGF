@@ -132,10 +132,16 @@ class TestObjectServicesMigrationGuard {
                     "builds the root EngineContext from current runtime services"),
             approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
                     "GameServices.hasRuntime()",
-                    "legacy fallback constructor selects active or isolated collision service"),
+                    "legacy fallback constructor refuses to run without active runtime-owned services"),
             approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
                     "GameServices.collision()",
                     "legacy fallback constructor bridges active collision service into ObjectServices"),
+            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
+                    "GameServices.worldSession()",
+                    "legacy fallback constructor bridges active world session into ObjectServices"),
+            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
+                    "GameServices.rng()",
+                    "legacy fallback constructor bridges active RNG into ObjectServices"),
             approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
                     "GameServices.zoneRuntimeRegistry()",
                     "legacy fallback constructor bridges active zone runtime registry into ObjectServices"),
@@ -145,6 +151,9 @@ class TestObjectServicesMigrationGuard {
             approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
                     "GameServices.zoneLayoutMutationPipeline()",
                     "legacy fallback constructor bridges active mutation pipeline into ObjectServices"),
+            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
+                    "GameServices.solidExecutionRegistry()",
+                    "legacy fallback constructor bridges active solid execution registry into ObjectServices"),
             approved("com.openggf.level.objects.ObjectManager", "EngineServices.",
                     "EngineServices.current()",
                     "ObjectServices composition boundary"),
@@ -451,8 +460,13 @@ class TestObjectServicesMigrationGuard {
             files.filter(path -> path.toString().endsWith(".java"))
                     .forEach(path -> {
                         try {
+                            if (path.endsWith(Path.of("com/openggf/game/sonic3k/objects/AizIntroTerrainSwap.java"))) {
+                                return;
+                            }
                             String content = Files.readString(path);
-                            if (content.contains("AizIntroTerrainSwap.applyMainLevelOverlays();")) {
+                            if (content.contains("AizIntroTerrainSwap.applyMainLevelOverlays();")
+                                    || content.contains("AizIntroTerrainSwap.preloadOverlayData();")
+                                    || content.contains("AizIntroTerrainSwap.precomputeTransitionTilemaps();")) {
                                 violations.add(srcMain.relativize(path).toString());
                             }
                         } catch (IOException ignored) {

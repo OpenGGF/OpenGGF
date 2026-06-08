@@ -245,6 +245,12 @@ class TestBuildToolingGuard {
         if (!workflow.contains("fetch-depth: 0")) {
             violations.add(".github/workflows/release.yml policy checkout must use fetch-depth: 0 for commit range validation");
         }
+        if (!workflow.contains("Validate branch policy (push)")) {
+            violations.add(".github/workflows/release.yml does not validate branch policy on direct master pushes");
+        }
+        if (!workflow.contains(".githooks/validate-policy.sh ci-push")) {
+            violations.add(".github/workflows/release.yml does not run validate-policy.sh ci-push for direct master pushes");
+        }
 
         if (!violations.isEmpty()) {
             fail("release PRs into master must not bypass branch policy validation:\n  "
@@ -361,26 +367,26 @@ class TestBuildToolingGuard {
         if (!workflow.contains("com.openggf.tests.trace.s3k.TestS3kAizTraceReplay.txt")) {
             violations.add(".github/workflows/release.yml does not explicitly scope the diagnostic-only AIZ trace skip");
         }
-        if (!workflow.contains("required_rom_backed_trace_reports")) {
-            violations.add(".github/workflows/release.yml does not declare explicit ROM-backed trace reports");
+        if (!workflow.contains("expected_trace_reports")) {
+            violations.add(".github/workflows/release.yml does not derive expected trace reports from source tests");
         }
-        if (!workflow.contains("TEST-com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay.xml")) {
-            violations.add(".github/workflows/release.yml does not require the S1 GHZ1 ROM-backed trace report");
+        if (!workflow.contains("src/test/java/com/openggf/tests/trace")) {
+            violations.add(".github/workflows/release.yml does not scan the source trace tree for expected reports");
         }
-        if (!workflow.contains("TEST-com.openggf.tests.trace.s1.TestS1Mz1TraceReplay.xml")) {
-            violations.add(".github/workflows/release.yml does not require the S1 MZ1 ROM-backed trace report");
+        if (!workflow.contains("expected_trace_reports.add")) {
+            violations.add(".github/workflows/release.yml does not add expected reports from TraceReplay source classes");
         }
-        if (!workflow.contains("TEST-com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay.xml")) {
-            violations.add(".github/workflows/release.yml does not require the S2 EHZ1 ROM-backed trace report");
+        if (!workflow.contains("missing_expected")) {
+            violations.add(".github/workflows/release.yml does not fail when expected trace reports are missing");
         }
-        if (!workflow.contains("TEST-com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay.xml")) {
-            violations.add(".github/workflows/release.yml does not require the S3K CNZ ROM-backed trace report");
+        if (!workflow.contains("allowed_missing_reports")) {
+            violations.add(".github/workflows/release.yml does not make missing diagnostic trace report debt explicit");
         }
-        if (!workflow.contains("Missing required ROM-backed trace report")) {
-            violations.add(".github/workflows/release.yml does not fail when an explicit ROM-backed trace report is missing");
+        if (!workflow.contains("Missing expected trace replay reports")) {
+            violations.add(".github/workflows/release.yml does not report missing expected trace replay reports");
         }
-        if (!workflow.contains("Required ROM-backed trace report did not execute")) {
-            violations.add(".github/workflows/release.yml does not fail when an explicit ROM-backed trace report is skipped");
+        if (!workflow.contains("Expected trace replay report did not execute")) {
+            violations.add(".github/workflows/release.yml does not fail when an expected trace report is skipped");
         }
 
         if (!violations.isEmpty()) {
@@ -423,6 +429,12 @@ class TestBuildToolingGuard {
         }
         if (!workflow.contains("release:\n    needs: build\n    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master'")) {
             violations.add(".github/workflows/release.yml manual publishing must be restricted to refs/heads/master");
+        }
+        if (!workflow.contains("Check release tag does not already exist")) {
+            violations.add(".github/workflows/release.yml does not fail before publishing an already-existing release tag");
+        }
+        if (!workflow.contains("git ls-remote --exit-code --tags origin \"refs/tags/v${VERSION}\"")) {
+            violations.add(".github/workflows/release.yml does not check whether the version tag already exists on origin");
         }
 
         if (!violations.isEmpty()) {
@@ -679,13 +691,21 @@ class TestBuildToolingGuard {
     @Test
     void releaseTestsShouldNotHideKnownFailingScenariosBehindDisabledAnnotations() throws Exception {
         List<String> violations = new ArrayList<>();
+        Set<String> allowedDisabled = Set.of(
+                "src/test/java/com/openggf/game/rewind/TestRewindTorture.java",
+                "src/test/java/com/openggf/tests/trace/DebugS1Ghz1RingParity.java",
+                "src/test/java/com/openggf/tests/trace/s3k/TestS3kAizTraceReplay.java");
         try (Stream<Path> paths = Files.walk(Path.of("src/test/java"))) {
             paths.filter(path -> path.toString().endsWith(".java"))
                     .forEach(path -> {
                         try {
                             String source = Files.readString(path);
-                            if (source.contains("@Disabled(\"Currently failing")) {
-                                violations.add(path.toString().replace('\\', '/'));
+                            if (source.contains("@Disabled")) {
+                                String normalized = path.toString().replace('\\', '/');
+                                if (!normalized.equals("src/test/java/com/openggf/tests/TestBuildToolingGuard.java")
+                                        && !allowedDisabled.contains(normalized)) {
+                                    violations.add(normalized);
+                                }
                             }
                         } catch (Exception e) {
                             throw new RuntimeException(e);

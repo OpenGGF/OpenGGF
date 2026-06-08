@@ -92,6 +92,16 @@ public abstract class AbstractTraceReplayTest {
         return Path.of("target/trace-reports");
     }
 
+    /** Override only for explicitly diagnostic trace fixtures that are not release gates. */
+    protected boolean allowDiagnosticOnlyTraceReplay() {
+        return false;
+    }
+
+    /** Override only when warning-only reports are deliberately diagnostic debt. */
+    protected boolean allowDiagnosticOnlyWarnings() {
+        return false;
+    }
+
     @Test
     public void replayMatchesTrace() throws Exception {
         // 0. Skip if trace directory or required files are missing
@@ -103,6 +113,10 @@ public abstract class AbstractTraceReplayTest {
         // 1. Load trace data (metadata is needed to resolve a shared, deduplicated BK2)
         TraceData trace = TraceData.load(traceDir);
         TraceMetadata meta = trace.metadata();
+        List<String> releaseBlockers = TraceReplayBootstrap.releaseBlockersForTraceReplay(trace);
+        if (!releaseBlockers.isEmpty() && !allowDiagnosticOnlyTraceReplay()) {
+            fail(String.join(System.lineSeparator(), releaseBlockers));
+        }
 
         // 2. Resolve BK2: prefer a shared movie referenced by metadata.source_bk2 (stored once
         //    under <game>/_movies/), else a legacy per-dir .bk2 copy.
@@ -256,14 +270,24 @@ public abstract class AbstractTraceReplayTest {
             if (report.hasErrors()) {
                 System.err.println("\n=== Context window around first error ===");
                 System.err.println(report.getContextWindow(firstReportErrorFrame(report), 10));
-                fail(report.toSummary());
             }
+            assertReportHasNoReleaseBlockingDivergences(report);
         } finally {
             if (sharedLevel != null) {
                 sharedLevel.dispose();
             } else {
                 TestEnvironment.resetAll();
             }
+        }
+    }
+
+    protected void assertReportHasNoReleaseBlockingDivergences(DivergenceReport report) {
+        if (report.hasErrors()) {
+            fail(report.toSummary());
+        }
+        if (report.hasWarnings() && !allowDiagnosticOnlyWarnings()) {
+            fail("Trace replay warning report is release-blocking by default: "
+                    + report.toSummary());
         }
     }
 

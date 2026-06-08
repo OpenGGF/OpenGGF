@@ -6,7 +6,7 @@ import com.openggf.game.sonic3k.Sonic3kPlayerArt;
 import com.openggf.game.sonic3k.Sonic3kSuperStateController;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.BootstrapObjectServices;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.physics.SwingMotion;
@@ -550,6 +550,11 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance {
      *     was queued — matching ROM behavior where Kos_decomp_queue_count is 0 at level start.
      */
     public static void updateMainLevelPhaseForCameraX(int cameraX, boolean introWasPlayed) {
+        updateMainLevelPhaseForCameraX(cameraX, introWasPlayed, null);
+    }
+
+    public static void updateMainLevelPhaseForCameraX(
+            int cameraX, boolean introWasPlayed, ObjectServices fallbackServices) {
         if (mainLevelPhaseActive) {
             return;
         }
@@ -572,9 +577,10 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance {
         // ROM: FG event queues terrain overlays when camera reaches $1400
         if (!mainLevelTerrainSwapAttempted) {
             mainLevelTerrainSwapAttempted = true;
-            boolean swapped = activeIntroInstance != null
-                    ? activeIntroInstance.applyMainLevelOverlaysFromServices()
-                    : AizIntroTerrainSwap.applyMainLevelOverlays(new BootstrapObjectServices());
+            ObjectServices services = activeIntroInstance != null
+                    ? activeIntroInstance.tryServices()
+                    : fallbackServices;
+            boolean swapped = services != null && AizIntroTerrainSwap.applyMainLevelOverlays(services);
             if (swapped) {
                 LOG.info("AIZ intro: main-level terrain overlays applied");
             } else {
