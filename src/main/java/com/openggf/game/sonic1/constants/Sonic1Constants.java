@@ -133,6 +133,7 @@ public final class Sonic1Constants {
     public static final int MAP_GIANT_RING_ADDR  = 0x00A654; // Map_GRing (Obj4B: 4 frames)
     public static final int MAP_GIANT_RING_FLASH_ADDR = 0x00A6F6; // Map_Flash (Obj7C: 8 frames)
     public static final int MAP_SHIELD_ADDR      = 0x014B1A; // Map_Shield (Obj38: shield + invincibility stars)
+    public static final int MAP_UNUSED_EXPLOSION_ADDR = 0x009524; // Map_UnkExplode (Obj24: 4 frames)
     public static final int MAP_SPIKE_ADDR       = 0x00D676; // Map_Spike (Obj36: 6 frames)
     public static final int MAP_MONITOR_ADDR     = 0x00AC14; // Map_Monitor (Obj26: 12 frames)
     public static final int MAP_SPRING_ADDR      = 0x00E3A8; // Map_Spring (Obj41: 6 frames)

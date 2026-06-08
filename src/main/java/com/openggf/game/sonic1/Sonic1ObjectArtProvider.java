@@ -1546,37 +1546,9 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         // no PLC ever loads art to that address. Object 24 itself is marked "unused?" in the
         // disassembly. The dissolve effect was likely cut during development.
         // We reuse buzz bomber patterns as a visual stand-in since the original has no art loaded.
-        List<SpriteMappingFrame> dissolveMappings = createBuzzBomberMissileDisolveMappings();
+        List<SpriteMappingFrame> dissolveMappings = art.loadMappingFrames(Sonic1Constants.MAP_UNUSED_EXPLOSION_ADDR);
         ObjectSpriteSheet dissolveSheet = new ObjectSpriteSheet(patterns, dissolveMappings, 0, 1);
         registerSheet(ObjectArtKeys.BUZZ_BOMBER_MISSILE_DISSOLVE, dissolveSheet);
-    }
-
-    /**
-     * Creates Buzz Bomber missile dissolve sprite mappings from S1 disassembly
-     * Map_MisDissolve_internal. 4 frames of 3x3 tiles (24x24 px) centered at (-$C, -$C).
-     * <p>
-     * Frame 0: Dissolve step 1 (tile $00)
-     * Frame 1: Dissolve step 2 (tile $09)
-     * Frame 2: Dissolve step 3 (tile $12)
-     * Frame 3: Dissolve step 4 (tile $1B)
-     */
-    private List<SpriteMappingFrame> createBuzzBomberMissileDisolveMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0C, -0x0C, 3, 3, 0x00, false, false, 0, false)
-        )));
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0C, -0x0C, 3, 3, 0x09, false, false, 0, false)
-        )));
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0C, -0x0C, 3, 3, 0x12, false, false, 0, false)
-        )));
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0C, -0x0C, 3, 3, 0x1B, false, false, 0, false)
-        )));
-
-        return frames;
     }
 
     @Override
