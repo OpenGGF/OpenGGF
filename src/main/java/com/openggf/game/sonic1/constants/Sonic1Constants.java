@@ -112,6 +112,7 @@ public final class Sonic1Constants {
     public static final int MAP_SWING_SLZ_ADDR   = 0x0082E4; // Map_Swing_SLZ (Obj15: 3 frames)
     public static final int MAP_SPIKED_POLE_HELIX_ADDR = 0x008476; // Map_Hel (Obj17: 8 frames)
     public static final int MAP_GIANT_BALL_ADDR  = 0x008828; // Map_GBall (Obj15 GHZ subtype $1X: 4 frames)
+    public static final int MAP_COLLAPSING_FLOOR_ADDR = 0x008DC4; // Map_CFlo (Obj53: 4 frames)
     public static final int MAP_SCENERY_ADDR     = 0x008ED4; // Map_Scen (Obj1C: 1 frame)
     public static final int MAP_SBZ_SMALL_DOOR_ADDR = 0x00906A; // Map_ADoor (Obj2A: 9 frames)
     public static final int MAP_BALL_HOG_ADDR    = 0x0094E0; // Map_Hog (Obj1E/20: 6 frames)

@@ -2394,7 +2394,8 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createCollapsingFloorMappingsMzSbz();
+        List<SpriteMappingFrame> mappings = List.copyOf(
+                art.loadMappingFrames(Sonic1Constants.MAP_COLLAPSING_FLOOR_ADDR).subList(0, 2));
         // make_art_tile(ArtTile_MZ_Block, 2, 0) -> palette line 2
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
         registerSheet(ObjectArtKeys.MZ_COLLAPSING_FLOOR, sheet);
@@ -2418,7 +2419,8 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createCollapsingFloorMappingsSlz();
+        List<SpriteMappingFrame> mappings = List.copyOf(
+                art.loadMappingFrames(Sonic1Constants.MAP_COLLAPSING_FLOOR_ADDR).subList(2, 4));
         // make_art_tile(ArtTile_SLZ_Collapsing_Floor, 2, 0) -> palette line 2
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
         registerSheet(ObjectArtKeys.SLZ_COLLAPSING_FLOOR, sheet);
@@ -2457,7 +2459,8 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         System.arraycopy(patterns, 0, doubled, patterns.length, patterns.length);
         patterns = doubled;
 
-        List<SpriteMappingFrame> mappings = createCollapsingFloorMappingsMzSbz();
+        List<SpriteMappingFrame> mappings = List.copyOf(
+                art.loadMappingFrames(Sonic1Constants.MAP_COLLAPSING_FLOOR_ADDR).subList(0, 2));
         // make_art_tile(ArtTile_SBZ_Collapsing_Floor, 2, 0) -> palette line 2
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
         registerSheet(ObjectArtKeys.SBZ_COLLAPSING_FLOOR, sheet);
@@ -2658,111 +2661,6 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         // make_art_tile(ArtTile_SBZ_Spinning_Platform, 0, 0) -> palette line 0
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 0, 1);
         registerSheet(ObjectArtKeys.SBZ_SPINNING_PLATFORM, sheet);
-    }
-
-    /**
-     * Creates collapsing floor sprite mappings for MZ and SBZ from
-     * docs/s1disasm/_maps/Collapsing Floors.asm (Map_CFlo_internal).
-     * <p>
-     * MZ and SBZ use frames 0 (intact) and 1 (smash).
-     * <p>
-     * Frame 0 (byte_874E): Intact floor - 4 pieces of 4x2, all startTile=0.
-     * <pre>
-     *   spritePiece -$20, -8, 4, 2, 0, 0, 0, 0, 0
-     *   spritePiece -$20,  8, 4, 2, 0, 0, 0, 0, 0
-     *   spritePiece    0, -8, 4, 2, 0, 0, 0, 0, 0
-     *   spritePiece    0,  8, 4, 2, 0, 0, 0, 0, 0
-     * </pre>
-     * <p>
-     * Frame 1 (byte_8763): Smash - 8 pieces of 2x2.
-     * <pre>
-     *   spritePiece -$20, -8, 2, 2, 0, 0, 0, 0, 0
-     *   spritePiece -$10, -8, 2, 2, 0, 0, 0, 0, 0
-     *   spritePiece    0, -8, 2, 2, 0, 0, 0, 0, 0
-     *   spritePiece  $10, -8, 2, 2, 0, 0, 0, 0, 0
-     *   spritePiece -$20,  8, 2, 2, 0, 0, 0, 0, 0
-     *   spritePiece -$10,  8, 2, 2, 0, 0, 0, 0, 0
-     *   spritePiece    0,  8, 2, 2, 0, 0, 0, 0, 0
-     *   spritePiece  $10,  8, 2, 2, 0, 0, 0, 0, 0
-     * </pre>
-     */
-    private List<SpriteMappingFrame> createCollapsingFloorMappingsMzSbz() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0: Intact floor (4 pieces of 4x2 tiles)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x20, -8, 4, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(-0x20,  8, 4, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(    0, -8, 4, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(    0,  8, 4, 2, 0, false, false, 0, false)
-        )));
-
-        // Frame 1: Smash (8 pieces of 2x2 tiles)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x20, -8, 2, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -8, 2, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(    0, -8, 2, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece( 0x10, -8, 2, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(-0x20,  8, 2, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(-0x10,  8, 2, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(    0,  8, 2, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece( 0x10,  8, 2, 2, 0, false, false, 0, false)
-        )));
-
-        return frames;
-    }
-
-    /**
-     * Creates collapsing floor sprite mappings for SLZ from
-     * docs/s1disasm/_maps/Collapsing Floors.asm (Map_CFlo_internal).
-     * <p>
-     * SLZ uses frames 2 (intact) and 3 (smash), but we store them as frames 0 and 1
-     * in the SLZ-specific sprite sheet.
-     * <p>
-     * Frame 2 (byte_878C): SLZ intact - 4 pieces of 4x2. Bottom halves use startTile 8.
-     * <pre>
-     *   spritePiece -$20, -8, 4, 2, 0, 0, 0, 0, 0
-     *   spritePiece -$20,  8, 4, 2, 8, 0, 0, 0, 0
-     *   spritePiece    0, -8, 4, 2, 0, 0, 0, 0, 0
-     *   spritePiece    0,  8, 4, 2, 8, 0, 0, 0, 0
-     * </pre>
-     * <p>
-     * Frame 3 (byte_87A1): SLZ smash - 8 pieces of 2x2 with varied startTiles (0,4,8,$C).
-     * <pre>
-     *   spritePiece -$20, -8, 2, 2, 0, 0, 0, 0, 0
-     *   spritePiece -$10, -8, 2, 2, 4, 0, 0, 0, 0
-     *   spritePiece    0, -8, 2, 2, 0, 0, 0, 0, 0
-     *   spritePiece  $10, -8, 2, 2, 4, 0, 0, 0, 0
-     *   spritePiece -$20,  8, 2, 2, 8, 0, 0, 0, 0
-     *   spritePiece -$10,  8, 2, 2, $C, 0, 0, 0, 0
-     *   spritePiece    0,  8, 2, 2, 8, 0, 0, 0, 0
-     *   spritePiece  $10,  8, 2, 2, $C, 0, 0, 0, 0
-     * </pre>
-     */
-    private List<SpriteMappingFrame> createCollapsingFloorMappingsSlz() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (mapped from Map_CFlo frame 2): SLZ intact
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x20, -8, 4, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(-0x20,  8, 4, 2, 8, false, false, 0, false),
-                new SpriteMappingPiece(    0, -8, 4, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(    0,  8, 4, 2, 8, false, false, 0, false)
-        )));
-
-        // Frame 1 (mapped from Map_CFlo frame 3): SLZ smash
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x20, -8, 2, 2,    0, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -8, 2, 2,    4, false, false, 0, false),
-                new SpriteMappingPiece(    0, -8, 2, 2,    0, false, false, 0, false),
-                new SpriteMappingPiece( 0x10, -8, 2, 2,    4, false, false, 0, false),
-                new SpriteMappingPiece(-0x20,  8, 2, 2,    8, false, false, 0, false),
-                new SpriteMappingPiece(-0x10,  8, 2, 2, 0x0C, false, false, 0, false),
-                new SpriteMappingPiece(    0,  8, 2, 2,    8, false, false, 0, false),
-                new SpriteMappingPiece( 0x10,  8, 2, 2, 0x0C, false, false, 0, false)
-        )));
-
-        return frames;
     }
 
     /**

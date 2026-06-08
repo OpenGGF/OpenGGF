@@ -119,6 +119,24 @@ public class TestSonic1MzRomMappings {
     }
 
     @Test
+    public void collapsingFloorRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_COLLAPSING_FLOOR_ADDR);
+
+        assertEquals(List.of(4, 8, 4, 8),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x20, -8, 4, 2, 0, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(0x10, 8, 2, 2, 0, false, false, 0, false),
+                romFrames.get(1).pieces().get(7));
+        assertEquals(new SpriteMappingPiece(-0x20, 8, 4, 2, 8, false, false, 0, false),
+                romFrames.get(2).pieces().get(1));
+        assertEquals(new SpriteMappingPiece(0x10, 8, 2, 2, 0x0C, false, false, 0, false),
+                romFrames.get(3).pieces().get(7));
+    }
+
+    @Test
     public void caterkillerRomMappingsKeepExpectedTableShape() throws Exception {
         RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
         List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
