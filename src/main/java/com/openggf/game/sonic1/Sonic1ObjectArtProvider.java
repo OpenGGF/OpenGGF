@@ -2904,36 +2904,9 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         registerSheet(ObjectArtKeys.LZ_PUSH_BLOCK, sheet);
 
         // Object 0x0B uses the same art source with Map_Pole mappings.
-        List<SpriteMappingFrame> poleMappings = createLzBreakablePoleMappings();
+        List<SpriteMappingFrame> poleMappings = art.loadMappingFrames(Sonic1Constants.MAP_LZ_BREAKABLE_POLE_ADDR);
         ObjectSpriteSheet poleSheet = new ObjectSpriteSheet(patterns, poleMappings, 2, 1);
         registerSheet(ObjectArtKeys.LZ_BREAKABLE_POLE, poleSheet);
-    }
-
-    /**
-     * Creates breakable pole mappings from docs/s1disasm/_maps/Pole that Breaks.asm
-     * ({@code Map_Pole_internal}).
-     * <p>
-     * Frame 0 (.normal): 2 pieces, intact pole.
-     * Frame 1 (.broken): 4 pieces, broken center section.
-     */
-    private List<SpriteMappingFrame> createLzBreakablePoleMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>(2);
-
-        // Frame 0 (.normal)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-4, -0x20, 1, 4, 0x00, false, false, 0, false),
-                new SpriteMappingPiece(-4, 0x00, 1, 4, 0x00, false, true, 0, false)
-        )));
-
-        // Frame 1 (.broken)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-4, -0x20, 1, 2, 0x00, false, false, 0, false),
-                new SpriteMappingPiece(-4, -0x10, 2, 2, 0x04, false, false, 0, false),
-                new SpriteMappingPiece(-4, 0x00, 2, 2, 0x04, false, true, 0, false),
-                new SpriteMappingPiece(-4, 0x10, 1, 2, 0x00, false, true, 0, false)
-        )));
-
-        return frames;
     }
 
     /**

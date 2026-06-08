@@ -33,6 +33,7 @@ All notable changes to the OpenGGF project are documented in this file.
   Giant Ring `Map_GRing`, Ring Flash `Map_Flash`, GHZ giant ball `Map_GBall`,
   SYZ/LZ spikeball chain `Map_SBall` / `Map_SBall2`, Big Spiked Ball
   `Map_BBall`, LZ Gargoyle `Map_Gar`, SBZ Running Disc `Map_Disc`,
+  LZ breakable pole `Map_Pole`,
   MZ Brick `Map_Brick`, SYZ Spinning Light `Map_Light`,
   MZ Smashable Green Block `Map_Smab`, MZ/SLZ/SBZ collapsing floor
   `Map_CFlo`, SBZ vanishing platform `Map_VanP`,
