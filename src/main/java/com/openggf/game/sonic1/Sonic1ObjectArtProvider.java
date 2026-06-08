@@ -1688,7 +1688,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createElevatorMappings();
+        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic1Constants.MAP_SLZ_ELEVATOR_ADDR);
 
         // Highest tile: $41 + (4*4) = $51
         int maxTileNeeded = 0x51;
@@ -1708,32 +1708,12 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         registerSheet(ObjectArtKeys.SLZ_ELEVATOR, sheet);
     }
 
-    /**
-     * SLZ elevator mappings from docs/s1disasm/_maps/SLZ Elevators.asm.
-     * Frame 0 (.elevator): 80x32 platform using 3 pieces, all starting at tile $41.
-     */
-    private List<SpriteMappingFrame> createElevatorMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // .elevator:
-        //   spritePiece -$28, -8, 4, 4, $41, 0, 0, 0, 0
-        //   spritePiece   -8, -8, 4, 4, $41, 0, 0, 0, 0
-        //   spritePiece  $18, -8, 2, 4, $41, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x28, -0x08, 4, 4, 0x41, false, false, 0, false),
-                new SpriteMappingPiece(-0x08, -0x08, 4, 4, 0x41, false, false, 0, false),
-                new SpriteMappingPiece(0x18, -0x08, 2, 4, 0x41, false, false, 0, false)
-        )));
-
-        return frames;
-    }
-
     public void registerCirclingPlatformSheet(Level level, int zoneIndex) {
         if (level == null || zoneIndex != Sonic1Constants.ZONE_SLZ) {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createCirclingPlatformMappings();
+        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic1Constants.MAP_SLZ_CIRCLING_PLATFORM_ADDR);
 
         // Highest tile: $51 + (3*2) = $57
         int maxTileNeeded = 0x57;
@@ -1754,24 +1734,6 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
     }
 
     /**
-     * SLZ circling platform mappings from docs/s1disasm/_maps/SLZ Circling Platform.asm.
-     * Frame 0 (.platform): 48x16 platform (2 pieces of 3x2 tiles)
-     */
-    private List<SpriteMappingFrame> createCirclingPlatformMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // .platform:
-        //   spritePiece -$18, -8, 3, 2, $51, 0, 0, 0, 0
-        //   spritePiece    0, -8, 3, 2, $51, 1, 0, 0, 0   (hflip=1)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x18, -0x08, 3, 2, 0x51, false, false, 0, false),
-                new SpriteMappingPiece(0x00, -0x08, 3, 2, 0x51, true, false, 0, false)
-        )));
-
-        return frames;
-    }
-
-    /**
      * Registers the SLZ staircase sprite sheet using level tile patterns.
      * Must be called AFTER the level is loaded since the staircase uses zone tileset art
      * (make_art_tile(ArtTile_Level,2,0)).
@@ -1789,7 +1751,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createStaircaseMappings();
+        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic1Constants.MAP_SLZ_STAIRCASE_ADDR);
 
         // Highest tile: $21 + (4*4) = $31
         int maxTileNeeded = 0x31;
@@ -1807,22 +1769,6 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         // Palette line 2 (make_art_tile(ArtTile_Level, 2, 0))
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
         registerSheet(ObjectArtKeys.SLZ_STAIRCASE, sheet);
-    }
-
-    /**
-     * SLZ staircase mappings from docs/s1disasm/_maps/Staircase.asm.
-     * Frame 0 (.block): 32x32 block (1 piece of 4x4 tiles at tile $21)
-     */
-    private List<SpriteMappingFrame> createStaircaseMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // .block:
-        //   spritePiece -$10, -$10, 4, 4, $21, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0x21, false, false, 0, false)
-        )));
-
-        return frames;
     }
 
     /**

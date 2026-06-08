@@ -17,6 +17,46 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class TestSonic1SlzRomMappings {
 
     @Test
+    public void elevatorRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_SLZ_ELEVATOR_ADDR);
+
+        assertEquals(List.of(3),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x28, -8, 4, 4, 0x41, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(0x18, -8, 2, 4, 0x41, false, false, 0, false),
+                romFrames.get(0).pieces().get(2));
+    }
+
+    @Test
+    public void circlingPlatformRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_SLZ_CIRCLING_PLATFORM_ADDR);
+
+        assertEquals(List.of(2),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x18, -8, 3, 2, 0x51, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(0, -8, 3, 2, 0x51, true, false, 0, false),
+                romFrames.get(0).pieces().get(1));
+    }
+
+    @Test
+    public void staircaseRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_SLZ_STAIRCASE_ADDR);
+
+        assertEquals(List.of(1),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0x21, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+    }
+
+    @Test
     public void platformRomMappingsKeepExpectedTableShape() throws Exception {
         RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
         List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
