@@ -3310,14 +3310,14 @@ public class GameLoop {
 
     private void playSpecialStageStageMusic(SpecialStageProvider ssProvider) {
         int musicId = ssProvider.getStageMusicId();
-        if (musicId >= 0) {
+        if (!audioManager.playMusic(ssProvider.getStageMusic()) && musicId >= 0) {
             audioManager.playMusic(musicId);
         }
     }
 
     private void playSpecialStageResultsMusic(SpecialStageProvider ssProvider) {
         int musicId = ssProvider.getResultsMusicId();
-        if (musicId >= 0) {
+        if (!audioManager.playMusic(ssProvider.getResultsMusic()) && musicId >= 0) {
             audioManager.playMusic(musicId);
         }
     }

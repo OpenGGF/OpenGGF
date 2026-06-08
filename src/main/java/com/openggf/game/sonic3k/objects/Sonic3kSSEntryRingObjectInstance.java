@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
 import com.openggf.level.BigRingReturnState;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -100,8 +101,9 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance {
         MARKED_DELETE
     }
 
-    /** Subtype is the bit index (0-31) into Collected_special_ring_array. */
+    /** Subtype low bits are the bit index (0-31) into Collected_special_ring_array. */
     private final int bitIndex;
+    private final boolean hiddenPalaceRoute;
 
     private State state;
     private boolean initialized;
@@ -125,7 +127,8 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance {
 
     public Sonic3kSSEntryRingObjectInstance(ObjectSpawn spawn) {
         super(spawn, "SSEntryRing");
-        this.bitIndex = spawn.subtype();
+        this.bitIndex = spawn.subtype() & 0x1F;
+        this.hiddenPalaceRoute = (spawn.subtype() & 0x80) != 0;
 
         // Default to MAIN state; ensureInitialized will check collection status
         this.state = State.MAIN;
@@ -298,6 +301,14 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance {
         // When implemented: check (bitIndex & 0x80) != 0 or SSEntry_CheckLevel + emerald state
         // and route to HPZ (zone 0x17, act 0x01) instead of special stage.
 
+        if (shouldRouteToHiddenPalace(gameState)) {
+            LOGGER.fine("SSEntryRing #" + bitIndex + " â€” routing to Hidden Palace");
+            gameState.markSpecialRingCollected(bitIndex);
+            setDestroyed(true);
+            services().requestZoneAndAct(Sonic3kZoneIds.ZONE_HPZ, 1, true);
+            return;
+        }
+
         if (gameState.hasAllEmeralds()) {
             // Path B: All emeralds collected — award 50 rings, instant delete
             LOGGER.fine("SSEntryRing #" + bitIndex + " — all emeralds, awarding 50 rings");
@@ -310,6 +321,10 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance {
             LOGGER.fine("SSEntryRing #" + bitIndex + " — entering Special Stage sequence");
             enterSpecialStageSequence(player);
         }
+    }
+
+    private boolean shouldRouteToHiddenPalace(com.openggf.game.GameStateManager gameState) {
+        return hiddenPalaceRoute || (gameState.hasAllEmeralds() && gameState.hasAllSuperEmeralds());
     }
 
     /**

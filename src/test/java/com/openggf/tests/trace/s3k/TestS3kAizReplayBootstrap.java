@@ -27,6 +27,8 @@ import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceReplayBootstrap;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -48,6 +50,28 @@ public class TestS3kAizReplayBootstrap {
     private static final TraceData TRACE = loadTraceData();
     private static final String PRE_TRACE_OSC_OVERRIDE_PROPERTY = "s3k.aiz.preTraceOscOverride";
     private static final Field ORIGINAL_SPAWN_FIELD = resolveOriginalSpawnField();
+    private String oldLegacyAizDiagnosticHeuristicFlag;
+
+    @BeforeEach
+    void allowLegacyAizDiagnosticHeuristic() {
+        oldLegacyAizDiagnosticHeuristicFlag = System.getProperty(
+                TraceReplayBootstrap.ALLOW_LEGACY_S3K_AIZ_DIAGNOSTIC_HEURISTIC_PROPERTY);
+        System.setProperty(
+                TraceReplayBootstrap.ALLOW_LEGACY_S3K_AIZ_DIAGNOSTIC_HEURISTIC_PROPERTY,
+                "true");
+    }
+
+    @AfterEach
+    void restoreLegacyAizDiagnosticHeuristicFlag() {
+        if (oldLegacyAizDiagnosticHeuristicFlag == null) {
+            System.clearProperty(
+                    TraceReplayBootstrap.ALLOW_LEGACY_S3K_AIZ_DIAGNOSTIC_HEURISTIC_PROPERTY);
+        } else {
+            System.setProperty(
+                    TraceReplayBootstrap.ALLOW_LEGACY_S3K_AIZ_DIAGNOSTIC_HEURISTIC_PROPERTY,
+                    oldLegacyAizDiagnosticHeuristicFlag);
+        }
+    }
 
     @Test
     void resumesLegacyS3kAizReplayAtRecordedGameplayStartAnchor() throws Exception {

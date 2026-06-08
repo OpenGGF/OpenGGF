@@ -32,7 +32,6 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.SeamlessLevelTransitionRequest;
-import com.openggf.level.objects.BootstrapObjectServices;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
@@ -493,7 +492,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 loadPaletteFromPalPointers(PAL_AIZ_INDEX);
                 paletteSwapped = true;
             }
-            AizIntroTerrainSwap.applyMainLevelOverlays(new BootstrapObjectServices());
+            AizIntroTerrainSwap.applyMainLevelOverlays(objectServices());
             AizPlaneIntroInstance.setMainLevelPhaseActive(true);
         }
     }
@@ -609,7 +608,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         // The trace recorder samples checkpoints from end-of-frame state after the
         // camera step, so use the current frame's predicted camera X for these
         // threshold-triggered intro transition checks.
-        AizPlaneIntroInstance.updateMainLevelPhaseForCameraX(frameEndCameraX, shouldSpawnIntro(0));
+        AizPlaneIntroInstance.updateMainLevelPhaseForCameraX(
+                frameEndCameraX, shouldSpawnIntro(0), objectServices());
         updateIntroNormalRefreshFlag(frameEndCameraX);
         if (frameEndCameraX >= FIRE_OVERLAY_STAGE_X) {
             // Keep the fire overlay staging after the intro/main-level terrain swap.
@@ -1039,7 +1039,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             // terrain-swap threshold instead of requiring the camera singleton to
             // already be there.
             int cameraX = Math.max(camera().getX() & 0xFFFF, TERRAIN_SWAP_X);
-            AizPlaneIntroInstance.updateMainLevelPhaseForCameraX(cameraX, false);
+            AizPlaneIntroInstance.updateMainLevelPhaseForCameraX(cameraX, false, objectServices());
             LOG.info("AIZ1: promoted intro state to main-level phase for explicit fire signal");
         }
         introNormalRefreshPending = false;

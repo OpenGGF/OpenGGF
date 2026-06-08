@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.audio;
 
 import com.openggf.audio.AbstractAudioProfile;
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
@@ -26,6 +27,7 @@ import java.util.Map;
 public class Sonic3kAudioProfile extends AbstractAudioProfile {
 
     private static final Map<GameSound, Integer> SOUND_MAP;
+    private static final Map<GameMusic, Integer> MUSIC_MAP;
 
     static {
         Map<GameSound, Integer> map = new EnumMap<>(GameSound.class);
@@ -56,10 +58,20 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
         map.put(GameSound.GRAB, Sonic3kSfx.GRAB.id);
         map.put(GameSound.GLIDE_LAND, Sonic3kSfx.GLIDE_LAND.id);
         SOUND_MAP = Collections.unmodifiableMap(map);
+
+        Map<GameMusic, Integer> music = new EnumMap<>(GameMusic.class);
+        music.put(GameMusic.ACT_CLEAR, Sonic3kMusic.ACT_CLEAR.id);
+        music.put(GameMusic.DROWNING, Sonic3kMusic.DROWNING.id);
+        music.put(GameMusic.EMERALD, Sonic3kMusic.EMERALD.id);
+        music.put(GameMusic.EXTRA_LIFE, Sonic3kMusic.EXTRA_LIFE.id);
+        music.put(GameMusic.INVINCIBILITY, Sonic3kMusic.INVINCIBILITY.id);
+        music.put(GameMusic.SPECIAL_STAGE, Sonic3kMusic.SPECIAL_STAGE.id);
+        music.put(GameMusic.SUPER, Sonic3kMusic.INVINCIBILITY.id);
+        MUSIC_MAP = Collections.unmodifiableMap(music);
     }
 
     public Sonic3kAudioProfile() {
-        super(SOUND_MAP);
+        super(SOUND_MAP, MUSIC_MAP);
     }
 
     @Override

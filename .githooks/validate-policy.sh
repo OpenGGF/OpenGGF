@@ -544,6 +544,20 @@ validate_ci_pr() {
     done
 }
 
+validate_ci_push() {
+    before_sha=$1
+    after_sha=$2
+    ref_name=$3
+
+    case "$before_sha" in
+        0000000000000000000000000000000000000000)
+            before_sha=$(git rev-parse "$after_sha^" 2>/dev/null || printf '%s\n' "$after_sha")
+            ;;
+    esac
+
+    validate_ci_pr "$before_sha" "$after_sha" "$ref_name" "$ref_name"
+}
+
 mode=${1:-}
 
 case "$mode" in
@@ -559,7 +573,10 @@ case "$mode" in
     ci-pr)
         validate_ci_pr "$2" "$3" "$4" "$5"
         ;;
+    ci-push)
+        validate_ci_push "$2" "$3" "$4"
+        ;;
     *)
-        die "usage: $0 {prepare-commit-msg|commit-msg|pre-merge-commit|ci-pr} ..."
+        die "usage: $0 {prepare-commit-msg|commit-msg|pre-merge-commit|ci-pr|ci-push} ..."
         ;;
 esac

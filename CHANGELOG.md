@@ -4,6 +4,43 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Release-prep architecture review hardening closed the current blocker
+  set:** branch policy now runs for direct release-branch pushes, release trace
+  coverage is counted from generated reports, warning-only trace reports fail
+  by default outside explicit diagnostics, and legacy S3K AIZ full-run replay is
+  blocked from release replay unless the diagnostic override is set. S2 Tornado
+  trace bootstrap no longer seeds ride/player state from trace metadata, AIZ
+  intro preload uses runtime-owned object services, final level progression now
+  requests credits instead of wrapping, S3K special-stage entry rings and Super
+  Emerald collection paths cover HPZ routing, and small presentation/diagnostic
+  gaps were guarded for S2 bridge stakes and S3K special-stage audio failures.
+
+- **Sonic 1 palette cycles, bridge bend tables, conveyor path/spawn data, and
+  a first support-object mapping slice now come from ROM data:**
+  `Sonic1PaletteCycler` reads the
+  GHZ/LZ/SLZ/SYZ/SBZ cycle rows from ROM offsets, `Sonic1BridgeObjectInstance`
+  reads `Bri_Data_Y_Max` / `Bri_Data_Align` from the Obj11 ROM data, and
+  `Sonic1ObjectPlacement` now parses LZ/SBZ conveyor waypoint groups plus
+  `ObjPosLZPlatform_Index` / `ObjPosSBZPlatform_Index` child spawn lists instead
+  of the conveyor objects carrying inline tables. `Sonic1ObjectArtProvider` now
+  loads `Map_Seesaw`, `Map_SSawBall`, `Map_Fan`, `Map_Pylon`, `Map_Scen`, and
+  `Map_ExplodeItem` from verified ROM offsets. LZ `Map_Jaws` / `Map_Burro` /
+  `Map_Flap` / `Map_WFall` / `Map_Splash`, MZ/SLZ fireball `Map_Fire`,
+  MZ Basaran/Batbrain `Map_Bas`, MZ glass block `Map_Glass`, MZ lava geyser `Map_Geyser`, SYZ bumper
+  `Map_Bump`, SYZ Roller `Map_Roll`, SYZ Yadrin `Map_Yad`, GHZ Crabmeat `Map_Crab`, GHZ Motobug `Map_Moto`, GHZ Newtron
+  `Map_Newt`, GHZ/SLZ smash-wall `Map_Smash`, LZ harpoon `Map_Harp`, MZ/SBZ Caterkiller `Map_Cat`, SBZ Ball Hog
+  `Map_Hog`, SBZ flamethrower `Map_Flame`, SLZ/SBZ Bomb `Map_Bomb`, SBZ saw/electrocuter and door/girder/platform tables `Map_Saw`
+  / `Map_Elec` / `Map_ADoor` / `Map_Gird` / `Map_Trap` / `Map_Spin`, shared
+  button `Map_But`, SBZ2
+  `Map_FFloor`, shared boss `Map_Eggman` / `Map_BossItems`, SBZ2/FZ `Map_SEgg`,
+  plus the Final Zone plasma launcher, plasma projectile, cylinder, escape-leg,
+  and damaged-ship overlay mappings now load from ROM offsets as well. The S1
+  mapping parser now preserves the tile priority bit from ROM mapping words.
+  The embedded-runtime-data guard now ratchets those table families to zero,
+  removes the legacy S1 boss mapping helper file, and reduces the remaining S1
+  object mapping-piece budget; larger S1 mapping migrations remain tracked
+  release debt.
+
 - **Develop release-sweep hardening closed the latest architecture review
   findings:** startup and audio teardown now fail closed on partial native
   initialization, incomplete FBO creation cleans up and disables priority

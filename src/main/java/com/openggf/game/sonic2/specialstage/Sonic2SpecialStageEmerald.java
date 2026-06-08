@@ -1,6 +1,6 @@
 package com.openggf.game.sonic2.specialstage;
 
-import com.openggf.game.sonic2.audio.Sonic2Music;
+import com.openggf.audio.GameMusic;
 
 import java.util.logging.Logger;
 import com.openggf.game.GameServices;
@@ -267,7 +267,7 @@ public class Sonic2SpecialStageEmerald extends Sonic2SpecialStageObject {
     private void updateCollecting() {
         // Play emerald jingle once
         if (!emeraldAwarded) {
-            GameServices.audio().playMusic(Sonic2Music.GOT_EMERALD.id);
+            GameServices.audio().playMusic(GameMusic.EMERALD);
             emeraldAwarded = true;
             phase = EmeraldPhase.COLLECTED;
             phaseTimer = COLLECT_COUNTDOWN;

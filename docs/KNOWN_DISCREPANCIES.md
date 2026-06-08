@@ -993,17 +993,28 @@ missing engine views for recorded native-prelude traces strict failures.
 
 ## Sonic 1 Embedded Runtime Data Ratchet
 
-**Location:** `Sonic1PaletteCycler`, `Sonic1LZConveyorObjectInstance`,
-`Sonic1SpinConveyorObjectInstance`, `Sonic1BridgeObjectInstance`,
-`Sonic1ObjectArtProvider`, `Sonic1BossMappings`
+**Location:** `Sonic1ObjectArtProvider`, `Sonic1BossMappings`
 **Scope:** Sonic 1 runtime data source debt.
 
 ### Current State
 
 The runtime does not read gameplay asset bytes from `docs/` disassembly trees,
-but several Sonic 1 tables are still embedded directly in production source:
-palette-cycle rows, LZ/SBZ conveyor waypoint and spawner tables, GHZ bridge
-bend tables, and handwritten object/boss mapping pieces.
+but several Sonic 1 mapping pieces are still handwritten in production source.
+The former palette-cycle rows, conveyor waypoint and child spawner tables, GHZ
+bridge bend tables, and the small `Map_Seesaw` / `Map_SSawBall` / `Map_Fan` /
+`Map_Pylon` / `Map_Scen` / `Map_ExplodeItem` support-object mapping slice, the
+LZ `Map_Jaws` / `Map_Burro` / `Map_Flap` / `Map_WFall` / `Map_Splash` tables,
+the MZ/SLZ `Map_Fire` table, the MZ `Map_Bas` / `Map_Glass` / `Map_Geyser` tables, the SYZ
+`Map_Bump` / `Map_Roll` / `Map_Yad` tables, the GHZ `Map_Crab` / `Map_Moto` / `Map_Newt` tables, the GHZ/SLZ `Map_Smash` table, the
+LZ `Map_Harp` table, the MZ/SBZ `Map_Cat` table, the SBZ `Map_Hog` table, the SLZ/SBZ `Map_Bomb` table, the SBZ `Map_Flame` / `Map_Saw` / `Map_Elec` / `Map_ADoor` / `Map_Gird` /
+`Map_Trap` / `Map_Spin` tables, the shared button `Map_But` table, the SBZ2
+`Map_FFloor` table, the shared boss `Map_Eggman` /
+`Map_BossItems` tables, the SBZ2/FZ `Map_SEgg` table, plus the Final Zone
+`Map_EggCyl` / `Map_PLaunch` / `Map_Plasma` / `Map_FZLegs` / `Map_FZDamaged`
+boss mapping slice, now load from the user-supplied ROM and their guard budgets
+have been ratcheted down. The current object-provider budget is 862 handwritten
+mapping pieces; Sonic 1 boss mappings are ROM-backed and
+their separate handwritten budget is zero.
 
 ### Release Boundary
 

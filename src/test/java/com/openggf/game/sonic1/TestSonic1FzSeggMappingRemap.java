@@ -1,10 +1,13 @@
 package com.openggf.game.sonic1;
 
-import com.openggf.game.sonic1.objects.bosses.Sonic1BossMappings;
+import com.openggf.data.RomByteReader;
 import org.junit.jupiter.api.Test;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -12,12 +15,15 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
+@RequiresRom(SonicGame.SONIC_1)
 public class TestSonic1FzSeggMappingRemap {
 
     @Test
     @SuppressWarnings("unchecked")
     public void intubeOverlayUsesWrappedFzBossTilesAfterObjectBaseAdd() throws Exception {
-        List<SpriteMappingFrame> raw = Sonic1BossMappings.createSEggMappings();
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> raw = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_SEGG_ADDR);
 
         Method method = Sonic1ObjectArtProvider.class.getDeclaredMethod(
                 "remapMappingsForObjectBase",
@@ -41,30 +47,6 @@ public class TestSonic1FzSeggMappingRemap {
         assertFalse(tubePiece.hFlip(), "H-flip should cancel after add.w overflow");
         assertFalse(tubePiece.vFlip(), "V-flip should cancel after add.w overflow");
         assertEquals(2, tubePiece.paletteIndex(), "Palette should resolve to line 2 after add.w overflow");
-    }
-
-    @Test
-    public void fzLegsAndDamagedMappingsStayWithinFzEggmanPatternRange() {
-        // Nem_FzEggman ("Boss - Eggman after FZ Fight") is 0x4C patterns in REV01.
-        // Map_FZLegs and Map_FZDamaged must remain within that local tile range.
-        int maxLegsTile = maxTileIndex(Sonic1BossMappings.createFZLegsMappings());
-        int maxDamagedTile = maxTileIndex(Sonic1BossMappings.createFZDamagedMappings());
-
-        assertEquals(0x1F, maxLegsTile, "Map_FZLegs max tile should be $1F");
-        assertEquals(0x4B, maxDamagedTile, "Map_FZDamaged max tile should be $4B");
-    }
-
-    private static int maxTileIndex(List<SpriteMappingFrame> frames) {
-        int max = 0;
-        for (SpriteMappingFrame frame : frames) {
-            for (SpriteMappingPiece piece : frame.pieces()) {
-                int lastTile = piece.tileIndex() + (piece.widthTiles() * piece.heightTiles()) - 1;
-                if (lastTile > max) {
-                    max = lastTile;
-                }
-            }
-        }
-        return max;
     }
 
 }

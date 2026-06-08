@@ -41,7 +41,6 @@ import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.rings.RingManager;
 import com.openggf.physics.CollisionSystem;
-import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.managers.SpriteManager;
 import java.io.IOException;
 import java.util.Objects;
@@ -114,9 +113,9 @@ public class DefaultObjectServices implements ObjectServices {
                                  WaterSystem waterSystem,
                                  ParallaxManager parallaxManager) {
         this(levelManager, camera, gameState, spriteManager, fadeManager, waterSystem,
-                parallaxManager, legacyCollisionSystem(), null, new GameRng(GameRng.Flavour.S1_S2),
+                parallaxManager, legacyCollisionSystem(), legacyWorldSession(), legacyRng(),
                 legacyZoneRuntimeRegistry(), legacyPaletteOwnershipRegistry(), legacyZoneLayoutMutationPipeline(),
-                SolidExecutionRegistry.inert(),
+                legacySolidExecutionRegistry(),
                 engineServicesFromGameServices(), NoOpBonusStageProvider.INSTANCE);
     }
 
@@ -168,27 +167,45 @@ public class DefaultObjectServices implements ObjectServices {
     }
 
     private static CollisionSystem legacyCollisionSystem() {
-        return GameServices.hasRuntime()
-                ? GameServices.collision()
-                : new CollisionSystem(new TerrainCollisionManager());
+        requireActiveRuntimeForLegacyConstructor();
+        return GameServices.collision();
+    }
+
+    private static WorldSession legacyWorldSession() {
+        requireActiveRuntimeForLegacyConstructor();
+        return GameServices.worldSession();
+    }
+
+    private static GameRng legacyRng() {
+        requireActiveRuntimeForLegacyConstructor();
+        return GameServices.rng();
     }
 
     private static ZoneRuntimeRegistry legacyZoneRuntimeRegistry() {
-        return GameServices.hasRuntime()
-                ? GameServices.zoneRuntimeRegistry()
-                : new ZoneRuntimeRegistry();
+        requireActiveRuntimeForLegacyConstructor();
+        return GameServices.zoneRuntimeRegistry();
     }
 
     private static PaletteOwnershipRegistry legacyPaletteOwnershipRegistry() {
-        return GameServices.hasRuntime()
-                ? GameServices.paletteOwnershipRegistryOrNull()
-                : null;
+        requireActiveRuntimeForLegacyConstructor();
+        return GameServices.paletteOwnershipRegistryOrNull();
     }
 
     private static ZoneLayoutMutationPipeline legacyZoneLayoutMutationPipeline() {
-        return GameServices.hasRuntime()
-                ? GameServices.zoneLayoutMutationPipeline()
-                : new ZoneLayoutMutationPipeline();
+        requireActiveRuntimeForLegacyConstructor();
+        return GameServices.zoneLayoutMutationPipeline();
+    }
+
+    private static SolidExecutionRegistry legacySolidExecutionRegistry() {
+        requireActiveRuntimeForLegacyConstructor();
+        return GameServices.solidExecutionRegistry();
+    }
+
+    private static void requireActiveRuntimeForLegacyConstructor() {
+        if (!GameServices.hasRuntime()) {
+            throw new IllegalStateException(
+                    "DefaultObjectServices legacy constructor requires an active gameplay runtime");
+        }
     }
 
     private LevelManager lm() {

@@ -65,6 +65,11 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
         return Path.of("target/trace-reports");
     }
 
+    /** Override only when warning-only reports are deliberately diagnostic debt. */
+    protected boolean allowDiagnosticOnlyWarnings() {
+        return false;
+    }
+
     @Test
     public void replayMatchesTrace() throws Exception {
         int idx = creditsDemoIndex();
@@ -220,14 +225,24 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
             if (report.hasErrors()) {
                 System.err.println("\n=== Context window around first error ===");
                 System.err.println(report.getContextWindow(firstReportErrorFrame(report), 10));
-                fail(report.toSummary());
             }
+            assertReportHasNoReleaseBlockingDivergences(report);
         } finally {
             sharedLevel.dispose();
             config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE,
                     oldMainCharacter != null ? oldMainCharacter : "sonic");
             config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE,
                     oldSidekickCharacter != null ? oldSidekickCharacter : "tails");
+        }
+    }
+
+    protected void assertReportHasNoReleaseBlockingDivergences(DivergenceReport report) {
+        if (report.hasErrors()) {
+            fail(report.toSummary());
+        }
+        if (report.hasWarnings() && !allowDiagnosticOnlyWarnings()) {
+            fail("Trace replay warning report is release-blocking by default: "
+                    + report.toSummary());
         }
     }
 

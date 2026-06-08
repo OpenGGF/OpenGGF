@@ -1,9 +1,9 @@
 package com.openggf.game.sonic3k.specialstage;
 
+import com.openggf.audio.GameMusic;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayerCharacter;
-import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GraphicsManager;
@@ -33,6 +33,7 @@ public class Sonic3kSpecialStageManager {
     private boolean initialized;
     private boolean finished;
     private boolean emeraldCollected;
+    private boolean superEmeraldMode;
     private int ringsCollected;
     private int spheresLeft;
     private int frameCounter;
@@ -133,6 +134,7 @@ public class Sonic3kSpecialStageManager {
         this.initialized = true;
         this.finished = false;
         this.emeraldCollected = false;
+        this.superEmeraldMode = false;
         this.ringsCollected = 0;
         this.frameCounter = 0;
         this.clearRoutine = 0;
@@ -147,6 +149,8 @@ public class Sonic3kSpecialStageManager {
         // Resolve character from configuration
         this.playerCharacter = resolvePlayerCharacter();
         this.tailsEnabled = (playerCharacter == PlayerCharacter.SONIC_AND_TAILS);
+        GameStateManager state = GameServices.gameState();
+        this.superEmeraldMode = state.hasAllEmeralds() && !state.hasAllSuperEmeralds();
 
         this.bannerPhase = 0;
         this.bannerTimer = 0;
@@ -353,7 +357,9 @@ public class Sonic3kSpecialStageManager {
         renderer.setHudTemplate(hudTemplate);
 
         // Load emerald art (KosinskiM compressed)
-        Pattern[] emeraldPatterns = dataLoader.getChaosEmeraldArt();
+        Pattern[] emeraldPatterns = superEmeraldMode
+                ? dataLoader.getSuperEmeraldArt()
+                : dataLoader.getChaosEmeraldArt();
         renderer.setEmeraldPatternBase(nextBase);
         for (int i = 0; i < emeraldPatterns.length; i++) {
             gm.cachePatternTexture(emeraldPatterns[i], nextBase + i);
@@ -409,8 +415,6 @@ public class Sonic3kSpecialStageManager {
             byte[] ttMapData = rom.readBytes(ttMapAddr, 300);
             renderer.setTailsTailsMappingData(ttMapData);
         }
-        nextBase += emeraldPatterns.length;
-
         // Load scalar table
         byte[] scalars = dataLoader.getScalarTable();
         // Scalars are used by the 3D projection system
@@ -419,8 +423,8 @@ public class Sonic3kSpecialStageManager {
         // In the combined S3K ROM, SK_alone_flag=0 and SK_special_stage_flag=0
         // for the first playthrough (chaos emeralds), so use S3 palettes (skMode=false).
         // skMode=true would be for S&K standalone or super emerald stages.
-        // Use SK palettes for stages 8+ (S&K layout set)
-        boolean skPalettes = currentStage >= 8;
+        // Use SK palettes for Super Emerald stages and stages 8+ (S&K layout set)
+        boolean skPalettes = superEmeraldMode || currentStage >= 8;
         palette.initialize(dataLoader, currentStage & 7,
                 playerCharacter == PlayerCharacter.KNUCKLES, skPalettes);
         com.openggf.level.Palette[] palLines = palette.getPalettes();
@@ -751,7 +755,11 @@ public class Sonic3kSpecialStageManager {
         GameStateManager gameState = GameServices.gameState();
         if (currentStage < EMERALD_COUNT) {
             emeraldCollected = true;
-            gameState.markEmeraldCollected(currentStage);
+            if (superEmeraldMode) {
+                gameState.markSuperEmeraldCollected(currentStage);
+            } else {
+                gameState.markEmeraldCollected(currentStage);
+            }
         }
 
         clearRoutine = 4; // Skip to completion
@@ -858,15 +866,13 @@ public class Sonic3kSpecialStageManager {
         int emeraldY = player.getYPos() - (cos * 8);
 
         int emeraldIndex = Sonic3kSpecialStageGrid.positionToIndex(emeraldX, emeraldY);
-        // Place chaos emerald (or super emerald)
-        grid.setCellByIndex(emeraldIndex, CELL_CHAOS_EMERALD);
+        grid.setCellByIndex(emeraldIndex, superEmeraldMode ? CELL_SUPER_EMERALD : CELL_CHAOS_EMERALD);
         emeraldInteractIndex = emeraldIndex;
 
         player.setVelocity(CLEAR_VELOCITY);
         emeraldTimer = EMERALD_TIMER_INIT;
 
-        // TODO: Queue emerald art loading (ArtKosM_SStageChaosEmerald)
-        // TODO: Load emerald palette from Pal_SStage_Emeralds
+        // Emerald art and palette are already loaded synchronously with the stage art.
     }
 
     /**
@@ -880,7 +886,7 @@ public class Sonic3kSpecialStageManager {
         emeraldTimer--;
         if (emeraldTimer <= 0) {
             clearRoutine = 3;
-            GameServices.audio().playMusic(Sonic3kMusic.EMERALD.id);
+            GameServices.audio().playMusic(GameMusic.EMERALD);
         }
     }
 
@@ -912,6 +918,7 @@ public class Sonic3kSpecialStageManager {
         initialized = false;
         finished = false;
         emeraldCollected = false;
+        superEmeraldMode = false;
         ringsCollected = 0;
         spheresLeft = 0;
         currentStage = 0;

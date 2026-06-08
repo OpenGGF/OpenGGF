@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+## 2026-06-08 - release review trace bootstrap guardrails
+
+- Scope: RRF-003 / RRF-004 / RRF-009 trace bootstrap and reporting only.
+- RRF-003: the legacy S3K AIZ `aiz1_to_hcz_fullrun` fixture remains
+  diagnostic-only debt. Normal release replay now reports it through
+  `TraceReplayBootstrap.releaseBlockersForTraceReplay` and `phaseForReplay`
+  throws unless `openggf.trace.allowLegacyS3kAizDiagnosticHeuristic=true` is
+  set by an explicit diagnostic test. Regeneration/native intro modelling is
+  still required before this fixture can be re-enabled as a release parity gate.
+- RRF-004: S2 Tornado traces no longer apply metadata `start_x`/`start_y` to
+  live player state and no longer prime the player/Tornado ride relationship
+  from ObjB2 shape. Remaining Tornado title-card setup is limited to native
+  object/timing prelude execution.
+- RRF-009: warning-only trace reports are release-blocking by default in both
+  BK2 trace replay and credits-demo replay harnesses. Subclasses must opt into
+  `allowDiagnosticOnlyWarnings()` for warning debt to stay diagnostic-only.
+- Verification:
+  - RED: `mvn -q "-Dtest=com.openggf.tests.trace.TestTraceReplayStartPositionPolicy,com.openggf.tests.trace.TestTraceReplayReportPolicy" test` failed at test compilation before implementation because the new release-blocker/report-policy APIs were missing.
+  - BLOCKED after implementation: the same Maven command currently fails in
+    main compilation on unrelated `Sonic3k.java` calls to
+    `AizIntroTerrainSwap.preloadOverlayData()` / `precomputeTransitionTilemaps()`
+    with no-arg signatures. This is outside the trace bootstrap ownership for
+    this pass.
+
 ## 2026-06-07 - release-readiness trace bootstrap cleanup
 
 - Branch: `bugfix/ai-release-readiness-issues`.

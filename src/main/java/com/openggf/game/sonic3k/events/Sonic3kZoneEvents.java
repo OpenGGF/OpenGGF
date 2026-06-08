@@ -7,6 +7,8 @@ import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.GameModule;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kLevel;
@@ -22,6 +24,8 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.Palette;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.DefaultObjectServices;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 
@@ -108,6 +112,14 @@ public abstract class Sonic3kZoneEvents {
 
     protected boolean hasRuntime() {
         return GameServices.hasRuntime();
+    }
+
+    protected ObjectServices objectServices() {
+        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode == null || !gameplayMode.isGameplayRuntimeReady()) {
+            throw new IllegalStateException("S3K zone events require an active gameplay runtime");
+        }
+        return new DefaultObjectServices(gameplayMode, EngineServices.current());
     }
 
     protected ZoneRuntimeRegistry zoneRuntimeRegistry() {

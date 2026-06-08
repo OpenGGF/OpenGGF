@@ -136,7 +136,7 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
     }
 
     private void launchPlayer(AbstractPlayableSprite player) {
-        int launchDistance = player.getX() - spawn.x();
+        int launchDistance = player.getCentreX() - spawn.x();
         if (isFlippedHorizontal()) {
             launchDistance = -launchDistance;
         }

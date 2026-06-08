@@ -64,6 +64,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private static final int SKID_SPEED_THRESHOLD = 0x400;
 	private static final short YSPEED_LANDING_CAP = (short) 0xFC0;
 	private static final int UPWARD_VELOCITY_CAP = -0xFC0;
+	private static final short HYPER_DASH_SPEED = (short) 0x800;
 
 	// Movement constants
 	private static final int MOVE_LOCK_FRAMES = 0x1E;
@@ -1026,8 +1027,20 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// after Bubble Shield sets x_vel to zero (AIZ trace F9661).
 		sprite.setRollingJump(false);
 
-		// ROM (sonic3k.asm:23404-23408): Super Sonic suppresses all abilities
+		ShieldType shield = sprite.getShieldType();
+		if (sprite.getSecondaryAbility() == SecondaryAbility.INSTA_SHIELD
+				&& shield == null
+				&& sprite.getSuperStateController() != null
+				&& sprite.getSuperStateController().activateFromAirAbility()) {
+			return true;
+		}
+
+		// ROM (sonic3k.asm:23404-23408): Super Sonic suppresses all abilities.
+		// With all Super Emeralds this path becomes Sonic_HyperDash instead.
 		if (sprite.isSuperSonic()) {
+			if (isHyperSonic()) {
+				hyperDash();
+			}
 			sprite.setDoubleJumpFlag(1);
 			return true;
 		}
@@ -1040,7 +1053,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// ROM: Sonic_ShieldMoves is only reached by Sonic (character_id == 0).
 		// Tails uses Tails_JumpHeight → flight. Knuckles uses Knux_JumpHeight → glide.
 		// Neither Tails nor Knuckles ever reaches the shield ability code.
-		ShieldType shield = sprite.getShieldType();
 		if (sprite.getSecondaryAbility() == SecondaryAbility.INSTA_SHIELD) {
 			// Sonic: elemental shield abilities OR insta-shield
 			if (hasElemental && shield != null) {
@@ -1077,6 +1089,44 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			instaShield.triggerAttack();
 		}
 		audioManager.playSfx(GameSound.INSTA_SHIELD);
+	}
+
+	private boolean isHyperSonic() {
+		GameStateManager state = sprite.currentGameStateOrNull();
+		return state != null && state.hasAllSuperEmeralds();
+	}
+
+	/** ROM: Sonic_HyperDash (sonic3k.asm:23482-23523) */
+	private void hyperDash() {
+		int horizontal = 0;
+		if (inputLeft && !inputRight) {
+			horizontal = -1;
+		} else if (inputRight && !inputLeft) {
+			horizontal = 1;
+		}
+
+		int vertical = 0;
+		if (inputUp && !inputDown) {
+			vertical = -1;
+		} else if (inputDown && !inputUp) {
+			vertical = 1;
+		}
+
+		if (horizontal == 0 && vertical == 0) {
+			horizontal = sprite.getDirection() == Direction.RIGHT ? 1 : -1;
+		}
+
+		short xVel = (short) (horizontal * HYPER_DASH_SPEED);
+		short yVel = (short) (vertical * HYPER_DASH_SPEED);
+		sprite.setXSpeed(xVel);
+		sprite.setYSpeed(yVel);
+		sprite.setGSpeed(xVel);
+		sprite.resetPositionAndStatTableHistory();
+		Camera camera = camera();
+		if (camera != null && camera.getFocusedSprite() == sprite) {
+			camera.setHorizScrollDelay(32);
+		}
+		audioManager.playSfx(GameSound.SPINDASH_RELEASE);
 	}
 
 	/** Fire dash: horizontal burst in facing direction (sonic3k.asm:23411-23430) */

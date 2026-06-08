@@ -1,7 +1,9 @@
 package com.openggf.game.sonic1.objects;
 
+import com.openggf.data.RomByteReader;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.SolidCheckpointBatch;
+import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.LevelManager;
@@ -50,55 +52,9 @@ public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
 
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
             ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS;
-
-    // ghzbend1.bin - Maximum depression depth per bridge length and player position
-    // 17 rows x 16 columns. Row = segment count (0-16), column = player position.
-    // @formatter:off
-    private static final int[][] BEND_DATA_1 = {
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // 0 segs
-        { 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // 1 seg
-        { 0x02, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // 2 segs
-        { 0x02, 0x04, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // 3
-        { 0x02, 0x04, 0x04, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // 4
-        { 0x02, 0x04, 0x06, 0x04, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // 5
-        { 0x02, 0x04, 0x06, 0x06, 0x04, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // 6
-        { 0x02, 0x04, 0x06, 0x08, 0x06, 0x04, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // 7
-        { 0x02, 0x04, 0x06, 0x08, 0x08, 0x06, 0x04, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // 8
-        { 0x02, 0x04, 0x06, 0x08, 0x0A, 0x08, 0x06, 0x04, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // 9
-        { 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0A, 0x08, 0x06, 0x04, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // 10
-        { 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0A, 0x08, 0x06, 0x04, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00 }, // 11
-        { 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0C, 0x0A, 0x08, 0x06, 0x04, 0x02, 0x00, 0x00, 0x00, 0x00 }, // 12
-        { 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E, 0x0C, 0x0A, 0x08, 0x06, 0x04, 0x02, 0x00, 0x00, 0x00 }, // 13
-        { 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E, 0x0E, 0x0C, 0x0A, 0x08, 0x06, 0x04, 0x02, 0x00, 0x00 }, // 14
-        { 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E, 0x10, 0x0E, 0x0C, 0x0A, 0x08, 0x06, 0x04, 0x02, 0x00 }, // 15
-        { 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E, 0x10, 0x10, 0x0E, 0x0C, 0x0A, 0x08, 0x06, 0x04, 0x02 }, // 16
-    };
-    // @formatter:on
-
-    // ghzbend2.bin - Per-segment weight curves (sine-like distribution)
-    // 16 rows x 16 columns. Row = Sonic's segment index. Each byte is a weight (0-$FF).
-    // Read forward for segments left of Sonic, backward (mirrored) for segments right.
-    // Values copied directly from docs/s1disasm/misc/ghzbend2.bin.
-    // @formatter:off
-    private static final int[][] BEND_DATA_2 = {
-        { 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-        { 0xB5, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-        { 0x7E, 0xDB, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-        { 0x61, 0xB5, 0xEC, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-        { 0x4A, 0x93, 0xCD, 0xF3, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-        { 0x3E, 0x7E, 0xB0, 0xDB, 0xF6, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-        { 0x38, 0x6D, 0x9D, 0xC5, 0xE4, 0xF8, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-        { 0x31, 0x61, 0x8E, 0xB5, 0xD4, 0xEC, 0xFB, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-        { 0x2B, 0x56, 0x7E, 0xA2, 0xC1, 0xDB, 0xEE, 0xFB, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-        { 0x25, 0x4A, 0x73, 0x93, 0xB0, 0xCD, 0xE1, 0xF3, 0xFC, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-        { 0x1F, 0x44, 0x67, 0x88, 0xA7, 0xBD, 0xD4, 0xE7, 0xF4, 0xFD, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00 },
-        { 0x1F, 0x3E, 0x5C, 0x7E, 0x98, 0xB0, 0xC9, 0xDB, 0xEA, 0xF6, 0xFD, 0xFF, 0x00, 0x00, 0x00, 0x00 },
-        { 0x19, 0x38, 0x56, 0x73, 0x8E, 0xA7, 0xBD, 0xD1, 0xE1, 0xEE, 0xF8, 0xFE, 0xFF, 0x00, 0x00, 0x00 },
-        { 0x19, 0x38, 0x50, 0x6D, 0x83, 0x9D, 0xB0, 0xC5, 0xD8, 0xE4, 0xF1, 0xF8, 0xFE, 0xFF, 0x00, 0x00 },
-        { 0x19, 0x31, 0x4A, 0x67, 0x7E, 0x93, 0xA7, 0xBD, 0xCD, 0xDB, 0xE7, 0xF3, 0xF9, 0xFE, 0xFF, 0x00 },
-        { 0x19, 0x31, 0x4A, 0x61, 0x78, 0x8E, 0xA2, 0xB5, 0xC5, 0xD4, 0xE1, 0xEC, 0xF4, 0xFB, 0xFE, 0xFF },
-    };
-    // @formatter:on
+    private static final int BEND_Y_MAX_ROWS = 17;
+    private static final int BEND_ALIGN_ROWS = 16;
+    private static final int BEND_COLUMNS = 16;
 
     // State fields
     private int logCount;            // Number of log segments
@@ -107,6 +63,7 @@ public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
     private int[] logYOffsets;       // Current Y offset for each log (pixels below base Y)
     private byte[] slopeData;        // Slope data for collision system
     private boolean playerOnBridge;  // Whether player is currently on the bridge
+    private BridgeBendData bendData;
     // ROM Bri_Action runs in routine 2 (Bri_Solid -> Platform3); on the catch
     // frame Platform3 bumps the bridge to routine 4 (addq.b #2,obRoutine(a0),
     // sub PlatformObject.asm:42) and only Bri_MoveSonic finalises Sonic's Y on
@@ -119,13 +76,36 @@ public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
     private boolean landingDeferred;
 
     public Sonic1BridgeObjectInstance(ObjectSpawn spawn) {
+        this(spawn, null);
+    }
+
+    Sonic1BridgeObjectInstance(ObjectSpawn spawn, BridgeBendData bendData) {
         super(spawn, "Bridge");
+        this.bendData = bendData;
         this.logCount = Math.max(1, spawn.subtype() & 0xFF);
         if (this.logCount > 16) {
-            this.logCount = 16; // Max 16 segments (BEND_DATA table limit)
+            this.logCount = 16; // Max 16 segments (Bri_Data table limit)
         }
         this.logYOffsets = new int[logCount];
         this.slopeData = new byte[getHalfWidth() + 1];
+    }
+
+    static BridgeBendData loadBendData(RomByteReader reader) {
+        return new BridgeBendData(
+                reader.slice(Sonic1Constants.BRIDGE_BEND_Y_MAX_ADDR, BEND_Y_MAX_ROWS * BEND_COLUMNS),
+                reader.slice(Sonic1Constants.BRIDGE_BEND_ALIGN_ADDR, BEND_ALIGN_ROWS * BEND_COLUMNS));
+    }
+
+    private BridgeBendData bendData() {
+        if (bendData != null) {
+            return bendData;
+        }
+        try {
+            bendData = loadBendData(services().romReader());
+            return bendData;
+        } catch (Exception e) {
+            throw new IllegalStateException("Unable to load Sonic 1 bridge bend data from ROM", e);
+        }
     }
 
     private int getHalfWidth() {
@@ -373,27 +353,27 @@ public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
      *   offset = ((weight + 1) * maxDepression * sin(depressionAngle)) >> 16
      * <p>
      * Segments left of (and including) the player position read weights forward
-     * from BEND_DATA_2[playerLogIndex]. Segments right of the player read weights
-     * backward (mirrored) from BEND_DATA_2[segmentsRightCount].
+     * from Bri_Data_Align[playerLogIndex]. Segments right of the player read
+     * weights backward (mirrored) from Bri_Data_Align[segmentsRightCount].
      * <p>
      * Reference: docs/s1disasm/_incObj/11 Bridge (part 3).asm
      */
     private void calculateBend() {
+        BridgeBendData data = bendData();
         // CalcSine: d4 = sin(depressionAngle), range 0-256 (8.8 fixed point)
         int sinValue = getSine(depressionAngle);
 
-        // Look up max depression from BEND_DATA_1
-        // Index: BEND_DATA_1[logCount][playerLogIndex]
-        int bendRow = Math.min(logCount, BEND_DATA_1.length - 1);
+        // Look up max depression from Bri_Data_Y_Max[logCount][playerLogIndex].
+        int bendRow = Math.min(logCount, BEND_Y_MAX_ROWS - 1);
         int bendCol = Math.min(playerLogIndex, 15);
-        int maxDepression = BEND_DATA_1[bendRow][bendCol];
+        int maxDepression = data.yMax(bendRow, bendCol);
 
         // Get weight curve for segments LEFT of Sonic (read forward)
-        int weightRow = Math.min(playerLogIndex, BEND_DATA_2.length - 1);
+        int weightRow = Math.min(playerLogIndex, BEND_ALIGN_ROWS - 1);
 
         // Process segments left of and including Sonic's position
         for (int i = 0; i <= playerLogIndex && i < logCount; i++) {
-            int weight = BEND_DATA_2[weightRow][i];
+            int weight = data.align(weightRow, i);
             // From disassembly: (weight+1) * maxDepression * sinValue, then swap (>> 16)
             long offset = ((long)(weight + 1) * maxDepression * sinValue) >> 16;
             logYOffsets[i] = (int) offset;
@@ -402,14 +382,14 @@ public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
         // Process segments right of Sonic's position (mirrored weights)
         int segmentsRight = logCount - 1 - playerLogIndex;
         if (segmentsRight > 0) {
-            int rightWeightRow = Math.min(segmentsRight, BEND_DATA_2.length - 1);
-            // Read backwards from BEND_DATA_2[rightWeightRow]
+            int rightWeightRow = Math.min(segmentsRight, BEND_ALIGN_ROWS - 1);
+            // Read backwards from Bri_Data_Align[rightWeightRow].
             for (int i = playerLogIndex + 1; i < logCount; i++) {
                 // Mirror index: count from right edge
                 int mirrorIdx = logCount - 1 - i;
                 if (mirrorIdx < 0) mirrorIdx = 0;
                 if (mirrorIdx > rightWeightRow) mirrorIdx = rightWeightRow;
-                int weight = BEND_DATA_2[rightWeightRow][mirrorIdx];
+                int weight = data.align(rightWeightRow, mirrorIdx);
                 long offset = ((long)(weight + 1) * maxDepression * sinValue) >> 16;
                 logYOffsets[i] = (int) offset;
             }
@@ -448,6 +428,25 @@ public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
         if (angle <= 0) return 0;
         if (angle > MAX_DEPRESSION_ANGLE) angle = MAX_DEPRESSION_ANGLE;
         return TrigLookupTable.sinHex(angle);
+    }
+
+    record BridgeBendData(byte[] yMaxData, byte[] alignData) {
+        BridgeBendData {
+            yMaxData = yMaxData.clone();
+            alignData = alignData.clone();
+        }
+
+        int yMax(int row, int column) {
+            return unsignedAt(yMaxData, row, column);
+        }
+
+        int align(int row, int column) {
+            return unsignedAt(alignData, row, column);
+        }
+
+        private static int unsignedAt(byte[] data, int row, int column) {
+            return Byte.toUnsignedInt(data[(row * BEND_COLUMNS) + column]);
+        }
     }
 
     // ---- Rendering ----

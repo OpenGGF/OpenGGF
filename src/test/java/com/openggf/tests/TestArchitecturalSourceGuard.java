@@ -353,46 +353,50 @@ class TestArchitecturalSourceGuard {
                         "com/openggf/game/sonic1/Sonic1PaletteCycler.java",
                         "embedded Sonic 1 palette-cycle arrays",
                         Pattern.compile("private\\s+static\\s+final\\s+byte\\s*\\[\\s*]\\s+PAL_"),
-                        18),
+                        0),
                 new EmbeddedRuntimeDataBudget(
                         "com/openggf/game/sonic1/objects/Sonic1LZConveyorObjectInstance.java",
                         "embedded LZ conveyor waypoint tables",
                         Pattern.compile("private\\s+static\\s+final\\s+int\\s*\\[\\s*]\\s*\\[\\s*]\\s+PATH_"),
-                        6),
+                        0),
                 new EmbeddedRuntimeDataBudget(
                         "com/openggf/game/sonic1/objects/Sonic1LZConveyorObjectInstance.java",
                         "embedded LZ conveyor spawner switch tables",
                         Pattern.compile("case\\s+\\d+\\s+->\\s+new\\s+int\\s*\\[\\s*]\\s*\\[\\s*]"),
-                        6),
+                        0),
                 new EmbeddedRuntimeDataBudget(
                         "com/openggf/game/sonic1/objects/Sonic1SpinConveyorObjectInstance.java",
                         "embedded SBZ spin-conveyor waypoint tables",
                         Pattern.compile("private\\s+static\\s+final\\s+int\\s*\\[\\s*]\\s*\\[\\s*]\\s+PATH_"),
-                        6),
+                        0),
                 new EmbeddedRuntimeDataBudget(
                         "com/openggf/game/sonic1/objects/Sonic1SpinConveyorObjectInstance.java",
                         "embedded SBZ spin-conveyor spawner tables",
                         Pattern.compile("private\\s+static\\s+final\\s+int\\s*\\[\\s*]\\s*\\[\\s*]\\s+SPAWN_DATA_"),
-                        6),
+                        0),
                 new EmbeddedRuntimeDataBudget(
                         "com/openggf/game/sonic1/objects/Sonic1BridgeObjectInstance.java",
                         "embedded GHZ bridge bend tables",
                         Pattern.compile("private\\s+static\\s+final\\s+int\\s*\\[\\s*]\\s*\\[\\s*]\\s+BEND_DATA_"),
-                        2),
+                        0),
                 new EmbeddedRuntimeDataBudget(
                         "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java",
                         "handwritten Sonic 1 object mapping pieces",
                         Pattern.compile("new\\s+SpriteMappingPiece\\s*\\("),
-                        1461),
+                        862),
                 new EmbeddedRuntimeDataBudget(
                         "com/openggf/game/sonic1/objects/bosses/Sonic1BossMappings.java",
                         "handwritten Sonic 1 boss mapping pieces",
                         Pattern.compile("new\\s+SpriteMappingPiece\\s*\\("),
-                        218)
+                        0)
         );
 
         for (EmbeddedRuntimeDataBudget budget : budgets) {
-            String source = Files.readString(SRC_MAIN.resolve(budget.relativePath()));
+            Path sourcePath = SRC_MAIN.resolve(budget.relativePath());
+            if (!Files.exists(sourcePath) && budget.expectedCount() == 0) {
+                continue;
+            }
+            String source = Files.readString(sourcePath);
             int actual = countMatches(budget.pattern(), source);
             if (actual != budget.expectedCount()) {
                 violations.add(budget.relativePath() + " has " + actual + " "
@@ -1065,6 +1069,42 @@ class TestArchitecturalSourceGuard {
                 "S3K special-stage results palette should decode Pal_Results through PaletteLoader");
         assertTrue(!stripped.contains(".cachePaletteTexture("),
                 "S3K special-stage results palette upload should use Sonic3kSpecialStagePaletteUploader");
+    }
+
+    @Test
+    void specialStageResultsAudioFailuresAreLogged() throws IOException {
+        String relative = "com/openggf/game/sonic3k/specialstage/S3kSpecialStageResultsScreen.java";
+        String source = Files.readString(SRC_MAIN.resolve(relative));
+
+        assertTrue(!source.contains("catch (Exception e) { /* ignore */ }"),
+                "S3K special-stage results audio helper failures should be logged, not swallowed");
+        assertTrue(source.contains("LOG.log("),
+                "S3K special-stage results screen should report audio helper failures through its logger");
+    }
+
+    @Test
+    void sonic3kSpecialStageManagerSupportsSuperEmeraldArtAndState() throws IOException {
+        String relative = "com/openggf/game/sonic3k/specialstage/Sonic3kSpecialStageManager.java";
+        String source = Files.readString(SRC_MAIN.resolve(relative));
+        String stripped = stripCommentsAndStrings(source);
+
+        assertTrue(stripped.contains("getSuperEmeraldArt()"),
+                "S3K special-stage manager should load Super Emerald art for Super Emerald stages");
+        assertTrue(stripped.contains("CELL_SUPER_EMERALD"),
+                "S3K special-stage manager should place Super Emerald cells when in Super Emerald mode");
+        assertTrue(stripped.contains("markSuperEmeraldCollected("),
+                "S3K special-stage manager should mark Super Emerald collection separately from Chaos Emeralds");
+    }
+
+    @Test
+    void bridgeStakeGroundEdgeSubtypesDoNotRenderInvisible() throws IOException {
+        String relative = "com/openggf/game/sonic2/objects/BridgeStakeObjectInstance.java";
+        String source = Files.readString(SRC_MAIN.resolve(relative));
+        String stripped = stripCommentsAndStrings(source);
+        String compact = stripped.replaceAll("\\s+", "");
+
+        assertTrue(!compact.contains("case7,8->{return;}"),
+                "BridgeStake subtypes 7/8 should render a visible fallback instead of returning early");
     }
 
     @Test

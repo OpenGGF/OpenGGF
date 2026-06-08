@@ -3112,8 +3112,8 @@ public class LevelManager {
             writeCurrentZone(currentZone + 1);
             writeCurrentAct(0);
             if (currentZone >= levels.size()) {
-                LOGGER.info("All zones complete!");
-                writeCurrentZone(0); // Loop back for now - TODO: end game sequence
+                requestCreditsTransition();
+                return;
             }
         }
         writeApparentAct(currentAct);

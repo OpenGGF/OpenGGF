@@ -473,6 +473,18 @@ function Validate-CiPr([string]$BaseSha, [string]$HeadSha, [string]$BaseRef, [st
     }
 }
 
+function Validate-CiPush([string]$BeforeSha, [string]$AfterSha, [string]$RefName) {
+    if ($BeforeSha -eq "0000000000000000000000000000000000000000") {
+        $parent = Invoke-GitText @("rev-parse", "$AfterSha^") -AllowFailure
+        if (-not [string]::IsNullOrWhiteSpace($parent)) {
+            $BeforeSha = $parent
+        } else {
+            $BeforeSha = $AfterSha
+        }
+    }
+    Validate-CiPr $BeforeSha $AfterSha $RefName $RefName
+}
+
 function Get-EffectiveBaseForCiPr([string]$BaseSha, [string]$HeadSha, [string]$BaseRef, [string]$HeadRef) {
     if ($BaseRef -ne "master") {
         return $BaseSha
@@ -512,7 +524,13 @@ switch ($Mode) {
         }
         Validate-CiPr $RemainingArgs[0] $RemainingArgs[1] $RemainingArgs[2] $RemainingArgs[3]
     }
+    "ci-push" {
+        if ($RemainingArgs.Count -lt 3) {
+            Fail "usage: validate-policy.ps1 ci-push <before-sha> <after-sha> <ref-name>"
+        }
+        Validate-CiPush $RemainingArgs[0] $RemainingArgs[1] $RemainingArgs[2]
+    }
     default {
-        Fail "usage: validate-policy.ps1 {prepare-commit-msg|commit-msg|pre-merge-commit|ci-pr} ..."
+        Fail "usage: validate-policy.ps1 {prepare-commit-msg|commit-msg|pre-merge-commit|ci-pr|ci-push} ..."
     }
 }

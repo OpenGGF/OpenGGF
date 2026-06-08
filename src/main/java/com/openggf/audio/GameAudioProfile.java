@@ -138,4 +138,12 @@ public interface GameAudioProfile {
      * @return unmodifiable map of GameSound enum values to native SFX IDs
      */
     Map<GameSound, Integer> getSoundMap();
+
+    /**
+     * Returns the GameMusic to game-specific music ID mapping.
+     * Used for shared gameplay cues that are music/jingles rather than SFX.
+     */
+    default Map<GameMusic, Integer> getMusicMap() {
+        return Map.of();
+    }
 }

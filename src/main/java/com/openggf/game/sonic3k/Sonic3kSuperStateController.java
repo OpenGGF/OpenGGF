@@ -1,9 +1,9 @@
 package com.openggf.game.sonic3k;
 
+import com.openggf.audio.GameMusic;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.PhysicsProfile;
-import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.sprites.animation.SpriteAnimationSet;
@@ -183,9 +183,9 @@ public class Sonic3kSuperStateController extends SuperStateController {
             if (CrossGameFeatureProvider.isActive()) {
                 GameServices.audio().playDonorMusic(
                         GameServices.crossGameFeatures().getDonorGameId(),
-                        Sonic3kMusic.INVINCIBILITY.id);
+                        GameMusic.SUPER);
             } else {
-                GameServices.audio().playMusic(Sonic3kMusic.INVINCIBILITY.id);
+                GameServices.audio().playMusic(GameMusic.SUPER);
             }
         } catch (Exception e) {
             LOGGER.fine("Could not play Super Sonic music: " + e.getMessage());
@@ -245,7 +245,13 @@ public class Sonic3kSuperStateController extends SuperStateController {
         player.setShieldVisible(true);
         // Revert to zone music
         try {
-            GameServices.audio().endMusicOverride(Sonic3kMusic.INVINCIBILITY.id);
+            if (CrossGameFeatureProvider.isActive()) {
+                GameServices.audio().endDonorMusicOverride(
+                        GameServices.crossGameFeatures().getDonorGameId(),
+                        GameMusic.SUPER);
+            } else {
+                GameServices.audio().endMusicOverride(GameMusic.SUPER);
+            }
         } catch (Exception e) {
             LOGGER.fine("Could not revert Super Sonic music: " + e.getMessage());
         }

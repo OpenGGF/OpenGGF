@@ -63,6 +63,7 @@ public class AudioManager {
     private final Map<String, DacData> donorDacData = new HashMap<>();
     private final Map<String, SmpsSequencerConfig> donorConfigs = new HashMap<>();
     private final Map<GameSound, DonorSfxBinding> donorSoundBindings = new EnumMap<>(GameSound.class);
+    private final Map<String, Map<GameMusic, Integer>> donorMusicBindings = new HashMap<>();
     private final Map<SmpsSourceDescriptor, AbstractSmpsData> restoreSmpsResolveCache = new HashMap<>();
 
     private record DonorSfxBinding(String gameId, int sfxId) {}
@@ -790,6 +791,22 @@ public class AudioManager {
         }
     }
 
+    public boolean playMusic(GameMusic music) {
+        Integer musicId = resolveMusic(audioProfile, music);
+        if (musicId == null) {
+            return false;
+        }
+        playMusic(musicId);
+        return true;
+    }
+
+    private static Integer resolveMusic(GameAudioProfile profile, GameMusic music) {
+        if (music == null || profile == null) {
+            return null;
+        }
+        return profile.getMusicMap().get(music);
+    }
+
     public void playSfx(String sfxName) {
         playSfx(sfxName, 1.0f);
     }
@@ -971,6 +988,15 @@ public class AudioManager {
         }
     }
 
+    public boolean playDonorMusic(String donorGameId, GameMusic music) {
+        Integer musicId = resolveDonorMusic(donorGameId, music);
+        if (musicId == null) {
+            return false;
+        }
+        playDonorMusic(donorGameId, musicId);
+        return true;
+    }
+
     public void endMusicOverride(int musicId) {
         if (suppressingRewindReplay()) {
             return;
@@ -979,6 +1005,38 @@ public class AudioManager {
         if (sendLiveBackendCommands()) {
             backend.endMusicOverride(musicId);
         }
+    }
+
+    public boolean endMusicOverride(GameMusic music) {
+        if (music == null || audioProfile == null) {
+            return false;
+        }
+        Integer musicId = audioProfile.getMusicMap().get(music);
+        if (musicId == null) {
+            return false;
+        }
+        endMusicOverride(musicId);
+        return true;
+    }
+
+    public boolean endDonorMusicOverride(String donorGameId, GameMusic music) {
+        Integer musicId = resolveDonorMusic(donorGameId, music);
+        if (musicId == null) {
+            return false;
+        }
+        endMusicOverride(musicId);
+        return true;
+    }
+
+    private Integer resolveDonorMusic(String donorGameId, GameMusic music) {
+        if (donorGameId == null || music == null) {
+            return null;
+        }
+        Map<GameMusic, Integer> musicMap = donorMusicBindings.get(donorGameId);
+        if (musicMap == null) {
+            return null;
+        }
+        return musicMap.get(music);
     }
 
     /**
@@ -1089,6 +1147,13 @@ public class AudioManager {
         }
     }
 
+    public void registerDonorMusicMap(String gameId, Map<GameMusic, Integer> musicMap) {
+        if (gameId == null || musicMap == null || musicMap.isEmpty()) {
+            return;
+        }
+        donorMusicBindings.put(gameId, Map.copyOf(musicMap));
+    }
+
     /**
      * Registers a donor sound binding so that a GameSound missing from the
      * base game's sound map will be routed through the specified donor loader.
@@ -1106,6 +1171,7 @@ public class AudioManager {
         donorDacData.clear();
         donorConfigs.clear();
         donorSoundBindings.clear();
+        donorMusicBindings.clear();
     }
 
     /**

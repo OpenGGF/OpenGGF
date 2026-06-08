@@ -1,12 +1,12 @@
 package com.openggf.game.sonic3k.specialstage;
 
+import com.openggf.audio.GameMusic;
 import com.openggf.data.RomByteReader;
 import com.openggf.data.PaletteLoader;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.sonic3k.Sonic3kObjectArt;
-import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GLCommand;
@@ -21,6 +21,7 @@ import com.openggf.level.render.SpriteMappingFrame;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -213,7 +214,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
             // Still in pre-tally wait
             if (!musicPlayed && countdown == MUSIC_TRIGGER_COUNTER) {
                 musicPlayed = true;
-                playMusic(Sonic3kMusic.ACT_CLEAR.id);
+                playMusic(GameMusic.ACT_CLEAR);
             }
             return;
         }
@@ -938,15 +939,27 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
     // ================================================================
 
     private void fadeOutMusic() {
-        try { GameServices.audio().fadeOutMusic(); } catch (Exception e) { /* ignore */ }
+        try {
+            GameServices.audio().fadeOutMusic();
+        } catch (Exception e) {
+            LOG.log(Level.WARNING, "Failed to fade out music for S3K special-stage results", e);
+        }
     }
 
-    private void playMusic(int id) {
-        try { GameServices.audio().playMusic(id); } catch (Exception e) { /* ignore */ }
+    private void playMusic(GameMusic music) {
+        try {
+            GameServices.audio().playMusic(music);
+        } catch (Exception e) {
+            LOG.log(Level.WARNING, "Failed to play S3K special-stage results music " + music, e);
+        }
     }
 
     private void playSfx(int id) {
-        try { GameServices.audio().playSfx(id); } catch (Exception e) { /* ignore */ }
+        try {
+            GameServices.audio().playSfx(id);
+        } catch (Exception e) {
+            LOG.log(Level.WARNING, "Failed to play S3K special-stage results SFX " + id, e);
+        }
     }
 
     // ================================================================

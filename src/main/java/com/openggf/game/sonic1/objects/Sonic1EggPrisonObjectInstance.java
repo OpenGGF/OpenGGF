@@ -1,8 +1,8 @@
 package com.openggf.game.sonic1.objects;
 
+import com.openggf.audio.GameMusic;
 import com.openggf.camera.Camera;
 import com.openggf.debug.DebugRenderContext;
-import com.openggf.game.sonic1.audio.Sonic1Music;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.level.objects.EggPrisonAnimalInstance;
@@ -378,7 +378,7 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
 
         // ROM: move.w #bgm_GotThrough,d0; jsr (QueueSound2).l
         try {
-            services().playMusic(Sonic1Music.GOT_THROUGH.id);
+            services().playMusic(GameMusic.ACT_CLEAR);
         } catch (Exception e) {
             LOGGER.warning("Failed to play stage clear music: " + e.getMessage());
         }

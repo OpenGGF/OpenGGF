@@ -11,7 +11,7 @@ on:
 
 jobs:
   policy:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -20,7 +20,12 @@ jobs:
           fetch-depth: 0
 
       - name: Validate branch policy
+        if: github.event_name == 'pull_request'
         run: bash .githooks/validate-policy.sh ci-pr "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" "${{ github.base_ref }}" "${{ github.head_ref }}"
+
+      - name: Validate branch policy (push)
+        if: github.event_name == 'push'
+        run: bash .githooks/validate-policy.sh ci-push "${{ github.event.before }}" "${{ github.sha }}" "${{ github.ref_name }}"
 
   test:
     runs-on: [self-hosted, release-fixtures]
@@ -82,29 +87,48 @@ jobs:
           from pathlib import Path
 
           surefire_dir = Path("target/surefire-reports")
-          required_rom_backed_trace_reports = {
-              "TEST-com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay.xml": "s1-ghz1",
-              "TEST-com.openggf.tests.trace.s1.TestS1Mz1TraceReplay.xml": "s1-mz1",
-              "TEST-com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay.xml": "s2-ehz1",
-              "TEST-com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay.xml": "s3k-cnz",
+          source_root = Path("src/test/java/com/openggf/tests/trace")
+          expected_trace_reports = set()
+          allowed_missing_reports = {
+              "TEST-com.openggf.tests.trace.s3k.TestS3kAizTraceReplay.xml",
           }
-          required_executed = 0
-          for report_name, label in sorted(required_rom_backed_trace_reports.items()):
+          for source in sorted(source_root.rglob("Test*TraceReplay.java")):
+              rel = source.relative_to(Path("src/test/java")).with_suffix("")
+              class_name = ".".join(rel.parts)
+              expected_trace_reports.add(f"TEST-{class_name}.xml")
+
+          missing_expected = [
+              report_name for report_name in sorted(expected_trace_reports)
+              if report_name not in allowed_missing_reports
+              and not (surefire_dir / report_name).exists()
+          ]
+          if missing_expected:
+              print("Missing expected trace replay reports:", file=sys.stderr)
+              for report_name in missing_expected:
+                  print(f"{surefire_dir / report_name}", file=sys.stderr)
+              sys.exit(1)
+
+          expected_executed = 0
+          for report_name in sorted(expected_trace_reports):
               report = surefire_dir / report_name
               if not report.exists():
-                  print(f"Missing required ROM-backed trace report: {report} ({label})", file=sys.stderr)
+                  continue
+              if not report.exists():
+                  print(f"Missing expected trace replay report: {report}", file=sys.stderr)
                   sys.exit(1)
               root = ET.parse(report).getroot()
               tests = int(root.attrib.get("tests", "0"))
               skipped_count = int(root.attrib.get("skipped", "0"))
               executed_count = tests - skipped_count
               if executed_count <= 0:
+                  if report_name in allowed_missing_reports:
+                      continue
                   print(
-                      f"Required ROM-backed trace report did not execute: {report} "
-                      f"({label}) tests={tests} skipped={skipped_count}",
+                      f"Expected trace replay report did not execute: {report} "
+                      f"tests={tests} skipped={skipped_count}",
                       file=sys.stderr)
                   sys.exit(1)
-              required_executed += executed_count
+              expected_executed += executed_count
 
           reports = sorted(surefire_dir.glob("com.openggf.tests.trace*TraceReplay.txt"))
           total = 0
@@ -158,8 +182,8 @@ jobs:
 
           print(
               f"Trace replay coverage: executed={executed} total={total} skipped={skipped} "
-              f"required_rom_backed_executed={required_executed} "
-              f"required_rom_backed_reports={len(required_rom_backed_trace_reports)}")
+              f"expected_trace_executed={expected_executed} "
+              f"expected_trace_reports={len(expected_trace_reports)}")
           PY
 
   build:
@@ -244,6 +268,14 @@ jobs:
         run: |
           VERSION=$(grep -m1 '<version>' pom.xml | sed 's/.*<version>\(.*\)<\/version>.*/\1/')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check release tag does not already exist
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if git ls-remote --exit-code --tags origin "refs/tags/v${VERSION}" >/dev/null 2>&1; then
+            echo "::error ::Release tag v${VERSION} already exists. Bump pom.xml or delete the stale tag before publishing."
+            exit 1
+          fi
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4

@@ -101,10 +101,11 @@ public final class S1SpriteDataLoader {
                 boolean hFlip = (tileWord & 0x800) != 0;
                 boolean vFlip = (tileWord & 0x1000) != 0;
                 int paletteIndex = (tileWord >> 13) & 0x3;
+                boolean priority = (tileWord & 0x8000) != 0;
 
                 pieces.add(new SpriteMappingPiece(
                         xOffset, yOffset, widthTiles, heightTiles,
-                        tileIndex, hFlip, vFlip, paletteIndex));
+                        tileIndex, hFlip, vFlip, paletteIndex, priority));
             }
             frames.add(new SpriteMappingFrame(pieces));
         }

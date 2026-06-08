@@ -3,6 +3,7 @@ package com.openggf.game;
 import com.openggf.architecture.CompositionRoot;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameAudioProfile;
+import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsLoader;
@@ -272,6 +273,8 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
             AudioManager am = GameServices.audio();
             am.registerDonorLoader(donorGameId.code(), donorSmpsLoader, donorDacData,
                     donorProfile.getSequencerConfig());
+            Map<GameMusic, Integer> donorMusic = donorProfile.getMusicMap();
+            am.registerDonorMusicMap(donorGameId.code(), donorMusic);
 
             Map<GameSound, Integer> donorSounds = donorProfile.getSoundMap();
             for (Map.Entry<GameSound, Integer> entry : donorSounds.entrySet()) {
@@ -279,7 +282,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
             }
 
             LOGGER.info("Donor audio initialized from " + donorGameId.code()
-                    + " (" + donorSounds.size() + " sounds registered)");
+                    + " (" + donorSounds.size() + " sounds, " + donorMusic.size() + " music cues registered)");
         } catch (IOException e) {
             LOGGER.warning("Failed to initialize donor audio from " + donorGameId.code()
                     + ": " + e.getMessage());

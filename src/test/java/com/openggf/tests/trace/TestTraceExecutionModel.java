@@ -77,9 +77,20 @@ class TestTraceExecutionModel {
         TraceFrame previous = trace.getFrame(500);
         TraceFrame current = trace.getFrame(501);
 
-        assertEquals(previous.gameplayFrameCounter() + 1, current.gameplayFrameCounter());
-        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
-                TraceReplayBootstrap.phaseForReplay(trace, previous, current));
+        String property = TraceReplayBootstrap.ALLOW_LEGACY_S3K_AIZ_DIAGNOSTIC_HEURISTIC_PROPERTY;
+        String oldValue = System.getProperty(property);
+        try {
+            System.setProperty(property, "true");
+            assertEquals(previous.gameplayFrameCounter() + 1, current.gameplayFrameCounter());
+            assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+                    TraceReplayBootstrap.phaseForReplay(trace, previous, current));
+        } finally {
+            if (oldValue == null) {
+                System.clearProperty(property);
+            } else {
+                System.setProperty(property, oldValue);
+            }
+        }
     }
 
     @Test

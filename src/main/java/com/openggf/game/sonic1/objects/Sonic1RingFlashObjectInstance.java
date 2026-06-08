@@ -1,7 +1,7 @@
 package com.openggf.game.sonic1.objects;
 
+import com.openggf.audio.GameMusic;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.sonic1.audio.Sonic1Music;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -136,7 +136,7 @@ public class Sonic1RingFlashObjectInstance extends AbstractObjectInstance {
 
         // Play "Got Through" music
         try {
-            services().playMusic(Sonic1Music.GOT_THROUGH.id);
+            services().playMusic(GameMusic.ACT_CLEAR);
         } catch (Exception e) {
             LOGGER.warning("Failed to play stage clear music: " + e.getMessage());
         }
