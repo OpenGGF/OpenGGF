@@ -156,4 +156,44 @@ public class TestSonic1PowerUpRomMappings {
         assertEquals(new SpriteMappingPiece(-8, -0x10, 2, 4, 0x6D, false, false, 1, false),
                 romFrames.get(5).pieces().get(0));
     }
+
+    @Test
+    public void giantRingRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_GIANT_RING_ADDR);
+
+        assertEquals(List.of(10, 8, 4, 8),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x18, -0x20, 3, 1, 0x00, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(0, 0x18, 3, 1, 0x29, false, false, 0, false),
+                romFrames.get(0).pieces().get(9));
+        assertEquals(new SpriteMappingPiece(8, -8, 2, 2, 0x41, false, false, 0, false),
+                romFrames.get(1).pieces().get(4));
+        assertEquals(new SpriteMappingPiece(4, -0x20, 1, 4, 0x52, true, false, 0, false),
+                romFrames.get(2).pieces().get(1));
+        assertEquals(new SpriteMappingPiece(-0x18, -8, 2, 2, 0x41, true, false, 0, false),
+                romFrames.get(3).pieces().get(4));
+    }
+
+    @Test
+    public void giantRingFlashRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_GIANT_RING_FLASH_ADDR);
+
+        assertEquals(List.of(2, 4, 4, 4, 4, 4, 2, 4),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(0, -0x20, 4, 4, 0x00, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(0x10, -0x20, 2, 4, 0x20, false, false, 0, false),
+                romFrames.get(1).pieces().get(1));
+        assertEquals(new SpriteMappingPiece(-0x20, -0x20, 4, 4, 0x34, true, false, 0, false),
+                romFrames.get(3).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x20, -0x20, 2, 4, 0x20, true, false, 0, false),
+                romFrames.get(5).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(0, 0, 4, 4, 0x44, true, true, 0, false),
+                romFrames.get(7).pieces().get(3));
+    }
 }
