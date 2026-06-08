@@ -139,4 +139,18 @@ public class TestSonic1SyzRomMappings {
         assertEquals(new SpriteMappingPiece(-0x10, 0, 4, 1, 0x45, false, true, 0, false),
                 romFrames.get(5).pieces().get(1));
     }
+
+    @Test
+    public void platformRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_PLATFORM_SYZ_ADDR);
+
+        assertEquals(List.of(3),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x20, -0x0A, 3, 4, 0x49, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(0x08, -0x0A, 3, 4, 0x55, false, false, 0, false),
+                romFrames.get(0).pieces().get(2));
+    }
 }
