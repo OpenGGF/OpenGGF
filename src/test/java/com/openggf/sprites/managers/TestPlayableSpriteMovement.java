@@ -7,7 +7,9 @@ import com.openggf.game.GameServices;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.ShieldType;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic3k.Sonic3kSuperStateController;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.sonic2.Sonic2SuperStateController;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.physics.CollisionSystem;
@@ -29,6 +31,7 @@ import com.openggf.physics.SensorResult;
 import com.openggf.game.GroundMode;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.playable.SecondaryAbility;
+import com.openggf.sprites.playable.SuperState;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.function.BooleanSupplier;
@@ -100,6 +103,28 @@ public class TestPlayableSpriteMovement {
                 field.set(sprite, featureSet);
         }
 
+        private boolean invokeTryShieldAbility() throws Exception {
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("tryShieldAbility");
+                method.setAccessible(true);
+                return (Boolean) method.invoke(manager);
+        }
+
+        private void collectAllChaosEmeralds() {
+                for (int i = 0; i < 7; i++) {
+                        GameServices.gameState().markEmeraldCollected(i);
+                }
+        }
+
+        private void collectAllSuperEmeralds() {
+                for (int i = 0; i < 7; i++) {
+                        GameServices.gameState().markSuperEmeraldCollected(i);
+                }
+        }
+
+        private void installCurrentModuleLevelState() {
+                GameServices.level().resetLevelGamestate(GameModuleRegistry.getCurrent().createLevelState());
+        }
+
         private void setMovementField(String name, Object value) throws Exception {
                 Field field = PlayableSpriteMovement.class.getDeclaredField(name);
                 field.setAccessible(true);
@@ -135,6 +160,79 @@ public class TestPlayableSpriteMovement {
                                 "S3K Sonic_ShieldMoves clears Status_RollJump before shield-specific branches");
                 assertEquals((short) -0x18, mockSprite.getXSpeed(),
                                 "Once Status_RollJump is cleared, Sonic_ChgJumpDir applies left air acceleration");
+        }
+
+        @Test
+        public void s3kShieldMoveTransformsInsteadOfInstaShieldWhenEligible() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                mockSprite.setSuperStateController(new Sonic3kSuperStateController(mockSprite));
+                installCurrentModuleLevelState();
+                collectAllChaosEmeralds();
+                mockSprite.setRingCount(50);
+                mockSprite.setAir(true);
+                mockSprite.setJumping(true);
+                mockSprite.setYSpeed((short) 0);
+                mockSprite.setDoubleJumpFlag(0);
+
+                assertTrue(GameServices.gameState().hasAllEmeralds(), "test precondition: all Chaos Emeralds");
+                assertEquals(50, mockSprite.getRingCount(), "test precondition: 50 rings");
+                assertTrue(mockSprite.getSuperStateController() != null, "test precondition: Super controller installed");
+
+                boolean handled = invokeTryShieldAbility();
+
+                assertTrue(handled, "S3K Sonic_ShieldMoves should consume the second jump by starting transformation");
+                assertTrue(mockSprite.isSuperSonic(), "Eligible S3K Sonic should transform before insta-shielding");
+                assertEquals(0, mockSprite.getDoubleJumpFlag(),
+                                "Starting Super/Hyper should not arm the insta-shield double-jump state");
+        }
+
+        @Test
+        public void s3kHyperSonicSecondJumpUsesDirectionalDashInsteadOfInstaShield() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                collectAllChaosEmeralds();
+                collectAllSuperEmeralds();
+                mockSprite.setSuperSonic(true);
+                mockSprite.setAir(true);
+                mockSprite.setJumping(true);
+                mockSprite.setYSpeed((short) 0x120);
+                mockSprite.setXSpeed((short) 0);
+                mockSprite.setGSpeed((short) 0);
+                mockSprite.setDoubleJumpFlag(0);
+                setInputState(false, true, false, true, true);
+
+                boolean handled = invokeTryShieldAbility();
+
+                assertTrue(handled, "Hyper Sonic should consume the second jump with Hyper Dash");
+                assertEquals(1, mockSprite.getDoubleJumpFlag(),
+                                "Hyper Dash should arm the S3K double-jump-used state");
+                assertEquals((short) 0x800, mockSprite.getXSpeed(),
+                                "Holding right should dash horizontally to the right");
+                assertEquals((short) -0x800, mockSprite.getYSpeed(),
+                                "Holding up should dash vertically upward");
+                assertEquals((short) 0x800, mockSprite.getGSpeed(),
+                                "Hyper Dash should seed ground velocity from the horizontal component");
+        }
+
+        @Test
+        public void s2JumpTriggerStillActivatesSuperSonic() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic2GameModule());
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                mockSprite.setSuperStateController(new Sonic2SuperStateController(mockSprite));
+                installCurrentModuleLevelState();
+                collectAllChaosEmeralds();
+                mockSprite.setRingCount(50);
+                mockSprite.setAir(true);
+                mockSprite.setJumping(true);
+                mockSprite.setYSpeed((short) 0);
+
+                mockSprite.getSuperStateController().update();
+
+                assertEquals(SuperState.TRANSFORMING, mockSprite.getSuperStateController().getState(),
+                                "S2 should still start Super Sonic from the normal airborne jump trigger");
+                assertTrue(mockSprite.isSuperSonic(),
+                                "S2 Super Sonic activation should set the player super flag immediately");
         }
 
         @Test

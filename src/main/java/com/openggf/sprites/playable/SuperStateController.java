@@ -69,6 +69,19 @@ public abstract class SuperStateController {
         return true;
     }
 
+    /**
+     * Starts the S3K air-ability transformation path. Unlike the normal S2 jump
+     * trigger, S3K tests Super/Hyper eligibility inside Sonic_ShieldMoves before
+     * dispatching insta-shield.
+     */
+    public boolean activateFromAirAbility() {
+        if (!canTransform()) {
+            return false;
+        }
+        startTransformation();
+        return true;
+    }
+
     public void debugDeactivate() {
         if (state == SuperState.NORMAL) return;
         revertToNormal();
