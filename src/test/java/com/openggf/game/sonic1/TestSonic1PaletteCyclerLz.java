@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1;
 
+import com.openggf.data.RomByteReader;
+import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.level.Level;
@@ -55,7 +57,7 @@ public class TestSonic1PaletteCyclerLz {
         TestEnvironment.activeGameplayMode();
         try {
             TestLevel level = new TestLevel();
-            Sonic1PaletteCycler cycler = new Sonic1PaletteCycler(level, 0x01, conveyorState);
+            Sonic1PaletteCycler cycler = new Sonic1PaletteCycler(level, 0x01, conveyorState, testCycleData());
 
             cycler.update();
 
@@ -77,7 +79,7 @@ public class TestSonic1PaletteCyclerLz {
         TestEnvironment.activeGameplayMode();
         try {
             TestLevel level = new TestLevel();
-            Sonic1PaletteCycler cycler = new Sonic1PaletteCycler(level, 0x01, conveyorState);
+            Sonic1PaletteCycler cycler = new Sonic1PaletteCycler(level, 0x01, conveyorState, testCycleData());
 
             cycler.update();
 
@@ -102,7 +104,7 @@ public class TestSonic1PaletteCyclerLz {
         try {
             TestLevel level = new TestLevel();
             conveyorState.setReversed(true);
-            Sonic1PaletteCycler cycler = new Sonic1PaletteCycler(level, 0x01, conveyorState);
+            Sonic1PaletteCycler cycler = new Sonic1PaletteCycler(level, 0x01, conveyorState, testCycleData());
 
             cycler.update();
 
@@ -122,6 +124,18 @@ public class TestSonic1PaletteCyclerLz {
         assertEquals(expected.r, actual.r);
         assertEquals(expected.g, actual.g);
         assertEquals(expected.b, actual.b);
+    }
+
+    private static Sonic1PaletteCycler.CycleData testCycleData() {
+        byte[] rom = new byte[Sonic1Constants.PAL_SBZ_CYCLE10_ADDR + 12];
+        copy(rom, Sonic1Constants.PAL_LZ_CYCLE1_ADDR, PAL_LZ_CYC1);
+        copy(rom, Sonic1Constants.PAL_LZ_CYCLE2_ADDR, PAL_LZ_CYC2);
+        copy(rom, Sonic1Constants.PAL_LZ_CYCLE3_ADDR, PAL_LZ_CYC3);
+        return Sonic1PaletteCycler.loadCycleData(new RomByteReader(rom));
+    }
+
+    private static void copy(byte[] target, int offset, byte[] source) {
+        System.arraycopy(source, 0, target, offset, source.length);
     }
 
     @SuppressWarnings("unchecked")

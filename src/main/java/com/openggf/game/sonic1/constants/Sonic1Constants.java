@@ -168,6 +168,24 @@ public final class Sonic1Constants {
     // ---- Title screen palettes ----
     public static final int PAL_TITLE_ADDR       = 0x2280;  // Pal_Title (128 bytes, 4 palette lines)
     public static final int PAL_TITLE_CYCLE_ADDR = 0x1B5E;  // Pal_TitleCyc (32 bytes, water cycle palette)
+    public static final int PAL_GHZ_CYCLE_ADDR = 0x1B7E;
+    public static final int PAL_LZ_CYCLE1_ADDR = 0x1B9E;
+    public static final int PAL_LZ_CYCLE2_ADDR = 0x1BBE;
+    public static final int PAL_LZ_CYCLE3_ADDR = 0x1BD0;
+    public static final int PAL_SBZ3_CYCLE_ADDR = 0x1BE2;
+    public static final int PAL_SLZ_CYCLE_ADDR = 0x1C4A;
+    public static final int PAL_SYZ_CYCLE1_ADDR = 0x1C6E;
+    public static final int PAL_SYZ_CYCLE2_ADDR = 0x1C8E;
+    public static final int PAL_SBZ_CYCLE1_ADDR = 0x1D02;
+    public static final int PAL_SBZ_CYCLE2_ADDR = 0x1D12;
+    public static final int PAL_SBZ_CYCLE3_ADDR = 0x1D22;
+    public static final int PAL_SBZ_CYCLE4_ADDR = 0x1D32;
+    public static final int PAL_SBZ_CYCLE5_ADDR = 0x1D3E;
+    public static final int PAL_SBZ_CYCLE6_ADDR = 0x1D4E;
+    public static final int PAL_SBZ_CYCLE7_ADDR = 0x1D5E;
+    public static final int PAL_SBZ_CYCLE8_ADDR = 0x1D7E;
+    public static final int PAL_SBZ_CYCLE9_ADDR = 0x1D88;
+    public static final int PAL_SBZ_CYCLE10_ADDR = 0x1D98;
 
     // ---- Title screen VRAM tile indices (from Constants.asm) ----
     public static final int ARTTILE_TITLE_FOREGROUND   = 0x200;

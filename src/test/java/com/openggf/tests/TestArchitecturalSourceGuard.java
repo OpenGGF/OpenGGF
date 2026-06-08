@@ -353,7 +353,7 @@ class TestArchitecturalSourceGuard {
                         "com/openggf/game/sonic1/Sonic1PaletteCycler.java",
                         "embedded Sonic 1 palette-cycle arrays",
                         Pattern.compile("private\\s+static\\s+final\\s+byte\\s*\\[\\s*]\\s+PAL_"),
-                        18),
+                        0),
                 new EmbeddedRuntimeDataBudget(
                         "com/openggf/game/sonic1/objects/Sonic1LZConveyorObjectInstance.java",
                         "embedded LZ conveyor waypoint tables",
