@@ -2464,7 +2464,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
     }
 
     /**
-     * Loads SBZ Vanishing Platform art (Nem_SbzBlock) and creates S1-format sprite mappings.
+     * Loads SBZ Vanishing Platform art (Nem_SbzBlock) with ROM-backed Map_VanP mappings.
      * <p>
      * From docs/s1disasm/_incObj/6C SBZ Vanishing Platforms.asm:
      * <pre>
@@ -2472,13 +2472,6 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
      * </pre>
      * ArtTile_SBZ_Vanishing_Block = $4C3, palette line 2.
      * <p>
-     * Mappings from docs/s1disasm/_maps/SBZ Vanishing Platforms.asm (Map_VanP_internal):
-     * <pre>
-     *   Frame 0 (.whole):   spritePiece -$10, -8, 4, 4, 0, 0, 0, 0, 0   (32x32)
-     *   Frame 1 (.half):    spritePiece   -8, -8, 2, 4, $10, 0, 0, 0, 0 (16x32)
-     *   Frame 2 (.quarter): spritePiece   -4, -8, 1, 4, $18, 0, 0, 0, 0 (8x32)
-     *   Frame 3 (.gone):    (empty - no sprite pieces)
-     * </pre>
      */
     private void loadSbzVanishingPlatformArt(Sonic1ObjectArt art) {
         Pattern[] patterns = art.loadNemesisPatterns(
@@ -2488,46 +2481,11 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createSbzVanishingPlatformMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(
+                Sonic1Constants.MAP_SBZ_VANISHING_PLATFORM_ADDR);
         // make_art_tile(ArtTile_SBZ_Vanishing_Block, 2, 0) -> palette line 2
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
         registerSheet(ObjectArtKeys.SBZ_VANISHING_PLATFORM, sheet);
-    }
-
-    /**
-     * Creates SBZ Vanishing Platform sprite mappings from
-     * docs/s1disasm/_maps/SBZ Vanishing Platforms.asm (Map_VanP_internal).
-     * <p>
-     * Four frames representing the vanishing sequence:
-     * <ul>
-     *   <li>Frame 0 (.whole): Full 32x32 block</li>
-     *   <li>Frame 1 (.half): Half 16x32 block (tiles start at $10)</li>
-     *   <li>Frame 2 (.quarter): Quarter 8x32 block (tiles start at $18)</li>
-     *   <li>Frame 3 (.gone): Empty (fully vanished)</li>
-     * </ul>
-     */
-    private List<SpriteMappingFrame> createSbzVanishingPlatformMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.whole): 1 piece, 4x4 tiles (32x32 pixels)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -8, 4, 4, 0, false, false, 0, false)
-        )));
-
-        // Frame 1 (.half): 1 piece, 2x4 tiles (16x32 pixels)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 4, 0x10, false, false, 0, false)
-        )));
-
-        // Frame 2 (.quarter): 1 piece, 1x4 tiles (8x32 pixels)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-4, -8, 1, 4, 0x18, false, false, 0, false)
-        )));
-
-        // Frame 3 (.gone): empty (no pieces)
-        frames.add(new SpriteMappingFrame(List.of()));
-
-        return frames;
     }
 
     /**

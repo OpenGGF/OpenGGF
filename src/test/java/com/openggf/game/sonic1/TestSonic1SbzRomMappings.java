@@ -163,6 +163,22 @@ public class TestSonic1SbzRomMappings {
     }
 
     @Test
+    public void sbzVanishingPlatformRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_SBZ_VANISHING_PLATFORM_ADDR);
+
+        assertEquals(List.of(1, 1, 1, 0),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x10, -8, 4, 4, 0, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -8, 2, 4, 0x10, false, false, 0, false),
+                romFrames.get(1).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-4, -8, 1, 4, 0x18, false, false, 0, false),
+                romFrames.get(2).pieces().get(0));
+    }
+
+    @Test
     public void sbzElectrocuterRomMappingsKeepExpectedTableShape() throws Exception {
         RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
         List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
