@@ -1566,7 +1566,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
     }
 
     /**
-     * Loads LZ waterfall/splash art (Nem_Splash) and mappings from Map_WFall.
+     * Loads LZ waterfall/splash art (Nem_Splash) with ROM-parsed S1 mappings (Map_WFall).
      */
     private void loadLzWaterfallArt(Sonic1ObjectArt art) {
         Pattern[] patterns = art.loadNemesisPatterns(
@@ -1576,58 +1576,9 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, createLzWaterfallMappings(), 2, 1);
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_LZ_WATERFALL_ADDR);
+        ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
         registerSheet(ObjectArtKeys.LZ_WATERFALL, sheet);
-    }
-
-    private List<SpriteMappingFrame> createLzWaterfallMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>(12);
-
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x08, -0x10, 2, 4, 0x00, false, false, 0, false)
-        )));
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x04, -0x08, 2, 1, 0x08, false, false, 0, false),
-                new SpriteMappingPiece(-0x0C, 0x00, 3, 1, 0x0A, false, false, 0, false)
-        )));
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(0x00, -0x08, 1, 1, 0x08, false, false, 0, false),
-                new SpriteMappingPiece(-0x08, 0x00, 2, 1, 0x0D, false, false, 0, false)
-        )));
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(0x00, -0x08, 1, 2, 0x0F, false, false, 0, false)
-        )));
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(0x00, -0x08, 1, 1, 0x08, false, false, 0, false),
-                new SpriteMappingPiece(-0x08, 0x00, 2, 1, 0x0D, false, false, 0, false)
-        )));
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(0x00, -0x08, 1, 2, 0x11, false, false, 0, false)
-        )));
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(0x00, -0x08, 1, 2, 0x13, false, false, 0, false)
-        )));
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x08, -0x10, 2, 4, 0x15, false, false, 0, false)
-        )));
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0A, -0x08, 4, 1, 0x1D, false, false, 0, false),
-                new SpriteMappingPiece(-0x18, 0x00, 4, 1, 0x21, false, false, 0, false)
-        )));
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x18, -0x10, 3, 4, 0x25, false, false, 0, false),
-                new SpriteMappingPiece(0x00, -0x10, 3, 4, 0x31, false, false, 0, false)
-        )));
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x18, -0x10, 3, 4, 0x3D, false, false, 0, false),
-                new SpriteMappingPiece(0x00, -0x10, 3, 4, 0x49, false, false, 0, false)
-        )));
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x18, -0x10, 3, 4, 0x55, false, false, 0, false),
-                new SpriteMappingPiece(0x00, -0x10, 3, 4, 0x61, false, false, 0, false)
-        )));
-
-        return frames;
     }
 
     /**
