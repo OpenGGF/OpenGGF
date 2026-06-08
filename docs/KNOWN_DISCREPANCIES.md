@@ -1014,11 +1014,12 @@ Ring `Map_GRing` / Ring Flash `Map_Flash` tables, the GHZ giant ball
 `Map_GBall` table, the SYZ/LZ spikeball chain `Map_SBall` / `Map_SBall2`
 tables, the Big Spiked Ball `Map_BBall` table, the LZ Gargoyle `Map_Gar`
 table, the SBZ Running Disc `Map_Disc` table, the MZ Brick `Map_Brick` table,
-the SYZ Spinning Light `Map_Light` table, the SBZ2 `Map_FFloor` table, the shared boss `Map_Eggman` /
+the SYZ Spinning Light `Map_Light` table, the MZ Smashable Green Block
+`Map_Smab` table, the SBZ2 `Map_FFloor` table, the shared boss `Map_Eggman` /
 `Map_BossItems` tables, the SBZ2/FZ `Map_SEgg` table, plus the Final Zone
 `Map_EggCyl` / `Map_PLaunch` / `Map_Plasma` / `Map_FZLegs` / `Map_FZDamaged`
 boss mapping slice, now load from the user-supplied ROM and their guard budgets
-have been ratcheted down. The current object-provider budget is 613 handwritten
+have been ratcheted down. The current object-provider budget is 607 handwritten
 mapping pieces; Sonic 1 boss mappings are ROM-backed and
 their separate handwritten budget is zero.
 

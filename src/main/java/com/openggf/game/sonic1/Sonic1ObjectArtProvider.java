@@ -2369,52 +2369,10 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createSmashBlockMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_MZ_SMASH_BLOCK_ADDR);
         // make_art_tile(ArtTile_MZ_Block, 2, 0) -> palette line 2, no priority
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
         registerSheet(ObjectArtKeys.MZ_SMASH_BLOCK, sheet);
-    }
-
-    /**
-     * Creates smashable green block sprite mappings from S1 disassembly
-     * docs/s1disasm/_maps/Smashable Green Block.asm (Map_Smab_internal).
-     * <p>
-     * spritePiece format: x, y, width, height, startTile, xflip, yflip, pal, pri
-     * <p>
-     * Frame 0 (.two): Intact block - two 32x16 halves stacked vertically.
-     * Both pieces use startTile 0 (same tiles, no flip) and priority bit 0.
-     * <pre>
-     *   spritePiece -$10, -$10, 4, 2, 0, 0, 0, 0, 0
-     *   spritePiece -$10,    0, 4, 2, 0, 0, 0, 0, 0
-     * </pre>
-     * <p>
-     * Frame 1 (.four): Four 16x16 quadrant fragments for SmashObject.
-     * Each piece uses startTile 0 and priority bit 1.
-     * <pre>
-     *   spritePiece -$10, -$10, 2, 2, 0, 0, 0, 0, 1
-     *   spritePiece -$10,    0, 2, 2, 0, 0, 0, 0, 1
-     *   spritePiece    0, -$10, 2, 2, 0, 0, 0, 0, 1
-     *   spritePiece    0,    0, 2, 2, 0, 0, 0, 0, 1
-     * </pre>
-     */
-    private List<SpriteMappingFrame> createSmashBlockMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.two): Intact block (2 pieces of 4x2 tiles)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 4, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(-0x10,     0, 4, 2, 0, false, false, 0, false)
-        )));
-
-        // Frame 1 (.four): Fragment quadrants (4 pieces of 2x2 tiles, priority bit set)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 2, 2, 0, false, false, 0, true),
-                new SpriteMappingPiece(-0x10,     0, 2, 2, 0, false, false, 0, true),
-                new SpriteMappingPiece(    0, -0x10, 2, 2, 0, false, false, 0, true),
-                new SpriteMappingPiece(    0,     0, 2, 2, 0, false, false, 0, true)
-        )));
-
-        return frames;
     }
 
     /**
