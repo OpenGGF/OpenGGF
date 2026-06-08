@@ -3200,50 +3200,10 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createFireballMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_FIREBALL_ADDR);
         // make_art_tile(ArtTile_MZ_Fireball, 0, 0) -> palette line 0, no priority
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 0, 0);
         registerSheet(ObjectArtKeys.MZ_FIREBALL, sheet);
-    }
-
-    /**
-     * Fireball sprite mappings from docs/s1disasm/_maps/Fireballs.asm (Map_Fire_internal).
-     * spritePiece format: x, y, width, height, startTile, xflip, yflip, pal, pri
-     */
-    private List<SpriteMappingFrame> createFireballMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.vertical1): 2x4 tiles at (-8, -$18), startTile 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -0x18, 2, 4, 0, false, false, 0, false)
-        )));
-
-        // Frame 1 (.vertical2): 2x4 tiles at (-8, -$18), startTile 8
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -0x18, 2, 4, 8, false, false, 0, false)
-        )));
-
-        // Frame 2 (.vertcollide): 2x3 tiles at (-8, -$10), startTile $10
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -0x10, 2, 3, 0x10, false, false, 0, false)
-        )));
-
-        // Frame 3 (.horizontal1): 4x2 tiles at (-$18, -8), startTile $16
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x18, -8, 4, 2, 0x16, false, false, 0, false)
-        )));
-
-        // Frame 4 (.horizontal2): 4x2 tiles at (-$18, -8), startTile $1E
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x18, -8, 4, 2, 0x1E, false, false, 0, false)
-        )));
-
-        // Frame 5 (.horicollide): 3x2 tiles at (-$10, -8), startTile $26
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -8, 3, 2, 0x26, false, false, 0, false)
-        )));
-
-        return frames;
     }
 
     /**
@@ -3261,7 +3221,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createFireballMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_FIREBALL_ADDR);
         // make_art_tile(ArtTile_SLZ_Fireball, 0, 0) -> palette line 0, no priority
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 0, 0);
         registerSheet(ObjectArtKeys.SLZ_FIREBALL, sheet);
