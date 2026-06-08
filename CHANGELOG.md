@@ -32,7 +32,8 @@ All notable changes to the OpenGGF project are documented in this file.
   special-stage result emerald `Map_SSRC`, Prison Capsule `Map_Pri`,
   Giant Ring `Map_GRing`, Ring Flash `Map_Flash`, GHZ giant ball `Map_GBall`,
   SYZ/LZ spikeball chain `Map_SBall` / `Map_SBall2`, Big Spiked Ball
-  `Map_BBall`, LZ Gargoyle `Map_Gar`, LZ block `Map_LBlock`, SBZ Running Disc `Map_Disc`,
+  `Map_BBall`, LZ Gargoyle `Map_Gar`, LZ block `Map_LBlock`,
+  SYZ boss block `Map_BossBlock`, SBZ Running Disc `Map_Disc`,
   LZ breakable pole `Map_Pole`, LZ conveyor `Map_LConv`, LZ bubbles `Map_Bub`,
   MZ/LZ push block `Map_Push`, MZ Brick `Map_Brick`, SYZ Spinning Light `Map_Light`,
   MZ Smashable Green Block `Map_Smab`, MZ/SLZ/SBZ collapsing floor

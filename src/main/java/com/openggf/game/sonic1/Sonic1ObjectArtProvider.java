@@ -3357,7 +3357,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createBossBlockMappings();
+        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic1Constants.MAP_SYZ_BOSS_BLOCK_ADDR);
         // Highest tile: $7D + (2*2) = $81
         int maxTileNeeded = 0x81;
 
@@ -3375,42 +3375,6 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         // make_art_tile(ArtTile_Level,2,0) — palette line 2
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 0, 3);
         registerSheet(ObjectArtKeys.SYZ_BOSS_BLOCK, sheet);
-    }
-
-    /**
-     * Creates boss block sprite mappings from docs/s1disasm/_maps/SYZ Boss Blocks.asm.
-     * <p>
-     * Frame 0 (.whole): 32x32 block as 2 pieces (4x2 tiles each):
-     * <pre>
-     * spritePiece -$10, -$10, 4, 2, $71, 0, 0, 0, 0   ; top half
-     * spritePiece -$10,    0, 4, 2, $79, 0, 0, 0, 0   ; bottom half
-     * </pre>
-     * Frames 1-4 (.quarter fragments): 16x16 as 1 piece (2x2 tiles each):
-     * <pre>
-     * Frame 1: spritePiece -8, -8, 2, 2, $71, 0, 0, 0, 0  ; top-left
-     * Frame 2: spritePiece -8, -8, 2, 2, $75, 0, 0, 0, 0  ; top-right
-     * Frame 3: spritePiece -8, -8, 2, 2, $79, 0, 0, 0, 0  ; bottom-left
-     * Frame 4: spritePiece -8, -8, 2, 2, $7D, 0, 0, 0, 0  ; bottom-right
-     * </pre>
-     */
-    private List<SpriteMappingFrame> createBossBlockMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0: whole block (32x32 = two 4x2 pieces)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 4, 2, 0x71, false, false, 2, false),
-                new SpriteMappingPiece(-0x10,     0, 4, 2, 0x79, false, false, 2, false)
-        )));
-
-        // Frames 1-4: quarter fragments (16x16 = one 2x2 piece each)
-        int[] fragTiles = {0x71, 0x75, 0x79, 0x7D};
-        for (int tile : fragTiles) {
-            frames.add(new SpriteMappingFrame(List.of(
-                    new SpriteMappingPiece(-8, -8, 2, 2, tile, false, false, 2, false)
-            )));
-        }
-
-        return frames;
     }
 
     /**

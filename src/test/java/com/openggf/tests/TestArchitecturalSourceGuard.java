@@ -383,7 +383,7 @@ class TestArchitecturalSourceGuard {
                         "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java",
                         "handwritten Sonic 1 object mapping pieces",
                         Pattern.compile("new\\s+SpriteMappingPiece\\s*\\("),
-                        356),
+                        353),
                 new EmbeddedRuntimeDataBudget(
                         "com/openggf/game/sonic1/objects/bosses/Sonic1BossMappings.java",
                         "handwritten Sonic 1 boss mapping pieces",
