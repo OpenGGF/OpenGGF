@@ -26,8 +26,8 @@ All notable changes to the OpenGGF project are documented in this file.
   loads `Map_Seesaw`, `Map_SSawBall`, `Map_Fan`, `Map_Pylon`, `Map_Scen`, and
   `Map_ExplodeItem` from verified ROM offsets. LZ `Map_Jaws` / `Map_Burro` /
   `Map_Flap` / `Map_WFall` / `Map_Splash`, MZ/SLZ fireball `Map_Fire`,
-  GHZ/SLZ smash-wall `Map_Smash`, LZ harpoon `Map_Harp`, shared button
-  `Map_But`, SBZ2
+  GHZ/SLZ smash-wall `Map_Smash`, LZ harpoon `Map_Harp`, SBZ flamethrower
+  `Map_Flame`, shared button `Map_But`, SBZ2
   `Map_FFloor`, shared boss `Map_Eggman` / `Map_BossItems`, SBZ2/FZ `Map_SEgg`,
   plus the Final Zone plasma launcher, plasma projectile, cylinder, escape-leg,
   and damaged-ship overlay mappings now load from ROM offsets as well. The S1
