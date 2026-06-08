@@ -1764,7 +1764,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createCollapsingLedgeMappings();
+        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic1Constants.MAP_COLLAPSING_LEDGE_ADDR);
 
         // Highest tile: 0xC1 + (2*2) = 0xC5
         int maxTileNeeded = 0xC5;
@@ -1782,114 +1782,6 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         // Palette line 2 (make_art_tile(ArtTile_Level, 2, 0))
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
         registerSheet(ObjectArtKeys.COLLAPSING_LEDGE, sheet);
-    }
-
-    /**
-     * Collapsing ledge mappings from docs/s1disasm/_maps/Collapsing Ledge.asm (Map_Ledge_internal).
-     * spritePiece format: x, y, width, height, startTile, xflip, yflip, pal, pri
-     */
-    private List<SpriteMappingFrame> createCollapsingLedgeMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.left): ledge facing left, 16 pieces
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(0x10, -0x38, 4, 3, 0x57, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x30, 4, 2, 0x63, false, false, 0, false),
-                new SpriteMappingPiece(0x10, -0x20, 4, 2, 0x6B, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x20, 4, 2, 0x73, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, -0x28, 2, 3, 0x7B, false, false, 0, false),
-                new SpriteMappingPiece(-0x30, -0x28, 2, 3, 0x81, false, false, 0, false),
-                new SpriteMappingPiece(0x10, -0x10, 4, 2, 0x87, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x10, 4, 2, 0x8F, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, -0x10, 2, 2, 0x97, false, false, 0, false),
-                new SpriteMappingPiece(-0x30, -0x10, 2, 2, 0x9B, false, false, 0, false),
-                new SpriteMappingPiece(0x10, 0x00, 4, 2, 0x9F, false, false, 0, false),
-                new SpriteMappingPiece(0x00, 0x00, 2, 2, 0xA7, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, 0x00, 4, 2, 0xAB, false, false, 0, false),
-                new SpriteMappingPiece(-0x30, 0x00, 2, 2, 0xB3, false, false, 0, false),
-                new SpriteMappingPiece(0x10, 0x10, 4, 2, 0xAB, false, false, 0, false),
-                new SpriteMappingPiece(0x00, 0x10, 2, 2, 0xB7, false, false, 0, false)
-        )));
-
-        // Frame 1 (.right): ledge facing right, 16 pieces
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(0x10, -0x38, 4, 3, 0x57, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x30, 4, 2, 0x63, false, false, 0, false),
-                new SpriteMappingPiece(0x10, -0x20, 4, 2, 0x6B, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x20, 4, 2, 0x73, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, -0x28, 2, 3, 0x7B, false, false, 0, false),
-                new SpriteMappingPiece(-0x30, -0x28, 2, 3, 0xBB, false, false, 0, false),
-                new SpriteMappingPiece(0x10, -0x10, 4, 2, 0x87, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x10, 4, 2, 0x8F, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, -0x10, 2, 2, 0x97, false, false, 0, false),
-                new SpriteMappingPiece(-0x30, -0x10, 2, 2, 0xC1, false, false, 0, false),
-                new SpriteMappingPiece(0x10, 0x00, 4, 2, 0x9F, false, false, 0, false),
-                new SpriteMappingPiece(0x00, 0x00, 2, 2, 0xA7, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, 0x00, 4, 2, 0xAB, false, false, 0, false),
-                new SpriteMappingPiece(-0x30, 0x00, 2, 2, 0xB7, false, false, 0, false),
-                new SpriteMappingPiece(0x10, 0x10, 4, 2, 0xAB, false, false, 0, false),
-                new SpriteMappingPiece(0x00, 0x10, 2, 2, 0xB7, false, false, 0, false)
-        )));
-
-        // Frame 2 (.leftsmash): left-facing fragments, 23 pieces
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(0x20, -0x38, 2, 3, 0x5D, false, false, 0, false),
-                new SpriteMappingPiece(0x10, -0x38, 2, 3, 0x57, false, false, 0, false),
-                new SpriteMappingPiece(0x00, -0x30, 2, 2, 0x67, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x30, 2, 2, 0x63, false, false, 0, false),
-                new SpriteMappingPiece(0x20, -0x20, 2, 2, 0x6F, false, false, 0, false),
-                new SpriteMappingPiece(0x10, -0x20, 2, 2, 0x6B, false, false, 0, false),
-                new SpriteMappingPiece(0x00, -0x20, 2, 2, 0x77, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x20, 2, 2, 0x73, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, -0x28, 2, 3, 0x7B, false, false, 0, false),
-                new SpriteMappingPiece(-0x30, -0x28, 2, 3, 0x81, false, false, 0, false),
-                new SpriteMappingPiece(0x20, -0x10, 2, 2, 0x8B, false, false, 0, false),
-                new SpriteMappingPiece(0x10, -0x10, 2, 2, 0x87, false, false, 0, false),
-                new SpriteMappingPiece(0x00, -0x10, 2, 2, 0x93, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x10, 2, 2, 0x8F, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, -0x10, 2, 2, 0x97, false, false, 0, false),
-                new SpriteMappingPiece(-0x30, -0x10, 2, 2, 0x9B, false, false, 0, false),
-                new SpriteMappingPiece(0x20, 0x00, 2, 2, 0x8B, false, false, 0, false),
-                new SpriteMappingPiece(0x10, 0x00, 2, 2, 0x8B, false, false, 0, false),
-                new SpriteMappingPiece(0x00, 0x00, 2, 2, 0xA7, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, 0x00, 2, 2, 0xAB, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, 0x00, 2, 2, 0xAB, false, false, 0, false),
-                new SpriteMappingPiece(-0x30, 0x00, 2, 2, 0xB3, false, false, 0, false),
-                new SpriteMappingPiece(0x20, 0x10, 2, 2, 0xAB, false, false, 0, false),
-                new SpriteMappingPiece(0x10, 0x10, 2, 2, 0xAB, false, false, 0, false),
-                new SpriteMappingPiece(0x00, 0x10, 2, 2, 0xB7, false, false, 0, false)
-        )));
-
-        // Frame 3 (.rightsmash): right-facing fragments, 25 pieces
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(0x20, -0x38, 2, 3, 0x5D, false, false, 0, false),
-                new SpriteMappingPiece(0x10, -0x38, 2, 3, 0x57, false, false, 0, false),
-                new SpriteMappingPiece(0x00, -0x30, 2, 2, 0x67, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x30, 2, 2, 0x63, false, false, 0, false),
-                new SpriteMappingPiece(0x20, -0x20, 2, 2, 0x6F, false, false, 0, false),
-                new SpriteMappingPiece(0x10, -0x20, 2, 2, 0x6B, false, false, 0, false),
-                new SpriteMappingPiece(0x00, -0x20, 2, 2, 0x77, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x20, 2, 2, 0x73, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, -0x28, 2, 3, 0x7B, false, false, 0, false),
-                new SpriteMappingPiece(-0x30, -0x28, 2, 3, 0xBB, false, false, 0, false),
-                new SpriteMappingPiece(0x20, -0x10, 2, 2, 0x8B, false, false, 0, false),
-                new SpriteMappingPiece(0x10, -0x10, 2, 2, 0x87, false, false, 0, false),
-                new SpriteMappingPiece(0x00, -0x10, 2, 2, 0x93, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x10, 2, 2, 0x8F, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, -0x10, 2, 2, 0x97, false, false, 0, false),
-                new SpriteMappingPiece(-0x30, -0x10, 2, 2, 0xC1, false, false, 0, false),
-                new SpriteMappingPiece(0x20, 0x00, 2, 2, 0x8B, false, false, 0, false),
-                new SpriteMappingPiece(0x10, 0x00, 2, 2, 0x8B, false, false, 0, false),
-                new SpriteMappingPiece(0x00, 0x00, 2, 2, 0xA7, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, 0x00, 2, 2, 0xAB, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, 0x00, 2, 2, 0xAB, false, false, 0, false),
-                new SpriteMappingPiece(-0x30, 0x00, 2, 2, 0xB7, false, false, 0, false),
-                new SpriteMappingPiece(0x20, 0x10, 2, 2, 0xAB, false, false, 0, false),
-                new SpriteMappingPiece(0x10, 0x10, 2, 2, 0xAB, false, false, 0, false),
-                new SpriteMappingPiece(0x00, 0x10, 2, 2, 0xB7, false, false, 0, false)
-        )));
-
-        return frames;
     }
 
     /**

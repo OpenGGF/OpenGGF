@@ -118,6 +118,7 @@ public final class Sonic1Constants {
     public static final int MAP_PLATFORM_GHZ_ADDR = 0x0087BA; // Map_Plat_GHZ (Obj18: 2 frames)
     public static final int MAP_PLATFORM_SYZ_ADDR = 0x008806; // Map_Plat_SYZ (Obj18: 1 frame)
     public static final int MAP_PLATFORM_SLZ_ADDR = 0x008818; // Map_Plat_SLZ (Obj18: 1 frame)
+    public static final int MAP_COLLAPSING_LEDGE_ADDR = 0x008C1E; // Map_Ledge (Obj1A: 4 frames)
     public static final int MAP_COLLAPSING_FLOOR_ADDR = 0x008DC4; // Map_CFlo (Obj53: 4 frames)
     public static final int MAP_SCENERY_ADDR     = 0x008ED4; // Map_Scen (Obj1C: 1 frame)
     public static final int MAP_SBZ_SMALL_DOOR_ADDR = 0x00906A; // Map_ADoor (Obj2A: 9 frames)

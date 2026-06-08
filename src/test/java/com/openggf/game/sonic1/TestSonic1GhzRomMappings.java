@@ -243,4 +243,24 @@ public class TestSonic1GhzRomMappings {
         assertEquals(new SpriteMappingPiece(0, 0x64, 4, 4, 0xD5, true, false, 0, false),
                 romFrames.get(1).pieces().get(9));
     }
+
+    @Test
+    public void collapsingLedgeRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_COLLAPSING_LEDGE_ADDR);
+
+        assertEquals(List.of(16, 16, 25, 25),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(0x10, -0x38, 4, 3, 0x57, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x30, 0, 2, 2, 0xB3, false, false, 0, false),
+                romFrames.get(0).pieces().get(13));
+        assertEquals(new SpriteMappingPiece(-0x30, -0x28, 2, 3, 0xBB, false, false, 0, false),
+                romFrames.get(1).pieces().get(5));
+        assertEquals(new SpriteMappingPiece(0x20, -0x38, 2, 3, 0x5D, false, false, 0, false),
+                romFrames.get(2).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(0, 0x10, 2, 2, 0xB7, false, false, 0, false),
+                romFrames.get(3).pieces().get(24));
+    }
 }

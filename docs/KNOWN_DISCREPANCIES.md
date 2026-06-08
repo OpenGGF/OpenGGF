@@ -1021,11 +1021,12 @@ MZ/SBZ Moving Block `Map_MBlock` table, the LZ Moving Block `Map_MBlockLZ`
 table, the GHZ/SYZ/SLZ Basic Platform `Map_Plat_GHZ` / `Map_Plat_SYZ` /
 `Map_Plat_SLZ` tables, the SLZ Elevator/Circling Platform/Staircase
 `Map_Elev` / `Map_Circ` / `Map_Stair` tables, the unused small explosion
-`Map_UnkExplode` table, the SBZ vanishing platform `Map_VanP` table, the SBZ2
+`Map_UnkExplode` table, the GHZ Collapsing Ledge `Map_Ledge` table, the SBZ
+vanishing platform `Map_VanP` table, the SBZ2
 `Map_FFloor` table, the shared boss `Map_Eggman` / `Map_BossItems` tables, the SBZ2/FZ `Map_SEgg` table, plus the Final Zone
 `Map_EggCyl` / `Map_PLaunch` / `Map_Plasma` / `Map_FZLegs` / `Map_FZDamaged`
 boss mapping slice, now load from the user-supplied ROM and their guard budgets
-have been ratcheted down. The current object-provider budget is 525 handwritten
+have been ratcheted down. The current object-provider budget is 443 handwritten
 mapping pieces; Sonic 1 boss mappings are ROM-backed and
 their separate handwritten budget is zero.
 
