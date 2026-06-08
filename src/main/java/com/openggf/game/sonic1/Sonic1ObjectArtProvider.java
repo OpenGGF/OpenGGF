@@ -3683,12 +3683,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = new ArrayList<>();
-        // Frame 0 (.spot): single 2x2 piece (16x16 pixels)
-        // spritePiece -8, -8, 2, 2, 0, 0, 0, 0, 0
-        mappings.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 0, false, false, 0, false)
-        )));
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_SBZ_RUNNING_DISC_ADDR);
 
         // make_art_tile(ArtTile_SBZ_Disc, 2, 1) -> palette line 2, priority bit 1
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);

@@ -151,6 +151,18 @@ public class TestSonic1SbzRomMappings {
     }
 
     @Test
+    public void runningDiscRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_SBZ_RUNNING_DISC_ADDR);
+
+        assertEquals(List.of(1),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-8, -8, 2, 2, 0, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+    }
+
+    @Test
     public void sbzElectrocuterRomMappingsKeepExpectedTableShape() throws Exception {
         RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
         List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
