@@ -17,6 +17,7 @@ import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
+import com.openggf.level.render.SpriteMappingPieces;
 import com.openggf.sprites.animation.SpriteAnimationEndAction;
 import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
@@ -1774,32 +1775,14 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
     }
 
     private static SpriteMappingPiece remapLavaWallPiece(SpriteMappingPiece piece) {
-        int finalTile = (toTileWord(piece) + MZ_LAVA_WALL_OBGFX_WORD) & 0x7FF;
-        return new SpriteMappingPiece(
-                piece.xOffset(),
-                piece.yOffset(),
-                piece.widthTiles(),
-                piece.heightTiles(),
+        int finalTile = (SpriteMappingPieces.toTileWord(piece) + MZ_LAVA_WALL_OBGFX_WORD) & 0x7FF;
+        return SpriteMappingPieces.withAttributes(
+                piece,
                 finalTile,
                 false,
                 false,
                 0,
                 false);
-    }
-
-    private static int toTileWord(SpriteMappingPiece piece) {
-        int word = piece.tileIndex() & 0x7FF;
-        if (piece.hFlip()) {
-            word |= 0x0800;
-        }
-        if (piece.vFlip()) {
-            word |= 0x1000;
-        }
-        word |= (piece.paletteIndex() & 0x3) << 13;
-        if (piece.priority()) {
-            word |= 0x8000;
-        }
-        return word;
     }
 
     /**
@@ -2402,9 +2385,8 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         List<SpriteMappingFrame> frames = new ArrayList<>(
                 loadMappingFrames(Sonic1Constants.MAP_LZ_BLOCK_ADDR));
         SpriteMappingPiece block = frames.get(3).pieces().get(0);
-        frames.set(3, new SpriteMappingFrame(List.of(new SpriteMappingPiece(
-                block.xOffset(), block.yOffset(), block.widthTiles(), block.heightTiles(),
-                block1TileStart, false, false, 0, false))));
+        frames.set(3, new SpriteMappingFrame(List.of(SpriteMappingPieces.withAttributes(
+                block, block1TileStart, false, false, 0, false))));
         return frames;
     }
 
@@ -2624,7 +2606,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
 
     private static SpriteMappingFrame remapStomperDoorFrame(SpriteMappingFrame rawFrame, int doorBase) {
         return new SpriteMappingFrame(rawFrame.pieces().stream()
-                .map(piece -> withTileIndex(piece, doorBase + (piece.tileIndex() - 0x1AF)))
+                .map(piece -> SpriteMappingPieces.withTileIndex(piece, doorBase + (piece.tileIndex() - 0x1AF)))
                 .toList());
     }
 
@@ -2685,21 +2667,8 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return List.of();
         }
         return List.of(new SpriteMappingFrame(rawFrames.get(4).pieces().stream()
-                .map(piece -> withTileIndex(piece, tileBase + piece.tileIndex()))
+                .map(piece -> SpriteMappingPieces.withTileIndex(piece, tileBase + piece.tileIndex()))
                 .toList()));
-    }
-
-    private static SpriteMappingPiece withTileIndex(SpriteMappingPiece piece, int tileIndex) {
-        return new SpriteMappingPiece(
-                piece.xOffset(),
-                piece.yOffset(),
-                piece.widthTiles(),
-                piece.heightTiles(),
-                tileIndex,
-                piece.hFlip(),
-                piece.vFlip(),
-                piece.paletteIndex(),
-                piece.priority());
     }
 
     /**
@@ -3267,11 +3236,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         for (SpriteMappingFrame frame : sourceMappings) {
             List<SpriteMappingPiece> remappedPieces = new ArrayList<>(frame.pieces().size());
             for (SpriteMappingPiece piece : frame.pieces()) {
-                int rawPatternWord = (piece.tileIndex() & 0x7FF)
-                        | (piece.hFlip() ? 0x0800 : 0)
-                        | (piece.vFlip() ? 0x1000 : 0)
-                        | ((piece.paletteIndex() & 0x3) << 13)
-                        | (piece.priority() ? 0x8000 : 0);
+                int rawPatternWord = SpriteMappingPieces.toTileWord(piece);
                 int summedPatternWord = (objectBaseTile + rawPatternWord) & 0xFFFF;
 
                 int remappedTile = (summedPatternWord & 0x7FF) - virtualBaseTile;
@@ -3280,17 +3245,13 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
                 int remappedPalette = (summedPatternWord >> 13) & 0x3;
                 boolean remappedPriority = (summedPatternWord & 0x8000) != 0;
 
-                remappedPieces.add(new SpriteMappingPiece(
-                        piece.xOffset(),
-                        piece.yOffset(),
-                        piece.widthTiles(),
-                        piece.heightTiles(),
+                remappedPieces.add(SpriteMappingPieces.withAttributes(
+                        piece,
                         remappedTile,
                         remappedHFlip,
                         remappedVFlip,
                         remappedPalette,
-                        remappedPriority
-                ));
+                        remappedPriority));
             }
             remapped.add(new SpriteMappingFrame(remappedPieces));
         }

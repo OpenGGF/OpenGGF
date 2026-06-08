@@ -998,8 +998,7 @@ missing engine views for recorded native-prelude traces strict failures.
 
 ### Current State
 
-The runtime does not read gameplay asset bytes from `docs/` disassembly trees,
-but several Sonic 1 mapping pieces are still handwritten in production source.
+The runtime does not read gameplay asset bytes from `docs/` disassembly trees.
 The former palette-cycle rows, conveyor waypoint and child spawner tables, GHZ
 bridge bend tables, and the small `Map_Seesaw` / `Map_SSawBall` / `Map_Fan` /
 `Map_Pylon` / `Map_Scen` / `Map_ExplodeItem` support-object mapping slice, the
@@ -1031,16 +1030,16 @@ vanishing platform `Map_VanP` table, the SYZ/SLZ/LZ floating block and door
 `Map_ESon` / `Map_ECha` / `Map_ESth` tables, plus the Final Zone
 `Map_EggCyl` / `Map_PLaunch` / `Map_Plasma` / `Map_FZLegs` / `Map_FZDamaged`
 boss mapping slice, now load from the user-supplied ROM and their guard budgets
-have been ratcheted down. The current object-provider budget is 4 handwritten
-mapping pieces; Sonic 1 boss mappings are ROM-backed and
-their separate handwritten budget is zero.
+have been ratcheted down. The Sonic 1 object-provider and boss mapping budgets
+are zero; remaining tile-word transformations use the shared
+`SpriteMappingPieces` helper over ROM-loaded frames rather than provider-local
+mapping literals.
 
 ### Release Boundary
 
-This is accepted release debt only as a bounded legacy exception. New gameplay
-runtime asset data must still be ROM-backed. `TestArchitecturalSourceGuard`
-locks the current exception counts for these files so this debt cannot expand
-silently under the release branch.
+New gameplay runtime asset data must still be ROM-backed.
+`TestArchitecturalSourceGuard` locks the current zero-exception counts for
+these files so this debt cannot reappear silently under the release branch.
 
 ### Removal Condition
 

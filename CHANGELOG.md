@@ -57,9 +57,9 @@ All notable changes to the OpenGGF project are documented in this file.
   and damaged-ship overlay mappings now load from ROM offsets as well. The S1
   mapping parser now preserves the tile priority bit from ROM mapping words.
   The embedded-runtime-data guard now ratchets those table families to zero,
-  removes the legacy S1 boss mapping helper file, and reduces the remaining S1
-  object mapping-piece budget; larger S1 mapping migrations remain tracked
-  release debt.
+  removes the legacy S1 boss mapping helper file, and keeps provider-local S1
+  object mapping-piece literals at zero by routing ROM-derived tile-word remaps
+  through `SpriteMappingPieces`.
 
 - **Develop release-sweep hardening closed the latest architecture review
   findings:** startup and audio teardown now fail closed on partial native

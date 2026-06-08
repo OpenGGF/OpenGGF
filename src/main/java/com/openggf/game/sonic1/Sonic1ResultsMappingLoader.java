@@ -4,6 +4,7 @@ import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
+import com.openggf.level.render.SpriteMappingPieces;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -61,32 +62,8 @@ public final class Sonic1ResultsMappingLoader {
     }
 
     private static SpriteMappingPiece adjustPiece(SpriteMappingPiece piece) {
-        int adjustedWord = (toTileWord(piece) + Sonic1Constants.RESULTS_TILE_ADJUST) & 0xFFFF;
-        return new SpriteMappingPiece(
-                piece.xOffset(),
-                piece.yOffset(),
-                piece.widthTiles(),
-                piece.heightTiles(),
-                adjustedWord & 0x7FF,
-                (adjustedWord & 0x0800) != 0,
-                (adjustedWord & 0x1000) != 0,
-                (adjustedWord >> 13) & 0x3,
-                (adjustedWord & 0x8000) != 0);
-    }
-
-    private static int toTileWord(SpriteMappingPiece piece) {
-        int word = piece.tileIndex() & 0x7FF;
-        if (piece.hFlip()) {
-            word |= 0x0800;
-        }
-        if (piece.vFlip()) {
-            word |= 0x1000;
-        }
-        word |= (piece.paletteIndex() & 0x3) << 13;
-        if (piece.priority()) {
-            word |= 0x8000;
-        }
-        return word;
+        int adjustedWord = (SpriteMappingPieces.toTileWord(piece) + Sonic1Constants.RESULTS_TILE_ADJUST) & 0xFFFF;
+        return SpriteMappingPieces.withTileWord(piece, adjustedWord);
     }
 
     private static SpriteMappingFrame slice(SpriteMappingFrame frame, int fromIndex, int toIndex) {
