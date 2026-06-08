@@ -1004,15 +1004,15 @@ The former palette-cycle rows, conveyor waypoint and child spawner tables, GHZ
 bridge bend tables, and the small `Map_Seesaw` / `Map_SSawBall` / `Map_Fan` /
 `Map_Pylon` / `Map_Scen` / `Map_ExplodeItem` support-object mapping slice, the
 LZ `Map_Jaws` / `Map_Burro` / `Map_Flap` / `Map_WFall` / `Map_Splash` tables,
-the MZ/SLZ `Map_Fire` table, the MZ `Map_Glass` table, the GHZ/SLZ
-`Map_Smash` table, the LZ `Map_Harp` table, the SBZ `Map_Flame` / `Map_Saw` /
-`Map_Elec` / `Map_ADoor` / `Map_Gird` /
+the MZ/SLZ `Map_Fire` table, the MZ `Map_Glass` / `Map_Geyser` tables, the
+GHZ/SLZ `Map_Smash` table, the LZ `Map_Harp` table, the SBZ `Map_Flame` /
+`Map_Saw` / `Map_Elec` / `Map_ADoor` / `Map_Gird` /
 `Map_Trap` / `Map_Spin` tables, the shared button `Map_But` table, the SBZ2
 `Map_FFloor` table, the shared boss `Map_Eggman` /
 `Map_BossItems` tables, the SBZ2/FZ `Map_SEgg` table, plus the Final Zone
 `Map_EggCyl` / `Map_PLaunch` / `Map_Plasma` / `Map_FZLegs` / `Map_FZDamaged`
 boss mapping slice, now load from the user-supplied ROM and their guard budgets
-have been ratcheted down. The current object-provider budget is 1068 handwritten
+have been ratcheted down. The current object-provider budget is 1026 handwritten
 mapping pieces; Sonic 1 boss mappings are ROM-backed and
 their separate handwritten budget is zero.
 
