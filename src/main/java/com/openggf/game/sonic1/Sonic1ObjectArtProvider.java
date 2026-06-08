@@ -4032,69 +4032,11 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
      * Returns frames 0-5 (SYZ variants + SLZ).
      */
     private List<SpriteMappingFrame> createFloatingBlockMappingsSyzSlz() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.syz1x1): 1 piece, SYZ 32x32 square block
-        // spritePiece -$10, -$10, 4, 4, $61, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0x61, false, false, 0, false)
-        )));
-
-        // Frame 1 (.syz2x2): 4 pieces, SYZ 64x64 quad block
-        // spritePiece -$20, -$20, 4, 4, $61, 0, 0, 0, 0
-        // spritePiece    0, -$20, 4, 4, $61, 0, 0, 0, 0
-        // spritePiece -$20,    0, 4, 4, $61, 0, 0, 0, 0
-        // spritePiece    0,    0, 4, 4, $61, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x20, -0x20, 4, 4, 0x61, false, false, 0, false),
-                new SpriteMappingPiece(    0, -0x20, 4, 4, 0x61, false, false, 0, false),
-                new SpriteMappingPiece(-0x20,     0, 4, 4, 0x61, false, false, 0, false),
-                new SpriteMappingPiece(    0,     0, 4, 4, 0x61, false, false, 0, false)
-        )));
-
-        // Frame 2 (.syz1x2): 2 pieces, SYZ 32x64 tall block
-        // spritePiece -$10, -$20, 4, 4, $61, 0, 0, 0, 0
-        // spritePiece -$10,    0, 4, 4, $61, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x20, 4, 4, 0x61, false, false, 0, false),
-                new SpriteMappingPiece(-0x10,     0, 4, 4, 0x61, false, false, 0, false)
-        )));
-
-        // Frame 3 (.syzrect2x2): 4 pieces, SYZ 64x52 rectangular blocks (tile $81)
-        // spritePiece -$20, -$1A, 4, 4, $81, 0, 0, 0, 0
-        // spritePiece    0, -$1A, 4, 4, $81, 0, 0, 0, 0
-        // spritePiece -$20,    0, 4, 4, $81, 0, 0, 0, 0
-        // spritePiece    0,    0, 4, 4, $81, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x20, -0x1A, 4, 4, 0x81, false, false, 0, false),
-                new SpriteMappingPiece(    0, -0x1A, 4, 4, 0x81, false, false, 0, false),
-                new SpriteMappingPiece(-0x20,     0, 4, 4, 0x81, false, false, 0, false),
-                new SpriteMappingPiece(    0,     0, 4, 4, 0x81, false, false, 0, false)
-        )));
-
-        // Frame 4 (.syzrect1x3): 3 pieces, SYZ 32x78 tall rectangular blocks (tile $81)
-        // spritePiece -$10, -$27, 4, 4, $81, 0, 0, 0, 0
-        // spritePiece -$10,  -$D, 4, 4, $81, 0, 0, 0, 0
-        // spritePiece -$10,  $0D, 4, 4, $81, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x27, 4, 4, 0x81, false, false, 0, false),
-                new SpriteMappingPiece(-0x10,  -0xD, 4, 4, 0x81, false, false, 0, false),
-                new SpriteMappingPiece(-0x10,   0xD, 4, 4, 0x81, false, false, 0, false)
-        )));
-
-        // Frame 5 (.slz): 1 piece, SLZ 32x32 square block (tile $21)
-        // spritePiece -$10, -$10, 4, 4, $21, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0x21, false, false, 0, false)
-        )));
-
-        // Frames 6-7 are LZ-specific and handled separately
-        // Add placeholder frames so frame indexing matches
-        // Frame 6: empty (LZ vert door - not used in SYZ/SLZ)
-        frames.add(new SpriteMappingFrame(List.of()));
-        // Frame 7: empty (LZ horiz door - not used in SYZ/SLZ)
-        frames.add(new SpriteMappingFrame(List.of()));
-
+        List<SpriteMappingFrame> frames = new ArrayList<>(
+                loadMappingFrames(Sonic1Constants.MAP_FLOATING_BLOCK_ADDR));
+        for (int i = 6; i < frames.size(); i++) {
+            frames.set(i, new SpriteMappingFrame(List.of()));
+        }
         return frames;
     }
 
@@ -4104,33 +4046,11 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
      * Returns 8 frames but only frames 6-7 have actual pieces for LZ.
      */
     private List<SpriteMappingFrame> createFloatingBlockMappingsLz() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frames 0-5 are SYZ/SLZ-specific, add empty placeholders
+        List<SpriteMappingFrame> frames = new ArrayList<>(
+                loadMappingFrames(Sonic1Constants.MAP_FLOATING_BLOCK_ADDR));
         for (int i = 0; i < 6; i++) {
-            frames.add(new SpriteMappingFrame(List.of()));
+            frames.set(i, new SpriteMappingFrame(List.of()));
         }
-
-        // Frame 6 (.lzvert): 2 pieces, LZ 16x64 vertical door
-        // spritePiece -8, -$20, 2, 4, 0, 0, 0, 0, 0
-        // spritePiece -8,    0, 2, 4, 0, 0, 1, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -0x20, 2, 4, 0, false, false, 0, false),
-                new SpriteMappingPiece(-8,     0, 2, 4, 0, false, true,  0, false)
-        )));
-
-        // Frame 7 (.lzhoriz): 4 pieces, LZ 128x32 horizontal door (tile $22)
-        // spritePiece -$40, -$10, 4, 4, $22, 0, 0, 0, 0
-        // spritePiece -$20, -$10, 4, 4, $22, 0, 0, 0, 0
-        // spritePiece    0, -$10, 4, 4, $22, 0, 0, 0, 0
-        // spritePiece  $20, -$10, 4, 4, $22, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x40, -0x10, 4, 4, 0x22, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, -0x10, 4, 4, 0x22, false, false, 0, false),
-                new SpriteMappingPiece(    0, -0x10, 4, 4, 0x22, false, false, 0, false),
-                new SpriteMappingPiece( 0x20, -0x10, 4, 4, 0x22, false, false, 0, false)
-        )));
-
         return frames;
     }
 

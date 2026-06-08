@@ -146,6 +146,7 @@ public final class Sonic1Constants {
     public static final int MAP_SYZ_SPIKEBALL_CHAIN_ADDR = 0x01102A; // Map_SBall (Obj57 SYZ: 1 frame)
     public static final int MAP_LZ_SPIKEBALL_CHAIN_ADDR = 0x011032; // Map_SBall2 (Obj57 LZ: 3 frames)
     public static final int MAP_BIG_SPIKED_BALL_ADDR = 0x011174; // Map_BBall (Obj58/SBZ swing ball: 3 frames)
+    public static final int MAP_FLOATING_BLOCK_ADDR = 0x010DD4; // Map_FBlock (Obj56: 8 frames)
     public static final int MAP_SLZ_ELEVATOR_ADDR = 0x01141C; // Map_Elev (Obj59: 1 frame)
     public static final int MAP_SLZ_CIRCLING_PLATFORM_ADDR = 0x011556; // Map_Circ (Obj5A: 1 frame)
     public static final int MAP_SLZ_STAIRCASE_ADDR = 0x011710; // Map_Stair (Obj5B: 1 frame)

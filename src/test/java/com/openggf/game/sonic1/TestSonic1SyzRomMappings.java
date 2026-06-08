@@ -123,6 +123,26 @@ public class TestSonic1SyzRomMappings {
     }
 
     @Test
+    public void floatingBlockRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_FLOATING_BLOCK_ADDR);
+
+        assertEquals(List.of(1, 4, 2, 4, 3, 1, 2, 4),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0x61, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(0, 0, 4, 4, 0x61, false, false, 0, false),
+                romFrames.get(1).pieces().get(3));
+        assertEquals(new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0x21, false, false, 0, false),
+                romFrames.get(5).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, 0, 2, 4, 0, false, true, 0, false),
+                romFrames.get(6).pieces().get(1));
+        assertEquals(new SpriteMappingPiece(0x20, -0x10, 4, 4, 0x22, false, false, 0, false),
+                romFrames.get(7).pieces().get(3));
+    }
+
+    @Test
     public void spinningLightRomMappingsKeepExpectedTableShape() throws Exception {
         RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
         List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
