@@ -12,8 +12,9 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.List;
 
 /**
- * S3K boss explosion child (ROM: Obj_BossExplosion2).
- * Plays sfx_Explode (0xB4) on init, animates through AniRaw_BossExplosion.
+ * S3K boss explosion child (ROM: Obj_BossExplosion1/2).
+ * The spawning controller plays sfx_Explode (0xB4); this child animates through
+ * AniRaw_BossExplosion.
  *
  * ROM animation format: Animate_RawMultiDelay — (delay, frame) pairs.
  * AniRaw_BossExplosion (sonic3k.asm:176871):
@@ -64,7 +65,7 @@ public class S3kBossExplosionChild extends AbstractObjectInstance {
         if (isDestroyed() || pairIndex >= ANIM_PAIRS.length) return;
         ObjectRenderManager rm = services().renderManager();
         if (rm == null) return;
-        // ROM: Obj_BossExplosion2 uses ArtTile_BossExplosion2, loaded from PLC $5A entry 3
+        // ROM: Obj_BossExplosion1/2 share Map_BossExplosion and AniRaw_BossExplosion.
         PatternSpriteRenderer renderer = rm.getBossExplosionRenderer();
         if (renderer == null || !renderer.isReady()) return;
         renderer.drawFrameIndex(ANIM_PAIRS[pairIndex][1], spawn.x(), spawn.y(), false, false);

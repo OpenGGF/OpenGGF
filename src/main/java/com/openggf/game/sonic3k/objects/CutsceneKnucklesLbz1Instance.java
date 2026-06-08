@@ -8,8 +8,10 @@ import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.events.Sonic3kZoneEvents;
+import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -35,10 +37,10 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance {
     private static final int WAIT_AFTER_BOMB = 0x0F;
     private static final int WAIT_BEFORE_COLLAPSE = 0x7F;
     private static final int COLLAPSE_WAIT = 0x5F;
-    private static final int[] COLLAPSE_SHAKE_Y_OFFSETS = {2, -2, 1, -1};
     private static final int EXIT_SPEED = 2;
     private static final int EXIT_CAMERA_MAX_X = 0x3B60;
     private static final int EXIT_CAMERA_MAX_Y_TARGET = 0x0148;
+    private static final int OBJECT_PATTERN_BASE = PatternAtlasRange.OBJECTS.base();
     private static final int HELPER_X_OFFSET = -0x40;
     private static final int HELPER_Y_OFFSET = 0;
     private static final int BOMB_X_OFFSET = -8;
@@ -53,6 +55,12 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance {
             {0x19, 0x13},
             {0x1A, 7},
             {0x1B, 0}
+    };
+    private static final byte[] SCREEN_SHAKE_CONTINUOUS = {
+            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
+            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3,
+            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
+            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
     };
 
     private Routine routine = Routine.INIT;
@@ -101,8 +109,8 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance {
             case WAIT_AFTER_SIGNAL -> routineWaitAfterSignal();
             case THROW_ANIMATION -> routineThrowAnimation();
             case WAIT_AFTER_BOMB -> routineWaitAfterBomb();
-            case WAIT_BEFORE_COLLAPSE -> routineWaitBeforeCollapse();
-            case COLLAPSE_WAIT -> routineCollapseWait();
+            case WAIT_BEFORE_COLLAPSE -> routineWaitBeforeCollapse(frameCounter);
+            case COLLAPSE_WAIT -> routineCollapseWait(frameCounter);
             case EXIT_RIGHT -> routineExitRight();
         }
     }
@@ -199,24 +207,23 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance {
         routine = Routine.WAIT_BEFORE_COLLAPSE;
     }
 
-    private void routineWaitBeforeCollapse() {
+    private void routineWaitBeforeCollapse(int frameCounter) {
         timer--;
         if (timer >= 0) {
             return;
         }
         spawnCollapseChildrenOnce();
-        applyCollapseShake();
+        applyCollapseShake(frameCounter);
         timer = COLLAPSE_WAIT;
         routine = Routine.COLLAPSE_WAIT;
     }
 
-    private void routineCollapseWait() {
-        applyCollapseShake();
+    private void routineCollapseWait(int frameCounter) {
+        applyCollapseShake(frameCounter);
         timer--;
         if (timer >= 0) {
             return;
         }
-        services().camera().setShakeOffsets(0, 0);
         animationIndex = 0;
         animationTimer = 0;
         mappingFrame = RUN_FRAMES[0];
@@ -300,6 +307,9 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance {
         if (renderManager.getArtProvider() instanceof Sonic3kObjectArtProvider s3kProvider) {
             s3kProvider.ensureBossExplosionArtLoaded();
         }
+        if (services().graphicsManager() != null) {
+            renderManager.ensurePatternsCached(services().graphicsManager(), OBJECT_PATTERN_BASE);
+        }
     }
 
     private void releasePlayersAndCamera() {
@@ -317,12 +327,13 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance {
         services().camera().setMaxXTarget((short) EXIT_CAMERA_MAX_X);
         services().camera().setMaxYTarget((short) EXIT_CAMERA_MAX_Y_TARGET);
         Sonic3kZoneEvents.loadPaletteFromPalPointers(Sonic3kConstants.PAL_POINTERS_LBZ1_INDEX);
-        spawnDynamicObject(new SongFadeTransitionInstance(SONG_FADE_FRAMES, Sonic3kMusic.LBZ1.id));
     }
 
-    private void applyCollapseShake() {
-        int offset = COLLAPSE_SHAKE_Y_OFFSETS[Math.floorMod(timer, COLLAPSE_SHAKE_Y_OFFSETS.length)];
-        services().camera().setShakeOffsets(0, offset);
+    private void applyCollapseShake(int frameCounter) {
+        LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(services().zoneRuntimeRegistry()).orElse(null);
+        if (state != null) {
+            state.requestScreenShakeOffset(SCREEN_SHAKE_CONTINUOUS[frameCounter & 0x3F]);
+        }
     }
 
     private boolean isPlayerKnuckles() {

@@ -1,5 +1,8 @@
 package com.openggf.game.sonic3k.scroll;
 
+import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.compose.DeformationPlan;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
@@ -61,6 +64,7 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
     private int lastBgCameraX = Integer.MIN_VALUE;
     private int screenShakeOffset;
     private int currentBgPeriodWidth = DEFAULT_BG_PERIOD_WIDTH;
+    private short vscrollFactorFG;
 
     public SwScrlLbz() {
         this(null);
@@ -85,6 +89,11 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
     }
 
     @Override
+    public short getVscrollFactorFG() {
+        return vscrollFactorFG;
+    }
+
+    @Override
     public void update(int[] horizScrollBuf,
                        int cameraX,
                        int cameraY,
@@ -92,6 +101,10 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
                        int actId) {
         resetScrollTracking();
         composer.reset();
+        LbzZoneRuntimeState runtimeState = currentRuntimeState();
+        if (runtimeState != null) {
+            screenShakeOffset = runtimeState.consumeScreenShakeOffset();
+        }
 
         short fgScroll = negWord(cameraX);
         if (actId == 0) {
@@ -100,11 +113,24 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
             updateAct2(cameraX, cameraY, frameCounter, fgScroll);
         }
 
+        if (screenShakeOffset != 0) {
+            composer.setVscrollFactorBG((short) (composer.getVscrollFactorBG() + screenShakeOffset));
+            composer.setVscrollFactorFG((short) (cameraY + screenShakeOffset));
+        }
+
         composer.copyPackedScrollWordsTo(horizScrollBuf);
         currentBgPeriodWidth = computeBgPeriodWidth(horizScrollBuf);
         vscrollFactorBG = composer.getVscrollFactorBG();
+        vscrollFactorFG = composer.getVscrollFactorFG();
         minScrollOffset = composer.getMinScrollOffset();
         maxScrollOffset = composer.getMaxScrollOffset();
+    }
+
+    private LbzZoneRuntimeState currentRuntimeState() {
+        if (!GameServices.hasRuntime()) {
+            return null;
+        }
+        return S3kRuntimeStates.currentLbz(GameServices.zoneRuntimeRegistry()).orElse(null);
     }
 
     @Override
@@ -115,7 +141,7 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
     private void updateAct1(int cameraX, int cameraY, short fgScroll) {
         lbz1HScroll.clear();
 
-        int bgY = asrSignedWord(cameraY - screenShakeOffset, 4) + screenShakeOffset;
+        int bgY = asrSignedWord(cameraY, 4);
         composer.setVscrollFactorBG((short) bgY);
 
         int fineX = fixedFromWord(cameraX) >> 4;
@@ -151,14 +177,14 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
     private void updateAct2(int cameraX, int cameraY, int frameCounter, short fgScroll) {
         lbz2HScroll.clear();
 
-        int relativeY = (short) (cameraY - screenShakeOffset - 0x5F0);
+        int relativeY = (short) (cameraY - 0x5F0);
         int bgYFixed = fixedFromWord(relativeY) >> 1;
         int step = bgYFixed >> 3;
         bgYFixed -= step;
         bgYFixed -= step >> 2;
         int bgYWithoutBase = wordFromFixed(bgYFixed);
         int equilibriumDelta = (short) (bgYWithoutBase - relativeY);
-        composer.setVscrollFactorBG((short) (bgYWithoutBase + 0x2C0 + screenShakeOffset));
+        composer.setVscrollFactorBG((short) (bgYWithoutBase + 0x2C0));
 
         int cameraXFixed = fixedFromWord(cameraX);
         buildWaterlineGradient(cameraXFixed, equilibriumDelta);

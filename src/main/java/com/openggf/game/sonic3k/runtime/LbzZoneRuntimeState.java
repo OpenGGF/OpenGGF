@@ -14,6 +14,7 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     private boolean interiorLayoutMod3Disabled;
     private int rollingDrumP1Angle;
     private int rollingDrumP2Angle;
+    private int pendingScreenShakeOffset;
 
     public LbzZoneRuntimeState(int actIndex, PlayerCharacter playerCharacter) {
         this.actIndex = actIndex;
@@ -66,14 +67,27 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         }
     }
 
+    public void requestScreenShakeOffset(int offset) {
+        if (Math.abs(offset) > Math.abs(pendingScreenShakeOffset)) {
+            pendingScreenShakeOffset = offset;
+        }
+    }
+
+    public int consumeScreenShakeOffset() {
+        int offset = pendingScreenShakeOffset;
+        pendingScreenShakeOffset = 0;
+        return offset;
+    }
+
     @Override
     public byte[] captureBytes() {
-        ByteBuffer buffer = ByteBuffer.allocate(5);
+        ByteBuffer buffer = ByteBuffer.allocate(9);
         buffer.put((byte) (alarmAnimationActive ? 1 : 0));
         buffer.put((byte) activeInteriorLayoutMod);
         buffer.put((byte) (interiorLayoutMod3Disabled ? 1 : 0));
         buffer.put((byte) rollingDrumP1Angle);
         buffer.put((byte) rollingDrumP2Angle);
+        buffer.putInt(pendingScreenShakeOffset);
         return buffer.array();
     }
 
@@ -99,6 +113,9 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         }
         if (bytes.length >= 5) {
             rollingDrumP2Angle = bytes[4] & 0xFF;
+        }
+        if (bytes.length >= 9) {
+            pendingScreenShakeOffset = ByteBuffer.wrap(bytes).getInt(5);
         }
     }
 }
