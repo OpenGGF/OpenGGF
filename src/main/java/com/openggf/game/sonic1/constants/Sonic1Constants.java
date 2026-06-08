@@ -107,6 +107,7 @@ public final class Sonic1Constants {
     public static final int MAP_BRIDGE_ADDR      = 0x007FB2; // Map_Bri (Obj11: 3 frames)
     public static final int MAP_SCENERY_ADDR     = 0x008ED4; // Map_Scen (Obj1C: 1 frame)
     public static final int MAP_SBZ_SMALL_DOOR_ADDR = 0x00906A; // Map_ADoor (Obj2A: 9 frames)
+    public static final int MAP_BALL_HOG_ADDR    = 0x0094E0; // Map_Hog (Obj1E/20: 6 frames)
     public static final int MAP_EXPLOSION_ADDR   = 0x009544; // Map_ExplodeItem (Obj24/27/3F: 5 frames)
     public static final int MAP_CRABMEAT_ADDR    = 0x009DCE; // Map_Crab (Obj1F: 7 frames)
     public static final int MAP_SPIKE_ADDR       = 0x00D676; // Map_Spike (Obj36: 6 frames)

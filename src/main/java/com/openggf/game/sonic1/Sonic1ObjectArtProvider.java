@@ -1763,8 +1763,8 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
     }
 
     /**
-     * Loads Ball Hog art (Nem_BallHog) and creates S1-format sprite mappings.
-     * Mappings from docs/s1disasm/_maps/Ball Hog.asm (Map_Hog_internal).
+     * Loads Ball Hog art (Nem_BallHog) and S1-format sprite mappings.
+     * Mappings loaded from Map_Hog.
      * 6 frames: Stand, Open, Squat, Leap, Ball1, Ball2.
      * The Ball Hog and its cannonball share the same sprite sheet.
      * <p>
@@ -1778,72 +1778,10 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createBallHogMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_BALL_HOG_ADDR);
         // make_art_tile(ArtTile_Ball_Hog, 1, 0) - palette line 1
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 1, 1);
         registerSheet(ObjectArtKeys.BALL_HOG, sheet);
-    }
-
-    /**
-     * Creates Ball Hog sprite mappings from S1 disassembly Map_Hog_internal.
-     * <p>
-     * spritePiece format: x, y, width, height, startTile, xflip, yflip, pal, pri
-     * <p>
-     * Frame 0 (M_Hog_Stand): Ball hog standing
-     *   spritePiece -$C, -$11, 3, 2, 0, 0, 0, 0, 0
-     *   spritePiece -$C, -1, 3, 3, 6, 0, 0, 0, 0
-     * Frame 1 (M_Hog_Open): Ball hog with hatch open
-     *   spritePiece -$C, -$11, 3, 2, 0, 0, 0, 0, 0
-     *   spritePiece -$C, -1, 3, 3, $F, 0, 0, 0, 0
-     * Frame 2 (M_Hog_Squat): Ball hog squatting
-     *   spritePiece -$C, -$C, 3, 2, 0, 0, 0, 0, 0
-     *   spritePiece -$C, 4, 3, 2, $18, 0, 0, 0, 0
-     * Frame 3 (M_Hog_Leap): Ball hog leaping
-     *   spritePiece -$C, -$1C, 3, 2, 0, 0, 0, 0, 0
-     *   spritePiece -$C, -$C, 3, 3, $1E, 0, 0, 0, 0
-     * Frame 4 (M_Hog_Ball1): Cannonball (black)
-     *   spritePiece -8, -8, 2, 2, $27, 0, 0, 0, 0
-     * Frame 5 (M_Hog_Ball2): Cannonball (red)
-     *   spritePiece -8, -8, 2, 2, $2B, 0, 0, 0, 0
-     */
-    private List<SpriteMappingFrame> createBallHogMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (M_Hog_Stand): 2 pieces - upper body 3x2 + lower body 3x3
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0C, -0x11, 3, 2, 0x00, false, false, 0, false),
-                new SpriteMappingPiece(-0x0C,  -0x01, 3, 3, 0x06, false, false, 0, false)
-        )));
-
-        // Frame 1 (M_Hog_Open): 2 pieces - upper body 3x2 + lower body open 3x3
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0C, -0x11, 3, 2, 0x00, false, false, 0, false),
-                new SpriteMappingPiece(-0x0C,  -0x01, 3, 3, 0x0F, false, false, 0, false)
-        )));
-
-        // Frame 2 (M_Hog_Squat): 2 pieces - upper body 3x2 + lower squatting 3x2
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0C, -0x0C, 3, 2, 0x00, false, false, 0, false),
-                new SpriteMappingPiece(-0x0C,  0x04, 3, 2, 0x18, false, false, 0, false)
-        )));
-
-        // Frame 3 (M_Hog_Leap): 2 pieces - upper body 3x2 + lower leaping 3x3
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0C, -0x1C, 3, 2, 0x00, false, false, 0, false),
-                new SpriteMappingPiece(-0x0C, -0x0C, 3, 3, 0x1E, false, false, 0, false)
-        )));
-
-        // Frame 4 (M_Hog_Ball1): 1 piece - cannonball black 2x2
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x08, -0x08, 2, 2, 0x27, false, false, 0, false)
-        )));
-
-        // Frame 5 (M_Hog_Ball2): 1 piece - cannonball red 2x2
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x08, -0x08, 2, 2, 0x2B, false, false, 0, false)
-        )));
-
-        return frames;
     }
 
     /**

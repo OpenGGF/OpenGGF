@@ -113,6 +113,28 @@ public class TestSonic1SbzRomMappings {
     }
 
     @Test
+    public void ballHogRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_BALL_HOG_ADDR);
+
+        assertEquals(List.of(2, 2, 2, 2, 1, 1),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x0C, -0x11, 3, 2, 0, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x0C, -1, 3, 3, 0x0F, false, false, 0, false),
+                romFrames.get(1).pieces().get(1));
+        assertEquals(new SpriteMappingPiece(-0x0C, 4, 3, 2, 0x18, false, false, 0, false),
+                romFrames.get(2).pieces().get(1));
+        assertEquals(new SpriteMappingPiece(-0x0C, -0x0C, 3, 3, 0x1E, false, false, 0, false),
+                romFrames.get(3).pieces().get(1));
+        assertEquals(new SpriteMappingPiece(-8, -8, 2, 2, 0x27, false, false, 0, false),
+                romFrames.get(4).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -8, 2, 2, 0x2B, false, false, 0, false),
+                romFrames.get(5).pieces().get(0));
+    }
+
+    @Test
     public void sbzSpinningPlatformRomMappingsKeepExpectedTableShape() throws Exception {
         RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
         List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
