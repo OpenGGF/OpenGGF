@@ -49,4 +49,24 @@ public class TestSonic1GhzRomMappings {
         assertEquals(new SpriteMappingPiece(0x10, -6, 1, 1, 0x1C, false, false, 0, false),
                 romFrames.get(5).pieces().get(0));
     }
+
+    @Test
+    public void newtronRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_NEWTRON_ADDR);
+
+        assertEquals(List.of(3, 3, 3, 4, 3, 2, 3, 3, 3, 3, 0),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x14, -0x14, 4, 2, 0, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x14, -0x14, 2, 3, 0x2A, false, false, 0, false),
+                romFrames.get(2).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(0x0C, 0x0C, 1, 1, 0x3C, false, false, 0, false),
+                romFrames.get(3).pieces().get(3));
+        assertEquals(new SpriteMappingPiece(0x14, -2, 1, 1, 0x52, false, false, 3, true),
+                romFrames.get(8).pieces().get(2));
+        assertEquals(new SpriteMappingPiece(0x14, -2, 2, 1, 0x53, false, false, 3, true),
+                romFrames.get(9).pieces().get(2));
+    }
 }
