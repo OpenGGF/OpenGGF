@@ -993,19 +993,16 @@ missing engine views for recorded native-prelude traces strict failures.
 
 ## Sonic 1 Embedded Runtime Data Ratchet
 
-**Location:** `Sonic1LZConveyorObjectInstance`,
-`Sonic1SpinConveyorObjectInstance`, `Sonic1ObjectArtProvider`,
-`Sonic1BossMappings`
+**Location:** `Sonic1ObjectArtProvider`, `Sonic1BossMappings`
 **Scope:** Sonic 1 runtime data source debt.
 
 ### Current State
 
 The runtime does not read gameplay asset bytes from `docs/` disassembly trees,
-but several Sonic 1 tables are still embedded directly in production source:
-LZ/SBZ conveyor waypoint tables and handwritten object/boss mapping pieces. The
-former palette-cycle rows, conveyor child spawner tables, and GHZ bridge bend
-tables now load from the user-supplied ROM and their guard budgets have been
-ratcheted to zero.
+but several Sonic 1 mapping pieces are still handwritten in production source.
+The former palette-cycle rows, conveyor waypoint and child spawner tables, and
+GHZ bridge bend tables now load from the user-supplied ROM and their guard
+budgets have been ratcheted to zero.
 
 ### Release Boundary
 

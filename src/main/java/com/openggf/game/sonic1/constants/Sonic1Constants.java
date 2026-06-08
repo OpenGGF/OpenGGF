@@ -25,6 +25,8 @@ public final class Sonic1Constants {
     public static final int OBJ_POS_INDEX_ADDR    = 0x6B000; // Object placement index
     public static final int OBJ_POS_LZ_PLATFORM_INDEX_ADDR = OBJ_POS_INDEX_ADDR + 0x70;
     public static final int OBJ_POS_SBZ_PLATFORM_INDEX_ADDR = OBJ_POS_INDEX_ADDR + 0x80;
+    public static final int LZ_CONVEYOR_PATH_TABLE_ADDR = 0x12CBC; // LCon_Data pointer table
+    public static final int SBZ_SPIN_CONVEYOR_PATH_TABLE_ADDR = 0x16C0E; // SpinC_Data pointer table
     public static final int START_LOC_ARRAY_ADDR  = 0x0611E; // Start positions (4 bytes per act)
 
     // ---- Level size / boundary array ----

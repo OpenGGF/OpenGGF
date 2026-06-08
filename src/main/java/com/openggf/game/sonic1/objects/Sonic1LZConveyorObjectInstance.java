@@ -84,53 +84,6 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
     // Platform mapping frame index: move.b #4,obFrame(a0)
     private static final int PLATFORM_FRAME = 4;
 
-    // ---- Path data tables (from LCon_Data in disassembly) ----
-    // Each entry: {waypointCount, baseX, waypoints[][2]}
-    // waypoints are (x, y) pairs forming a closed loop.
-
-    // word_125F4: path 0 (6 waypoints)
-    private static final int[][] PATH_0 = {
-            {0x1078, 0x021A}, {0x10BE, 0x0260}, {0x10BE, 0x0393},
-            {0x108C, 0x03C5}, {0x1022, 0x0390}, {0x1022, 0x0244}
-    };
-    private static final int PATH_0_BASE_X = 0x1070;
-
-    // word_12610: path 1 (5 waypoints)
-    private static final int[][] PATH_1 = {
-            {0x127E, 0x0280}, {0x12CE, 0x02D0}, {0x12CE, 0x046E},
-            {0x1232, 0x0420}, {0x1232, 0x02CC}
-    };
-    private static final int PATH_1_BASE_X = 0x1280;
-
-    // word_12628: path 2 (4 waypoints)
-    private static final int[][] PATH_2 = {
-            {0x0D22, 0x0482}, {0x0D22, 0x05DE}, {0x0DAE, 0x05DE}, {0x0DAE, 0x0482}
-    };
-    private static final int PATH_2_BASE_X = 0x0D68;
-
-    // word_1263C: path 3 (4 waypoints)
-    private static final int[][] PATH_3 = {
-            {0x0D62, 0x03A2}, {0x0DEE, 0x03A2}, {0x0DEE, 0x04DE}, {0x0D62, 0x04DE}
-    };
-    private static final int PATH_3_BASE_X = 0x0DA0;
-
-    // word_12650: path 4 (5 waypoints)
-    private static final int[][] PATH_4 = {
-            {0x0CAC, 0x0242}, {0x0DDE, 0x0242}, {0x0DDE, 0x03DE},
-            {0x0C52, 0x03DE}, {0x0C52, 0x029C}
-    };
-    private static final int PATH_4_BASE_X = 0x0D00;
-
-    // word_12668: path 5 (4 waypoints)
-    private static final int[][] PATH_5 = {
-            {0x1252, 0x020A}, {0x13DE, 0x020A}, {0x13DE, 0x02BE}, {0x1252, 0x02BE}
-    };
-    private static final int PATH_5_BASE_X = 0x1300;
-
-    private static final int[][][] ALL_PATHS = {PATH_0, PATH_1, PATH_2, PATH_3, PATH_4, PATH_5};
-    private static final int[] ALL_BASE_X = {PATH_0_BASE_X, PATH_1_BASE_X, PATH_2_BASE_X,
-            PATH_3_BASE_X, PATH_4_BASE_X, PATH_5_BASE_X};
-
     // ---- Instance state ----
 
     /** Object mode: SPAWNER, PLATFORM, or WHEEL. */
@@ -156,6 +109,7 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
 
     /** Reusable state for SubpixelMotion calls (avoids per-frame allocation). */
     private final SubpixelMotion.State motion = new SubpixelMotion.State(0, 0, 0, 0, 0, 0);
+    private int pathIndex;           // subtype bits 4-6 selecting LCon_Data entry
     private int baseX;               // base X for out_of_range check (objoff_30)
     private boolean dirReversed;     // local tracking of f_conveyrev state (objoff_3B)
     private int routine;             // platform routine: 2 = PlatformObject, 4 = ExitPlatform+MvSonicOnPtfm2
@@ -200,14 +154,10 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
 
             // Parse path index from subtype bits 4-6
             // From disassembly: lsr.w #3,d0 / andi.w #$1E,d0
-            int pathIndex = (subtype >> 4) & 0x07;
-            if (pathIndex >= ALL_PATHS.length) {
+            this.pathIndex = (subtype >> 4) & 0x07;
+            if (pathIndex >= 6) {
                 pathIndex = 0; // safety fallback
             }
-
-            this.waypoints = ALL_PATHS[pathIndex];
-            this.waypointCount = waypoints.length * WAYPOINT_STEP;
-            this.baseX = ALL_BASE_X[pathIndex];
 
             // Starting waypoint from subtype bits 0-3
             // From disassembly: andi.w #$F,d1 / lsl.w #2,d1
@@ -217,16 +167,6 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
             // Default step: +4 (forward)
             // From disassembly: move.b #4,objoff_3A(a0)
             this.waypointStep = WAYPOINT_STEP;
-
-            // Set initial target from current waypoint (before potential reverse adjustment)
-            // From disassembly loc_1244C:
-            //   move.w (a2,d1.w),objoff_34(a0)  ; target X
-            //   move.w 2(a2,d1.w),objoff_36(a0)  ; target Y
-            int wpArrayIdx = currentWaypointIdx / WAYPOINT_STEP;
-            if (wpArrayIdx >= 0 && wpArrayIdx < waypoints.length) {
-                targetX = waypoints[wpArrayIdx][0];
-                targetY = waypoints[wpArrayIdx][1];
-            }
 
             // Initialize velocity and subpixel fractions
             this.velX = 0;
@@ -257,6 +197,11 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
         }
         initialized = true;
         if (mode == Mode.PLATFORM) {
+            if (!loadPathData()) {
+                setDestroyed(true);
+                return;
+            }
+
             // Check f_conveyrev at init time
             Sonic1ConveyorState conveyorState = services().gameService(Sonic1ConveyorState.class);
             if (conveyorState.isReversed()) {
@@ -278,6 +223,29 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
 
             // Calculate initial velocity toward target (bsr.w LCon_ChangeDir)
             changeDirection();
+        }
+    }
+
+    private boolean loadPathData() {
+        try {
+            Sonic1ObjectPlacement.ConveyorPathData data =
+                    new Sonic1ObjectPlacement(services().romReader()).loadLzConveyorPath(pathIndex);
+            if (data == null) {
+                return false;
+            }
+            this.waypoints = data.waypoints();
+            this.waypointCount = waypoints.length * WAYPOINT_STEP;
+            this.baseX = data.baseX();
+
+            int wpArrayIdx = currentWaypointIdx / WAYPOINT_STEP;
+            if (wpArrayIdx >= 0 && wpArrayIdx < waypoints.length) {
+                targetX = waypoints[wpArrayIdx][0];
+                targetY = waypoints[wpArrayIdx][1];
+            }
+            return true;
+        } catch (IOException | RuntimeException e) {
+            LOGGER.log(Level.WARNING, "Failed to load LZ conveyor path data from ROM", e);
+            return false;
         }
     }
 

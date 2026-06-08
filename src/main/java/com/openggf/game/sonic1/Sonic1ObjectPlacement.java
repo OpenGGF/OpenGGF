@@ -29,6 +29,8 @@ public class Sonic1ObjectPlacement {
 
     private static final int RECORD_SIZE = 6;
     private static final int TERMINATOR = 0xFFFF;
+    private static final int CONVEYOR_PATH_COUNT = 6;
+    private static final int CONVEYOR_WAYPOINT_STEP = 4;
     // 4 act slots per zone, 2 words (4 bytes) per act entry
     private static final int ACT_SLOTS_PER_ZONE = 4;
     private static final int BYTES_PER_ACT_ENTRY = 4;
@@ -89,6 +91,14 @@ public class Sonic1ObjectPlacement {
         return loadPlatformChildren(Sonic1Constants.OBJ_POS_SBZ_PLATFORM_INDEX_ADDR, slotIndex);
     }
 
+    public ConveyorPathData loadLzConveyorPath(int pathIndex) {
+        return loadConveyorPath(Sonic1Constants.LZ_CONVEYOR_PATH_TABLE_ADDR, pathIndex);
+    }
+
+    public ConveyorPathData loadSbzSpinConveyorPath(int pathIndex) {
+        return loadConveyorPath(Sonic1Constants.SBZ_SPIN_CONVEYOR_PATH_TABLE_ADDR, pathIndex);
+    }
+
     private int[][] loadPlatformChildren(int tableAddr, int slotIndex) {
         if (slotIndex < 0 || slotIndex >= 8) {
             return null;
@@ -107,5 +117,34 @@ public class Sonic1ObjectPlacement {
             cursor += RECORD_SIZE;
         }
         return entries;
+    }
+
+    private ConveyorPathData loadConveyorPath(int tableAddr, int pathIndex) {
+        if (pathIndex < 0 || pathIndex >= CONVEYOR_PATH_COUNT) {
+            return null;
+        }
+        int groupAddr = tableAddr + rom.readU16BE(tableAddr + pathIndex * 2);
+        int waypointBytes = rom.readU16BE(groupAddr);
+        int count = waypointBytes / CONVEYOR_WAYPOINT_STEP;
+        int baseX = rom.readU16BE(groupAddr + 2);
+        int cursor = groupAddr + 4;
+
+        int[][] waypoints = new int[count][2];
+        for (int i = 0; i < count; i++) {
+            waypoints[i][0] = rom.readU16BE(cursor);
+            waypoints[i][1] = rom.readU16BE(cursor + 2);
+            cursor += CONVEYOR_WAYPOINT_STEP;
+        }
+        return new ConveyorPathData(baseX, waypoints);
+    }
+
+    public record ConveyorPathData(int baseX, int[][] waypoints) {
+        public ConveyorPathData {
+            int[][] copy = new int[waypoints.length][];
+            for (int i = 0; i < waypoints.length; i++) {
+                copy[i] = waypoints[i].clone();
+            }
+            waypoints = copy;
+        }
     }
 }

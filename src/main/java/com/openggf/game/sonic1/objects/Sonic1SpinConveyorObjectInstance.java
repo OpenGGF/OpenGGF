@@ -86,50 +86,6 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
     // Frame duration $F = stays on frame 0 indefinitely (afEnd loops back)
     private static final int STILL_ANIM_DURATION = 0x0F;
 
-    // ---- Path data tables from off_164A6 in disassembly ----
-    // Each path: array of (X, Y) waypoint pairs forming a closed loop.
-    // First word pair from the data header is waypointCount (in bytes) and baseX.
-
-    // word_164B2: path 0 - 4 waypoints
-    private static final int[][] PATH_0 = {
-            {0x0E14, 0x0370}, {0x0EEF, 0x0302}, {0x0EEF, 0x0340}, {0x0E14, 0x03AE}
-    };
-    private static final int PATH_0_BASE_X = 0x0E80;
-
-    // word_164C6: path 1 - 4 waypoints
-    private static final int[][] PATH_1 = {
-            {0x0F14, 0x02E0}, {0x0FEF, 0x0272}, {0x0FEF, 0x02B0}, {0x0F14, 0x031E}
-    };
-    private static final int PATH_1_BASE_X = 0x0F80;
-
-    // word_164DA: path 2 - 4 waypoints
-    private static final int[][] PATH_2 = {
-            {0x1014, 0x0270}, {0x10EF, 0x0202}, {0x10EF, 0x0240}, {0x1014, 0x02AE}
-    };
-    private static final int PATH_2_BASE_X = 0x1080;
-
-    // word_164EE: path 3 - 4 waypoints
-    private static final int[][] PATH_3 = {
-            {0x0F14, 0x0570}, {0x0FEF, 0x0502}, {0x0FEF, 0x0540}, {0x0F14, 0x05AE}
-    };
-    private static final int PATH_3_BASE_X = 0x0F80;
-
-    // word_16502: path 4 - 4 waypoints
-    private static final int[][] PATH_4 = {
-            {0x1B14, 0x0670}, {0x1BEF, 0x0602}, {0x1BEF, 0x0640}, {0x1B14, 0x06AE}
-    };
-    private static final int PATH_4_BASE_X = 0x1B80;
-
-    // word_16516: path 5 - 4 waypoints
-    private static final int[][] PATH_5 = {
-            {0x1C14, 0x05E0}, {0x1CEF, 0x0572}, {0x1CEF, 0x05B0}, {0x1C14, 0x061E}
-    };
-    private static final int PATH_5_BASE_X = 0x1C80;
-
-    private static final int[][][] ALL_PATHS = {PATH_0, PATH_1, PATH_2, PATH_3, PATH_4, PATH_5};
-    private static final int[] ALL_BASE_X = {PATH_0_BASE_X, PATH_1_BASE_X, PATH_2_BASE_X,
-            PATH_3_BASE_X, PATH_4_BASE_X, PATH_5_BASE_X};
-
     // ---- Instance state ----
 
     private enum Mode { SPAWNER, PLATFORM }
@@ -154,6 +110,7 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
 
     /** Reusable state for SubpixelMotion calls (avoids per-frame allocation). */
     private final SubpixelMotion.State motion = new SubpixelMotion.State(0, 0, 0, 0, 0, 0);
+    private int pathIndex;           // subtype bits 4-6 selecting SpinC_Data entry
     private int baseX;               // base X for out_of_range check (objoff_30)
 
     // Animation state
@@ -197,14 +154,10 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
 
             // Parse path index from subtype bits 4-6
             // From disassembly: lsr.w #3,d0 / andi.w #$1E,d0
-            int pathIndex = (subtype >> 4) & 0x07;
-            if (pathIndex >= ALL_PATHS.length) {
+            this.pathIndex = (subtype >> 4) & 0x07;
+            if (pathIndex >= 6) {
                 pathIndex = 0;
             }
-
-            this.waypoints = ALL_PATHS[pathIndex];
-            this.waypointCount = waypoints.length * WAYPOINT_STEP;
-            this.baseX = ALL_BASE_X[pathIndex];
 
             // Starting waypoint from subtype bits 0-3
             // From disassembly: andi.w #$F,d1 / lsl.w #2,d1
@@ -214,16 +167,6 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
             // Default step: +4 (forward)
             // From disassembly: move.b #4,objoff_3A(a0)
             this.waypointStep = WAYPOINT_STEP;
-
-            // Set initial target from current waypoint (before potential reverse adjustment)
-            // From disassembly loc_16356:
-            //   move.w (a2,d1.w),objoff_34(a0)  ; target X
-            //   move.w 2(a2,d1.w),objoff_36(a0) ; target Y
-            int wpArrayIdx = currentWaypointIdx / WAYPOINT_STEP;
-            if (wpArrayIdx >= 0 && wpArrayIdx < waypoints.length) {
-                targetX = waypoints[wpArrayIdx][0];
-                targetY = waypoints[wpArrayIdx][1];
-            }
 
             // Set initial animation based on starting waypoint position
             // From disassembly loc_16356-loc_16378:
@@ -271,6 +214,11 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
         }
         initialized = true;
         if (mode == Mode.PLATFORM) {
+            if (!loadPathData()) {
+                setDestroyed(true);
+                return;
+            }
+
             // Check f_conveyrev at init time
             // From disassembly: tst.b (f_conveyrev).w / beq.s loc_16356
             Sonic1ConveyorState conveyorState = services().gameService(Sonic1ConveyorState.class);
@@ -292,6 +240,29 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
 
             // Calculate initial velocity toward target (bsr.w LCon_ChangeDir)
             changeDirection();
+        }
+    }
+
+    private boolean loadPathData() {
+        try {
+            Sonic1ObjectPlacement.ConveyorPathData data =
+                    new Sonic1ObjectPlacement(services().romReader()).loadSbzSpinConveyorPath(pathIndex);
+            if (data == null) {
+                return false;
+            }
+            this.waypoints = data.waypoints();
+            this.waypointCount = waypoints.length * WAYPOINT_STEP;
+            this.baseX = data.baseX();
+
+            int wpArrayIdx = currentWaypointIdx / WAYPOINT_STEP;
+            if (wpArrayIdx >= 0 && wpArrayIdx < waypoints.length) {
+                targetX = waypoints[wpArrayIdx][0];
+                targetY = waypoints[wpArrayIdx][1];
+            }
+            return true;
+        } catch (IOException | RuntimeException e) {
+            LOGGER.log(Level.WARNING, "Failed to load SBZ spin-conveyor path data from ROM", e);
+            return false;
         }
     }
 
