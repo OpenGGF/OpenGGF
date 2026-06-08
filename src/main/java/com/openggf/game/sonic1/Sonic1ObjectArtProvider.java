@@ -7339,9 +7339,11 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
 
         // FZ_CYLINDER: Crushing cylinders (Map_EggCyl)
         List<SpriteMappingFrame> cylMappings =
-                Sonic1BossMappings.createEggCylMappings();
-        registerSheet(ObjectArtKeys.FZ_CYLINDER,
-                new ObjectSpriteSheet(fzPatterns, cylMappings, 0, cylMappings.size()));
+                art.loadMappingFrames(Sonic1Constants.MAP_FZ_EGGCYL_ADDR);
+        if (!cylMappings.isEmpty()) {
+            registerSheet(ObjectArtKeys.FZ_CYLINDER,
+                    new ObjectSpriteSheet(fzPatterns, cylMappings, 0, cylMappings.size()));
+        }
 
         // FZ_PLASMA_LAUNCHER: Plasma turret (Map_PLaunch)
         List<SpriteMappingFrame> launchMappings =

@@ -30,6 +30,20 @@ public class TestSonic1FzRomMappings {
         assertEquals(0x4B, maxDamagedTile, "Map_FZDamaged max tile should be $4B");
     }
 
+    @Test
+    public void fzCylinderRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_FZ_EGGCYL_ADDR);
+
+        assertEquals(List.of(6, 8, 10, 12, 13, 14, 14, 14, 14, 14, 14, 2),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x20, -0x60, 4, 2, 0x00, false, false, 2, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x10, 0, 4, 1, 0x6A, false, false, 0, false),
+                romFrames.get(11).pieces().get(1));
+    }
+
     private static int maxTileIndex(List<SpriteMappingFrame> frames) {
         int max = 0;
         for (SpriteMappingFrame frame : frames) {
