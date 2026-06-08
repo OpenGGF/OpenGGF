@@ -2874,7 +2874,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createPushBlockMappings(false);
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_PUSH_BLOCK_ADDR);
         // make_art_tile(ArtTile_MZ_Block, 2, 0) -> palette line 2, no priority
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
         registerSheet(ObjectArtKeys.MZ_PUSH_BLOCK, sheet);
@@ -2898,7 +2898,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createPushBlockMappings(false);
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_PUSH_BLOCK_ADDR);
         // make_art_tile(ArtTile_LZ_Push_Block, 2, 0) -> palette line 2, no priority
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
         registerSheet(ObjectArtKeys.LZ_PUSH_BLOCK, sheet);
@@ -2907,39 +2907,6 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         List<SpriteMappingFrame> poleMappings = art.loadMappingFrames(Sonic1Constants.MAP_LZ_BREAKABLE_POLE_ADDR);
         ObjectSpriteSheet poleSheet = new ObjectSpriteSheet(patterns, poleMappings, 2, 1);
         registerSheet(ObjectArtKeys.LZ_BREAKABLE_POLE, poleSheet);
-    }
-
-    /**
-     * Creates pushable block sprite mappings from S1 disassembly
-     * docs/s1disasm/_maps/Pushable Blocks.asm (Map_Push_internal).
-     * <p>
-     * S1 spritePiece macro: x, y, width, height, startTile, xflip, yflip, pal, pri
-     *
-     * @param highPriority whether frame 1 (4-block row) uses high priority
-     */
-    private List<SpriteMappingFrame> createPushBlockMappings(boolean highPriority) {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.single): Single 32x32 block
-        // spritePiece -$10, -$10, 4, 4, 8, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0x08, false, false, 0, false)
-        )));
-
-        // Frame 1 (.four): Row of 4 blocks (32x32 each)
-        // spritePiece -$40, -$10, 4, 4, 8, 0, 0, 0, 0
-        // spritePiece -$20, -$10, 4, 4, 8, 0, 0, 0, 0
-        // spritePiece    0, -$10, 4, 4, 8, 0, 0, 0, 0
-        // spritePiece  $20, -$10, 4, 4, 8, 0, 0, 0, 0
-        // Subtype != 0 sets priority: make_art_tile(ArtTile_MZ_Block, 2, 1)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x40, -0x10, 4, 4, 0x08, false, false, 0, true),
-                new SpriteMappingPiece(-0x20, -0x10, 4, 4, 0x08, false, false, 0, true),
-                new SpriteMappingPiece(    0, -0x10, 4, 4, 0x08, false, false, 0, true),
-                new SpriteMappingPiece( 0x20, -0x10, 4, 4, 0x08, false, false, 0, true)
-        )));
-
-        return frames;
     }
 
     /**

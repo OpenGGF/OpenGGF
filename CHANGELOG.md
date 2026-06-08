@@ -34,7 +34,7 @@ All notable changes to the OpenGGF project are documented in this file.
   SYZ/LZ spikeball chain `Map_SBall` / `Map_SBall2`, Big Spiked Ball
   `Map_BBall`, LZ Gargoyle `Map_Gar`, SBZ Running Disc `Map_Disc`,
   LZ breakable pole `Map_Pole`,
-  MZ Brick `Map_Brick`, SYZ Spinning Light `Map_Light`,
+  MZ/LZ push block `Map_Push`, MZ Brick `Map_Brick`, SYZ Spinning Light `Map_Light`,
   MZ Smashable Green Block `Map_Smab`, MZ/SLZ/SBZ collapsing floor
   `Map_CFlo`, SBZ vanishing platform `Map_VanP`,
   shared score popup `Map_Poi`, hidden-bonus `Map_Bonus`, GHZ Buzz Bomber `Map_Buzz` / `Map_Missile`, shared shield and
