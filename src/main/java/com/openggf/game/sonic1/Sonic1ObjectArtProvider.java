@@ -2654,55 +2654,12 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createLzConveyorMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_LZ_CONVEYOR_ADDR);
         // Platforms use palette 2 (make_art_tile(...,2,0)), wheels use palette 0 (make_art_tile(...,0,0)).
         // We use palette 2 as the sheet default since platforms are the primary usage.
         // The wheel subtype overrides to palette 0 in the object code.
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
         registerSheet(ObjectArtKeys.LZ_CONVEYOR, sheet);
-    }
-
-    /**
-     * Creates LZ Conveyor Belt sprite mappings from S1 disassembly Map_LConv_internal.
-     * <p>
-     * From docs/s1disasm/_maps/LZ Conveyor.asm:
-     * <pre>
-     * .wheel1:   spritePiece -$10, -$10, 4, 4,    0, 0, 0, 0, 0   ; frame 0
-     * .wheel2:   spritePiece -$10, -$10, 4, 4, $10, 0, 0, 0, 0   ; frame 1
-     * .wheel3:   spritePiece -$10, -$10, 4, 4, $20, 0, 0, 0, 0   ; frame 2
-     * .wheel4:   spritePiece -$10, -$10, 4, 4, $30, 0, 0, 0, 0   ; frame 3
-     * .platform: spritePiece -$10,   -8, 4, 2, $40, 0, 0, 0, 0   ; frame 4
-     * </pre>
-     */
-    private List<SpriteMappingFrame> createLzConveyorMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0: .wheel1 - 32x32 wheel animation frame 1 (tile 0)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0x00, false, false, 0, false)
-        )));
-
-        // Frame 1: .wheel2 - 32x32 wheel animation frame 2 (tile $10)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0x10, false, false, 0, false)
-        )));
-
-        // Frame 2: .wheel3 - 32x32 wheel animation frame 3 (tile $20)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0x20, false, false, 0, false)
-        )));
-
-        // Frame 3: .wheel4 - 32x32 wheel animation frame 4 (tile $30)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0x30, false, false, 0, false)
-        )));
-
-        // Frame 4: .platform - 32x16 platform surface (tile $40)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x08, 4, 2, 0x40, false, false, 0, false)
-        )));
-
-        return frames;
     }
 
     /**
