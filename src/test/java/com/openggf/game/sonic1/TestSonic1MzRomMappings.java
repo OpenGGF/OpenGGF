@@ -87,4 +87,29 @@ public class TestSonic1MzRomMappings {
         assertEquals(new SpriteMappingPiece(0x0C, -2, 1, 1, 0x27, false, false, 0, false),
                 romFrames.get(3).pieces().get(3));
     }
+
+    @Test
+    public void caterkillerRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_CATERKILLER_ADDR);
+
+        assertEquals(List.of(
+                        1, 1, 1, 1, 1, 1, 1, 1,
+                        1, 1, 1, 1, 1, 1, 1, 1,
+                        1, 1, 1, 1, 1, 1, 1, 1),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-8, -0x0E, 2, 3, 0, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -0x15, 2, 3, 0, false, false, 0, false),
+                romFrames.get(7).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -8, 2, 2, 0x0C, false, false, 0, false),
+                romFrames.get(8).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -0x0F, 2, 2, 0x0C, false, false, 0, false),
+                romFrames.get(15).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -0x0E, 2, 3, 0x06, false, false, 0, false),
+                romFrames.get(16).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -0x15, 2, 3, 0x06, false, false, 0, false),
+                romFrames.get(23).pieces().get(0));
+    }
 }

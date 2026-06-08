@@ -1607,8 +1607,8 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
     }
 
     /**
-     * Loads Caterkiller art (Nem_Cater) and creates S1-format sprite mappings.
-     * Mappings from docs/s1disasm/_maps/Caterkiller.asm (Map_Cat_internal).
+     * Loads Caterkiller art (Nem_Cater) and S1-format sprite mappings.
+     * Mappings loaded from Map_Cat.
      * 24 frames total:
      *   Frames 0-7: Head at various Y offsets (bobbing animation)
      *   Frames 8-15: Body segment at various Y offsets
@@ -1622,55 +1622,9 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createCaterkillerMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_CATERKILLER_ADDR);
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 1, 1);
         registerSheet(ObjectArtKeys.CATERKILLER, sheet);
-    }
-
-    /**
-     * Creates Caterkiller sprite mappings from S1 disassembly Map_Cat_internal.
-     * <p>
-     * spritePiece format: x, y, width, height, startTile, xflip, yflip, pal, pri
-     * <p>
-     * The Caterkiller has 24 mapping frames organized in 3 groups of 8:
-     * <ul>
-     *   <li>Frames 0-7: Head (2x3 tiles at tile 0) - Y offsets from -$E to -$15</li>
-     *   <li>Frames 8-15: Body segment (2x2 tiles at tile $C) - Y offsets from -8 to -$F</li>
-     *   <li>Frames 16-23: Legged body segment (2x3 tiles at tile 6) - Y offsets from -$E to -$15</li>
-     * </ul>
-     * Each group uses 8 Y offsets for the bobbing animation driven by Ani_Cat table.
-     */
-    private List<SpriteMappingFrame> createCaterkillerMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Head frames (0-7): 2x3 tiles at tile 0, varying Y offsets
-        // From Map_Cat_internal byte_16D9E through byte_16DC8
-        int[] headYOffsets = { -0x0E, -0x0F, -0x10, -0x11, -0x12, -0x13, -0x14, -0x15 };
-        for (int yOff : headYOffsets) {
-            frames.add(new SpriteMappingFrame(List.of(
-                    new SpriteMappingPiece(-8, yOff, 2, 3, 0, false, false, 0, false)
-            )));
-        }
-
-        // Body segment frames (8-15): 2x2 tiles at tile $C, varying Y offsets
-        // From Map_Cat_internal byte_16DCE through byte_16DF8
-        int[] bodyYOffsets = { -0x08, -0x09, -0x0A, -0x0B, -0x0C, -0x0D, -0x0E, -0x0F };
-        for (int yOff : bodyYOffsets) {
-            frames.add(new SpriteMappingFrame(List.of(
-                    new SpriteMappingPiece(-8, yOff, 2, 2, 0x0C, false, false, 0, false)
-            )));
-        }
-
-        // Legged body segment frames (16-23): 2x3 tiles at tile 6, varying Y offsets
-        // From Map_Cat_internal byte_16DFE through byte_16E28
-        int[] legYOffsets = { -0x0E, -0x0F, -0x10, -0x11, -0x12, -0x13, -0x14, -0x15 };
-        for (int yOff : legYOffsets) {
-            frames.add(new SpriteMappingFrame(List.of(
-                    new SpriteMappingPiece(-8, yOff, 2, 3, 0x06, false, false, 0, false)
-            )));
-        }
-
-        return frames;
     }
 
     /**
