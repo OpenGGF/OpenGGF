@@ -1,4 +1,5 @@
 package com.openggf.game.sonic2.objects;
+import com.openggf.audio.GameMusic;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.BoxObjectInstance;
 import com.openggf.level.objects.SignpostSparkleObjectInstance;
@@ -6,7 +7,6 @@ import com.openggf.level.objects.SignpostSparkleObjectInstance;
 import com.openggf.camera.Camera;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
-import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.graphics.GLCommand;
@@ -340,7 +340,7 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
         // state latched here instead of clearing it at results spawn.
 
         try {
-            services().playMusic(Sonic2Music.ACT_CLEAR.id);
+            services().playMusic(GameMusic.ACT_CLEAR);
         } catch (Exception e) {
             LOGGER.warning("Failed to play stage clear music: " + e.getMessage());
         }

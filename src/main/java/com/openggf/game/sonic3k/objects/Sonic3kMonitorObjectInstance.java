@@ -1,11 +1,11 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.audio.GameAudioProfile;
+import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.ExplosionObjectInstance;
 import com.openggf.level.objects.ObjectAnimationState;
-import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
@@ -326,7 +326,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
             }
             case ONE_UP -> {
                 services().gameState().addLife();
-                services().playMusic(Sonic3kMusic.EXTRA_LIFE.id);
+                services().playMusic(GameMusic.EXTRA_LIFE);
             }
             case RINGS -> {
                 player.addRings(RING_MONITOR_REWARD);
@@ -355,7 +355,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
                 // Skip invincibility if player is already Super Sonic
                 if (!player.isSuperSonic()) {
                     player.giveInvincibility();
-                    services().playMusic(Sonic3kMusic.INVINCIBILITY.id);
+                    services().playMusic(GameMusic.INVINCIBILITY);
                 }
             }
             case SUPER -> {

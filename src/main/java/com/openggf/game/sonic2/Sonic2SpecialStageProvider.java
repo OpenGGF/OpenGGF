@@ -1,12 +1,12 @@
 package com.openggf.game.sonic2;
 
 
+import com.openggf.audio.GameMusic;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
-import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.objects.SpecialStageResultsScreenObjectInstance;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager;
@@ -43,13 +43,13 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     }
 
     @Override
-    public int getStageMusicId() {
-        return Sonic2Music.SPECIAL_STAGE.id;
+    public GameMusic getStageMusic() {
+        return GameMusic.SPECIAL_STAGE;
     }
 
     @Override
-    public int getResultsMusicId() {
-        return Sonic2Music.ACT_CLEAR.id;
+    public GameMusic getResultsMusic() {
+        return GameMusic.ACT_CLEAR;
     }
 
     @Override

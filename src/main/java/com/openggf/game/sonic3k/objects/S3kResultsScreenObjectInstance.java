@@ -1,12 +1,12 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.audio.GameMusic;
 import com.openggf.data.Rom;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.save.SaveReason;
 import com.openggf.level.objects.AbstractResultsScreen;
 import com.openggf.game.sonic3k.Sonic3kObjectArt;
-import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.S3kTransitionWriteSupport;
@@ -404,7 +404,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
         if (!musicPlayed && stateTimer == MUSIC_TRIGGER_FRAME) {
             musicPlayed = true;
             try {
-                services().playMusic(Sonic3kMusic.ACT_CLEAR.id);
+                services().playMusic(GameMusic.ACT_CLEAR);
             } catch (Exception e) {
                 // Ignore audio errors
             }

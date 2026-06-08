@@ -1,12 +1,12 @@
 package com.openggf.game.sonic1.specialstage;
 
+import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic1.Sonic1PlayerArt;
 import com.openggf.game.sonic1.Sonic1RingArt;
-import com.openggf.game.sonic1.audio.Sonic1Music;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.graphics.GLCommand;
@@ -582,7 +582,7 @@ public final class Sonic1SpecialStageManager {
         // 1UP (0x28)
         if (blockId == 0x28) {
             layout[bufIndex] = 0;
-            playMusic(Sonic1Music.EXTRA_LIFE);
+            playMusic(GameMusic.EXTRA_LIFE);
             return;
         }
 
@@ -593,7 +593,7 @@ public final class Sonic1SpecialStageManager {
             exitTriggered = true;
             exitPhase = 0;
             exitTimer = 0;
-            playMusic(Sonic1Music.CHAOS_EMERALD);
+            playMusic(GameMusic.EMERALD);
             return;
         }
 
@@ -1817,9 +1817,9 @@ public final class Sonic1SpecialStageManager {
         }
     }
 
-    private void playMusic(Sonic1Music music) {
+    private void playMusic(GameMusic music) {
         if (music != null) {
-            GameServices.audio().playMusic(music.id);
+            GameServices.audio().playMusic(music);
         }
     }
 }

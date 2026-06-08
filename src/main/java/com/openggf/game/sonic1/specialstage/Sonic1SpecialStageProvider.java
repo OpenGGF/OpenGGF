@@ -1,10 +1,10 @@
 package com.openggf.game.sonic1.specialstage;
 
+import com.openggf.audio.GameMusic;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
-import com.openggf.game.sonic1.audio.Sonic1Music;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 
 import com.openggf.level.Palette;
@@ -29,13 +29,13 @@ public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
     }
 
     @Override
-    public int getStageMusicId() {
-        return Sonic1Music.SPECIAL_STAGE.id;
+    public GameMusic getStageMusic() {
+        return GameMusic.SPECIAL_STAGE;
     }
 
     @Override
-    public int getResultsMusicId() {
-        return Sonic1Music.GOT_THROUGH.id;
+    public GameMusic getResultsMusic() {
+        return GameMusic.ACT_CLEAR;
     }
 
     @Override

@@ -2,6 +2,8 @@ package com.openggf.game;
 
 import static org.lwjgl.opengl.GL11.glClearColor;
 
+import com.openggf.audio.GameMusic;
+
 import java.io.IOException;
 
 /**
@@ -45,12 +47,30 @@ public interface SpecialStageProvider extends MiniGameProvider {
     }
 
     /**
+     * Gets the shared music cue to play while the special stage is active.
+     *
+     * @return generic music cue, or null to use {@link #getStageMusicId()}
+     */
+    default GameMusic getStageMusic() {
+        return null;
+    }
+
+    /**
      * Gets the music ID to play for special stage results.
      *
      * @return game-specific music ID, or -1 to use the engine fallback
      */
     default int getResultsMusicId() {
         return -1;
+    }
+
+    /**
+     * Gets the shared music cue to play for special stage results.
+     *
+     * @return generic music cue, or null to use {@link #getResultsMusicId()}
+     */
+    default GameMusic getResultsMusic() {
+        return null;
     }
 
     /**

@@ -1,12 +1,12 @@
 package com.openggf.game.sonic3k.specialstage;
 
+import com.openggf.audio.GameMusic;
 import com.openggf.data.RomByteReader;
 import com.openggf.data.PaletteLoader;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.sonic3k.Sonic3kObjectArt;
-import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GLCommand;
@@ -214,7 +214,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
             // Still in pre-tally wait
             if (!musicPlayed && countdown == MUSIC_TRIGGER_COUNTER) {
                 musicPlayed = true;
-                playMusic(Sonic3kMusic.ACT_CLEAR.id);
+                playMusic(GameMusic.ACT_CLEAR);
             }
             return;
         }
@@ -946,11 +946,11 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
         }
     }
 
-    private void playMusic(int id) {
+    private void playMusic(GameMusic music) {
         try {
-            GameServices.audio().playMusic(id);
+            GameServices.audio().playMusic(music);
         } catch (Exception e) {
-            LOG.log(Level.WARNING, "Failed to play S3K special-stage results music " + id, e);
+            LOG.log(Level.WARNING, "Failed to play S3K special-stage results music " + music, e);
         }
     }
 

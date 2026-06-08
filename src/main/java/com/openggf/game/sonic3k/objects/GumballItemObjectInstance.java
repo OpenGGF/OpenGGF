@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.audio.GameMusic;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -335,7 +336,7 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
             // safe fallback for test env
         }
         try {
-            services().playMusic(com.openggf.game.sonic3k.audio.Sonic3kMusic.EXTRA_LIFE.id);
+            services().playMusic(GameMusic.EXTRA_LIFE);
         } catch (Exception e) {
             // safe fallback
         }

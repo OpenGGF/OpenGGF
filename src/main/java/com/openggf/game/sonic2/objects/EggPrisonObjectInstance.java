@@ -1,10 +1,10 @@
 package com.openggf.game.sonic2.objects;
+import com.openggf.audio.GameMusic;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.ExplosionObjectInstance;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic2.Sonic2Rng;
-import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.level.objects.AnimalObjectInstance;
 import com.openggf.level.objects.EggPrisonAnimalInstance;
@@ -513,7 +513,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
 
         // Play stage clear music
         try {
-            services().playMusic(Sonic2Music.ACT_CLEAR.id);
+            services().playMusic(GameMusic.ACT_CLEAR);
         } catch (Exception e) {
             LOGGER.warning("Failed to play stage clear music: " + e.getMessage());
         }

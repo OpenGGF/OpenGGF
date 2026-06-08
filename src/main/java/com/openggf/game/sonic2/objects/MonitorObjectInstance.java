@@ -1,8 +1,8 @@
 package com.openggf.game.sonic2.objects;
+import com.openggf.audio.GameMusic;
 import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.ExplosionObjectInstance;
 
-import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
@@ -545,11 +545,11 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
                 // ROM: tst.b (Super_Sonic_flag).w / bne.s +++ - skip when Super Sonic
                 if (!player.isSuperSonic()) {
                     player.giveInvincibility();
-                    services().playMusic(Sonic2Music.INVINCIBILITY.id);
+                    services().playMusic(GameMusic.INVINCIBILITY);
                 }
             }
             case SONIC, TAILS -> {
-                services().playMusic(Sonic2Music.EXTRA_LIFE.id);
+                services().playMusic(GameMusic.EXTRA_LIFE);
                 services().gameState().addLife();
             }
             case EGGMAN, STATIC -> {

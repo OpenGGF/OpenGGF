@@ -18,9 +18,15 @@ import java.util.Map;
 public abstract class AbstractAudioProfile implements GameAudioProfile {
 
     private final Map<GameSound, Integer> soundMap;
+    private final Map<GameMusic, Integer> musicMap;
 
     protected AbstractAudioProfile(Map<GameSound, Integer> soundMap) {
+        this(soundMap, Map.of());
+    }
+
+    protected AbstractAudioProfile(Map<GameSound, Integer> soundMap, Map<GameMusic, Integer> musicMap) {
         this.soundMap = soundMap;
+        this.musicMap = musicMap;
     }
 
     // ------------------------------------------------------------------
@@ -92,5 +98,10 @@ public abstract class AbstractAudioProfile implements GameAudioProfile {
     @Override
     public Map<GameSound, Integer> getSoundMap() {
         return soundMap;
+    }
+
+    @Override
+    public Map<GameMusic, Integer> getMusicMap() {
+        return musicMap;
     }
 }

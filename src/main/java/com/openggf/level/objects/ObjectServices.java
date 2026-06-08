@@ -1,6 +1,7 @@
 package com.openggf.level.objects;
 
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfigurationService;
@@ -79,6 +80,9 @@ public interface ObjectServices {
     void playSfx(int soundId);
     void playSfx(GameSound sound);
     void playMusic(int musicId);
+    default boolean playMusic(GameMusic music) {
+        return audioManager().playMusic(music);
+    }
     void fadeOutMusic();
     AudioManager audioManager();
 

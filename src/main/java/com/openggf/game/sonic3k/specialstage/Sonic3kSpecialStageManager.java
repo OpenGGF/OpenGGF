@@ -1,9 +1,9 @@
 package com.openggf.game.sonic3k.specialstage;
 
+import com.openggf.audio.GameMusic;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayerCharacter;
-import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GraphicsManager;
@@ -886,7 +886,7 @@ public class Sonic3kSpecialStageManager {
         emeraldTimer--;
         if (emeraldTimer <= 0) {
             clearRoutine = 3;
-            GameServices.audio().playMusic(Sonic3kMusic.EMERALD.id);
+            GameServices.audio().playMusic(GameMusic.EMERALD);
         }
     }
 

@@ -1,12 +1,12 @@
 package com.openggf.game.sonic3k.specialstage;
 
+import com.openggf.audio.GameMusic;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
-import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 
 import java.io.IOException;
@@ -44,8 +44,8 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider {
     }
 
     @Override
-    public int getStageMusicId() {
-        return Sonic3kMusic.SPECIAL_STAGE.id;
+    public GameMusic getStageMusic() {
+        return GameMusic.SPECIAL_STAGE;
     }
 
     @Override

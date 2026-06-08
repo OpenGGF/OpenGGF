@@ -1,8 +1,8 @@
 package com.openggf.game.sonic1.objects;
 
 import com.openggf.audio.GameAudioProfile;
+import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
-import com.openggf.game.sonic1.audio.Sonic1Music;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
@@ -244,11 +244,11 @@ public class Sonic1MonitorObjectInstance extends AbstractMonitorObjectInstance
             // Pow_ChkInvinc: invincibility on, play bgm_Invincible
             case 5 -> {
                 player.giveInvincibility();
-                services.playMusic(Sonic1Music.INVINCIBILITY.id);
+                services.playMusic(GameMusic.INVINCIBILITY);
             }
             // Pow_ChkSonic: v_lives++, play bgm_ExtraLife
             case 2 -> {
-                services.playMusic(Sonic1Music.EXTRA_LIFE.id);
+                services.playMusic(GameMusic.EXTRA_LIFE);
                 services.gameState().addLife();
             }
             // Pow_ChkEggman, Pow_ChkS, Pow_ChkGoggles: no effect
