@@ -1355,27 +1355,9 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         }
 
         int paletteLine = zoneIndex == Sonic1Constants.ZONE_SLZ ? 1 : 0;
-        ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, createOrbinautMappings(), paletteLine, 1);
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_ORBINAUT_ADDR);
+        ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, paletteLine, 1);
         registerSheet(ObjectArtKeys.ORBINAUT, sheet);
-    }
-
-    private List<SpriteMappingFrame> createOrbinautMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0C, -0x0C, 3, 3, 0x00, false, false, 0, false)
-        )));
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0C, -0x0C, 3, 3, 0x09, false, false, 1, false)
-        )));
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0C, -0x0C, 3, 3, 0x12, false, false, 0, false)
-        )));
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x08, -0x08, 2, 2, 0x1B, false, false, 0, false)
-        )));
-
-        return frames;
     }
 
     /**
