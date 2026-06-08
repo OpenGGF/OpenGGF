@@ -3947,50 +3947,10 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createSbzGirderMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_SBZ_GIRDER_ADDR);
         // make_art_tile(ArtTile_SBZ_Girder, 2, 0) -> palette line 2
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
         registerSheet(ObjectArtKeys.SBZ_GIRDER, sheet);
-    }
-
-    /**
-     * Creates SBZ Girder Block sprite mappings from
-     * docs/s1disasm/_maps/Girder Block.asm (Map_Gird_internal).
-     * <p>
-     * Single frame: 12 pieces forming a 192x48 pixel girder block.
-     * 6 columns (x: -0x60 to +0x40) x 2 rows (top y=-0x18, bottom y=0).
-     * Each piece is 4x3 tiles (32x24 pixels).
-     * First column uses tile 0; all other columns reuse tile 6.
-     * Bottom row pieces are y-flipped.
-     * <p>
-     * spritePiece args: xpos, ypos, width, height, tile, xflip, yflip, pal, pri
-     */
-    private List<SpriteMappingFrame> createSbzGirderMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.girder): 12 pieces - full girder block
-        frames.add(new SpriteMappingFrame(List.of(
-                // Column 1 (x=-0x60): unique end tiles
-                new SpriteMappingPiece(-0x60, -0x18, 4, 3, 0, false, false, 0, false),
-                new SpriteMappingPiece(-0x60,     0, 4, 3, 0, false,  true, 0, false),
-                // Column 2 (x=-0x40): repeated mid tiles
-                new SpriteMappingPiece(-0x40, -0x18, 4, 3, 6, false, false, 0, false),
-                new SpriteMappingPiece(-0x40,     0, 4, 3, 6, false,  true, 0, false),
-                // Column 3 (x=-0x20): repeated mid tiles
-                new SpriteMappingPiece(-0x20, -0x18, 4, 3, 6, false, false, 0, false),
-                new SpriteMappingPiece(-0x20,     0, 4, 3, 6, false,  true, 0, false),
-                // Column 4 (x=0): repeated mid tiles
-                new SpriteMappingPiece(    0, -0x18, 4, 3, 6, false, false, 0, false),
-                new SpriteMappingPiece(    0,     0, 4, 3, 6, false,  true, 0, false),
-                // Column 5 (x=0x20): repeated mid tiles
-                new SpriteMappingPiece( 0x20, -0x18, 4, 3, 6, false, false, 0, false),
-                new SpriteMappingPiece( 0x20,     0, 4, 3, 6, false,  true, 0, false),
-                // Column 6 (x=0x40): repeated mid tiles
-                new SpriteMappingPiece( 0x40, -0x18, 4, 3, 6, false, false, 0, false),
-                new SpriteMappingPiece( 0x40,     0, 4, 3, 6, false,  true, 0, false)
-        )));
-
-        return frames;
     }
 
     /**

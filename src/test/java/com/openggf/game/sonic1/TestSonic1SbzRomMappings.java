@@ -63,4 +63,20 @@ public class TestSonic1SbzRomMappings {
         assertEquals(new SpriteMappingPiece(-4, 0x20, 1, 2, 0, true, false, 0, false),
                 romFrames.get(21).pieces().get(5));
     }
+
+    @Test
+    public void sbzGirderRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_SBZ_GIRDER_ADDR);
+
+        assertEquals(List.of(12),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x60, -0x18, 4, 3, 0, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x60, 0, 4, 3, 0, false, true, 0, false),
+                romFrames.get(0).pieces().get(1));
+        assertEquals(new SpriteMappingPiece(0x40, 0, 4, 3, 6, false, true, 0, false),
+                romFrames.get(0).pieces().get(11));
+    }
 }
