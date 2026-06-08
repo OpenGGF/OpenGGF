@@ -1,0 +1,40 @@
+package com.openggf.game.sonic1;
+
+import com.openggf.data.RomByteReader;
+import com.openggf.game.sonic1.constants.Sonic1Constants;
+import com.openggf.level.render.SpriteMappingFrame;
+import com.openggf.level.render.SpriteMappingPiece;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+@RequiresRom(SonicGame.SONIC_1)
+public class TestSonic1PowerUpRomMappings {
+
+    @Test
+    public void shieldAndInvincibilityRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_SHIELD_ADDR, 8);
+
+        assertEquals(List.of(0, 4, 4, 4, 4, 4, 4, 4),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x18, -0x18, 3, 3, 0, false, false, 0, false),
+                romFrames.get(1).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(0, 0, 3, 3, 9, false, true, 0, false),
+                romFrames.get(1).pieces().get(3));
+        assertEquals(new SpriteMappingPiece(-0x17, -0x18, 3, 3, 0x12, true, false, 0, false),
+                romFrames.get(2).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x18, -0x18, 3, 3, 9, true, false, 0, false),
+                romFrames.get(3).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x18, 0, 3, 3, 9, true, true, 0, false),
+                romFrames.get(4).pieces().get(2));
+        assertEquals(new SpriteMappingPiece(0, 0, 3, 3, 0x1B, false, true, 0, false),
+                romFrames.get(7).pieces().get(3));
+    }
+}

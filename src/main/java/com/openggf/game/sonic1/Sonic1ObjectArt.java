@@ -69,6 +69,19 @@ public class Sonic1ObjectArt {
     }
 
     /**
+     * Loads S1-format sprite mappings from the current ROM with an explicit frame count.
+     */
+    public List<SpriteMappingFrame> loadMappingFrames(int mappingAddr, int frameCount) {
+        try {
+            return S1SpriteDataLoader.loadMappingFrames(reader, mappingAddr, frameCount);
+        } catch (IllegalArgumentException e) {
+            LOG.warning("Failed to load S1 mappings at 0x" + Integer.toHexString(mappingAddr)
+                    + ": " + e.getMessage());
+            return List.of();
+        }
+    }
+
+    /**
      * Builds a sprite sheet from Nemesis-compressed art and hardcoded mappings.
      *
      * @param artAddr ROM address of Nemesis-compressed art

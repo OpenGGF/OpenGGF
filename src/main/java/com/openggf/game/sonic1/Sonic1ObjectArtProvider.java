@@ -570,114 +570,34 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
                 Sonic1Constants.ART_NEM_EXPLOSION_ADDR, Sonic1Constants.MAP_EXPLOSION_ADDR, 0, 1));
     }
 
-    /**
-     * Loads shield art (Nem_Shield) and creates S1-format sprite mappings.
-     * Mappings from docs/s1disasm/_maps/Shield and Invincibility.asm (Map_Shield_internal).
-     * <p>
-     * S1 shield has 4 frames:
-     * <ul>
-     *   <li>Frame 0 (.shield1): bottom half only (2 pieces, 3x3 tiles each)</li>
-     *   <li>Frame 1 (.shield2): full quad - top + bottom (4 pieces)</li>
-     *   <li>Frame 2 (.shield3): full quad, alternate tile ($12) (4 pieces)</li>
-     *   <li>Frame 3 (.shield4): full quad, mirrored (4 pieces)</li>
-     * </ul>
-     */
     private void loadShieldArt(Sonic1ObjectArt art) {
+        List<SpriteMappingFrame> shieldMappings = createShieldMappingsFromRom(art);
         registerSheet(ObjectArtKeys.SHIELD, art.buildArtSheet(
-                Sonic1Constants.ART_NEM_SHIELD_ADDR, createShieldMappings(), 0, 1));
+                Sonic1Constants.ART_NEM_SHIELD_ADDR, shieldMappings, 0, 1));
     }
 
-    /**
-     * Creates shield sprite mappings from S1 disassembly Map_Shield_internal.
-     * <p>
-     * spritePiece format: x, y, width, height, startTile, xflip, yflip, pal, pri
-     */
-    private List<SpriteMappingFrame> createShieldMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
+    private List<SpriteMappingFrame> createShieldMappingsFromRom(Sonic1ObjectArt art) {
+        List<SpriteMappingFrame> romFrames = art.loadMappingFrames(Sonic1Constants.MAP_SHIELD_ADDR, 8);
+        if (romFrames.size() < 4 || romFrames.get(1).pieces().size() < 4) {
+            return List.of();
+        }
 
-        // Frame 0: .shield1 - bottom half only (2 pieces)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x18, 0, 3, 3, 0, false, true, 0, false),
-                new SpriteMappingPiece(0, 0, 3, 3, 9, false, true, 0, false)
-        )));
-
-        // Frame 1: .shield2 - full quad (4 pieces: top + bottom)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x18, -0x18, 3, 3, 0, false, false, 0, false),
-                new SpriteMappingPiece(0, -0x18, 3, 3, 9, false, false, 0, false),
-                new SpriteMappingPiece(-0x18, 0, 3, 3, 0, false, true, 0, false),
-                new SpriteMappingPiece(0, 0, 3, 3, 9, false, true, 0, false)
-        )));
-
-        // Frame 2: .shield3 - full quad, alternate tile $12 (4 pieces)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x17, -0x18, 3, 3, 0x12, true, false, 0, false),
-                new SpriteMappingPiece(0, -0x18, 3, 3, 0x12, false, false, 0, false),
-                new SpriteMappingPiece(-0x17, 0, 3, 3, 0x12, true, true, 0, false),
-                new SpriteMappingPiece(0, 0, 3, 3, 0x12, false, true, 0, false)
-        )));
-
-        // Frame 3: .shield4 - full quad, mirrored (4 pieces)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x18, -0x18, 3, 3, 9, true, false, 0, false),
-                new SpriteMappingPiece(0, -0x18, 3, 3, 0, true, false, 0, false),
-                new SpriteMappingPiece(-0x18, 0, 3, 3, 9, true, true, 0, false),
-                new SpriteMappingPiece(0, 0, 3, 3, 0, true, true, 0, false)
-        )));
-
-        return frames;
+        List<SpriteMappingFrame> shieldFrames = new ArrayList<>(4);
+        shieldFrames.add(new SpriteMappingFrame(List.copyOf(romFrames.get(1).pieces().subList(2, 4))));
+        shieldFrames.add(romFrames.get(1));
+        shieldFrames.add(romFrames.get(2));
+        shieldFrames.add(romFrames.get(3));
+        return List.copyOf(shieldFrames);
     }
 
-    /**
-     * Loads invincibility stars art (Nem_Stars) and creates S1-format sprite mappings.
-     * Mappings from docs/s1disasm/_maps/Shield and Invincibility.asm (Map_Shield_internal .stars*).
-     */
     private void loadInvincibilityStarsArt(Sonic1ObjectArt art) {
+        List<SpriteMappingFrame> romFrames = art.loadMappingFrames(Sonic1Constants.MAP_SHIELD_ADDR, 8);
+        List<SpriteMappingFrame> starMappings = romFrames.size() >= 8
+                ? List.copyOf(romFrames.subList(4, 8))
+                : List.of();
         registerSheet(ObjectArtKeys.INVINCIBILITY_STARS, art.buildArtSheet(
                 Sonic1Constants.ART_NEM_INVINCIBILITY_STARS_ADDR,
-                createInvincibilityStarsMappings(), 0, 1));
-    }
-
-    /**
-     * Creates invincibility stars sprite mappings from S1 disassembly Map_Shield_internal.
-     * Uses only .stars1-.stars4 frames.
-     */
-    private List<SpriteMappingFrame> createInvincibilityStarsMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0: .stars1
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x18, -0x18, 3, 3, 0, false, false, 0, false),
-                new SpriteMappingPiece(0, -0x18, 3, 3, 9, false, false, 0, false),
-                new SpriteMappingPiece(-0x18, 0, 3, 3, 9, true, true, 0, false),
-                new SpriteMappingPiece(0, 0, 3, 3, 0, true, true, 0, false)
-        )));
-
-        // Frame 1: .stars2
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x18, -0x18, 3, 3, 9, true, false, 0, false),
-                new SpriteMappingPiece(0, -0x18, 3, 3, 0, true, false, 0, false),
-                new SpriteMappingPiece(-0x18, 0, 3, 3, 0, false, true, 0, false),
-                new SpriteMappingPiece(0, 0, 3, 3, 9, false, true, 0, false)
-        )));
-
-        // Frame 2: .stars3
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x18, -0x18, 3, 3, 0x12, false, false, 0, false),
-                new SpriteMappingPiece(0, -0x18, 3, 3, 0x1B, false, false, 0, false),
-                new SpriteMappingPiece(-0x18, 0, 3, 3, 0x1B, true, true, 0, false),
-                new SpriteMappingPiece(0, 0, 3, 3, 0x12, true, true, 0, false)
-        )));
-
-        // Frame 3: .stars4
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x18, -0x18, 3, 3, 0x1B, true, false, 0, false),
-                new SpriteMappingPiece(0, -0x18, 3, 3, 0x12, true, false, 0, false),
-                new SpriteMappingPiece(-0x18, 0, 3, 3, 0x12, false, true, 0, false),
-                new SpriteMappingPiece(0, 0, 3, 3, 0x1B, false, true, 0, false)
-        )));
-
-        return frames;
+                starMappings, 0, 1));
     }
 
     /**
