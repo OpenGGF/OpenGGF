@@ -57,4 +57,20 @@ public class TestSonic1PowerUpRomMappings {
         assertEquals(new SpriteMappingPiece(6, -4, 2, 1, 7, false, false, 0, false),
                 romFrames.get(6).pieces().get(1));
     }
+
+    @Test
+    public void hiddenBonusRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_HIDDEN_BONUS_ADDR);
+
+        assertEquals(List.of(0, 1, 1, 1),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x10, -0x0C, 4, 3, 0x00, false, false, 0, false),
+                romFrames.get(1).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x10, -0x0C, 4, 3, 0x0C, false, false, 0, false),
+                romFrames.get(2).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x10, -0x0C, 4, 3, 0x18, false, false, 0, false),
+                romFrames.get(3).pieces().get(0));
+    }
 }

@@ -4551,7 +4551,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createHiddenBonusMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_HIDDEN_BONUS_ADDR);
         // make_art_tile(ArtTile_Hidden_Points, 0, 1) — palette 0, priority set
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 0, 1);
         registerSheet(ObjectArtKeys.HIDDEN_BONUS, sheet);
@@ -4570,19 +4570,13 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         frames.add(new SpriteMappingFrame(List.of()));
 
         // Frame 1: ._10000 — spritePiece -$10, -$C, 4, 3, 0, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x0C, 4, 3, 0x00, false, false, 0, false)
-        )));
+        frames.add(new SpriteMappingFrame(List.of()));
 
         // Frame 2: ._1000 — spritePiece -$10, -$C, 4, 3, $C, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x0C, 4, 3, 0x0C, false, false, 0, false)
-        )));
+        frames.add(new SpriteMappingFrame(List.of()));
 
         // Frame 3: ._100 — spritePiece -$10, -$C, 4, 3, $18, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x0C, 4, 3, 0x18, false, false, 0, false)
-        )));
+        frames.add(new SpriteMappingFrame(List.of()));
 
         return frames;
     }

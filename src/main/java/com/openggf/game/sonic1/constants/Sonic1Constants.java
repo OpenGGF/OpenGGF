@@ -135,6 +135,7 @@ public final class Sonic1Constants {
     public static final int MAP_SBZ_ELECTROCUTER_ADDR = 0x016948; // Map_Elec (Obj6E: 6 frames)
     public static final int MAP_SBZ_GIRDER_ADDR  = 0x016D90; // Map_Gird (Obj70: 1 frame)
     public static final int MAP_CATERKILLER_ADDR = 0x01751A; // Map_Cat (Obj78: 24 frames)
+    public static final int MAP_HIDDEN_BONUS_ADDR = 0x0179F4; // Map_Bonus (Obj7D: 4 frames)
     public static final int MAP_EGGMAN_ADDR      = 0x0184B8; // Map_Eggman (bosses: 13 frames)
     public static final int MAP_BOSS_ITEMS_ADDR  = 0x018580; // Map_BossItems (boss extras: 8 frames)
     public static final int MAP_SEGG_ADDR        = 0x01A1E4; // Map_SEgg (Obj82/Obj85: 11 frames)

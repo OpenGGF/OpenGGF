@@ -1012,7 +1012,7 @@ LZ/SLZ/SBZ `Map_Orb` table, the LZ `Map_Harp` table, the MZ/SBZ `Map_Cat` table,
 `Map_BossItems` tables, the SBZ2/FZ `Map_SEgg` table, plus the Final Zone
 `Map_EggCyl` / `Map_PLaunch` / `Map_Plasma` / `Map_FZLegs` / `Map_FZDamaged`
 boss mapping slice, now load from the user-supplied ROM and their guard budgets
-have been ratcheted down. The current object-provider budget is 770 handwritten
+have been ratcheted down. The current object-provider budget is 767 handwritten
 mapping pieces; Sonic 1 boss mappings are ROM-backed and
 their separate handwritten budget is zero.
 
