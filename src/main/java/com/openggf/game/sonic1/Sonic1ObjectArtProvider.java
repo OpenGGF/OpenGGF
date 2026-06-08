@@ -1959,78 +1959,10 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createYadrinMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_YADRIN_ADDR);
         // make_art_tile(ArtTile_Yadrin, 1, 0) - palette line 1
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 1, 1);
         registerSheet(ObjectArtKeys.YADRIN, sheet);
-    }
-
-    /**
-     * Creates Yadrin sprite mappings from S1 disassembly Map_Yad_internal.
-     * <p>
-     * spritePiece format: x, y, width, height, startTile, xflip, yflip, pal, pri
-     * <p>
-     * 6 frames: walk0 through walk5.
-     * Frames 0-2 use tile $31 for feet; frames 3-5 use tile $37 for feet.
-     */
-    private List<SpriteMappingFrame> createYadrinMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.walk0): 5 pieces
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0C, -0x0C, 3, 1, 0x00, false, false, 0, false),
-                new SpriteMappingPiece(-0x14, -0x04, 4, 3, 0x03, false, false, 0, false),
-                new SpriteMappingPiece(-0x04, -0x14, 2, 1, 0x0F, false, false, 0, false),
-                new SpriteMappingPiece( 0x0C, -0x0C, 1, 3, 0x11, false, false, 0, false),
-                new SpriteMappingPiece(-0x04,  0x04, 3, 2, 0x31, false, false, 0, false)
-        )));
-
-        // Frame 1 (.walk1): 5 pieces - different head/body art
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0C, -0x0C, 3, 1, 0x14, false, false, 0, false),
-                new SpriteMappingPiece(-0x14, -0x04, 4, 3, 0x17, false, false, 0, false),
-                new SpriteMappingPiece(-0x04, -0x14, 2, 1, 0x0F, false, false, 0, false),
-                new SpriteMappingPiece( 0x0C, -0x0C, 1, 3, 0x11, false, false, 0, false),
-                new SpriteMappingPiece(-0x04,  0x04, 3, 2, 0x31, false, false, 0, false)
-        )));
-
-        // Frame 2 (.walk2): 5 pieces - body top is 3x2 instead of 3x1
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0C, -0x0C, 3, 2, 0x23, false, false, 0, false),
-                new SpriteMappingPiece(-0x14,  0x04, 4, 2, 0x29, false, false, 0, false),
-                new SpriteMappingPiece(-0x04, -0x14, 2, 1, 0x0F, false, false, 0, false),
-                new SpriteMappingPiece( 0x0C, -0x0C, 1, 3, 0x11, false, false, 0, false),
-                new SpriteMappingPiece(-0x04,  0x04, 3, 2, 0x31, false, false, 0, false)
-        )));
-
-        // Frame 3 (.walk3): Same as frame 0 but with tile $37 feet
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0C, -0x0C, 3, 1, 0x00, false, false, 0, false),
-                new SpriteMappingPiece(-0x14, -0x04, 4, 3, 0x03, false, false, 0, false),
-                new SpriteMappingPiece(-0x04, -0x14, 2, 1, 0x0F, false, false, 0, false),
-                new SpriteMappingPiece( 0x0C, -0x0C, 1, 3, 0x11, false, false, 0, false),
-                new SpriteMappingPiece(-0x04,  0x04, 3, 2, 0x37, false, false, 0, false)
-        )));
-
-        // Frame 4 (.walk4): Same as frame 1 but with tile $37 feet
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0C, -0x0C, 3, 1, 0x14, false, false, 0, false),
-                new SpriteMappingPiece(-0x14, -0x04, 4, 3, 0x17, false, false, 0, false),
-                new SpriteMappingPiece(-0x04, -0x14, 2, 1, 0x0F, false, false, 0, false),
-                new SpriteMappingPiece( 0x0C, -0x0C, 1, 3, 0x11, false, false, 0, false),
-                new SpriteMappingPiece(-0x04,  0x04, 3, 2, 0x37, false, false, 0, false)
-        )));
-
-        // Frame 5 (.walk5): Same as frame 2 but with tile $37 feet
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0C, -0x0C, 3, 2, 0x23, false, false, 0, false),
-                new SpriteMappingPiece(-0x14,  0x04, 4, 2, 0x29, false, false, 0, false),
-                new SpriteMappingPiece(-0x04, -0x14, 2, 1, 0x0F, false, false, 0, false),
-                new SpriteMappingPiece( 0x0C, -0x0C, 1, 3, 0x11, false, false, 0, false),
-                new SpriteMappingPiece(-0x04,  0x04, 3, 2, 0x37, false, false, 0, false)
-        )));
-
-        return frames;
     }
 
     /**

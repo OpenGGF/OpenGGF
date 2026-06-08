@@ -33,4 +33,22 @@ public class TestSonic1SyzRomMappings {
         assertEquals(new SpriteMappingPiece(0, -0x10, 2, 4, 0x0E, true, false, 0, false),
                 romFrames.get(2).pieces().get(1));
     }
+
+    @Test
+    public void yadrinRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_YADRIN_ADDR);
+
+        assertEquals(List.of(5, 5, 5, 5, 5, 5),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x0C, -0x0C, 3, 1, 0, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x04, 0x04, 3, 2, 0x31, false, false, 0, false),
+                romFrames.get(0).pieces().get(4));
+        assertEquals(new SpriteMappingPiece(-0x0C, -0x0C, 3, 2, 0x23, false, false, 0, false),
+                romFrames.get(2).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x04, 0x04, 3, 2, 0x37, false, false, 0, false),
+                romFrames.get(5).pieces().get(4));
+    }
 }
