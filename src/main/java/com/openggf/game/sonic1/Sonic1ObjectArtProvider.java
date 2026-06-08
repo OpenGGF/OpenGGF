@@ -4019,59 +4019,11 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createSbzSpinningPlatformMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(
+                Sonic1Constants.MAP_SBZ_SPINNING_PLATFORM_ADDR);
         // make_art_tile(ArtTile_SBZ_Spinning_Platform, 0, 0) -> palette line 0
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 0, 1);
         registerSheet(ObjectArtKeys.SBZ_SPINNING_PLATFORM, sheet);
-    }
-
-    /**
-     * Creates SBZ Spinning Platform sprite mappings from
-     * docs/s1disasm/_maps/SBZ Spinning Platforms.asm (Map_Spin_internal).
-     * <p>
-     * Five frames representing the spinning disc rotation:
-     * <ul>
-     *   <li>Frame 0 (.flat): 2 pieces of 2x2 - disc seen from above (solid)</li>
-     *   <li>Frame 1 (.spin1): 2 pieces of 4x2 - first rotation frame</li>
-     *   <li>Frame 2 (.spin2): 2 pieces of 3x2 - second rotation frame</li>
-     *   <li>Frame 3 (.spin3): 2 pieces of 3x2 - third rotation frame</li>
-     *   <li>Frame 4 (.spin4): 2 pieces of 2x2 - fourth rotation frame (edge-on)</li>
-     * </ul>
-     */
-    private List<SpriteMappingFrame> createSbzSpinningPlatformMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.flat): 2 pieces of 2x2
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -8, 2, 2, 0, false, false, 0, false),
-                new SpriteMappingPiece(0, -8, 2, 2, 0, true, false, 0, false)
-        )));
-
-        // Frame 1 (.spin1): 2 pieces of 4x2
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 4, 2, 0x14, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, 0, 4, 2, 0x1C, false, false, 0, false)
-        )));
-
-        // Frame 2 (.spin2): 2 pieces of 3x2
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 3, 2, 0x04, false, false, 0, false),
-                new SpriteMappingPiece(-0x08, 0, 3, 2, 0x0A, false, false, 0, false)
-        )));
-
-        // Frame 3 (.spin3): 2 pieces of 3x2
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 3, 2, 0x24, false, false, 0, false),
-                new SpriteMappingPiece(-0x08, 0, 3, 2, 0x2A, false, false, 0, false)
-        )));
-
-        // Frame 4 (.spin4): 2 pieces of 2x2
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x08, -0x10, 2, 2, 0x10, false, false, 0, false),
-                new SpriteMappingPiece(-0x08, 0, 2, 2, 0x10, false, true, 0, false)
-        )));
-
-        return frames;
     }
 
     /**
