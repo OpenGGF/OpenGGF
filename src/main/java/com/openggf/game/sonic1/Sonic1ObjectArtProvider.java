@@ -4305,46 +4305,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         if (patterns.length == 0) {
             return null;
         }
-        return new ObjectSpriteSheet(patterns, createEndingEmeraldsMappings(), 0, 1);
-    }
-
-    /**
-     * Sprite mappings from docs/s1disasm/_maps/Ending Sequence Emeralds.asm.
-     * 7 frames (index 0 unused by ROM, indices 1-6 for the 6 emeralds).
-     */
-    private List<SpriteMappingFrame> createEndingEmeraldsMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0: M_ECha_1
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 0x00, false, false, 0, false)
-        )));
-        // Frame 1: M_ECha_2
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 0x04, false, false, 0, false)
-        )));
-        // Frame 2: M_ECha_3 (palette 2)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 0x10, false, false, 2, false)
-        )));
-        // Frame 3: M_ECha_4 (palette 1)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 0x18, false, false, 1, false)
-        )));
-        // Frame 4: M_ECha_5 (palette 2)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 0x14, false, false, 2, false)
-        )));
-        // Frame 5: M_ECha_6
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 0x08, false, false, 0, false)
-        )));
-        // Frame 6: M_ECha_7
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 0x0C, false, false, 0, false)
-        )));
-
-        return frames;
+        return new ObjectSpriteSheet(patterns, art.loadMappingFrames(Sonic1Constants.MAP_END_EMERALDS_ADDR), 0, 1);
     }
 
     private ObjectSpriteSheet createEndingSTHSheet(Sonic1ObjectArt art) {
@@ -4352,24 +4313,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         if (patterns.length == 0) {
             return null;
         }
-        return new ObjectSpriteSheet(patterns, createEndingSTHMappings(), 0, 1);
-    }
-
-    /**
-     * Sprite mappings from docs/s1disasm/_maps/Ending Sequence STH.asm.
-     * Single frame: three 4x4-tile pieces spelling "SONIC THE HEDGEHOG".
-     */
-    private List<SpriteMappingFrame> createEndingSTHMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0: M_ESth_1
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x30, -0x10, 4, 4, 0x00, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0x10, false, false, 0, false),
-                new SpriteMappingPiece(0x10, -0x10, 4, 4, 0x20, false, false, 0, false)
-        )));
-
-        return frames;
+        return new ObjectSpriteSheet(patterns, art.loadMappingFrames(Sonic1Constants.MAP_END_STH_ADDR), 0, 1);
     }
 
     // ── SBZ2 cutscene art ──────────────────────────────────────────────
