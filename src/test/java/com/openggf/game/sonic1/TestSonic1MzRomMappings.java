@@ -69,4 +69,22 @@ public class TestSonic1MzRomMappings {
         assertEquals(new SpriteMappingPiece(0, -0x28, 4, 3, 0x90, true, false, 0, false),
                 romFrames.get(17).pieces().get(5));
     }
+
+    @Test
+    public void basaranRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_BASARAN_ADDR);
+
+        assertEquals(List.of(1, 3, 4, 4),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-8, -0x0C, 2, 3, 0, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(0x0C, 0x02, 1, 1, 0x27, false, false, 0, false),
+                romFrames.get(1).pieces().get(2));
+        assertEquals(new SpriteMappingPiece(-0x10, 0, 4, 1, 0x16, false, false, 0, false),
+                romFrames.get(2).pieces().get(1));
+        assertEquals(new SpriteMappingPiece(0x0C, -2, 1, 1, 0x27, false, false, 0, false),
+                romFrames.get(3).pieces().get(3));
+    }
 }

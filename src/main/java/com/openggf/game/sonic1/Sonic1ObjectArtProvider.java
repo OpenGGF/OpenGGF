@@ -1736,62 +1736,10 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createBatbrainMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_BASARAN_ADDR);
         // make_art_tile(ArtTile_Basaran, 0, 1) - palette line 0
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 0, 1);
         registerSheet(ObjectArtKeys.BATBRAIN, sheet);
-    }
-
-    /**
-     * Creates Batbrain sprite mappings from S1 disassembly Map_Bas_internal.
-     * <p>
-     * spritePiece format: x, y, width, height, startTile, xflip, yflip, pal, pri
-     * <p>
-     * Frame 0 (.still):  spritePiece -8, -$C, 2, 3, 0, 0, 0, 0, 0
-     * Frame 1 (.fly1):   spritePiece -$C, -$E, 4, 3, 6, 0, 0, 0, 0
-     *                     spritePiece -4, $A, 2, 1, $12, 0, 0, 0, 0
-     *                     spritePiece $C, 2, 1, 1, $27, 0, 0, 0, 0
-     * Frame 2 (.fly2):   spritePiece -8, -8, 2, 1, $14, 0, 0, 0, 0
-     *                     spritePiece -$10, 0, 4, 1, $16, 0, 0, 0, 0
-     *                     spritePiece 0, 8, 2, 1, $1A, 0, 0, 0, 0
-     *                     spritePiece $C, 0, 1, 1, $28, 0, 0, 0, 0
-     * Frame 3 (.fly3):   spritePiece -$B, -$A, 3, 2, $1C, 0, 0, 0, 0
-     *                     spritePiece -$C, 6, 3, 1, $22, 0, 0, 0, 0
-     *                     spritePiece -$C, $E, 2, 1, $25, 0, 0, 0, 0
-     *                     spritePiece $C, -2, 1, 1, $27, 0, 0, 0, 0
-     */
-    private List<SpriteMappingFrame> createBatbrainMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.still): Single 2x3 piece (16x24 pixels) - bat hanging from ceiling
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x08, -0x0C, 2, 3, 0x00, false, false, 0, false)
-        )));
-
-        // Frame 1 (.fly1): 3 pieces - body + feet + wing tip
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0C, -0x0E, 4, 3, 0x06, false, false, 0, false),
-                new SpriteMappingPiece(-0x04,  0x0A, 2, 1, 0x12, false, false, 0, false),
-                new SpriteMappingPiece( 0x0C,  0x02, 1, 1, 0x27, false, false, 0, false)
-        )));
-
-        // Frame 2 (.fly2): 4 pieces - head + body + feet + wing tip
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x08, -0x08, 2, 1, 0x14, false, false, 0, false),
-                new SpriteMappingPiece(-0x10,  0x00, 4, 1, 0x16, false, false, 0, false),
-                new SpriteMappingPiece( 0x00,  0x08, 2, 1, 0x1A, false, false, 0, false),
-                new SpriteMappingPiece( 0x0C,  0x00, 1, 1, 0x28, false, false, 0, false)
-        )));
-
-        // Frame 3 (.fly3): 4 pieces - body + lower body + feet + wing tip
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0B, -0x0A, 3, 2, 0x1C, false, false, 0, false),
-                new SpriteMappingPiece(-0x0C,  0x06, 3, 1, 0x22, false, false, 0, false),
-                new SpriteMappingPiece(-0x0C,  0x0E, 2, 1, 0x25, false, false, 0, false),
-                new SpriteMappingPiece( 0x0C, -0x02, 1, 1, 0x27, false, false, 0, false)
-        )));
-
-        return frames;
     }
 
     /**
