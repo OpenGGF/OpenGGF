@@ -129,4 +129,24 @@ public class TestSonic1GhzRomMappings {
         assertEquals(new SpriteMappingPiece(-8, -8, 2, 2, 0x33, false, false, 0, false),
                 romFrames.get(3).pieces().get(0));
     }
+
+    @Test
+    public void spikedPoleHelixRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_SPIKED_POLE_HELIX_ADDR);
+
+        assertEquals(List.of(1, 1, 1, 1, 1, 1, 0, 1),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-4, -0x10, 1, 2, 0, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -0x0B, 2, 2, 2, false, false, 0, false),
+                romFrames.get(1).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -5, 2, 2, 0x0A, false, false, 0, false),
+                romFrames.get(3).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-3, 4, 1, 1, 0x10, false, false, 0, false),
+                romFrames.get(5).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-3, -0x0C, 1, 1, 0x11, false, false, 0, false),
+                romFrames.get(7).pieces().get(0));
+    }
 }
