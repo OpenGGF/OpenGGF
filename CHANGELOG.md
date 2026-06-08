@@ -46,7 +46,8 @@ All notable changes to the OpenGGF project are documented in this file.
   GHZ collapsing ledge `Map_Ledge`,
   SBZ vanishing platform `Map_VanP`,
   shared score popup `Map_Poi`, hidden-bonus `Map_Bonus`, GHZ Buzz Bomber `Map_Buzz` / `Map_Missile`, shared shield and
-  invincibility-star `Map_Shield`, GHZ/SLZ smash-wall `Map_Smash`, LZ/SLZ/SBZ Orbinaut `Map_Orb`, LZ harpoon `Map_Harp`, MZ/SBZ Caterkiller `Map_Cat`, SBZ Ball Hog
+  invincibility-star `Map_Shield`, results-card `Map_Got` / `Map_SSR`,
+  GHZ/SLZ smash-wall `Map_Smash`, LZ/SLZ/SBZ Orbinaut `Map_Orb`, LZ harpoon `Map_Harp`, MZ/SBZ Caterkiller `Map_Cat`, SBZ Ball Hog
   `Map_Hog`, SBZ flamethrower `Map_Flame`, SLZ/SBZ Bomb `Map_Bomb`, SBZ saw/electrocuter and door/girder/platform tables `Map_Saw`
   / `Map_Elec` / `Map_ADoor` / `Map_Gird` / `Map_Trap` / `Map_Spin`, shared
   button `Map_But`, SBZ2

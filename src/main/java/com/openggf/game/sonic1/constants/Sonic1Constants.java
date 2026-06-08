@@ -163,6 +163,8 @@ public final class Sonic1Constants {
     public static final int MAP_LZ_CONVEYOR_ADDR = 0x012D50; // Map_LConv (Obj63: 5 frames)
     public static final int MAP_LZ_BUBBLES_ADDR  = 0x0130A0; // Map_Bub (Obj0A/64: 23 frames)
     public static final int MAP_LZ_BREAKABLE_POLE_ADDR = 0x0119F6; // Map_Pole (Obj0B: 2 frames)
+    public static final int MAP_RESULTS_GOT_ADDR = 0x00D266; // Map_Got (results/title-card text: 9 frames, signed offsets)
+    public static final int MAP_RESULTS_SPECIAL_STAGE_ADDR = 0x00D328; // Map_SSR (special-stage results text: 9 frames, signed offsets)
     public static final int MAP_SS_RESULT_EMERALDS_ADDR = 0x00D482; // Map_SSRC (Obj7F: 7 frames)
     public static final int MAP_LZ_WATERFALL_ADDR = 0x013228; // Map_WFall (Obj65: 12 frames)
     public static final int MAP_LZ_SPLASH_ADDR   = 0x014D34; // Map_Splash (Obj08: 3 frames)
