@@ -3743,80 +3743,10 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createSbzElectrocuterMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_SBZ_ELECTROCUTER_ADDR);
         // make_art_tile(ArtTile_SBZ_Electric_Orb, 0, 0) -> palette line 0
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 0, 1);
         registerSheet(ObjectArtKeys.SBZ_ELECTROCUTER, sheet);
-    }
-
-    /**
-     * Creates SBZ Electrocuter sprite mappings from
-     * docs/s1disasm/_maps/Electrocuter.asm (Map_Elec_internal).
-     * <p>
-     * Six frames:
-     * <ul>
-     *   <li>Frame 0 (.normal): Base orb only - 2 pieces</li>
-     *   <li>Frame 1 (.zap1): Small zap above orb - 3 pieces</li>
-     *   <li>Frame 2 (.zap2): Medium zap with side bolts - 5 pieces</li>
-     *   <li>Frame 3 (.zap3): Orb with side bolts (no top zap) - 4 pieces</li>
-     *   <li>Frame 4 (.zap4): Orb with flipped side bolts + extended bolts - 6 pieces</li>
-     *   <li>Frame 5 (.zap5): Orb with flipped extended bolts - 4 pieces</li>
-     * </ul>
-     * <p>
-     * spritePiece args: xpos, ypos, width, height, tile, xflip, yflip, pal, pri
-     */
-    private List<SpriteMappingFrame> createSbzElectrocuterMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.normal): 2 pieces - base orb
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 1, 0, false, false, 3, false),
-                new SpriteMappingPiece(-8, 0, 2, 3, 2, false, false, 2, false)
-        )));
-
-        // Frame 1 (.zap1): 3 pieces - small zap above orb
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 8, false, false, 0, false),
-                new SpriteMappingPiece(-8, -8, 2, 1, 0, false, false, 3, false),
-                new SpriteMappingPiece(-8, 0, 2, 3, 2, false, false, 2, false)
-        )));
-
-        // Frame 2 (.zap2): 5 pieces - medium zap with side bolts
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 8, false, false, 0, false),
-                new SpriteMappingPiece(-8, -8, 2, 1, 0, false, false, 3, false),
-                new SpriteMappingPiece(-8, 0, 2, 3, 2, false, false, 2, false),
-                new SpriteMappingPiece(8, -0xA, 4, 2, 0xC, false, false, 0, false),
-                new SpriteMappingPiece(-0x24, -0xA, 4, 2, 0xC, true, false, 0, false)
-        )));
-
-        // Frame 3 (.zap3): 4 pieces - orb with side bolts (no top zap)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 1, 0, false, false, 3, false),
-                new SpriteMappingPiece(-8, 0, 2, 3, 2, false, false, 2, false),
-                new SpriteMappingPiece(8, -0xA, 4, 2, 0xC, false, false, 0, false),
-                new SpriteMappingPiece(-0x24, -0xA, 4, 2, 0xC, true, false, 0, false)
-        )));
-
-        // Frame 4 (.zap4): 6 pieces - orb with flipped side bolts + extended bolts
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 1, 0, false, false, 3, false),
-                new SpriteMappingPiece(-8, 0, 2, 3, 2, false, false, 2, false),
-                new SpriteMappingPiece(8, -0xA, 4, 2, 0xC, false, true, 0, false),
-                new SpriteMappingPiece(-0x24, -0xA, 4, 2, 0xC, true, true, 0, false),
-                new SpriteMappingPiece(0x24, -0xA, 4, 2, 0xC, false, false, 0, false),
-                new SpriteMappingPiece(-0x40, -0xA, 4, 2, 0xC, true, false, 0, false)
-        )));
-
-        // Frame 5 (.zap5): 4 pieces - orb with flipped extended bolts
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 1, 0, false, false, 3, false),
-                new SpriteMappingPiece(-8, 0, 2, 3, 2, false, false, 2, false),
-                new SpriteMappingPiece(0x24, -0xA, 4, 2, 0xC, false, true, 0, false),
-                new SpriteMappingPiece(-0x40, -0xA, 4, 2, 0xC, true, true, 0, false)
-        )));
-
-        return frames;
     }
 
     /**
