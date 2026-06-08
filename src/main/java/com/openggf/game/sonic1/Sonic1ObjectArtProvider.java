@@ -7345,22 +7345,28 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
 
         // FZ_PLASMA_LAUNCHER: Plasma turret (Map_PLaunch)
         List<SpriteMappingFrame> launchMappings =
-                Sonic1BossMappings.createPLaunchMappings();
-        registerSheet(ObjectArtKeys.FZ_PLASMA_LAUNCHER,
-                new ObjectSpriteSheet(fzPatterns, launchMappings, 0, launchMappings.size()));
+                art.loadMappingFrames(Sonic1Constants.MAP_FZ_PLAUNCH_ADDR);
+        if (!launchMappings.isEmpty()) {
+            registerSheet(ObjectArtKeys.FZ_PLASMA_LAUNCHER,
+                    new ObjectSpriteSheet(fzPatterns, launchMappings, 0, launchMappings.size()));
+        }
 
         // FZ_PLASMA: Energy ball projectiles (Map_Plasma)
         List<SpriteMappingFrame> plasmaMappings =
-                Sonic1BossMappings.createPlasmaMappings();
-        registerSheet(ObjectArtKeys.FZ_PLASMA,
-                new ObjectSpriteSheet(fzPatterns, plasmaMappings, 0, plasmaMappings.size()));
+                art.loadMappingFrames(Sonic1Constants.MAP_FZ_PLASMA_ADDR);
+        if (!plasmaMappings.isEmpty()) {
+            registerSheet(ObjectArtKeys.FZ_PLASMA,
+                    new ObjectSpriteSheet(fzPatterns, plasmaMappings, 0, plasmaMappings.size()));
+        }
 
         // FZ_LEGS: Escape ship legs (Map_FZLegs), sourced from Nem_FzEggman.
         if (fzEggmanPatterns.length > 0) {
             List<SpriteMappingFrame> legsMappings =
-                    Sonic1BossMappings.createFZLegsMappings();
-            registerSheet(ObjectArtKeys.FZ_LEGS,
-                    new ObjectSpriteSheet(fzEggmanPatterns, legsMappings, 0, legsMappings.size()));
+                    art.loadMappingFrames(Sonic1Constants.MAP_FZ_LEGS_ADDR);
+            if (!legsMappings.isEmpty()) {
+                registerSheet(ObjectArtKeys.FZ_LEGS,
+                        new ObjectSpriteSheet(fzEggmanPatterns, legsMappings, 0, legsMappings.size()));
+            }
         }
 
         // Standard Eggman art for escape phase (Map_Eggman)
@@ -7370,9 +7376,11 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         // FZ_DAMAGED: Damaged ship mapping (Map_FZDamaged), sourced from Nem_FzEggman.
         if (fzEggmanPatterns.length > 0) {
             List<SpriteMappingFrame> damagedMappings =
-                    Sonic1BossMappings.createFZDamagedMappings();
-            registerSheet(ObjectArtKeys.FZ_DAMAGED,
-                    new ObjectSpriteSheet(fzEggmanPatterns, damagedMappings, 0, damagedMappings.size()));
+                    art.loadMappingFrames(Sonic1Constants.MAP_FZ_DAMAGED_ADDR);
+            if (!damagedMappings.isEmpty()) {
+                registerSheet(ObjectArtKeys.FZ_DAMAGED,
+                        new ObjectSpriteSheet(fzEggmanPatterns, damagedMappings, 0, damagedMappings.size()));
+            }
         }
     }
 

@@ -43,30 +43,6 @@ public class TestSonic1FzSeggMappingRemap {
         assertEquals(2, tubePiece.paletteIndex(), "Palette should resolve to line 2 after add.w overflow");
     }
 
-    @Test
-    public void fzLegsAndDamagedMappingsStayWithinFzEggmanPatternRange() {
-        // Nem_FzEggman ("Boss - Eggman after FZ Fight") is 0x4C patterns in REV01.
-        // Map_FZLegs and Map_FZDamaged must remain within that local tile range.
-        int maxLegsTile = maxTileIndex(Sonic1BossMappings.createFZLegsMappings());
-        int maxDamagedTile = maxTileIndex(Sonic1BossMappings.createFZDamagedMappings());
-
-        assertEquals(0x1F, maxLegsTile, "Map_FZLegs max tile should be $1F");
-        assertEquals(0x4B, maxDamagedTile, "Map_FZDamaged max tile should be $4B");
-    }
-
-    private static int maxTileIndex(List<SpriteMappingFrame> frames) {
-        int max = 0;
-        for (SpriteMappingFrame frame : frames) {
-            for (SpriteMappingPiece piece : frame.pieces()) {
-                int lastTile = piece.tileIndex() + (piece.widthTiles() * piece.heightTiles()) - 1;
-                if (lastTile > max) {
-                    max = lastTile;
-                }
-            }
-        }
-        return max;
-    }
-
 }
 
 

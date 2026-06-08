@@ -1002,10 +1002,11 @@ The runtime does not read gameplay asset bytes from `docs/` disassembly trees,
 but several Sonic 1 mapping pieces are still handwritten in production source.
 The former palette-cycle rows, conveyor waypoint and child spawner tables, GHZ
 bridge bend tables, and the small `Map_Seesaw` / `Map_SSawBall` / `Map_Fan` /
-`Map_Pylon` / `Map_Scen` / `Map_ExplodeItem` support-object mapping slice now
-load from the user-supplied ROM and their guard budgets have been ratcheted
-down. The current object-provider budget is 1406 handwritten mapping pieces;
-boss mappings remain separately budgeted at 218.
+`Map_Pylon` / `Map_Scen` / `Map_ExplodeItem` support-object mapping slice, plus
+the Final Zone `Map_PLaunch` / `Map_Plasma` / `Map_FZLegs` / `Map_FZDamaged`
+boss mapping slice, now load from the user-supplied ROM and their guard budgets
+have been ratcheted down. The current object-provider budget is 1406 handwritten
+mapping pieces; boss mappings remain separately budgeted at 177.
 
 ### Release Boundary
 
