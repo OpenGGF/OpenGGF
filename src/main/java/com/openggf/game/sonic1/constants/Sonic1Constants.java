@@ -149,6 +149,7 @@ public final class Sonic1Constants {
     public static final int MAP_FZ_EGGCYL_ADDR   = 0x01AE2C; // Map_EggCyl (Obj85: 12 frames)
     public static final int MAP_FZ_PLAUNCH_ADDR  = 0x01B20C; // Map_PLaunch (Obj86: 4 frames)
     public static final int MAP_FZ_PLASMA_ADDR   = 0x01B25C; // Map_Plasma (Obj87: 11 frames)
+    public static final int MAP_PRISON_ADDR      = 0x01B52A; // Map_Pri (Obj3E: 7 frames)
 
     // Sonic's animation scripts (31 animations)
     public static final int SONIC_ANIM_DATA_ADDR = 0x1421C;
