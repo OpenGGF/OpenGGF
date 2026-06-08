@@ -111,50 +111,6 @@ public final class Sonic1BossMappings {
     }
 
     /**
-     * GHZ Ball mappings (Map_GBall_internal) — 4 frames.
-     * Used by the wrecking ball at the end of the chain.
-     */
-    public static List<SpriteMappingFrame> createGHZBallMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0: .shiny (6 pieces)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 2, 1, 0x24, false, false, 0, false),
-                new SpriteMappingPiece(-0x10,  -0x8, 2, 1, 0x24, false, true,  0, false),
-                new SpriteMappingPiece(-0x18, -0x18, 3, 3, 0x00, false, false, 0, false),
-                new SpriteMappingPiece( 0x00, -0x18, 3, 3, 0x00, true,  false, 0, false),
-                new SpriteMappingPiece(-0x18,  0x00, 3, 3, 0x00, false, true,  0, false),
-                new SpriteMappingPiece( 0x00,  0x00, 3, 3, 0x00, true,  true,  0, false)
-        )));
-
-        // Frame 1: .check1 (4 pieces)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x18, -0x18, 3, 3, 0x09, false, false, 0, false),
-                new SpriteMappingPiece( 0x00, -0x18, 3, 3, 0x09, true,  false, 0, false),
-                new SpriteMappingPiece(-0x18,  0x00, 3, 3, 0x09, false, true,  0, false),
-                new SpriteMappingPiece( 0x00,  0x00, 3, 3, 0x09, true,  true,  0, false)
-        )));
-
-        // Frame 2: .check2 (4 pieces)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x18, -0x18, 3, 3, 0x12, false, false, 0, false),
-                new SpriteMappingPiece( 0x00, -0x18, 3, 3, 0x1B, false, false, 0, false),
-                new SpriteMappingPiece(-0x18,  0x00, 3, 3, 0x1B, true,  true,  0, false),
-                new SpriteMappingPiece( 0x00,  0x00, 3, 3, 0x12, true,  true,  0, false)
-        )));
-
-        // Frame 3: .check3 (4 pieces)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x18, -0x18, 3, 3, 0x1B, true,  false, 0, false),
-                new SpriteMappingPiece( 0x00, -0x18, 3, 3, 0x12, true,  false, 0, false),
-                new SpriteMappingPiece(-0x18,  0x00, 3, 3, 0x12, false, true,  0, false),
-                new SpriteMappingPiece( 0x00,  0x00, 3, 3, 0x1B, false, true,  0, false)
-        )));
-
-        return frames;
-    }
-
-    /**
      * Boss Items mappings (Map_BossItems_internal) — chain anchor + tube frames.
      * Frames 0-1: GHZ boss chain anchors.
      * Frames 2-3: Placeholder (unused intermediate frames).

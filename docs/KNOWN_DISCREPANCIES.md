@@ -1006,7 +1006,8 @@ bridge bend tables, and the small `Map_Seesaw` / `Map_SSawBall` / `Map_Fan` /
 the Final Zone `Map_PLaunch` / `Map_Plasma` / `Map_FZLegs` / `Map_FZDamaged`
 boss mapping slice, now load from the user-supplied ROM and their guard budgets
 have been ratcheted down. The current object-provider budget is 1406 handwritten
-mapping pieces; boss mappings remain separately budgeted at 177.
+mapping pieces; boss mappings remain separately budgeted at 159 after removing
+an unused GHZ ball mapping helper.
 
 ### Release Boundary
 
