@@ -2762,16 +2762,15 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         //   -> in combined array: stomperCount + 0
         // Original: tile $1B2 -> absolute $472 -> door pattern index 3
         //   -> in combined array: stomperCount + 3
-        int doorBase = stomperCount;
-
-        List<SpriteMappingFrame> mappings = createStomperDoorMappings(doorBase);
+        List<SpriteMappingFrame> mappings = createStomperDoorMappingsFromRom(
+                art.loadMappingFrames(Sonic1Constants.MAP_SBZ_STOMPER_DOOR_ADDR), stomperCount);
         // make_art_tile(ArtTile_SBZ_Moving_Block_Short, 1, 0) -> palette line 1
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(combined, mappings, 1, 1);
         registerSheet(ObjectArtKeys.SBZ_STOMPER_DOOR, sheet);
     }
 
     /**
-     * Creates sprite mappings for the SBZ Stomper and Door (Object 0x6B).
+     * Builds sprite mappings for the SBZ Stomper and Door (Object 0x6B) from ROM data.
      * <p>
      * From docs/s1disasm/_maps/SBZ Stomper and Door.asm (Map_Stomp_internal):
      * <ul>
@@ -2786,49 +2785,23 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
      *
      * @param doorBase index in the combined pattern array where Nem_SbzDoor2 starts
      */
-    private List<SpriteMappingFrame> createStomperDoorMappings(int doorBase) {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
+    static List<SpriteMappingFrame> createStomperDoorMappingsFromRom(
+            List<SpriteMappingFrame> rawFrames, int doorBase) {
+        if (rawFrames.size() < 4) {
+            return List.of();
+        }
+        List<SpriteMappingFrame> frames = new ArrayList<>(4);
+        frames.add(remapStomperDoorFrame(rawFrames.get(0), doorBase));
+        frames.add(rawFrames.get(1));
+        frames.add(rawFrames.get(2));
+        frames.add(rawFrames.get(3));
+        return List.copyOf(frames);
+    }
 
-        // Frame 0 (.door): 4 pieces - horizontal sliding door (128x24)
-        // Original tiles: $1AF, $1B2 relative to ArtTile_SBZ_Moving_Block_Short
-        // Remapped: doorBase + 0, doorBase + 3
-        // spritePiece -$40, -$C, 4, 3, $1AF, 0, 0, 1, 0
-        // spritePiece -$20, -$C, 4, 3, $1B2, 0, 0, 1, 0
-        // spritePiece    0, -$C, 4, 3, $1B2, 0, 0, 1, 0
-        // spritePiece  $20, -$C, 4, 3, $1AF, 1, 0, 1, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x40, -0x0C, 4, 3, doorBase,     false, false, 1, false),
-                new SpriteMappingPiece(-0x20, -0x0C, 4, 3, doorBase + 3, false, false, 1, false),
-                new SpriteMappingPiece(    0, -0x0C, 4, 3, doorBase + 3, false, false, 1, false),
-                new SpriteMappingPiece( 0x20, -0x0C, 4, 3, doorBase,     true,  false, 1, false)
-        )));
-
-        // Frame 1 (.stomper): 8 pieces - stomper block with yellow/black stripes (56x64)
-        // Tiles are direct indices into Nem_Stomper (at offset 0 in combined array)
-        // spritePiece -$1C, -$20, 4, 1, $C, 0, 0, 0, 0
-        // spritePiece    4, -$20, 3, 1, $10, 0, 0, 0, 0
-        // spritePiece -$1C, -$18, 4, 3, $13, 0, 0, 1, 0
-        // spritePiece    4, -$18, 3, 3, $1F, 0, 0, 1, 0
-        // spritePiece -$1C,    0, 4, 3, $13, 0, 0, 1, 0
-        // spritePiece    4,    0, 3, 3, $1F, 0, 0, 1, 0
-        // spritePiece -$1C,  $18, 4, 1, $C, 0, 0, 0, 0
-        // spritePiece    4,  $18, 3, 1, $10, 0, 0, 0, 0
-        SpriteMappingFrame stomperFrame = new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x1C, -0x20, 4, 1, 0x0C, false, false,  0, false),
-                new SpriteMappingPiece( 0x04, -0x20, 3, 1, 0x10, false, false,  0, false),
-                new SpriteMappingPiece(-0x1C, -0x18, 4, 3, 0x13, false, false,  1, false),
-                new SpriteMappingPiece( 0x04, -0x18, 3, 3, 0x1F, false, false,  1, false),
-                new SpriteMappingPiece(-0x1C,  0x00, 4, 3, 0x13, false, false,  1, false),
-                new SpriteMappingPiece( 0x04,  0x00, 3, 3, 0x1F, false, false,  1, false),
-                new SpriteMappingPiece(-0x1C,  0x18, 4, 1, 0x0C, false, false,  0, false),
-                new SpriteMappingPiece( 0x04,  0x18, 3, 1, 0x10, false, false,  0, false)
-        ));
-        // Frames 1, 2, 3 all reference the same .stomper mapping in the table
-        frames.add(stomperFrame);
-        frames.add(stomperFrame);
-        frames.add(stomperFrame);
-
-        return frames;
+    private static SpriteMappingFrame remapStomperDoorFrame(SpriteMappingFrame rawFrame, int doorBase) {
+        return new SpriteMappingFrame(rawFrame.pieces().stream()
+                .map(piece -> withTileIndex(piece, doorBase + (piece.tileIndex() - 0x1AF)))
+                .toList());
     }
 
     /**
@@ -2867,56 +2840,42 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             patterns[i] = level.getPattern(i);
         }
 
-        List<SpriteMappingFrame> mappings = createSbz3BigDoorMappings(tileBase);
+        List<SpriteMappingFrame> mappings = createSbz3BigDoorMappingsFromRom(
+                loadMappingFrames(Sonic1Constants.MAP_SBZ_STOMPER_DOOR_ADDR), tileBase);
         // make_art_tile(ArtTile_Level+$1F0, 2, 0) -> palette line 2
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
         registerSheet(ObjectArtKeys.SBZ3_BIG_DOOR, sheet);
     }
 
     /**
-     * Creates sprite mapping for the SBZ3 big diagonal door.
+     * Builds the SBZ3 big diagonal door mapping from ROM data.
      * <p>
      * From docs/s1disasm/_maps/SBZ Stomper and Door.asm (.bigdoor):
      * 14 pieces forming a 256x128 diagonal sliding door.
      *
      * @param tileBase the base tile index ($1F0) in the patterns array
      */
-    private List<SpriteMappingFrame> createSbz3BigDoorMappings(int tileBase) {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
+    static List<SpriteMappingFrame> createSbz3BigDoorMappingsFromRom(
+            List<SpriteMappingFrame> rawFrames, int tileBase) {
+        if (rawFrames.size() < 5) {
+            return List.of();
+        }
+        return List.of(new SpriteMappingFrame(rawFrames.get(4).pieces().stream()
+                .map(piece -> withTileIndex(piece, tileBase + piece.tileIndex()))
+                .toList()));
+    }
 
-        // .bigdoor: 14 pieces
-        // spritePiece -$80, -$40, 4, 4,    0, 0, 0, 0, 0
-        // spritePiece -$60, -$40, 4, 4,  $10, 0, 0, 0, 0
-        // spritePiece -$40, -$40, 4, 4,  $20, 0, 0, 0, 0
-        // spritePiece -$20, -$40, 4, 4,  $10, 0, 0, 0, 0
-        // spritePiece    0, -$40, 4, 4,  $20, 0, 0, 0, 0
-        // spritePiece  $20, -$40, 4, 4,  $10, 0, 0, 0, 0
-        // spritePiece  $40, -$40, 4, 4,  $30, 0, 0, 0, 0
-        // spritePiece  $60, -$40, 4, 2,  $40, 0, 0, 0, 0
-        // spritePiece -$80, -$20, 4, 4,  $48, 0, 0, 0, 0
-        // spritePiece -$40, -$20, 4, 4,  $48, 0, 0, 0, 0
-        // spritePiece    0, -$20, 4, 4,  $58, 0, 0, 0, 0
-        // spritePiece -$80,    0, 4, 4,  $48, 0, 0, 0, 0
-        // spritePiece -$40,    0, 4, 4,  $58, 0, 0, 0, 0
-        // spritePiece -$80,  $20, 4, 4,  $58, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x80, -0x40, 4, 4, tileBase + 0x00, false, false, 0, false),
-                new SpriteMappingPiece(-0x60, -0x40, 4, 4, tileBase + 0x10, false, false, 0, false),
-                new SpriteMappingPiece(-0x40, -0x40, 4, 4, tileBase + 0x20, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, -0x40, 4, 4, tileBase + 0x10, false, false, 0, false),
-                new SpriteMappingPiece( 0x00, -0x40, 4, 4, tileBase + 0x20, false, false, 0, false),
-                new SpriteMappingPiece( 0x20, -0x40, 4, 4, tileBase + 0x10, false, false, 0, false),
-                new SpriteMappingPiece( 0x40, -0x40, 4, 4, tileBase + 0x30, false, false, 0, false),
-                new SpriteMappingPiece( 0x60, -0x40, 4, 2, tileBase + 0x40, false, false, 0, false),
-                new SpriteMappingPiece(-0x80, -0x20, 4, 4, tileBase + 0x48, false, false, 0, false),
-                new SpriteMappingPiece(-0x40, -0x20, 4, 4, tileBase + 0x48, false, false, 0, false),
-                new SpriteMappingPiece( 0x00, -0x20, 4, 4, tileBase + 0x58, false, false, 0, false),
-                new SpriteMappingPiece(-0x80,  0x00, 4, 4, tileBase + 0x48, false, false, 0, false),
-                new SpriteMappingPiece(-0x40,  0x00, 4, 4, tileBase + 0x58, false, false, 0, false),
-                new SpriteMappingPiece(-0x80,  0x20, 4, 4, tileBase + 0x58, false, false, 0, false)
-        )));
-
-        return frames;
+    private static SpriteMappingPiece withTileIndex(SpriteMappingPiece piece, int tileIndex) {
+        return new SpriteMappingPiece(
+                piece.xOffset(),
+                piece.yOffset(),
+                piece.widthTiles(),
+                piece.heightTiles(),
+                tileIndex,
+                piece.hFlip(),
+                piece.vFlip(),
+                piece.paletteIndex(),
+                piece.priority());
     }
 
     /**

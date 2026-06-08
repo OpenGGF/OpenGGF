@@ -1007,7 +1007,7 @@ LZ `Map_Jaws` / `Map_Burro` / `Map_Flap` / `Map_WFall` / `Map_Splash` tables,
 the MZ/SLZ `Map_Fire` table, the MZ `Map_Bas` / `Map_Glass` / `Map_CStom` / `Map_Geyser` / `Map_LWall` tables, the LZ `Map_LConv` / `Map_Bub` tables, the GHZ `Map_Hel` / `Map_Swing_GHZ` tables, the SLZ `Map_Swing_SLZ` table, the SYZ
 `Map_Bump` / `Map_Spring` / `Map_Roll` / `Map_Yad` tables, the GHZ `Map_Crab` / `Map_Moto` / `Map_Newt` / `Map_Buzz` / `Map_Missile` tables, the GHZ/SLZ `Map_Smash` table, the
 LZ/SLZ/SBZ `Map_Orb` table, the LZ `Map_Harp` table, the MZ/SBZ `Map_Cat` table, the SBZ `Map_Hog` table, the SLZ/SBZ `Map_Bomb` table, the SBZ `Map_Flame` / `Map_Saw` / `Map_Elec` / `Map_ADoor` / `Map_Gird` /
-`Map_Trap` / `Map_Spin` tables, the shared button `Map_But` table, the shared
+`Map_Trap` / `Map_Spin` / `Map_Stomp` tables, the shared button `Map_But` table, the shared
 animal `Map_Animal1` / `Map_Animal2` / `Map_Animal3` tables, the special-stage
 result-card `Map_Got` / `Map_SSR` tables, the special-stage result emerald
 `Map_SSRC` table, the Prison Capsule `Map_Pri` table, the Giant
@@ -1031,7 +1031,7 @@ vanishing platform `Map_VanP` table, the SYZ/SLZ/LZ floating block and door
 `Map_ECha` / `Map_ESth` tables, plus the Final Zone
 `Map_EggCyl` / `Map_PLaunch` / `Map_Plasma` / `Map_FZLegs` / `Map_FZDamaged`
 boss mapping slice, now load from the user-supplied ROM and their guard budgets
-have been ratcheted down. The current object-provider budget is 182 handwritten
+have been ratcheted down. The current object-provider budget is 157 handwritten
 mapping pieces; Sonic 1 boss mappings are ROM-backed and
 their separate handwritten budget is zero.
 

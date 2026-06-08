@@ -49,7 +49,7 @@ All notable changes to the OpenGGF project are documented in this file.
   invincibility-star `Map_Shield`, results-card `Map_Got` / `Map_SSR`,
   GHZ/SLZ smash-wall `Map_Smash`, LZ/SLZ/SBZ Orbinaut `Map_Orb`, LZ harpoon `Map_Harp`, MZ/SBZ Caterkiller `Map_Cat`, SBZ Ball Hog
   `Map_Hog`, SBZ flamethrower `Map_Flame`, SLZ/SBZ Bomb `Map_Bomb`, SBZ saw/electrocuter and door/girder/platform tables `Map_Saw`
-  / `Map_Elec` / `Map_ADoor` / `Map_Gird` / `Map_Trap` / `Map_Spin`, shared
+  / `Map_Elec` / `Map_ADoor` / `Map_Gird` / `Map_Trap` / `Map_Spin` / `Map_Stomp`, shared
   button `Map_But`, SBZ2
   `Map_FFloor`, shared boss `Map_Eggman` / `Map_BossItems`, SBZ2/FZ `Map_SEgg`,
   ending emerald/STH mappings `Map_ECha` / `Map_ESth`,

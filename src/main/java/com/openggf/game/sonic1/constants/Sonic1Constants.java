@@ -174,6 +174,7 @@ public final class Sonic1Constants {
     public static final int MAP_SBZ_TRAP_DOOR_ADDR = 0x016048; // Map_Trap (Obj69: 3 frames)
     public static final int MAP_SBZ_SPINNING_PLATFORM_ADDR = 0x0160A2; // Map_Spin (Obj69: 5 frames)
     public static final int MAP_SBZ_SAW_ADDR     = 0x016300; // Map_Saw (Obj6A: 4 frames)
+    public static final int MAP_SBZ_STOMPER_DOOR_ADDR = 0x0166D0; // Map_Stomp (Obj6B: 5 frames)
     public static final int MAP_SBZ_VANISHING_PLATFORM_ADDR = 0x016892; // Map_VanP (Obj6C: 4 frames)
     public static final int MAP_SBZ_ELECTROCUTER_ADDR = 0x016948; // Map_Elec (Obj6E: 6 frames)
     public static final int MAP_SBZ_GIRDER_ADDR  = 0x016D90; // Map_Gird (Obj70: 1 frame)
