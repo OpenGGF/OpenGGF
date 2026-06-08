@@ -1980,57 +1980,10 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createRollerMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_ROLLER_ADDR);
         // make_art_tile(ArtTile_Roller, 0, 0) - palette line 0
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 0, 1);
         registerSheet(ObjectArtKeys.ROLLER, sheet);
-    }
-
-    /**
-     * Creates Roller sprite mappings from S1 disassembly Map_Roll_internal.
-     * <p>
-     * spritePiece format: x, y, width, height, startTile, xflip, yflip, pal, pri
-     * <p>
-     * 5 frames: Stand, Fold, Roll1, Roll2, Roll3.
-     */
-    private List<SpriteMappingFrame> createRollerMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (M_Roll_Stand): 2 pieces - standing pose
-        // spritePiece -$10, -$22, 4, 3, 0, 0, 0, 0, 0
-        // spritePiece -$10, -$A,  4, 3, $C, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x22, 4, 3, 0x00, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x0A, 4, 3, 0x0C, false, false, 0, false)
-        )));
-
-        // Frame 1 (M_Roll_Fold): 2 pieces - folding pose
-        // spritePiece -$10, -$1A, 4, 3, 0, 0, 0, 0, 0
-        // spritePiece -$10, -2,   4, 2, $18, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x1A, 4, 3, 0x00, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x02, 4, 2, 0x18, false, false, 0, false)
-        )));
-
-        // Frame 2 (M_Roll_Roll1): 1 piece - rolling frame 1
-        // spritePiece -$10, -$10, 4, 4, $20, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0x20, false, false, 0, false)
-        )));
-
-        // Frame 3 (M_Roll_Roll2): 1 piece - rolling frame 2
-        // spritePiece -$10, -$10, 4, 4, $30, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0x30, false, false, 0, false)
-        )));
-
-        // Frame 4 (M_Roll_Roll3): 1 piece - rolling frame 3
-        // spritePiece -$10, -$10, 4, 4, $40, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0x40, false, false, 0, false)
-        )));
-
-        return frames;
     }
 
     /**

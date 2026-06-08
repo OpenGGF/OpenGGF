@@ -51,4 +51,22 @@ public class TestSonic1SyzRomMappings {
         assertEquals(new SpriteMappingPiece(-0x04, 0x04, 3, 2, 0x37, false, false, 0, false),
                 romFrames.get(5).pieces().get(4));
     }
+
+    @Test
+    public void rollerRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_ROLLER_ADDR);
+
+        assertEquals(List.of(2, 2, 1, 1, 1),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x10, -0x22, 4, 3, 0, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x10, -2, 4, 2, 0x18, false, false, 0, false),
+                romFrames.get(1).pieces().get(1));
+        assertEquals(new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0x20, false, false, 0, false),
+                romFrames.get(2).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0x40, false, false, 0, false),
+                romFrames.get(4).pieces().get(0));
+    }
 }

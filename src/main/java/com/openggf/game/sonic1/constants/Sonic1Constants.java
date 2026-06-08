@@ -112,6 +112,7 @@ public final class Sonic1Constants {
     public static final int MAP_SPIKE_ADDR       = 0x00D676; // Map_Spike (Obj36: 6 frames)
     public static final int MAP_MONITOR_ADDR     = 0x00AC14; // Map_Monitor (Obj26: 12 frames)
     public static final int MAP_NEWTRON_ADDR     = 0x00E5D0; // Map_Newt (Obj42: 11 frames)
+    public static final int MAP_ROLLER_ADDR      = 0x00E830; // Map_Roll (Obj43: 5 frames)
     public static final int MAP_SLZ_PYLON_ADDR   = 0x01176A; // Map_Pylon (Obj5C: 1 frame)
     public static final int MAP_BASARAN_ADDR     = 0x0108CA; // Map_Bas (Obj4F: 4 frames)
     public static final int MAP_SLZ_FAN_ADDR     = 0x011CE4; // Map_Fan (Obj5D: 5 frames)
