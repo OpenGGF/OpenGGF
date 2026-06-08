@@ -104,6 +104,8 @@ public final class Sonic1Constants {
     public static final int MAP_YADRIN_ADDR      = 0x00FFBA; // Map_Yad (Obj50: 6 frames)
     public static final int MAP_LZ_FLAPPING_DOOR_ADDR = 0x011AC6; // Map_Flap (Obj0C: 3 frames)
     public static final int MAP_GHZ_EDGE_WALL_ADDR = 0x00E8DF; // Map_Edge (Obj44: 3 frames)
+    public static final int MAP_MZ_BRICK_ADDR  = 0x00EF90; // Map_Brick (Obj46: 1 frame)
+    public static final int MAP_SYZ_SPINNING_LIGHT_ADDR = 0x00F00E; // Map_Light (Obj12: 6 frames)
     public static final int MAP_BRIDGE_ADDR      = 0x007FB2; // Map_Bri (Obj11: 3 frames)
     public static final int MAP_SWING_GHZ_ADDR   = 0x0082C6; // Map_Swing_GHZ (Obj15/48: 3 frames)
     public static final int MAP_SWING_SLZ_ADDR   = 0x0082E4; // Map_Swing_SLZ (Obj15: 3 frames)

@@ -89,6 +89,18 @@ public class TestSonic1MzRomMappings {
     }
 
     @Test
+    public void mzBrickRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_MZ_BRICK_ADDR);
+
+        assertEquals(List.of(1),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x10, -0x10, 4, 4, 1, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+    }
+
+    @Test
     public void caterkillerRomMappingsKeepExpectedTableShape() throws Exception {
         RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
         List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(

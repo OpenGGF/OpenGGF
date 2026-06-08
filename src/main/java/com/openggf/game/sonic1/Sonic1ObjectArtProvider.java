@@ -70,6 +70,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             { AnimalType.RABBIT, AnimalType.CHICKEN }   // SBZ
     };
 
+    private RomByteReader romReader;
     private Pattern[] hudDigitPatterns;
     private Pattern[] hudTextPatterns;
     private Pattern[] hudLivesPatterns;
@@ -106,6 +107,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             throw new IllegalStateException("ROM not loaded");
         }
         RomByteReader reader = new RomByteReader(rom.readAllBytes());
+        this.romReader = reader;
         Sonic1ObjectArt art = new Sonic1ObjectArt(rom, reader);
 
         hudDigitPatterns = art.loadUncompressedPatterns(
@@ -4104,7 +4106,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createMzBrickMappings();
+        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic1Constants.MAP_MZ_BRICK_ADDR);
 
         // Highest tile: 0x01 + (4*4) = 0x11
         int maxTileNeeded = 0x11;
@@ -4125,24 +4127,6 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
     }
 
     /**
-     * MZ Brick mappings from docs/s1disasm/_maps/MZ Bricks.asm (Map_Brick_internal).
-     * Single frame: one 32x32 brick piece.
-     * <pre>
-     * .brick: spritePiece -$10, -$10, 4, 4, 1, 0, 0, 0, 0
-     * </pre>
-     */
-    private List<SpriteMappingFrame> createMzBrickMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.brick): single 4x4 piece (32x32 pixels) at tile index 1
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0x01, false, false, 0, false)
-        )));
-
-        return frames;
-    }
-
-    /**
      * Registers the SYZ spinning light sprite sheet using level tile patterns.
      * Must be called AFTER the level is loaded since the lamp uses zone tileset art
      * (make_art_tile(ArtTile_Level,0,0)).
@@ -4160,7 +4144,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createSpinningLightMappings();
+        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic1Constants.MAP_SYZ_SPINNING_LIGHT_ADDR);
         // Highest tile: 0x45 + 4 = 0x49
         int maxTileNeeded = 0x49;
 
@@ -4178,32 +4162,6 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         // Palette line 0 (make_art_tile(ArtTile_Level, 0, 0))
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 0, 1);
         registerSheet(ObjectArtKeys.SYZ_SPINNING_LIGHT, sheet);
-    }
-
-    /**
-     * Creates spinning light sprite mappings from docs/s1disasm/_maps/Light.asm.
-     * <p>
-     * Each of the 6 frames has 2 pieces (4 tiles wide, 1 tile tall each):
-     * <pre>
-     * .f0: spritePiece -$10, -8, 4, 1, $31, 0, 0, 0, 0
-     *      spritePiece -$10,  0, 4, 1, $31, 0, 1, 0, 0
-     * .f1: spritePiece -$10, -8, 4, 1, $35, 0, 0, 0, 0
-     *      spritePiece -$10,  0, 4, 1, $35, 0, 1, 0, 0
-     * ... (tiles advance by 4 each frame)
-     * </pre>
-     */
-    private List<SpriteMappingFrame> createSpinningLightMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        int[] baseTiles = {0x31, 0x35, 0x39, 0x3D, 0x41, 0x45};
-        for (int tile : baseTiles) {
-            frames.add(new SpriteMappingFrame(List.of(
-                    new SpriteMappingPiece(-0x10, -8, 4, 1, tile, false, false, 0, false),
-                    new SpriteMappingPiece(-0x10,  0, 4, 1, tile, false, true,  0, false)
-            )));
-        }
-
-        return frames;
     }
 
     /**
@@ -5003,6 +4961,20 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         rendererOrder.add(renderer);
     }
 
+    private List<SpriteMappingFrame> loadMappingFrames(int mappingAddr) {
+        if (romReader == null) {
+            try {
+                Rom rom = GameServices.rom().getRom();
+                if (rom == null) {
+                    throw new IllegalStateException("ROM not loaded");
+                }
+                romReader = new RomByteReader(rom.readAllBytes());
+            } catch (IOException ex) {
+                throw new IllegalStateException("Unable to load Sonic 1 ROM mapping data", ex);
+            }
+        }
+        return S1SpriteDataLoader.loadMappingFrames(romReader, mappingAddr);
+    }
 
     @Override
     public Pattern[] getHudDigitPatterns() {

@@ -121,4 +121,22 @@ public class TestSonic1SyzRomMappings {
         assertEquals(new SpriteMappingPiece(-0x10, -0x18, 4, 2, 0x18, false, true, 0, false),
                 romFrames.get(2).pieces().get(1));
     }
+
+    @Test
+    public void spinningLightRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_SYZ_SPINNING_LIGHT_ADDR);
+
+        assertEquals(List.of(2, 2, 2, 2, 2, 2),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x10, -8, 4, 1, 0x31, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x10, 0, 4, 1, 0x31, false, true, 0, false),
+                romFrames.get(0).pieces().get(1));
+        assertEquals(new SpriteMappingPiece(-0x10, -8, 4, 1, 0x3D, false, false, 0, false),
+                romFrames.get(3).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x10, 0, 4, 1, 0x45, false, true, 0, false),
+                romFrames.get(5).pieces().get(1));
+    }
 }
