@@ -139,6 +139,7 @@ public final class Sonic1Constants {
     public static final int MAP_BOMB_ADDR        = 0x0122FC; // Map_Bomb (Obj4A: 12 frames)
     public static final int MAP_ORBINAUT_ADDR    = 0x0125B8; // Map_Orb (Obj60: 4 frames)
     public static final int MAP_LZ_HARPOON_ADDR  = 0x01266E; // Map_Harp (Obj16: 6 frames)
+    public static final int MAP_LZ_GARGOYLE_ADDR = 0x0129EC; // Map_Gar (Obj62: 4 frames)
     public static final int MAP_SS_RESULT_EMERALDS_ADDR = 0x00D482; // Map_SSRC (Obj7F: 7 frames)
     public static final int MAP_LZ_WATERFALL_ADDR = 0x013228; // Map_WFall (Obj65: 12 frames)
     public static final int MAP_LZ_SPLASH_ADDR   = 0x014D34; // Map_Splash (Obj08: 3 frames)

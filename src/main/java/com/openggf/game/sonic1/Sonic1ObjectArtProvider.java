@@ -1282,34 +1282,9 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             LOGGER.warning("Failed to load LZ gargoyle art");
             return;
         }
-        List<SpriteMappingFrame> mappings = createGargoyleMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_LZ_GARGOYLE_ADDR);
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 0);
         registerSheet(ObjectArtKeys.LZ_GARGOYLE, sheet);
-    }
-
-    /**
-     * Creates gargoyle sprite mappings from Map_Gar_internal.
-     * Frames 0,1: head (3 pieces, pal 2). Frame 2: fireball1 (pal 0). Frame 3: fireball2 (pal 0).
-     */
-    private List<SpriteMappingFrame> createGargoyleMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-        // Frame 0 (.head): gargoyle head, palette line 2
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(0, -0x10, 2, 1, 0x00, false, false, 2, false),
-                new SpriteMappingPiece(-0x10, -8, 4, 2, 0x02, false, false, 2, false),
-                new SpriteMappingPiece(-8, 8, 3, 1, 0x0A, false, false, 2, false))));
-        // Frame 1 (.head): identical to frame 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(0, -0x10, 2, 1, 0x00, false, false, 2, false),
-                new SpriteMappingPiece(-0x10, -8, 4, 2, 0x02, false, false, 2, false),
-                new SpriteMappingPiece(-8, 8, 3, 1, 0x0A, false, false, 2, false))));
-        // Frame 2 (.fireball1): palette line 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -4, 2, 1, 0x0D, false, false, 0, false))));
-        // Frame 3 (.fireball2): palette line 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -4, 2, 1, 0x0F, false, false, 0, false))));
-        return frames;
     }
 
     /**

@@ -145,4 +145,22 @@ public class TestSonic1LzRomMappings {
         assertEquals(new SpriteMappingPiece(-8, -8, 2, 2, 0x14, false, false, 0, false),
                 romFrames.get(2).pieces().get(0));
     }
+
+    @Test
+    public void gargoyleRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_LZ_GARGOYLE_ADDR);
+
+        assertEquals(List.of(3, 3, 1, 1),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(0, -0x10, 2, 1, 0, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x10, -8, 4, 2, 2, false, false, 0, false),
+                romFrames.get(1).pieces().get(1));
+        assertEquals(new SpriteMappingPiece(-8, -4, 2, 1, 0x0D, false, false, 0, false),
+                romFrames.get(2).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -4, 2, 1, 0x0F, false, false, 0, false),
+                romFrames.get(3).pieces().get(0));
+    }
 }
