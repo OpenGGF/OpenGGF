@@ -36,7 +36,8 @@ All notable changes to the OpenGGF project are documented in this file.
   LZ breakable pole `Map_Pole`,
   MZ/LZ push block `Map_Push`, MZ Brick `Map_Brick`, SYZ Spinning Light `Map_Light`,
   MZ Smashable Green Block `Map_Smab`, MZ/SLZ/SBZ collapsing floor
-  `Map_CFlo`, SBZ vanishing platform `Map_VanP`,
+  `Map_CFlo`, MZ/SBZ moving block `Map_MBlock`, LZ moving block `Map_MBlockLZ`,
+  SBZ vanishing platform `Map_VanP`,
   shared score popup `Map_Poi`, hidden-bonus `Map_Bonus`, GHZ Buzz Bomber `Map_Buzz` / `Map_Missile`, shared shield and
   invincibility-star `Map_Shield`, GHZ/SLZ smash-wall `Map_Smash`, LZ/SLZ/SBZ Orbinaut `Map_Orb`, LZ harpoon `Map_Harp`, MZ/SBZ Caterkiller `Map_Cat`, SBZ Ball Hog
   `Map_Hog`, SBZ flamethrower `Map_Flame`, SLZ/SBZ Bomb `Map_Bomb`, SBZ saw/electrocuter and door/girder/platform tables `Map_Saw`

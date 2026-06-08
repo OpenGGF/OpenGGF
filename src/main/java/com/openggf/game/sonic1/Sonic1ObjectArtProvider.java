@@ -2918,8 +2918,6 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
      * </pre>
      * ArtTile_MZ_Block = $2B8, palette line 2.
      * <p>
-     * Mappings from docs/s1disasm/_maps/Moving Blocks (MZ and SBZ).asm (Map_MBlock_internal):
-     * 5 frames for different block sizes.
      */
     private void loadMzMovingBlockArt(Sonic1ObjectArt art) {
         Pattern[] patterns = art.loadNemesisPatterns(
@@ -2929,7 +2927,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createMzSbzMovingBlockMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_MZ_SBZ_MOVING_BLOCK_ADDR);
         // make_art_tile(ArtTile_MZ_Block, 2, 0) -> palette line 2, no priority
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
         registerSheet(ObjectArtKeys.MZ_MOVING_BLOCK, sheet);
@@ -2945,8 +2943,6 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
      * </pre>
      * ArtTile_LZ_Moving_Block = $3BC, palette line 2.
      * <p>
-     * Mappings from docs/s1disasm/_maps/Moving Blocks (LZ).asm (Map_MBlockLZ_internal):
-     * Single frame (32x16 block).
      */
     private void loadLzMovingBlockArt(Sonic1ObjectArt art) {
         Pattern[] patterns = art.loadNemesisPatterns(
@@ -2956,7 +2952,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createLzMovingBlockMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_LZ_MOVING_BLOCK_ADDR);
         // make_art_tile(ArtTile_LZ_Moving_Block, 2, 0) -> palette line 2, no priority
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
         registerSheet(ObjectArtKeys.LZ_MOVING_BLOCK, sheet);
@@ -3295,7 +3291,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createMzSbzMovingBlockMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_MZ_SBZ_MOVING_BLOCK_ADDR);
         // make_art_tile(ArtTile_SBZ_Moving_Block_Short, 1, 0) -> palette line 1, no priority
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 1, 1);
         registerSheet(ObjectArtKeys.SBZ_MOVING_BLOCK_SHORT, sheet);
@@ -3321,76 +3317,10 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createMzSbzMovingBlockMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_MZ_SBZ_MOVING_BLOCK_ADDR);
         // make_art_tile(ArtTile_SBZ_Moving_Block_Long, 2, 0) -> palette line 2, no priority
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
         registerSheet(ObjectArtKeys.SBZ_MOVING_BLOCK_LONG, sheet);
-    }
-
-    /**
-     * Creates MZ/SBZ moving block sprite mappings from S1 disassembly
-     * docs/s1disasm/_maps/Moving Blocks (MZ and SBZ).asm (Map_MBlock_internal).
-     * <p>
-     * spritePiece format: x, y, width, height, startTile, xflip, yflip, pal, pri
-     * <p>
-     * Frame 0 (.mz1): Single 32x16 MZ block (1 piece)
-     * Frame 1 (.mz2): Double 64x16 MZ block (2 pieces)
-     * Frame 2 (.sbz): SBZ short block 64x24 (4 pieces - top row + bottom row, repeated)
-     * Frame 3 (.sbzwide): SBZ wide block 128x24 (4 pieces)
-     * Frame 4 (.mz3): Triple 96x16 MZ block (3 pieces)
-     */
-    private List<SpriteMappingFrame> createMzSbzMovingBlockMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.mz1): 1 piece - 32x32 tile block
-        // spritePiece -$10, -8, 4, 4, 8, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -8, 4, 4, 8, false, false, 0, false)
-        )));
-
-        // Frame 1 (.mz2): 2 pieces - double 64x32 block
-        // spritePiece -$20, -8, 4, 4, 8, 0, 0, 0, 0
-        // spritePiece    0, -8, 4, 4, 8, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x20, -8, 4, 4, 8, false, false, 0, false),
-                new SpriteMappingPiece(    0, -8, 4, 4, 8, false, false, 0, false)
-        )));
-
-        // Frame 2 (.sbz): 4 pieces - SBZ short block
-        // spritePiece -$20, -8, 4, 1, 0, 0, 0, 1, 0
-        // spritePiece -$20,  0, 4, 2, 4, 0, 0, 0, 0
-        // spritePiece    0, -8, 4, 1, 0, 0, 0, 1, 0
-        // spritePiece    0,  0, 4, 2, 4, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x20, -8, 4, 1, 0, false, false, 1, false),
-                new SpriteMappingPiece(-0x20,  0, 4, 2, 4, false, false, 0, false),
-                new SpriteMappingPiece(    0, -8, 4, 1, 0, false, false, 1, false),
-                new SpriteMappingPiece(    0,  0, 4, 2, 4, false, false, 0, false)
-        )));
-
-        // Frame 3 (.sbzwide): 4 pieces - SBZ wide block 128x24
-        // spritePiece -$40, -8, 4, 3, 0, 0, 0, 0, 0
-        // spritePiece -$20, -8, 4, 3, 3, 0, 0, 0, 0
-        // spritePiece    0, -8, 4, 3, 3, 0, 0, 0, 0
-        // spritePiece  $20, -8, 4, 3, 0, 1, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x40, -8, 4, 3, 0, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, -8, 4, 3, 3, false, false, 0, false),
-                new SpriteMappingPiece(    0, -8, 4, 3, 3, false, false, 0, false),
-                new SpriteMappingPiece( 0x20, -8, 4, 3, 0, true,  false, 0, false)
-        )));
-
-        // Frame 4 (.mz3): 3 pieces - triple 96x32 MZ block
-        // spritePiece -$30, -8, 4, 4, 8, 0, 0, 0, 0
-        // spritePiece -$10, -8, 4, 4, 8, 0, 0, 0, 0
-        // spritePiece  $10, -8, 4, 4, 8, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x30, -8, 4, 4, 8, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -8, 4, 4, 8, false, false, 0, false),
-                new SpriteMappingPiece( 0x10, -8, 4, 4, 8, false, false, 0, false)
-        )));
-
-        return frames;
     }
 
     /**
@@ -3820,25 +3750,6 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
                 new SpriteMappingPiece(-0x80,  0x00, 4, 4, tileBase + 0x48, false, false, 0, false),
                 new SpriteMappingPiece(-0x40,  0x00, 4, 4, tileBase + 0x58, false, false, 0, false),
                 new SpriteMappingPiece(-0x80,  0x20, 4, 4, tileBase + 0x58, false, false, 0, false)
-        )));
-
-        return frames;
-    }
-
-    /**
-     * Creates LZ moving block sprite mappings from S1 disassembly
-     * docs/s1disasm/_maps/Moving Blocks (LZ).asm (Map_MBlockLZ_internal).
-     * <p>
-     * Single frame: 32x16 block (1 piece).
-     * Note: LZ block uses obHeight=7 in disassembly (shorter collision).
-     */
-    private List<SpriteMappingFrame> createLzMovingBlockMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.f0): 1 piece - 32x16 block
-        // spritePiece -$10, -8, 4, 2, 0, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -8, 4, 2, 0, false, false, 0, false)
         )));
 
         return frames;
