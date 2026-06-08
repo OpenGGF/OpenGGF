@@ -2745,33 +2745,12 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
      * @param block1TileStart remapped tile index for frame 3's $5FA tiles
      */
     private List<SpriteMappingFrame> createLabyrinthBlockMappings(int block1TileStart) {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.sinkblock): 1 piece, 32x32 block (tile 0, pal 0, pri 0)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0, false, false, 0, false)
-        )));
-
-        // Frame 1 (.riseplatform): 2 pieces, 64x24 platform (tiles $69/$75, pal 0, pri 0)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x20, -0x0C, 4, 3, 0x69, false, false, 0, false),
-                new SpriteMappingPiece(    0, -0x0C, 4, 3, 0x75, false, false, 0, false)
-        )));
-
-        // Frame 2 (.cork): 1 piece, 32x32 cork (tile $11A, pal 0, pri 0)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0x11A, false, false, 0, false)
-        )));
-
-        // Frame 3 (.block): 1 piece, 32x32 block (tile $5FA in spritePiece)
-        // Raw spritePiece says xflip=1, yflip=1, pal=3, pri=1 but those are PRE-addition
-        // values. On the Genesis, the full 16-bit pattern word ($FDFA) is added to obGfx
-        // ($43E6), producing $41E0. Carries from the tile overflow ($5FA+$3E6=$9E0) ripple
-        // through hflip, vflip, and palette bits, yielding: hflip=0, vflip=0, pal=2, pri=0.
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 4, 4, block1TileStart, false, false, 0, false)
-        )));
-
+        List<SpriteMappingFrame> frames = new ArrayList<>(
+                loadMappingFrames(Sonic1Constants.MAP_LZ_BLOCK_ADDR));
+        SpriteMappingPiece block = frames.get(3).pieces().get(0);
+        frames.set(3, new SpriteMappingFrame(List.of(new SpriteMappingPiece(
+                block.xOffset(), block.yOffset(), block.widthTiles(), block.heightTiles(),
+                block1TileStart, false, false, 0, false))));
         return frames;
     }
 

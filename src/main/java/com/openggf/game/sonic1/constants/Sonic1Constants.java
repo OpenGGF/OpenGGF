@@ -157,6 +157,7 @@ public final class Sonic1Constants {
     public static final int MAP_ORBINAUT_ADDR    = 0x0125B8; // Map_Orb (Obj60: 4 frames)
     public static final int MAP_LZ_HARPOON_ADDR  = 0x01266E; // Map_Harp (Obj16: 6 frames)
     public static final int MAP_LZ_GARGOYLE_ADDR = 0x0129EC; // Map_Gar (Obj62: 4 frames)
+    public static final int MAP_LZ_BLOCK_ADDR    = 0x012896; // Map_LBlock (Obj61: 4 frames)
     public static final int MAP_LZ_CONVEYOR_ADDR = 0x012D50; // Map_LConv (Obj63: 5 frames)
     public static final int MAP_LZ_BUBBLES_ADDR  = 0x0130A0; // Map_Bub (Obj0A/64: 23 frames)
     public static final int MAP_LZ_BREAKABLE_POLE_ADDR = 0x0119F6; // Map_Pole (Obj0B: 2 frames)

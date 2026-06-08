@@ -129,6 +129,26 @@ public class TestSonic1LzRomMappings {
     }
 
     @Test
+    public void labyrinthBlockRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_LZ_BLOCK_ADDR);
+
+        assertEquals(List.of(1, 2, 1, 1),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x20, -0x0C, 4, 3, 0x69, false, false, 0, false),
+                romFrames.get(1).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(0, -0x0C, 4, 3, 0x75, false, false, 0, false),
+                romFrames.get(1).pieces().get(1));
+        assertEquals(new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0x11A, false, false, 0, false),
+                romFrames.get(2).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0x5FA, true, true, 3, true),
+                romFrames.get(3).pieces().get(0));
+    }
+
+    @Test
     public void conveyorRomMappingsKeepExpectedTableShape() throws Exception {
         RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
         List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
