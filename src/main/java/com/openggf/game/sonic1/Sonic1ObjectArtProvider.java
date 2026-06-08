@@ -3995,99 +3995,10 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createSbzSmallDoorMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_SBZ_SMALL_DOOR_ADDR);
         // make_art_tile(ArtTile_SBZ_Door, 2, 0) -> palette line 2
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
         registerSheet(ObjectArtKeys.SBZ_SMALL_DOOR, sheet);
-    }
-
-    /**
-     * Creates SBZ Small Door sprite mappings from
-     * docs/s1disasm/_maps/SBZ Small Door.asm (Map_ADoor_internal).
-     * <p>
-     * 9 frames total: frame 0 (closed) through frame 8 (fully open).
-     * Each frame has 2 pieces of size 2x4 tiles (16x32 pixels).
-     * The two door halves slide apart vertically as the door opens.
-     * <p>
-     * spritePiece format (SonicMappingsVer=1):
-     *   xpos, ypos, width, height, tile, xflip, yflip, pal, pri
-     */
-    private List<SpriteMappingFrame> createSbzSmallDoorMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.closed): two 2x4 halves flush together
-        // spritePiece -8, -$20, 2, 4, 0, 1, 0, 0, 0
-        // spritePiece -8,    0, 2, 4, 0, 1, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -0x20, 2, 4, 0, true, false, 0, false),
-                new SpriteMappingPiece(-8,     0, 2, 4, 0, true, false, 0, false)
-        )));
-
-        // Frame 1 (.f01): halves spread by 4px each
-        // spritePiece -8, -$24, 2, 4, 0, 1, 0, 0, 0
-        // spritePiece -8,    4, 2, 4, 0, 1, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -0x24, 2, 4, 0, true, false, 0, false),
-                new SpriteMappingPiece(-8,   0x4, 2, 4, 0, true, false, 0, false)
-        )));
-
-        // Frame 2 (.f02)
-        // spritePiece -8, -$28, 2, 4, 0, 1, 0, 0, 0
-        // spritePiece -8,    8, 2, 4, 0, 1, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -0x28, 2, 4, 0, true, false, 0, false),
-                new SpriteMappingPiece(-8,   0x8, 2, 4, 0, true, false, 0, false)
-        )));
-
-        // Frame 3 (.f03)
-        // spritePiece -8, -$2C, 2, 4, 0, 1, 0, 0, 0
-        // spritePiece -8,   $C, 2, 4, 0, 1, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -0x2C, 2, 4, 0, true, false, 0, false),
-                new SpriteMappingPiece(-8,   0xC, 2, 4, 0, true, false, 0, false)
-        )));
-
-        // Frame 4 (.f04)
-        // spritePiece -8, -$30, 2, 4, 0, 1, 0, 0, 0
-        // spritePiece -8,  $10, 2, 4, 0, 1, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -0x30, 2, 4, 0, true, false, 0, false),
-                new SpriteMappingPiece(-8,  0x10, 2, 4, 0, true, false, 0, false)
-        )));
-
-        // Frame 5 (.f05)
-        // spritePiece -8, -$34, 2, 4, 0, 1, 0, 0, 0
-        // spritePiece -8,  $14, 2, 4, 0, 1, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -0x34, 2, 4, 0, true, false, 0, false),
-                new SpriteMappingPiece(-8,  0x14, 2, 4, 0, true, false, 0, false)
-        )));
-
-        // Frame 6 (.f06)
-        // spritePiece -8, -$38, 2, 4, 0, 1, 0, 0, 0
-        // spritePiece -8,  $18, 2, 4, 0, 1, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -0x38, 2, 4, 0, true, false, 0, false),
-                new SpriteMappingPiece(-8,  0x18, 2, 4, 0, true, false, 0, false)
-        )));
-
-        // Frame 7 (.f07)
-        // spritePiece -8, -$3C, 2, 4, 0, 1, 0, 0, 0
-        // spritePiece -8,  $1C, 2, 4, 0, 1, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -0x3C, 2, 4, 0, true, false, 0, false),
-                new SpriteMappingPiece(-8,  0x1C, 2, 4, 0, true, false, 0, false)
-        )));
-
-        // Frame 8 (.open): fully open, halves far apart
-        // spritePiece -8, -$40, 2, 4, 0, 1, 0, 0, 0
-        // spritePiece -8,  $20, 2, 4, 0, 1, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -0x40, 2, 4, 0, true, false, 0, false),
-                new SpriteMappingPiece(-8,  0x20, 2, 4, 0, true, false, 0, false)
-        )));
-
-        return frames;
     }
 
     /**
