@@ -147,6 +147,27 @@ public class TestSonic1LzRomMappings {
     }
 
     @Test
+    public void bubblesRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_LZ_BUBBLES_ADDR);
+
+        assertEquals(List.of(
+                        1, 1, 1, 1, 1, 1, 1, 4, 4,
+                        1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                        1, 1, 1, 0),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-4, -4, 1, 1, 0, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(0, 0, 2, 2, 0x24, true, true, 0, false),
+                romFrames.get(7).pieces().get(3));
+        assertEquals(new SpriteMappingPiece(-8, -12, 2, 3, 0x44, false, false, 1, false),
+                romFrames.get(13).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -8, 2, 2, 0x70, false, false, 0, false),
+                romFrames.get(21).pieces().get(0));
+    }
+
+    @Test
     public void waterfallRomMappingsKeepExpectedTableShape() throws Exception {
         RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
         List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
