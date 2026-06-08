@@ -98,6 +98,7 @@ public final class Sonic1Constants {
     public static final int MAP_FIREBALL_ADDR    = 0x00B9F8; // Map_Fire (Obj14/35/74: 6 frames)
     public static final int MAP_MZ_LARGE_GRASSY_PLATFORM_ADDR = 0x00B95E; // Map_LGrass (Obj2F: 3 frames)
     public static final int MAP_MZ_GLASS_ADDR    = 0x00BC84; // Map_Glass (Obj30: 3 frames)
+    public static final int MAP_MZ_CHAINED_STOMPER_ADDR = 0x00C1D8; // Map_CStom (Obj31: 11 frames)
     public static final int MAP_BUTTON_ADDR      = 0x00C52E; // Map_But (Obj32/Obj82: 4 frames)
     public static final int MAP_PUSH_BLOCK_ADDR  = 0x00C970; // Map_Push (Obj33: 2 frames)
     public static final int MAP_MZ_SMASH_BLOCK_ADDR = 0x010460; // Map_Smab (Obj51: 2 frames)
