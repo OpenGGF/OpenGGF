@@ -37,4 +37,24 @@ public class TestSonic1PowerUpRomMappings {
         assertEquals(new SpriteMappingPiece(0, 0, 3, 3, 0x1B, false, true, 0, false),
                 romFrames.get(7).pieces().get(3));
     }
+
+    @Test
+    public void pointsRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_POINTS_ADDR);
+
+        assertEquals(List.of(1, 1, 1, 1, 1, 2, 2),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-8, -4, 2, 1, 0, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -4, 3, 1, 6, false, false, 0, false),
+                romFrames.get(3).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-4, -4, 1, 1, 6, false, false, 0, false),
+                romFrames.get(4).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x0C, -4, 3, 1, 6, false, false, 0, false),
+                romFrames.get(5).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(6, -4, 2, 1, 7, false, false, 0, false),
+                romFrames.get(6).pieces().get(1));
+    }
 }

@@ -630,7 +630,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         registerSheet(ObjectArtKeys.END_STH, createEndingSTHSheet(art));
 
         registerSheet(ObjectArtKeys.POINTS, art.buildArtSheet(
-                Sonic1Constants.ART_NEM_POINTS_ADDR, createPointsMappings(), 1, 0));
+                Sonic1Constants.ART_NEM_POINTS_ADDR, createPointsMappingsFromRom(art), 1, 0));
     }
 
     private AnimalType[] resolveZoneAnimals(int zoneIndex) {
@@ -768,30 +768,16 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         }
     }
 
-    private List<SpriteMappingFrame> createPointsMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
+    private List<SpriteMappingFrame> createPointsMappingsFromRom(Sonic1ObjectArt art) {
+        List<SpriteMappingFrame> romFrames = art.loadMappingFrames(Sonic1Constants.MAP_POINTS_ADDR);
+        if (romFrames.size() < 5) {
+            return List.of();
+        }
 
-        // Obj29 score popup frames. Frame order is aligned with PointsObjectInstance.
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -4, 2, 1, 0, false, false, 0, false) // 100
-        )));
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -4, 2, 1, 2, false, false, 0, false) // 200
-        )));
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -4, 2, 1, 4, false, false, 0, false) // 500
-        )));
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -4, 3, 1, 6, false, false, 0, false) // 1000
-        )));
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-4, -4, 1, 1, 6, false, false, 0, false) // 10
-        )));
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -4, 3, 1, 6, false, false, 0, false) // 1000 alt slot
-        )));
-
-        return frames;
+        List<SpriteMappingFrame> frames = new ArrayList<>(6);
+        frames.addAll(romFrames.subList(0, 5));
+        frames.add(romFrames.get(3));
+        return List.copyOf(frames);
     }
 
     /**
