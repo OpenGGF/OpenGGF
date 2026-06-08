@@ -91,4 +91,34 @@ public class TestSonic1SyzRomMappings {
         assertEquals(new SpriteMappingPiece(-0x10, -0x10, 4, 4, 0x40, false, false, 0, false),
                 romFrames.get(4).pieces().get(0));
     }
+
+    @Test
+    public void syzSpikeballChainRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_SYZ_SPIKEBALL_CHAIN_ADDR);
+
+        assertEquals(List.of(1),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-8, -8, 2, 2, 0, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+    }
+
+    @Test
+    public void bigSpikedBallRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_BIG_SPIKED_BALL_ADDR);
+
+        assertEquals(List.of(5, 1, 2),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-8, -0x18, 2, 1, 0, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, 0x10, 2, 1, 0x16, false, false, 0, false),
+                romFrames.get(0).pieces().get(4));
+        assertEquals(new SpriteMappingPiece(-8, -8, 2, 2, 0x20, false, false, 0, false),
+                romFrames.get(1).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x10, -0x18, 4, 2, 0x18, false, true, 0, false),
+                romFrames.get(2).pieces().get(1));
+    }
 }

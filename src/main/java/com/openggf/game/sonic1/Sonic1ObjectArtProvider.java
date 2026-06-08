@@ -4448,7 +4448,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             Pattern[] patterns = art.loadNemesisPatterns(
                     Sonic1Constants.ART_NEM_GIANT_BALL_ADDR);
             if (patterns.length > 0) {
-                List<SpriteMappingFrame> mappings = createGiantBallMappings();
+                List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_GIANT_BALL_ADDR);
                 // make_art_tile(ArtTile_GHZ_Giant_Ball, 2, 0) — palette line 2
                 ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
                 registerSheet(ObjectArtKeys.SWING_GIANT_BALL, sheet);
@@ -4472,7 +4472,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             Pattern[] patterns = art.loadNemesisPatterns(
                     Sonic1Constants.ART_NEM_SBZ_SPIKED_BALL_ADDR);
             if (patterns.length > 0) {
-                List<SpriteMappingFrame> mappings = createSbzBallMappings();
+                List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_BIG_SPIKED_BALL_ADDR);
                 // make_art_tile(ArtTile_SBZ_Swing, 0, 0) — palette line 0
                 ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 0, 1);
                 registerSheet(ObjectArtKeys.SWING_SBZ_BALL, sheet);
@@ -4480,41 +4480,6 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         }
     }
 
-    /**
-     * SBZ spiked ball mappings from docs/s1disasm/_maps/Big Spiked Ball.asm.
-     * <p>
-     * Frame 0 (.ball):   Spiked ball — 5 pieces (48x48 with spikes)
-     * Frame 1 (.chain):  Chain link — 1 piece (16x16)
-     * Frame 2 (.anchor): Anchor — 2 pieces (32x32, v-flip pair)
-     */
-    private List<SpriteMappingFrame> createSbzBallMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0: .ball — spiked ball (5 pieces)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(   -8, -0x18, 2, 1,    0, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x10, 4, 4,    2, false, false, 0, false),
-                new SpriteMappingPiece(-0x18,    -8, 1, 2, 0x12, false, false, 0, false),
-                new SpriteMappingPiece( 0x10,    -8, 1, 2, 0x14, false, false, 0, false),
-                new SpriteMappingPiece(   -8,  0x10, 2, 1, 0x16, false, false, 0, false)
-        )));
-
-        // Frame 1: .chain — chain link (1 piece)
-        // spritePiece -8, -8, 2, 2, $20, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 0x20, false, false, 0, false)
-        )));
-
-        // Frame 2: .anchor — anchor (2 pieces, v-flip pair)
-        // spritePiece -$10,   -8, 4, 2, $18, 0, 0, 0, 0
-        // spritePiece -$10, -$18, 4, 2, $18, 0, 1, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10,    -8, 4, 2, 0x18, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x18, 4, 2, 0x18, false, true,  0, false)
-        )));
-
-        return frames;
-    }
 
     /**
      * Loads big spiked ball art for SYZ (Object 0x58).
@@ -4554,8 +4519,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         Pattern[] patterns = art.loadNemesisPatterns(
                 Sonic1Constants.ART_NEM_SBZ_SPIKED_BALL_ADDR);
         if (patterns.length > 0) {
-            // Reuses same Map_BBall mappings as SBZ ball (createSbzBallMappings)
-            List<SpriteMappingFrame> mappings = createSbzBallMappings();
+            List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_BIG_SPIKED_BALL_ADDR);
             // make_art_tile(ArtTile_SYZ_Big_Spikeball, 0, 0) — palette line 0
             ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 0, 1);
             registerSheet(ObjectArtKeys.SYZ_BIG_SPIKED_BALL, sheet);
@@ -4573,29 +4537,13 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         Pattern[] patterns = art.loadNemesisPatterns(
                 Sonic1Constants.ART_NEM_SYZ_SMALL_SPIKEBALL_ADDR);
         if (patterns.length > 0) {
-            List<SpriteMappingFrame> mappings = createSyzSpikeballChainMappings();
+            List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_SYZ_SPIKEBALL_CHAIN_ADDR);
             // make_art_tile(ArtTile_SYZ_Spikeball_Chain, 0, 0) — palette line 0
             ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 0, 1);
             registerSheet(ObjectArtKeys.SYZ_SPIKEBALL_CHAIN, sheet);
         }
     }
 
-    /**
-     * SYZ spiked ball chain mappings from docs/s1disasm/_maps/Spiked Ball and Chain (SYZ).asm.
-     * <p>
-     * Frame 0 (.f0): 16x16 ball — 1 piece (2x2 tiles, start tile 0)
-     */
-    private List<SpriteMappingFrame> createSyzSpikeballChainMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0: .f0 — spikeball (1 piece of 2x2 tiles)
-        // spritePiece -8, -8, 2, 2, 0, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 0, false, false, 0, false)
-        )));
-
-        return frames;
-    }
 
     /**
      * Loads LZ spiked ball and chain art (Nem_LzSpikeBall, Object 0x57).
@@ -4611,91 +4559,14 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         Pattern[] patterns = art.loadNemesisPatterns(
                 Sonic1Constants.ART_NEM_LZ_SPIKEBALL_ADDR);
         if (patterns.length > 0) {
-            List<SpriteMappingFrame> mappings = createLzSpikeballChainMappings();
+            List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_LZ_SPIKEBALL_CHAIN_ADDR);
             // make_art_tile(ArtTile_LZ_Spikeball_Chain, 0, 0) — palette line 0
             ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 0, 1);
             registerSheet(ObjectArtKeys.LZ_SPIKEBALL_CHAIN, sheet);
         }
     }
 
-    /**
-     * LZ spiked ball chain mappings from docs/s1disasm/_maps/Spiked Ball and Chain (LZ).asm.
-     * <p>
-     * Frame 0 (.chain):     Chain link — 1 piece (2x2, tile 0)
-     * Frame 1 (.spikeball): Large spikeball — 1 piece (4x4, tile 4)
-     * Frame 2 (.base):      Wall attachment — 1 piece (2x2, tile $14)
-     */
-    private List<SpriteMappingFrame> createLzSpikeballChainMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
 
-        // Frame 0: .chain — chain link (1 piece of 2x2 tiles)
-        // spritePiece -8, -8, 2, 2, 0, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 0, false, false, 0, false)
-        )));
-
-        // Frame 1: .spikeball — large spikeball (1 piece of 4x4 tiles)
-        // spritePiece -$10, -$10, 4, 4, 4, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 4, 4, 4, false, false, 0, false)
-        )));
-
-        // Frame 2: .base — wall attachment (1 piece of 2x2 tiles)
-        // spritePiece -8, -8, 2, 2, $14, 0, 0, 0, 0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 0x14, false, false, 0, false)
-        )));
-
-        return frames;
-    }
-
-    /**
-     * GHZ giant ball mappings from docs/s1disasm/_maps/GHZ Ball.asm.
-     * <p>
-     * Frame 0 (.shiny):  Ball with shine — 6 pieces (48x48)
-     * Frame 1 (.check1): Checkered ball frame 1 — 4 pieces
-     * Frame 2 (.check2): Checkered ball frame 2 — 4 pieces
-     * Frame 3 (.check3): Checkered ball frame 3 — 4 pieces
-     */
-    private List<SpriteMappingFrame> createGiantBallMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0: .shiny — shine highlight + 4-way symmetric ball
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x10, 2, 1, 0x24, false, false, 0, false),
-                new SpriteMappingPiece(-0x10,    -8, 2, 1, 0x24, false, true,  0, false),
-                new SpriteMappingPiece(-0x18, -0x18, 3, 3,    0, false, false, 0, false),
-                new SpriteMappingPiece(    0, -0x18, 3, 3,    0, true,  false, 0, false),
-                new SpriteMappingPiece(-0x18,     0, 3, 3,    0, false, true,  0, false),
-                new SpriteMappingPiece(    0,     0, 3, 3,    0, true,  true,  0, false)
-        )));
-
-        // Frame 1: .check1 — checkered pattern (4-way symmetric)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x18, -0x18, 3, 3, 9, false, false, 0, false),
-                new SpriteMappingPiece(    0, -0x18, 3, 3, 9, true,  false, 0, false),
-                new SpriteMappingPiece(-0x18,     0, 3, 3, 9, false, true,  0, false),
-                new SpriteMappingPiece(    0,     0, 3, 3, 9, true,  true,  0, false)
-        )));
-
-        // Frame 2: .check2 — mixed pattern
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x18, -0x18, 3, 3, 0x12, false, false, 0, false),
-                new SpriteMappingPiece(    0, -0x18, 3, 3, 0x1B, false, false, 0, false),
-                new SpriteMappingPiece(-0x18,     0, 3, 3, 0x1B, true,  true,  0, false),
-                new SpriteMappingPiece(    0,     0, 3, 3, 0x12, true,  true,  0, false)
-        )));
-
-        // Frame 3: .check3 — rotated pattern
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x18, -0x18, 3, 3, 0x1B, true,  false, 0, false),
-                new SpriteMappingPiece(    0, -0x18, 3, 3, 0x12, true,  false, 0, false),
-                new SpriteMappingPiece(-0x18,     0, 3, 3, 0x12, false, true,  0, false),
-                new SpriteMappingPiece(    0,     0, 3, 3, 0x1B, false, true,  0, false)
-        )));
-
-        return frames;
-    }
 
     /**
      * Loads prison capsule art (Nem_Prison) and creates S1-format sprite mappings.

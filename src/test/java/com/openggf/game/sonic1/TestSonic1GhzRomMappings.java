@@ -187,4 +187,24 @@ public class TestSonic1GhzRomMappings {
         assertEquals(new SpriteMappingPiece(-8, -8, 2, 2, 0x1C, false, false, 0, false),
                 romFrames.get(2).pieces().get(0));
     }
+
+    @Test
+    public void giantBallRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_GIANT_BALL_ADDR);
+
+        assertEquals(List.of(6, 4, 4, 4),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x10, -0x10, 2, 1, 0x24, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x10, -8, 2, 1, 0x24, false, true, 0, false),
+                romFrames.get(0).pieces().get(1));
+        assertEquals(new SpriteMappingPiece(-0x18, -0x18, 3, 3, 9, false, false, 0, false),
+                romFrames.get(1).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(0, -0x18, 3, 3, 0x1B, false, false, 0, false),
+                romFrames.get(2).pieces().get(1));
+        assertEquals(new SpriteMappingPiece(-0x18, -0x18, 3, 3, 0x1B, true, false, 0, false),
+                romFrames.get(3).pieces().get(0));
+    }
 }
