@@ -80,4 +80,32 @@ public class Sonic1ObjectPlacement {
         spawns.sort(Comparator.comparingInt(ObjectSpawn::x));
         return List.copyOf(spawns);
     }
+
+    public int[][] loadLzPlatformChildren(int slotIndex) {
+        return loadPlatformChildren(Sonic1Constants.OBJ_POS_LZ_PLATFORM_INDEX_ADDR, slotIndex);
+    }
+
+    public int[][] loadSbzPlatformChildren(int slotIndex) {
+        return loadPlatformChildren(Sonic1Constants.OBJ_POS_SBZ_PLATFORM_INDEX_ADDR, slotIndex);
+    }
+
+    private int[][] loadPlatformChildren(int tableAddr, int slotIndex) {
+        if (slotIndex < 0 || slotIndex >= 8) {
+            return null;
+        }
+        int baseAddr = Sonic1Constants.OBJ_POS_INDEX_ADDR;
+        int listOffset = rom.readU16BE(tableAddr + slotIndex * 2);
+        int cursor = baseAddr + listOffset;
+        int count = rom.readU16BE(cursor) + 1;
+        cursor += 2;
+
+        int[][] entries = new int[count][3];
+        for (int i = 0; i < count; i++) {
+            entries[i][0] = rom.readU16BE(cursor);
+            entries[i][1] = rom.readU16BE(cursor + 2);
+            entries[i][2] = rom.readU16BE(cursor + 4) & 0xFF;
+            cursor += RECORD_SIZE;
+        }
+        return entries;
+    }
 }

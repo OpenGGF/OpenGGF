@@ -363,7 +363,7 @@ class TestArchitecturalSourceGuard {
                         "com/openggf/game/sonic1/objects/Sonic1LZConveyorObjectInstance.java",
                         "embedded LZ conveyor spawner switch tables",
                         Pattern.compile("case\\s+\\d+\\s+->\\s+new\\s+int\\s*\\[\\s*]\\s*\\[\\s*]"),
-                        6),
+                        0),
                 new EmbeddedRuntimeDataBudget(
                         "com/openggf/game/sonic1/objects/Sonic1SpinConveyorObjectInstance.java",
                         "embedded SBZ spin-conveyor waypoint tables",
@@ -373,7 +373,7 @@ class TestArchitecturalSourceGuard {
                         "com/openggf/game/sonic1/objects/Sonic1SpinConveyorObjectInstance.java",
                         "embedded SBZ spin-conveyor spawner tables",
                         Pattern.compile("private\\s+static\\s+final\\s+int\\s*\\[\\s*]\\s*\\[\\s*]\\s+SPAWN_DATA_"),
-                        6),
+                        0),
                 new EmbeddedRuntimeDataBudget(
                         "com/openggf/game/sonic1/objects/Sonic1BridgeObjectInstance.java",
                         "embedded GHZ bridge bend tables",

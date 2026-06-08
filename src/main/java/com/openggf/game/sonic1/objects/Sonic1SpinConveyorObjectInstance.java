@@ -3,6 +3,7 @@ import com.openggf.game.PlayableEntity;
 
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic1.Sonic1ConveyorState;
+import com.openggf.game.sonic1.Sonic1ObjectPlacement;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -20,7 +21,9 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import com.openggf.debug.DebugColor;
+import java.io.IOException;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -33,7 +36,7 @@ import java.util.logging.Logger;
  * Two modes are selected by subtype bit 7:
  * <ul>
  *   <li><b>Spawner mode</b> (subtype bit 7 set): Reads child platform positions from
- *       hardcoded position tables (ObjPosSBZPlatform_Index) and spawns individual
+ *       ROM ObjPosSBZPlatform_Index data and spawns individual
  *       platform instances. Uses v_obj63 to prevent duplicate spawning.</li>
  *   <li><b>Platform mode</b> (subtype &lt; 0x80): A spinning disc that follows waypoints
  *       from one of 6 path tables. Solid only when flat (obFrame == 0, mapping frame 0).
@@ -126,62 +129,6 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
     private static final int[][][] ALL_PATHS = {PATH_0, PATH_1, PATH_2, PATH_3, PATH_4, PATH_5};
     private static final int[] ALL_BASE_X = {PATH_0_BASE_X, PATH_1_BASE_X, PATH_2_BASE_X,
             PATH_3_BASE_X, PATH_4_BASE_X, PATH_5_BASE_X};
-
-    // ---- Spawner position data (from objpos/sbz1pf1.bin through sbz1pf6.bin) ----
-    // Format per ROM entry: word count-1, then per platform: word X, word Y, word (subtype in low byte).
-
-    // sbz1pf1.bin: 8 platforms (count-1 = 7)
-    private static final int[][] SPAWN_DATA_0 = {
-            {0x0E14, 0x0370, 0x00}, {0x0E5A, 0x034D, 0x01},
-            {0x0EA0, 0x032A, 0x01}, {0x0EE7, 0x0307, 0x01},
-            {0x0EEF, 0x0340, 0x02}, {0x0EA9, 0x0363, 0x03},
-            {0x0E63, 0x0386, 0x03}, {0x0E1C, 0x03A9, 0x03}
-    };
-
-    // sbz1pf2.bin: 8 platforms (count-1 = 7)
-    private static final int[][] SPAWN_DATA_1 = {
-            {0x0F14, 0x02E0, 0x10}, {0x0F5A, 0x02BD, 0x11},
-            {0x0FA0, 0x029A, 0x11}, {0x0FE7, 0x0277, 0x11},
-            {0x0FEF, 0x02B0, 0x12}, {0x0FA9, 0x02D3, 0x13},
-            {0x0F63, 0x02F6, 0x13}, {0x0F1C, 0x0319, 0x13}
-    };
-
-    // sbz1pf3.bin: 8 platforms (count-1 = 7)
-    private static final int[][] SPAWN_DATA_2 = {
-            {0x1014, 0x0270, 0x20}, {0x105A, 0x024D, 0x21},
-            {0x10A0, 0x022A, 0x21}, {0x10E7, 0x0207, 0x21},
-            {0x10EF, 0x0240, 0x22}, {0x10A9, 0x0263, 0x23},
-            {0x1063, 0x0286, 0x23}, {0x101C, 0x02A9, 0x23}
-    };
-
-    // sbz1pf4.bin: 8 platforms (count-1 = 7)
-    private static final int[][] SPAWN_DATA_3 = {
-            {0x0F14, 0x0570, 0x30}, {0x0F5A, 0x054D, 0x31},
-            {0x0FA0, 0x052A, 0x31}, {0x0FE7, 0x0507, 0x31},
-            {0x0FEF, 0x0540, 0x32}, {0x0FA9, 0x0563, 0x33},
-            {0x0F63, 0x0586, 0x33}, {0x0F1C, 0x05A9, 0x33}
-    };
-
-    // sbz1pf5.bin: 8 platforms (count-1 = 7)
-    private static final int[][] SPAWN_DATA_4 = {
-            {0x1B14, 0x0670, 0x40}, {0x1B5A, 0x064D, 0x41},
-            {0x1BA0, 0x062A, 0x41}, {0x1BE7, 0x0607, 0x41},
-            {0x1BEF, 0x0640, 0x42}, {0x1BA9, 0x0663, 0x43},
-            {0x1B63, 0x0686, 0x43}, {0x1B1C, 0x06A9, 0x43}
-    };
-
-    // sbz1pf6.bin: 8 platforms (count-1 = 7)
-    private static final int[][] SPAWN_DATA_5 = {
-            {0x1C14, 0x05E0, 0x50}, {0x1C5A, 0x05BD, 0x51},
-            {0x1CA0, 0x059A, 0x51}, {0x1CE7, 0x0577, 0x51},
-            {0x1CEF, 0x05B0, 0x52}, {0x1CA9, 0x05D3, 0x53},
-            {0x1C63, 0x05F6, 0x53}, {0x1C1C, 0x0619, 0x53}
-    };
-
-    private static final int[][][] ALL_SPAWN_DATA = {
-            SPAWN_DATA_0, SPAWN_DATA_1, SPAWN_DATA_2,
-            SPAWN_DATA_3, SPAWN_DATA_4, SPAWN_DATA_5
-    };
 
     // ---- Instance state ----
 
@@ -408,11 +355,11 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
         }
 
         // Get platform position data for this spawner slot
-        if (spawnerSlotIndex < 0 || spawnerSlotIndex >= ALL_SPAWN_DATA.length) {
+        int[][] positionData = loadSpawnerPositionData(spawnerSlotIndex);
+        if (positionData == null) {
             setDestroyed(true);
             return;
         }
-        int[][] positionData = ALL_SPAWN_DATA[spawnerSlotIndex];
 
         if (services().objectManager() == null) {
             setDestroyed(true);
@@ -438,6 +385,15 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
         // Spawner itself is consumed after spawning
         // From disassembly: addq.l #4,sp / rts (pops return address, skips back to main)
         setDestroyed(true);
+    }
+
+    private int[][] loadSpawnerPositionData(int slotIndex) {
+        try {
+            return new Sonic1ObjectPlacement(services().romReader()).loadSbzPlatformChildren(slotIndex);
+        } catch (IOException | RuntimeException e) {
+            LOGGER.log(Level.WARNING, "Failed to load SBZ spin-conveyor child positions from ROM", e);
+            return null;
+        }
     }
 
     // ========================================

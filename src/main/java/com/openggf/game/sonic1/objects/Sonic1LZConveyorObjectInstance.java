@@ -3,6 +3,7 @@ import com.openggf.game.PlayableEntity;
 
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic1.Sonic1ConveyorState;
+import com.openggf.game.sonic1.Sonic1ObjectPlacement;
 import com.openggf.game.sonic1.Sonic1SwitchManager;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.graphics.GLCommand;
@@ -19,7 +20,9 @@ import com.openggf.level.objects.WaypointPathFollower;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -397,8 +400,8 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
      *   ...                              ; spawn loop: X, Y, subtype words
      * </pre>
      * <p>
-     * Rather than reading from the binary objpos files in ROM, we embed the
-     * platform position data directly (it is small and static).
+     * Child position data is loaded from the ROM-backed ObjPosLZPlatform_Index
+     * table through {@link Sonic1ObjectPlacement}.
      */
     private void updateSpawner() {
         if (spawnerDone) {
@@ -414,7 +417,7 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
         }
 
         // Get platform position data for this spawner slot
-        int[][] positionData = getSpawnerPositionData(spawnerSlotIndex);
+        int[][] positionData = loadSpawnerPositionData(spawnerSlotIndex);
         if (positionData == null) {
             setDestroyed(true);
             return;
@@ -439,67 +442,13 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
         setDestroyed(true);
     }
 
-    /**
-     * Returns platform position data for a given spawner slot index.
-     * Data sourced from the binary objpos/lzNpfN.bin files in the ROM.
-     * <p>
-     * Each entry is {x, y, subtype}. The subtype word from ROM has the subtype
-     * in the low byte; the high byte is the render/status flags word.
-     * <p>
-     * Data extracted from docs/s1disasm/objpos/lz*pf*.bin files.
-     * Format per entry: word X, word Y, word (subtype in low byte).
-     */
-    private static int[][] getSpawnerPositionData(int slotIndex) {
-        // Data extracted from docs/s1disasm/objpos/lzNpfN.bin files.
-        // Format per ROM entry: word count-1, then per platform: word X, word Y, word (subtype in low byte).
-        return switch (slotIndex) {
-            // LZ1 pf1 (objpos/lz1pf1.bin): 8 platforms
-            case 0 -> new int[][] {
-                    {0x1078, 0x021A, 0x00}, {0x10BE, 0x0291, 0x02},
-                    {0x10BE, 0x0307, 0x02}, {0x10BE, 0x037E, 0x02},
-                    {0x105C, 0x0390, 0x04}, {0x1022, 0x0352, 0x05},
-                    {0x1022, 0x02DB, 0x05}, {0x1022, 0x0265, 0x05}
-            };
-            // LZ1 pf2 (objpos/lz1pf2.bin): 8 platforms
-            case 1 -> new int[][] {
-                    {0x127E, 0x0280, 0x10}, {0x12CE, 0x0305, 0x12},
-                    {0x12CE, 0x038A, 0x12}, {0x12CE, 0x040F, 0x12},
-                    {0x12A7, 0x046E, 0x13}, {0x1232, 0x040F, 0x14},
-                    {0x1232, 0x038A, 0x14}, {0x1232, 0x0305, 0x14}
-            };
-            // LZ2 pf1 (objpos/lz2pf1.bin): 8 platforms
-            case 2 -> new int[][] {
-                    {0x0D22, 0x0483, 0x21}, {0x0D9C, 0x0482, 0x20},
-                    {0x0DAE, 0x04EA, 0x23}, {0x0DAE, 0x0564, 0x23},
-                    {0x0DAE, 0x05DD, 0x23}, {0x0D34, 0x05DE, 0x22},
-                    {0x0D22, 0x0576, 0x21}, {0x0D22, 0x04FC, 0x21}
-            };
-            // LZ2 pf2 (objpos/lz2pf2.bin): 8 platforms
-            case 3 -> new int[][] {
-                    {0x0D62, 0x03A2, 0x30}, {0x0DD4, 0x03A2, 0x31},
-                    {0x0DEE, 0x03FA, 0x32}, {0x0DEE, 0x046C, 0x32},
-                    {0x0DEE, 0x04DD, 0x32}, {0x0D7C, 0x04DE, 0x33},
-                    {0x0D62, 0x0486, 0x30}, {0x0D62, 0x0414, 0x30}
-            };
-            // LZ3 pf1 (objpos/lz3pf1.bin): 12 platforms
-            case 4 -> new int[][] {
-                    {0x0CAD, 0x0242, 0x41}, {0x0D2D, 0x0242, 0x41},
-                    {0x0DAC, 0x0242, 0x41}, {0x0DDE, 0x028F, 0x42},
-                    {0x0DDE, 0x030E, 0x42}, {0x0DDE, 0x038D, 0x42},
-                    {0x0DB0, 0x03DE, 0x43}, {0x0D31, 0x03DE, 0x43},
-                    {0x0CB2, 0x03DE, 0x43}, {0x0C52, 0x03BF, 0x44},
-                    {0x0C52, 0x0340, 0x44}, {0x0C52, 0x02C1, 0x44}
-            };
-            // LZ3 pf2 (objpos/lz3pf2.bin): 9 platforms
-            case 5 -> new int[][] {
-                    {0x1252, 0x020A, 0x50}, {0x12D2, 0x020A, 0x51},
-                    {0x1352, 0x020A, 0x51}, {0x13D2, 0x020A, 0x51},
-                    {0x13DE, 0x027E, 0x52}, {0x139E, 0x02BE, 0x53},
-                    {0x131E, 0x02BE, 0x53}, {0x129E, 0x02BE, 0x53},
-                    {0x1252, 0x028A, 0x50}
-            };
-            default -> null;
-        };
+    private int[][] loadSpawnerPositionData(int slotIndex) {
+        try {
+            return new Sonic1ObjectPlacement(services().romReader()).loadLzPlatformChildren(slotIndex);
+        } catch (IOException | RuntimeException e) {
+            LOGGER.log(Level.WARNING, "Failed to load LZ conveyor child positions from ROM", e);
+            return null;
+        }
     }
 
     // ---- Platform mode ----
