@@ -69,4 +69,26 @@ public class TestSonic1GhzRomMappings {
         assertEquals(new SpriteMappingPiece(0x14, -2, 2, 1, 0x53, false, false, 3, true),
                 romFrames.get(9).pieces().get(2));
     }
+
+    @Test
+    public void crabmeatRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_CRABMEAT_ADDR);
+
+        assertEquals(List.of(4, 4, 4, 4, 6, 1, 1),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x18, -0x10, 3, 2, 0, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(0, -0x10, 3, 2, 0, true, false, 0, false),
+                romFrames.get(0).pieces().get(1));
+        assertEquals(new SpriteMappingPiece(-0x10, -0x10, 2, 1, 0x32, false, false, 0, false),
+                romFrames.get(4).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(0, 0x08, 2, 1, 0x3A, true, false, 0, false),
+                romFrames.get(4).pieces().get(5));
+        assertEquals(new SpriteMappingPiece(-8, -8, 2, 2, 0x3C, false, false, 0, false),
+                romFrames.get(5).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -8, 2, 2, 0x40, false, false, 0, false),
+                romFrames.get(6).pieces().get(0));
+    }
 }
