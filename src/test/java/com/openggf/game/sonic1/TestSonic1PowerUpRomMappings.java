@@ -73,4 +73,41 @@ public class TestSonic1PowerUpRomMappings {
         assertEquals(new SpriteMappingPiece(-0x10, -0x0C, 4, 3, 0x18, false, false, 0, false),
                 romFrames.get(3).pieces().get(0));
     }
+
+    @Test
+    public void animalRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+
+        List<SpriteMappingFrame> animal1Frames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_ANIMAL1_ADDR, 3);
+        List<SpriteMappingFrame> animal2Frames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_ANIMAL2_ADDR, 3);
+        List<SpriteMappingFrame> animal3Frames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_ANIMAL3_ADDR, 3);
+
+        assertEquals(List.of(1, 1, 1), animal1Frames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(List.of(1, 1, 1), animal2Frames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(List.of(1, 1, 1), animal3Frames.stream().map(frame -> frame.pieces().size()).toList());
+
+        assertEquals(new SpriteMappingPiece(-8, -0x0C, 2, 3, 0x06, false, false, 0, false),
+                animal1Frames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -0x0C, 2, 3, 0x0C, false, false, 0, false),
+                animal1Frames.get(1).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -0x0C, 2, 3, 0x00, false, false, 0, false),
+                animal1Frames.get(2).pieces().get(0));
+
+        assertEquals(new SpriteMappingPiece(-8, -4, 2, 2, 0x06, false, false, 0, false),
+                animal2Frames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -4, 2, 2, 0x0A, false, false, 0, false),
+                animal2Frames.get(1).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -0x0C, 2, 3, 0x00, false, false, 0, false),
+                animal2Frames.get(2).pieces().get(0));
+
+        assertEquals(new SpriteMappingPiece(-0x0C, -4, 3, 2, 0x06, false, false, 0, false),
+                animal3Frames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x0C, -4, 3, 2, 0x0C, false, false, 0, false),
+                animal3Frames.get(1).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -0x0C, 2, 3, 0x00, false, false, 0, false),
+                animal3Frames.get(2).pieces().get(0));
+    }
 }

@@ -620,7 +620,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
 
         Pattern[] combinedAnimals = createCombinedAnimalPatterns(firstAnimalPatterns, secondAnimalPatterns);
         registerSheet(ObjectArtKeys.ANIMAL,
-                new ObjectSpriteSheet(combinedAnimals, createAnimalMappings(), 0, 1));
+                new ObjectSpriteSheet(combinedAnimals, createAnimalMappings(art), 0, 1));
 
         ObjectSpriteSheet endingAnimalSheet = createEndingAnimalSheet(art);
         registerSheet(ObjectArtKeys.ANIMAL_ENDING, endingAnimalSheet);
@@ -679,7 +679,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         if (patterns.length == 0) {
             return null;
         }
-        return new ObjectSpriteSheet(patterns, createEndingAnimalMappings(), 0, 1);
+        return new ObjectSpriteSheet(patterns, createEndingAnimalMappings(art), 0, 1);
     }
 
     private Pattern[] createEndingAnimalPatterns(Sonic1ObjectArt art) {
@@ -699,16 +699,16 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         return combined;
     }
 
-    private List<SpriteMappingFrame> createEndingAnimalMappings() {
+    private List<SpriteMappingFrame> createEndingAnimalMappings(Sonic1ObjectArt art) {
         List<SpriteMappingFrame> frames = new ArrayList<>();
         for (int i = 0; i < ENDING_ANIMAL_ORDER.length; i++) {
             int tileOffset = i * ANIMAL_TILE_BANK_SIZE;
-            addAnimalSetFrames(frames, ENDING_ANIMAL_ORDER[i].mappingSet(), tileOffset);
+            frames.addAll(loadAnimalMappingFrames(art, ENDING_ANIMAL_ORDER[i].mappingSet(), tileOffset));
         }
-        return frames;
+        return List.copyOf(frames);
     }
 
-    private List<SpriteMappingFrame> createAnimalMappings() {
+    private List<SpriteMappingFrame> createAnimalMappings(Sonic1ObjectArt art) {
         List<SpriteMappingFrame> frames = new ArrayList<>();
         AnimalType.MappingSet[] sets = {
                 AnimalType.MappingSet.A,
@@ -721,51 +721,20 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         // Frame order matches AnimalObjectInstance.getFrameIndex():
         // ((mappingSet * 2) + artVariant) * 3 + animFrame
         for (AnimalType.MappingSet mappingSet : sets) {
-            addAnimalSetFrames(frames, mappingSet, 0);
-            addAnimalSetFrames(frames, mappingSet, ANIMAL_TILE_BANK_SIZE);
+            frames.addAll(loadAnimalMappingFrames(art, mappingSet, 0));
+            frames.addAll(loadAnimalMappingFrames(art, mappingSet, ANIMAL_TILE_BANK_SIZE));
         }
-        return frames;
+        return List.copyOf(frames);
     }
 
-    private void addAnimalSetFrames(List<SpriteMappingFrame> frames, AnimalType.MappingSet mappingSet, int tileOffset) {
-        switch (mappingSet) {
-            case A, D -> {
-                // Map_Animal2: flying set (flicky/chicken/seal style)
-                frames.add(new SpriteMappingFrame(List.of(
-                        new SpriteMappingPiece(-8, -4, 2, 2, tileOffset + 0x06, false, false, 0, false)
-                )));
-                frames.add(new SpriteMappingFrame(List.of(
-                        new SpriteMappingPiece(-8, -4, 2, 2, tileOffset + 0x0A, false, false, 0, false)
-                )));
-                frames.add(new SpriteMappingFrame(List.of(
-                        new SpriteMappingPiece(-8, -0x0C, 2, 3, tileOffset, false, false, 0, false)
-                )));
-            }
-            case B, C -> {
-                // Map_Animal3: wide body set (squirrel/pig style)
-                frames.add(new SpriteMappingFrame(List.of(
-                        new SpriteMappingPiece(-0x0C, -4, 3, 2, tileOffset + 0x06, false, false, 0, false)
-                )));
-                frames.add(new SpriteMappingFrame(List.of(
-                        new SpriteMappingPiece(-0x0C, -4, 3, 2, tileOffset + 0x0C, false, false, 0, false)
-                )));
-                frames.add(new SpriteMappingFrame(List.of(
-                        new SpriteMappingPiece(-8, -0x0C, 2, 3, tileOffset, false, false, 0, false)
-                )));
-            }
-            case E -> {
-                // Map_Animal1: tall walker set (rabbit/penguin style)
-                frames.add(new SpriteMappingFrame(List.of(
-                        new SpriteMappingPiece(-8, -0x0C, 2, 3, tileOffset + 0x06, false, false, 0, false)
-                )));
-                frames.add(new SpriteMappingFrame(List.of(
-                        new SpriteMappingPiece(-8, -0x0C, 2, 3, tileOffset + 0x0C, false, false, 0, false)
-                )));
-                frames.add(new SpriteMappingFrame(List.of(
-                        new SpriteMappingPiece(-8, -0x0C, 2, 3, tileOffset, false, false, 0, false)
-                )));
-            }
-        }
+    private List<SpriteMappingFrame> loadAnimalMappingFrames(
+            Sonic1ObjectArt art, AnimalType.MappingSet mappingSet, int tileOffset) {
+        int mappingAddr = switch (mappingSet) {
+            case A, D -> Sonic1Constants.MAP_ANIMAL2_ADDR;
+            case B, C -> Sonic1Constants.MAP_ANIMAL3_ADDR;
+            case E -> Sonic1Constants.MAP_ANIMAL1_ADDR;
+        };
+        return art.loadMappingFramesWithTileOffset(mappingAddr, 3, tileOffset);
     }
 
     private List<SpriteMappingFrame> createPointsMappingsFromRom(Sonic1ObjectArt art) {

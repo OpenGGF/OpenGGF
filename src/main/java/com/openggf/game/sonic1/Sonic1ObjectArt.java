@@ -5,9 +5,11 @@ import com.openggf.data.RomByteReader;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.SpriteMappingFrame;
+import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.util.PatternDecompressor;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
@@ -79,6 +81,35 @@ public class Sonic1ObjectArt {
                     + ": " + e.getMessage());
             return List.of();
         }
+    }
+
+    public List<SpriteMappingFrame> loadMappingFramesWithTileOffset(int mappingAddr, int frameCount, int tileOffset) {
+        return offsetMappingTiles(loadMappingFrames(mappingAddr, frameCount), tileOffset);
+    }
+
+    public static List<SpriteMappingFrame> offsetMappingTiles(List<SpriteMappingFrame> frames, int tileOffset) {
+        if (tileOffset == 0 || frames.isEmpty()) {
+            return List.copyOf(frames);
+        }
+
+        List<SpriteMappingFrame> remappedFrames = new ArrayList<>(frames.size());
+        for (SpriteMappingFrame frame : frames) {
+            List<SpriteMappingPiece> remappedPieces = new ArrayList<>(frame.pieces().size());
+            for (SpriteMappingPiece piece : frame.pieces()) {
+                remappedPieces.add(new SpriteMappingPiece(
+                        piece.xOffset(),
+                        piece.yOffset(),
+                        piece.widthTiles(),
+                        piece.heightTiles(),
+                        piece.tileIndex() + tileOffset,
+                        piece.hFlip(),
+                        piece.vFlip(),
+                        piece.paletteIndex(),
+                        piece.priority()));
+            }
+            remappedFrames.add(new SpriteMappingFrame(remappedPieces));
+        }
+        return List.copyOf(remappedFrames);
     }
 
     /**

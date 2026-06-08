@@ -1007,12 +1007,13 @@ LZ `Map_Jaws` / `Map_Burro` / `Map_Flap` / `Map_WFall` / `Map_Splash` tables,
 the MZ/SLZ `Map_Fire` table, the MZ `Map_Bas` / `Map_Glass` / `Map_Geyser` tables, the SYZ
 `Map_Bump` / `Map_Spring` / `Map_Roll` / `Map_Yad` tables, the GHZ `Map_Crab` / `Map_Moto` / `Map_Newt` / `Map_Buzz` / `Map_Missile` tables, the GHZ/SLZ `Map_Smash` table, the
 LZ/SLZ/SBZ `Map_Orb` table, the LZ `Map_Harp` table, the MZ/SBZ `Map_Cat` table, the SBZ `Map_Hog` table, the SLZ/SBZ `Map_Bomb` table, the SBZ `Map_Flame` / `Map_Saw` / `Map_Elec` / `Map_ADoor` / `Map_Gird` /
-`Map_Trap` / `Map_Spin` tables, the shared button `Map_But` table, the SBZ2
+`Map_Trap` / `Map_Spin` tables, the shared button `Map_But` table, the shared
+animal `Map_Animal1` / `Map_Animal2` / `Map_Animal3` tables, the SBZ2
 `Map_FFloor` table, the shared boss `Map_Eggman` /
 `Map_BossItems` tables, the SBZ2/FZ `Map_SEgg` table, plus the Final Zone
 `Map_EggCyl` / `Map_PLaunch` / `Map_Plasma` / `Map_FZLegs` / `Map_FZDamaged`
 boss mapping slice, now load from the user-supplied ROM and their guard budgets
-have been ratcheted down. The current object-provider budget is 767 handwritten
+have been ratcheted down. The current object-provider budget is 758 handwritten
 mapping pieces; Sonic 1 boss mappings are ROM-backed and
 their separate handwritten budget is zero.
 
