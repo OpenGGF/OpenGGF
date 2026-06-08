@@ -1498,7 +1498,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
     }
 
     /**
-     * Loads Burrobot art (Nem_Burrobot) and creates S1 mappings from Map_Burro.
+     * Loads Burrobot art (Nem_Burrobot) with ROM-parsed S1 mappings (Map_Burro).
      */
     private void loadBurrobotArt(Sonic1ObjectArt art) {
         Pattern[] patterns = art.loadNemesisPatterns(
@@ -1508,49 +1508,9 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, createBurrobotMappings(), 0, 1);
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_BURROBOT_ADDR);
+        ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 0, 1);
         registerSheet(ObjectArtKeys.BURROBOT, sheet);
-    }
-
-    private List<SpriteMappingFrame> createBurrobotMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x14, 3, 3, 0x00, false, false, 0, false),
-                new SpriteMappingPiece(-0x0C, 0x04, 3, 2, 0x09, false, false, 0, false)
-        )));
-
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x14, 3, 3, 0x0F, false, false, 0, false),
-                new SpriteMappingPiece(-0x0C, 0x04, 3, 2, 0x18, false, false, 0, false)
-        )));
-
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0C, -0x18, 3, 3, 0x1E, false, false, 0, false),
-                new SpriteMappingPiece(-0x0C, 0x00, 3, 3, 0x27, false, false, 0, false)
-        )));
-
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0C, -0x18, 3, 3, 0x30, false, false, 0, false),
-                new SpriteMappingPiece(-0x0C, 0x00, 3, 3, 0x39, false, false, 0, false)
-        )));
-
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x18, 3, 3, 0x0F, false, false, 0, false),
-                new SpriteMappingPiece(-0x0C, 0x00, 3, 3, 0x42, false, false, 0, false)
-        )));
-
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x18, -0x0C, 2, 3, 0x4B, false, false, 0, false),
-                new SpriteMappingPiece(-0x08, -0x0C, 3, 3, 0x51, false, false, 0, false)
-        )));
-
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x10, -0x14, 3, 3, 0x0F, false, false, 0, false),
-                new SpriteMappingPiece(-0x0C, 0x04, 3, 2, 0x09, false, false, 0, false)
-        )));
-
-        return frames;
     }
 
     /**
