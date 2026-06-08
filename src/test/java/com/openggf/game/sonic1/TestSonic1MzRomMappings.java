@@ -71,6 +71,24 @@ public class TestSonic1MzRomMappings {
     }
 
     @Test
+    public void mzLargeGrassyPlatformRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_MZ_LARGE_GRASSY_PLATFORM_ADDR);
+
+        assertEquals(List.of(13, 10, 6),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x40, -0x28, 2, 3, 0x57, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(0x30, -0x10, 2, 2, 0x53, false, false, 0, false),
+                romFrames.get(0).pieces().get(12));
+        assertEquals(new SpriteMappingPiece(-0x20, -0x40, 4, 4, 0x27, false, false, 0, false),
+                romFrames.get(1).pieces().get(3));
+        assertEquals(new SpriteMappingPiece(0, 0x10, 4, 4, 1, false, false, 0, false),
+                romFrames.get(2).pieces().get(5));
+    }
+
+    @Test
     public void basaranRomMappingsKeepExpectedTableShape() throws Exception {
         RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
         List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(

@@ -37,6 +37,7 @@ All notable changes to the OpenGGF project are documented in this file.
   MZ/LZ push block `Map_Push`, MZ Brick `Map_Brick`, SYZ Spinning Light `Map_Light`,
   MZ Smashable Green Block `Map_Smab`, MZ/SLZ/SBZ collapsing floor
   `Map_CFlo`, MZ/SBZ moving block `Map_MBlock`, LZ moving block `Map_MBlockLZ`,
+  MZ large grassy platform `Map_LGrass`,
   GHZ/SYZ/SLZ basic platform `Map_Plat_GHZ` / `Map_Plat_SYZ` / `Map_Plat_SLZ`,
   SLZ elevator/circling platform/staircase `Map_Elev` / `Map_Circ` / `Map_Stair`,
   unused small explosion `Map_UnkExplode`,

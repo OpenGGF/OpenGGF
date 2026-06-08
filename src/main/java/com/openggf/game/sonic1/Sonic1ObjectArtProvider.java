@@ -1804,7 +1804,8 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createLargeGrassyPlatformMappings();
+        List<SpriteMappingFrame> mappings = loadMappingFrames(
+                Sonic1Constants.MAP_MZ_LARGE_GRASSY_PLATFORM_ADDR);
 
         // Highest tile used: 0x57 + (2*3) = 0x5D
         int maxTileNeeded = 0x5D;
@@ -1822,57 +1823,6 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         // Palette line 2, priority 1: make_art_tile(ArtTile_Level, 2, 1)
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
         registerSheet(ObjectArtKeys.MZ_LARGE_GRASSY_PLATFORM, sheet);
-    }
-
-    /**
-     * MZ Large Grassy Platform mappings from docs/s1disasm/_maps/MZ Large Grassy Platforms.asm.
-     * spritePiece format: x, y, width, height, startTile, xflip, yflip, pal, pri
-     */
-    private List<SpriteMappingFrame> createLargeGrassyPlatformMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.wide): wide platform, 13 pieces
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x40, -0x28, 2, 3, 0x57, false, false, 0, false),
-                new SpriteMappingPiece(-0x40, -0x10, 2, 2, 0x53, false, false, 0, false),
-                new SpriteMappingPiece(-0x40, 0x00, 4, 4, 0x01, false, false, 0, false),
-                new SpriteMappingPiece(-0x30, -0x30, 4, 4, 0x27, false, false, 0, false),
-                new SpriteMappingPiece(-0x30, -0x10, 4, 2, 0x37, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, -0x10, 4, 4, 0x01, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -0x30, 4, 4, 0x11, false, false, 0, false),
-                new SpriteMappingPiece(0x10, -0x30, 4, 4, 0x3F, false, false, 0, false),
-                new SpriteMappingPiece(0x10, -0x10, 4, 2, 0x4F, false, false, 0, false),
-                new SpriteMappingPiece(0x00, -0x10, 4, 4, 0x01, false, false, 0, false),
-                new SpriteMappingPiece(0x20, 0x00, 4, 4, 0x01, false, false, 0, false),
-                new SpriteMappingPiece(0x30, -0x28, 2, 3, 0x57, false, false, 0, false),
-                new SpriteMappingPiece(0x30, -0x10, 2, 2, 0x53, false, false, 0, false)
-        )));
-
-        // Frame 1 (.sloped): sloped platform (catches fire), 10 pieces
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x40, -0x30, 4, 4, 0x27, false, false, 0, false),
-                new SpriteMappingPiece(-0x40, -0x10, 4, 2, 0x37, false, false, 0, false),
-                new SpriteMappingPiece(-0x40, 0x00, 4, 4, 0x01, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, -0x40, 4, 4, 0x27, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, -0x20, 4, 2, 0x37, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, -0x10, 4, 4, 0x01, false, false, 0, false),
-                new SpriteMappingPiece(0x00, -0x40, 4, 4, 0x11, false, false, 0, false),
-                new SpriteMappingPiece(0x00, -0x20, 4, 4, 0x01, false, false, 0, false),
-                new SpriteMappingPiece(0x20, -0x40, 4, 4, 0x3F, false, false, 0, false),
-                new SpriteMappingPiece(0x20, -0x20, 4, 2, 0x4F, false, false, 0, false)
-        )));
-
-        // Frame 2 (.narrow): narrow platform, 6 pieces
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x20, -0x30, 4, 4, 0x11, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, -0x10, 4, 4, 0x01, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, 0x10, 4, 4, 0x01, false, false, 0, false),
-                new SpriteMappingPiece(0x00, -0x30, 4, 4, 0x11, false, false, 0, false),
-                new SpriteMappingPiece(0x00, -0x10, 4, 4, 0x01, false, false, 0, false),
-                new SpriteMappingPiece(0x00, 0x10, 4, 4, 0x01, false, false, 0, false)
-        )));
-
-        return frames;
     }
 
     /**
