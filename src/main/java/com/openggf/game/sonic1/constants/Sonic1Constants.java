@@ -171,6 +171,7 @@ public final class Sonic1Constants {
     public static final int MAP_SS_RESULT_EMERALDS_ADDR = 0x00D482; // Map_SSRC (Obj7F: 7 frames)
     public static final int MAP_LZ_WATERFALL_ADDR = 0x013228; // Map_WFall (Obj65: 12 frames)
     public static final int MAP_LZ_SPLASH_ADDR   = 0x014D34; // Map_Splash (Obj08: 3 frames)
+    public static final int MAP_SBZ_JUNCTION_ADDR = 0x0159FA; // Map_Jun (Obj66: 17 frames)
     public static final int MAP_SBZ_RUNNING_DISC_ADDR = 0x015DEE; // Map_Disc (Obj67: 1 frame)
     public static final int MAP_SBZ_TRAP_DOOR_ADDR = 0x016048; // Map_Trap (Obj69: 3 frames)
     public static final int MAP_SBZ_SPINNING_PLATFORM_ADDR = 0x0160A2; // Map_Spin (Obj69: 5 frames)
