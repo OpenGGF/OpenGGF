@@ -108,6 +108,7 @@ public final class Sonic1Constants {
     public static final int MAP_SBZ_FLAMETHROWER_ADDR = 0x00EC82; // Map_Flame (Obj6D: 22 frames)
     public static final int MAP_SYZ_BUMPER_ADDR  = 0x00F18C; // Map_Bump (Obj47: 3 frames)
     public static final int MAP_MZ_LAVA_GEYSER_ADDR = 0x00F8D6; // Map_Geyser (Obj4C/4D: 20 frames)
+    public static final int MAP_MZ_LAVA_WALL_ADDR = 0x00FBBA; // Map_LWall (Obj4E: 5 frames)
     public static final int MAP_MOTOBUG_ADDR     = 0x00FE2C; // Map_Moto (Obj40: 7 frames)
     public static final int MAP_YADRIN_ADDR      = 0x00FFBA; // Map_Yad (Obj50: 6 frames)
     public static final int MAP_LZ_FLAPPING_DOOR_ADDR = 0x011AC6; // Map_Flap (Obj0C: 3 frames)

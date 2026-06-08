@@ -39,6 +39,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
     private static final int RESULTS_SCORE_DIGIT_PAIR_COUNT = 8;
     private static final int RESULTS_SCORE_DIGIT_TILE_COUNT = RESULTS_SCORE_DIGIT_PAIR_COUNT * 2;
     private static final int HUD_TEXT_E_PAIR_INDEX = 22;
+    private static final int MZ_LAVA_WALL_OBGFX_WORD = 0x63A8;
     /**
      * Remaps S3K Knuckles life-icon tile indices onto the native merged S1 HUD palette.
      *
@@ -1743,7 +1744,8 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createLavaWallMappings();
+        List<SpriteMappingFrame> mappings = createLavaWallMappingsFromRom(
+                loadMappingFrames(Sonic1Constants.MAP_MZ_LAVA_WALL_ADDR));
 
         // Highest tile used: $428 + (4*4-1) = $437
         int maxTileNeeded = 0x438;
@@ -1763,80 +1765,41 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         registerSheet(ObjectArtKeys.MZ_LAVA_WALL, sheet);
     }
 
-    /**
-     * MZ Lava Wall mappings from docs/s1disasm/_maps/Wall of Lava.asm (Map_LWall_internal).
-     * 5 frames: 4 animated edge frames (9 pieces each) + 1 trailing body frame (8 pieces).
-     * <p>
-     * Tile indices are final VRAM tile addresses computed from the VDP add.w of
-     * obGfx ($63A8) + mapping pattern word:
-     * <ul>
-     *   <li>$408 = edge variant A (Nem_Lava offset $60)</li>
-     *   <li>$418 = edge variant B (Nem_Lava offset $70)</li>
-     *   <li>$428 = edge variant C (Nem_Lava offset $80)</li>
-     *   <li>$2D2 = solid lava body (zone level tile)</li>
-     * </ul>
-     */
-    private List<SpriteMappingFrame> createLavaWallMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Edge tile VRAM indices (obGfx $63A8 + mapping offset)
-        final int EDGE_A = 0x408; // Nem_Lava + $60
-        final int EDGE_B = 0x418; // Nem_Lava + $70
-        final int EDGE_C = 0x428; // Nem_Lava + $80
-        // Body tile VRAM index (after 16-bit overflow in add.w)
-        final int BODY = 0x2D2;   // zone lava fill tile
-
-        // Frame 0 (byte_F538): edge=A top, edge=B bottom, 7 body
-        frames.add(createLavaWallFrame(EDGE_A, EDGE_B, BODY));
-
-        // Frame 1 (byte_F566): edge=B top, edge=C bottom, 7 body
-        frames.add(createLavaWallFrame(EDGE_B, EDGE_C, BODY));
-
-        // Frame 2 (byte_F594): edge=C top, edge=B bottom, 7 body
-        frames.add(createLavaWallFrame(EDGE_C, EDGE_B, BODY));
-
-        // Frame 3 (byte_F5C2): edge=B top, edge=A bottom, 7 body
-        frames.add(createLavaWallFrame(EDGE_B, EDGE_A, BODY));
-
-        // Frame 4 (byte_F5F0): trailing section - 8 body pieces only (no edge)
-        List<SpriteMappingPiece> trailPieces = new ArrayList<>();
-        trailPieces.add(new SpriteMappingPiece(0x20, -0x20, 4, 4, BODY, false, false, 0, false));
-        trailPieces.add(new SpriteMappingPiece(0x20, 0, 4, 4, BODY, false, false, 0, false));
-        trailPieces.add(new SpriteMappingPiece(0, -0x20, 4, 4, BODY, false, false, 0, false));
-        trailPieces.add(new SpriteMappingPiece(0, 0, 4, 4, BODY, false, false, 0, false));
-        trailPieces.add(new SpriteMappingPiece(-0x20, -0x20, 4, 4, BODY, false, false, 0, false));
-        trailPieces.add(new SpriteMappingPiece(-0x20, 0, 4, 4, BODY, false, false, 0, false));
-        trailPieces.add(new SpriteMappingPiece(-0x40, -0x20, 4, 4, BODY, false, false, 0, false));
-        trailPieces.add(new SpriteMappingPiece(-0x40, 0, 4, 4, BODY, false, false, 0, false));
-        frames.add(new SpriteMappingFrame(trailPieces));
-
-        return frames;
+    static List<SpriteMappingFrame> createLavaWallMappingsFromRom(List<SpriteMappingFrame> rawFrames) {
+        return rawFrames.stream()
+                .map(frame -> new SpriteMappingFrame(frame.pieces().stream()
+                        .map(Sonic1ObjectArtProvider::remapLavaWallPiece)
+                        .toList()))
+                .toList();
     }
 
-    /**
-     * Creates a lava wall frame with animated edge pieces (top-right) and solid body pieces.
-     * Layout matches the disassembly: 2 edge pieces + 7 body pieces filling the wall area.
-     *
-     * @param edgeTop    edge tile for the upper right 4x4 block
-     * @param edgeBottom edge tile for the lower right 4x4 block (offset $3C,0 from center)
-     * @param body       body fill tile
-     */
-    private SpriteMappingFrame createLavaWallFrame(int edgeTop, int edgeBottom, int body) {
-        List<SpriteMappingPiece> pieces = new ArrayList<>();
-        // Edge pieces (leading edge of wall)
-        // spritePiece $20, -$20, 4, 4, edgeTop
-        pieces.add(new SpriteMappingPiece(0x20, -0x20, 4, 4, edgeTop, false, false, 0, false));
-        // spritePiece $3C, 0, 4, 4, edgeBottom
-        pieces.add(new SpriteMappingPiece(0x3C, 0, 4, 4, edgeBottom, false, false, 0, false));
-        // Body fill pieces (solid lava)
-        pieces.add(new SpriteMappingPiece(0x20, 0, 4, 4, body, false, false, 0, false));
-        pieces.add(new SpriteMappingPiece(0, -0x20, 4, 4, body, false, false, 0, false));
-        pieces.add(new SpriteMappingPiece(0, 0, 4, 4, body, false, false, 0, false));
-        pieces.add(new SpriteMappingPiece(-0x20, -0x20, 4, 4, body, false, false, 0, false));
-        pieces.add(new SpriteMappingPiece(-0x20, 0, 4, 4, body, false, false, 0, false));
-        pieces.add(new SpriteMappingPiece(-0x40, -0x20, 4, 4, body, false, false, 0, false));
-        pieces.add(new SpriteMappingPiece(-0x40, 0, 4, 4, body, false, false, 0, false));
-        return new SpriteMappingFrame(pieces);
+    private static SpriteMappingPiece remapLavaWallPiece(SpriteMappingPiece piece) {
+        int finalTile = (toTileWord(piece) + MZ_LAVA_WALL_OBGFX_WORD) & 0x7FF;
+        return new SpriteMappingPiece(
+                piece.xOffset(),
+                piece.yOffset(),
+                piece.widthTiles(),
+                piece.heightTiles(),
+                finalTile,
+                false,
+                false,
+                0,
+                false);
+    }
+
+    private static int toTileWord(SpriteMappingPiece piece) {
+        int word = piece.tileIndex() & 0x7FF;
+        if (piece.hFlip()) {
+            word |= 0x0800;
+        }
+        if (piece.vFlip()) {
+            word |= 0x1000;
+        }
+        word |= (piece.paletteIndex() & 0x3) << 13;
+        if (piece.priority()) {
+            word |= 0x8000;
+        }
+        return word;
     }
 
     /**

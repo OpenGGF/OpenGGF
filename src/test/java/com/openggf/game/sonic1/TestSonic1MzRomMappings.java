@@ -232,4 +232,28 @@ public class TestSonic1MzRomMappings {
         assertEquals(new SpriteMappingPiece(-0x10, -0x14, 4, 4, 0x2F, false, false, 0, false),
                 romFrames.get(10).pieces().get(0));
     }
+
+    @Test
+    public void mzLavaWallRomMappingsKeepExpectedTableShapeAndFinalTileIds() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_MZ_LAVA_WALL_ADDR);
+
+        assertEquals(List.of(9, 9, 9, 9, 8),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(0x20, -0x20, 4, 4, 0x60, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(0x20, 0, 4, 4, 0x72A, true, true, 3, true),
+                romFrames.get(0).pieces().get(2));
+
+        List<SpriteMappingFrame> remapped = Sonic1ObjectArtProvider.createLavaWallMappingsFromRom(romFrames);
+        assertEquals(new SpriteMappingPiece(0x20, -0x20, 4, 4, 0x408, false, false, 0, false),
+                remapped.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(0x3C, 0, 4, 4, 0x418, false, false, 0, false),
+                remapped.get(0).pieces().get(1));
+        assertEquals(new SpriteMappingPiece(0x20, 0, 4, 4, 0x2D2, false, false, 0, false),
+                remapped.get(0).pieces().get(2));
+        assertEquals(new SpriteMappingPiece(0x20, -0x20, 4, 4, 0x2D2, false, false, 0, false),
+                remapped.get(4).pieces().get(0));
+    }
 }

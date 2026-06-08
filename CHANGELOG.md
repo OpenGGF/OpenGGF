@@ -26,7 +26,7 @@ All notable changes to the OpenGGF project are documented in this file.
   loads `Map_Seesaw`, `Map_SSawBall`, `Map_Fan`, `Map_Pylon`, `Map_Scen`, and
   `Map_ExplodeItem` from verified ROM offsets. LZ `Map_Jaws` / `Map_Burro` /
   `Map_Flap` / `Map_WFall` / `Map_Splash`, MZ/SLZ fireball `Map_Fire`,
-  MZ Basaran/Batbrain `Map_Bas`, MZ glass block `Map_Glass`, MZ chained stomper `Map_CStom`, MZ lava geyser `Map_Geyser`, GHZ spiked pole helix `Map_Hel`, GHZ/MZ swinging platform `Map_Swing_GHZ`, SLZ swinging platform `Map_Swing_SLZ`, SYZ bumper
+  MZ Basaran/Batbrain `Map_Bas`, MZ glass block `Map_Glass`, MZ chained stomper `Map_CStom`, MZ lava geyser `Map_Geyser`, MZ lava wall `Map_LWall`, GHZ spiked pole helix `Map_Hel`, GHZ/MZ swinging platform `Map_Swing_GHZ`, SLZ swinging platform `Map_Swing_SLZ`, SYZ bumper
   `Map_Bump`, shared spring `Map_Spring`, SYZ Roller `Map_Roll`, SYZ Yadrin `Map_Yad`, GHZ Crabmeat `Map_Crab`, GHZ Motobug `Map_Moto`, GHZ Newtron
   `Map_Newt`, shared animal `Map_Animal1` / `Map_Animal2` / `Map_Animal3`,
   special-stage result emerald `Map_SSRC`, Prison Capsule `Map_Pri`,
