@@ -3769,68 +3769,10 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        List<SpriteMappingFrame> mappings = createSbzSawMappings();
+        List<SpriteMappingFrame> mappings = art.loadMappingFrames(Sonic1Constants.MAP_SBZ_SAW_ADDR);
         // make_art_tile(ArtTile_SBZ_Saw, 2, 0) -> palette line 2, no priority
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, mappings, 2, 1);
         registerSheet(ObjectArtKeys.SBZ_SAW, sheet);
-    }
-
-    /**
-     * Creates SBZ Saw / Pizza Cutter sprite mappings from
-     * docs/s1disasm/_maps/Saws and Pizza Cutters.asm (Map_Saw_internal).
-     * <p>
-     * Four frames:
-     * <ul>
-     *   <li>Frame 0 (.pizzacutter1): Pizza cutter with pole + blade (tile $00) - 7 pieces</li>
-     *   <li>Frame 1 (.pizzacutter2): Pizza cutter with pole + rotated blade (tile $10) - 7 pieces</li>
-     *   <li>Frame 2 (.groundsaw1): Ground saw blade only (tile $00) - 4 pieces</li>
-     *   <li>Frame 3 (.groundsaw2): Ground saw rotated blade (tile $10) - 4 pieces</li>
-     * </ul>
-     * <p>
-     * spritePiece args: xpos, ypos, width, height, tile, xflip, yflip, pal, pri
-     */
-    private List<SpriteMappingFrame> createSbzSawMappings() {
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0 (.pizzacutter1): 7 pieces - pole + blade tile $00
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-4, -0x3C, 1, 2, 0x20, false, false, 0, false),
-                new SpriteMappingPiece(-4, -0x2C, 1, 2, 0x20, false, false, 0, false),
-                new SpriteMappingPiece(-4, -0x1C, 1, 4, 0x20, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, -0x20, 4, 4, 0, false, false, 0, false),
-                new SpriteMappingPiece(0, -0x20, 4, 4, 0, true, false, 0, false),
-                new SpriteMappingPiece(-0x20, 0, 4, 4, 0, false, true, 0, false),
-                new SpriteMappingPiece(0, 0, 4, 4, 0, true, true, 0, false)
-        )));
-
-        // Frame 1 (.pizzacutter2): 7 pieces - pole + rotated blade tile $10
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-4, -0x3C, 1, 2, 0x20, false, false, 0, false),
-                new SpriteMappingPiece(-4, -0x2C, 1, 2, 0x20, false, false, 0, false),
-                new SpriteMappingPiece(-4, -0x1C, 1, 4, 0x20, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, -0x20, 4, 4, 0x10, false, false, 0, false),
-                new SpriteMappingPiece(0, -0x20, 4, 4, 0x10, true, false, 0, false),
-                new SpriteMappingPiece(-0x20, 0, 4, 4, 0x10, false, true, 0, false),
-                new SpriteMappingPiece(0, 0, 4, 4, 0x10, true, true, 0, false)
-        )));
-
-        // Frame 2 (.groundsaw1): 4 pieces - blade only tile $00
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x20, -0x20, 4, 4, 0, false, false, 0, false),
-                new SpriteMappingPiece(0, -0x20, 4, 4, 0, true, false, 0, false),
-                new SpriteMappingPiece(-0x20, 0, 4, 4, 0, false, true, 0, false),
-                new SpriteMappingPiece(0, 0, 4, 4, 0, true, true, 0, false)
-        )));
-
-        // Frame 3 (.groundsaw2): 4 pieces - rotated blade tile $10
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x20, -0x20, 4, 4, 0x10, false, false, 0, false),
-                new SpriteMappingPiece(0, -0x20, 4, 4, 0x10, true, false, 0, false),
-                new SpriteMappingPiece(-0x20, 0, 4, 4, 0x10, false, true, 0, false),
-                new SpriteMappingPiece(0, 0, 4, 4, 0x10, true, true, 0, false)
-        )));
-
-        return frames;
     }
 
     /**
