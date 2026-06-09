@@ -4,6 +4,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Release config defaults now expose trace-render visibility:** the bundled
+  YAML template includes the `debug.traceRender.*` keys, and the configuration
+  reference distinguishes debug subsystem initialization from showing the HUD.
+
 - **Develop CI now has trace visibility:** default CI asserts a minimum executed
   test count after the non-ROM Maven suite, and manual/scheduled develop CI runs
   the trace-replay profile on the ROM fixture runner with report, skip, and

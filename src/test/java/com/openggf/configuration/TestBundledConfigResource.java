@@ -21,6 +21,9 @@ class TestBundledConfigResource {
             ConfigFlattener.Result r = ConfigFlattener.flatten(nested);
             assertTrue(r.unknownKeys().isEmpty(), "bundled config has unknown keys: " + r.unknownKeys());
             assertTrue(r.flat().containsKey(SonicConfiguration.DEFAULT_ROM.name()));
+            assertEquals(Boolean.TRUE, r.flat().get(SonicConfiguration.TRACE_SHOW_DESYNC_GHOSTS.name()));
+            assertEquals(Boolean.TRUE, r.flat().get(SonicConfiguration.TRACE_SHOW_GAME_HUD.name()));
+            assertEquals(Boolean.FALSE, r.flat().get(SonicConfiguration.TRACE_SHOW_DEBUG_HUD.name()));
         }
     }
 
