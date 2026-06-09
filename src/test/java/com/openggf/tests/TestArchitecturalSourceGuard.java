@@ -847,6 +847,24 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
+    void cnzPrizeObjectsUseBaseDestroyedState() throws IOException {
+        List<String> violations = new ArrayList<>();
+        for (String relative : List.of(
+                "com/openggf/game/sonic2/objects/BombPrizeObjectInstance.java",
+                "com/openggf/game/sonic2/objects/RingPrizeObjectInstance.java")) {
+            String source = stripCommentsAndStrings(Files.readString(SRC_MAIN.resolve(relative)));
+            if (source.contains("boolean destroyed")) {
+                violations.add(relative + " declares a local destroyed field instead of using AbstractObjectInstance");
+            }
+            if (source.contains("boolean isDestroyed()")) {
+                violations.add(relative + " overrides isDestroyed() instead of using AbstractObjectInstance");
+            }
+        }
+
+        assertNoViolations("CNZ prize objects must use the base object lifecycle destroyed state", violations);
+    }
+
+    @Test
     void s3kUiPatternBasesStayCentralizedInPatternAtlasRange() throws IOException {
         List<String> violations = new ArrayList<>();
         String ranges = Files.readString(SRC_MAIN.resolve("com/openggf/graphics/PatternAtlasRange.java"));

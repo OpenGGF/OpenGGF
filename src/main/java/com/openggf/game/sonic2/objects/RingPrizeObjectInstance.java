@@ -57,7 +57,6 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance {
     // State machine
     private int state = STATE_SPIRAL;
     private boolean ringCollected = false;
-    private boolean destroyed = false;
 
     // Sparkle animation tracking
     private int sparkleStartFrame = -1;
@@ -91,7 +90,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance {
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (destroyed) {
+        if (isDestroyed()) {
             return;
         }
 
@@ -111,7 +110,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance {
 
         // Check if off-screen for cleanup (only in spiral state)
         if (state == STATE_SPIRAL && !isOnScreen(64)) {
-            destroyed = true;
+            setDestroyed(true);
         }
     }
 
@@ -166,7 +165,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance {
         RingManager ringManager = services().ringManager();
         if (ringManager == null || sparkleStartFrame < 0) {
             // No sparkle available, destroy immediately
-            destroyed = true;
+            setDestroyed(true);
             return;
         }
 
@@ -175,7 +174,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance {
 
         if (sparkleFrameCount <= 0) {
             // No sparkle animation, destroy immediately
-            destroyed = true;
+            setDestroyed(true);
             return;
         }
 
@@ -186,7 +185,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance {
         int sparkleFrameOffset = elapsed / frameDelay;
         if (sparkleFrameOffset >= sparkleFrameCount) {
             // Sparkle animation complete, destroy the ring
-            destroyed = true;
+            setDestroyed(true);
         }
     }
 
@@ -225,7 +224,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance {
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (destroyed) {
+        if (isDestroyed()) {
             return;
         }
 
@@ -312,8 +311,4 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance {
         return RenderPriority.clamp(3);
     }
 
-    @Override
-    public boolean isDestroyed() {
-        return destroyed;
-    }
 }

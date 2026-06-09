@@ -48,9 +48,6 @@ public class BombPrizeObjectInstance extends AbstractObjectInstance {
     // Reference to parent counter (for decrementing)
     private final int[] prizeCounter;
 
-    // State
-    private boolean destroyed = false;
-
     // Reference to LevelManager for rendering
 
     /**
@@ -77,7 +74,7 @@ public class BombPrizeObjectInstance extends AbstractObjectInstance {
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (destroyed) {
+        if (isDestroyed()) {
             return;
         }
 
@@ -116,13 +113,13 @@ public class BombPrizeObjectInstance extends AbstractObjectInstance {
                 if (prizeCounter != null && prizeCounter.length > 0) {
                     prizeCounter[0]--;
                 }
-                destroyed = true;
+                setDestroyed(true);
             }
         }
 
         // Check if off-screen for cleanup
         if (!isOnScreen(64)) {
-            destroyed = true;
+            setDestroyed(true);
         }
     }
 
@@ -171,7 +168,7 @@ public class BombPrizeObjectInstance extends AbstractObjectInstance {
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (destroyed) {
+        if (isDestroyed()) {
             return;
         }
 
@@ -225,8 +222,4 @@ public class BombPrizeObjectInstance extends AbstractObjectInstance {
         return RenderPriority.clamp(3);
     }
 
-    @Override
-    public boolean isDestroyed() {
-        return destroyed;
-    }
 }

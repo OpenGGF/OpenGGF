@@ -63,7 +63,7 @@ This file tracks the release-prep architecture/code review findings being fixed 
 | RRF-055 | Medium | fixed | S3K animated tiles | LRZ AniPLC selection now uses `Sonic3kZoneIds.ZONE_LRZ` so Lava Reef Act 1 loads its ROM AniPLC scripts. | `Sonic3kPatternAnimator.java`, `Sonic3kZoneIds.java`, animation tests |
 | RRF-056 | Medium | open | Object lifecycle | Remaining AIZ boss/cutscene object spawns still call raw `ObjectManager.addDynamicObject(...)` instead of construction-context helpers. | `AizBattleshipInstance.java`, `AizEndBossInstance.java`, `AizMinibossInstance.java`, `CutsceneKnucklesRockChild.java`, object guard tests |
 | RRF-057 | Medium | fixed | Solid contacts | `ObjectSolidContactController.reset()` now clears `inlineSupportedPlayers` and `forceAirOnStaleSupportLoss`, matching rewind restore coverage. | `ObjectSolidContactController.java`, solid-contact tests |
-| RRF-058 | Medium | open | Object lifecycle | CNZ prize objects shadow `AbstractObjectInstance` destroyed state with local fields, risking lifecycle and rewind mismatch. | `RingPrizeObjectInstance.java`, `BombPrizeObjectInstance.java`, object lifecycle tests |
+| RRF-058 | Medium | fixed | Object lifecycle | CNZ ring/bomb prize objects now use `AbstractObjectInstance` destroyed state instead of local shadow fields. | `RingPrizeObjectInstance.java`, `BombPrizeObjectInstance.java`, object lifecycle tests |
 
 ## RRF-014 asset notes
 

@@ -103,6 +103,10 @@ All notable changes to the OpenGGF project are documented in this file.
   pattern animation resolves LRZ AniPLC scripts from `ZONE_LRZ`, restoring the
   ROM-backed animated tile setup for Lava Reef Act 1.
 
+- **CNZ prize objects now use the shared object lifecycle state:** Sonic 2 ring
+  and bomb prize objects no longer shadow `AbstractObjectInstance` destroyed
+  state, keeping lifecycle and rewind capture aligned.
+
 - **Hash-warning saves can no longer be launched from data select:** save
   summaries now distinguish recoverable payloads from loadable slots, so hash
   mismatches remain visible/deletable for recovery while data-select launch and
