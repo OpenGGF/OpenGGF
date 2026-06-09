@@ -129,8 +129,8 @@ Work is ongoing across all three games. Recent branch work spans S3K route
 bring-up (AIZ, CNZ, MGZ, ICZ, and Mushroom Hill), an S3K complete-run per-zone
 trace suite (one Sonic+Tails AIZ->Doomsday movie segmented per zone, each trace
 spanning the act1->act2 transition through the zone-exit handoff) with
-ROM-accurate in-game pause modelling and bounded trace-entry metadata
-initialisation, animated ROM-derived master-title game previews that replace the
+ROM-accurate in-game pause modelling and explicit trace-entry capability
+metadata, animated ROM-derived master-title game previews that replace the
 bundled title emblem resource, S2 trace-frontier closures (Sky Chase and Casino
 Night
 level-select replays), object-physics standardization onto shared contracts,
@@ -240,13 +240,15 @@ live in `CHANGELOG.md`; this README keeps only the high-level shape of the relea
   trace release gates no longer allow missing S3K AIZ replay coverage,
   save/config/editor recovery paths are more resilient, native-library and
   shader loading are release-hardened, and architecture ratchets remain part of
-  the release guard set. A later local release review reopened S3K AIZ replay
-  parity as an active blocker until the focused trace run returns green.
+  the release guard set. The follow-up release review kept S3K AIZ replay as a
+  hard publish gate and closed the known AIZ mismatch through ROM-visible object
+  and sidekick state rather than trace-state seeding.
 - **Release-prep guardrails and S1 ROM-data migration branch (2026-06-08).**
   Merged the release-prep policy/CI hardening that validates direct release
   pushes, counts generated trace replay reports, blocks warning-only trace
-  debt by default, and keeps the legacy S3K AIZ full-run bootstrap
-  diagnostic-only. The same branch moves another large Sonic 1 runtime-data
+  debt by default, and keeps S3K AIZ full-run entry behavior driven by explicit
+  fixture capability metadata instead of gameplay-state seeding. The same branch
+  moves another large Sonic 1 runtime-data
   slice to ROM-backed sources: palette cycles, GHZ bridge bend tables,
   LZ/SBZ conveyor and child-platform placement data, support-object mappings,
   badnik mappings, SBZ machinery mappings, and the Final Zone boss mapping
