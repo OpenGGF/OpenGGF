@@ -135,7 +135,7 @@ Paths are relative to the working directory (where the JAR is launched).
 
 ## Capture
 
-Trace video capture (the headless trace-capture driver / `TraceCaptureTool`) renders a chosen trace and muxes a lossless MKV via ffmpeg. These keys set the defaults; CLI flags override them.
+Trace video capture (the headless trace-capture driver / `TraceCaptureTool`) renders a chosen trace and muxes a lossless MKV via ffmpeg. These keys set the code defaults; CLI flags override them. The bundled `config.yaml` omits the optional `capture` block until a user needs to override one of these defaults.
 
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
