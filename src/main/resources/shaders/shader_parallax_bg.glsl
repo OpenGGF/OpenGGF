@@ -68,7 +68,7 @@ void main()
 
     // Map physical viewport pixels to logical game pixels and snap to integer
     // game pixels so per-scanline sampling stays stable under integer upscaling.
-    float gameX = floor((viewportX * 320.0) / ScreenWidth);
+    float gameX = floor(viewportX);
     float gameY = floor(((ScreenHeight - 1.0 - viewportY) * 224.0) / ScreenHeight);  // Y=0 at top
 
     // Get the scroll value for this scanline
@@ -83,8 +83,9 @@ void main()
         vScrollThis = texture(VScrollTexture, scanlineTexCoord).r * 32767.0;
     }
     if (UsePerColumnVScroll != 0) {
-        float column = clamp(floor(gameX / 16.0), 0.0, 19.0);
-        float columnTexCoord = (column + 0.5) / 20.0;
+        float vScrollColumnCount = max(1.0, ceil(ScreenWidth / 16.0));
+        float column = clamp(floor(gameX / 16.0), 0.0, vScrollColumnCount - 1.0);
+        float columnTexCoord = (column + 0.5) / vScrollColumnCount;
         vScrollThis += texture(VScrollColumnTexture, columnTexCoord).r * 32767.0;
     }
 

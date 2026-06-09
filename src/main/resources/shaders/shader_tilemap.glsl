@@ -27,7 +27,7 @@ uniform int UseUnderwaterPalette;
 uniform float WaterlineScreenY;
 uniform sampler1D HScrollTexture;    // Per-scanline BG scroll (R32F, 224 entries)
 uniform int PerLineScroll;           // 1 = per-scanline HScroll, 0 = uniform WorldOffsetX
-uniform sampler1D VScrollColumnTexture; // Per-column VScroll (R32F, 20 entries)
+uniform sampler1D VScrollColumnTexture; // Per-column VScroll (R32F, ceil(WindowWidth / 16) entries)
 uniform int PerColumnVScroll;        // 1 = apply per-column VScroll to worldY
 uniform float ScreenHeight;          // Visible scanline count (224.0)
 uniform float PerLineScrollSampleYOffsetPx;
@@ -120,8 +120,9 @@ void main()
     }
     float columnVScroll = 0.0;
     if (PerColumnVScroll == 1) {
-        float column = clamp(floor(pixelX / 16.0), 0.0, 19.0);
-        float columnTexCoord = (column + 0.5) / 20.0;
+        float vScrollColumnCount = max(1.0, ceil(WindowWidth / 16.0));
+        float column = clamp(floor(pixelX / 16.0), 0.0, vScrollColumnCount - 1.0);
+        float columnTexCoord = (column + 0.5) / vScrollColumnCount;
         columnVScroll = texture(VScrollColumnTexture, columnTexCoord).r * 32767.0;
     }
     float worldY = WorldOffsetY + pixelYFromTop + columnVScroll;
