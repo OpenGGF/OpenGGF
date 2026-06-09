@@ -451,10 +451,7 @@ public abstract class AbstractTraceReplayTest {
                 String secondaryCharacterLabel = meta.recordedSidekicks().isEmpty()
                         ? "sidekick"
                         : meta.recordedSidekicks().getFirst();
-                TraceFrame comparisonFrame =
-                        TraceReplayBootstrap.s3kFrameForRingDiagnosticComparison(
-                                trace, driveTraceIndex, driveFrame, engineDiag);
-                binder.compareFrame(comparisonFrame,
+                binder.compareFrame(driveFrame,
                         actualPrimary.x(), actualPrimary.y(),
                         actualPrimary.xSpeed(), actualPrimary.ySpeed(), actualPrimary.gSpeed(),
                         actualPrimary.angle(),

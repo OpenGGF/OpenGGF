@@ -160,7 +160,7 @@ class TestTraceExecutionModel {
     }
 
     @Test
-    void s3kRingDiagnosticComparisonBorrowsOnlyNextRowRingCount() throws Exception {
+    void s3kRingDiagnosticComparisonKeepsCurrentTraceRingCount() throws Exception {
         TraceData trace = TraceData.load(
                 Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
         TraceFrame current = trace.getFrame(6203);
@@ -178,7 +178,7 @@ class TestTraceExecutionModel {
         assertEquals(current.y(), comparison.y());
         assertEquals(current.cameraX(), comparison.cameraX());
         assertEquals(current.cameraY(), comparison.cameraY());
-        assertEquals(next.rings(), comparison.rings());
+        assertEquals(current.rings(), comparison.rings());
     }
 
     @Test

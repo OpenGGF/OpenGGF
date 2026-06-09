@@ -4,6 +4,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K trace replay now keeps ring comparisons row-strict:** the S3K replay
+  harness compares the current trace row directly instead of substituting a
+  next-row ring diagnostic when the engine happens to match that later value.
+
 - **S3K AIZ hollow-tree reveal now uses ROM centre coordinates:** the tree
   reveal-control counter compares against playable `y_pos` via centre Y instead
   of top-left sprite bounds, matching the disassembly and preventing early

@@ -574,35 +574,18 @@ public final class TraceReplayBootstrap {
     }
 
     /**
-     * S3K v6 traces can expose a one-row diagnostic skew for ring-count updates:
-     * the gameplay state is already the row being compared, while the Lua-visible
-     * Ring_count value appears on the following row. This helper only borrows
-     * that next-row ring diagnostic when the engine already equals it and the
-     * current row differs by a single ring, so persistent or larger mismatches
-     * still surface normally.
+     * Returns the S3K frame values that should be compared after a replay step.
+     *
+     * <p>S3K trace comparison is intentionally row-strict for ring counts. Earlier
+     * release candidates borrowed a next-row ring diagnostic when the engine
+     * already matched that next row, but that rewrote the expected value before
+     * {@link TraceBinder} could report a real ring-count mismatch.
      */
     public static TraceFrame s3kFrameForRingDiagnosticComparison(TraceData trace,
                                                                  int currentIndex,
                                                                  TraceFrame current,
                                                                  EngineDiagnostics engineDiag) {
-        if (trace == null || current == null || engineDiag == null
-                || trace.metadata() == null
-                || !"s3k".equalsIgnoreCase(trace.metadata().game())
-                || currentIndex + 1 >= trace.frameCount()
-                || current.rings() < 0 || engineDiag.rings() < 0
-                || current.rings() == engineDiag.rings()) {
-            return current;
-        }
-
-        TraceFrame next = trace.getFrame(currentIndex + 1);
-        if (next == null || next.rings() < 0
-                || next.frame() != current.frame() + 1
-                || next.rings() != engineDiag.rings()
-                || Math.abs(next.rings() - current.rings()) != 1) {
-            return current;
-        }
-
-        return current.withRingDiagnosticsFrom(next);
+        return current;
     }
 
     private static void recordSeedFrameInputHistory(AbstractPlayableSprite sprite, int inputMask) {
