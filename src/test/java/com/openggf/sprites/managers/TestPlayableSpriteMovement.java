@@ -2337,6 +2337,33 @@ public class TestPlayableSpriteMovement {
                                 "S3K Animate_Tails clears Status_Push after the roll-stop anim change");
         }
 
+        @Test
+        public void testS3kLeftWallPushSurvivesFacingFlipClearWhenContactIsLive() throws Exception {
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setDirection(Direction.RIGHT);
+                mockSprite.setGSpeed((short) 0);
+                mockSprite.setPushing(false);
+
+                Method updatePush = PlayableSpriteMovement.class.getDeclaredMethod(
+                                "updatePushingOnDirectionChange", boolean.class, boolean.class);
+                updatePush.setAccessible(true);
+                updatePush.invoke(manager, true, false);
+                mockSprite.setDirection(Direction.LEFT);
+                mockSprite.setPushing(true);
+
+                Method clearPush = PlayableSpriteMovement.class.getDeclaredMethod(
+                                "clearFacingFlipPushAfterGroundWallCollision");
+                clearPush.setAccessible(true);
+                clearPush.invoke(manager);
+
+                assertEquals(Direction.LEFT, mockSprite.getDirection(),
+                                "Pressing left from rest should face into the left wall before CalcRoomInFront");
+                assertTrue(mockSprite.getPushing(),
+                                "Live left-wall push contact must not be cleared by the prior facing-flip latch");
+        }
+
         /**
          * Test ROM-accurate speed-dependent threshold calculation.
          * ROM: threshold = min(abs(xSpeed >> 8) + 4, 14)
