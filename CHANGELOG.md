@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Object lifecycle guard budgets now match current source:** raw
+  `setDestroyed(true)` and direct dynamic-object spawn guard counts are
+  exact ratchets, include all raw `addDynamicObject*` variants, and verify
+  that the scan root is not accidentally narrowed.
+
 - **Data Select launch failures now return to the save screen:** failed save
   restore or level launch work inside the fade-complete callback is caught,
   logged, and routed back to Data Select with a recorded launch error instead

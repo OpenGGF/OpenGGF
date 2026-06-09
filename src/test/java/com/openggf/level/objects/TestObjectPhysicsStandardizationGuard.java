@@ -50,7 +50,7 @@ class TestObjectPhysicsStandardizationGuard {
     private static final Pattern RAW_SET_DESTROYED_TRUE = Pattern.compile(
             "\\b(?:[A-Za-z_$][\\w$]*\\s*\\.\\s*)?setDestroyed\\s*\\(\\s*true\\s*\\)");
     private static final Pattern RAW_ADD_DYNAMIC_OBJECT = Pattern.compile(
-            "\\.\\s*addDynamicObject\\s*\\(");
+            "\\.\\s*addDynamicObject(?:AfterCurrent(?:NextFrame)?|AfterSlot|NextFrame)?\\s*\\(");
     private static final Pattern TOUCH_PROFILE_HOOK_WITHOUT_PROFILE = Pattern.compile(
             "\\bpublic\\s+(?:boolean|int|TouchRegion\\[\\]|TouchResponseProvider\\.TouchRegion\\[\\])\\s+"
                     + "(?:requiresContinuousTouchCallbacks|usesS3kTouchSpecialPropertyResponse|"
@@ -122,8 +122,9 @@ class TestObjectPhysicsStandardizationGuard {
             "com/openggf/level/objects/ObjectLifetimeOps.java",
             "com/openggf/level/objects/ObjectManager.java"
     );
-    private static final int RAW_SET_DESTROYED_TRUE_OBJECT_PACKAGE_BUDGET = 585;
-    private static final int RAW_ADD_DYNAMIC_OBJECT_OBJECT_PACKAGE_BUDGET = 136;
+    private static final int OBJECT_LIFECYCLE_RATCHET_MINIMUM_SCANNED_FILES = 250;
+    private static final int RAW_SET_DESTROYED_TRUE_OBJECT_PACKAGE_BUDGET = 581;
+    private static final int RAW_ADD_DYNAMIC_OBJECT_OBJECT_PACKAGE_BUDGET = 10;
 
     @Test
     void objectManagerUsesNativePositionOpsForPlayablePreserveSubpixelWrites() throws IOException {
@@ -215,15 +216,15 @@ class TestObjectPhysicsStandardizationGuard {
                 .filter(violation -> violation.contains("raw addDynamicObject(...)"))
                 .toList();
 
-        assertTrue(rawSetDestroyed.size() <= RAW_SET_DESTROYED_TRUE_OBJECT_PACKAGE_BUDGET,
-                "Raw setDestroyed(true) calls in object production packages must not grow. Current count is "
+        assertEquals(RAW_SET_DESTROYED_TRUE_OBJECT_PACKAGE_BUDGET, rawSetDestroyed.size(),
+                "Raw setDestroyed(true) calls in object production packages must not grow or drift silently. Current count is "
                         + rawSetDestroyed.size() + "; budget is "
                         + RAW_SET_DESTROYED_TRUE_OBJECT_PACKAGE_BUDGET + ". "
                         + "Prefer ObjectLifetimeOps.destroyLatched(...) or "
                         + "ObjectLifetimeOps.destroyRespawnableOffscreen(...). Current violations:\n  "
                         + String.join("\n  ", rawSetDestroyed));
-        assertTrue(rawAddDynamicObject.size() <= RAW_ADD_DYNAMIC_OBJECT_OBJECT_PACKAGE_BUDGET,
-                "Raw addDynamicObject(...) calls in object production packages must not grow. Current count is "
+        assertEquals(RAW_ADD_DYNAMIC_OBJECT_OBJECT_PACKAGE_BUDGET, rawAddDynamicObject.size(),
+                "Raw addDynamicObject* calls in object production packages must not grow or drift silently. Current count is "
                         + rawAddDynamicObject.size() + "; budget is "
                         + RAW_ADD_DYNAMIC_OBJECT_OBJECT_PACKAGE_BUDGET + ". "
                         + "Prefer spawnChild(...), spawnFreeChild(...), or "
@@ -566,6 +567,10 @@ class TestObjectPhysicsStandardizationGuard {
                 "    setDestroyed(true);",
                 "    child.setDestroyed ( true );",
                 "    objectManager.addDynamicObject(new Sparkle());",
+                "    objectManager.addDynamicObjectAfterCurrent(new Sparkle());",
+                "    objectManager.addDynamicObjectAfterCurrentNextFrame(new Sparkle());",
+                "    objectManager.addDynamicObjectAfterSlot(new Sparkle(), 3);",
+                "    objectManager.addDynamicObjectNextFrame(new Sparkle());",
                 "  }",
                 "}"));
 
@@ -575,6 +580,14 @@ class TestObjectPhysicsStandardizationGuard {
                         "Sample.java:4 - raw setDestroyed(true); use ObjectLifetimeOps.destroyLatched(...) "
                                 + "or ObjectLifetimeOps.destroyRespawnableOffscreen(...)",
                         "Sample.java:5 - raw addDynamicObject(...); use spawnChild(...), spawnFreeChild(...), "
+                                + "or ObjectManager.createDynamicObject(...)",
+                        "Sample.java:6 - raw addDynamicObject(...); use spawnChild(...), spawnFreeChild(...), "
+                                + "or ObjectManager.createDynamicObject(...)",
+                        "Sample.java:7 - raw addDynamicObject(...); use spawnChild(...), spawnFreeChild(...), "
+                                + "or ObjectManager.createDynamicObject(...)",
+                        "Sample.java:8 - raw addDynamicObject(...); use spawnChild(...), spawnFreeChild(...), "
+                                + "or ObjectManager.createDynamicObject(...)",
+                        "Sample.java:9 - raw addDynamicObject(...); use spawnChild(...), spawnFreeChild(...), "
                                 + "or ObjectManager.createDynamicObject(...)"),
                 scanLifecycleRatchetSource("Sample.java", source));
     }
@@ -712,8 +725,13 @@ class TestObjectPhysicsStandardizationGuard {
             throw new IOException("Could not locate src/main/java");
         }
         List<String> violations = new ArrayList<>();
-        for (Path sourceFile : ObjectGuardSourceScanner.javaFilesUnderPackages(
-                srcMain, ObjectGuardSourceScanner.OBJECT_PACKAGE_PATHS)) {
+        List<Path> sourceFiles = ObjectGuardSourceScanner.javaFilesUnderPackages(
+                srcMain, ObjectGuardSourceScanner.OBJECT_PACKAGE_PATHS);
+        assertTrue(sourceFiles.size() >= OBJECT_LIFECYCLE_RATCHET_MINIMUM_SCANNED_FILES,
+                "Lifecycle ratchet scan root is unexpectedly small: scanned "
+                        + sourceFiles.size() + " files, minimum is "
+                        + OBJECT_LIFECYCLE_RATCHET_MINIMUM_SCANNED_FILES);
+        for (Path sourceFile : sourceFiles) {
             String path = srcMain.relativize(sourceFile).toString().replace('\\', '/');
             if (LIFECYCLE_RATCHET_OWNER_FILES.contains(path)) {
                 continue;
