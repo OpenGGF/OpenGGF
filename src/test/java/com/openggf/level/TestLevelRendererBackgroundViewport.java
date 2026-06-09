@@ -56,6 +56,19 @@ class TestLevelRendererBackgroundViewport {
                 "Parallax/deform runtime state must be published before S3K animated tiles read it.");
     }
 
+    @Test
+    void backgroundTilemapCacheTracksRuntimeFullWidthRequirement() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelTilemapManager.java"));
+
+        assertTrue(source.contains("lastRequiresFullWidthBgTilemap"),
+                "BG tilemap cache must remember the runtime full-width requirement used for the last build.");
+        assertTrue(source.contains("if (lastRequiresFullWidthBgTilemap != null")
+                        && source.contains("lastRequiresFullWidthBgTilemap != requiresFullWidthBgTilemap"),
+                "ensureBackgroundTilemapData must dirty the BG cache when runtime full-width mode changes.");
+        assertTrue(source.contains("lastRequiresFullWidthBgTilemap = requiresFullWidthBgTilemap"),
+                "The last built full-width mode must be recorded after a BG rebuild.");
+    }
+
     private static String methodBody(String text, String signature) {
         int start = text.indexOf(signature);
         assertTrue(start >= 0, "Missing method signature: " + signature);

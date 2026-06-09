@@ -4,6 +4,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Background tilemap caching now tracks full-width runtime mode:** changing
+  `requiresFullWidthBgTilemap()` dirties the cached BG tilemap so runtime
+  overlays cannot reuse a stale wrapped cache.
+
 - **Worktree setup now links the current YAML config:** the post-checkout hook
   shares `config.yaml` into new worktrees instead of the legacy `config.json`.
 
