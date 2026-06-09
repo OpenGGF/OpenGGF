@@ -58,6 +58,7 @@ public final class Sonic3kObjectArtKeys {
     // AIZ End Boss (Object 0x92)
     public static final String AIZ_END_BOSS = "aiz_end_boss";
     public static final String ROBOTNIK_SHIP = "robotnik_ship";
+    public static final String LBZ_MINIBOSS = "lbz_miniboss";
     public static final String LBZ_MINIBOSS_BOX = "lbz_miniboss_box";
     // AIZ2 Battleship bombing sequence
     public static final String AIZ2_BOMB_EXPLODE = "aiz2_bomb_explode";

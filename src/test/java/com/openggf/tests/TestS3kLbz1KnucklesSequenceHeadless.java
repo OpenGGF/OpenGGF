@@ -13,6 +13,7 @@ import com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1Instance;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1RangeHelper;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1ThrownBomb;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1Instance;
+import com.openggf.game.sonic3k.objects.LbzMinibossInstance;
 import com.openggf.game.sonic3k.objects.Lbz1RobotnikEventController;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
@@ -22,13 +23,16 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PlaceholderObjectInstance;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -217,14 +221,240 @@ class TestS3kLbz1KnucklesSequenceHeadless {
         assertTrue(robotnik.isFlameVisibleForTest(),
                 "Child1_MakeRoboShipFlame becomes visible once Robotnik has nonzero x_vel.");
 
-        for (int frame = 120; frame < 260 && robotnik.getRoutineForTest() != 0x10; frame++) {
+        for (int frame = 120; frame < 120 + 0x20; frame++) {
+            robotnik.update(frame, player);
+        }
+
+        ObjectInstance miniboss = activeObjectByName("LBZMiniboss");
+        assertNotNull(miniboss,
+                "loc_8CD6C turns the carried box into Obj_Wait($1F) before ChildObjDat_8D264 spawns the miniboss.");
+        assertEquals(1, activeSongFadeTransitions(),
+                "loc_8CD98 calls sub_8D116 before creating Obj_LBZMiniboss; it must allocate "
+                        + "Obj_Song_Fade_Transition for mus_Miniboss.");
+        assertEquals(0x3EC0, miniboss.getX(),
+                "Obj_LBZMiniboss must inherit the dropped box child's x_pos, not Robotnik's later escape x_pos.");
+        assertEquals(0x0160, miniboss.getY(),
+                "The dropped box child is created at parent y_pos+$34 when Robotnik reaches y_pos=$12C.");
+        assertEquals(0x0E, robotnik.getRoutineForTest(),
+                "Obj_LBZ1Robotnik is still in the diagonal escape when the dropped box wait callback fires.");
+
+        for (int frame = 120 + 0x20; frame < 260 && robotnik.getRoutineForTest() != 0x10; frame++) {
             robotnik.update(frame, player);
         }
 
         assertEquals(0x10, robotnik.getRoutineForTest(),
                 "loc_8CD40 clears y_vel and switches to the post-handoff ship movement once y_pos reaches $1B8.");
-        assertTrue(activeObjectNames().contains("LBZMiniboss"),
+        assertNotNull(miniboss,
                 "ChildObjDat_8D264 creates Obj_LBZMiniboss as Robotnik hands off to the miniboss object.");
+        assertFalse(miniboss instanceof PlaceholderObjectInstance,
+                "The Robotnik handoff must instantiate the concrete Obj_LBZMiniboss, not the old placeholder.");
+        assertInstanceOf(LbzMinibossInstance.class, miniboss,
+                "Obj_LBZ1Robotnik's ChildObjDat_8D264 target is Obj_LBZMiniboss.");
+    }
+
+    @Test
+    void lbzMinibossFactoryInitializesRomStateAndChildren() {
+        HeadlessTestFixture fixture = lbzFixture();
+        AbstractPlayableSprite player = fixture.sprite();
+        removeLbz1GroundLaunchIntro();
+        applyTitleCardHandoff();
+        Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry();
+
+        ObjectInstance created = registry.create(new ObjectSpawn(
+                0x3EC0, 0x01B8, Sonic3kObjectIds.LBZ_MINIBOSS, 0, 0, false, 0));
+
+        assertInstanceOf(LbzMinibossInstance.class, created,
+                "S3KL object $C9 must route to Obj_LBZMiniboss in Launch Base.");
+
+        LbzMinibossInstance miniboss = GameServices.level().getObjectManager().createDynamicObject(
+                () -> new LbzMinibossInstance(new ObjectSpawn(
+                        0x3EC0, 0x01B8, Sonic3kObjectIds.LBZ_MINIBOSS, 0, 0, false, 0)));
+        miniboss.update(0, player);
+
+        assertEquals(0x02, miniboss.getRoutineForTest(),
+                "loc_72400 runs SetUp_ObjAttributes, seeds $2E=$10, then waits in routine $02.");
+        assertEquals(0x10, miniboss.getWaitTimerForTest(),
+                "Obj_LBZMiniboss init writes $2E=$10 before loc_72458.");
+        assertEquals(6, miniboss.getCollisionProperty(),
+                "loc_72400 writes collision_property(a0)=6.");
+        assertEquals(0, miniboss.getCollisionFlags(),
+                "ObjDat_LBZMiniboss has collision_flags=0 until loc_724C8 opens the boss.");
+        assertEquals(13, miniboss.getPanelCountForTest(),
+                "ChildObjDat_7296E plus the two six-piece link lists create 13 visible children.");
+        assertEquals(Sonic3kObjectIds.LBZ_MINIBOSS, GameServices.gameState().getCurrentBossId(),
+                "loc_72400 sets Boss_flag; engine state should claim the LBZ miniboss slot.");
+    }
+
+    @Test
+    void lbzMinibossOpenStateTracksPlayerAndUsesRomHitWindow() {
+        HeadlessTestFixture fixture = lbzFixture();
+        AbstractPlayableSprite player = fixture.sprite();
+        removeLbz1GroundLaunchIntro();
+        applyTitleCardHandoff();
+        LbzMinibossInstance miniboss = GameServices.level().getObjectManager().createDynamicObject(
+                () -> new LbzMinibossInstance(new ObjectSpawn(
+                        0x3EC0, 0x01B8, Sonic3kObjectIds.LBZ_MINIBOSS, 0, 0, false, 0)));
+        miniboss.forceOpenForTest(0x3EC0, 0x01B8);
+
+        player.setCentreX((short) 0x3EA0);
+        player.setCentreY((short) 0x0200);
+        miniboss.update(0, player);
+
+        assertEquals(0x08, miniboss.getRoutineForTest());
+        assertEquals(0xFF00, miniboss.getXVelocityForTest() & 0xFFFF,
+                "loc_72522 chooses x_vel=-$100 when Player_1 is left of the boss.");
+        assertEquals(0x0100, miniboss.getYVelocityForTest() & 0xFFFF,
+                "Obj_LBZMiniboss targets Player_1 y_pos-$38, so y_vel=+$100 here.");
+        assertEquals(0x06, miniboss.getCollisionFlags(),
+                "loc_724C8 opens the boss by writing collision_flags=$06.");
+
+        miniboss.onPlayerAttack(player, new TouchResponseResult(0x06, 0x20, 0x20, TouchCategory.ENEMY));
+
+        assertEquals(5, miniboss.getCollisionProperty(),
+                "Touch_Enemy_Part2 consumes one collision_property count on a non-fatal hit.");
+        assertEquals(0, miniboss.getCollisionFlags(),
+                "loc_72840 holds collision_flags clear during the $20 boss-hit flash.");
+        assertEquals(0x20, miniboss.getHitReactionTimerForTest(),
+                "loc_7285A writes $20(a0)=$20 for the boss-hit flash window.");
+    }
+
+    @Test
+    void lbzMinibossRendersPanelsFromMinibossMappingsNotBoxSheet() {
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        PatternSpriteRenderer bossRenderer = mock(PatternSpriteRenderer.class);
+        PatternSpriteRenderer boxRenderer = mock(PatternSpriteRenderer.class);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.LBZ_MINIBOSS)).thenReturn(bossRenderer);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.LBZ_MINIBOSS_BOX)).thenReturn(boxRenderer);
+        when(bossRenderer.isReady()).thenReturn(true);
+        when(boxRenderer.isReady()).thenReturn(true);
+
+        LbzMinibossInstance miniboss = new LbzMinibossInstance(new ObjectSpawn(
+                0x3EC0, 0x01B8, Sonic3kObjectIds.LBZ_MINIBOSS, 0, 0, false, 0));
+        miniboss.setServices(new TestObjectServices() {
+            @Override
+            public ObjectRenderManager renderManager() {
+                return renderManager;
+            }
+        }.withConfiguration(SonicConfigurationService.getInstance()));
+        miniboss.forceOpenForTest(0x3EC0, 0x01B8);
+
+        for (int frame = 0; frame < 0x40; frame++) {
+            miniboss.update(frame, null);
+        }
+        miniboss.appendRenderCommands(new ArrayList<>());
+
+        org.mockito.Mockito.verify(bossRenderer, org.mockito.Mockito.times(14)).drawFrameIndex(
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.eq(false),
+                org.mockito.ArgumentMatchers.eq(false),
+                org.mockito.ArgumentMatchers.eq(1));
+        org.mockito.Mockito.verify(boxRenderer, org.mockito.Mockito.never()).drawFrameIndex(
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyBoolean(),
+                org.mockito.ArgumentMatchers.anyBoolean(),
+                org.mockito.ArgumentMatchers.anyInt());
+    }
+
+    @Test
+    void lbzMinibossArmChildrenRenderAsLinkedChains() {
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        PatternSpriteRenderer bossRenderer = mock(PatternSpriteRenderer.class);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.LBZ_MINIBOSS)).thenReturn(bossRenderer);
+        when(bossRenderer.isReady()).thenReturn(true);
+
+        LbzMinibossInstance miniboss = new LbzMinibossInstance(new ObjectSpawn(
+                0x3EC0, 0x01B8, Sonic3kObjectIds.LBZ_MINIBOSS, 0, 0, false, 0));
+        miniboss.setServices(new TestObjectServices() {
+            @Override
+            public ObjectRenderManager renderManager() {
+                return renderManager;
+            }
+        }.withConfiguration(SonicConfigurationService.getInstance()));
+        miniboss.forceOpenForTest(0x3EC0, 0x01B8);
+
+        for (int frame = 0; frame < 0x130; frame++) {
+            miniboss.update(frame, null);
+        }
+        miniboss.appendRenderCommands(new ArrayList<>());
+
+        ArgumentCaptor<Integer> xCaptor = ArgumentCaptor.forClass(Integer.class);
+        ArgumentCaptor<Integer> yCaptor = ArgumentCaptor.forClass(Integer.class);
+        org.mockito.Mockito.verify(bossRenderer, org.mockito.Mockito.times(14)).drawFrameIndex(
+                org.mockito.ArgumentMatchers.anyInt(),
+                xCaptor.capture(),
+                yCaptor.capture(),
+                org.mockito.ArgumentMatchers.eq(false),
+                org.mockito.ArgumentMatchers.eq(false),
+                org.mockito.ArgumentMatchers.eq(1));
+        int maxDistance = 0;
+        for (int i = 1; i < xCaptor.getAllValues().size(); i++) {
+            int dx = Math.abs(xCaptor.getAllValues().get(i) - 0x3EC0);
+            int dy = Math.abs(yCaptor.getAllValues().get(i) - 0x01B8);
+            maxDistance = Math.max(maxDistance, Math.max(dx, dy));
+        }
+        assertTrue(maxDistance >= 0x28,
+                "The linked arm child routines wait $100 frames and then propagate $38 bit 1 inward; "
+                        + "the arms must extend well beyond the old short constant-orbit layout.");
+    }
+
+    @Test
+    void lbzMinibossArmChildrenExposeRomHurtTouchRegions() {
+        LbzMinibossInstance miniboss = new LbzMinibossInstance(new ObjectSpawn(
+                0x3EC0, 0x01B8, Sonic3kObjectIds.LBZ_MINIBOSS, 0, 0, false, 0));
+        miniboss.setServices(new TestObjectServices());
+        miniboss.forceOpenForTest(0x3EC0, 0x01B8);
+
+        TouchResponseProvider.TouchRegion[] regions = miniboss.getMultiTouchRegions();
+
+        assertNotNull(regions,
+                "Obj_LBZMiniboss arm children run Draw_And_Touch_Sprite with collision_flags=$98.");
+        assertEquals(13, regions.length,
+                "Open miniboss touch regions should include the vulnerable body plus twelve harmful arm pieces.");
+        assertEquals(0x06, regions[0].collisionFlags(),
+                "The parent body keeps collision_flags=$06 while open.");
+        long hurtArmRegions = java.util.Arrays.stream(regions)
+                .filter(region -> region.collisionFlags() == 0x98)
+                .count();
+        assertEquals(12, hurtArmRegions,
+                "Each linked arm child uses ObjDat3 word_72968 collision_flags=$98.");
+    }
+
+    @Test
+    void lbzMinibossCenterChildUsesRawAnimationDelay() {
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        PatternSpriteRenderer bossRenderer = mock(PatternSpriteRenderer.class);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.LBZ_MINIBOSS)).thenReturn(bossRenderer);
+        when(bossRenderer.isReady()).thenReturn(true);
+
+        LbzMinibossInstance miniboss = new LbzMinibossInstance(new ObjectSpawn(
+                0x3EC0, 0x01B8, Sonic3kObjectIds.LBZ_MINIBOSS, 0, 0, false, 0));
+        miniboss.setServices(new TestObjectServices() {
+            @Override
+            public ObjectRenderManager renderManager() {
+                return renderManager;
+            }
+        }.withConfiguration(SonicConfigurationService.getInstance()));
+        miniboss.forceOpenForTest(0x3EC0, 0x01B8);
+
+        miniboss.appendRenderCommands(new ArrayList<>());
+        miniboss.update(1, null);
+        miniboss.appendRenderCommands(new ArrayList<>());
+
+        ArgumentCaptor<Integer> frameCaptor = ArgumentCaptor.forClass(Integer.class);
+        org.mockito.Mockito.verify(bossRenderer, org.mockito.Mockito.times(28)).drawFrameIndex(
+                frameCaptor.capture(),
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.eq(false),
+                org.mockito.ArgumentMatchers.eq(false),
+                org.mockito.ArgumentMatchers.eq(1));
+        assertEquals(frameCaptor.getAllValues().get(1), frameCaptor.getAllValues().get(15),
+                "Obj_LBZMiniboss center child runs Animate_Raw byte_72988, whose first byte delays frame changes; "
+                        + "it must not advance every single update.");
     }
 
     @Test
@@ -256,6 +486,81 @@ class TestS3kLbz1KnucklesSequenceHeadless {
         verify(boxRenderer).drawFrameIndex(6, 0x3ED0, 0x01D4, false, true, 2);
         verify(boxRenderer).drawFrameIndex(9, 0x3EC0, 0x01E8, false, false, 2);
         verify(boxRenderer).drawFrameIndex(3, 0x3ED4, 0x01C8, false, false, 2);
+    }
+
+    @Test
+    void lbz1RobotnikAnimatesMinibossBoxPiecesDuringEmergence() {
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        PatternSpriteRenderer boxRenderer = mock(PatternSpriteRenderer.class);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP)).thenReturn(renderer);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.LBZ_MINIBOSS_BOX)).thenReturn(boxRenderer);
+        when(renderer.isReady()).thenReturn(true);
+        when(boxRenderer.isReady()).thenReturn(true);
+
+        Lbz1RobotnikEventController robotnik = new Lbz1RobotnikEventController(new ObjectSpawn(
+                0x3EC0, 0x012C, Sonic3kObjectIds.LBZ1_ROBOTNIK, 0, 0, false, 0));
+        robotnik.setServices(new TestObjectServices() {
+            @Override
+            public ObjectRenderManager renderManager() {
+                return renderManager;
+            }
+        }.withConfiguration(SonicConfigurationService.getInstance()));
+        robotnik.forceMinibossBoxReleaseForTest(0x3EC0, 0x0160);
+
+        robotnik.appendRenderCommands(new ArrayList<>());
+        for (int frame = 0; frame < 2; frame++) {
+            robotnik.update(frame, null);
+        }
+        robotnik.appendRenderCommands(new ArrayList<>());
+
+        ArgumentCaptor<Integer> frameCaptor = ArgumentCaptor.forClass(Integer.class);
+        org.mockito.Mockito.verify(boxRenderer, org.mockito.Mockito.atLeast(11)).drawFrameIndex(
+                frameCaptor.capture(),
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyBoolean(),
+                org.mockito.ArgumentMatchers.anyBoolean(),
+                org.mockito.ArgumentMatchers.eq(2));
+        assertTrue(frameCaptor.getAllValues().contains(7) || frameCaptor.getAllValues().contains(8),
+                "When loc_8CD9C sets parent bit 3, the first box children should run byte_8D280 "
+                        + "instead of disappearing with the static carried-box frames.");
+    }
+
+    @Test
+    void lbz1RobotnikDeletesMinibossBoxPiecesAfterFoldAwayScripts() {
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        PatternSpriteRenderer boxRenderer = mock(PatternSpriteRenderer.class);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP)).thenReturn(renderer);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.LBZ_MINIBOSS_BOX)).thenReturn(boxRenderer);
+        when(renderer.isReady()).thenReturn(true);
+        when(boxRenderer.isReady()).thenReturn(true);
+
+        Lbz1RobotnikEventController robotnik = new Lbz1RobotnikEventController(new ObjectSpawn(
+                0x3EC0, 0x012C, Sonic3kObjectIds.LBZ1_ROBOTNIK, 0, 0, false, 0));
+        robotnik.setServices(new TestObjectServices() {
+            @Override
+            public ObjectRenderManager renderManager() {
+                return renderManager;
+            }
+        }.withConfiguration(SonicConfigurationService.getInstance()));
+        robotnik.forceMinibossBoxReleaseForTest(0x3EC0, 0x0160);
+
+        for (int frame = 0; frame < 0x100; frame++) {
+            robotnik.update(frame, null);
+        }
+        org.mockito.Mockito.clearInvocations(boxRenderer);
+
+        robotnik.appendRenderCommands(new ArrayList<>());
+
+        org.mockito.Mockito.verify(boxRenderer, org.mockito.Mockito.never()).drawFrameIndex(
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyBoolean(),
+                org.mockito.ArgumentMatchers.anyBoolean(),
+                org.mockito.ArgumentMatchers.anyInt());
     }
 
     @Test
@@ -755,5 +1060,12 @@ class TestS3kLbz1KnucklesSequenceHeadless {
                         || name.contains("Robotnik"))
                 .toList()
                 .toString();
+    }
+
+    private ObjectInstance activeObjectByName(String name) {
+        return GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(object -> name.equals(object.getName()))
+                .findFirst()
+                .orElse(null);
     }
 }

@@ -1872,6 +1872,15 @@ public class Sonic3kConstants {
     // Map_LBZMinibossBox - LBZ1 carried yellow-box mappings.
     // The locked-on object code references this S3-half include through Lockon S3 data.
     public static final int MAP_LBZ_MINIBOSS_BOX_ADDR = 0x36036A;
+    // Map_LBZMiniboss - LBZ1 miniboss mappings.
+    // Like the box mapping, the locked-on object code references this Lockon S3 include.
+    public static final int MAP_LBZ_MINIBOSS_ADDR = 0x3602C8;
+    // ArtKosM_LBZMiniboss - Kosinski Moduled miniboss art queued by Obj_LBZ1Robotnik/sub_8D0EA.
+    public static final int ART_KOSM_LBZ_MINIBOSS_ADDR = 0x375358;
+    // Pal_LBZMiniboss - loaded into palette line 1 by Obj_LBZMiniboss init.
+    public static final int PAL_LBZ_MINIBOSS_ADDR = 0x07299A;
+    // ArtTile_LBZMiniboss - VRAM tile for the miniboss body.
+    public static final int ART_TILE_LBZ_MINIBOSS = 0x04D6;
     // ArtKosM_LBZMinibossBox - Kosinski Moduled box art queued by Obj_LBZ1Robotnik.
     public static final int ART_KOSM_LBZ_MINIBOSS_BOX_ADDR = 0x37567A;
     // ArtTile_LBZMinibossBox - VRAM tile for the carried yellow box.

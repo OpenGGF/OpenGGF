@@ -1475,6 +1475,17 @@ public final class Sonic3kPlcArtRegistry {
                     2,
                     -1
             ));
+            // Obj_LBZ1Robotnik queues ArtKosM_LBZMiniboss before the handoff;
+            // Obj_LBZMiniboss renders Map_LBZMiniboss, palette line 1.
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.LBZ_MINIBOSS,
+                    Sonic3kConstants.ART_KOSM_LBZ_MINIBOSS_ADDR,
+                    CompressionType.KOSINSKI_MODULED,
+                    0,
+                    Sonic3kConstants.MAP_LBZ_MINIBOSS_ADDR,
+                    1,
+                    -1
+            ));
         }
 
         // StillSprite groups: subtype 20 (pole), subtypes 21-23 (girders)

@@ -103,6 +103,18 @@ All notable changes to the OpenGGF project are documented in this file.
   checkpoint, and S3K starpost respawns aligned with the original object
   coordinates.
 
+- **S3K Launch Base Zone Act 1 now hands off to the ROM-backed miniboss:**
+  Robotnik drops/spawns the concrete `$C9` LBZ miniboss object after the
+  post-collapse launch instead of keeping a placeholder carried box, and the
+  miniboss now loads verified ROM art/mappings/palette data, initializes the
+  ROM hit state, tracks Player 1 with the disassembly velocity/deadband rules,
+  exposes the correct hit-flash collision window, queues the 90-frame
+  `Obj_Song_Fade_Transition` to `mus_Miniboss`, animates the miniboss box pieces
+  during emergence through their delayed move-and-fold scripts, drives the two
+  linked six-piece arm chains with the ROM wait/angle propagation state machine,
+  applies the miniboss center-child raw animation delays, and runs the standard
+  S3K boss explosion/signpost defeat flow.
+
 - **S3K AIZ full-run trace release gate was regenerated and advanced:** the
   AIZ end-to-end fixture now records with Lua `6.25-s3k` and the focused replay
   is re-enabled as a release-blocking test that reaches the regenerated trace

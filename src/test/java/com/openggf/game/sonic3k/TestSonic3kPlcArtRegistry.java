@@ -320,6 +320,41 @@ public class TestSonic3kPlcArtRegistry {
     }
 
     @Test
+    public void lbzMinibossStandaloneArtMatchesRomShape() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        Sonic3kPlcArtRegistry.StandaloneArtEntry entry = requireStandaloneArt(
+                Sonic3kPlcArtRegistry.getPlan(0x06, 0), Sonic3kObjectArtKeys.LBZ_MINIBOSS);
+        assertEquals(Sonic3kConstants.ART_KOSM_LBZ_MINIBOSS_ADDR, entry.artAddr());
+        assertEquals(CompressionType.KOSINSKI_MODULED, entry.compression());
+        assertEquals(Sonic3kConstants.MAP_LBZ_MINIBOSS_ADDR, entry.mappingAddr());
+        assertEquals(1, entry.palette(), "ObjDat_LBZMiniboss uses make_art_tile(ArtTile_LBZMiniboss,1,1).");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            List<SpriteMappingFrame> frames = S3kSpriteDataLoader.loadMappingFrames(
+                    reader, Sonic3kConstants.MAP_LBZ_MINIBOSS_ADDR);
+
+            assertEquals(9, frames.size(), "Map_LBZMiniboss has 9 frames.");
+            assertEquals(2, frames.get(0).pieces().size());
+            assertEquals(4, frames.get(3).pieces().size());
+            assertEquals(1, frames.get(6).pieces().size());
+            assertEquals(0, frames.get(0).pieces().getFirst().tileIndex());
+            assertEquals(0x15, frames.get(3).pieces().getFirst().tileIndex());
+            assertEquals(0x19, frames.get(6).pieces().getFirst().tileIndex());
+
+            Sonic3kObjectArt art = new Sonic3kObjectArt(null, reader);
+            ObjectSpriteSheet sheet = art.loadStandaloneSheet(rom, entry);
+            assertEquals(42, sheet.getPatterns().length,
+                    "ArtKosM_LBZMiniboss decompresses to 1344 bytes / 42 tiles.");
+            assertEquals(9, sheet.getFrameCount());
+            assertMappingTilesWithinSheet(sheet, "LBZ miniboss mappings must fit the decompressed boss art");
+        }
+    }
+
+    @Test
     public void lbzRideGrappleMappingsMatchRomShape() throws IOException {
         File romFile = RomTestUtils.ensureSonic3kRomAvailable();
         assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
