@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Sidekick flight constants now live behind physics feature flags:** shared
+  sidekick CPU code reads S3K catch-up/flight tuning through
+  `PhysicsFeatureSet` instead of directly referencing concrete S3K constants,
+  and a source guard now blocks concrete Sonic package references from shared
+  sprite code.
+
 - **Object lifecycle guard budgets now match current source:** raw
   `setDestroyed(true)` and direct dynamic-object spawn guard counts are
   exact ratchets, include all raw `addDynamicObject*` variants, and verify

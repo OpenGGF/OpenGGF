@@ -461,6 +461,21 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
+    void sharedSpriteCodeDoesNotGainConcreteSonicDependencies() throws IOException {
+        List<String> references = new ArrayList<>();
+        for (Path file : productionFilesUnder("com/openggf/sprites")) {
+            String relative = relative(file);
+            references.addAll(scanPattern(relative,
+                    Files.readString(file),
+                    CONCRETE_SONIC_REFERENCE));
+        }
+
+        assertNoViolations(
+                "Shared sprite code must use feature sets, providers, or shared contracts instead of concrete Sonic packages",
+                references);
+    }
+
+    @Test
     void lowLevelGraphicsAndAudioDoNotGainGameplayServiceLookups() throws IOException {
         List<String> references = new ArrayList<>();
         for (String root : LOW_LEVEL_SERVICE_SCAN_ROOTS) {

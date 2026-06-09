@@ -2575,8 +2575,11 @@ public class SidekickCpuController {
         catchUpTargetX = targetX;
         catchUpTargetY = targetY;
         sidekick.setCentreXPreserveSubpixel((short) targetX);
-        sidekick.setCentreYPreserveSubpixel(
-                (short) (targetY - com.openggf.game.sonic3k.constants.Sonic3kConstants.TAILS_CATCH_UP_Y_OFFSET));
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        int catchUpYOffset = fs != null
+                ? fs.sidekickCatchUpYOffset()
+                : PhysicsFeatureSet.SIDEKICK_CATCH_UP_Y_OFFSET_S3K;
+        sidekick.setCentreYPreserveSubpixel((short) (targetY - catchUpYOffset));
         sidekick.setXSpeed((short) 0);
         sidekick.setYSpeed((short) 0);
         sidekick.setGSpeed((short) 0);
@@ -2613,16 +2616,22 @@ public class SidekickCpuController {
      */
     private void updateFlightAutoRecovery() {
         // ROM Tails_FlySwim_Unknown (sonic3k.asm:26534-26653).
-        final int AUTO_LAND_FRAMES = com.openggf.game.sonic3k.constants
-                .Sonic3kConstants.TAILS_FLIGHT_AUTO_LAND_FRAMES;
-        final int MAX_X_STEP = com.openggf.game.sonic3k.constants
-                .Sonic3kConstants.TAILS_FLIGHT_MAX_X_STEP;
-        final int Y_STEP = com.openggf.game.sonic3k.constants
-                .Sonic3kConstants.TAILS_FLIGHT_Y_STEP;
-        final int LEAD_SUPPRESS = com.openggf.game.sonic3k.constants
-                .Sonic3kConstants.TAILS_FLIGHT_LEAD_SUPPRESS_GSPEED;
-        final int LEAD_OFFSET = com.openggf.game.sonic3k.constants
-                .Sonic3kConstants.TAILS_FLIGHT_LEAD_X_OFFSET;
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        final int AUTO_LAND_FRAMES = fs != null
+                ? fs.sidekickFlightAutoLandFrames()
+                : PhysicsFeatureSet.SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K;
+        final int MAX_X_STEP = fs != null
+                ? fs.sidekickFlightMaxXStep()
+                : PhysicsFeatureSet.SIDEKICK_FLIGHT_MAX_X_STEP_S3K;
+        final int Y_STEP = fs != null
+                ? fs.sidekickFlightYStep()
+                : PhysicsFeatureSet.SIDEKICK_FLIGHT_Y_STEP_S3K;
+        final int LEAD_SUPPRESS = fs != null
+                ? fs.sidekickFlightLeadSuppressGSpeed()
+                : PhysicsFeatureSet.SIDEKICK_FLIGHT_LEAD_SUPPRESS_GSPEED_S3K;
+        final int LEAD_OFFSET = fs != null
+                ? fs.sidekickFlightLeadXOffset()
+                : PhysicsFeatureSet.SIDEKICK_FLIGHT_LEAD_X_OFFSET_S3K;
         final int FLIGHT_FUEL = (8 * 60) / 2;   // ROM loc_13C3A:26552 double_jump_property reload
 
         // 1. Off-screen timer. The ROM check is `tst.b render_flags(a0); bmi.s loc_13C3A`.
@@ -2724,7 +2733,6 @@ public class SidekickCpuController {
         //    object_control is still nonzero.
         boolean closeEnough = residualX == 0 && residualY == 0;
         byte delayedStatus = leader.getStatusHistory(ROM_FOLLOW_DELAY_FRAMES);
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
         int statusBlockerMask = fs != null
                 ? fs.sidekickFlyLandStatusBlockerMask()
                 : PhysicsFeatureSet.SIDEKICK_FLY_LAND_BLOCKERS_S2;

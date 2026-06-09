@@ -81,6 +81,12 @@ public class TestHybridPhysicsFeatureSet {
                 true,   // sidekickDespawnUsesObjectIdMismatch - S1/S2 (s2.asm:39067 cmp.b id(a3),d0)
                 PhysicsFeatureSet.SIDEKICK_FLY_LAND_BLOCKERS_NONE,  // sidekickFlyLandStatusBlockerMask - S1 has no CPU sidekick
                 false,  // sidekickFlyLandRequiresLeaderAlive - S1 has no CPU sidekick
+                PhysicsFeatureSet.SIDEKICK_CATCH_UP_Y_OFFSET_S3K,  // sidekickCatchUpYOffset - S1 inert default
+                PhysicsFeatureSet.SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K,  // sidekickFlightAutoLandFrames - S1 inert default
+                PhysicsFeatureSet.SIDEKICK_FLIGHT_MAX_X_STEP_S3K,  // sidekickFlightMaxXStep - S1 inert default
+                PhysicsFeatureSet.SIDEKICK_FLIGHT_Y_STEP_S3K,  // sidekickFlightYStep - S1 inert default
+                PhysicsFeatureSet.SIDEKICK_FLIGHT_LEAD_X_OFFSET_S3K,  // sidekickFlightLeadXOffset - S1 inert default
+                PhysicsFeatureSet.SIDEKICK_FLIGHT_LEAD_SUPPRESS_GSPEED_S3K,  // sidekickFlightLeadSuppressGSpeed - S1 inert default
                 false,  // solidObjectOffscreenGate - S1 keeps current behaviour (gate is S3K-only for now)
                 false,  // solidObjectRequiresSidekickOnScreen - S1 has no CPU sidekick
                 false,  // sidekickDespawnUsesRidingInstanceLoss - S1 has no CPU sidekick
