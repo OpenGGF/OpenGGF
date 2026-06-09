@@ -8,6 +8,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -130,7 +132,10 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isSolidFor(PlayableEntity player) {
-        return settled && !collapseStarted;
+        // ROM loc_2B2E8 still falls through to SolidObjectFull2 while the
+        // collapse delay counts down. Player support ends only when loc_2B45E
+        // ejects the standing players and deletes the parent object.
+        return settled && !isDestroyed();
     }
 
     @Override
@@ -143,7 +148,7 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         if (!cutsceneOverride && Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()) {
-            setDestroyed(true);
+            ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
 
@@ -183,7 +188,7 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
                 collapseTimer--;
             } else {
                 ejectStandingPlayers();
-                setDestroyed(true);
+                ObjectLifetimeOps.deleteNoRespawn(this);
             }
         }
     }
@@ -212,6 +217,10 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
             player.setOnObject(false);
             player.setPushing(false);
             player.setAir(true);
+            ObjectManager objectManager = services().objectManager();
+            if (objectManager != null) {
+                objectManager.clearRidingObject(player);
+            }
             if (player instanceof AbstractPlayableSprite sprite) {
                 // Use forcedAnimationId so the normal animation system doesn't
                 // overwrite HURT_FALL on the next frame based on movement state.
@@ -284,7 +293,7 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
             x = motion.x;
             y = motion.y;
             if (!isOnScreen(128)) {
-                setDestroyed(true);
+                ObjectLifetimeOps.expireDynamic(this);
             }
         }
 

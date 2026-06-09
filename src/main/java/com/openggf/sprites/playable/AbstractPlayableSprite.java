@@ -3111,6 +3111,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return logicalInputState & 0xFFFF;
         }
 
+        /** Mirrors a late ROM logical-input write into the current follower-history slot. */
+        public void writeLogicalInputAndCurrentFollowerHistory(int inputMask, boolean jumpPress) {
+                logicalInputState = (short) inputMask;
+                logicalJumpPressState = jumpPress;
+                inputHistory[historyPos] = logicalInputState;
+                jumpPressHistory[historyPos] = (byte) (logicalJumpPressState ? 1 : 0);
+        }
+
         /**
          * Returns whether the player is actively pressing a movement direction this frame,
          * after all control lock filtering. Used by animation to match ROM behavior.

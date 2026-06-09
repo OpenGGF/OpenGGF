@@ -647,7 +647,7 @@ public class CollisionSystemTest {
     }
 
     @Test
-    public void floorLipSlopeUsesAlternateSensorPatternOutsideSbzCoordinates() {
+    public void floorLipOddSensorUsesRomCardinalFallbackInsteadOfAlternateSlope() {
         AbstractPlayableSprite player = newCollisionTestSprite();
         player.setGroundMode(GroundMode.GROUND);
         player.setCentreX((short) 0x0100);
@@ -658,9 +658,10 @@ public class CollisionSystemTest {
 
         SensorResult result = invokeSelectSensorWithAngle(player, selectedOddFloor, alternateSlope);
 
-        assertSame(alternateSlope, result,
-                "Floor lip selection should choose the ROM-shaped alternate slope sensor by sensor result pattern");
-        assertEquals(0x08, player.getAngle() & 0xFF);
+        assertSame(selectedOddFloor, result,
+                "Player_Angle keeps the lower-distance floor sensor even when its angle is odd");
+        assertEquals(0x00, player.getAngle() & 0xFF,
+                "Odd floor angles use the ROM cardinal fallback; the farther alternate slope must not be borrowed");
     }
 
     private static Object describeCalcRoomInFrontProbe(int angle, short gSpeed) {

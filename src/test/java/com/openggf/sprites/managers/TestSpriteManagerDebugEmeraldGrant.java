@@ -36,6 +36,7 @@ import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.TerrainCollisionManager;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.timer.TimerManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,6 +48,7 @@ class TestSpriteManagerDebugEmeraldGrant {
 
     @BeforeEach
     void setUp() {
+        TestEnvironment.resetAll();
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         AudioManager.getInstance().resetState();
         audioBackend = new RecordingAudioBackend();

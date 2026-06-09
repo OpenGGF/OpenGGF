@@ -44,6 +44,7 @@ class TestBuildToolingGuard {
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - if (current.frame() == firstLevelFrame) {",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - int gameplayStartFrame = findCheckpointFrame(trace, \"gameplay_start\");",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - return gameplayStartFrame >= 0 && current.frame() <= gameplayStartFrame;",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - || next.frame() != current.frame() + 1",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - || !\"complete_run\".equals(metadata.traceProfile())",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - if (metadata.zoneId() == null || metadata.zoneId() != 0 || metadata.act() != 1) {",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - .anyMatch(checkpoint -> \"intro_begin\".equals(checkpoint.name()));",
@@ -793,7 +794,7 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void legacyS3kAizFullRunReplayIsDiagnosticOnly() throws Exception {
+    void regeneratedS3kAizFullRunReplayIsReleaseBlocking() throws Exception {
         String file = "src/test/java/com/openggf/tests/trace/s3k/TestS3kAizTraceReplay.java";
         String source = Files.readString(Path.of(file));
         List<String> violations = new ArrayList<>();
@@ -801,15 +802,15 @@ class TestBuildToolingGuard {
         if (!source.contains("public void replayMatchesTrace() throws Exception")) {
             violations.add(file + " does not override the inherited full replay parity test");
         }
-        if (!source.contains("@Disabled(\"Legacy AIZ end-to-end trace uses fixture-shaped bootstrap; diagnostic-only until regenerated\")")) {
-            violations.add(file + " does not mark the legacy full replay as diagnostic-only");
+        if (source.contains("@Disabled(")) {
+            violations.add(file + " still disables the regenerated full replay");
         }
         if (!source.contains("super.replayMatchesTrace();")) {
-            violations.add(file + " override should delegate to the base implementation when explicitly enabled locally");
+            violations.add(file + " override should delegate to the base release-blocking implementation");
         }
 
         if (!violations.isEmpty()) {
-            fail("legacy S3K AIZ full-run replay must not be counted as release parity coverage:\n  "
+            fail("regenerated S3K AIZ full-run replay must count as release parity coverage:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }

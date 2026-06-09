@@ -413,7 +413,10 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
     }
 
     protected boolean shouldStartResults(AbstractPlayableSprite player) {
-        return !player.getAir();
+        return !player.getAir()
+                && player.getXSpeed() == 0
+                && player.getYSpeed() == 0
+                && player.getGSpeed() == 0;
     }
 
     protected void startResults(AbstractPlayableSprite player) {
@@ -421,6 +424,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
             return;
         }
         resultsStarted = true;
+        services().gameState().setEndOfLevelFlag(false);
         services().gameState().setEndOfLevelActive(true);
         if (shouldLockPlayersForResults()) {
             for (PlayableEntity candidate : playerQuery(player)

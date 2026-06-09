@@ -8,7 +8,7 @@ This file tracks the release-prep architecture/code review findings being fixed 
 | --- | --- | --- | --- | --- | --- |
 | RRF-001 | High | fixed | Release policy | Direct `master` pushes can bypass branch-policy validation because release policy only runs on pull requests. | `.github/workflows/release.yml`, `.githooks/` |
 | RRF-002 | High | fixed | Release trace gate | Release trace coverage requires only four reports despite the trace profile selecting many trace tests. | `.github/workflows/release.yml`, `pom.xml`, `src/test/java/com/openggf/tests/TestBuildToolingGuard.java` |
-| RRF-003 | High | deferred | Trace policy | Legacy S3K AIZ full-run trace remains diagnostic-only; release replay now blocks it unless the explicit diagnostic heuristic property is set. Full regeneration is still required before re-enabling it as release parity. | `TraceReplayBootstrap.java`, `TestS3kAizTraceReplay.java`, `docs/TRACE_FRONTIER_LOG.md` |
+| RRF-003 | High | fixed | Trace policy | S3K AIZ full-run trace was regenerated, re-enabled as release-blocking, and now reaches the regenerated trace end without divergences. | `TraceReplayBootstrap.java`, `TestS3kAizTraceReplay.java`, `RingManager.java`, `CollisionSystem.java`, `TraceExecutionModel.java`, `docs/TRACE_FRONTIER_LOG.md` |
 | RRF-004 | High | fixed | Trace bootstrap | S2 Tornado replay no longer applies metadata start position or primes player/Tornado ride state from route-shaped object state; remaining prelude work is native timing/object advancement only. | `TraceReplayBootstrap.java`, `TraceReplaySessionBootstrap.java` |
 | RRF-005 | High | fixed | Runtime ownership | AIZ intro preload can use `BootstrapObjectServices` instead of active runtime-owned services. | `Sonic3k.java`, `AizIntroTerrainSwap.java`, `Sonic3kAIZEvents.java`, `AizPlaneIntroInstance.java` |
 | RRF-006 | High | fixed | S3K progression | S3K special-stage entry rings now route Hidden Palace subtypes and all-chaos/all-super emerald state to HPZ instead of silently falling through. | `Sonic3kSSEntryRingObjectInstance.java`, `TestSonic3kSSEntryRingFormation.java` |
@@ -18,11 +18,13 @@ This file tracks the release-prep architecture/code review findings being fixed 
 
 ## Trace-scope notes
 
-- RRF-003 residual debt: `src/test/resources/traces/s3k/aiz1_to_hcz_fullrun`
-  still needs regeneration or a native intro replay model before it can be a
-  release parity gate. The legacy heuristic is now guarded by
-  `openggf.trace.allowLegacyS3kAizDiagnosticHeuristic` and throws in normal
-  release replay.
+- RRF-003: `src/test/resources/traces/s3k/aiz1_to_hcz_fullrun` has been
+  regenerated with Lua `6.25-s3k`, is no longer diagnostic-only, and passes the
+  focused release-blocking replay through the HCZ handoff. The closed frontiers
+  include duplicate placed-ring coordinates, S3K raw ring parsing/window
+  semantics, S3K odd floor-lip angle fallback, AIZ miniboss/title-card handoff,
+  AIZ2 bridge/capsule/camera timing, and S3K transition-mode replay
+  classification.
 - RRF-004 removed the committed trace-to-engine ride-state bootstrap. S2 SCZ/WFZ
   may expose earlier native frontiers once the wider workspace compiles and
   those ROM-backed traces can run.

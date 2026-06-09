@@ -43,11 +43,10 @@ public interface TraceExecutionModel {
         if (gameplayCounterAdvanced(previous, current)) {
             return TraceExecutionPhase.FULL_LEVEL_FRAME;
         }
-        // S3K exposes Lag_frame_count in VInt_0_Main, but the disassembly
-        // clears it again during the normal frame path. Treat it as diagnostic
-        // only and continue to classify replay phases from gameplay/VBlank
-        // counter deltas.
-        if (vblankCounterAdvanced(previous, current)) {
+        if (lagCounterAdvanced(previous, current)) {
+            return TraceExecutionPhase.VBLANK_ONLY;
+        }
+        if (vblankCounterAdvanced(previous, current) && current.stateEquals(previous)) {
             return TraceExecutionPhase.VBLANK_ONLY;
         }
         return TraceExecutionPhase.FULL_LEVEL_FRAME;
@@ -98,6 +97,12 @@ public interface TraceExecutionModel {
 
     private static boolean vblankCounterAdvanced(TraceFrame previous, TraceFrame current) {
         return current.vblankCounter() != previous.vblankCounter();
+    }
+
+    private static boolean lagCounterAdvanced(TraceFrame previous, TraceFrame current) {
+        return current.lagCounter() >= 0
+                && previous.lagCounter() >= 0
+                && current.lagCounter() > previous.lagCounter();
     }
 
     private static TraceExecutionPhase deriveLegacyHeuristic(

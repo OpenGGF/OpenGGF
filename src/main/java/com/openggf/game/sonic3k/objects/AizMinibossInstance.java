@@ -16,6 +16,8 @@ import com.openggf.level.Palette;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.objects.boss.AbstractBossInstance;
@@ -144,6 +146,22 @@ public class AizMinibossInstance extends AbstractBossInstance {
     @Override
     protected int getCollisionSizeIndex() {
         return COLLISION_SIZE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        TouchResponseProfile base = TouchResponseProfile.fromProvider(this);
+        return new TouchResponseProfile(
+                base.categoryDecodeMode(),
+                base.continuousCallbacks(),
+                base.requiresRenderFlagForTouch(),
+                base.multiRegionSource(),
+                base.shieldDeflectCapability(),
+                base.shieldReactionFlags(),
+                base.enablesPostSpecialTouchAirborneSideVelocityPreservation(),
+                base.attackBouncePolicy(),
+                TouchActorContextPolicy.MAIN_ONLY,
+                base.stopAfterFirstOverlapPolicy());
     }
 
     @Override

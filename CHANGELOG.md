@@ -4,6 +4,17 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K AIZ full-run trace release gate was regenerated and advanced:** the
+  AIZ end-to-end fixture now records with Lua `6.25-s3k` and the focused replay
+  is re-enabled as a release-blocking test that reaches the regenerated trace
+  end with no divergences. Placed-ring tracking now preserves
+  duplicate ROM ring entries at identical coordinates, rewind parity compares
+  active ring spawn indices, and S3K odd floor-lip collision uses the ROM
+  cardinal fallback for the selected odd sensor instead of borrowing the
+  alternate sensor slope. The AIZ2 bridge/capsule/results/title-card handoff
+  path now models the ROM camera, input, sidekick-touch, and transition freeze
+  timing through the HCZ handoff.
+
 - **Release-prep architecture review hardening closed the current blocker
   set:** branch policy now runs for direct release-branch pushes, release trace
   coverage is counted from generated reports, warning-only trace reports fail

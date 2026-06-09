@@ -611,6 +611,9 @@ final class ObjectTouchResponseController {
         if (sidekick == null) {
             return;
         }
+        if (profile != null && profile.actorContextPolicy() == TouchActorContextPolicy.MAIN_ONLY) {
+            return;
+        }
         if (listener != null) {
             listener.onTouchResponse(sidekick, result, currentFrameCounter);
         }

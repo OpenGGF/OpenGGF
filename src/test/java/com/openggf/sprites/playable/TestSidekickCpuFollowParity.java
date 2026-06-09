@@ -287,6 +287,19 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void lateObjectLogicalInputWriteUpdatesCurrentFollowerHistorySlot() {
+        TestableSprite sonic = new TestableSprite("sonic");
+
+        sonic.setLogicalInputState(false, false, false, false, false);
+        sonic.endOfTick();
+        sonic.writeLogicalInputAndCurrentFollowerHistory(AbstractPlayableSprite.INPUT_RIGHT, false);
+
+        assertEquals(AbstractPlayableSprite.INPUT_RIGHT, sonic.getInputHistory(0) & 0xFFFF,
+                "Object/event writes to Ctrl_1_logical after Sonic_RecordPos must still update "
+                        + "the current Stat_table slot for delayed Tails CPU replay");
+    }
+
+    @Test
     void releasedAizIntroMarkerSuppressesFirstNormalMovementPulse() throws Exception {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
