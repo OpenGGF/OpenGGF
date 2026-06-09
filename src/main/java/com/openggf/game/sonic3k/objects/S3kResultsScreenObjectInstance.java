@@ -15,6 +15,7 @@ import com.openggf.tools.NemesisReader;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Pattern;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -604,20 +605,28 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
             // ROM lines 62713-62720
             boolean skipTitleCard = (zone == 0x08) || (zone == 0x0B);
             if (!skipTitleCard && !hasSeamlessTransition) {
-                services().titleCardProvider().initializeInLevel(zone, 1);
+                var titleCardProvider = services().titleCardProvider();
+                titleCardProvider.initializeInLevel(zone, 1);
+                if (aizAct1MinibossTitleHandoff
+                        && titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
+                    s3kTitleCard.requestLevelGamestateResetOnInLevelComplete();
+                }
             }
 
             // ROM: Timer and ring count reset on act transition. For zones with
             // seamless transitions (HCZ), the level reload in executeActTransition
             // creates a fresh LevelGamestate. For non-seamless S3K act transitions
             // (where acts share level data), the results screen must reset the
-            // gamestate directly since no level reload occurs.
-            if (!hasSeamlessTransition) {
+            // gamestate directly since no level reload occurs. AIZ's miniboss
+            // handoff is the ROM's Obj_TitleCard in-level path; it changes
+            // Apparent_act before the title card but does not clear Ring_count
+            // at this point (sonic3k.asm:62708-62720, 62244-62279).
+            if (!hasSeamlessTransition && !aizAct1MinibossTitleHandoff) {
                 resetLevelGamestateForActTransition();
             }
         }
 
-        setDestroyed(true);
+        ObjectLifetimeOps.deleteNoRespawn(this);
         LOG.fine(() -> String.format("S3K results exit: zone=%X act=%d isAct2OrSpecial=%b",
                 zone, act, isAct2OrSpecial));
     }

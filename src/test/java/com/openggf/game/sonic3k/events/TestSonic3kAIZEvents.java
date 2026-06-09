@@ -207,6 +207,29 @@ public class TestSonic3kAIZEvents {
     }
 
     @Test
+    public void postBombingBattleshipWrapUsesRomRepeatDistance() throws Exception {
+        Camera camera = GameServices.camera();
+        camera.setX((short) 0x46BC);
+        camera.setMinX((short) 0x46BC);
+        camera.setMaxX((short) 0x46BC);
+        camera.setFrozen(false);
+
+        AbstractPlayableSprite sonic = fixture.sprite();
+        sonic.setCentreX((short) 0x4762);
+
+        var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        setPrivateBoolean(events, "battleshipAutoScrollActive", true);
+        setPrivateInt(events, "battleshipWrapX", 0x46C0);
+
+        events.updatePrePhysics(1);
+
+        assertEquals(0x44C0, camera.getX() & 0xFFFF,
+                "AIZ2 post-bombing ship loop must subtract ROM Level_repeat_offset=$0200 at $46C0");
+        assertEquals(0x4560, sonic.getCentreX() & 0xFFFF,
+                "AIZ2 ship loop applies ROM Level_repeat_offset=$0200 to player x_pos; normal physics adds movement later");
+    }
+
+    @Test
     public void introObjectIsReadyBeforeFirstAizGameplayFrame() {
         AizPlaneIntroInstance intro = AizPlaneIntroInstance.getActiveIntroInstance();
         assertNotNull(intro, "ROM SpawnLevelMainSprites installs Obj_AIZPlaneIntro before first Process_Sprites");
@@ -841,16 +864,16 @@ public class TestSonic3kAIZEvents {
 
         events.updatePrePhysics(1);
 
-        assertEquals(0x4640, camera.getX() & 0xFFFF,
+        assertEquals(0x44C0, camera.getX() & 0xFFFF,
                 "post-bombing visual wrap should land inside the repeated forest mask, not back at the entrance");
-        assertEquals(0x46E0, sonic.getCentreX() & 0xFFFF,
+        assertEquals(0x4560, sonic.getCentreX() & 0xFFFF,
                 "sub_50318 clamps the wrapped player to Camera_X_pos+$A0 before movement");
-        assertEquals(0x4658, tails.getCentreX() & 0xFFFF,
+        assertEquals(0x44D8, tails.getCentreX() & 0xFFFF,
                 "AIZ2_DoShipLoop should wrap native P2, then clamp it to Camera_X_pos+$18");
-        assertEquals(0x4680, extraSidekick.getCentreX() & 0xFFFF,
+        assertEquals(0x4500, extraSidekick.getCentreX() & 0xFFFF,
                 "AIZ2_DoShipLoop should preserve all-engine sidekick participation for extra sidekicks");
-        assertEquals(0x80, events.getLevelRepeatOffset(),
-                "post-bombing wraps use the short hidden-forest repeat offset");
+        assertEquals(0x200, events.getLevelRepeatOffset(),
+                "post-bombing wraps use the ROM hidden-forest repeat distance");
     }
 
     @Test
@@ -1099,6 +1122,12 @@ public class TestSonic3kAIZEvents {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.setBoolean(target, value);
+    }
+
+    private static void setPrivateInt(Object target, String fieldName, int value) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.setInt(target, value);
     }
 
     private static void assertAizMethodUsesAllEnginePlayers(String source, String methodName) {

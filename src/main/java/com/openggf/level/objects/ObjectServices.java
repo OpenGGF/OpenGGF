@@ -35,6 +35,7 @@ import com.openggf.level.BigRingReturnState;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
+import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.rings.RingManager;
 import com.openggf.physics.CollisionSystem;
@@ -285,6 +286,15 @@ public interface ObjectServices {
      * @param deactivateLevelNow true to freeze level updates until the transition completes
      */
     void requestZoneAndAct(int zone, int act, boolean deactivateLevelNow);
+
+    /**
+     * Requests an in-place seamless transition. Use for ROM paths that reload
+     * or mutate the level without entering the fade transition loop.
+     *
+     * @param request transition request to enqueue
+     */
+    default void requestSeamlessTransition(SeamlessLevelTransitionRequest request) {
+    }
 
     // --- Level queries ---
 

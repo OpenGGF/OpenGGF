@@ -133,6 +133,45 @@ public class TestRingManager {
     }
 
     @Test
+    public void testDuplicatePlacedRingsAtSameCoordinateCollectIndependently() {
+        RingSpawn first = new RingSpawn(100, 100);
+        RingSpawn second = new RingSpawn(100, 100);
+        RingManager ringManager = buildRingManager(List.of(first, second));
+        ringManager.reset(0);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 100, (short) 100);
+
+        ringManager.collectStageRings(player, 0);
+
+        assertTrue(ringManager.isCollected(first));
+        assertTrue(ringManager.isCollected(second));
+        assertEquals(2, player.getRingCount());
+    }
+
+    @Test
+    public void testS3kStageRingSweepSkipsDuringHighPostHitInvulnerability() {
+        RingSpawn spawn = new RingSpawn(100, 100);
+        RingManager ringManager = buildRingManager(List.of(spawn));
+        ringManager.reset(0);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 100, (short) 100);
+        player.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        player.setInvulnerableFrames(90);
+
+        ringManager.collectStageRings(player, 0);
+
+        assertFalse(ringManager.isCollected(spawn),
+                "S3K Test_Ring_Collisions returns while invulnerability_timer >= 90");
+        assertEquals(0, player.getRingCount());
+
+        player.setInvulnerableFrames(89);
+        ringManager.collectStageRings(player, 1);
+
+        assertTrue(ringManager.isCollected(spawn));
+        assertEquals(1, player.getRingCount());
+    }
+
+    @Test
     public void testCpuSidekickObjectControlledRecoveryCannotCollectStageRings() {
         RingSpawn spawn = new RingSpawn(100, 100);
         RingManager ringManager = buildRingManager(List.of(spawn));

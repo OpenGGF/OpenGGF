@@ -940,12 +940,6 @@ public class CollisionSystem {
         SensorResult secondary = leftIsPrimary ? rightSensor : leftSensor;
         SensorResult selected = primary.distance() < secondary.distance() ? primary : secondary;
         SensorResult alternate = selected == primary ? secondary : primary;
-        SensorResult floorLipResult = floorLipSlopeResult(selected, alternate);
-        if (floorLipResult != null) {
-            pendingOddSensorFallbackAngles.remove(sprite);
-            applyAngleFromSensor(sprite, floorLipResult.angle());
-            return floorLipResult;
-        }
         if (mode != GroundMode.RIGHTWALL || !usesOddRightWallFallback(selected, alternate)) {
             pendingOddSensorFallbackAngles.remove(sprite);
             applyAngleFromSensor(sprite, selected.angle());
@@ -992,20 +986,6 @@ public class CollisionSystem {
                 && selected.distance() == 0
                 && (selected.angle() & 0x01) != 0
                 && alternate != null;
-    }
-
-    private SensorResult floorLipSlopeResult(SensorResult selected,
-                                             SensorResult alternate) {
-        if (selected != null
-                && selected.distance() == 0
-                && (selected.angle() & 0x01) != 0
-                && alternate != null
-                && alternate.distance() >= 3
-                && alternate.distance() <= 4
-                && (alternate.angle() & 0xFF) == 0x08) {
-            return alternate;
-        }
-        return null;
     }
 
     private void applyAngleFromSensor(AbstractPlayableSprite sprite, byte sensorAngle) {

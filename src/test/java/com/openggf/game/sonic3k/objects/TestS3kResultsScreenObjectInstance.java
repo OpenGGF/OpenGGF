@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.LevelState;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.ZoneRegistry;
@@ -10,6 +11,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.events.S3kTransitionEventBridge;
 import com.openggf.camera.Camera;
 import com.openggf.level.Level;
+import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.TestObjectServices;
 import org.junit.jupiter.api.Test;
@@ -22,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -80,6 +83,27 @@ class TestS3kResultsScreenObjectInstance {
         assertEquals(1, services.apparentAct,
                 "Act 1 results exit must update Apparent_act to Act 2 before title-card handoff "
                         + "(docs/skdisasm/sonic3k.asm:62708-62720)");
+    }
+
+    @Test
+    void aizActOneMinibossTitleHandoffPreservesRingCount() throws Exception {
+        ActTransitionRecordingServices services = new ActTransitionRecordingServices(0x00, Sonic3kMusic.AIZ2.id);
+        S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
+                services,
+                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0));
+        results.setServices(services);
+
+        Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
+        onExitReady.setAccessible(true);
+        onExitReady.invoke(results);
+
+        assertEquals(1, services.apparentAct,
+                "AIZ Act 1 miniboss results still updates Apparent_act for the in-level Act 2 title card "
+                        + "(docs/skdisasm/sonic3k.asm:62708-62720)");
+        assertEquals(List.of("0:1"), services.titleCard.calls,
+                "AIZ Act 1 miniboss results mutates into the in-level Act 2 title card "
+                        + "without taking the seamless reload path");
+        verify(services.levelManager, never()).resetLevelGamestate(org.mockito.ArgumentMatchers.any(LevelState.class));
     }
 
     @Test
@@ -172,6 +196,7 @@ class TestS3kResultsScreenObjectInstance {
         private final GameStateManager gameState = mock(GameStateManager.class);
         private final Camera camera = new Camera();
         private final RecordingTitleCardProvider titleCard = new RecordingTitleCardProvider();
+        private final LevelManager levelManager = mock(LevelManager.class);
         private final List<Integer> playedMusic = new ArrayList<>();
         private int apparentAct = -1;
 
@@ -188,6 +213,11 @@ class TestS3kResultsScreenObjectInstance {
         @Override
         public GameStateManager gameState() {
             return gameState;
+        }
+
+        @Override
+        public LevelManager levelManager() {
+            return levelManager;
         }
 
         @Override

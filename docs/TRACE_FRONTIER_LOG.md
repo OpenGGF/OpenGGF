@@ -1,5 +1,37 @@
 # Trace Frontier Log
 
+## 2026-06-08 - S3K AIZ full-run regenerated and replay-green through HCZ handoff
+
+- Scope: RRF-003 S3K AIZ `aiz1_to_hcz_fullrun` release-readiness review.
+- Regenerated `src/test/resources/traces/s3k/aiz1_to_hcz_fullrun` with
+  `lua_script_version=6.25-s3k` / `trace_profile=aiz_end_to_end` so the fixture
+  no longer depends on the legacy diagnostic AIZ intro heuristic.
+- Re-enabled `TestS3kAizTraceReplay#replayMatchesTrace` as a release-blocking
+  test; the focused replay now reaches the regenerated trace end with no
+  divergences.
+- **Frontier movement:**
+  - Old regenerated-trace first error: frame 2836, ring count
+    `expected=24 actual=23`, caused by duplicate placed rings at the same
+    coordinate being collapsed by `RingManager`'s active set.
+  - After tracking active placed rings by spawn index, first error moved to
+    frame 3203, terrain `y/angle` mismatch.
+  - After removing the alternate-slope borrow in S3K odd floor-lip handling and
+    using the ROM cardinal fallback for the selected odd sensor, first error
+    moved to frame 3934, ring count `expected=34 actual=35`.
+  - S3K ring parsing/window semantics and high post-hit invulnerability gating
+    closed the frame 3934 ring frontier.
+  - The replay then exposed and closed AIZ2 reload/ring diagnostic skew,
+    S3K vblank/gameplay-frame classification, AIZ miniboss sidekick touch
+    eligibility, title-card ring reset timing, title-card camera unlock,
+    post-bombing battleship wrap distance, AIZ2 capsule/result handoff,
+    cutscene stop/input timing, bridge-collapse support timing, gradual
+    post-button `Camera_max_Y_pos` release, and HCZ handoff transition freeze
+    frontiers.
+- Verification:
+  - `mvn -q -Dmse=off "-Dmaven.repo.local=C:\Users\farre\.m2\repository" "-Dtest=com.openggf.tests.trace.TestTraceExecutionModel,com.openggf.game.sonic3k.objects.TestAiz2BossEndSequenceObjects,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false` -> PASS; `All frames match trace. No divergences.`
+  - `mvn -q "-Dmaven.repo.local=C:\Users\farre\.m2\repository" "-Dtest=com.openggf.game.TestHybridPhysicsFeatureSet,com.openggf.game.sonic3k.TestSonic3kRingPlacement,com.openggf.tests.TestRingManager#testDuplicatePlacedRingsAtSameCoordinateCollectIndependently+testS3kStageRingSweepSkipsDuringHighPostHitInvulnerability+testCpuSidekickObjectControlledRecoveryCannotCollectStageRings" test -DfailIfNoTests=false` -> PASS.
+  - `mvn -q "-Dmaven.repo.local=C:\Users\farre\.m2\repository" "-Dtest=com.openggf.tests.physics.CollisionSystemTest#floorLipOddSensorUsesRomCardinalFallbackInsteadOfAlternateSlope" test -DfailIfNoTests=false` -> PASS.
+
 ## 2026-06-08 - release review trace bootstrap guardrails
 
 - Scope: RRF-003 / RRF-004 / RRF-009 trace bootstrap and reporting only.

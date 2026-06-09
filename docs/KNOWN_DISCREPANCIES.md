@@ -998,30 +998,48 @@ missing engine views for recorded native-prelude traces strict failures.
 
 ### Current State
 
-The runtime does not read gameplay asset bytes from `docs/` disassembly trees,
-but several Sonic 1 mapping pieces are still handwritten in production source.
+The runtime does not read gameplay asset bytes from `docs/` disassembly trees.
 The former palette-cycle rows, conveyor waypoint and child spawner tables, GHZ
 bridge bend tables, and the small `Map_Seesaw` / `Map_SSawBall` / `Map_Fan` /
 `Map_Pylon` / `Map_Scen` / `Map_ExplodeItem` support-object mapping slice, the
 LZ `Map_Jaws` / `Map_Burro` / `Map_Flap` / `Map_WFall` / `Map_Splash` tables,
-the MZ/SLZ `Map_Fire` table, the MZ `Map_Bas` / `Map_Glass` / `Map_Geyser` tables, the SYZ
-`Map_Bump` / `Map_Roll` / `Map_Yad` tables, the GHZ `Map_Crab` / `Map_Moto` / `Map_Newt` tables, the GHZ/SLZ `Map_Smash` table, the
-LZ `Map_Harp` table, the MZ/SBZ `Map_Cat` table, the SBZ `Map_Hog` table, the SLZ/SBZ `Map_Bomb` table, the SBZ `Map_Flame` / `Map_Saw` / `Map_Elec` / `Map_ADoor` / `Map_Gird` /
-`Map_Trap` / `Map_Spin` tables, the shared button `Map_But` table, the SBZ2
-`Map_FFloor` table, the shared boss `Map_Eggman` /
-`Map_BossItems` tables, the SBZ2/FZ `Map_SEgg` table, plus the Final Zone
+the MZ/SLZ `Map_Fire` table, the MZ `Map_Bas` / `Map_Glass` / `Map_CStom` / `Map_Geyser` / `Map_LWall` tables, the LZ `Map_LConv` / `Map_Bub` tables, the GHZ `Map_Hel` / `Map_Swing_GHZ` tables, the SLZ `Map_Swing_SLZ` table, the SYZ
+`Map_Bump` / `Map_Spring` / `Map_Roll` / `Map_Yad` tables, the GHZ `Map_Crab` / `Map_Moto` / `Map_Newt` / `Map_Buzz` / `Map_Missile` tables, the GHZ/SLZ `Map_Smash` table, the
+LZ/SLZ/SBZ `Map_Orb` table, the LZ `Map_Harp` table, the MZ/SBZ `Map_Cat` table, the SBZ `Map_Hog` table, the SLZ/SBZ `Map_Bomb` table, the SBZ `Map_Flame` / `Map_Saw` / `Map_Elec` / `Map_ADoor` / `Map_Gird` /
+`Map_Trap` / `Map_Spin` / `Map_Stomp` tables, the shared button `Map_But` table, the shared
+animal `Map_Animal1` / `Map_Animal2` / `Map_Animal3` tables, the special-stage
+result-card `Map_Got` / `Map_SSR` tables, the special-stage result emerald
+`Map_SSRC` table, the Prison Capsule `Map_Pri` table, the Giant
+Ring `Map_GRing` / Ring Flash `Map_Flash` tables, the GHZ giant ball
+`Map_GBall` table, the SYZ/LZ spikeball chain `Map_SBall` / `Map_SBall2`
+tables, the Big Spiked Ball `Map_BBall` table, the LZ Gargoyle `Map_Gar`
+table, the LZ Block `Map_LBlock` table, the SYZ Boss Block `Map_BossBlock`
+table, the SBZ rotating junction `Map_Jun` table, the SBZ Running Disc `Map_Disc` table, the LZ Breakable Pole
+`Map_Pole` table, the MZ/LZ Push Block `Map_Push` table, the MZ Brick `Map_Brick` table,
+the SYZ Spinning Light `Map_Light` table, the MZ Smashable Green Block
+`Map_Smab` table, the MZ/SLZ/SBZ Collapsing Floor `Map_CFlo` table, the
+MZ/SBZ Moving Block `Map_MBlock` table, the LZ Moving Block `Map_MBlockLZ`
+table, the GHZ/SYZ/SLZ Basic Platform `Map_Plat_GHZ` / `Map_Plat_SYZ` /
+`Map_Plat_SLZ` tables, the SLZ Elevator/Circling Platform/Staircase
+`Map_Elev` / `Map_Circ` / `Map_Stair` tables, the unused small explosion
+`Map_UnkExplode` table, the GHZ Collapsing Ledge `Map_Ledge` table, the MZ
+large grassy platform `Map_LGrass` table, the SBZ
+vanishing platform `Map_VanP` table, the SYZ/SLZ/LZ floating block and door
+`Map_FBlock` table, the SBZ2
+`Map_FFloor` table, the shared boss `Map_Eggman` / `Map_BossItems` tables, the SBZ2/FZ `Map_SEgg` table, the ending
+`Map_ESon` / `Map_ECha` / `Map_ESth` tables, plus the Final Zone
 `Map_EggCyl` / `Map_PLaunch` / `Map_Plasma` / `Map_FZLegs` / `Map_FZDamaged`
 boss mapping slice, now load from the user-supplied ROM and their guard budgets
-have been ratcheted down. The current object-provider budget is 862 handwritten
-mapping pieces; Sonic 1 boss mappings are ROM-backed and
-their separate handwritten budget is zero.
+have been ratcheted down. The Sonic 1 object-provider and boss mapping budgets
+are zero; remaining tile-word transformations use the shared
+`SpriteMappingPieces` helper over ROM-loaded frames rather than provider-local
+mapping literals.
 
 ### Release Boundary
 
-This is accepted release debt only as a bounded legacy exception. New gameplay
-runtime asset data must still be ROM-backed. `TestArchitecturalSourceGuard`
-locks the current exception counts for these files so this debt cannot expand
-silently under the release branch.
+New gameplay runtime asset data must still be ROM-backed.
+`TestArchitecturalSourceGuard` locks the current zero-exception counts for
+these files so this debt cannot reappear silently under the release branch.
 
 ### Removal Condition
 

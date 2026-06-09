@@ -166,6 +166,10 @@ public final class LevelFrameStep {
 
         levelManager.flushQueuedLayoutMutations();
 
+        if (levelManager.isLevelInactiveForTransition()) {
+            return;
+        }
+
         BonusStageProvider bonusStageProvider = context.bonusStageProvider();
         boolean integratedBonusStageUpdate = bonusStageProvider != null
                 && bonusStageProvider.updateDuringLevelFrame();

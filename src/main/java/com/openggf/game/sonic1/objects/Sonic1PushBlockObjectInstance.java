@@ -926,6 +926,11 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean isHighPriority() {
+        return frameIndex == 1;
+    }
+
+    @Override
     public boolean isPersistent() {
         // Allow ObjectManager's counter-based unload path to delete the block
         // when the ROM's second out_of_range check has failed on spawn X.

@@ -501,6 +501,8 @@ class TestRewindParityAgainstTrace {
         if (ra.placementLastCameraX() != rb.placementLastCameraX())
             failures.add("[rings] placementLastCameraX: " + ra.placementLastCameraX()
                     + " vs " + rb.placementLastCameraX());
+        if (!Arrays.equals(ra.activeSpawnIndices(), rb.activeSpawnIndices()))
+            failures.add("[rings] activeSpawnIndices mismatch");
         if (ra.lostRingActiveCount() != rb.lostRingActiveCount())
             failures.add("[rings] lostRingActiveCount: " + ra.lostRingActiveCount()
                     + " vs " + rb.lostRingActiveCount());

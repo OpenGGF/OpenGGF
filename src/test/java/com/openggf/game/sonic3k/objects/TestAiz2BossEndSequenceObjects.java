@@ -18,12 +18,14 @@ import com.openggf.level.objects.EggPrisonAnimalInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.game.solid.ObjectSolidExecutionContext;
 import com.openggf.game.solid.PlayerStandingState;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
@@ -117,10 +119,18 @@ class TestAiz2BossEndSequenceObjects {
         assertTrue(bridge.isSolidFor(player));
 
         Aiz2BossEndSequenceState.pressButton();
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 14; i++) {
             bridge.update(40 + i, player);
         }
 
+        assertTrue(bridge.isSolidFor(player),
+                "Obj_AIZDrawBridge continues running SolidObjectFull2 through the $0E collapse countdown");
+        assertFalse(player.getAir(),
+                "Players stay ride-supported until loc_2B45E ejects them and deletes the parent object");
+
+        bridge.update(54, player);
+
+        assertFalse(bridge.isSolidFor(player));
         assertTrue(player.getAir());
         assertEquals(Sonic3kAnimationIds.HURT_FALL.id(), player.getForcedAnimationId());
     }
@@ -470,6 +480,61 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
+    void floatingCapsuleResultsWaitForResidualGroundVelocityToSettle() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+
+        GameStateManager gameState = new GameStateManager();
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        sonic.setAir(false);
+        sonic.setXSpeed((short) 0x0014);
+        sonic.setGSpeed((short) 0x0014);
+        TimingFloatingCapsuleForTest capsule = new TimingFloatingCapsuleForTest();
+        capsule.setServices(new TestObjectServices()
+                .withCamera(camera)
+                .withGameState(gameState));
+        setField(capsule, "opened", 1);
+        setField(capsule, "postOpenTimer", 0);
+
+        capsule.update(0, sonic);
+
+        assertFalse(getBooleanField(capsule, "resultsStarted"),
+                "The collapsed engine object pass must let the ROM-style ground deceleration "
+                        + "settle before applying Set_PlayerEndingPose");
+
+        sonic.setXSpeed((short) 0);
+        sonic.setGSpeed((short) 0);
+        capsule.update(1, sonic);
+
+        assertTrue(getBooleanField(capsule, "resultsStarted"));
+    }
+
+    @Test
+    void floatingCapsuleResultsClearStaleEndOfLevelFlagBeforeWaitingForExit() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+
+        GameStateManager gameState = new GameStateManager();
+        gameState.setEndOfLevelFlag(true);
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        sonic.setAir(false);
+        TimingFloatingCapsuleForTest capsule = new TimingFloatingCapsuleForTest();
+        capsule.setServices(new TestObjectServices()
+                .withCamera(camera)
+                .withGameState(gameState));
+        setField(capsule, "opened", 1);
+        setField(capsule, "postOpenTimer", 0);
+
+        capsule.update(0, sonic);
+
+        assertTrue(getBooleanField(capsule, "resultsStarted"));
+        assertFalse(gameState.isEndOfLevelFlag(),
+                "AIZ2 results must not consume the in-level title-card End_of_level_flag; "
+                        + "Obj_LevelResults owns the next flag write on exit");
+        assertFalse(Aiz2BossEndSequenceState.isEggCapsuleReleased());
+    }
+
+    @Test
     void aizCapsuleClearsSignedSidekickLockWhenEndingPoseCheckRuns() throws Exception {
         Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
@@ -606,6 +671,7 @@ class TestAiz2BossEndSequenceObjects {
         player.setCentreX((short) 0x4A60);
         player.setCentreY((short) 0x0210);
         player.setTestY((short) 0x0170);
+        player.setSubpixelRaw(0x5900, 0xA300);
 
         RecordingServices services = new RecordingServices();
         services.withCamera(camera);
@@ -621,13 +687,26 @@ class TestAiz2BossEndSequenceObjects {
 
         Aiz2BossEndSequenceState.releaseEggCapsule();
         controller.update(1, player);
+        assertEquals(0x4880, camera.getMaxXTarget() & 0xFFFF);
+        assertTrue(player.isControlLocked());
+        assertTrue(player.isObjectControlled());
+        assertFalse(player.isForceInputRight());
+
+        for (int i = 0; i < 10; i++) {
+            controller.update(i + 2, player);
+        }
+
         assertEquals(0x49D8, camera.getMaxXTarget() & 0xFFFF);
         assertTrue(player.isControlLocked());
-        assertTrue(player.isForceInputRight());
+        assertFalse(player.isObjectControlled());
+        assertTrue(player.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT));
+        assertEquals(0x000C, player.getXSpeed() & 0xFFFF);
+        assertEquals(0x000C, player.getGSpeed() & 0xFFFF);
+        assertEquals(0x6500, player.getXSubpixelRaw());
 
         for (int i = 0; i < 16; i++) {
             camera.updateBoundaryEasing();
-            controller.update(i + 2, player);
+            controller.update(i + 13, player);
         }
         assertTrue((camera.getMaxX() & 0xFFFF) > 0x4880);
 
@@ -636,8 +715,13 @@ class TestAiz2BossEndSequenceObjects {
         player.setTestY((short) 0x01F0);
         controller.update(100, player);
 
-        assertEquals(Sonic3kZoneIds.ZONE_HCZ, services.requestedZone);
-        assertEquals(0, services.requestedAct);
+        assertEquals(SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL,
+                services.lastSeamlessRequest.type());
+        assertEquals(Sonic3kZoneIds.ZONE_HCZ, services.lastSeamlessRequest.targetZone());
+        assertEquals(0, services.lastSeamlessRequest.targetAct());
+        assertTrue(services.lastSeamlessRequest.deactivateLevelNow());
+        assertTrue(services.lastSeamlessRequest.preserveLevelGamestate());
+        assertTrue(services.lastSeamlessRequest.preserveOffsetCameraPosition());
         assertEquals(SaveReason.PROGRESSION_SAVE, services.lastSaveReason);
     }
 
@@ -664,7 +748,7 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
-    void hydrocityTransitionUsesRomCentreYRatherThanSpriteTopY() {
+    void hydrocityTransitionUsesRomCentreYRatherThanSpriteTopY() throws Exception {
         Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
         camera.setMaxX((short) 0x49D8);
@@ -682,13 +766,49 @@ class TestAiz2BossEndSequenceObjects {
 
         Aiz2BossEndSequenceController controller = new Aiz2BossEndSequenceController(0x4880, 0x0000);
         controller.setServices(services);
+        setField(controller, "postResultsControlRestoreDelay", 0);
         Aiz2BossEndSequenceState.releaseEggCapsule();
         Aiz2BossEndSequenceState.pressButton();
 
         controller.update(100, player);
 
-        assertEquals(Sonic3kZoneIds.ZONE_HCZ, services.requestedZone,
+        assertEquals(Sonic3kZoneIds.ZONE_HCZ, services.lastSeamlessRequest.targetZone(),
                 "ROM y_pos maps to centre Y; top-left/test Y must not delay the HCZ transition");
+    }
+
+    @Test
+    void controllerButtonStartsGradualLevelEndYChild() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+        camera.setMaxX((short) 0x49D8);
+        camera.setX((short) 0x49D8);
+        camera.setMaxY((short) 0x015A);
+        camera.setY((short) 0x0100);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setCentreX((short) 0x4A80);
+        player.setCentreY((short) 0x0200);
+
+        Aiz2BossEndSequenceController controller = new Aiz2BossEndSequenceController(0x4880, 0x0000);
+        controller.setServices(new RecordingServices()
+                .withCamera(camera)
+                .withGameState(new GameStateManager()));
+        setField(controller, "postResultsControlRestoreDelay", 0);
+        Aiz2BossEndSequenceState.releaseEggCapsule();
+        Aiz2BossEndSequenceState.pressButton();
+
+        controller.update(100, player);
+
+        assertEquals(0x015A, camera.getMaxY() & 0xFFFF,
+                "Obj_IncLevEndYGradual's first $8000 accumulator tick has no integer delta");
+        assertEquals(0x1000, camera.getMaxYTarget() & 0xFFFF,
+                "loc_65C56 writes Camera_target_max_Y_pos before creating the gradual level-end child");
+
+        controller.update(101, player);
+
+        assertEquals(0x015B, camera.getMaxY() & 0xFFFF,
+                "The child object adds the accumulator high word to Camera_max_Y_pos on later updates");
+        assertEquals(0x1000, camera.getMaxYTarget() & 0xFFFF);
     }
 
     private static void setField(Object target, String fieldName, int value) throws Exception {
@@ -768,6 +888,7 @@ class TestAiz2BossEndSequenceObjects {
         int requestedZone = -1;
         int requestedAct = -1;
         SaveReason lastSaveReason;
+        SeamlessLevelTransitionRequest lastSeamlessRequest;
 
         @Override
         public void requestZoneAndAct(int zone, int act) {
@@ -778,6 +899,11 @@ class TestAiz2BossEndSequenceObjects {
         @Override
         public void requestSessionSave(SaveReason reason) {
             lastSaveReason = reason;
+        }
+
+        @Override
+        public void requestSeamlessTransition(SeamlessLevelTransitionRequest request) {
+            lastSeamlessRequest = request;
         }
     }
 

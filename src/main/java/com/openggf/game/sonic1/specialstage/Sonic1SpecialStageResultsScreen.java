@@ -2,9 +2,12 @@ package com.openggf.game.sonic1.specialstage;
 
 import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
+import com.openggf.data.RomByteReader;
 import com.openggf.data.RomManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.ResultsScreen;
+import com.openggf.game.sonic1.S1SpriteDataLoader;
+import com.openggf.game.sonic1.Sonic1ResultsMappingLoader;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.graphics.GLCommand;
@@ -15,11 +18,9 @@ import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
-import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.util.PatternDecompressor;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
@@ -59,7 +60,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
     private static final int TALLY_DECREMENT = 10;
     private static final int TALLY_TICK_INTERVAL = 4;
 
-    // Map_SSR frame indices (matching createResultsScreenMappings() below).
+    // Composite results-frame indices from Sonic1ResultsMappingLoader.
     private static final int FRAME_SCORE = 2;
     private static final int FRAME_RING_BONUS = 4;
     private static final int FRAME_OVAL = 5;
@@ -341,7 +342,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
             }
 
             // Create results sprite sheet and renderer
-            List<SpriteMappingFrame> mappings = createResultsScreenMappings();
+            List<SpriteMappingFrame> mappings = Sonic1ResultsMappingLoader.load(RomByteReader.fromRom(rom));
             ObjectSpriteSheet sheet = new ObjectSpriteSheet(combinedPatterns, mappings, 0, 1);
             resultsRenderer = new PatternSpriteRenderer(sheet);
 
@@ -366,21 +367,14 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
             return;
         }
 
-        // Map_SSRC: each frame is a single 2x2 spritePiece(-8, -8, 2, 2, tile, pal)
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 4, false, false, 1))));  // 0: Blue
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 0, false, false, 0))));  // 1: Yellow
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 4, false, false, 2))));  // 2: Pink
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 4, false, false, 3))));  // 3: Green
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 8, false, false, 1))));  // 4: Orange
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 12, false, false, 1)))); // 5: Purple
-        frames.add(new SpriteMappingFrame(List.of()));                         // 6: Blank (flash)
+        List<SpriteMappingFrame> frames;
+        try {
+            frames = S1SpriteDataLoader.loadMappingFrames(
+                    RomByteReader.fromRom(rom), Sonic1Constants.MAP_SS_RESULT_EMERALDS_ADDR);
+        } catch (IOException e) {
+            LOGGER.warning("Failed to load SS results emerald mappings: " + e.getMessage());
+            return;
+        }
 
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(emeraldPatterns, frames, 0, 1);
         emeraldRenderer = new PatternSpriteRenderer(sheet);
@@ -693,165 +687,6 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
             LOGGER.warning("Failed to load " + name + " patterns: " + e.getMessage());
             return new Pattern[0];
         }
-    }
-
-    // ===== Mapping frames (duplicated from Sonic1ObjectArtProvider) =====
-
-    /**
-     * Creates sprite mappings for the results screen from Map_Got in the disassembly.
-     * All tile IDs from the disassembly are relative to ArtTile_Title_Card ($580).
-     * We add RESULTS_TILE_ADJUST (0x10) to convert to composite array indices.
-     */
-    private static List<SpriteMappingFrame> createResultsScreenMappings() {
-        final int T = Sonic1Constants.RESULTS_TILE_ADJUST; // 0x10
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-
-        // Frame 0: "SONIC HAS"
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x48, -8, 2, 2, 0x3E + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x38, -8, 2, 2, 0x32 + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x28, -8, 2, 2, 0x2E + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x18, -8, 1, 2, 0x20 + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -8, 2, 2, 0x08 + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x10, -8, 2, 2, 0x1C + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x20, -8, 2, 2, 0x00 + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x30, -8, 2, 2, 0x3E + T, false, false, 0, false)
-        )));
-
-        // Frame 1: "PASSED"
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x30, -8, 2, 2, 0x36 + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x20, -8, 2, 2, 0x00 + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -8, 2, 2, 0x3E + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x00, -8, 2, 2, 0x3E + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x10, -8, 2, 2, 0x10 + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x20, -8, 2, 2, 0x0C + T, false, false, 0, false)
-        )));
-
-        // Frame 2: "SCORE" text + score digits
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x50, -8, 4, 2, 0x14A + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x30, -8, 1, 2, 0x162 + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x18, -8, 3, 2, 0x164 + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x30, -8, 4, 2, 0x16A + T, false, false, 0, false)
-        )));
-
-        // Frame 3: "TIME BONUS" + digit area
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x50, -8, 4, 2, 0x15A + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x27, -8, 4, 2, 0x66 + T,  false, false, 0, false),
-                new SpriteMappingPiece(   -7, -8, 1, 2, 0x14A + T, false, false, 0, false),
-                new SpriteMappingPiece( -0xA, -9, 2, 1, 0x6E + T,  false, false, 0, false),
-                new SpriteMappingPiece( -0xA, -1, 2, 1, 0x6E + T,  true,  true,  0, false),
-                new SpriteMappingPiece( 0x28, -8, 4, 2, 0,         false, false, 0, false),
-                new SpriteMappingPiece( 0x48, -8, 1, 2, 0x170 + T, false, false, 0, false)
-        )));
-
-        // Frame 4: "RING BONUS" + digit area
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x50, -8, 4, 2, 0x152 + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x27, -8, 4, 2, 0x66 + T,  false, false, 0, false),
-                new SpriteMappingPiece(   -7, -8, 1, 2, 0x14A + T, false, false, 0, false),
-                new SpriteMappingPiece( -0xA, -9, 2, 1, 0x6E + T,  false, false, 0, false),
-                new SpriteMappingPiece( -0xA, -1, 2, 1, 0x6E + T,  true,  true,  0, false),
-                new SpriteMappingPiece( 0x28, -8, 4, 2, 8,         false, false, 0, false),
-                new SpriteMappingPiece( 0x48, -8, 1, 2, 0x170 + T, false, false, 0, false)
-        )));
-
-        // Frame 5: Oval decoration
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x0C, -0x1C, 4, 1, 0x70 + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x14, -0x1C, 1, 3, 0x74 + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x14, -0x14, 2, 1, 0x77 + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x1C, -0x0C, 2, 2, 0x79 + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x14,  0x14, 4, 1, 0x70 + T, true,  true,  0, false),
-                new SpriteMappingPiece(-0x1C,  0x04, 1, 3, 0x74 + T, true,  true,  0, false),
-                new SpriteMappingPiece( 0x04,  0x0C, 2, 1, 0x77 + T, true,  true,  0, false),
-                new SpriteMappingPiece( 0x0C, -0x04, 2, 2, 0x79 + T, true,  true,  0, false),
-                new SpriteMappingPiece(-0x04, -0x14, 3, 1, 0x7D + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x0C, -0x0C, 4, 1, 0x7C + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x0C, -0x04, 3, 1, 0x7C + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x14,  0x04, 4, 1, 0x7C + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x14,  0x0C, 3, 1, 0x7C + T, false, false, 0, false)
-        )));
-
-        // Frame 6: "ACT 1"
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x14, 0x04, 4, 1, 0x53 + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x0C, -0x0C, 1, 3, 0x57 + T, false, false, 0, false)
-        )));
-
-        // Frame 7: "ACT 2"
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x14, 0x04, 4, 1, 0x53 + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x08, -0x0C, 2, 3, 0x5A + T, false, false, 0, false)
-        )));
-
-        // Frame 8: "ACT 3"
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x14, 0x04, 4, 1, 0x53 + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x08, -0x0C, 2, 3, 0x60 + T, false, false, 0, false)
-        )));
-
-        // Frame 9: SCORE separator dots
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x33, -9, 2, 1, 0x6E + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x33, -1, 2, 1, 0x6E + T, true,  true,  0, false)
-        )));
-
-        // Frame 10: "CHAOS EMERALDS" (Map_SSR frame 0)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x70, -8, 2, 2, 0x08 + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x60, -8, 2, 2, 0x1C + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x50, -8, 2, 2, 0x00 + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x40, -8, 2, 2, 0x32 + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x30, -8, 2, 2, 0x3E + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x10, -8, 2, 2, 0x10 + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x00, -8, 2, 2, 0x2A + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x10, -8, 2, 2, 0x10 + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x20, -8, 2, 2, 0x3A + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x30, -8, 2, 2, 0x00 + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x40, -8, 2, 2, 0x26 + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x50, -8, 2, 2, 0x0C + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x60, -8, 2, 2, 0x3E + T, false, false, 0, false)
-        )));
-
-        // Frame 11: "SPECIAL STAGE" (Map_SSR frame 7)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x64, -8, 2, 2, 0x3E + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x54, -8, 2, 2, 0x36 + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x44, -8, 2, 2, 0x10 + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x34, -8, 2, 2, 0x08 + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x24, -8, 1, 2, 0x20 + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x1C, -8, 2, 2, 0x00 + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x0C, -8, 2, 2, 0x26 + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x14, -8, 2, 2, 0x3E + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x24, -8, 2, 2, 0x42 + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x34, -8, 2, 2, 0x00 + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x44, -8, 2, 2, 0x18 + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x54, -8, 2, 2, 0x10 + T, false, false, 0, false)
-        )));
-
-        // Frame 12: "SONIC GOT THEM ALL" (Map_SSR frame 8)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-0x78, -8, 2, 2, 0x3E + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x68, -8, 2, 2, 0x32 + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x58, -8, 2, 2, 0x2E + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x48, -8, 1, 2, 0x20 + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x40, -8, 2, 2, 0x08 + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x28, -8, 2, 2, 0x18 + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x18, -8, 2, 2, 0x32 + T, false, false, 0, false),
-                new SpriteMappingPiece(-0x08, -8, 2, 2, 0x42 + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x10, -8, 2, 2, 0x42 + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x20, -8, 2, 2, 0x1C + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x30, -8, 2, 2, 0x10 + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x40, -8, 2, 2, 0x2A + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x58, -8, 2, 2, 0x00 + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x68, -8, 2, 2, 0x26 + T, false, false, 0, false),
-                new SpriteMappingPiece( 0x78, -8, 2, 2, 0x26 + T, false, false, 0, false)
-        )));
-
-        return frames;
     }
 
     // ===== Coordinate / utility helpers =====

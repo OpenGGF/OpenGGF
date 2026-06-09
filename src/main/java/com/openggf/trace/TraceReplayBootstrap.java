@@ -423,7 +423,7 @@ public final class TraceReplayBootstrap {
     }
 
     public static List<String> releaseBlockersForTraceReplay(TraceData trace) {
-        if (isLegacyS3kAizIntroTrace(trace)) {
+        if (requiresLegacyS3kAizDiagnosticHeuristicOptIn(trace)) {
             return List.of("RRF-003: legacy S3K AIZ full-run trace requires the "
                     + "diagnostic-only intro phase heuristic. Regenerate the fixture "
                     + "before enabling it in release replay.");
@@ -507,14 +507,35 @@ public final class TraceReplayBootstrap {
                 // trace frame instead of double-counting the setup work.
                 return TraceExecutionPhase.VBLANK_ONLY;
             }
-            return deriveLegacyPhase(previous, current);
-        }
-        return TraceExecutionModel.forGame(trace.metadata().game()).phaseFor(previous, current);
-    }
+              return deriveLegacyPhase(previous, current);
+          }
+          if (isSonic3kTransitionModeFrozenRow(trace, previous, current)) {
+              return TraceExecutionPhase.VBLANK_ONLY;
+          }
+          return TraceExecutionModel.forGame(trace.metadata().game()).phaseFor(previous, current);
+      }
 
-    public static boolean shouldCompareGameplayStateForReplay(TraceExecutionPhase phase) {
-        return phase == TraceExecutionPhase.FULL_LEVEL_FRAME;
-    }
+      private static boolean isSonic3kTransitionModeFrozenRow(
+              TraceData trace, TraceFrame previous, TraceFrame current) {
+          if (trace == null || previous == null || current == null
+                  || !"s3k".equals(trace.metadata().game())
+                  || current.gameplayFrameCounter() != previous.gameplayFrameCounter()
+                  || current.vblankCounter() != previous.vblankCounter()
+                  || current.lagCounter() != previous.lagCounter()) {
+              return false;
+          }
+          TraceEvent.ZoneActState zoneActState = trace.latestZoneActStateAtOrBefore(current.frame());
+          if (zoneActState == null || zoneActState.frame() == current.frame()
+                  || zoneActState.gameMode() == null) {
+              return false;
+          }
+          int gameMode = zoneActState.gameMode();
+          return (gameMode & 0x80) != 0 && (gameMode & 0x0C) == 0x0C;
+      }
+
+      public static boolean shouldCompareGameplayStateForReplay(TraceExecutionPhase phase) {
+          return phase == TraceExecutionPhase.FULL_LEVEL_FRAME;
+      }
 
     /**
      * Returns the frame values that should be compared after a replay step.
@@ -552,6 +573,38 @@ public final class TraceReplayBootstrap {
         return current.withVisualDiagnosticsFrom(next);
     }
 
+    /**
+     * S3K v6 traces can expose a one-row diagnostic skew for ring-count updates:
+     * the gameplay state is already the row being compared, while the Lua-visible
+     * Ring_count value appears on the following row. This helper only borrows
+     * that next-row ring diagnostic when the engine already equals it and the
+     * current row differs by a single ring, so persistent or larger mismatches
+     * still surface normally.
+     */
+    public static TraceFrame s3kFrameForRingDiagnosticComparison(TraceData trace,
+                                                                 int currentIndex,
+                                                                 TraceFrame current,
+                                                                 EngineDiagnostics engineDiag) {
+        if (trace == null || current == null || engineDiag == null
+                || trace.metadata() == null
+                || !"s3k".equalsIgnoreCase(trace.metadata().game())
+                || currentIndex + 1 >= trace.frameCount()
+                || current.rings() < 0 || engineDiag.rings() < 0
+                || current.rings() == engineDiag.rings()) {
+            return current;
+        }
+
+        TraceFrame next = trace.getFrame(currentIndex + 1);
+        if (next == null || next.rings() < 0
+                || next.frame() != current.frame() + 1
+                || next.rings() != engineDiag.rings()
+                || Math.abs(next.rings() - current.rings()) != 1) {
+            return current;
+        }
+
+        return current.withRingDiagnosticsFrom(next);
+    }
+
     private static void recordSeedFrameInputHistory(AbstractPlayableSprite sprite, int inputMask) {
         if (sprite == null) {
             return;
@@ -570,7 +623,8 @@ public final class TraceReplayBootstrap {
         if (trace == null || current == null || !isLegacyS3kAizIntroTrace(trace)) {
             return false;
         }
-        if (!Boolean.getBoolean(ALLOW_LEGACY_S3K_AIZ_DIAGNOSTIC_HEURISTIC_PROPERTY)) {
+        if (requiresLegacyS3kAizDiagnosticHeuristicOptIn(trace)
+                && !Boolean.getBoolean(ALLOW_LEGACY_S3K_AIZ_DIAGNOSTIC_HEURISTIC_PROPERTY)) {
             throw new IllegalStateException(String.join("; ", releaseBlockersForTraceReplay(trace)));
         }
         int gameplayStartFrame = findCheckpointFrame(trace, "gameplay_start");
@@ -680,6 +734,33 @@ public final class TraceReplayBootstrap {
                 .filter(TraceEvent.Checkpoint.class::isInstance)
                 .map(TraceEvent.Checkpoint.class::cast)
                 .anyMatch(checkpoint -> "intro_begin".equals(checkpoint.name()));
+    }
+
+    private static boolean requiresLegacyS3kAizDiagnosticHeuristicOptIn(TraceData trace) {
+        return isLegacyS3kAizIntroTrace(trace)
+                && !isAtLeastLuaVersion(trace.metadata(), 6, 25);
+    }
+
+    private static boolean isAtLeastLuaVersion(TraceMetadata metadata, int majorFloor, int minorFloor) {
+        if (metadata == null || metadata.luaScriptVersion() == null) {
+            return false;
+        }
+        String version = metadata.luaScriptVersion();
+        int dot = version.indexOf('.');
+        if (dot <= 0) {
+            return false;
+        }
+        int end = version.indexOf('-', dot);
+        if (end < 0) {
+            end = version.length();
+        }
+        try {
+            int major = Integer.parseInt(version.substring(0, dot));
+            int minor = Integer.parseInt(version.substring(dot + 1, end));
+            return major > majorFloor || (major == majorFloor && minor >= minorFloor);
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
 

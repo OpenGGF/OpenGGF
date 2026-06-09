@@ -4,6 +4,17 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K AIZ full-run trace release gate was regenerated and advanced:** the
+  AIZ end-to-end fixture now records with Lua `6.25-s3k` and the focused replay
+  is re-enabled as a release-blocking test that reaches the regenerated trace
+  end with no divergences. Placed-ring tracking now preserves
+  duplicate ROM ring entries at identical coordinates, rewind parity compares
+  active ring spawn indices, and S3K odd floor-lip collision uses the ROM
+  cardinal fallback for the selected odd sensor instead of borrowing the
+  alternate sensor slope. The AIZ2 bridge/capsule/results/title-card handoff
+  path now models the ROM camera, input, sidekick-touch, and transition freeze
+  timing through the HCZ handoff.
+
 - **Release-prep architecture review hardening closed the current blocker
   set:** branch policy now runs for direct release-branch pushes, release trace
   coverage is counted from generated reports, warning-only trace reports fail
@@ -26,20 +37,40 @@ All notable changes to the OpenGGF project are documented in this file.
   loads `Map_Seesaw`, `Map_SSawBall`, `Map_Fan`, `Map_Pylon`, `Map_Scen`, and
   `Map_ExplodeItem` from verified ROM offsets. LZ `Map_Jaws` / `Map_Burro` /
   `Map_Flap` / `Map_WFall` / `Map_Splash`, MZ/SLZ fireball `Map_Fire`,
-  MZ Basaran/Batbrain `Map_Bas`, MZ glass block `Map_Glass`, MZ lava geyser `Map_Geyser`, SYZ bumper
-  `Map_Bump`, SYZ Roller `Map_Roll`, SYZ Yadrin `Map_Yad`, GHZ Crabmeat `Map_Crab`, GHZ Motobug `Map_Moto`, GHZ Newtron
-  `Map_Newt`, GHZ/SLZ smash-wall `Map_Smash`, LZ harpoon `Map_Harp`, MZ/SBZ Caterkiller `Map_Cat`, SBZ Ball Hog
+  MZ Basaran/Batbrain `Map_Bas`, MZ glass block `Map_Glass`, MZ chained stomper `Map_CStom`, MZ lava geyser `Map_Geyser`, MZ lava wall `Map_LWall`, GHZ spiked pole helix `Map_Hel`, GHZ/MZ swinging platform `Map_Swing_GHZ`, SLZ swinging platform `Map_Swing_SLZ`, SYZ bumper
+  `Map_Bump`, shared spring `Map_Spring`, SYZ Roller `Map_Roll`, SYZ Yadrin `Map_Yad`, GHZ Crabmeat `Map_Crab`, GHZ Motobug `Map_Moto`, GHZ Newtron
+  `Map_Newt`, shared animal `Map_Animal1` / `Map_Animal2` / `Map_Animal3`,
+  special-stage result emerald `Map_SSRC`, Prison Capsule `Map_Pri`,
+  Giant Ring `Map_GRing`, Ring Flash `Map_Flash`, GHZ giant ball `Map_GBall`,
+  SYZ/LZ spikeball chain `Map_SBall` / `Map_SBall2`, Big Spiked Ball
+  `Map_BBall`, LZ Gargoyle `Map_Gar`, LZ block `Map_LBlock`,
+  SYZ boss block `Map_BossBlock`, SBZ rotating junction `Map_Jun`, SBZ Running Disc `Map_Disc`,
+  LZ breakable pole `Map_Pole`, LZ conveyor `Map_LConv`, LZ bubbles `Map_Bub`,
+  MZ/LZ push block `Map_Push`, MZ Brick `Map_Brick`, SYZ Spinning Light `Map_Light`,
+  MZ Smashable Green Block `Map_Smab`, MZ/SLZ/SBZ collapsing floor
+  `Map_CFlo`, MZ/SBZ moving block `Map_MBlock`, LZ moving block `Map_MBlockLZ`,
+  MZ large grassy platform `Map_LGrass`,
+  SYZ/SLZ/LZ floating block and door `Map_FBlock`,
+  GHZ/SYZ/SLZ basic platform `Map_Plat_GHZ` / `Map_Plat_SYZ` / `Map_Plat_SLZ`,
+  SLZ elevator/circling platform/staircase `Map_Elev` / `Map_Circ` / `Map_Stair`,
+  unused small explosion `Map_UnkExplode`,
+  GHZ collapsing ledge `Map_Ledge`,
+  SBZ vanishing platform `Map_VanP`,
+  shared score popup `Map_Poi`, hidden-bonus `Map_Bonus`, GHZ Buzz Bomber `Map_Buzz` / `Map_Missile`, shared shield and
+  invincibility-star `Map_Shield`, results-card `Map_Got` / `Map_SSR`,
+  GHZ/SLZ smash-wall `Map_Smash`, LZ/SLZ/SBZ Orbinaut `Map_Orb`, LZ harpoon `Map_Harp`, MZ/SBZ Caterkiller `Map_Cat`, SBZ Ball Hog
   `Map_Hog`, SBZ flamethrower `Map_Flame`, SLZ/SBZ Bomb `Map_Bomb`, SBZ saw/electrocuter and door/girder/platform tables `Map_Saw`
-  / `Map_Elec` / `Map_ADoor` / `Map_Gird` / `Map_Trap` / `Map_Spin`, shared
+  / `Map_Elec` / `Map_ADoor` / `Map_Gird` / `Map_Trap` / `Map_Spin` / `Map_Stomp`, shared
   button `Map_But`, SBZ2
   `Map_FFloor`, shared boss `Map_Eggman` / `Map_BossItems`, SBZ2/FZ `Map_SEgg`,
+  ending Sonic/emerald/STH mappings `Map_ESon` / `Map_ECha` / `Map_ESth`,
   plus the Final Zone plasma launcher, plasma projectile, cylinder, escape-leg,
   and damaged-ship overlay mappings now load from ROM offsets as well. The S1
   mapping parser now preserves the tile priority bit from ROM mapping words.
   The embedded-runtime-data guard now ratchets those table families to zero,
-  removes the legacy S1 boss mapping helper file, and reduces the remaining S1
-  object mapping-piece budget; larger S1 mapping migrations remain tracked
-  release debt.
+  removes the legacy S1 boss mapping helper file, and keeps provider-local S1
+  object mapping-piece literals at zero by routing ROM-derived tile-word remaps
+  through `SpriteMappingPieces`.
 
 - **Develop release-sweep hardening closed the latest architecture review
   findings:** startup and audio teardown now fail closed on partial native

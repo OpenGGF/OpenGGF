@@ -47,6 +47,7 @@ class TestSpriteManagerDebugEmeraldGrant {
 
     @BeforeEach
     void setUp() {
+        TestEnvironment.resetAll();
         TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_2);
         AudioManager.getInstance().resetState();
         audioBackend = new RecordingAudioBackend();

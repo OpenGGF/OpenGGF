@@ -151,6 +151,34 @@ public class TestSonic1SbzRomMappings {
     }
 
     @Test
+    public void runningDiscRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_SBZ_RUNNING_DISC_ADDR);
+
+        assertEquals(List.of(1),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-8, -8, 2, 2, 0, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+    }
+
+    @Test
+    public void sbzVanishingPlatformRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_SBZ_VANISHING_PLATFORM_ADDR);
+
+        assertEquals(List.of(1, 1, 1, 0),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x10, -8, 4, 4, 0, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-8, -8, 2, 4, 0x10, false, false, 0, false),
+                romFrames.get(1).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-4, -8, 1, 4, 0x18, false, false, 0, false),
+                romFrames.get(2).pieces().get(0));
+    }
+
+    @Test
     public void sbzElectrocuterRomMappingsKeepExpectedTableShape() throws Exception {
         RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
         List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
@@ -184,6 +212,67 @@ public class TestSonic1SbzRomMappings {
                 romFrames.get(3).pieces().get(0));
         assertEquals(new SpriteMappingPiece(0, 0, 4, 4, 0x10, true, true, 0, false),
                 romFrames.get(3).pieces().get(3));
+    }
+
+    @Test
+    public void sbzStomperDoorRomMappingsKeepExpectedTableShapeAndSheetRemaps() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_SBZ_STOMPER_DOOR_ADDR);
+
+        assertEquals(List.of(4, 8, 8, 8, 14),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x40, -0x0C, 4, 3, 0x1AF, false, false, 1, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(0x20, -0x0C, 4, 3, 0x1AF, true, false, 1, false),
+                romFrames.get(0).pieces().get(3));
+        assertEquals(new SpriteMappingPiece(-0x1C, -0x20, 4, 1, 0x0C, false, false, 0, false),
+                romFrames.get(1).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x1C, -0x18, 4, 3, 0x13, false, false, 1, false),
+                romFrames.get(1).pieces().get(2));
+        assertEquals(new SpriteMappingPiece(-0x80, -0x40, 4, 4, 0, false, false, 0, false),
+                romFrames.get(4).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x80, 0x20, 4, 4, 0x58, false, false, 0, false),
+                romFrames.get(4).pieces().get(13));
+
+        List<SpriteMappingFrame> combinedSheetFrames =
+                Sonic1ObjectArtProvider.createStomperDoorMappingsFromRom(romFrames, 0x40);
+        assertEquals(4, combinedSheetFrames.size());
+        assertEquals(new SpriteMappingPiece(-0x40, -0x0C, 4, 3, 0x40, false, false, 1, false),
+                combinedSheetFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x20, -0x0C, 4, 3, 0x43, false, false, 1, false),
+                combinedSheetFrames.get(0).pieces().get(1));
+        assertEquals(romFrames.get(1), combinedSheetFrames.get(1));
+
+        List<SpriteMappingFrame> bigDoorFrames =
+                Sonic1ObjectArtProvider.createSbz3BigDoorMappingsFromRom(romFrames, 0x120);
+        assertEquals(List.of(14), bigDoorFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x80, -0x40, 4, 4, 0x120, false, false, 0, false),
+                bigDoorFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x80, 0x20, 4, 4, 0x178, false, false, 0, false),
+                bigDoorFrames.get(0).pieces().get(13));
+    }
+
+    @Test
+    public void sbzJunctionRomMappingsKeepExpectedTableShape() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        List<SpriteMappingFrame> romFrames = S1SpriteDataLoader.loadMappingFrames(
+                reader, Sonic1Constants.MAP_SBZ_JUNCTION_ADDR);
+
+        assertEquals(List.of(
+                        6, 6, 6, 6, 6, 6, 6, 6,
+                        6, 6, 6, 6, 6, 6, 6, 6, 12),
+                romFrames.stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(new SpriteMappingPiece(-0x30, -0x18, 2, 2, 0x22, false, false, 0, false),
+                romFrames.get(0).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x30, 0x08, 2, 2, 0x22, false, true, 0, false),
+                romFrames.get(0).pieces().get(1));
+        assertEquals(new SpriteMappingPiece(0x20, -0x18, 2, 2, 0x22, true, false, 0, false),
+                romFrames.get(8).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(-0x20, -0x38, 4, 2, 9, false, false, 0, false),
+                romFrames.get(16).pieces().get(0));
+        assertEquals(new SpriteMappingPiece(0x28, 0, 2, 4, 0x1A, true, true, 0, false),
+                romFrames.get(16).pieces().get(11));
     }
 
     @Test

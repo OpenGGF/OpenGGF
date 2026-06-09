@@ -113,6 +113,21 @@ public record TraceFrame(
             lagCounter, sidekick);
     }
 
+    /**
+     * Returns this gameplay row with only the ring-count diagnostic copied from
+     * another row. Gameplay state and camera diagnostics intentionally stay
+     * bound to this row.
+     */
+    public TraceFrame withRingDiagnosticsFrom(TraceFrame ringFrame) {
+        if (ringFrame == null) {
+            return this;
+        }
+        return new TraceFrame(frame, input, x, y, xSpeed, ySpeed, gSpeed, angle,
+            air, rolling, groundMode, xSub, ySub, routine, cameraX, cameraY,
+            ringFrame.rings(), statusByte, gameplayFrameCounter, standOnObj,
+            vblankCounter, lagCounter, sidekick);
+    }
+
     /** v1 column count (original format). */
     private static final int V1_COLUMNS = 11;
 

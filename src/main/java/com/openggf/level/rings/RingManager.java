@@ -63,19 +63,20 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     public RingManager(List<RingSpawn> spawns, RingSpriteSheet spriteSheet,
                        LevelManager levelManager, TouchResponseTable touchResponseTable,
                        AudioManager audioManager) {
-        this.placement = new RingPlacement(spawns);
-        this.renderer = (spriteSheet != null && spriteSheet.getFrameCount() > 0)
-                ? new RingRenderer(spriteSheet)
-                : null;
-        this.levelManager = levelManager;
-        this.audioManager = audioManager;
-        this.lostRings = new LostRingPool(levelManager, this.renderer, touchResponseTable, audioManager);
         // Feature-flag: ROM parity sources this from the current game's physics feature set.
         // S1 routes stage rings through Obj25's touch-response pipeline (Touch_Rings);
         // S2/S3K collect them via the bounding-box sweep (Touch_Rings_Test).
         GameModule module = GameServices.currentOrBootstrapGameModule();
         PhysicsProvider physProvider = module != null ? module.getPhysicsProvider() : null;
         PhysicsFeatureSet featureSet = physProvider != null ? physProvider.getFeatureSet() : null;
+        this.placement = new RingPlacement(spawns,
+                featureSet != null && featureSet.stageRingSweepUsesRawCameraWindow());
+        this.renderer = (spriteSheet != null && spriteSheet.getFrameCount() > 0)
+                ? new RingRenderer(spriteSheet)
+                : null;
+        this.levelManager = levelManager;
+        this.audioManager = audioManager;
+        this.lostRings = new LostRingPool(levelManager, this.renderer, touchResponseTable, audioManager);
         this.stageRingsUseObjectTouchCollection =
                 featureSet != null && featureSet.stageRingsUseObjectTouchCollection();
         this.attractedRings = new AttractedRing[MAX_ATTRACTED_RINGS];
@@ -132,12 +133,12 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         if (lightningAttractionActive) {
             int pcx = player.getCentreX();
             int pcy = player.getCentreY();
-            Collection<RingSpawn> active = placement.getActiveSpawns();
-            for (RingSpawn ring : active) {
-                int index = placement.getSpawnIndex(ring);
+            int[] activeIndices = placement.getActiveSpawnIndices();
+            for (int index : activeIndices) {
                 if (index < 0 || placement.isCollected(index)) {
                     continue;
                 }
+                RingSpawn ring = placement.getSpawn(index);
                 int dx = pcx - ring.x();
                 int dy = pcy - ring.y();
                 // ROM: box check — ±$40 from player centre, extended by ring half-width
@@ -168,8 +169,11 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         if (cannotCollectRings(player)) {
             return;
         }
-        Collection<RingSpawn> active = placement.getActiveSpawns();
-        if (active.isEmpty()) {
+        if (!stageRingsUseObjectTouchCollection && player.getInvulnerableFrames() >= 90) {
+            return;
+        }
+        int[] activeIndices = placement.getActiveSpawnIndices();
+        if (activeIndices.length == 0) {
             return;
         }
 
@@ -189,11 +193,11 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         int ringWidth = featureSet != null ? featureSet.ringCollisionWidth() : RING_COLLISION_HALF;
         int ringHeight = featureSet != null ? featureSet.ringCollisionHeight() : RING_COLLISION_HALF;
 
-        for (RingSpawn ring : active) {
-            int index = placement.getSpawnIndex(ring);
+        for (int index : activeIndices) {
             if (index < 0 || placement.isCollected(index)) {
                 continue;
             }
+            RingSpawn ring = placement.getSpawn(index);
 
             if (!ringOverlapsPlayer(playerLeft, playerTop, playerHeight, 0x10,
                     ring.x(), ring.y(), ringWidth, ringHeight)) {
@@ -276,17 +280,14 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         if (renderer == null) {
             return;
         }
-        Collection<RingSpawn> active = placement.getActiveSpawns();
-        if (active == null || active.isEmpty()) {
-            return;
-        }
 
         int spinFrameIndex = renderer.getSpinFrameIndex(frameCounter);
-        for (RingSpawn ring : active) {
-            int index = placement.getSpawnIndex(ring);
+        int[] activeIndices = placement.getActiveSpawnIndices();
+        for (int index : activeIndices) {
             if (index < 0) {
                 continue;
             }
+            RingSpawn ring = placement.getSpawn(index);
             if (!placement.isCollected(index)) {
                 renderer.drawFrameIndex(spinFrameIndex, ring.x(), ring.y());
                 continue;
@@ -864,16 +865,21 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     private static final class RingPlacement extends AbstractPlacementManager<RingSpawn> {
         private static final int EXTRA_AHEAD = 0x140; // 320; native -> 0x280 window
         private static final int UNLOAD_BEHIND = 0x300;
+        private static final int S3K_RAW_WINDOW_BEHIND = 0x08;
+        private static final int S3K_RAW_WINDOW_AHEAD = 0x148;
         private static final int NO_SPARKLE = -1;
 
+        private final boolean useRawCameraWindow;
         private final BitSet collected = new BitSet();
+        private final ArrayList<Integer> activeIndices = new ArrayList<>();
         private int[] sparkleStartFrames;
         private int cursorIndex = 0;
         private int lastCameraX = Integer.MIN_VALUE;
 
-        private RingPlacement(List<RingSpawn> spawns) {
+        private RingPlacement(List<RingSpawn> spawns, boolean useRawCameraWindow) {
             super(spawns, EXTRA_AHEAD, UNLOAD_BEHIND,
                     com.openggf.level.spawn.PlacementViewportWidth::current);
+            this.useRawCameraWindow = useRawCameraWindow;
             this.sparkleStartFrames = new int[this.spawns.size()];
             Arrays.fill(this.sparkleStartFrames, NO_SPARKLE);
         }
@@ -889,7 +895,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         }
 
         private void reset(int cameraX) {
-            active.clear();
+            activeIndices.clear();
             collected.clear();
             Arrays.fill(sparkleStartFrames, NO_SPARKLE);
             cursorIndex = 0;
@@ -949,19 +955,19 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         }
 
         private void spawnForward(int cameraX) {
-            int spawnLimit = getWindowEnd(cameraX);
+            int spawnLimit = ringWindowEnd(cameraX);
             while (cursorIndex < spawns.size() && spawns.get(cursorIndex).x() <= spawnLimit) {
-                active.add(spawns.get(cursorIndex));
+                addActiveIndex(cursorIndex);
                 cursorIndex++;
             }
         }
 
         private void trimActive(int cameraX) {
-            int windowStart = getWindowStart(cameraX);
-            int windowEnd = getWindowEnd(cameraX);
-            Iterator<RingSpawn> iterator = active.iterator();
+            int windowStart = ringWindowStart(cameraX);
+            int windowEnd = ringWindowEnd(cameraX);
+            Iterator<Integer> iterator = activeIndices.iterator();
             while (iterator.hasNext()) {
-                RingSpawn spawn = iterator.next();
+                RingSpawn spawn = spawns.get(iterator.next());
                 if (spawn.x() < windowStart || spawn.x() > windowEnd) {
                     iterator.remove();
                 }
@@ -969,34 +975,75 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         }
 
         private void refreshWindow(int cameraX) {
-            int windowStart = getWindowStart(cameraX);
-            int windowEnd = getWindowEnd(cameraX);
+            int windowStart = ringWindowStart(cameraX);
+            int windowEnd = ringWindowEnd(cameraX);
             int start = lowerBound(windowStart);
             int end = upperBound(windowEnd);
             cursorIndex = end;
-            active.clear();
+            activeIndices.clear();
             for (int i = start; i < end; i++) {
-                active.add(spawns.get(i));
+                addActiveIndex(i);
             }
         }
 
         private int[] snapshotActiveSpawnIndices() {
-            return active.stream()
-                    .mapToInt(this::getSpawnIndex)
-                    .filter(index -> index >= 0)
+            return activeIndices.stream()
+                    .mapToInt(Integer::intValue)
                     .toArray();
         }
 
         private void restoreActiveSpawnIndices(int[] activeSpawnIndices) {
-            active.clear();
+            activeIndices.clear();
             if (activeSpawnIndices == null) {
                 return;
             }
             for (int index : activeSpawnIndices) {
                 if (index >= 0 && index < spawns.size()) {
-                    active.add(spawns.get(index));
+                    addActiveIndex(index);
                 }
             }
+        }
+
+        @Override
+        public Collection<RingSpawn> getActiveSpawns() {
+            if (activeIndices.isEmpty()) {
+                return List.of();
+            }
+            List<RingSpawn> activeSpawns = new ArrayList<>(activeIndices.size());
+            for (int index : activeIndices) {
+                activeSpawns.add(spawns.get(index));
+            }
+            return List.copyOf(activeSpawns);
+        }
+
+        private int[] getActiveSpawnIndices() {
+            return activeIndices.stream()
+                    .mapToInt(Integer::intValue)
+                    .toArray();
+        }
+
+        private RingSpawn getSpawn(int index) {
+            return spawns.get(index);
+        }
+
+        private void addActiveIndex(int index) {
+            if (!activeIndices.contains(index)) {
+                activeIndices.add(index);
+            }
+        }
+
+        private int ringWindowStart(int cameraX) {
+            if (!useRawCameraWindow) {
+                return getWindowStart(cameraX);
+            }
+            return Math.max(0, cameraX - S3K_RAW_WINDOW_BEHIND);
+        }
+
+        private int ringWindowEnd(int cameraX) {
+            if (!useRawCameraWindow) {
+                return getWindowEnd(cameraX);
+            }
+            return cameraX + S3K_RAW_WINDOW_AHEAD;
         }
 
         private boolean areAllCollected() {

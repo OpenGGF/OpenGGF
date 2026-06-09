@@ -46,6 +46,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     // Display hold duration (frames). ROM: Level routine overwrites $2E to $16 (22)
     // at line 7878, synchronizing the hold with Palette_fade_timer.
     private static final int DISPLAY_HOLD_FRAMES = 90;
+    private static final int IN_LEVEL_WAIT_FRAMES_BEFORE_HUD_RESET = 4;
 
     // ROM palette fade duration: 22 frames (sonic3k.asm line 7877, Palette_fade_timer = $16).
     // In the ROM, the title card is already visible for many frames during level loading
@@ -109,6 +110,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     private int stateTimer;
     private int phaseCounter;  // Exit phase counter for staggered exit
     private boolean inLevelMode;  // No black background, control released immediately
+    private boolean resetLevelGamestateOnInLevelComplete;
     private boolean bonusMode;  // 2-element "BONUS STAGE" layout
     private float bonusFadeProgress; // 0.0→1.0 over BONUS_DISPLAY_HOLD_FRAMES during DISPLAY
 
@@ -159,6 +161,18 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     }
 
     /**
+     * S3K Act 1 results mutate into an in-level title card. The ROM clears
+     * {@code Ring_count}/timer when {@code Obj_TitleCardWait} starts the
+     * in-level wait, not when Obj_LevelResults first switches
+     * {@code Apparent_act} (sonic3k.asm:62708-62720, 62214-62235).
+     */
+    public void requestLevelGamestateResetOnInLevelComplete() {
+        if (inLevelMode) {
+            resetLevelGamestateOnInLevelComplete = true;
+        }
+    }
+
+    /**
      * Initializes for bonus stage mode — shows "BONUS STAGE" text.
      * Uses 2 horizontal elements (frames 19/20) instead of the normal 4-element layout.
      * Both elements have exit priority 1 (exit simultaneously).
@@ -200,6 +214,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         this.currentAct = actIndex;
         this.bonusMode = false;
         this.inLevelMode = inLevel;
+        this.resetLevelGamestateOnInLevelComplete = false;
         this.state = Sonic3kTitleCardState.SLIDE_IN;
         this.stateTimer = 0;
         this.phaseCounter = 0;
@@ -274,12 +289,17 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         if (!inLevelMode || state != Sonic3kTitleCardState.EXIT) {
             return false;
         }
+        // Engine ordering: Sonic3kTitleCardManager advances before object
+        // updates, while the ROM title-card wait object and end-sign
+        // controller run in the same object pass. Predict one title-card
+        // manager tick ahead so AIZ's level-size proxy can start on the ROM
+        // frame where Obj_TitleCardWait2 raises End_of_level_flag.
         int count = bonusMode ? BONUS_ELEMENT_COUNT : ELEMENT_COUNT;
         for (int i = 0; i < count; i++) {
             if (!bonusMode && !actNumberVisible && i == ELEM_ACT_NUM) {
                 continue;
             }
-            if (!willElementBeExitedAfterThisUpdate(i)) {
+            if (!willElementBeExitedWithinUpdates(i, 2)) {
                 return false;
             }
         }
@@ -367,6 +387,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         inLevelMode = false;
         bonusMode = false;
         bonusFadeProgress = 0f;
+        resetLevelGamestateOnInLevelComplete = false;
         currentZone = 0;
         currentAct = 0;
         actNumberVisible = false;
@@ -414,6 +435,9 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
 
     private void updateDisplay() {
         stateTimer++;
+        if (inLevelMode && stateTimer >= IN_LEVEL_WAIT_FRAMES_BEFORE_HUD_RESET) {
+            consumeLevelGamestateResetRequest();
+        }
 
         // In bonus mode, run the per-channel fade during the last 22 frames of the hold.
         // ROM: Palette_fade_timer runs after level loading completes, but the title card
@@ -470,12 +494,23 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         }
     }
 
-    private boolean willElementBeExitedAfterThisUpdate(int idx) {
+    private void consumeLevelGamestateResetRequest() {
+        if (!resetLevelGamestateOnInLevelComplete) {
+            return;
+        }
+        resetLevelGamestateOnInLevelComplete = false;
+        var levelManager = GameServices.levelOrNull();
+        if (levelManager != null) {
+            levelManager.resetLevelGamestate(GameServices.module().createLevelState());
+        }
+    }
+
+    private boolean willElementBeExitedWithinUpdates(int idx, int updates) {
         if (elemExited[idx]) {
             return true;
         }
         int[] priorities = bonusMode ? BONUS_EXIT_PRIORITY : EXIT_PRIORITY;
-        if (phaseCounter + 1 < priorities[idx]) {
+        if (phaseCounter + updates < priorities[idx]) {
             return false;
         }
         int speed = SLIDE_SPEED_OUT;
@@ -485,7 +520,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         if (dir == 0) {
             return true;
         }
-        int next = current + dir * speed;
+        int next = current + dir * speed * updates;
         return (dir > 0 && next >= start) || (dir < 0 && next <= start);
     }
 

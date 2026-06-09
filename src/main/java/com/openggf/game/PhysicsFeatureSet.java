@@ -157,6 +157,12 @@ public record PhysicsFeatureSet(
          *  S1: true (s1disasm 25 Rings.asm: ring is a touch-response object).
          *  S2/S3K: false (s2.asm:25034, sonic3k.asm Touch_Rings_Test: sweep in bookkeeping). */
         boolean stageRingsUseObjectTouchCollection,
+        /** Whether the placed-ring sweep window uses raw camera pointers instead
+         *  of the chunk-aligned object placement window.
+         *  S3K: true (sonic3k.asm:18232-18342 stores Ring_start_addr_ROM at
+         *  cameraX-8 and Ring_end_addr_ROM at cameraX+$148).
+         *  S1/S2: false for the existing object/ring-manager baselines. */
+        boolean stageRingSweepUsesRawCameraWindow,
         /** Pixel threshold that gates the sidekick CPU follow-AI's input override.
          *  When {@code |delayedSonicX - tailsX| >= threshold}, the CPU forces
          *  {@code Ctrl_2_logical} LEFT or RIGHT based on the sign; below the
@@ -870,7 +876,7 @@ public record PhysicsFeatureSet(
             RING_FLOOR_CHECK_MASK_S1, RING_COLLISION_SIZE_S1, RING_COLLISION_SIZE_S1, false,
             null, (short) 0, true, false /* groundWallPushRequiresFacingIntoWall: S1 wall response sets push unconditionally (s1disasm/_incObj/01 Sonic.asm:551-568) */, false /* animationChangeClearsPush: S1 clear is FixBugs-only (s1disasm/_incObj/01 Sonic.asm:2055-2065) */, false,
             false /* slopeResistStartsFromRest: S1 Sonic_SlopeResist returns on zero inertia (s1disasm/_incObj/01 Sonic.asm:1043-1044) */,
-            false, false, false, false, true, false, false, false, true, FAST_SCROLL_CAP_S2, false, true,
+            false, false, false, false, true, false, false, false, true, FAST_SCROLL_CAP_S2, false, true, false,
             SIDEKICK_FOLLOW_SNAP_S2, SIDEKICK_DESPAWN_X_S2, SIDEKICK_FOLLOW_LEAD_OFFSET_NONE, true /* sidekickSpawningRequiresGroundedLeader: S1 has no Tails CPU */, false /* useScreenYWrapValueForVisibility: S1 keeps 32-margin */,
             true /* sidekickDespawnUsesObjectIdMismatch: S1 has no Tails CPU; symmetric with S2 */,
             SIDEKICK_FLY_LAND_BLOCKERS_NONE, false /* sidekickFlyLandRequiresLeaderAlive: S1 has no CPU sidekick */, false /* solidObjectOffscreenGate: keep current S1 trace baseline */,
@@ -915,7 +921,7 @@ public record PhysicsFeatureSet(
             true /* pinballLandingPreservesPinballMode: S2 Sonic_ResetOnFloor / Tails_ResetOnFloor never clear pinball_mode (s2.asm:37770-37771,40625-40626) — both branch to Part3 on pinball_mode, and Part3 only clears in_air/pushing/rolljumping/jumping */,
             false, false, false, false,
             true /* fullSolidBottomOverlapUsesCurrentYRadiusOnly: S2 SolidObject_cont uses the player's CURRENT y_radius symmetrically on both halves of the underside box (d2 = obHeight/2 + y_radius(a1); bottom boundary d4 = 2*d2), s2.asm:35355-35367. This matches S1 (s1disasm/_incObj/sub SolidObject.asm:109-119). Only S3K loc_1DFD6 (sonic3k.asm:41422-41436) substitutes default_y_radius for the bottom extra term, giving the taller asymmetric box — so S3K stays false. Previously false here gave Sonic a 5px-too-tall underside box that triggered a phantom Stomper (Obj2A) ceiling hit during a MCZ rolling jump (y_radius 0x0E vs standing 0x13), zeroing y_speed at MCZ1 trace frame 2005 where ROM never collides. */,
-            FAST_SCROLL_CAP_S2, false, false,
+            FAST_SCROLL_CAP_S2, false, false, false,
             SIDEKICK_FOLLOW_SNAP_S2, SIDEKICK_DESPAWN_X_S2, SIDEKICK_FOLLOW_LEAD_OFFSET_NONE, true, false /* useScreenYWrapValueForVisibility: S2 keeps 32-margin */,
             true /* sidekickDespawnUsesObjectIdMismatch: S2 cmp.b id(a3),d0 in TailsCPU_CheckDespawn (s2.asm:39067) */,
             SIDEKICK_FLY_LAND_BLOCKERS_S2, false /* sidekickFlyLandRequiresLeaderAlive: S2 TailsCPU_Flying_Part2 has no Sonic-routine check */, true /* solidObjectOffscreenGate: S2 SolidObject_OnScreenTest (s2.asm:35330-35336) _btst render_flags.on_screen,render_flags(a0) / _beq SolidObject_TestClearPush skips the side/top/bottom push for any object whose render box has scrolled off-screen ("if Sonic outruns the screen then he can phase through solid objects"). Plain-SolidObject objects (e.g. Obj36 Spikes) are gated; objects that call SolidObject_Always (Obj74/Obj30) and the sloped/top-only helpers already opt out via bypassesOffscreenSolidGate()/topSolidOnly()/SlopedSolidProvider. HTZ1 trace f5647: an off-screen-left upright spike (slot 53 @ 0x1548, box right edge 0x1563, camera left edge 0x157F) was side-pushing the CPU Tails to 0x1563 and zeroing its x_vel where ROM preserves the smooth left accel. */,
@@ -962,7 +968,7 @@ public record PhysicsFeatureSet(
             false, true,
             true /* pinballLandingPreservesRoll: S3K Player_TouchFloor_Check_Spindash skips the roll-clear body while spin_dash_flag is set (sonic3k.asm:24325-24327) */,
             true /* pinballLandingPreservesPinballMode: S3K Player_TouchFloor_Check_Spindash leaves spin_dash_flag set while AutoSpin tunnel control is active */,
-            true, true, true, true, false, FAST_SCROLL_CAP_S3K, true, false,
+            true, true, true, true, false, FAST_SCROLL_CAP_S3K, true, false, true,
             SIDEKICK_FOLLOW_SNAP_S3K, SIDEKICK_DESPAWN_X_S3K, SIDEKICK_FOLLOW_LEAD_OFFSET_S3K, false, true /* useScreenYWrapValueForVisibility: S3K Render_Sprites height_pixels=0x18 */,
             false /* sidekickDespawnUsesObjectIdMismatch: S3K cmp.w (a3),d0 in sub_13EFC (sonic3k.asm:26823) compares routine-pointer high word; all gameplay objects share the same high word so the check almost never fires */,
             SIDEKICK_FLY_LAND_BLOCKERS_S3K, true /* sidekickFlyLandRequiresLeaderAlive: sonic3k.asm:26629 cmpi.b #6,(Player_1+routine).w / bhs.s loc_13D42 */, true /* solidObjectOffscreenGate: ROM SolidObject_cont uses render_flags bit 7 to skip side-push for off-screen objects (sonic3k.asm:41390 loc_1DF88) */,

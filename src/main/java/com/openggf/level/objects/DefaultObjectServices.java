@@ -538,6 +538,11 @@ public class DefaultObjectServices implements ObjectServices {
         lm().requestZoneAndAct(zone, act, deactivateLevelNow);
     }
 
+    @Override
+    public void requestSeamlessTransition(com.openggf.level.SeamlessLevelTransitionRequest request) {
+        lm().requestSeamlessTransition(request);
+    }
+
     // ── Level queries ──────────────────────────────────────────────────
 
     @Override

@@ -100,7 +100,6 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
 
     @Override
     @Test
-    @Disabled("Legacy AIZ end-to-end trace uses fixture-shaped bootstrap; diagnostic-only until regenerated")
     public void replayMatchesTrace() throws Exception {
         super.replayMatchesTrace();
     }
