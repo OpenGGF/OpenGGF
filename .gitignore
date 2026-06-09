@@ -1,6 +1,6 @@
 /bin
 .DS_Store
-/*.gen
+*.gen
 /target/*
 .classpath
 .project
@@ -9,7 +9,11 @@
 /config.json
 /config.yaml
 /config.json.bak
-/*.bin
+*.bin
+*.smd
+*.sms
+*.gg
+*.32x
 
 # Build/debug artifacts
 *.log

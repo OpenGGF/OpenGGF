@@ -4,6 +4,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Branch policy now rejects ROM-like binary files anywhere in the tree:**
+  git hooks and CI guards block tracked `.gen`, `.smd`, `.bin`, `.sms`, `.gg`,
+  and `.32x` files, and `.gitignore` now ignores those extensions repo-wide.
+
 - **Animated tiles now read current-frame S3K deform state:** level rendering
   publishes parallax/deform runtime state before animated tile and palette
   updates, keeping CNZ/MHZ tile phases aligned with the frame being rendered.

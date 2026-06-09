@@ -689,6 +689,44 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void branchPolicyShouldRejectRomLikeFilesAnywhere() throws Exception {
+        String shellPolicy = Files.readString(Path.of(".githooks/validate-policy.sh"));
+        String powershellPolicy = Files.readString(Path.of(".githooks/validate-policy.ps1"));
+        List<String> gitignoreLines = Files.readAllLines(Path.of(".gitignore"));
+        List<String> violations = new ArrayList<>();
+
+        for (String extension : List.of(".gen", ".smd", ".bin", ".sms", ".gg", ".32x")) {
+            if (!shellPolicy.contains(extension)) {
+                violations.add(".githooks/validate-policy.sh does not deny " + extension + " files");
+            }
+            if (!powershellPolicy.contains(extension)) {
+                violations.add(".githooks/validate-policy.ps1 does not deny " + extension + " files");
+            }
+            String ignorePattern = "*" + extension;
+            if (!gitignoreLines.contains(ignorePattern)) {
+                violations.add(".gitignore does not ignore " + ignorePattern + " in nested directories");
+            }
+        }
+        if (!shellPolicy.contains("is_rom_like_path")) {
+            violations.add(".githooks/validate-policy.sh does not define a ROM-like path predicate");
+        }
+        if (!powershellPolicy.contains("Test-RomLikeTrackedPath")) {
+            violations.add(".githooks/validate-policy.ps1 does not define a ROM-like path predicate");
+        }
+        if (!shellPolicy.contains("ROM_LIKE_DENYLIST_EXTENSIONS")) {
+            violations.add(".githooks/validate-policy.sh does not name the ROM-like denylist");
+        }
+        if (!powershellPolicy.contains("RomLikeDenylistExtensions")) {
+            violations.add(".githooks/validate-policy.ps1 does not name the ROM-like denylist");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("branch policy must reject ROM-like binary files in any tracked directory:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
     void pomShouldDeclareUtf8BuildEncodings() throws Exception {
         Document pom = parsePom("pom.xml");
         List<String> violations = new ArrayList<>();

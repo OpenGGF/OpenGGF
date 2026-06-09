@@ -11,6 +11,7 @@ $ErrorActionPreference = "Stop"
 $script:GithubFileSizeLimitBytes = 100000000
 $script:TraceCompressionThresholdBytes = 1048576
 $script:ReleaseTrailerCutoverBase = "677447024a08db9e25f3461588d661c23ba26848"
+$script:RomLikeDenylistExtensions = @(".gen", ".smd", ".bin", ".sms", ".gg", ".32x")
 
 function Fail([string]$Message) {
     [Console]::Error.WriteLine("policy: $Message")
@@ -165,8 +166,21 @@ function Add-ValidationError([string]$Message) {
     $script:Errors.Add("- $Message") | Out-Null
 }
 
+function Test-RomLikeTrackedPath([string]$Path) {
+    $lower = $Path.ToLowerInvariant()
+    foreach ($extension in $script:RomLikeDenylistExtensions) {
+        if ($lower.EndsWith($extension)) {
+            return $true
+        }
+    }
+    return $false
+}
+
 function Validate-FileSizePolicyForFiles([string[]]$Files, [scriptblock]$SizeResolver) {
     foreach ($path in $Files) {
+        if (Test-RomLikeTrackedPath $path) {
+            Add-ValidationError "``$path`` looks like a ROM/binary asset. Keep user-supplied ROMs and ROM-derived binary assets untracked."
+        }
         $size = & $SizeResolver $path
         if ($null -eq $size) {
             continue
