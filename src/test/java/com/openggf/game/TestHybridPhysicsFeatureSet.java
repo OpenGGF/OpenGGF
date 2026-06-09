@@ -91,13 +91,14 @@ public class TestHybridPhysicsFeatureSet {
                 false,  // solidObjectRequiresSidekickOnScreen - S1 has no CPU sidekick
                 false,  // sidekickDespawnUsesRidingInstanceLoss - S1 has no CPU sidekick
                 false,  // sidekickRespawnEntersCatchUpFlight - S1 has no CPU sidekick
+                false,  // sidekickPushBypassUsesGraceStatus - S1 has no Tails CPU
+                false,  // sidekickSuppressesFastLeaderTinyFollowNudge - S1 has no Tails CPU
                 false,  // sidekickClearsStalePushVelocityBeforeGroundMove - S1 has no CPU sidekick
                 false,  // sidekickCpuUsesLevelFrameCounter - S1 has no CPU sidekick
                 false,  // landingRollClearUsesCurrentYRadiusDelta - S1 uses fixed roll-clear lift
                 false,  // levelBoundaryRightStrict - S1 uses bls.s (s1disasm/_incObj/01 Sonic.asm:998)
                 false,  // levelBoundaryUsesCentreY - hybrid override fixture keeps explicit donor divergence
                 false,  // solidObjectTopBranchAlwaysLiftsOnUpwardVelocity - S1 Solid_Landed bails on y_vel<0 (s1disasm/_incObj/sub SolidObject.asm:278)
-                false,  // sidekickPushBypassUsesGraceStatus - S1 has no Tails CPU
                 false,  // sidekickNormalCpuSkipsHurtRoutine - S1 has no Tails CPU
                 false,  // controlLockLatchesLogicalInput - S1 baseline (uses separate Ctrl_Lock_byte)
                 false,  // hurtRoutineLatchesLogicalInput - S1 has no Tails CPU consuming Stat_table input

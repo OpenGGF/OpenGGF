@@ -10,6 +10,11 @@ All notable changes to the OpenGGF project are documented in this file.
   and a source guard now blocks concrete Sonic package references from shared
   sprite code.
 
+- **S3K sidekick push-grace nudge suppression is now feature-gated:** the
+  fast-leader tiny-dx follow-nudge suppression is explicit S3K physics policy,
+  with S2 regression coverage proving stale local grace does not suppress the
+  normal S2 follow nudge.
+
 - **Object lifecycle guard budgets now match current source:** raw
   `setDestroyed(true)` and direct dynamic-object spawn guard counts are
   exact ratchets, include all raw `addDynamicObject*` variants, and verify

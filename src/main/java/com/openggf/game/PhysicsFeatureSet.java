@@ -398,6 +398,17 @@ public record PhysicsFeatureSet(
          */
         boolean sidekickPushBypassUsesGraceStatus,
         /**
+         * Whether the fast-leader, tiny-dx follow branch may suppress the
+         * immediate +/-1 grounded follow nudge when stale local push state is
+         * modelling an imminent S3K solid-contact response.
+         * <p>S3K: {@code true}; this is part of the S3K object-order/local
+         * push bridge around loc_13DD0/FollowRight (sonic3k.asm:26702-26741).
+         * S1/S2: {@code false}; S2's TailsCPU_Normal applies the normal
+         * FollowLeft/FollowRight nudge after its live Status_Push branch and
+         * has no S3K lead/grace bridge.
+         */
+        boolean sidekickSuppressesFastLeaderTinyFollowNudge,
+        /**
          * Whether a CPU sidekick with stale push status and no fresh left/right
          * input clears ground velocity before the ground movement step.
          * <p>S3K: {@code true}. The engine uses this to mirror the S3K
@@ -931,6 +942,7 @@ public record PhysicsFeatureSet(
             false /* sidekickDespawnUsesRidingInstanceLoss: S1 has no Tails CPU */,
             false /* sidekickRespawnEntersCatchUpFlight: S1 has no Tails CPU */,
             false /* sidekickPushBypassUsesGraceStatus: S1 has no Tails CPU */,
+            false /* sidekickSuppressesFastLeaderTinyFollowNudge: S1 has no Tails CPU */,
             false /* sidekickClearsStalePushVelocityBeforeGroundMove: S1 has no Tails CPU */,
             false /* sidekickCpuUsesLevelFrameCounter: S1 has no Tails CPU */,
             false /* landingRollClearUsesCurrentYRadiusDelta: S1 Sonic_ResetOnFloor applies fixed subq.w #5, obY(a0) when clearing ball state */,
@@ -980,6 +992,7 @@ public record PhysicsFeatureSet(
             false /* sidekickDespawnUsesRidingInstanceLoss: S2 8-bit-id mismatch path already covers the freed-slot case (id of a freed slot is also 0) */,
             false /* sidekickRespawnEntersCatchUpFlight: S2 TailsCPU_Spawning inlines the 64-frame trigger and warp; engine keeps SPAWNING flow */,
             false /* sidekickPushBypassUsesGraceStatus: S2 TailsCPU_Normal uses live Status_Push only (s2.asm:38943-38946) */,
+            false /* sidekickSuppressesFastLeaderTinyFollowNudge: S2 has no S3K lead/grace bridge; FollowRight still nudges after the live Status_Push branch */,
             false /* sidekickClearsStalePushVelocityBeforeGroundMove: S2 TailsCPU_Normal writes Ctrl_2_Logical without clearing velocity (s2.asm:38943-39027) */,
             false /* sidekickCpuUsesLevelFrameCounter: preserve existing S2 trace cadence */,
             false /* landingRollClearUsesCurrentYRadiusDelta: S2 Sonic_ResetOnFloor applies fixed subq.w #5, y_pos(a0) when clearing rolling */,
@@ -1031,6 +1044,7 @@ public record PhysicsFeatureSet(
             true /* sidekickDespawnUsesRidingInstanceLoss: S3K sub_13EFC reads (a3)=0 when slot freed by Delete_Referenced_Sprite (sonic3k.asm:36116-36124); engine tracks ObjectInstance reference because latchedSolidObjectId is sticky across destruction */,
             true /* sidekickRespawnEntersCatchUpFlight: ROM sub_13ECA writes Tails_CPU_routine = 2 (sonic3k.asm:26803), which dispatches to Tails_Catch_Up_Flying (sonic3k.asm:26474) on the next frame */,
             true /* sidekickPushBypassUsesGraceStatus: preserve ROM-visible transient push continuity for S3K object ordering (sonic3k.asm:26702-26705) */,
+            true /* sidekickSuppressesFastLeaderTinyFollowNudge: S3K fast-leader/local-grace contact bridge suppresses the separate FollowRight nudge when solid response owns x_pos */,
             true /* sidekickClearsStalePushVelocityBeforeGroundMove: only for S3K's AIZ object-order push-grace bridge; live Status_Push and MGZ grace continuation still run Tails_InputAcceleration_Path deceleration/projection before collision clears ground_vel (sonic3k.asm:26702-26705,26775-26785,27947-28017) */,
             true /* sidekickCpuUsesLevelFrameCounter: S3K Tails CPU gates read Level_frame_counter directly (sonic3k.asm:26474-26531; LevelLoop increments it before Process_Sprites at sonic3k.asm:7884-7894) */,
             true /* landingRollClearUsesCurrentYRadiusDelta: S3K Player_TouchFloor applies saved y_radius - default_y_radius to y_pos, so already-restored roll-jump radii produce no 5 px lift (sonic3k.asm:23335-23358,24341-24363). */,

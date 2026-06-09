@@ -1248,6 +1248,46 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void s2FastLeaderTinyDxStillAppliesFollowNudgeWhenLocalGraceIsPresent() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x02B5);
+        tails.setCentreY((short) 0x02FF);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x0018);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x02B7);
+        Arrays.fill(yHistory, (short) 0x02BA);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        sonic.setGSpeed((short) 0x0600);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        setNormalPushingGraceFrames(controller, 15);
+
+        controller.update(0x1524);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("leader_fast", diagnostics.followBranch()),
+                () -> assertTrue(controller.getInputRight()),
+                () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                        "S2 has no S3K lead/grace bridge. The shared fast-leader branch must "
+                                + "still run FollowRight's +1 x_pos nudge when only stale local "
+                                + "engine grace is present."),
+                () -> assertEquals(0x02B6, tails.getCentreX() & 0xFFFF));
+    }
+
+    @Test
     void s3kFastLeaderLocalPushGraceMiddleDxKeepsAccelerationWithoutFollowNudge() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");

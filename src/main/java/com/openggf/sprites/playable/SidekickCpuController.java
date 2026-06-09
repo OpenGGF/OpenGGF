@@ -1642,7 +1642,9 @@ public class SidekickCpuController {
         suppressLocalGraceFollowNudge =
                 suppressLocalGraceFollowNudge && !fastLeaderNoLiveObjectNudge && !smallDxDelayedInputNudge;
         boolean suppressFastLeaderTinyFollowNudge =
-                effectiveLeader.getGSpeed() >= 0x400
+                fs != null
+                        && fs.sidekickSuppressesFastLeaderTinyFollowNudge()
+                        && effectiveLeader.getGSpeed() >= 0x400
                         && !leaderStatusOnObject
                         && Math.abs(sidekick.getGSpeed()) < 0x100
                         && localGraceAbsDx < followSnapThreshold
