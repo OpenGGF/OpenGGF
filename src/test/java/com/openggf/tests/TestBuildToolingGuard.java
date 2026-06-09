@@ -45,7 +45,6 @@ class TestBuildToolingGuard {
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - if (current.frame() == firstLevelFrame) {",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - int gameplayStartFrame = findCheckpointFrame(trace, \"gameplay_start\");",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - return gameplayStartFrame >= 0 && current.frame() <= gameplayStartFrame;",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - || next.frame() != current.frame() + 1",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - || !\"complete_run\".equals(metadata.traceProfile())",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - if (metadata.zoneId() == null || metadata.zoneId() != 0 || metadata.act() != 1) {",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - .anyMatch(checkpoint -> \"intro_begin\".equals(checkpoint.name()));",
