@@ -4,6 +4,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Unrecognized ROMs now fail fast:** corrupt or unsupported ROMs stop
+  startup with a clear "ROM not recognized or corrupt" error instead of
+  silently falling back to the Sonic 2 module and failing later.
+
 - **S3K AIZ sidekick push-bypass now uses ROM-visible status:** the sidekick
   CPU follow path distinguishes a high-speed live `Status_Push` branch from a
   later stale low-speed push bit, keeping AIZ replay aligned through the

@@ -48,7 +48,6 @@ import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.data.Rom;
 import com.openggf.physics.Direction;
@@ -455,10 +454,8 @@ public class Engine {
 			Rom rom = romManager.getRom();
 			module = romDetectionService
 				.detectAndCreateModule(rom)
-				.orElseGet(() -> {
-					LOGGER.warning("ROM detection failed during game initialization, using default Sonic 2 module");
-					return new Sonic2GameModule();
-				});
+				.orElseThrow(() -> new IllegalStateException(
+					"ROM not recognized or corrupt. OpenGGF requires a supported Sonic 1, Sonic 2, or Sonic 3&K ROM."));
 		} catch (IOException e) {
 			throw new RuntimeException("Failed to load ROM during game initialization", e);
 		}

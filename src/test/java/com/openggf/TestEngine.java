@@ -55,6 +55,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -195,6 +196,17 @@ class TestEngine {
     }
 
     @Test
+    void initializeGame_rejectsUnrecognizedOrCorruptRom() throws Exception {
+        try (BootstrapHarness harness = createBootstrapHarness(false, Optional.empty())) {
+            IllegalStateException error = assertThrows(IllegalStateException.class,
+                    harness.engine::initializeGame);
+
+            assertEquals("ROM not recognized or corrupt. OpenGGF requires a supported Sonic 1, Sonic 2, or Sonic 3&K ROM.",
+                    error.getMessage());
+        }
+    }
+
+    @Test
     void exitMasterTitleScreenFromBootstrapDoesNotRequireActiveWorldSession() throws Exception {
         SessionManager.clear();
         try (BootstrapHarness harness = createBootstrapHarness(false)) {
@@ -322,6 +334,20 @@ class TestEngine {
     }
 
     private BootstrapHarness createBootstrapHarness(boolean donorActive) throws Exception {
+        TrackingS1ImageCacheManager cacheManager = new TrackingS1ImageCacheManager(tempDir, spy(new GraphicsManager()));
+        Sonic1GameModule module = newSonic1WarmupModule(cacheManager);
+        return createBootstrapHarness(donorActive, Optional.of(module), cacheManager);
+    }
+
+    private BootstrapHarness createBootstrapHarness(boolean donorActive, Optional<GameModule> detectedModule) throws Exception {
+        TrackingS1ImageCacheManager cacheManager = new TrackingS1ImageCacheManager(tempDir, spy(new GraphicsManager()));
+        return createBootstrapHarness(donorActive, detectedModule, cacheManager);
+    }
+
+    private BootstrapHarness createBootstrapHarness(
+            boolean donorActive,
+            Optional<GameModule> detectedModule,
+            TrackingS1ImageCacheManager suppliedCacheManager) throws Exception {
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.resetToDefaults();
         config.setConfigValue(SonicConfiguration.AUDIO_ENABLED, false);
@@ -335,7 +361,7 @@ class TestEngine {
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
 
-        GraphicsManager graphics = spy(new GraphicsManager());
+        GraphicsManager graphics = suppliedCacheManager.graphics;
         RomManager romManager = mock(RomManager.class);
         Rom rom = mock(Rom.class);
         when(romManager.getRom()).thenReturn(rom);
@@ -348,21 +374,7 @@ class TestEngine {
         EngineContext services = new EngineContext(config, graphics, audioManager, romManager, profiler,
                 debugOverlayManager, playbackDebugManager, romDetectionService, crossGameFeatureProvider);
 
-        TrackingS1ImageCacheManager cacheManager = new TrackingS1ImageCacheManager(tempDir, graphics);
-        Sonic1GameModule module = new Sonic1GameModule() {
-            @Override
-            public <T> T getGameService(Class<T> type) {
-                if (type == S1DataSelectImageCacheManager.class) {
-                    return type.cast(cacheManager);
-                }
-                return super.getGameService(type);
-            }
-
-            @Override
-            public Optional<com.openggf.game.startup.DonatedDataSelectWarmupTask> getDonatedDataSelectWarmupTask() {
-                return Optional.of(cacheManager);
-            }
-        };
+        TrackingS1ImageCacheManager cacheManager = suppliedCacheManager;
 
         Camera camera = new Camera();
         SpriteManager spriteManager = mock(SpriteManager.class);
@@ -373,7 +385,7 @@ class TestEngine {
             assertEquals(donorActive ? 1 : 0, cacheManager.renderTaskRuns.get());
             return null;
         }).when(levelManager).loadZoneAndAct(0, 0);
-        when(romDetectionService.detectAndCreateModule(rom)).thenReturn(java.util.Optional.of(module));
+        when(romDetectionService.detectAndCreateModule(rom)).thenReturn(detectedModule);
 
         MockedStatic<GameplaySessionFactory> gameplayFactory =
                 mockStatic(GameplaySessionFactory.class, CALLS_REAL_METHODS);
@@ -433,6 +445,23 @@ class TestEngine {
                 cacheManager,
                 donor,
                 gameplayFactory);
+    }
+
+    private static Sonic1GameModule newSonic1WarmupModule(TrackingS1ImageCacheManager cacheManager) {
+        return new Sonic1GameModule() {
+            @Override
+            public <T> T getGameService(Class<T> type) {
+                if (type == S1DataSelectImageCacheManager.class) {
+                    return type.cast(cacheManager);
+                }
+                return super.getGameService(type);
+            }
+
+            @Override
+            public Optional<com.openggf.game.startup.DonatedDataSelectWarmupTask> getDonatedDataSelectWarmupTask() {
+                return Optional.of(cacheManager);
+            }
+        };
     }
 
     private static final class BootstrapHarness implements AutoCloseable {
