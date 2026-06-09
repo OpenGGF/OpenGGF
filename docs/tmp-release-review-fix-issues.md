@@ -49,10 +49,10 @@ This file tracks the release-prep architecture/code review findings being fixed 
 | RRF-041 | Medium | open | Rendering cache | Runtime-controlled full-width background tilemap mode can go stale if `requiresFullWidthBgTilemap()` changes without another tilemap invalidation. | `LevelTilemapManager.java`, HTZ render/cache tests |
 | RRF-042 | Medium | open | Runtime ownership | Editor-mode teardown resets only sprites/camera despite editor context creating level, collision, parallax, water, and game-state managers. | `EditorSessionFactory.java`, `EditorModeContext.java`, editor lifecycle tests |
 | RRF-043 | Medium | open | Object lifecycle | AIZ boss/cutscene child objects still use raw `ObjectManager.addDynamicObject(...)` rather than construction-context child spawn helpers or documented manager-owned allocation. | `AizEndBossInstance.java`, `AizMinibossCutsceneInstance.java`, object guard tests |
-| RRF-044 | Medium | open | Release packaging | Release workflow uploads assembled artifacts without smoke-validating archive layout, manifest/config presence, version metadata, or launch/bootstrap viability. | `.github/workflows/release.yml`, build tooling tests |
+| RRF-044 | Medium | fixed | Release packaging | Release workflow now smoke-validates assembled native archives before upload, including archive layout, config presence, JVM manifest bootstrap metadata, macOS version metadata, and platform launch entry points. | `.github/workflows/release.yml`, build tooling tests |
 | RRF-045 | Low | open | Tooling | Worktree post-checkout hook still links legacy `config.json` instead of current `config.yaml`. | `.githooks/post-checkout`, build tooling tests |
-| RRF-046 | Low | open | Packaging metadata | macOS bundle metadata hardcodes `1.0` while Maven/release version is `0.6.prerelease`. | `src/packaging/Info.plist`, packaging scripts/tests |
-| RRF-047 | Low | open | Packaging metadata | Stale unused `src/main/java/META-INF/MANIFEST.MF` still contains old JOGL-era classpath entries and can mislead packaging work. | `src/main/java/META-INF/MANIFEST.MF`, `pom.xml`, build tooling tests |
+| RRF-046 | Low | fixed | Packaging metadata | macOS bundle metadata now matches the Maven/release version `0.6.prerelease` and is guarded by build-tooling tests. | `src/packaging/Info.plist`, packaging scripts/tests |
+| RRF-047 | Low | fixed | Packaging metadata | Stale checked-in manifest metadata was reduced to the engine entry point so old JOGL-era classpath entries cannot mislead packaging work. | `src/main/java/META-INF/MANIFEST.MF`, build tooling tests |
 
 ## RRF-014 asset notes
 

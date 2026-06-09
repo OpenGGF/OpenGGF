@@ -8,6 +8,12 @@ All notable changes to the OpenGGF project are documented in this file.
   git hooks and CI guards block tracked `.gen`, `.smd`, `.bin`, `.sms`, `.gg`,
   and `.32x` files, and `.gitignore` now ignores those extensions repo-wide.
 
+- **Release package metadata now has bounded smoke validation:** release
+  builds inspect native archives before upload for expected layout, editable
+  config, launch entry points, JVM manifest bootstrap metadata, and macOS
+  bundle version alignment. The checked-in manifest no longer carries obsolete
+  JOGL-era classpath entries.
+
 - **Animated tiles now read current-frame S3K deform state:** level rendering
   publishes parallax/deform runtime state before animated tile and palette
   updates, keeping CNZ/MHZ tile phases aligned with the frame being rendered.
