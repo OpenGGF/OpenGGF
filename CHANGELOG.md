@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K AIZ hollow-tree reveal now uses ROM centre coordinates:** the tree
+  reveal-control counter compares against playable `y_pos` via centre Y instead
+  of top-left sprite bounds, matching the disassembly and preventing early
+  terrain reveal progression.
+
 - **S2/S3K pushing animation now clears on ROM-gated animation changes:**
   playable animation resolution now models the S2/S3K fix that clears
   `Status_Push` when the grounded animation changes, while preserving Sonic 1's
