@@ -372,11 +372,20 @@ class TestBuildToolingGuard {
         if (!workflow.contains("expected_trace_reports")) {
             violations.add(".github/workflows/release.yml does not derive expected trace reports from source tests");
         }
+        if (!workflow.contains("expected_policy_reports")) {
+            violations.add(".github/workflows/release.yml does not derive expected reports for the full trace-replay profile surface");
+        }
         if (!workflow.contains("src/test/java/com/openggf/tests/trace")) {
             violations.add(".github/workflows/release.yml does not scan the source trace tree for expected reports");
         }
+        if (!workflow.contains("source_root.rglob(\"Test*.java\")")) {
+            violations.add(".github/workflows/release.yml does not scan every Test*.java selected by the trace-replay profile");
+        }
         if (!workflow.contains("expected_trace_reports.add")) {
             violations.add(".github/workflows/release.yml does not add expected reports from TraceReplay source classes");
+        }
+        if (!workflow.contains("expected_policy_reports.add")) {
+            violations.add(".github/workflows/release.yml does not add expected reports from non-TraceReplay profile classes");
         }
         if (!workflow.contains("missing_expected")) {
             violations.add(".github/workflows/release.yml does not fail when expected trace reports are missing");
@@ -386,6 +395,9 @@ class TestBuildToolingGuard {
         }
         if (!workflow.contains("Missing expected trace replay reports")) {
             violations.add(".github/workflows/release.yml does not report missing expected trace replay reports");
+        }
+        if (!workflow.contains("Missing expected trace policy reports")) {
+            violations.add(".github/workflows/release.yml does not report missing non-TraceReplay trace policy reports");
         }
         if (!workflow.contains("Expected trace replay report did not execute")) {
             violations.add(".github/workflows/release.yml does not fail when an expected trace report is skipped");
