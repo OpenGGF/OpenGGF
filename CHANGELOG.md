@@ -23,6 +23,13 @@ All notable changes to the OpenGGF project are documented in this file.
   saves and editor saves now choose unique `.corrupt` sibling names instead of
   replacing an existing quarantine artifact on repeated failures.
 
+- **S3K AIZ sidekick follow grace now reaches the full-run trace end:** the
+  sidekick CPU follow path now lets stale engine-local push grace fall through
+  to the ROM follow nudge when the delayed leader input, fast-leader speed, no
+  live ride slot, and near-expired grace state show that ROM `Status_Push` is
+  clear. This closes the release-visible AIZ replay regression exposed after
+  removing the skipped/missing coverage allowlist.
+
 - **MGZ top-platform grab state now has explicit rewind coverage:** per-player
   grab helpers implement a rewind-state contract and the rewind collection/map
   codec accepts concrete stateful helper values, preserving grabbed-player

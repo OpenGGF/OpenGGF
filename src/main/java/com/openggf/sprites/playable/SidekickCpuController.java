@@ -47,6 +47,15 @@ public class SidekickCpuController {
     private static final int JUMP_DISTANCE_TRIGGER = 64;
     private static final int JUMP_HEIGHT_THRESHOLD = 32;
     private static final int PUSH_STATUS_GRACE_FRAMES = 16;
+    private static final int LOCAL_BELOW_TARGET_PUSH_BRIDGE_MAX_GRACE =
+            PUSH_STATUS_GRACE_FRAMES - 4;
+    private static final int LOCAL_BELOW_TARGET_PUSH_BRIDGE_MIN_GRACE = 3;
+    private static final int OBJECT_ORDER_PUSH_BRIDGE_MIN_GRACE = 4;
+    private static final int LOCAL_BELOW_TARGET_REBOUND_NUDGE_MIN_GSPEED = 0x80;
+    private static final int FAST_LEADER_NO_LIVE_OBJECT_INPUT_NUDGE_MAX_UPWARD_GAP = 0x40;
+    private static final int FAST_LEADER_NO_LIVE_OBJECT_LATE_GRACE_INPUT_NUDGE_MIN_DX = 0x90;
+    private static final int FAST_LEADER_NO_LIVE_OBJECT_LATE_GRACE_INPUT_NUDGE_MAX_UPWARD_GAP = 0x50;
+    private static final int FAST_LEADER_NO_LIVE_OBJECT_NUDGE_MAX_DX = 0xA0;
     private static final int PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y = 0x80;
     private static final int LEVEL_START_X_OFFSET = -0x20;
     private static final int LEVEL_START_Y_OFFSET = 4;
@@ -450,7 +459,7 @@ public class SidekickCpuController {
                         + "pre=obj%02X st%02X x=%04X.%04X xv%04X yv%04X gv%04X a=%02X "
                         + "gen=%04X jp=%s postCpu=obj%02X st%02X xv%04X yv%04X gv%04X "
                         + "x=%04X.%04X a=%02X nudge=%d postPhys=%s obj%02X st%02X "
-                        + "xv%04X yv%04X gv%04X x=%04X.%04X a=%02X dx=%04X dy=%04X skip=%s",
+                        + "xv%04X yv%04X gv%04X x=%04X.%04X a=%02X dx=%04X dy=%04X skip=%s grace=%d",
                 d.frameCounter(),
                 d.state(),
                 d.followBranch(),
@@ -489,7 +498,8 @@ public class SidekickCpuController {
                 d.postPhysicsAngle() & 0xFF,
                 d.dx() & 0xFFFF,
                 d.dy() & 0xFFFF,
-                d.skipFollowSteering());
+                d.skipFollowSteering(),
+                normalPushingGraceFrames);
     }
 
     public void recordDiagnosticPostPhysics() {
@@ -1580,6 +1590,61 @@ public class SidekickCpuController {
                 && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y;
         boolean supportGraceKeepsFollowSteering =
                 localGracePushBypass && isDoorSupportGraceFollowSteeringContext();
+        int followSnapThreshold = resolveFollowSnapThreshold();
+        boolean localBelowTargetFacingIntoFollowSide =
+                (dx > 0 && sidekick.getDirection() == Direction.RIGHT)
+                        || (dx < 0 && sidekick.getDirection() == Direction.LEFT);
+        boolean delayedInputIntoFollowSide =
+                (dx > 0 && (recordedInput & AbstractPlayableSprite.INPUT_RIGHT) != 0)
+                        || (dx < 0 && (recordedInput & AbstractPlayableSprite.INPUT_LEFT) != 0);
+        boolean freshBelowTargetReboundGrace =
+                localGracePushBypass
+                        && Math.abs(sidekick.getGSpeed()) >= LOCAL_BELOW_TARGET_REBOUND_NUDGE_MIN_GSPEED
+                        && dy >= 0
+                        && localBelowTargetFacingIntoFollowSide;
+        boolean localBelowTargetBridgeWindow =
+                normalPushingGraceFrames >= LOCAL_BELOW_TARGET_PUSH_BRIDGE_MIN_GRACE
+                        && normalPushingGraceFrames <= LOCAL_BELOW_TARGET_PUSH_BRIDGE_MAX_GRACE;
+        boolean suppressLocalGraceFollowNudge =
+                localGracePushBypass
+                        && normalPushingGraceFrames >= OBJECT_ORDER_PUSH_BRIDGE_MIN_GRACE
+                        && !leaderStatusOnObject
+                        && !supportGraceKeepsFollowSteering
+                        && !freshBelowTargetReboundGrace;
+        int localGraceAbsDx = Math.abs(dx);
+        boolean fastLeaderNoLiveObjectNudge =
+                effectiveLeader.getGSpeed() >= 0x400
+                        && currentRidingObject() == null
+                        && (localGraceAbsDx < followSnapThreshold
+                        || (normalPushingGraceFrames <= OBJECT_ORDER_PUSH_BRIDGE_MIN_GRACE + 1
+                        && dy >= -JUMP_HEIGHT_THRESHOLD)
+                        || (localGraceAbsDx <= FAST_LEADER_NO_LIVE_OBJECT_NUDGE_MAX_DX
+                        && dy >= -JUMP_HEIGHT_THRESHOLD)
+                        || (normalPushingGraceFrames <= OBJECT_ORDER_PUSH_BRIDGE_MIN_GRACE + 1
+                        && localGraceAbsDx >= FAST_LEADER_NO_LIVE_OBJECT_LATE_GRACE_INPUT_NUDGE_MIN_DX
+                        && localGraceAbsDx <= FAST_LEADER_NO_LIVE_OBJECT_NUDGE_MAX_DX
+                        && dy >= -FAST_LEADER_NO_LIVE_OBJECT_LATE_GRACE_INPUT_NUDGE_MAX_UPWARD_GAP
+                        && delayedInputIntoFollowSide)
+                        || (localGraceAbsDx <= FAST_LEADER_NO_LIVE_OBJECT_NUDGE_MAX_DX
+                        && dy >= -FAST_LEADER_NO_LIVE_OBJECT_INPUT_NUDGE_MAX_UPWARD_GAP
+                        && delayedInputIntoFollowSide));
+        boolean smallDxDelayedInputNudge =
+                effectiveLeader.getGSpeed() < 0x400
+                        && localGraceAbsDx < followSnapThreshold
+                        && (delayedInputIntoFollowSide
+                        || (dx < 0 && sidekick.getGSpeed() < 0)
+                        || (dx > 0 && sidekick.getGSpeed() > 0))
+                        && dy >= -JUMP_HEIGHT_THRESHOLD;
+        suppressLocalGraceFollowNudge =
+                suppressLocalGraceFollowNudge && !fastLeaderNoLiveObjectNudge && !smallDxDelayedInputNudge;
+        boolean suppressFastLeaderTinyFollowNudge =
+                effectiveLeader.getGSpeed() >= 0x400
+                        && !leaderStatusOnObject
+                        && Math.abs(sidekick.getGSpeed()) < 0x100
+                        && localGraceAbsDx < followSnapThreshold
+                        && dy < -JUMP_HEIGHT_THRESHOLD
+                        && !sidekick.getAir()
+                        && !sidekick.getRolling();
         boolean airbornePushHandoff = false;
         if (suppressNextAirbornePushFollowSteering) {
             // After loc_13DD0 branches to loc_13E9C, Tails_Spin_Freespace runs
@@ -1590,21 +1655,35 @@ public class SidekickCpuController {
             airbornePushHandoff = sidekick.getAir();
             suppressNextAirbornePushFollowSteering = false;
         }
-        // Engine-side push grace is only a ROM-visible loc_13DD0 push bypass
-        // where provider-approved object order can clear transient Status_Push
-        // before Tails' CPU slot. In ordinary local grace cases, ROM sees
-        // current Status_Push clear and falls through to FollowLeft/FollowRight
+        // Engine-side push grace only skips follow steering when it models a
+        // ROM-visible current push bit at Tails' CPU slot. Object-order grace
+        // covers provider-approved SolidObjectFull timing; the local
+        // below-target bridge covers the same side-contact continuity only in
+        // the fresh local push window, while Tails is still facing into the
+        // delayed follow side. Once that early continuity window is gone, or
+        // the facing bit flips away from the contact, ROM current Status_Push
+        // is clear and Ctrl_2 falls through FollowLeft/FollowRight
         // (sonic3k.asm:26702-26729).
+        boolean localBelowTargetGrace =
+                localGracePushBypass
+                        && !freshBelowTargetReboundGrace
+                        && localBelowTargetBridgeWindow
+                        && !delayedInputIntoFollowSide
+                        && dy >= 0
+                        && localBelowTargetFacingIntoFollowSide;
         boolean objectOrderGrace = localGracePushBypass
+                && normalPushingGraceFrames >= OBJECT_ORDER_PUSH_BRIDGE_MIN_GRACE
                 && isObjectOrderFollowSteeringContext(effectiveLeader)
                 && (leaderStatusOnObject
                 || (recordedStatus & AbstractPlayableSprite.STATUS_ON_OBJECT) != 0);
         objectOrderGracePushBypassThisFrame = objectOrderGrace;
         boolean skipFollowSteering = currentPushBypass
                 || liveAndDelayedPushAirborneHandoff
+                || localBelowTargetGrace
                 || (objectOrderGrace && !supportGraceKeepsFollowSteering)
                 || airbornePushHandoff;
         String followBranch = currentPushBypass ? "current_push_bypass"
+                : localBelowTargetGrace ? "grace_push_bypass"
                 : (objectOrderGrace && !supportGraceKeepsFollowSteering) ? "grace_push_bypass"
                 : airbornePushHandoff ? "airborne_push_handoff"
                 : leaderStatusOnObject ? "leader_on_object"
@@ -1655,7 +1734,7 @@ public class SidekickCpuController {
             //            s2.asm:38967 TailsCPU_Normal_FollowRight).
             // S3K: 0x30 (sonic3k.asm:26712 loc_13DF2,
             //            sonic3k.asm:26729 loc_13E26).
-            int snapThreshold = resolveFollowSnapThreshold();
+            int snapThreshold = followSnapThreshold;
             int steeringDx = resolveFollowSteeringDx(dx, effectiveLeader, leadOffset, leaderStatusOnObject,
                     snapThreshold);
             if (steeringDx < 0) {
@@ -1677,6 +1756,8 @@ public class SidekickCpuController {
             int nudgeDx = resolveFollowNudgeDx(dx, effectiveLeader);
             if (nudgeDx < 0
                     && sidekick.getDirection() == Direction.LEFT
+                    && !suppressLocalGraceFollowNudge
+                    && !suppressFastLeaderTinyFollowNudge
                     // ROM loc_13E0A gates the positional nudge on
                     // object_control bit 0, not on the broader control
                     // lock state (sonic3k.asm:26722-26724).
@@ -1697,6 +1778,8 @@ public class SidekickCpuController {
                 }
             } else if (nudgeDx > 0
                     && sidekick.getDirection() == Direction.RIGHT
+                    && !suppressLocalGraceFollowNudge
+                    && !suppressFastLeaderTinyFollowNudge
                     // ROM loc_13E34 gates the positional nudge on
                     // object_control bit 0, not on the broader control
                     // lock state (sonic3k.asm:26739-26741).
