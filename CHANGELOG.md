@@ -4,6 +4,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Editor save apply now validates before mutating:** corrupt editor edit
+  payloads are fully checked before any live level mutation, so quarantine on a
+  later invalid entry cannot leave earlier edits partially applied.
+
 - **Malformed user config files are now preserved:** unreadable `config.yaml`
   files are moved to unique `.corrupt` siblings before defaults are saved, and
   legacy `config.json` migration now preserves existing `.bak` files.

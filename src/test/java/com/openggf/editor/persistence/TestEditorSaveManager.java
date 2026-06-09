@@ -162,6 +162,37 @@ class TestEditorSaveManager {
         assertTrue(Files.exists(file.resolveSibling(file.getFileName() + ".corrupt")));
     }
 
+    @Test
+    void invalidLaterPayloadEntryDoesNotPartiallyMutateLevel() throws Exception {
+        EditorSaveManager manager = new EditorSaveManager(tempDir);
+        EditorSavePayload payload = new EditorSavePayload(
+                List.of(),
+                List.of(),
+                List.of(
+                        new EditorSavePayload.MapCell(0, 1, 1, 2),
+                        new EditorSavePayload.MapCell(0, 2, 1, 99)));
+        EditorSaveEnvelope envelope = new EditorSaveEnvelope(
+                1,
+                GameId.S2.code(),
+                1,
+                0,
+                "2026-05-09T00:00:00Z",
+                payload,
+                sha256(MAPPER.writeValueAsString(payload)));
+        Path file = manager.editPath(GameId.S2, 1, 0);
+        Files.createDirectories(file.getParent());
+        MAPPER.writeValue(file.toFile(), envelope);
+
+        MutableLevel level = createMutableLevel();
+        EditorSaveManager.ApplyResult result = manager.tryApplyEdits(GameId.S2, 1, 0, level);
+
+        assertEquals(EditorSaveManager.ApplyResult.QUARANTINED, result);
+        assertEquals(0, Byte.toUnsignedInt(level.getMap().getValue(0, 1, 1)),
+                "valid earlier map edit must not be applied before later invalid entry quarantines");
+        assertFalse(Files.exists(file));
+        assertTrue(Files.exists(file.resolveSibling(file.getFileName() + ".corrupt")));
+    }
+
     private static String sha256(String value) throws Exception {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
