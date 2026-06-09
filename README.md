@@ -224,6 +224,12 @@ behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Release-readiness review fixes branch (2026-06-09).** Merged the deep
+  architecture/code review remediation branch for the 0.6 prerelease line:
+  trace release gates no longer allow missing S3K AIZ replay coverage, the
+  regenerated AIZ replay is green, save/config/editor recovery paths are more
+  resilient, native-library and shader loading are release-hardened, architecture
+  ratchets remain green, and the full Maven suite is back to release-green.
 - **Release-prep guardrails and S1 ROM-data migration branch (2026-06-08).**
   Merged the release-prep policy/CI hardening that validates direct release
   pushes, counts generated trace replay reports, blocks warning-only trace

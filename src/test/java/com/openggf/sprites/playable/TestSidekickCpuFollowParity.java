@@ -6,9 +6,14 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.LevelEventProvider;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.Direction;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
@@ -16,6 +21,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -49,6 +55,22 @@ class TestSidekickCpuFollowParity {
 
         void setPhysicsFeatureSetForTest(PhysicsFeatureSet featureSet) {
             setPhysicsFeatureSet(featureSet);
+        }
+    }
+
+    private static final class LiveRideObject extends AbstractObjectInstance {
+        private LiveRideObject(int objectId) {
+            super(new ObjectSpawn(0x1200, 0x0800, objectId, 0, 0, false, 0), "LiveRideObject");
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+            // Test sentinel only.
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // No rendering needed for this test sentinel.
         }
     }
 
@@ -621,38 +643,44 @@ class TestSidekickCpuFollowParity {
 
     @Test
     void cnzDoorSupportGraceFallsThroughToFollowLeftNudgeWhenPushIsClear() {
-        TestableSprite sonic = new TestableSprite("sonic");
-        TestableSprite tails = new TestableSprite("tails_p2");
-        tails.setCpuControlled(true);
-        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
-        tails.setAir(false);
-        tails.setOnObject(true);
-        tails.setLatchedSolidObjectId(0x3C);
-        tails.setCentreX((short) 0x0FEE);
-        tails.setCentreY((short) 0x0231);
-        tails.setDirection(Direction.LEFT);
-        tails.setGSpeed((short) 0xFFF4);
+        GameModule previous = GameModuleRegistry.getCurrent();
+        try {
+            installStandaloneGameModule(new Sonic3kGameModule());
+            TestableSprite sonic = new TestableSprite("sonic");
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+            tails.setAir(false);
+            tails.setOnObject(true);
+            tails.setLatchedSolidObjectId(0x3C);
+            tails.setCentreX((short) 0x0FEE);
+            tails.setCentreY((short) 0x0231);
+            tails.setDirection(Direction.LEFT);
+            tails.setGSpeed((short) 0xFFF4);
 
-        short[] xHistory = new short[64];
-        short[] yHistory = new short[64];
-        short[] inputHistory = new short[64];
-        byte[] statusHistory = new byte[64];
-        Arrays.fill(xHistory, (short) 0x0FBE);
-        Arrays.fill(yHistory, (short) 0x0231);
-        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+            short[] xHistory = new short[64];
+            short[] yHistory = new short[64];
+            short[] inputHistory = new short[64];
+            byte[] statusHistory = new byte[64];
+            Arrays.fill(xHistory, (short) 0x0FBE);
+            Arrays.fill(yHistory, (short) 0x0231);
+            sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
 
-        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
-        tails.setPushing(true);
-        controller.update(0x2310);
-        tails.setPushing(false);
-        controller.update(0x2311);
+            tails.setPushing(true);
+            controller.update(0x2310);
+            tails.setPushing(false);
+            controller.update(0x2311);
 
-        assertEquals(0x0FED, tails.getCentreX() & 0xFFFF,
-                "With current Status_Push clear, CNZ Door support must fall through to "
-                        + "FollowLeft and apply the -1 x_pos nudge (sonic3k.asm:26702-26724; "
-                        + "Obj3C Door SolidObjectFull at sonic3k.asm:66249-66258)");
+            assertEquals(0x0FED, tails.getCentreX() & 0xFFFF,
+                    "With current Status_Push clear, CNZ Door support must fall through to "
+                            + "FollowLeft and apply the -1 x_pos nudge (sonic3k.asm:26702-26724; "
+                            + "Obj3C Door SolidObjectFull at sonic3k.asm:66249-66258)");
+        } finally {
+            installStandaloneGameModule(previous);
+        }
     }
 
     @Test
@@ -776,6 +804,1067 @@ class TestSidekickCpuFollowParity {
                         "FollowRight overrides the delayed LEFT control word when dx >= $30 "
                                 + "(sonic3k.asm:26729-26740)."),
                 () -> assertFalse(controller.getInputLeft()));
+    }
+
+    @Test
+    void s3kFreshLowSpeedLocalPushGracePreservesInputWithoutNudgingNearAizSpikedLogs() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x210D);
+        tails.setCentreY((short) 0x0541);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x0042);
+        tails.setXSpeed((short) 0x0040);
+        tails.setYSpeed((short) 0x000C);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x218C);
+        Arrays.fill(yHistory, (short) 0x0559);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        setNormalPushingGraceFrames(controller, 15);
+
+        controller.update(0x29E0);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("follow_steering", diagnostics.followBranch(),
+                        "AIZ2 F10720 falls through FollowRight with the delayed RIGHT input, "
+                                + "but the local side-contact grace is still low-speed."),
+                () -> assertTrue(controller.getInputRight()),
+                () -> assertEquals(0, diagnostics.appliedFollowNudge(),
+                        "The early low-speed local push grace must not manufacture the +1 x_pos "
+                                + "nudge before ROM's rebound threshold is reached."));
+    }
+
+    @Test
+    void s3kAgedLocalPushGraceBelowTargetBypassesFollowSteeringNearAizSpikedLogs() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x210F);
+        tails.setCentreY((short) 0x0541);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x0072);
+        tails.setXSpeed((short) 0x006F);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x2195);
+        Arrays.fill(yHistory, (short) 0x0559);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        setNormalPushingGraceFrames(controller, 12);
+
+        tails.setPushing(false);
+        controller.update(0x29E4);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("grace_push_bypass", diagnostics.followBranch(),
+                        "AIZ2 F10724 has stale local push grace with the delayed target at/below Tails. "
+                                + "ROM still sees live Status_Push and branches through loc_13DD0."),
+                () -> assertTrue(diagnostics.skipFollowSteering()),
+                () -> assertFalse(controller.getInputRight(),
+                        "The preserved Ctrl_2 sample is zero, so Tails must not manufacture "
+                                + "a FollowRight acceleration pulse before physics."));
+    }
+
+    @Test
+    void s3kFreshLocalPushGraceBelowTargetResumesFollowSteeringAfterReboundRefresh() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x210D);
+        tails.setCentreY((short) 0x0541);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x0080);
+        tails.setXSpeed((short) 0x007D);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x21A9);
+        Arrays.fill(yHistory, (short) 0x0559);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+        Arrays.fill(statusHistory, (byte) AbstractPlayableSprite.STATUS_UNDERWATER);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        setNormalPushingGraceFrames(controller, 13);
+        controller.update(0x29F1);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("follow_steering", diagnostics.followBranch(),
+                        "AIZ2 F10738 has a freshly refreshed local push grace after the rebound, "
+                                + "but ROM current Status_Push is clear, so Ctrl_2 falls "
+                                + "through normal FollowRight (sonic3k.asm:26702-26729)."),
+                () -> assertFalse(diagnostics.skipFollowSteering()),
+                () -> assertTrue(controller.getInputRight()),
+                () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                        "AIZ2 F10738 has ROM current Status_Push clear after the rebound refresh, "
+                                + "so FollowRight applies the +1 x_pos nudge."),
+                () -> assertFalse(controller.getInputLeft()));
+    }
+
+    @Test
+    void s3kHighSpeedAgedLocalPushGraceResumesFollowSteeringNearAizSpikedLogs() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x210F);
+        tails.setCentreY((short) 0x0541);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x0098);
+        tails.setXSpeed((short) 0x0095);
+        tails.setYSpeed((short) 0x001D);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x21AB);
+        Arrays.fill(yHistory, (short) 0x0559);
+        Arrays.fill(inputHistory, (short) (AbstractPlayableSprite.INPUT_RIGHT
+                | AbstractPlayableSprite.INPUT_DOWN));
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        setNormalPushingGraceFrames(controller, 11);
+
+        controller.update(0x29F3);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("follow_steering", diagnostics.followBranch(),
+                        "AIZ2 F10739 has high-speed rebound motion; ROM current Status_Push is clear "
+                                + "and no longer takes the local grace bypass."),
+                () -> assertFalse(diagnostics.skipFollowSteering()),
+                () -> assertTrue(controller.getInputRight()),
+                () -> assertTrue(controller.getInputDown()),
+                () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                        "The high-speed rebound path applies FollowRight's +1 x_pos nudge."));
+    }
+
+    @Test
+    void s3kLowRemainingLocalPushGraceExpiresToFollowSteeringNearAizSpikedLogs() throws Exception {
+        GameModule previous = GameModuleRegistry.getCurrent();
+        try {
+            installStandaloneGameModule(sonic3kWithSidekickContext(true));
+            TestableSprite sonic = new TestableSprite("sonic");
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setAir(false);
+            tails.setObjectControlled(false);
+            tails.setCentreX((short) 0x2117);
+            tails.setCentreY((short) 0x0543);
+            tails.setDirection(Direction.RIGHT);
+            tails.setGSpeed((short) 0x0006);
+            tails.setXSpeed((short) 0x0005);
+            tails.setYSpeed((short) 0x0001);
+
+            short[] xHistory = new short[64];
+            short[] yHistory = new short[64];
+            short[] inputHistory = new short[64];
+            byte[] statusHistory = new byte[64];
+            Arrays.fill(xHistory, (short) 0x21AA);
+            Arrays.fill(yHistory, (short) 0x0559);
+            Arrays.fill(inputHistory, (short) (AbstractPlayableSprite.INPUT_RIGHT
+                    | AbstractPlayableSprite.INPUT_DOWN));
+            Arrays.fill(statusHistory, (byte) AbstractPlayableSprite.STATUS_ON_OBJECT);
+            sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+            controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+            setNormalPushingGraceFrames(controller, 3);
+
+            controller.update(0x29FC);
+
+            SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+            Assertions.assertAll(
+                    () -> assertEquals("follow_steering", diagnostics.followBranch(),
+                            "AIZ2 F10748 is past the ROM-visible local push bridge; Ctrl_2 falls "
+                                    + "through normal FollowRight even though the engine grace counter "
+                                    + "will report two frames left after the CPU step."),
+                    () -> assertFalse(controller.usedObjectOrderGracePushBypassThisFrame()),
+                    () -> assertFalse(diagnostics.skipFollowSteering()),
+                    () -> assertTrue(controller.getInputRight()),
+                    () -> assertTrue(controller.getInputDown()),
+                    () -> assertEquals(1, diagnostics.appliedFollowNudge()));
+        } finally {
+            installStandaloneGameModule(previous);
+        }
+    }
+
+    @Test
+    void s3kLocalPushGracePreservesFollowInputWithoutNudgingIntoAizIntroSpringWall() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x2835);
+        tails.setCentreY((short) 0x0320);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x000C);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x28DF);
+        Arrays.fill(yHistory, (short) 0x02E2);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+        Arrays.fill(statusHistory, (byte) (AbstractPlayableSprite.STATUS_IN_AIR
+                | AbstractPlayableSprite.STATUS_ROLLING));
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        tails.setPushing(true);
+        controller.update(0x0E86);
+        tails.setPushing(false);
+        controller.update(0x0E87);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("follow_steering", diagnostics.followBranch(),
+                        "AIZ F4008 has no provider-owned object-order bridge, so Ctrl_2 still falls "
+                                + "through the normal FollowRight path instead of a push-bypass branch."),
+                () -> assertTrue(controller.getInputRight(),
+                        "ROM preserves the delayed RIGHT control word and Tails_InputAcceleration_Path "
+                                + "adds Acceleration_P2=$000C (sonic3k.asm:26712-26741,27798-27805,"
+                                + "28103-28122)."),
+                () -> assertFalse(controller.getInputLeft()),
+                () -> assertEquals(0, diagnostics.appliedFollowNudge(),
+                        "The engine-side stale push grace represents a ROM-visible Status_Push timing "
+                                + "bridge here; applying the +1 follow nudge manufactures a side contact "
+                                + "with the AIZ intro spring wall before the ROM does."));
+    }
+
+    @Test
+    void s3kHighRemainingFastLeaderLocalGraceStillSuppressesIntroSpringWallNudge() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x2835);
+        tails.setCentreY((short) 0x0320);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x000C);
+        tails.setXSpeed((short) 0x000C);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x292E);
+        Arrays.fill(yHistory, (short) 0x0305);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        sonic.setGSpeed((short) 0x040E);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        setNormalPushingGraceFrames(controller, 15);
+
+        controller.update(0x0FBE);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("leader_fast", diagnostics.followBranch()),
+                () -> assertTrue(controller.getInputRight()),
+                () -> assertEquals(0, diagnostics.appliedFollowNudge(),
+                        "AIZ F4030 still has high remaining local push grace near the intro "
+                                + "spring wall. ROM keeps RIGHT acceleration but the spring-wall "
+                                + "side contact owns the positional response, so FollowRight must "
+                                + "not add a separate +1 x_pos nudge."));
+    }
+
+    @Test
+    void s3kFastLeaderTinyDxKeepsAccelerationWithoutFollowNudge() throws Exception {
+        GameModule previous = GameModuleRegistry.getCurrent();
+        try {
+            installStandaloneGameModule(new Sonic3kGameModule());
+            installEmptyObjectManager();
+            TestableSprite sonic = new TestableSprite("sonic");
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setAir(false);
+            tails.setObjectControlled(false);
+            tails.setCentreX((short) 0x02B5);
+            tails.setCentreY((short) 0x02FF);
+            tails.setDirection(Direction.RIGHT);
+            tails.setGSpeed((short) 0x0018);
+            LiveRideObject rideObject = new LiveRideObject(0x07);
+            rideObject.setSlotIndex(36);
+            GameServices.level().getObjectManager().addDynamicObject(rideObject);
+            tails.setLatchedSolidObject(0x07, rideObject);
+
+            short[] xHistory = new short[64];
+            short[] yHistory = new short[64];
+            short[] inputHistory = new short[64];
+            byte[] statusHistory = new byte[64];
+            Arrays.fill(xHistory, (short) 0x02B7);
+            Arrays.fill(yHistory, (short) 0x02BA);
+            Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+            sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+            sonic.setGSpeed((short) 0x0600);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+            controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+            controller.update(0x1524);
+
+            SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+            Assertions.assertAll(
+                    () -> assertEquals("leader_fast", diagnostics.followBranch()),
+                    () -> assertTrue(controller.getInputRight()),
+                    () -> assertEquals(0, diagnostics.appliedFollowNudge(),
+                            "AIZ2 F5708 takes the fast-leader path with dx=$0002 and a live "
+                                    + "interact slot. The delayed RIGHT control word still accelerates "
+                                    + "Tails, but applying the +1 nudge moves him into the spring-wall "
+                                    + "push one frame before ROM."));
+        } finally {
+            installStandaloneGameModule(previous);
+        }
+    }
+
+    @Test
+    void s3kFastLeaderLocalPushGraceMiddleDxKeepsAccelerationWithoutFollowNudge() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x02B5);
+        tails.setCentreY((short) 0x02FF);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x0018);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x02EB);
+        Arrays.fill(yHistory, (short) 0x02B2);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        sonic.setGSpeed((short) 0x0600);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        tails.setPushing(true);
+        controller.update(0x152E);
+        tails.setPushing(false);
+        controller.update(0x152F);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("leader_fast", diagnostics.followBranch()),
+                () -> assertTrue(controller.getInputRight()),
+                () -> assertEquals(0, diagnostics.appliedFollowNudge(),
+                        "AIZ2 F5719 remains inside the local push-grace vertical band with dx=$0036. "
+                                + "ROM keeps the delayed RIGHT control word for acceleration but does "
+                                + "not apply the +1 follow nudge before the spring-wall solid contact."));
+    }
+
+    @Test
+    void s3kLocalPushGracePreservesFollowInputWithoutNudgingIntoAiz2VineWall() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x07B5);
+        tails.setCentreY((short) 0x037D);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x0030);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x07D6);
+        Arrays.fill(yHistory, (short) 0x033B);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        sonic.setGSpeed((short) 0x0325);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        tails.setPushing(true);
+        controller.update(0x16F2);
+        tails.setPushing(false);
+        controller.update(0x16F3);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("follow_steering", diagnostics.followBranch()),
+                () -> assertTrue(controller.getInputRight()),
+                () -> assertEquals(0, diagnostics.appliedFollowNudge(),
+                        "AIZ2 F6171 keeps the delayed RIGHT control word for acceleration, but the "
+                                + "engine-side stale push bridge represents ROM Status_Push=$20 and "
+                                + "must not add the +1 follow nudge before solid resolution."));
+    }
+
+    @Test
+    void s3kLeaderOnObjectLocalPushGraceStillAppliesFollowNudge() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x0EC0);
+        tails.setCentreY((short) 0x047E);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x00C0);
+        sonic.setOnObject(true);
+        sonic.captureOnObjectAtFrameStart();
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x0EF1);
+        Arrays.fill(yHistory, (short) 0x02FA);
+        Arrays.fill(inputHistory, (short) (AbstractPlayableSprite.INPUT_RIGHT
+                | AbstractPlayableSprite.INPUT_JUMP
+                | AbstractPlayableSprite.INPUT_UP));
+        Arrays.fill(statusHistory, (byte) (AbstractPlayableSprite.STATUS_IN_AIR
+                | AbstractPlayableSprite.STATUS_PUSHING));
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        sonic.setGSpeed((short) 0x0600);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        tails.setPushing(true);
+        controller.update(0x1BFC);
+        tails.setPushing(false);
+        controller.update(0x1BFD);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("leader_on_object", diagnostics.followBranch()),
+                () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                        "AIZ2 F7164 has ROM current Status_Push clear on the leader-on-object branch, "
+                                + "so stale local push grace must not suppress the +1 follow nudge."));
+    }
+
+    @Test
+    void s3kFastLeaderPastSnapThresholdStillNudgesDuringLocalPushGrace() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x0EC2);
+        tails.setCentreY((short) 0x047E);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x00CC);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x0EF6);
+        Arrays.fill(yHistory, (short) 0x02FD);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+        Arrays.fill(statusHistory, (byte) (AbstractPlayableSprite.STATUS_IN_AIR
+                | AbstractPlayableSprite.STATUS_PUSHING));
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        sonic.setGSpeed((short) 0x0600);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        tails.setPushing(true);
+        controller.update(0x1BFD);
+        tails.setPushing(false);
+        controller.update(0x1BFE);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("leader_fast", diagnostics.followBranch()),
+                () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                        "AIZ2 F7165 has dx=$0034, beyond S3K's $30 follow snap threshold; ROM "
+                                + "applies the +1 follow nudge even with delayed Status_Push bits."));
+    }
+
+    @Test
+    void s3kFastLeaderTinyDxStillNudgesWithoutInteractionSlot() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x13FB);
+        tails.setCentreY((short) 0x0420);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x033C);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x13FE);
+        Arrays.fill(yHistory, (short) 0x041C);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        sonic.setGSpeed((short) 0x0600);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        controller.update(0x04C9);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("leader_fast", diagnostics.followBranch()),
+                () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                        "AIZ F1514 has no latched interact slot, so the fast-leader path still "
+                                + "applies ROM's +1 x_pos nudge (sonic3k.asm:26734-26741)."),
+                () -> assertEquals(0x13FC, tails.getCentreX() & 0xFFFF));
+    }
+
+    @Test
+    void s3kFastLeaderTinyDxStillNudgesAtLowLocalGraceWithoutLiveObjectNearAizBossRunout() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x332C);
+        tails.setCentreY((short) 0x01FD);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x0018);
+        tails.setXSpeed((short) 0x0018);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x3339);
+        Arrays.fill(yHistory, (short) 0x01FC);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+        Arrays.fill(statusHistory, (byte) (AbstractPlayableSprite.STATUS_IN_AIR
+                | AbstractPlayableSprite.STATUS_ROLLING));
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        sonic.setGSpeed((short) 0x0547);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        setNormalPushingGraceFrames(controller, 13);
+
+        controller.update(0x3725);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("leader_fast", diagnostics.followBranch()),
+                () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                        "AIZ2 F14423 has a tiny fast-leader dx and no live interaction slot; "
+                                + "ROM applies FollowRight's +1 x_pos nudge despite stale local "
+                                + "grace from the earlier contact."),
+                () -> assertEquals(0x332D, tails.getCentreX() & 0xFFFF));
+    }
+
+    @Test
+    void s3kFastLeaderPastSnapThresholdStillNudgesAtLowLocalGraceWithoutLiveObjectNearAizBossRunout()
+            throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x3336);
+        tails.setCentreY((short) 0x01FD);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x004E);
+        tails.setXSpeed((short) 0x004E);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x3367);
+        Arrays.fill(yHistory, (short) 0x01FA);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        sonic.setGSpeed((short) 0x0547);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        setNormalPushingGraceFrames(controller, 5);
+
+        controller.update(0x372E);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("leader_fast", diagnostics.followBranch()),
+                () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                        "AIZ2 F14432 has dx=$0031 just beyond S3K's snap threshold, shallow "
+                                + "vertical separation, and no live interaction slot; ROM current "
+                                + "Status_Push is clear and FollowRight applies the +1 x_pos nudge."),
+                () -> assertEquals(0x3337, tails.getCentreX() & 0xFFFF));
+    }
+
+    @Test
+    void s3kFastLeaderMidDxLocalGraceNudgesAfterAiz2Reload() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x3693);
+        tails.setCentreY((short) 0x01DF);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x0006);
+        tails.setXSpeed((short) 0x0006);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x3709);
+        Arrays.fill(yHistory, (short) 0x01D5);
+        Arrays.fill(inputHistory, (short) (AbstractPlayableSprite.INPUT_RIGHT
+                | AbstractPlayableSprite.INPUT_DOWN));
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        sonic.setGSpeed((short) 0x06A8);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        setNormalPushingGraceFrames(controller, 14);
+
+        controller.update(0x3DBE);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("leader_fast", diagnostics.followBranch()),
+                () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                        "AIZ2 F15814 has dx=$0076, shallow vertical separation, and no live "
+                                + "interaction slot; ROM current Status_Push is clear and "
+                                + "FollowRight still applies the +1 x_pos nudge."),
+                () -> assertEquals(0x3694, tails.getCentreX() & 0xFFFF));
+    }
+
+    @Test
+    void s3kFastLeaderBoundaryDxLocalGraceKeepsNudgingAfterAiz2Reload() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x3695);
+        tails.setCentreY((short) 0x01DF);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x0012);
+        tails.setXSpeed((short) 0x0012);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x3716);
+        Arrays.fill(yHistory, (short) 0x01CC);
+        Arrays.fill(inputHistory, (short) (AbstractPlayableSprite.INPUT_RIGHT
+                | AbstractPlayableSprite.INPUT_DOWN));
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        sonic.setGSpeed((short) 0x0674);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        setNormalPushingGraceFrames(controller, 12);
+
+        controller.update(0x3DC0);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("leader_fast", diagnostics.followBranch()),
+                () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                        "AIZ2 F15816 has dx=$0081 with ROM current Status_Push clear and no live "
+                                + "interaction slot. The stale engine-local grace should not suppress "
+                                + "FollowRight's +1 x_pos nudge."),
+                () -> assertEquals(0x3696, tails.getCentreX() & 0xFFFF));
+    }
+
+    @Test
+    void s3kFastLeaderLargeDxDelayedInputLocalGraceKeepsNudgingAfterAiz2Reload() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x3699);
+        tails.setCentreY((short) 0x01DE);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x0024);
+        tails.setXSpeed((short) 0x0024);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x3726);
+        Arrays.fill(yHistory, (short) 0x01B9);
+        Arrays.fill(inputHistory, (short) (AbstractPlayableSprite.INPUT_RIGHT
+                | AbstractPlayableSprite.INPUT_DOWN));
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        sonic.setGSpeed((short) 0x0674);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        setNormalPushingGraceFrames(controller, 9);
+
+        controller.update(0x3DC3);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("leader_fast", diagnostics.followBranch()),
+                () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                        "AIZ2 F15819 has dx=$008E, delayed RIGHT input, ROM current Status_Push "
+                                + "clear, and no live interaction slot. FollowRight still applies "
+                                + "the +1 x_pos nudge while local engine grace is stale."),
+                () -> assertEquals(0x369A, tails.getCentreX() & 0xFFFF));
+    }
+
+    @Test
+    void s3kFastLeaderWideDxModerateGapLocalGraceKeepsNudgingAfterAiz2Reload() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x369B);
+        tails.setCentreY((short) 0x01DE);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x0030);
+        tails.setXSpeed((short) 0x0030);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x372C);
+        Arrays.fill(yHistory, (short) 0x01AC);
+        Arrays.fill(inputHistory, (short) (AbstractPlayableSprite.INPUT_RIGHT
+                | AbstractPlayableSprite.INPUT_DOWN));
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        sonic.setGSpeed((short) 0x0674);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        setNormalPushingGraceFrames(controller, 7);
+
+        controller.update(0x3DC5);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("leader_fast", diagnostics.followBranch()),
+                () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                        "AIZ2 F15821 has dx=$0091, dy=$FFCE, delayed RIGHT input, and no live "
+                                + "ROM push bit. The stale local grace should still fall through "
+                                + "FollowRight's +1 x_pos nudge."),
+                () -> assertEquals(0x369C, tails.getCentreX() & 0xFFFF));
+    }
+
+    @Test
+    void s3kFastLeaderLateLocalGraceWideGapKeepsNudgingAfterAiz2Reload() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x369F);
+        tails.setCentreY((short) 0x01DE);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x0042);
+        tails.setXSpeed((short) 0x0042);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x3731);
+        Arrays.fill(yHistory, (short) 0x0197);
+        Arrays.fill(inputHistory, (short) (AbstractPlayableSprite.INPUT_RIGHT
+                | AbstractPlayableSprite.INPUT_DOWN));
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        sonic.setGSpeed((short) 0x0674);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        setNormalPushingGraceFrames(controller, 5);
+
+        controller.update(0x3DD0);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("leader_fast", diagnostics.followBranch()),
+                () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                        "AIZ2 F15824 has dx=$0093, dy=$FFB9, delayed RIGHT input, and only "
+                                + "late stale local push grace left (displayed as grace=4 after the "
+                                + "counter tick). With no live interaction slot, ROM current "
+                                + "Status_Push is clear and FollowRight still applies the +1 x_pos "
+                                + "nudge."),
+                () -> assertEquals(0x36A0, tails.getCentreX() & 0xFFFF));
+    }
+
+    @Test
+    void s3kSmallDxLocalGraceFollowLeftNudgesAfterAiz2Reload() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x37A6);
+        tails.setCentreY((short) 0x015E);
+        tails.setDirection(Direction.LEFT);
+        tails.setGSpeed((short) 0xFFEE);
+        tails.setXSpeed((short) 0xFFEE);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x3787);
+        Arrays.fill(yHistory, (short) 0x0159);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_LEFT);
+        Arrays.fill(statusHistory, (byte) AbstractPlayableSprite.STATUS_FACING_LEFT);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        sonic.setOnObject(true);
+        sonic.captureOnObjectAtFrameStart();
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        setNormalPushingGraceFrames(controller, 14);
+
+        controller.update(0x3C2D);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals(-1, diagnostics.appliedFollowNudge(),
+                        "AIZ2 F15405 has dx=$FFE1 inside S3K's snap threshold, delayed LEFT input, "
+                                + "and shallow vertical separation. ROM falls through FollowLeft and "
+                                + "applies the -1 x_pos nudge even while engine local push grace is live."),
+                () -> assertEquals(0x37A5, tails.getCentreX() & 0xFFFF));
+    }
+
+    @Test
+    void s3kSmallDxLocalGraceFollowLeftKeepsNudgingAfterAiz2ReloadInputClears() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x37A2);
+        tails.setCentreY((short) 0x015E);
+        tails.setDirection(Direction.LEFT);
+        tails.setGSpeed((short) 0xFFDC);
+        tails.setXSpeed((short) 0xFFDC);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x3786);
+        Arrays.fill(yHistory, (short) 0x015A);
+        Arrays.fill(statusHistory, (byte) AbstractPlayableSprite.STATUS_FACING_LEFT);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        sonic.setOnObject(true);
+        sonic.captureOnObjectAtFrameStart();
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        setNormalPushingGraceFrames(controller, 11);
+
+        controller.update(0x3C30);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals(-1, diagnostics.appliedFollowNudge(),
+                        "AIZ2 F15408 has no delayed LEFT input left, but Tails is still moving left "
+                                + "with dx=$FFE4 inside S3K's snap threshold. ROM still applies the "
+                                + "-1 x_pos FollowLeft nudge while local grace is live."),
+                () -> assertEquals(0x37A1, tails.getCentreX() & 0xFFFF));
+    }
+
+    @Test
+    void s3kFastLeaderTinyDxStillNudgesWhenAirborneRollingBelowTarget() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(true);
+        tails.setRolling(true);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x17E0);
+        tails.setCentreY((short) 0x03E1);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) -0x0038);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x17E1);
+        Arrays.fill(yHistory, (short) 0x02B4);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+        Arrays.fill(statusHistory, (byte) (AbstractPlayableSprite.STATUS_IN_AIR
+                | AbstractPlayableSprite.STATUS_ROLLING));
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        sonic.setGSpeed((short) 0x061A);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        controller.update(0x0909);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("leader_fast", diagnostics.followBranch()),
+                () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                        "AIZ F2313 is airborne+rolling with dx=$0001 and a large upward target gap; "
+                                + "ROM still applies the fast-leader +1 x_pos nudge."),
+                () -> assertEquals(0x17E1, tails.getCentreX() & 0xFFFF));
+    }
+
+    @Test
+    void s3kFastLeaderTinyDxStillNudgesWhenFollowerAlreadyFastBelowTarget() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setRolling(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x1863);
+        tails.setCentreY((short) 0x0460);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x0499);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x1873);
+        Arrays.fill(yHistory, (short) 0x02C3);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+        Arrays.fill(statusHistory, (byte) AbstractPlayableSprite.STATUS_IN_AIR);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        sonic.setGSpeed((short) 0x0602);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        controller.update(0x0923);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("leader_fast", diagnostics.followBranch()),
+                () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                        "AIZ F2339 is grounded/non-rolling with a fast follower; ROM still applies "
+                                + "the +1 x_pos nudge instead of treating it like the later low-speed "
+                                + "spring-wall contact shape."),
+                () -> assertEquals(0x1864, tails.getCentreX() & 0xFFFF));
+    }
+
+    @Test
+    void s3kFastLeaderLiveSlotStillNudgesWhenDxIsOutsideTinyContactRange() throws Exception {
+        GameModule previous = GameModuleRegistry.getCurrent();
+        try {
+            installStandaloneGameModule(new Sonic3kGameModule());
+            installEmptyObjectManager();
+            TestableSprite sonic = new TestableSprite("sonic");
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setAir(false);
+            tails.setObjectControlled(false);
+            tails.setCentreX((short) 0x2899);
+            tails.setCentreY((short) 0x02E4);
+            tails.setDirection(Direction.RIGHT);
+            tails.setGSpeed((short) 0x0240);
+            LiveRideObject rideObject = new LiveRideObject(0x07);
+            rideObject.setSlotIndex(39);
+            GameServices.level().getObjectManager().addDynamicObject(rideObject);
+            tails.setLatchedSolidObject(0x07, rideObject);
+
+            short[] xHistory = new short[64];
+            short[] yHistory = new short[64];
+            short[] inputHistory = new short[64];
+            byte[] statusHistory = new byte[64];
+            Arrays.fill(xHistory, (short) 0x28B2);
+            Arrays.fill(yHistory, (short) 0x02E6);
+            Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+            sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+            sonic.setGSpeed((short) 0x0600);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+            controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+            controller.update(0x10B5);
+
+            SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+            Assertions.assertAll(
+                    () -> assertEquals("leader_fast", diagnostics.followBranch()),
+                    () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                            "AIZ F4277 has dx=$0019 on the fast-leader path; even with an "
+                                    + "engine live-slot surrogate, ROM still applies the +1 x_pos "
+                                    + "nudge (sonic3k.asm:26734-26741)."));
+        } finally {
+            installStandaloneGameModule(previous);
+        }
     }
 
     @Test
@@ -1204,6 +2293,18 @@ class TestSidekickCpuFollowParity {
         GameModuleRegistry.setCurrent(module);
         SessionManager.openGameplaySession(module);
         TestEnvironment.activeGameplayMode();
+    }
+
+    private static void installEmptyObjectManager() throws Exception {
+        Field field = GameServices.level().getClass().getDeclaredField("objectManager");
+        field.setAccessible(true);
+        field.set(GameServices.level(), new ObjectManager(List.of(), null, 0, null, null));
+    }
+
+    private static void setNormalPushingGraceFrames(SidekickCpuController controller, int frames) throws Exception {
+        Field field = SidekickCpuController.class.getDeclaredField("normalPushingGraceFrames");
+        field.setAccessible(true);
+        field.setInt(controller, frames);
     }
 
     private static void setControllerState(SidekickCpuController controller,

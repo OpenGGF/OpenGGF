@@ -3524,6 +3524,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
 		boolean extended = featureSet != null && featureSet.extendedEdgeBalance();
+		boolean singleFacingBalanceSet = featureSet != null && featureSet.singleFacingBalanceAnimationSet();
 
 		// ROM Sonic_Move (s2.asm:36285) / Tails_Move (s2.asm:39359) read
 		// `width_pixels(a1)` from the object's SST for the balance computation,
@@ -3584,9 +3585,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				// S2/S3K: 4-state balance with precarious check
 				boolean precarious = d1 < -4;
 				boolean facingTowardEdge = !facingRight;
-				int balanceState = facingTowardEdge ? (precarious ? 2 : 1) : (precarious ? 4 : 3);
-				if (balanceState == 4) {
+				int balanceState;
+				if (singleFacingBalanceSet) {
 					sprite.setDirection(Direction.LEFT);
+					balanceState = precarious ? 2 : 1;
+				} else {
+					balanceState = facingTowardEdge ? (precarious ? 2 : 1) : (precarious ? 4 : 3);
+					if (balanceState == 4) {
+						sprite.setDirection(Direction.LEFT);
+					}
 				}
 				sprite.setBalanceState(balanceState);
 			} else {
@@ -3601,9 +3608,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				// S2/S3K: 4-state balance with precarious check
 				boolean precarious = d1 >= d2 + 6;
 				boolean facingTowardEdge = facingRight;
-				int balanceState = facingTowardEdge ? (precarious ? 2 : 1) : (precarious ? 4 : 3);
-				if (balanceState == 4) {
+				int balanceState;
+				if (singleFacingBalanceSet) {
 					sprite.setDirection(Direction.RIGHT);
+					balanceState = precarious ? 2 : 1;
+				} else {
+					balanceState = facingTowardEdge ? (precarious ? 2 : 1) : (precarious ? 4 : 3);
+					if (balanceState == 4) {
+						sprite.setDirection(Direction.RIGHT);
+					}
 				}
 				sprite.setBalanceState(balanceState);
 			} else {
@@ -3773,6 +3786,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// Determine if precarious (closer to falling)
 		boolean precarious = distanceFromPrecarious < 6;
+
+		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+		if (featureSet != null && featureSet.singleFacingBalanceAnimationSet()) {
+			sprite.setDirection(isLeftEdge ? Direction.LEFT : Direction.RIGHT);
+			sprite.setBalanceState(precarious ? 2 : 1);
+			return;
+		}
 
 		int balanceState;
 		if (facingTowardEdge) {

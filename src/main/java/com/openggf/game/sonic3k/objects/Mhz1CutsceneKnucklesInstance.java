@@ -16,6 +16,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -47,8 +48,6 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance {
     private static final int POST_CUTSCENE_RESTART_X = 0x0190;
     private static final int POST_CUTSCENE_RESTART_Y = 0x056C;
     private static final int CUTSCENE_PALETTE_LINE = 1;
-
-    private static volatile Mhz1CutsceneKnucklesInstance activeInstance;
 
     private final int x;
     private final int y;
@@ -107,7 +106,6 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance {
             return;
         }
         workspaceRoutine = ROUTINE_WAIT_PLAYER;
-        activeInstance = this;
         snapshotPaletteLine1();
         if (!playerTwoStopperSpawned && services().playerQuery().nativeP2OrNull() != null) {
             spawnFreeChild(() -> new Mhz1CutscenePlayerTwoStopper(this));
@@ -190,9 +188,6 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance {
         fadeBackToLevelMusicOnce();
         restorePaletteLine1();
         savePostCutsceneRestartPoint(camera);
-        if (activeInstance == this) {
-            activeInstance = null;
-        }
         setDestroyed(true);
     }
 
@@ -261,16 +256,14 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance {
         }
     }
 
-    static Mhz1CutsceneKnucklesInstance getActiveInstance() {
-        return activeInstance;
-    }
-
-    public static void clearActiveInstance() {
-        activeInstance = null;
-    }
-
-    static void clearActiveInstanceForTests() {
-        clearActiveInstance();
+    static Mhz1CutsceneKnucklesInstance activeInstance(ObjectManager objectManager) {
+        if (objectManager == null) {
+            return null;
+        }
+        return objectManager.activeObjectsOfType(Mhz1CutsceneKnucklesInstance.class).stream()
+                .filter(instance -> !instance.isDestroyed())
+                .findFirst()
+                .orElse(null);
     }
 
     void signalButtonCallback() {
@@ -285,7 +278,6 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance {
 
     void forceReadyForButtonForTest() {
         workspaceRoutine = ROUTINE_WAIT_BUTTON;
-        activeInstance = this;
     }
 
     private void fadeBackToLevelMusicOnce() {

@@ -14,6 +14,7 @@ import com.openggf.game.sonic2.Sonic2LevelEventManager;
 import com.openggf.game.sonic2.Sonic2LevelInitProfile;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kLevelInitProfile;
+import com.openggf.sprites.playable.Sonic;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -177,6 +178,24 @@ public class TestPostLoadAssemblyBehavior {
         assertTrue(ctx.hasCheckpoint(), "Checkpoint data should survive into respawn context");
         assertEquals(300, ctx.getCheckpointX());
         assertEquals(600, ctx.getCheckpointY());
+    }
+
+    @Test
+    public void checkpointRestoreUsesRomCentreCoordinates() {
+        Camera camera = GameServices.camera();
+        camera.setX((short) 0x0100);
+        camera.setY((short) 0x0020);
+
+        CheckpointState state = new CheckpointState();
+        state.saveCheckpoint(1, 0x1234, 0x0456, false);
+
+        Sonic player = new Sonic("sonic", (short) 0, (short) 0);
+        state.restoreToPlayer(player, camera);
+
+        assertEquals(0x1234, player.getCentreX() & 0xFFFF,
+                "Checkpoint x_pos must restore to the playable centre coordinate");
+        assertEquals(0x0456, player.getCentreY() & 0xFFFF,
+                "Checkpoint y_pos must restore to the playable centre coordinate");
     }
 
     // ========== S3K Title Card Behavior on Checkpoint Resume ==========

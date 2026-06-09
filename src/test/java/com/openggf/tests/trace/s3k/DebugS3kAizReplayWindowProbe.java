@@ -1512,7 +1512,8 @@ public class DebugS3kAizReplayWindowProbe {
     private static S3kCheckpointProbe captureProbe(int replayFrame, HeadlessTestFixture fixture) {
         boolean resultsActive = GameServices.level().getObjectManager().getActiveObjects().stream()
                 .anyMatch(S3kResultsScreenObjectInstance.class::isInstance);
-        boolean signpostActive = S3kSignpostInstance.getActiveSignpost() != null;
+        boolean signpostActive = S3kSignpostInstance.activeSignpost(
+                GameServices.level().getObjectManager()) != null;
         boolean eventsFg5 =
                 GameServices.module().getLevelEventProvider() instanceof Sonic3kLevelEventManager manager
                         && manager.isEventsFg5();

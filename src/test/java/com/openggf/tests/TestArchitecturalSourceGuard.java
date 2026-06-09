@@ -1014,6 +1014,21 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
+    void mgzTopPlatformPlayerGrabStateHasExplicitRewindCoverage() throws IOException {
+        String platform = Files.readString(SRC_MAIN.resolve(
+                "com/openggf/game/sonic3k/objects/MGZTopPlatformObjectInstance.java"));
+        String codecs = Files.readString(SRC_MAIN.resolve(
+                "com/openggf/game/rewind/schema/RewindCodecs.java"));
+
+        assertTrue(platform.contains("PlayerGrabState implements RewindStateful<PlayerGrabState.Snapshot>"),
+                "MGZ top platform per-player grab helper must expose explicit rewind state");
+        assertTrue(platform.contains("private record Snapshot("),
+                "MGZ top platform grab state must snapshot every mutable per-player scalar");
+        assertTrue(codecs.contains("RewindStateful.class.isAssignableFrom(type)"),
+                "rewind collection/map codecs must accept concrete RewindStateful values");
+    }
+
+    @Test
     void productionGameplayCodeDoesNotBypassLevelMutationSurfaceWithRawLevelMutators() throws IOException {
         List<String> violations = new ArrayList<>();
         for (Path file : productionFiles()) {

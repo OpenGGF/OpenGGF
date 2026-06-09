@@ -12,6 +12,7 @@ import com.openggf.camera.Camera;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -31,17 +32,6 @@ import java.util.logging.Logger;
  */
 public class S3kSignpostInstance extends AbstractObjectInstance {
     private static final Logger LOG = Logger.getLogger(S3kSignpostInstance.class.getName());
-
-    // ---- Static reference for hidden monitors ----
-    private static S3kSignpostInstance activeSignpost;
-
-    public static S3kSignpostInstance getActiveSignpost() {
-        return activeSignpost;
-    }
-
-    public static void clearActiveSignpost() {
-        activeSignpost = null;
-    }
 
     // ---- State machine ----
     private enum State { INIT, FALLING, LANDED, RESULTS, AFTER }
@@ -149,6 +139,16 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
         return true;
     }
 
+    public static S3kSignpostInstance activeSignpost(ObjectManager objectManager) {
+        if (objectManager == null) {
+            return null;
+        }
+        return objectManager.activeObjectsOfType(S3kSignpostInstance.class).stream()
+                .filter(signpost -> !signpost.isDestroyed())
+                .findFirst()
+                .orElse(null);
+    }
+
     /**
      * ROM: Offset_ObjectsDuringTransition shifts Obj_EndSign's position by the
      * same delta as the players/camera during a seamless act reload (e.g. CNZ
@@ -183,8 +183,6 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
     // =========================================================================
 
     private void updateInit(AbstractPlayableSprite player) {
-        activeSignpost = this;
-
         var camera = services().camera();
         worldY = camera.getY() - 0x20;
 
@@ -462,7 +460,6 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
         Camera camera = services().camera();
         if (camera != null && !isWithinRomAfterRange(worldX, worldY, camera.getX(), camera.getY())) {
             setDestroyed(true);
-            activeSignpost = null;
             LOG.fine("S3K Signpost destroyed (off-screen)");
         }
     }

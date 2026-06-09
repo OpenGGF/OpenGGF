@@ -88,19 +88,29 @@ jobs:
 
           surefire_dir = Path("target/surefire-reports")
           source_root = Path("src/test/java/com/openggf/tests/trace")
+          expected_policy_reports = set()
           expected_trace_reports = set()
-          allowed_missing_reports = {
-              "TEST-com.openggf.tests.trace.s3k.TestS3kAizTraceReplay.xml",
-          }
-          for source in sorted(source_root.rglob("Test*TraceReplay.java")):
+          for source in sorted(source_root.rglob("Test*.java")):
               rel = source.relative_to(Path("src/test/java")).with_suffix("")
               class_name = ".".join(rel.parts)
-              expected_trace_reports.add(f"TEST-{class_name}.xml")
+              report_name = f"TEST-{class_name}.xml"
+              expected_policy_reports.add(report_name)
+              if source.name.endswith("TraceReplay.java"):
+                  expected_trace_reports.add(report_name)
+
+          missing_policy = [
+              report_name for report_name in sorted(expected_policy_reports)
+              if not (surefire_dir / report_name).exists()
+          ]
+          if missing_policy:
+              print("Missing expected trace policy reports:", file=sys.stderr)
+              for report_name in missing_policy:
+                  print(f"{surefire_dir / report_name}", file=sys.stderr)
+              sys.exit(1)
 
           missing_expected = [
               report_name for report_name in sorted(expected_trace_reports)
-              if report_name not in allowed_missing_reports
-              and not (surefire_dir / report_name).exists()
+              if not (surefire_dir / report_name).exists()
           ]
           if missing_expected:
               print("Missing expected trace replay reports:", file=sys.stderr)
@@ -108,27 +118,31 @@ jobs:
                   print(f"{surefire_dir / report_name}", file=sys.stderr)
               sys.exit(1)
 
+          expected_policy_executed = 0
           expected_executed = 0
-          for report_name in sorted(expected_trace_reports):
+          for report_name in sorted(expected_policy_reports):
               report = surefire_dir / report_name
               if not report.exists():
                   continue
-              if not report.exists():
-                  print(f"Missing expected trace replay report: {report}", file=sys.stderr)
-                  sys.exit(1)
               root = ET.parse(report).getroot()
               tests = int(root.attrib.get("tests", "0"))
               skipped_count = int(root.attrib.get("skipped", "0"))
               executed_count = tests - skipped_count
               if executed_count <= 0:
-                  if report_name in allowed_missing_reports:
-                      continue
-                  print(
-                      f"Expected trace replay report did not execute: {report} "
-                      f"tests={tests} skipped={skipped_count}",
-                      file=sys.stderr)
+                  if report_name in expected_trace_reports:
+                      print(
+                          f"Expected trace replay report did not execute: {report} "
+                          f"tests={tests} skipped={skipped_count}",
+                          file=sys.stderr)
+                  else:
+                      print(
+                          f"Expected trace policy report did not execute: {report} "
+                          f"tests={tests} skipped={skipped_count}",
+                          file=sys.stderr)
                   sys.exit(1)
-              expected_executed += executed_count
+              expected_policy_executed += executed_count
+              if report_name in expected_trace_reports:
+                  expected_executed += executed_count
 
           reports = sorted(surefire_dir.glob("com.openggf.tests.trace*TraceReplay.txt"))
           total = 0
@@ -151,16 +165,12 @@ jobs:
               print(f"trace_reports={len(reports)} total={total} skipped={skipped}", file=sys.stderr)
               sys.exit(1)
 
-          allowed_skipped_reports = {
-              "com.openggf.tests.trace.s3k.TestS3kAizTraceReplay.txt",
-          }
           unexpected_skipped = [
               (report, skipped_count)
               for report, skipped_count in skipped_reports
-              if report.name not in allowed_skipped_reports
           ]
           if unexpected_skipped:
-              print("Trace replay skipped tests are release-blocking unless explicitly allowlisted as diagnostic-only debt",
+              print("Trace replay skipped tests are release-blocking",
                     file=sys.stderr)
               for report, skipped_count in unexpected_skipped:
                   print(f"{report}: skipped={skipped_count}", file=sys.stderr)
@@ -183,7 +193,9 @@ jobs:
           print(
               f"Trace replay coverage: executed={executed} total={total} skipped={skipped} "
               f"expected_trace_executed={expected_executed} "
-              f"expected_trace_reports={len(expected_trace_reports)}")
+              f"expected_trace_reports={len(expected_trace_reports)} "
+              f"expected_policy_executed={expected_policy_executed} "
+              f"expected_policy_reports={len(expected_policy_reports)}")
           PY
 
   build:

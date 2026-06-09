@@ -26,9 +26,10 @@ class TestSaveManager {
     }
 
     @Test
-    void malformedFile_replacesExistingCorruptArtifact() throws Exception {
+    void malformedFile_preservesExistingCorruptArtifacts() throws Exception {
         Path slot = root.resolve("s3k").resolve("slot1.json");
         Path corrupt = slot.resolveSibling("slot1.json.corrupt");
+        Path nextCorrupt = slot.resolveSibling("slot1.json.corrupt.1");
         Files.createDirectories(slot.getParent());
         Files.writeString(slot, "{ not-json");
         Files.writeString(corrupt, "old");
@@ -37,11 +38,12 @@ class TestSaveManager {
         SaveSlotSummary summary = manager.readSlotSummary("s3k", 1);
 
         assertEquals(SaveSlotState.EMPTY, summary.state());
-        assertEquals("{ not-json", Files.readString(corrupt));
+        assertEquals("old", Files.readString(corrupt));
+        assertEquals("{ not-json", Files.readString(nextCorrupt));
     }
 
     @Test
-    void hashMismatch_warnsButStillLoads() throws Exception {
+    void hashMismatch_keepsPayloadForRecoveryButIsNotLoadable() throws Exception {
         SaveManager manager = new SaveManager(root);
         manager.writeSlot("s3k", 1, Map.of("zone", 0, "act", 0));
         Path slot = root.resolve("s3k").resolve("slot1.json");
@@ -49,6 +51,8 @@ class TestSaveManager {
         SaveSlotSummary summary = manager.readSlotSummary("s3k", 1);
         assertEquals(SaveSlotState.HASH_WARNING, summary.state());
         assertFalse(summary.payload().isEmpty());
+        assertFalse(summary.isLoadable());
+        assertTrue(summary.hasRecoverablePayload());
     }
 
     @Test

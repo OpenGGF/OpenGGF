@@ -4,6 +4,63 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2/S3K pushing animation now clears on ROM-gated animation changes:**
+  playable animation resolution now models the S2/S3K fix that clears
+  `Status_Push` when the grounded animation changes, while preserving Sonic 1's
+  original stuck-push behavior.
+
+- **S3K signpost and MHZ1 cutscene rendezvous now use runtime-owned objects:**
+  hidden monitors and the MHZ1 cutscene button now locate their paired live
+  controllers through `ObjectManager` instead of static active-instance bridges,
+  keeping the state visible to rewind/session ownership.
+
+- **Release trace validation no longer bypasses S3K AIZ replay coverage:**
+  missing or skipped AIZ replay reports are now release-blocking like other
+  trace reports, and the regenerated full-run test no longer enables the
+  legacy diagnostic intro heuristic.
+
+- **Corrupt save quarantine now preserves previous recovery copies:** gameplay
+  saves and editor saves now choose unique `.corrupt` sibling names instead of
+  replacing an existing quarantine artifact on repeated failures.
+
+- **S3K AIZ sidekick follow grace now reaches the full-run trace end:** the
+  sidekick CPU follow path now lets stale engine-local push grace fall through
+  to the ROM follow nudge when the delayed leader input, fast-leader speed, no
+  live ride slot, and near-expired grace state show that ROM `Status_Push` is
+  clear. This closes the release-visible AIZ replay regression exposed after
+  removing the skipped/missing coverage allowlist.
+
+- **MGZ top-platform grab state now has explicit rewind coverage:** per-player
+  grab helpers implement a rewind-state contract and the rewind collection/map
+  codec accepts concrete stateful helper values, preserving grabbed-player
+  routine state across restore.
+
+- **Configuration saves now publish atomically:** `config.yaml` writes now go
+  through a sibling temporary file and atomic move before replacing the live
+  user configuration, reducing the risk of interrupted writes leaving a
+  truncated config.
+
+- **Hash-warning saves can no longer be launched from data select:** save
+  summaries now distinguish recoverable payloads from loadable slots, so hash
+  mismatches remain visible/deletable for recovery while data-select launch and
+  clear-restart actions are blocked unless the slot hash validates.
+
+- **Native-image LWJGL library discovery now trusts packaged libraries only:**
+  native builds resolve LWJGL binaries from the executable directory, with the
+  macOS launcher environment hint accepted only when it canonicalizes to that
+  same packaged location. Cwd and `target/native-libs` fallbacks are no longer
+  trusted in native-image startup.
+
+- **Shader loading now fails on missing packaged resources:** runtime shader
+  lookup no longer falls back to `src/main/resources`, so release and native
+  builds cannot mask a missing shader resource with mutable repository files.
+
+- **Checkpoint death respawn now preserves ROM centre coordinates:** shared
+  `CheckpointState` restores saved `x_pos` / `y_pos` through playable centre
+  setters instead of top-left sprite bounds, keeping S1 lamppost, S2
+  checkpoint, and S3K starpost respawns aligned with the original object
+  coordinates.
+
 - **S3K AIZ full-run trace release gate was regenerated and advanced:** the
   AIZ end-to-end fixture now records with Lua `6.25-s3k` and the focused replay
   is re-enabled as a release-blocking test that reaches the regenerated trace

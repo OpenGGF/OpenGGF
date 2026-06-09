@@ -54,6 +54,15 @@ class TestS3kTensionBridgeObject {
     }
 
     @Test
+    void objectExposesRomBalanceWidth() {
+        TensionBridgeObjectInstance instance = new TensionBridgeObjectInstance(
+                new ObjectSpawn(0x1200, 0x0600, Sonic3kObjectIds.TENSION_BRIDGE, 0x8C, 0x00, false, 0));
+
+        assertEquals(0x80, instance.getBalanceWidthPixels(),
+                "Obj_TensionBridge writes width_pixels=$80; object-edge balance must not use the 16px sprite default");
+    }
+
+    @Test
     void artRegistryProvidesZoneSpecificBridgeSheets() {
         LevelArtEntry hcz = findLevelEntry(Sonic3kPlcArtRegistry.getPlan(0x01, 0).levelArt(),
                 Sonic3kObjectArtKeys.TENSION_BRIDGE_HCZ);

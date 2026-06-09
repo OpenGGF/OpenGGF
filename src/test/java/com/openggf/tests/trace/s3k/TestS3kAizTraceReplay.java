@@ -18,9 +18,6 @@ import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceReplayBootstrap;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
@@ -54,29 +51,6 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
     private static final int AIZ2_RELOAD_SIDEKICK_CATCH_UP_GATE_FRAME = 6313;
     private static final int AIZ2_RELOAD_SIDEKICK_FALLTHROUGH_AUTO_JUMP_FRAME = 7082;
     private static final int AIZ2_MINIBOSS_RESULTS_CAMERA_LOCK_FRAME = 8839;
-
-    private String oldLegacyAizDiagnosticHeuristicFlag;
-
-    @BeforeEach
-    void allowLegacyAizDiagnosticHeuristic() {
-        oldLegacyAizDiagnosticHeuristicFlag = System.getProperty(
-                TraceReplayBootstrap.ALLOW_LEGACY_S3K_AIZ_DIAGNOSTIC_HEURISTIC_PROPERTY);
-        System.setProperty(
-                TraceReplayBootstrap.ALLOW_LEGACY_S3K_AIZ_DIAGNOSTIC_HEURISTIC_PROPERTY,
-                "true");
-    }
-
-    @AfterEach
-    void restoreLegacyAizDiagnosticHeuristicFlag() {
-        if (oldLegacyAizDiagnosticHeuristicFlag == null) {
-            System.clearProperty(
-                    TraceReplayBootstrap.ALLOW_LEGACY_S3K_AIZ_DIAGNOSTIC_HEURISTIC_PROPERTY);
-        } else {
-            System.setProperty(
-                    TraceReplayBootstrap.ALLOW_LEGACY_S3K_AIZ_DIAGNOSTIC_HEURISTIC_PROPERTY,
-                    oldLegacyAizDiagnosticHeuristicFlag);
-        }
-    }
 
     @Override
     protected SonicGame game() {

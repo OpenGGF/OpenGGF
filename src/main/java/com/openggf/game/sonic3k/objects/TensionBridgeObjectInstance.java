@@ -179,6 +179,12 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // Obj_TensionBridge init writes width_pixels(a0) = $80 (sonic3k.asm:75516).
+        return 0x80;
+    }
+
+    @Override
     public boolean isTopSolidOnly() {
         return true;
     }

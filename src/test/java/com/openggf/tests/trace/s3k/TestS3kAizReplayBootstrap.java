@@ -1629,7 +1629,8 @@ public class TestS3kAizReplayBootstrap {
         boolean resultsActive = GameServices.level().getObjectManager().getActiveObjects().stream()
                 .anyMatch(com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance.class::isInstance);
         boolean signpostActive =
-                com.openggf.game.sonic3k.objects.S3kSignpostInstance.getActiveSignpost() != null;
+                com.openggf.game.sonic3k.objects.S3kSignpostInstance.activeSignpost(
+                        GameServices.level().getObjectManager()) != null;
         boolean eventsFg5 =
                 GameServices.module().getLevelEventProvider() instanceof Sonic3kLevelEventManager manager
                         && manager.isEventsFg5();

@@ -57,7 +57,7 @@ public class S3kHiddenMonitorInstance extends AbstractObjectInstance {
             return;
         }
 
-        S3kSignpostInstance signpost = S3kSignpostInstance.getActiveSignpost();
+        S3kSignpostInstance signpost = S3kSignpostInstance.activeSignpost(services().objectManager());
         if (signpost == null) {
             return;
         }

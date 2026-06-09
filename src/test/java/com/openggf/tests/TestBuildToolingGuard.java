@@ -7,6 +7,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -121,9 +122,7 @@ class TestBuildToolingGuard {
             "src/main/java/com/openggf/game/sonic3k/objects/IczSnowboardArtLoader.java - private static PatternSpriteRenderer sonicRenderer;",
             "src/main/java/com/openggf/game/sonic3k/objects/IczSnowboardArtLoader.java - private static PatternSpriteRenderer snowboardRenderer;",
             "src/main/java/com/openggf/game/sonic3k/objects/IczSnowboardArtLoader.java - private static PatternSpriteRenderer dustRenderer;",
-            "src/main/java/com/openggf/game/sonic3k/objects/IczSnowboardArtLoader.java - private static boolean loaded;",
-            "src/main/java/com/openggf/game/sonic3k/objects/Mhz1CutsceneKnucklesInstance.java - private static volatile Mhz1CutsceneKnucklesInstance activeInstance;",
-            "src/main/java/com/openggf/game/sonic3k/objects/S3kSignpostInstance.java - private static S3kSignpostInstance activeSignpost;");
+            "src/main/java/com/openggf/game/sonic3k/objects/IczSnowboardArtLoader.java - private static boolean loaded;");
 
     @Test
     void surefireShouldPreloadMockitoAsJavaAgent() throws Exception {
@@ -362,29 +361,40 @@ class TestBuildToolingGuard {
         if (!workflow.contains("Trace replay skipped tests are release-blocking")) {
             violations.add(".github/workflows/release.yml does not fail on unexpected skipped trace replay tests");
         }
-        if (!workflow.contains("allowed_skipped_reports")) {
-            violations.add(".github/workflows/release.yml does not make skipped trace replay debt explicit");
-        }
-        if (!workflow.contains("com.openggf.tests.trace.s3k.TestS3kAizTraceReplay.txt")) {
-            violations.add(".github/workflows/release.yml does not explicitly scope the diagnostic-only AIZ trace skip");
+        if (workflow.contains("allowed_skipped_reports")
+                || workflow.contains("com.openggf.tests.trace.s3k.TestS3kAizTraceReplay.txt")) {
+            violations.add(".github/workflows/release.yml still allowlists skipped S3K AIZ trace replay debt");
         }
         if (!workflow.contains("expected_trace_reports")) {
             violations.add(".github/workflows/release.yml does not derive expected trace reports from source tests");
         }
+        if (!workflow.contains("expected_policy_reports")) {
+            violations.add(".github/workflows/release.yml does not derive expected reports for the full trace-replay profile surface");
+        }
         if (!workflow.contains("src/test/java/com/openggf/tests/trace")) {
             violations.add(".github/workflows/release.yml does not scan the source trace tree for expected reports");
+        }
+        if (!workflow.contains("source_root.rglob(\"Test*.java\")")) {
+            violations.add(".github/workflows/release.yml does not scan every Test*.java selected by the trace-replay profile");
         }
         if (!workflow.contains("expected_trace_reports.add")) {
             violations.add(".github/workflows/release.yml does not add expected reports from TraceReplay source classes");
         }
+        if (!workflow.contains("expected_policy_reports.add")) {
+            violations.add(".github/workflows/release.yml does not add expected reports from non-TraceReplay profile classes");
+        }
         if (!workflow.contains("missing_expected")) {
             violations.add(".github/workflows/release.yml does not fail when expected trace reports are missing");
         }
-        if (!workflow.contains("allowed_missing_reports")) {
-            violations.add(".github/workflows/release.yml does not make missing diagnostic trace report debt explicit");
+        if (workflow.contains("allowed_missing_reports")
+                || workflow.contains("TEST-com.openggf.tests.trace.s3k.TestS3kAizTraceReplay.xml")) {
+            violations.add(".github/workflows/release.yml still allowlists missing S3K AIZ trace replay reports");
         }
         if (!workflow.contains("Missing expected trace replay reports")) {
             violations.add(".github/workflows/release.yml does not report missing expected trace replay reports");
+        }
+        if (!workflow.contains("Missing expected trace policy reports")) {
+            violations.add(".github/workflows/release.yml does not report missing non-TraceReplay trace policy reports");
         }
         if (!workflow.contains("Expected trace replay report did not execute")) {
             violations.add(".github/workflows/release.yml does not fail when an expected trace report is skipped");
@@ -470,6 +480,30 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void developCiShouldProtectDirectPushes() throws Exception {
+        String ci = Files.readString(Path.of(".github/workflows/ci.yml"));
+        List<String> violations = new ArrayList<>();
+
+        if (!ci.contains("push:\n    branches:\n      - develop")) {
+            violations.add(".github/workflows/ci.yml must run on direct pushes to develop");
+        }
+        if (!ci.contains(".githooks/validate-policy.sh ci-push")) {
+            violations.add(".github/workflows/ci.yml must run validate-policy.sh ci-push for direct develop pushes");
+        }
+        if (!ci.contains("github.event_name == 'pull_request'")) {
+            violations.add(".github/workflows/ci.yml policy job must keep pull-request branch policy validation");
+        }
+        if (!ci.contains("github.event_name == 'push'")) {
+            violations.add(".github/workflows/ci.yml policy job must add push branch policy validation");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("develop CI must protect both pull requests and direct pushes:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
     void nativeReleasePackagesShouldIncludeEditableConfigYaml() throws Exception {
         String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
         List<String> violations = new ArrayList<>();
@@ -486,6 +520,30 @@ class TestBuildToolingGuard {
 
         if (!violations.isEmpty()) {
             fail("native release packages must include editable config.yaml next to the executable/app:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void nativeImageLwjglDiscoveryShouldOnlyTrustExecutableAdjacentLibraries() throws Exception {
+        String engine = Files.readString(Path.of("src/main/java/com/openggf/Engine.java"));
+        List<String> violations = new ArrayList<>();
+
+        if (engine.contains("hasNativeLibs(cwd)")) {
+            violations.add("Engine native-image LWJGL discovery trusts the process working directory");
+        }
+        if (engine.contains("target/native-libs")) {
+            violations.add("Engine native-image LWJGL discovery trusts target/native-libs relative to cwd");
+        }
+        if (!engine.contains("findNativeLibsDirForTesting(")) {
+            violations.add("Engine native-image LWJGL discovery is not covered by deterministic path-selection tests");
+        }
+        if (!engine.contains("isSameCanonicalFile(")) {
+            violations.add("Engine native-image LWJGL discovery does not canonicalize and compare trusted directories");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("native-image LWJGL discovery must only trust executable-adjacent packaged libraries:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
@@ -649,6 +707,25 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void generatedRomDerivedReferenceFixturesShouldNotBeTracked() throws Exception {
+        Set<String> trackedResources = trackedFiles("src/test/resources");
+        List<String> violations = new ArrayList<>();
+
+        for (String path : trackedResources) {
+            if (path.startsWith("src/test/resources/audio-reference/")
+                    || path.startsWith("src/test/resources/visual-reference/")
+                    || (path.startsWith("src/test/resources/EHZ") && (path.endsWith(".kos") || path.endsWith(".raw")))) {
+                violations.add(path);
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            fail("Generated ROM-derived reference fixtures must stay local and untracked:\n  "
+                    + String.join("\n  ", violations));
+        }
+    }
+
+    @Test
     void romGatedTestsShouldUseResolvedRomPathsAndAssumeReferenceFixtures() throws Exception {
         String file = "src/test/java/com/openggf/game/sonic3k/TestSonic3kLifeIconAddresses.java";
         String source = Files.readString(Path.of(file));
@@ -694,8 +771,7 @@ class TestBuildToolingGuard {
         List<String> violations = new ArrayList<>();
         Set<String> allowedDisabled = Set.of(
                 "src/test/java/com/openggf/game/rewind/TestRewindTorture.java",
-                "src/test/java/com/openggf/tests/trace/DebugS1Ghz1RingParity.java",
-                "src/test/java/com/openggf/tests/trace/s3k/TestS3kAizTraceReplay.java");
+                "src/test/java/com/openggf/tests/trace/DebugS1Ghz1RingParity.java");
         try (Stream<Path> paths = Files.walk(Path.of("src/test/java"))) {
             paths.filter(path -> path.toString().endsWith(".java"))
                     .forEach(path -> {
@@ -804,6 +880,9 @@ class TestBuildToolingGuard {
         }
         if (source.contains("@Disabled(")) {
             violations.add(file + " still disables the regenerated full replay");
+        }
+        if (source.contains("ALLOW_LEGACY_S3K_AIZ_DIAGNOSTIC_HEURISTIC_PROPERTY")) {
+            violations.add(file + " still enables the legacy diagnostic AIZ heuristic");
         }
         if (!source.contains("super.replayMatchesTrace();")) {
             violations.add(file + " override should delegate to the base release-blocking implementation");
@@ -946,6 +1025,24 @@ class TestBuildToolingGuard {
 
     private static String normalizeLineEndings(String text) {
         return text.replace("\r\n", "\n").replace('\r', '\n');
+    }
+
+    private static Set<String> trackedFiles(String pathspec) throws Exception {
+        Process process = new ProcessBuilder("git", "ls-files", pathspec)
+                .redirectErrorStream(true)
+                .start();
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        int exitCode = process.waitFor();
+        if (exitCode != 0) {
+            fail("git ls-files failed for " + pathspec + ":\n" + output);
+        }
+        Set<String> paths = new TreeSet<>();
+        for (String line : output.split("\\R")) {
+            if (!line.isBlank()) {
+                paths.add(line.replace('\\', '/'));
+            }
+        }
+        return paths;
     }
 
     private static String property(Document pom, String name) {

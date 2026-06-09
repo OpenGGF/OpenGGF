@@ -1,5 +1,47 @@
 # Trace Frontier Log
 
+## 2026-06-09 - RRF-031 S3K AIZ sidekick local push grace replay-green
+
+- Scope: release-readiness review RRF-031, follow-up to RRF-029's now-visible
+  S3K AIZ release gate failure.
+- Change: `SidekickCpuController` now treats stale engine-local push grace as a
+  ROM-clear push state when the sidekick is on the fast-leader follow path with
+  delayed follow input, no live ride object, a wide follow gap, and only the
+  final local-grace tick remaining. This lets `FollowRight` apply the ROM
+  +1 `x_pos` nudge after the AIZ2 reload instead of suppressing it from a stale
+  local contact surrogate. The predicate is state-driven (leader speed,
+  current/delayed input/status, live ride slot, `dx`/`dy`, grace counter), not a
+  zone/route/frame exception.
+- Frontier movement:
+  - Before this sidekick-follow pass, the release-visible regenerated AIZ replay
+    failed at frame 4008, then exposed successive sidekick local push/follow
+    frontiers through frames 10748, 14423, 14432, 15405, 15408, 15814, 15816,
+    15819, 15821, and 15824.
+  - After modelling the late local-grace fast-leader follow nudge, the focused
+    `TestS3kAizTraceReplay#replayMatchesTrace` reaches the regenerated trace
+    end with no divergences.
+- Verification:
+  - `mvn -Dmse=off "-Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity#s3kFreshLowSpeedLocalPushGracePreservesInputWithoutNudgingNearAizSpikedLogs+s3kFreshLocalPushGraceBelowTargetResumesFollowSteeringAfterReboundRefresh+s3kHighSpeedAgedLocalPushGraceResumesFollowSteeringNearAizSpikedLogs+s3kLowRemainingLocalPushGraceExpiresToFollowSteeringNearAizSpikedLogs+s3kAgedLocalPushGraceBelowTargetBypassesFollowSteeringNearAizSpikedLogs+s3kLocalPushGraceNearAizSpikedLogsStillFallsThroughToFollowRight+s3kHighRemainingFastLeaderLocalGraceStillSuppressesIntroSpringWallNudge+s3kFastLeaderLocalPushGraceMiddleDxKeepsAccelerationWithoutFollowNudge+s3kFastLeaderTinyDxKeepsAccelerationWithoutFollowNudge+s3kLocalPushGracePreservesFollowInputWithoutNudgingIntoAiz2VineWall+s3kLeaderOnObjectLocalPushGraceStillAppliesFollowNudge+s3kFastLeaderPastSnapThresholdStillNudgesDuringLocalPushGrace+s3kFastLeaderTinyDxStillNudgesWithoutInteractionSlot+s3kFastLeaderTinyDxStillNudgesAtLowLocalGraceWithoutLiveObjectNearAizBossRunout+s3kFastLeaderPastSnapThresholdStillNudgesAtLowLocalGraceWithoutLiveObjectNearAizBossRunout+s3kFastLeaderMidDxLocalGraceNudgesAfterAiz2Reload+s3kFastLeaderBoundaryDxLocalGraceKeepsNudgingAfterAiz2Reload+s3kFastLeaderLargeDxDelayedInputLocalGraceKeepsNudgingAfterAiz2Reload+s3kFastLeaderWideDxModerateGapLocalGraceKeepsNudgingAfterAiz2Reload+s3kFastLeaderLateLocalGraceWideGapKeepsNudgingAfterAiz2Reload+s3kSmallDxLocalGraceFollowLeftNudgesAfterAiz2Reload+s3kSmallDxLocalGraceFollowLeftKeepsNudgingAfterAiz2ReloadInputClears+s3kFastLeaderTinyDxStillNudgesWhenAirborneRollingBelowTarget+s3kFastLeaderTinyDxStillNudgesWhenFollowerAlreadyFastBelowTarget+s3kFastLeaderLiveSlotStillNudgesWhenDxIsOutsideTinyContactRange+s3kLocalPushGracePreservesFollowInputWithoutNudgingIntoAizIntroSpringWall" test -DfailIfNoTests=false`
+    -> PASS, 26 tests, 0 failures.
+  - `mvn -Dmse=off "-Ds3k.rom.path=s3k.gen" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+    -> PASS, `All frames match trace. No divergences.`
+
+## 2026-06-09 - RRF-029 S3K AIZ release gate no longer allowlists skipped/missing coverage
+
+- Scope: release-readiness review RRF-029.
+- Change: removed the release workflow allowlists for missing/skipped
+  `TestS3kAizTraceReplay` reports and removed the regenerated full-run test's
+  explicit opt-in to
+  `openggf.trace.allowLegacyS3kAizDiagnosticHeuristic`.
+- Verification:
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.TestBuildToolingGuard#releaseWorkflowShouldAssertTraceReplayCoverageWasNotSkipped+regeneratedS3kAizFullRunReplayIsReleaseBlocking+releaseTestsShouldNotHideKnownFailingScenariosBehindDisabledAnnotations" test -DfailIfNoTests=false`
+    -> PASS.
+  - `mvn -Dmse=off "-Ds3k.rom.path=s3k.gen" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+    -> FAIL, now release-visible: first error frame 4008,
+    `tails_g_speed expected=0x0018 actual=0x0000`, 1266 errors, 0 warnings.
+    ROM MD5 matched trace metadata (`C5B1C655C19F462ADE0AC4E17A844D10`).
+    This is no longer hidden behind missing/skipped report debt.
+
 ## 2026-06-08 - S3K AIZ full-run regenerated and replay-green through HCZ handoff
 
 - Scope: RRF-003 S3K AIZ `aiz1_to_hcz_fullrun` release-readiness review.

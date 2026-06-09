@@ -127,9 +127,9 @@ public class CheckpointState implements RespawnState {
             return;
         }
 
-        // Restore player position to checkpoint location
-        player.setX((short) savedX);
-        player.setY((short) savedY);
+        // ROM checkpoint x_pos/y_pos are playable centre coordinates.
+        player.setCentreX((short) savedX);
+        player.setCentreY((short) savedY);
 
         // Clear player state for fresh start
         player.setXSpeed((short) 0);

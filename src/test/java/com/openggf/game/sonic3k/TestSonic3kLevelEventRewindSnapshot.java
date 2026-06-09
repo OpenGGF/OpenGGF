@@ -13,8 +13,6 @@ import com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesCnz2AInstance;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesCnz2BInstance;
 import com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance;
-import com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance;
-import com.openggf.game.sonic3k.objects.S3kSignpostInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.Sonic;
 import org.junit.jupiter.api.AfterEach;
@@ -315,10 +313,6 @@ class TestSonic3kLevelEventRewindSnapshot {
                 new CutsceneKnucklesCnz2AInstance(new ObjectSpawn(0, 0, 0, 0, 0, false, 0)));
         setStatic(CutsceneKnucklesCnz2BInstance.class, "activeInstance",
                 new CutsceneKnucklesCnz2BInstance(new ObjectSpawn(0, 0, 0, 0, 0, false, 0)));
-        setStatic(Mhz1CutsceneKnucklesInstance.class, "activeInstance",
-                new Mhz1CutsceneKnucklesInstance(new ObjectSpawn(0, 0, 0, 0, 0, false, 0)));
-        setStatic(S3kSignpostInstance.class, "activeSignpost",
-                new S3kSignpostInstance(0, 0));
         HCZWaterRushObjectInstance.HCZBreakableBarState.setState(3);
         HCZWaterRushObjectInstance.HCZWaterRushPaletteCycleGate.setActive(true);
         setStatic(HCZWaterSkimHandler.class, "skimActiveP1", true);
@@ -328,8 +322,6 @@ class TestSonic3kLevelEventRewindSnapshot {
 
         assertNull(getStatic(CutsceneKnucklesCnz2AInstance.class, "activeInstance"));
         assertNull(getStatic(CutsceneKnucklesCnz2BInstance.class, "activeInstance"));
-        assertNull(getStatic(Mhz1CutsceneKnucklesInstance.class, "activeInstance"));
-        assertNull(getStatic(S3kSignpostInstance.class, "activeSignpost"));
         assertEquals(0, HCZWaterRushObjectInstance.HCZBreakableBarState.getState());
         assertFalse(HCZWaterRushObjectInstance.HCZWaterRushPaletteCycleGate.isActive());
         assertFalse(HCZWaterSkimHandler.isSkimActiveP1());

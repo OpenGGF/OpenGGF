@@ -116,6 +116,25 @@ class TestEditorSaveManager {
     }
 
     @Test
+    void quarantinePreservesExistingEditorRecoveryCopies() throws Exception {
+        MutableLevel edited = createMutableLevel();
+        edited.setBlockInMap(0, 1, 1, 2);
+        EditorSaveManager manager = new EditorSaveManager(tempDir);
+        Path file = manager.save(GameId.S2, 1, 0, edited).file();
+        Path corrupt = file.resolveSibling(file.getFileName() + ".corrupt");
+        Path nextCorrupt = file.resolveSibling(file.getFileName() + ".corrupt.1");
+        Files.writeString(corrupt, "old");
+        Files.writeString(file, "{ not-json");
+
+        EditorSaveManager.ApplyResult result = manager.tryApplyEdits(GameId.S2, 1, 0, createMutableLevel());
+
+        assertEquals(EditorSaveManager.ApplyResult.QUARANTINED, result);
+        assertFalse(Files.exists(file));
+        assertEquals("old", Files.readString(corrupt));
+        assertEquals("{ not-json", Files.readString(nextCorrupt));
+    }
+
+    @Test
     void outOfRangePersistedMapBlockIsQuarantined() throws Exception {
         EditorSaveManager manager = new EditorSaveManager(tempDir);
         EditorSavePayload payload = new EditorSavePayload(

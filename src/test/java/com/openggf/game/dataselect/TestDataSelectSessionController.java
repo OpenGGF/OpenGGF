@@ -86,6 +86,30 @@ class TestDataSelectSessionController {
     }
 
     @Test
+    void hashWarningSlot_cannotLaunchOrClearRestart() {
+        StubHostProfile hostProfile = new StubHostProfile();
+        DataSelectSessionController controller = new DataSelectSessionController(hostProfile);
+
+        controller.loadAvailableTeams(null);
+        controller.loadSlotSummaries(List.of(
+                new SaveSlotSummary(1, SaveSlotState.HASH_WARNING, Map.of(
+                        "zone", 4,
+                        "act", 0,
+                        "clear", true,
+                        "mainCharacter", "sonic",
+                        "sidekicks", List.of("tails")
+                ))
+        ));
+        controller.menuModel().setSelectedRow(1);
+
+        assertEquals(List.of(), controller.currentClearRestartDestinations());
+
+        DataSelectAction action = controller.confirmSelection();
+
+        assertEquals(DataSelectActionType.NONE, action.type());
+    }
+
+    @Test
     void presentationProvider_injectsControllerIntoDelegate_andConsumePendingActionDelegatesToController() {
         StubHostProfile hostProfile = new StubHostProfile();
         DataSelectSessionController controller = new DataSelectSessionController(hostProfile);

@@ -82,7 +82,8 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         spawnDoorOnce();
-        Mhz1CutsceneKnucklesInstance knuckles = Mhz1CutsceneKnucklesInstance.getActiveInstance();
+        Mhz1CutsceneKnucklesInstance knuckles =
+                Mhz1CutsceneKnucklesInstance.activeInstance(services().objectManager());
         if (usesNormalSwitchPath(knuckles)) {
             updateNormalSwitchPath();
             return;

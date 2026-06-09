@@ -47,9 +47,7 @@ import com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance;
 import com.openggf.game.sonic3k.objects.IczSnowboardArtLoader;
 import com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance;
 import com.openggf.game.sonic3k.objects.Lbz1GroundLaunchIntroInstance;
-import com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance;
 import com.openggf.game.sonic3k.objects.MhzPollenSpawnerInstance;
-import com.openggf.game.sonic3k.objects.S3kSignpostInstance;
 import com.openggf.camera.Camera;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -1180,8 +1178,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         CutsceneKnucklesCnz2AInstance.clearActiveInstance();
         CutsceneKnucklesCnz2BInstance.clearActiveInstance();
         CutsceneKnucklesHcz2Instance.clearActiveInstance();
-        Mhz1CutsceneKnucklesInstance.clearActiveInstance();
-        S3kSignpostInstance.clearActiveSignpost();
         HCZWaterTunnelHandler.reset();
         HCZWaterSkimHandler.reset();
         HCZWaterRushObjectInstance.HCZBreakableBarState.reset();

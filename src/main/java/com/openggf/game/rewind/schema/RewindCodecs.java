@@ -1,6 +1,8 @@
 package com.openggf.game.rewind.schema;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.GenericFieldCapturer;
+import com.openggf.game.rewind.RewindStateful;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.ObjectRefKind;
 import com.openggf.game.rewind.identity.PlayerRefId;
@@ -292,6 +294,7 @@ public final class RewindCodecs {
                 || type.isEnum()
                 || type.isArray() && supportedArrayComponent(type.getComponentType())
                 || type == Palette.Color.class
+                || RewindStateful.class.isAssignableFrom(type)
                 || isSupportedConstructiblePlainStateHolder(type);
     }
 
@@ -1180,6 +1183,8 @@ public final class RewindCodecs {
             writeArrayBody(type.getComponentType(), value, scalarData, opaqueValues, context);
         } else if (type == Palette.Color.class) {
             writePaletteColor((Palette.Color) value, scalarData);
+        } else if (RewindStateful.class.isAssignableFrom(type)) {
+            writeStatefulCollectionValue((RewindStateful<?>) value, opaqueValues);
         } else if (isSupportedConstructiblePlainStateHolder(type)) {
             capturePlainState(plainStateFields(type), value, scalarData, opaqueValues, context);
         } else {
@@ -1214,6 +1219,9 @@ public final class RewindCodecs {
         }
         if (type == Palette.Color.class) {
             return readPaletteColor(null, scalarData);
+        }
+        if (RewindStateful.class.isAssignableFrom(type)) {
+            return readStatefulCollectionValue(type, opaqueValues, opaqueIndex);
         }
         if (isSupportedConstructiblePlainStateHolder(type)) {
             Object state = newPlainStateHolder(type);
@@ -1347,6 +1355,45 @@ public final class RewindCodecs {
             return constructor.newInstance();
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException("Cannot construct rewind state holder " + type.getName(), e);
+        }
+    }
+
+    private static void writeStatefulCollectionValue(RewindStateful<?> value, List<Object> opaqueValues) {
+        Object state = value.captureRewindStateValue();
+        opaqueValues.add(new StatefulCollectionValueSnapshot(
+                state == null ? null : state.getClass(),
+                GenericFieldCapturer.deepCopySnapshotValue(state)));
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static Object readStatefulCollectionValue(
+            Class<?> type,
+            Object[] opaqueValues,
+            RewindCodec.OpaqueIndex opaqueIndex) {
+
+        StatefulCollectionValueSnapshot snapshot =
+                (StatefulCollectionValueSnapshot) opaqueIndex.next(opaqueValues);
+        Object holder = newStatefulCollectionValue(type);
+        Object state = snapshot.state() == null
+                ? null
+                : GenericFieldCapturer.deepCopySnapshotValue(snapshot.state());
+        ((RewindStateful) holder).restoreRewindStateValue(state);
+        return holder;
+    }
+
+    private static Object newStatefulCollectionValue(Class<?> type) {
+        try {
+            Constructor<?> constructor = type.getDeclaredConstructor();
+            constructor.setAccessible(true);
+            return constructor.newInstance();
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Cannot construct rewind stateful value " + type.getName(), e);
+        }
+    }
+
+    private record StatefulCollectionValueSnapshot(Class<?> stateType, Object state) {
+        private StatefulCollectionValueSnapshot {
+            state = GenericFieldCapturer.deepCopySnapshotValue(state);
         }
     }
 
