@@ -155,6 +155,17 @@ class TestTraceReplayInvariantGuard {
     }
 
     @Test
+    void s3kTraceReplayValidatesBk2InputAlignment() throws IOException {
+        String text = Files.readString(Path.of(
+                "src/test/java/com/openggf/tests/trace/AbstractTraceReplayTest.java"));
+        String method = methodBody(text, "private void replayS3kTrace(");
+
+        assertTrue(method.contains("binder.validateInput(driveFrame, bk2Input)"),
+                "S3K trace replay must validate BK2 input against each trace row "
+                        + "before comparing engine state.");
+    }
+
+    @Test
     void traceParserDataAndCatalogStayIndependentOfEngineRuntime()
             throws IOException {
         List<String> violations = new ArrayList<>();
@@ -417,6 +428,27 @@ class TestTraceReplayInvariantGuard {
             sources.add(source);
         }
         return sources;
+    }
+
+    private static String methodBody(String text, String signature) {
+        int start = text.indexOf(signature);
+        assertTrue(start >= 0, "Missing method signature: " + signature);
+        int brace = text.indexOf('{', start);
+        assertTrue(brace >= 0, "Missing method body: " + signature);
+        int depth = 0;
+        for (int i = brace; i < text.length(); i++) {
+            char ch = text.charAt(i);
+            if (ch == '{') {
+                depth++;
+            } else if (ch == '}') {
+                depth--;
+                if (depth == 0) {
+                    return text.substring(brace + 1, i);
+                }
+            }
+        }
+        fail("Unclosed method body: " + signature);
+        return "";
     }
 
     private static List<Path> javaSources(Path root) throws IOException {
