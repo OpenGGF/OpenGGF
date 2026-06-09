@@ -4,6 +4,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Editor save tests no longer touch production save paths:** editor resume
+  saving now uses an engine-owned save manager dependency so integration tests
+  can route writes to temporary directories.
+
 - **Cross-game hybrid physics now preserves base boundary flags:** hybrid
   feature construction keeps the base game's sidekick, landing, and level
   boundary flags aligned while donating only the intended cross-game abilities.

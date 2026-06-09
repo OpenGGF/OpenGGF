@@ -103,6 +103,7 @@ public class Engine {
 	private final EngineRenderDispatcher.ClearActions clearActions = new EngineClearActions();
 	private final EngineRenderDispatcher.DrawActions drawActions = new EngineDrawActions();
 	private final LevelEditorController levelEditorController = new LevelEditorController();
+	private EditorSaveManager editorSaveManager = new EditorSaveManager(Path.of("saves"));
 	private final EditorInputHandler editorInputHandler;
 	private final EditorOverlayRenderer editorOverlayRenderer;
 	// Match the rest of the debug overlay — no drop shadow.
@@ -646,8 +647,7 @@ public class Engine {
 		}
 		GameModule module = worldSession.getGameModule();
 		try {
-			new EditorSaveManager(Path.of("saves"))
-					.save(module.getGameId(), worldSession.getCurrentZone(), worldSession.getCurrentAct(), mutableLevel);
+			editorSaveManager.save(module.getGameId(), worldSession.getCurrentZone(), worldSession.getCurrentAct(), mutableLevel);
 			return true;
 		} catch (IOException e) {
 			LOGGER.warning("Failed to save editor edits: " + e.getMessage());

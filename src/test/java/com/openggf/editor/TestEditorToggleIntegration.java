@@ -37,6 +37,7 @@ import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -248,10 +249,13 @@ class TestEditorToggleIntegration {
     }
 
     @Test
-    void resumePlaytestFromEditor_savesEditorControllerMutableLevelAfterRuntimeTeardown() throws Exception {
+    void resumePlaytestFromEditor_savesEditorControllerMutableLevelAfterRuntimeTeardown(
+            @TempDir Path tempSaves) throws Exception {
         assumeS2RomAvailableForResumeReload();
         enableEditor();
         Engine engine = new Engine();
+        EditorSaveManager saveManager = new EditorSaveManager(tempSaves);
+        setPrivateField(engine, "editorSaveManager", saveManager);
         GameplayModeContext gameplayMode = createGameplayMode(engine);
         MutableLevel mutable = MutableLevel.snapshot(new SyntheticLevel());
         gameplayMode.getLevelManager().setLevel(mutable);
@@ -259,27 +263,21 @@ class TestEditorToggleIntegration {
         int act = 1;
         gameplayMode.getWorldSession().setCurrentZone(zone);
         gameplayMode.getWorldSession().setCurrentAct(act);
-        EditorSaveManager saveManager = new EditorSaveManager(Path.of("saves"));
         Path saveFile = saveManager.editPath(gameplayMode.getWorldSession().getGameModule().getGameId(), zone, act);
-        Files.deleteIfExists(saveFile);
 
-        try {
-            engine.enterEditorFromCurrentPlayer(
-                    new EditorPlaytestStash(50, 50, 0, 0, true, 0, 1),
-                    100, 200);
-            engine.getLevelEditorController().placeBlock(0, 1, 1, 1);
+        engine.enterEditorFromCurrentPlayer(
+                new EditorPlaytestStash(50, 50, 0, 0, true, 0, 1),
+                100, 200);
+        engine.getLevelEditorController().placeBlock(0, 1, 1, 1);
 
-            engine.resumePlaytestFromEditor();
+        engine.resumePlaytestFromEditor();
 
-            assertTrue(Files.exists(saveFile),
-                    "editor resume should save the MutableLevel attached to LevelEditorController");
-            MutableLevel fresh = MutableLevel.snapshot(new SyntheticLevel());
-            assertEquals(EditorSaveManager.ApplyResult.APPLIED,
-                    saveManager.tryApplyEdits(gameplayMode.getWorldSession().getGameModule().getGameId(), zone, act, fresh));
-            assertEquals(1, Byte.toUnsignedInt(fresh.getMap().getValue(0, 1, 1)));
-        } finally {
-            Files.deleteIfExists(saveFile);
-        }
+        assertTrue(Files.exists(saveFile),
+                "editor resume should save the MutableLevel attached to LevelEditorController");
+        MutableLevel fresh = MutableLevel.snapshot(new SyntheticLevel());
+        assertEquals(EditorSaveManager.ApplyResult.APPLIED,
+                saveManager.tryApplyEdits(gameplayMode.getWorldSession().getGameModule().getGameId(), zone, act, fresh));
+        assertEquals(1, Byte.toUnsignedInt(fresh.getMap().getValue(0, 1, 1)));
     }
 
     @Test
