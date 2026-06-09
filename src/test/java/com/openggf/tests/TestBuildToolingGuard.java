@@ -470,6 +470,30 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void developCiShouldProtectDirectPushes() throws Exception {
+        String ci = Files.readString(Path.of(".github/workflows/ci.yml"));
+        List<String> violations = new ArrayList<>();
+
+        if (!ci.contains("push:\n    branches:\n      - develop")) {
+            violations.add(".github/workflows/ci.yml must run on direct pushes to develop");
+        }
+        if (!ci.contains(".githooks/validate-policy.sh ci-push")) {
+            violations.add(".github/workflows/ci.yml must run validate-policy.sh ci-push for direct develop pushes");
+        }
+        if (!ci.contains("github.event_name == 'pull_request'")) {
+            violations.add(".github/workflows/ci.yml policy job must keep pull-request branch policy validation");
+        }
+        if (!ci.contains("github.event_name == 'push'")) {
+            violations.add(".github/workflows/ci.yml policy job must add push branch policy validation");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("develop CI must protect both pull requests and direct pushes:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
     void nativeReleasePackagesShouldIncludeEditableConfigYaml() throws Exception {
         String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
         List<String> violations = new ArrayList<>();
