@@ -170,7 +170,7 @@ Audio: headless capture installs `HeadlessSmpsAudioBackend`, a true no-device SM
 
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
-| `DEBUG_VIEW_ENABLED` | `debug.flags.debugView` | bool | `true` | Eagerly initialise the debug overlay subsystem. Required for any runtime debug keys to function. Does not show anything on-screen until debug mode is activated. |
+| `DEBUG_VIEW_ENABLED` | `debug.flags.debugView` | bool | `false` | Eagerly initialise the debug overlay subsystem. Required for any runtime debug keys to function. Does not show anything on-screen until debug mode is activated. |
 | `EDITOR_ENABLED` | `debug.flags.editor` | bool | `false` | Allow the experimental in-engine editor overlay to be entered from gameplay with `Shift+Tab`. |
 | `DEBUG_COLLISION_VIEW_ENABLED` | `debug.flags.collisionView` | bool | `false` | Draw collision sensor rays and solid object outlines over the scene at all times. |
 | `LIVE_REWIND_ENABLED` | `rewind.liveEnabled` | bool | `false` | Enable held-key rewind during ordinary live level play. Uses gameplay rewind snapshots, records live input while enabled, and presents reverse audio/fade state while held. |
@@ -382,7 +382,7 @@ discord:
 # ════════════════════════════════════════════
 debug:
   flags:
-    debugView: true   # Enable the debug overlay subsystem; visible HUD starts hidden until toggled
+    debugView: false   # Enable the debug overlay subsystem; visible HUD starts hidden until toggled
     editor: false   # Allow entering the level editor from gameplay
     collisionView: false   # Draw the collision overlay
   keys:

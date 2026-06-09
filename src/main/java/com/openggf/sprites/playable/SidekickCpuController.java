@@ -57,7 +57,6 @@ public class SidekickCpuController {
     private static final int FAST_LEADER_NO_LIVE_OBJECT_LATE_GRACE_INPUT_NUDGE_MAX_UPWARD_GAP = 0x50;
     private static final int FAST_LEADER_NO_LIVE_OBJECT_NUDGE_MAX_DX = 0xA0;
     private static final int PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y = 0x80;
-    private static final int ROM_VISIBLE_PUSH_BYPASS_MIN_X_SPEED = 0xE0;
     private static final int LEVEL_START_X_OFFSET = -0x20;
     private static final int LEVEL_START_Y_OFFSET = 4;
     /**
@@ -1575,11 +1574,11 @@ public class SidekickCpuController {
                 (pushBypassStatus
                         & (AbstractPlayableSprite.STATUS_ON_OBJECT
                         | AbstractPlayableSprite.STATUS_PUSHING)) != 0;
-        boolean romVisibleCurrentPushing =
+        boolean currentStatusPush =
                 (diagnostics.preStatus() & AbstractPlayableSprite.STATUS_PUSHING) != 0;
-        boolean currentPushBypass = romVisibleCurrentPushing
+        boolean currentPushBypass = currentStatusPush
                 && (recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
-                && isRomVisibleCurrentPushBypassContext(delayedObjectOrPushContext, dy);
+                && isCurrentPushBypassContext(delayedObjectOrPushContext, dy);
         boolean liveAndDelayedPushAirborneHandoff = currentPushing
                 && sidekick.getAir()
                 && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) != 0;
@@ -2095,17 +2094,15 @@ public class SidekickCpuController {
         }
     }
 
-    private boolean isRomVisibleCurrentPushBypassContext(boolean delayedObjectOrPushContext, int dy) {
+    private boolean isCurrentPushBypassContext(boolean delayedObjectOrPushContext, int dy) {
         if (delayedObjectOrPushContext) {
             return true;
         }
         // Live Status_Push bypasses follow steering only while Tails is still
         // in the local contact band that can plausibly feed ROM loc_13DD0.
-        // A high incoming x_vel is also ROM-visible wall-push state even when
-        // the delayed follow target is far away; low-speed far-target pushes
-        // are stale collision state and fall through to FollowLeft/FollowRight.
-        return Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y
-                || Math.abs(sidekick.getXSpeed()) >= ROM_VISIBLE_PUSH_BYPASS_MIN_X_SPEED;
+        // Do not infer ROM push state from speed alone; velocity is not the
+        // status byte branch that the sidekick CPU reads here.
+        return Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y;
     }
 
     private void updatePanic() {

@@ -509,6 +509,12 @@ class TestBuildToolingGuard {
         if (!ci.contains("github.event_name == 'push'")) {
             violations.add(".github/workflows/ci.yml policy job must add push branch policy validation");
         }
+        if (!ci.contains("develop-trace-replay:")) {
+            violations.add(".github/workflows/ci.yml must include the nightly/manual develop trace replay job");
+        }
+        if (!ci.contains("ref: develop")) {
+            violations.add(".github/workflows/ci.yml develop trace replay checkout must pin ref: develop so scheduled default-branch runs validate develop");
+        }
         if (!shellPolicy.contains("validate_ci_commit_range \"$before_sha\" \"$after_sha\"")) {
             violations.add(".githooks/validate-policy.sh direct pushes must validate commit trailers over the pushed range");
         }

@@ -1,22 +1,37 @@
 # Trace Frontier Log
 
-## 2026-06-09 - RRF release review AIZ sidekick Status_Push visibility (AIZ f14302 -> GREEN)
+## 2026-06-10 - Release review correction: sidekick push-bypass claim narrowed
 
-- Scope: release-readiness review follow-up to the sidekick-only AIZ frontier
-  exposed after the placed-ring touch-phase fix.
-- Change: `SidekickCpuController` now decides the live push-bypass branch from
-  the ROM-visible sidekick status byte captured at the CPU slot, then requires
-  either local object-band continuity or high incoming wall-push velocity before
-  treating the engine `Status_Push` bit as a real `loc_13DD0` bypass. This keeps
-  the high-speed frame 3077 push branch from manufacturing follow input while
-  allowing the later low-speed stale-push frame 14302 to fall through
-  `FollowLeft`. The predicate is driven by status, speed, delayed status, and
-  follow geometry; it is not a zone/route/frame exception.
+- Scope: release-readiness review follow-up correcting the previous
+  sidekick-only AIZ push-bypass entry.
+- Change: the uncited high-incoming-velocity shortcut was removed from
+  `SidekickCpuController`. Live engine `Status_Push` now bypasses follow
+  steering only when the delayed leader status still carries object/push
+  context, or when the sidekick is still inside the local contact band that can
+  plausibly feed ROM `loc_13DD0`. Speed alone is not treated as the ROM status
+  byte branch.
+- Frontier note: the prior "AIZ f14302 -> GREEN" claim is not retained here.
+  AIZ, S2, and S3K sidekick trace replay results must be recorded from the
+  corrected predicate before this entry can claim frontier movement.
 - Verification:
-  - `mvn -q -Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace test -DfailIfNoTests=false`
-    -> AIZ replay passed with no divergences.
-  - `mvn -q -Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity#s3kFastCurrentPushFarBelowTargetStillBypassesFollowRightAfterAizIntro+s3kStaleCurrentPushFarBelowTargetFallsThroughToFollowLeftAfterAizReload+normalPushBypassUsesSameDelayedStatusSlotAsRomD4 test -DfailIfNoTests=false`
-    -> focused CPU parity regressions passed.
+  - `mvn -q "-Dtest=com.openggf.graphics.TestVScrollColumnCount,com.openggf.tests.TestBuildToolingGuard,com.openggf.editor.TestEditorToggleIntegration,com.openggf.TestEngine,com.openggf.game.TestHybridPhysicsFeatureSet,com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.sprites.playable.TestSidekickCpuFollowParity" test "-DfailIfNoTests=false"`
+    -> focused release-review and sidekick parity slice passed
+    (7347 passed / 0 failed / 9 skipped).
+  - `mvn -q "-Ds2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Dtest=com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+    -> still fails at bootstrap frame 0 with `player_history.pos`
+    expected `0x0068`, actual `0x0019`; this is not a new sidekick
+    follow-branch signal.
+  - `mvn -q "-Ds3k.rom.path=s3k.gen" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+    -> still fails at AIZ frame 3074, `tails_g_speed expected=0x0000
+    actual=0x000C`. The trace's ROM-side CPU snapshot has
+    `tailsCpu status=20`, confirming a real current `Status_Push` branch there,
+    but no disassembly-backed replacement for the removed `0xE0` speed cutoff
+    is landed in this correction.
+
+## 2026-06-09 - RRF release review AIZ sidekick Status_Push visibility (superseded)
+
+- Superseded by the 2026-06-10 correction above. The speed-based branch in this
+  entry was not disassembly-backed and the green-frontier claim was overstated.
 
 ## 2026-06-09 - RRF release review AIZ placed-ring touch phase (AIZ f6203 -> f14302)
 

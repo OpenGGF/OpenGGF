@@ -921,6 +921,138 @@ public record PhysicsFeatureSet(
     public static final int SIDEKICK_FLIGHT_LEAD_SUPPRESS_GSPEED_S3K =
             Sonic3kConstants.TAILS_FLIGHT_LEAD_SUPPRESS_GSPEED;
 
+    public static Builder builderFrom(PhysicsFeatureSet source) {
+        return new Builder(source);
+    }
+
+    public Builder toBuilder() {
+        return new Builder(this);
+    }
+
+    public static final class Builder {
+        private final PhysicsFeatureSet source;
+        private Boolean spindashEnabled;
+        private short[] spindashSpeedTable;
+        private Boolean elementalShieldsEnabled;
+        private Boolean instaShieldEnabled;
+        private Boolean lightningShieldEnabled;
+
+        private Builder(PhysicsFeatureSet source) {
+            if (source == null) {
+                throw new IllegalArgumentException("source feature set is required");
+            }
+            this.source = source;
+        }
+
+        public Builder spindashEnabled(boolean spindashEnabled) {
+            this.spindashEnabled = spindashEnabled;
+            return this;
+        }
+
+        public Builder spindashSpeedTable(short[] spindashSpeedTable) {
+            this.spindashSpeedTable = spindashSpeedTable;
+            return this;
+        }
+
+        public Builder elementalShieldsEnabled(boolean elementalShieldsEnabled) {
+            this.elementalShieldsEnabled = elementalShieldsEnabled;
+            return this;
+        }
+
+        public Builder instaShieldEnabled(boolean instaShieldEnabled) {
+            this.instaShieldEnabled = instaShieldEnabled;
+            return this;
+        }
+
+        public Builder lightningShieldEnabled(boolean lightningShieldEnabled) {
+            this.lightningShieldEnabled = lightningShieldEnabled;
+            return this;
+        }
+
+        public PhysicsFeatureSet build() {
+            return new PhysicsFeatureSet(
+                    spindashEnabled != null ? spindashEnabled : source.spindashEnabled(),
+                    spindashSpeedTable != null ? spindashSpeedTable : source.spindashSpeedTable(),
+                    source.collisionModel(),
+                    source.fixedAnglePosThreshold(),
+                    source.lookScrollDelay(),
+                    source.waterShimmerEnabled(),
+                    source.inputAlwaysCapsGroundSpeed(),
+                    elementalShieldsEnabled != null ? elementalShieldsEnabled : source.elementalShieldsEnabled(),
+                    instaShieldEnabled != null ? instaShieldEnabled : source.instaShieldEnabled(),
+                    source.jumpRepressClearsRollJumpBeforeAbility(),
+                    source.angleDiffCardinalSnap(),
+                    source.extendedEdgeBalance(),
+                    source.singleFacingBalanceAnimationSet(),
+                    source.ringFloorCheckMask(),
+                    source.ringCollisionWidth(),
+                    source.ringCollisionHeight(),
+                    lightningShieldEnabled != null ? lightningShieldEnabled : source.lightningShieldEnabled(),
+                    source.superSpindashSpeedTable(),
+                    source.movingCrouchThreshold(),
+                    source.groundWallCollisionEnabled(),
+                    source.groundWallPushRequiresFacingIntoWall(),
+                    source.animationChangeClearsPush(),
+                    source.airSuperspeedPreserved(),
+                    source.slopeResistStartsFromRest(),
+                    source.slopeRepelChecksOnObject(),
+                    source.slopeRepelUsesS3kSlipKick(),
+                    source.pinballLandingPreservesRoll(),
+                    source.pinballLandingPreservesPinballMode(),
+                    source.topSolidLandingAllowsZeroDist(),
+                    source.airBottomSolidHitClearsGroundSpeed(),
+                    source.airRightWallHitContinuesIntoCeilingSeparation(),
+                    source.airLeftWallHitContinuesIntoCeilingSeparation(),
+                    source.fullSolidBottomOverlapUsesCurrentYRadiusOnly(),
+                    source.fastScrollCap(),
+                    source.bossHitNegatesGroundSpeed(),
+                    source.stageRingsUseObjectTouchCollection(),
+                    source.stageRingSweepUsesRawCameraWindow(),
+                    source.sidekickFollowSnapThreshold(),
+                    source.sidekickDespawnX(),
+                    source.sidekickFollowLeadOffset(),
+                    source.sidekickSpawningRequiresGroundedLeader(),
+                    source.useScreenYWrapValueForVisibility(),
+                    source.sidekickDespawnUsesObjectIdMismatch(),
+                    source.sidekickFlyLandStatusBlockerMask(),
+                    source.sidekickFlyLandRequiresLeaderAlive(),
+                    source.sidekickCatchUpYOffset(),
+                    source.sidekickFlightAutoLandFrames(),
+                    source.sidekickFlightMaxXStep(),
+                    source.sidekickFlightYStep(),
+                    source.sidekickFlightLeadXOffset(),
+                    source.sidekickFlightLeadSuppressGSpeed(),
+                    source.solidObjectOffscreenGate(),
+                    source.solidObjectRequiresSidekickOnScreen(),
+                    source.sidekickDespawnUsesRidingInstanceLoss(),
+                    source.sidekickRespawnEntersCatchUpFlight(),
+                    source.sidekickPushBypassUsesGraceStatus(),
+                    source.sidekickSuppressesFastLeaderTinyFollowNudge(),
+                    source.sidekickClearsStalePushVelocityBeforeGroundMove(),
+                    source.sidekickCpuUsesLevelFrameCounter(),
+                    source.landingRollClearUsesCurrentYRadiusDelta(),
+                    source.levelBoundaryRightStrict(),
+                    source.levelBoundaryUsesCentreY(),
+                    source.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity(),
+                    source.sidekickNormalCpuSkipsHurtRoutine(),
+                    source.controlLockLatchesLogicalInput(),
+                    source.hurtRoutineLatchesLogicalInput(),
+                    source.waterExitBoostSkipsFastUpwardVelocity(),
+                    source.slopeResistAppliesAtZeroInertia(),
+                    source.permanentRespawnTableLatch(),
+                    source.objectsExecuteAfterPlayerPhysics(),
+                    source.speedShoesTimerPrePhysicsExtraTicks(),
+                    source.shieldObjectFixedSlotIndex(),
+                    source.invincibilityStarsFixedSlotIndex(),
+                    source.touchResponseUsesRenderFlagYGate(),
+                    source.sidekickDeathUsesDeferredDespawn(),
+                    source.rightWallDeepProbePreservesPenetration(),
+                    source.solidObjectBarelyPokingResolvesAsSide(),
+                    source.speedShoesTimerDecimation()
+            );
+        }
+    }
+
     /** Sonic 1: no spindash, single collision path, fixed AnglePos threshold, instant look scroll, water shimmer,
      *  always caps ground speed on input (s1disasm/_incObj/01 Sonic.asm:554-558),
      *  no angle diff cardinal snap (s1disasm Sonic_Angle directly applies sensor angle),

@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Release-review blockers are now guarded directly:** the parallax shader
+  maps physical window pixels back to logical display pixels, scheduled
+  develop trace CI explicitly checks out `develop`, bad ROM startup errors
+  return to the title screen, editor save replay uses the engine-owned save
+  manager, and `PhysicsFeatureSet` hybrid construction now uses a builder with
+  a source guard against positional call sites.
+
 - **Editor save apply now validates before mutating:** corrupt editor edit
   payloads are fully checked before any live level mutation, so quarantine on a
   later invalid entry cannot leave earlier edits partially applied.
@@ -51,10 +58,10 @@ All notable changes to the OpenGGF project are documented in this file.
   startup with a clear "ROM not recognized or corrupt" error instead of
   silently falling back to the Sonic 2 module and failing later.
 
-- **S3K AIZ sidekick push-bypass now uses ROM-visible status:** the sidekick
-  CPU follow path distinguishes a high-speed live `Status_Push` branch from a
-  later stale low-speed push bit, keeping AIZ replay aligned through the
-  post-reload follow window.
+- **S3K sidekick push-bypass claims are narrowed:** the sidekick CPU follow path
+  no longer treats high incoming velocity as a ROM-visible `Status_Push` branch;
+  live engine push bypass is limited to delayed object/push context or local
+  contact-band continuity pending a full trace sweep.
 
 - **Editor save tests no longer touch production save paths:** editor resume
   saving now uses an engine-owned save manager dependency so integration tests

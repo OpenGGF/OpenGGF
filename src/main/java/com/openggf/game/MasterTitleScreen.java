@@ -564,6 +564,20 @@ public class MasterTitleScreen {
         this.gameSelected = true;
     }
 
+    public void showRomLoadError(String gameId) {
+        if (gameId != null) {
+            for (GameEntry entry : GameEntry.values()) {
+                if (entry.gameId.equalsIgnoreCase(gameId)) {
+                    setSelectedIndex(entry.ordinal());
+                    break;
+                }
+            }
+        }
+        this.state = State.ERROR_DISPLAY;
+        this.errorFrameCounter = 0;
+        this.gameSelected = false;
+    }
+
     /**
      * Sets the projection (viewport) width for widescreen-aware layout.
      * Must be called each frame before {@link #draw()} when the engine is

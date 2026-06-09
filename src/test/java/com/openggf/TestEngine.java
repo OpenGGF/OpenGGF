@@ -55,7 +55,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -67,6 +66,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 
 class TestEngine {
@@ -196,13 +196,13 @@ class TestEngine {
     }
 
     @Test
-    void initializeGame_rejectsUnrecognizedOrCorruptRom() throws Exception {
+    void initializeGame_surfacesUnrecognizedOrCorruptRomOnMasterTitleScreen() throws Exception {
         try (BootstrapHarness harness = createBootstrapHarness(false, Optional.empty())) {
-            IllegalStateException error = assertThrows(IllegalStateException.class,
-                    harness.engine::initializeGame);
+            assertDoesNotThrow(harness.engine::initializeGame);
 
-            assertEquals("ROM not recognized or corrupt. OpenGGF requires a supported Sonic 1, Sonic 2, or Sonic 3&K ROM.",
-                    error.getMessage());
+            assertEquals(GameMode.MASTER_TITLE_SCREEN, harness.engine.getCurrentGameMode());
+            assertNotNull(harness.engine.getMasterTitleScreen());
+            verify(harness.levelManager, never()).loadZoneAndAct(0, 0);
         }
     }
 

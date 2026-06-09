@@ -1067,7 +1067,7 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
-    void s3kFastCurrentPushFarBelowTargetStillBypassesFollowRightAfterAizIntro() {
+    void s3kFastCurrentPushFarBelowTargetFallsThroughFollowRightAfterAizIntro() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
@@ -1097,15 +1097,15 @@ class TestSidekickCpuFollowParity {
 
         SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
         Assertions.assertAll(
-                () -> assertEquals("current_push_bypass", diagnostics.followBranch(),
-                        "AIZ F3077 still has a high incoming wall-push velocity, so the engine "
-                                + "Status_Push is ROM-visible at Tails_CPU_Control and must bypass "
-                                + "FollowRight (sonic3k.asm:26702-26729)."),
-                () -> assertTrue(diagnostics.skipFollowSteering()),
+                () -> assertEquals("follow_steering", diagnostics.followBranch(),
+                        "AIZ F3077 has a high incoming wall-push velocity, but speed alone is "
+                                + "not the ROM Status_Push byte read by Tails_CPU_Control "
+                                + "(sonic3k.asm:26702-26729)."),
+                () -> assertFalse(diagnostics.skipFollowSteering()),
                 () -> assertFalse(controller.getInputLeft()),
-                () -> assertFalse(controller.getInputRight(),
-                        "The bypass preserves the already-loaded zero Ctrl_2 word instead of "
-                                + "manufacturing a right pulse."));
+                () -> assertTrue(controller.getInputRight(),
+                        "FollowRight applies because this far-target push has no delayed "
+                                + "push/object context and is outside the local contact band."));
     }
 
     @Test

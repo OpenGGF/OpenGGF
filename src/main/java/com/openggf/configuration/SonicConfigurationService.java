@@ -450,8 +450,8 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.SCREEN_HEIGHT, 448);
 		putDefault(SonicConfiguration.SCREEN_HEIGHT_PIXELS, 224);
 		putDefault(SonicConfiguration.SCALE, 1.0);
-		// Debug view now eagerly initialized in Engine.init() to avoid macOS freeze
-		putDefault(SonicConfiguration.DEBUG_VIEW_ENABLED, true);
+		// Keep the release default off; developers can enable this for debug keys.
+		putDefault(SonicConfiguration.DEBUG_VIEW_ENABLED, false);
 		putDefault(SonicConfiguration.EDITOR_ENABLED, false);
 		putDefault(SonicConfiguration.DEBUG_COLLISION_VIEW_ENABLED, false);
 		putDefault(SonicConfiguration.DISPLAY_COLOR_PROFILE, "RAW_RGB");

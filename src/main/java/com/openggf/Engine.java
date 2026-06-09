@@ -452,12 +452,15 @@ public class Engine {
 		GameModule module;
 		try {
 			Rom rom = romManager.getRom();
-			module = romDetectionService
-				.detectAndCreateModule(rom)
-				.orElseThrow(() -> new IllegalStateException(
-					"ROM not recognized or corrupt. OpenGGF requires a supported Sonic 1, Sonic 2, or Sonic 3&K ROM."));
+			var detectedModule = romDetectionService.detectAndCreateModule(rom);
+			if (detectedModule.isEmpty()) {
+				showStartupRomError("ROM not recognized or corrupt. OpenGGF requires a supported Sonic 1, Sonic 2, or Sonic 3&K ROM.");
+				return;
+			}
+			module = detectedModule.orElseThrow();
 		} catch (IOException e) {
-			throw new RuntimeException("Failed to load ROM during game initialization", e);
+			showStartupRomError("Failed to load ROM during game initialization: " + e.getMessage());
+			return;
 		}
 		GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
 		initializeGameplayRuntime(gameplayMode, true);
@@ -475,6 +478,21 @@ public class Engine {
 			graphicsManager.runPendingRenderThreadTasks();
 		}
 		enterConfiguredStartupMode();
+	}
+
+	private void showStartupRomError(String message) {
+		LOGGER.warning(message);
+		gameplayMode = null;
+		gameLoop.setGameplayMode(null);
+		if (masterTitleScreen != null) {
+			masterTitleScreen.cleanup();
+		}
+		masterTitleScreen = new MasterTitleScreen(configService);
+		if (graphicsManager.isGlInitialized()) {
+			masterTitleScreen.initialize();
+		}
+		masterTitleScreen.showRomLoadError(configService.getString(SonicConfiguration.DEFAULT_ROM));
+		gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
 	}
 
 	/**
@@ -898,6 +916,7 @@ public class Engine {
 		this.camera = gameplayMode.getCamera();
 		this.spriteManager = gameplayMode.getSpriteManager();
 		this.levelManager = gameplayMode.getLevelManager();
+		this.levelManager.setEditorSaveManager(editorSaveManager);
 		gameLoop.setGameplayMode(gameplayMode);
 	}
 
@@ -913,6 +932,7 @@ public class Engine {
 		Camera editorCamera = editorMode.getCamera();
 		SpriteManager editorSprites = editorMode.getSpriteManager();
 		LevelManager editorLevelManager = editorMode.getLevelManager();
+		editorLevelManager.setEditorSaveManager(editorSaveManager);
 		editorLevelManager.restoreEditorLevelView(editorLevel);
 		editorCamera.setMinX(minX);
 		editorCamera.setMaxX(maxX);

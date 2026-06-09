@@ -896,6 +896,16 @@ class TestEditorToggleIntegration {
         assertTrue(SessionManager.getCurrentGameplayMode().getResumeStash().isEmpty());
     }
 
+    @Test
+    void levelManagerAppliesPersistedEditorEditsThroughInjectedSaveManager() throws IOException {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelManager.java"));
+
+        assertFalse(source.contains("new EditorSaveManager(Path.of(\"saves\"))"),
+                "LevelManager must not create a process-root save manager that can quarantine real user saves in tests");
+        assertTrue(source.contains("editorSaveManager.tryApplyEdits("),
+                "LevelManager should apply persisted edits through the save manager injected by Engine");
+    }
+
     private GameplayModeContext createGameplayMode(Engine engine) {
         return createGameplayMode(engine, (short) 100, (short) 200);
     }

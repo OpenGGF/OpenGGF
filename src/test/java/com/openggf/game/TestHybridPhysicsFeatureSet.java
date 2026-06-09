@@ -34,87 +34,11 @@ public class TestHybridPhysicsFeatureSet {
     public void testExpectedHybridFeatureSetValues() {
         // Validates the expected contract of the hybrid feature set:
         // spindash enabled (from donor), all other flags stay S1.
-        // Without a ROM, we construct the expected values directly.
-        PhysicsFeatureSet expected = new PhysicsFeatureSet(
-                true,  // spindashEnabled - from donor
-                new short[]{0x0800, 0x0880, 0x0900, 0x0980, 0x0A00, 0x0A80, 0x0B00, 0x0B80, 0x0C00},
-                CollisionModel.UNIFIED,  // S1
-                true,   // fixedAnglePosThreshold - S1
-                PhysicsFeatureSet.LOOK_SCROLL_DELAY_NONE,  // S1
-                true,   // waterShimmerEnabled - S1
-                true,   // inputAlwaysCapsGroundSpeed - S1
-                false,  // elementalShieldsEnabled - S1
-                false,  // instaShieldEnabled - S1 (test uses S1 base, no donor context)
-                false,  // jumpRepressClearsRollJumpBeforeAbility - S1 has no S3K shield-move branch
-                false,  // angleDiffCardinalSnap - S1
-                false,  // extendedEdgeBalance - S1
-                false,  // singleFacingBalanceAnimationSet - S1
-                PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S1,  // ringFloorCheckMask - S1
-                PhysicsFeatureSet.RING_COLLISION_SIZE_S1,  // ringCollisionWidth - S1
-                PhysicsFeatureSet.RING_COLLISION_SIZE_S1,  // ringCollisionHeight - S1
-                false,  // lightningShieldEnabled - S1 (no elemental shields)
-                null,  // superSpindashSpeedTable - not donated
-                (short) 0,  // movingCrouchThreshold - not donated
-                false,  // groundWallCollisionEnabled - S1
-                false,  // groundWallPushRequiresFacingIntoWall - S1
-                false,  // animationChangeClearsPush - S1 original build does not clear pushing on anim change
-                false,  // airSuperspeedPreserved - S1
-                false,  // slopeResistStartsFromRest - S1
-                false,  // slopeRepelChecksOnObject - S1
-                false,  // slopeRepelUsesS3kSlipKick - S1
-                false,  // pinballLandingPreservesRoll - S1
-                false,  // pinballLandingPreservesPinballMode - S1
-                true,   // topSolidLandingAllowsZeroDist - S1
-                false,  // airBottomSolidHitClearsGroundSpeed - S1
-                false,  // airRightWallHitContinuesIntoCeilingSeparation - S1
-                false,  // airLeftWallHitContinuesIntoCeilingSeparation - S1
-                true,   // fullSolidBottomOverlapUsesCurrentYRadiusOnly - S1
-                PhysicsFeatureSet.FAST_SCROLL_CAP_S2, // fastScrollCap - S1 (same as S2)
-                false,  // bossHitNegatesGroundSpeed - S1
-                true,   // stageRingsUseObjectTouchCollection - S1
-                false,  // stageRingSweepUsesRawCameraWindow - S1 rings are object-touch instances
-                PhysicsFeatureSet.SIDEKICK_FOLLOW_SNAP_S2,  // sidekickFollowSnapThreshold - S1/S2 default
-                PhysicsFeatureSet.SIDEKICK_DESPAWN_X_S2,  // sidekickDespawnX - S1/S2 placeholder
-                PhysicsFeatureSet.SIDEKICK_FOLLOW_LEAD_OFFSET_NONE,  // sidekickFollowLeadOffset - S1/S2 (no offset)
-                true,  // sidekickSpawningRequiresGroundedLeader - S1/S2 default (matches s2.asm:38751-38762)
-                false,  // useScreenYWrapValueForVisibility - S1/S2 keep 32-margin
-                true,   // sidekickDespawnUsesObjectIdMismatch - S1/S2 (s2.asm:39067 cmp.b id(a3),d0)
-                PhysicsFeatureSet.SIDEKICK_FLY_LAND_BLOCKERS_NONE,  // sidekickFlyLandStatusBlockerMask - S1 has no CPU sidekick
-                false,  // sidekickFlyLandRequiresLeaderAlive - S1 has no CPU sidekick
-                PhysicsFeatureSet.SIDEKICK_CATCH_UP_Y_OFFSET_S3K,  // sidekickCatchUpYOffset - S1 inert default
-                PhysicsFeatureSet.SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K,  // sidekickFlightAutoLandFrames - S1 inert default
-                PhysicsFeatureSet.SIDEKICK_FLIGHT_MAX_X_STEP_S3K,  // sidekickFlightMaxXStep - S1 inert default
-                PhysicsFeatureSet.SIDEKICK_FLIGHT_Y_STEP_S3K,  // sidekickFlightYStep - S1 inert default
-                PhysicsFeatureSet.SIDEKICK_FLIGHT_LEAD_X_OFFSET_S3K,  // sidekickFlightLeadXOffset - S1 inert default
-                PhysicsFeatureSet.SIDEKICK_FLIGHT_LEAD_SUPPRESS_GSPEED_S3K,  // sidekickFlightLeadSuppressGSpeed - S1 inert default
-                false,  // solidObjectOffscreenGate - S1 keeps current behaviour (gate is S3K-only for now)
-                false,  // solidObjectRequiresSidekickOnScreen - S1 has no CPU sidekick
-                false,  // sidekickDespawnUsesRidingInstanceLoss - S1 has no CPU sidekick
-                false,  // sidekickRespawnEntersCatchUpFlight - S1 has no CPU sidekick
-                false,  // sidekickPushBypassUsesGraceStatus - S1 has no Tails CPU
-                false,  // sidekickSuppressesFastLeaderTinyFollowNudge - S1 has no Tails CPU
-                false,  // sidekickClearsStalePushVelocityBeforeGroundMove - S1 has no CPU sidekick
-                false,  // sidekickCpuUsesLevelFrameCounter - S1 has no CPU sidekick
-                false,  // landingRollClearUsesCurrentYRadiusDelta - S1 uses fixed roll-clear lift
-                false,  // levelBoundaryRightStrict - S1 uses bls.s (s1disasm/_incObj/01 Sonic.asm:998)
-                false,  // levelBoundaryUsesCentreY - hybrid override fixture keeps explicit donor divergence
-                false,  // solidObjectTopBranchAlwaysLiftsOnUpwardVelocity - S1 Solid_Landed bails on y_vel<0 (s1disasm/_incObj/sub SolidObject.asm:278)
-                false,  // sidekickNormalCpuSkipsHurtRoutine - S1 has no Tails CPU
-                false,  // controlLockLatchesLogicalInput - S1 baseline (uses separate Ctrl_Lock_byte)
-                false,  // hurtRoutineLatchesLogicalInput - S1 has no Tails CPU consuming Stat_table input
-                false,  // waterExitBoostSkipsFastUpwardVelocity - S1 exits water with unconditional asl.w obVelY(a0)
-                false,  // slopeResistAppliesAtZeroInertia - S1 SlopeResist returns when inertia=0 (s1disasm/_incObj/01 Sonic.asm:1243-1244)
-                false,  // permanentRespawnTableLatch - S1 only latches remembered spawns
-                true,   // objectsExecuteAfterPlayerPhysics - S1 uses post-physics object ordering per 2026-04-18-solid-ordering-rom-accuracy plan
-                0,      // speedShoesTimerPrePhysicsExtraTicks - S1/S2 word timer clears on display-time zero decrement
-                6,      // shieldObjectFixedSlotIndex - S1 v_shieldobj at slot 6
-                8,      // invincibilityStarsFixedSlotIndex - S1 v_starsobj1 at slot 8
-                true,   // touchResponseUsesRenderFlagYGate - S1 ReactToItem reads obRender bit 7 cleared by BuildSprites Y-band
-                false,  // sidekickDeathUsesDeferredDespawn - S1 has no Tails CPU
-                false,  // rightWallDeepProbePreservesPenetration - S1 baseline
-                true,   // solidObjectBarelyPokingResolvesAsSide - S1 Solid_SideAir (s1 SolidObject.asm:181-184,211-214)
-                1       // speedShoesTimerDecimation - S1 per-frame word timer
-        );
+        PhysicsFeatureSet expected = PhysicsFeatureSet.builderFrom(PhysicsFeatureSet.SONIC_1)
+                .spindashEnabled(true)
+                .spindashSpeedTable(
+                        new short[]{0x0800, 0x0880, 0x0900, 0x0980, 0x0A00, 0x0A80, 0x0B00, 0x0B80, 0x0C00})
+                .build();
 
         // Verify spindash is enabled (donor contribution)
         assertTrue(expected.spindashEnabled(), "Hybrid should enable spindash");

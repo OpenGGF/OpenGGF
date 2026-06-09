@@ -84,7 +84,7 @@ discord:
 # ════════════════════════════════════════════
 debug:
   flags:
-    debugView: true   # Enable the debug overlay subsystem; visible HUD starts hidden until toggled
+    debugView: false   # Enable the debug overlay subsystem; visible HUD starts hidden until toggled
     editor: false   # Allow entering the level editor from gameplay
     collisionView: false   # Draw the collision overlay
   keys:

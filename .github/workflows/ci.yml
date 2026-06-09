@@ -80,8 +80,10 @@ jobs:
       SONIC2_ROM_PATH: ${{ vars.SONIC2_ROM_PATH }}
       S3K_ROM_PATH: ${{ vars.S3K_ROM_PATH }}
     steps:
-      - name: Checkout code
+      - name: Checkout develop
         uses: actions/checkout@v4
+        with:
+          ref: develop
 
       - name: Set up Java 21
         uses: actions/setup-java@v4

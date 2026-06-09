@@ -69,7 +69,6 @@ import com.openggf.sprites.playable.Tails;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -214,8 +213,7 @@ public class LevelManager {
 
     // Rendering pipeline (extracted from LevelManager — see LevelRenderer).
     private final LevelRenderer levelRenderer = new LevelRenderer(this);
-    private EngineContext engineServices;
-
+    private EngineContext engineServices; private EditorSaveManager editorSaveManager;
 
     @Deprecated(forRemoval = true)
     protected LevelManager() {
@@ -255,6 +253,8 @@ public class LevelManager {
         this.apparentAct = worldSession.getApparentAct();
         this.level = worldSession.getCurrentLevel();
     }
+
+    public void setEditorSaveManager(EditorSaveManager editorSaveManager) { this.editorSaveManager = editorSaveManager; }
 
     /**
      * Refreshes the zone list from the current GameModule's ZoneRegistry.
@@ -3079,8 +3079,8 @@ public class LevelManager {
         MutableLevel mutableLevel = level instanceof MutableLevel existing
                 ? existing
                 : MutableLevel.snapshot(level);
-        EditorSaveManager.ApplyResult result = new EditorSaveManager(Path.of("saves"))
-                .tryApplyEdits(gameModule.getGameId(), currentZone, currentAct, mutableLevel);
+        if (editorSaveManager == null) return;
+        EditorSaveManager.ApplyResult result = editorSaveManager.tryApplyEdits(gameModule.getGameId(), currentZone, currentAct, mutableLevel);
         if (result == EditorSaveManager.ApplyResult.APPLIED && mutableLevel != level) {
             setLevel(mutableLevel);
         }

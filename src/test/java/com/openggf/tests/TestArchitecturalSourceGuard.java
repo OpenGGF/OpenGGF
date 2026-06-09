@@ -317,6 +317,33 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
+    void physicsFeatureSetConstructionStaysInsideBuilderSurface() throws IOException {
+        Pattern positionalConstructor = Pattern.compile("\\bnew\\s+PhysicsFeatureSet\\s*\\(");
+        List<String> violations = new ArrayList<>();
+        Path root = Path.of("src");
+        try (Stream<Path> stream = Files.walk(root)) {
+            for (Path file : stream
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.toString().endsWith(".java"))
+                    .toList()) {
+                String relative = root.relativize(file).toString().replace('\\', '/');
+                if (relative.equals("main/java/com/openggf/game/PhysicsFeatureSet.java")) {
+                    continue;
+                }
+                String source = stripCommentsAndStrings(Files.readString(file));
+                Matcher matcher = positionalConstructor.matcher(source);
+                while (matcher.find()) {
+                    violations.add(relative + ":" + lineNumberForOffset(source, matcher.start())
+                            + " - use PhysicsFeatureSet.builderFrom(...) instead of positional construction");
+                }
+            }
+        }
+
+        assertNoViolations("PhysicsFeatureSet has too many fields for call-site positional construction",
+                violations);
+    }
+
+    @Test
     void runtimeProductionCodeDoesNotReadDisassemblyAssets() throws IOException {
         List<String> violations = new ArrayList<>();
         for (Path file : productionFiles()) {
