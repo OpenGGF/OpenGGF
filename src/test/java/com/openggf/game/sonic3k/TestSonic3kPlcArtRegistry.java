@@ -39,21 +39,10 @@ public class TestSonic3kPlcArtRegistry {
             reviewedS3SideReference(Sonic3kObjectArtKeys.CUTSCENE_KNUCKLES, "dplcAddr", 0x36430E)
     );
     private static final Set<String> REVIEWED_HARDCODED_MAPPING_DEBT = Set.of(
-            "level:" + Sonic3kObjectArtKeys.SPIKES + ":buildSpikesSheet",
-            "level:" + Sonic3kObjectArtKeys.AIZ1_TREE + ":buildAiz1TreeSheet",
-            "level:" + Sonic3kObjectArtKeys.AIZ1_ZIPLINE_PEG + ":buildAiz1ZiplinePegSheet",
-            "level:" + Sonic3kObjectArtKeys.AIZ_FOREGROUND_PLANT + ":buildAizForegroundPlantSheet",
             "standalone:" + Sonic3kObjectArtKeys.MGZ_ENDBOSS_SCALED + ":mappingAddr<=0",
-            "provider:" + ObjectArtKeys.EXPLOSION + ":loadExplosionArt",
-            "provider:" + Sonic3kObjectArtKeys.MONITOR + ":buildMonitorMappingFrames",
             "provider:" + Sonic3kObjectArtKeys.MONITOR + ":buildMonitorAnimations"
     );
-    private static final Set<String> HARDCODED_MAPPING_BUILDERS = Set.of(
-            "buildSpikesSheet",
-            "buildAiz1TreeSheet",
-            "buildAiz1ZiplinePegSheet",
-            "buildAizForegroundPlantSheet"
-    );
+    private static final Set<String> HARDCODED_MAPPING_BUILDERS = Set.of();
 
     @Test
     public void sharedLevelArtEntriesIncludeSpikesAndSprings() {
@@ -643,7 +632,7 @@ public class TestSonic3kPlcArtRegistry {
         try {
             String source = java.nio.file.Files.readString(java.nio.file.Path.of(
                     "src/main/java/com/openggf/game/sonic3k/Sonic3kObjectArtProvider.java"));
-            if (source.contains("private void loadExplosionArt()")) {
+            if (methodBody(source, "loadExplosionArt").contains("new SpriteMappingFrame")) {
                 actual.add("provider:" + ObjectArtKeys.EXPLOSION + ":loadExplosionArt");
             }
             if (methodBody(source, "buildMonitorMappingFrames").contains("new SpriteMappingFrame")) {

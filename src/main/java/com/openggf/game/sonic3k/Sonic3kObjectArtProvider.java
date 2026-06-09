@@ -316,19 +316,9 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         }
 
         Pattern[] patterns = PatternDecompressor.nemesis(rom, Sonic3kConstants.ART_NEM_EXPLOSION_ADDR);
-
-        // 5 frames from Map - Explosion.asm (identical to S2)
-        List<SpriteMappingFrame> frames = new ArrayList<>(5);
-        // Frame 0: 2x2 at tile 0 (-8, -8)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -8, 2, 2, 0, false, false, 0))));
-        // Frames 1-4: 4x4 at tiles 4, 0x14, 0x24, 0x34 (-16, -16)
-        for (int tile : new int[]{4, 0x14, 0x24, 0x34}) {
-            frames.add(new SpriteMappingFrame(List.of(
-                    new SpriteMappingPiece(-16, -16, 4, 4, tile, false, false, 0))));
-        }
-
-        ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, frames, 0, 1);
+        RomByteReader reader = RomByteReader.fromRom(rom);
+        ObjectSpriteSheet sheet = buildSheetFromPatterns(
+                patterns, reader, Sonic3kConstants.MAP_EXPLOSION_ADDR, 0);
         registerSheet(ObjectArtKeys.EXPLOSION, sheet);
         LOG.info("Loaded S3K explosion art: " + patterns.length + " patterns, 5 frames");
     }
@@ -374,8 +364,9 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             }
         }
 
-        // Build mapping frames from disassembly (Map - Monitor.asm)
-        List<SpriteMappingFrame> frames = buildMonitorMappingFrames();
+        RomByteReader reader = RomByteReader.fromRom(rom);
+        List<SpriteMappingFrame> frames = S3kSpriteDataLoader.loadMappingFrames(
+                reader, Sonic3kConstants.MAP_MONITOR_ADDR, 12);
 
         // Create and register sprite sheet
         ObjectSpriteSheet monitorSheet = new ObjectSpriteSheet(monitorPatterns, frames, 0, 1);
@@ -387,66 +378,6 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
 
         LOG.info("Loaded S3K monitor art: " + monitorBasePatterns.length + " base patterns, "
                 + frames.size() + " mapping frames, 11 animations");
-    }
-
-    /**
-     * Builds S3K monitor mapping frames from disassembly data.
-     * <p>
-     * From Map - Monitor.asm: 12 frames (0=box, 1-10=icon+box, 11=broken shell).
-     * Piece format: y_offset(8), size(8), pattern_word(16), x_offset(16).
-     */
-    private static List<SpriteMappingFrame> buildMonitorMappingFrames() {
-        // Common box piece: 4x4 tiles (32x32px) at tile 0, palette 0
-        SpriteMappingPiece box = new SpriteMappingPiece(-16, -16, 4, 4, 0, false, false, 0);
-
-        List<SpriteMappingFrame> frames = new ArrayList<>(12);
-
-        // Frame 0: static box only
-        frames.add(new SpriteMappingFrame(List.of(box)));
-
-        // Frame 1: Eggman icon ($18) + box
-        frames.add(iconAndBox(0x18, 0));
-
-        // Frame 2: 1-Up icon ($310 = life icon art offset, palette 0)
-        frames.add(iconAndBox(0x310, 0));
-
-        // Frame 3: Eggman 2 icon ($1C) + box
-        frames.add(iconAndBox(0x1C, 0));
-
-        // Frame 4: Rings icon ($20, palette 1 for ring colors)
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -13, 2, 2, 0x20, false, false, 1),
-                box)));
-
-        // Frame 5: Speed Shoes icon ($24) + box
-        frames.add(iconAndBox(0x24, 0));
-
-        // Frame 6: Fire Shield icon ($30) + box
-        frames.add(iconAndBox(0x30, 0));
-
-        // Frame 7: Lightning Shield icon ($2C) + box
-        frames.add(iconAndBox(0x2C, 0));
-
-        // Frame 8: Bubble Shield icon ($34) + box
-        frames.add(iconAndBox(0x34, 0));
-
-        // Frame 9: Invincibility icon ($28) + box
-        frames.add(iconAndBox(0x28, 0));
-
-        // Frame 10: Super icon ($38) + box
-        frames.add(iconAndBox(0x38, 0));
-
-        // Frame 11: Broken shell - 4x2 tiles (32x16px) at tile $10, y=0
-        frames.add(new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-16, 0, 4, 2, 0x10, false, false, 0))));
-
-        return frames;
-    }
-
-    private static SpriteMappingFrame iconAndBox(int iconTile, int iconPalette) {
-        return new SpriteMappingFrame(List.of(
-                new SpriteMappingPiece(-8, -13, 2, 2, iconTile, false, false, iconPalette),
-                new SpriteMappingPiece(-16, -16, 4, 4, 0, false, false, 0)));
     }
 
     /**

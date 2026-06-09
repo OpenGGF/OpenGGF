@@ -4,6 +4,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K runtime object mappings now read more frames from ROM:** shared spikes,
+  AIZ tree, AIZ zipline peg, AIZ foreground plant, monitor, and explosion
+  mappings now use ROM-parsed mapping frames instead of transcribed Java data.
+
 - **AIZ boss child spawning now uses construction-context helpers:** AIZ end
   boss and miniboss cutscene child, debris, and explosion objects now spawn
   through `spawnChild` suppliers so child constructors receive object services.
