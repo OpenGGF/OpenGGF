@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Hash-warning saves can no longer be launched from data select:** save
+  summaries now distinguish recoverable payloads from loadable slots, so hash
+  mismatches remain visible/deletable for recovery while data-select launch and
+  clear-restart actions are blocked unless the slot hash validates.
+
 - **Native-image LWJGL library discovery now trusts packaged libraries only:**
   native builds resolve LWJGL binaries from the executable directory, with the
   macOS launcher environment hint accepted only when it canonicalizes to that

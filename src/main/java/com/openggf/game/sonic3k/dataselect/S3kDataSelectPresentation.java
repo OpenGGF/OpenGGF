@@ -500,7 +500,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
         }
         if (selectedRow >= 1 && selectedRow <= hostProfile.slotCount()) {
             SaveSlotSummary summary = sessionController.slotSummaries().get(selectedRow - 1);
-            if (summary.state() == SaveSlotState.VALID || summary.state() == SaveSlotState.HASH_WARNING) {
+            if (summary.hasRecoverablePayload()) {
                 menuSfxPlayer.accept(Sonic3kSfx.STARPOST.id);
                 deleteTargetRow = selectedRow;
                 deleteRobotnikState = DeleteRobotnikState.PROMPT_ANIMATING;
@@ -688,8 +688,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
             return null;
         }
         SaveSlotSummary summary = summaries.get(slotIndex);
-        if (summary == null || (summary.state() != SaveSlotState.VALID
-                && summary.state() != SaveSlotState.HASH_WARNING)) {
+        if (summary == null || !summary.hasRecoverablePayload()) {
             return null;
         }
         // Host preview active → suppress the S3K zone card icon (no host zone art available)
@@ -731,8 +730,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
     }
 
     private int resolveHostSelectedSlotIconIndex(SaveSlotSummary summary) {
-        if (summary == null || (summary.state() != SaveSlotState.VALID
-                && summary.state() != SaveSlotState.HASH_WARNING)) {
+        if (summary == null || !summary.hasRecoverablePayload()) {
             return -1;
         }
         DataSelectDestination clearDestination = Boolean.TRUE.equals(summary.payload().get("clear"))
@@ -824,7 +822,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
     }
 
     private List<Integer> resolveEmeraldMappingFrames(SaveSlotSummary summary) {
-        if (summary == null || (summary.state() != SaveSlotState.VALID && summary.state() != SaveSlotState.HASH_WARNING)) {
+        if (summary == null || !summary.hasRecoverablePayload()) {
             return List.of();
         }
         Map<String, Object> payload = summary.payload();
@@ -868,7 +866,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
                                          S3kSaveScreenObjectState.SlotVisualKind kind,
                                          boolean selected,
                                          S3kSaveScreenObjectState.SlotLabelKind labelKind) {
-        if (summary == null || (summary.state() != SaveSlotState.VALID && summary.state() != SaveSlotState.HASH_WARNING)) {
+        if (summary == null || !summary.hasRecoverablePayload()) {
             return 0;
         }
         if (kind == S3kSaveScreenObjectState.SlotVisualKind.CLEAR) {
@@ -956,7 +954,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
     }
 
     private int resolveSlotStat(SaveSlotSummary summary, String key) {
-        if (summary == null || (summary.state() != SaveSlotState.VALID && summary.state() != SaveSlotState.HASH_WARNING)) {
+        if (summary == null || !summary.hasRecoverablePayload()) {
             return 0;
         }
         return readInt(summary.payload(), key, 0);

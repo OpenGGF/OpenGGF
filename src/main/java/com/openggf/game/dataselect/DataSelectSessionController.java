@@ -154,7 +154,7 @@ public class DataSelectSessionController {
             return List.of();
         }
         SaveSlotSummary summary = slotSummaries.get(row - 1);
-        if (summary.state() == SaveSlotState.EMPTY) {
+        if (!summary.isLoadable()) {
             return List.of();
         }
         return hostProfile.clearRestartDestinations(summary.payload());
@@ -200,6 +200,9 @@ public class DataSelectSessionController {
         SaveSlotSummary summary = slotSummaries.get(slot - 1);
         if (summary.state() == SaveSlotState.EMPTY) {
             return new DataSelectAction(DataSelectActionType.NEW_SLOT_START, slot, 0, 0, currentTeam());
+        }
+        if (!summary.isLoadable()) {
+            return DataSelectAction.none();
         }
 
         Map<String, Object> payload = summary.payload();
@@ -248,7 +251,7 @@ public class DataSelectSessionController {
             return 0;
         }
         SaveSlotSummary summary = slotSummaries.get(row - 1);
-        if (summary.state() == SaveSlotState.EMPTY) {
+        if (!summary.isLoadable()) {
             return 0;
         }
         List<DataSelectDestination> destinations = hostProfile.clearRestartDestinations(summary.payload());
@@ -266,7 +269,7 @@ public class DataSelectSessionController {
             return 0;
         }
         SaveSlotSummary summary = slotSummaries.get(row - 1);
-        if (summary.state() == SaveSlotState.EMPTY) {
+        if (!summary.isLoadable()) {
             return 0;
         }
         return hostProfile.clearRestartSelectionCount(summary.payload());

@@ -41,7 +41,7 @@ class TestSaveManager {
     }
 
     @Test
-    void hashMismatch_warnsButStillLoads() throws Exception {
+    void hashMismatch_keepsPayloadForRecoveryButIsNotLoadable() throws Exception {
         SaveManager manager = new SaveManager(root);
         manager.writeSlot("s3k", 1, Map.of("zone", 0, "act", 0));
         Path slot = root.resolve("s3k").resolve("slot1.json");
@@ -49,6 +49,8 @@ class TestSaveManager {
         SaveSlotSummary summary = manager.readSlotSummary("s3k", 1);
         assertEquals(SaveSlotState.HASH_WARNING, summary.state());
         assertFalse(summary.payload().isEmpty());
+        assertFalse(summary.isLoadable());
+        assertTrue(summary.hasRecoverablePayload());
     }
 
     @Test

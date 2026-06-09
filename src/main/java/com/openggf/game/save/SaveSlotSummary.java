@@ -7,4 +7,12 @@ public record SaveSlotSummary(int slot, SaveSlotState state, Map<String, Object>
     public static SaveSlotSummary empty(int slot) {
         return new SaveSlotSummary(slot, SaveSlotState.EMPTY, Map.of());
     }
+
+    public boolean isLoadable() {
+        return state == SaveSlotState.VALID;
+    }
+
+    public boolean hasRecoverablePayload() {
+        return state == SaveSlotState.VALID || state == SaveSlotState.HASH_WARNING;
+    }
 }
