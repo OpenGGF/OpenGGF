@@ -428,6 +428,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
                 baseFeatureSet.jumpRepressClearsRollJumpBeforeAbility(), // jumpRepressClearsRollJumpBeforeAbility (from base game)
                 baseFeatureSet.angleDiffCardinalSnap(),         // angleDiffCardinalSnap (from base game)
                 baseFeatureSet.extendedEdgeBalance(),           // extendedEdgeBalance (from base game)
+                baseFeatureSet.singleFacingBalanceAnimationSet(), // singleFacingBalanceAnimationSet (from base game)
                 baseFeatureSet.ringFloorCheckMask(),            // ringFloorCheckMask (from base game)
                 baseFeatureSet.ringCollisionWidth(),            // ringCollisionWidth (from base game)
                 baseFeatureSet.ringCollisionHeight(),           // ringCollisionHeight (from base game)

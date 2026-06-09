@@ -1,6 +1,7 @@
 package com.openggf.tests;
 
 import org.junit.jupiter.api.Test;
+import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -50,6 +51,23 @@ public class TestScriptedVelocityAnimationProfile {
         assertEquals(3, animId.intValue()); // rollAnimId, not slideAnimId
     }
 
+    @Test
+    public void s3kBalanceUsesSingleFacingSetForAwayStates() {
+        ScriptedVelocityAnimationProfile profile = createProfile()
+                .setBalanceAnimId(20)
+                .setBalance2AnimId(21)
+                .setBalance3AnimId(22)
+                .setBalance4AnimId(23);
+        TestSprite sprite = new TestSprite();
+        sprite.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sprite.setBalanceState(4);
+
+        Integer animId = profile.resolveAnimationId(sprite, 0, 32);
+
+        assertEquals(21, animId.intValue(),
+                "S3K dummies out the S2 away-facing object/terrain balance animations and uses Balance2");
+    }
+
     private static ScriptedVelocityAnimationProfile createProfile() {
         return new ScriptedVelocityAnimationProfile()
                 .setIdleAnimId(0)
@@ -93,6 +111,10 @@ public class TestScriptedVelocityAnimationProfile {
 
         @Override
         protected void createSensorLines() {
+        }
+
+        void useFeatureSet(PhysicsFeatureSet fs) {
+            setPhysicsFeatureSet(fs);
         }
     }
 }
