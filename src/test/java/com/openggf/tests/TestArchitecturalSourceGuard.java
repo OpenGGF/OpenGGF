@@ -208,8 +208,6 @@ class TestArchitecturalSourceGuard {
 
     private static final Set<String> COORDINATE_HAZARD_ALLOWED = Set.of(
             "com/openggf/game/sonic2/objects/CheckpointStarInstance.java",
-            "com/openggf/game/sonic2/objects/FallingPillarObjectInstance.java",
-            "com/openggf/game/sonic2/objects/PipeExitSpringObjectInstance.java",
             "com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceController.java",
             "com/openggf/game/sonic3k/objects/AizEmeraldScatterInstance.java",
             "com/openggf/game/sonic3k/objects/AizHollowTreeObjectInstance.java",
@@ -219,7 +217,6 @@ class TestArchitecturalSourceGuard {
             // the allowlisted Hcz2CutsceneButtonInstance / S3kCutsceneButtonObjectInstance.
             "com/openggf/game/sonic3k/objects/Cnz2CutsceneButtonInstance.java",
             "com/openggf/game/sonic3k/objects/Hcz2CutsceneButtonInstance.java",
-            "com/openggf/game/sonic3k/objects/HCZLargeFanObjectInstance.java",
             "com/openggf/game/sonic3k/objects/PachinkoFlipperObjectInstance.java",
             "com/openggf/game/sonic3k/objects/S3kCutsceneButtonObjectInstance.java"
     );

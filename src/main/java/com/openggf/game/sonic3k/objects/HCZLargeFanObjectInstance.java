@@ -112,12 +112,12 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance {
             return false;
         }
 
-        int playerX = player.getX() & 0xFFFF;
+        int playerX = player.getCentreX() & 0xFFFF;
         if (playerX - PLAYER_X_TRIGGER_OFFSET < x) {
             return false;
         }
 
-        int relY = player.getY() - PLAYER_Y_TRIGGER_OFFSET - y;
+        int relY = player.getCentreY() - PLAYER_Y_TRIGGER_OFFSET - y;
         return relY >= 0 && relY < PLAYER_Y_TRIGGER_RANGE;
     }
 

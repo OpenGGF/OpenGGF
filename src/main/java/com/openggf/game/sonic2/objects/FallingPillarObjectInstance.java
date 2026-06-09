@@ -161,7 +161,7 @@ public class FallingPillarObjectInstance extends AbstractObjectInstance
         if (player == null) {
             return;
         }
-        int dx = x - player.getX();
+        int dx = x - player.getCentreX();
         if (dx < 0) {
             dx = -dx;
         }

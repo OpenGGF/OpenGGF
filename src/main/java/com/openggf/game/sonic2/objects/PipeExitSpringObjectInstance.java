@@ -250,8 +250,8 @@ public class PipeExitSpringObjectInstance extends BoxObjectInstance
     private boolean isPlayerInTubeBelow(AbstractPlayableSprite player) {
         int springX = spawn.x();
         int springY = spawn.y();
-        int playerX = player.getX();
-        int playerY = player.getY();
+        int playerX = player.getCentreX();
+        int playerY = player.getCentreY();
 
         // ROM: d4 = x_pos - $10, d5 = x_pos + $10
         int xMin = springX - PROXIMITY_X_RANGE;
