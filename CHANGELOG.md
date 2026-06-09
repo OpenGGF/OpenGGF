@@ -4,6 +4,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Cross-game hybrid physics now preserves base boundary flags:** hybrid
+  feature construction keeps the base game's sidekick, landing, and level
+  boundary flags aligned while donating only the intended cross-game abilities.
+
 - **Rewind level keyframes now isolate live map mutations:** level rewind
   capture advances the map copy-on-write epoch so later layout mutations cannot
   rewrite already-captured keyframe bytes.

@@ -8,12 +8,16 @@ import com.openggf.graphics.RenderContext;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.sprites.art.SpriteArtSet;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.RecordComponent;
 import java.util.List;
+import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
@@ -59,6 +63,30 @@ class TestCrossGameFeatureProviderRefactor {
     }
 
     @Test
+    void hybridFeatureSetPreservesBaseBoundaryAndSidekickFlags() throws Exception {
+        TestEnvironment.configureGameModuleFixture(new com.openggf.game.sonic2.Sonic2GameModule());
+        CrossGameFeatureProvider provider = new CrossGameFeatureProvider(null, null);
+        setField(provider, "donorGameId", GameId.S3K);
+        setField(provider, "donorCapabilities", new StubDonorCapabilities());
+
+        PhysicsFeatureSet hybrid = invokeBuildHybridFeatureSet(provider);
+        PhysicsFeatureSet base = PhysicsFeatureSet.SONIC_2;
+
+        assertHybridPreservesBaseExceptDonatedCapabilities(base, hybrid);
+        assertEquals(base.sidekickPushBypassUsesGraceStatus(), hybrid.sidekickPushBypassUsesGraceStatus());
+        assertEquals(base.sidekickClearsStalePushVelocityBeforeGroundMove(),
+                hybrid.sidekickClearsStalePushVelocityBeforeGroundMove());
+        assertEquals(base.sidekickCpuUsesLevelFrameCounter(), hybrid.sidekickCpuUsesLevelFrameCounter());
+        assertEquals(base.landingRollClearUsesCurrentYRadiusDelta(),
+                hybrid.landingRollClearUsesCurrentYRadiusDelta());
+        assertEquals(base.levelBoundaryRightStrict(), hybrid.levelBoundaryRightStrict());
+        assertEquals(base.levelBoundaryUsesCentreY(), hybrid.levelBoundaryUsesCentreY());
+        assertEquals(base.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity(),
+                hybrid.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity());
+        assertEquals(base.sidekickNormalCpuSkipsHurtRoutine(), hybrid.sidekickNormalCpuSkipsHurtRoutine());
+    }
+
+    @Test
     void loadPlayerSpriteArt_refreshesDonorPaletteForRequestedCharacter() throws Exception {
         Palette sonicPalette = paletteWithBlueMarker();
         Palette knucklesPalette = paletteWithRedMarker();
@@ -83,6 +111,30 @@ class TestCrossGameFeatureProviderRefactor {
         Field field = CrossGameFeatureProvider.class.getDeclaredField(name);
         field.setAccessible(true);
         field.set(target, value);
+    }
+
+    private static PhysicsFeatureSet invokeBuildHybridFeatureSet(CrossGameFeatureProvider provider) throws Exception {
+        Method method = CrossGameFeatureProvider.class.getDeclaredMethod("buildHybridFeatureSet");
+        method.setAccessible(true);
+        return (PhysicsFeatureSet) method.invoke(provider);
+    }
+
+    private static void assertHybridPreservesBaseExceptDonatedCapabilities(
+            PhysicsFeatureSet base, PhysicsFeatureSet hybrid) throws Exception {
+        Set<String> donorFields = Set.of(
+                "spindashEnabled",
+                "spindashSpeedTable",
+                "elementalShieldsEnabled",
+                "instaShieldEnabled",
+                "lightningShieldEnabled");
+        for (RecordComponent component : PhysicsFeatureSet.class.getRecordComponents()) {
+            if (donorFields.contains(component.getName())) {
+                continue;
+            }
+            Method accessor = component.getAccessor();
+            assertEquals(accessor.invoke(base), accessor.invoke(hybrid),
+                    "Hybrid physics must preserve base component " + component.getName());
+        }
     }
 
     private static final class StubDonorCapabilities implements DonorCapabilities {
