@@ -551,14 +551,40 @@ public class SonicConfigurationService {
 		try {
 			String cmd = ProcessHandle.current().info().command().orElse("");
 			if (!cmd.isEmpty()) {
-				File execDir = new File(cmd).getParentFile();
-				if (execDir != null) {
-					return new File(execDir, "config.yaml");
-				}
+				return resolveNativeConfigForExecutable(new File(cmd));
 			}
 		} catch (Exception ignored) {
 		}
 		return null;
+	}
+
+	static File resolveNativeConfigForExecutable(File executable) {
+		if (executable == null) {
+			return null;
+		}
+		File execDir = executable.isDirectory() ? executable : executable.getParentFile();
+		if (execDir == null) {
+			return null;
+		}
+		File bundleSiblingConfig = macosAppBundleSiblingConfig(execDir);
+		if (bundleSiblingConfig != null) {
+			return bundleSiblingConfig;
+		}
+		return new File(execDir, "config.yaml");
+	}
+
+	private static File macosAppBundleSiblingConfig(File execDir) {
+		File contentsDir = execDir.getParentFile();
+		File appBundle = contentsDir == null ? null : contentsDir.getParentFile();
+		if (!"MacOS".equals(execDir.getName())
+				|| contentsDir == null
+				|| !"Contents".equals(contentsDir.getName())
+				|| appBundle == null
+				|| !appBundle.getName().endsWith(".app")) {
+			return null;
+		}
+		File appParent = appBundle.getParentFile();
+		return appParent == null ? null : new File(appParent, "config.yaml");
 	}
 
 	/**

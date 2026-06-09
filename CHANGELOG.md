@@ -82,6 +82,10 @@ All notable changes to the OpenGGF project are documented in this file.
   user configuration, reducing the risk of interrupted writes leaving a
   truncated config.
 
+- **macOS native packages now read the editable app-adjacent config:** native
+  launches from `OpenGGF.app/Contents/MacOS` resolve `config.yaml` beside the
+  `.app` bundle, matching the packaged release layout.
+
 - **Hash-warning saves can no longer be launched from data select:** save
   summaries now distinguish recoverable payloads from loadable slots, so hash
   mismatches remain visible/deletable for recovery while data-select launch and
