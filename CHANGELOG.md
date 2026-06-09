@@ -91,6 +91,10 @@ All notable changes to the OpenGGF project are documented in this file.
   pipeline releases session HUD managers when graphics returns to bootstrap
   camera/fade references.
 
+- **Ground sensor test overrides now clear on teardown:** gameplay teardown and
+  the shared test reset baseline clear the static `GroundSensor` level override,
+  preventing trace/headless sessions from leaking stale level collision state.
+
 - **Hash-warning saves can no longer be launched from data select:** save
   summaries now distinguish recoverable payloads from loadable slots, so hash
   mismatches remain visible/deletable for recovery while data-select launch and

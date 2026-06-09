@@ -32,6 +32,7 @@ import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.rings.RingManager;
 import com.openggf.physics.CollisionSystem;
+import com.openggf.physics.GroundSensor;
 import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.timer.TimerManager;
@@ -570,6 +571,7 @@ public final class GameplayModeContext implements ModeContext {
         if (camera != null) {
             camera.resetState();
         }
+        GroundSensor.setLevelManager(null);
         zoneLayoutMutationPipeline = null;
         advancedRenderModeController = null;
         specialRenderEffectRegistry = null;

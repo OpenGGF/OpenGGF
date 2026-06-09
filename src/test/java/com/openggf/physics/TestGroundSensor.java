@@ -20,6 +20,7 @@ import com.openggf.game.GroundMode;
 import java.lang.reflect.Field;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyByte;
@@ -163,6 +164,23 @@ public class TestGroundSensor {
 
     private ChunkDesc[][] chunkMapForLayer(byte layer) {
         return layer == 1 ? bgChunkMap : fgChunkMap;
+    }
+
+    @Test
+    public void resetAllClearsStaticLevelManagerOverride() throws Exception {
+        assertNotNull(groundSensorOverrideLevelManager(),
+                "setUp should install a GroundSensor level-manager override");
+
+        TestEnvironment.resetAll();
+
+        assertNull(groundSensorOverrideLevelManager(),
+                "Test reset must clear GroundSensor's static level-manager override");
+    }
+
+    private static Object groundSensorOverrideLevelManager() throws Exception {
+        Field field = GroundSensor.class.getDeclaredField("overrideLevelManager");
+        field.setAccessible(true);
+        return field.get(null);
     }
 
     @Test
