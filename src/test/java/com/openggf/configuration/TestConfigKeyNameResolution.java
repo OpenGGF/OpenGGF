@@ -12,9 +12,7 @@ class TestConfigKeyNameResolution {
 
     @BeforeEach
     void setUp() {
-        // Reset singleton to get a fresh instance with defaults applied
-        SonicConfigurationService.resetStaticInstance();
-        configService = SonicConfigurationService.getInstance();
+        configService = SonicConfigurationService.createStandalone();
     }
 
     @Test

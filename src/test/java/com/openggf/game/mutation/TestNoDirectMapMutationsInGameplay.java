@@ -29,8 +29,11 @@ import static org.junit.jupiter.api.Assertions.fail;
  */
 class TestNoDirectMapMutationsInGameplay {
 
-    private static final Pattern DIRECT_MAP_SETVALUE = Pattern.compile(
-            "\\bgetMap\\s*\\(\\s*\\)\\s*\\.\\s*setValue\\s*\\(");
+    private static final String RAW_MAP_MUTATORS =
+            "(?:setValue|setChunkDesc|setPatternDesc|setSolidTileIndex|setSolidTileAltIndex)";
+    private static final Pattern DIRECT_MAP_MUTATION = Pattern.compile(
+            "(?:\\([^;\\r\\n]*\\bgetMap\\s*\\(\\s*\\)\\s*\\)|\\bgetMap\\s*\\(\\s*\\))"
+                    + "\\s*\\.\\s*" + RAW_MAP_MUTATORS + "\\s*\\(");
     private static final Pattern LEVEL_MAP_ALIAS = Pattern.compile(
             "\\b([A-Za-z_$][\\w$]*)\\s*=\\s*[^;\\r\\n]*\\.\\s*getMap\\s*\\(\\s*\\)\\s*;");
 
@@ -58,25 +61,19 @@ class TestNoDirectMapMutationsInGameplay {
     void noDirectMapSetValueInGameplay() throws IOException {
         List<String> violations = new ArrayList<>();
         for (String root : SCAN_ROOTS) {
-            Path rootPath = Paths.get(root);
-            if (!Files.exists(rootPath)) continue;
-            try (Stream<Path> walk = Files.walk(rootPath)) {
-                walk.filter(p -> p.toString().endsWith(".java"))
-                    .filter(p -> !isAllowed(p))
-                    .forEach(p -> {
-                        try {
-                            String content = Files.readString(p, StandardCharsets.UTF_8);
-                            // Strip line comments and block comments to avoid
-                            // false positives on documentation that mentions
-                            // the old pattern.
-                            String stripped = stripCommentsAndStrings(content);
-                            if (hasDirectMapMutation(stripped)) {
-                                violations.add(p.toString());
-                            }
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
+            for (Path p : scannableJavaFiles(root)) {
+                try {
+                    String content = Files.readString(p, StandardCharsets.UTF_8);
+                    // Strip line comments and block comments to avoid
+                    // false positives on documentation that mentions
+                    // the old pattern.
+                    String stripped = stripCommentsAndStrings(content);
+                    if (hasDirectMapMutation(stripped)) {
+                        violations.add(p.toString());
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
         if (!violations.isEmpty()) {
@@ -99,6 +96,17 @@ class TestNoDirectMapMutationsInGameplay {
     }
 
     @Test
+    void detectsParenthesizedChainedMapMutation() {
+        assertTrue(hasDirectMapMutation("""
+                class GameplayMutation {
+                    void apply(Level level) {
+                        (level.getMap()).setValue(0, 0, 1);
+                    }
+                }
+                """));
+    }
+
+    @Test
     void detectsMapAliasMutationFromLevelMap() {
         assertTrue(hasDirectMapMutation("""
                 class GameplayMutation {
@@ -108,6 +116,26 @@ class TestNoDirectMapMutationsInGameplay {
                     }
                 }
                 """));
+    }
+
+    @Test
+    void detectsAliasChunkAndTileMutatorsFromLevelMap() {
+        assertTrue(hasDirectMapMutation("""
+                class GameplayMutation {
+                    void apply(Level level) {
+                        var levelMap = level.getMap();
+                        levelMap.setSolidTileAltIndex(3);
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void scanRootsExistAndContainJavaFiles() throws IOException {
+        for (String root : SCAN_ROOTS) {
+            assertFalse(scannableJavaFiles(root).isEmpty(),
+                    "scan root must exist and contain Java files: " + root);
+        }
     }
 
     @Test
@@ -122,19 +150,32 @@ class TestNoDirectMapMutationsInGameplay {
     }
 
     private static boolean hasDirectMapMutation(String strippedSource) {
-        if (DIRECT_MAP_SETVALUE.matcher(strippedSource).find()) {
+        if (DIRECT_MAP_MUTATION.matcher(strippedSource).find()) {
             return true;
         }
         Matcher aliasMatcher = LEVEL_MAP_ALIAS.matcher(strippedSource);
         while (aliasMatcher.find()) {
             String alias = aliasMatcher.group(1);
-            Pattern aliasSetValue = Pattern.compile("\\b" + Pattern.quote(alias)
-                    + "\\s*\\.\\s*setValue\\s*\\(");
-            if (aliasSetValue.matcher(strippedSource).find()) {
+            Pattern aliasMutation = Pattern.compile("\\b" + Pattern.quote(alias)
+                    + "\\s*\\.\\s*" + RAW_MAP_MUTATORS + "\\s*\\(");
+            if (aliasMutation.matcher(strippedSource).find()) {
                 return true;
             }
         }
         return false;
+    }
+
+    private static List<Path> scannableJavaFiles(String root) throws IOException {
+        Path rootPath = Paths.get(root);
+        assertTrue(Files.isDirectory(rootPath), "scan root must exist: " + root);
+        try (Stream<Path> walk = Files.walk(rootPath)) {
+            List<Path> files = walk.filter(p -> p.toString().endsWith(".java"))
+                    .filter(p -> !isAllowed(p))
+                    .sorted()
+                    .toList();
+            assertTrue(!files.isEmpty(), "scan root must contain Java files: " + root);
+            return files;
+        }
     }
 
     /**
@@ -142,7 +183,7 @@ class TestNoDirectMapMutationsInGameplay {
      * The allow-list paths are relative to src/main/java/; we match against
      * the relative portion of the given path.
      */
-    private boolean isAllowed(Path filePath) {
+    private static boolean isAllowed(Path filePath) {
         String pathStr = filePath.toString().replace('\\', '/');
         for (String allowed : ALLOWED) {
             if (pathStr.endsWith(allowed)) {

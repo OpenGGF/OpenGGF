@@ -129,6 +129,7 @@ public final class EditorSaveManager {
         if (payload == null) {
             return;
         }
+        validatePayload(payload, level);
         for (EditorSavePayload.ChunkState chunkState : payload.chunks()) {
             if (chunkState.index() >= 0 && chunkState.index() < level.getChunkCount()
                     && chunkState.state().length == new Chunk().saveState().length) {
@@ -154,6 +155,31 @@ public final class EditorSaveManager {
                             + " x=" + mapCell.x() + " y=" + mapCell.y());
                 }
                 level.setBlockInMap(mapCell.layer(), mapCell.x(), mapCell.y(), mapCell.blockIndex());
+            }
+        }
+    }
+
+    private void validatePayload(EditorSavePayload payload, MutableLevel level) {
+        for (EditorSavePayload.ChunkState chunkState : payload.chunks()) {
+            if (chunkState.state() == null) {
+                throw new IllegalArgumentException("Missing editor chunk state at index " + chunkState.index());
+            }
+        }
+        for (EditorSavePayload.BlockState blockState : payload.blocks()) {
+            if (blockState.state() == null) {
+                throw new IllegalArgumentException("Missing editor block state at index " + blockState.index());
+            }
+        }
+        for (EditorSavePayload.MapCell mapCell : payload.mapCells()) {
+            if (mapCell.layer() >= 0 && mapCell.layer() < level.getMap().getLayerCount()
+                    && mapCell.x() >= 0 && mapCell.x() < level.getMap().getWidth()
+                    && mapCell.y() >= 0 && mapCell.y() < level.getMap().getHeight()) {
+                if (mapCell.blockIndex() < 0 || mapCell.blockIndex() >= level.getBlockCount()
+                        || mapCell.blockIndex() > 0xFF) {
+                    throw new IllegalArgumentException("Invalid editor map block index "
+                            + mapCell.blockIndex() + " at layer=" + mapCell.layer()
+                            + " x=" + mapCell.x() + " y=" + mapCell.y());
+                }
             }
         }
     }

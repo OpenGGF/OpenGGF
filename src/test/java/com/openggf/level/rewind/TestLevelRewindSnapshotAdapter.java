@@ -1,6 +1,7 @@
 package com.openggf.level.rewind;
 
 import com.openggf.game.LevelGamestate;
+import com.openggf.game.mutation.DirectLevelMutationSurface;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
 import com.openggf.level.AbstractLevel;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -85,6 +87,23 @@ class TestLevelRewindSnapshotAdapter {
         verify(manager).invalidateAllTilemaps();
         verify(manager).restoreRespawnRequestedForRewind(true);
         verify(manager).restoreCheckpointStateForRewind(null);
+    }
+
+    @Test
+    void captureIsolatesMapDataFromLaterProductionMutations() {
+        StubLevel level = new StubLevel();
+        level.getMap().setValue(0, 0, 0, (byte) 0x11);
+        LevelManager manager = mock(LevelManager.class);
+        when(manager.getCurrentLevel()).thenReturn(level);
+
+        LevelSnapshot snapshot = LevelRewindSnapshotAdapter.create(manager).capture();
+        byte[] snapshotMap = snapshot.mapData();
+
+        new DirectLevelMutationSurface(level).setBlockInMapWithoutRedraw(0, 0, 0, 0x99);
+
+        assertNotSame(snapshotMap, level.getMap().getData());
+        assertEquals((byte) 0x11, snapshotMap[0]);
+        assertEquals((byte) 0x99, level.getMap().getValue(0, 0, 0));
     }
 
     static class StubLevel extends AbstractLevel {

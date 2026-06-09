@@ -2,8 +2,7 @@ package com.openggf.level;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests for copy-on-write behavior in Block.
@@ -30,9 +29,9 @@ class TestBlockCoW {
         b.setChunkDesc(0, 0, new ChunkDesc(0x9999));
 
         // The old array still has the original value
-        assert beforeArray[0].get() == 0xABCD : "Before array should not be mutated by CoW";
+        assertEquals(0xABCD, beforeArray[0].get(), "Before array should not be mutated by CoW");
         // The new array has the mutation
-        assert afterArray[0].get() == 0x9999 : "After array should have the mutation";
+        assertEquals(0x9999, afterArray[0].get(), "After array should have the mutation");
     }
 
     @Test
@@ -68,17 +67,17 @@ class TestBlockCoW {
         assertNotSame(arr1, arr2, "CoW on new epoch should re-clone");
 
         // Old array should be unchanged
-        assert arr1[0].get() == 0x2222 : "arr1 should have second mutation";
+        assertEquals(0x2222, arr1[0].get(), "arr1 should have second mutation");
         // New array initially has same data
-        assert arr2[0].get() == 0x2222 : "arr2 should start with same data as arr1";
+        assertEquals(0x2222, arr2[0].get(), "arr2 should start with same data as arr1");
 
         // Now mutate arr2
         b.setChunkDesc(0, 0, new ChunkDesc(0x3333));
 
         // arr1 should be unchanged
-        assert arr1[0].get() == 0x2222 : "arr1 should not see third mutation";
+        assertEquals(0x2222, arr1[0].get(), "arr1 should not see third mutation");
         // arr2 should have the new value
-        assert arr2[0].get() == 0x3333 : "arr2 should have third mutation";
+        assertEquals(0x3333, arr2[0].get(), "arr2 should have third mutation");
     }
 
     @Test
@@ -96,9 +95,9 @@ class TestBlockCoW {
         ChunkDesc[] arr2 = b2.chunkDescsArrayForTest();
 
         // b1 should have cloned
-        assert b1.chunkDescsArrayForTest() == arr1;
+        assertSame(arr1, b1.chunkDescsArrayForTest());
         // b2 should still be original (no CoW yet)
-        assert b2.chunkDescsArrayForTest() == arr2;
+        assertSame(arr2, b2.chunkDescsArrayForTest());
 
         // Now CoW b2
         b2.cowEnsureWritable(1L);

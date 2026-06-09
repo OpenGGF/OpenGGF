@@ -2,8 +2,7 @@ package com.openggf.level;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests for copy-on-write behavior in Map.
@@ -30,9 +29,9 @@ class TestMapCoW {
         m.setValue(0, 0, 0, (byte) 0x99);
 
         // The old array still has the original value
-        assert beforeArray[0] == (byte) 0xAB : "Before array should not be mutated by CoW";
+        assertEquals((byte) 0xAB, beforeArray[0], "Before array should not be mutated by CoW");
         // The new array has the mutation
-        assert afterArray[0] == (byte) 0x99 : "After array should have the mutation";
+        assertEquals((byte) 0x99, afterArray[0], "After array should have the mutation");
     }
 
     @Test
@@ -68,17 +67,17 @@ class TestMapCoW {
         assertNotSame(arr1, arr2, "CoW on new epoch should re-clone");
 
         // Old array should have the second mutation
-        assert arr1[0] == (byte) 0x22 : "arr1 should have second mutation";
+        assertEquals((byte) 0x22, arr1[0], "arr1 should have second mutation");
         // New array initially has same data
-        assert arr2[0] == (byte) 0x22 : "arr2 should start with same data as arr1";
+        assertEquals((byte) 0x22, arr2[0], "arr2 should start with same data as arr1");
 
         // Now mutate arr2
         m.setValue(0, 0, 0, (byte) 0x33);
 
         // arr1 should be unchanged
-        assert arr1[0] == (byte) 0x22 : "arr1 should not see third mutation";
+        assertEquals((byte) 0x22, arr1[0], "arr1 should not see third mutation");
         // arr2 should have the new value
-        assert arr2[0] == (byte) 0x33 : "arr2 should have third mutation";
+        assertEquals((byte) 0x33, arr2[0], "arr2 should have third mutation");
     }
 
     @Test
@@ -87,7 +86,7 @@ class TestMapCoW {
         m.setValue(0, 0, 0, (byte) 0x11);
 
         byte[] original = m.dataArrayForTest();
-        assert m.getValue(0, 0, 0) == (byte) 0x11;
+        assertEquals((byte) 0x11, m.getValue(0, 0, 0));
 
         // Create a new data array (simulating snapshot data)
         byte[] snapshotData = new byte[256 * 256 * 2];
@@ -101,7 +100,7 @@ class TestMapCoW {
         // Should have different references
         assertNotSame(original, restored);
         // And the value should be from the snapshot
-        assert m.getValue(0, 0, 0) == (byte) 0x99;
+        assertEquals((byte) 0x99, m.getValue(0, 0, 0));
     }
 
     @Test
@@ -144,7 +143,7 @@ class TestMapCoW {
         m.setValue(1, 0, 0, (byte) 0x44);
 
         // Both old values should persist in the cloned array (which now has the new values)
-        assert arr1[0] == (byte) 0x33 : "First layer should have new value";
+        assertEquals((byte) 0x33, arr1[0], "First layer should have new value");
         // The old array reference still points to the same (cloned) array, so it sees the new values
         // This is expected because we cloned the entire byte[] on first write
     }

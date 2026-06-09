@@ -110,12 +110,17 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     }
 
     public void update(int cameraX, AbstractPlayableSprite player, int frameCounter) {
+        update(cameraX, player, frameCounter, true);
+    }
+
+    public void update(int cameraX, AbstractPlayableSprite player, int frameCounter,
+                       boolean collectStageRingsInUpdate) {
         placement.update(cameraX);
         if (player == null || player.getDead()) {
             return;
         }
 
-        if (!stageRingsUseObjectTouchCollection) {
+        if (collectStageRingsInUpdate && !stageRingsUseObjectTouchCollection) {
             collectStageRings(player, frameCounter);
         }
 
@@ -162,8 +167,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      * ROM parity: normal ring pickup is part of the player/object touch pass
      * (ReactToItem/Test_Ring_Collisions), not a late end-of-frame sweep. Calling
      * this from the touch phase keeps ring routine transitions and SST slot
-     * lifetimes aligned with the disassembly. {@link #update} still invokes the
-     * same helper so existing callers and tests retain the previous API.
+     * lifetimes aligned with the disassembly. {@link #update(int,
+     * AbstractPlayableSprite, int, boolean)} keeps the legacy collection path
+     * only for callers that explicitly request it.
      */
     public void collectStageRings(AbstractPlayableSprite player, int frameCounter) {
         if (cannotCollectRings(player)) {
@@ -235,6 +241,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
     private static boolean cannotCollectRings(AbstractPlayableSprite player) {
         if (player == null || player.getDead()) {
+            return true;
+        }
+        if (player.isTouchResponseSuppressedByObjectControl()) {
             return true;
         }
         return player.isCpuControlled() && player.isObjectControlled();

@@ -37,6 +37,7 @@ import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -71,6 +72,9 @@ import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
 class TestEditorToggleIntegration {
     private static final Path S2_ROM = Path.of("Sonic The Hedgehog 2 (W) (REV01) [!].gen");
+
+    @TempDir
+    Path tempSaves;
 
     private static final ParallaxManager SINGLE_CHUNK_BG_PERIOD = new ParallaxManager() {
         @Override
@@ -252,6 +256,8 @@ class TestEditorToggleIntegration {
         assumeS2RomAvailableForResumeReload();
         enableEditor();
         Engine engine = new Engine();
+        EditorSaveManager saveManager = new EditorSaveManager(tempSaves);
+        setPrivateField(engine, "editorSaveManager", saveManager);
         GameplayModeContext gameplayMode = createGameplayMode(engine);
         MutableLevel mutable = MutableLevel.snapshot(new SyntheticLevel());
         gameplayMode.getLevelManager().setLevel(mutable);
@@ -259,27 +265,21 @@ class TestEditorToggleIntegration {
         int act = 1;
         gameplayMode.getWorldSession().setCurrentZone(zone);
         gameplayMode.getWorldSession().setCurrentAct(act);
-        EditorSaveManager saveManager = new EditorSaveManager(Path.of("saves"));
         Path saveFile = saveManager.editPath(gameplayMode.getWorldSession().getGameModule().getGameId(), zone, act);
-        Files.deleteIfExists(saveFile);
 
-        try {
-            engine.enterEditorFromCurrentPlayer(
-                    new EditorPlaytestStash(50, 50, 0, 0, true, 0, 1),
-                    100, 200);
-            engine.getLevelEditorController().placeBlock(0, 1, 1, 1);
+        engine.enterEditorFromCurrentPlayer(
+                new EditorPlaytestStash(50, 50, 0, 0, true, 0, 1),
+                100, 200);
+        engine.getLevelEditorController().placeBlock(0, 1, 1, 1);
 
-            engine.resumePlaytestFromEditor();
+        engine.resumePlaytestFromEditor();
 
-            assertTrue(Files.exists(saveFile),
-                    "editor resume should save the MutableLevel attached to LevelEditorController");
-            MutableLevel fresh = MutableLevel.snapshot(new SyntheticLevel());
-            assertEquals(EditorSaveManager.ApplyResult.APPLIED,
-                    saveManager.tryApplyEdits(gameplayMode.getWorldSession().getGameModule().getGameId(), zone, act, fresh));
-            assertEquals(1, Byte.toUnsignedInt(fresh.getMap().getValue(0, 1, 1)));
-        } finally {
-            Files.deleteIfExists(saveFile);
-        }
+        assertTrue(Files.exists(saveFile),
+                "editor resume should save the MutableLevel attached to LevelEditorController");
+        MutableLevel fresh = MutableLevel.snapshot(new SyntheticLevel());
+        assertEquals(EditorSaveManager.ApplyResult.APPLIED,
+                saveManager.tryApplyEdits(gameplayMode.getWorldSession().getGameModule().getGameId(), zone, act, fresh));
+        assertEquals(1, Byte.toUnsignedInt(fresh.getMap().getValue(0, 1, 1)));
     }
 
     @Test
@@ -896,11 +896,12 @@ class TestEditorToggleIntegration {
         assertTrue(SessionManager.getCurrentGameplayMode().getResumeStash().isEmpty());
     }
 
-    private static GameplayModeContext createGameplayMode(Engine engine) {
+    private GameplayModeContext createGameplayMode(Engine engine) {
         return createGameplayMode(engine, (short) 100, (short) 200);
     }
 
-    private static GameplayModeContext createGameplayMode(Engine engine, short playerX, short playerY) {
+    private GameplayModeContext createGameplayMode(Engine engine, short playerX, short playerY) {
+        installTempEditorSaveManager(engine);
         RomManager.getInstance().setRom(null);
         GameplayModeContext gameplayMode = SessionManager.openGameplaySession(new Sonic2GameModule());
         TestEnvironment.activeGameplayMode();
@@ -910,6 +911,14 @@ class TestEditorToggleIntegration {
         gameplayMode.getCamera().setFocusedSprite(player);
         engine.getGameLoop().setGameplayMode(gameplayMode);
         return gameplayMode;
+    }
+
+    private void installTempEditorSaveManager(Engine engine) {
+        try {
+            setPrivateField(engine, "editorSaveManager", new EditorSaveManager(tempSaves));
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Failed to install test editor save manager", e);
+        }
     }
 
     private static void assumeS2RomAvailableForResumeReload() {
@@ -966,7 +975,7 @@ class TestEditorToggleIntegration {
         field.set(controller, cursor);
     }
 
-    private static void setPrivateField(Object target, String fieldName, Object value) throws Exception {
+    private static void setPrivateField(Object target, String fieldName, Object value) throws ReflectiveOperationException {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(target, value);

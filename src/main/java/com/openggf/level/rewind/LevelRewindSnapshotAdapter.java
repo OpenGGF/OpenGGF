@@ -31,6 +31,10 @@ public final class LevelRewindSnapshotAdapter implements RewindSnapshottable<Lev
         AbstractLevel level = currentAbstractLevel();
         LevelState levelState = manager.getLevelGamestate();
 
+        // Capture establishes a new COW boundary: future production map writes
+        // must clone away from the byte array referenced by this keyframe.
+        level.bumpEpoch();
+
         return new LevelSnapshot(
                 level.currentEpoch(),
                 level.blocksReference(),

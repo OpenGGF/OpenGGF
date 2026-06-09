@@ -295,6 +295,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
     @Override
     public void reset() {
         state = State.INACTIVE;
+        launchErrorMessage = null;
         renderer.reset();
         if (sessionController != null) {
             sessionController.reset();
@@ -302,6 +303,16 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
         selectorState.setCurrentEntry(0);
         displayedSelectedRow = 0;
         frameCounter = 0;
+        fadeTimer = 0;
+        resetDeleteRobotnikState();
+    }
+
+    @Override
+    public void showLaunchError(String message) {
+        super.showLaunchError(message);
+        reloadSlotSummaries();
+        selectorState.setCurrentEntry(menuModel().getSelectedRow());
+        displayedSelectedRow = menuModel().getSelectedRow();
         fadeTimer = 0;
         resetDeleteRobotnikState();
     }

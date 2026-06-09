@@ -1,5 +1,53 @@
 # Trace Frontier Log
 
+## 2026-06-09 - RRF release review AIZ sidekick Status_Push visibility (AIZ f14302 -> GREEN)
+
+- Scope: release-readiness review follow-up to the sidekick-only AIZ frontier
+  exposed after the placed-ring touch-phase fix.
+- Change: `SidekickCpuController` now decides the live push-bypass branch from
+  the ROM-visible sidekick status byte captured at the CPU slot, then requires
+  either local object-band continuity or high incoming wall-push velocity before
+  treating the engine `Status_Push` bit as a real `loc_13DD0` bypass. This keeps
+  the high-speed frame 3077 push branch from manufacturing follow input while
+  allowing the later low-speed stale-push frame 14302 to fall through
+  `FollowLeft`. The predicate is driven by status, speed, delayed status, and
+  follow geometry; it is not a zone/route/frame exception.
+- Verification:
+  - `mvn -q -Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace test -DfailIfNoTests=false`
+    -> AIZ replay passed with no divergences.
+  - `mvn -q -Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity#s3kFastCurrentPushFarBelowTargetStillBypassesFollowRightAfterAizIntro+s3kStaleCurrentPushFarBelowTargetFallsThroughToFollowLeftAfterAizReload+normalPushBypassUsesSameDelayedStatusSlotAsRomD4 test -DfailIfNoTests=false`
+    -> focused CPU parity regressions passed.
+
+## 2026-06-09 - RRF release review AIZ placed-ring touch phase (AIZ f6203 -> f14302)
+
+- Scope: release-readiness review follow-up to the exposed AIZ2 ring frontier.
+- Change: S2/S3K placed-ring pickup now stays in the player touch phase instead
+  of running a second late `RingManager.update` sweep after object execution.
+  Placed rings also reuse the shared `object_control` touch-response suppression
+  predicate, so native bit-7 control states skip `Test_Ring_Collisions` the same
+  way object contacts do. This is state/order driven, not a zone or frame
+  carve-out.
+- Root cause/evidence:
+  - At frame 6203 after `aiz2_reload_resume`, player/camera/velocity matched
+    the ROM, but the engine had already collected the next placed ring.
+  - The engine was calling `collectStageRings` both from
+    `LevelManager.applyTouchResponses` and again from the late level update.
+    The late pass saw the post-object ride-vine position; ROM does not run
+    `Test_Ring_Collisions` again after the ride-vine object updates the player.
+  - Native object-control touch suppression was also missing from
+    `RingManager.collectStageRings`, while the object touch-response controller
+    already had the correct shared predicate.
+- Verification:
+  - `mvn -q "-Dtest=com.openggf.tests.TestRingManager#testNativeBit7ObjectControlSuppressesStageRingCollection+testLateRingManagerUpdateCanSkipStageRingCollection" test -DfailIfNoTests=false`
+    -> selected regressions passed; repo aggregate still reported the AIZ
+    release gate as expected before the full replay was rerun.
+  - `mvn -q "-Dopenggf.trace.ringdiag=true" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+    -> AIZ advanced past the ring frontier to frame 14302,
+    `tails_g_speed expected=-0006 actual=0x0006` (519 errors / 0 warnings).
+- New frontier: frame 14302 sidekick-only `tails_g_speed` sign mismatch during
+  post-AIZ2-reload follow/push-bypass behavior. Main player, camera, ring count,
+  and trace phase are aligned at the frontier.
+
 ## 2026-06-09 - RRF-052 pre-level-prefix bootstrap policy cleanup exposes AIZ2 ring frontier
 
 - Scope: release-readiness review RRF-052.

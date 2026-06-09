@@ -208,8 +208,6 @@ class TestArchitecturalSourceGuard {
 
     private static final Set<String> COORDINATE_HAZARD_ALLOWED = Set.of(
             "com/openggf/game/sonic2/objects/CheckpointStarInstance.java",
-            "com/openggf/game/sonic2/objects/FallingPillarObjectInstance.java",
-            "com/openggf/game/sonic2/objects/PipeExitSpringObjectInstance.java",
             "com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceController.java",
             "com/openggf/game/sonic3k/objects/AizEmeraldScatterInstance.java",
             "com/openggf/game/sonic3k/objects/AizHollowTreeObjectInstance.java",
@@ -219,7 +217,6 @@ class TestArchitecturalSourceGuard {
             // the allowlisted Hcz2CutsceneButtonInstance / S3kCutsceneButtonObjectInstance.
             "com/openggf/game/sonic3k/objects/Cnz2CutsceneButtonInstance.java",
             "com/openggf/game/sonic3k/objects/Hcz2CutsceneButtonInstance.java",
-            "com/openggf/game/sonic3k/objects/HCZLargeFanObjectInstance.java",
             "com/openggf/game/sonic3k/objects/PachinkoFlipperObjectInstance.java",
             "com/openggf/game/sonic3k/objects/S3kCutsceneButtonObjectInstance.java"
     );
@@ -461,6 +458,21 @@ class TestArchitecturalSourceGuard {
                         + OBJECT_MANAGER_CONCRETE_SONIC_REFERENCE_BUDGET
                         + ". Move new rewind/dynamic-object recreation through registered factories or codecs.\n    "
                         + String.join("\n    ", references));
+    }
+
+    @Test
+    void sharedSpriteCodeDoesNotGainConcreteSonicDependencies() throws IOException {
+        List<String> references = new ArrayList<>();
+        for (Path file : productionFilesUnder("com/openggf/sprites")) {
+            String relative = relative(file);
+            references.addAll(scanPattern(relative,
+                    Files.readString(file),
+                    CONCRETE_SONIC_REFERENCE));
+        }
+
+        assertNoViolations(
+                "Shared sprite code must use feature sets, providers, or shared contracts instead of concrete Sonic packages",
+                references);
     }
 
     @Test
@@ -1322,12 +1334,14 @@ class TestArchitecturalSourceGuard {
     private static List<Path> productionFilesUnder(String relativeRoot) throws IOException {
         Path root = SRC_MAIN.resolve(relativeRoot);
         if (!Files.isDirectory(root)) {
-            return List.of();
+            fail("production scan root is missing: " + relativeRoot);
         }
         try (Stream<Path> stream = Files.walk(root)) {
-            return stream.filter(path -> path.toString().endsWith(".java"))
+            List<Path> files = stream.filter(path -> path.toString().endsWith(".java"))
                     .sorted()
                     .toList();
+            assertTrue(!files.isEmpty(), "production scan root must contain Java files: " + relativeRoot);
+            return files;
         }
     }
 

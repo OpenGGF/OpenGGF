@@ -23,9 +23,10 @@ own supported Sonic 1, Sonic 2, and Sonic 3 & Knuckles ROMs.
   the GitHub release is a manual `workflow_dispatch` action while the prerelease version tag is
   static.
 - **Known release risks:** the architecture review tracker in
-  `docs/release-architecture-review-issues.md` records remaining parity/framework issues. Several
-  trace and rewind failures are still present in the local full-suite output and should be treated
-  as release blockers or explicit deferrals before publishing.
+  `docs/release-architecture-review-issues.md` records remaining parity/framework issues. S3K AIZ
+  trace replay is a hard publish gate for this prerelease line; the June 9 follow-up fixes resolve
+  the known AIZ mismatch through ROM-visible object and sidekick state, and any remaining parity or
+  framework risks should be recorded as explicit deferrals before publishing.
 
 See `CHANGELOG.md` for the running list of branch-level changes and
 `docs/TRACE_FRONTIER_LOG.md` for trace frontier movement.

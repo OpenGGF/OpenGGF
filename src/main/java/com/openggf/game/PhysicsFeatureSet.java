@@ -283,6 +283,28 @@ public record PhysicsFeatureSet(
          * <p>S1:  {@code false} (no CPU sidekick).
          */
         boolean sidekickFlyLandRequiresLeaderAlive,
+        /** Y offset applied when the sidekick catch-up routine teleports above
+         *  the leader.
+         *  <p>S3K: {@code 0xC0} (sonic3k.asm:26494). S1/S2 keep this inert
+         *  default because they do not enter the S3K routine-2 flight state. */
+        int sidekickCatchUpYOffset,
+        /** Off-screen timeout for the sidekick auto-recovery flight routine.
+         *  <p>S3K: {@code 5*60} frames (sonic3k.asm:26538). */
+        int sidekickFlightAutoLandFrames,
+        /** Horizontal per-frame clamp for the sidekick auto-recovery flight chase.
+         *  <p>S3K: {@code 0x0C} pixels/frame (sonic3k.asm:26576). */
+        int sidekickFlightMaxXStep,
+        /** Vertical per-frame step for the sidekick auto-recovery flight chase.
+         *  <p>S3K: {@code 1} pixel/frame (sonic3k.asm:26612). */
+        int sidekickFlightYStep,
+        /** X lead offset used by the sidekick auto-recovery flight routine.
+         *  <p>S3K: {@code 0x20} when leader object/speed gates allow it
+         *  (sonic3k.asm:26692-26694). */
+        int sidekickFlightLeadXOffset,
+        /** Leader ground-speed threshold that suppresses the auto-recovery
+         *  flight lead offset.
+         *  <p>S3K: {@code 0x400} (sonic3k.asm:26692). */
+        int sidekickFlightLeadSuppressGSpeed,
         /**
          * Whether {@code SolidObject_cont}'s on-screen gate
          * (s2.asm:35140-35145 SolidObject_OnScreenTest, sonic3k.asm:41390-41392
@@ -375,6 +397,17 @@ public record PhysicsFeatureSet(
          * (sonic3k.asm:26702-26705). S1/S2 keep the direct live-push path.
          */
         boolean sidekickPushBypassUsesGraceStatus,
+        /**
+         * Whether the fast-leader, tiny-dx follow branch may suppress the
+         * immediate +/-1 grounded follow nudge when stale local push state is
+         * modelling an imminent S3K solid-contact response.
+         * <p>S3K: {@code true}; this is part of the S3K object-order/local
+         * push bridge around loc_13DD0/FollowRight (sonic3k.asm:26702-26741).
+         * S1/S2: {@code false}; S2's TailsCPU_Normal applies the normal
+         * FollowLeft/FollowRight nudge after its live Status_Push branch and
+         * has no S3K lead/grace bridge.
+         */
+        boolean sidekickSuppressesFastLeaderTinyFollowNudge,
         /**
          * Whether a CPU sidekick with stale push status and no fresh left/right
          * input clears ground velocity before the ground movement step.
@@ -872,6 +905,22 @@ public record PhysicsFeatureSet(
     /** S1: no CPU sidekick — value unreachable. */
     public static final int SIDEKICK_FLY_LAND_BLOCKERS_NONE = 0;
 
+    /** S3K Tails_Catch_Up_Flying y target offset (sonic3k.asm:26494). */
+    public static final int SIDEKICK_CATCH_UP_Y_OFFSET_S3K = Sonic3kConstants.TAILS_CATCH_UP_Y_OFFSET;
+    /** S3K Tails_FlySwim_Unknown off-screen timeout (sonic3k.asm:26538). */
+    public static final int SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K =
+            Sonic3kConstants.TAILS_FLIGHT_AUTO_LAND_FRAMES;
+    /** S3K Tails_FlySwim_Unknown max x step (sonic3k.asm:26576). */
+    public static final int SIDEKICK_FLIGHT_MAX_X_STEP_S3K = Sonic3kConstants.TAILS_FLIGHT_MAX_X_STEP;
+    /** S3K Tails_FlySwim_Unknown y step (sonic3k.asm:26612). */
+    public static final int SIDEKICK_FLIGHT_Y_STEP_S3K = Sonic3kConstants.TAILS_FLIGHT_Y_STEP;
+    /** S3K Tails_FlySwim_Unknown delayed-target lead offset (sonic3k.asm:26694). */
+    public static final int SIDEKICK_FLIGHT_LEAD_X_OFFSET_S3K =
+            Sonic3kConstants.TAILS_FLIGHT_LEAD_X_OFFSET;
+    /** S3K Tails_FlySwim_Unknown lead suppression threshold (sonic3k.asm:26692). */
+    public static final int SIDEKICK_FLIGHT_LEAD_SUPPRESS_GSPEED_S3K =
+            Sonic3kConstants.TAILS_FLIGHT_LEAD_SUPPRESS_GSPEED;
+
     /** Sonic 1: no spindash, single collision path, fixed AnglePos threshold, instant look scroll, water shimmer,
      *  always caps ground speed on input (s1disasm/_incObj/01 Sonic.asm:554-558),
      *  no angle diff cardinal snap (s1disasm Sonic_Angle directly applies sensor angle),
@@ -884,11 +933,16 @@ public record PhysicsFeatureSet(
             false, false, false, false, true, false, false, false, true, FAST_SCROLL_CAP_S2, false, true, false,
             SIDEKICK_FOLLOW_SNAP_S2, SIDEKICK_DESPAWN_X_S2, SIDEKICK_FOLLOW_LEAD_OFFSET_NONE, true /* sidekickSpawningRequiresGroundedLeader: S1 has no Tails CPU */, false /* useScreenYWrapValueForVisibility: S1 keeps 32-margin */,
             true /* sidekickDespawnUsesObjectIdMismatch: S1 has no Tails CPU; symmetric with S2 */,
-            SIDEKICK_FLY_LAND_BLOCKERS_NONE, false /* sidekickFlyLandRequiresLeaderAlive: S1 has no CPU sidekick */, false /* solidObjectOffscreenGate: keep current S1 trace baseline */,
+            SIDEKICK_FLY_LAND_BLOCKERS_NONE, false /* sidekickFlyLandRequiresLeaderAlive: S1 has no CPU sidekick */,
+            SIDEKICK_CATCH_UP_Y_OFFSET_S3K, SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K,
+            SIDEKICK_FLIGHT_MAX_X_STEP_S3K, SIDEKICK_FLIGHT_Y_STEP_S3K,
+            SIDEKICK_FLIGHT_LEAD_X_OFFSET_S3K, SIDEKICK_FLIGHT_LEAD_SUPPRESS_GSPEED_S3K,
+            false /* solidObjectOffscreenGate: keep current S1 trace baseline */,
             false /* solidObjectRequiresSidekickOnScreen: S1 has no CPU sidekick */,
             false /* sidekickDespawnUsesRidingInstanceLoss: S1 has no Tails CPU */,
             false /* sidekickRespawnEntersCatchUpFlight: S1 has no Tails CPU */,
             false /* sidekickPushBypassUsesGraceStatus: S1 has no Tails CPU */,
+            false /* sidekickSuppressesFastLeaderTinyFollowNudge: S1 has no Tails CPU */,
             false /* sidekickClearsStalePushVelocityBeforeGroundMove: S1 has no Tails CPU */,
             false /* sidekickCpuUsesLevelFrameCounter: S1 has no Tails CPU */,
             false /* landingRollClearUsesCurrentYRadiusDelta: S1 Sonic_ResetOnFloor applies fixed subq.w #5, obY(a0) when clearing ball state */,
@@ -929,11 +983,16 @@ public record PhysicsFeatureSet(
             FAST_SCROLL_CAP_S2, false, false, false,
             SIDEKICK_FOLLOW_SNAP_S2, SIDEKICK_DESPAWN_X_S2, SIDEKICK_FOLLOW_LEAD_OFFSET_NONE, true, false /* useScreenYWrapValueForVisibility: S2 keeps 32-margin */,
             true /* sidekickDespawnUsesObjectIdMismatch: S2 cmp.b id(a3),d0 in TailsCPU_CheckDespawn (s2.asm:39067) */,
-            SIDEKICK_FLY_LAND_BLOCKERS_S2, false /* sidekickFlyLandRequiresLeaderAlive: S2 TailsCPU_Flying_Part2 has no Sonic-routine check */, true /* solidObjectOffscreenGate: S2 SolidObject_OnScreenTest (s2.asm:35330-35336) _btst render_flags.on_screen,render_flags(a0) / _beq SolidObject_TestClearPush skips the side/top/bottom push for any object whose render box has scrolled off-screen ("if Sonic outruns the screen then he can phase through solid objects"). Plain-SolidObject objects (e.g. Obj36 Spikes) are gated; objects that call SolidObject_Always (Obj74/Obj30) and the sloped/top-only helpers already opt out via bypassesOffscreenSolidGate()/topSolidOnly()/SlopedSolidProvider. HTZ1 trace f5647: an off-screen-left upright spike (slot 53 @ 0x1548, box right edge 0x1563, camera left edge 0x157F) was side-pushing the CPU Tails to 0x1563 and zeroing its x_vel where ROM preserves the smooth left accel. */,
+            SIDEKICK_FLY_LAND_BLOCKERS_S2, false /* sidekickFlyLandRequiresLeaderAlive: S2 TailsCPU_Flying_Part2 has no Sonic-routine check */,
+            SIDEKICK_CATCH_UP_Y_OFFSET_S3K, SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K,
+            SIDEKICK_FLIGHT_MAX_X_STEP_S3K, SIDEKICK_FLIGHT_Y_STEP_S3K,
+            SIDEKICK_FLIGHT_LEAD_X_OFFSET_S3K, SIDEKICK_FLIGHT_LEAD_SUPPRESS_GSPEED_S3K,
+            true /* solidObjectOffscreenGate: S2 SolidObject_OnScreenTest (s2.asm:35330-35336) _btst render_flags.on_screen,render_flags(a0) / _beq SolidObject_TestClearPush skips the side/top/bottom push for any object whose render box has scrolled off-screen ("if Sonic outruns the screen then he can phase through solid objects"). Plain-SolidObject objects (e.g. Obj36 Spikes) are gated; objects that call SolidObject_Always (Obj74/Obj30) and the sloped/top-only helpers already opt out via bypassesOffscreenSolidGate()/topSolidOnly()/SlopedSolidProvider. HTZ1 trace f5647: an off-screen-left upright spike (slot 53 @ 0x1548, box right edge 0x1563, camera left edge 0x157F) was side-pushing the CPU Tails to 0x1563 and zeroing its x_vel where ROM preserves the smooth left accel. */,
             true /* solidObjectRequiresSidekickOnScreen: S2 SolidObject skips off-screen Sidekick (s2.asm:34800-34804) */,
             false /* sidekickDespawnUsesRidingInstanceLoss: S2 8-bit-id mismatch path already covers the freed-slot case (id of a freed slot is also 0) */,
             false /* sidekickRespawnEntersCatchUpFlight: S2 TailsCPU_Spawning inlines the 64-frame trigger and warp; engine keeps SPAWNING flow */,
             false /* sidekickPushBypassUsesGraceStatus: S2 TailsCPU_Normal uses live Status_Push only (s2.asm:38943-38946) */,
+            false /* sidekickSuppressesFastLeaderTinyFollowNudge: S2 has no S3K lead/grace bridge; FollowRight still nudges after the live Status_Push branch */,
             false /* sidekickClearsStalePushVelocityBeforeGroundMove: S2 TailsCPU_Normal writes Ctrl_2_Logical without clearing velocity (s2.asm:38943-39027) */,
             false /* sidekickCpuUsesLevelFrameCounter: preserve existing S2 trace cadence */,
             false /* landingRollClearUsesCurrentYRadiusDelta: S2 Sonic_ResetOnFloor applies fixed subq.w #5, y_pos(a0) when clearing rolling */,
@@ -976,11 +1035,16 @@ public record PhysicsFeatureSet(
             true, true, true, true, false, FAST_SCROLL_CAP_S3K, true, false, true,
             SIDEKICK_FOLLOW_SNAP_S3K, SIDEKICK_DESPAWN_X_S3K, SIDEKICK_FOLLOW_LEAD_OFFSET_S3K, false, true /* useScreenYWrapValueForVisibility: S3K Render_Sprites height_pixels=0x18 */,
             false /* sidekickDespawnUsesObjectIdMismatch: S3K cmp.w (a3),d0 in sub_13EFC (sonic3k.asm:26823) compares routine-pointer high word; all gameplay objects share the same high word so the check almost never fires */,
-            SIDEKICK_FLY_LAND_BLOCKERS_S3K, true /* sidekickFlyLandRequiresLeaderAlive: sonic3k.asm:26629 cmpi.b #6,(Player_1+routine).w / bhs.s loc_13D42 */, true /* solidObjectOffscreenGate: ROM SolidObject_cont uses render_flags bit 7 to skip side-push for off-screen objects (sonic3k.asm:41390 loc_1DF88) */,
+            SIDEKICK_FLY_LAND_BLOCKERS_S3K, true /* sidekickFlyLandRequiresLeaderAlive: sonic3k.asm:26629 cmpi.b #6,(Player_1+routine).w / bhs.s loc_13D42 */,
+            SIDEKICK_CATCH_UP_Y_OFFSET_S3K, SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K,
+            SIDEKICK_FLIGHT_MAX_X_STEP_S3K, SIDEKICK_FLIGHT_Y_STEP_S3K,
+            SIDEKICK_FLIGHT_LEAD_X_OFFSET_S3K, SIDEKICK_FLIGHT_LEAD_SUPPRESS_GSPEED_S3K,
+            true /* solidObjectOffscreenGate: ROM SolidObject_cont uses render_flags bit 7 to skip side-push for off-screen objects (sonic3k.asm:41390 loc_1DF88) */,
             true /* solidObjectRequiresSidekickOnScreen: S3K SolidObjectFull skips off-screen Player_2 before collision (sonic3k.asm:41006-41010) */,
             true /* sidekickDespawnUsesRidingInstanceLoss: S3K sub_13EFC reads (a3)=0 when slot freed by Delete_Referenced_Sprite (sonic3k.asm:36116-36124); engine tracks ObjectInstance reference because latchedSolidObjectId is sticky across destruction */,
             true /* sidekickRespawnEntersCatchUpFlight: ROM sub_13ECA writes Tails_CPU_routine = 2 (sonic3k.asm:26803), which dispatches to Tails_Catch_Up_Flying (sonic3k.asm:26474) on the next frame */,
             true /* sidekickPushBypassUsesGraceStatus: preserve ROM-visible transient push continuity for S3K object ordering (sonic3k.asm:26702-26705) */,
+            true /* sidekickSuppressesFastLeaderTinyFollowNudge: S3K fast-leader/local-grace contact bridge suppresses the separate FollowRight nudge when solid response owns x_pos */,
             true /* sidekickClearsStalePushVelocityBeforeGroundMove: only for S3K's AIZ object-order push-grace bridge; live Status_Push and MGZ grace continuation still run Tails_InputAcceleration_Path deceleration/projection before collision clears ground_vel (sonic3k.asm:26702-26705,26775-26785,27947-28017) */,
             true /* sidekickCpuUsesLevelFrameCounter: S3K Tails CPU gates read Level_frame_counter directly (sonic3k.asm:26474-26531; LevelLoop increments it before Process_Sprites at sonic3k.asm:7884-7894) */,
             true /* landingRollClearUsesCurrentYRadiusDelta: S3K Player_TouchFloor applies saved y_radius - default_y_radius to y_pos, so already-restored roll-jump radii produce no 5 px lift (sonic3k.asm:23335-23358,24341-24363). */,

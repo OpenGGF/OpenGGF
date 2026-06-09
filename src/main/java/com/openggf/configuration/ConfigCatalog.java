@@ -149,7 +149,8 @@ public final class ConfigCatalog {
         // ───────────────── DEBUG BLOCK ─────────────────
 
         // debug.flags
-        put(DEBUG_VIEW_ENABLED, of("debug.flags", "debugView", BOOL, "Show the on-screen debug HUD"));
+        put(DEBUG_VIEW_ENABLED, of("debug.flags", "debugView", BOOL,
+                "Enable the debug overlay subsystem; visible HUD starts hidden until toggled"));
         put(EDITOR_ENABLED, of("debug.flags", "editor", BOOL, "Allow entering the level editor from gameplay"));
         put(DEBUG_COLLISION_VIEW_ENABLED, of("debug.flags", "collisionView", BOOL,
                 "Draw the collision overlay"));

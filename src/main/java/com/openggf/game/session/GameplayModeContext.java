@@ -41,6 +41,12 @@ import java.util.Optional;
 import java.util.Objects;
 
 public final class GameplayModeContext implements ModeContext {
+    private static final String PATTERN_ANIMATOR_REWIND_KEY = "pattern-animator";
+    private static final String[] PLC_ART_REWIND_KEYS = {
+            "s2-plc-art",
+            "s3k-plc-art"
+    };
+
     private final WorldSession worldSession;
     private final int spawnX;
     private final int spawnY;
@@ -402,7 +408,7 @@ public final class GameplayModeContext implements ModeContext {
     /**
      * Registers the {@link RingManager} rewind adapter after ring data is
      * available (Phase H of level load, after {@link #registerLevelAdapters}).
-     * Safe to call with a null argument — it is silently ignored.
+     * Safe to call with a null argument -- it is silently ignored.
      */
     public void registerRingAdapter(RingManager ringManager) {
         if (rewindRegistry == null || ringManager == null) {
@@ -416,10 +422,15 @@ public final class GameplayModeContext implements ModeContext {
      * Registers an {@link com.openggf.game.ObjectArtProvider} that also implements
      * {@link com.openggf.game.rewind.RewindSnapshottable} with the rewind registry.
      * Called from {@link com.openggf.level.LevelManager} after object art is loaded.
-     * Safe to call with a null argument — it is silently ignored.
+     * Safe to call with a null argument; stale optional PLC-art adapters are
+     * removed for zones that do not expose a snapshottable provider.
      */
     public void registerPlcArtAdapter(com.openggf.game.ObjectArtProvider provider) {
-        if (rewindRegistry == null || provider == null) {
+        if (rewindRegistry == null) {
+            return;
+        }
+        deregisterPlcArtAdapters();
+        if (provider == null) {
             return;
         }
         if (provider instanceof com.openggf.game.rewind.RewindSnapshottable<?> snap) {
@@ -432,16 +443,27 @@ public final class GameplayModeContext implements ModeContext {
      * Registers a {@link com.openggf.level.animation.AnimatedPatternManager} that also
      * implements {@link com.openggf.game.rewind.RewindSnapshottable} with the rewind
      * registry. Called from {@link com.openggf.level.LevelManager#initAnimatedContent()}.
-     * Safe to call with a null argument — it is silently ignored.
+     * Safe to call with a null argument; stale optional pattern animator
+     * adapters are removed for zones without an animated pattern manager.
      */
     public void registerPatternAnimatorAdapter(
             com.openggf.level.animation.AnimatedPatternManager mgr) {
-        if (rewindRegistry == null || mgr == null) {
+        if (rewindRegistry == null) {
+            return;
+        }
+        rewindRegistry.deregister(PATTERN_ANIMATOR_REWIND_KEY);
+        if (mgr == null) {
             return;
         }
         if (mgr instanceof com.openggf.game.rewind.RewindSnapshottable<?> snap) {
-            rewindRegistry.deregister("pattern-animator");
+            rewindRegistry.deregister(snap.key());
             rewindRegistry.register(snap);
+        }
+    }
+
+    private void deregisterPlcArtAdapters() {
+        for (String key : PLC_ART_REWIND_KEYS) {
+            rewindRegistry.deregister(key);
         }
     }
 

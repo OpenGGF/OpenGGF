@@ -36,11 +36,12 @@ The `config.yaml` is organized into the following top-level sections:
 
 | Sub-section | Contents |
 |-------------|----------|
-| `debug.flags` | Debug view, editor enable, collision view overlay |
+| `debug.flags` | Debug subsystem, editor enable, collision view overlay |
 | `debug.keys` | All debug/developer keyboard shortcuts |
 | `debug.startup` | Level select on startup, S3K skip intros |
 | `debug.playback` | BK2 movie path and playback control keys |
 | `debug.traceRewind` | Key held during Trace Test Mode to rewind engine state |
+| `debug.traceRender` | Trace Test Mode / capture visibility flags |
 | `debug.testMode` | Test mode enable flag and trace catalog directory |
 | `debug.crossGame` | Data-select image regeneration overrides and coord-log key |
 | `debug.window` | **DEPRECATED** manual width/height/scale — use `display.aspect` + `display.windowAutosize` instead |
@@ -135,7 +136,7 @@ Paths are relative to the working directory (where the JAR is launched).
 
 ## Capture
 
-Trace video capture (the headless trace-capture driver / `TraceCaptureTool`) renders a chosen trace and muxes a lossless MKV via ffmpeg. These keys set the defaults; CLI flags override them.
+Trace video capture (the headless trace-capture driver / `TraceCaptureTool`) renders a chosen trace and muxes a lossless MKV via ffmpeg. These keys set the code defaults; CLI flags override them. The bundled `config.yaml` omits the optional `capture` block until a user needs to override one of these defaults.
 
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
@@ -183,9 +184,9 @@ Audio: headless capture installs `HeadlessSmpsAudioBackend`, a true no-device SM
 | `REWIND_AUDIO_HISTORY_SIZE_MB` | `rewind.audioHistorySizeMb` | int | `10` | Megabytes of stereo PCM history kept for held-rewind playback when `REWIND_AUDIO_HISTORY_LIMIT_TYPE` is `"size"`. Stereo 16-bit at 48 kHz consumes ~192 KB/s, so 10 MB is roughly 54 s at that sample rate (~57 s at 44.1 kHz). |
 | `TEST_MODE_ENABLED` | `debug.testMode.enabled` | bool | `false` | Replace the master-title game-select with the Trace Test Mode picker that lists every trace in `debug.testMode.catalogDir` and plays the chosen trace back in the live engine. Dev-only. **When `true`, `DISPLAY_ASPECT` is always forced to `NATIVE_4_3` (320×224) regardless of its configured value** — trace replay and test-mode runs are parity-critical and must always run at 320×224. |
 | `TRACE_CATALOG_DIR` | `debug.testMode.catalogDir` | string | `"src/test/resources/traces"` | Directory scanned by `TraceCatalog` when `TEST_MODE_ENABLED` is true. Resolved against `user.dir`. |
-| `TRACE_SHOW_DESYNC_GHOSTS` | `debug.testMode.showDesyncGhosts` | bool | `true` | In Trace Test Mode and trace capture, render the desync ghost(s). |
-| `TRACE_SHOW_GAME_HUD` | `debug.testMode.showGameHud` | bool | `true` | Render the game HUD (rings/score/time) during trace replay/capture. |
-| `TRACE_SHOW_DEBUG_HUD` | `debug.testMode.showDebugHud` | bool | `false` | Render the debug HUD during trace replay/capture; individual panels follow the existing `DebugOverlayToggle` states. |
+| `TRACE_SHOW_DESYNC_GHOSTS` | `debug.traceRender.showDesyncGhosts` | bool | `true` | In Trace Test Mode and trace capture, render the desync ghost(s). |
+| `TRACE_SHOW_GAME_HUD` | `debug.traceRender.showGameHud` | bool | `true` | Render the game HUD (rings/score/time) during trace replay/capture. |
+| `TRACE_SHOW_DEBUG_HUD` | `debug.traceRender.showDebugHud` | bool | `false` | Render the debug HUD during trace replay/capture; individual panels follow the existing `DebugOverlayToggle` states. |
 | `DISCORD_RICH_PRESENCE_ENABLED` | `discord.enabled` | bool | `false` | Opt in to publishing OpenGGF menu/gameplay status through the local Discord desktop client. Disabled by default for privacy and no-ops when Discord is unavailable. |
 | `DISCORD_RICH_PRESENCE_SHOW_TIMER` | `discord.showTimer` | bool | `true` | Include the current level timer in Discord Rich Presence gameplay status when presence is enabled. |
 | `DISCORD_RICH_PRESENCE_SHOW_ZONE` | `discord.showZone` | bool | `true` | Include the current zone and act in Discord Rich Presence gameplay status when presence is enabled. |
@@ -381,7 +382,7 @@ discord:
 # ════════════════════════════════════════════
 debug:
   flags:
-    debugView: true   # Show the on-screen debug HUD
+    debugView: true   # Enable the debug overlay subsystem; visible HUD starts hidden until toggled
     editor: false   # Allow entering the level editor from gameplay
     collisionView: false   # Draw the collision overlay
   keys:
@@ -416,6 +417,10 @@ debug:
     startOffsetFrame: 0   # Starting frame offset for BK2 playback
   traceRewind:
     key: R   # Key held in Trace Test Mode to rewind deterministic engine state
+  traceRender:
+    showDesyncGhosts: true   # Render desync ghosts in Trace Test Mode and trace capture
+    showGameHud: true   # Render the game HUD during trace replay/capture
+    showDebugHud: false   # Render the debug HUD during trace replay/capture
   testMode:
     enabled: false   # Replace the master title with the trace picker (dev-only)
     catalogDir: "src/test/resources/traces"   # Directory scanned for traces when test mode is enabled

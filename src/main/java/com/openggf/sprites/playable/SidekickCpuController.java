@@ -57,6 +57,7 @@ public class SidekickCpuController {
     private static final int FAST_LEADER_NO_LIVE_OBJECT_LATE_GRACE_INPUT_NUDGE_MAX_UPWARD_GAP = 0x50;
     private static final int FAST_LEADER_NO_LIVE_OBJECT_NUDGE_MAX_DX = 0xA0;
     private static final int PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y = 0x80;
+    private static final int ROM_VISIBLE_PUSH_BYPASS_MIN_X_SPEED = 0xE0;
     private static final int LEVEL_START_X_OFFSET = -0x20;
     private static final int LEVEL_START_Y_OFFSET = 4;
     /**
@@ -1574,8 +1575,11 @@ public class SidekickCpuController {
                 (pushBypassStatus
                         & (AbstractPlayableSprite.STATUS_ON_OBJECT
                         | AbstractPlayableSprite.STATUS_PUSHING)) != 0;
-        boolean currentPushBypass = currentPushing
-                && (recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0;
+        boolean romVisibleCurrentPushing =
+                (diagnostics.preStatus() & AbstractPlayableSprite.STATUS_PUSHING) != 0;
+        boolean currentPushBypass = romVisibleCurrentPushing
+                && (recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
+                && isRomVisibleCurrentPushBypassContext(delayedObjectOrPushContext, dy);
         boolean liveAndDelayedPushAirborneHandoff = currentPushing
                 && sidekick.getAir()
                 && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) != 0;
@@ -1638,7 +1642,9 @@ public class SidekickCpuController {
         suppressLocalGraceFollowNudge =
                 suppressLocalGraceFollowNudge && !fastLeaderNoLiveObjectNudge && !smallDxDelayedInputNudge;
         boolean suppressFastLeaderTinyFollowNudge =
-                effectiveLeader.getGSpeed() >= 0x400
+                fs != null
+                        && fs.sidekickSuppressesFastLeaderTinyFollowNudge()
+                        && effectiveLeader.getGSpeed() >= 0x400
                         && !leaderStatusOnObject
                         && Math.abs(sidekick.getGSpeed()) < 0x100
                         && localGraceAbsDx < followSnapThreshold
@@ -2087,6 +2093,19 @@ public class SidekickCpuController {
         } else if (normalPushingGraceFrames > 0) {
             normalPushingGraceFrames--;
         }
+    }
+
+    private boolean isRomVisibleCurrentPushBypassContext(boolean delayedObjectOrPushContext, int dy) {
+        if (delayedObjectOrPushContext) {
+            return true;
+        }
+        // Live Status_Push bypasses follow steering only while Tails is still
+        // in the local contact band that can plausibly feed ROM loc_13DD0.
+        // A high incoming x_vel is also ROM-visible wall-push state even when
+        // the delayed follow target is far away; low-speed far-target pushes
+        // are stale collision state and fall through to FollowLeft/FollowRight.
+        return Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y
+                || Math.abs(sidekick.getXSpeed()) >= ROM_VISIBLE_PUSH_BYPASS_MIN_X_SPEED;
     }
 
     private void updatePanic() {
@@ -2558,8 +2577,11 @@ public class SidekickCpuController {
         catchUpTargetX = targetX;
         catchUpTargetY = targetY;
         sidekick.setCentreXPreserveSubpixel((short) targetX);
-        sidekick.setCentreYPreserveSubpixel(
-                (short) (targetY - com.openggf.game.sonic3k.constants.Sonic3kConstants.TAILS_CATCH_UP_Y_OFFSET));
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        int catchUpYOffset = fs != null
+                ? fs.sidekickCatchUpYOffset()
+                : PhysicsFeatureSet.SIDEKICK_CATCH_UP_Y_OFFSET_S3K;
+        sidekick.setCentreYPreserveSubpixel((short) (targetY - catchUpYOffset));
         sidekick.setXSpeed((short) 0);
         sidekick.setYSpeed((short) 0);
         sidekick.setGSpeed((short) 0);
@@ -2596,16 +2618,22 @@ public class SidekickCpuController {
      */
     private void updateFlightAutoRecovery() {
         // ROM Tails_FlySwim_Unknown (sonic3k.asm:26534-26653).
-        final int AUTO_LAND_FRAMES = com.openggf.game.sonic3k.constants
-                .Sonic3kConstants.TAILS_FLIGHT_AUTO_LAND_FRAMES;
-        final int MAX_X_STEP = com.openggf.game.sonic3k.constants
-                .Sonic3kConstants.TAILS_FLIGHT_MAX_X_STEP;
-        final int Y_STEP = com.openggf.game.sonic3k.constants
-                .Sonic3kConstants.TAILS_FLIGHT_Y_STEP;
-        final int LEAD_SUPPRESS = com.openggf.game.sonic3k.constants
-                .Sonic3kConstants.TAILS_FLIGHT_LEAD_SUPPRESS_GSPEED;
-        final int LEAD_OFFSET = com.openggf.game.sonic3k.constants
-                .Sonic3kConstants.TAILS_FLIGHT_LEAD_X_OFFSET;
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        final int AUTO_LAND_FRAMES = fs != null
+                ? fs.sidekickFlightAutoLandFrames()
+                : PhysicsFeatureSet.SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K;
+        final int MAX_X_STEP = fs != null
+                ? fs.sidekickFlightMaxXStep()
+                : PhysicsFeatureSet.SIDEKICK_FLIGHT_MAX_X_STEP_S3K;
+        final int Y_STEP = fs != null
+                ? fs.sidekickFlightYStep()
+                : PhysicsFeatureSet.SIDEKICK_FLIGHT_Y_STEP_S3K;
+        final int LEAD_SUPPRESS = fs != null
+                ? fs.sidekickFlightLeadSuppressGSpeed()
+                : PhysicsFeatureSet.SIDEKICK_FLIGHT_LEAD_SUPPRESS_GSPEED_S3K;
+        final int LEAD_OFFSET = fs != null
+                ? fs.sidekickFlightLeadXOffset()
+                : PhysicsFeatureSet.SIDEKICK_FLIGHT_LEAD_X_OFFSET_S3K;
         final int FLIGHT_FUEL = (8 * 60) / 2;   // ROM loc_13C3A:26552 double_jump_property reload
 
         // 1. Off-screen timer. The ROM check is `tst.b render_flags(a0); bmi.s loc_13C3A`.
@@ -2707,7 +2735,6 @@ public class SidekickCpuController {
         //    object_control is still nonzero.
         boolean closeEnough = residualX == 0 && residualY == 0;
         byte delayedStatus = leader.getStatusHistory(ROM_FOLLOW_DELAY_FRAMES);
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
         int statusBlockerMask = fs != null
                 ? fs.sidekickFlyLandStatusBlockerMask()
                 : PhysicsFeatureSet.SIDEKICK_FLY_LAND_BLOCKERS_S2;

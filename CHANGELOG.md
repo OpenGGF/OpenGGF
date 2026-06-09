@@ -4,6 +4,88 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Editor save apply now validates before mutating:** corrupt editor edit
+  payloads are fully checked before any live level mutation, so quarantine on a
+  later invalid entry cannot leave earlier edits partially applied.
+
+- **Malformed user config files are now preserved:** unreadable `config.yaml`
+  files are moved to unique `.corrupt` siblings before defaults are saved, and
+  legacy `config.json` migration now preserves existing `.bak` files.
+
+- **Release architecture guards now fail closed:** gameplay map-mutation
+  scanner roots must exist and contain Java sources, map mutation bypass forms
+  are covered, CoW tests use active JUnit assertions, and the GameLoop size
+  ratchet is back under budget after extracting mode-change types.
+
+- **Release config defaults now expose trace-render visibility:** the bundled
+  YAML template includes the `debug.traceRender.*` keys, and the configuration
+  reference distinguishes debug subsystem initialization from showing the HUD.
+
+- **Develop CI now has trace visibility:** default CI asserts a minimum executed
+  test count after the non-ROM Maven suite, and manual/scheduled develop CI runs
+  the trace-replay profile on the ROM fixture runner with report, skip, and
+  warning checks.
+
+- **Sidekick flight constants now live behind physics feature flags:** shared
+  sidekick CPU code reads S3K catch-up/flight tuning through
+  `PhysicsFeatureSet` instead of directly referencing concrete S3K constants,
+  and a source guard now blocks concrete Sonic package references from shared
+  sprite code.
+
+- **S3K sidekick push-grace nudge suppression is now feature-gated:** the
+  fast-leader tiny-dx follow-nudge suppression is explicit S3K physics policy,
+  with S2 regression coverage proving stale local grace does not suppress the
+  normal S2 follow nudge.
+
+- **Object lifecycle guard budgets now match current source:** raw
+  `setDestroyed(true)` and direct dynamic-object spawn guard counts are
+  exact ratchets, include all raw `addDynamicObject*` variants, and verify
+  that the scan root is not accidentally narrowed.
+
+- **Data Select launch failures now return to the save screen:** failed save
+  restore or level launch work inside the fade-complete callback is caught,
+  logged, and routed back to Data Select with a recorded launch error instead
+  of escaping the callback and killing the app.
+
+- **Unrecognized ROMs now fail fast:** corrupt or unsupported ROMs stop
+  startup with a clear "ROM not recognized or corrupt" error instead of
+  silently falling back to the Sonic 2 module and failing later.
+
+- **S3K AIZ sidekick push-bypass now uses ROM-visible status:** the sidekick
+  CPU follow path distinguishes a high-speed live `Status_Push` branch from a
+  later stale low-speed push bit, keeping AIZ replay aligned through the
+  post-reload follow window.
+
+- **Editor save tests no longer touch production save paths:** editor resume
+  saving now uses an engine-owned save manager dependency so integration tests
+  can route writes to temporary directories.
+
+- **Cross-game hybrid physics now preserves base boundary flags:** hybrid
+  feature construction keeps the base game's sidekick, landing, and level
+  boundary flags aligned while donating only the intended cross-game abilities.
+
+- **Rewind level keyframes now isolate live map mutations:** level rewind
+  capture advances the map copy-on-write epoch so later layout mutations cannot
+  rewrite already-captured keyframe bytes.
+
+- **S3K placed rings now honor object-control touch suppression:** stage-ring
+  pickup uses the same ROM `object_control` touch-response gate as object
+  contacts and no longer runs a second late post-object sweep, preventing early
+  AIZ2 reload ring pickups while object-control routines own the player.
+
+- **Optional rewind adapters now clear when absent:** gameplay contexts remove
+  stale PLC-art and pattern-animator adapters when a newly loaded zone does not
+  expose those optional snapshottables.
+
+- **Per-column VScroll shaders now honor widescreen widths:** parallax and
+  tilemap shaders derive VScroll column sampling from the active viewport/render
+  width instead of hardcoding the native 20-column table.
+
+- **Object and event proximity triggers now use ROM centre coordinates:** HCZ
+  large fan, ARZ falling pillar, CPZ pipe-exit spring, and CPZ water-rise checks
+  now compare playable `x_pos`/`y_pos` via centre coordinates instead of
+  top-left sprite bounds.
+
 - **LBZ miniboss now satisfies release guardrails:** its defeat explosion
   controller is classified as derived rewind presentation state, and its
   multi-region body/arm touch handling declares the standard provider profile.
