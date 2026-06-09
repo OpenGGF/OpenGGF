@@ -4,6 +4,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **AIZ boss child spawning now uses construction-context helpers:** AIZ end
+  boss and miniboss cutscene child, debris, and explosion objects now spawn
+  through `spawnChild` suppliers so child constructors receive object services.
+
 - **Editor-mode teardown now resets all editor-owned managers:** leaving editor
   mode clears the editor level, sprite, collision, terrain, parallax, water,
   game-state, and camera managers instead of only sprites/camera.
