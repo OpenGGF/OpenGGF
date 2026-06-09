@@ -4,6 +4,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Editor-mode teardown now resets all editor-owned managers:** leaving editor
+  mode clears the editor level, sprite, collision, terrain, parallax, water,
+  game-state, and camera managers instead of only sprites/camera.
+
 - **Background tilemap caching now tracks full-width runtime mode:** changing
   `requiresFullWidthBgTilemap()` dirties the cached BG tilemap so runtime
   overlays cannot reuse a stale wrapped cache.

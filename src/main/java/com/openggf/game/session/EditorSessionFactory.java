@@ -53,6 +53,7 @@ public final class EditorSessionFactory {
         }
 
         return new EditorModeContext(worldSession, cursor, playtestStash,
-                editorCamera, editorSprites, editorLevelManager);
+                editorCamera, editorSprites, editorLevelManager,
+                editorParallax, editorWater, editorTerrain, editorCollision, editorGameState);
     }
 }
