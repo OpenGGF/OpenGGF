@@ -4,6 +4,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Animated tiles now read current-frame S3K deform state:** level rendering
+  publishes parallax/deform runtime state before animated tile and palette
+  updates, keeping CNZ/MHZ tile phases aligned with the frame being rendered.
+
 - **S3K trace replay now keeps ring comparisons row-strict:** the S3K replay
   harness compares the current trace row directly instead of substituting a
   next-row ring diagnostic when the engine happens to match that later value.
