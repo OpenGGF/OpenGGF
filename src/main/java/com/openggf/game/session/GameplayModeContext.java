@@ -570,6 +570,25 @@ public final class GameplayModeContext implements ModeContext {
         if (camera != null) {
             camera.resetState();
         }
+        zoneLayoutMutationPipeline = null;
+        advancedRenderModeController = null;
+        specialRenderEffectRegistry = null;
+        animatedTileChannelGraph = null;
+        paletteOwnershipRegistry = null;
+        zoneRuntimeRegistry = null;
+        levelManager = null;
+        spriteManager = null;
+        collisionSystem = null;
+        terrainCollisionManager = null;
+        parallaxManager = null;
+        waterSystem = null;
+        solidExecutionRegistry = null;
+        rng = null;
+        audioManager = null;
+        fadeManager = null;
+        gameStateManager = null;
+        timerManager = null;
+        camera = null;
         activeBonusStageProvider = NoOpBonusStageProvider.INSTANCE;
         rewindController = null;
         playbackController = null;

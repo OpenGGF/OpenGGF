@@ -3,14 +3,17 @@ package com.openggf.graphics;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.camera.Camera;
+import com.openggf.game.GameStateManager;
 import com.openggf.game.session.EngineContext;
 import com.openggf.graphics.pipeline.UiRenderPipeline;
+import com.openggf.level.objects.HudRenderManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 public class TestGraphicsManagerFadeRebinding {
@@ -76,6 +79,25 @@ public class TestGraphicsManagerFadeRebinding {
         assertSame(bootstrapFade, graphicsManager.getUiRenderPipeline().getFadeManager(),
                 "UiRenderPipeline should return to the bootstrap FadeManager");
         assertSame(bootstrapCamera, getPrivateField(graphicsManager, "camera"), "GraphicsManager should return to the bootstrap Camera");
+    }
+
+    @Test
+    public void testClearRuntimeBindingClearsHudRenderManager() throws Exception {
+        SessionManager.clear();
+        EngineContext engineContext = EngineContext.fromLegacySingletonsForBootstrap();
+        GraphicsManager graphicsManager = engineContext.graphics();
+        graphicsManager.resetState();
+
+        UiRenderPipeline pipeline = new UiRenderPipeline(graphicsManager);
+        HudRenderManager hud = new HudRenderManager(graphicsManager,
+                new Camera(engineContext.configuration()), new GameStateManager());
+        pipeline.setHudRenderManager(hud);
+        setPrivateField(graphicsManager, "uiRenderPipeline", pipeline);
+
+        graphicsManager.clearRuntimeManagedReferences();
+
+        assertNull(pipeline.getHudRenderManager(),
+                "UiRenderPipeline must not retain HUD managers from a destroyed gameplay session");
     }
 
     @Test
