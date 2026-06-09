@@ -10,6 +10,10 @@ All notable changes to the OpenGGF project are documented in this file.
   same packaged location. Cwd and `target/native-libs` fallbacks are no longer
   trusted in native-image startup.
 
+- **Shader loading now fails on missing packaged resources:** runtime shader
+  lookup no longer falls back to `src/main/resources`, so release and native
+  builds cannot mask a missing shader resource with mutable repository files.
+
 - **Checkpoint death respawn now preserves ROM centre coordinates:** shared
   `CheckpointState` restores saved `x_pos` / `y_pos` through playable centre
   setters instead of top-left sprite bounds, keeping S1 lamppost, S2
