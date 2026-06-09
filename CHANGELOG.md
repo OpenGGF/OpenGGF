@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Native-image LWJGL library discovery now trusts packaged libraries only:**
+  native builds resolve LWJGL binaries from the executable directory, with the
+  macOS launcher environment hint accepted only when it canonicalizes to that
+  same packaged location. Cwd and `target/native-libs` fallbacks are no longer
+  trusted in native-image startup.
+
 - **Checkpoint death respawn now preserves ROM centre coordinates:** shared
   `CheckpointState` restores saved `x_pos` / `y_pos` through playable centre
   setters instead of top-left sprite bounds, keeping S1 lamppost, S2

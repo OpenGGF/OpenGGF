@@ -528,6 +528,30 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void nativeImageLwjglDiscoveryShouldOnlyTrustExecutableAdjacentLibraries() throws Exception {
+        String engine = Files.readString(Path.of("src/main/java/com/openggf/Engine.java"));
+        List<String> violations = new ArrayList<>();
+
+        if (engine.contains("hasNativeLibs(cwd)")) {
+            violations.add("Engine native-image LWJGL discovery trusts the process working directory");
+        }
+        if (engine.contains("target/native-libs")) {
+            violations.add("Engine native-image LWJGL discovery trusts target/native-libs relative to cwd");
+        }
+        if (!engine.contains("findNativeLibsDirForTesting(")) {
+            violations.add("Engine native-image LWJGL discovery is not covered by deterministic path-selection tests");
+        }
+        if (!engine.contains("isSameCanonicalFile(")) {
+            violations.add("Engine native-image LWJGL discovery does not canonicalize and compare trusted directories");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("native-image LWJGL discovery must only trust executable-adjacent packaged libraries:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
     void branchPolicyShouldValidateCommitTrailersForMasterPullRequests() throws Exception {
         String shellPolicy = Files.readString(Path.of(".githooks/validate-policy.sh"));
         String powershellPolicy = Files.readString(Path.of(".githooks/validate-policy.ps1"));

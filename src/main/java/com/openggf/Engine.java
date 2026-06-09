@@ -1786,42 +1786,58 @@ public class Engine {
 	}
 
 	private static String findNativeLibsDir() {
-		// Strategy 1: SONIC_NATIVE_LIBS_DIR env var set by .app launcher script.
-		// This is NOT stripped by macOS SIP (unlike DYLD_LIBRARY_PATH).
-		String envDir = System.getenv("SONIC_NATIVE_LIBS_DIR");
-		if (envDir != null && !envDir.isEmpty()) {
-			java.io.File dir = new java.io.File(envDir);
-			if (hasNativeLibs(dir)) {
-				return dir.getAbsolutePath();
+		return findNativeLibsDirForTesting(
+				System.getenv("SONIC_NATIVE_LIBS_DIR"),
+				ProcessHandle.current().info().command().orElse(""));
+	}
+
+	static String findNativeLibsDirForTesting(String envDir, String command) {
+		java.io.File executableDir = executableDir(command);
+		if (executableDir == null) {
+			return null;
+		}
+
+		// SONIC_NATIVE_LIBS_DIR is set by the macOS .app launcher because SIP strips
+		// DYLD_LIBRARY_PATH for Finder-launched apps. Treat it as a hint only: it must
+		// resolve to the same packaged directory as the native executable.
+		if (envDir != null && !envDir.isBlank()) {
+			java.io.File hintedDir = new java.io.File(envDir);
+			if (isSameCanonicalFile(hintedDir, executableDir) && hasNativeLibs(hintedDir)) {
+				return canonicalPath(hintedDir);
 			}
 		}
 
-		// Strategy 2: directory containing the executable (works for bare binary
-		// and .app bundles where dylibs are co-located with the binary)
-		try {
-			String cmd = ProcessHandle.current().info().command().orElse("");
-			if (!cmd.isEmpty()) {
-				java.io.File execDir = new java.io.File(cmd).getParentFile();
-				if (execDir != null && hasNativeLibs(execDir)) {
-					return execDir.getAbsolutePath();
-				}
-			}
-		} catch (Exception ignored) {
-		}
-
-		// Strategy 3: working directory (if user runs from target/)
-		java.io.File cwd = new java.io.File(System.getProperty("user.dir"));
-		if (hasNativeLibs(cwd)) {
-			return cwd.getAbsolutePath();
-		}
-
-		// Strategy 4: target/native-libs/ relative to working directory (dev builds)
-		java.io.File targetNativeLibs = new java.io.File(cwd, "target/native-libs");
-		if (hasNativeLibs(targetNativeLibs)) {
-			return targetNativeLibs.getAbsolutePath();
+		if (hasNativeLibs(executableDir)) {
+			return canonicalPath(executableDir);
 		}
 
 		return null;
+	}
+
+	private static java.io.File executableDir(String command) {
+		try {
+			if (command != null && !command.isBlank()) {
+				return new java.io.File(command).getCanonicalFile().getParentFile();
+			}
+		} catch (Exception ignored) {
+		}
+		return null;
+	}
+
+	private static boolean isSameCanonicalFile(java.io.File first, java.io.File second) {
+		try {
+			return first.getCanonicalFile().equals(second.getCanonicalFile());
+		} catch (Exception ignored) {
+			return false;
+		}
+	}
+
+	private static String canonicalPath(java.io.File dir) {
+		try {
+			return dir.getCanonicalPath();
+		} catch (Exception ignored) {
+			return dir.getAbsolutePath();
+		}
 	}
 
 	private static boolean hasNativeLibs(java.io.File dir) {
