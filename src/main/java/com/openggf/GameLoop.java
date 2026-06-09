@@ -167,17 +167,6 @@ public class GameLoop {
     private boolean bonusStageTransitionPending;
     private BonusStageProvider activeBonusStageProvider;
 
-    /**
-     * Where to transition after a title card completes.
-     * Normally LEVEL, but bonus stage entry routes through title card first.
-     */
-    private enum PostTitleCardDestination {
-        /** Normal: title card → LEVEL mode (default) */
-        LEVEL,
-        /** Bonus stage entry: title card → BONUS_STAGE mode */
-        BONUS_STAGE
-    }
-
     private PostTitleCardDestination postTitleCardDestination = PostTitleCardDestination.LEVEL;
 
     // Deferred bonus stage setup — applied when title card exits with BONUS_STAGE destination
@@ -195,11 +184,9 @@ public class GameLoop {
     // Optional trace camera focus controller — ticked at the top of every stepInternal()
     private TraceCameraFocusController traceCameraFocusController;
 
-    /**
-     * Callback interface for game mode changes.
-     */
-    public interface GameModeChangeListener {
-        void onGameModeChanged(GameMode oldMode, GameMode newMode);
+    /** @deprecated use {@link com.openggf.GameModeChangeListener}. */
+    @Deprecated
+    public interface GameModeChangeListener extends com.openggf.GameModeChangeListener {
     }
 
     private volatile boolean paused = false;      // Window focus pause

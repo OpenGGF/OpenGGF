@@ -76,10 +76,9 @@ class TestZoneLayoutMutationPipelineNoRedraw {
         Map map = level.getMap();
         map.setValue(0, 1, 0, (byte) 5); // pre-seed a value
 
-        // Simulate a snapshot being taken by recording the current data content.
-        // CoW will ensure that after bumpEpoch + mutation the live array diverges
-        // from what a snapshot would have preserved.
-        byte snapshotValue = map.getValue(0, 1, 0); // == 5
+        // Simulate a snapshot retaining the pre-mutation backing array.
+        byte[] snapshotData = map.getData();
+        byte snapshotValue = snapshotData[1]; // layer 0, x 1, y 0
 
         // Advance the epoch — subsequent mutations must clone before writing.
         level.bumpEpoch();
@@ -96,10 +95,12 @@ class TestZoneLayoutMutationPipelineNoRedraw {
         assertEquals((byte) 99, map.getValue(0, 1, 0),
                 "Map block should have been updated to 99");
 
-        // The value we read before the epoch bump is still 5 (CoW preserved the
-        // pre-mutation content — our local variable acts as a proxy for the snapshot).
+        assertNotSame(snapshotData, map.getData(),
+                "Live map storage should clone before mutating after an epoch bump");
+        assertEquals((byte) 5, snapshotData[1],
+                "Snapshot backing array should not have been affected by the mutation");
         assertEquals((byte) 5, snapshotValue,
-                "Snapshot value should not have been affected by the mutation");
+                "Snapshot value should preserve the pre-mutation content");
     }
 
     // ── Test 3 ────────────────────────────────────────────────────────────

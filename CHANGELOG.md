@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Release architecture guards now fail closed:** gameplay map-mutation
+  scanner roots must exist and contain Java sources, map mutation bypass forms
+  are covered, CoW tests use active JUnit assertions, and the GameLoop size
+  ratchet is back under budget after extracting mode-change types.
+
 - **Release config defaults now expose trace-render visibility:** the bundled
   YAML template includes the `debug.traceRender.*` keys, and the configuration
   reference distinguishes debug subsystem initialization from showing the HUD.

@@ -1334,12 +1334,14 @@ class TestArchitecturalSourceGuard {
     private static List<Path> productionFilesUnder(String relativeRoot) throws IOException {
         Path root = SRC_MAIN.resolve(relativeRoot);
         if (!Files.isDirectory(root)) {
-            return List.of();
+            fail("production scan root is missing: " + relativeRoot);
         }
         try (Stream<Path> stream = Files.walk(root)) {
-            return stream.filter(path -> path.toString().endsWith(".java"))
+            List<Path> files = stream.filter(path -> path.toString().endsWith(".java"))
                     .sorted()
                     .toList();
+            assertTrue(!files.isEmpty(), "production scan root must contain Java files: " + relativeRoot);
+            return files;
         }
     }
 
