@@ -80,6 +80,22 @@ public class TestPlayableSpriteAnimation {
     }
 
     @Test
+    public void s3kActivePushAnimationDoesNotClearEveryFrame() {
+        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
+        sprite.setAnimationId(4);
+        sprite.setMovementInputActive(true);
+        sprite.setPushing(true);
+        sprite.setGSpeed((short) 0x0200);
+
+        sprite.getAnimationManager().update(0);
+
+        assertTrue(sprite.getPushing(),
+                "An already-displayed push animation with live push contact must remain stable");
+        assertEquals(4, sprite.getAnimationId(),
+                "Active wall-push contact should continue rendering push instead of flickering to walk");
+    }
+
+    @Test
     public void s3kRunToPushDoesNotUseIdleToWalkClear() {
         TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
         sprite.setAnimationId(1);
