@@ -32,6 +32,11 @@ docs/audio-debug/
 *.pcm
 *.raw
 
+# Generated ROM-derived test reference outputs (keep local, never commit)
+/src/test/resources/audio-reference/
+/src/test/resources/visual-reference/
+/src/test/resources/EHZ*.kos
+
 # Archived planning docs
 docs/archive/
 

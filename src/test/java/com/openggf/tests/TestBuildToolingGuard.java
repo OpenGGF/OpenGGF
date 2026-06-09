@@ -7,6 +7,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -673,6 +674,25 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void generatedRomDerivedReferenceFixturesShouldNotBeTracked() throws Exception {
+        Set<String> trackedResources = trackedFiles("src/test/resources");
+        List<String> violations = new ArrayList<>();
+
+        for (String path : trackedResources) {
+            if (path.startsWith("src/test/resources/audio-reference/")
+                    || path.startsWith("src/test/resources/visual-reference/")
+                    || (path.startsWith("src/test/resources/EHZ") && (path.endsWith(".kos") || path.endsWith(".raw")))) {
+                violations.add(path);
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            fail("Generated ROM-derived reference fixtures must stay local and untracked:\n  "
+                    + String.join("\n  ", violations));
+        }
+    }
+
+    @Test
     void romGatedTestsShouldUseResolvedRomPathsAndAssumeReferenceFixtures() throws Exception {
         String file = "src/test/java/com/openggf/game/sonic3k/TestSonic3kLifeIconAddresses.java";
         String source = Files.readString(Path.of(file));
@@ -970,6 +990,24 @@ class TestBuildToolingGuard {
 
     private static String normalizeLineEndings(String text) {
         return text.replace("\r\n", "\n").replace('\r', '\n');
+    }
+
+    private static Set<String> trackedFiles(String pathspec) throws Exception {
+        Process process = new ProcessBuilder("git", "ls-files", pathspec)
+                .redirectErrorStream(true)
+                .start();
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        int exitCode = process.waitFor();
+        if (exitCode != 0) {
+            fail("git ls-files failed for " + pathspec + ":\n" + output);
+        }
+        Set<String> paths = new TreeSet<>();
+        for (String line : output.split("\\R")) {
+            if (!line.isBlank()) {
+                paths.add(line.replace('\\', '/'));
+            }
+        }
+        return paths;
     }
 
     private static String property(Document pom, String name) {
