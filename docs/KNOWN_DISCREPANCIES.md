@@ -25,7 +25,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 12. [S2 Music Offsets Resolved from Hardcoded REV01 Table](#s2-music-offsets-resolved-from-hardcoded-rev01-table)
 13. [Right-Boundary Is Viewport-Independent (Level Edge)](#right-boundary-is-viewport-independent-level-edge)
 14. [Object Despawn and Visibility Windows](#object-despawn-and-visibility-windows)
-15. [Legacy S3K AIZ Intro Trace Replay Bootstrap](#legacy-s3k-aiz-intro-trace-replay-bootstrap)
+15. [Pre-Level Intro Prefix Trace Bootstrap Contract](#pre-level-intro-prefix-trace-bootstrap-contract)
 16. [S2 Tornado Ride-Start Trace Bootstrap Contract](#s2-tornado-ride-start-trace-bootstrap-contract)
 17. [S2 CNZ Slot-Machine Trace Bootstrap Contract](#s2-cnz-slot-machine-trace-bootstrap-contract)
 18. [S3K Sidekick Seed-Frame Trace Bootstrap Debt](#s3k-sidekick-seed-frame-trace-bootstrap-debt)
@@ -790,45 +790,45 @@ At widescreen viewport widths (e.g. `ULTRA_21_9` = 528 px) the ROM's hardcoded 6
 This entry should remain as long as widescreen `DISPLAY_ASPECT` presets are supported. It would only be removed if the engine reverted to a fixed 320 × 224 viewport assumption.
 ---
 
-## Legacy S3K AIZ Intro Trace Replay Bootstrap
+## Pre-Level Intro Prefix Trace Bootstrap Contract
 
-**Location:** `TraceReplayBootstrap.isLegacyS3kAizIntroTrace`
+**Location:** `TraceReplayBootstrap`, `TraceMetadata.hasPreLevelIntroPrefix`
 **Scope:** Trace replay fixture compatibility only; not live gameplay.
 
 ### Original State
 
-One legacy S3K AIZ intro replay fixture was recorded from the power-on/intro path
-before the current replay bootstrap contract was fully normalized. That fixture
-does not describe the same initial gameplay state as modern checkpoint or
-level-select fixtures.
+Some end-to-end replay fixtures intentionally begin recording before the ROM has
+entered its first comparable LEVEL-mode row. Frame 0 may still contain stale
+Player_1 RAM from pre-level or transition setup, while the trace must still
+drive the visible intro prefix to preserve timers, object setup, and global
+phase.
 
 ### Our Implementation
 
-`TraceReplayBootstrap` keeps a single predicate named
-`isLegacyS3kAizIntroTrace(...)` to recognize that one fixture shape and apply
-the older cursor/phase assumptions for focused diagnostics. It no longer turns
-trace rows into actual player state for comparison; pre-level rows are advanced
-as VBlank-only and skipped until the first comparable level frame. The inherited
-full-run `replayMatchesTrace` parity test in `TestS3kAizTraceReplay` is
-disabled as diagnostic-only until the trace is regenerated; release validation
-must not count this fixture as proof of end-to-end AIZ parity. The predicate is
-intentionally bounded to S3K AIZ intro metadata, and trace policy tests reject
-any new trace-row-to-actual-primary-state substitution.
+Such fixtures declare the generic `pre_level_intro_prefix` metadata capability.
+`TraceReplayBootstrap` then starts replay from trace frame 0, validates the
+current BK2 row while driving gameplay with the previously latched movie input,
+treats rows before the first LEVEL-mode event as VBlank-only, advances
+post-level input-latch rows without comparing their duplicated sampled state,
+and uses the recorded `gameplay_start` checkpoint only to end the
+prefix-specific phase classifier.
+The bootstrap does not key this behavior from game id, zone id, act, route, or
+fixture name, and it does not copy trace-row player state into the engine.
 
 ### Rationale
 
-This is deferred release debt because removing the fixture-identity predicate
-requires either re-recording the legacy fixture or replacing the compatibility
-branch with a ROM-state-driven intro bootstrap model. The release hardening
-requirement is that the exception is visible, bounded, diagnostic-only for the
-legacy full-run fixture, and prevented from expanding silently. It is not a full
-trace-policy fix and must not be described as proof of strict AIZ intro parity.
+The ROM can spend hundreds of frames in setup/intro execution before the first
+strict gameplay comparison row. Skipping directly to that row loses native
+state that a single metadata start position cannot reconstruct, but treating
+the early stale Player_1 rows as normal gameplay comparisons is equally wrong.
+The explicit capability makes the fixture contract visible and reusable without
+preserving a zone-specific carve-out.
 
 ### Removal Condition
 
-Re-record the affected AIZ intro trace with the current fixture format, or model
-the missing intro bootstrap state from ROM state rather than fixture identity.
-Then delete `isLegacyS3kAizIntroTrace(...)` and its guard allowance.
+This entry can be removed if all release replay fixtures start at a comparable
+LEVEL-mode row or if the trace recorder exposes a richer generic phase stream
+that makes this metadata capability redundant.
 
 ---
 

@@ -11,7 +11,6 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestTraceReplayStartPositionPolicy {
@@ -53,7 +52,7 @@ class TestTraceReplayStartPositionPolicy {
 
         assertFalse(
                 shouldApply,
-                "The legacy S3K AIZ full-run trace starts from power-on state, so replay must "
+                "The pre-level-prefix S3K AIZ full-run trace starts before LEVEL mode, so replay must "
                         + "keep the engine's live intro spawn instead of applying frame-zero "
                         + "start_x/start_y from stale Player_1 RAM.");
     }
@@ -62,10 +61,10 @@ class TestTraceReplayStartPositionPolicy {
     void s3kEndToEndTraceStartsAtFrameZeroWithoutSkippingIntro() throws Exception {
         TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
 
-        assertFalse(TraceReplayBootstrap.releaseBlockersForTraceReplay(trace).isEmpty(),
-                "The legacy AIZ full-run fixture must be release-blocked until it is regenerated "
-                        + "without the route-shaped intro phase heuristic.");
-        assertFalse(TraceReplayBootstrap.shouldUseLegacyS3kAizIntroWarmup(trace));
+        assertTrue(trace.metadata().hasPreLevelIntroPrefix(),
+                "Pre-level prefix behavior must be declared by generic fixture metadata.");
+        assertTrue(TraceReplayBootstrap.releaseBlockersForTraceReplay(trace).isEmpty(),
+                "The regenerated AIZ full-run fixture must not be release-blocked by legacy heuristics.");
         assertFalse(TraceReplayBootstrap.shouldSeedFrameZeroForTraceReplay(trace));
         assertEquals(0, TraceReplayBootstrap.replaySeedTraceIndexForTraceReplay(trace));
         // Strict comparison starts on the first real AIZ level frame, where
@@ -73,10 +72,9 @@ class TestTraceReplayStartPositionPolicy {
         assertEquals(289, TraceReplayBootstrap.strictStartTraceIndexForTraceReplay(trace),
                 "AIZ frame-0 Player_1 RAM is still the title banner object; strict "
                         + "gameplay comparison starts when the ROM reaches Game_Mode 0x0C.");
-        assertEquals(trace.metadata().bk2FrameOffset() - 1,
+        assertEquals(trace.metadata().bk2FrameOffset(),
                 TraceReplayBootstrap.recordingStartFrameForTraceReplay(trace),
-                "AIZ row 0 is emitted immediately after recorder arming, so the BK2 cursor "
-                        + "starts one input frame earlier while still playing the full intro prefix.");
+                "Pre-level-prefix replay should trust the recorder's BK2 frame offset.");
         assertEquals(0,
                 TraceReplayBootstrap.preTraceOscillationFramesForTraceReplay(trace, -1),
                 "The AIZ prefix is simulated from frame 0, so no separate oscillator seed is required.");
@@ -91,18 +89,58 @@ class TestTraceReplayStartPositionPolicy {
     void s3kEndToEndTracePreLevelPrefixAdvancesMovieWithoutTickingLevel() throws Exception {
         TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
 
-        assertThrows(IllegalStateException.class,
-                () -> TraceReplayBootstrap.phaseForReplay(trace, null, trace.getFrame(0)),
-                "Release replay must not silently use the legacy AIZ intro phase heuristic.");
+        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
+                TraceReplayBootstrap.phaseForReplay(trace, null, trace.getFrame(0)),
+                "Pre-level prefix rows advance the movie without ticking the loaded level.");
     }
 
     @Test
     void vblankOnlyRowsAdvanceMovieButDoNotCompareGameplayState() throws Exception {
         TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
 
-        assertThrows(IllegalStateException.class,
-                () -> TraceReplayBootstrap.phaseForReplay(trace, trace.getFrame(287), trace.getFrame(288)),
-                "Legacy AIZ phase classification is diagnostic-only debt, not release replay policy.");
+        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
+                TraceReplayBootstrap.phaseForReplay(trace, trace.getFrame(287), trace.getFrame(288)),
+                "Rows before the first LEVEL-mode frame stay VBlank-only.");
+    }
+
+    @Test
+    void preLevelPrefixInputEdgeWithoutStateAdvanceOnlyConsumesMovieInput() throws Exception {
+        TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
+
+        int inputOnlyIndex = firstInputOnlyStateRow(trace);
+        TraceFrame previous = trace.getFrame(inputOnlyIndex - 1);
+        TraceFrame current = trace.getFrame(inputOnlyIndex);
+
+        assertEquals(TraceExecutionPhase.ADVANCE_ONLY,
+                TraceReplayBootstrap.phaseForReplay(trace, previous, current),
+                "Pre-level-prefix rows can record a new held input before the ROM applies it. "
+                        + "Replay must advance native gameplay for counter parity but skip comparing "
+                        + "the duplicated sampled state.");
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+                TraceReplayBootstrap.phaseForReplay(trace, current, trace.getFrame(inputOnlyIndex + 1)),
+                "The following row advances state and should consume the already-aligned input normally "
+                        + "(selected trace row " + current.frame() + ").");
+    }
+
+    @Test
+    void preLevelPrefixInputEdgeWithStateAdvanceStillTicksGameplay() throws Exception {
+        TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
+
+        int inputLatchIndex = firstStateAdvancingInputLatchRow(trace);
+        TraceFrame previous = trace.getFrame(inputLatchIndex - 1);
+        TraceFrame current = trace.getFrame(inputLatchIndex);
+
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+                TraceReplayBootstrap.phaseForReplay(trace, previous, current),
+                "When a pre-level-prefix row changes the sampled input while state still reflects "
+                        + "the prior input, replay should still tick gameplay with the previous "
+                        + "movie row (selected trace row " + current.frame() + ").");
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+                TraceReplayBootstrap.phaseForReplay(trace, current, trace.getFrame(inputLatchIndex + 1)),
+                "The following row should step with the latched input.");
+        assertTrue(TraceReplayBootstrap.shouldUsePreviousRecordingInputForTraceReplay(trace),
+                "Pre-level-prefix replay should validate the current BK2 row while driving "
+                        + "state-advancing frames with the previous row.");
     }
 
     @Test
@@ -135,7 +173,6 @@ class TestTraceReplayStartPositionPolicy {
 
         assertFalse(trace.preTraceObjectSnapshots().isEmpty(),
                 "CNZ records object snapshots for randomised balloon bob phases.");
-        assertFalse(TraceReplayBootstrap.shouldUseLegacyS3kAizIntroWarmup(trace));
         assertEquals(0, TraceReplayBootstrap.replaySeedTraceIndexForTraceReplay(trace));
         assertFalse(TraceReplayBootstrap.shouldSeedFrameZeroForTraceReplay(trace));
         assertEquals(1,
@@ -156,7 +193,7 @@ class TestTraceReplayStartPositionPolicy {
                         + "OscillateNumDo tick.");
         assertEquals(0,
                 TraceReplayBootstrap.initialOscillationSuppressionFramesForTraceReplay(trace),
-                "Legacy AIZ full-intro replay now drives oscillator timing natively as well.");
+                "Pre-level-prefix replay drives oscillator timing natively as well.");
     }
 
     @Test
@@ -276,5 +313,56 @@ class TestTraceReplayStartPositionPolicy {
         TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s2/ehz1_fullrun"));
 
         assertFalse(TraceReplayBootstrap.isS2TornadoRideStartMetadataCandidate(trace));
+    }
+
+    private static int firstInputOnlyStateRow(TraceData trace) {
+        boolean afterGameplayStart = false;
+        for (int i = 1; i + 1 < trace.frameCount(); i++) {
+            if (!afterGameplayStart) {
+                for (TraceEvent event : trace.getEventsForFrame(i)) {
+                    if (event instanceof TraceEvent.Checkpoint checkpoint
+                            && "gameplay_start".equals(checkpoint.name())) {
+                        afterGameplayStart = true;
+                    }
+                }
+                continue;
+            }
+            TraceFrame previous = trace.getFrame(i - 1);
+            TraceFrame current = trace.getFrame(i);
+            if (current.input() != previous.input()
+                    && current.stateEquals(previous)
+                    && !trace.getFrame(i + 1).stateEquals(current)
+                    && current.gameplayFrameCounter() == previous.gameplayFrameCounter()
+                    && current.vblankCounter() == previous.vblankCounter()
+                    && current.lagCounter() == previous.lagCounter()) {
+                return i;
+            }
+        }
+        throw new AssertionError("No input-only state row found");
+    }
+
+    private static int firstStateAdvancingInputLatchRow(TraceData trace) {
+        boolean afterGameplayStart = false;
+        for (int i = 1; i + 1 < trace.frameCount(); i++) {
+            if (!afterGameplayStart) {
+                for (TraceEvent event : trace.getEventsForFrame(i)) {
+                    if (event instanceof TraceEvent.Checkpoint checkpoint
+                            && "gameplay_start".equals(checkpoint.name())) {
+                        afterGameplayStart = true;
+                    }
+                }
+                continue;
+            }
+            TraceFrame previous = trace.getFrame(i - 1);
+            TraceFrame current = trace.getFrame(i);
+            if (current.input() != previous.input()
+                    && !current.stateEquals(previous)
+                    && current.gameplayFrameCounter() == previous.gameplayFrameCounter()
+                    && current.vblankCounter() == previous.vblankCounter()
+                    && current.lagCounter() == previous.lagCounter()) {
+                return i;
+            }
+        }
+        throw new AssertionError("No state-advancing input latch row found");
     }
 }

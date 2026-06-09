@@ -27,8 +27,6 @@ import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceReplayBootstrap;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -43,38 +41,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 @RequiresRom(SonicGame.SONIC_3K)
-public class TestS3kAizReplayBootstrap {
+public class DebugS3kAizReplayBootstrapProbe {
 
     private static final Path TRACE_DIR =
             Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun");
     private static final TraceData TRACE = loadTraceData();
     private static final String PRE_TRACE_OSC_OVERRIDE_PROPERTY = "s3k.aiz.preTraceOscOverride";
     private static final Field ORIGINAL_SPAWN_FIELD = resolveOriginalSpawnField();
-    private String oldLegacyAizDiagnosticHeuristicFlag;
-
-    @BeforeEach
-    void allowLegacyAizDiagnosticHeuristic() {
-        oldLegacyAizDiagnosticHeuristicFlag = System.getProperty(
-                TraceReplayBootstrap.ALLOW_LEGACY_S3K_AIZ_DIAGNOSTIC_HEURISTIC_PROPERTY);
-        System.setProperty(
-                TraceReplayBootstrap.ALLOW_LEGACY_S3K_AIZ_DIAGNOSTIC_HEURISTIC_PROPERTY,
-                "true");
-    }
-
-    @AfterEach
-    void restoreLegacyAizDiagnosticHeuristicFlag() {
-        if (oldLegacyAizDiagnosticHeuristicFlag == null) {
-            System.clearProperty(
-                    TraceReplayBootstrap.ALLOW_LEGACY_S3K_AIZ_DIAGNOSTIC_HEURISTIC_PROPERTY);
-        } else {
-            System.setProperty(
-                    TraceReplayBootstrap.ALLOW_LEGACY_S3K_AIZ_DIAGNOSTIC_HEURISTIC_PROPERTY,
-                    oldLegacyAizDiagnosticHeuristicFlag);
-        }
-    }
 
     @Test
-    void resumesLegacyS3kAizReplayAtRecordedGameplayStartAnchor() throws Exception {
+    void resumesDiagnosticS3kAizReplayAtRecordedGameplayStartAnchor() throws Exception {
         TraceData trace = TraceData.load(TRACE_DIR);
         int gameplayStartFrame = findCheckpointFrame(trace, "gameplay_start");
         SonicConfigurationService config = SonicConfigurationService.getInstance();
@@ -138,7 +114,7 @@ public class TestS3kAizReplayBootstrap {
     }
 
     @Test
-    void reachesRecordedGameplayStartAnchorForLegacyS3kAizTrace() throws Exception {
+    void reachesRecordedGameplayStartAnchorForDiagnosticS3kAizTrace() throws Exception {
         TraceData trace = TraceData.load(TRACE_DIR);
         int gameplayStartFrame = findCheckpointFrame(trace, "gameplay_start");
         int nextTraceFrame = gameplayStartFrame + 1;
@@ -445,7 +421,7 @@ public class TestS3kAizReplayBootstrap {
     }
 
     @Test
-    void legacyAizPreLevelPrefixIsVblankOnlyUntilFirstLevelFrame() throws Exception {
+    void preLevelPrefixIsVblankOnlyUntilFirstLevelFrame() throws Exception {
         TraceData trace = TraceData.load(TRACE_DIR);
         int strictStartFrame = TraceReplayBootstrap.strictStartTraceIndexForTraceReplay(trace);
 
@@ -486,7 +462,7 @@ public class TestS3kAizReplayBootstrap {
             TraceFrame expected = trace.getFrame(probeFrame);
 
             assertFrameMatches(expected, fixture, lastInput);
-            // Camera assertions intentionally omitted for the legacy AIZ
+            // Camera assertions intentionally omitted for the pre-level prefix
             // seed-at-0 path. Trace frame 1 captures stale pre-level Player_1
             // RAM (camera recorded as 0,0), but the headless fixture has
             // already loaded AIZ1 and placed the camera at its level-intro
@@ -835,7 +811,7 @@ public class TestS3kAizReplayBootstrap {
     }
 
     @Test
-    void raisesFireTransitionSignalOnRecordedLegacyCheckpointFrame() throws Exception {
+    void raisesFireTransitionSignalOnRecordedDiagnosticCheckpointFrame() throws Exception {
         TraceData trace = TraceData.load(TRACE_DIR);
         int fireTransitionFrame = findCheckpointFrame(trace, "aiz1_fire_transition_begin");
         SonicConfigurationService config = SonicConfigurationService.getInstance();
@@ -962,7 +938,7 @@ public class TestS3kAizReplayBootstrap {
     }
 
     @Test
-    void matchesLegacyReplayShortlyAfterFireTransitionCheckpoint() throws Exception {
+    void matchesDiagnosticReplayShortlyAfterFireTransitionCheckpoint() throws Exception {
         TraceData trace = TraceData.load(TRACE_DIR);
         int probeFrame = 1800;
         SonicConfigurationService config = SonicConfigurationService.getInstance();
@@ -1002,7 +978,7 @@ public class TestS3kAizReplayBootstrap {
     }
 
     @Test
-    void keepsMonkeyDudeBodyAtLegacyHeightBeforeRecordedStomp() throws Exception {
+    void keepsMonkeyDudeBodyAtDiagnosticHeightBeforeRecordedStomp() throws Exception {
         TraceData trace = TraceData.load(TRACE_DIR);
         // Rebased from 1833 after the AIZ trace re-recording moved the BK2
         // start forward by 114 frames (offset 397→511, frame count 20912→20798).
@@ -1097,7 +1073,7 @@ public class TestS3kAizReplayBootstrap {
     }
 
     @Test
-    void matchesLegacyReplayAtFirstPostSpringAirGSpeedResetFrame() throws Exception {
+    void matchesDiagnosticReplayAtFirstPostSpringAirGSpeedResetFrame() throws Exception {
         TraceData trace = TraceData.load(TRACE_DIR);
         int probeFrame = 2006;
         SonicConfigurationService config = SonicConfigurationService.getInstance();
@@ -1514,7 +1490,7 @@ public class TestS3kAizReplayBootstrap {
     }
 
     @Test
-    void matchesLegacyReplayShortlyBeforeAiz2ReloadResume() throws Exception {
+    void matchesDiagnosticReplayShortlyBeforeAiz2ReloadResume() throws Exception {
         TraceData trace = TraceData.load(TRACE_DIR);
         // Rebased from 5000 after the AIZ trace re-recording moved the BK2
         // start forward by 114 frames (offset 397→511, frame count 20912→20798).

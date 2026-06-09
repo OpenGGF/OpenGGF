@@ -98,7 +98,7 @@ class TraceReplaySessionBootstrapConfigTest {
                 config.getConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
         // Note: prepareConfiguration only forces S3K_SKIP_INTROS=false
         // when TraceReplayBootstrap.requiresFreshLevelLoadForTraceReplay
-        // returns true (legacy S3K AIZ intro traces). This stub doesn't
+        // returns true (pre-level-prefix intro traces). This stub doesn't
         // qualify, so the user's true stays in place — and is therefore
         // already restored by the roundtrip.
 

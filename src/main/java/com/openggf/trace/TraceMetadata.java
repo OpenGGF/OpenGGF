@@ -370,6 +370,16 @@ public record TraceMetadata(
                 && auxSchemaExtras.contains("sidekick_seed_frame_prelude");
     }
 
+    /**
+     * Whether trace frame 0 intentionally starts before the first comparable
+     * LEVEL-mode row. Replay drives this native prefix from frame 0 instead of
+     * jumping to the first level frame.
+     */
+    public boolean hasPreLevelIntroPrefix() {
+        return auxSchemaExtras != null
+                && auxSchemaExtras.contains("pre_level_intro_prefix");
+    }
+
     /** Load metadata from a metadata.json file. */
     public static TraceMetadata load(Path metadataFile) throws IOException {
         ObjectMapper mapper = new ObjectMapper();

@@ -1,5 +1,41 @@
 # Trace Frontier Log
 
+## 2026-06-09 - RRF-052 pre-level-prefix bootstrap policy cleanup exposes AIZ2 ring frontier
+
+- Scope: release-readiness review RRF-052.
+- Change: the S3K AIZ full-run trace now advertises the generic
+  `pre_level_intro_prefix` recorder capability instead of relying on a legacy
+  S3K/AIZ identity predicate or diagnostic opt-in. Replay starts at trace frame
+  0, uses the regenerated BK2 offset directly, treats true pre-level prefix
+  rows as VBlank-only, and advances post-level input-latch rows without
+  comparing their duplicated sampled state.
+- Replay-policy finding: after removing the legacy predicate, the regenerated
+  AIZ trace samples controller rows one emulator frame before those inputs
+  affect LevelLoop state. The release replay loop now validates the current BK2
+  row while driving pre-level-prefix gameplay rows with the previous BK2 row.
+- Frontier movement:
+  - Before the policy cleanup, replay failed immediately at frame 1428
+    (`x_speed expected=0x0000 actual=0x000C`) because the first RIGHT input was
+    applied one row too early.
+  - After modelling the input-latch phase, replay reached frame 1680.
+  - After delayed-input driving for state-advancing rows, replay reached frame
+    2017 and exposed a sidekick post-CPU physics timing gap
+    (`tails_x_speed expected=0x00EC actual=0x00F8`).
+  - After classifying unchanged-state post-level input-latch rows as
+    advance-only native frames, the focused sidekick cadence regression passes
+    and the full release replay reaches frame 6203. The first remaining
+    release-visible failure is `rings expected=58 actual=59` after
+    `aiz2_reload_resume`; primary position, velocity, camera, and zone/act state
+    are aligned at the frontier, so the next investigation should focus on ring
+    collection timing or count sampling around the AIZ2 reload segment.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestTraceReplayStartPositionPolicy" test "-DfailIfNoTests=false"`
+    -> PASS, 16 tests, 0 failures.
+  - `mvn "-Ds3k.rom.path=s3k.gen" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#hollowTreeSidekickUsesRomVisibleAutoJumpCadenceOnReleaseFrame" test`
+    -> PASS.
+  - `mvn "-Ds3k.rom.path=s3k.gen" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test`
+    -> FAIL at frame 6203 as described above.
+
 ## 2026-06-09 - RRF-031 S3K AIZ sidekick local push grace replay-green
 
 - Scope: release-readiness review RRF-031, follow-up to RRF-029's now-visible

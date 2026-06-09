@@ -58,6 +58,14 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
         return runner.stepFrameFromRecording();
     }
 
+    /**
+     * Step one frame with the previous BK2 input while consuming and returning
+     * the current BK2 row for trace input validation.
+     */
+    public int stepFrameFromRecordingUsingPreviousInput() {
+        return runner.stepFrameFromRecordingUsingPreviousInput();
+    }
+
     /** Advance BK2 by one frame without processing physics (for lag frames). Returns the input mask. */
     public int skipFrameFromRecording() {
         return runner.skipFrameFromRecording();

@@ -112,6 +112,13 @@ All notable changes to the OpenGGF project are documented in this file.
   `spawnFreeChild(...)`, preserving construction services, slot semantics, and
   shared lifecycle ownership.
 
+- **S3K AIZ trace bootstrap no longer uses a legacy zone identity carve-out:**
+  the regenerated end-to-end AIZ fixture now declares a generic
+  `pre_level_intro_prefix` capability, and replay bootstrap uses that metadata
+  instead of an S3K/AIZ/act/checkpoint identity predicate. The replay harness
+  also models the fixture's one-row movie-input latch and advance-only duplicate
+  sample rows without hydrating trace state into gameplay.
+
 - **Hash-warning saves can no longer be launched from data select:** save
   summaries now distinguish recoverable payloads from loadable slots, so hash
   mismatches remain visible/deletable for recovery while data-select launch and
@@ -147,8 +154,8 @@ All notable changes to the OpenGGF project are documented in this file.
 - **Release-prep architecture review hardening closed the current blocker
   set:** branch policy now runs for direct release-branch pushes, release trace
   coverage is counted from generated reports, warning-only trace reports fail
-  by default outside explicit diagnostics, and legacy S3K AIZ full-run replay is
-  blocked from release replay unless the diagnostic override is set. S2 Tornado
+  by default outside explicit diagnostics, and S3K AIZ pre-level replay is
+  driven by explicit fixture capability metadata. S2 Tornado
   trace bootstrap no longer seeds ride/player state from trace metadata, AIZ
   intro preload uses runtime-owned object services, final level progression now
   requests credits instead of wrapping, S3K special-stage entry rings and Super
@@ -1946,8 +1953,8 @@ All notable changes to the OpenGGF project are documented in this file.
   `GameplayModeContext.isGameplayRuntimeReady()` returns `false` once `tearDownManagers()` has run.
   Release validation now runs the trace-replay Maven profile, stale `@Disabled("Currently failing")`
   annotations were removed from the S3K AIZ/CNZ keep-green tests after forced-on verification, and
-  `TestBuildToolingGuard` documents and bounds the one accepted legacy S3K AIZ trace bootstrap plus
-  the S2 Tornado ride-start trace contract. AIZ intro terrain swap cache state is reset across game
+  `TestBuildToolingGuard` documents and bounds the pre-level intro prefix plus
+  S2 Tornado ride-start trace contracts. AIZ intro terrain swap cache state is reset across game
   bootstrap and routes immediate mutations through injected `ObjectServices`, while ICZ now installs
   typed runtime state consumed by palette/animated-tile code and MHZ runtime-state refresh recognizes
   its current event-backed adapter.

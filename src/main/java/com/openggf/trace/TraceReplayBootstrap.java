@@ -15,9 +15,6 @@ import java.util.List;
  * into the engine.
  */
 public final class TraceReplayBootstrap {
-    public static final String ALLOW_LEGACY_S3K_AIZ_DIAGNOSTIC_HEURISTIC_PROPERTY =
-            "openggf.trace.allowLegacyS3kAizDiagnosticHeuristic";
-
     public record ReplayStartState(int startingTraceIndex, int seededTraceIndex) {
         public static final ReplayStartState DEFAULT = new ReplayStartState(0, -1);
 
@@ -123,15 +120,6 @@ public final class TraceReplayBootstrap {
             return 0;
         }
         int seedTraceIndex = replaySeedTraceIndexForTraceReplay(trace);
-        if (isLegacyS3kAizIntroTrace(trace) && seedTraceIndex == 0) {
-            // The AIZ end-to-end recorder writes trace frame 0 in the same
-            // callback that arms recording, unlike level-gated traces which
-            // return and emit their first row after the next frameadvance().
-            // That row is therefore the state produced by the previous BK2
-            // input. Start the movie cursor one input frame earlier while still
-            // replaying the full trace prefix from trace frame 0.
-            return Math.max(0, trace.metadata().bk2FrameOffset() - 1);
-        }
         return trace.metadata().bk2FrameOffset() + Math.max(0, seedTraceIndex - 1);
     }
 
@@ -157,11 +145,10 @@ public final class TraceReplayBootstrap {
         if (trace == null || trace.frameCount() == 0) {
             return 0;
         }
-        if (isLegacyS3kAizIntroTrace(trace)) {
-            // The AIZ full-run fixture records the intro/cutscene timeline from its
-            // own frame 0. Replaying from the first in-level frame skips hundreds of
-            // recorded intro frames and loses global state that the seed frame alone
-            // cannot reconstruct (timers, title-card state, zone-event evolution).
+        if (hasPreLevelIntroPrefix(trace)) {
+            // Pre-level-prefix fixtures record the intro/cutscene timeline from
+            // trace frame 0. Replaying from the first in-level frame skips
+            // recorded native state that the seed frame alone cannot reconstruct.
             return 0;
         }
         int firstLevelFrame = findFirstLevelGameplayFrame(trace);
@@ -181,7 +168,7 @@ public final class TraceReplayBootstrap {
             return override;
         }
         if (trace == null || trace.frameCount() == 0
-                || shouldUseLegacyS3kAizIntroWarmup(trace)) {
+                || hasPreLevelIntroPrefix(trace)) {
             return 0;
         }
         int seedTraceIndex = replaySeedTraceIndexForTraceReplay(trace);
@@ -207,7 +194,7 @@ public final class TraceReplayBootstrap {
     }
 
     /**
-     * The legacy S3K AIZ end-to-end trace now drives its intro prefix from
+     * Pre-level-prefix traces now drive their intro prefix from
      * trace frame 0, including the first native LevelLoop oscillator tick.
      * Applying an additional replay-local suppression would leave
      * Obj_FloatingPlatform one oscillator frame behind the ROM by the first
@@ -408,26 +395,17 @@ public final class TraceReplayBootstrap {
     }
 
     public static boolean requiresFreshLevelLoadForTraceReplay(TraceData trace) {
-        return isLegacyS3kAizIntroTrace(trace)
+        return hasPreLevelIntroPrefix(trace)
                 && replaySeedTraceIndexForTraceReplay(trace) == 0;
-    }
-
-    public static boolean shouldUseLegacyS3kAizIntroWarmup(TraceData trace) {
-        return false;
     }
 
     public static boolean shouldApplyMetadataStartPositionForTraceReplay(TraceData trace) {
         return replaySeedTraceIndexForTraceReplay(trace) == 0
-                && !isLegacyS3kAizIntroTrace(trace)
+                && !hasPreLevelIntroPrefix(trace)
                 && !isS2TornadoRideStartMetadataCandidate(trace);
     }
 
     public static List<String> releaseBlockersForTraceReplay(TraceData trace) {
-        if (requiresLegacyS3kAizDiagnosticHeuristicOptIn(trace)) {
-            return List.of("RRF-003: legacy S3K AIZ full-run trace requires the "
-                    + "diagnostic-only intro phase heuristic. Regenerate the fixture "
-                    + "before enabling it in release replay.");
-        }
         return List.of();
     }
 
@@ -459,7 +437,7 @@ public final class TraceReplayBootstrap {
         if (trace == null || trace.frameCount() == 0) {
             return 0;
         }
-        if (isLegacyS3kAizIntroTrace(trace)) {
+        if (hasPreLevelIntroPrefix(trace)) {
             return findFirstLevelGameplayFrame(trace);
         }
         return replaySeedTraceIndexForTraceReplay(trace);
@@ -477,7 +455,10 @@ public final class TraceReplayBootstrap {
     public static TraceExecutionPhase phaseForReplay(TraceData trace,
                                                      TraceFrame previous,
                                                      TraceFrame current) {
-        if (shouldUseLegacyS3kAizIntroHeuristic(trace, current)) {
+        if (isPreLevelPrefixInputLatchRow(trace, previous, current)) {
+            return TraceExecutionPhase.ADVANCE_ONLY;
+        }
+        if (shouldUsePreLevelIntroPrefix(trace, current)) {
             int firstLevelFrame = findFirstLevelGameplayFrame(trace);
             if (current.frame() < firstLevelFrame) {
                 // The AIZ end-to-end trace starts while Game_Mode is $4C
@@ -507,35 +488,35 @@ public final class TraceReplayBootstrap {
                 // trace frame instead of double-counting the setup work.
                 return TraceExecutionPhase.VBLANK_ONLY;
             }
-              return deriveLegacyPhase(previous, current);
-          }
-          if (isSonic3kTransitionModeFrozenRow(trace, previous, current)) {
-              return TraceExecutionPhase.VBLANK_ONLY;
-          }
-          return TraceExecutionModel.forGame(trace.metadata().game()).phaseFor(previous, current);
-      }
+            return deriveLegacyPhase(previous, current);
+        }
+        if (isSonic3kTransitionModeFrozenRow(trace, previous, current)) {
+            return TraceExecutionPhase.VBLANK_ONLY;
+        }
+        return TraceExecutionModel.forGame(trace.metadata().game()).phaseFor(previous, current);
+    }
 
-      private static boolean isSonic3kTransitionModeFrozenRow(
-              TraceData trace, TraceFrame previous, TraceFrame current) {
-          if (trace == null || previous == null || current == null
-                  || !"s3k".equals(trace.metadata().game())
-                  || current.gameplayFrameCounter() != previous.gameplayFrameCounter()
-                  || current.vblankCounter() != previous.vblankCounter()
-                  || current.lagCounter() != previous.lagCounter()) {
-              return false;
-          }
-          TraceEvent.ZoneActState zoneActState = trace.latestZoneActStateAtOrBefore(current.frame());
-          if (zoneActState == null || zoneActState.frame() == current.frame()
-                  || zoneActState.gameMode() == null) {
-              return false;
-          }
-          int gameMode = zoneActState.gameMode();
-          return (gameMode & 0x80) != 0 && (gameMode & 0x0C) == 0x0C;
-      }
+    private static boolean isSonic3kTransitionModeFrozenRow(
+            TraceData trace, TraceFrame previous, TraceFrame current) {
+        if (trace == null || previous == null || current == null
+                || !"s3k".equals(trace.metadata().game())
+                || current.gameplayFrameCounter() != previous.gameplayFrameCounter()
+                || current.vblankCounter() != previous.vblankCounter()
+                || current.lagCounter() != previous.lagCounter()) {
+            return false;
+        }
+        TraceEvent.ZoneActState zoneActState = trace.latestZoneActStateAtOrBefore(current.frame());
+        if (zoneActState == null || zoneActState.frame() == current.frame()
+                || zoneActState.gameMode() == null) {
+            return false;
+        }
+        int gameMode = zoneActState.gameMode();
+        return (gameMode & 0x80) != 0 && (gameMode & 0x0C) == 0x0C;
+    }
 
-      public static boolean shouldCompareGameplayStateForReplay(TraceExecutionPhase phase) {
-          return phase == TraceExecutionPhase.FULL_LEVEL_FRAME;
-      }
+    public static boolean shouldCompareGameplayStateForReplay(TraceExecutionPhase phase) {
+        return phase == TraceExecutionPhase.FULL_LEVEL_FRAME;
+    }
 
     /**
      * Returns the frame values that should be compared after a replay step.
@@ -601,17 +582,35 @@ public final class TraceReplayBootstrap {
         sprite.endOfTick();
     }
 
-    private static boolean shouldUseLegacyS3kAizIntroHeuristic(TraceData trace,
-                                                                TraceFrame current) {
-        if (trace == null || current == null || !isLegacyS3kAizIntroTrace(trace)) {
+    private static boolean shouldUsePreLevelIntroPrefix(TraceData trace,
+                                                        TraceFrame current) {
+        if (trace == null || current == null || !hasPreLevelIntroPrefix(trace)) {
             return false;
-        }
-        if (requiresLegacyS3kAizDiagnosticHeuristicOptIn(trace)
-                && !Boolean.getBoolean(ALLOW_LEGACY_S3K_AIZ_DIAGNOSTIC_HEURISTIC_PROPERTY)) {
-            throw new IllegalStateException(String.join("; ", releaseBlockersForTraceReplay(trace)));
         }
         int gameplayStartFrame = findCheckpointFrame(trace, "gameplay_start");
         return gameplayStartFrame >= 0 && current.frame() <= gameplayStartFrame;
+    }
+
+    private static boolean isPreLevelPrefixInputLatchRow(TraceData trace,
+                                                         TraceFrame previous,
+                                                         TraceFrame current) {
+        if (trace == null || previous == null || current == null
+                || !hasPreLevelIntroPrefix(trace)
+                || current.input() == previous.input()) {
+            return false;
+        }
+        int firstLevelFrame = findFirstLevelGameplayFrame(trace);
+        if (current.frame() <= firstLevelFrame) {
+            return false;
+        }
+        return current.stateEquals(previous)
+                && current.gameplayFrameCounter() == previous.gameplayFrameCounter()
+                && current.vblankCounter() == previous.vblankCounter()
+                && current.lagCounter() == previous.lagCounter();
+    }
+
+    public static boolean shouldUsePreviousRecordingInputForTraceReplay(TraceData trace) {
+        return hasPreLevelIntroPrefix(trace);
     }
 
     /**
@@ -620,8 +619,8 @@ public final class TraceReplayBootstrap {
      * are entered mid-run from the previous zone's seamless act/zone handoff.
      * The predicate keys off the recording's structural identity - S3K, a
      * recorded sidekick, and the {@code complete_run} trace profile - never a
-     * zone id, route, or frame number. The legacy AIZ intro full-run trace
-     * drives its cutscene prefix from trace frame 0 and is excluded.
+     * zone id, route, or frame number. Pre-level-prefix traces drive their
+     * cutscene prefix from trace frame 0 and are excluded.
      */
     public static boolean isS3kCompleteRunSegment(TraceData trace) {
         if (trace == null || trace.frameCount() == 0) {
@@ -632,7 +631,7 @@ public final class TraceReplayBootstrap {
                 || !"s3k".equals(metadata.game())
                 || metadata.recordedSidekicks().isEmpty()
                 || !"complete_run".equals(metadata.traceProfile())
-                || isLegacyS3kAizIntroTrace(trace)) {
+                || hasPreLevelIntroPrefix(trace)) {
             return false;
         }
         return replaySeedTraceIndexForTraceReplay(trace) == 0;
@@ -654,7 +653,7 @@ public final class TraceReplayBootstrap {
         if (trace == null || trace.frameCount() < 2
                 || !"s3k".equals(trace.metadata().game())
                 || trace.metadata().recordedSidekicks().isEmpty()
-                || isLegacyS3kAizIntroTrace(trace)) {
+                || hasPreLevelIntroPrefix(trace)) {
             return false;
         }
         if (replaySeedTraceIndexForTraceReplay(trace) != 0) {
@@ -672,10 +671,10 @@ public final class TraceReplayBootstrap {
     }
 
     /**
-     * Legacy S3K AIZ intro traces keep gameplay_frame_counter pinned during the
-     * opening cutscene, so the normal execution model misclassifies many real
-     * gameplay frames as VBlank-only. Use the old state-change heuristic for
-     * the intro window instead of forcing every frame to full execution.
+     * Pre-level-prefix traces can keep gameplay_frame_counter pinned during
+     * opening cutscenes, so the normal execution model misclassifies many real
+     * gameplay frames as VBlank-only. Use state changes inside that prefix
+     * window instead of forcing every frame to full execution.
      */
     private static TraceExecutionPhase deriveLegacyPhase(TraceFrame previous,
                                                          TraceFrame current) {
@@ -702,48 +701,10 @@ public final class TraceReplayBootstrap {
                 : TraceExecutionPhase.FULL_LEVEL_FRAME;
     }
 
-    private static boolean isLegacyS3kAizIntroTrace(TraceData trace) {
-        if (trace == null) {
-            return false;
-        }
-        TraceMetadata metadata = trace.metadata();
-        if (!"s3k".equals(metadata.game())) {
-            return false;
-        }
-        if (metadata.zoneId() == null || metadata.zoneId() != 0 || metadata.act() != 1) {
-            return false;
-        }
-        return trace.getEventsForFrame(0).stream()
-                .filter(TraceEvent.Checkpoint.class::isInstance)
-                .map(TraceEvent.Checkpoint.class::cast)
-                .anyMatch(checkpoint -> "intro_begin".equals(checkpoint.name()));
-    }
-
-    private static boolean requiresLegacyS3kAizDiagnosticHeuristicOptIn(TraceData trace) {
-        return isLegacyS3kAizIntroTrace(trace)
-                && !isAtLeastLuaVersion(trace.metadata(), 6, 25);
-    }
-
-    private static boolean isAtLeastLuaVersion(TraceMetadata metadata, int majorFloor, int minorFloor) {
-        if (metadata == null || metadata.luaScriptVersion() == null) {
-            return false;
-        }
-        String version = metadata.luaScriptVersion();
-        int dot = version.indexOf('.');
-        if (dot <= 0) {
-            return false;
-        }
-        int end = version.indexOf('-', dot);
-        if (end < 0) {
-            end = version.length();
-        }
-        try {
-            int major = Integer.parseInt(version.substring(0, dot));
-            int minor = Integer.parseInt(version.substring(dot + 1, end));
-            return major > majorFloor || (major == majorFloor && minor >= minorFloor);
-        } catch (NumberFormatException e) {
-            return false;
-        }
+    private static boolean hasPreLevelIntroPrefix(TraceData trace) {
+        return trace != null
+                && trace.metadata() != null
+                && trace.metadata().hasPreLevelIntroPrefix();
     }
 
 

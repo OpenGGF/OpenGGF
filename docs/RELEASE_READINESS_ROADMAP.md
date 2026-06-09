@@ -186,16 +186,15 @@ limitations.
 
 Work:
 
-- Accepted Phase 1 release debt: legacy S3K AIZ intro trace bootstrap.
-  - `TraceReplayBootstrap.isLegacyS3kAizIntroTrace` remains as one bounded
-    fixture-compatibility predicate for the old AIZ intro trace.
-  - It is documented in `docs/KNOWN_DISCREPANCIES.md`; the old full-run AIZ
-    replay is diagnostic-only until regenerated, and trace policy tests reject
-    trace-row-to-actual-primary-state substitution.
-  - The remaining fixture-identity phase/cursor predicate is deferred release
-    debt, not proof of strict AIZ intro parity.
-  - Future trace cleanup should re-record the fixture or model the missing ROM
-    intro state and then remove the predicate.
+- Release-blocking pre-level intro trace bootstrap.
+  - `TraceReplayBootstrap` now uses the generic
+    `TraceMetadata.hasPreLevelIntroPrefix()` fixture capability instead of an
+    S3K AIZ zone/act/checkpoint identity predicate.
+  - The regenerated AIZ end-to-end replay is release-blocking; pre-level rows
+    advance the BK2/VBlank cursor without hydrating trace-row player state into
+    the engine.
+  - Trace policy tests reject new legacy trace predicates and zone/route/frame
+    carve-outs in the bootstrap path.
 - Deferred release debt: frame-0 bootstrap sidekick/SST snapshot coverage.
   - `AbstractTraceReplayTest.captureEngineSnapshot()` currently captures player
     history only; sidekick CPU and per-slot SST engine views remain absent.
@@ -515,8 +514,6 @@ Work:
   - removed the remaining trace-row primary-state substitution path from
     `TraceReplayBootstrap`; comparison now uses live engine sprite state only.
 - Remaining cleanup:
-  - Replace `isLegacyS3kAizIntroTrace(...)` with regenerated fixture metadata or
-    ROM-state phase metadata.
   - Add engine-side sidekick CPU and per-slot SST frame-0 snapshot views so
     bootstrap warnings can become strict comparisons.
 
