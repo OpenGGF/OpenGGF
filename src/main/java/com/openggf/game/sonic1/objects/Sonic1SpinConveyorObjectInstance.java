@@ -9,6 +9,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
@@ -215,7 +216,7 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
         initialized = true;
         if (mode == Mode.PLATFORM) {
             if (!loadPathData()) {
-                setDestroyed(true);
+                ObjectLifetimeOps.deleteNoRespawn(this);
                 return;
             }
 
@@ -321,19 +322,19 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
         Sonic1ConveyorState conveyorState = services().gameService(Sonic1ConveyorState.class);
         if (conveyorState.testAndSetSpawned(spawnerSlotIndex)) {
             // Already spawned - delete self
-            setDestroyed(true);
+            ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
 
         // Get platform position data for this spawner slot
         int[][] positionData = loadSpawnerPositionData(spawnerSlotIndex);
         if (positionData == null) {
-            setDestroyed(true);
+            ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
 
         if (services().objectManager() == null) {
-            setDestroyed(true);
+            ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
 
@@ -355,7 +356,7 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
 
         // Spawner itself is consumed after spawning
         // From disassembly: addq.l #4,sp / rts (pops return address, skips back to main)
-        setDestroyed(true);
+        ObjectLifetimeOps.deleteNoRespawn(this);
     }
 
     private int[][] loadSpawnerPositionData(int slotIndex) {

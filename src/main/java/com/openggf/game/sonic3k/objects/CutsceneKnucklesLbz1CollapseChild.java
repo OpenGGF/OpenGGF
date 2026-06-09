@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
@@ -12,9 +13,9 @@ import java.util.List;
  * LBZ1 collapsing building/pillar helper spawned by rival Knuckles.
  *
  * <p>ROM reference: {@code loc_6285A}. The ROM positions four helpers at
- * x=$3BC0/$3B80/$3B40/$3B00, y=$01A0 and moves each upward under
- * {@code Obj_Wait}. The engine keeps this as a behavior-visible no-render
- * helper until LBZ pillar art is wired.
+ * x=$3BC0/$3B80/$3B40/$3B00, y=$01A0, moves each upward under
+ * {@code Obj_Wait}, and routes through {@code Obj_BossExpControl1} to emit
+ * visible boss-explosion sprites.
  */
 public final class CutsceneKnucklesLbz1CollapseChild extends AbstractObjectInstance {
     private static final int[][] START_POSITIONS = {
@@ -92,12 +93,13 @@ public final class CutsceneKnucklesLbz1CollapseChild extends AbstractObjectInsta
         int random = services().rng().nextRaw();
         int xOffset = (random & ((EXPLOSION_X_RANGE * 2) - 1)) - EXPLOSION_X_RANGE;
         int yOffset = ((random >> 8) & ((EXPLOSION_Y_RANGE * 2) - 1)) - EXPLOSION_Y_RANGE;
+        services().playSfx(Sonic3kSfx.EXPLODE.id);
         spawnChild(() -> new S3kBossExplosionChild(x + xOffset, y + yOffset));
         explosionIntervalCounter = EXPLOSION_INTERVAL - 1;
     }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        // Placeholder until LBZ Knuckles pillar mappings/art are ROM-wired.
+        // ROM controller object is invisible; it only moves the explosion stream.
     }
 }

@@ -43,6 +43,22 @@ class SwScrlLbzTest {
     }
 
     @Test
+    void act1ScreenShakeOffsetsForegroundAndBackgroundVScroll() {
+        SwScrlLbz handler = new SwScrlLbz();
+        int[] buffer = new int[VISIBLE_LINES];
+
+        handler.setScreenShakeOffset(3);
+        handler.update(buffer, 0x2000, 0x0400, 0, 0);
+
+        assertEquals((short) 0x0403, handler.getVscrollFactorFG(),
+                "ShakeScreen_Setup adds Screen_shake_offset to Camera_Y_pos_copy for the foreground plane.");
+        assertEquals((short) 0x0043, handler.getVscrollFactorBG(),
+                "LBZ1 applies Screen_shake_offset after computing the normal background parallax factor.");
+        assertEquals(3, handler.getShakeOffsetY(),
+                "The same shake offset must propagate to sprite/camera rendering.");
+    }
+
+    @Test
     void act2UsesRomWaterlineBackgroundCameraAndParallaxBands() {
         SwScrlLbz handler = new SwScrlLbz();
         int[] buffer = new int[VISIBLE_LINES];

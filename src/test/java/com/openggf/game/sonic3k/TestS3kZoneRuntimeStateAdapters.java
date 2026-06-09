@@ -178,6 +178,9 @@ class TestS3kZoneRuntimeStateAdapters {
         state.setInteriorLayoutMod3Disabled(true);
         state.setRollingDrumAngle(0, 0x123);
         state.setRollingDrumAngle(1, -1);
+        state.requestScreenShakeOffset(2);
+        state.requestScreenShakeOffset(6);
+        state.requestScreenShakeOffset(3);
 
         ZoneRuntimeRegistry registry = new ZoneRuntimeRegistry();
         registry.install(state);
@@ -192,5 +195,7 @@ class TestS3kZoneRuntimeStateAdapters {
         assertTrue(state.isInteriorLayoutMod3Disabled());
         assertEquals(0x23, state.getRollingDrumAngle(0));
         assertEquals(0xFF, state.getRollingDrumAngle(1));
+        assertEquals(6, state.consumeScreenShakeOffset());
+        assertEquals(0, state.consumeScreenShakeOffset());
     }
 }

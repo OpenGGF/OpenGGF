@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.Sonic2LevelEventManager;
+import com.openggf.tests.rules.SonicGame;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -20,7 +21,7 @@ public class TestHTZBossEventRoutine9 {
 
     @BeforeEach
     public void setUp() {
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_2);
         GameServices.camera().resetState();
         GameServices.gameState().resetSession();
 
@@ -67,5 +68,4 @@ public class TestHTZBossEventRoutine9 {
         assertEquals((short) 0x430, camera.getMaxYTarget());
     }
 }
-
 

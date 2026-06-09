@@ -99,6 +99,12 @@ All notable changes to the OpenGGF project are documented in this file.
   `WorldSession`, fixing the crash that occurred after selecting a game from
   the master title selector.
 
+- **S3K LBZ1 Knuckles collapse effects now match the locked-on sequence more
+  closely:** the post-bomb collapse uses the S3K boss-explosion stream with
+  cached ROM art and `sfx_Explode`, keeps Knuckles music active after Knuckles
+  exits, and routes continuous screen shake through LBZ parallax so foreground,
+  background, and sprites shake together.
+
 - **Release-readiness hardening for trace replay, rewind snapshots, and
   runtime teardown:** trace bootstrap no longer seeds S3K complete-run frame-0
   player/camera/sidekick state from recorded trace rows; those segments now stay

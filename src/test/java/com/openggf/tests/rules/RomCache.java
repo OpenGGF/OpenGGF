@@ -34,10 +34,12 @@ final class RomCache {
             return null;
         }
         if (cached != null) {
-            return cached;
+            if (cached.isOpen()) {
+                return cached;
+            }
+            cache.remove(game);
         }
 
-        // First access — attempt to load
         Rom rom = loadRom(game);
         cache.put(game, rom != null ? rom : UNAVAILABLE);
         return rom;
@@ -71,5 +73,3 @@ final class RomCache {
         };
     }
 }
-
-

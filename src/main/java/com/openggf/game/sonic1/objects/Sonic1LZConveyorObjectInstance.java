@@ -10,6 +10,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -198,7 +199,7 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
         initialized = true;
         if (mode == Mode.PLATFORM) {
             if (!loadPathData()) {
-                setDestroyed(true);
+                ObjectLifetimeOps.deleteNoRespawn(this);
                 return;
             }
 
@@ -380,19 +381,19 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
         Sonic1ConveyorState conveyorState = services().gameService(Sonic1ConveyorState.class);
         if (conveyorState.testAndSetSpawned(spawnerSlotIndex)) {
             // Already spawned - delete self (FixBugs: avoid returning to main loop)
-            setDestroyed(true);
+            ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
 
         // Get platform position data for this spawner slot
         int[][] positionData = loadSpawnerPositionData(spawnerSlotIndex);
         if (positionData == null) {
-            setDestroyed(true);
+            ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
 
         if (services().objectManager() == null) {
-            setDestroyed(true);
+            ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
 
@@ -407,7 +408,7 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
         }
 
         // Spawner itself is consumed after spawning
-        setDestroyed(true);
+        ObjectLifetimeOps.deleteNoRespawn(this);
     }
 
     private int[][] loadSpawnerPositionData(int slotIndex) {

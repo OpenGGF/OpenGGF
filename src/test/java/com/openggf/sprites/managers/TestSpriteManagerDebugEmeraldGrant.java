@@ -21,12 +21,10 @@ import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.render.AdvancedRenderModeController;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
-import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
@@ -36,8 +34,9 @@ import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.TerrainCollisionManager;
-import com.openggf.tests.TestEnvironment;
 import com.openggf.timer.TimerManager;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,13 +48,13 @@ class TestSpriteManagerDebugEmeraldGrant {
     @BeforeEach
     void setUp() {
         TestEnvironment.resetAll();
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_2);
         AudioManager.getInstance().resetState();
         audioBackend = new RecordingAudioBackend();
         AudioManager.getInstance().setBackend(audioBackend);
         AudioManager.getInstance().setAudioProfile(new Sonic2AudioProfile());
 
-        GameplayModeContext mode = SessionManager.openGameplaySession(new Sonic2GameModule());
+        GameplayModeContext mode = TestEnvironment.activeGameplayMode();
         SpriteManager spriteManager = new SpriteManager();
         GameStateManager gameStateManager = new GameStateManager();
         mode.attachGameplayManagers(

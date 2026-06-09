@@ -112,7 +112,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/sprites/playable/TestOnObjectAtFrameStartSnapshot.java#configureRuntime
             src/test/java/com/openggf/sprites/playable/TestRespawnStrategies.java#setUp
             src/test/java/com/openggf/sprites/playable/TestSidekickCpuControllerRewindCapture.java#setUp
-            src/test/java/com/openggf/tests/TestHTZBossEventRoutine9.java#setUp
             src/test/java/com/openggf/tests/TestHTZRisingLavaDisassemblyParity.java#setUp
             src/test/java/com/openggf/tests/TestMonitorIconTiming.java#setUp
             src/test/java/com/openggf/tests/TestOilSurfaceManager.java#setUp

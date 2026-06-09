@@ -12,10 +12,14 @@ import com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1RangeHelper;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1ThrownBomb;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1Instance;
 import com.openggf.game.sonic3k.objects.Lbz1RobotnikEventController;
+import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
+import com.openggf.game.sonic3k.objects.SongFadeTransitionInstance;
+import com.openggf.level.objects.ExplosionObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -29,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -301,6 +306,12 @@ class TestS3kLbz1KnucklesSequenceHeadless {
         fixture.stepFrame(false, false, false, false, false);
         CutsceneKnucklesLbz1Instance knuckles = findActive(CutsceneKnucklesLbz1Instance.class);
         assertNotNull(knuckles, "The ROM-placed subtype $14 object should spawn when the camera reaches LBZ1 Knuckles.");
+        PatternSpriteRenderer bossExplosionRenderer = GameServices.level().getObjectRenderManager()
+                .getBossExplosionRenderer();
+        assertNotNull(bossExplosionRenderer,
+                "CutsceneKnux_LBZ1 loads PLC_BossExplosion for the later rising building stream.");
+        assertTrue(bossExplosionRenderer.isReady(),
+                "Late-loaded PLC_BossExplosion art must be cached before S3kBossExplosionChild tries to draw.");
 
         int frame = 1;
         while (frame++ < 240 && findActive(CutsceneKnucklesLbz1ThrownBomb.class) == null) {
@@ -317,6 +328,16 @@ class TestS3kLbz1KnucklesSequenceHeadless {
         }
         assertEquals(4, activeCollapseChildren(),
                 "Collapse phase should create the four building/pillar helper children.");
+        GameServices.parallax().update(Sonic3kZoneIds.ZONE_LBZ, 0, GameServices.camera(), frame, 0);
+        assertNotEquals(0, GameServices.parallax().getShakeOffsetY(),
+                "loc_6277A writes Screen_shake_flag=-1; LBZ parallax must publish a visible shake offset "
+                        + "instead of relying on a direct Camera shake write that render propagation overwrites.");
+        fixture.stepIdleFrames(12);
+        assertTrue(activeBossExplosions() >= 4,
+                "sonic3k.asm loc_6285A routes the LBZ1 rising building controllers through Obj_BossExpControl1, "
+                        + "which emits Child6_MakeBossExplosion1 orange boss-explosion sprites.");
+        assertEquals(0, activeNormalExplosions(),
+                "The locked-on S3K LBZ1 path must not use the Sonic 3 standalone Child*_MakeNormalExplosion stream.");
         assertEquals(originalBuildingCell, GameServices.level().getCurrentLevel().getMap().getValue(0, 0x74, 0) & 0xFF,
                 "Knuckles starting the collapse should not instantly apply LBZ1_ModEndingLayout.");
         Sonic3kLevelEventManager manager = (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
@@ -348,6 +369,9 @@ class TestS3kLbz1KnucklesSequenceHeadless {
         }
 
         assertTrue(knuckles.isDestroyed(), "Knuckles should delete after running offscreen to the right.");
+        assertEquals(0, activeSongFadeTransitions(),
+                "CutsceneKnux_LBZ1 exit does not spawn Obj_Song_Fade_ToLevelMusic; Knuckles music should remain "
+                        + "active until the later miniboss handoff.");
         assertFalse(player.isObjectControlled(), "Exit should clear Player_1 object_control.");
         for (AbstractPlayableSprite sidekick : GameServices.sprites().getRegisteredSidekicks()) {
             assertFalse(sidekick.isObjectControlled(), "Exit should clear native Player_2 object_control.");
@@ -371,6 +395,9 @@ class TestS3kLbz1KnucklesSequenceHeadless {
                 "The ROM arms cell VScroll before the first falling-strip delta is generated.");
 
         manager.getLbzEvents().update(0, 1);
+        GameServices.parallax().update(Sonic3kZoneIds.ZONE_LBZ, 0, GameServices.camera(), 1, 0);
+        assertNotEquals(0, GameServices.parallax().getShakeOffsetY(),
+                "LBZ1_EventVScroll keeps Screen_shake_flag=-1 active while the foreground strips fall.");
 
         short[] override = manager.getLbzEvents()
                 .buildEndingCollapseForegroundVScrollOverride(GameServices.camera().getX());
@@ -462,6 +489,24 @@ class TestS3kLbz1KnucklesSequenceHeadless {
     private int activeCollapseChildren() {
         return (int) GameServices.level().getObjectManager().getActiveObjects().stream()
                 .filter(CutsceneKnucklesLbz1CollapseChild.class::isInstance)
+                .count();
+    }
+
+    private int activeNormalExplosions() {
+        return (int) GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(ExplosionObjectInstance.class::isInstance)
+                .count();
+    }
+
+    private int activeBossExplosions() {
+        return (int) GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(S3kBossExplosionChild.class::isInstance)
+                .count();
+    }
+
+    private int activeSongFadeTransitions() {
+        return (int) GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(SongFadeTransitionInstance.class::isInstance)
                 .count();
     }
 

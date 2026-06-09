@@ -42,6 +42,12 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private static final int[] ENDING_COLLAPSE_SCROLL_SPEED = {
             0x1EE, 0x1F2, 0x0C7, 0x1B3, 0x1B7, 0x198, 0x00E, 0x139
     };
+    private static final byte[] SCREEN_SHAKE_CONTINUOUS = {
+            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
+            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3,
+            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
+            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
+    };
 
     private boolean endingCollapseActive;
     private boolean endingCollapseFinished;
@@ -252,7 +258,7 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
             endingCollapseScroll[i] = scroll;
         }
 
-        camera().setShakeOffsets(0, (frameCounter & 1) == 0 ? 2 : -2);
+        requestScreenShakeOffset(frameCounter);
         if (((frameCounter - 1) & ENDING_COLLAPSE_RUMBLE_MASK) == 0 && unfinishedColumns > 0) {
             audio().playSfx(Sonic3kSfx.BIG_RUMBLE.id);
         }
@@ -264,10 +270,18 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private void finishEndingCollapse() {
         endingCollapseActive = false;
         endingCollapseFinished = true;
-        camera().setShakeOffsets(0, 0);
         Arrays.fill(endingCollapseScroll, 0);
         applyEndingLayout();
         audio().playSfx(Sonic3kSfx.CRASH.id);
+    }
+
+    private void requestScreenShakeOffset(int frameCounter) {
+        if (!hasRuntime()) {
+            return;
+        }
+        S3kRuntimeStates.currentLbz(zoneRuntimeRegistry())
+                .ifPresent(state -> state.requestScreenShakeOffset(
+                        SCREEN_SHAKE_CONTINUOUS[frameCounter & 0x3F]));
     }
 
     private static LayoutMod modById(int id) {
