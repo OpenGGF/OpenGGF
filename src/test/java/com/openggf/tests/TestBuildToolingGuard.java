@@ -361,11 +361,9 @@ class TestBuildToolingGuard {
         if (!workflow.contains("Trace replay skipped tests are release-blocking")) {
             violations.add(".github/workflows/release.yml does not fail on unexpected skipped trace replay tests");
         }
-        if (!workflow.contains("allowed_skipped_reports")) {
-            violations.add(".github/workflows/release.yml does not make skipped trace replay debt explicit");
-        }
-        if (!workflow.contains("com.openggf.tests.trace.s3k.TestS3kAizTraceReplay.txt")) {
-            violations.add(".github/workflows/release.yml does not explicitly scope the diagnostic-only AIZ trace skip");
+        if (workflow.contains("allowed_skipped_reports")
+                || workflow.contains("com.openggf.tests.trace.s3k.TestS3kAizTraceReplay.txt")) {
+            violations.add(".github/workflows/release.yml still allowlists skipped S3K AIZ trace replay debt");
         }
         if (!workflow.contains("expected_trace_reports")) {
             violations.add(".github/workflows/release.yml does not derive expected trace reports from source tests");
@@ -388,8 +386,9 @@ class TestBuildToolingGuard {
         if (!workflow.contains("missing_expected")) {
             violations.add(".github/workflows/release.yml does not fail when expected trace reports are missing");
         }
-        if (!workflow.contains("allowed_missing_reports")) {
-            violations.add(".github/workflows/release.yml does not make missing diagnostic trace report debt explicit");
+        if (workflow.contains("allowed_missing_reports")
+                || workflow.contains("TEST-com.openggf.tests.trace.s3k.TestS3kAizTraceReplay.xml")) {
+            violations.add(".github/workflows/release.yml still allowlists missing S3K AIZ trace replay reports");
         }
         if (!workflow.contains("Missing expected trace replay reports")) {
             violations.add(".github/workflows/release.yml does not report missing expected trace replay reports");
@@ -772,8 +771,7 @@ class TestBuildToolingGuard {
         List<String> violations = new ArrayList<>();
         Set<String> allowedDisabled = Set.of(
                 "src/test/java/com/openggf/game/rewind/TestRewindTorture.java",
-                "src/test/java/com/openggf/tests/trace/DebugS1Ghz1RingParity.java",
-                "src/test/java/com/openggf/tests/trace/s3k/TestS3kAizTraceReplay.java");
+                "src/test/java/com/openggf/tests/trace/DebugS1Ghz1RingParity.java");
         try (Stream<Path> paths = Files.walk(Path.of("src/test/java"))) {
             paths.filter(path -> path.toString().endsWith(".java"))
                     .forEach(path -> {
@@ -882,6 +880,9 @@ class TestBuildToolingGuard {
         }
         if (source.contains("@Disabled(")) {
             violations.add(file + " still disables the regenerated full replay");
+        }
+        if (source.contains("ALLOW_LEGACY_S3K_AIZ_DIAGNOSTIC_HEURISTIC_PROPERTY")) {
+            violations.add(file + " still enables the legacy diagnostic AIZ heuristic");
         }
         if (!source.contains("super.replayMatchesTrace();")) {
             violations.add(file + " override should delegate to the base release-blocking implementation");

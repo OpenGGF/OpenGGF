@@ -1,5 +1,21 @@
 # Trace Frontier Log
 
+## 2026-06-09 - RRF-029 S3K AIZ release gate no longer allowlists skipped/missing coverage
+
+- Scope: release-readiness review RRF-029.
+- Change: removed the release workflow allowlists for missing/skipped
+  `TestS3kAizTraceReplay` reports and removed the regenerated full-run test's
+  explicit opt-in to
+  `openggf.trace.allowLegacyS3kAizDiagnosticHeuristic`.
+- Verification:
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.TestBuildToolingGuard#releaseWorkflowShouldAssertTraceReplayCoverageWasNotSkipped+regeneratedS3kAizFullRunReplayIsReleaseBlocking+releaseTestsShouldNotHideKnownFailingScenariosBehindDisabledAnnotations" test -DfailIfNoTests=false`
+    -> PASS.
+  - `mvn -Dmse=off "-Ds3k.rom.path=s3k.gen" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+    -> FAIL, now release-visible: first error frame 4008,
+    `tails_g_speed expected=0x0018 actual=0x0000`, 1266 errors, 0 warnings.
+    ROM MD5 matched trace metadata (`C5B1C655C19F462ADE0AC4E17A844D10`).
+    This is no longer hidden behind missing/skipped report debt.
+
 ## 2026-06-08 - S3K AIZ full-run regenerated and replay-green through HCZ handoff
 
 - Scope: RRF-003 S3K AIZ `aiz1_to_hcz_fullrun` release-readiness review.

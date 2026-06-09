@@ -14,6 +14,11 @@ All notable changes to the OpenGGF project are documented in this file.
   controllers through `ObjectManager` instead of static active-instance bridges,
   keeping the state visible to rewind/session ownership.
 
+- **Release trace validation no longer bypasses S3K AIZ replay coverage:**
+  missing or skipped AIZ replay reports are now release-blocking like other
+  trace reports, and the regenerated full-run test no longer enables the
+  legacy diagnostic intro heuristic.
+
 - **Corrupt save quarantine now preserves previous recovery copies:** gameplay
   saves and editor saves now choose unique `.corrupt` sibling names instead of
   replacing an existing quarantine artifact on repeated failures.
