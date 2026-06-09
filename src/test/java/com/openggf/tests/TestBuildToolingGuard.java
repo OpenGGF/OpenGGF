@@ -376,6 +376,19 @@ class TestBuildToolingGuard {
         if (!workflow.contains("source_root.rglob(\"Test*.java\")")) {
             violations.add(".github/workflows/release.yml does not scan every Test*.java selected by the trace-replay profile");
         }
+        if (!workflow.contains("TRACE_REPLAY_DIAGNOSTIC_EXCLUDES")) {
+            violations.add(".github/workflows/release.yml does not name the diagnostic trace exclusions used by the Maven profile");
+        }
+        for (String diagnosticExclude : TRACE_REPLAY_DIAGNOSTIC_EXCLUDES) {
+            String pythonGlob = diagnosticExclude.replace("**/", "");
+            if (!workflow.contains("\"" + pythonGlob + "\"")) {
+                violations.add(".github/workflows/release.yml trace coverage assertion does not mirror Maven exclude "
+                        + diagnosticExclude);
+            }
+        }
+        if (!workflow.contains("if is_diagnostic_trace_source(source):")) {
+            violations.add(".github/workflows/release.yml does not skip diagnostic trace sources before expecting reports");
+        }
         if (!workflow.contains("expected_trace_reports.add")) {
             violations.add(".github/workflows/release.yml does not add expected reports from TraceReplay source classes");
         }

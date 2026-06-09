@@ -80,6 +80,7 @@ jobs:
         shell: bash
         run: |
           python3 - <<'PY'
+          import fnmatch
           import json
           import re
           import sys
@@ -88,9 +89,22 @@ jobs:
 
           surefire_dir = Path("target/surefire-reports")
           source_root = Path("src/test/java/com/openggf/tests/trace")
+          TRACE_REPLAY_DIAGNOSTIC_EXCLUDES = (
+              "Debug*.java",
+              "*Debug*.java",
+              "*Probe.java",
+              "*Probe*.java",
+          )
+
+          def is_diagnostic_trace_source(source):
+              return any(fnmatch.fnmatch(source.name, pattern)
+                         for pattern in TRACE_REPLAY_DIAGNOSTIC_EXCLUDES)
+
           expected_policy_reports = set()
           expected_trace_reports = set()
           for source in sorted(source_root.rglob("Test*.java")):
+              if is_diagnostic_trace_source(source):
+                  continue
               rel = source.relative_to(Path("src/test/java")).with_suffix("")
               class_name = ".".join(rel.parts)
               report_name = f"TEST-{class_name}.xml"
