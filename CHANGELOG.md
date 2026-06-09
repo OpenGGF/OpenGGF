@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Develop CI now has trace visibility:** default CI asserts a minimum executed
+  test count after the non-ROM Maven suite, and manual/scheduled develop CI runs
+  the trace-replay profile on the ROM fixture runner with report, skip, and
+  warning checks.
+
 - **Sidekick flight constants now live behind physics feature flags:** shared
   sidekick CPU code reads S3K catch-up/flight tuning through
   `PhysicsFeatureSet` instead of directly referencing concrete S3K constants,

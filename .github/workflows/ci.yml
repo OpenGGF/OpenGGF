@@ -7,6 +7,9 @@ on:
   push:
     branches:
       - develop
+  workflow_dispatch:
+  schedule:
+    - cron: '30 5 * * *'
 
 jobs:
   policy:
@@ -40,3 +43,191 @@ jobs:
 
       - name: Run tests
         run: mvn -Dmse=off test -B
+
+      - name: Assert default test coverage
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          reports = sorted(Path("target/surefire-reports").glob("TEST-*.xml"))
+          total = 0
+          skipped = 0
+          for report in reports:
+              root = ET.parse(report).getroot()
+              total += int(root.attrib.get("tests", "0"))
+              skipped += int(root.attrib.get("skipped", "0"))
+
+          executed = total - skipped
+          minimum = 1000
+          if executed < minimum:
+              print(
+                  f"Default CI executed too few tests: executed={executed} "
+                  f"total={total} skipped={skipped} minimum={minimum}",
+                  file=sys.stderr)
+              sys.exit(1)
+
+          print(f"Default CI coverage: executed={executed} total={total} skipped={skipped}")
+          PY
+
+  develop-trace-replay:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: [self-hosted, release-fixtures]
+    env:
+      SONIC1_ROM_PATH: ${{ vars.SONIC1_ROM_PATH }}
+      SONIC2_ROM_PATH: ${{ vars.SONIC2_ROM_PATH }}
+      S3K_ROM_PATH: ${{ vars.S3K_ROM_PATH }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Verify trace replay ROM paths
+        shell: bash
+        run: |
+          missing=0
+          for var in SONIC1_ROM_PATH SONIC2_ROM_PATH S3K_ROM_PATH; do
+            value="${!var:-}"
+            if [ -z "$value" ]; then
+              echo "::error ::$var must point to a develop trace-validation ROM fixture."
+              missing=1
+            elif [ ! -f "$value" ]; then
+              echo "::error ::$var points to '$value', but that file does not exist."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Run trace replay profile
+        shell: bash
+        run: |
+          mvn -Dmse=off test -Ptrace-replay -B \
+            -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
+            -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
+            -Ds3k.rom.path="${S3K_ROM_PATH}"
+
+      - name: Assert trace replay coverage
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import fnmatch
+          import json
+          import re
+          import sys
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          surefire_dir = Path("target/surefire-reports")
+          source_root = Path("src/test/java/com/openggf/tests/trace")
+          diagnostic_excludes = (
+              "Debug*.java",
+              "*Debug*.java",
+              "*Probe.java",
+              "*Probe*.java",
+          )
+
+          def is_diagnostic(source):
+              return any(fnmatch.fnmatch(source.name, pattern)
+                         for pattern in diagnostic_excludes)
+
+          expected_policy_reports = set()
+          expected_trace_reports = set()
+          for source in sorted(source_root.rglob("Test*.java")):
+              if is_diagnostic(source):
+                  continue
+              rel = source.relative_to(Path("src/test/java")).with_suffix("")
+              report_name = f"TEST-{'.'.join(rel.parts)}.xml"
+              expected_policy_reports.add(report_name)
+              if source.name.endswith("TraceReplay.java"):
+                  expected_trace_reports.add(report_name)
+
+          missing_policy = [
+              name for name in sorted(expected_policy_reports)
+              if not (surefire_dir / name).exists()
+          ]
+          if missing_policy:
+              print("Missing expected trace policy reports:", file=sys.stderr)
+              for name in missing_policy:
+                  print(f"{surefire_dir / name}", file=sys.stderr)
+              sys.exit(1)
+
+          missing_trace = [
+              name for name in sorted(expected_trace_reports)
+              if not (surefire_dir / name).exists()
+          ]
+          if missing_trace:
+              print("Missing expected trace replay reports:", file=sys.stderr)
+              for name in missing_trace:
+                  print(f"{surefire_dir / name}", file=sys.stderr)
+              sys.exit(1)
+
+          expected_trace_executed = 0
+          for report_name in sorted(expected_policy_reports):
+              report = surefire_dir / report_name
+              root = ET.parse(report).getroot()
+              tests = int(root.attrib.get("tests", "0"))
+              skipped = int(root.attrib.get("skipped", "0"))
+              executed = tests - skipped
+              if executed <= 0:
+                  print(
+                      f"Expected trace report did not execute: {report} "
+                      f"tests={tests} skipped={skipped}",
+                      file=sys.stderr)
+                  sys.exit(1)
+              if report_name in expected_trace_reports:
+                  expected_trace_executed += executed
+
+          reports = sorted(surefire_dir.glob("com.openggf.tests.trace*TraceReplay.txt"))
+          total = 0
+          skipped = 0
+          skipped_reports = []
+          for report in reports:
+              text = report.read_text(encoding="utf-8", errors="replace")
+              match = re.search(r"Tests run: (\d+), Failures: \d+, Errors: \d+, Skipped: (\d+)", text)
+              if not match:
+                  continue
+              run_count = int(match.group(1))
+              skipped_count = int(match.group(2))
+              total += run_count
+              skipped += skipped_count
+              if skipped_count > 0:
+                  skipped_reports.append((report, skipped_count))
+
+          executed = total - skipped
+          if executed == 0:
+              print("Trace replay profile produced no executed ROM-backed trace tests", file=sys.stderr)
+              print(f"trace_reports={len(reports)} total={total} skipped={skipped}", file=sys.stderr)
+              sys.exit(1)
+
+          if skipped_reports:
+              print("Trace replay skipped tests are develop-blocking", file=sys.stderr)
+              for report, skipped_count in skipped_reports:
+                  print(f"{report}: skipped={skipped_count}", file=sys.stderr)
+              sys.exit(1)
+
+          warning_reports = []
+          for report in sorted(Path("target/trace-reports").glob("*_report.json")):
+              data = json.loads(report.read_text(encoding="utf-8"))
+              warning_count = int(data.get("warning_count", 0))
+              if warning_count > 0:
+                  warning_reports.append((report, warning_count))
+
+          if warning_reports:
+              print("Trace replay warnings are develop-blocking", file=sys.stderr)
+              for report, warning_count in warning_reports:
+                  print(f"{report}: warning_count={warning_count}", file=sys.stderr)
+              sys.exit(1)
+
+          print(
+              f"Develop trace replay coverage: executed={executed} total={total} "
+              f"expected_trace_executed={expected_trace_executed} "
+              f"expected_trace_reports={len(expected_trace_reports)}")
+          PY
