@@ -4,6 +4,7 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindStateful;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
@@ -119,7 +120,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
     private static final int WAYPOINT_WORDS_PER_ENTRY = 8;
 
     /** Per-player sub_34EEC state. */
-    private static final class PlayerGrabState {
+    private static final class PlayerGrabState implements RewindStateful<PlayerGrabState.Snapshot> {
         int routine;            // (a4): 0 / 2 / 4 / 6
         int entrySideBias;      // 1(a4): 0 = no bias; $F = came from right
         boolean standingNow;    // set by onSolidContact each frame
@@ -127,6 +128,32 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         boolean grabbed;        // true while routine == 4 (fast check)
         int xSub;
         int ySub;
+
+        @Override
+        public Snapshot captureRewindStateValue() {
+            return new Snapshot(routine, entrySideBias, standingNow, jumpHeldAtGrab, grabbed, xSub, ySub);
+        }
+
+        @Override
+        public void restoreRewindStateValue(Snapshot state) {
+            routine = state.routine();
+            entrySideBias = state.entrySideBias();
+            standingNow = state.standingNow();
+            jumpHeldAtGrab = state.jumpHeldAtGrab();
+            grabbed = state.grabbed();
+            xSub = state.xSub();
+            ySub = state.ySub();
+        }
+
+        private record Snapshot(
+                int routine,
+                int entrySideBias,
+                boolean standingNow,
+                boolean jumpHeldAtGrab,
+                boolean grabbed,
+                int xSub,
+                int ySub) {
+        }
     }
 
     private record ProbeResult(int distance, int angle) {
