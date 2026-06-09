@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K AIZ sidekick push-bypass now uses ROM-visible status:** the sidekick
+  CPU follow path distinguishes a high-speed live `Status_Push` branch from a
+  later stale low-speed push bit, keeping AIZ replay aligned through the
+  post-reload follow window.
+
 - **Editor save tests no longer touch production save paths:** editor resume
   saving now uses an engine-owned save manager dependency so integration tests
   can route writes to temporary directories.

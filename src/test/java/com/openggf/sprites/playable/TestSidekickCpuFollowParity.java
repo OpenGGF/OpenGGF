@@ -1025,6 +1025,90 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void s3kStaleCurrentPushFarBelowTargetFallsThroughToFollowLeftAfterAizReload() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x31CA);
+        tails.setCentreY((short) 0x065E);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0);
+        tails.setXSpeed((short) 0x007A);
+        tails.setYSpeed((short) 0);
+        tails.setPushing(true);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x3171);
+        Arrays.fill(yHistory, (short) 0x025C);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        controller.update(0x37DE);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("follow_steering", diagnostics.followBranch(),
+                        "AIZ2 F14302 has no ROM-visible current Status_Push at Tails_CPU_Control; "
+                                + "the stale engine push bit must not take loc_13DD0's bypass "
+                                + "(sonic3k.asm:26702-26729)."),
+                () -> assertFalse(diagnostics.skipFollowSteering()),
+                () -> assertTrue(controller.getInputLeft(),
+                        "FollowLeft overrides the delayed RIGHT input when dx <= -$30."),
+                () -> assertFalse(controller.getInputRight()));
+    }
+
+    @Test
+    void s3kFastCurrentPushFarBelowTargetStillBypassesFollowRightAfterAizIntro() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x1F35);
+        tails.setCentreY((short) 0x049D);
+        tails.setDirection(Direction.LEFT);
+        tails.setGSpeed((short) 0);
+        tails.setXSpeed((short) 0xFF18);
+        tails.setYSpeed((short) 0);
+        tails.setPushing(true);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x2235);
+        Arrays.fill(yHistory, (short) 0x038C);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        controller.update(0x0AE4);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("current_push_bypass", diagnostics.followBranch(),
+                        "AIZ F3077 still has a high incoming wall-push velocity, so the engine "
+                                + "Status_Push is ROM-visible at Tails_CPU_Control and must bypass "
+                                + "FollowRight (sonic3k.asm:26702-26729)."),
+                () -> assertTrue(diagnostics.skipFollowSteering()),
+                () -> assertFalse(controller.getInputLeft()),
+                () -> assertFalse(controller.getInputRight(),
+                        "The bypass preserves the already-loaded zero Ctrl_2 word instead of "
+                                + "manufacturing a right pulse."));
+    }
+
+    @Test
     void s3kLocalPushGracePreservesFollowInputWithoutNudgingIntoAizIntroSpringWall() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");

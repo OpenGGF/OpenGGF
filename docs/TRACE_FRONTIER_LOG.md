@@ -1,5 +1,23 @@
 # Trace Frontier Log
 
+## 2026-06-09 - RRF release review AIZ sidekick Status_Push visibility (AIZ f14302 -> GREEN)
+
+- Scope: release-readiness review follow-up to the sidekick-only AIZ frontier
+  exposed after the placed-ring touch-phase fix.
+- Change: `SidekickCpuController` now decides the live push-bypass branch from
+  the ROM-visible sidekick status byte captured at the CPU slot, then requires
+  either local object-band continuity or high incoming wall-push velocity before
+  treating the engine `Status_Push` bit as a real `loc_13DD0` bypass. This keeps
+  the high-speed frame 3077 push branch from manufacturing follow input while
+  allowing the later low-speed stale-push frame 14302 to fall through
+  `FollowLeft`. The predicate is driven by status, speed, delayed status, and
+  follow geometry; it is not a zone/route/frame exception.
+- Verification:
+  - `mvn -q -Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace test -DfailIfNoTests=false`
+    -> AIZ replay passed with no divergences.
+  - `mvn -q -Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity#s3kFastCurrentPushFarBelowTargetStillBypassesFollowRightAfterAizIntro+s3kStaleCurrentPushFarBelowTargetFallsThroughToFollowLeftAfterAizReload+normalPushBypassUsesSameDelayedStatusSlotAsRomD4 test -DfailIfNoTests=false`
+    -> focused CPU parity regressions passed.
+
 ## 2026-06-09 - RRF release review AIZ placed-ring touch phase (AIZ f6203 -> f14302)
 
 - Scope: release-readiness review follow-up to the exposed AIZ2 ring frontier.
