@@ -24,6 +24,7 @@ import com.openggf.level.rings.RingSpawn;
 import com.openggf.level.rings.RingSpriteSheet;
 import com.openggf.physics.Sensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -187,6 +188,48 @@ public class TestRingManager {
         assertFalse(ringManager.isCollected(spawn),
                 "CPU Tails recovery flight keeps object_control set and must not collect stage rings");
         assertEquals(0, tails.getRingCount());
+    }
+
+    @Test
+    public void testNativeBit7ObjectControlSuppressesStageRingCollection() {
+        RingSpawn spawn = new RingSpawn(100, 100);
+        RingManager ringManager = buildRingManager(List.of(spawn));
+        ringManager.reset(0);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 100, (short) 100);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
+
+        ringManager.collectStageRings(player, 0);
+
+        assertFalse(ringManager.isCollected(spawn),
+                "ROM skips TouchResponse/Test_Ring_Collisions while object_control bit 7 suppresses touch");
+        assertEquals(0, player.getRingCount());
+
+        ObjectControlState.none().applyTo(player);
+        ringManager.collectStageRings(player, 1);
+
+        assertTrue(ringManager.isCollected(spawn));
+        assertEquals(1, player.getRingCount());
+    }
+
+    @Test
+    public void testLateRingManagerUpdateCanSkipStageRingCollection() {
+        RingSpawn spawn = new RingSpawn(100, 100);
+        RingManager ringManager = buildRingManager(List.of(spawn));
+        ringManager.reset(0);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 100, (short) 100);
+
+        ringManager.update(0, player, 0, false);
+
+        assertFalse(ringManager.isCollected(spawn),
+                "LevelManager's late post-object update must not run a second placed-ring sweep");
+        assertEquals(0, player.getRingCount());
+
+        ringManager.update(0, player, 1, true);
+
+        assertTrue(ringManager.isCollected(spawn));
+        assertEquals(1, player.getRingCount());
     }
 
     // NOTE: legacy per-ring lost-ring lifecycle (collected-ring sparkle expiry and

@@ -1027,7 +1027,7 @@ public class LevelManager {
             playable = player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
         }
         if (ringManager != null) {
-            ringManager.update(camera.getX(), playable, frameCounter + 1);
+            ringManager.update(camera.getX(), playable, frameCounter + 1, false);
             // Per-ring spilled-ring physics now runs in the object exec loop
             // (LostRingObjectInstance); this only advances the shared decelerating
             // spin once per frame (ROM ChangeRingFrame / Ring_spill_anim_*).

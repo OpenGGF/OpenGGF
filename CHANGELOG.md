@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K placed rings now honor object-control touch suppression:** stage-ring
+  pickup uses the same ROM `object_control` touch-response gate as object
+  contacts and no longer runs a second late post-object sweep, preventing early
+  AIZ2 reload ring pickups while object-control routines own the player.
+
 - **Optional rewind adapters now clear when absent:** gameplay contexts remove
   stale PLC-art and pattern-animator adapters when a newly loaded zone does not
   expose those optional snapshottables.
