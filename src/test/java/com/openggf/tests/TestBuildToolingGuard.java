@@ -494,6 +494,8 @@ class TestBuildToolingGuard {
     @Test
     void developCiShouldProtectDirectPushes() throws Exception {
         String ci = Files.readString(Path.of(".github/workflows/ci.yml"));
+        String shellPolicy = Files.readString(Path.of(".githooks/validate-policy.sh"));
+        String powershellPolicy = Files.readString(Path.of(".githooks/validate-policy.ps1"));
         List<String> violations = new ArrayList<>();
 
         if (!ci.contains("push:\n    branches:\n      - develop")) {
@@ -507,6 +509,12 @@ class TestBuildToolingGuard {
         }
         if (!ci.contains("github.event_name == 'push'")) {
             violations.add(".github/workflows/ci.yml policy job must add push branch policy validation");
+        }
+        if (!shellPolicy.contains("validate_ci_commit_range \"$before_sha\" \"$after_sha\"")) {
+            violations.add(".githooks/validate-policy.sh direct pushes must validate commit trailers over the pushed range");
+        }
+        if (!powershellPolicy.contains("Validate-CiCommitRange $BeforeSha $AfterSha")) {
+            violations.add(".githooks/validate-policy.ps1 direct pushes must validate commit trailers over the pushed range");
         }
 
         if (!violations.isEmpty()) {

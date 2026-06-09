@@ -458,7 +458,11 @@ function Validate-CiPr([string]$BaseSha, [string]$HeadSha, [string]$BaseRef, [st
         }
     }
 
-    $commits = Invoke-GitLines @("rev-list", "--reverse", "--no-merges", "$effectiveBaseSha..$HeadSha")
+    Validate-CiCommitRange $effectiveBaseSha $HeadSha
+}
+
+function Validate-CiCommitRange([string]$EffectiveBaseSha, [string]$HeadSha) {
+    $commits = Invoke-GitLines @("rev-list", "--reverse", "--no-merges", "$EffectiveBaseSha..$HeadSha")
     foreach ($commit in $commits) {
         $message = Invoke-GitText @("show", "-s", "--format=%B", $commit)
         $files = Get-CommitFiles $commit
@@ -495,6 +499,10 @@ function Validate-CiPush([string]$BeforeSha, [string]$AfterSha, [string]$RefName
         } else {
             $BeforeSha = $AfterSha
         }
+    }
+    if ($RefName -eq "develop") {
+        Validate-CiCommitRange $BeforeSha $AfterSha
+        return
     }
     Validate-CiPr $BeforeSha $AfterSha $RefName $RefName
 }

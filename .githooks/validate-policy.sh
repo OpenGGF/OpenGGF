@@ -536,6 +536,13 @@ validate_ci_pr() {
         fi
     fi
 
+    validate_ci_commit_range "$effective_base" "$head_sha"
+}
+
+validate_ci_commit_range() {
+    effective_base=$1
+    head_sha=$2
+
     for commit in $(git rev-list --reverse --no-merges "$effective_base..$head_sha"); do
         message=$(git show -s --format=%B "$commit")
         files=$(commit_files "$commit")
@@ -570,6 +577,11 @@ validate_ci_push() {
             before_sha=$(git rev-parse "$after_sha^" 2>/dev/null || printf '%s\n' "$after_sha")
             ;;
     esac
+
+    if [ "$ref_name" = "develop" ]; then
+        validate_ci_commit_range "$before_sha" "$after_sha"
+        return 0
+    fi
 
     validate_ci_pr "$before_sha" "$after_sha" "$ref_name" "$ref_name"
 }
