@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Checkpoint death respawn now preserves ROM centre coordinates:** shared
+  `CheckpointState` restores saved `x_pos` / `y_pos` through playable centre
+  setters instead of top-left sprite bounds, keeping S1 lamppost, S2
+  checkpoint, and S3K starpost respawns aligned with the original object
+  coordinates.
+
 - **S3K AIZ full-run trace release gate was regenerated and advanced:** the
   AIZ end-to-end fixture now records with Lua `6.25-s3k` and the focused replay
   is re-enabled as a release-blocking test that reaches the regenerated trace
