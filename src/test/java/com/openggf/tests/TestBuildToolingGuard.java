@@ -43,11 +43,10 @@ class TestBuildToolingGuard {
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - && \"level_gated_reset_aware\".equals(metadata.traceProfile())",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - if (current.frame() < firstLevelFrame) {",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - if (current.frame() == firstLevelFrame) {",
+            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - if (current.frame() <= firstLevelFrame) {",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - int gameplayStartFrame = findCheckpointFrame(trace, \"gameplay_start\");",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - return gameplayStartFrame >= 0 && current.frame() <= gameplayStartFrame;",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - || !\"complete_run\".equals(metadata.traceProfile())",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - if (metadata.zoneId() == null || metadata.zoneId() != 0 || metadata.act() != 1) {",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - .anyMatch(checkpoint -> \"intro_begin\".equals(checkpoint.name()));",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - private static int findCheckpointFrame(TraceData trace, String checkpointName) {",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - && checkpointName.equals(checkpoint.name())) {");
     private static final Set<String> REVIEWED_S3K_STATIC_SESSION_STATE = Set.of(
@@ -376,6 +375,19 @@ class TestBuildToolingGuard {
         if (!workflow.contains("source_root.rglob(\"Test*.java\")")) {
             violations.add(".github/workflows/release.yml does not scan every Test*.java selected by the trace-replay profile");
         }
+        if (!workflow.contains("TRACE_REPLAY_DIAGNOSTIC_EXCLUDES")) {
+            violations.add(".github/workflows/release.yml does not name the diagnostic trace exclusions used by the Maven profile");
+        }
+        for (String diagnosticExclude : TRACE_REPLAY_DIAGNOSTIC_EXCLUDES) {
+            String pythonGlob = diagnosticExclude.replace("**/", "");
+            if (!workflow.contains("\"" + pythonGlob + "\"")) {
+                violations.add(".github/workflows/release.yml trace coverage assertion does not mirror Maven exclude "
+                        + diagnosticExclude);
+            }
+        }
+        if (!workflow.contains("if is_diagnostic_trace_source(source):")) {
+            violations.add(".github/workflows/release.yml does not skip diagnostic trace sources before expecting reports");
+        }
         if (!workflow.contains("expected_trace_reports.add")) {
             violations.add(".github/workflows/release.yml does not add expected reports from TraceReplay source classes");
         }
@@ -481,6 +493,8 @@ class TestBuildToolingGuard {
     @Test
     void developCiShouldProtectDirectPushes() throws Exception {
         String ci = Files.readString(Path.of(".github/workflows/ci.yml"));
+        String shellPolicy = Files.readString(Path.of(".githooks/validate-policy.sh"));
+        String powershellPolicy = Files.readString(Path.of(".githooks/validate-policy.ps1"));
         List<String> violations = new ArrayList<>();
 
         if (!ci.contains("push:\n    branches:\n      - develop")) {
@@ -494,6 +508,12 @@ class TestBuildToolingGuard {
         }
         if (!ci.contains("github.event_name == 'push'")) {
             violations.add(".github/workflows/ci.yml policy job must add push branch policy validation");
+        }
+        if (!shellPolicy.contains("validate_ci_commit_range \"$before_sha\" \"$after_sha\"")) {
+            violations.add(".githooks/validate-policy.sh direct pushes must validate commit trailers over the pushed range");
+        }
+        if (!powershellPolicy.contains("Validate-CiCommitRange $BeforeSha $AfterSha")) {
+            violations.add(".githooks/validate-policy.ps1 direct pushes must validate commit trailers over the pushed range");
         }
 
         if (!violations.isEmpty()) {
@@ -932,7 +952,7 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void traceReplayLegacyExceptionsShouldBeDocumentedAndBounded() throws Exception {
+    void traceReplayBootstrapContractsShouldBeDocumentedAndNotLegacy() throws Exception {
         String bootstrap = Files.readString(Path.of("src/main/java/com/openggf/trace/TraceReplayBootstrap.java"));
         String discrepancies = Files.readString(Path.of("docs/KNOWN_DISCREPANCIES.md"));
         String roadmap = Files.readString(Path.of("docs/RELEASE_READINESS_ROADMAP.md"));
@@ -942,11 +962,18 @@ class TestBuildToolingGuard {
                 .matcher(bootstrap)
                 .results()
                 .count();
-        if (legacyTracePredicates != 1) {
-            violations.add("TraceReplayBootstrap should expose exactly one accepted legacy trace predicate");
+        if (legacyTracePredicates != 0) {
+            violations.add("TraceReplayBootstrap must not expose legacy trace identity predicates");
         }
-        if (!discrepancies.contains("Legacy S3K AIZ Intro Trace Replay Bootstrap")) {
-            violations.add("docs/KNOWN_DISCREPANCIES.md does not document the accepted legacy S3K AIZ trace bootstrap");
+        if (bootstrap.contains("ALLOW_LEGACY") || discrepancies.contains("Legacy S3K AIZ Intro Trace Replay Bootstrap")
+                || roadmap.contains("Accepted Phase 1 release debt: legacy S3K AIZ intro trace bootstrap")) {
+            violations.add("legacy S3K AIZ trace bootstrap debt should be removed, not documented as accepted");
+        }
+        if (!bootstrap.contains("hasPreLevelIntroPrefix()")) {
+            violations.add("TraceReplayBootstrap should use generic pre-level-prefix fixture metadata");
+        }
+        if (!discrepancies.contains("Pre-Level Intro Prefix Trace Bootstrap Contract")) {
+            violations.add("docs/KNOWN_DISCREPANCIES.md does not document the pre-level prefix bootstrap contract");
         }
         if (!discrepancies.contains("S2 Tornado Ride-Start Trace Bootstrap Contract")) {
             violations.add("docs/KNOWN_DISCREPANCIES.md does not document the S2 Tornado ride-start bootstrap contract");
@@ -960,14 +987,11 @@ class TestBuildToolingGuard {
         if (!discrepancies.contains("S3K Complete-Run Segment Start-Position Bootstrap Debt")) {
             violations.add("docs/KNOWN_DISCREPANCIES.md does not document the S3K complete-run start-position bootstrap debt");
         }
-        if (!roadmap.contains("Accepted Phase 1 release debt: legacy S3K AIZ intro trace bootstrap")) {
-            violations.add("docs/RELEASE_READINESS_ROADMAP.md does not classify the legacy S3K AIZ trace exception as accepted Phase 1 debt");
+        if (!roadmap.contains("Release-blocking pre-level intro trace bootstrap")) {
+            violations.add("docs/RELEASE_READINESS_ROADMAP.md does not classify the pre-level intro bootstrap contract");
         }
         if (!roadmap.contains("S3K complete-run segment metadata start-position")) {
             violations.add("docs/RELEASE_READINESS_ROADMAP.md does not classify the S3K complete-run start-position bootstrap as bounded debt");
-        }
-        if (!discrepancies.contains("diagnostic-only") || !roadmap.contains("diagnostic-only")) {
-            violations.add("legacy S3K AIZ trace docs must state that the old full-run fixture is diagnostic-only");
         }
 
         if (!violations.isEmpty()) {

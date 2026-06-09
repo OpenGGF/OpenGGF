@@ -135,18 +135,14 @@ public class AizBattleshipInstance extends AbstractObjectInstance {
     }
 
     private void spawnBomb(int screenX, int worldY, int bombScriptX) {
-        var om = services().objectManager();
-        if (om == null) return;
-
         // Spawn with the translated world position for bookkeeping; the bomb itself
         // continues translating from the ship's live secondary-camera coordinates.
         int cameraX = services().camera().getX();
-        AizShipBombInstance bomb = new AizShipBombInstance(
-                new ObjectSpawn(cameraX + screenX, worldY, 0, 0, 0, false, 0),
-                this, bombScriptX, worldY);
         // ROM Obj_AIZBattleshipMain creates bombs with AllocateObjectAfterCurrent
         // (sonic3k.asm:105315), so bomb slots must follow the ship's slot.
-        om.addDynamicObjectAfterCurrent(bomb);
+        spawnChild(() -> new AizShipBombInstance(
+                new ObjectSpawn(cameraX + screenX, worldY, 0, 0, 0, false, 0),
+                this, bombScriptX, worldY));
     }
 
     private void updateSecondaryCameraY(int shipX) {

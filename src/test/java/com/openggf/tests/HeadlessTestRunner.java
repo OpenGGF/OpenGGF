@@ -339,6 +339,44 @@ public class HeadlessTestRunner {
     }
 
     /**
+     * Consumes the current BK2 row for validation but drives gameplay with the
+     * previous BK2 row. Some pre-level-prefix traces sample controller state
+     * one emulator frame before that input affects LevelLoop state.
+     */
+    public int stepFrameFromRecordingUsingPreviousInput() {
+        if (bk2Movie == null) {
+            throw new IllegalStateException("No BK2 movie loaded. Call setBk2Movie() first.");
+        }
+        if (currentBk2Index >= bk2Movie.getFrameCount()) {
+            throw new IllegalStateException(
+                    "BK2 movie exhausted at index " + currentBk2Index
+                    + " (movie has " + bk2Movie.getFrameCount() + " frames)");
+        }
+        if (currentBk2Index <= 0) {
+            return stepFrameFromRecording();
+        }
+
+        Bk2FrameInput validationInput = bk2Movie.getFrame(currentBk2Index);
+        Bk2FrameInput driveInput = bk2Movie.getFrame(currentBk2Index - 1);
+        int validationMask = inputMask(validationInput);
+        int driveMask = inputMask(driveInput);
+        int p2Mask = p2InputMask(driveInput);
+
+        stepFrame(
+                (driveMask & AbstractPlayableSprite.INPUT_UP) != 0,
+                (driveMask & AbstractPlayableSprite.INPUT_DOWN) != 0,
+                (driveMask & AbstractPlayableSprite.INPUT_LEFT) != 0,
+                (driveMask & AbstractPlayableSprite.INPUT_RIGHT) != 0,
+                (driveMask & AbstractPlayableSprite.INPUT_JUMP) != 0,
+                p2Mask,
+                driveInput.p2StartPressed(),
+                driveInput.p1StartPressed());
+        currentBk2Index++;
+
+        return validationMask;
+    }
+
+    /**
      * Advances the BK2 movie by one frame without processing physics.
      * Used for lag frames where the ROM didn't execute the main game loop,
      * so the engine should not process physics either.
@@ -376,6 +414,22 @@ public class HeadlessTestRunner {
         // sensitive to this. Advance the ObjectManager's frame counter to keep
         // it aligned with v_vbla_byte.
         levelManager.getObjectManager().advanceVblaCounter();
+        return mask;
+    }
+
+    private static int inputMask(Bk2FrameInput frameInput) {
+        int mask = frameInput.p1InputMask();
+        if (frameInput.p1ActionMask() != 0) {
+            mask |= AbstractPlayableSprite.INPUT_JUMP;
+        }
+        return mask;
+    }
+
+    private static int p2InputMask(Bk2FrameInput frameInput) {
+        int mask = frameInput.p2InputMask();
+        if (frameInput.p2ActionMask() != 0) {
+            mask |= AbstractPlayableSprite.INPUT_JUMP;
+        }
         return mask;
     }
 

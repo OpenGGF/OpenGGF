@@ -224,6 +224,10 @@ behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Release review remediation completion (2026-06-09).** Merged the final
+  `bugfix/ai-release-review-fixes` changes after rebasing develop, carrying the
+  lifecycle-test alignment that verifies destroyed gameplay contexts detach
+  cleared runtime managers while stale references remain inert.
 - **Release review remediation branch (2026-06-09).** Merged
   `bugfix/ai-release-review-fixes`, closing the temporary release-review issue
   tracker. The branch tightens S3K trace replay invariants, rendering/cache

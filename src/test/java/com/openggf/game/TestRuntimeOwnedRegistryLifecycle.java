@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -53,6 +54,12 @@ class TestRuntimeOwnedRegistryLifecycle {
         first.getZoneLayoutMutationPipeline().queue(context -> MutationEffects.redrawAllTilemaps());
         first.getSpecialRenderEffectRegistry().register(noOpEffect());
         first.getAdvancedRenderModeController().register(noOpMode());
+        var oldZoneRuntimeRegistry = first.getZoneRuntimeRegistry();
+        var oldPaletteOwnershipRegistry = first.getPaletteOwnershipRegistry();
+        var oldAnimatedTileChannelGraph = first.getAnimatedTileChannelGraph();
+        var oldZoneLayoutMutationPipeline = first.getZoneLayoutMutationPipeline();
+        var oldSpecialRenderEffectRegistry = first.getSpecialRenderEffectRegistry();
+        var oldAdvancedRenderModeController = first.getAdvancedRenderModeController();
 
         assertNotSame(NoOpZoneRuntimeState.INSTANCE, first.getZoneRuntimeRegistry().current(),
                 "precondition: zone runtime state should be live before editor entry");
@@ -72,44 +79,50 @@ class TestRuntimeOwnedRegistryLifecycle {
         // re-publish gameplay-scoped registry state.
         SessionManager.enterEditorMode(new com.openggf.game.session.EditorCursorState(0, 0));
 
-        // Old pipeline + registries belong to the destroyed gameplay mode; their
-        // state was cleared by tearDownManagers. Re-flushing must not fire
-        // queued intents.
-        StringBuilder log = new StringBuilder();
-        first.getZoneLayoutMutationPipeline().queue(context -> {
-            log.append("post-destroy");
-            return MutationEffects.NONE;
-        });
-        // (queue itself is fine, but the pipeline should still be empty
-        // *as far as the prior batch is concerned*; the new queue entry above
-        // is a separate batch that we're not flushing here.)
-        assertSame(NoOpZoneRuntimeState.INSTANCE, first.getZoneRuntimeRegistry().current(),
+        // Old pipeline + registries belong to the destroyed gameplay mode.
+        // tearDownManagers clears those objects, then detaches them from the
+        // stale context so parked runtime code cannot keep using them.
+        assertSame(NoOpZoneRuntimeState.INSTANCE, oldZoneRuntimeRegistry.current(),
                 "destroyCurrent should clear zone runtime state");
-        assertFalse(first.getPaletteOwnershipRegistry().isPaletteRotationDisabled(),
+        assertFalse(oldPaletteOwnershipRegistry.isPaletteRotationDisabled(),
                 "destroyCurrent should clear palette ownership state");
-        assertTrue(first.getAnimatedTileChannelGraph().channels().isEmpty(),
+        assertTrue(oldAnimatedTileChannelGraph.channels().isEmpty(),
                 "destroyCurrent should clear animated tile channels");
-        assertTrue(first.getSpecialRenderEffectRegistry().isEmpty(),
+        assertTrue(oldZoneLayoutMutationPipeline.isEmpty(),
+                "destroyCurrent should clear queued mutations");
+        assertTrue(oldSpecialRenderEffectRegistry.isEmpty(),
                 "destroyCurrent should clear special render effects");
-        assertTrue(first.getAdvancedRenderModeController().isEmpty(),
+        assertTrue(oldAdvancedRenderModeController.isEmpty(),
                 "destroyCurrent should clear advanced render-mode contributions");
+        assertNull(first.getZoneRuntimeRegistry(),
+                "destroyed gameplay context should detach zone runtime registry");
+        assertNull(first.getPaletteOwnershipRegistry(),
+                "destroyed gameplay context should detach palette ownership registry");
+        assertNull(first.getAnimatedTileChannelGraph(),
+                "destroyed gameplay context should detach animated tile graph");
+        assertNull(first.getZoneLayoutMutationPipeline(),
+                "destroyed gameplay context should detach mutation pipeline");
+        assertNull(first.getSpecialRenderEffectRegistry(),
+                "destroyed gameplay context should detach special render registry");
+        assertNull(first.getAdvancedRenderModeController(),
+                "destroyed gameplay context should detach advanced render-mode controller");
 
         // Mirror Engine.resumePlaytestFromEditor: build a fresh runtime over
         // the surviving WorldSession.
         GameplayModeContext resumed = SessionManager.resumeGameplayFromEditor();
         GameplayModeContext second = TestEnvironment.activeGameplayMode();
 
-        assertNotSame(first.getZoneRuntimeRegistry(), second.getZoneRuntimeRegistry(),
+        assertNotSame(oldZoneRuntimeRegistry, second.getZoneRuntimeRegistry(),
                 "rebuild must produce a fresh ZoneRuntimeRegistry");
-        assertNotSame(first.getPaletteOwnershipRegistry(), second.getPaletteOwnershipRegistry(),
+        assertNotSame(oldPaletteOwnershipRegistry, second.getPaletteOwnershipRegistry(),
                 "rebuild must produce a fresh PaletteOwnershipRegistry");
-        assertNotSame(first.getAnimatedTileChannelGraph(), second.getAnimatedTileChannelGraph(),
+        assertNotSame(oldAnimatedTileChannelGraph, second.getAnimatedTileChannelGraph(),
                 "rebuild must produce a fresh AnimatedTileChannelGraph");
-        assertNotSame(first.getZoneLayoutMutationPipeline(), second.getZoneLayoutMutationPipeline(),
+        assertNotSame(oldZoneLayoutMutationPipeline, second.getZoneLayoutMutationPipeline(),
                 "rebuild must produce a fresh ZoneLayoutMutationPipeline");
-        assertNotSame(first.getSpecialRenderEffectRegistry(), second.getSpecialRenderEffectRegistry(),
+        assertNotSame(oldSpecialRenderEffectRegistry, second.getSpecialRenderEffectRegistry(),
                 "rebuild must produce a fresh SpecialRenderEffectRegistry");
-        assertNotSame(first.getAdvancedRenderModeController(), second.getAdvancedRenderModeController(),
+        assertNotSame(oldAdvancedRenderModeController, second.getAdvancedRenderModeController(),
                 "rebuild must produce a fresh AdvancedRenderModeController");
 
         assertSame(NoOpZoneRuntimeState.INSTANCE, second.getZoneRuntimeRegistry().current(),

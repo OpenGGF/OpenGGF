@@ -31,6 +31,12 @@ import com.openggf.game.zone.NoOpZoneRuntimeState;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.graphics.FadeManager;
+import com.openggf.level.LevelManager;
+import com.openggf.level.ParallaxManager;
+import com.openggf.level.WaterSystem;
+import com.openggf.physics.CollisionSystem;
+import com.openggf.physics.TerrainCollisionManager;
+import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.timer.TimerManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +45,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 /**
  * Unit tests for the {@link RewindRegistry} integration on
@@ -159,6 +166,21 @@ class TestGameplayModeContextRewindRegistry {
     }
 
     @Test
+    void partialCoreReattachAfterTeardownDoesNotReportRuntimeReady() {
+        GameplayModeContext ctx = buildAttachedContext();
+        attachLevelManagers(ctx);
+        attachSharedRegistries(ctx);
+        assertTrue(ctx.isGameplayRuntimeReady(), "Fully attached context should be runtime-ready");
+
+        ctx.tearDownManagers();
+        ctx.attachGameplayManagers(new Camera(), new TimerManager(), new GameStateManager(),
+                new FadeManager(), new GameRng(GameRng.Flavour.S1_S2), new DefaultSolidExecutionRegistry());
+
+        assertFalse(ctx.isGameplayRuntimeReady(),
+                "Core-manager reattach must not expose stale level managers or registries as runtime-ready");
+    }
+
+    @Test
     void sharedRuntimeRegistriesAreRewindRegisteredAfterAttach() {
         GameplayModeContext ctx = buildAttachedContext();
         attachSharedRegistries(ctx);
@@ -244,6 +266,16 @@ class TestGameplayModeContextRewindRegistry {
                 new SpecialRenderEffectRegistry(),
                 new AdvancedRenderModeController(),
                 new ZoneLayoutMutationPipeline());
+    }
+
+    private static void attachLevelManagers(GameplayModeContext ctx) {
+        WaterSystem water = new WaterSystem();
+        ParallaxManager parallax = new ParallaxManager();
+        TerrainCollisionManager terrain = new TerrainCollisionManager();
+        CollisionSystem collision = new CollisionSystem(terrain);
+        SpriteManager sprites = new SpriteManager();
+        LevelManager level = mock(LevelManager.class);
+        ctx.attachLevelManagers(water, parallax, terrain, collision, sprites, level);
     }
 
     private static AnimatedTileChannel dummyChannel() {

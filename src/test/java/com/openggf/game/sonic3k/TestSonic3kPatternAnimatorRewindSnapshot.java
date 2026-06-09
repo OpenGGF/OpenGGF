@@ -76,6 +76,14 @@ class TestSonic3kPatternAnimatorRewindSnapshot {
     }
 
     @Test
+    void captureHasScriptCountersForLrz1() throws IOException {
+        Sonic3kPatternAnimator anim = buildAnimator(Sonic3kZoneIds.ZONE_LRZ, 0);
+        PatternAnimatorSnapshot snap = anim.capture();
+        assertTrue(snap.scriptCounters().length > 0,
+                "LRZ1 should load its AniPLC script using the canonical LRZ zone id");
+    }
+
+    @Test
     void captureHasExtraBlobForAiz2() throws IOException {
         Sonic3kPatternAnimator anim = buildAnimator(0, 1); // AIZ2
         PatternAnimatorSnapshot snap = anim.capture();

@@ -6,6 +6,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.animation.AnimatedTileChannelGraph;
 import com.openggf.game.animation.ChannelContext;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
@@ -1924,7 +1925,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
                     ? Sonic3kConstants.ANIPLC_LBZ1_ADDR
                     : Sonic3kConstants.ANIPLC_LBZ2_ADDR;
             case 0x07 -> Sonic3kConstants.ANIPLC_MHZ_ADDR;
-            case 0x08 -> ANIPLC_LRZ1_ADDR;
+            case 0x08, Sonic3kZoneIds.ZONE_LRZ -> ANIPLC_LRZ1_ADDR;
             case 0x14 -> Sonic3kConstants.ANIPLC_PACHINKO_ADDR;
             default -> -1;
         };

@@ -16,6 +16,7 @@ import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.objects.DefaultObjectServices;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.physics.GroundSensor;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
@@ -91,6 +92,7 @@ public final class TestEnvironment {
     }
 
     private static void resetToBootstrapBaseline() {
+        GroundSensor.setLevelManager(null);
         SonicConfigurationService.getInstance().resetToDefaults();
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
 

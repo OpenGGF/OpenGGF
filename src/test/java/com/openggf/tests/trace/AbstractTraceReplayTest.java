@@ -426,7 +426,9 @@ public abstract class AbstractTraceReplayTest {
                     TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
             int bk2Input = phase == TraceExecutionPhase.VBLANK_ONLY
                     ? fixture.skipFrameFromRecording()
-                    : fixture.stepFrameFromRecording();
+                    : TraceReplayBootstrap.shouldUsePreviousRecordingInputForTraceReplay(trace)
+                            ? fixture.stepFrameFromRecordingUsingPreviousInput()
+                            : fixture.stepFrameFromRecording();
 
             if (!binder.validateInput(driveFrame, bk2Input)) {
                 fail(String.format(

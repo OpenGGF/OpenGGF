@@ -82,6 +82,43 @@ All notable changes to the OpenGGF project are documented in this file.
   user configuration, reducing the risk of interrupted writes leaving a
   truncated config.
 
+- **macOS native packages now read the editable app-adjacent config:** native
+  launches from `OpenGGF.app/Contents/MacOS` resolve `config.yaml` beside the
+  `.app` bundle, matching the packaged release layout.
+
+- **Gameplay teardown now drops stale runtime-owned references:** destroyed
+  gameplay contexts clear disposable managers/registries after reset, and the UI
+  pipeline releases session HUD managers when graphics returns to bootstrap
+  camera/fade references.
+
+- **Ground sensor test overrides now clear on teardown:** gameplay teardown and
+  the shared test reset baseline clear the static `GroundSensor` level override,
+  preventing trace/headless sessions from leaking stale level collision state.
+
+- **Solid-contact reset now clears transient support state:** object solid
+  contact teardown clears inline-support and stale-support-loss player sets,
+  matching the state already handled by rewind restore.
+
+- **Lava Reef animated PLC loading now uses the canonical LRZ zone id:** S3K
+  pattern animation resolves LRZ AniPLC scripts from `ZONE_LRZ`, restoring the
+  ROM-backed animated tile setup for Lava Reef Act 1.
+
+- **CNZ prize objects now use the shared object lifecycle state:** Sonic 2 ring
+  and bomb prize objects no longer shadow `AbstractObjectInstance` destroyed
+  state, keeping lifecycle and rewind capture aligned.
+
+- **AIZ boss and cutscene spawns now use managed object helpers:** remaining AIZ
+  boss/cutscene dynamic object creations now route through `spawnChild(...)` or
+  `spawnFreeChild(...)`, preserving construction services, slot semantics, and
+  shared lifecycle ownership.
+
+- **S3K AIZ trace bootstrap no longer uses a legacy zone identity carve-out:**
+  the regenerated end-to-end AIZ fixture now declares a generic
+  `pre_level_intro_prefix` capability, and replay bootstrap uses that metadata
+  instead of an S3K/AIZ/act/checkpoint identity predicate. The replay harness
+  also models the fixture's one-row movie-input latch and advance-only duplicate
+  sample rows without hydrating trace state into gameplay.
+
 - **Hash-warning saves can no longer be launched from data select:** save
   summaries now distinguish recoverable payloads from loadable slots, so hash
   mismatches remain visible/deletable for recovery while data-select launch and
@@ -129,8 +166,8 @@ All notable changes to the OpenGGF project are documented in this file.
 - **Release-prep architecture review hardening closed the current blocker
   set:** branch policy now runs for direct release-branch pushes, release trace
   coverage is counted from generated reports, warning-only trace reports fail
-  by default outside explicit diagnostics, and legacy S3K AIZ full-run replay is
-  blocked from release replay unless the diagnostic override is set. S2 Tornado
+  by default outside explicit diagnostics, and S3K AIZ pre-level replay is
+  driven by explicit fixture capability metadata. S2 Tornado
   trace bootstrap no longer seeds ride/player state from trace metadata, AIZ
   intro preload uses runtime-owned object services, final level progression now
   requests credits instead of wrapping, S3K special-stage entry rings and Super
@@ -1928,8 +1965,8 @@ All notable changes to the OpenGGF project are documented in this file.
   `GameplayModeContext.isGameplayRuntimeReady()` returns `false` once `tearDownManagers()` has run.
   Release validation now runs the trace-replay Maven profile, stale `@Disabled("Currently failing")`
   annotations were removed from the S3K AIZ/CNZ keep-green tests after forced-on verification, and
-  `TestBuildToolingGuard` documents and bounds the one accepted legacy S3K AIZ trace bootstrap plus
-  the S2 Tornado ride-start trace contract. AIZ intro terrain swap cache state is reset across game
+  `TestBuildToolingGuard` documents and bounds the pre-level intro prefix plus
+  S2 Tornado ride-start trace contracts. AIZ intro terrain swap cache state is reset across game
   bootstrap and routes immediate mutations through injected `ObjectServices`, while ICZ now installs
   typed runtime state consumed by palette/animated-tile code and MHZ runtime-state refresh recognizes
   its current event-backed adapter.

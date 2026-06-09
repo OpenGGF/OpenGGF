@@ -106,11 +106,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
             for (int traceIndex = replayStart.startingTraceIndex(); traceIndex <= 1979; traceIndex++) {
                 TraceFrame current = trace.getFrame(traceIndex);
                 TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(trace, previous, current);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    fixture.skipFrameFromRecording();
-                } else {
-                    fixture.stepFrameFromRecording();
-                }
+                stepReplayFrame(trace, fixture, phase);
 
                 if (traceIndex >= 1974) {
                     assertEquals(
@@ -164,11 +160,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                  traceIndex++) {
                 TraceFrame current = trace.getFrame(traceIndex);
                 TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(trace, previous, current);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    fixture.skipFrameFromRecording();
-                } else {
-                    fixture.stepFrameFromRecording();
-                }
+                stepReplayFrame(trace, fixture, phase);
 
                 if (traceIndex >= GIANT_RIDE_VINE_WINDOW_START) {
                     assertEquals(
@@ -226,11 +218,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                  traceIndex++) {
                 TraceFrame current = trace.getFrame(traceIndex);
                 TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(trace, previous, current);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    fixture.skipFrameFromRecording();
-                } else {
-                    fixture.stepFrameFromRecording();
-                }
+                stepReplayFrame(trace, fixture, phase);
 
                 previous = current;
             }
@@ -293,11 +281,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                  traceIndex++) {
                 TraceFrame current = trace.getFrame(traceIndex);
                 TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(trace, previous, current);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    fixture.skipFrameFromRecording();
-                } else {
-                    fixture.stepFrameFromRecording();
-                }
+                stepReplayFrame(trace, fixture, phase);
                 previous = current;
             }
 
@@ -317,11 +301,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
 
             TraceFrame postGrab = trace.getFrame(AIZ1_GIANT_RIDE_VINE_POST_GRAB_FRAME);
             TraceExecutionPhase postGrabPhase = TraceReplayBootstrap.phaseForReplay(trace, previous, postGrab);
-            if (postGrabPhase == TraceExecutionPhase.VBLANK_ONLY) {
-                fixture.skipFrameFromRecording();
-            } else {
-                fixture.stepFrameFromRecording();
-            }
+            stepReplayFrame(trace, fixture, postGrabPhase);
 
             assertEquals(postGrab.x() & 0xFFFF, player.getCentreX() & 0xFFFF,
                     "After grab, Obj0C should keep carrying Sonic from loc_2248A's passive vine chain");
@@ -371,11 +351,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                  traceIndex++) {
                 TraceFrame current = trace.getFrame(traceIndex);
                 TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(trace, previous, current);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    fixture.skipFrameFromRecording();
-                } else {
-                    fixture.stepFrameFromRecording();
-                }
+                stepReplayFrame(trace, fixture, phase);
                 previous = current;
             }
 
@@ -442,11 +418,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                  traceIndex++) {
                 TraceFrame current = trace.getFrame(traceIndex);
                 TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(trace, previous, current);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    fixture.skipFrameFromRecording();
-                } else {
-                    fixture.stepFrameFromRecording();
-                }
+                stepReplayFrame(trace, fixture, phase);
 
                 SidekickCpuController.State state = controller.getState();
                 if (state != lastState) {
@@ -520,11 +492,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                  traceIndex++) {
                 TraceFrame current = trace.getFrame(traceIndex);
                 TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(trace, previous, current);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    fixture.skipFrameFromRecording();
-                } else {
-                    fixture.stepFrameFromRecording();
-                }
+                stepReplayFrame(trace, fixture, phase);
 
                 if (traceIndex == AIZ1_HOLLOW_TREE_CAPTURE_FRAME) {
                     AbstractPlayableSprite player = fixture.sprite();
@@ -599,11 +567,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                  traceIndex++) {
                 TraceFrame current = trace.getFrame(traceIndex);
                 TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(trace, previous, current);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    fixture.skipFrameFromRecording();
-                } else {
-                    fixture.stepFrameFromRecording();
-                }
+                stepReplayFrame(trace, fixture, phase);
                 previous = current;
             }
 
@@ -670,11 +634,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                  traceIndex++) {
                 TraceFrame current = trace.getFrame(traceIndex);
                 TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(trace, previous, current);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    fixture.skipFrameFromRecording();
-                } else {
-                    fixture.stepFrameFromRecording();
-                }
+                stepReplayFrame(trace, fixture, phase);
                 previous = current;
             }
 
@@ -729,11 +689,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                  traceIndex++) {
                 TraceFrame current = trace.getFrame(traceIndex);
                 TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(trace, previous, current);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    fixture.skipFrameFromRecording();
-                } else {
-                    fixture.stepFrameFromRecording();
-                }
+                stepReplayFrame(trace, fixture, phase);
                 previous = current;
             }
 
@@ -799,11 +755,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                  traceIndex++) {
                 TraceFrame current = trace.getFrame(traceIndex);
                 TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(trace, previous, current);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    fixture.skipFrameFromRecording();
-                } else {
-                    fixture.stepFrameFromRecording();
-                }
+                stepReplayFrame(trace, fixture, phase);
                 if (traceIndex >= AIZ1_AIZ2_FIRE_REVEAL_CAMERA_RELEASE_FRAME - 8) {
                     if (GameServices.module().getLevelEventProvider()
                             instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager events
@@ -876,11 +828,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                  traceIndex++) {
                 TraceFrame current = trace.getFrame(traceIndex);
                 TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(trace, previous, current);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    fixture.skipFrameFromRecording();
-                } else {
-                    fixture.stepFrameFromRecording();
-                }
+                stepReplayFrame(trace, fixture, phase);
                 previous = current;
             }
 
@@ -944,11 +892,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                  traceIndex++) {
                 TraceFrame current = trace.getFrame(traceIndex);
                 TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(trace, previous, current);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    fixture.skipFrameFromRecording();
-                } else {
-                    fixture.stepFrameFromRecording();
-                }
+                stepReplayFrame(trace, fixture, phase);
                 previous = current;
             }
 
@@ -1016,11 +960,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                  traceIndex++) {
                 TraceFrame current = trace.getFrame(traceIndex);
                 TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(trace, previous, current);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    fixture.skipFrameFromRecording();
-                } else {
-                    fixture.stepFrameFromRecording();
-                }
+                stepReplayFrame(trace, fixture, phase);
                 previous = current;
             }
 
@@ -1088,11 +1028,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
                  traceIndex++) {
                 TraceFrame current = trace.getFrame(traceIndex);
                 TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(trace, previous, current);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    fixture.skipFrameFromRecording();
-                } else {
-                    fixture.stepFrameFromRecording();
-                }
+                stepReplayFrame(trace, fixture, phase);
                 previous = current;
             }
 
@@ -1149,6 +1085,16 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
     private TraceReplayBootstrap.ReplayStartState primeReplayFixture(TraceData trace, HeadlessTestFixture fixture) {
         TraceReplayBootstrap.applyPreTraceState(trace, fixture);
         return TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, fixture);
+    }
+
+    private void stepReplayFrame(TraceData trace, HeadlessTestFixture fixture, TraceExecutionPhase phase) {
+        if (phase == TraceExecutionPhase.VBLANK_ONLY) {
+            fixture.skipFrameFromRecording();
+        } else if (TraceReplayBootstrap.shouldUsePreviousRecordingInputForTraceReplay(trace)) {
+            fixture.stepFrameFromRecordingUsingPreviousInput();
+        } else {
+            fixture.stepFrameFromRecording();
+        }
     }
 
     private Path findBk2File(Path traceDir) throws IOException {

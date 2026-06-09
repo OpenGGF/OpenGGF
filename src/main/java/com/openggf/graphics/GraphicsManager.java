@@ -341,6 +341,9 @@ public class GraphicsManager {
 		if (camera != null || bootstrapCamera != null) {
 			camera = getOrCreateBootstrapCamera();
 		}
+		if (uiRenderPipeline != null) {
+			uiRenderPipeline.setHudRenderManager(null);
+		}
 		if (fadeManager != null || bootstrapFadeManager != null || uiRenderPipeline != null) {
 			setActiveFadeManager(getOrCreateBootstrapFadeManager());
 		}
