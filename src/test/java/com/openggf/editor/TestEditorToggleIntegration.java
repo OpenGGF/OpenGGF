@@ -73,6 +73,9 @@ import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 class TestEditorToggleIntegration {
     private static final Path S2_ROM = Path.of("Sonic The Hedgehog 2 (W) (REV01) [!].gen");
 
+    @TempDir
+    Path tempSaves;
+
     private static final ParallaxManager SINGLE_CHUNK_BG_PERIOD = new ParallaxManager() {
         @Override
         public int getBgPeriodWidth() {
@@ -249,8 +252,7 @@ class TestEditorToggleIntegration {
     }
 
     @Test
-    void resumePlaytestFromEditor_savesEditorControllerMutableLevelAfterRuntimeTeardown(
-            @TempDir Path tempSaves) throws Exception {
+    void resumePlaytestFromEditor_savesEditorControllerMutableLevelAfterRuntimeTeardown() throws Exception {
         assumeS2RomAvailableForResumeReload();
         enableEditor();
         Engine engine = new Engine();
@@ -894,11 +896,12 @@ class TestEditorToggleIntegration {
         assertTrue(SessionManager.getCurrentGameplayMode().getResumeStash().isEmpty());
     }
 
-    private static GameplayModeContext createGameplayMode(Engine engine) {
+    private GameplayModeContext createGameplayMode(Engine engine) {
         return createGameplayMode(engine, (short) 100, (short) 200);
     }
 
-    private static GameplayModeContext createGameplayMode(Engine engine, short playerX, short playerY) {
+    private GameplayModeContext createGameplayMode(Engine engine, short playerX, short playerY) {
+        installTempEditorSaveManager(engine);
         RomManager.getInstance().setRom(null);
         GameplayModeContext gameplayMode = SessionManager.openGameplaySession(new Sonic2GameModule());
         TestEnvironment.activeGameplayMode();
@@ -908,6 +911,14 @@ class TestEditorToggleIntegration {
         gameplayMode.getCamera().setFocusedSprite(player);
         engine.getGameLoop().setGameplayMode(gameplayMode);
         return gameplayMode;
+    }
+
+    private void installTempEditorSaveManager(Engine engine) {
+        try {
+            setPrivateField(engine, "editorSaveManager", new EditorSaveManager(tempSaves));
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Failed to install test editor save manager", e);
+        }
     }
 
     private static void assumeS2RomAvailableForResumeReload() {
@@ -964,7 +975,7 @@ class TestEditorToggleIntegration {
         field.set(controller, cursor);
     }
 
-    private static void setPrivateField(Object target, String fieldName, Object value) throws Exception {
+    private static void setPrivateField(Object target, String fieldName, Object value) throws ReflectiveOperationException {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(target, value);
