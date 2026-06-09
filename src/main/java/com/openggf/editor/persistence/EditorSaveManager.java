@@ -5,7 +5,6 @@ import com.openggf.game.GameId;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.level.MutableLevel;
-import com.openggf.util.QuarantineFiles;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -161,7 +160,21 @@ public final class EditorSaveManager {
 
     private void quarantine(Path file, String reason) throws IOException {
         LOG.warning("Quarantining corrupt editor save " + file + ": " + reason);
-        Files.move(file, QuarantineFiles.uniqueCorruptSibling(file));
+        Files.move(file, uniqueCorruptSibling(file));
+    }
+
+    private static Path uniqueCorruptSibling(Path file) {
+        Path base = file.resolveSibling(file.getFileName() + ".corrupt");
+        if (!Files.exists(base)) {
+            return base;
+        }
+        for (int suffix = 1; suffix < Integer.MAX_VALUE; suffix++) {
+            Path candidate = file.resolveSibling(file.getFileName() + ".corrupt." + suffix);
+            if (!Files.exists(candidate)) {
+                return candidate;
+            }
+        }
+        throw new IllegalStateException("No available quarantine filename for " + file);
     }
 
     private static String sha256(String value) {
