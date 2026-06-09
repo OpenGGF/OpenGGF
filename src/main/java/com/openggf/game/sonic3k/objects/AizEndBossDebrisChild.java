@@ -34,7 +34,7 @@ public class AizEndBossDebrisChild extends AbstractObjectInstance {
     };
 
     // ROM: ChildObjDat_47BBC offsets from parent position
-    private static final int[][] DEBRIS_OFFSETS = {
+    static final int[][] DEBRIS_OFFSETS = {
             {-0x10, -0x10},
             { 0x10, -0x10},
             {-0x10,  0x08},
@@ -58,7 +58,7 @@ public class AizEndBossDebrisChild extends AbstractObjectInstance {
     private int ySub;
     private int flickerCounter;
 
-    private AizEndBossDebrisChild(int x, int y, int index) {
+    AizEndBossDebrisChild(int x, int y, int index) {
         super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "AIZEndBossDebris");
         this.mappingFrame = FRAME_BASE + index;
         this.xVel = DEBRIS_VELOCITIES[index][0];
@@ -68,18 +68,6 @@ public class AizEndBossDebrisChild extends AbstractObjectInstance {
         this.xSub = 0;
         this.ySub = 0;
         this.flickerCounter = 0;
-    }
-
-    /**
-     * Spawn all 6 debris children at offsets from the given boss position.
-     */
-    public static void spawnAll(int bossX, int bossY,
-                                com.openggf.level.objects.ObjectManager objectManager) {
-        for (int i = 0; i < DEBRIS_OFFSETS.length; i++) {
-            int x = bossX + DEBRIS_OFFSETS[i][0];
-            int y = bossY + DEBRIS_OFFSETS[i][1];
-            objectManager.addDynamicObject(new AizEndBossDebrisChild(x, y, i));
-        }
     }
 
     @Override

@@ -107,6 +107,11 @@ All notable changes to the OpenGGF project are documented in this file.
   and bomb prize objects no longer shadow `AbstractObjectInstance` destroyed
   state, keeping lifecycle and rewind capture aligned.
 
+- **AIZ boss and cutscene spawns now use managed object helpers:** remaining AIZ
+  boss/cutscene dynamic object creations now route through `spawnChild(...)` or
+  `spawnFreeChild(...)`, preserving construction services, slot semantics, and
+  shared lifecycle ownership.
+
 - **Hash-warning saves can no longer be launched from data select:** save
   summaries now distinguish recoverable payloads from loadable slots, so hash
   mismatches remain visible/deletable for recovery while data-select launch and

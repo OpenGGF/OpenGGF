@@ -113,12 +113,18 @@ class TestArchitecturalSourceGuard {
             "com/openggf/game/sonic2/objects/bosses/Sonic2MTZBossInstance.java",
             "com/openggf/game/sonic3k/objects/AizEndBossArmChild.java",
             "com/openggf/game/sonic3k/objects/AizEndBossBombChild.java",
+            "com/openggf/game/sonic3k/objects/AizEndBossDebrisChild.java",
             "com/openggf/game/sonic3k/objects/AizEndBossFlameChild.java",
             "com/openggf/game/sonic3k/objects/AizEndBossPropellerChild.java",
+            "com/openggf/game/sonic3k/objects/AizBattleshipInstance.java",
             "com/openggf/game/sonic3k/objects/AizBgTreeSpawnerInstance.java",
+            "com/openggf/game/sonic3k/objects/AizEndBossInstance.java",
             "com/openggf/game/sonic3k/objects/AizShipBombInstance.java",
             "com/openggf/game/sonic3k/objects/AizMinibossBarrelShotChild.java",
+            "com/openggf/game/sonic3k/objects/AizMinibossCutsceneInstance.java",
             "com/openggf/game/sonic3k/objects/AizMinibossFlameBarrelChild.java",
+            "com/openggf/game/sonic3k/objects/AizMinibossInstance.java",
+            "com/openggf/game/sonic3k/objects/CutsceneKnucklesRockChild.java",
             "com/openggf/game/sonic3k/objects/CnzBumperObjectInstance.java",
             "com/openggf/game/sonic3k/objects/MGZHeadTriggerObjectInstance.java",
             "com/openggf/game/sonic3k/objects/Sonic3kStarPostObjectInstance.java",
@@ -126,13 +132,6 @@ class TestArchitecturalSourceGuard {
             "com/openggf/game/sonic3k/objects/badniks/BlastoidBadnikInstance.java",
             "com/openggf/game/sonic3k/objects/badniks/BuggernautBadnikInstance.java",
             "com/openggf/game/sonic3k/objects/badniks/CaterkillerJrHeadInstance.java"
-    );
-    private static final Map<String, Integer> AIZ_RAW_OBJECT_SPAWN_REVIEWED_BUDGETS = Map.of(
-            "com/openggf/game/sonic3k/objects/AizBattleshipInstance.java", 1,
-            "com/openggf/game/sonic3k/objects/AizEndBossDebrisChild.java", 1,
-            "com/openggf/game/sonic3k/objects/AizEndBossInstance.java", 10,
-            "com/openggf/game/sonic3k/objects/AizMinibossCutsceneInstance.java", 3,
-            "com/openggf/game/sonic3k/objects/AizMinibossInstance.java", 3
     );
     private static final Map<String, Integer> SONIC2_NATIVE_LEVEL_ART_RENDER_PATTERN_BUDGETS = Map.ofEntries(
             Map.entry("com/openggf/game/sonic2/objects/ARZPlatformObjectInstance.java", 1),
@@ -823,27 +822,6 @@ class TestArchitecturalSourceGuard {
 
         assertNoViolations("Migrated object child spawns must use spawnChild()/spawnFreeChild() helpers",
                 violations);
-    }
-
-    @Test
-    void reviewedAizRawObjectSpawnsStayBoundedAndDocumented() throws IOException {
-        String discrepancies = Files.readString(Path.of("docs", "S3K_KNOWN_DISCREPANCIES.md"));
-        List<String> violations = new ArrayList<>();
-        if (!discrepancies.contains("AIZ Boss and Miniboss Raw Spawn Debt")) {
-            violations.add("docs/S3K_KNOWN_DISCREPANCIES.md must document the reviewed AIZ raw-spawn debt");
-        }
-
-        for (Map.Entry<String, Integer> budget : AIZ_RAW_OBJECT_SPAWN_REVIEWED_BUDGETS.entrySet()) {
-            String source = stripCommentsAndStrings(Files.readString(SRC_MAIN.resolve(budget.getKey())));
-            int actual = countMatches(RAW_OBJECT_CHILD_SPAWN, source);
-            if (actual != budget.getValue()) {
-                violations.add(budget.getKey() + " has " + actual
-                        + " raw object-spawn calls; expected exactly " + budget.getValue()
-                        + ". Migrate new child spawns through spawnChild()/spawnFreeChild() instead of growing debt.");
-            }
-        }
-
-        assertNoViolations("Reviewed AIZ raw object spawns must stay bounded and documented", violations);
     }
 
     @Test

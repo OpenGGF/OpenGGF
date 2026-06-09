@@ -97,16 +97,14 @@ public class CutsceneKnucklesRockChild extends AbstractObjectInstance {
      */
     private void spawnFragments() {
         try {
-            var objectManager = services().objectManager();
-            if (objectManager == null) return;
-
             int[][] velocities = AizRockFragmentChild.FRAGMENT_VELOCITIES;
             for (int i = 0; i < velocities.length; i++) {
+                int fragmentIndex = i;
                 ObjectSpawn fragSpawn = new ObjectSpawn(
                         getX(), getY(), 0, 0, 0, false, 0);
-                AizRockFragmentChild frag = new AizRockFragmentChild(
-                        fragSpawn, velocities[i][0], velocities[i][1], mappingFrame, i);
-                objectManager.addDynamicObject(frag);
+                AizRockFragmentChild frag = spawnFreeChild(() -> new AizRockFragmentChild(
+                        fragSpawn, velocities[fragmentIndex][0], velocities[fragmentIndex][1],
+                        mappingFrame, fragmentIndex));
                 // Compensate for pendingDynamicAdditions delay: ROM processes
                 // each fragment's first movement in the same frame as creation.
                 frag.update(0, null);

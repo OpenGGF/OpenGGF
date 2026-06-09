@@ -288,24 +288,6 @@ This is not a behavioral discrepancy from the ROM — sprite output is identical
 
 ---
 
-## AIZ Boss and Miniboss Raw Spawn Debt
-
-**Location:** `AizBattleshipInstance`, `AizEndBossInstance`,
-`AizEndBossDebrisChild`, `AizMinibossInstance`,
-`AizMinibossCutsceneInstance`
-
-Some AIZ boss and cutscene helpers still use raw `ObjectManager.addDynamicObject(...)`
-calls for orchestration objects, debris bursts, and cutscene controllers. These are
-reviewed release debt, not a pattern for new object children. New child objects should
-use `spawnChild(...)` or `spawnFreeChild(...)` so slot ownership, lifecycle, and rewind
-state stay on the shared object-lifetime path.
-
-`TestArchitecturalSourceGuard.reviewedAizRawObjectSpawnsStayBoundedAndDocumented`
-pins the current call budgets by source file and fails if the debt grows or this
-documentation is removed.
-
----
-
 ## MGZ2 Quake Chunk Source Address
 
 **Location:** `Sonic3kMGZEvents.MGZ_QUAKE_CHUNK_ROM_ADDR`

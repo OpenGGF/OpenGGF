@@ -454,14 +454,14 @@ public class AizMinibossInstance extends AbstractBossInstance {
         state.yVel = DESCEND_VEL;
         setWait(DESCEND_TIME, WaitCallback.DESCEND_COMPLETE);
 
-        var objectManager = services().objectManager();
-        spawnChild(new AizMinibossBodyChild(this), objectManager);
-        spawnChild(new AizMinibossArmChild(this), objectManager);
+        spawnBossComponent(() -> new AizMinibossBodyChild(this));
+        spawnBossComponent(() -> new AizMinibossArmChild(this));
         for (int i = 0; i < 3; i++) {
-            spawnChild(new AizMinibossFlameBarrelChild(this, i, false), objectManager);
+            int barrelIndex = i;
+            spawnBossComponent(() -> new AizMinibossFlameBarrelChild(this, barrelIndex, false));
         }
         // Napalm controller (stays idle for Sonic, activates for Knuckles)
-        spawnChild(new AizMinibossNapalmController(this, 0), objectManager);
+        spawnBossComponent(() -> new AizMinibossNapalmController(this, 0));
 
         services().playMusic(Sonic3kMusic.MINIBOSS.id);
     }
@@ -627,15 +627,11 @@ public class AizMinibossInstance extends AbstractBossInstance {
         // at random offsets within +/-$20 pixels. Total: 33 explosions over ~102 frames.
         if (defeatExplosionController != null && !defeatExplosionController.isFinished()) {
             defeatExplosionController.tick();
-            var objectManager = services().objectManager();
-            if (objectManager != null) {
-                for (var pending : defeatExplosionController.drainPendingExplosions()) {
-                    if (pending.playSfx()) {
-                        services().playSfx(Sonic3kSfx.EXPLODE.id);
-                    }
-                    objectManager.addDynamicObject(
-                            new S3kBossExplosionChild(pending.x(), pending.y()));
+            for (var pending : defeatExplosionController.drainPendingExplosions()) {
+                if (pending.playSfx()) {
+                    services().playSfx(Sonic3kSfx.EXPLODE.id);
                 }
+                spawnFreeChild(() -> new S3kBossExplosionChild(pending.x(), pending.y()));
             }
         }
 
@@ -714,26 +710,20 @@ public class AizMinibossInstance extends AbstractBossInstance {
         }
     }
 
-    private void spawnChild(AbstractBossChild child,
-                            ObjectManager objectManager) {
+    private void spawnBossComponent(java.util.function.Supplier<? extends AbstractBossChild> factory) {
+        AbstractBossChild child = spawnFreeChild(factory);
         childComponents.add(child);
-        if (objectManager != null) {
-            objectManager.addDynamicObject(child);
-        }
     }
 
     private void spawnBreathFlames() {
-        var objectManager = services().objectManager();
-        if (objectManager == null) {
-            return;
-        }
         for (int i = 0; i < BREATH_FLAME_X_OFFSETS.length; i++) {
+            int flameIndex = i;
             // CreateChild1_Normal sets subtype = d2 (increments by 2): 0, 2, 4, 6
-            objectManager.addDynamicObject(new AizMinibossFlameChild(
+            spawnFreeChild(() -> new AizMinibossFlameChild(
                     this,
-                    BREATH_FLAME_X_OFFSETS[i],
-                    BREATH_FLAME_Y_OFFSETS[i],
-                    i * 2));
+                    BREATH_FLAME_X_OFFSETS[flameIndex],
+                    BREATH_FLAME_Y_OFFSETS[flameIndex],
+                    flameIndex * 2));
         }
     }
 

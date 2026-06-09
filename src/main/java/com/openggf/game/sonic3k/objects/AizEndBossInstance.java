@@ -694,7 +694,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
 
         ObjectManager objectManager = services().objectManager();
         if (objectManager != null) {
-            AizEndBossDebrisChild.spawnAll(state.x, state.y, objectManager);
+            spawnDebris();
         }
 
         // Existing AIZ handoff wait; updateDefeated applies Obj_Wait's
@@ -741,30 +741,35 @@ public class AizEndBossInstance extends AbstractBossInstance {
             // Ignore audio errors
         }
 
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            if (getPlayerCharacter() != PlayerCharacter.KNUCKLES) {
-                Aiz2BossEndSequenceState.reset();
-                Aiz2BossEndSequenceState.activateCutsceneOverrideObjects();
-                // ROM loc_694AA creates the route-8 capsule through
-                // CreateChild6_Simple, which allocates after the current boss
-                // slot (sonic3k.asm:138247-138255, 177114-177129).
-                objectManager.addDynamicObjectAfterCurrent(Aiz2EndEggCapsuleInstance.createForCamera(
-                        services().camera().getX(), services().camera().getY()));
-                objectManager.addDynamicObject(AizDrawBridgeObjectInstance.createCutsceneOverride());
-                objectManager.addDynamicObject(S3kCutsceneButtonObjectInstance.createCutsceneOverride());
-                objectManager.addDynamicObject(new Aiz2BossEndSequenceController(targetMaxX, yBase));
-            } else {
-                int newMaxX = targetMaxX + 0x158;
-                services().camera().setMaxX((short) newMaxX);
-                S3kBossDefeatSignpostFlow defeatFlow = new S3kBossDefeatSignpostFlow(
-                        state.x, 1, S3kBossDefeatSignpostFlow.CleanupAction.NONE);
-                objectManager.addDynamicObject(defeatFlow);
-            }
+        if (getPlayerCharacter() != PlayerCharacter.KNUCKLES) {
+            Aiz2BossEndSequenceState.reset();
+            Aiz2BossEndSequenceState.activateCutsceneOverrideObjects();
+            // ROM loc_694AA creates the route-8 capsule through
+            // CreateChild6_Simple, which allocates after the current boss
+            // slot (sonic3k.asm:138247-138255, 177114-177129).
+            spawnChild(() -> Aiz2EndEggCapsuleInstance.createForCamera(
+                    services().camera().getX(), services().camera().getY()));
+            spawnFreeChild(AizDrawBridgeObjectInstance::createCutsceneOverride);
+            spawnFreeChild(S3kCutsceneButtonObjectInstance::createCutsceneOverride);
+            spawnFreeChild(() -> new Aiz2BossEndSequenceController(targetMaxX, yBase));
+        } else {
+            int newMaxX = targetMaxX + 0x158;
+            services().camera().setMaxX((short) newMaxX);
+            spawnFreeChild(() -> new S3kBossDefeatSignpostFlow(
+                    state.x, 1, S3kBossDefeatSignpostFlow.CleanupAction.NONE));
         }
 
         // Mark render as complete since boss is now hidden
         defeatRenderComplete = true;
+    }
+
+    private void spawnDebris() {
+        for (int i = 0; i < AizEndBossDebrisChild.DEBRIS_OFFSETS.length; i++) {
+            int debrisIndex = i;
+            int x = state.x + AizEndBossDebrisChild.DEBRIS_OFFSETS[debrisIndex][0];
+            int y = state.y + AizEndBossDebrisChild.DEBRIS_OFFSETS[debrisIndex][1];
+            spawnFreeChild(() -> new AizEndBossDebrisChild(x, y, debrisIndex));
+        }
     }
 
     // ===== Random position selection (ROM: loc_69A66) =====
