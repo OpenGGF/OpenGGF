@@ -3,6 +3,7 @@ package com.openggf.game.save;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.game.dataselect.DataSelectGameProfile;
+import com.openggf.util.QuarantineFiles;
 
 import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -91,8 +92,7 @@ public final class SaveManager {
 
     private void quarantine(Path file, String reason) throws IOException {
         LOG.warning("Quarantining corrupt save " + file + ": " + reason);
-        Files.move(file, file.resolveSibling(file.getFileName() + ".corrupt"),
-                StandardCopyOption.REPLACE_EXISTING);
+        Files.move(file, QuarantineFiles.uniqueCorruptSibling(file));
     }
 
     public void deleteSlot(String game, int slot) {

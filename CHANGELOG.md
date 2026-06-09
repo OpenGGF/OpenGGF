@@ -4,6 +4,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Corrupt save quarantine now preserves previous recovery copies:** gameplay
+  saves and editor saves now choose unique `.corrupt` sibling names instead of
+  replacing an existing quarantine artifact on repeated failures.
+
 - **Configuration saves now publish atomically:** `config.yaml` writes now go
   through a sibling temporary file and atomic move before replacing the live
   user configuration, reducing the risk of interrupted writes leaving a
