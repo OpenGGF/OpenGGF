@@ -4,6 +4,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Rewind level keyframes now isolate live map mutations:** level rewind
+  capture advances the map copy-on-write epoch so later layout mutations cannot
+  rewrite already-captured keyframe bytes.
+
 - **S3K placed rings now honor object-control touch suppression:** stage-ring
   pickup uses the same ROM `object_control` touch-response gate as object
   contacts and no longer runs a second late post-object sweep, preventing early
