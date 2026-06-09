@@ -2255,6 +2255,7 @@ class TestMhz1CutsceneObjects {
                 0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0));
         knuckles.setServices(services);
         knuckles.forceReadyForButtonForTest();
+        registerActiveCutsceneController(objectManager, knuckles);
         TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0389, (short) 0x0580);
         sonic.setControlLocked(true);
         sonic.setForcedInputMask(AbstractPlayableSprite.INPUT_DOWN);
@@ -2346,6 +2347,7 @@ class TestMhz1CutsceneObjects {
                 0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0));
         knuckles.setServices(services);
         knuckles.forceReadyForButtonForTest();
+        registerActiveCutsceneController(objectManager, knuckles);
         Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
                 0x0380, MHZ1_SWITCH_SPAWN_Y, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
         button.setServices(services);
@@ -2415,6 +2417,7 @@ class TestMhz1CutsceneObjects {
                 0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0));
         knuckles.setServices(services);
         knuckles.forceReadyForButtonForTest();
+        registerActiveCutsceneController(objectManager, knuckles);
         Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
                 0x0380, MHZ1_SWITCH_SPAWN_Y, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
         button.setServices(services);
@@ -2457,6 +2460,7 @@ class TestMhz1CutsceneObjects {
                 0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0));
         controller.setServices(services);
         controller.forceReadyForButtonForTest();
+        registerActiveCutsceneController(objectManager, controller);
         Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
                 0x0380, MHZ1_SWITCH_SPAWN_Y, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
         button.setServices(services);
@@ -2529,6 +2533,7 @@ class TestMhz1CutsceneObjects {
                 0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0));
         controller.setServices(services);
         controller.forceReadyForButtonForTest();
+        registerActiveCutsceneController(objectManager, controller);
         Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
                 0x0380, MHZ1_SWITCH_SPAWN_Y, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
         button.setServices(services);
@@ -2678,6 +2683,7 @@ class TestMhz1CutsceneObjects {
                 0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0));
         knuckles.setServices(services);
         knuckles.forceReadyForButtonForTest();
+        registerActiveCutsceneController(objectManager, knuckles);
         Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
                 0x0380, MHZ1_SWITCH_SPAWN_Y, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
         button.setServices(services);
@@ -2914,7 +2920,6 @@ class TestMhz1CutsceneObjects {
     @AfterEach
     void tearDown() {
         AbstractObjectInstance.resetCameraBoundsForTests();
-        Mhz1CutsceneKnucklesInstance.clearActiveInstanceForTests();
     }
 
     private static final class ZoneForTestRegistry extends Sonic3kObjectRegistry {
@@ -2958,6 +2963,12 @@ class TestMhz1CutsceneObjects {
             cutsceneKnuckles.update(frame, sonic);
             button.update(frame, sonic);
         }
+    }
+
+    private static void registerActiveCutsceneController(ObjectManager objectManager,
+                                                         Mhz1CutsceneKnucklesInstance controller) {
+        when(objectManager.activeObjectsOfType(Mhz1CutsceneKnucklesInstance.class))
+                .thenReturn(List.of(controller));
     }
 
     private static int advanceMhz2CutsceneThroughPressAnimation(CutsceneKnucklesMhz2Instance cutscene,

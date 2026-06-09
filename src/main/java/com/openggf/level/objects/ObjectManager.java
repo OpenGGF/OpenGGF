@@ -1572,14 +1572,18 @@ public class ObjectManager {
     }
 
     /**
-     * Test/diagnostic accessor: returns all live {@link #dynamicObjects} of the
-     * given concrete type, in ascending slot order. Used by the spilled-ring
-     * object-model tests to assert ring objects entered the exec loop.
+     * Returns all live objects of the given concrete type, in ascending slot order.
      */
     public <T extends ObjectInstance> List<T> activeObjectsOfType(Class<T> type) {
         List<T> matches = new ArrayList<>();
+        Set<ObjectInstance> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (ObjectInstance instance : activeObjects.values()) {
+            if (type.isInstance(instance) && seen.add(instance)) {
+                matches.add(type.cast(instance));
+            }
+        }
         for (ObjectInstance instance : dynamicObjects) {
-            if (type.isInstance(instance)) {
+            if (type.isInstance(instance) && seen.add(instance)) {
                 matches.add(type.cast(instance));
             }
         }

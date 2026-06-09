@@ -9,6 +9,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -18,13 +19,13 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class TestS3kHiddenMonitorInstance {
     private static final int HIDDEN_MONITOR = 0x80;
 
     @AfterEach
-    void tearDown() throws Exception {
-        setActiveSignpost(null);
+    void tearDown() {
         AbstractObjectInstance.resetCameraBoundsForTests();
     }
 
@@ -32,11 +33,12 @@ class TestS3kHiddenMonitorInstance {
     void outOfRangeLandedSignpostSwitchesToOnScreenTestWithoutImmediateDestroy() throws Exception {
         S3kHiddenMonitorInstance hidden = new S3kHiddenMonitorInstance(new ObjectSpawn(
                 0x1800, 0x0600, HIDDEN_MONITOR, 3, 0, false, 0));
-        RecordingServices services = new RecordingServices();
-        hidden.setServices(services);
         AbstractObjectInstance.updateCameraBounds(0x1700, 0, 0x1840, 0x00E0, 0);
         S3kSignpostInstance signpost = landedSignpostAt(0x1900, 0x0600);
-        setActiveSignpost(signpost);
+        ObjectManager objectManager = mock(ObjectManager.class);
+        when(objectManager.activeObjectsOfType(S3kSignpostInstance.class)).thenReturn(List.of(signpost));
+        RecordingServices services = new RecordingServices(objectManager);
+        hidden.setServices(services);
 
         hidden.update(0, null);
         hidden.update(1, null);
@@ -59,7 +61,7 @@ class TestS3kHiddenMonitorInstance {
         hidden.setServices(services);
         AbstractObjectInstance.updateCameraBounds(0x1700, 0, 0x1840, 0x00E0, 0);
         S3kSignpostInstance signpost = landedSignpostAt(0x1800, 0x0600);
-        setActiveSignpost(signpost);
+        when(objectManager.activeObjectsOfType(S3kSignpostInstance.class)).thenReturn(List.of(signpost));
 
         hidden.update(0, null);
 
@@ -78,12 +80,6 @@ class TestS3kHiddenMonitorInstance {
         setPrivateField(signpost, "worldY", y);
         signpost.setLanded(true);
         return signpost;
-    }
-
-    private static void setActiveSignpost(S3kSignpostInstance signpost) throws Exception {
-        Field field = S3kSignpostInstance.class.getDeclaredField("activeSignpost");
-        field.setAccessible(true);
-        field.set(null, signpost);
     }
 
     private static void setPrivateField(Object instance, String fieldName, Object value) throws Exception {

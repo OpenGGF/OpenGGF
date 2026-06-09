@@ -9,6 +9,11 @@ All notable changes to the OpenGGF project are documented in this file.
   `Status_Push` when the grounded animation changes, while preserving Sonic 1's
   original stuck-push behavior.
 
+- **S3K signpost and MHZ1 cutscene rendezvous now use runtime-owned objects:**
+  hidden monitors and the MHZ1 cutscene button now locate their paired live
+  controllers through `ObjectManager` instead of static active-instance bridges,
+  keeping the state visible to rewind/session ownership.
+
 - **Corrupt save quarantine now preserves previous recovery copies:** gameplay
   saves and editor saves now choose unique `.corrupt` sibling names instead of
   replacing an existing quarantine artifact on repeated failures.

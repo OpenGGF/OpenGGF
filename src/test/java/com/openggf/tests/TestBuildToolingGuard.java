@@ -122,9 +122,7 @@ class TestBuildToolingGuard {
             "src/main/java/com/openggf/game/sonic3k/objects/IczSnowboardArtLoader.java - private static PatternSpriteRenderer sonicRenderer;",
             "src/main/java/com/openggf/game/sonic3k/objects/IczSnowboardArtLoader.java - private static PatternSpriteRenderer snowboardRenderer;",
             "src/main/java/com/openggf/game/sonic3k/objects/IczSnowboardArtLoader.java - private static PatternSpriteRenderer dustRenderer;",
-            "src/main/java/com/openggf/game/sonic3k/objects/IczSnowboardArtLoader.java - private static boolean loaded;",
-            "src/main/java/com/openggf/game/sonic3k/objects/Mhz1CutsceneKnucklesInstance.java - private static volatile Mhz1CutsceneKnucklesInstance activeInstance;",
-            "src/main/java/com/openggf/game/sonic3k/objects/S3kSignpostInstance.java - private static S3kSignpostInstance activeSignpost;");
+            "src/main/java/com/openggf/game/sonic3k/objects/IczSnowboardArtLoader.java - private static boolean loaded;");
 
     @Test
     void surefireShouldPreloadMockitoAsJavaAgent() throws Exception {
