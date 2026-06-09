@@ -669,6 +669,7 @@ class TestSidekickCpuFollowParity {
             SidekickCpuController controller = new SidekickCpuController(tails, sonic);
             controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
 
+            tails.setPushing(true);
             controller.update(0x2310);
             tails.setPushing(false);
             controller.update(0x2311);
