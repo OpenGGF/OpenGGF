@@ -303,8 +303,17 @@ class TestMushmeanieBadnikInstance {
         advanceToJumping(mushmeanie, player);
         assertEquals("JUMPING", mushmeanie.getStateName());
 
-        for (int frame = 12; frame <= 44; frame++) {
-            mushmeanie.update(frame, player);
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkLeftWallDist(anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+
+            for (int frame = 12; frame <= 44; frame++) {
+                mushmeanie.update(frame, player);
+            }
         }
 
         assertEquals("JUMPING", mushmeanie.getStateName(),

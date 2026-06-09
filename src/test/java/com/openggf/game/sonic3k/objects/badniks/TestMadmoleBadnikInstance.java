@@ -569,8 +569,15 @@ class TestMadmoleBadnikInstance {
         listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x49);
         services.soundIds.clear();
 
-        for (int frame = 0x49; frame <= 0x5E; frame++) {
-            child.update(frame, player);
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkLeftWallDist(anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+
+            for (int frame = 0x49; frame <= 0x5E; frame++) {
+                child.update(frame, player);
+            }
         }
 
         assertEquals(-0x500, sideChildIntField(child, "yVelocity"),
@@ -594,7 +601,14 @@ class TestMadmoleBadnikInstance {
         setSideChildIntField(child, "animFrame", 7);
         setSideChildIntField(child, "animTimer", 0);
 
-        child.update(0x49, player);
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkLeftWallDist(anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+
+            child.update(0x49, player);
+        }
 
         assertEquals(false, player.isObjectControlled(),
                 "loc_8D846's threshold branch clears object_control and releases the captured player");
@@ -617,9 +631,16 @@ class TestMadmoleBadnikInstance {
         setSideChildIntField(child, "animFrame", 7);
         setSideChildIntField(child, "animTimer", 0);
 
-        child.update(0x49, player);
-        listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x4A);
-        child.update(0x4A, player);
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkLeftWallDist(anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
+                    .thenReturn(TerrainCheckResult.noCollision());
+
+            child.update(0x49, player);
+            listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x4A);
+            child.update(0x4A, player);
+        }
 
         assertEquals(false, player.isObjectControlled(),
                 "loc_8D834 switches the arcing side drill to routine 6, so continuous touch polling cannot recapture Sonic");
