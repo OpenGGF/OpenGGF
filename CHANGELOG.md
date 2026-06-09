@@ -59,9 +59,10 @@ All notable changes to the OpenGGF project are documented in this file.
   tilemap shaders derive VScroll column sampling from the active viewport/render
   width instead of hardcoding the native 20-column table.
 
-- **Object proximity triggers now use ROM centre coordinates:** HCZ large fan,
-  ARZ falling pillar, and CPZ pipe-exit spring checks now compare playable
-  `x_pos`/`y_pos` via centre coordinates instead of top-left sprite bounds.
+- **Object and event proximity triggers now use ROM centre coordinates:** HCZ
+  large fan, ARZ falling pillar, CPZ pipe-exit spring, and CPZ water-rise checks
+  now compare playable `x_pos`/`y_pos` via centre coordinates instead of
+  top-left sprite bounds.
 
 - **LBZ miniboss now satisfies release guardrails:** its defeat explosion
   controller is classified as derived rewind presentation state, and its
