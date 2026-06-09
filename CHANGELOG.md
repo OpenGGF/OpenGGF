@@ -99,6 +99,10 @@ All notable changes to the OpenGGF project are documented in this file.
   contact teardown clears inline-support and stale-support-loss player sets,
   matching the state already handled by rewind restore.
 
+- **Lava Reef animated PLC loading now uses the canonical LRZ zone id:** S3K
+  pattern animation resolves LRZ AniPLC scripts from `ZONE_LRZ`, restoring the
+  ROM-backed animated tile setup for Lava Reef Act 1.
+
 - **Hash-warning saves can no longer be launched from data select:** save
   summaries now distinguish recoverable payloads from loadable slots, so hash
   mismatches remain visible/deletable for recovery while data-select launch and
