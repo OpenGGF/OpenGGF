@@ -112,4 +112,33 @@ class TestSonicConfigurationFileBootstrap {
             SonicConfigurationService.resetStaticInstance();
         }
     }
+
+    @Test
+    void malformedConfigIsQuarantinedBeforeSavingDefaults() throws IOException {
+        String originalUserDir = System.getProperty("user.dir");
+        Path configPath = tempDir.resolve("config.yaml");
+        Path corruptPath = tempDir.resolve("config.yaml.corrupt");
+        String malformed = "debug: [";
+
+        try {
+            Files.writeString(configPath, malformed);
+            System.setProperty("user.dir", tempDir.toString());
+            SonicConfigurationService.resetStaticInstance();
+
+            SonicConfigurationService service = SonicConfigurationService.getInstance();
+            service.saveConfig();
+
+            assertTrue(Files.exists(corruptPath), "malformed config should be quarantined");
+            assertEquals(malformed, Files.readString(corruptPath),
+                    "quarantine copy must preserve the unreadable config bytes");
+            assertTrue(Files.exists(configPath), "saving should create a fresh config.yaml");
+            Map<String, Object> savedConfig = readFlatYaml(configPath);
+            assertEquals("s2", savedConfig.get(SonicConfiguration.DEFAULT_ROM.name()));
+        } finally {
+            if (originalUserDir != null) {
+                System.setProperty("user.dir", originalUserDir);
+            }
+            SonicConfigurationService.resetStaticInstance();
+        }
+    }
 }

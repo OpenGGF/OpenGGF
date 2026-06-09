@@ -44,6 +44,7 @@ public class SonicConfigurationService {
 					loadedFromExistingFile = true;
 				} catch (IOException e) {
 					LOGGER.log(Level.WARNING, "Failed to load config.yaml from executable directory", e);
+					quarantineUnreadableConfig(execConfig);
 				}
 			}
 		} else {
@@ -55,6 +56,7 @@ public class SonicConfigurationService {
 					loadedFromExistingFile = true;
 				} catch (IOException e) {
 					LOGGER.log(Level.WARNING, "Failed to load config.yaml from working directory", e);
+					quarantineUnreadableConfig(file);
 				}
 			}
 		}
@@ -111,13 +113,14 @@ public class SonicConfigurationService {
 		}
 		if (migratedFromLegacyJson) {
 			File legacy = resolveRelativeFile("config.json");
-			File backup = resolveRelativeFile("config.json.bak");
 			if (legacy.exists()) {
-				if (legacy.renameTo(backup)) {
-					LOGGER.info("Migrated legacy config.json to config.yaml (backup at config.json.bak)");
-				} else {
-					LOGGER.warning("Migrated config.json to config.yaml but could not rename the old file to "
-							+ "config.json.bak (it may already exist); the legacy config.json was left in place.");
+				try {
+					Path backup = moveToUniqueSibling(legacy.toPath(), ".bak");
+					LOGGER.info("Migrated legacy config.json to config.yaml (backup at "
+							+ backup.getFileName() + ")");
+				} catch (IOException e) {
+					LOGGER.log(Level.WARNING, "Migrated config.json to config.yaml but could not back up the old file",
+							e);
 				}
 			}
 		}
@@ -339,6 +342,44 @@ public class SonicConfigurationService {
 		} finally {
 			Files.deleteIfExists(temp);
 		}
+	}
+
+	private static void quarantineUnreadableConfig(File configFile) {
+		if (configFile == null || !configFile.exists()) {
+			return;
+		}
+		try {
+			Path quarantined = moveToUniqueSibling(configFile.toPath(), ".corrupt");
+			LOGGER.warning("Unreadable config.yaml moved to " + quarantined.getFileName());
+		} catch (IOException moveFailure) {
+			LOGGER.log(Level.WARNING,
+					"Failed to quarantine unreadable config.yaml; leaving it in place", moveFailure);
+		}
+	}
+
+	private static Path moveToUniqueSibling(Path source, String suffix) throws IOException {
+		Path absoluteSource = source.toAbsolutePath();
+		Path target = uniqueSibling(absoluteSource.resolveSibling(
+				absoluteSource.getFileName().toString() + suffix));
+		try {
+			Files.move(absoluteSource, target, StandardCopyOption.ATOMIC_MOVE);
+		} catch (AtomicMoveNotSupportedException e) {
+			Files.move(absoluteSource, target);
+		}
+		return target;
+	}
+
+	private static Path uniqueSibling(Path preferred) {
+		if (!Files.exists(preferred)) {
+			return preferred;
+		}
+		for (int i = 1; i < 1000; i++) {
+			Path candidate = preferred.resolveSibling(preferred.getFileName().toString() + "." + i);
+			if (!Files.exists(candidate)) {
+				return candidate;
+			}
+		}
+		throw new IllegalStateException("Could not find unique backup name for " + preferred);
 	}
 
 	public void ensureConfigFileExists() {

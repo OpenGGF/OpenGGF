@@ -4,6 +4,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Malformed user config files are now preserved:** unreadable `config.yaml`
+  files are moved to unique `.corrupt` siblings before defaults are saved, and
+  legacy `config.json` migration now preserves existing `.bak` files.
+
 - **Release architecture guards now fail closed:** gameplay map-mutation
   scanner roots must exist and contain Java sources, map mutation bypass forms
   are covered, CoW tests use active JUnit assertions, and the GameLoop size

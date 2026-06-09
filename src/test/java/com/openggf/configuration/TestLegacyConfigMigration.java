@@ -46,4 +46,23 @@ class TestLegacyConfigMigration {
         String text = Files.readString(yaml);
         assertTrue(text.contains("audio:"), text);
     }
+
+    @Test
+    void legacyMigrationPreservesExistingBackupWithUniqueName() throws Exception {
+        Path json = tempDir.resolve("config.json");
+        Path yaml = tempDir.resolve("config.yaml");
+        Path bak = tempDir.resolve("config.json.bak");
+        Path secondBak = tempDir.resolve("config.json.bak.1");
+        Files.writeString(json, "{ \"AUDIO_ENABLED\": false, \"FPS\": 50 }");
+        Files.writeString(bak, "previous backup");
+
+        SonicConfigurationService svc = SonicConfigurationService.createStandalone();
+
+        assertFalse(svc.getBoolean(SonicConfiguration.AUDIO_ENABLED), "migrated value preserved");
+        assertTrue(Files.exists(yaml), "config.yaml written");
+        assertEquals("previous backup", Files.readString(bak),
+                "existing backup must not be overwritten");
+        assertTrue(Files.exists(secondBak), "legacy config should move to a unique backup path");
+        assertFalse(Files.exists(json), "original config.json removed");
+    }
 }
