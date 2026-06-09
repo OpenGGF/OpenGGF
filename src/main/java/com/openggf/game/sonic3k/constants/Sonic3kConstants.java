@@ -415,6 +415,8 @@ public class Sonic3kConstants {
     public static final int ART_NEM_TAILS_LIFE_ICON_ADDR = 0x35CFFE;   // ArtNem_TailsLifeIcon (LockOn S3 data in combined S3&K ROM)
     public static final int ART_NEM_MONITORS_ADDR = 0x190F4A;
     public static final int ART_NEM_EXPLOSION_ADDR = 0x19200A;
+    public static final int MAP_MONITOR_ADDR = 0x01DBA2; // Map_Monitor (12 frames, S&K side)
+    public static final int MAP_EXPLOSION_ADDR = 0x01E758; // Map_Explosion (5 frames, S&K side)
     public static final int ART_NEM_BUBBLES_ADDR = 0x191B46;
     public static final int MAP_BUBBLER_ADDR = 0x02FCB2; // Map_Bubbler (23 frames, S&K side)
     public static final int ART_NEM_RING_HUD_TEXT_ADDR = 0x192AEE;
@@ -508,6 +510,9 @@ public class Sonic3kConstants {
     public static final int ARTTILE_AIZ_SLIDE_ROPE = 0x0324;
     public static final int ARTTILE_AIZ_MISC1 = 0x0333;
     public static final int ARTTILE_AIZ_MISC2 = 0x02E9;
+    public static final int MAP_AIZ1_TREE_ADDR = 0x21C3E8; // Map_AIZ1Tree (1 frame)
+    public static final int MAP_AIZ1_ZIPLINE_PEG_ADDR = 0x21C42A; // Map_AIZ1ZiplinePeg (1 frame)
+    public static final int MAP_AIZ_FOREGROUND_PLANT_ADDR = 0x22B8EC; // Map_AIZForegroundPlant (2 frames)
     public static final int ARTTILE_LRZ2_MISC = 0x040D;
     public static final int ARTTILE_AIZ_FALLING_LOG = 0x03CF;
     public static final int ARTTILE_AIZ_SWING_VINE = 0x041B;
@@ -2106,6 +2111,7 @@ public class Sonic3kConstants {
     public static final int MAP_PACHINKO_F_ITEM_ADDR = 0x04A3D2;    // Map_PachinkoFItem
 
     // Spring child object mappings (shared, used across all zones)
+    public static final int MAP_SPIKES_ADDR = 0x024456;             // Map_Spikes (8 frames)
     public static final int MAP_SPRING_ADDR = 0x02375C;             // Map_Spring (11 frames, S3K mapping format)
     public static final int MAP_SPRING2_ADDR = 0x023772;            // Map_Spring2 (yellow spring frames)
 

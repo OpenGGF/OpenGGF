@@ -4,6 +4,48 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K runtime object mappings now read more frames from ROM:** shared spikes,
+  AIZ tree, AIZ zipline peg, AIZ foreground plant, monitor, and explosion
+  mappings now use ROM-parsed mapping frames instead of transcribed Java data.
+
+- **AIZ boss child spawning now uses construction-context helpers:** AIZ end
+  boss and miniboss cutscene child, debris, and explosion objects now spawn
+  through `spawnChild` suppliers so child constructors receive object services.
+
+- **Editor-mode teardown now resets all editor-owned managers:** leaving editor
+  mode clears the editor level, sprite, collision, terrain, parallax, water,
+  game-state, and camera managers instead of only sprites/camera.
+
+- **Background tilemap caching now tracks full-width runtime mode:** changing
+  `requiresFullWidthBgTilemap()` dirties the cached BG tilemap so runtime
+  overlays cannot reuse a stale wrapped cache.
+
+- **Worktree setup now links the current YAML config:** the post-checkout hook
+  shares `config.yaml` into new worktrees instead of the legacy `config.json`.
+
+- **Branch policy now rejects ROM-like binary files anywhere in the tree:**
+  git hooks and CI guards block tracked `.gen`, `.smd`, `.bin`, `.sms`, `.gg`,
+  and `.32x` files, and `.gitignore` now ignores those extensions repo-wide.
+
+- **Release package metadata now has bounded smoke validation:** release
+  builds inspect native archives before upload for expected layout, editable
+  config, launch entry points, JVM manifest bootstrap metadata, and macOS
+  bundle version alignment. The checked-in manifest no longer carries obsolete
+  JOGL-era classpath entries.
+
+- **Animated tiles now read current-frame S3K deform state:** level rendering
+  publishes parallax/deform runtime state before animated tile and palette
+  updates, keeping CNZ/MHZ tile phases aligned with the frame being rendered.
+
+- **S3K trace replay now keeps ring comparisons row-strict:** the S3K replay
+  harness compares the current trace row directly instead of substituting a
+  next-row ring diagnostic when the engine happens to match that later value.
+
+- **S3K AIZ hollow-tree reveal now uses ROM centre coordinates:** the tree
+  reveal-control counter compares against playable `y_pos` via centre Y instead
+  of top-left sprite bounds, matching the disassembly and preventing early
+  terrain reveal progression.
+
 - **S2/S3K pushing animation now clears on ROM-gated animation changes:**
   playable animation resolution now models the S2/S3K fix that clears
   `Status_Push` when the grounded animation changes, while preserving Sonic 1's

@@ -45,7 +45,6 @@ class TestBuildToolingGuard {
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - if (current.frame() == firstLevelFrame) {",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - int gameplayStartFrame = findCheckpointFrame(trace, \"gameplay_start\");",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - return gameplayStartFrame >= 0 && current.frame() <= gameplayStartFrame;",
-            "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - || next.frame() != current.frame() + 1",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - || !\"complete_run\".equals(metadata.traceProfile())",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - if (metadata.zoneId() == null || metadata.zoneId() != 0 || metadata.act() != 1) {",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - .anyMatch(checkpoint -> \"intro_begin\".equals(checkpoint.name()));",
@@ -525,6 +524,104 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void worktreePostCheckoutHookShouldLinkCurrentYamlConfig() throws Exception {
+        String hook = Files.readString(Path.of(".githooks/post-checkout"));
+        List<String> violations = new ArrayList<>();
+
+        if (!hook.contains("link_file \"config.yaml\"")) {
+            violations.add(".githooks/post-checkout does not link config.yaml into worktrees");
+        }
+        if (hook.contains("link_file \"config.json\"")) {
+            violations.add(".githooks/post-checkout still links legacy config.json");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("worktree resource linking must follow the current YAML config file:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void releaseWorkflowShouldSmokeValidatePackagedArtifactsBeforeUpload() throws Exception {
+        String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
+        List<String> violations = new ArrayList<>();
+
+        int smokeIndex = workflow.indexOf("Smoke validate packaged artifact");
+        int uploadIndex = workflow.indexOf("Upload artifacts");
+        if (smokeIndex < 0) {
+            violations.add(".github/workflows/release.yml does not smoke validate assembled native archives");
+        }
+        if (smokeIndex < 0 || uploadIndex < 0 || smokeIndex > uploadIndex) {
+            violations.add(".github/workflows/release.yml must smoke validate artifacts before upload");
+        }
+        if (!workflow.contains("target/OpenGGF-{version}-jar-with-dependencies.jar")) {
+            violations.add(".github/workflows/release.yml does not inspect the packaged JVM jar");
+        }
+        if (!workflow.contains("META-INF/MANIFEST.MF") || !workflow.contains("Main-Class: com.openggf.Engine")) {
+            violations.add(".github/workflows/release.yml does not validate manifest bootstrap metadata");
+        }
+        if (!workflow.contains("config.yaml")) {
+            violations.add(".github/workflows/release.yml does not validate packaged config.yaml presence");
+        }
+        if (!workflow.contains("CFBundleShortVersionString") || !workflow.contains("CFBundleVersion")) {
+            violations.add(".github/workflows/release.yml does not validate macOS bundle version metadata");
+        }
+        if (!workflow.contains("OpenGGF.exe") || !workflow.contains("OpenGGF.app/Contents/MacOS/OpenGGF")
+                || !workflow.contains("OpenGGF/OpenGGF")) {
+            violations.add(".github/workflows/release.yml does not validate platform launch entry points");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("release artifacts must be structurally smoke-validated before upload:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void macosBundleMetadataShouldMatchMavenVersion() throws Exception {
+        String expectedVersion = property(parsePom("pom.xml"), "version");
+        String plist = Files.readString(Path.of("src/packaging/Info.plist"));
+        List<String> violations = new ArrayList<>();
+
+        if (!plistValueEquals(plist, "CFBundleVersion", expectedVersion)) {
+            violations.add("src/packaging/Info.plist CFBundleVersion must match pom.xml version " + expectedVersion);
+        }
+        if (!plistValueEquals(plist, "CFBundleShortVersionString", expectedVersion)) {
+            violations.add("src/packaging/Info.plist CFBundleShortVersionString must match pom.xml version "
+                    + expectedVersion);
+        }
+
+        if (!violations.isEmpty()) {
+            fail("macOS release metadata must not drift from the Maven release version:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void sourceManifestShouldNotCarryLegacyJogampClasspath() throws Exception {
+        String manifest = Files.readString(Path.of("src/main/java/META-INF/MANIFEST.MF"));
+        List<String> violations = new ArrayList<>();
+
+        if (!manifest.contains("Main-Class: com.openggf.Engine")) {
+            violations.add("src/main/java/META-INF/MANIFEST.MF does not identify com.openggf.Engine as Main-Class");
+        }
+        if (manifest.contains("Class-Path:")) {
+            violations.add("src/main/java/META-INF/MANIFEST.MF should not define a stale manual Class-Path");
+        }
+        for (String legacyDependency : List.of("jogl", "gluegen", "joal", "jocl")) {
+            if (manifest.toLowerCase().contains(legacyDependency)) {
+                violations.add("src/main/java/META-INF/MANIFEST.MF still references legacy " + legacyDependency
+                        + " artifacts");
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            fail("the checked-in manifest must not mislead packaging work with obsolete JOGL-era dependencies:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
     void nativeImageLwjglDiscoveryShouldOnlyTrustExecutableAdjacentLibraries() throws Exception {
         String engine = Files.readString(Path.of("src/main/java/com/openggf/Engine.java"));
         List<String> violations = new ArrayList<>();
@@ -684,6 +781,44 @@ class TestBuildToolingGuard {
 
         if (!violations.isEmpty()) {
             fail("branch policy must reject uncompressed trace payloads at trace-directory roots and below:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void branchPolicyShouldRejectRomLikeFilesAnywhere() throws Exception {
+        String shellPolicy = Files.readString(Path.of(".githooks/validate-policy.sh"));
+        String powershellPolicy = Files.readString(Path.of(".githooks/validate-policy.ps1"));
+        List<String> gitignoreLines = Files.readAllLines(Path.of(".gitignore"));
+        List<String> violations = new ArrayList<>();
+
+        for (String extension : List.of(".gen", ".smd", ".bin", ".sms", ".gg", ".32x")) {
+            if (!shellPolicy.contains(extension)) {
+                violations.add(".githooks/validate-policy.sh does not deny " + extension + " files");
+            }
+            if (!powershellPolicy.contains(extension)) {
+                violations.add(".githooks/validate-policy.ps1 does not deny " + extension + " files");
+            }
+            String ignorePattern = "*" + extension;
+            if (!gitignoreLines.contains(ignorePattern)) {
+                violations.add(".gitignore does not ignore " + ignorePattern + " in nested directories");
+            }
+        }
+        if (!shellPolicy.contains("is_rom_like_path")) {
+            violations.add(".githooks/validate-policy.sh does not define a ROM-like path predicate");
+        }
+        if (!powershellPolicy.contains("Test-RomLikeTrackedPath")) {
+            violations.add(".githooks/validate-policy.ps1 does not define a ROM-like path predicate");
+        }
+        if (!shellPolicy.contains("ROM_LIKE_DENYLIST_EXTENSIONS")) {
+            violations.add(".githooks/validate-policy.sh does not name the ROM-like denylist");
+        }
+        if (!powershellPolicy.contains("RomLikeDenylistExtensions")) {
+            violations.add(".githooks/validate-policy.ps1 does not name the ROM-like denylist");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("branch policy must reject ROM-like binary files in any tracked directory:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
@@ -1051,6 +1186,12 @@ class TestBuildToolingGuard {
             return null;
         }
         return nodes.item(0).getTextContent().trim();
+    }
+
+    private static boolean plistValueEquals(String plist, String key, String expectedValue) {
+        return Pattern.compile("<key>\\s*" + Pattern.quote(key)
+                        + "\\s*</key>\\s*<string>\\s*" + Pattern.quote(expectedValue) + "\\s*</string>",
+                Pattern.DOTALL).matcher(plist).find();
     }
 
     private static boolean surefirePluginUsesSharedArgLine(Document pom) {

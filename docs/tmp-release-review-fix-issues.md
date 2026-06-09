@@ -15,24 +15,11 @@ This file tracks the release-prep architecture/code review findings being fixed 
 | RRF-007 | Medium | fixed | Object services | Production object constructors are guarded against `services()` calls while safe child construction continues through `ObjectConstructionContext`; the existing constructor/context guards now cover the release concern. | `TestNoServicesInObjectConstructors.java`, `TestConstructionContextGuard.java`, `TestObjectServicesMigrationGuard.java` |
 | RRF-008 | Medium | fixed | Object services | Deprecated `DefaultObjectServices` fallback can create detached registries/pipeline when no runtime exists. | `DefaultObjectServices.java`, tests |
 | RRF-009 | Medium | fixed | Trace reporting | Trace replay and credits-demo harnesses now fail warning-only reports by default, with an explicit diagnostic-only override for non-release fixtures. | `AbstractTraceReplayTest.java`, `AbstractCreditsDemoTraceReplayTest.java` |
-
-## Trace-scope notes
-
-- RRF-003: `src/test/resources/traces/s3k/aiz1_to_hcz_fullrun` has been
-  regenerated with Lua `6.25-s3k`, is no longer diagnostic-only, and passes the
-  focused release-blocking replay through the HCZ handoff. The closed frontiers
-  include duplicate placed-ring coordinates, S3K raw ring parsing/window
-  semantics, S3K odd floor-lip angle fallback, AIZ miniboss/title-card handoff,
-  AIZ2 bridge/capsule/camera timing, and S3K transition-mode replay
-  classification.
-- RRF-004 removed the committed trace-to-engine ride-state bootstrap. S2 SCZ/WFZ
-  may expose earlier native frontiers once the wider workspace compiles and
-  those ROM-backed traces can run.
 | RRF-010 | Medium | fixed | Coordinate semantics | S3K Pachinko flipper launch distance now uses player centre X against ROM object X, with a regression test for same-centre/different-bounds sprites. | `PachinkoFlipperObjectInstance.java`, `TestPachinkoFlipperObjectInstance.java` |
 | RRF-011 | Medium | fixed | Game completion | Advancing past the final configured zone now requests credits and preserves the terminal progression sentinel instead of wrapping to zone 0. | `LevelManager.java`, `TestLevelManagerEndProgression.java` |
 | RRF-012 | Medium | fixed | Release guard tests | Build/release guard tests rely heavily on raw string checks and disabled-test guard only blocks one wording. | `TestBuildToolingGuard.java` |
 | RRF-013 | Medium | fixed | Release automation | Manual release uses static `v0.6.prerelease` tag without an explicit tag-exists preflight. | `.github/workflows/release.yml`, `pom.xml` |
-| RRF-014 | Medium | fixed | Runtime assets | S1 palette cycles, conveyor waypoint and child spawn tables, GHZ bridge bend tables, a small SLZ/support-object mapping slice, LZ `Map_Jaws` / `Map_Burro` / `Map_Flap` / `Map_WFall` / `Map_Splash`, MZ/SLZ `Map_Fire`, MZ `Map_Bas` / `Map_Glass` / `Map_CStom` / `Map_Geyser` / `Map_LWall`, GHZ `Map_Hel`, GHZ/MZ `Map_Swing_GHZ`, SLZ `Map_Swing_SLZ`, SYZ `Map_Bump` / shared `Map_Spring` / `Map_Roll` / `Map_Yad`, GHZ `Map_Crab` / `Map_Moto` / `Map_Newt`, shared `Map_Poi`, hidden-bonus `Map_Bonus`, Giant Ring `Map_GRing`, Ring Flash `Map_Flash`, GHZ giant ball `Map_GBall`, SYZ/LZ spikeball chain `Map_SBall` / `Map_SBall2`, Big Spiked Ball `Map_BBall`, LZ Gargoyle `Map_Gar`, LZ block `Map_LBlock`, SYZ boss block `Map_BossBlock`, LZ breakable pole `Map_Pole`, LZ conveyor `Map_LConv`, LZ bubbles `Map_Bub`, MZ/LZ push block `Map_Push`, SBZ rotating junction `Map_Jun`, SBZ Running Disc `Map_Disc`, MZ Brick `Map_Brick`, SYZ Spinning Light `Map_Light`, MZ Smashable Green Block `Map_Smab`, MZ/SLZ/SBZ Collapsing Floor `Map_CFlo`, MZ/SBZ moving block `Map_MBlock`, LZ moving block `Map_MBlockLZ`, GHZ/SYZ/SLZ basic platform `Map_Plat_GHZ` / `Map_Plat_SYZ` / `Map_Plat_SLZ`, SLZ elevator/circling platform/staircase `Map_Elev` / `Map_Circ` / `Map_Stair`, unused small explosion `Map_UnkExplode`, GHZ collapsing ledge `Map_Ledge`, MZ large grassy platform `Map_LGrass`, SYZ/SLZ/LZ floating block and door `Map_FBlock`, SBZ vanishing platform `Map_VanP`, GHZ `Map_Buzz` / `Map_Missile`, GHZ/SLZ `Map_Smash`, LZ/SLZ/SBZ `Map_Orb`, LZ `Map_Harp`, MZ/SBZ `Map_Cat`, SBZ `Map_Hog`, SLZ/SBZ `Map_Bomb`, shared `Map_Shield`, shared animal `Map_Animal1` / `Map_Animal2` / `Map_Animal3`, result-card `Map_Got` / `Map_SSR`, special-stage result emerald `Map_SSRC`, Prison Capsule `Map_Pri`, SBZ `Map_Flame` / `Map_Saw` / `Map_Elec` / `Map_ADoor` / `Map_Gird` / `Map_Trap` / `Map_Spin` / `Map_Stomp`, shared `Map_But`, SBZ2 `Map_FFloor`, ending `Map_ESon` / `Map_ECha` / `Map_ESth`, and all S1 boss mappings now load from ROM data; the legacy boss mapping helper file was removed, provider-local mapping literals are zero, and remaining ROM-derived tile-word remaps use `SpriteMappingPieces`. | `Sonic1PaletteCycler.java`, `Sonic1BridgeObjectInstance.java`, `Sonic1ObjectPlacement.java`, `Sonic1ObjectArtProvider.java`, `SpriteMappingPieces.java`, `Sonic1LZConveyorObjectInstance.java`, `Sonic1SpinConveyorObjectInstance.java`, `TestArchitecturalSourceGuard.java`, related S1 assets |
+| RRF-014 | Medium | fixed | Runtime assets | S1 palette cycles, object mapping data, boss mappings, and related runtime tables now load from ROM-backed sources; provider-local mapping literals are zero and remaining tile-word remaps use `SpriteMappingPieces`. See RRF-014 asset notes below. | `Sonic1PaletteCycler.java`, `Sonic1BridgeObjectInstance.java`, `Sonic1ObjectPlacement.java`, `Sonic1ObjectArtProvider.java`, `SpriteMappingPieces.java`, `Sonic1LZConveyorObjectInstance.java`, `Sonic1SpinConveyorObjectInstance.java`, `TestArchitecturalSourceGuard.java`, related S1 assets |
 | RRF-015 | Low | fixed | Presentation | S3K special-stage emerald handling now loads Super Emerald art/palette state and marks Super Emerald collection when the save state is in Super Emerald mode. | `Sonic3kSpecialStageManager.java`, `TestArchitecturalSourceGuard.java` |
 | RRF-016 | Low | fixed | Presentation | S2 bridge stake subtypes 7/8 now render with the bridge renderer ground-edge frame instead of returning invisible. | `BridgeStakeObjectInstance.java`, `TestArchitecturalSourceGuard.java` |
 | RRF-017 | Low | fixed | Diagnostics | S3K special-stage results audio helper failures now log warnings instead of being swallowed. | `S3kSpecialStageResultsScreen.java`, `TestArchitecturalSourceGuard.java` |
@@ -53,3 +40,56 @@ This file tracks the release-prep architecture/code review findings being fixed 
 | RRF-032 | Medium | fixed | Test parity guard | Full-suite run exposed that one CNZ sidekick support-grace regression test no longer held `Status_Push` on the setup frame, so the assertion measured two follow nudges instead of the intended clear-on-second-frame nudge. | `TestSidekickCpuFollowParity.java` |
 | RRF-033 | High | fixed | S3K object parity | Full-suite run exposed that Madmole arcing side-drill and Mushmeanie jump/floor ROM parity tests depended on ambient terrain state; those tests now isolate the no-collision terrain condition they are asserting through. | `TestMadmoleBadnikInstance.java`, `TestMushmeanieBadnikInstance.java` |
 | RRF-034 | Medium | fixed | Architecture ratchet | Editor save quarantine now keeps unique corrupt-filename selection inside editor persistence, removing the new `editor -> util` top-level edge. | `EditorSaveManager.java`, `TestArchUnitRules.java` |
+| RRF-035 | High | fixed | Trace policy | S3K trace replay reads BK2 input without the same trace-input alignment validation used by non-S3K replay. | `AbstractTraceReplayTest.java`, trace tests |
+| RRF-036 | High | fixed | Trace policy | S3K ring-count comparison can rewrite the expected trace row from next-row engine-matching diagnostics before comparison. | `TraceReplayBootstrap.java`, `TraceFrame.java`, `AbstractTraceReplayTest.java`, trace guard tests |
+| RRF-037 | High | fixed | Rendering parity | S3K animated tile phases can read previous-frame parallax/deform runtime state because animated pattern updates run before parallax state publication. | `LevelRenderer.java`, `Sonic3kPatternAnimator.java`, scroll handlers, render tests |
+| RRF-038 | High | fixed | Coordinate semantics | AIZ hollow-tree terrain reveal compares ROM `Player_1+y_pos` using centre `getCentreY()` instead of top-left `getY()`, with a regression test covering the reveal-control threshold. | `AizHollowTreeObjectInstance.java`, `TestAizHollowTreeObjectInstance.java` |
+| RRF-039 | High | fixed | Runtime assets | S3K shared spikes, AIZ tree, AIZ zipline peg, AIZ foreground plant, monitor, and explosion mappings now load from ROM-parsed mapping frames instead of hardcoded/transcribed Java data. | `Sonic3kObjectArt.java`, `Sonic3kObjectArtProvider.java`, asset guard tests |
+| RRF-040 | High | fixed | Release policy | ROM/asset inclusion policy ignores only root `*.gen`/`*.bin` and lacks hook/CI denylist checks for ROM-like files elsewhere. | `.gitignore`, `.githooks/validate-policy.*`, `TestBuildToolingGuard.java` |
+| RRF-041 | Medium | fixed | Rendering cache | Runtime-controlled full-width background tilemap mode can go stale if `requiresFullWidthBgTilemap()` changes without another tilemap invalidation. | `LevelTilemapManager.java`, HTZ render/cache tests |
+| RRF-042 | Medium | fixed | Runtime ownership | Editor-mode teardown resets only sprites/camera despite editor context creating level, collision, parallax, water, and game-state managers. | `EditorSessionFactory.java`, `EditorModeContext.java`, editor lifecycle tests |
+| RRF-043 | Medium | fixed | Object lifecycle | AIZ boss/cutscene child, debris, and explosion objects now spawn through construction-context `spawnChild` suppliers instead of raw `ObjectManager.addDynamicObject(...)`, with a guard test covering the child paths. | `AizEndBossInstance.java`, `AizMinibossCutsceneInstance.java`, object guard tests |
+| RRF-044 | Medium | fixed | Release packaging | Release workflow now smoke-validates assembled native archives before upload, including archive layout, config presence, JVM manifest bootstrap metadata, macOS version metadata, and platform launch entry points. | `.github/workflows/release.yml`, build tooling tests |
+| RRF-045 | Low | fixed | Tooling | Worktree post-checkout hook still links legacy `config.json` instead of current `config.yaml`. | `.githooks/post-checkout`, build tooling tests |
+| RRF-046 | Low | fixed | Packaging metadata | macOS bundle metadata now matches the Maven/release version `0.6.prerelease` and is guarded by build-tooling tests. | `src/packaging/Info.plist`, packaging scripts/tests |
+| RRF-047 | Low | fixed | Packaging metadata | Stale checked-in manifest metadata was reduced to the engine entry point so old JOGL-era classpath entries cannot mislead packaging work. | `src/main/java/META-INF/MANIFEST.MF`, build tooling tests |
+
+## RRF-014 asset notes
+
+S1 runtime data moved to ROM-backed loading for palette cycles, conveyor waypoint
+and child spawn tables, GHZ bridge bend tables, a small SLZ/support-object
+mapping slice, all S1 boss mappings, and these object mappings:
+
+- LZ: `Map_Jaws`, `Map_Burro`, `Map_Flap`, `Map_WFall`, `Map_Splash`,
+  `Map_Gar`, `Map_LBlock`, `Map_LConv`, `Map_Bub`, `Map_MBlockLZ`, `Map_Harp`
+- MZ/SLZ/SBZ: `Map_Fire`, `Map_Bas`, `Map_Glass`, `Map_CStom`, `Map_Geyser`,
+  `Map_LWall`, `Map_CFlo`, `Map_MBlock`, `Map_Cat`
+- GHZ/SYZ/SLZ: `Map_Hel`, `Map_Swing_GHZ`, `Map_Swing_SLZ`, `Map_Bump`,
+  `Map_Spring`, `Map_Roll`, `Map_Yad`, `Map_Crab`, `Map_Moto`, `Map_Newt`,
+  `Map_GBall`, `Map_SBall`, `Map_SBall2`, `Map_BBall`, `Map_Plat_GHZ`,
+  `Map_Plat_SYZ`, `Map_Plat_SLZ`
+- Shared/other: `Map_Poi`, `Map_Bonus`, `Map_GRing`, `Map_Flash`,
+  `Map_BossBlock`, `Map_Push`, `Map_Jun`, `Map_Disc`, `Map_Brick`,
+  `Map_Light`, `Map_Smab`, `Map_Elev`, `Map_Circ`, `Map_Stair`,
+  `Map_UnkExplode`, `Map_Ledge`, `Map_LGrass`, `Map_FBlock`, `Map_VanP`,
+  `Map_Buzz`, `Map_Missile`, `Map_Smash`, `Map_Orb`, `Map_Hog`, `Map_Bomb`,
+  `Map_Shield`, `Map_Animal1`, `Map_Animal2`, `Map_Animal3`, `Map_Got`,
+  `Map_SSR`, `Map_SSRC`, `Map_Pri`, `Map_But`
+- SBZ/ending: `Map_Flame`, `Map_Saw`, `Map_Elec`, `Map_ADoor`, `Map_Gird`,
+  `Map_Trap`, `Map_Spin`, `Map_Stomp`, `Map_FFloor`, `Map_ESon`,
+  `Map_ECha`, `Map_ESth`
+
+The legacy boss mapping helper file was removed.
+
+## Trace-scope notes
+
+- RRF-003: `src/test/resources/traces/s3k/aiz1_to_hcz_fullrun` has been
+  regenerated with Lua `6.25-s3k`, is no longer diagnostic-only, and passes the
+  focused release-blocking replay through the HCZ handoff. The closed frontiers
+  include duplicate placed-ring coordinates, S3K raw ring parsing/window
+  semantics, S3K odd floor-lip angle fallback, AIZ miniboss/title-card handoff,
+  AIZ2 bridge/capsule/camera timing, and S3K transition-mode replay
+  classification.
+- RRF-004 removed the committed trace-to-engine ride-state bootstrap. S2 SCZ/WFZ
+  may expose earlier native frontiers once the wider workspace compiles and
+  those ROM-backed traces can run.

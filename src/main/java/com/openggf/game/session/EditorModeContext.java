@@ -2,7 +2,12 @@ package com.openggf.game.session;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameMode;
+import com.openggf.game.GameStateManager;
 import com.openggf.level.LevelManager;
+import com.openggf.level.ParallaxManager;
+import com.openggf.level.WaterSystem;
+import com.openggf.physics.CollisionSystem;
+import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.managers.SpriteManager;
 
 import java.util.Objects;
@@ -14,13 +19,19 @@ public final class EditorModeContext implements ModeContext {
     private final Camera camera;
     private final SpriteManager spriteManager;
     private final LevelManager levelManager;
+    private final ParallaxManager parallaxManager;
+    private final WaterSystem waterSystem;
+    private final TerrainCollisionManager terrainCollisionManager;
+    private final CollisionSystem collisionSystem;
+    private final GameStateManager gameStateManager;
 
     public EditorModeContext(WorldSession worldSession, EditorCursorState cursor) {
         this(worldSession, cursor, null);
     }
 
     public EditorModeContext(WorldSession worldSession, EditorCursorState cursor, EditorPlaytestStash playtestStash) {
-        this(worldSession, cursor, playtestStash, null, null, null);
+        this(worldSession, cursor, playtestStash, null, null, null,
+                null, null, null, null, null);
     }
 
     EditorModeContext(WorldSession worldSession,
@@ -28,13 +39,23 @@ public final class EditorModeContext implements ModeContext {
                       EditorPlaytestStash playtestStash,
                       Camera camera,
                       SpriteManager spriteManager,
-                      LevelManager levelManager) {
+                      LevelManager levelManager,
+                      ParallaxManager parallaxManager,
+                      WaterSystem waterSystem,
+                      TerrainCollisionManager terrainCollisionManager,
+                      CollisionSystem collisionSystem,
+                      GameStateManager gameStateManager) {
         this.worldSession = Objects.requireNonNull(worldSession, "worldSession");
         this.cursor = Objects.requireNonNull(cursor, "cursor");
         this.playtestStash = playtestStash;
         this.camera = camera;
         this.spriteManager = spriteManager;
         this.levelManager = levelManager;
+        this.parallaxManager = parallaxManager;
+        this.waterSystem = waterSystem;
+        this.terrainCollisionManager = terrainCollisionManager;
+        this.collisionSystem = collisionSystem;
+        this.gameStateManager = gameStateManager;
     }
 
     public WorldSession getWorldSession() {
@@ -82,8 +103,26 @@ public final class EditorModeContext implements ModeContext {
 
     @Override
     public void destroy() {
+        if (levelManager != null) {
+            levelManager.resetGameplayState();
+        }
         if (spriteManager != null) {
             spriteManager.resetState();
+        }
+        if (collisionSystem != null) {
+            collisionSystem.resetState();
+        }
+        if (terrainCollisionManager != null) {
+            terrainCollisionManager.resetState();
+        }
+        if (parallaxManager != null) {
+            parallaxManager.resetState();
+        }
+        if (waterSystem != null) {
+            waterSystem.reset();
+        }
+        if (gameStateManager != null) {
+            gameStateManager.resetState();
         }
         if (camera != null) {
             camera.resetState();

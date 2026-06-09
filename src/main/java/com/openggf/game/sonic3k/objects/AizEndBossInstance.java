@@ -901,48 +901,29 @@ public class AizEndBossInstance extends AbstractBossInstance {
     // ===== Child spawning =====
 
     private void spawnShipChild() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
-            return;
-        }
-
-        shipChild = new AizEndBossShipChild(this);
-        objectManager.addDynamicObject(shipChild);
+        shipChild = spawnChild(() -> new AizEndBossShipChild(this));
         childComponents.add(shipChild);
     }
 
     private void spawnArmChildren() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) return;
-
         // Left arm (subtype 0): offset +$14, -4
-        leftArm = new AizEndBossArmChild(this, 0x14, -4, 0);
-        objectManager.addDynamicObject(leftArm);
+        leftArm = spawnChild(() -> new AizEndBossArmChild(this, 0x14, -4, 0));
         childComponents.add(leftArm);
 
         // Right arm (subtype 1): offset -$14, -4
-        rightArm = new AizEndBossArmChild(this, -0x14, -4, 1);
-        objectManager.addDynamicObject(rightArm);
+        rightArm = spawnChild(() -> new AizEndBossArmChild(this, -0x14, -4, 1));
         childComponents.add(rightArm);
     }
 
     private void spawnFlameColumnChild() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
-            return;
-        }
-        objectManager.addDynamicObject(new AizEndBossFlameColumnChild(this));
+        spawnChild(() -> new AizEndBossFlameColumnChild(this));
     }
 
     private void spawnPendingExplosions() {
         if (defeatExplosionController == null) return;
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) return;
 
         for (var exp : defeatExplosionController.drainPendingExplosions()) {
-            S3kBossExplosionChild explosion = new S3kBossExplosionChild(
-                    exp.x(), exp.y());
-            objectManager.addDynamicObject(explosion);
+            spawnChild(() -> new S3kBossExplosionChild(exp.x(), exp.y()));
             if (exp.playSfx()) {
                 services().playSfx(Sonic3kSfx.EXPLODE.id);
             }

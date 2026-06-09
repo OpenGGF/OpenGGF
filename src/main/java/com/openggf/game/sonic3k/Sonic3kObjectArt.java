@@ -142,19 +142,7 @@ public class Sonic3kObjectArt {
      * Y offsets: -24, -8, +8; X offset: -8
      */
     public ObjectSpriteSheet buildAiz1TreeSheet(int artTileBase) {
-        // Mapping pieces from Map - Act 1 Tree.asm
-        // 3 pieces, each 2x2 tiles (16x16px), all tile index 0x38, palette 0
-        List<SpriteMappingPiece> pieces = List.of(
-                new SpriteMappingPiece(-8, -24, 2, 2, 0x38, false, false, 0),
-                new SpriteMappingPiece(-8, -8, 2, 2, 0x38, false, false, 0),
-                new SpriteMappingPiece(-8, 8, 2, 2, 0x38, false, false, 0)
-        );
-        SpriteMappingFrame frame = new SpriteMappingFrame(pieces);
-        List<SpriteMappingFrame> frames = List.of(frame);
-
-        // Tile range: 0x38 to 0x38+3 = 0x3B (each 2x2 piece uses 4 tiles)
-        // minTile = 0x38, maxTileExclusive = 0x3C
-        return buildLevelArtSheet(artTileBase, 2, frames, 0x38, 0x3C);
+        return buildLevelArtSheetFromRom(Sonic3kConstants.MAP_AIZ1_TREE_ADDR, artTileBase, 2);
     }
 
     /**
@@ -168,17 +156,7 @@ public class Sonic3kObjectArt {
      * Piece 2: 3x3 (24x24px), tile 6, Y=-12, X=+8
      */
     public ObjectSpriteSheet buildAiz1ZiplinePegSheet(int artTileBase) {
-        // Mapping pieces from Map - Act 1 Zipline Peg.asm
-        List<SpriteMappingPiece> pieces = List.of(
-                new SpriteMappingPiece(-32, -12, 4, 1, 0, false, false, 0),
-                new SpriteMappingPiece(-8, -4, 2, 1, 4, false, false, 0),
-                new SpriteMappingPiece(8, -12, 3, 3, 6, false, false, 0)
-        );
-        SpriteMappingFrame frame = new SpriteMappingFrame(pieces);
-        List<SpriteMappingFrame> frames = List.of(frame);
-
-        // Tile range: 0 to 6 + (3*3) - 1 = 14 → maxTileExclusive = 15
-        return buildLevelArtSheet(artTileBase, 2, frames, 0, 15);
+        return buildLevelArtSheetFromRom(Sonic3kConstants.MAP_AIZ1_ZIPLINE_PEG_ADDR, artTileBase, 2);
     }
 
     /**
@@ -218,32 +196,27 @@ public class Sonic3kObjectArt {
      * tiles $0494-$049B instead of $049C-$04A3. Sheet covers both ranges (16 tiles).
      */
     public ObjectSpriteSheet buildSpikesSheet(int artTileBase) {
-        // Sheet covers tiles 0-15 (sideways=0-7, upright=8-15) relative to artTileBase
-        List<SpriteMappingFrame> frames = new ArrayList<>(8);
-
-        // Frames 0-3: upright spikes (2w×4h = 16×32px pieces)
-        // piece tile index = 8 (upright art at base + 8)
-        for (int count = 2; count <= 8; count += 2) {
-            List<SpriteMappingPiece> pieces = new ArrayList<>(count);
-            int startX = -(count / 2) * 16;
-            for (int i = 0; i < count; i++) {
-                pieces.add(new SpriteMappingPiece(startX + i * 16, -16, 2, 4, 8, false, false, 0));
+        if (reader == null) return null;
+        List<SpriteMappingFrame> romFrames = S3kSpriteDataLoader.loadMappingFrames(
+                reader, Sonic3kConstants.MAP_SPIKES_ADDR, 8);
+        List<SpriteMappingFrame> frames = new ArrayList<>(romFrames.size());
+        for (int i = 0; i < romFrames.size(); i++) {
+            int tileDelta = i < 4 ? 8 : 0;
+            List<SpriteMappingPiece> pieces = new ArrayList<>(romFrames.get(i).pieces().size());
+            for (SpriteMappingPiece piece : romFrames.get(i).pieces()) {
+                pieces.add(new SpriteMappingPiece(
+                        piece.xOffset(),
+                        piece.yOffset(),
+                        piece.widthTiles(),
+                        piece.heightTiles(),
+                        piece.tileIndex() + tileDelta,
+                        piece.hFlip(),
+                        piece.vFlip(),
+                        piece.paletteIndex(),
+                        piece.priority()));
             }
             frames.add(new SpriteMappingFrame(pieces));
         }
-
-        // Frames 4-7: sideways spikes (4w×2h = 32×16px pieces, hflip=true)
-        // piece tile index = 0 (sideways art at base)
-        for (int count = 2; count <= 8; count += 2) {
-            List<SpriteMappingPiece> pieces = new ArrayList<>(count);
-            int startY = -(count / 2) * 16;
-            for (int i = 0; i < count; i++) {
-                pieces.add(new SpriteMappingPiece(-16, startY + i * 16, 4, 2, 0, true, false, 0));
-            }
-            frames.add(new SpriteMappingFrame(pieces));
-        }
-
-        // 16 tiles: sideways art (0-7) + upright art (8-15)
         return buildLevelArtSheet(artTileBase, 0, frames, 0, 16);
     }
 
@@ -369,34 +342,7 @@ public class Sonic3kObjectArt {
      * Tile range: 0x64 to 0x9B (56 patterns from level art).
      */
     public ObjectSpriteSheet buildAizForegroundPlantSheet(int artTileBase) {
-        // Frame 0: with flowers (8 pieces)
-        List<SpriteMappingPiece> frame0Pieces = List.of(
-                new SpriteMappingPiece(-32, -48, 4, 3, 0x64, false, false, 0),
-                new SpriteMappingPiece(-32, -24, 4, 4, 0x70, false, false, 0),
-                new SpriteMappingPiece(-24, 8, 3, 2, 0x80, false, false, 0),
-                new SpriteMappingPiece(-8, 24, 1, 3, 0x86, false, false, 0),
-                new SpriteMappingPiece(16, -24, 2, 1, 0x89, false, false, 0),
-                new SpriteMappingPiece(0, -16, 4, 2, 0x8B, false, false, 0),
-                new SpriteMappingPiece(0, 0, 3, 2, 0x93, false, false, 0),
-                new SpriteMappingPiece(0, 16, 1, 3, 0x99, false, false, 0));
-
-        // Frame 1: without flowers (8 pieces)
-        List<SpriteMappingPiece> frame1Pieces = List.of(
-                new SpriteMappingPiece(0, -60, 4, 3, 0x64, true, false, 0),
-                new SpriteMappingPiece(0, -36, 4, 4, 0x70, true, false, 0),
-                new SpriteMappingPiece(0, -4, 3, 2, 0x80, true, false, 0),
-                new SpriteMappingPiece(0, 12, 1, 3, 0x86, true, false, 0),
-                new SpriteMappingPiece(-32, -36, 4, 3, 0x64, false, false, 0),
-                new SpriteMappingPiece(-32, -12, 4, 4, 0x70, false, false, 0),
-                new SpriteMappingPiece(-24, 20, 3, 2, 0x80, false, false, 0),
-                new SpriteMappingPiece(-8, 36, 1, 3, 0x86, false, false, 0));
-
-        List<SpriteMappingFrame> frames = List.of(
-                new SpriteMappingFrame(frame0Pieces),
-                new SpriteMappingFrame(frame1Pieces));
-
-        // Tile range: 0x64 to 0x9C (exclusive) = 56 patterns
-        return buildLevelArtSheet(artTileBase, 2, frames, 0x64, 0x9C);
+        return buildLevelArtSheetFromRom(Sonic3kConstants.MAP_AIZ_FOREGROUND_PLANT_ADDR, artTileBase, 2);
     }
 
     /**

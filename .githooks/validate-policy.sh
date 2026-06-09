@@ -5,6 +5,7 @@ set -eu
 GITHUB_FILE_SIZE_LIMIT_BYTES=100000000
 TRACE_COMPRESSION_THRESHOLD_BYTES=1048576
 RELEASE_TRAILER_CUTOVER_BASE=677447024a08db9e25f3461588d661c23ba26848
+ROM_LIKE_DENYLIST_EXTENSIONS=".gen .smd .bin .sms .gg .32x"
 
 die() {
     echo "policy: $*" >&2
@@ -51,6 +52,18 @@ staged_blob_size() {
 
 commit_blob_size() {
     git cat-file -s "$1:$2" 2>/dev/null || true
+}
+
+is_rom_like_path() {
+    lower=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+    for extension in $ROM_LIKE_DENYLIST_EXTENSIONS; do
+        case "$lower" in
+            *"$extension")
+                return 0
+                ;;
+        esac
+    done
+    return 1
 }
 
 effective_base_for_ci_pr() {
@@ -175,6 +188,9 @@ validate_file_size_policy() {
     IFS='
 '
     for path in $files; do
+        if is_rom_like_path "$path"; then
+            append_error "\`$path\` looks like a ROM/binary asset. Keep user-supplied ROMs and ROM-derived binary assets untracked."
+        fi
         if [ "$mode" = "commit" ]; then
             size=$(commit_blob_size "$commit" "$path")
         else

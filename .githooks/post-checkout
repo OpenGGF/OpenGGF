@@ -2,7 +2,7 @@
 # post-checkout hook: auto-link ROMs, config, and disassemblies in git worktrees
 #
 # When `git worktree add` creates a new worktree, gitignored files (ROMs,
-# config.json) and submodule directories (disassemblies) are missing. This hook
+# config.yaml) and submodule directories (disassemblies) are missing. This hook
 # detects worktree context and creates symlinks back to the main
 # working tree so everything just works.
 #
@@ -57,7 +57,7 @@ for rom in "$MAIN_TREE"/*.gen; do
 done
 
 # --- Config (gitignored) ---
-link_file "config.json"
+link_file "config.yaml"
 
 # --- Disassemblies (submodule gitlinks without .gitmodules) ---
 link_dir "docs/s1disasm"

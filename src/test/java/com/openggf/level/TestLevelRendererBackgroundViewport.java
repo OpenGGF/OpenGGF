@@ -41,4 +41,51 @@ class TestLevelRendererBackgroundViewport {
         assertFalse(normalizedSource.contains("float fgWorldOffsetY = camera.getYWithShake();"),
                 "Using camera Y for the mask shifts low-priority sprite occlusion away from visible foreground tiles.");
     }
+
+    @Test
+    void parallaxPublishesRuntimeStateBeforeAnimatedTilesReadIt() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelRenderer.java"));
+        String method = methodBody(source.replace("\r\n", "\n"), "public void drawWithRenderOptions(");
+
+        int parallaxUpdate = method.indexOf("lm.parallaxManager.update(");
+        int animatedPatternUpdate = method.indexOf("lm.animatedPatternManager.update();");
+
+        assertTrue(parallaxUpdate >= 0, "drawWithRenderOptions must update parallax each frame.");
+        assertTrue(animatedPatternUpdate >= 0, "drawWithRenderOptions must update animated patterns each frame.");
+        assertTrue(parallaxUpdate < animatedPatternUpdate,
+                "Parallax/deform runtime state must be published before S3K animated tiles read it.");
+    }
+
+    @Test
+    void backgroundTilemapCacheTracksRuntimeFullWidthRequirement() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelTilemapManager.java"));
+
+        assertTrue(source.contains("lastRequiresFullWidthBgTilemap"),
+                "BG tilemap cache must remember the runtime full-width requirement used for the last build.");
+        assertTrue(source.contains("if (lastRequiresFullWidthBgTilemap != null")
+                        && source.contains("lastRequiresFullWidthBgTilemap != requiresFullWidthBgTilemap"),
+                "ensureBackgroundTilemapData must dirty the BG cache when runtime full-width mode changes.");
+        assertTrue(source.contains("lastRequiresFullWidthBgTilemap = requiresFullWidthBgTilemap"),
+                "The last built full-width mode must be recorded after a BG rebuild.");
+    }
+
+    private static String methodBody(String text, String signature) {
+        int start = text.indexOf(signature);
+        assertTrue(start >= 0, "Missing method signature: " + signature);
+        int brace = text.indexOf('{', start);
+        assertTrue(brace >= 0, "Missing method body: " + signature);
+        int depth = 0;
+        for (int i = brace; i < text.length(); i++) {
+            char ch = text.charAt(i);
+            if (ch == '{') {
+                depth++;
+            } else if (ch == '}') {
+                depth--;
+                if (depth == 0) {
+                    return text.substring(brace + 1, i);
+                }
+            }
+        }
+        throw new AssertionError("Unclosed method body: " + signature);
+    }
 }

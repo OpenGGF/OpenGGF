@@ -257,6 +257,110 @@ jobs:
           tar -czvf dist/OpenGGF-linux.tar.gz -C dist OpenGGF
           rm -rf dist/OpenGGF
 
+      - name: Smoke validate packaged artifact
+        shell: bash
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          if command -v python3 >/dev/null 2>&1; then
+            PYTHON=python3
+          else
+            PYTHON=python
+          fi
+          "$PYTHON" - <<'PY'
+          import re
+          import stat
+          import sys
+          import tarfile
+          import zipfile
+          from pathlib import Path
+          import os
+
+          platform = os.environ["PLATFORM"]
+
+          def fail(message):
+              print(f"::error ::{message}", file=sys.stderr)
+              sys.exit(1)
+
+          pom = Path("pom.xml").read_text(encoding="utf-8")
+          match = re.search(r"<version>([^<]+)</version>", pom)
+          if not match:
+              fail("Could not read project version from pom.xml")
+          version = match.group(1)
+
+          jar = Path(f"target/OpenGGF-{version}-jar-with-dependencies.jar")
+          if not jar.is_file():
+              fail(f"Missing packaged JVM jar: {jar}")
+          with zipfile.ZipFile(jar) as archive:
+              try:
+                  manifest = archive.read("META-INF/MANIFEST.MF").decode("utf-8", errors="replace")
+              except KeyError:
+                  fail(f"{jar} is missing META-INF/MANIFEST.MF")
+          if "Main-Class: com.openggf.Engine" not in manifest:
+              fail(f"{jar} manifest does not bootstrap com.openggf.Engine")
+          stale_manifest_terms = ["jogl", "gluegen", "joal", "jocl"]
+          stale_terms = [term for term in stale_manifest_terms if term in manifest.lower()]
+          if stale_terms:
+              fail(f"{jar} manifest contains obsolete dependency metadata: {', '.join(stale_terms)}")
+
+          if platform == "windows":
+              archive_path = Path("dist/OpenGGF-windows.zip")
+              if not archive_path.is_file():
+                  fail(f"Missing Windows archive: {archive_path}")
+              with zipfile.ZipFile(archive_path) as archive:
+                  names = set(archive.namelist())
+              required = {"OpenGGF/OpenGGF.exe", "OpenGGF/config.yaml"}
+              missing = sorted(required - names)
+              if missing:
+                  fail(f"{archive_path} is missing required entries: {', '.join(missing)}")
+              if not any(name.startswith("OpenGGF/") and name.endswith(".dll") for name in names):
+                  fail(f"{archive_path} does not include packaged LWJGL .dll libraries")
+          elif platform == "macos":
+              archive_path = Path("dist/OpenGGF-macos.zip")
+              if not archive_path.is_file():
+                  fail(f"Missing macOS archive: {archive_path}")
+              with zipfile.ZipFile(archive_path) as archive:
+                  names = set(archive.namelist())
+                  required = {
+                      "OpenGGF.app/Contents/Info.plist",
+                      "OpenGGF.app/Contents/MacOS/OpenGGF",
+                      "OpenGGF.app/Contents/MacOS/OpenGGF.bin",
+                      "config.yaml",
+                  }
+                  missing = sorted(required - names)
+                  if missing:
+                      fail(f"{archive_path} is missing required entries: {', '.join(missing)}")
+                  info_plist = archive.read("OpenGGF.app/Contents/Info.plist").decode(
+                      "utf-8", errors="replace")
+                  for executable in ("OpenGGF.app/Contents/MacOS/OpenGGF",
+                                     "OpenGGF.app/Contents/MacOS/OpenGGF.bin"):
+                      mode = archive.getinfo(executable).external_attr >> 16
+                      if mode and (mode & stat.S_IXUSR) == 0:
+                          fail(f"{archive_path} entry is not executable: {executable}")
+              for key in ("CFBundleVersion", "CFBundleShortVersionString"):
+                  pattern = rf"<key>\s*{re.escape(key)}\s*</key>\s*<string>\s*{re.escape(version)}\s*</string>"
+                  if not re.search(pattern, info_plist, re.DOTALL):
+                      fail(f"{archive_path} {key} does not match Maven version {version}")
+          elif platform == "linux":
+              archive_path = Path("dist/OpenGGF-linux.tar.gz")
+              if not archive_path.is_file():
+                  fail(f"Missing Linux archive: {archive_path}")
+              with tarfile.open(archive_path, "r:gz") as archive:
+                  members = {member.name: member for member in archive.getmembers()}
+              required = {"OpenGGF/OpenGGF", "OpenGGF/config.yaml"}
+              missing = sorted(required - set(members))
+              if missing:
+                  fail(f"{archive_path} is missing required entries: {', '.join(missing)}")
+              if (members["OpenGGF/OpenGGF"].mode & stat.S_IXUSR) == 0:
+                  fail(f"{archive_path} OpenGGF/OpenGGF is not executable")
+              if not any(name.startswith("OpenGGF/") and name.endswith(".so") for name in members):
+                  fail(f"{archive_path} does not include packaged LWJGL .so libraries")
+          else:
+              fail(f"Unknown release platform: {platform}")
+
+          print(f"Smoke validated {platform} release artifact for version {version}")
+          PY
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:

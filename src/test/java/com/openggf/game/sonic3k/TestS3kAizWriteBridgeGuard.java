@@ -48,4 +48,37 @@ class TestS3kAizWriteBridgeGuard {
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
+
+    @Test
+    void aizBossChildrenShouldUseConstructionContextSpawning() throws IOException {
+        List<String> violations = new ArrayList<>();
+        assertNoRawChildSpawns(violations,
+                "src/main/java/com/openggf/game/sonic3k/objects/AizEndBossInstance.java",
+                "objectManager.addDynamicObject(shipChild)",
+                "objectManager.addDynamicObject(leftArm)",
+                "objectManager.addDynamicObject(rightArm)",
+                "objectManager.addDynamicObject(new AizEndBossFlameColumnChild",
+                "objectManager.addDynamicObject(explosion)");
+        assertNoRawChildSpawns(violations,
+                "src/main/java/com/openggf/game/sonic3k/objects/AizMinibossCutsceneInstance.java",
+                "objectManager.addDynamicObject(child)",
+                "objectManager.addDynamicObject(new S3kBossExplosionChild",
+                "objectManager.addDynamicObject(new AizMinibossDebrisChild");
+
+        if (!violations.isEmpty()) {
+            fail("AIZ boss child objects should be created through spawnChild suppliers so constructor services are set:\n  "
+                    + String.join("\n  ", violations));
+        }
+    }
+
+    private static void assertNoRawChildSpawns(List<String> violations,
+                                               String file,
+                                               String... forbiddenSnippets) throws IOException {
+        String content = Files.readString(Path.of(file));
+        for (String forbidden : forbiddenSnippets) {
+            if (content.contains(forbidden)) {
+                violations.add(file + " contains " + forbidden);
+            }
+        }
+    }
 }

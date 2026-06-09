@@ -3075,11 +3075,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// 28094-28109. Do not pre-clear push while the player is still braking
 		// from the opposite direction.
 		if (left && !right && sprite.getDirection() == Direction.RIGHT && gSpeed <= 0) {
+			boolean wasPushing = sprite.getPushing();
 			sprite.setPushing(false);
-			facingFlipForcesPushClearAfterGroundWall = !sprite.getAir() && !sprite.getRolling();
+			facingFlipForcesPushClearAfterGroundWall = wasPushing && !sprite.getAir() && !sprite.getRolling();
 		} else if (right && !left && sprite.getDirection() == Direction.LEFT && gSpeed >= 0) {
+			boolean wasPushing = sprite.getPushing();
 			sprite.setPushing(false);
-			facingFlipForcesPushClearAfterGroundWall = !sprite.getAir() && !sprite.getRolling();
+			facingFlipForcesPushClearAfterGroundWall = wasPushing && !sprite.getAir() && !sprite.getRolling();
 		}
 	}
 

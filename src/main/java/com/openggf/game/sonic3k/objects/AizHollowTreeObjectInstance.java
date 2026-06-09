@@ -381,7 +381,7 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
 
             // Disasm parity:
             // move.w #$480,d0 / sub.w (Player_1+y_pos).w,d0 / lsr.w #3,d0 / addq.w #3,d0
-            int target = (0x480 - (player.getY() & 0xFFFF)) & 0xFFFF;
+            int target = (0x480 - (player.getCentreY() & 0xFFFF)) & 0xFFFF;
             target = (target >>> 3) + 3;
             if (Integer.compareUnsigned(target, eventsFg4) < 0 && (timer2EWord & 1) == 0) {
                 return;

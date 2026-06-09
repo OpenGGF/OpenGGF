@@ -12,6 +12,10 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -83,9 +87,42 @@ class TestAizHollowTreeObjectInstance {
                 "Hollow-tree fall-off should clear bit-6 wall-probe suppression");
     }
 
+    @Test
+    void treeRevealControlUsesPlayerCentreYForRomYPos() throws Exception {
+        AbstractPlayableSprite player = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_AIZ, 0)
+                .build()
+                .sprite();
+        player.setCentreY((short) 0x0456);
+
+        Object revealControl = newTreeRevealControl();
+        setTimer2EWord(revealControl, 1);
+        AizHollowTreeObjectInstance.setTreeRevealCounter(9);
+
+        ((com.openggf.level.objects.AbstractObjectInstance) revealControl).update(0, player);
+
+        assertEquals(9, AizHollowTreeObjectInstance.getTreeRevealCounter(),
+                "Obj_AIZ1TreeRevealControl compares against ROM Player_1+y_pos, "
+                        + "which maps to player centre Y, not top-left sprite bounds");
+    }
+
     private static void clearFixtureIntroControl(AbstractPlayableSprite player) {
         ObjectControlState.none().applyTo(player);
         player.setControlLocked(false);
         player.setObjectMappingFrameControl(false);
+    }
+
+    private static Object newTreeRevealControl() throws Exception {
+        Class<?> controlClass = Class.forName(AizHollowTreeObjectInstance.class.getName()
+                + "$AizTreeRevealControlObjectInstance");
+        Constructor<?> constructor = controlClass.getDeclaredConstructor(int.class, int.class);
+        constructor.setAccessible(true);
+        return constructor.newInstance(0x2D00, 0x03CC);
+    }
+
+    private static void setTimer2EWord(Object revealControl, int value) throws Exception {
+        Field field = revealControl.getClass().getDeclaredField("timer2EWord");
+        field.setAccessible(true);
+        field.setInt(revealControl, value);
     }
 }

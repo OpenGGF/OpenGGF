@@ -49,6 +49,7 @@ public class LevelTilemapManager {
     private int backgroundTilemapWidthTiles;
     private int backgroundTilemapHeightTiles;
     private boolean backgroundTilemapDirty = true;
+    private Boolean lastRequiresFullWidthBgTilemap;
     private int backgroundVdpWrapHeightTiles = 0; // 0 = disabled
     // X offset (in pixels, 512-aligned) for BG tilemap building.
     // Wide BG maps (> 512px) need tiles from the correct region, not always from position 0.
@@ -140,7 +141,13 @@ public class LevelTilemapManager {
                                             int currentZone,
                                             ParallaxManager parallaxManager,
                                             boolean verticalWrapEnabled) {
+        boolean requiresFullWidthBgTilemap = zoneRuntimeRequiresFullWidthBgTilemap();
+        if (lastRequiresFullWidthBgTilemap != null
+                && lastRequiresFullWidthBgTilemap != requiresFullWidthBgTilemap) {
+            backgroundTilemapDirty = true;
+        }
         if (!backgroundTilemapDirty && backgroundTilemapData != null && patternLookupData != null) {
+            lastRequiresFullWidthBgTilemap = requiresFullWidthBgTilemap;
             // Tilemap data already up to date — but still push VDP wrap height
             // to the renderer in case it was null during the initial build.
             TilemapGpuRenderer renderer = graphicsManager.getTilemapGpuRenderer();
@@ -156,6 +163,7 @@ public class LevelTilemapManager {
 
         buildBackgroundTilemapData(blockLookup, zoneFeatureProvider, currentZone,
                 parallaxManager, verticalWrapEnabled);
+        lastRequiresFullWidthBgTilemap = requiresFullWidthBgTilemap;
         backgroundTilemapDirty = false;
 
         ensurePatternLookupData();
@@ -816,6 +824,7 @@ public class LevelTilemapManager {
         backgroundTilemapData = prebuiltBgTilemap;
         backgroundTilemapWidthTiles = prebuiltBgWidth;
         backgroundTilemapHeightTiles = prebuiltBgHeight;
+        lastRequiresFullWidthBgTilemap = zoneRuntimeRequiresFullWidthBgTilemap();
         backgroundTilemapDirty = false;
 
         patternLookupDirty = true;
@@ -857,6 +866,7 @@ public class LevelTilemapManager {
         prebuiltFgTilemap = null;
         prebuiltBgTilemap = null;
         backgroundTilemapDirty = true;
+        lastRequiresFullWidthBgTilemap = null;
         bgTilemapBaseX = 0;
         currentBgPeriodWidth = VDP_BG_PLANE_WIDTH_PX;
         foregroundTilemapDirty = true;

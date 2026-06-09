@@ -532,13 +532,6 @@ public final class LevelRenderer {
         // instead of issuing redundant glGetIntegerv pipeline syncs.
         cacheViewportForFrame();
 
-        // frameCounter is now incremented in update() — see comment there.
-        if (lm.animatedPatternManager != null) {
-            lm.animatedPatternManager.update();
-        }
-        if (lm.animatedPaletteManager != null && lm.animatedPaletteManager != lm.animatedPatternManager) {
-            lm.animatedPaletteManager.update();
-        }
         Camera camera = lm.camera;
         int bgScrollY = (int) (camera.getY() * 0.1f);
         if (lm.game != null) {
@@ -548,6 +541,15 @@ public final class LevelRenderer {
         }
 
         lm.parallaxManager.update(lm.currentZone, lm.currentAct, camera, lm.frameCounter, bgScrollY, lm.level);
+        // frameCounter is now incremented in update() — see comment there.
+        // Run animated tile/palette updates after parallax publishes runtime
+        // deform state; S3K CNZ/MHZ animated tile phases read that state.
+        if (lm.animatedPatternManager != null) {
+            lm.animatedPatternManager.update();
+        }
+        if (lm.animatedPaletteManager != null && lm.animatedPaletteManager != lm.animatedPatternManager) {
+            lm.animatedPaletteManager.update();
+        }
         resolveAdvancedRenderFrameState(lm.frameCounter);
 
         // Propagate shake offsets from parallax manager to camera.

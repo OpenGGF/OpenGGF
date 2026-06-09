@@ -224,6 +224,13 @@ behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Release review remediation branch (2026-06-09).** Merged
+  `bugfix/ai-release-review-fixes`, closing the temporary release-review issue
+  tracker. The branch tightens S3K trace replay invariants, rendering/cache
+  ordering, release package validation, ROM-like asset policy, editor teardown,
+  AIZ boss child lifecycle, and S3K ROM-backed object mappings, with focused
+  verification over the affected trace, render, tooling, editor, object, and
+  art guard suites.
 - **Release-readiness review fixes branch (2026-06-09).** Merged the deep
   architecture/code review remediation branch for the 0.6 prerelease line:
   trace release gates no longer allow missing S3K AIZ replay coverage, the

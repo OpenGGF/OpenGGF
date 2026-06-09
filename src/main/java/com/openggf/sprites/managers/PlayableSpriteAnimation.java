@@ -481,7 +481,9 @@ public class PlayableSpriteAnimation {
         } finally {
             sprite.setPushing(true);
         }
-        if (desiredWithoutPush == null || desiredWithoutPush == currentAnimId) {
+        if (desiredWithoutPush == null
+                || desiredWithoutPush == currentAnimId
+                || currentAnimId == profile.getPushAnimId()) {
             return;
         }
 

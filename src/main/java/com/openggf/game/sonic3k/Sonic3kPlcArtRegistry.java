@@ -133,7 +133,7 @@ public final class Sonic3kPlcArtRegistry {
     private static final List<LevelArtEntry> SHARED_LEVEL_ART = List.of(
             new LevelArtEntry(
                     Sonic3kObjectArtKeys.SPIKES,
-                    -1,
+                    Sonic3kConstants.MAP_SPIKES_ADDR,
                     Sonic3kConstants.ARTTILE_SPIKES_SPRINGS,
                     0,
                     "buildSpikesSheet"
@@ -1278,7 +1278,12 @@ public final class Sonic3kPlcArtRegistry {
 
         // Override shared spikes to FBZ tile address
         levelArt.removeIf(e -> e.key().equals(Sonic3kObjectArtKeys.SPIKES));
-        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SPIKES, -1, Sonic3kConstants.ARTTILE_FBZ_SPIKES, 0, "buildSpikesSheet"));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.SPIKES,
+                Sonic3kConstants.MAP_SPIKES_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_SPIKES,
+                0,
+                "buildSpikesSheet"));
 
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.FBZ_BLASTER,
@@ -2241,10 +2246,10 @@ public final class Sonic3kPlcArtRegistry {
         ));
         levelArt.add(new LevelArtEntry(
                 Sonic3kObjectArtKeys.AIZ_FOREGROUND_PLANT,
-                -1,
+                Sonic3kConstants.MAP_AIZ_FOREGROUND_PLANT_ADDR,
                 Sonic3kConstants.ARTTILE_AIZ_MISC1,
                 2,
-                "buildAizForegroundPlantSheet"
+                null
         ));
 
         // StillSprite groups: subtypes 0-5 (AIZ2 decorations)
@@ -2336,17 +2341,17 @@ public final class Sonic3kPlcArtRegistry {
         if (actIndex == 0) {
             levelArt.add(new LevelArtEntry(
                     Sonic3kObjectArtKeys.AIZ1_TREE,
-                    -1,
+                    Sonic3kConstants.MAP_AIZ1_TREE_ADDR,
                     1,
                     2,
-                    "buildAiz1TreeSheet"
+                    null
             ));
             levelArt.add(new LevelArtEntry(
                     Sonic3kObjectArtKeys.AIZ1_ZIPLINE_PEG,
-                    -1,
+                    Sonic3kConstants.MAP_AIZ1_ZIPLINE_PEG_ADDR,
                     Sonic3kConstants.ARTTILE_AIZ_SLIDE_ROPE,
                     2,
-                    "buildAiz1ZiplinePegSheet"
+                    null
             ));
             levelArt.add(new LevelArtEntry(
                     Sonic3kObjectArtKeys.AIZ1_ROCK,

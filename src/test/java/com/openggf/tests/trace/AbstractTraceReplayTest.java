@@ -428,6 +428,14 @@ public abstract class AbstractTraceReplayTest {
                     ? fixture.skipFrameFromRecording()
                     : fixture.stepFrameFromRecording();
 
+            if (!binder.validateInput(driveFrame, bk2Input)) {
+                fail(String.format(
+                    "Input alignment error at trace frame %d: " +
+                    "BK2 input=0x%04X, trace input=0x%04X. " +
+                    "Check bk2_frame_offset in metadata.json.",
+                    driveTraceIndex, bk2Input, driveFrame.input()));
+            }
+
             S3kCheckpointProbe probe = captureS3kProbe(driveFrame.frame(), fixture.sprite());
             TraceEvent.Checkpoint engineCheckpoint = detector.observe(probe);
 
@@ -443,10 +451,7 @@ public abstract class AbstractTraceReplayTest {
                 String secondaryCharacterLabel = meta.recordedSidekicks().isEmpty()
                         ? "sidekick"
                         : meta.recordedSidekicks().getFirst();
-                TraceFrame comparisonFrame =
-                        TraceReplayBootstrap.s3kFrameForRingDiagnosticComparison(
-                                trace, driveTraceIndex, driveFrame, engineDiag);
-                binder.compareFrame(comparisonFrame,
+                binder.compareFrame(driveFrame,
                         actualPrimary.x(), actualPrimary.y(),
                         actualPrimary.xSpeed(), actualPrimary.ySpeed(), actualPrimary.gSpeed(),
                         actualPrimary.angle(),
