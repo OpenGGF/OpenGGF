@@ -301,6 +301,8 @@ final class ObjectSolidContactController {
     void reset() {
         frameCounter = 0;
         ridingStates.clear();
+        inlineSupportedPlayers.clear();
+        forceAirOnStaleSupportLoss.clear();
         latestStandingSnapshots.clear();
         latestHeadroomSnapshots.clear();
         objectStandingBitSet.clear();

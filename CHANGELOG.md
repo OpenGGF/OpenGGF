@@ -95,6 +95,10 @@ All notable changes to the OpenGGF project are documented in this file.
   the shared test reset baseline clear the static `GroundSensor` level override,
   preventing trace/headless sessions from leaking stale level collision state.
 
+- **Solid-contact reset now clears transient support state:** object solid
+  contact teardown clears inline-support and stale-support-loss player sets,
+  matching the state already handled by rewind restore.
+
 - **Hash-warning saves can no longer be launched from data select:** save
   summaries now distinguish recoverable payloads from loadable slots, so hash
   mismatches remain visible/deletable for recovery while data-select launch and
