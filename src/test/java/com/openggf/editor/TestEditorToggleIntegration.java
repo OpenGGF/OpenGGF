@@ -438,15 +438,19 @@ class TestEditorToggleIntegration {
     }
 
     @Test
-    void parkedRuntimeSpriteRendering_doesNotRequireActiveGameServicesRuntime() {
+    void editorEntryTearsDownParkedRuntimeSpriteManager() {
         enableEditor();
         Engine engine = new Engine();
         GameplayModeContext gameplayMode = createGameplayMode(engine);
+        SpriteManager oldSpriteManager = gameplayMode.getSpriteManager();
 
         engine.enterEditorFromCurrentPlayer(new EditorPlaytestStash(100, 200, 0, 0, true, 0, 0), 100, 200);
 
         assertNull(SessionManager.getCurrentGameplayMode());
-        assertDoesNotThrow(() -> gameplayMode.getSpriteManager().drawLowPriority());
+        assertNull(gameplayMode.getSpriteManager(),
+                "editor entry should detach the old runtime sprite manager");
+        assertDoesNotThrow(oldSpriteManager::drawLowPriority,
+                "the cleared old sprite manager should remain safe if a stale reference is rendered");
     }
 
     // Removed: parkedRuntimeBackgroundTilemapBuild_doesNotRequireActiveGameServicesRuntime

@@ -70,19 +70,22 @@ class TestSpecialRenderEffectRegistry {
         assertSame(gameplayMode.getSpecialRenderEffectRegistry(), GameServices.specialRenderEffectRegistry());
         assertSame(gameplayMode.getSpecialRenderEffectRegistry(), GameServices.specialRenderEffectRegistryOrNull());
 
-        gameplayMode.getSpecialRenderEffectRegistry().register(new RecordingEffect(
+        SpecialRenderEffectRegistry registry = gameplayMode.getSpecialRenderEffectRegistry();
+        registry.register(new RecordingEffect(
                 "bg",
                 SpecialRenderEffectStage.AFTER_BACKGROUND,
                 new ArrayList<>(),
                 new ArrayList<>()));
-        assertFalse(gameplayMode.getSpecialRenderEffectRegistry().isEmpty());
+        assertFalse(registry.isEmpty());
 
         SessionManager.clear();
         // Post-migration: GameServices accessors throw only when the gameplay
-        // mode is gone — destroyCurrent leaves cleared managers attached.
+        // mode is gone. The destroyed context detaches cleared managers so stale
+        // runtime state is not exposed through direct getters either.
         assertNull(GameServices.specialRenderEffectRegistryOrNull());
         assertThrows(IllegalStateException.class, GameServices::specialRenderEffectRegistry);
-        assertTrue(gameplayMode.getSpecialRenderEffectRegistry().isEmpty());
+        assertTrue(registry.isEmpty());
+        assertNull(gameplayMode.getSpecialRenderEffectRegistry());
     }
 
     @Test
