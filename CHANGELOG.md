@@ -4,6 +4,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Optional rewind adapters now clear when absent:** gameplay contexts remove
+  stale PLC-art and pattern-animator adapters when a newly loaded zone does not
+  expose those optional snapshottables.
+
 - **Per-column VScroll shaders now honor widescreen widths:** parallax and
   tilemap shaders derive VScroll column sampling from the active viewport/render
   width instead of hardcoding the native 20-column table.

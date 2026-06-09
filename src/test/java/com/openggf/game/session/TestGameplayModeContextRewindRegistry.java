@@ -6,6 +6,7 @@ import com.openggf.game.BonusStageState;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.animation.AnimatedTileCachePolicy;
 import com.openggf.game.animation.AnimatedTileChannel;
 import com.openggf.game.animation.AnimatedTileChannelGraph;
@@ -31,10 +32,16 @@ import com.openggf.game.zone.NoOpZoneRuntimeState;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.graphics.FadeManager;
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
+import com.openggf.level.Pattern;
 import com.openggf.level.WaterSystem;
+import com.openggf.level.animation.AnimatedPatternManager;
+import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.CollisionSystem;
+import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.timer.TimerManager;
@@ -258,6 +265,30 @@ class TestGameplayModeContextRewindRegistry {
         assertEquals(5, mode.value);
     }
 
+    @Test
+    void nullPlcArtAdapterRemovesPreviouslyRegisteredOptionalProvider() {
+        GameplayModeContext ctx = buildAttachedContext();
+        ctx.registerPlcArtAdapter(new SnapObjectArtProvider("s2-plc-art"));
+        assertTrue(ctx.getRewindRegistry().capture().entries().containsKey("s2-plc-art"));
+
+        ctx.registerPlcArtAdapter(null);
+
+        assertFalse(ctx.getRewindRegistry().capture().entries().containsKey("s2-plc-art"),
+                "A zone without PLC art must not retain the previous zone's PLC rewind adapter");
+    }
+
+    @Test
+    void nullPatternAnimatorAdapterRemovesPreviouslyRegisteredOptionalAnimator() {
+        GameplayModeContext ctx = buildAttachedContext();
+        ctx.registerPatternAnimatorAdapter(new SnapPatternAnimator());
+        assertTrue(ctx.getRewindRegistry().capture().entries().containsKey("pattern-animator"));
+
+        ctx.registerPatternAnimatorAdapter(null);
+
+        assertFalse(ctx.getRewindRegistry().capture().entries().containsKey("pattern-animator"),
+                "A zone without an animated pattern manager must not retain the previous zone's animator adapter");
+    }
+
     private static void attachSharedRegistries(GameplayModeContext ctx) {
         ctx.attachSharedRegistries(
                 new ZoneRuntimeRegistry(),
@@ -361,6 +392,109 @@ class TestGameplayModeContextRewindRegistry {
         @Override
         public void restore(Integer snapshot) {
             value = snapshot;
+        }
+    }
+
+    private static final class SnapPatternAnimator
+            implements AnimatedPatternManager, RewindSnapshottable<Integer> {
+        @Override
+        public void update() {
+        }
+
+        @Override
+        public String key() {
+            return "pattern-animator";
+        }
+
+        @Override
+        public Integer capture() {
+            return 1;
+        }
+
+        @Override
+        public void restore(Integer snapshot) {
+        }
+    }
+
+    private static final class SnapObjectArtProvider
+            implements ObjectArtProvider, RewindSnapshottable<Integer> {
+        private final String key;
+
+        private SnapObjectArtProvider(String key) {
+            this.key = key;
+        }
+
+        @Override
+        public void loadArtForZone(int zoneIndex) {
+        }
+
+        @Override
+        public PatternSpriteRenderer getRenderer(String key) {
+            return null;
+        }
+
+        @Override
+        public ObjectSpriteSheet getSheet(String key) {
+            return null;
+        }
+
+        @Override
+        public SpriteAnimationSet getAnimations(String key) {
+            return null;
+        }
+
+        @Override
+        public int getZoneData(String key, int zoneIndex) {
+            return -1;
+        }
+
+        @Override
+        public Pattern[] getHudDigitPatterns() {
+            return null;
+        }
+
+        @Override
+        public Pattern[] getHudTextPatterns() {
+            return null;
+        }
+
+        @Override
+        public Pattern[] getHudLivesPatterns() {
+            return null;
+        }
+
+        @Override
+        public Pattern[] getHudLivesNumbers() {
+            return null;
+        }
+
+        @Override
+        public List<String> getRendererKeys() {
+            return List.of();
+        }
+
+        @Override
+        public int ensurePatternsCached(GraphicsManager graphicsManager, int baseIndex) {
+            return baseIndex;
+        }
+
+        @Override
+        public boolean isReady() {
+            return true;
+        }
+
+        @Override
+        public String key() {
+            return key;
+        }
+
+        @Override
+        public Integer capture() {
+            return 1;
+        }
+
+        @Override
+        public void restore(Integer snapshot) {
         }
     }
 
