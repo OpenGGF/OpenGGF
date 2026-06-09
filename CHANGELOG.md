@@ -4,6 +4,9 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Worktree setup now links the current YAML config:** the post-checkout hook
+  shares `config.yaml` into new worktrees instead of the legacy `config.json`.
+
 - **Branch policy now rejects ROM-like binary files anywhere in the tree:**
   git hooks and CI guards block tracked `.gen`, `.smd`, `.bin`, `.sms`, `.gg`,
   and `.32x` files, and `.gitignore` now ignores those extensions repo-wide.

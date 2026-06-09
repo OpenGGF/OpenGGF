@@ -525,6 +525,24 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void worktreePostCheckoutHookShouldLinkCurrentYamlConfig() throws Exception {
+        String hook = Files.readString(Path.of(".githooks/post-checkout"));
+        List<String> violations = new ArrayList<>();
+
+        if (!hook.contains("link_file \"config.yaml\"")) {
+            violations.add(".githooks/post-checkout does not link config.yaml into worktrees");
+        }
+        if (hook.contains("link_file \"config.json\"")) {
+            violations.add(".githooks/post-checkout still links legacy config.json");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("worktree resource linking must follow the current YAML config file:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
     void releaseWorkflowShouldSmokeValidatePackagedArtifactsBeforeUpload() throws Exception {
         String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
         List<String> violations = new ArrayList<>();
