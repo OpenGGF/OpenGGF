@@ -4,6 +4,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **LBZ miniboss now satisfies release guardrails:** its defeat explosion
+  controller is classified as derived rewind presentation state, and its
+  multi-region body/arm touch handling declares the standard provider profile.
+
 - **S3K runtime object mappings now read more frames from ROM:** shared spikes,
   AIZ tree, AIZ zipline peg, AIZ foreground plant, monitor, and explosion
   mappings now use ROM-parsed mapping frames instead of transcribed Java data.
