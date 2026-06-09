@@ -531,6 +531,55 @@ public class TestGameLoop {
     }
 
     @Test
+    void testExitDataSelectRestoresScreenWhenGameplayLaunchFailsAfterFade() throws Exception {
+        SessionManager.clear();
+        SessionManager.clear();
+
+        StubDataSelectProvider provider = new StubDataSelectProvider(new DataSelectAction(
+                DataSelectActionType.LOAD_SLOT, 2, 3, 1,
+                new SelectedTeam("tails", List.of())));
+        GameModule module = mock(GameModule.class);
+        when(module.getDataSelectProvider()).thenReturn(provider);
+        when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
+
+        GameModuleRegistry.setCurrent(new Sonic2GameModule());
+        SessionManager.openGameplaySession(module);
+        TestEnvironment.activeGameplayMode();
+
+        AtomicReference<DataSelectAction> handled = new AtomicReference<>();
+        gameLoop.setDataSelectActionHandler(action -> {
+            handled.set(action);
+            gameLoop.setGameMode(GameMode.LEVEL);
+            throw new RuntimeException("save loader failed");
+        });
+
+        FadeManager fadeManager = mock(FadeManager.class);
+        setPrivateField(gameLoop, "fadeManager", fadeManager);
+        setPrivateField(gameLoop, "currentGameMode", GameMode.DATA_SELECT);
+
+        AtomicReference<Runnable> fadeCallback = new AtomicReference<>();
+        doAnswer(invocation -> {
+            fadeCallback.set(invocation.getArgument(0));
+            return null;
+        }).when(fadeManager).startFadeToBlack(any());
+
+        invokePrivateMethod(gameLoop, "exitDataSelect");
+
+        assertNotNull(fadeCallback.get(), "gameplay launch should still wait for fade completion");
+        assertDoesNotThrow(() -> fadeCallback.get().run(),
+                "launch failures should be handled inside the fade callback");
+
+        assertNotNull(handled.get());
+        assertEquals(DataSelectActionType.LOAD_SLOT, handled.get().type());
+        assertEquals(GameMode.DATA_SELECT, gameLoop.getCurrentGameMode(),
+                "failed launch should restore the Data Select mode even after partial gameplay setup");
+        assertEquals(com.openggf.game.DataSelectProvider.State.ACTIVE, provider.getState(),
+                "Data Select should remain active instead of resetting inactive on launch failure");
+        assertEquals("Unable to load selected save.", provider.launchErrorMessage().orElseThrow());
+        verify(fadeManager).startFadeFromBlack(isNull());
+    }
+
+    @Test
     void testExitDataSelectDoesNotResetWhileFadeAlreadyActive() throws Exception {
         SessionManager.clear();
         SessionManager.clear();

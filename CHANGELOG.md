@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Data Select launch failures now return to the save screen:** failed save
+  restore or level launch work inside the fade-complete callback is caught,
+  logged, and routed back to Data Select with a recorded launch error instead
+  of escaping the callback and killing the app.
+
 - **Unrecognized ROMs now fail fast:** corrupt or unsupported ROMs stop
   startup with a clear "ROM not recognized or corrupt" error instead of
   silently falling back to the Sonic 2 module and failing later.

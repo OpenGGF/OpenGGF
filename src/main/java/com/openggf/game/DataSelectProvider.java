@@ -38,6 +38,22 @@ public interface DataSelectProvider {
     /** Reset all state (called when leaving the data select screen). */
     void reset();
 
+    /**
+     * Shows a launch failure while keeping the data select screen active.
+     *
+     * <p>Providers that have a native error presentation can render the message;
+     * providers that only track menu state should at least expose it through
+     * {@link #launchErrorMessage()} so callers and tests can confirm recovery.
+     */
+    default void showLaunchError(String message) {
+        // default: no provider-local error presentation
+    }
+
+    /** Last data-select launch error, when the provider records one. */
+    default java.util.Optional<String> launchErrorMessage() {
+        return java.util.Optional.empty();
+    }
+
     /** Returns the current lifecycle state. */
     State getState();
 

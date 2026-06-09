@@ -2899,10 +2899,14 @@ public class GameLoop {
             com.openggf.game.dataselect.DataSelectAction pendingAction = action;
             audioManager.fadeOutMusic();
             resolveFadeManager().startFadeToBlack(() -> {
-                if (dataSelect != null) {
-                    dataSelect.reset();
+                try {
+                    dataSelectActionHandler.accept(pendingAction);
+                    if (dataSelect != null) {
+                        dataSelect.reset();
+                    }
+                } catch (RuntimeException e) {
+                    restoreDataSelectAfterLaunchFailure(dataSelect, pendingAction, e);
                 }
-                dataSelectActionHandler.accept(pendingAction);
                 resolveFadeManager().startFadeFromBlack(null);
             });
             return;
@@ -2911,6 +2915,20 @@ public class GameLoop {
             dataSelect.reset();
         }
         dataSelectActionHandler.accept(action);
+    }
+
+    private void restoreDataSelectAfterLaunchFailure(
+            DataSelectProvider dataSelect,
+            com.openggf.game.dataselect.DataSelectAction action,
+            RuntimeException failure) {
+        LOGGER.warning("Data Select launch failed for action " + action.type()
+                + " slot " + action.slot() + ": " + failure.getMessage());
+        if (currentGameMode != GameMode.DATA_SELECT) {
+            setGameMode(GameMode.DATA_SELECT);
+        }
+        if (dataSelect != null) {
+            dataSelect.showLaunchError("Unable to load selected save.");
+        }
     }
 
     private boolean isDataSelectGameplayAction(com.openggf.game.dataselect.DataSelectActionType type) {

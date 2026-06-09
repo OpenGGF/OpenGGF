@@ -60,6 +60,16 @@ public final class DataSelectPresentationProvider extends AbstractDataSelectProv
     }
 
     @Override
+    public void showLaunchError(String message) {
+        requireDelegate().showLaunchError(message);
+    }
+
+    @Override
+    public java.util.Optional<String> launchErrorMessage() {
+        return requireDelegate().launchErrorMessage();
+    }
+
+    @Override
     public State getState() {
         return requireDelegate().getState();
     }
