@@ -390,7 +390,7 @@ public class TestGameLoop {
 
         setPrivateField(gameLoop, "currentGameMode", GameMode.TITLE_CARD);
         setPrivateField(gameLoop, "postTitleCardDestination",
-                enumConstant(GameLoop.class, "PostTitleCardDestination", "BONUS_STAGE"));
+                Enum.valueOf(PostTitleCardDestination.class, "BONUS_STAGE"));
         setPrivateField(gameLoop, "deferredBonusProvider", provider);
         setPrivateField(gameLoop, "deferredBonusType", BonusStageType.SLOT_MACHINE);
         setPrivateField(gameLoop, "deferredBonusState", null);

@@ -339,11 +339,12 @@ class TestRewindParityAgainstTrace {
         if (la == null) { failures.add("[level] missing from snapA"); return; }
         if (lb == null) { failures.add("[level] missing from snapB"); return; }
 
-        // After restore, bumpEpoch() increments the epoch once, so snapB's epoch
-        // must be exactly snapA's epoch + 1.
-        long expectedEpochB = la.epochAtCapture() + 1;
+        // Capture establishes a COW boundary and restore establishes a fresh
+        // post-restore boundary. snapA already includes the first capture bump;
+        // snapB is therefore exactly two epochs later after restore + recapture.
+        long expectedEpochB = la.epochAtCapture() + 2;
         if (lb.epochAtCapture() != expectedEpochB) {
-            failures.add("[level] epochAtCapture: expected A+1=" + expectedEpochB
+            failures.add("[level] epochAtCapture: expected A+2=" + expectedEpochB
                     + " but got " + lb.epochAtCapture()
                     + " (A=" + la.epochAtCapture() + ")");
         }
