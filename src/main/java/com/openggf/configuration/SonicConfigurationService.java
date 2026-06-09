@@ -9,7 +9,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.OptionalInt;
@@ -311,9 +314,30 @@ public class SonicConfigurationService {
 		File target = resolveConfigFile();
 		try {
 			String yaml = new ConfigYamlWriter().write(config);
-			Files.writeString(target.toPath(), yaml, StandardCharsets.UTF_8);
+			writeStringAtomically(target.toPath(), yaml);
 		} catch (IOException e) {
 			LOGGER.log(Level.WARNING, "Failed to save config.yaml", e);
+		}
+	}
+
+	private static void writeStringAtomically(Path target, String content) throws IOException {
+		Path absoluteTarget = target.toAbsolutePath();
+		Path parent = absoluteTarget.getParent();
+		if (parent != null) {
+			Files.createDirectories(parent);
+		}
+		Path temp = Files.createTempFile(parent, absoluteTarget.getFileName() + ".", ".tmp");
+		try {
+			Files.writeString(temp, content, StandardCharsets.UTF_8);
+			try {
+				Files.move(temp, absoluteTarget,
+						StandardCopyOption.ATOMIC_MOVE,
+						StandardCopyOption.REPLACE_EXISTING);
+			} catch (AtomicMoveNotSupportedException e) {
+				Files.move(temp, absoluteTarget, StandardCopyOption.REPLACE_EXISTING);
+			}
+		} finally {
+			Files.deleteIfExists(temp);
 		}
 	}
 

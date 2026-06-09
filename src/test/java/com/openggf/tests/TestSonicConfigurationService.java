@@ -61,6 +61,18 @@ public class TestSonicConfigurationService {
     }
 
     @Test
+    public void saveConfig_usesTempFileAndAtomicMove() throws IOException {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/configuration/SonicConfigurationService.java"));
+
+        assertTrue(source.contains("Files.createTempFile"),
+                "saveConfig must write config.yaml through a sibling temp file");
+        assertTrue(source.contains("StandardCopyOption.ATOMIC_MOVE"),
+                "saveConfig must publish config.yaml with an atomic move");
+        assertFalse(source.contains("Files.writeString(target.toPath()"),
+                "saveConfig must not write config.yaml directly");
+    }
+
+    @Test
     public void testGetters() {
         SonicConfigurationService svc = SonicConfigurationService.createStandalone();
         svc.resetToDefaults();

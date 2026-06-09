@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Configuration saves now publish atomically:** `config.yaml` writes now go
+  through a sibling temporary file and atomic move before replacing the live
+  user configuration, reducing the risk of interrupted writes leaving a
+  truncated config.
+
 - **Hash-warning saves can no longer be launched from data select:** save
   summaries now distinguish recoverable payloads from loadable slots, so hash
   mismatches remain visible/deletable for recovery while data-select launch and
