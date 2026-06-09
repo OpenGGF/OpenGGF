@@ -49,6 +49,37 @@ public class TestPlayableSpriteAnimation {
     }
 
     @Test
+    public void s2IdleToWalkAnimationChangeClearsGroundPush() {
+        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_2);
+        sprite.setAnimationId(5);
+        sprite.setMovementInputActive(true);
+        sprite.setPushing(true);
+
+        sprite.getAnimationManager().update(0);
+
+        assertFalse(sprite.getPushing(),
+                "S2 Animate_Sonic/Tails clears Status_Push when anim changes from idle to walk");
+        assertEquals(0, sprite.getAnimationId(),
+                "After the push clear, animation resolution should choose walk instead of push");
+    }
+
+    @Test
+    public void s3kRunToWalkAnimationChangeClearsGroundPush() {
+        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
+        sprite.setAnimationId(1);
+        sprite.setMovementInputActive(true);
+        sprite.setPushing(true);
+        sprite.setGSpeed((short) 0x0200);
+
+        sprite.getAnimationManager().update(0);
+
+        assertFalse(sprite.getPushing(),
+                "S3K clears Status_Push for any grounded anim change, not only idle to walk");
+        assertEquals(0, sprite.getAnimationId(),
+                "After the push clear, animation resolution should choose walk instead of push");
+    }
+
+    @Test
     public void s3kRunToPushDoesNotUseIdleToWalkClear() {
         TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
         sprite.setAnimationId(1);

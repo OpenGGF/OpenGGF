@@ -71,7 +71,8 @@ public class PlayableSpriteAnimation {
         if (sprite.getAnimationSet() != null && !sprite.getAnimationSet().getAllScripts().isEmpty()) {
             int forced = sprite.getForcedAnimationId();
             if (forced < 0 && profile instanceof ScriptedVelocityAnimationProfile velocityProfile) {
-                clearPushForIdleToWalkAnimationChange(velocityProfile);
+                clearPushForAnimationChange(velocityProfile, frameCounter,
+                        sprite.getAnimationSet().getScriptCount());
             }
             // Both branches must be Integer (not int) so null from resolveAnimationId
             // doesn't trigger auto-unboxing NPE via JLS ternary type inference.
@@ -459,23 +460,34 @@ public class PlayableSpriteAnimation {
         lastAnimationId = sprite.getAnimationId();
     }
 
-    private void clearPushForIdleToWalkAnimationChange(ScriptedVelocityAnimationProfile profile) {
+    private void clearPushForAnimationChange(ScriptedVelocityAnimationProfile profile,
+                                             int frameCounter,
+                                             int scriptCount) {
         if (!sprite.getPushing()
                 || sprite.getAir()
-                || sprite.getRolling()
-                || !sprite.isMovementInputActive()
-                || sprite.getAnimationId() != profile.getIdleAnimId()) {
+                || sprite.getRolling()) {
             return;
         }
         if (sprite.getPhysicsFeatureSet() == null
                 || !sprite.getPhysicsFeatureSet().animationChangeClearsPush()) {
             return;
         }
-        // S2/S3K Tails/Sonic MoveRight/MoveLeft write anim=Walk after accepting
-        // ground input (S3K Tails right: sonic3k.asm:28103-28122). If the later
-        // wall-probe sets Status_Push in that same tick, Animate_Tails2P still
-        // compares anim=Walk against the previous idle anim and clears Status_Push
-        // before selecting frames (sonic3k.asm:29681-29686; s2.asm:40879-40884).
+
+        int currentAnimId = sprite.getAnimationId();
+        Integer desiredWithoutPush;
+        sprite.setPushing(false);
+        try {
+            desiredWithoutPush = profile.resolveAnimationId(sprite, frameCounter, scriptCount);
+        } finally {
+            sprite.setPushing(true);
+        }
+        if (desiredWithoutPush == null || desiredWithoutPush == currentAnimId) {
+            return;
+        }
+
+        // S2/S3K animation drivers clear Status_Push whenever anim differs
+        // from prev_anim (s2.asm:38033-38038,40879-40884;
+        // sonic3k.asm:29359-29364,29681-29686). S1 leaves this behind FixBugs.
         sprite.setPushing(false);
     }
 
