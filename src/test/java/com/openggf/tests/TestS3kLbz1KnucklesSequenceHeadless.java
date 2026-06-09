@@ -4,6 +4,8 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1CollapseChild;
@@ -18,7 +20,11 @@ import com.openggf.game.sonic3k.objects.SongFadeTransitionInstance;
 import com.openggf.level.objects.ExplosionObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
@@ -27,6 +33,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -36,6 +43,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kLbz1KnucklesSequenceHeadless {
@@ -95,6 +105,7 @@ class TestS3kLbz1KnucklesSequenceHeadless {
                 0x3EC0, 0x01A0, Sonic3kObjectIds.LBZ1_ROBOTNIK, 0, 0, false, 0)));
         Sonic3kLevelEventManager manager = (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
         Lbz1RobotnikEventController robotnik = spawnRobotnikCollapseController();
+        robotnik.forceRoutineForTest(0x06);
 
         GameServices.camera().setX((short) 0x3B3F);
         player.setCentreY((short) 0x01C0);
@@ -124,6 +135,204 @@ class TestS3kLbz1KnucklesSequenceHeadless {
     }
 
     @Test
+    void lbz1RobotnikRunsRomInitBeforeCollapseTriggerRoutine() {
+        HeadlessTestFixture fixture = lbzFixture();
+        AbstractPlayableSprite player = fixture.sprite();
+        removeLbz1GroundLaunchIntro();
+        applyTitleCardHandoff();
+        Lbz1RobotnikEventController robotnik = spawnRobotnikCollapseController();
+
+        GameServices.camera().setMinX((short) 0);
+        GameServices.camera().setMaxX((short) 0x4000);
+        robotnik.update(0, player);
+
+        assertEquals(0x02, robotnik.getRoutineForTest(),
+                "loc_8CB9E performs SetUp_ObjAttributes/Swing_Setup1, then returns at routine $02.");
+        assertEquals(0x3820, GameServices.camera().getMinX() & 0xFFFF,
+                "Obj_LBZ1Robotnik init locks Camera_min_X_pos to $3820.");
+        assertEquals(0x3AE8, GameServices.camera().getMaxX() & 0xFFFF,
+                "Obj_LBZ1Robotnik init locks Camera_max_X_pos to $3AE8.");
+        assertEquals(0x00C0, robotnik.getYVelocityForTest() & 0xFFFF,
+                "Swing_Setup1 seeds y_vel=$00C0 for Robotnik's hover.");
+        assertEquals(0x00C0, robotnik.getSwingMaxVelocityForTest() & 0xFFFF,
+                "Swing_Setup1 stores $3E=$00C0.");
+        assertEquals(0x0010, robotnik.getSwingAccelerationForTest() & 0xFFFF,
+                "Swing_Setup1 stores $40=$0010.");
+    }
+
+    @Test
+    void lbz1RobotnikApproachUsesRomProximityAndRiseTeleportSequence() {
+        HeadlessTestFixture fixture = lbzFixture();
+        AbstractPlayableSprite player = fixture.sprite();
+        removeLbz1GroundLaunchIntro();
+        applyTitleCardHandoff();
+        Lbz1RobotnikEventController robotnik = spawnRobotnikCollapseController();
+
+        robotnik.update(0, player);
+        player.setCentreX((short) 0x3EC0);
+        player.setCentreY((short) 0x01A0);
+        player.setAir(false);
+        robotnik.update(1, player);
+
+        assertEquals(0x04, robotnik.getRoutineForTest(),
+                "loc_8CBF2 enters the rise routine when Player_1 is within $70 x and $60 y while grounded.");
+        assertEquals(0xFC00, robotnik.getYVelocityForTest() & 0xFFFF,
+                "loc_8CC20 seeds y_vel=-$400.");
+
+        for (int frame = 2; frame < 80 && robotnik.getRoutineForTest() != 0x06; frame++) {
+            robotnik.update(frame, player);
+        }
+
+        assertEquals(0x06, robotnik.getRoutineForTest(),
+                "loc_8CC3C teleports Robotnik back to the collapse trigger position after rising above y=$300.");
+        assertEquals(0x3EC0, robotnik.getX());
+        assertEquals(0x01A0, robotnik.getY());
+        assertTrue(robotnik.isFacingLeftForTest(),
+                "loc_8CC3C sets render_flags bit 0 before the collapse-trigger wait.");
+    }
+
+    @Test
+    void lbz1RobotnikPostCollapseLaunchSpawnsVisibleFlameAndMinibossHandoff() {
+        HeadlessTestFixture fixture = lbzFixture();
+        AbstractPlayableSprite player = fixture.sprite();
+        removeLbz1GroundLaunchIntro();
+        applyTitleCardHandoff();
+        Lbz1RobotnikEventController robotnik = spawnRobotnikCollapseController();
+
+        robotnik.forceRoutineForTest(0x0A);
+        player.setCentreX((short) 0x3EC0);
+        player.setCentreY((short) 0x01A0);
+        robotnik.update(0, player);
+        assertEquals(0x0C, robotnik.getRoutineForTest(),
+                "loc_8CCB4 enters the second rise when a player is within $60 of Robotnik.");
+
+        for (int frame = 1; frame < 120 && robotnik.getRoutineForTest() != 0x0E; frame++) {
+            robotnik.update(frame, player);
+        }
+
+        assertEquals(0x0E, robotnik.getRoutineForTest(),
+                "loc_8CCF6 starts the diagonal escape once y_pos reaches $12C.");
+        assertEquals(0x0200, robotnik.getXVelocityForTest() & 0xFFFF);
+        assertEquals(0x0200, robotnik.getYVelocityForTest() & 0xFFFF);
+        assertTrue(robotnik.isFlameVisibleForTest(),
+                "Child1_MakeRoboShipFlame becomes visible once Robotnik has nonzero x_vel.");
+
+        for (int frame = 120; frame < 260 && robotnik.getRoutineForTest() != 0x10; frame++) {
+            robotnik.update(frame, player);
+        }
+
+        assertEquals(0x10, robotnik.getRoutineForTest(),
+                "loc_8CD40 clears y_vel and switches to the post-handoff ship movement once y_pos reaches $1B8.");
+        assertTrue(activeObjectNames().contains("LBZMiniboss"),
+                "ChildObjDat_8D264 creates Obj_LBZMiniboss as Robotnik hands off to the miniboss object.");
+    }
+
+    @Test
+    void lbz1RobotnikRendersShipHeadAndFlameFromSharedRobotnikShipSheet() {
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        PatternSpriteRenderer boxRenderer = mock(PatternSpriteRenderer.class);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP)).thenReturn(renderer);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.LBZ_MINIBOSS_BOX)).thenReturn(boxRenderer);
+        when(renderer.isReady()).thenReturn(true);
+        when(boxRenderer.isReady()).thenReturn(true);
+
+        Lbz1RobotnikEventController robotnik = new Lbz1RobotnikEventController(new ObjectSpawn(
+                0x3EC0, 0x01A0, Sonic3kObjectIds.LBZ1_ROBOTNIK, 0, 0, false, 0));
+        robotnik.setServices(new TestObjectServices() {
+            @Override
+            public ObjectRenderManager renderManager() {
+                return renderManager;
+            }
+        });
+        robotnik.forceInitializedForTest(0x3EC0, 0x01A0, 0x0E, 0x0200, 0x0200, true);
+
+        robotnik.appendRenderCommands(new ArrayList<>());
+
+        verify(renderer).drawFrameIndex(0x0A, 0x3EC0, 0x01A0, true, false, 0);
+        verify(renderer).drawFrameIndex(0, 0x3EC0, 0x0184, true, false, 0);
+        verify(renderer).drawFrameIndex(6, 0x3EA2, 0x01A0, true, false, 0);
+        verify(boxRenderer).drawFrameIndex(6, 0x3EB0, 0x01D4, false, false, 2);
+        verify(boxRenderer).drawFrameIndex(6, 0x3ED0, 0x01D4, false, true, 2);
+        verify(boxRenderer).drawFrameIndex(9, 0x3EC0, 0x01E8, false, false, 2);
+        verify(boxRenderer).drawFrameIndex(3, 0x3ED4, 0x01C8, false, false, 2);
+    }
+
+    @Test
+    void lbz1RobotnikInitLoadsSharedRobotnikShipAndBoxArtInLbz1() {
+        HeadlessTestFixture fixture = lbzFixture();
+        AbstractPlayableSprite player = fixture.sprite();
+        removeLbz1GroundLaunchIntro();
+        applyTitleCardHandoff();
+
+        Lbz1RobotnikEventController robotnik = spawnRobotnikCollapseController();
+        robotnik.update(0, player);
+
+        ObjectRenderManager renderManager = GameServices.level().getObjectRenderManager();
+        assertNotNull(renderManager.getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP),
+                "Obj_LBZ1Robotnik uses the shared Robotnik ship mapping, so LBZ1 must expose that standalone PLC art.");
+        assertNotNull(renderManager.getRenderer(Sonic3kObjectArtKeys.LBZ_MINIBOSS_BOX),
+                "Obj_LBZ1Robotnik queues ArtKosM_LBZMinibossBox and renders the carried yellow box children.");
+    }
+
+    @Test
+    void lbz1RobotnikUsesNormalBossHitReactionWithoutDefeat() {
+        List<Integer> sfx = new ArrayList<>();
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP)).thenReturn(renderer);
+        when(renderer.isReady()).thenReturn(true);
+
+        Lbz1RobotnikEventController robotnik = new Lbz1RobotnikEventController(new ObjectSpawn(
+                0x3EC0, 0x01A0, Sonic3kObjectIds.LBZ1_ROBOTNIK, 0, 0, false, 0));
+        TestObjectServices services = new TestObjectServices() {
+            @Override
+            public void playSfx(int soundId) {
+                sfx.add(soundId);
+            }
+
+            @Override
+            public ObjectRenderManager renderManager() {
+                return renderManager;
+            }
+        }.withConfiguration(SonicConfigurationService.getInstance());
+        robotnik.setServices(services);
+
+        assertEquals(0x0F, robotnik.getCollisionFlags(),
+                "ObjDat_LBZ1Robotnik sets collision_flags=$0F through SetUp_ObjAttributes.");
+        assertEquals(0xFF, robotnik.getCollisionProperty() & 0xFF,
+                "loc_8CB9E writes collision_property=-1 so the shared Touch_Enemy boss-hit rebound runs.");
+
+        robotnik.onPlayerAttack(null, new TouchResponseResult(0x0F, 0x20, 0x20, TouchCategory.ENEMY));
+
+        assertEquals(List.of(Sonic3kSfx.BOSS_HIT.id), sfx,
+                "sub_8D1FC plays sfx_BossHit when TouchResponse clears collision_flags after a player attack.");
+        assertEquals(0, robotnik.getCollisionFlags(),
+                "sub_8D1FC keeps collision_flags clear while $20(a0)'s hit timer is nonzero.");
+        assertEquals(0x20, robotnik.getHitReactionTimerForTest());
+        assertFalse(robotnik.isDestroyed(),
+                "Obj_LBZ1Robotnik reacts to hits but has no defeat/deletion path.");
+        robotnik.appendRenderCommands(new ArrayList<>());
+        verify(renderer).drawFrameIndex(2, 0x3EC0, 0x0184, false, false, 0);
+
+        robotnik.onPlayerAttack(null, new TouchResponseResult(0x0F, 0x20, 0x20, TouchCategory.ENEMY));
+        assertEquals(1, sfx.size(),
+                "A second overlap during the hit timer must not restart the BossHit sound/window.");
+
+        for (int frame = 0; frame < 31; frame++) {
+            robotnik.update(frame, null);
+        }
+        assertEquals(1, robotnik.getHitReactionTimerForTest());
+        assertEquals(0, robotnik.getCollisionFlags());
+
+        robotnik.update(31, null);
+        assertEquals(0, robotnik.getHitReactionTimerForTest());
+        assertEquals(0x0F, robotnik.getCollisionFlags(),
+                "When the hit timer expires, sub_8D1FC restores collision_flags from $25(a0).");
+        assertFalse(robotnik.isDestroyed());
+    }
+
+    @Test
     void lbz1ThrownBombUsesRomBackedBombArt() {
         HeadlessTestFixture fixture = lbzFixture();
         removeLbz1GroundLaunchIntro();
@@ -150,6 +359,7 @@ class TestS3kLbz1KnucklesSequenceHeadless {
         applyTitleCardHandoff();
         Sonic3kLevelEventManager manager = (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
         Lbz1RobotnikEventController robotnik = spawnRobotnikCollapseController();
+        robotnik.forceRoutineForTest(0x06);
 
         GameServices.camera().setX((short) 0x3B40);
         GameServices.camera().setMaxX((short) 0x3B60);
@@ -345,6 +555,7 @@ class TestS3kLbz1KnucklesSequenceHeadless {
                 "CutsceneKnux_LBZ1 only spawns explosion helpers; Obj_LBZ1Robotnik arms LBZ1_EventVScroll.");
 
         Lbz1RobotnikEventController robotnik = spawnRobotnikCollapseController();
+        robotnik.forceRoutineForTest(0x06);
         GameServices.camera().setX((short) 0x3B40);
         player.setCentreY((short) 0x01C0);
         player.setAir(false);
@@ -539,7 +750,9 @@ class TestS3kLbz1KnucklesSequenceHeadless {
     private String activeObjectNames() {
         return GameServices.level().getObjectManager().getActiveObjects().stream()
                 .map(ObjectInstance::getName)
-                .filter(name -> name.contains("CutsceneKnuxLBZ1"))
+                .filter(name -> name.contains("CutsceneKnuxLBZ1")
+                        || name.contains("LBZ")
+                        || name.contains("Robotnik"))
                 .toList()
                 .toString();
     }

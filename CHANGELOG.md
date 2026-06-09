@@ -105,6 +105,13 @@ All notable changes to the OpenGGF project are documented in this file.
   exits, and routes continuous screen shake through LBZ parallax so foreground,
   background, and sprites shake together.
 
+- **S3K LBZ1 Robotnik now runs the visible end-of-act approach entity:**
+  object `0xC3` performs the ROM-shaped init, hover/rise/collapse-trigger,
+  post-collapse camera unlock, diagonal ship escape, shared Robotnik ship/head
+  rendering, flame overlay, carried LBZ miniboss box, normal boss-hit rebound
+  reaction, and miniboss handoff instead of acting as an invisible event-only
+  controller.
+
 - **Release-readiness hardening for trace replay, rewind snapshots, and
   runtime teardown:** trace bootstrap no longer seeds S3K complete-run frame-0
   player/camera/sidekick state from recorded trace rows; those segments now stay

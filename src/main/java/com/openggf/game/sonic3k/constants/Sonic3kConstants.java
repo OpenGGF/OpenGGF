@@ -1864,6 +1864,13 @@ public class Sonic3kConstants {
     public static final int MAP_ROBOTNIK_SHIP_ADDR = 0x06820C;
     // ArtTile_RobotnikShip - VRAM tile for shared Robotnik ship
     public static final int ART_TILE_ROBOTNIK_SHIP = 0x052E;
+    // Map_LBZMinibossBox - LBZ1 carried yellow-box mappings.
+    // The locked-on object code references this S3-half include through Lockon S3 data.
+    public static final int MAP_LBZ_MINIBOSS_BOX_ADDR = 0x36036A;
+    // ArtKosM_LBZMinibossBox - Kosinski Moduled box art queued by Obj_LBZ1Robotnik.
+    public static final int ART_KOSM_LBZ_MINIBOSS_BOX_ADDR = 0x37567A;
+    // ArtTile_LBZMinibossBox - VRAM tile for the carried yellow box.
+    public static final int ART_TILE_LBZ_MINIBOSS_BOX = 0x0456;
     // ArtTile_BossExplosion2 - VRAM tile for boss explosion (PLC_6B)
     public static final int ART_TILE_BOSS_EXPLOSION_2 = 0x04D2;
 

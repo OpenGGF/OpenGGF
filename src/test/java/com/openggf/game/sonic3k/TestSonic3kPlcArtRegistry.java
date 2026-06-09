@@ -226,6 +226,10 @@ public class TestSonic3kPlcArtRegistry {
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.ORBINAUT)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.RIBOT)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.CORKEY)));
+        assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.ROBOTNIK_SHIP)),
+                "Obj_LBZ1Robotnik loads the shared Robotnik ship art via PLC_60.");
+        assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.LBZ_MINIBOSS_BOX)),
+                "Obj_LBZ1Robotnik queues the carried ArtKosM_LBZMinibossBox sheet.");
     }
 
     @Test
@@ -288,6 +292,41 @@ public class TestSonic3kPlcArtRegistry {
             assertEquals(7, frames.get(4).pieces().size());
             assertEquals(10, frames.get(5).pieces().size());
             assertEquals(3, frames.get(6).pieces().size());
+        }
+    }
+
+    @Test
+    public void lbz1RobotnikBoxStandaloneArtMatchesRomShape() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        Sonic3kPlcArtRegistry.StandaloneArtEntry entry = requireStandaloneArt(
+                Sonic3kPlcArtRegistry.getPlan(0x06, 0), Sonic3kObjectArtKeys.LBZ_MINIBOSS_BOX);
+        assertEquals(Sonic3kConstants.ART_KOSM_LBZ_MINIBOSS_BOX_ADDR, entry.artAddr());
+        assertEquals(CompressionType.KOSINSKI_MODULED, entry.compression());
+        assertEquals(Sonic3kConstants.MAP_LBZ_MINIBOSS_BOX_ADDR, entry.mappingAddr());
+        assertEquals(2, entry.palette(), "ObjDat3_8D23C uses make_art_tile(ArtTile_LBZMinibossBox,2,0).");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            List<SpriteMappingFrame> frames = S3kSpriteDataLoader.loadMappingFrames(
+                    reader, Sonic3kConstants.MAP_LBZ_MINIBOSS_BOX_ADDR);
+
+            assertEquals(12, frames.size(), "Map_LBZMinibossBox has 12 frames.");
+            assertEquals(2, frames.get(0).pieces().size());
+            assertEquals(1, frames.get(6).pieces().size());
+            assertEquals(1, frames.get(9).pieces().size());
+            assertEquals(0, frames.get(0).pieces().getFirst().tileIndex());
+            assertEquals(0x48, frames.get(6).pieces().getFirst().tileIndex());
+            assertEquals(0x4B, frames.get(9).pieces().getFirst().tileIndex());
+
+            Sonic3kObjectArt art = new Sonic3kObjectArt(null, reader);
+            ObjectSpriteSheet sheet = art.loadStandaloneSheet(rom, entry);
+            assertEquals(78, sheet.getPatterns().length,
+                    "ArtKosM_LBZMinibossBox decompresses to 2496 bytes / 78 tiles.");
+            assertEquals(12, sheet.getFrameCount());
+            assertMappingTilesWithinSheet(sheet, "LBZ miniboss box mappings must fit the decompressed box art");
         }
     }
 

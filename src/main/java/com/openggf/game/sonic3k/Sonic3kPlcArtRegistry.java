@@ -1448,6 +1448,28 @@ public final class Sonic3kPlcArtRegistry {
                     1,
                     -1
             ));
+            // PLC_60 / ObjDat_LBZ1Robotnik: ArtNem_RobotnikShip + Map_RobotnikShip,
+            // make_art_tile(ArtTile_RobotnikShip,0,0).
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.ROBOTNIK_SHIP,
+                    Sonic3kConstants.ART_NEM_ROBOTNIK_SHIP_ADDR,
+                    CompressionType.NEMESIS,
+                    0,
+                    Sonic3kConstants.MAP_ROBOTNIK_SHIP_ADDR,
+                    0,
+                    -1
+            ));
+            // Obj_LBZ1Robotnik queues ArtKosM_LBZMinibossBox and renders
+            // the carried yellow box via Map_LBZMinibossBox, palette line 2.
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.LBZ_MINIBOSS_BOX,
+                    Sonic3kConstants.ART_KOSM_LBZ_MINIBOSS_BOX_ADDR,
+                    CompressionType.KOSINSKI_MODULED,
+                    0,
+                    Sonic3kConstants.MAP_LBZ_MINIBOSS_BOX_ADDR,
+                    2,
+                    -1
+            ));
         }
 
         // StillSprite groups: subtype 20 (pole), subtypes 21-23 (girders)
