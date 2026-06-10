@@ -92,6 +92,10 @@ public class SidekickCpuController {
     private final int flyAnimId;
     private final int duckAnimId;
     private static final int INPUT_START = 0x20;
+    private static final int DIRECTIONAL_INPUT_MASK = AbstractPlayableSprite.INPUT_UP
+            | AbstractPlayableSprite.INPUT_DOWN
+            | AbstractPlayableSprite.INPUT_LEFT
+            | AbstractPlayableSprite.INPUT_RIGHT;
     private static final int MANUAL_HELD_MASK = AbstractPlayableSprite.INPUT_UP
             | AbstractPlayableSprite.INPUT_DOWN
             | AbstractPlayableSprite.INPUT_LEFT
@@ -158,6 +162,7 @@ public class SidekickCpuController {
     private boolean inputRight;
     private boolean inputJump;
     private boolean inputJumpPress;
+    private int diagnosticGeneratedPressedInput;
     private boolean jumpingFlag;
     private int minXBound = Integer.MIN_VALUE;
     private int maxXBound = Integer.MIN_VALUE;
@@ -240,6 +245,8 @@ public class SidekickCpuController {
      */
     private boolean controller2SignedLocked;
     private NormalStepDiagnostics latestNormalStepDiagnostics;
+    private int diagnosticCtrl2HeldLatch;
+    private int diagnosticCtrl2PressedLatch;
 
     // =====================================================================
     // Tails-carry-Sonic support (S3K-only; null trigger = feature disabled)
@@ -482,13 +489,12 @@ public class SidekickCpuController {
     }
 
     public int getDiagnosticGeneratedPressedInput() {
-        int generated = diagnosticGeneratedInput();
-        int directional = AbstractPlayableSprite.INPUT_UP
-                | AbstractPlayableSprite.INPUT_DOWN
-                | AbstractPlayableSprite.INPUT_LEFT
-                | AbstractPlayableSprite.INPUT_RIGHT;
-        return (generated & directional)
-                | (inputJumpPress ? AbstractPlayableSprite.INPUT_JUMP : 0);
+        NormalStepDiagnostics d = latestNormalStepDiagnostics;
+        if (d != null && d.frameCounter() == frameCounter) {
+            return d.generatedPressedInput() & 0xFF;
+        }
+        return (diagnosticGeneratedPressedInput
+                | (inputJumpPress ? AbstractPlayableSprite.INPUT_JUMP : 0)) & 0xFF;
     }
 
     public int getDiagnosticFollowHistorySlot() {
@@ -604,6 +610,7 @@ public class SidekickCpuController {
                 -1,
                 -1,
                 0,
+                0,
                 diagnosticStatusByte(),
                 diagnosticObjectControlByte(),
                 sidekick.getXSpeed(),
@@ -638,6 +645,27 @@ public class SidekickCpuController {
                                              int dy,
                                              boolean skipFollowSteering,
                                              int appliedFollowNudge) {
+        finishNormalStepDiagnosticsWithCtrl2(base, branch,
+                followDelayFrames, followHistorySlot, recordedInput, recordedStatus, pushBypassStatus,
+                dx, dy, diagnosticGeneratedInput(), diagnosticGeneratedPressedInput,
+                skipFollowSteering, appliedFollowNudge);
+    }
+
+    private void finishNormalStepDiagnosticsWithCtrl2(NormalStepDiagnostics base,
+                                                      String branch,
+                                                      int followDelayFrames,
+                                                      int followHistorySlot,
+                                                      int recordedInput,
+                                                      int recordedStatus,
+                                                      int pushBypassStatus,
+                                                      int dx,
+                                                      int dy,
+                                                      int generatedInput,
+                                                      int generatedPressedInput,
+                                                      boolean skipFollowSteering,
+                                                      int appliedFollowNudge) {
+        diagnosticCtrl2HeldLatch = generatedInput & 0xFF;
+        diagnosticCtrl2PressedLatch = generatedPressedInput & 0xFF;
         latestNormalStepDiagnostics = base.withCpuResult(
                 branch,
                 followDelayFrames,
@@ -647,7 +675,8 @@ public class SidekickCpuController {
                 pushBypassStatus,
                 dx,
                 dy,
-                diagnosticGeneratedInput(),
+                diagnosticCtrl2HeldLatch,
+                diagnosticCtrl2PressedLatch,
                 diagnosticStatusByte(),
                 diagnosticObjectControlByte(),
                 sidekick.getXSpeed(),
@@ -710,6 +739,7 @@ public class SidekickCpuController {
             int dx,
             int dy,
             int generatedInput,
+            int generatedPressedInput,
             int postCpuStatus,
             int postCpuObjectControl,
             short postCpuXVel,
@@ -740,6 +770,7 @@ public class SidekickCpuController {
                                             int dx,
                                             int dy,
                                             int generatedInput,
+                                            int generatedPressedInput,
                                             int postCpuStatus,
                                             int postCpuObjectControl,
                                             short postCpuXVel,
@@ -756,7 +787,7 @@ public class SidekickCpuController {
                     preCpuX, preCpuXSubpixel, preAngle,
                     followDelayFrames, followHistorySlot,
                     recordedInput, recordedStatus, pushBypassStatus,
-                    dx, dy, generatedInput,
+                    dx, dy, generatedInput, generatedPressedInput,
                     postCpuStatus, postCpuObjectControl, postCpuXVel, postCpuYVel, postCpuGroundVel,
                     postCpuX, postCpuXSubpixel, postCpuAngle, appliedFollowNudge,
                     inputJumpPress,
@@ -778,7 +809,7 @@ public class SidekickCpuController {
                     preCpuX, preCpuXSubpixel, preAngle,
                     followDelayFrames, followHistorySlot,
                     recordedInput, recordedStatus, pushBypassStatus,
-                    dx, dy, generatedInput,
+                    dx, dy, generatedInput, generatedPressedInput,
                     postCpuStatus, postCpuObjectControl, postCpuXVel, postCpuYVel, postCpuGroundVel,
                     postCpuX, postCpuXSubpixel, postCpuAngle, appliedFollowNudge,
                     inputJumpPress,
@@ -1475,8 +1506,12 @@ public class SidekickCpuController {
             //     Tails_respawn_counter freezes at 0xBA the whole time, leaving it
             //     at 0xFF (255) < $12C (300) at the engine's spurious-despawn frame.
             updateNormalPushingGrace(currentPushing);
-            finishNormalStepDiagnostics(diagnostics, "sidekick_hurt_object_routine", -1, -1,
-                    0, 0, 0, 0, 0, false, 0);
+            // Obj02_Hurt bypasses Obj02_Control entirely, so ROM-visible
+            // Ctrl_2_Logical keeps the last word written by TailsCPU_Normal
+            // rather than being cleared by the skipped CPU path.
+            finishNormalStepDiagnosticsWithCtrl2(diagnostics, "sidekick_hurt_object_routine", -1, -1,
+                    0, 0, 0, 0, 0,
+                    diagnosticCtrl2HeldLatch, diagnosticCtrl2PressedLatch, false, 0);
             return;
         }
         if (checkDespawn()) {
@@ -1601,8 +1636,13 @@ public class SidekickCpuController {
         inputJump = (recordedInput & AbstractPlayableSprite.INPUT_JUMP) != 0;
         // ROM copies the delayed Ctrl_1_Logical word into Ctrl_2_Logical
         // (s2.asm:38939-38946, 39025-39027). The held bits live in
-        // inputHistory; the low-byte jump press bit is tracked separately.
+        // inputHistory; the low-byte jump press bit is tracked separately,
+        // while directional press edges are reconstructed from the adjacent
+        // delayed Stat_Record_Buf slots.
         inputJumpPress = recordedJumpPress;
+        diagnosticGeneratedPressedInput =
+                delayedDirectionalPress(effectiveLeader, followStatDelayFrames, recordedInput)
+                        | (recordedJumpPress ? AbstractPlayableSprite.INPUT_JUMP : 0);
 
         byte pushBypassStatus = effectiveLeader.getStatusHistory(OBJECT_ORDER_INPUT_DELAY_FRAMES);
         // ROM loc_13DD0 tests Tails' current Status_Push byte before loc_13E9C
@@ -1781,6 +1821,9 @@ public class SidekickCpuController {
             inputDown = (recordedInput & AbstractPlayableSprite.INPUT_DOWN) != 0;
             inputJump = (recordedInput & AbstractPlayableSprite.INPUT_JUMP) != 0;
             inputJumpPress = recordedJumpPress;
+            diagnosticGeneratedPressedInput =
+                    delayedDirectionalPress(effectiveLeader, OBJECT_ORDER_INPUT_DELAY_FRAMES, recordedInput)
+                            | (recordedJumpPress ? AbstractPlayableSprite.INPUT_JUMP : 0);
         }
         int appliedFollowNudge = 0;
         if (!skipFollowSteering) {
@@ -1800,11 +1843,19 @@ public class SidekickCpuController {
                 if (absDx >= snapThreshold) {
                     inputLeft = true;
                     inputRight = false;
+                    diagnosticGeneratedPressedInput =
+                            (diagnosticGeneratedPressedInput
+                                    & ~(AbstractPlayableSprite.INPUT_LEFT | AbstractPlayableSprite.INPUT_RIGHT))
+                                    | AbstractPlayableSprite.INPUT_LEFT;
                 }
             } else if (steeringDx > 0) {
                 if (steeringDx >= snapThreshold) {
                     inputRight = true;
                     inputLeft = false;
+                    diagnosticGeneratedPressedInput =
+                            (diagnosticGeneratedPressedInput
+                                    & ~(AbstractPlayableSprite.INPUT_LEFT | AbstractPlayableSprite.INPUT_RIGHT))
+                                    | AbstractPlayableSprite.INPUT_RIGHT;
                 }
             } else if ((recordedStatus & AbstractPlayableSprite.STATUS_FACING_LEFT) != 0) {
                 sidekick.setDirection(Direction.LEFT);
@@ -1914,6 +1965,7 @@ public class SidekickCpuController {
                     && sidekick.getAnimationId() != duckAnimId) {
                 inputJump = true;
                 inputJumpPress = true;
+                diagnosticGeneratedPressedInput |= AbstractPlayableSprite.INPUT_JUMP;
                 lastNormalAutoJumpPressFrameCounter = autoJumpFrameCounter;
                 jumpingFlag = true;
                 if (objectOrderGrace && pushBypassGraceEnabled) {
@@ -1939,6 +1991,7 @@ public class SidekickCpuController {
                 && (currentPushBypass || localGracePushBypass || !recordedJumpPress)) {
             inputJump = false;
             inputJumpPress = false;
+            diagnosticGeneratedPressedInput &= ~AbstractPlayableSprite.INPUT_JUMP;
             jumpingFlag = false;
         }
 
@@ -1951,6 +2004,7 @@ public class SidekickCpuController {
                 && !sidekick.getAir()) {
             inputJump = false;
             inputJumpPress = false;
+            diagnosticGeneratedPressedInput &= ~AbstractPlayableSprite.INPUT_JUMP;
             jumpingFlag = false;
         }
 
@@ -1986,6 +2040,11 @@ public class SidekickCpuController {
         // updates CPU sidekicks before the main player, so the latest completed
         // player history entry already corresponds to the previous ROM sample.
         return ROM_FOLLOW_DELAY_FRAMES;
+    }
+
+    private int delayedDirectionalPress(AbstractPlayableSprite effectiveLeader, int delayFrames, short recordedInput) {
+        short previousInput = effectiveLeader.getInputHistory(delayFrames + 1);
+        return (recordedInput & ~previousInput) & DIRECTIONAL_INPUT_MASK;
     }
 
     private int resolveFollowSteeringDx(int dx, AbstractPlayableSprite effectiveLeader, int leadOffset,
@@ -3047,6 +3106,7 @@ public class SidekickCpuController {
         inputRight = (controller2Held & AbstractPlayableSprite.INPUT_RIGHT) != 0;
         inputJump = (controller2Held & AbstractPlayableSprite.INPUT_JUMP) != 0;
         inputJumpPress = (controller2Logical & AbstractPlayableSprite.INPUT_JUMP) != 0;
+        diagnosticGeneratedPressedInput = controller2Logical & MANUAL_HELD_MASK;
         controlCounter--;
     }
 
@@ -3109,11 +3169,10 @@ public class SidekickCpuController {
      * object id changed between consecutive frames — i.e. the slot was recycled
      * to a different object (mtz1 f375: object {@code 0x01} → SteamSpring
      * {@code 0x42}) — and stays quiet when the same object persists in the slot
-     * off-screen (htz2 f795: HTZ platform {@code 0x41} stays put). An empty
-     * engine slot ({@link ObjectManager#objectIdInSlot} returns {@code -1})
-     * models "object unloaded but slot not recycled" and is treated as
-     * unchanged, deferring to the {@code $12C}-frame respawn timer, mirroring the
-     * ROM fall-through to {@code TailsCPU_TickRespawnTimer}.
+     * off-screen (htz2 f795: HTZ platform {@code 0x41} stays put). An emptied
+     * once-ridden engine slot ({@link ObjectManager#objectIdInSlot} returns
+     * {@code -1}) maps back to ROM's zeroed object id, so the compare sees the
+     * same id change ROM sees after {@code DeleteObject} clears the slot.
      *
      * <p>S3K's {@code sub_13EFC} (docs/skdisasm/sonic3k.asm:26816-26833) compares
      * the routine-pointer high word, which is identical for virtually all
@@ -3141,9 +3200,9 @@ public class SidekickCpuController {
         // case ROM dereferences default slot 0 = ObjID_Sonic 0x01, so the
         // snapshot must be seeded with that concrete value (this is what makes
         // a later off-screen first-landing on a different-id object mismatch).
-        // For a ridden-then-emptied slot the engine instead keeps the last real
-        // id (refreshInteractIdSnapshot ignores -1) so the recycle/deletion is
-        // still detectable; see romEffectiveInteractSlotId for the compare side.
+        // For a ridden-then-emptied slot ROM writes the zeroed object id. The
+        // off-screen mismatch path still compares before this refresh, so a
+        // deleted ride slot despawns before the zero write can mask it.
         int snapshotSeedId = snapshotSeedInteractSlotId(rawLiveSlotId);
 
         if (onScreen) {
@@ -3214,9 +3273,10 @@ public class SidekickCpuController {
      * here covers BOTH a never-ridden sidekick ({@code interactSlotIndex < 0})
      * and a once-occupied slot whose object has been deleted/recycled away
      * ({@code interactSlotIndex >= 0} but {@code objectIdInSlot} finds no live
-     * occupant). This raw form is the source for {@link #refreshInteractIdSnapshot}
-     * so the snapshot keeps its last <em>real</em> occupant id across a
-     * momentarily-empty slot.
+     * occupant). This raw form is converted through
+     * {@link #snapshotSeedInteractSlotId(int)} before updating the ROM-visible
+     * snapshot, so a ridden-then-emptied slot stores the concrete zero id that
+     * ROM reads from cleared object RAM.
      *
      * <p>For the ROM despawn comparison itself, use
      * {@link #romEffectiveInteractSlotId(int)}, which maps these two engine
@@ -3289,8 +3349,7 @@ public class SidekickCpuController {
     /**
      * The id ROM {@code TailsCPU_UpdateObjInteract} would store into
      * {@code Tails_interact_ID} ({@code = id(slot)}, s2.asm:39435-39446) on a
-     * non-despawning frame, with one deliberate engine divergence for recycle
-     * detection. Two of the three slot states match
+     * non-despawning frame. All slot states match
      * {@link #romEffectiveInteractSlotId(int)} exactly:
      *
      * <ul>
@@ -3303,13 +3362,10 @@ public class SidekickCpuController {
      *       guard would never arm for an un-ridden sidekick.</li>
      *   <li><b>Slot occupied by a live object</b>: the real occupant id.</li>
      *   <li><b>Rode something, slot since emptied</b>
-     *       ({@code interactSlotIndex >= 0}, no live occupant): return {@code -1}
-     *       so {@link #refreshInteractIdSnapshot} <em>keeps</em> the last real id
-     *       instead of overwriting it with ROM's zero. This is the engine's
-     *       documented divergence from ROM's literal {@code UpdateObjInteract}
-     *       write: the despawn fires on the same frame the slot first reads 0
-     *       (the compare runs before the fall-through write in ROM too), and
-     *       keeping the prior id keeps the recycle/deletion mismatch detectable.</li>
+     *       ({@code interactSlotIndex >= 0}, no live occupant): ROM reads the
+     *       zeroed slot id and stores {@code 0}. The off-screen despawn compare
+     *       runs before this refresh, so a deleted ride slot is still detected
+     *       before the snapshot is overwritten.</li>
      * </ul>
      */
     private int snapshotSeedInteractSlotId(int rawLiveSlotId) {
@@ -3320,21 +3376,18 @@ public class SidekickCpuController {
             // Never rode anything: ROM writes id(slot 0) = ObjID_Sonic 0x01.
             return ROM_DEFAULT_INTERACT_OBJECT_ID;
         }
-        // Ridden-then-emptied: preserve the last real id (engine divergence).
-        return -1;
+        // Ridden-then-emptied: ROM writes the zeroed slot id.
+        return ROM_DELETED_INTERACT_SLOT_ID;
     }
 
     /**
      * ROM {@code TailsCPU_UpdateObjInteract}: {@code Tails_interact_ID = id(slot)}.
      * Fed {@link #snapshotSeedInteractSlotId(int)} (NOT the raw read): the
      * never-ridden case seeds 0x01, an occupied slot stores the real id, and a
-     * ridden-then-emptied slot passes {@code -1} so the snapshot keeps the last
-     * real id and a later recycle stays detectable.
+     * ridden-then-emptied slot stores ROM's zeroed slot id.
      */
     private void refreshInteractIdSnapshot(int snapshotSeedId) {
-        if (snapshotSeedId >= 0) {
-            lastInteractObjectId = snapshotSeedId;
-        }
+        lastInteractObjectId = snapshotSeedId;
     }
 
     private boolean isLatchedRideSlotFreed(ObjectInstance instance) {
@@ -3770,6 +3823,7 @@ public class SidekickCpuController {
         inputRight = false;
         inputJump = false;
         inputJumpPress = false;
+        diagnosticGeneratedPressedInput = 0;
         objectOrderGracePushBypassThisFrame = false;
     }
 

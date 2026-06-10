@@ -131,7 +131,7 @@ class TestSidekickCpuControllerRewindCapture {
                 1, 2, (short) 3, (short) 0x0303, (short) 4,
                 (short) 0x1111, (short) 0x2222, (byte) 0x12,
                 5, 6, 7, 8, 9,
-                10, 11, 12, 13, 14,
+                10, 11, 12, 0x12, 13, 14,
                 (short) 15, (short) 0x1515, (short) 16,
                 (short) 0x3333, (short) 0x4444, (byte) 0x34, -1,
                 true,

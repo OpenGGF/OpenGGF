@@ -47,7 +47,7 @@ class TestBootstrapComparator {
     @Test
     void synthetic_matching_snapshot_yields_empty_divergences() {
         TraceData trace = traceWithSnapshots(
-                /* historyPos */ 12,
+                /* historyPos */ 0x34,
                 /* xHistory  */ shorts(64, 0x0500),
                 /* yHistory  */ shorts(64, 0x0300),
                 /* inputHist */ shorts(64, 0x0000),
@@ -72,6 +72,38 @@ class TestBootstrapComparator {
     }
 
     /**
+     * ROM {@code Sonic_Pos_Record_Index} is a byte offset into 4-byte Pos_table
+     * records; the engine snapshot exposes the already-normalized 0-63 slot.
+     */
+    @Test
+    void player_history_pos_compares_rom_byte_offset_as_engine_slot() {
+        TraceData trace = traceWithSnapshots(
+                /* historyPos */ 0x68,
+                /* xHistory  */ shorts(64, 0x0500),
+                /* yHistory  */ shorts(64, 0x0300),
+                /* inputHist */ shorts(64, 0x0000),
+                /* statusHist*/ bytes(64, (byte) 0x00),
+                cpu("tails", 1, 0, 2, (short) 0x0480, (short) 0x0320, 0x0000, false),
+                List.of());
+
+        EngineSnapshot snapshot = new EngineSnapshot(
+                shorts(64, 0x0500),
+                shorts(64, 0x0300),
+                shorts(64, 0x0000),
+                bytes(64, (byte) 0x00),
+                0x19,
+                new EngineSnapshot.SidekickCpuView(1, 0, 2, (short) 0x0480, (short) 0x0320, 0x0000, false),
+                Map.of());
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        List<BootstrapDivergence> divergences = binder.compareBootstrapFrame0(trace, snapshot);
+
+        assertTrue(divergences.isEmpty(),
+                () -> "Equivalent ROM byte offset and engine slot must not diverge: "
+                        + divergences);
+    }
+
+    /**
      * Modifying a single recorded field must produce exactly one ERROR-severity
      * divergence with the matching field name, expected and actual rendered as
      * hex, and a non-blank context string.
@@ -82,7 +114,7 @@ class TestBootstrapComparator {
         xHistory[12] = (short) 0x0501; // ROM trace has 0x0501 at idx 12
 
         TraceData trace = traceWithSnapshots(
-                12,
+                0x34,
                 xHistory,
                 shorts(64, 0x0300),
                 shorts(64, 0x0000),

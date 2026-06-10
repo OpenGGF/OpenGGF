@@ -1,6 +1,7 @@
 package com.openggf.trace;
 
 import com.openggf.level.objects.RomObjectSnapshot;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -195,7 +196,8 @@ public class TraceBinder {
 
         String secondaryPrefix = normalizeCharacterPrefix(secondaryCharacterLabel);
         appendSidekickCpuComparisons(fields, secondaryPrefix,
-                expectedSidekickCpu, actualSidekickCpu);
+                expectedSidekickCpu, actualSidekickCpu,
+                expected.sidekick(), actualSidekick);
         appendCharacterComparisons(fields,
             secondaryPrefix,
             expected.sidekick(), actualSidekick);
@@ -357,15 +359,15 @@ public class TraceBinder {
     }
 
     private void appendSidekickCpuComparisons(Map<String, FieldComparison> fields, String prefix,
-            TraceEvent.CpuState expected, EngineSidekickCpuState actual) {
-        if (expected == null && actual == null) {
+            TraceEvent.CpuState expected, EngineSidekickCpuState actual,
+            TraceCharacterState expectedSidekick, TraceCharacterState actualSidekick) {
+        if (expected == null) {
             return;
         }
-        boolean expectedPresent = expected != null;
         boolean actualPresent = actual != null;
         fields.put(prefix + "cpu_present",
-                compareFlag(prefix + "cpu_present", expectedPresent, actualPresent));
-        if (!expectedPresent || !actualPresent) {
+                compareFlag(prefix + "cpu_present", true, actualPresent));
+        if (!actualPresent) {
             return;
         }
 
@@ -382,17 +384,71 @@ public class TraceBinder {
         fields.put(prefix + "cpu_target_y", compareNumeric(prefix + "cpu_target_y",
                 expected.targetY() & 0xFFFF, actual.targetY() & 0xFFFF, 0, 1, false));
         fields.put(prefix + "cpu_ctrl2_held", compareNumeric(prefix + "cpu_ctrl2_held",
-                expected.ctrl2Held() & 0xFF, actual.generatedHeld() & 0xFF, 0, 1, false));
+                normalizeRomCtrl2LogicalByte(expected.ctrl2Held()),
+                actual.generatedHeld() & 0xFF, 0, 1, false));
         fields.put(prefix + "cpu_ctrl2_pressed", compareNumeric(prefix + "cpu_ctrl2_pressed",
-                expected.ctrl2Pressed() & 0xFF, actual.generatedPressed() & 0xFF, 0, 1, false));
+                normalizeRomCtrl2PressedByte(expected.ctrl2Pressed()),
+                normalizeEngineCtrl2PressedByte(actual.generatedPressed()), 0, 1, false));
         fields.put(prefix + "cpu_jumping", compareNumeric(prefix + "cpu_jumping",
                 expected.autoJumpFlag() & 0xFF, actual.jumpingFlag() & 0xFF, 0, 1, false));
         if (expected.cpuRoutine() == 0x06 && actual.cpuRoutine() == 0x06
-                && expected.delayedIndex() >= 0) {
+                && expected.delayedIndex() >= 0
+                && actual.followHistorySlot() >= 0
+                && sidekickObjectControlRoutineRan(expectedSidekick, actualSidekick)) {
             fields.put(prefix + "cpu_follow_ring", compareNumeric(prefix + "cpu_follow_ring",
-                    expected.delayedIndex() & 0xFF,
+                    romHistoryByteOffsetToSlot(expected.delayedIndex()),
                     actual.followHistorySlot(), 0, 1, false));
         }
+    }
+
+    private static boolean sidekickObjectControlRoutineRan(
+            TraceCharacterState expectedSidekick, TraceCharacterState actualSidekick) {
+        return expectedSidekick != null
+                && actualSidekick != null
+                && expectedSidekick.present()
+                && actualSidekick.present()
+                && expectedSidekick.routine() == 0x02
+                && actualSidekick.routine() == 0x02;
+    }
+
+    /**
+     * ROM Pos_table/Stat_table indices are byte offsets into 4-byte records.
+     * Engine diagnostics expose the already-normalized 0-63 ring slot.
+     */
+    private static int romHistoryByteOffsetToSlot(int byteOffset) {
+        return ((byteOffset & 0xFF) >>> 2) & 0x3F;
+    }
+
+    /**
+     * {@code Sonic_Pos_Record_Index} points at the next free 4-byte record;
+     * engine {@code historyPos} points at the latest written slot.
+     */
+    private static int romNextFreeHistoryByteOffsetToLatestSlot(int byteOffset) {
+        return (romHistoryByteOffsetToSlot(byteOffset) + 0x3F) & 0x3F;
+    }
+
+    /**
+     * The recorder emits raw ROM button bits for {@code Ctrl_2_Logical}. The
+     * engine collapses A/B/C into its single abstract jump bit while preserving
+     * directional bits.
+     */
+    private static int normalizeRomCtrl2LogicalByte(int raw) {
+        int normalized = raw & (AbstractPlayableSprite.INPUT_UP
+                | AbstractPlayableSprite.INPUT_DOWN
+                | AbstractPlayableSprite.INPUT_LEFT
+                | AbstractPlayableSprite.INPUT_RIGHT);
+        if ((raw & 0x70) != 0) {
+            normalized |= AbstractPlayableSprite.INPUT_JUMP;
+        }
+        return normalized & 0xFF;
+    }
+
+    private static int normalizeRomCtrl2PressedByte(int raw) {
+        return (raw & 0x70) != 0 ? AbstractPlayableSprite.INPUT_JUMP : 0;
+    }
+
+    private static int normalizeEngineCtrl2PressedByte(int raw) {
+        return raw & AbstractPlayableSprite.INPUT_JUMP;
     }
 
     private static String normalizeCharacterPrefix(String label) {
@@ -492,11 +548,15 @@ public class TraceBinder {
             return;
         }
 
-        if (recorded.historyPos() != snapshot.playerHistoryPos()) {
+        int recordedHistorySlot =
+                romNextFreeHistoryByteOffsetToLatestSlot(recorded.historyPos());
+        if (recordedHistorySlot != snapshot.playerHistoryPos()) {
             out.add(new BootstrapDivergence(
                     "player_history.pos",
                     BootstrapDivergence.Severity.ERROR,
-                    String.format("0x%04X", recorded.historyPos() & 0xFFFF),
+                    String.format("0x%04X (slot 0x%02X)",
+                            recorded.historyPos() & 0xFFFF,
+                            recordedHistorySlot & 0x3F),
                     String.format("0x%04X", snapshot.playerHistoryPos() & 0xFFFF),
                     "ROM and engine ring-buffer positions disagree"));
         }

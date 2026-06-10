@@ -642,4 +642,35 @@ class TestSidekickCpuDespawnParity {
         controller.update(2);
         assertEquals(SidekickCpuController.State.NORMAL, controller.getState());
     }
+
+    @Test
+    void onScreenEmptyInteractSlotRefreshesCachedInteractIdToZero() throws Exception {
+        installEmptyObjectManager();
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x0399);
+        tails.setCentreY((short) 0x03C2);
+        tails.setAir(false);
+
+        UnloadedRideObject oldRide = new UnloadedRideObject(0x2B);
+        oldRide.setSlotIndex(0x11);
+        tails.setLatchedSolidObject(0x2B, oldRide);
+        tails.setOnObject(false);
+        tails.setRenderFlagOnScreen(true);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(6, 0, 0, 0x2B, false, 0, 0);
+        tails.setLatchedSolidObject(0x2B, oldRide);
+        tails.setOnObject(false);
+        tails.setRenderFlagOnScreen(true);
+
+        controller.update(372);
+
+        assertEquals(0, controller.getDiagnosticInteractId(),
+                "S2 TailsCPU_UpdateObjInteract writes id(Object_RAM[interact]) every "
+                        + "non-despawning frame; a deleted slot reads id 0 "
+                        + "(docs/s2disasm/s2.asm:39435-39445)");
+    }
 }

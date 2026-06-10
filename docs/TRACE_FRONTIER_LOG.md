@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+## 2026-06-10 - S2 CPU-present comparator regression corrected
+
+- Scope: release-gate correction for the per-frame sidekick CPU comparator
+  added with the S2 CPU-state instrumentation. Legacy S2 traces such as
+  `ehz1_fullrun`, `scz`, and `wfz` do not advertise `cpu_state_per_frame`, so
+  they have no ROM-side `cpu_state` row to compare against.
+- Fix (comparison-only): `TraceBinder` now emits the `*_cpu_present` field only
+  when the trace actually carries a ROM CPU-state event for that frame. Once
+  such an event exists, `cpu_present` remains strict: a missing engine CPU
+  diagnostic still reports an error. This preserves the regenerated
+  CPU-state trace gate while preventing older traces from being reclassified
+  as frame-0 CPU failures.
+- Unit corrections retained: ROM `Ctrl_2_Logical` A/B/C bits are normalized to
+  the engine's abstract jump bit for CPU input comparisons, and ROM
+  `Pos_table`/`Stat_table` byte offsets are converted to engine 0-63 history
+  slots before comparing follow-ring/history-position fields.
+- Verification:
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.TestTraceBinder" test`
+    -> PASS, 25 tests.
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test -DfailIfNoTests=false`
+    -> still RED, but no longer because of `*_cpu_present` on missing aux data.
+    Current first errors are bootstrap/player-history mismatches: EHZ1 frame 0
+    `player_history.y[26] expected=0x0293 actual=0x0294`; SCZ/WFZ frame 0
+    `player_history.pos expected=0x0068 (slot 0x19) actual=0x003F`. Those are
+    the separate native-prelude history seeding gap already called out by the
+    S2 sidekick CPU instrumentation baseline.
+- Release state: this removes the false red gate introduced by comparing
+  absent CPU aux data. The 0.6 release remains blocked by S3K AIZ frame 3074
+  `Status_Push` bypass modeling and by the S2 native-prelude/history baseline,
+  not by `cpu_present`.
+
 ## 2026-06-10 - S2 stuck-route sidekick CPU instrumentation baseline
 
 - Scope: focused S2 `TailsCPU_*` deep-dive setup for the seven stuck

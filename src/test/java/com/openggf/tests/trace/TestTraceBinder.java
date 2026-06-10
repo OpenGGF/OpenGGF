@@ -199,6 +199,212 @@ public class TestTraceBinder {
     }
 
     @Test
+    void testSidekickCpuComparisonSkippedWhenTraceDoesNotCarryCpuState() {
+        TraceFrame frame = TraceFrame.of(117, 0x0000,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x11, 0x06, 0x0000, 0x0000,
+                0x10, 0x10, 0x0A, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, null, "tails", null, null, actualCpu);
+
+        assertFalse(result.fields().containsKey("tails_cpu_present"));
+        assertFalse(result.hasError());
+    }
+
+    @Test
+    void testSidekickCpuPresentReportsEngineAbsenceWhenTraceCarriesCpuState() {
+        TraceFrame frame = TraceFrame.of(117, 0x0000,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0);
+        TraceEvent.CpuState expectedCpu = new TraceEvent.CpuState(
+                117, "tails", 0x11, 0, 0, 0x06,
+                (short) 0x0000, (short) 0x0000, 0,
+                0, 0x40, 0x40, 0, 0x0000,
+                0x68, 0x28, (short) 0x0000, (short) 0x0000,
+                0x0000, 0x00, 0x00, 0x00, 0x0000);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, null, "tails", null, expectedCpu, null);
+
+        assertEquals(Severity.ERROR, result.fields().get("tails_cpu_present").severity());
+        assertTrue(result.hasError());
+    }
+
+    @Test
+    void testSidekickCpuFollowRingConvertsRomByteOffsetToEngineSlot() {
+        TraceCharacterState tailsControl = new TraceCharacterState(
+                true, (short) 0, (short) 0, (short) 0, (short) 0, (short) 0,
+                (byte) 0, false, false, 0, 0, 0, 0x02, 0, 0);
+        TraceFrame frame = new TraceFrame(0, 0x0000,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            0, 0, 0x02, 0, 0, 0, 0, 0, 0, 0, 0,
+            tailsControl);
+        TraceEvent.CpuState expectedCpu = new TraceEvent.CpuState(
+                0, "tails", 0x11, 7, 299, 0x06,
+                (short) 0x0613, (short) 0x0264, 0,
+                1, 0x08, 0x10, 0, 0x4000,
+                0x68, 0x28, (short) 0x0500, (short) 0x0200,
+                0x0800, 0x08, 0x02, 0x11, 0x000C);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                7, 299, 0x11, 0x06, 0x0613, 0x0264,
+                0x08, 0x10, 0x0A, 1);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, null, "tails", tailsControl, expectedCpu, actualCpu);
+
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_follow_ring").severity());
+        assertFalse(result.hasError());
+    }
+
+    @Test
+    void testSidekickCpuFollowRingSkippedWhenObjectRoutineBypassesCpuControl() {
+        TraceFrame frame = new TraceFrame(312, 0x0000,
+            (short) 0x030D, (short) 0x03BC,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x04, false, false, 0,
+            0, 0, 0x02, 0, 0, 2, 0, 0x139, 0, 0x0AAB, 0,
+            new TraceCharacterState(true,
+                (short) 0x0323, (short) 0x0364,
+                (short) 0x0200, (short) 0xFC30, (short) 0x0000,
+                (byte) 0x00, true, false, 0,
+                0xAF00, 0x4700, 0x04, 0x03, 0x11));
+        TraceEvent.CpuState expectedCpu = new TraceEvent.CpuState(
+                312, "tails", 0x2B, 0, 0, 0x06,
+                (short) 0x0000, (short) 0x0000, 0,
+                0, 0x44, 0x04, 0, 0x0000,
+                0x4C, 0x08, (short) 0x0000, (short) 0x0000,
+                0x0800, 0x06, 0x03, 0x11, 0x0000);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x2B, 0x06, 0, 0,
+                0x14, 0, -1, 0);
+        TraceCharacterState actualTailsHurt = new TraceCharacterState(
+                true, (short) 0x0323, (short) 0x0364,
+                (short) 0x0200, (short) 0xFC30, (short) 0x0000,
+                (byte) 0x00, true, false, 0,
+                0xAF00, 0x4700, 0x04, 0x03, -1);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x030D, (short) 0x03BC,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x04, false, false, 0,
+            null, null, "tails", actualTailsHurt, expectedCpu, actualCpu);
+
+        assertFalse(result.fields().containsKey("tails_cpu_follow_ring"),
+                "The recorder derives delayed_index every frame; compare it only when Obj02_Control runs");
+        assertFalse(result.hasError());
+    }
+
+    @Test
+    void testSidekickCpuFollowRingSkippedWhenHurtStopRestoresRoutineAfterCpuBypass() {
+        TraceCharacterState tailsControlAfterHurtStop = new TraceCharacterState(
+                true, (short) 0x0399, (short) 0x03C2,
+                (short) 0, (short) 0, (short) 0,
+                (byte) 0x04, false, false, 0,
+                0xAF00, 0x2700, 0x02, 0x01, 0x11);
+        TraceFrame frame = new TraceFrame(371, 0x0000,
+            (short) 0x035D, (short) 0x03BD,
+            (short) 0x02C7, (short) 0x0046, (short) 0x02CD,
+            (byte) 0x04, false, false, 0,
+            0, 0, 0x02, 0, 0, 2, 0, 0x174, 0, 0x0AE6, 0,
+            tailsControlAfterHurtStop);
+        TraceEvent.CpuState expectedCpu = new TraceEvent.CpuState(
+                371, "tails", 0x2B, 0, 0, 0x06,
+                (short) 0x0000, (short) 0x0000, 0,
+                0, 0x44, 0x04, 0, 0x0000,
+                0x38, 0xF4, (short) 0x0000, (short) 0x0000,
+                0x0800, 0x00, 0x01, 0x11, 0x0000);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x2B, 0x06, 0, 0,
+                0x14, 0, -1, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x035D, (short) 0x03BD,
+            (short) 0x02C7, (short) 0x0046, (short) 0x02CD,
+            (byte) 0x04, false, false, 0,
+            null, null, "tails", tailsControlAfterHurtStop, expectedCpu, actualCpu);
+
+        assertFalse(result.fields().containsKey("tails_cpu_follow_ring"),
+                "A final routine byte of 2 is not enough; compare only when the engine CPU recorded a table read");
+    }
+
+    @Test
+    void testSidekickCpuCtrl2LogicalNormalizesRomJumpButtons() {
+        TraceFrame frame = TraceFrame.of(117, 0x0000,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0);
+        TraceEvent.CpuState expectedCpu = new TraceEvent.CpuState(
+                117, "tails", 0x11, 0, 0, 0x06,
+                (short) 0x0000, (short) 0x0000, 0,
+                0, 0x40, 0x40, 0, 0x0000,
+                0x68, 0x28, (short) 0x0000, (short) 0x0000,
+                0x0000, 0x00, 0x00, 0x00, 0x0000);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x11, 0x06, 0x0000, 0x0000,
+                0x10, 0x10, 0x0A, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, null, "tails", null, expectedCpu, actualCpu);
+
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_held").severity());
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_pressed").severity());
+        assertFalse(result.hasError());
+    }
+
+    @Test
+    void testSidekickCpuCtrl2PressedComparisonIgnoresDirectionalBits() {
+        TraceFrame frame = TraceFrame.of(16, 0x0000,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0);
+        TraceEvent.CpuState expectedCpu = new TraceEvent.CpuState(
+                16, "tails", 0x11, 0, 0, 0x06,
+                (short) 0x0000, (short) 0x0000, 0,
+                0, 0x08, 0x00, 0, 0x0000,
+                0x68, 0x28, (short) 0x0000, (short) 0x0000,
+                0x0800, 0x00, 0x00, 0x00, 0x0000);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x11, 0x06, 0x0000, 0x0000,
+                0x08, 0x08, 0x0A, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, null, "tails", null, expectedCpu, actualCpu);
+
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_held").severity());
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_pressed").severity());
+        assertFalse(result.hasError());
+    }
+
+    @Test
     void testRingCountMismatchIsWarningWhenConfiguredWarnOnly() {
         TraceFrame frame = new TraceFrame(0, 0x0000,
             (short) 0x0050, (short) 0x03B0,

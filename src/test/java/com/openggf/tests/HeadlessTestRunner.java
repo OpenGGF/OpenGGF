@@ -332,6 +332,7 @@ public class HeadlessTestRunner {
         // frame-aligned. The Start edge is computed inside stepFrame().
         boolean p1Start = frameInput.p1StartPressed();
 
+        applyP1ActionPressEdge(currentBk2Index);
         stepFrame(up, down, left, right, jump, p2Mask, p2Start, p1Start);
         currentBk2Index++;
 
@@ -362,6 +363,7 @@ public class HeadlessTestRunner {
         int driveMask = inputMask(driveInput);
         int p2Mask = p2InputMask(driveInput);
 
+        applyP1ActionPressEdge(currentBk2Index - 1);
         stepFrame(
                 (driveMask & AbstractPlayableSprite.INPUT_UP) != 0,
                 (driveMask & AbstractPlayableSprite.INPUT_DOWN) != 0,
@@ -374,6 +376,27 @@ public class HeadlessTestRunner {
         currentBk2Index++;
 
         return validationMask;
+    }
+
+    private void applyP1ActionPressEdge(int bk2Index) {
+        if (hasNewP1ActionPress(bk2Movie, bk2Index)) {
+            // ROM Ctrl_1_Logical keeps separate A/B/C press bits. The engine's
+            // normal input path collapses them into one jump key, so a fresh A
+            // press while B/C is already held would otherwise disappear before
+            // Sonic_RecordPos writes follower history.
+            sprite.setForcedJumpPress(true);
+        }
+    }
+
+    static boolean hasNewP1ActionPress(Bk2Movie movie, int bk2Index) {
+        if (movie == null || bk2Index < 0 || bk2Index >= movie.getFrameCount()) {
+            return false;
+        }
+        int currentAction = movie.getFrame(bk2Index).p1ActionMask();
+        int previousAction = bk2Index > 0
+                ? movie.getFrame(bk2Index - 1).p1ActionMask()
+                : 0;
+        return (currentAction & ~previousAction) != 0;
     }
 
     /**

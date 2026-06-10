@@ -150,6 +150,7 @@ public abstract class AbstractTraceReplayTest {
                         .startPositionIsCentre();
             }
             HeadlessTestFixture fixture = fixtureBuilder.build();
+            TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(trace, fixture);
 
             if (GameServices.debugOverlay() != null) {
                 GameServices.debugOverlay().setEnabled(DebugOverlayToggle.TOUCH_RESPONSE, true);
@@ -897,8 +898,10 @@ public abstract class AbstractTraceReplayTest {
         int cpuMaxY = sidekick.getCpuController() != null
                 ? sidekick.getCpuController().getMaxYBound(camMaxY) & 0xFFFF
                 : -1;
+        int interactSlot = sidekick.getInteractSlotIndex();
+        String interactOccupant = summariseSlotOccupant(om, interactSlot);
         return String.format(
-                "eng-tails-state pos=(%04X,%04X) sub=(%04X,%04X) vel=(%04X,%04X) g=%04X dir=%s onObj=%s ride=s%d type=%02X st=%02X pin=%s lock=%s prs=%s boundsY=%04X/%04X/%04X cpuMax=%04X",
+                "eng-tails-state pos=(%04X,%04X) sub=(%04X,%04X) vel=(%04X,%04X) g=%04X dir=%s onObj=%s ride=s%d type=%02X interact=s%d[%s] st=%02X pin=%s lock=%s prs=%s boundsY=%04X/%04X/%04X cpuMax=%04X",
                 sidekick.getCentreX() & 0xFFFF,
                 sidekick.getCentreY() & 0xFFFF,
                 sidekick.getXSubpixelRaw() & 0xFFFF,
@@ -910,6 +913,8 @@ public abstract class AbstractTraceReplayTest {
                 sidekick.isOnObject(),
                 standOnSlot,
                 standOnType & 0xFF,
+                interactSlot,
+                interactOccupant,
                 buildStatusByte(sidekick),
                 sidekick.getPinballMode(),
                 sidekick.getPinballSpeedLock(),
@@ -918,6 +923,25 @@ public abstract class AbstractTraceReplayTest {
                 camMaxY,
                 camMaxYTarget,
                 cpuMaxY);
+    }
+
+    private String summariseSlotOccupant(ObjectManager om, int slot) {
+        if (om == null || slot < 0) {
+            return "empty";
+        }
+        for (ObjectInstance instance : om.getActiveObjects()) {
+            if (instance instanceof AbstractObjectInstance aoi
+                    && aoi.getSlotIndex() == slot
+                    && !instance.isDestroyed()
+                    && instance.getSpawn() != null) {
+                return String.format("%02X@%04X,%04X/%s",
+                        instance.getSpawn().objectId() & 0xFF,
+                        instance.getX() & 0xFFFF,
+                        instance.getY() & 0xFFFF,
+                        instance.getClass().getSimpleName());
+            }
+        }
+        return "empty";
     }
 
     private String summariseSidekickNearbyObjects(ObjectManager om) {

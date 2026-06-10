@@ -218,8 +218,10 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
         y = subY >> 8;
         velY += GRAVITY;
 
-        // Check if off-screen - delete if beyond camera viewport + margin
-        if (!isOnScreen(112)) {
+        // ROM loc_25BA4 tests render_flags.on_screen and jumps to DeleteObject
+        // when BuildSprites cleared the render-bounds bit
+        // (docs/s2disasm/s2.asm:51885-51888).
+        if (!isWithinSolidContactBounds()) {
             setDestroyed(true);
         }
     }
@@ -303,7 +305,10 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
                 int vy = DEBRIS_DATA[i][1];
                 int delay = DEBRIS_DATA[i][2];
 
-                spawnFreeChild(() -> new RisingPillarDebrisInstance(
+                // ROM loc_25C1C calls AllocateObjectAfterCurrent for each
+                // debris sibling (docs/s2disasm/s2.asm:51936-51938), so the
+                // spawned pieces must occupy slots after the pillar slot.
+                spawnChild(() -> new RisingPillarDebrisInstance(
                         x, y, vx, vy, piece, delay));
             }
         }
@@ -511,8 +516,9 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
             currentX = subX >> 8;
             currentY = subY >> 8;
 
-            // Check if off-screen - delete if beyond camera viewport + margin
-            if (!isOnScreen(112)) {
+            // ROM loc_25BA4 tests render_flags.on_screen, not a broad persistence
+            // margin (docs/s2disasm/s2.asm:51885-51888).
+            if (!isWithinSolidContactBounds()) {
                 setDestroyed(true);
             }
         }

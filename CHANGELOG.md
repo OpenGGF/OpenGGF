@@ -8,6 +8,9 @@ All notable changes to the OpenGGF project are documented in this file.
   S2 level-select fixtures were regenerated with `cpu_state_per_frame`, and
   trace replay now compares read-only Tails CPU routine, counters, targets,
   logical input bytes, and delayed follow-ring metadata before positional drift.
+  Legacy S2 traces that do not advertise the CPU-state aux schema no longer
+  fail with synthetic `cpu_present` errors; CPU-state presence is compared only
+  when the trace carries the ROM-side event.
 
 - **Release-review blockers are now guarded directly:** the parallax shader
   maps physical window pixels back to logical display pixels, scheduled
