@@ -100,7 +100,7 @@ public final class EditorSaveManager {
         BitSet modifiedBlocks = level.modifiedBlocksSinceBaseline();
         for (int index = modifiedBlocks.nextSetBit(0); index >= 0; index = modifiedBlocks.nextSetBit(index + 1)) {
             if (index < level.getBlockCount()) {
-                blocks.add(new EditorSavePayload.BlockState(index, level.getBlock(index).saveState()));
+                blocks.add(new EditorSavePayload.BlockState(index, level.editorSaveBlockState(index)));
             }
         }
 
@@ -108,7 +108,7 @@ public final class EditorSaveManager {
         BitSet modifiedChunks = level.modifiedChunksSinceBaseline();
         for (int index = modifiedChunks.nextSetBit(0); index >= 0; index = modifiedChunks.nextSetBit(index + 1)) {
             if (index < level.getChunkCount()) {
-                chunks.add(new EditorSavePayload.ChunkState(index, level.getChunk(index).saveState()));
+                chunks.add(new EditorSavePayload.ChunkState(index, level.editorSaveChunkState(index)));
             }
         }
 
@@ -120,7 +120,7 @@ public final class EditorSaveManager {
             int x = cell[1];
             int y = cell[2];
             mapCells.add(new EditorSavePayload.MapCell(
-                    layer, x, y, Byte.toUnsignedInt(level.getMap().getValue(layer, x, y))));
+                    layer, x, y, level.editorSaveMapCellValue(index)));
         }
         return new EditorSavePayload(blocks, chunks, mapCells);
     }

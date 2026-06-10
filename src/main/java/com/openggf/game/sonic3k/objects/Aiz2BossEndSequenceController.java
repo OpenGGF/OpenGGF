@@ -194,7 +194,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance {
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
         ObjectControlState.nativeBit7FullControl().applyTo(player);
-        setSidekickControlLocked(player, true);
+        holdSidekickEndingPose(player);
     }
 
     private void startPostCapsuleSequence(AbstractPlayableSprite player) {
@@ -204,6 +204,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance {
         player.setControlLocked(true);
         forceRightLogicalInput(player);
         applyFirstForcedRightWalkTick(player);
+        restoreSidekickPostResultsControl(player);
         setSidekickControlLocked(player, true);
     }
 
@@ -268,6 +269,41 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance {
                 if (!locked) {
                     sprite.clearForcedInputMask();
                 }
+            }
+        }
+    }
+
+    private void holdSidekickEndingPose(AbstractPlayableSprite player) {
+        ObjectPlayerQuery query = new ObjectPlayerQuery(
+                () -> player,
+                () -> services().playerQuery().sidekicks());
+        for (PlayableEntity sidekick : query.playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (sidekick == player) {
+                continue;
+            }
+            if (sidekick instanceof AbstractPlayableSprite sprite) {
+                sprite.setControlLocked(true);
+                sprite.setXSpeed((short) 0);
+                sprite.setYSpeed((short) 0);
+                sprite.setGSpeed((short) 0);
+                ObjectControlState.nativeBit7FullControl().applyTo(sprite);
+            }
+        }
+    }
+
+    private void restoreSidekickPostResultsControl(AbstractPlayableSprite player) {
+        ObjectPlayerQuery query = new ObjectPlayerQuery(
+                () -> player,
+                () -> services().playerQuery().sidekicks());
+        for (PlayableEntity sidekick : query.playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (sidekick == player) {
+                continue;
+            }
+            if (sidekick instanceof AbstractPlayableSprite sprite) {
+                ObjectControlState.none().applyTo(sprite);
+                sprite.setForcedAnimationId(-1);
             }
         }
     }

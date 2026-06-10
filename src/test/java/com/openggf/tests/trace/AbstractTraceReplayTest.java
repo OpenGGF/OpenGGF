@@ -244,6 +244,8 @@ public abstract class AbstractTraceReplayTest {
                             formatCharacterDiagnostics(secondaryCharacterLabel, actualSidekick));
                     TraceEvent.CpuState expectedSidekickCpu =
                             trace.cpuStateForFrame(comparisonExpected.frame(), secondaryCharacterLabel);
+                    TraceEvent.TailsCpuNormalStep expectedSidekickNormalStep =
+                            trace.tailsCpuNormalStepForFrame(comparisonExpected.frame(), secondaryCharacterLabel);
                     EngineSidekickCpuState actualSidekickCpu = captureFirstSidekickCpuState();
                     binder.compareFrame(comparisonExpected,
                         sprite.getCentreX(), sprite.getCentreY(),
@@ -254,7 +256,7 @@ public abstract class AbstractTraceReplayTest {
                         EngineDiagnostics.formattedWithCamera(
                                 engineDiag.cameraX(), engineDiag.cameraY(), engineDiagText),
                         secondaryCharacterLabel, actualSidekick,
-                        expectedSidekickCpu, actualSidekickCpu);
+                        expectedSidekickCpu, actualSidekickCpu, expectedSidekickNormalStep);
 
                 }
             }
@@ -367,6 +369,8 @@ public abstract class AbstractTraceReplayTest {
 
             TraceEvent.CpuState expectedSidekickCpu =
                     trace.cpuStateForFrame(seededFrame.frame(), secondaryCharacterLabel);
+            TraceEvent.TailsCpuNormalStep expectedSidekickNormalStep =
+                    trace.tailsCpuNormalStepForFrame(seededFrame.frame(), secondaryCharacterLabel);
             EngineSidekickCpuState actualSidekickCpu = captureFirstSidekickCpuState();
             binder.compareFrame(seededFrame,
                     seededPrimary.x(), seededPrimary.y(),
@@ -378,7 +382,8 @@ public abstract class AbstractTraceReplayTest {
                     secondaryCharacterLabel,
                     seededSidekick,
                     expectedSidekickCpu,
-                    actualSidekickCpu);
+                    actualSidekickCpu,
+                    expectedSidekickNormalStep);
 
             for (int frame = 0; frame <= replayStart.seededTraceIndex(); frame++) {
                 for (TraceEvent event : trace.getEventsForFrame(frame)) {
@@ -463,6 +468,8 @@ public abstract class AbstractTraceReplayTest {
                         : meta.recordedSidekicks().getFirst();
                 TraceEvent.CpuState expectedSidekickCpu =
                         trace.cpuStateForFrame(driveFrame.frame(), secondaryCharacterLabel);
+                TraceEvent.TailsCpuNormalStep expectedSidekickNormalStep =
+                        trace.tailsCpuNormalStepForFrame(driveFrame.frame(), secondaryCharacterLabel);
                 EngineSidekickCpuState actualSidekickCpu = captureFirstSidekickCpuState();
                 binder.compareFrame(driveFrame,
                         actualPrimary.x(), actualPrimary.y(),
@@ -474,7 +481,8 @@ public abstract class AbstractTraceReplayTest {
                         secondaryCharacterLabel,
                         actualSidekick,
                         expectedSidekickCpu,
-                        actualSidekickCpu);
+                        actualSidekickCpu,
+                        expectedSidekickNormalStep);
             }
 
             TraceEvent.Checkpoint traceCheckpoint = trace.latestCheckpointAtOrBefore(driveTraceIndex);
@@ -900,8 +908,9 @@ public abstract class AbstractTraceReplayTest {
                 : -1;
         int interactSlot = sidekick.getInteractSlotIndex();
         String interactOccupant = summariseSlotOccupant(om, interactSlot);
+        String renderFlagDiag = summariseSidekickRenderFlagDiagnostics(sidekick);
         return String.format(
-                "eng-tails-state pos=(%04X,%04X) sub=(%04X,%04X) vel=(%04X,%04X) g=%04X dir=%s onObj=%s ride=s%d type=%02X interact=s%d[%s] st=%02X pin=%s lock=%s prs=%s boundsY=%04X/%04X/%04X cpuMax=%04X",
+                "eng-tails-state pos=(%04X,%04X) sub=(%04X,%04X) vel=(%04X,%04X) g=%04X dir=%s onObj=%s ride=s%d type=%02X interact=s%d[%s] st=%02X pin=%s lock=%s prs=%s boundsY=%04X/%04X/%04X cpuMax=%04X %s",
                 sidekick.getCentreX() & 0xFFFF,
                 sidekick.getCentreY() & 0xFFFF,
                 sidekick.getXSubpixelRaw() & 0xFFFF,
@@ -922,7 +931,42 @@ public abstract class AbstractTraceReplayTest {
                 camMinY,
                 camMaxY,
                 camMaxYTarget,
-                cpuMaxY);
+                cpuMaxY,
+                renderFlagDiag);
+    }
+
+    private String summariseSidekickRenderFlagDiagnostics(AbstractPlayableSprite sidekick) {
+        var cam = sidekick.currentCamera();
+        if (cam == null) {
+            return "rf=cam-none";
+        }
+        int rawCamX = cam.getX();
+        int rawCamY = cam.getY();
+        int renderCamX = cam.getXWithShake();
+        int renderCamY = cam.getYWithShake();
+        int relX = sidekick.getRenderCentreX() - renderCamX;
+        int relY = sidekick.getRenderCentreY() - renderCamY;
+        return String.format(
+                "rf=%s/%s inv=%02X hurt=%s hidden=%s refresh=%s rc=(%04X,%04X) wh=%02X/%02X camRaw=(%04X,%04X) camCopy=(%04X,%04X) shake=(%d,%d) rel=(%d,%d) calc=%s",
+                sidekick.isRenderFlagOnScreen(),
+                sidekick.hasRenderFlagOnScreenState(),
+                sidekick.getInvulnerableFrames() & 0xFF,
+                sidekick.isHurt(),
+                sidekick.isHidden(),
+                sidekick.shouldRefreshRenderFlagThisFrame(),
+                sidekick.getRenderCentreX() & 0xFFFF,
+                sidekick.getRenderCentreY() & 0xFFFF,
+                sidekick.getRenderFlagWidthPixels() & 0xFF,
+                sidekick.getRenderFlagWidthPixels() & 0xFF,
+                rawCamX & 0xFFFF,
+                rawCamY & 0xFFFF,
+                renderCamX & 0xFFFF,
+                renderCamY & 0xFFFF,
+                cam.getShakeOffsetX(),
+                cam.getShakeOffsetY(),
+                relX,
+                relY,
+                cam.isVisibleForRenderFlag(sidekick));
     }
 
     private String summariseSlotOccupant(ObjectManager om, int slot) {

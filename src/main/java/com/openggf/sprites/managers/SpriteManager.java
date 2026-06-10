@@ -806,6 +806,9 @@ public class SpriteManager {
 		}
 		for (Sprite sprite : getAllSprites()) {
 			if (sprite instanceof AbstractPlayableSprite playable) {
+				if (!playable.shouldRefreshRenderFlagThisFrame()) {
+					continue;
+				}
 				playable.setRenderFlagOnScreen(camera.isVisibleForRenderFlag(playable));
 			}
 		}

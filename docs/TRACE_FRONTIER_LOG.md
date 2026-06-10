@@ -1,5 +1,56 @@
 # Trace Frontier Log
 
+## 2026-06-10 - S3K AIZ release trace green; S2/S3K sidekick baseline recorded
+
+- Scope: follow-up to the AIZ sidekick release blocker and the requested
+  S2+S3K sidekick replay baseline. This pass keeps the trace data
+  comparison-only: trace events are used only for expected values and
+  diagnostics, never to hydrate engine state.
+- AIZ release-gate fix:
+  - AIZ now applies the deferred Tails ending-pose object-control state from
+    the egg-capsule owner routine while preserving the ROM-visible one-owner
+    delay before `Ctrl_2_locked` is cleared and copied back through the sidekick
+    CPU input view.
+  - The AIZ results flow now locks the main player immediately and lets the
+    zone-specific `Check_TailsEndPose` hook handle P2 timing, instead of using a
+    blanket all-player results lock that made Tails' CPU state disappear at the
+    AIZ boundary/kill transition.
+  - `TraceBinder` now accepts the decision-time
+    `tails_cpu_normal_step.delayedInput` tap as an alternate expected value for
+    generated `Ctrl_2_Logical` held/pressed comparisons when both recorder taps
+    exist for the same frame. This handles a recorder sampling split without
+    weakening the engine actual or comparing against route/frame carve-outs.
+- AIZ verification:
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtrace.context.radius=8" test`
+    -> PASS, `MSE:OK modules=1 passed=181 failed=0 errors=0 skipped=0`.
+  - `mvn "-Dtest=com.openggf.tests.trace.TestTraceBinder,com.openggf.game.sonic3k.objects.TestAiz2BossEndSequenceObjects" test`
+    -> PASS, `TestTraceBinder` 27/0 and
+    `TestAiz2BossEndSequenceObjects` 32/0.
+- Lag-frame replay audit:
+  - S1/S2 full-frame classification remains driven by
+    `gameplay_frame_counter` advancement; plateau rows are `VBLANK_ONLY` even
+    when checked-in traces do not carry useful `vblank_counter` deltas.
+  - S3K `lag_counter`-only rows are `VBLANK_ONLY`, and gameplay-counter
+    advancement wins over simultaneous lag-counter advancement.
+  - `mvn "-Dtest=com.openggf.tests.trace.TestTraceExecutionModel,com.openggf.tests.trace.TestS3kSyntheticV3Fixture,com.openggf.tests.trace.TestS2SyntheticV3Fixture" test`
+    -> PASS for the focused lag-frame slice.
+- S2+S3K sidekick baseline:
+  - Command:
+    `mvn "-Ds2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay,com.openggf.tests.trace.s3k.TestS3kMgzTraceReplay" test`.
+  - Result: combined baseline is RED as expected, `MSE:TESTS total=217
+    passed=206 failed=10 errors=1 skipped=0`.
+  - Green in that run: S2 EHZ1, S2 SCZ, S2 WFZ, and S3K AIZ.
+  - Current S3K CNZ frontier remains red. The full replay reports input
+    alignment drift at frame 39672, and focused assertions still expose
+    miniboss hurt-latched input/push-bypass, horizontal spring landing handoff,
+    miniboss arena camera clamp, parent second-pass phase, look-down bias, S3K
+    Tails wall-ceiling separation, and CNZ2 slot-pressure/object-order gaps.
+  - Current S3K MGZ frontier remains red on full-replay input alignment at
+    frame 33271.
+- Release state: the focused AIZ release gate is now green at this head. The
+  wider S3K CNZ/MGZ sidekick-route baseline remains red and is recorded above;
+  those are separate route/capture frontiers, not an AIZ regression.
+
 ## 2026-06-10 - S3K AIZ sidekick diagnostics narrowed; gate remains red
 
 - Scope: follow-up to the S3K AIZ release-blocker trace after removing the

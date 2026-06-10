@@ -239,6 +239,11 @@
 -- diagnostics for the focused CNZ2 balloon phase window, recording seed
 -- before/after, result, return PC, and the current object register context.
 -- Diagnostic-only.
+-- v6.26-s3k extends sidekick_interact_object diagnostics with the sidekick
+-- invulnerability_timer, width_pixels/height_pixels, and Camera_*_pos_copy
+-- words used by Tails_Display / Render_Sprites visibility
+-- (sonic3k.constants.asm:9-16,62,416-417; sonic3k.asm:26278-26300,
+-- 36323-36370). Diagnostic-only.
 ------------------------------------------------------------------------------
 
 -----------------
@@ -1037,7 +1042,7 @@ local function write_metadata()
     meta_file:write('  "sidekicks": ["tails"],\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "6.25-s3k-completerun",\n')
+    meta_file:write('  "lua_script_version": "6.26-s3k-completerun",\n')
     -- trace_schema: csv schema is unchanged from 5. v5 CSV + new per-frame
     -- cpu_state, oscillation_state, object_state, and interact_state aux
     -- events are detected by parsers via aux_schema_extras rather than a
@@ -1097,6 +1102,10 @@ local function write_metadata()
     -- lifetime fields. Diagnostic-only.
     -- v6.25 adds rng_call_per_frame for focused CNZ2 Random_Number call
     -- sequence diagnostics before the @10E8 balloon init. Diagnostic-only.
+    -- v6.26 extends sidekick_interact_object_per_frame with the ROM
+    -- render-visibility inputs (sidekick invulnerability timer, width/height,
+    -- and camera copy).
+    -- Diagnostic-only.
     -- All diagnostic-only.
     meta_file:write('  "trace_schema": 5,\n')
     meta_file:write('  "csv_version": 5,\n')
@@ -1277,6 +1286,8 @@ local function build_object_fields(addr)
     parts[#parts + 1] = string.format('"y_vel":"0x%04X"', y_vel_raw)
 
     parts[#parts + 1] = string.format('"render_flags":"0x%02X"', mainmemory.read_u8(addr + 0x04))
+    parts[#parts + 1] = string.format('"height_pixels":"0x%02X"', mainmemory.read_u8(addr + 0x06))
+    parts[#parts + 1] = string.format('"width_pixels":"0x%02X"', mainmemory.read_u8(addr + 0x07))
     parts[#parts + 1] = string.format('"status":"0x%02X"', mainmemory.read_u8(addr + OFF_STATUS))
     parts[#parts + 1] = string.format('"routine":"0x%02X"', mainmemory.read_u8(addr + OFF_ROUTINE))
     parts[#parts + 1] = string.format('"mapping_frame":"0x%02X"', mainmemory.read_u8(addr + 0x22))
@@ -1647,7 +1658,12 @@ local function write_sidekick_interact_object_state(player2_present)
     local tails_status = mainmemory.read_u8(SIDEKICK_BASE + OFF_STATUS)
     local tails_object_control = mainmemory.read_u8(SIDEKICK_BASE + OFF_OBJECT_CONTROL)
     local tails_render_flags = mainmemory.read_u8(SIDEKICK_BASE + 0x04)
+    local tails_invulnerability_timer = mainmemory.read_u8(SIDEKICK_BASE + 0x34)
+    local tails_height_pixels = mainmemory.read_u8(SIDEKICK_BASE + 0x06)
+    local tails_width_pixels = mainmemory.read_u8(SIDEKICK_BASE + 0x07)
     local tails_on_object = (tails_status & STATUS_ON_OBJECT) ~= 0
+    local camera_x_copy = mainmemory.read_u16_be(0xEE80)
+    local camera_y_copy = mainmemory.read_u16_be(0xEE84)
 
     local obj_addr = OBJ_TABLE_START + (interact_slot * OBJ_SLOT_SIZE)
     local object_code = 0
@@ -1682,6 +1698,9 @@ local function write_sidekick_interact_object_state(player2_present)
         '{"frame":%d,"vfc":%d,"event":"sidekick_interact_object","character":"tails",'
             .. '"interact":"0x%04X","interact_slot":%d,'
             .. '"tails_render_flags":"0x%02X","tails_object_control":"0x%02X",'
+            .. '"tails_invulnerability_timer":"0x%02X",'
+            .. '"tails_width_pixels":"0x%02X","tails_height_pixels":"0x%02X",'
+            .. '"camera_x_copy":"0x%04X","camera_y_copy":"0x%04X",'
             .. '"tails_status":"0x%02X","tails_on_object":%s,'
             .. '"object_code":"0x%08X","object_routine":"0x%02X",'
             .. '"object_status":"0x%02X","object_x":"0x%04X","object_y":"0x%04X",'
@@ -1692,6 +1711,9 @@ local function write_sidekick_interact_object_state(player2_present)
         trace_frame, vfc,
         interact_addr, interact_slot,
         tails_render_flags, tails_object_control,
+        tails_invulnerability_timer,
+        tails_width_pixels, tails_height_pixels,
+        camera_x_copy, camera_y_copy,
         tails_status, tostring(tails_on_object),
         object_code, object_routine,
         object_status, object_x, object_y,
@@ -4978,7 +5000,7 @@ end
 
 WAIT_DESC = "first level entry (Game_Mode=0x0C). Auto-segmenting per ROM zone."
 print(string.format(
-    "S3K Complete-Run Recorder v6.25-s3k-completerun loaded. Profile=%s. Base output=%s. Waiting for %s",
+    "S3K Complete-Run Recorder v6.26-s3k-completerun loaded. Profile=%s. Base output=%s. Waiting for %s",
     TRACE_PROFILE, BASE_OUTPUT_DIR, WAIT_DESC))
 
 -- Register the CNZ wire cage execution hooks. Done once at script load

@@ -95,6 +95,89 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void negativeCtrl2LockPreservesLastRomVisibleCpuLogicalWordForTraceDiagnostics() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x49DA);
+        Arrays.fill(yHistory, (short) 0x01AA);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_JUMP);
+        Arrays.fill(statusHistory, (byte) (AbstractPlayableSprite.STATUS_IN_AIR
+                | AbstractPlayableSprite.STATUS_ROLLING));
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+        tails.setAir(true);
+        tails.setRolling(true);
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        controller.update(0x4CC0);
+        assertEquals(AbstractPlayableSprite.INPUT_JUMP,
+                controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_JUMP);
+
+        controller.setController2Input(AbstractPlayableSprite.INPUT_LEFT, 0);
+        controller.setController2SignedLocked(true);
+        controller.update(0x4CC1);
+
+        assertFalse(controller.getInputLeft(),
+                "Negative Ctrl_2_locked still skips live controller input "
+                        + "(sonic3k.asm:26196-26205).");
+        assertEquals(AbstractPlayableSprite.INPUT_JUMP,
+                controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_JUMP,
+                "The locked path skips Tails_CPU_Control but does not itself clear "
+                        + "the ROM-visible Ctrl_2_Logical word; AIZ's capsule lock "
+                        + "therefore preserves the previous delayed held jump until "
+                        + "another ROM writer changes it.");
+    }
+
+    @Test
+    void negativeCtrl2LockReportsClearedLogicalWordOnceEndingPoseObjectControlOwnsSidekick() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x49DA);
+        Arrays.fill(yHistory, (short) 0x01AA);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_JUMP);
+        Arrays.fill(statusHistory, (byte) (AbstractPlayableSprite.STATUS_IN_AIR
+                | AbstractPlayableSprite.STATUS_ROLLING));
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+        tails.setAir(true);
+        tails.setRolling(true);
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        controller.update(0x4CC0);
+        assertEquals(AbstractPlayableSprite.INPUT_JUMP,
+                controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_JUMP);
+
+        tails.setObjectControlled(true);
+        tails.setObjectControlAllowsCpu(false);
+        controller.setController2SignedLocked(true);
+        controller.update(0x4CC1);
+
+        Assertions.assertAll(
+                () -> assertEquals("ctrl2_signed_lock_skip",
+                        controller.getLatestNormalStepDiagnostics().followBranch()),
+                () -> assertEquals(0,
+                        controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_JUMP,
+                        "Check_TailsEndPose clears Ctrl_2_locked before Set_PlayerEndingPose "
+                                + "freezes Tails with object_control=$81, so the trace-visible "
+                                + "Ctrl_2_logical word follows the cleared raw controller state "
+                                + "(sonic3k.asm:26196-26203,181919-181988)."));
+    }
+
+    @Test
     void followRightStillNudgesPositionWhenDxIsBelowThreshold() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
@@ -534,6 +617,65 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void objectOrderPushAutoJumpUsesFreshDelayedInputOnFirstAirborneTick() {
+        GameModule previous = GameModuleRegistry.getBootstrapDefault();
+        try {
+            installStandaloneGameModule(sonic3kWithSidekickContext(true));
+            TestableSprite sonic = new TestableSprite("sonic");
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setAir(false);
+            tails.setPushing(true);
+            tails.setCentreX((short) 0x1CED);
+            tails.setCentreY((short) 0x03C0);
+
+            short[] xHistory = new short[64];
+            short[] yHistory = new short[64];
+            short[] inputHistory = new short[64];
+            byte[] statusHistory = new byte[64];
+            Arrays.fill(xHistory, (short) 0x1D40);
+            Arrays.fill(yHistory, (short) 0x03C0);
+            Arrays.fill(statusHistory, AbstractPlayableSprite.STATUS_ON_OBJECT);
+            sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+            sonic.setLatchedSolidObjectId(0x03);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+            controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+            controller.update(0x097F);
+            tails.setPushing(false);
+            controller.update(0x0980);
+
+            int nextHistoryPos = 21;
+            int romDelaySlot = nextHistoryPos - SidekickCpuController.ROM_FOLLOW_DELAY_FRAMES;
+            int staleObjectOrderSlot = nextHistoryPos - 17;
+            inputHistory[romDelaySlot] = AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP;
+            inputHistory[staleObjectOrderSlot] = 0;
+            sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, nextHistoryPos);
+            tails.setAir(true);
+            tails.setRolling(true);
+
+            controller.update(0x0981);
+
+            SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+            Assertions.assertAll(
+                    () -> assertFalse("airborne_push_handoff".equals(diagnostics.followBranch()),
+                            "S3K AIZ F2722 falls through loc_13DD0 after the push auto-jump; "
+                                    + "it consumes the next 16-frame Stat_table Ctrl_1 word rather than "
+                                    + "a stale object-order bridge sample (sonic3k.asm:26696-26729,28330-28401)."),
+                    () -> assertEquals(SidekickCpuController.ROM_FOLLOW_DELAY_FRAMES,
+                            diagnostics.followDelayFrames()),
+                    () -> assertTrue(controller.getInputRight(),
+                            "The fresh delayed word carries RIGHT+JUMP at AIZ F2722."),
+                    () -> assertTrue(controller.getInputJump(),
+                            "The jump hold from loc_13E9C remains live on the airborne follow frame."));
+        } finally {
+            installStandaloneGameModule(previous);
+        }
+    }
+
+    @Test
     void normalPushGraceSuppressesGroundedFollowPulseInsideAizObjectBand() throws Exception {
         GameModule previous = GameModuleRegistry.getBootstrapDefault();
         try {
@@ -722,6 +864,48 @@ class TestSidekickCpuFollowParity {
                         + "current sample carries RIGHT; MGZ F1466 is the companion case where d1 is "
                         + "zero and the older RIGHT sample must not be re-read (sonic3k.asm:"
                         + "26696-26705,26775-26785).");
+    }
+
+    @Test
+    void s3kFrameStartPushBypassesFollowSteeringAfterEngineSideClear() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x1F35);
+        tails.setCentreY((short) 0x049D);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0);
+        tails.setXSpeed((short) 0x03B2);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x2175);
+        Arrays.fill(yHistory, (short) 0x049D);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        tails.setPushing(true);
+        tails.captureOnObjectAtFrameStart();
+        tails.setPushing(false);
+        controller.update(0x0C02);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("current_push_bypass", diagnostics.followBranch(),
+                        "AIZ F3074 reads Tails' ROM Status_Push before the engine-side "
+                                + "interact/touch path clears the local push flag. loc_13DD0 bypasses "
+                                + "FollowRight with delayed stat/input both zero (sonic3k.asm:26702-26705)."),
+                () -> assertTrue(diagnostics.skipFollowSteering()),
+                () -> assertFalse(controller.getInputRight(),
+                        "The bypass preserves the already-loaded zero Ctrl_2 word until the next "
+                                + "delayed RIGHT sample arrives."));
     }
 
     @Test
@@ -1038,6 +1222,7 @@ class TestSidekickCpuFollowParity {
         tails.setXSpeed((short) 0x007A);
         tails.setYSpeed((short) 0);
         tails.setPushing(true);
+        tails.setInWater(true);
 
         short[] xHistory = new short[64];
         short[] yHistory = new short[64];
@@ -1063,11 +1248,65 @@ class TestSidekickCpuFollowParity {
                 () -> assertFalse(diagnostics.skipFollowSteering()),
                 () -> assertTrue(controller.getInputLeft(),
                         "FollowLeft overrides the delayed RIGHT input when dx <= -$30."),
-                () -> assertFalse(controller.getInputRight()));
+                () -> assertFalse(controller.getInputRight()),
+                () -> assertEquals(AbstractPlayableSprite.INPUT_LEFT,
+                        controller.getDiagnosticGeneratedHeldInput()
+                                & (AbstractPlayableSprite.INPUT_LEFT | AbstractPlayableSprite.INPUT_RIGHT),
+                        "The ROM-visible Ctrl_2_Logical byte must follow the real FollowLeft branch."));
     }
 
     @Test
-    void s3kFastCurrentPushFarBelowTargetFallsThroughFollowRightAfterAizIntro() {
+    void s3kUnderwaterCurrentPushPulseBypassesFollowLeftAfterAizReload() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x31CA);
+        tails.setCentreY((short) 0x065E);
+        tails.setDirection(Direction.LEFT);
+        tails.setGSpeed((short) 0);
+        tails.setXSpeed((short) 0xFEBE);
+        tails.setYSpeed((short) 0);
+        tails.setPushing(true);
+        tails.setInWater(true);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x316D);
+        Arrays.fill(yHistory, (short) 0x025C);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_DOWN);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        controller.update(0x37D7);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("current_push_bypass", diagnostics.followBranch(),
+                        "AIZ2 F14295 has ROM-visible Status_Push at Tails_CPU_Control: "
+                                + "the underwater side-contact pulse reaches loc_13DD0 before "
+                                + "Tails_InputAcceleration_Path clears Status_Push "
+                                + "(sonic3k.asm:26702-26705,27798-27805)."),
+                () -> assertTrue(diagnostics.skipFollowSteering()),
+                () -> assertFalse(controller.getInputLeft()),
+                () -> assertFalse(controller.getInputRight()),
+                () -> assertTrue(controller.getInputDown()),
+                () -> assertEquals(AbstractPlayableSprite.INPUT_DOWN,
+                        controller.getDiagnosticGeneratedHeldInput()
+                                & (AbstractPlayableSprite.INPUT_UP
+                                | AbstractPlayableSprite.INPUT_DOWN
+                                | AbstractPlayableSprite.INPUT_LEFT
+                                | AbstractPlayableSprite.INPUT_RIGHT)));
+    }
+
+    @Test
+    void s3kCurrentPushFarBelowTargetBypassesFollowRightAfterAizIntro() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
@@ -1097,15 +1336,16 @@ class TestSidekickCpuFollowParity {
 
         SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
         Assertions.assertAll(
-                () -> assertEquals("follow_steering", diagnostics.followBranch(),
-                        "AIZ F3077 has a high incoming wall-push velocity, but speed alone is "
-                                + "not the ROM Status_Push byte read by Tails_CPU_Control "
+                () -> assertEquals("current_push_bypass", diagnostics.followBranch(),
+                        "AIZ F3074/F3077 has ROM-visible Status_Push at Tails_CPU_Control; "
+                                + "loc_13DD0 must skip FollowRight even when dx is far "
                                 + "(sonic3k.asm:26702-26729)."),
-                () -> assertFalse(diagnostics.skipFollowSteering()),
+                () -> assertTrue(diagnostics.skipFollowSteering()),
                 () -> assertFalse(controller.getInputLeft()),
-                () -> assertTrue(controller.getInputRight(),
-                        "FollowRight applies because this far-target push has no delayed "
-                                + "push/object context and is outside the local contact band."));
+                () -> assertFalse(controller.getInputRight()),
+                () -> assertEquals(0,
+                        controller.getDiagnosticGeneratedHeldInput()
+                                & (AbstractPlayableSprite.INPUT_LEFT | AbstractPlayableSprite.INPUT_RIGHT)));
     }
 
     @Test
@@ -2238,6 +2478,46 @@ class TestSidekickCpuFollowParity {
                         "ROM loc_13E9C holds A/B/C when Level_frame_counter low bits are zero"),
                 () -> assertEquals(true, controller.getInputJumpPress(),
                         "ROM loc_13E9C writes Ctrl_2_logical on the Level_frame_counter cadence"));
+    }
+
+    @Test
+    void airborneRollingNormalStepPreservesDelayedHeldJumpDiagnosticWithoutPressEdge() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(true);
+        tails.setRolling(true);
+        tails.setCentreX((short) 0x49E0);
+        tails.setCentreY((short) 0x01AC);
+        tails.setXSpeed((short) 0xFF98);
+        tails.setYSpeed((short) 0xFDA8);
+        tails.setGSpeed((short) 0xFF24);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x49DA);
+        Arrays.fill(yHistory, (short) 0x01AA);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_JUMP);
+        Arrays.fill(statusHistory, (byte) (AbstractPlayableSprite.STATUS_IN_AIR
+                | AbstractPlayableSprite.STATUS_ROLLING));
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        controller.update(0x4CC1);
+
+        Assertions.assertAll(
+                () -> assertEquals(AbstractPlayableSprite.INPUT_JUMP,
+                        controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_JUMP,
+                        "TailsCPU_Normal copies the delayed Ctrl_1_Logical high-byte A/B/C hold "
+                                + "into Ctrl_2_Logical even when there is no fresh low-byte press "
+                                + "(sonic3k.asm:26696-26785)."),
+                () -> assertEquals(0,
+                        controller.getDiagnosticGeneratedPressedInput() & AbstractPlayableSprite.INPUT_JUMP,
+                        "A held-only delayed sample must not manufacture a fresh Ctrl_2 press bit."));
     }
 
     @Test

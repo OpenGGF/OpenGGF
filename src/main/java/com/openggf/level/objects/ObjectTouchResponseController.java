@@ -379,6 +379,9 @@ final class ObjectTouchResponseController {
             TouchResponseProfile touchProfile = regions != null
                     ? provider.getTouchResponseProfile(true)
                     : provider.getTouchResponseProfile();
+            if (!isCandidateForActor(isSidekick, touchProfile)) {
+                continue;
+            }
 
             // ROM parity (S1-specific provenance):
             // S1's ReactToItem (docs/s1disasm/_incObj/sub ReactToItem.asm:26-27)
@@ -539,6 +542,9 @@ final class ObjectTouchResponseController {
             TouchResponseProvider.TouchRegion[] regions, int playerWidth,
             Set<ObjectInstance> buildingSet, Set<ObjectInstance> overlappingSet,
             boolean isSidekick) {
+        if (!isCandidateForActor(isSidekick, profile)) {
+            return false;
+        }
         for (TouchResponseProvider.TouchRegion region : regions) {
             int flags = region.collisionFlags();
             if (flags == 0) {
@@ -578,6 +584,12 @@ final class ObjectTouchResponseController {
             return true;
         }
         return false; // No region overlapped
+    }
+
+    private boolean isCandidateForActor(boolean isSidekick, TouchResponseProfile profile) {
+        return !isSidekick
+                || profile == null
+                || profile.actorContextPolicy() != TouchActorContextPolicy.MAIN_ONLY;
     }
 
     private boolean tryShieldDeflect(PlayableEntity player, ObjectInstance instance,
@@ -694,9 +706,6 @@ final class ObjectTouchResponseController {
      * which applies hurt animation without checking rings.
      */
     private void applySidekickHurt(PlayableEntity sidekick, ObjectInstance instance) {
-        if (sidekick.getInvulnerable()) {
-            return;
-        }
         int sourceX = instance != null ? instance.getX() : sidekick.getCentreX();
         // ROM: Hurt_Sidekick in 1P mode - just apply hurt knockback, no ring scatter
         sidekick.applyHurt(sourceX);

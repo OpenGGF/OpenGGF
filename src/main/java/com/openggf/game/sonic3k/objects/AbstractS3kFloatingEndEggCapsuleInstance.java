@@ -213,10 +213,13 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
             }
             updateSwingAndMove();
             checkpointAll();
-        } else if (resultsStarted && !releaseTriggered && services().gameState().isEndOfLevelFlag()) {
-            releaseTriggered = true;
-            onEndingPoseLockClear();
-            onResultsComplete();
+        } else if (resultsStarted && !releaseTriggered) {
+            onResultsActiveWait();
+            if (services().gameState().isEndOfLevelFlag()) {
+                releaseTriggered = true;
+                onEndingPoseLockClear();
+                onResultsComplete();
+            }
             updateSwingAndMove();
             checkpointAll();
         } else {
@@ -428,7 +431,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
         services().gameState().setEndOfLevelActive(true);
         if (shouldLockPlayersForResults()) {
             for (PlayableEntity candidate : playerQuery(player)
-                    .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                    .playersFor(resultsLockParticipationPolicy())) {
                 if (candidate instanceof AbstractPlayableSprite sprite) {
                     lockForResults(sprite);
                 }
@@ -443,6 +446,10 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
 
     protected boolean shouldLockPlayersForResults() {
         return true;
+    }
+
+    protected ObjectPlayerParticipationPolicy resultsLockParticipationPolicy() {
+        return ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS;
     }
 
     protected void lockForResults(AbstractPlayableSprite sprite) {
@@ -462,6 +469,10 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
 
     protected void onResultsComplete() {
         // Zone-specific post-results handoff.
+    }
+
+    protected void onResultsActiveWait() {
+        // Zone-specific Obj_EggCapsule routine $0C side effects.
     }
 
     protected void onEndingPoseLockClear() {

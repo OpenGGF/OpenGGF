@@ -439,6 +439,36 @@ public class TestTouchResponseManager {
     }
 
     @Test
+    public void sidekickTouchResponseSkipsMainOnlyObjectBeforeConsumingOverlap() {
+        when(player.getCentreX()).thenReturn((short) 500);
+
+        AbstractPlayableSprite sidekick = mock(AbstractPlayableSprite.class);
+        when(sidekick.getCentreX()).thenReturn((short) 160);
+        when(sidekick.getCentreY()).thenReturn((short) 112);
+        when(sidekick.getYRadius()).thenReturn((short) 20);
+        when(sidekick.getCrouching()).thenReturn(false);
+        when(sidekick.getDead()).thenReturn(false);
+        when(sidekick.getInvulnerable()).thenReturn(false);
+        when(sidekick.getInvincibleFrames()).thenReturn(0);
+        when(sidekick.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(sidekick.getAnimationId()).thenReturn(Sonic3kAnimationIds.WALK.id());
+
+        MockMainOnlyTouchObject mainOnlyOverlap = new MockMainOnlyTouchObject(160, 112, 0x48);
+        MockTouchObject laterHurt = new MockTouchObject(160, 112, 0x88);
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(mainOnlyOverlap);
+        objectManager.addDynamicObject(laterHurt);
+
+        objectManager.update(0, player, List.of(sidekick), 1);
+
+        assertFalse(mainOnlyOverlap.wasTouched,
+                "MAIN_ONLY touch objects are not candidates for sidekick response");
+        assertTrue(laterHurt.wasTouched,
+                "An inapplicable earlier overlap must not hide a later sidekick hurt object");
+        verify(sidekick).applyHurt(anyInt());
+    }
+
+    @Test
     public void testSidekickMultiRegionTouchResponseStopsAfterFirstOverlappingObject() {
         when(player.getCentreX()).thenReturn((short) 500);
 
@@ -837,6 +867,26 @@ public class TestTouchResponseManager {
         @Override
         public boolean requiresContinuousTouchCallbacks() {
             return true;
+        }
+    }
+
+    private static final class MockMainOnlyTouchObject extends MockTouchObject {
+        private MockMainOnlyTouchObject(int x, int y, int flags) {
+            super(x, y, flags);
+        }
+
+        @Override
+        public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+            return new TouchResponseProfile(
+                    TouchCategoryDecodeMode.NORMAL,
+                    false,
+                    true,
+                    multiRegionSource,
+                    TouchShieldDeflectCapability.NONE,
+                    0,
+                    TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                    TouchActorContextPolicy.MAIN_ONLY,
+                    TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY);
         }
     }
 

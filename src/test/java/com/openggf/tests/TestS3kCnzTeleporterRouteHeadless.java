@@ -18,8 +18,11 @@ import com.openggf.level.objects.DefaultObjectServices;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -192,7 +195,7 @@ class TestS3kCnzTeleporterRouteHeadless {
         fixture.sprite().setHidden(true);
 
         CnzEndBossInstance boss = spawnCnzEndBossForTest();
-        boss.forceDefeatForTest();
+        defeatCnzEndBossWithPlayerAttacks(boss, fixture.sprite());
 
         fixture.stepIdleFrames(1);
 
@@ -228,7 +231,7 @@ class TestS3kCnzTeleporterRouteHeadless {
         GameServices.gameState().setCurrentBossId(Sonic3kObjectIds.CNZ_END_BOSS);
 
         CnzEndBossInstance boss = spawnCnzEndBossForTest();
-        boss.forceDefeatForTest();
+        defeatCnzEndBossWithPlayerAttacks(boss, fixture.sprite());
         fixture.stepIdleFrames(1);
 
         CnzEggCapsuleInstance capsule = findObject(CnzEggCapsuleInstance.class);
@@ -318,6 +321,16 @@ class TestS3kCnzTeleporterRouteHeadless {
         boss.setServices(TestEnvironment.objectServices());
         GameServices.level().getObjectManager().addDynamicObject(boss);
         return boss;
+    }
+
+    private void defeatCnzEndBossWithPlayerAttacks(CnzEndBossInstance boss, AbstractPlayableSprite player) {
+        TouchResponseResult hit = new TouchResponseResult(0x06, 0, 0, TouchCategory.ENEMY);
+        for (int i = 0; i < 8; i++) {
+            boss.onPlayerAttack(player, hit);
+            for (int cooldown = 0; cooldown < 0x20; cooldown++) {
+                boss.update(cooldown, player);
+            }
+        }
     }
 
     private boolean isObjectPresent(Class<?> type) {

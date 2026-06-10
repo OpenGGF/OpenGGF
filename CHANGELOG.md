@@ -4,6 +4,25 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Trace replay lag frames are classified consistently across all games:**
+  S1/S2 use gameplay-frame counter advancement as the full-frame signal, S3K
+  treats lag-counter-only rows as VBlank-only frames, and gameplay advancement
+  wins when both counters move.
+
+- **The S3K AIZ release trace gate is green again:** AIZ egg-capsule results
+  timing now preserves the ROM-visible Tails ending-pose/control-lock ordering,
+  and trace comparison accepts the recorder's decision-time sidekick input tap
+  without hydrating engine state from the trace.
+
+- **Editor save files no longer persist runtime terrain events:** gameplay
+  layout mutations update the live level and redraw state without changing the
+  editor-save baseline, preventing event terrain such as the AIZ intro swap
+  from being baked into future edit loads.
+
+- **Data Select launch errors are visible on the save screen:** stored launch
+  failures are now carried through presentation state and rendered as clipped
+  safe-glyph text instead of only being logged internally.
+
 - **S3K release-route crashes and dead ends are guarded:** completed-emerald
   big-ring touches no longer request the unregistered HPZ zone, and the CNZ2
   post-capsule sequence now continues through the ROM cannon-launch handoff into

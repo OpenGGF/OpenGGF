@@ -16,6 +16,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -34,7 +35,7 @@ import java.util.logging.Logger;
  * Object 0x2A - Cork Floor (Sonic 3 & Knuckles).
  */
 public class CorkFloorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider {
 
     private static final Logger LOG = Logger.getLogger(CorkFloorObjectInstance.class.getName());
 
@@ -43,6 +44,14 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
     private static final int ROLL_BREAK_LAUNCH_YVEL = -0x300;
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
             ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS;
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        // Obj_CorkFloor is installed at 0x0002A618 in the S&K-side ROM.
+        // Tails_CPU_interact stores word 0 of the stood-on object SST
+        // (docs/skdisasm/sonic3k.asm:26816-26843).
+        return 0x0002;
+    }
 
     private static final int[][] VEL_TABLE_SMALL = {
             {-0x200, -0x200}, {0x200, -0x200},

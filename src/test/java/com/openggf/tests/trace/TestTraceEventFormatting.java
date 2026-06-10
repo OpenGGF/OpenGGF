@@ -174,12 +174,12 @@ public class TestTraceEventFormatting {
     void summarisesS3kSidekickInteractObjectDiagnostics() {
         TraceEvent event = TraceEvent.parseJsonLine(
                 """
-                {"frame":4679,"vfc":4680,"event":"sidekick_interact_object","character":"tails","interact":"0xB128","interact_slot":4,"tails_render_flags":"0x80","tails_object_control":"0x03","tails_status":"0x08","tails_on_object":true,"object_code":"0x000220C2","object_routine":"0x02","object_status":"0x10","object_x":"0x2D95","object_y":"0x0420","object_subtype":"0x40","object_render_flags":"0x80","object_object_control":"0x00","object_active":true,"object_destroyed":false,"object_p1_standing":false,"object_p2_standing":true}
+                {"frame":4679,"vfc":4680,"event":"sidekick_interact_object","character":"tails","interact":"0xB128","interact_slot":4,"tails_render_flags":"0x80","tails_object_control":"0x03","tails_invulnerability_timer":"0x2F","tails_width_pixels":"0x14","tails_height_pixels":"0x18","camera_x_copy":"0x1CA1","camera_y_copy":"0x0360","tails_status":"0x08","tails_on_object":true,"object_code":"0x000220C2","object_routine":"0x02","object_status":"0x10","object_x":"0x2D95","object_y":"0x0420","object_subtype":"0x40","object_render_flags":"0x80","object_object_control":"0x00","object_active":true,"object_destroyed":false,"object_p1_standing":false,"object_p2_standing":true}
                 """.trim(),
                 mapper);
 
         assertTrue(event instanceof TraceEvent.SidekickInteractObjectState);
-        assertEquals("tailsInteract slot=4 ptr=B128 obj=000220C2 rtn=02 st=10 @2D95,0420 sub=40 tails rf=80 obj=03 onObj=true objP2=true active=true destroyed=false",
+        assertEquals("tailsInteract slot=4 ptr=B128 obj=000220C2 rtn=02 st=10 @2D95,0420 sub=40 tails rf=80 inv=2F wh=14/18 camCopy=1CA1,0360 obj=03 onObj=true objP2=true active=true destroyed=false",
                 TraceEventFormatter.summariseFrameEvents(List.of(event)));
     }
 

@@ -283,6 +283,7 @@ public record PerObjectRewindSnapshot(
             int minYBound,
             int maxYBound,
             int lastInteractObjectId,
+            int diagnosticS3kInteractWord,
             int normalFrameCount,
             int sidekickCount,
             int normalPushingGraceFrames,
@@ -350,7 +351,7 @@ public record PerObjectRewindSnapshot(
             boolean objectPreservedRollVelocityCarry,
             boolean tunnelMode,
             // Surface interaction / collision
-            boolean onObject, boolean onObjectAtFrameStart,
+            boolean onObject, boolean onObjectAtFrameStart, boolean pushingAtFrameStart,
             int latchedSolidObjectId, int interactSlotIndex, boolean slopeRepelJustSlipped,
             boolean stickToConvex, boolean sliding, boolean pushing,
             boolean skidding, int skidDustTimer,
@@ -360,7 +361,7 @@ public record PerObjectRewindSnapshot(
             boolean springing, int springingFrames,
             boolean dead, boolean drowningDeath, int drownPreDeathTimer,
             boolean hurt, int deathCountdown,
-            int invulnerableFrames, int invincibleFrames,
+            int invulnerableFrames, boolean suppressNextInvulnerabilityDecrement, int invincibleFrames,
             // Player abilities
             boolean spindash, short spindashCounter,
             boolean crouching, boolean lookingUp, short lookDelayCounter,
