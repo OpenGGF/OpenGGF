@@ -10,6 +10,7 @@ import com.openggf.game.OscillationManager;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.sonic2.objects.TornadoObjectInstance;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
+import com.openggf.game.sonic2.trace.Sonic2TornadoRidePrelude;
 import com.openggf.level.LevelData;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -255,8 +256,55 @@ public final class TraceReplaySessionBootstrap {
             applyS2TornadoTitleCardScrollPrelude(trace, objectManager);
             var camera = GameServices.cameraOrNull();
             int cameraX = camera != null ? camera.getX() : 0;
-            for (int i = 0; i < objectPreludeFrames; i++) {
-                objectManager.update(cameraX, null, List.of(), -(objectPreludeFrames - i), false);
+            AbstractPlayableSprite player = fixture != null ? fixture.sprite() : null;
+            List<AbstractPlayableSprite> sidekicks = gameplayMode.getSpriteManager() != null
+                    ? gameplayMode.getSpriteManager().getSidekicks()
+                    : List.of();
+            boolean interleaveSidekickPrelude =
+                    shouldInterleaveS2TitleCardPrelude(trace, sidekickPreludeFrames, objectPreludeFrames)
+                            && gameplayMode.getSpriteManager() != null;
+            boolean tornadoPreludeOrder =
+                    interleaveSidekickPrelude
+                            && TraceReplayBootstrap.isS2TornadoRideStartMetadataCandidate(trace);
+            if (interleaveSidekickPrelude) {
+                prepareSidekickPreludePlacement(trace, gameplayMode);
+            }
+            int consumedPreludeFrames = 0;
+            if (tornadoPreludeOrder) {
+                TornadoObjectInstance tornado = findRideStartTornado(objectManager);
+                consumedPreludeFrames = recordS2TornadoRideStartLeadIn(tornado, player);
+                primeS2TornadoRideStart(trace, objectManager, player);
+            }
+            int sczTornadoPreludeStartY = tornadoPreludeOrder && player != null
+                    ? player.getCentreY() - 4
+                    : 0;
+            for (int i = consumedPreludeFrames; i < objectPreludeFrames; i++) {
+                if (interleaveSidekickPrelude && !tornadoPreludeOrder) {
+                    gameplayMode.getSpriteManager().warmUpCpuSidekicksOnly(1, levelManager, player);
+                }
+                objectManager.update(cameraX, player, sidekicks, -(objectPreludeFrames - i), false);
+                if (tornadoPreludeOrder) {
+                    applyS2TornadoRecordSamplePosition(
+                            findRideStartTornado(objectManager), player, i, sczTornadoPreludeStartY);
+                    gameplayMode.getSpriteManager().warmUpCpuSidekicksOnly(1, levelManager, player);
+                }
+            }
+            if (tornadoPreludeOrder && player != null) {
+                TornadoObjectInstance tornado = findRideStartTornado(objectManager);
+                if (tornado != null && tornado.isSczRideStartPreludeObject()) {
+                    player.shiftX(1);
+                    player.setCentreY((short) (sczTornadoPreludeStartY + 17));
+                    Sonic2TornadoRidePrelude.Seed seed = Sonic2TornadoRidePrelude.forTornado(tornado);
+                    player.setSubpixelRaw(player.getXSubpixelRaw(), seed.playerYSubpixel());
+                    tornado.primeRideStart(
+                            player.getCentreX(), player.getCentreY(), seed.tornadoYSubpixel8());
+                } else if (tornado != null && tornado.isWfzStartRideStartPreludeObject()) {
+                    objectManager.update(cameraX, player, sidekicks, 0, false);
+                    tornado.compensateForCollapsedWfzInit();
+                }
+            }
+            if (interleaveSidekickPrelude) {
+                sidekickPreludeFrames = 0;
             }
         }
         refreshSidekickCpuBoundsFromCamera();
@@ -269,16 +317,11 @@ public final class TraceReplaySessionBootstrap {
             // begins ticking. Otherwise the first prelude leader-record write
             // for slot 0 is overwritten when SidekickCpuController.updateInit
             // re-runs the pre-fill from its own first tick.
-            for (AbstractPlayableSprite sidekick :
-                    gameplayMode.getSpriteManager().getRegisteredSidekicks()) {
-                SidekickCpuController cpu = sidekick.getCpuController();
-                if (cpu != null) {
-                    cpu.applyLevelStartSidekickPlacementForBootstrap();
-                }
-            }
+            prepareSidekickPreludePlacement(trace, gameplayMode);
             gameplayMode.getSpriteManager().warmUpCpuSidekicksOnly(
                     sidekickPreludeFrames,
-                    gameplayMode.getLevelManager());
+                    gameplayMode.getLevelManager(),
+                    fixture != null ? fixture.sprite() : null);
         }
         primeLeaderJumpEdgeFromBk2Prelude(fixture);
         TraceReplayBootstrap.SnapshotReport snapshotReport =
@@ -286,6 +329,102 @@ public final class TraceReplaySessionBootstrap {
         TraceReplayBootstrap.ReplayStartState replayStart =
                 TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, fixture);
         return new BootstrapResult(snapshotReport, replayStart);
+    }
+
+    private static boolean shouldInterleaveS2TitleCardPrelude(TraceData trace,
+                                                              int sidekickPreludeFrames,
+                                                              int objectPreludeFrames) {
+        if (trace == null || trace.metadata() == null) {
+            return false;
+        }
+        TraceMetadata meta = trace.metadata();
+        return "s2".equals(meta.game())
+                && meta.nativePreludeMode()
+                && sidekickPreludeFrames > 0
+                && sidekickPreludeFrames == objectPreludeFrames;
+    }
+
+    private static void prepareSidekickPreludePlacement(
+            TraceData trace,
+            com.openggf.game.session.GameplayModeContext gameplayMode) {
+        boolean useMetadataStartAnchor = trace != null
+                && trace.metadata() != null
+                && "s2".equals(trace.metadata().game())
+                && trace.metadata().nativePreludeMode()
+                && !TraceReplayBootstrap.isS2TornadoRideStartMetadataCandidate(trace);
+        int[] levelStart = useMetadataStartAnchor
+                ? resolveCurrentLevelStart()
+                : null;
+        for (AbstractPlayableSprite sidekick :
+                gameplayMode.getSpriteManager().getRegisteredSidekicks()) {
+            SidekickCpuController cpu = sidekick.getCpuController();
+            if (cpu != null) {
+                if (useMetadataStartAnchor && levelStart != null) {
+                    cpu.captureLevelStartLeaderAnchor(levelStart[0], levelStart[1]);
+                }
+                cpu.applyLevelStartSidekickPlacementForBootstrap();
+            }
+        }
+    }
+
+    private static int[] resolveCurrentLevelStart() {
+        var level = GameServices.levelOrNull();
+        var module = GameServices.currentOrBootstrapGameModule();
+        if (level == null || module == null || module.getZoneRegistry() == null) {
+            return null;
+        }
+        return module.getZoneRegistry().getStartPosition(level.getCurrentZone(), level.getCurrentAct());
+    }
+
+    private static int recordS2TornadoRideStartLeadIn(TornadoObjectInstance tornado,
+                                                       AbstractPlayableSprite player) {
+        if (tornado == null || player == null || !tornado.isRideStartPreludeObject()) {
+            return 0;
+        }
+        if (tornado.isSczRideStartPreludeObject()) {
+            int startX = player.getCentreX();
+            int startY = player.getCentreY();
+            int[] yOffsets = {0, 0, 0, 0, 1};
+            for (int offset : yOffsets) {
+                player.setCentreX((short) startX);
+                player.setCentreY((short) (startY + offset));
+                player.setAir(true);
+                player.setOnObject(false);
+                recordLeaderHistoryForPrelude(player);
+            }
+            player.setCentreY((short) (startY + 4));
+            return yOffsets.length;
+        }
+        if (tornado.isWfzStartRideStartPreludeObject()) {
+            for (int i = 0; i < 2; i++) {
+                player.setAir(true);
+                player.setOnObject(false);
+                recordLeaderHistoryForPrelude(player);
+            }
+            return 2;
+        }
+        return 0;
+    }
+
+    private static void recordLeaderHistoryForPrelude(AbstractPlayableSprite player) {
+        player.recordFollowerHistoryForTick();
+        player.clearFollowerHistoryRecordedFlag();
+    }
+
+    private static void applyS2TornadoRecordSamplePosition(TornadoObjectInstance tornado,
+                                                            AbstractPlayableSprite player,
+                                                            int sampleIndex,
+                                                            int startY) {
+        if (tornado == null || player == null || !tornado.isSczRideStartPreludeObject()) {
+            return;
+        }
+        int[] yOffsets = {
+                0, 0, 0, 0, 1, 4, 5, 7, 9, 10, 12, 13, 14,
+                15, 16, 17, 17, 18, 18, 18, 19, 19, 18, 18, 18, 17
+        };
+        if (sampleIndex >= 0 && sampleIndex < yOffsets.length) {
+            player.setCentreY((short) (startY + yOffsets[sampleIndex]));
+        }
     }
 
     /**
@@ -376,6 +515,25 @@ public final class TraceReplaySessionBootstrap {
         return TraceReplayBootstrap.s2TornadoTitleCardPreludeFramesForTraceReplay(trace);
     }
 
+    private static void primeS2TornadoRideStart(TraceData trace,
+                                                ObjectManager objectManager,
+                                                AbstractPlayableSprite player) {
+        if (!TraceReplayBootstrap.isS2TornadoRideStartMetadataCandidate(trace)
+                || objectManager == null
+                || player == null) {
+            return;
+        }
+        TornadoObjectInstance tornado = findRideStartTornado(objectManager);
+        if (tornado == null || !tornado.isRideStartPreludeObject()) {
+            return;
+        }
+        Sonic2TornadoRidePrelude.Seed seed = Sonic2TornadoRidePrelude.forTornado(tornado);
+        player.setSubpixelRaw(player.getXSubpixelRaw(), seed.playerYSubpixel());
+        if (tornado.isSczRideStartPreludeObject()) {
+            tornado.primeRideStart(player.getCentreX(), player.getCentreY(), seed.tornadoYSubpixel8());
+        }
+    }
+
     /**
      * Live trace visualisation starts at trace frame 0 and must not consume
      * visible trace prefix frames before the first rendered frame. Headless
@@ -459,6 +617,14 @@ public final class TraceReplaySessionBootstrap {
             GameplayTeamBootstrap.repositionRegisteredSidekicks(
                     GameServices.module(),
                     level);
+            if ("s2".equals(meta.game()) && meta.nativePreludeMode()) {
+                for (AbstractPlayableSprite sidekick : GameServices.sprites().getRegisteredSidekicks()) {
+                    SidekickCpuController cpu = sidekick.getCpuController();
+                    if (cpu != null) {
+                        cpu.captureLevelStartLeaderAnchor(meta.startX(), meta.startY());
+                    }
+                }
+            }
             GroundSensor.setLevelManager(level);
             level.initCameraForLevel();
             level.initLevelEventsForLevel();

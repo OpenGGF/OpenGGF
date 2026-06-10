@@ -1018,7 +1018,9 @@ public class SidekickCpuController {
             // today. Trace replay setups without a recorded title-card prelude
             // (S1, S3K) keep the legacy "fill with current Sonic centre"
             // behaviour to avoid altering already-tuned sidekick CPU traces.
-            leader.prefillPositionHistoryWithOffset(LEVEL_START_X_OFFSET, LEVEL_START_Y_OFFSET);
+            leader.prefillPositionHistoryWithCentre(
+                    (short) (anchorX + LEVEL_START_X_OFFSET),
+                    (short) (anchorY + LEVEL_START_Y_OFFSET));
         } else {
             // The ROM CPU routine reads Sonic's delayed position buffer
             // (S2 s2.asm:38808-38815, S3K sonic3k.asm:26564-26565).

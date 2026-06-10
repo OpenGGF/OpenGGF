@@ -499,8 +499,11 @@ public class ObjectManager {
             boolean inlineSolidResolution, boolean solidPostMovement) {
         SolidExecutionRegistry registry = objectServices.solidExecutionRegistry();
         SolidExecutionMode mode = null;
-        if (inlineSolidResolution && instance instanceof SolidObjectProvider provider) {
-            mode = provider.solidExecutionMode();
+        if (instance instanceof SolidObjectProvider provider) {
+            SolidExecutionMode providerMode = provider.solidExecutionMode();
+            if (inlineSolidResolution || providerMode == SolidExecutionMode.MANUAL_CHECKPOINT) {
+                mode = providerMode;
+            }
         }
 
         ObjectSolidExecutionContext.Resolver resolver =

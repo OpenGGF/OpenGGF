@@ -10,7 +10,9 @@ All notable changes to the OpenGGF project are documented in this file.
   logical input bytes, and delayed follow-ring metadata before positional drift.
   Legacy S2 traces that do not advertise the CPU-state aux schema no longer
   fail with synthetic `cpu_present` errors; CPU-state presence is compared only
-  when the trace carries the ROM-side event.
+  when the trace carries the ROM-side event. The S2 native-prelude bootstrap now
+  also interleaves sidekick history warmup with title-card object prelude, so
+  EHZ1, SCZ, and WFZ return to green with their ROM player-history snapshots.
 
 - **Release-review blockers are now guarded directly:** the parallax shader
   maps physical window pixels back to logical display pixels, scheduled

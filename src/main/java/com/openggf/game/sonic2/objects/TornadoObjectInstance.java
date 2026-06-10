@@ -440,7 +440,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
             case 2 -> {
                 // ObjB2_Main_WFZ_Start_main
                 scriptTimer--;
-                if (scriptTimer >= 0) {
+                if (scriptTimer > 0) {
                     objectMove();
                     applyTornadoParallaxVelocity();
                     checkpoint(player);
@@ -694,13 +694,18 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         if (player == null) {
             return;
         }
-        NativePositionOps.writeXPosPreserveSubpixel(player, currentX);
-        NativePositionOps.writeYPosPreserveSubpixel(player, currentY - WFZ_LANDED_PLAYER_Y_OFFSET);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
         player.setAir(false);
+        // ROM clears the rolling status bit and writes y_radius after y_pos,
+        // but radius changes do not move ROM centre coordinates. The engine's
+        // height/radius update affects centre-derived accessors, so apply it
+        // before the native position write to leave the final centre at the
+        // ObjB2_Landed_on_plane value (s2.asm:79003-79014).
         player.setRolling(false);
+        NativePositionOps.writeXPosPreserveSubpixel(player, currentX);
+        NativePositionOps.writeYPosPreserveSubpixel(player, currentY - WFZ_LANDED_PLAYER_Y_OFFSET);
         applyWaitingAnimation(player);
     }
 

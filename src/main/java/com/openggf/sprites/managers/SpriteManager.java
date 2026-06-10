@@ -592,7 +592,13 @@ public class SpriteManager {
 	 * history once per prelude frame.
 	 */
 	public void warmUpCpuSidekicksOnly(int frames, LevelManager levelManager) {
-		if (frames <= 0 || levelManager == null || sidekicks.isEmpty()) {
+		warmUpCpuSidekicksOnly(frames, levelManager, null);
+	}
+
+	public void warmUpCpuSidekicksOnly(int frames,
+			LevelManager levelManager,
+			AbstractPlayableSprite leaderFallback) {
+		if (frames <= 0 || levelManager == null) {
 			return;
 		}
 		int savedFrameCounter = frameCounter;
@@ -609,6 +615,18 @@ public class SpriteManager {
 					if (cpuController != null) {
 						leaderToRecord = cpuController.getLeader();
 						break;
+					}
+				}
+				if (leaderToRecord == null) {
+					leaderToRecord = leaderFallback;
+				}
+				if (leaderToRecord == null) {
+					for (Sprite sprite : getAllSprites()) {
+						if (sprite instanceof AbstractPlayableSprite playable
+								&& !playable.isCpuControlled()) {
+							leaderToRecord = playable;
+							break;
+						}
 					}
 				}
 				if (leaderToRecord != null) {

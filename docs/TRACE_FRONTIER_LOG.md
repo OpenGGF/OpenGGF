@@ -1,5 +1,45 @@
 # Trace Frontier Log
 
+## 2026-06-10 - S2 native-prelude history restored for green trace gates
+
+- Scope: follow-up to the CPU-present comparator correction below. The false
+  `cpu_present` failures exposed a real native-prelude bootstrap gap in the
+  three previously-green S2 gates (`ehz1_fullrun`, `scz`, `wfz`): engine leader
+  history was seeded from stale shared-level placement or from object/player
+  prelude order that did not match ROM title-card execution.
+- Fix (comparison-only invariant preserved): the replay bootstrap now
+  interleaves S2 title-card sidekick history warmup with native object prelude
+  when the metadata says those frames are concurrent. Shared-level fixture reuse
+  resets the freshly registered player to the zone's ROM start before sidekick
+  anchoring, and CPU sidekick warmup can record the actual leader when the
+  active sidekick list is intentionally absent for suppressed-sidekick routes.
+- Tornado-specific ROM ordering:
+  - SCZ/WFZ ride-start preludes now seed the leader history around ObjB2's
+    title-card movement rather than backfilling from the post-bootstrap player
+    state.
+  - WFZ `ObjB2_Main_WFZ_Start_main` transitions when its countdown reaches zero
+    instead of after one extra object move, matching `subq.w #1,objoff_2A /
+    bpl.s` fall-through timing at `docs/s2disasm/s2.asm:78811-78823`.
+  - WFZ `ObjB2_Landed_on_plane` applies the engine's rolling/radius update
+    before the native `x_pos/y_pos` write so the final centre coordinate remains
+    the ROM-written `y_pos` despite engine hitbox dimensions
+    (`docs/s2disasm/s2.asm:79003-79014`).
+- Comparator cleanup:
+  - A frame-0 CPU snapshot no longer warns when frame 0 records the sidekick as
+    absent and the engine consequently has no sidekick CPU view.
+  - Object prelude snapshots no longer emit missing-slot warnings when the
+    engine snapshot has no object-slot visibility for that slot; object fields
+    remain strict when a captured engine slot exists.
+- Verification:
+  - `mvn "-Dtest=com.openggf.trace.TestBootstrapComparator,com.openggf.tests.trace.TestTraceBinder,com.openggf.tests.trace.s2.TestS2ReplayBootstrapTailsFrame0" test`
+    -> PASS for the selected comparator/bootstrap slice.
+  - `mvn "-Dtest=com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+    -> PASS; the three previously-green S2 gates are green again.
+- Release state: the S2 `cpu_present`/native-prelude regression is resolved.
+  The 0.6 release gate remains red on the known S3K AIZ sidekick push-bypass
+  frontier (`TestS3kAizTraceReplay`, the same delayed `Status_Push` modeling
+  family). This pass did not rerun or claim a new S3K AIZ frontier.
+
 ## 2026-06-10 - S2 CPU-present comparator regression corrected
 
 - Scope: release-gate correction for the per-frame sidekick CPU comparator

@@ -252,7 +252,11 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
             }
 
             // 6. Preserve existing builder semantics for explicit custom starts by
-            // reapplying the requested coordinates after any level load.
+            // reapplying the requested coordinates after any level load. When a
+            // shared level is already loaded, resetPerTest() has cleared the
+            // sprite roster but not re-run LevelManager.spawnPlayerAtStartPosition();
+            // place the freshly registered team at the level's ROM start before
+            // sidekick anchoring and ground snap.
             if (customStartPositionProvided) {
                 if (startPositionIsCentre) {
                     sprite.setCentreX(startX);
@@ -261,6 +265,12 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
                     sprite.setX(startX);
                     sprite.setY(startY);
                 }
+            } else if (sharedLevel != null && !needsSharedLevelReload) {
+                int[] start = GameServices.module()
+                        .getZoneRegistry()
+                        .getStartPosition(sharedLevel.zone(), sharedLevel.act());
+                sprite.setCentreX((short) start[0]);
+                sprite.setCentreY((short) start[1]);
             }
 
             // 7. Re-anchor registered sidekicks to the current player position.

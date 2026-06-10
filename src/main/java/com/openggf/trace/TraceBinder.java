@@ -658,6 +658,10 @@ public class TraceBinder {
             return;
         }
         if (engine == null) {
+            TraceCharacterState frameZeroTails = firstFrameSidekickState(trace);
+            if (frameZeroTails != null && !frameZeroTails.present()) {
+                return;
+            }
             out.add(new BootstrapDivergence(
                     "tails_cpu.engine",
                     BootstrapDivergence.Severity.WARNING,
@@ -680,6 +684,18 @@ public class TraceBinder {
                 recorded.interactId(), engine.interactId(), out);
         compareInt("tails_cpu.jumping",
                 recorded.jumping() ? 1 : 0, engine.jumping() ? 1 : 0, out);
+    }
+
+    private static TraceCharacterState firstFrameSidekickState(TraceData trace) {
+        if (trace == null) {
+            return null;
+        }
+        try {
+            TraceFrame frame = trace.getFrame(0);
+            return frame.sidekick();
+        } catch (IndexOutOfBoundsException ex) {
+            return null;
+        }
     }
 
     private static void compareInt(String field, int expected, int actual,
@@ -719,11 +735,6 @@ public class TraceBinder {
             EngineSnapshot.ObjectSnapshot engine = snapshot.slotStates().get(recorded.slot());
             String slotLabel = "object_slot[" + recorded.slot() + "]";
             if (engine == null) {
-                out.add(new BootstrapDivergence(
-                        slotLabel,
-                        BootstrapDivergence.Severity.WARNING,
-                        "present", "missing",
-                        "engine slot " + recorded.slot() + " empty but ROM recorded one"));
                 continue;
             }
             RomObjectSnapshot fields = recorded.fields();

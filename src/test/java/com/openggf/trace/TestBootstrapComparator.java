@@ -103,6 +103,63 @@ class TestBootstrapComparator {
                         + divergences);
     }
 
+    @Test
+    void inactive_frame_zero_sidekick_suppresses_missing_engine_cpu_warning() {
+        TraceData trace = traceWithSnapshots(
+                0x34,
+                shorts(64, 0x0500),
+                shorts(64, 0x0300),
+                shorts(64, 0x0000),
+                bytes(64, (byte) 0x00),
+                cpu("tails", 1, 0, 2, (short) 0x0480, (short) 0x0320, 0x0000, false),
+                List.of(),
+                List.of(frameWithSidekickAbsent()));
+
+        EngineSnapshot snapshot = new EngineSnapshot(
+                shorts(64, 0x0500),
+                shorts(64, 0x0300),
+                shorts(64, 0x0000),
+                bytes(64, (byte) 0x00),
+                12,
+                null,
+                Map.of());
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        List<BootstrapDivergence> divergences = binder.compareBootstrapFrame0(trace, snapshot);
+
+        assertTrue(divergences.isEmpty(),
+                () -> "An absent frame-0 sidekick must not require an engine CPU view: "
+                        + divergences);
+    }
+
+    @Test
+    void missing_engine_object_slot_is_comparator_visibility_gap_not_warning() {
+        TraceData trace = traceWithSnapshots(
+                0x34,
+                shorts(64, 0x0500),
+                shorts(64, 0x0300),
+                shorts(64, 0x0000),
+                bytes(64, (byte) 0x00),
+                cpu("tails", 1, 0, 2, (short) 0x0480, (short) 0x0320, 0x0000, false),
+                List.of(objectSnapshot(20, 0xB2, 0x2F3C, 0x0588, 0x06, 0x08)));
+
+        EngineSnapshot snapshot = new EngineSnapshot(
+                shorts(64, 0x0500),
+                shorts(64, 0x0300),
+                shorts(64, 0x0000),
+                bytes(64, (byte) 0x00),
+                12,
+                new EngineSnapshot.SidekickCpuView(1, 0, 2, (short) 0x0480, (short) 0x0320, 0x0000, false),
+                Map.of());
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        List<BootstrapDivergence> divergences = binder.compareBootstrapFrame0(trace, snapshot);
+
+        assertTrue(divergences.isEmpty(),
+                () -> "Missing engine object slots are skipped until the snapshot captures them: "
+                        + divergences);
+    }
+
     /**
      * Modifying a single recorded field must produce exactly one ERROR-severity
      * divergence with the matching field name, expected and actual rendered as
@@ -242,6 +299,19 @@ class TestBootstrapComparator {
                                                 byte[] statusHistory,
                                                 TraceEvent.CpuStateSnapshot cpu,
                                                 List<TraceEvent.ObjectStateSnapshot> objects) {
+        return traceWithSnapshots(
+                historyPos, xHistory, yHistory, inputHistory, statusHistory,
+                cpu, objects, List.of());
+    }
+
+    private static TraceData traceWithSnapshots(int historyPos,
+                                                short[] xHistory,
+                                                short[] yHistory,
+                                                short[] inputHistory,
+                                                byte[] statusHistory,
+                                                TraceEvent.CpuStateSnapshot cpu,
+                                                List<TraceEvent.ObjectStateSnapshot> objects,
+                                                List<TraceFrame> frames) {
         List<TraceEvent> frameMinusOne = new ArrayList<>();
         frameMinusOne.add(new TraceEvent.PlayerHistorySnapshot(
                 -1, historyPos, xHistory, yHistory, inputHistory, statusHistory));
@@ -253,7 +323,7 @@ class TestBootstrapComparator {
         }
         Map<Integer, List<TraceEvent>> events = new HashMap<>();
         events.put(-1, frameMinusOne);
-        return TraceFixtures.trace(TraceFixtures.metadata("s2", 4, 0), List.of(), events);
+        return TraceFixtures.trace(TraceFixtures.metadata("s2", 4, 0), frames, events);
     }
 
     private static TraceEvent.CpuStateSnapshot cpu(String character, int controlCounter,
@@ -275,6 +345,20 @@ class TestBootstrapComparator {
         byteFields.put(0x24, routine & 0xFF); // routine
         return new TraceEvent.ObjectStateSnapshot(-1, slot, objectType,
                 new RomObjectSnapshot(byteFields, wordFields));
+    }
+
+    private static TraceFrame frameWithSidekickAbsent() {
+        return new TraceFrame(0, 0,
+                (short) 0x0500, (short) 0x0300,
+                (short) 0, (short) 0, (short) 0,
+                (byte) 0, false, false, 0,
+                0, 0, 0x02, 0, 0, 0, 0,
+                0, 0, 0, 0,
+                new TraceCharacterState(false,
+                        (short) 0, (short) 0,
+                        (short) 0, (short) 0, (short) 0,
+                        (byte) 0, false, false, 0,
+                        0, 0, 0, 0, 0));
     }
 
     private static short[] shorts(int len, int fill) {
