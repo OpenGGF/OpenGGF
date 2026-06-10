@@ -27,8 +27,9 @@ uniform int UseUnderwaterPalette;
 uniform float WaterlineScreenY;
 uniform sampler1D HScrollTexture;    // Per-scanline BG scroll (R32F, 224 entries)
 uniform int PerLineScroll;           // 1 = per-scanline HScroll, 0 = uniform WorldOffsetX
-uniform sampler1D VScrollColumnTexture; // Per-column VScroll (R32F, ceil(WindowWidth / 16) entries)
+uniform sampler1D VScrollColumnTexture; // Per-column VScroll (R32F, ceil(displayWidth / 16) entries)
 uniform int PerColumnVScroll;        // 1 = apply per-column VScroll to worldY
+uniform float VScrollColumnCount;    // Texel count of VScrollColumnTexture; WindowWidth is the FBO width for BG passes and must not size the lookup
 uniform float ScreenHeight;          // Visible scanline count (224.0)
 uniform float PerLineScrollSampleYOffsetPx;
 uniform float VDPWrapWidth;          // VDP nametable width in tiles (64.0), 0 = use TilemapWidth
@@ -120,7 +121,9 @@ void main()
     }
     float columnVScroll = 0.0;
     if (PerColumnVScroll == 1) {
-        float vScrollColumnCount = max(1.0, ceil(WindowWidth / 16.0));
+        float vScrollColumnCount = VScrollColumnCount > 0.0
+            ? VScrollColumnCount
+            : max(1.0, ceil(WindowWidth / 16.0));
         float column = clamp(floor(pixelX / 16.0), 0.0, vScrollColumnCount - 1.0);
         float columnTexCoord = (column + 0.5) / vScrollColumnCount;
         columnVScroll = texture(VScrollColumnTexture, columnTexCoord).r * 32767.0;

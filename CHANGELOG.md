@@ -4,6 +4,26 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Boss hit-flash renders again in Sonic 1 and Sonic 2 SCZ/DEZ:** palette
+  writes submitted through `PaletteOwnershipRegistry` are now resolved by a
+  game-agnostic frame fallback in the render pipeline, so games and zones
+  without a registry-resolving palette cycler no longer silently drop them.
+
+- **The AIZ fire-transition background renders correctly at standard aspect:**
+  the tilemap shader now receives the per-column VScroll texture's actual
+  entry count instead of deriving it from the background FBO width, finishing
+  the widescreen vscroll fix that previously only covered the parallax shader.
+
+- **S3K runtime terrain overlays no longer corrupt rewind keyframes:** the
+  AIZ intro terrain swap and AIZ2 battleship chunk/block overlays now install
+  freshly constructed entries in a cloned array, so previously captured rewind
+  keyframes keep their pre-overlay terrain and collision.
+
+- **Zone music resumes after rewinding through a 1-up or invincibility
+  jingle:** the audio logical restore rebuilds the saved music override stack
+  from this session's played sources, keeps an in-flight restore pending, and
+  clears the SFX-block latch when nothing could ever unblock it.
+
 - **Trace replay lag frames are classified consistently across all games:**
   S1/S2 use gameplay-frame counter advancement as the full-frame signal, S3K
   treats lag-counter-only rows as VBlank-only frames, and gameplay advancement

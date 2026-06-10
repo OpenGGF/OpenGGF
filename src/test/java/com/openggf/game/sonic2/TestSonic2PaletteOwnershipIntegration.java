@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_2)
 class TestSonic2PaletteOwnershipIntegration {
@@ -226,6 +227,47 @@ class TestSonic2PaletteOwnershipIntegration {
         updateAnimatedPaletteManager();
 
         assertEquals(WFZ_FIRE_BELT_OWNER, registry.ownerAt(PaletteSurface.NORMAL, 2, 7));
+    }
+
+    @Test
+    void sharedFrameFallbackSkipsResolutionWhenTheCyclerAlreadyResolved() {
+        loadZone(Sonic2ZoneConstants.ZONE_EHZ, 0);
+
+        PaletteOwnershipRegistry registry = GameServices.paletteOwnershipRegistry();
+        Palette[] livePalettes = livePalettes();
+        registry.beginFrame();
+
+        updateAnimatedPaletteManager();
+        assertTrue(registry.hasResolvedThisFrame(),
+                "EHZ cycler resolves the registry itself on its first submission frame");
+
+        clearColors(livePalettes[1], 3, 4, 14, 15);
+        com.openggf.game.palette.PaletteWriteSupport.resolvePendingFrameWrites(
+                registry, GameServices.level().getCurrentLevel(), null, null);
+
+        assertEquals(0, livePalettes[1].getColor(3).r & 0xFF,
+                "fallback must not re-apply writes the cycler already resolved this frame");
+    }
+
+    @Test
+    void sharedFrameFallbackResolvesSubmittedWritesWhenNoCyclerResolved() {
+        loadZone(Sonic2ZoneConstants.ZONE_EHZ, 0);
+
+        PaletteOwnershipRegistry registry = GameServices.paletteOwnershipRegistry();
+        Palette[] livePalettes = livePalettes();
+        registry.beginFrame();
+
+        // Simulates an SCZ/DEZ frame: a boss-flash write is submitted but no
+        // palette cycle resolves the registry (loadCycles has no SCZ/DEZ case).
+        com.openggf.game.palette.PaletteWriteSupport.applyColor(
+                registry, GameServices.level().getCurrentLevel(), null,
+                "test.bossFlash", 200, 1, 5, 0x0EEE);
+        com.openggf.game.palette.PaletteWriteSupport.resolvePendingFrameWrites(
+                registry, GameServices.level().getCurrentLevel(), null, null);
+
+        assertEquals("test.bossFlash", registry.ownerAt(PaletteSurface.NORMAL, 1, 5));
+        assertEquals(255, livePalettes[1].getColor(5).r & 0xFF,
+                "fallback must apply submitted writes when no cycler resolved this frame");
     }
 
     private static void loadZone(int zone, int act) {

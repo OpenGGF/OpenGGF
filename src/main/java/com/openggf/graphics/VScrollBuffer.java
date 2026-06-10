@@ -109,6 +109,10 @@ public class VScrollBuffer {
         return textureId;
     }
 
+    public int getEntryCount() {
+        return entryCount;
+    }
+
     public void cleanup() {
         if (textureId > 0) {
             glDeleteTextures(textureId);

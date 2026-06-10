@@ -329,6 +329,10 @@ public class TilemapGpuRenderer {
         shader.setHScrollTexture(5);
         shader.setVScrollColumnTexture(6);
         shader.setPerColumnVScroll(perColumnVScroll);
+        // The column texture is sized from the configured screen width, while
+        // windowWidth is the FBO render width for BG passes (e.g. 512 at native
+        // 320), so the shader must sample with the texture's own entry count.
+        shader.setVScrollColumnCount(columnVScrollBuffer.getEntryCount());
         if (perLineScroll) {
             shader.setScreenHeight(perLineScreenHeight);
         }

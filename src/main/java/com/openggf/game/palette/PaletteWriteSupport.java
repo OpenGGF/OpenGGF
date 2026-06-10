@@ -39,6 +39,28 @@ public final class PaletteWriteSupport {
         cachePaletteTextureIfReady(graphics, palette, paletteIndex);
     }
 
+    /**
+     * Applies any palette writes still pending at the end of the frame's
+     * palette phase. Per-game palette cyclers resolve the registry themselves
+     * where they exist; without this fallback, games or zones with no
+     * resolving cycler (Sonic 1, Sonic 2 zones without palette cycles) drop
+     * every submitted write — e.g. the shared boss hit-flash — when the next
+     * {@code beginFrame()} clears the queue.
+     */
+    public static void resolvePendingFrameWrites(PaletteOwnershipRegistry registry,
+                                                 Level level,
+                                                 Palette[] underwaterPalettes,
+                                                 GraphicsManager graphics) {
+        if (registry == null || level == null || registry.hasResolvedThisFrame()) {
+            return;
+        }
+        Palette[] normal = new Palette[level.getPaletteCount()];
+        for (int i = 0; i < normal.length; i++) {
+            normal[i] = level.getPalette(i);
+        }
+        registry.resolveInto(normal, underwaterPalettes, graphics, level.getPalette(0));
+    }
+
     public static int segaWordFromColor(Palette.Color color) {
         int r3 = quantizeSegaComponent(color.r);
         int g3 = quantizeSegaComponent(color.g);

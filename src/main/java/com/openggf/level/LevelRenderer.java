@@ -13,6 +13,8 @@ import com.openggf.game.GameServices;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.PhysicsProvider;
 import com.openggf.game.ZoneFeatureProvider;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.render.AdvancedRenderFrameState;
 import com.openggf.game.render.AdvancedRenderModeContext;
 import com.openggf.game.render.AdvancedRenderModeController;
@@ -491,6 +493,24 @@ public final class LevelRenderer {
         return override != null ? override : lm.parallaxManager.getVScrollPerColumnFGForShader();
     }
 
+    /**
+     * Game-agnostic fallback resolution for {@link PaletteOwnershipRegistry}
+     * writes. Per-game palette cyclers resolve where they exist (S2 cycling
+     * zones, S3K); games and zones without one (S1, S2 SCZ/DEZ) would
+     * otherwise silently drop registry-submitted writes such as the shared
+     * boss hit-flash. No-op when the registry already resolved this frame.
+     */
+    private void resolvePendingPaletteOwnershipWrites() {
+        PaletteOwnershipRegistry registry = GameServices.paletteOwnershipRegistryOrNull();
+        if (registry == null || lm.level == null) {
+            return;
+        }
+        Palette[] underwaterPalettes = lm.waterSystem != null
+                ? lm.waterSystem.getUnderwaterPalette(lm.level.getZoneIndex(), lm.currentAct)
+                : null;
+        PaletteWriteSupport.resolvePendingFrameWrites(registry, lm.level, underwaterPalettes, lm.graphicsManager);
+    }
+
     private void resolveAdvancedRenderFrameState(int frameCounter) {
         AdvancedRenderModeController controller = GameServices.advancedRenderModeControllerOrNull();
         if (controller == null || controller.isEmpty() || lm.camera == null) {
@@ -550,6 +570,7 @@ public final class LevelRenderer {
         if (lm.animatedPaletteManager != null && lm.animatedPaletteManager != lm.animatedPatternManager) {
             lm.animatedPaletteManager.update();
         }
+        resolvePendingPaletteOwnershipWrites();
         resolveAdvancedRenderFrameState(lm.frameCounter);
 
         // Propagate shake offsets from parallax manager to camera.
