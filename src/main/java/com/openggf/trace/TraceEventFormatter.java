@@ -73,6 +73,20 @@ public final class TraceEventFormatter {
                             routine.to(),
                             routine.x() & 0xFFFF,
                             routine.y() & 0xFFFF);
+            case TraceEvent.CpuState cpu ->
+                    String.format("%scpu rtn=%04X ctrl=%04X resp=%04X target=%04X,%04X ctrl2=%02X/%02X hist=%02X/%02X stat=%02X in=%04X",
+                            characterPrefix(cpu.character()),
+                            cpu.cpuRoutine() & 0xFFFF,
+                            cpu.idleTimer() & 0xFFFF,
+                            cpu.flightTimer() & 0xFFFF,
+                            cpu.targetX() & 0xFFFF,
+                            cpu.targetY() & 0xFFFF,
+                            cpu.ctrl2Held() & 0xFF,
+                            cpu.ctrl2Pressed() & 0xFF,
+                            cpu.posTableIndex() & 0xFF,
+                            cpu.delayedIndex() & 0xFF,
+                            cpu.delayedStatus() & 0xFF,
+                            cpu.delayedInput() & 0xFFFF);
             case TraceEvent.Checkpoint checkpoint ->
                     String.format("cp %s z=%s a=%s ap=%s gm=%s",
                             checkpoint.name(),

@@ -29,6 +29,7 @@ import com.openggf.trace.DivergenceGroup;
 import com.openggf.trace.DivergenceReport;
 import com.openggf.trace.EngineDiagnostics;
 import com.openggf.trace.EngineSnapshot;
+import com.openggf.trace.EngineSidekickCpuState;
 import com.openggf.trace.EngineNearbyObject;
 import com.openggf.trace.EngineNearbyObjectFormatter;
 import com.openggf.trace.ToleranceConfig;
@@ -240,6 +241,9 @@ public abstract class AbstractTraceReplayTest {
                     String engineDiagText = combineDiagnostics(
                             engineDiag.format(),
                             formatCharacterDiagnostics(secondaryCharacterLabel, actualSidekick));
+                    TraceEvent.CpuState expectedSidekickCpu =
+                            trace.cpuStateForFrame(comparisonExpected.frame(), secondaryCharacterLabel);
+                    EngineSidekickCpuState actualSidekickCpu = captureFirstSidekickCpuState();
                     binder.compareFrame(comparisonExpected,
                         sprite.getCentreX(), sprite.getCentreY(),
                         sprite.getXSpeed(), sprite.getYSpeed(), sprite.getGSpeed(),
@@ -248,7 +252,8 @@ public abstract class AbstractTraceReplayTest {
                         sprite.getGroundMode().ordinal(), romDiag,
                         EngineDiagnostics.formattedWithCamera(
                                 engineDiag.cameraX(), engineDiag.cameraY(), engineDiagText),
-                        secondaryCharacterLabel, actualSidekick);
+                        secondaryCharacterLabel, actualSidekick,
+                        expectedSidekickCpu, actualSidekickCpu);
 
                 }
             }
@@ -308,16 +313,13 @@ public abstract class AbstractTraceReplayTest {
         byte[] statusHistory = sprite != null ? sprite.copyStatusHistory() : null;
         int historyPos = sprite != null ? sprite.historyPos() : 0;
 
-        // SidekickCpuView and per-slot SST snapshots are left null/empty for
-        // now — they require additional accessors on SidekickCpuController
-        // (controlCounter/respawnCounter/cpuRoutine/interactId/jumping) and a
-        // per-slot SST extraction path on ObjectManager. The comparator emits
-        // WARNING entries for absent fields, which is the right behaviour
-        // until a native-prelude-mode trace (lua_script_version >= 9.2-s2)
-        // gives us something concrete to assert against. Plumbing scheduled
-        // for T10 when the first re-recorded trace surfaces real divergences.
+        EngineSnapshot.SidekickCpuView tailsCpu = captureFirstSidekickCpuSnapshot();
+
+        // Per-slot SST snapshots are still left empty; they require a stable
+        // ObjectManager slot extraction path. Sidekick CPU state is now captured
+        // read-only so bootstrap reports can flag native-prelude CPU drift.
         return EngineSnapshot.capture(xHistory, yHistory, inputHistory, statusHistory,
-                historyPos, null, java.util.Map.of());
+                historyPos, tailsCpu, java.util.Map.of());
     }
 
     private void validateMetadata(TraceMetadata meta) {
@@ -362,6 +364,9 @@ public abstract class AbstractTraceReplayTest {
                     ? "sidekick"
                     : meta.recordedSidekicks().getFirst();
 
+            TraceEvent.CpuState expectedSidekickCpu =
+                    trace.cpuStateForFrame(seededFrame.frame(), secondaryCharacterLabel);
+            EngineSidekickCpuState actualSidekickCpu = captureFirstSidekickCpuState();
             binder.compareFrame(seededFrame,
                     seededPrimary.x(), seededPrimary.y(),
                     seededPrimary.xSpeed(), seededPrimary.ySpeed(), seededPrimary.gSpeed(),
@@ -370,7 +375,9 @@ public abstract class AbstractTraceReplayTest {
                     seededPrimary.groundMode(), romDiag,
                     engineDiag,
                     secondaryCharacterLabel,
-                    seededSidekick);
+                    seededSidekick,
+                    expectedSidekickCpu,
+                    actualSidekickCpu);
 
             for (int frame = 0; frame <= replayStart.seededTraceIndex(); frame++) {
                 for (TraceEvent event : trace.getEventsForFrame(frame)) {
@@ -453,6 +460,9 @@ public abstract class AbstractTraceReplayTest {
                 String secondaryCharacterLabel = meta.recordedSidekicks().isEmpty()
                         ? "sidekick"
                         : meta.recordedSidekicks().getFirst();
+                TraceEvent.CpuState expectedSidekickCpu =
+                        trace.cpuStateForFrame(driveFrame.frame(), secondaryCharacterLabel);
+                EngineSidekickCpuState actualSidekickCpu = captureFirstSidekickCpuState();
                 binder.compareFrame(driveFrame,
                         actualPrimary.x(), actualPrimary.y(),
                         actualPrimary.xSpeed(), actualPrimary.ySpeed(), actualPrimary.gSpeed(),
@@ -461,7 +471,9 @@ public abstract class AbstractTraceReplayTest {
                         actualPrimary.groundMode(), romDiag,
                         engineDiag,
                         secondaryCharacterLabel,
-                        actualSidekick);
+                        actualSidekick,
+                        expectedSidekickCpu,
+                        actualSidekickCpu);
             }
 
             TraceEvent.Checkpoint traceCheckpoint = trace.latestCheckpointAtOrBefore(driveTraceIndex);
@@ -585,6 +597,47 @@ public abstract class AbstractTraceReplayTest {
             return null;
         }
         return captureCharacterState(spriteManager.getSidekicks().getFirst());
+    }
+
+    private EngineSnapshot.SidekickCpuView captureFirstSidekickCpuSnapshot() {
+        SpriteManager spriteManager = GameServices.sprites();
+        if (spriteManager == null || spriteManager.getSidekicks().isEmpty()) {
+            return null;
+        }
+        SidekickCpuController controller = spriteManager.getSidekicks().getFirst().getCpuController();
+        if (controller == null) {
+            return null;
+        }
+        return new EngineSnapshot.SidekickCpuView(
+                controller.getDiagnosticControlCounter(),
+                controller.getDiagnosticRespawnCounter(),
+                controller.getDiagnosticRomCpuRoutine(),
+                (short) controller.targetX(),
+                (short) controller.targetY(),
+                controller.getDiagnosticInteractId(),
+                controller.getDiagnosticJumpingFlag() != 0);
+    }
+
+    private EngineSidekickCpuState captureFirstSidekickCpuState() {
+        SpriteManager spriteManager = GameServices.sprites();
+        if (spriteManager == null || spriteManager.getSidekicks().isEmpty()) {
+            return null;
+        }
+        SidekickCpuController controller = spriteManager.getSidekicks().getFirst().getCpuController();
+        if (controller == null) {
+            return null;
+        }
+        return new EngineSidekickCpuState(
+                controller.getDiagnosticControlCounter(),
+                controller.getDiagnosticRespawnCounter(),
+                controller.getDiagnosticInteractId(),
+                controller.getDiagnosticRomCpuRoutine(),
+                controller.targetX(),
+                controller.targetY(),
+                controller.getDiagnosticGeneratedHeldInput(),
+                controller.getDiagnosticGeneratedPressedInput(),
+                controller.getDiagnosticFollowHistorySlot(),
+                controller.getDiagnosticJumpingFlag());
     }
 
     private TraceCharacterState captureCharacterState(AbstractPlayableSprite sprite) {

@@ -1,5 +1,69 @@
 # Trace Frontier Log
 
+## 2026-06-10 - S2 stuck-route sidekick CPU instrumentation baseline
+
+- Scope: focused S2 `TailsCPU_*` deep-dive setup for the seven stuck
+  level-select traces (`arz`, `cnz`, `htz`, `htz2`, `mtz`, `mtz2`, `ooz2`),
+  replacing another generic per-trace fleet pass.
+- Change (comparison-only): regenerated all seven fixtures with
+  `lua_script_version=9.8-s2` and `cpu_state_per_frame` aux events. The replay
+  comparator now parses and reports per-frame Tails CPU routine/counter/target,
+  `Ctrl_2_Logical` high/low bytes, delayed `Pos_table`/`Stat_table` slot
+  metadata, and sidekick status/interact/inertia without hydrating engine state
+  from the trace.
+- Change (engine diagnostics only): `SidekickCpuController` exposes read-only
+  diagnostic accessors for its projected ROM routine, respawn/control counters,
+  generated logical input, follow-history slot, target, and jump flag. These
+  are consumed by trace replay reports only. A sidecar audit caught two
+  instrumentation hazards before landing: S2 `SPAWNING`/`APPROACHING` now map
+  to ROM routines `$02`/`$04` instead of the S3K catch-up routine names, and
+  Tails' approach strategy now exposes its ROM-equivalent fly-in target/counter
+  values instead of leaving those diagnostics at stale controller defaults.
+- Fixture sanity:
+  - `arz`: 5073 frames, `cpu_state_per_frame`, 5073 `cpu_state` events.
+  - `cnz`: 9469 frames, `cpu_state_per_frame`, 9469 `cpu_state` events.
+  - `htz`: 8861 frames, `cpu_state_per_frame`, 8861 `cpu_state` events.
+  - `htz2`: 10166 frames, `cpu_state_per_frame`, 10166 `cpu_state` events.
+  - `mtz`: 10134 frames, `cpu_state_per_frame`, 10134 `cpu_state` events.
+  - `mtz2`: 12811 frames, `cpu_state_per_frame`, 12811 `cpu_state` events.
+  - `ooz2`: 13317 frames, `cpu_state_per_frame`, 13317 `cpu_state` events.
+- Current red baseline after regeneration:
+  - All seven traces still fail. The common first release-blocking entry remains
+    native-prelude bootstrap drift: frame 0 `player_history.pos` expected
+    `0x0068`, actual `0x0019` (MTZ1 has fewer bootstrap history mismatches but
+    the same first field).
+  - The new per-frame CPU stream shows a shared frame-0 follow-ring mismatch
+    before the route-specific routine splits: `tails_cpu_follow_ring` expected
+    `0x28`, actual `0x0A`, frames 0-53 on all seven traces. This points at the
+    same native-prelude/history seeding gap as the bootstrap history mismatch,
+    not seven independent route bugs.
+  - Later route-specific CPU routine mismatches are now visible:
+    `arz` f2209 `0x08` vs `0x06`; `cnz` f356 `0x08` vs `0x06`;
+    `htz` f182 `0x06` vs `0x04`; `htz2` f113 `0x06` vs `0x08`;
+    `mtz` f375 `0x02` vs `0x06`; `mtz2` f1138 `0x08` vs `0x06`;
+    `ooz2` f446 `0x06` vs `0x04`.
+- Audit leads for the next behavior pass:
+  - The shared first CPU mismatch is the follow-history ring position, so the
+    first behavior target should be native-prelude `Sonic_Pos_Record_Index` /
+    history seeding rather than per-zone Tails steering.
+  - The later routine mismatches cluster around S2 `TailsCPU_Normal`,
+    `TailsCPU_Flying`, and `TailsCPU_Panic`; compare those exact labels in
+    `docs/s2disasm/s2.asm` before changing controller behavior.
+  - `TailsCPU_CheckDespawn -> TailsCPU_UpdateObjInteract` stores the live
+    object slot id even when the slot has been zeroed. The engine still has
+    object-slot/id preservation behavior that should be audited against the
+    new `tails_cpu_interact` stream before changing despawn logic.
+  - S2 control-lock/logical-input preservation remains a likely source of
+    delayed `Stat_table` differences, especially around signpost/end-of-act
+    forced input. Do not fix it by replay hydration or route-specific latches.
+- Verification:
+  - `mvn "-Dtest=TestTraceBinder,TestTraceDataParsing,TestTraceEventFormatting" test`
+    -> focused parser/binder/formatter slice compiled and ran; the repository's
+    MSE aggregate still reports the known red S2/S3K trace gates.
+  - `mvn "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" test`
+    -> expected FAIL, 7/7 red, report JSON refreshed with the CPU-state fields
+    and the baseline above.
+
 ## 2026-06-10 - Release review correction: sidekick push-bypass claim narrowed
 
 - Scope: release-readiness review follow-up correcting the previous

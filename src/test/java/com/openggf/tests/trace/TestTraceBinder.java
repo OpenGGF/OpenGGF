@@ -172,6 +172,33 @@ public class TestTraceBinder {
     }
 
     @Test
+    void testSidekickCpuStateMismatchIsReportedBeforePositionFields() {
+        TraceFrame frame = TraceFrame.of(3906, 0x0000,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0);
+        TraceEvent.CpuState expectedCpu = new TraceEvent.CpuState(
+                3906, "tails", 0x11, 7, 299, 0x06,
+                (short) 0x0613, (short) 0x0264, 0,
+                1, 0x08, 0x10, 0, 0x4000,
+                0x44, 0x00, (short) 0x0500, (short) 0x0200,
+                0x0800, 0x08, 0x02, 0x11, 0x000C);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                7, 299, 0x11, 0x08, 0x0613, 0x0264,
+                0x08, 0x10, 0x00, 1);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, null, "tails", null, expectedCpu, actualCpu);
+
+        assertTrue(result.hasError());
+        assertEquals(Severity.ERROR, result.fields().get("tails_cpu_routine").severity());
+    }
+
+    @Test
     void testRingCountMismatchIsWarningWhenConfiguredWarnOnly() {
         TraceFrame frame = new TraceFrame(0, 0x0000,
             (short) 0x0050, (short) 0x03B0,

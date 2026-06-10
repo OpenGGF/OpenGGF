@@ -60,28 +60,34 @@ public sealed interface TraceEvent {
         implements TraceEvent {}
 
     /**
-     * Per-frame snapshot of the Tails CPU global block (sonic3k.constants.asm:618-626)
-     * plus {@code Ctrl_2_logical} (held + pressed). Emitted on every recorded trace
-     * frame by the v6+ recorder as diagnostic comparison context for the
+     * Per-frame snapshot of the Tails CPU global block plus
+     * {@code Ctrl_2_logical} (held + pressed). Emitted on every recorded trace
+     * frame by the recorder as diagnostic comparison context for the
      * engine's native {@link com.openggf.sprites.playable.SidekickCpuController}
-     * state machine. Older traces (schema &lt; 6) never emit this event.
+     * state machine. Older traces never emit this event.
      *
      * <p>Field layout:
      * <ul>
-     * <li>{@code interact} - {@code Tails_CPU_interact} (RAM address of last object Tails stood on)</li>
-     * <li>{@code idleTimer} - {@code Tails_CPU_idle_timer} (counts down while Ctrl_2 idle)</li>
-     * <li>{@code flightTimer} - {@code Tails_CPU_flight_timer} (counts up during respawn)</li>
+     * <li>{@code interact} - S2 {@code Tails_interact_ID} / sidekick interact id</li>
+     * <li>{@code idleTimer} - S2 {@code Tails_CPU_control_counter}</li>
+     * <li>{@code flightTimer} - S2 {@code Tails_CPU_respawn_counter}</li>
      * <li>{@code cpuRoutine} - {@code Tails_CPU_routine} (current AI routine index)</li>
      * <li>{@code targetX}/{@code targetY} - flight steering targets</li>
      * <li>{@code autoFlyTimer} - {@code Tails_CPU_auto_fly_timer} (MGZ2 boss carry)</li>
      * <li>{@code autoJumpFlag} - {@code Tails_CPU_auto_jump_flag} (set when AI fires jump)</li>
      * <li>{@code ctrl2Held}/{@code ctrl2Pressed} - {@code Ctrl_2_held_logical}/{@code Ctrl_2_pressed_logical}</li>
+     * <li>{@code posTableIndex}/{@code delayedIndex} - follower history ring cursors, when recorded</li>
      * </ul>
      */
     record CpuState(int frame, String character, int interact,
                     int idleTimer, int flightTimer, int cpuRoutine,
                     short targetX, short targetY, int autoFlyTimer,
-                    int autoJumpFlag, int ctrl2Held, int ctrl2Pressed)
+                    int autoJumpFlag, int ctrl2Held, int ctrl2Pressed,
+                    int ctrl2RawHeld, int ctrl1Logical,
+                    int posTableIndex, int delayedIndex,
+                    short delayedX, short delayedY, int delayedInput,
+                    int delayedStatus, int tailsStatus, int tailsInteract,
+                    int tailsInertia)
         implements TraceEvent {}
 
     /**
@@ -614,7 +620,18 @@ public sealed interface TraceEvent {
                     node.has("auto_fly_timer") ? node.get("auto_fly_timer").asInt() : 0,
                     node.has("auto_jump_flag") ? node.get("auto_jump_flag").asInt() : 0,
                     parseHexInt(node, "ctrl2_held"),
-                    parseHexInt(node, "ctrl2_pressed")
+                    parseHexInt(node, "ctrl2_pressed"),
+                    parseHexIntOrDefault(node, "ctrl2_raw_held", -1),
+                    parseHexIntOrDefault(node, "ctrl1_logical", -1),
+                    parseHexIntOrDefault(node, "pos_table_index", -1),
+                    parseHexIntOrDefault(node, "delayed_index", -1),
+                    parseHexShortOrDefault(node, "delayed_x", (short) 0),
+                    parseHexShortOrDefault(node, "delayed_y", (short) 0),
+                    parseHexIntOrDefault(node, "delayed_input", -1),
+                    parseHexIntOrDefault(node, "delayed_status", -1),
+                    parseHexIntOrDefault(node, "tails_status", -1),
+                    parseHexIntOrDefault(node, "tails_interact", -1),
+                    parseHexIntOrDefault(node, "tails_inertia", -1)
                 );
                 case "oscillation_state" -> new OscillationState(
                     frame,
@@ -1088,6 +1105,13 @@ public sealed interface TraceEvent {
         return 0;
     }
 
+    private static short parseHexShortOrDefault(JsonNode node, String field, short defaultValue) {
+        if (!node.has(field)) {
+            return defaultValue;
+        }
+        return parseHexShort(node, field);
+    }
+
     private static String parseCharacter(JsonNode node) {
         if (!node.has("character") || node.get("character").isNull()) {
             return null;
@@ -1113,6 +1137,13 @@ public sealed interface TraceEvent {
         // sign-extended values like "0xFFFFFFFFFFFFB000". Parse as a long
         // and cast to int — only the low 32 bits are semantically used.
         return (int) Long.parseUnsignedLong(hex, 16);
+    }
+
+    private static int parseHexIntOrDefault(JsonNode node, String field, int defaultValue) {
+        if (!node.has(field)) {
+            return defaultValue;
+        }
+        return parseHexInt(node, field);
     }
 
     private static RngCall.ObjectContext parseRngObjectContext(JsonNode node, String prefix) {

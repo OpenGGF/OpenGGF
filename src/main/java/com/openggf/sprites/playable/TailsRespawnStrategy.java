@@ -22,6 +22,8 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
 
     private final SidekickCpuController controller;
     private int offscreenFlightFrames;
+    private int diagnosticTargetX;
+    private int diagnosticTargetY;
 
     public TailsRespawnStrategy(SidekickCpuController controller) {
         this.controller = controller;
@@ -31,6 +33,8 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
     @Override
     public boolean beginApproach(AbstractPlayableSprite sidekick, AbstractPlayableSprite leader) {
         offscreenFlightFrames = 0;
+        diagnosticTargetX = leader.getCentreX() & 0xFFFF;
+        diagnosticTargetY = leader.getCentreY() & 0xFFFF;
         sidekick.setCentreXPreserveSubpixel(leader.getCentreX());
         sidekick.setCentreYPreserveSubpixel((short) (leader.getCentreY() - RESPAWN_Y_OFFSET));
         PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
@@ -69,6 +73,8 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         int targetX = leader.getCentreX(SidekickCpuController.ROM_FOLLOW_DELAY_FRAMES);
         int targetY = controller.clampTargetYToWater(
                 leader.getCentreY(SidekickCpuController.ROM_FOLLOW_DELAY_FRAMES));
+        diagnosticTargetX = targetX & 0xFFFF;
+        diagnosticTargetY = targetY & 0xFFFF;
         int sidekickX = sidekick.getCentreX();
         int sidekickY = sidekick.getCentreY();
 
@@ -145,6 +151,21 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         int frames = offscreenFlightFrames;
         offscreenFlightFrames = 0;
         return frames;
+    }
+
+    @Override
+    public int diagnosticRespawnCounter(int controllerValue) {
+        return offscreenFlightFrames;
+    }
+
+    @Override
+    public int diagnosticTargetX(int controllerValue) {
+        return diagnosticTargetX;
+    }
+
+    @Override
+    public int diagnosticTargetY(int controllerValue) {
+        return diagnosticTargetY;
     }
 
     private boolean handleS2FlyingOffscreenTimeout(AbstractPlayableSprite sidekick) {

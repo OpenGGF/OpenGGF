@@ -51,4 +51,29 @@ public interface SidekickRespawnStrategy {
     default int consumeApproachDespawnCarryFrames() {
         return 0;
     }
+
+    /**
+     * Comparison-only mirror of any approach-routine counter that shares the
+     * ROM respawn-counter global. Implementations that do not own that counter
+     * should return the controller's current value unchanged.
+     */
+    default int diagnosticRespawnCounter(int controllerValue) {
+        return controllerValue;
+    }
+
+    /**
+     * Comparison-only mirror of the ROM {@code Tails_CPU_target_X} word while
+     * an approach strategy owns fly-in steering.
+     */
+    default int diagnosticTargetX(int controllerValue) {
+        return controllerValue;
+    }
+
+    /**
+     * Comparison-only mirror of the ROM {@code Tails_CPU_target_Y} word while
+     * an approach strategy owns fly-in steering.
+     */
+    default int diagnosticTargetY(int controllerValue) {
+        return controllerValue;
+    }
 }

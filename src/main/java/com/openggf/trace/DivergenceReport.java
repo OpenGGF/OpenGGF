@@ -444,6 +444,10 @@ public class DivergenceReport {
         if (sonicRecordPos != null) {
             diagnostics.add(sonicRecordPos);
         }
+        TraceEvent.CpuState cpuState = traceData.cpuStateForFrame(frame, "tails");
+        if (cpuState != null) {
+            diagnostics.add(cpuState);
+        }
         TraceEvent.TailsCpuNormalStep cpuNormalStep =
                 traceData.tailsCpuNormalStepForFrame(frame, "tails");
         if (cpuNormalStep != null) {

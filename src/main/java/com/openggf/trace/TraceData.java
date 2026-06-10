@@ -179,6 +179,10 @@ public class TraceData {
                 && !hasEventOfType(TraceEvent.SonicRecordPos.class)) {
             missing.add("sonic_record_pos_per_frame");
         }
+        if (metadata.hasPerFrameCpuState()
+                && !hasEventOfType(TraceEvent.CpuState.class)) {
+            missing.add("cpu_state_per_frame");
+        }
         if (metadata.hasPerFrameTailsCpuNormalStep()
                 && !hasEventOfType(TraceEvent.TailsCpuNormalStep.class)) {
             missing.add("tails_cpu_normal_step_per_frame");

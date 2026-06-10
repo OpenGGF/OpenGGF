@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 sidekick CPU traces now expose per-frame CPU state:** the seven stuck
+  S2 level-select fixtures were regenerated with `cpu_state_per_frame`, and
+  trace replay now compares read-only Tails CPU routine, counters, targets,
+  logical input bytes, and delayed follow-ring metadata before positional drift.
+
 - **Release-review blockers are now guarded directly:** the parallax shader
   maps physical window pixels back to logical display pixels, scheduled
   develop trace CI explicitly checks out `develop`, bad ROM startup errors

@@ -633,6 +633,85 @@ public class TestTraceDataParsing {
     }
 
     @Test
+    void parsesPerFrameCpuStateFollowRingDiagnostics() throws IOException {
+        Path dir = Files.createTempDirectory("s2-cpu-state-diag");
+        Files.writeString(dir.resolve("metadata.json"), """
+            {
+              "game": "s2",
+              "zone": "mtz",
+              "zone_id": 4,
+              "act": 1,
+              "bk2_frame_offset": 0,
+              "trace_frame_count": 1,
+              "start_x": "0x0080",
+              "start_y": "0x03A0",
+              "characters": ["sonic", "tails"],
+              "main_character": "sonic",
+              "sidekicks": ["tails"],
+              "recording_date": "2026-06-10",
+              "lua_script_version": "9.8-s2",
+              "trace_schema": 5,
+              "csv_version": 5,
+              "aux_schema_extras": ["cpu_state_per_frame"],
+              "rom_checksum": "test"
+            }
+            """);
+        Files.writeString(dir.resolve("physics.csv"), """
+            frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,gameplay_frame_counter,stand_on_obj,vblank_counter,lag_counter,sidekick_present,sidekick_x,sidekick_y,sidekick_x_speed,sidekick_y_speed,sidekick_g_speed,sidekick_angle,sidekick_air,sidekick_rolling,sidekick_ground_mode,sidekick_x_sub,sidekick_y_sub,sidekick_routine,sidekick_status_byte,sidekick_stand_on_obj
+            0000,0000,0080,03A0,0000,0000,0000,00,0,0,0,0000,0000,02,0000,0000,0000,00,0001,00,0001,0000,1,0050,0288,0010,FFF0,000C,08,1,0,0,8000,4000,02,0A,03
+            """);
+        Files.writeString(dir.resolve("aux_state.jsonl"), """
+            {"frame":0,"vfc":1,"event":"cpu_state","character":"tails","interact":"0x0011","idle_timer":7,"flight_timer":299,"cpu_routine":6,"target_x":"0x0613","target_y":"0x0264","auto_fly_timer":0,"auto_jump_flag":1,"ctrl2_held":"0x08","ctrl2_pressed":"0x10","ctrl2_raw_held":"0x00","ctrl1_logical":"0x4000","pos_table_index":"0x44","delayed_index":"0x00","delayed_x":"0x0500","delayed_y":"0x0200","delayed_input":"0x0800","delayed_status":"0x08","tails_status":"0x02","tails_interact":"0x11","tails_inertia":"0x000C"}
+            """);
+
+        TraceData data = TraceData.load(dir);
+
+        assertTrue(data.metadata().hasPerFrameCpuState());
+        assertTrue(data.missingAdvertisedAuxSchemas().isEmpty());
+        TraceEvent.CpuState state = data.cpuStateForFrame(0, "tails");
+        assertNotNull(state);
+        assertEquals(0x44, state.posTableIndex());
+        assertEquals(0x00, state.delayedIndex());
+        assertEquals(0x0800, state.delayedInput());
+        assertEquals(0x08, state.delayedStatus());
+        assertEquals(0x11, state.tailsInteract());
+    }
+
+    @Test
+    void reportsAdvertisedCpuStateMissingFromAuxStream() throws IOException {
+        Path dir = Files.createTempDirectory("s2-missing-cpu-state");
+        Files.writeString(dir.resolve("metadata.json"), """
+            {
+              "game": "s2",
+              "zone": "mtz",
+              "zone_id": 4,
+              "act": 1,
+              "bk2_frame_offset": 0,
+              "trace_frame_count": 1,
+              "start_x": "0x0080",
+              "start_y": "0x03A0",
+              "recording_date": "2026-06-10",
+              "lua_script_version": "9.8-s2",
+              "trace_schema": 3,
+              "csv_version": 4,
+              "aux_schema_extras": ["cpu_state_per_frame"],
+              "rom_checksum": "test"
+            }
+            """);
+        Files.writeString(dir.resolve("physics.csv"), """
+            frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,gameplay_frame_counter,stand_on_obj,vblank_counter,lag_counter
+            0000,0000,0080,03A0,0000,0000,0000,00,0,0,0,0000,0000,02,0000,0000,0000,00,0001,00,0001,0000
+            """);
+        Files.writeString(dir.resolve("aux_state.jsonl"), """
+            {"frame":0,"event":"checkpoint","name":"gameplay_start","actual_zone_id":4,"actual_act":0,"apparent_act":0,"game_mode":12}
+            """);
+
+        TraceData data = TraceData.load(dir);
+
+        assertEquals(List.of("cpu_state_per_frame"), data.missingAdvertisedAuxSchemas());
+    }
+
+    @Test
     void latestAuxStateLookupsDoNotRebuildFrameIndexPerCall() throws IOException {
         Path dir = Files.createTempDirectory("trace-latest-aux-index");
         int frameCount = 10_000;

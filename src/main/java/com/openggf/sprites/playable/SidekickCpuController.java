@@ -449,6 +449,59 @@ public class SidekickCpuController {
         return frameCounter;
     }
 
+    /**
+     * Comparison-only diagnostic mirror of ROM Tails CPU globals. These
+     * accessors are intentionally read-only and are used by trace replay to
+     * report CPU-state divergence before it echoes into position drift.
+     */
+    public int getDiagnosticControlCounter() {
+        return controlCounter;
+    }
+
+    public int getDiagnosticRespawnCounter() {
+        if (state == State.APPROACHING) {
+            return respawnStrategy.diagnosticRespawnCounter(despawnCounter);
+        }
+        return despawnCounter;
+    }
+
+    public int getDiagnosticInteractId() {
+        return lastInteractObjectId;
+    }
+
+    public int getDiagnosticRomCpuRoutine() {
+        return romCpuRoutineForState(state);
+    }
+
+    public int getDiagnosticGeneratedHeldInput() {
+        NormalStepDiagnostics d = latestNormalStepDiagnostics;
+        if (d != null && d.frameCounter() == frameCounter) {
+            return d.generatedInput() & 0xFF;
+        }
+        return diagnosticGeneratedInput() & 0xFF;
+    }
+
+    public int getDiagnosticGeneratedPressedInput() {
+        int generated = diagnosticGeneratedInput();
+        int directional = AbstractPlayableSprite.INPUT_UP
+                | AbstractPlayableSprite.INPUT_DOWN
+                | AbstractPlayableSprite.INPUT_LEFT
+                | AbstractPlayableSprite.INPUT_RIGHT;
+        return (generated & directional)
+                | (inputJumpPress ? AbstractPlayableSprite.INPUT_JUMP : 0);
+    }
+
+    public int getDiagnosticFollowHistorySlot() {
+        NormalStepDiagnostics d = latestNormalStepDiagnostics;
+        return d != null && d.frameCounter() == frameCounter
+                ? d.followHistorySlot()
+                : -1;
+    }
+
+    public int getDiagnosticJumpingFlag() {
+        return jumpingFlag ? 1 : 0;
+    }
+
     public String formatLatestNormalStepDiagnostics() {
         if (latestNormalStepDiagnostics == null) {
             return "eng-tails-cpu none";
@@ -3900,6 +3953,26 @@ public class SidekickCpuController {
         };
     }
 
+    private int romCpuRoutineForState(State state) {
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        boolean usesS3kCatchUpRoutines = fs != null && fs.sidekickRespawnEntersCatchUpFlight();
+        return switch (state) {
+            case INIT -> 0x00;
+            case SPAWNING -> usesS3kCatchUpRoutines ? -1 : 0x02;
+            case APPROACHING -> usesS3kCatchUpRoutines ? -1 : 0x04;
+            case CATCH_UP_FLIGHT -> 0x02;
+            case FLIGHT_AUTO_RECOVERY -> 0x04;
+            case NORMAL -> 0x06;
+            case PANIC -> 0x08;
+            case DORMANT_MARKER -> 0x0A;
+            case CARRY_INIT -> 0x0C;
+            case CARRYING -> 0x0E;
+            case CARRY_FLYOFF -> 0x10;
+            case MGZ_RESCUE_WAIT -> 0x12;
+            default -> -1;
+        };
+    }
+
     public boolean getInputUp() { return inputUp; }
     public boolean getInputDown() { return inputDown; }
     public boolean getInputLeft() { return inputLeft; }
@@ -4252,12 +4325,24 @@ public class SidekickCpuController {
      * (sonic3k.asm $F70A). Surfaces the value written by {@link #hydrateFromRomCpuState}
      * and persisted in the catch-up steering field. Always masked to 16 bits.
      */
-    public int targetX() { return catchUpTargetX & 0xFFFF; }
+    public int targetX() {
+        int value = catchUpTargetX & 0xFFFF;
+        if (state == State.APPROACHING) {
+            return respawnStrategy.diagnosticTargetX(value) & 0xFFFF;
+        }
+        return value;
+    }
 
     /**
      * Accessor for the hydrated ROM {@code Tails_CPU_target_Y} word
      * (sonic3k.asm $F70C). Surfaces the value written by {@link #hydrateFromRomCpuState}
      * and persisted in the catch-up steering field. Always masked to 16 bits.
      */
-    public int targetY() { return catchUpTargetY & 0xFFFF; }
+    public int targetY() {
+        int value = catchUpTargetY & 0xFFFF;
+        if (state == State.APPROACHING) {
+            return respawnStrategy.diagnosticTargetY(value) & 0xFFFF;
+        }
+        return value;
+    }
 }

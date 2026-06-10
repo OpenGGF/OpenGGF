@@ -122,6 +122,23 @@ public class TraceBinder {
             EngineDiagnostics engineDiag,
             String secondaryCharacterLabel,
             TraceCharacterState actualSidekick) {
+        return compareFrame(expected, actualX, actualY, actualXSpeed, actualYSpeed,
+            actualGSpeed, actualAngle, actualAir, actualRolling, actualGroundMode,
+            romDiagOverride, engineDiag, secondaryCharacterLabel, actualSidekick, null, null);
+    }
+
+    public FrameComparison compareFrame(
+            TraceFrame expected,
+            short actualX, short actualY,
+            short actualXSpeed, short actualYSpeed, short actualGSpeed,
+            byte actualAngle, boolean actualAir, boolean actualRolling,
+            int actualGroundMode,
+            String romDiagOverride,
+            EngineDiagnostics engineDiag,
+            String secondaryCharacterLabel,
+            TraceCharacterState actualSidekick,
+            TraceEvent.CpuState expectedSidekickCpu,
+            EngineSidekickCpuState actualSidekickCpu) {
 
         Map<String, FieldComparison> fields = new LinkedHashMap<>();
 
@@ -176,8 +193,11 @@ public class TraceBinder {
                     tolerances.cameraWarn(), tolerances.cameraError(), false));
         }
 
+        String secondaryPrefix = normalizeCharacterPrefix(secondaryCharacterLabel);
+        appendSidekickCpuComparisons(fields, secondaryPrefix,
+                expectedSidekickCpu, actualSidekickCpu);
         appendCharacterComparisons(fields,
-            normalizeCharacterPrefix(secondaryCharacterLabel),
+            secondaryPrefix,
             expected.sidekick(), actualSidekick);
 
         // Store diagnostic context (ROM trace + engine side) for the context window.
@@ -334,6 +354,45 @@ public class TraceBinder {
         fields.put(prefix + "ground_mode", compareEnum(prefix + "ground_mode",
             deriveGroundMode(expected.angle() & 0xFF),
             deriveGroundMode(actual.angle() & 0xFF)));
+    }
+
+    private void appendSidekickCpuComparisons(Map<String, FieldComparison> fields, String prefix,
+            TraceEvent.CpuState expected, EngineSidekickCpuState actual) {
+        if (expected == null && actual == null) {
+            return;
+        }
+        boolean expectedPresent = expected != null;
+        boolean actualPresent = actual != null;
+        fields.put(prefix + "cpu_present",
+                compareFlag(prefix + "cpu_present", expectedPresent, actualPresent));
+        if (!expectedPresent || !actualPresent) {
+            return;
+        }
+
+        fields.put(prefix + "cpu_routine", compareNumeric(prefix + "cpu_routine",
+                expected.cpuRoutine(), actual.cpuRoutine(), 0, 1, false));
+        fields.put(prefix + "cpu_control_counter", compareNumeric(prefix + "cpu_control_counter",
+                expected.idleTimer(), actual.controlCounter(), 0, 1, false));
+        fields.put(prefix + "cpu_respawn_counter", compareNumeric(prefix + "cpu_respawn_counter",
+                expected.flightTimer(), actual.respawnCounter(), 0, 1, false));
+        fields.put(prefix + "cpu_interact", compareNumeric(prefix + "cpu_interact",
+                expected.interact() & 0xFF, actual.interact(), 0, 1, false));
+        fields.put(prefix + "cpu_target_x", compareNumeric(prefix + "cpu_target_x",
+                expected.targetX() & 0xFFFF, actual.targetX() & 0xFFFF, 0, 1, false));
+        fields.put(prefix + "cpu_target_y", compareNumeric(prefix + "cpu_target_y",
+                expected.targetY() & 0xFFFF, actual.targetY() & 0xFFFF, 0, 1, false));
+        fields.put(prefix + "cpu_ctrl2_held", compareNumeric(prefix + "cpu_ctrl2_held",
+                expected.ctrl2Held() & 0xFF, actual.generatedHeld() & 0xFF, 0, 1, false));
+        fields.put(prefix + "cpu_ctrl2_pressed", compareNumeric(prefix + "cpu_ctrl2_pressed",
+                expected.ctrl2Pressed() & 0xFF, actual.generatedPressed() & 0xFF, 0, 1, false));
+        fields.put(prefix + "cpu_jumping", compareNumeric(prefix + "cpu_jumping",
+                expected.autoJumpFlag() & 0xFF, actual.jumpingFlag() & 0xFF, 0, 1, false));
+        if (expected.cpuRoutine() == 0x06 && actual.cpuRoutine() == 0x06
+                && expected.delayedIndex() >= 0) {
+            fields.put(prefix + "cpu_follow_ring", compareNumeric(prefix + "cpu_follow_ring",
+                    expected.delayedIndex() & 0xFF,
+                    actual.followHistorySlot(), 0, 1, false));
+        }
     }
 
     private static String normalizeCharacterPrefix(String label) {
