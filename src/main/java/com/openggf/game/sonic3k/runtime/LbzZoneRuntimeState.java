@@ -12,6 +12,9 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     private boolean alarmAnimationActive;
     private int activeInteriorLayoutMod;
     private boolean interiorLayoutMod3Disabled;
+    private boolean robotnikIntroActive;
+    private boolean lbz2LayoutAdjustApplied;
+    private boolean lbz2EntryCorridorApplied;
     private int rollingDrumP1Angle;
     private int rollingDrumP2Angle;
     private int pendingScreenShakeOffset;
@@ -54,6 +57,37 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         }
     }
 
+    /**
+     * ROM {@code _unkFAAB}: set by {@code Obj_LBZ1Robotnik} init so the
+     * standalone {@code Obj_LBZMinibossBox} deletes itself while the Robotnik
+     * intro owns the miniboss handoff.
+     */
+    public boolean isRobotnikIntroActive() {
+        return robotnikIntroActive;
+    }
+
+    public void setRobotnikIntroActive(boolean robotnikIntroActive) {
+        this.robotnikIntroActive = robotnikIntroActive;
+    }
+
+    /** ROM Adjust_LBZ2Layout applied-once latch for the loaded LBZ2 layout. */
+    public boolean isLbz2LayoutAdjustApplied() {
+        return lbz2LayoutAdjustApplied;
+    }
+
+    public void setLbz2LayoutAdjustApplied(boolean applied) {
+        this.lbz2LayoutAdjustApplied = applied;
+    }
+
+    /** ROM LBZ2_LayoutMod applied-once latch (Events_routine_fg 0 -> 4). */
+    public boolean isLbz2EntryCorridorApplied() {
+        return lbz2EntryCorridorApplied;
+    }
+
+    public void setLbz2EntryCorridorApplied(boolean applied) {
+        this.lbz2EntryCorridorApplied = applied;
+    }
+
     public int getRollingDrumAngle(int nativePlayerIndex) {
         return nativePlayerIndex == 0 ? rollingDrumP1Angle : rollingDrumP2Angle;
     }
@@ -81,13 +115,16 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
 
     @Override
     public byte[] captureBytes() {
-        ByteBuffer buffer = ByteBuffer.allocate(9);
+        ByteBuffer buffer = ByteBuffer.allocate(12);
         buffer.put((byte) (alarmAnimationActive ? 1 : 0));
         buffer.put((byte) activeInteriorLayoutMod);
         buffer.put((byte) (interiorLayoutMod3Disabled ? 1 : 0));
         buffer.put((byte) rollingDrumP1Angle);
         buffer.put((byte) rollingDrumP2Angle);
         buffer.putInt(pendingScreenShakeOffset);
+        buffer.put((byte) (robotnikIntroActive ? 1 : 0));
+        buffer.put((byte) (lbz2LayoutAdjustApplied ? 1 : 0));
+        buffer.put((byte) (lbz2EntryCorridorApplied ? 1 : 0));
         return buffer.array();
     }
 
@@ -116,6 +153,13 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         }
         if (bytes.length >= 9) {
             pendingScreenShakeOffset = ByteBuffer.wrap(bytes).getInt(5);
+        }
+        if (bytes.length >= 10) {
+            robotnikIntroActive = bytes[9] != 0;
+        }
+        if (bytes.length >= 12) {
+            lbz2LayoutAdjustApplied = bytes[10] != 0;
+            lbz2EntryCorridorApplied = bytes[11] != 0;
         }
     }
 }

@@ -4,6 +4,21 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **LBZ1 miniboss and the LBZ1 → LBZ2 act transition reach ROM parity:** the
+  miniboss now rises 2px per hit-flash frame with the ROM palette flash, the
+  bit-2 arm ring detaches one panel per frame at three hits remaining, defeat
+  runs the ROM `$3F`-frame Wait_NewDelay before the end-sign handoff (including
+  the original game's AfterBoss_LBZ MHZ2 palette quirk), and the Knuckles
+  tracking offset matches `loc_724E2`. The Robotnik intro gains the
+  player-above rise trigger, the `Obj_LBZ1InvisibleBarrier` collapse wall, the
+  `Events_fg_4=$55` boss-area chunk swap, ROM-script box-piece release with
+  lingering drift panels, and off-screen ship removal. `Obj_LBZMinibossBox`
+  (star-post restarts) and `Obj_LBZMinibossBoxKnux` (Knuckles dual-boss fight
+  and end-of-act sequence) are newly implemented, and the results screen's
+  `Events_fg_5` now drives the `LBZ1BGE_DoTransition` seamless reload into
+  LBZ2 with the `-$3A00` world shift, `Adjust_LBZ2Layout` (including the
+  chunk-$DB rotation), and the gated `LBZ2_LayoutMod` entry corridor.
+
 - **S3K release-route crashes and dead ends are guarded:** completed-emerald
   big-ring touches no longer request the unregistered HPZ zone, and the CNZ2
   post-capsule sequence now continues through the ROM cannon-launch handoff into

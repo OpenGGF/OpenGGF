@@ -19,6 +19,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 6. [Tails Flying-With-Cargo Physics](#tails-flying-with-cargo-physics)
 7. [HCZ Object Mappings: Removal of `docs/` Runtime Reads](#hcz-object-mappings-removal-of-docs-runtime-reads)
 8. [AIZ2 Battleship Post-Bombing Wrap Distance](#aiz2-battleship-post-bombing-wrap-distance)
+9. [LBZ1 Miniboss Box Pieces: PLC VRAM Restore Skipped](#lbz1-miniboss-box-pieces-plc-vram-restore-skipped)
 
 ---
 
@@ -324,3 +325,37 @@ This is a deliberate visual approximation, not a physics change: it only affects
 ### Verification
 
 `TestS3kAiz2SidekickBoundsSync` passes (boundary-sync assertion). The AIZ trace replay frontier (`TestS3kAizTraceReplay`) is unaffected by this entry's documentation.
+
+---
+
+## LBZ1 Miniboss Box Pieces: PLC VRAM Restore Skipped
+
+**Location:** `LbzMinibossBoxRig.java` (`Phase.LINGER` removal), `Lbz1RobotnikEventController.java`, `LbzMinibossBoxInstance.java`
+**ROM Reference:** `sonic3k.asm` `loc_8CF1E` (`PLC_LBZRobotnikAfter`, `PLC_MonitorsSpikesSprings`)
+
+### Original Implementation
+
+When the last LBZ1 miniboss box piece scrolls off screen, `loc_8CF1E` reloads
+`PLC_MonitorsSpikesSprings` (subtype `$C` only) and `PLC_LBZRobotnikAfter`
+(bubbles + LBZ misc art) before deleting itself, because the box/boss art had
+overwritten those VRAM tile ranges on real hardware.
+
+### Our Implementation
+
+The engine loads the box, boss, and Robotnik ship art as standalone
+`Pattern[]` sheets outside the level's shared pattern buffer, so no VRAM tiles
+are overwritten and there is nothing to restore. The pieces' off-screen
+removal range (`$280` coarse) and lingering drift behaviour are replicated;
+only the PLC reloads are omitted.
+
+### Rationale
+
+Standalone PLC decompression is the project's preferred boss-art strategy
+("Why standalone" in the s3k-implement-boss skill): it avoids the VRAM overlap
+conflict entirely instead of emulating the overwrite-and-restore cycle.
+
+### Verification
+
+`TestS3kLbz1KnucklesSequenceHeadless#lbz1RobotnikFoldsAwayBurstPanelsAndKeepsDriftersUntilOffscreen`
+covers the piece lifecycle including the off-screen cull;
+`TestSonic3kPlcArtRegistry` guards the standalone sheets.

@@ -191,7 +191,11 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                 0xBF, // Ribot
                 0xC0, // Orbinaut
                 0xC1, // Corkey
-                0xC2  // Flybot767
+                0xC2, // Flybot767
+                0xC3, // LBZ1Robotnik
+                0xC4, // LBZMinibossBox
+                0xC5, // LBZMinibossBoxKnux
+                0xC9  // LBZMiniboss
         ));
         S3KL_IMPLEMENTED_IDS = Set.copyOf(s3kl);
 

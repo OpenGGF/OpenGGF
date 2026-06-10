@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -78,41 +79,8 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
     private static final int BOX_ANCHOR_Y_OFFSET = 0x34;
     private static final int DROPPED_BOX_WAIT = 0x1F;
     private static final int MINIBOSS_MUSIC_FADE_FRAMES = 90;
-    private static final int BOX_RELEASE_MOVE_FRAMES = 0x5F;
-    private static final int[][] BOX_CHILD_PARTS = {
-            {6, 0, -0x10, 0},
-            {6, 2, 0x10, 0},
-            {9, 0, 0, 0x14},
-            {9, 1, 0, 0x0C},
-            {9, 0, 0, -0x0C},
-            {9, 1, 0, -0x14},
-            {0, 0, -0x0C, -0x10},
-            {0, 3, 0x0C, 0x10},
-            {3, 0, 0x14, -0x0C},
-            {3, 3, -0x14, 0x0C}
-    };
-    private static final int[] BOX_RELEASE_DELAYS = {
-            0, 0, 0x10, 0x10, 0x10, 0x10, 0x40, 0x50, 0x70, 0x60
-    };
-    private static final int[][] BOX_RELEASE_PRIMARY_FRAMES = {
-            {6, 7, 8},
-            {6, 7, 8},
-            {9, 0x0A, 0x0B},
-            {9, 0x0A, 0x0B},
-            {9, 0x0A, 0x0B},
-            {9, 0x0A, 0x0B},
-            {0, 0, 0},
-            {0, 0, 0},
-            {3, 3, 3},
-            {3, 3, 3}
-    };
-    private static final int[][] BOX_RELEASE_SECONDARY_FRAMES = {
-            {0, 1, 2},
-            {0, 1, 2},
-            {3, 4, 5},
-            {3, 4, 5}
-    };
-    private static final int[] BOX_RELEASE_Y_VELS = {-0x40, 0x40, -0x40, 0x40};
+    /** ROM Sprite_CheckDeleteTouch2: coarse off-screen removal range. */
+    private static final int OFFSCREEN_COARSE_RANGE = 0x280;
 
     private final SubpixelMotion.State motion;
     private int routine = ROUTINE_INIT;
@@ -130,8 +98,9 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
     private int droppedBoxTimer;
     private int droppedBoxX;
     private int droppedBoxY;
-    private BoxPieceState[] boxReleasePieces;
+    private LbzMinibossBoxRig boxRig;
     private int hitReactionTimer;
+    private boolean shipGone;
 
     public Lbz1RobotnikEventController(ObjectSpawn spawn) {
         super(spawn, "LBZ1Robotnik");
@@ -150,7 +119,7 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
 
     @Override
     public int getCollisionFlags() {
-        return hitReactionTimer > 0 ? 0 : COLLISION_FLAGS;
+        return (hitReactionTimer > 0 || shipGone) ? 0 : COLLISION_FLAGS;
     }
 
     @Override
@@ -160,7 +129,7 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
 
     @Override
     public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
-        if (hitReactionTimer > 0 || isDestroyed()) {
+        if (hitReactionTimer > 0 || shipGone || isDestroyed()) {
             return;
         }
         hitReactionTimer = HIT_REACTION_FRAMES;
@@ -171,13 +140,14 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         if (isPlayerKnuckles()) {
+            // ROM loc_8CB90: Knuckles never meets Obj_LBZ1Robotnik here.
             ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
         flameVisible = false;
         animateHead();
         updateHitReaction();
-        updateBoxReleaseAnimation();
+        updateBoxRig();
         if (!(playerEntity instanceof AbstractPlayableSprite player)) {
             return;
         }
@@ -196,7 +166,7 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
             case ROUTINE_AFTER_COLLAPSE -> updateAfterCollapse(player);
             case ROUTINE_SECOND_RISE -> updateSecondRise();
             case ROUTINE_DIAGONAL_ESCAPE -> updateDiagonalEscape(frameCounter);
-            case ROUTINE_POST_HANDOFF -> updatePostHandoff();
+            case ROUTINE_POST_HANDOFF -> updatePostHandoff(frameCounter);
             default -> {
             }
         }
@@ -208,11 +178,14 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         if (isDestroyed()) {
             return;
         }
+        drawMinibossBox();
+        if (shipGone) {
+            return;
+        }
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP);
         if (renderer == null) {
             return;
         }
-        drawCarriedMinibossBox();
         renderer.drawFrameIndex(SHIP_FRAME, getX(), getY(), facingLeft, false, PALETTE_LINE);
         renderer.drawFrameIndex(headFrame, getX(), getY() + HEAD_Y_OFFSET, facingLeft, false, PALETTE_LINE);
         if (flameVisible) {
@@ -268,6 +241,9 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         this.routine = routine;
         this.facingLeft = facingLeft;
         this.flameVisible = xVel != 0;
+        if (boxRig == null) {
+            boxRig = new LbzMinibossBoxRig(x & 0xFFFF, (y + BOX_ANCHOR_Y_OFFSET) & 0xFFFF);
+        }
         updateDynamicSpawn(x, y);
     }
 
@@ -276,7 +252,8 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         droppedBoxArmed = true;
         droppedBoxX = x & 0xFFFF;
         droppedBoxY = y & 0xFFFF;
-        startBoxReleaseAnimation();
+        boxRig = new LbzMinibossBoxRig(droppedBoxX, droppedBoxY);
+        boxRig.release();
     }
 
     private void initialize() {
@@ -285,10 +262,22 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         swingSetup1();
         services().camera().setMinX((short) APPROACH_CAMERA_MIN_X);
         services().camera().setMaxX((short) APPROACH_CAMERA_MAX_X);
+        // ROM loc_8CB9E: st (_unkFAAB).w — tells the standalone
+        // Obj_LBZMinibossBox that the Robotnik intro owns this fight.
+        LbzZoneRuntimeState lbz = resolveLbzRuntimeState();
+        if (lbz != null) {
+            lbz.setRobotnikIntroActive(true);
+        }
+        boxRig = new LbzMinibossBoxRig(getX(), getY() + BOX_ANCHOR_Y_OFFSET);
     }
 
     private void updateApproachHover(AbstractPlayableSprite player) {
-        if (isPlayerNear(player, APPROACH_NEAR_X, APPROACH_NEAR_Y) && !player.getAir()) {
+        // ROM loc_8CBF2: Find_OtherObject d1==0 (player at or above the ship)
+        // triggers the rise immediately; otherwise the player must be within
+        // $70/$60 and grounded.
+        boolean playerAtOrAboveShip = signedDelta(getY(), player.getCentreY() & 0xFFFF) >= 0;
+        if (playerAtOrAboveShip
+                || (isPlayerNear(player, APPROACH_NEAR_X, APPROACH_NEAR_Y) && !player.getAir())) {
             routine = ROUTINE_FIRST_RISE;
             motion.yVel = FIRST_RISE_Y_VEL;
             return;
@@ -363,8 +352,24 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         }
     }
 
-    private void updatePostHandoff() {
+    private void updatePostHandoff(int frameCounter) {
+        // ROM loc_8CD4C: keep moving and delete once coarse-off-screen; the
+        // floating box panels are independent and stay behind.
         moveSprite2();
+        flameVisible = !shipGone && (frameCounter & 1) == 0 && motion.xVel != 0;
+        updateDroppedBoxHandoff();
+        if (!shipGone && isShipCoarseOffscreen()) {
+            shipGone = true;
+        }
+        if (shipGone && (boxRig == null || !boxRig.hasVisiblePieces())) {
+            ObjectLifetimeOps.deleteNoRespawn(this);
+        }
+    }
+
+    private boolean isShipCoarseOffscreen() {
+        int cameraX = services().camera().getX() & 0xFFFF;
+        int coarseDistance = ((getX() & 0xFF80) - ((cameraX - 0x80) & 0xFF80)) & 0xFFFF;
+        return coarseDistance > OFFSCREEN_COARSE_RANGE;
     }
 
     private boolean collapseEventFinished() {
@@ -413,6 +418,13 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
                 services().configuration()) == PlayerCharacter.KNUCKLES;
     }
 
+    private LbzZoneRuntimeState resolveLbzRuntimeState() {
+        if (services().zoneRuntimeRegistry() == null) {
+            return null;
+        }
+        return S3kRuntimeStates.currentLbz(services().zoneRuntimeRegistry()).orElse(null);
+    }
+
     private void swingSetup1() {
         motion.yVel = SWING_INITIAL_VELOCITY;
         swingMaxVelocity = SWING_INITIAL_VELOCITY;
@@ -432,15 +444,19 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         SubpixelMotion.moveSprite2(motion);
     }
 
+    private int signedDelta(int a, int b) {
+        return (short) ((a & 0xFFFF) - (b & 0xFFFF));
+    }
+
     private boolean isPlayerNear(AbstractPlayableSprite player, int maxXDistance, int maxYDistance) {
-        int dx = Math.abs((short) ((player.getCentreX() & 0xFFFF) - (motion.x & 0xFFFF)));
+        int dx = Math.abs(signedDelta(player.getCentreX() & 0xFFFF, motion.x & 0xFFFF));
         if (dx >= maxXDistance) {
             return false;
         }
         if (maxYDistance == Integer.MAX_VALUE) {
             return true;
         }
-        int dy = Math.abs((short) ((player.getCentreY() & 0xFFFF) - (motion.y & 0xFFFF)));
+        int dy = Math.abs(signedDelta(player.getCentreY() & 0xFFFF, motion.y & 0xFFFF));
         return dy < maxYDistance;
     }
 
@@ -459,33 +475,28 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         }
     }
 
-    private void drawCarriedMinibossBox() {
+    private void updateBoxRig() {
+        if (boxRig == null) {
+            return;
+        }
+        if (!boxRig.isReleased()) {
+            int anchorX = droppedBoxArmed ? droppedBoxX : getX();
+            int anchorY = droppedBoxArmed ? droppedBoxY : getY() + BOX_ANCHOR_Y_OFFSET;
+            boxRig.follow(anchorX, anchorY);
+        }
+        var camera = services().camera();
+        boxRig.update(camera != null ? camera.getX() & 0xFFFF : LbzMinibossBoxRig.NO_CAMERA);
+    }
+
+    private void drawMinibossBox() {
+        if (boxRig == null || !boxRig.hasVisiblePieces()) {
+            return;
+        }
         PatternSpriteRenderer boxRenderer = getRenderer(Sonic3kObjectArtKeys.LBZ_MINIBOSS_BOX);
         if (boxRenderer == null) {
             return;
         }
-        if (boxReleasePieces != null && hasVisibleBoxReleasePieces()) {
-            for (BoxPieceState piece : boxReleasePieces) {
-                if (piece.deleted) {
-                    continue;
-                }
-                boxRenderer.drawFrameIndex(piece.frame, piece.x, piece.y,
-                        piece.flipX(), piece.flipY(), BOX_PALETTE_LINE);
-            }
-            return;
-        }
-        if (minibossSpawned) {
-            return;
-        }
-        int anchorX = droppedBoxArmed ? droppedBoxX : getX();
-        int anchorY = droppedBoxArmed ? droppedBoxY : getY() + BOX_ANCHOR_Y_OFFSET;
-        for (int[] part : BOX_CHILD_PARTS) {
-            int renderFlags = part[1];
-            boolean flipX = (renderFlags & 0x01) != 0;
-            boolean flipY = (renderFlags & 0x02) != 0;
-            boxRenderer.drawFrameIndex(part[0], anchorX + part[2], anchorY + part[3],
-                    flipX, flipY, BOX_PALETTE_LINE);
-        }
+        boxRig.draw(boxRenderer, BOX_PALETTE_LINE);
     }
 
     private void ensureRobotnikArtLoaded() {
@@ -522,159 +533,27 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
             return;
         }
         minibossSpawned = true;
-        startBoxReleaseAnimation();
+        // ROM loc_8CD9C: bset #3,$38 releases the box pieces, plays
+        // sfx_BossActivate, and creates Obj_LBZMiniboss.
+        if (boxRig != null) {
+            boxRig.release();
+        }
+        services().playSfx(Sonic3kSfx.BOSS_ACTIVATE.id);
+        notifyBoxOpenedChunkSwap();
         spawnFreeChild(() -> new SongFadeTransitionInstance(
                 MINIBOSS_MUSIC_FADE_FRAMES, Sonic3kMusic.MINIBOSS.id));
         spawnChild(() -> new LbzMinibossInstance(new ObjectSpawn(
                 x & 0xFFFF, y & 0xFFFF, Sonic3kObjectIds.LBZ_MINIBOSS, 0, 0, false, 0)));
     }
 
-    private void startBoxReleaseAnimation() {
-        boxReleasePieces = new BoxPieceState[BOX_CHILD_PARTS.length];
-        for (int i = 0; i < BOX_CHILD_PARTS.length; i++) {
-            int[] part = BOX_CHILD_PARTS[i];
-            boxReleasePieces[i] = new BoxPieceState(
-                    i,
-                    part[0],
-                    part[1],
-                    (droppedBoxX + part[2]) & 0xFFFF,
-                    (droppedBoxY + part[3]) & 0xFFFF,
-                    BOX_RELEASE_DELAYS[i],
-                    BOX_RELEASE_PRIMARY_FRAMES[i]);
-        }
-    }
-
-    private void updateBoxReleaseAnimation() {
-        if (boxReleasePieces == null) {
-            return;
-        }
-        for (BoxPieceState piece : boxReleasePieces) {
-            piece.update();
-        }
-    }
-
-    private boolean hasVisibleBoxReleasePieces() {
-        if (boxReleasePieces == null) {
-            return false;
-        }
-        for (BoxPieceState piece : boxReleasePieces) {
-            if (!piece.deleted) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static final class BoxPieceState {
-        private final int index;
-        private final int renderFlags;
-        private final int[] primaryFrames;
-        private int x;
-        private int y;
-        private int ySub;
-        private int yVel;
-        private int frame;
-        private int delayTimer;
-        private int animTimer;
-        private int animIndex;
-        private int moveTimer;
-        private int[] activeFrames;
-        private Phase phase = Phase.WAIT_PRIMARY;
-        private boolean deleted;
-
-        private enum Phase {
-            WAIT_PRIMARY,
-            PRIMARY_ANIM,
-            MOVE_ANIM,
-            FINAL_ANIM
-        }
-
-        private BoxPieceState(int index, int frame, int renderFlags, int x, int y, int delayTimer,
-                              int[] primaryFrames) {
-            this.index = index;
-            this.frame = frame;
-            this.renderFlags = renderFlags;
-            this.x = x;
-            this.y = y;
-            this.delayTimer = delayTimer;
-            this.primaryFrames = primaryFrames;
-            this.activeFrames = primaryFrames;
-        }
-
-        private void update() {
-            if (deleted) {
-                return;
-            }
-            switch (phase) {
-                case WAIT_PRIMARY -> {
-                    if (delayTimer-- <= 0) {
-                        startAnimation(primaryFrames, Phase.PRIMARY_ANIM);
-                    }
-                }
-                case PRIMARY_ANIM -> {
-                    if (tickRawAnimation()) {
-                        if (index < 6) {
-                            deleted = true;
-                        } else {
-                            startMovingAnimation();
-                        }
-                    }
-                }
-                case MOVE_ANIM -> {
-                    moveY();
-                    if (moveTimer-- <= 0) {
-                        startAnimation(activeFrames, Phase.FINAL_ANIM);
-                        animTimer = 5;
-                    }
-                }
-                case FINAL_ANIM -> {
-                    if (tickRawAnimation()) {
-                        deleted = true;
-                    }
-                }
-            }
-        }
-
-        private void startAnimation(int[] frames, Phase nextPhase) {
-            activeFrames = frames;
-            animIndex = 0;
-            animTimer = 0;
-            frame = activeFrames[0];
-            phase = nextPhase;
-        }
-
-        private boolean tickRawAnimation() {
-            if (animTimer-- > 0) {
-                return false;
-            }
-            animIndex++;
-            if (animIndex >= activeFrames.length) {
-                return true;
-            }
-            frame = activeFrames[animIndex];
-            animTimer = 0;
-            return false;
-        }
-
-        private void startMovingAnimation() {
-            int movingIndex = index - 6;
-            yVel = BOX_RELEASE_Y_VELS[movingIndex];
-            moveTimer = BOX_RELEASE_MOVE_FRAMES;
-            startAnimation(BOX_RELEASE_SECONDARY_FRAMES[movingIndex], Phase.MOVE_ANIM);
-        }
-
-        private void moveY() {
-            int total = ((short) y << 8) + ySub + yVel;
-            y = (total >> 8) & 0xFFFF;
-            ySub = total & 0xFF;
-        }
-
-        private boolean flipX() {
-            return (renderFlags & 0x01) != 0;
-        }
-
-        private boolean flipY() {
-            return (renderFlags & 0x02) != 0;
+    /**
+     * ROM loc_8CE84: the first box piece sets Events_fg_4=$55, and
+     * LBZ1_ScreenEvent swaps the boss-area layout chunk in response.
+     */
+    private void notifyBoxOpenedChunkSwap() {
+        if (services().levelEventProvider() instanceof Sonic3kLevelEventManager manager
+                && manager.getLbzEvents() != null) {
+            manager.getLbzEvents().applyMinibossBoxOpenedChunkSwap(false);
         }
     }
 }

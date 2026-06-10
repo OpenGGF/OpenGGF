@@ -491,6 +491,11 @@ public class Sonic3kConstants {
     // PalPointers index for LBZ1 main palette (Pal_LBZ1, palette lines 1-3).
     public static final int PAL_POINTERS_LBZ1_INDEX = 22;
 
+    // PalPointers index for MHZ2 main palette (Pal_MHZ2). AfterBoss_MHZ — also
+    // reached by AfterBoss_LBZ, an original-game bug — loads its first line via
+    // PalLoad_Line1 after the miniboss results begin.
+    public static final int PAL_POINTERS_MHZ2_INDEX = 25;
+
     // Pal_AIZIntroEmeralds - Emerald palette (32 bytes = 16 colors)
     public static final int PAL_AIZ_INTRO_EMERALDS_ADDR = 0x067AAA;
 
