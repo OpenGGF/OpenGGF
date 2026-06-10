@@ -11,6 +11,7 @@ import com.openggf.graphics.SpriteMaskReplayRole;
 import com.openggf.game.GameRng;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -284,23 +285,20 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance {
 
     private boolean childrenSpawned;
 
-    // Single-instance reference for cross-object coordination (REP gumball
-    // needs to call back into the machine to respawn springs). Only one
-    // gumball bonus stage is active at a time.
-    private static GumballMachineObjectInstance currentInstance;
-
     /**
      * @return the current active gumball machine, or null if none
      */
-    public static GumballMachineObjectInstance current() {
-        return currentInstance;
+    public static GumballMachineObjectInstance current(ObjectManager objectManager) {
+        if (objectManager == null) {
+            return null;
+        }
+        List<GumballMachineObjectInstance> machines =
+                objectManager.activeObjectsOfType(GumballMachineObjectInstance.class);
+        return machines.isEmpty() ? null : machines.get(0);
     }
 
     public GumballMachineObjectInstance(ObjectSpawn spawn) {
         super(spawn, "GumballMachine");
-
-        // Register as the active machine so gumball items can trigger callbacks
-        currentInstance = this;
     }
 
     private void spawnChildren() {
@@ -1110,7 +1108,8 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance {
                 return;
             }
             GraphicsManager graphicsManager = services().graphicsManager();
-            GumballMachineObjectInstance machine = GumballMachineObjectInstance.current();
+            GumballMachineObjectInstance machine =
+                    GumballMachineObjectInstance.current(services().objectManager());
             int renderY = (machine != null)
                     ? machine.getCurrentY() + offsetFromMachine
                     : spawn.y();
@@ -1202,7 +1201,8 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance {
                 return;
             }
             GraphicsManager graphicsManager = services().graphicsManager();
-            GumballMachineObjectInstance machine = GumballMachineObjectInstance.current();
+            GumballMachineObjectInstance machine =
+                    GumballMachineObjectInstance.current(services().objectManager());
             int renderY = (machine != null)
                     ? machine.getCurrentY() + offsetFromMachine
                     : spawn.y();

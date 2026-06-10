@@ -1,7 +1,5 @@
 package com.openggf.tests;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import com.openggf.configuration.SonicConfiguration;
@@ -19,24 +17,9 @@ public class TestSonicConfigurationService {
     @TempDir
     Path tempDir;
 
-    private String originalUserDir;
-
-    @BeforeEach
-    void setUp() {
-        originalUserDir = System.getProperty("user.dir");
-        System.setProperty("user.dir", tempDir.toString());
-    }
-
-    @AfterEach
-    void tearDown() {
-        if (originalUserDir != null) {
-            System.setProperty("user.dir", originalUserDir);
-        }
-    }
-
     @Test
     public void testUpdateConfig() {
-        SonicConfigurationService service = SonicConfigurationService.createStandalone();
+        SonicConfigurationService service = SonicConfigurationService.createStandalone(tempDir);
 
         // Save original value
         boolean originalDebug = service.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
@@ -50,8 +33,7 @@ public class TestSonicConfigurationService {
 
     @Test
     public void testSaveConfig() throws IOException {
-        // user.dir is set to tempDir by @BeforeEach — saveConfig writes there
-        SonicConfigurationService service = SonicConfigurationService.createStandalone();
+        SonicConfigurationService service = SonicConfigurationService.createStandalone(tempDir);
         Path configPath = tempDir.resolve("config.yaml");
 
         service.saveConfig();
@@ -74,7 +56,7 @@ public class TestSonicConfigurationService {
 
     @Test
     public void testGetters() {
-        SonicConfigurationService svc = SonicConfigurationService.createStandalone();
+        SonicConfigurationService svc = SonicConfigurationService.createStandalone(tempDir);
         svc.resetToDefaults();
         assertEquals(640, svc.getInt(SonicConfiguration.SCREEN_WIDTH));
         assertEquals(320, svc.getShort(SonicConfiguration.SCREEN_WIDTH_PIXELS));

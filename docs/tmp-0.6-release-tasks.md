@@ -34,6 +34,7 @@ Temporary execution tracker for the current release-gate pass. Do not treat this
 ## Current Verification
 
 - [x] Full non-ROM Maven suite: `mvn test` exited 0 with `MSE:OK modules=1 passed=7372 failed=0 errors=0 skipped=9`.
+- [x] Full direct Maven suite after the release-medium cleanup: `mvn "-Dmse=off" test` exited 0 with `Tests run: 7332, Failures: 0, Errors: 0, Skipped: 9` and `BUILD SUCCESS`.
 - [x] Focused S3K AIZ release trace: `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtrace.context.radius=8" test` exited 0.
 - [x] Refreshed S2+S3K sidekick baseline after the logical jump-press cleanup; substantive result is unchanged from the baseline above.
 
@@ -57,9 +58,15 @@ Temporary execution tracker for the current release-gate pass. Do not treat this
 - [x] Render the stored data-select error message instead of only recording it.
   - Local change: S3K data-select presentation carries the stored launch error into save-screen object state, and the renderer draws a clipped, safe-glyph message on the save screen.
   - Verification: `mvn "-Dtest=com.openggf.game.sonic3k.dataselect.TestS3kDataSelectPresentation" test` exited 0 with 69 tests / 0 failures / 0 errors.
-- [ ] Quarantine transient IO failures in `SaveManager` and configuration writes.
-- [ ] Isolate configuration tests from process current-working-directory state.
-- [ ] Remove or contain the `GumballMachine` static lifecycle hazard.
+- [x] Quarantine transient IO failures in `SaveManager` and configuration writes.
+  - Local change: save-slot/config reads now quarantine only malformed or invalid payloads. Transient read `IOException`s log and leave the original file in place; atomic write paths still publish through temp files.
+  - Verification: `mvn "-Dmse=off" "-Dtest=com.openggf.game.save.TestSaveManager,com.openggf.configuration.TestConfigEnumValidation,com.openggf.configuration.TestConfigServiceYamlRoundTrip,com.openggf.configuration.TestLegacyConfigMigration,com.openggf.configuration.TestConfigKeyNameResolution,com.openggf.configuration.TestSonicConfigurationFileBootstrap,com.openggf.tests.TestSonicConfigurationService,com.openggf.tests.TestBuildToolingGuard,com.openggf.game.sonic3k.objects.TestGumballMachineDrift,com.openggf.game.sonic3k.objects.TestGumballDebugVisibilityFilter,com.openggf.game.sonic3k.objects.TestGumballMachineOverlayPriority" test`.
+- [x] Isolate configuration tests from process current-working-directory state.
+  - Local change: `SonicConfigurationService.createStandalone(Path)` lets tests and tools bind config loading/saving to an explicit root without changing `user.dir`.
+  - Verification: `rg -n 'System\.setProperty\("user\.dir|System\.clearProperty\("user\.dir' src/test/java/com/openggf/configuration src/test/java/com/openggf/tests/TestSonicConfigurationService.java` returned no matches.
+- [x] Remove or contain the `GumballMachine` static lifecycle hazard.
+  - Local change: the strong static `currentInstance` reference was removed. Cross-object coordination now resolves the active machine from the current `ObjectManager`, so the machine and injected services graph are not retained after stage teardown.
+  - Verification: same focused Maven slice above plus `rg -n "currentInstance|private static GumballMachineObjectInstance|static\s+GumballMachineObjectInstance\s+\w+\s*;" src/main/java/com/openggf/game/sonic3k/objects src/test/java/com/openggf/tests/TestBuildToolingGuard.java` returned no matches.
 
 ## Local Worktree Constraints
 

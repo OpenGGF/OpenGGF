@@ -1,5 +1,6 @@
 package com.openggf.game.save;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.game.dataselect.DataSelectGameProfile;
@@ -21,12 +22,20 @@ import static java.security.MessageDigest.getInstance;
 public final class SaveManager {
 
     private static final Logger LOG = Logger.getLogger(SaveManager.class.getName());
+    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
 
     private final Path root;
     private final ObjectMapper mapper = new ObjectMapper();
+    private final SaveFileReader reader;
 
     public SaveManager(Path root) {
         this.root = root;
+        this.reader = file -> mapper.readValue(file.toFile(), MAP_TYPE);
+    }
+
+    SaveManager(Path root, SaveFileReader reader) {
+        this.root = root;
+        this.reader = reader;
     }
 
     public void writeSlot(String game, int slot, Map<String, Object> payload) throws IOException {
@@ -57,20 +66,17 @@ public final class SaveManager {
             return SaveSlotSummary.empty(slot);
         }
         try {
-            Map<String, Object> raw = mapper.readValue(file.toFile(), new TypeReference<>() {});
+            Map<String, Object> raw = reader.read(file);
             if (!game.equals(raw.get("game"))) {
-                quarantine(file, "wrong game");
-                return SaveSlotSummary.empty(slot);
+                return quarantineCorruptAndReturnEmpty(file, slot, "wrong game");
             }
             @SuppressWarnings("unchecked")
             Map<String, Object> payload = (Map<String, Object>) raw.get("payload");
             if (payload == null) {
-                quarantine(file, "missing payload");
-                return SaveSlotSummary.empty(slot);
+                return quarantineCorruptAndReturnEmpty(file, slot, "missing payload");
             }
             if (profile != null && !profile.isPayloadValid(payload)) {
-                quarantine(file, "invalid payload");
-                return SaveSlotSummary.empty(slot);
+                return quarantineCorruptAndReturnEmpty(file, slot, "invalid payload");
             }
             String actual = sha256(mapper.writeValueAsString(payload));
             String expected = String.valueOf(raw.get("hash"));
@@ -80,14 +86,22 @@ public final class SaveManager {
             return actual.equals(expected)
                     ? new SaveSlotSummary(slot, SaveSlotState.VALID, payload)
                     : new SaveSlotSummary(slot, SaveSlotState.HASH_WARNING, payload);
-        } catch (Exception ex) {
-            try {
-                quarantine(file, ex.getMessage());
-            } catch (IOException qe) {
-                LOG.warning("Failed to quarantine " + file + ": " + qe.getMessage());
-            }
+        } catch (JsonProcessingException | RuntimeException ex) {
+            return quarantineCorruptAndReturnEmpty(file, slot, ex.getMessage());
+        } catch (IOException ex) {
+            LOG.warning("Transient I/O while reading save " + file + "; leaving it in place: "
+                    + ex.getMessage());
             return SaveSlotSummary.empty(slot);
         }
+    }
+
+    private SaveSlotSummary quarantineCorruptAndReturnEmpty(Path file, int slot, String reason) {
+        try {
+            quarantine(file, reason);
+        } catch (IOException qe) {
+            LOG.warning("Failed to quarantine " + file + "; leaving it in place: " + qe.getMessage());
+        }
+        return SaveSlotSummary.empty(slot);
     }
 
     private void quarantine(Path file, String reason) throws IOException {
@@ -115,5 +129,10 @@ public final class SaveManager {
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    @FunctionalInterface
+    interface SaveFileReader {
+        Map<String, Object> read(Path file) throws IOException;
     }
 }

@@ -348,7 +348,8 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
      * In the engine, this respawns the dispenser + springs via the machine.
      */
     private void onCollectRepairDispenser(PlayableEntity player) {
-        GumballMachineObjectInstance current = GumballMachineObjectInstance.current();
+        GumballMachineObjectInstance current =
+                GumballMachineObjectInstance.current(services().objectManager());
         if (current != null) {
             LOGGER.info("REP gumball collected — calling respawnSprings()");
             current.respawnSprings();

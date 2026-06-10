@@ -64,6 +64,13 @@ All notable changes to the OpenGGF project are documented in this file.
   files are moved to unique `.corrupt` siblings before defaults are saved, and
   legacy `config.json` migration now preserves existing `.bak` files.
 
+- **Transient storage errors no longer look like corruption:** save-slot and
+  configuration reads now quarantine only malformed or invalid payloads, leave
+  transient I/O failures in place, and configuration-focused tests use explicit
+  temp roots instead of mutating the process working directory. The S3K
+  GumballMachine also no longer stores a static object reference across stage
+  teardown.
+
 - **Release architecture guards now fail closed:** gameplay map-mutation
   scanner roots must exist and contain Java sources, map mutation bypass forms
   are covered, CoW tests use active JUnit assertions, and the GameLoop size
