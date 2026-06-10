@@ -5,8 +5,10 @@ import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
+import com.openggf.game.sonic3k.objects.CnzCannonInstance;
 import com.openggf.game.sonic3k.objects.CnzEggCapsuleInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -46,12 +48,26 @@ public final class CnzEndBossInstance extends AbstractObjectInstance {
      * make the release explicit without claiming full boss-boundary parity.
      */
     private static final int CAMERA_RELEASE_DELTA = 0x100;
+    private static final int CAPSULE_X = 0x4990;
+    private static final int CAPSULE_Y = 0x02E0;
+    private static final int CANNON_TRIGGER_X = 0x4A30;
+    private static final int CANNON_X = 0x4B20;
+    private static final int CANNON_Y = 0x02A8;
+    private static final int CANNON_LAUNCH_WAIT = 0xBF;
+    private static final int ICZ_START_ZONE_WORD = 0x500;
 
     private final int centreX;
     private final int centreY;
 
     private boolean defeatRequestedForTest;
     private boolean defeatHandoffComplete;
+    private boolean capsuleResultsComplete;
+    private boolean cannonSpawned;
+    private boolean cannonArmed;
+    private boolean cannonLaunched;
+    private boolean transitionRequested;
+    private int cannonLaunchTimer = -1;
+    private CnzCannonInstance endCannon;
 
     public CnzEndBossInstance(ObjectSpawn spawn) {
         super(spawn, "CNZEndBoss");
@@ -92,6 +108,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance {
         if (defeatRequestedForTest && !defeatHandoffComplete) {
             applyDefeatHandoff();
         }
+        updatePostDefeatSequence(frameCounter, player);
     }
 
     /**
@@ -123,7 +140,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance {
      *   <li>clear {@code Boss_flag}</li>
      *   <li>widen the camera max so the player can move past the boss arena</li>
      *   <li>spawn the CNZ-local egg capsule wrapper</li>
-     *   <li>restore player control and CNZ Act 2 music</li>
+     *   <li>stay alive as the post-results cannon-launch controller</li>
      * </ol>
      */
     private void applyDefeatHandoff() {
@@ -139,10 +156,69 @@ public final class CnzEndBossInstance extends AbstractObjectInstance {
         services().camera().setMaxX((short) widenedMaxX);
 
         spawnChild(() -> new CnzEggCapsuleInstance(
-                new ObjectSpawn(centreX, centreY, Sonic3kObjectIds.EGG_CAPSULE, 0, 0, false, 0)));
+                new ObjectSpawn(CAPSULE_X, CAPSULE_Y, Sonic3kObjectIds.EGG_CAPSULE, 0, 0, false, 0),
+                this::onCapsuleResultsComplete));
+    }
 
+    private void updatePostDefeatSequence(int frameCounter, PlayableEntity player) {
+        if (!defeatHandoffComplete || transitionRequested) {
+            return;
+        }
+        if (capsuleResultsComplete && !cannonSpawned) {
+            restorePlayerControl();
+            restoreLevelMusic();
+            if (player instanceof AbstractPlayableSprite sprite
+                    && (sprite.getCentreX() & 0xFFFF) >= CANNON_TRIGGER_X) {
+                spawnEndCannon();
+            }
+            return;
+        }
+        if (!cannonSpawned || !(player instanceof AbstractPlayableSprite sprite)) {
+            return;
+        }
+        if (!cannonArmed && endCannon != null && endCannon.isEndSequenceLaunchReady()) {
+            cannonArmed = true;
+            cannonLaunchTimer = CANNON_LAUNCH_WAIT;
+            services().camera().setMaxYTarget((short) 0x0200);
+            sprite.setControlLocked(true);
+            return;
+        }
+        if (cannonArmed && !cannonLaunched) {
+            if (cannonLaunchTimer-- > 0) {
+                return;
+            }
+            if (endCannon != null) {
+                endCannon.triggerEndSequenceLaunch(frameCounter);
+            }
+            cannonLaunched = true;
+            return;
+        }
+        if (cannonLaunched && isPlayerPastIczLaunchThreshold(sprite)) {
+            requestIczTransition();
+        }
+    }
+
+    private void onCapsuleResultsComplete() {
+        capsuleResultsComplete = true;
+    }
+
+    private void spawnEndCannon() {
+        cannonSpawned = true;
+        endCannon = spawnChild(() -> new CnzCannonInstance(
+                new ObjectSpawn(CANNON_X, CANNON_Y, Sonic3kObjectIds.CNZ_CANNON, 0, 0, false, 0)));
+    }
+
+    private boolean isPlayerPastIczLaunchThreshold(AbstractPlayableSprite sprite) {
+        int cameraYPlusWindow = (services().camera().getY() & 0xFFFF) + 0x20;
+        int playerY = sprite.getCentreY() & 0xFFFF;
+        return cameraYPlusWindow >= playerY;
+    }
+
+    private void requestIczTransition() {
+        transitionRequested = true;
+        int act = ICZ_START_ZONE_WORD & 0xFF;
+        services().requestZoneAndAct(Sonic3kZoneIds.ZONE_ICZ, act, true);
         restorePlayerControl();
-        restoreLevelMusic();
         setDestroyed(true);
     }
 

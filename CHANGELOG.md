@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K release-route crashes and dead ends are guarded:** completed-emerald
+  big-ring touches no longer request the unregistered HPZ zone, and the CNZ2
+  post-capsule sequence now continues through the ROM cannon-launch handoff into
+  ICZ1 instead of silently ending at the egg capsule.
+
 - **S2 sidekick CPU traces now expose per-frame CPU state:** the seven stuck
   S2 level-select fixtures were regenerated with `cpu_state_per_frame`, and
   trace replay now compares read-only Tails CPU routine, counters, targets,

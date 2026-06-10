@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
+import com.openggf.game.sonic3k.objects.CnzCannonInstance;
 import com.openggf.game.sonic3k.objects.CnzEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.CnzTeleporterBeamInstance;
 import com.openggf.game.sonic3k.objects.CnzTeleporterInstance;
@@ -16,6 +17,7 @@ import com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance;
 import com.openggf.level.objects.DefaultObjectServices;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidContact;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
@@ -194,20 +196,77 @@ class TestS3kCnzTeleporterRouteHeadless {
 
         fixture.stepIdleFrames(1);
 
-        assertTrue(isObjectPresent(CnzEggCapsuleInstance.class),
+        CnzEggCapsuleInstance capsule = findObject(CnzEggCapsuleInstance.class);
+        assertTrue(capsule != null,
                 "The bounded Task 8 defeat handoff should spawn the CNZ-local egg capsule wrapper");
+
+        capsule.forceResultsCompleteForTest();
+        boss.update(1, fixture.sprite());
+
         assertFalse(fixture.sprite().isControlLocked(),
-                "Defeat handoff should return player control once the capsule is released");
+                "Capsule release should return player control once the results screen has finished");
         assertFalse(fixture.sprite().isObjectControlled(),
-                "Defeat handoff should clear object control instead of leaving the player frozen");
+                "Capsule release should clear object control instead of leaving the player frozen");
         assertFalse(fixture.sprite().isHidden(),
-                "If the teleporter route hid the player earlier, the defeat handoff must reveal them again");
+                "If the teleporter route hid the player earlier, capsule release must reveal them again");
         assertFalse(events.isBossFlag(),
                 "Task 8 owns clearing Boss_flag so later CNZ event logic can leave boss mode");
         assertEquals(0, GameServices.gameState().getCurrentBossId(),
                 "Defeat handoff should clear Current_Boss_ID alongside Boss_flag");
         assertTrue(fixture.camera().getMaxX() > 0x48E0,
                 "Task 8 should widen the CNZ boss camera clamp during the capsule handoff");
+    }
+
+    @Test
+    void cnzPostCapsuleRouteSpawnsCannonAndRequestsIczAfterLaunchThreshold() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .build();
+
+        Sonic3kCNZEvents events = getCnzEvents();
+        events.setBossFlag(true);
+        GameServices.gameState().setCurrentBossId(Sonic3kObjectIds.CNZ_END_BOSS);
+
+        CnzEndBossInstance boss = spawnCnzEndBossForTest();
+        boss.forceDefeatForTest();
+        fixture.stepIdleFrames(1);
+
+        CnzEggCapsuleInstance capsule = findObject(CnzEggCapsuleInstance.class);
+        assertTrue(capsule != null,
+                "Obj_CNZEndBoss loc_6E6E4 should create the egg capsule before the launcher route");
+
+        capsule.forceResultsCompleteForTest();
+        fixture.sprite().setCentreX((short) 0x4A30);
+        boss.update(1, fixture.sprite());
+
+        CnzCannonInstance cannon = findObject(CnzCannonInstance.class);
+        assertTrue(cannon != null,
+                "Obj_CNZEndBoss loc_6E778 should spawn Obj_CNZCannon at the launcher handoff");
+
+        fixture.sprite().setCentreX((short) 0x4B20);
+        fixture.sprite().setCentreY((short) 0x0280);
+        fixture.sprite().setAir(false);
+        fixture.sprite().setJumping(false);
+        cannon.onSolidContact(fixture.sprite(), new SolidContact(true, false, false, true, false), 0);
+        invokeCannonLaunchReadyHook(cannon);
+        assertTrue(cannon.isEndSequenceLaunchReady(),
+                "The end-sequence cannon should capture Sonic before the boss forces the jump input");
+
+        for (int frame = 0; frame < 210 && fixture.sprite().isObjectControlled(); frame++) {
+            fixture.stepIdleFrames(1);
+        }
+        assertFalse(fixture.sprite().isObjectControlled(),
+                "Obj_CNZEndBoss loc_6E7E4 should force the cannon launch instead of waiting for manual input");
+
+        fixture.sprite().setCentreY((short) (fixture.camera().getY() + 0x10));
+        boss.update(2, fixture.sprite());
+
+        assertTrue(GameServices.level().consumeZoneActRequest(),
+                "Obj_CNZEndBoss loc_6E80C should request StartNewLevel once the launcher carries Sonic offscreen");
+        assertEquals(Sonic3kZoneIds.ZONE_ICZ, GameServices.level().getRequestedZone());
+        assertEquals(0, GameServices.level().getRequestedAct());
+        assertTrue(GameServices.level().isLevelInactiveForTransition(),
+                "The ICZ request should freeze level updates while the fade transition owns the load");
     }
 
     /**
@@ -243,5 +302,24 @@ class TestS3kCnzTeleporterRouteHeadless {
     private boolean isObjectPresent(Class<?> type) {
         return GameServices.level().getObjectManager().getActiveObjects().stream()
                 .anyMatch(type::isInstance);
+    }
+
+    private <T> T findObject(Class<T> type) {
+        return GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(type::isInstance)
+                .map(type::cast)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private static void invokeCannonLaunchReadyHook(CnzCannonInstance cannon) {
+        try {
+            java.lang.reflect.Method method =
+                    CnzCannonInstance.class.getDeclaredMethod("setLaunchDelayFramesForTest", int.class);
+            method.setAccessible(true);
+            method.invoke(cannon, 0);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Failed to ready CNZ cannon for route test", e);
+        }
     }
 }

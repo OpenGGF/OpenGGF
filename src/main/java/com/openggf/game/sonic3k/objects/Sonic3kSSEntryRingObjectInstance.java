@@ -39,7 +39,7 @@ import java.util.logging.Logger;
  *     <ul>
  *       <li>Chaos emeralds &lt; 7: enter Special Stage (full flash sequence)</li>
  *       <li>All emeralds collected: award 50 rings, ring vanishes immediately</li>
- *       <li>TODO: Hidden Palace route (subtype bit 7, or S3+7chaos+7super)</li>
+ *       <li>Hidden Palace routes are disabled until HPZ is registered as a loadable level</li>
  *     </ul>
  *   </li>
  *   <li>For Special Stage path: lock player (hidden + object controlled),
@@ -284,7 +284,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance {
      *   <li>SK_alone + 7 chaos → award 50 rings</li>
      *   <li>S3 level + 7 chaos → enter Special Stage (for super emeralds)</li>
      *   <li>SK level + 7 chaos + 7 super → award 50 rings</li>
-     *   <li>Subtype bit 7 set → Hidden Palace (TODO)</li>
+     *   <li>Subtype bit 7 set → Hidden Palace after the flash sequence, once HPZ is loadable</li>
      * </ul>
      */
     private void onTouched(AbstractPlayableSprite player) {
@@ -297,19 +297,15 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance {
         // Play sfx_BigRing ($B3) — always plays on touch
         services().playSfx(Sonic3kSfx.BIG_RING.id);
 
-        // TODO: Hidden Palace route — subtype bit 7, or S3 completed + 7 chaos + 7 super
-        // When implemented: check (bitIndex & 0x80) != 0 or SSEntry_CheckLevel + emerald state
-        // and route to HPZ (zone 0x17, act 0x01) instead of special stage.
-
-        if (shouldRouteToHiddenPalace(gameState)) {
-            LOGGER.fine("SSEntryRing #" + bitIndex + " â€” routing to Hidden Palace");
+        if (shouldRouteToHiddenPalace(gameState) && hiddenPalaceRouteAvailable()) {
+            LOGGER.fine("SSEntryRing #" + bitIndex + " - routing to Hidden Palace");
             gameState.markSpecialRingCollected(bitIndex);
             setDestroyed(true);
             services().requestZoneAndAct(Sonic3kZoneIds.ZONE_HPZ, 1, true);
             return;
         }
 
-        if (gameState.hasAllEmeralds()) {
+        if (gameState.hasAllEmeralds() || shouldRouteToHiddenPalace(gameState)) {
             // Path B: All emeralds collected — award 50 rings, instant delete
             LOGGER.fine("SSEntryRing #" + bitIndex + " — all emeralds, awarding 50 rings");
             gameState.markSpecialRingCollected(bitIndex);
@@ -325,6 +321,13 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance {
 
     private boolean shouldRouteToHiddenPalace(com.openggf.game.GameStateManager gameState) {
         return hiddenPalaceRoute || (gameState.hasAllEmeralds() && gameState.hasAllSuperEmeralds());
+    }
+
+    private boolean hiddenPalaceRouteAvailable() {
+        // ROM loc_618AC restarts into HPZ, but the engine's S3K zone registry
+        // currently indexes through zone 0x15. Requesting 0x16 would crash the
+        // fade callback before HPZ LevelData exists.
+        return false;
     }
 
     /**

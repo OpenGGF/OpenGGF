@@ -324,6 +324,16 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         return chamberFrame;
     }
 
+    public boolean isEndSequenceLaunchReady() {
+        return state == STATE_READY_TO_LAUNCH && capturedPlayer != null;
+    }
+
+    public void triggerEndSequenceLaunch(int frameCounter) {
+        if (isEndSequenceLaunchReady()) {
+            launchPlayer(capturedPlayer, frameCounter);
+        }
+    }
+
     /**
      * Package-private test seam for launch timing.
      *

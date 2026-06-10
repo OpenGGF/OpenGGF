@@ -6,7 +6,6 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
-import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
@@ -219,31 +218,33 @@ public class TestSonic3kSSEntryRingFormation {
     }
 
     @Test
-    public void subtypeBitSevenRoutesToHiddenPalace() {
+    public void subtypeBitSevenDoesNotRequestUnregisteredHiddenPalace() {
         Sonic3kSSEntryRingObjectInstance ring = createRing(0x80 | 3);
         AbstractPlayableSprite player = createMockPlayerAt(RING_X, RING_Y);
 
         advanceToIdleAndTouch(ring, player);
 
         assertTrue(ring.isDestroyed(), "HPZ-routed ring should be removed after touch");
-        assertEquals(Sonic3kZoneIds.ZONE_HPZ, services.requestedZone);
-        assertEquals(1, services.requestedAct);
-        assertTrue(services.deactivateLevelNow, "HPZ route should freeze level updates for the transition");
+        assertEquals(-1, services.requestedZone, "HPZ is not registered as a loadable runtime zone yet");
+        assertEquals(-1, services.requestedAct);
+        assertFalse(services.deactivateLevelNow, "Unavailable HPZ route must not freeze level updates for a transition");
         assertTrue(gameState.isSpecialRingCollected(3), "HPZ subtype flag must not pollute the collection bit index");
+        verify(player).addRings(50);
     }
 
     @Test
-    public void allChaosAndSuperEmeraldsRouteToHiddenPalace() {
+    public void allChaosAndSuperEmeraldsAwardRingsUntilHiddenPalaceIsRegistered() {
         collectAllChaosAndSuperEmeralds();
         Sonic3kSSEntryRingObjectInstance ring = createRing(4);
         AbstractPlayableSprite player = createMockPlayerAt(RING_X, RING_Y);
 
         advanceToIdleAndTouch(ring, player);
 
-        assertTrue(ring.isDestroyed(), "Completed emerald state should route through HPZ and remove the ring");
-        assertEquals(Sonic3kZoneIds.ZONE_HPZ, services.requestedZone);
-        assertEquals(1, services.requestedAct);
-        verify(player, never()).addRings(anyInt());
+        assertTrue(ring.isDestroyed(), "Completed emerald state should remove the ring");
+        assertEquals(-1, services.requestedZone, "Completionist big-ring touch must not request unregistered HPZ");
+        assertEquals(-1, services.requestedAct);
+        assertFalse(services.deactivateLevelNow);
+        verify(player).addRings(50);
     }
 
     @Test
