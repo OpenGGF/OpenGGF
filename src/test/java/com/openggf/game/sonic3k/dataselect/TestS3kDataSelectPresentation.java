@@ -114,6 +114,30 @@ class TestS3kDataSelectPresentation {
     }
 
     @Test
+    void draw_carriesLaunchErrorMessageIntoRenderedObjectState() {
+        RecordingAssets assets = new RecordingAssets(0x2A);
+        RecordingRenderer renderer = new RecordingRenderer();
+        DataSelectSessionController controller = new DataSelectSessionController(new S3kDataSelectProfile());
+
+        S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
+                controller,
+                new SaveManager(root),
+                EngineServices.current().configuration(),
+                assets,
+                renderer,
+                ignored -> {
+                });
+
+        presentation.initialize();
+        presentation.showLaunchError("Unable to load selected save.");
+        presentation.draw();
+
+        assertNotNull(renderer.lastObjectState);
+        assertEquals("Unable to load selected save.", renderer.lastObjectState.launchErrorMessage(),
+                "stored launch error should be included in the object state passed to the renderer");
+    }
+
+    @Test
     void update_keepsDataSelectInFadeInForMultipleFramesBeforeActive() {
         RecordingAssets assets = new RecordingAssets(0x2A);
         RecordingRenderer renderer = new RecordingRenderer();
@@ -1712,6 +1736,38 @@ class TestS3kDataSelectPresentation {
         assertTrue(graphics.containsRenderPosition(32, 96));
         assertTrue(graphics.containsRenderPosition(48, 96));
         assertTrue(graphics.containsRenderPosition(72, 96));
+    }
+
+    @Test
+    void render_drawsLaunchErrorMessageText() {
+        RecordingGraphics graphics = new RecordingGraphics();
+        RecordingAssets assets = new RecordingAssets(0x2A);
+        assets.loadData();
+        S3kDataSelectRenderer renderer = new S3kDataSelectRenderer();
+        S3kSaveScreenLayoutObjects layout = S3kSaveScreenLayoutObjects.original();
+
+        renderer.draw(graphics,
+                assets,
+                new S3kSaveScreenObjectState(
+                        layout,
+                        new S3kSaveScreenSelectorState(ignored -> {}),
+                        visualState(layout, 4, 0xD,
+                                S3kSaveScreenObjectState.SlotVisualKind.EMPTY,
+                                S3kSaveScreenObjectState.SlotVisualKind.EMPTY,
+                                S3kSaveScreenObjectState.SlotVisualKind.EMPTY,
+                                S3kSaveScreenObjectState.SlotVisualKind.EMPTY,
+                                S3kSaveScreenObjectState.SlotVisualKind.EMPTY,
+                                S3kSaveScreenObjectState.SlotVisualKind.EMPTY,
+                                S3kSaveScreenObjectState.SlotVisualKind.EMPTY,
+                                S3kSaveScreenObjectState.SlotVisualKind.EMPTY),
+                        null,
+                        layout.deleteIcon().worldX(),
+                        "Unable to load selected save."));
+
+        assertTrue(graphics.containsPatternId(saveTextWordPatternId('U')),
+                "launch error should render the stored message text");
+        assertTrue(graphics.containsPatternId(saveTextWordPatternId('.')),
+                "launch error should render punctuation from the stored message");
     }
 
     @Test

@@ -1,7 +1,5 @@
 package com.openggf.configuration;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -14,20 +12,6 @@ class TestLegacyConfigMigration {
 
     @TempDir
     Path tempDir;
-    private String originalUserDir;
-
-    @BeforeEach
-    void setup() {
-        originalUserDir = System.getProperty("user.dir");
-        System.setProperty("user.dir", tempDir.toString());
-    }
-
-    @AfterEach
-    void teardown() {
-        if (originalUserDir != null) {
-            System.setProperty("user.dir", originalUserDir);
-        }
-    }
 
     @Test
     void legacyFlatJsonMigratesToYamlAndBacksUp() throws Exception {
@@ -36,7 +20,7 @@ class TestLegacyConfigMigration {
         Path bak = tempDir.resolve("config.json.bak");
         Files.writeString(json, "{ \"AUDIO_ENABLED\": false, \"FPS\": 50 }");
 
-        SonicConfigurationService svc = SonicConfigurationService.createStandalone();
+        SonicConfigurationService svc = SonicConfigurationService.createStandalone(tempDir);
 
         assertFalse(svc.getBoolean(SonicConfiguration.AUDIO_ENABLED), "migrated value preserved");
         assertEquals(50, svc.getInt(SonicConfiguration.FPS));
@@ -56,7 +40,7 @@ class TestLegacyConfigMigration {
         Files.writeString(json, "{ \"AUDIO_ENABLED\": false, \"FPS\": 50 }");
         Files.writeString(bak, "previous backup");
 
-        SonicConfigurationService svc = SonicConfigurationService.createStandalone();
+        SonicConfigurationService svc = SonicConfigurationService.createStandalone(tempDir);
 
         assertFalse(svc.getBoolean(SonicConfiguration.AUDIO_ENABLED), "migrated value preserved");
         assertTrue(Files.exists(yaml), "config.yaml written");

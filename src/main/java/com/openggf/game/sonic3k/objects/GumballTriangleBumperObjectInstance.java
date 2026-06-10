@@ -183,7 +183,8 @@ public class GumballTriangleBumperObjectInstance extends AbstractObjectInstance
     }
 
     private GumballMachineObjectInstance currentMachineForThisContext() {
-        GumballMachineObjectInstance machine = GumballMachineObjectInstance.current();
+        GumballMachineObjectInstance machine =
+                GumballMachineObjectInstance.current(services().objectManager());
         if (machine == null || services().currentLevel() == null) {
             return null;
         }

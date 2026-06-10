@@ -405,6 +405,72 @@ public class TestTraceBinder {
     }
 
     @Test
+    void testSidekickCpuCtrl2UsesNormalStepWhenRecorderHasDecisionTimeInput() {
+        TraceFrame frame = TraceFrame.of(20315, 0x0000,
+            (short) 0x49DA, (short) 0x01FD,
+            (short) 0x00CC, (short) 0x0000, (short) 0x00CC,
+            (byte) 0x00, false, false, 0);
+        TraceEvent.CpuState snapshotCpu = new TraceEvent.CpuState(
+                20315, "tails", 0x02, 0, 0, 0x06,
+                (short) 0x49A1, (short) 0x01FD, 0,
+                0, 0x00, 0x00, 0, 0x0068,
+                0x98, 0x00, (short) 0x49B3, (short) 0x01FD,
+                0x0808, 0x00, 0x00, 0x00, 0x0000);
+        TraceEvent.TailsCpuNormalStep normalStep = new TraceEvent.TailsCpuNormalStep(
+                20315, "tails", 0x00, 0x00, 0x0000, 0x0000,
+                0xFF, 0x0808, 0x98, 0x49B3, 0x01FD, 0xFFE1, 0xFFFC,
+                "fallthrough_sub20", 0x0808, 0x08,
+                0x0000, 0x0000, 0x00, 0x0006, 0x0006, 0x00);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x02, 0x06, 0x49A1, 0x01FD,
+                0x08, 0x00, 0x16, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x49DA, (short) 0x01FD,
+            (short) 0x00CC, (short) 0x0000, (short) 0x00CC,
+            (byte) 0x00, false, false, 0,
+            null, null, "tails", null, snapshotCpu, actualCpu, normalStep);
+
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_held").severity());
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_pressed").severity());
+        assertFalse(result.hasError());
+    }
+
+    @Test
+    void testSidekickCpuCtrl2StillAcceptsCpuStateWhenNormalStepTapIsZero() {
+        TraceFrame frame = TraceFrame.of(1726, 0x0000,
+            (short) 0x182F, (short) 0x0417,
+            (short) 0x001F, (short) 0xFE00, (short) 0xFF74,
+            (byte) 0x00, true, true, 0);
+        TraceEvent.CpuState snapshotCpu = new TraceEvent.CpuState(
+                1726, "tails", 0x00, 0, 0, 0x06,
+                (short) 0x138A, (short) 0x041B, 0,
+                0, 0x40, 0x40, 0, 0x0000,
+                0x74, 0x00, (short) 0x1815, (short) 0x0461,
+                0x4040, 0xFF, 0x07, 0x00, 0x0000);
+        TraceEvent.TailsCpuNormalStep normalStep = new TraceEvent.TailsCpuNormalStep(
+                1726, "tails", 0x01, 0x00, 0xFF74, 0xFF74,
+                0x07, 0x4040, 0x74, 0x1815, 0x0461, 0xFFE2, 0x0001,
+                "fallthrough_sub20", 0x0000, 0x00,
+                0xFF74, 0xFF74, 0x07, 0x0000, 0x0000, 0x00);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x00, 0x06, 0x138A, 0x041B,
+                0x10, 0x10, 0x13, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x182F, (short) 0x0417,
+            (short) 0x001F, (short) 0xFE00, (short) 0xFF74,
+            (byte) 0x00, true, true, 0,
+            null, null, "tails", null, snapshotCpu, actualCpu, normalStep);
+
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_held").severity());
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_pressed").severity());
+        assertFalse(result.hasError());
+    }
+
+    @Test
     void testRingCountMismatchIsWarningWhenConfiguredWarnOnly() {
         TraceFrame frame = new TraceFrame(0, 0x0000,
             (short) 0x0050, (short) 0x03B0,

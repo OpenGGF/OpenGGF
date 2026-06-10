@@ -12,6 +12,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -40,7 +41,7 @@ import java.util.logging.Logger;
  * ROM references: Obj_CollapsingPlatform (sonic3k.asm), loc_20594, loc_205CE.
  */
 public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SolidObjectListener {
+        implements SlopedSolidProvider, SolidObjectListener, RomObjectCodePointerProvider {
 
     private static final Logger LOG = Logger.getLogger(Sonic3kCollapsingPlatformObjectInstance.class.getName());
 
@@ -52,6 +53,13 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
 
     // Priority: $280 = bucket 5 (ROM: move.w #$280,priority(a0))
     private static final int PRIORITY = 5;
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        // Obj_CollapsingPlatform / loc_20594 are in ROM bank 0x0002
+        // (sonic3k.asm:44784,44814).
+        return 0x0002;
+    }
 
     // ===== Zone-specific configuration =====
 

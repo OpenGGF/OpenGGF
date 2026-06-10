@@ -1,7 +1,5 @@
 package com.openggf.configuration;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -14,25 +12,11 @@ class TestConfigServiceYamlRoundTrip {
 
     @TempDir
     Path tempDir;
-    private String originalUserDir;
-
-    @BeforeEach
-    void setup() {
-        originalUserDir = System.getProperty("user.dir");
-        System.setProperty("user.dir", tempDir.toString());
-    }
-
-    @AfterEach
-    void teardown() {
-        if (originalUserDir != null) {
-            System.setProperty("user.dir", originalUserDir);
-        }
-    }
 
     @Test
     void saveWritesGroupedYaml() throws Exception {
         Path yaml = tempDir.resolve("config.yaml");
-        SonicConfigurationService svc = SonicConfigurationService.createStandalone();
+        SonicConfigurationService svc = SonicConfigurationService.createStandalone(tempDir);
         svc.saveConfig();
         assertTrue(Files.exists(yaml), "saveConfig must write config.yaml");
         String text = Files.readString(yaml);
@@ -43,11 +27,11 @@ class TestConfigServiceYamlRoundTrip {
 
     @Test
     void loadReadsBackWrittenValues() throws Exception {
-        SonicConfigurationService svc = SonicConfigurationService.createStandalone();
+        SonicConfigurationService svc = SonicConfigurationService.createStandalone(tempDir);
         svc.setConfigValue(SonicConfiguration.AUDIO_ENABLED, false);
         svc.saveConfig();
 
-        SonicConfigurationService reloaded = SonicConfigurationService.createStandalone();
+        SonicConfigurationService reloaded = SonicConfigurationService.createStandalone(tempDir);
         assertFalse(reloaded.getBoolean(SonicConfiguration.AUDIO_ENABLED));
     }
 }

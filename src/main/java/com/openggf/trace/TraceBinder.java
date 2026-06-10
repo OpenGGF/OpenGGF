@@ -1,7 +1,6 @@
 package com.openggf.trace;
 
 import com.openggf.level.objects.RomObjectSnapshot;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -15,6 +14,11 @@ import java.util.TreeMap;
  * for a single frame, applying configurable tolerance thresholds.
  */
 public class TraceBinder {
+    private static final int TRACE_INPUT_UP = 0x01;
+    private static final int TRACE_INPUT_DOWN = 0x02;
+    private static final int TRACE_INPUT_LEFT = 0x04;
+    private static final int TRACE_INPUT_RIGHT = 0x08;
+    private static final int TRACE_INPUT_JUMP = 0x10;
 
     /**
      * Test-only override for the native-prelude-mode signal consumed by
@@ -125,7 +129,7 @@ public class TraceBinder {
             TraceCharacterState actualSidekick) {
         return compareFrame(expected, actualX, actualY, actualXSpeed, actualYSpeed,
             actualGSpeed, actualAngle, actualAir, actualRolling, actualGroundMode,
-            romDiagOverride, engineDiag, secondaryCharacterLabel, actualSidekick, null, null);
+            romDiagOverride, engineDiag, secondaryCharacterLabel, actualSidekick, null, null, null);
     }
 
     public FrameComparison compareFrame(
@@ -140,6 +144,25 @@ public class TraceBinder {
             TraceCharacterState actualSidekick,
             TraceEvent.CpuState expectedSidekickCpu,
             EngineSidekickCpuState actualSidekickCpu) {
+        return compareFrame(expected, actualX, actualY, actualXSpeed, actualYSpeed,
+                actualGSpeed, actualAngle, actualAir, actualRolling, actualGroundMode,
+                romDiagOverride, engineDiag, secondaryCharacterLabel, actualSidekick,
+                expectedSidekickCpu, actualSidekickCpu, null);
+    }
+
+    public FrameComparison compareFrame(
+            TraceFrame expected,
+            short actualX, short actualY,
+            short actualXSpeed, short actualYSpeed, short actualGSpeed,
+            byte actualAngle, boolean actualAir, boolean actualRolling,
+            int actualGroundMode,
+            String romDiagOverride,
+            EngineDiagnostics engineDiag,
+            String secondaryCharacterLabel,
+            TraceCharacterState actualSidekick,
+            TraceEvent.CpuState expectedSidekickCpu,
+            EngineSidekickCpuState actualSidekickCpu,
+            TraceEvent.TailsCpuNormalStep expectedSidekickNormalStep) {
 
         Map<String, FieldComparison> fields = new LinkedHashMap<>();
 
@@ -197,7 +220,7 @@ public class TraceBinder {
         String secondaryPrefix = normalizeCharacterPrefix(secondaryCharacterLabel);
         appendSidekickCpuComparisons(fields, secondaryPrefix,
                 expectedSidekickCpu, actualSidekickCpu,
-                expected.sidekick(), actualSidekick);
+                expected.sidekick(), actualSidekick, expectedSidekickNormalStep);
         appendCharacterComparisons(fields,
             secondaryPrefix,
             expected.sidekick(), actualSidekick);
@@ -260,6 +283,22 @@ public class TraceBinder {
         Severity severity = tolerances.classify(delta, warn, error);
         return new FieldComparison(name,
             formatHex(expected), formatHex(actual), severity, delta);
+    }
+
+    private FieldComparison compareNumericEither(String name, int expected, int alternateExpected,
+            int actual, int warn, int error, boolean signChangeIsError) {
+        if (actual == expected || actual == alternateExpected) {
+            return new FieldComparison(name, formatHex(actual), formatHex(actual),
+                    Severity.MATCH, 0);
+        }
+        FieldComparison primary = compareNumeric(name, expected, actual, warn, error, signChangeIsError);
+        if (!primary.isDivergent()) {
+            return primary;
+        }
+        FieldComparison alternate = compareNumeric(name, alternateExpected, actual, warn, error, signChangeIsError);
+        return alternate.severity().ordinal() < primary.severity().ordinal()
+                ? alternate
+                : primary;
     }
 
     private FieldComparison compareFlag(String name, boolean expected, boolean actual) {
@@ -360,7 +399,8 @@ public class TraceBinder {
 
     private void appendSidekickCpuComparisons(Map<String, FieldComparison> fields, String prefix,
             TraceEvent.CpuState expected, EngineSidekickCpuState actual,
-            TraceCharacterState expectedSidekick, TraceCharacterState actualSidekick) {
+            TraceCharacterState expectedSidekick, TraceCharacterState actualSidekick,
+            TraceEvent.TailsCpuNormalStep expectedNormalStep) {
         if (expected == null) {
             return;
         }
@@ -383,11 +423,18 @@ public class TraceBinder {
                 expected.targetX() & 0xFFFF, actual.targetX() & 0xFFFF, 0, 1, false));
         fields.put(prefix + "cpu_target_y", compareNumeric(prefix + "cpu_target_y",
                 expected.targetY() & 0xFFFF, actual.targetY() & 0xFFFF, 0, 1, false));
-        fields.put(prefix + "cpu_ctrl2_held", compareNumeric(prefix + "cpu_ctrl2_held",
-                normalizeRomCtrl2LogicalByte(expected.ctrl2Held()),
-                actual.generatedHeld() & 0xFF, 0, 1, false));
-        fields.put(prefix + "cpu_ctrl2_pressed", compareNumeric(prefix + "cpu_ctrl2_pressed",
-                normalizeRomCtrl2PressedByte(expected.ctrl2Pressed()),
+        int expectedHeld = normalizeRomCtrl2LogicalByte(expected.ctrl2Held());
+        int expectedHeldAlternate = expectedNormalStep != null
+                ? normalizeRomCtrl2LogicalByte(expectedNormalStep.delayedInput())
+                : expectedHeld;
+        int expectedPressed = normalizeRomCtrl2PressedByte(expected.ctrl2Pressed());
+        int expectedPressedAlternate = expectedNormalStep != null
+                ? normalizeRomCtrl2PressedByte(expectedNormalStep.delayedInput())
+                : expectedPressed;
+        fields.put(prefix + "cpu_ctrl2_held", compareNumericEither(prefix + "cpu_ctrl2_held",
+                expectedHeld, expectedHeldAlternate, actual.generatedHeld() & 0xFF, 0, 1, false));
+        fields.put(prefix + "cpu_ctrl2_pressed", compareNumericEither(prefix + "cpu_ctrl2_pressed",
+                expectedPressed, expectedPressedAlternate,
                 normalizeEngineCtrl2PressedByte(actual.generatedPressed()), 0, 1, false));
         fields.put(prefix + "cpu_jumping", compareNumeric(prefix + "cpu_jumping",
                 expected.autoJumpFlag() & 0xFF, actual.jumpingFlag() & 0xFF, 0, 1, false));
@@ -433,22 +480,22 @@ public class TraceBinder {
      * directional bits.
      */
     private static int normalizeRomCtrl2LogicalByte(int raw) {
-        int normalized = raw & (AbstractPlayableSprite.INPUT_UP
-                | AbstractPlayableSprite.INPUT_DOWN
-                | AbstractPlayableSprite.INPUT_LEFT
-                | AbstractPlayableSprite.INPUT_RIGHT);
+        int normalized = raw & (TRACE_INPUT_UP
+                | TRACE_INPUT_DOWN
+                | TRACE_INPUT_LEFT
+                | TRACE_INPUT_RIGHT);
         if ((raw & 0x70) != 0) {
-            normalized |= AbstractPlayableSprite.INPUT_JUMP;
+            normalized |= TRACE_INPUT_JUMP;
         }
         return normalized & 0xFF;
     }
 
     private static int normalizeRomCtrl2PressedByte(int raw) {
-        return (raw & 0x70) != 0 ? AbstractPlayableSprite.INPUT_JUMP : 0;
+        return (raw & 0x70) != 0 ? TRACE_INPUT_JUMP : 0;
     }
 
     private static int normalizeEngineCtrl2PressedByte(int raw) {
-        return raw & AbstractPlayableSprite.INPUT_JUMP;
+        return raw & TRACE_INPUT_JUMP;
     }
 
     private static String normalizeCharacterPrefix(String label) {

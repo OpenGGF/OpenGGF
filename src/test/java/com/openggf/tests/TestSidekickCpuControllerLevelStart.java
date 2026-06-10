@@ -124,7 +124,11 @@ class TestSidekickCpuControllerLevelStart {
         TestablePlayableSprite leader = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         leader.setCentreX((short) 0x100);
         leader.setCentreY((short) 0x200);
-        seedLeaderHistory(leader, AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP, true);
+        seedLeaderHistory(leader, AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP, false);
+        recordLeaderHistory(leader, AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP, true);
+        for (int i = 0; i < ROM_FOLLOW_DELAY_FRAMES; i++) {
+            recordLeaderHistory(leader, AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP, false);
+        }
 
         TestableTailsSprite tails = new TestableTailsSprite("tails_p2", (short) 0, (short) 0);
         tails.setCentreX((short) 0x100);

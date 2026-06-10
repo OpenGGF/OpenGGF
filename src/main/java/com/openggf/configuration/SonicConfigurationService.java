@@ -1,5 +1,6 @@
 package com.openggf.configuration;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
@@ -31,20 +32,34 @@ public class SonicConfigurationService {
 	private boolean loadedFromExistingFile;
 	private boolean migratedFromLegacyJson;
 	private boolean defaultInsertedSinceLastApply;
+	private final Path configDirectoryOverride;
+	private final ConfigFileReader yamlReader;
 	// Derived (non-persisted) display values; read before `config`, never saved.
 	private final Map<String, Object> transientResolved = new HashMap<>();
 
 	private SonicConfigurationService() {
+		this(null, null);
+	}
+
+	private SonicConfigurationService(Path configDirectoryOverride, ConfigFileReader yamlReader) {
+		this.configDirectoryOverride = configDirectoryOverride == null
+				? null
+				: configDirectoryOverride.toAbsolutePath();
+		this.yamlReader = yamlReader == null ? this::readYamlFlat : yamlReader;
 		if (System.getProperty("org.graalvm.nativeimage.imagecode") != null) {
 			// Native image: look for config.yaml next to the executable binary
 			File execConfig = findConfigNextToExecutable();
 			if (execConfig != null && execConfig.exists()) {
 				try {
-					config = readYamlFlat(execConfig);
+					config = this.yamlReader.read(execConfig);
 					loadedFromExistingFile = true;
-				} catch (IOException e) {
-					LOGGER.log(Level.WARNING, "Failed to load config.yaml from executable directory", e);
+				} catch (JsonProcessingException e) {
+					LOGGER.log(Level.WARNING, "Failed to parse config.yaml from executable directory", e);
 					quarantineUnreadableConfig(execConfig);
+				} catch (IOException e) {
+					LOGGER.log(Level.WARNING,
+							"Transient I/O while loading config.yaml from executable directory; leaving it in place",
+							e);
 				}
 			}
 		} else {
@@ -52,11 +67,15 @@ public class SonicConfigurationService {
 			File file = resolveRelativeFile("config.yaml");
 			if (file.exists()) {
 				try {
-					config = readYamlFlat(file);
+					config = this.yamlReader.read(file);
 					loadedFromExistingFile = true;
-				} catch (IOException e) {
-					LOGGER.log(Level.WARNING, "Failed to load config.yaml from working directory", e);
+				} catch (JsonProcessingException e) {
+					LOGGER.log(Level.WARNING, "Failed to parse config.yaml from working directory", e);
 					quarantineUnreadableConfig(file);
+				} catch (IOException e) {
+					LOGGER.log(Level.WARNING,
+							"Transient I/O while loading config.yaml from working directory; leaving it in place",
+							e);
 				}
 			}
 		}
@@ -169,6 +188,14 @@ public class SonicConfigurationService {
 	 */
 	public static SonicConfigurationService createStandalone() {
 		return new SonicConfigurationService();
+	}
+
+	public static SonicConfigurationService createStandalone(Path configDirectory) {
+		return new SonicConfigurationService(configDirectory, null);
+	}
+
+	static SonicConfigurationService createStandalone(Path configDirectory, ConfigFileReader yamlReader) {
+		return new SonicConfigurationService(configDirectory, yamlReader);
 	}
 
 	public short getShort(SonicConfiguration sonicConfiguration) {
@@ -633,9 +660,12 @@ public class SonicConfigurationService {
 	 * launched from macOS Finder, getcwd() is broken so File("relative") may
 	 * resolve against the wrong directory. This ensures consistent behavior.
 	 */
-	private static File resolveRelativeFile(String name) {
+	private File resolveRelativeFile(String name) {
 		File f = new File(name);
 		if (!f.isAbsolute()) {
+			if (configDirectoryOverride != null) {
+				return configDirectoryOverride.resolve(name).toFile();
+			}
 			String userDir = System.getProperty("user.dir");
 			if (userDir != null) {
 				return new File(userDir, name);
@@ -644,12 +674,17 @@ public class SonicConfigurationService {
 		return f;
 	}
 
-	private static File resolveConfigFile() {
+	private File resolveConfigFile() {
 		if (System.getProperty("org.graalvm.nativeimage.imagecode") != null) {
 			File execConfig = findConfigNextToExecutable();
 			return (execConfig != null) ? execConfig : resolveRelativeFile("config.yaml");
 		}
 		return resolveRelativeFile("config.yaml");
+	}
+
+	@FunctionalInterface
+	interface ConfigFileReader {
+		Map<String, Object> read(File file) throws IOException;
 	}
 
 	private static int resolveKeyCode(Object value) {

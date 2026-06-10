@@ -124,7 +124,7 @@ public final class TraceEventFormatter {
             case TraceEvent.TailsCpuNormalStep step ->
                     summariseTailsCpuNormalStep(step);
             case TraceEvent.SidekickInteractObjectState state ->
-                    String.format("%sInteract slot=%d ptr=%04X obj=%08X rtn=%02X st=%02X @%04X,%04X sub=%02X %s rf=%02X obj=%02X onObj=%s objP2=%s active=%s destroyed=%s",
+                    String.format("%sInteract slot=%d ptr=%04X obj=%08X rtn=%02X st=%02X @%04X,%04X sub=%02X %s rf=%02X%s%s obj=%02X onObj=%s objP2=%s active=%s destroyed=%s",
                             state.character() == null || state.character().isBlank()
                                     ? "sidekick"
                                     : state.character(),
@@ -140,6 +140,16 @@ public final class TraceEventFormatter {
                                     ? "sidekick"
                                     : state.character(),
                             state.tailsRenderFlags() & 0xFF,
+                            state.tailsInvulnerabilityTimer() >= 0
+                                    ? String.format(" inv=%02X", state.tailsInvulnerabilityTimer() & 0xFF)
+                                    : "",
+                            state.tailsWidthPixels() >= 0
+                                    ? String.format(" wh=%02X/%02X camCopy=%04X,%04X",
+                                            state.tailsWidthPixels() & 0xFF,
+                                            state.tailsHeightPixels() & 0xFF,
+                                            state.cameraXCopy() & 0xFFFF,
+                                            state.cameraYCopy() & 0xFFFF)
+                                    : "",
                             state.tailsObjectControl() & 0xFF,
                             state.tailsOnObject(),
                             state.objectP2Standing(),

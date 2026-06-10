@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k.scroll;
 
 import com.openggf.game.sonic3k.objects.GumballMachineObjectInstance;
+import com.openggf.game.GameServices;
+import com.openggf.level.LevelManager;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 
@@ -105,7 +107,10 @@ public class SwScrlGumball extends AbstractZoneScrollHandler {
         // ROM Gumball_SetUpVScroll: compute machine-tracked strip Y value.
         // d1 = cameraY + $C8 - machineY_saved.  (Use the drifted currentY so
         // the body tiles follow the machine as it sinks when gumballs drop.)
-        GumballMachineObjectInstance machine = GumballMachineObjectInstance.current();
+        LevelManager level = GameServices.levelOrNull();
+        GumballMachineObjectInstance machine = level == null
+                ? null
+                : GumballMachineObjectInstance.current(level.getObjectManager());
         if (machine == null) {
             // Fall back to flat FG VScroll when no machine is present.
             fgColumnsActive = false;

@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.game.PlayableEntity;
@@ -19,7 +20,7 @@ import java.util.Map;
  * then calls {@code SolidObjectTop} with d1=$A0, d2=$10, d3=$10.
  */
 public final class AizTransitionFloorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider {
+        implements SolidObjectProvider, RomObjectCodePointerProvider {
     private static final int X = 0x2FB0;
     private static final int Y = 0x03A0;
     private static final int OBJECT_ID = 0x00;
@@ -85,6 +86,12 @@ public final class AizTransitionFloorObjectInstance extends AbstractObjectInstan
         // Obj_AIZTransitionFloor sets status bit 7 before calling SolidObjectTop,
         // so it is solid on its first execution frame.
         return false;
+    }
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        // Obj_AIZTransitionFloor = 0x0004FE38 (sonic3k.asm:104777).
+        return 0x0004;
     }
 
     @Override

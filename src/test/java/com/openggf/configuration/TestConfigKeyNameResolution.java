@@ -2,17 +2,22 @@ package com.openggf.configuration;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.lwjgl.glfw.GLFW.*;
 
 class TestConfigKeyNameResolution {
 
+    @TempDir
+    Path tempDir;
     private SonicConfigurationService configService;
 
     @BeforeEach
     void setUp() {
-        configService = SonicConfigurationService.createStandalone();
+        configService = SonicConfigurationService.createStandalone(tempDir);
     }
 
     @Test

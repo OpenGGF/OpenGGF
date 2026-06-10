@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
@@ -15,6 +16,9 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchResponseAttackable;
+import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -38,7 +42,8 @@ import java.util.List;
  * <p>Any later swing/attack logic should replace this bounded wrapper once the
  * remaining CNZ end-boss choreography is implemented.
  */
-public final class CnzEndBossInstance extends AbstractObjectInstance {
+public final class CnzEndBossInstance extends AbstractObjectInstance
+        implements TouchResponseProvider, TouchResponseAttackable {
     /**
      * Task 8 approximation for the post-defeat camera release.
      *
@@ -55,12 +60,16 @@ public final class CnzEndBossInstance extends AbstractObjectInstance {
     private static final int CANNON_Y = 0x02A8;
     private static final int CANNON_LAUNCH_WAIT = 0xBF;
     private static final int ICZ_START_ZONE_WORD = 0x500;
+    private static final int HIT_COUNT = 8;
+    private static final int COLLISION_FLAGS = 0x06;
+    private static final int HIT_INVULNERABILITY_FRAMES = 0x20;
 
     private final int centreX;
     private final int centreY;
 
-    private boolean defeatRequestedForTest;
     private boolean defeatHandoffComplete;
+    private int hitCount = HIT_COUNT;
+    private int hitInvulnerabilityTimer;
     private boolean capsuleResultsComplete;
     private boolean cannonSpawned;
     private boolean cannonArmed;
@@ -73,14 +82,6 @@ public final class CnzEndBossInstance extends AbstractObjectInstance {
         super(spawn, "CNZEndBoss");
         this.centreX = spawn.x();
         this.centreY = spawn.y();
-    }
-
-    /**
-     * Task 8 keeps the defeat path bounded and therefore exposes a narrow test
-     * seam instead of pretending the full damage/attack state machine exists.
-     */
-    public void forceDefeatForTest() {
-        defeatRequestedForTest = true;
     }
 
     @Override
@@ -105,10 +106,37 @@ public final class CnzEndBossInstance extends AbstractObjectInstance {
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
-        if (defeatRequestedForTest && !defeatHandoffComplete) {
-            applyDefeatHandoff();
+        if (hitInvulnerabilityTimer > 0) {
+            hitInvulnerabilityTimer--;
         }
         updatePostDefeatSequence(frameCounter, player);
+    }
+
+    @Override
+    public int getCollisionFlags() {
+        if (defeatHandoffComplete || hitInvulnerabilityTimer > 0 || hitCount <= 0) {
+            return 0;
+        }
+        return COLLISION_FLAGS;
+    }
+
+    @Override
+    public int getCollisionProperty() {
+        return hitCount;
+    }
+
+    @Override
+    public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
+        if (defeatHandoffComplete || hitInvulnerabilityTimer > 0 || hitCount <= 0) {
+            return;
+        }
+        hitCount--;
+        services().playSfx(Sonic3kSfx.BOSS_HIT.id);
+        if (hitCount <= 0) {
+            applyDefeatHandoff();
+        } else {
+            hitInvulnerabilityTimer = HIT_INVULNERABILITY_FRAMES;
+        }
     }
 
     /**
@@ -157,7 +185,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance {
 
         spawnChild(() -> new CnzEggCapsuleInstance(
                 new ObjectSpawn(CAPSULE_X, CAPSULE_Y, Sonic3kObjectIds.EGG_CAPSULE, 0, 0, false, 0),
-                this::onCapsuleResultsComplete));
+                CnzEggCapsuleInstance.CompletionContinuation.CNZ_END_BOSS_SEQUENCE));
     }
 
     private void updatePostDefeatSequence(int frameCounter, PlayableEntity player) {
@@ -198,7 +226,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance {
         }
     }
 
-    private void onCapsuleResultsComplete() {
+    public void onCapsuleResultsComplete() {
         capsuleResultsComplete = true;
     }
 

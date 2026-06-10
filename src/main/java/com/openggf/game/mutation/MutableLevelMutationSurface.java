@@ -29,19 +29,19 @@ public final class MutableLevelMutationSurface implements LevelMutationSurface {
 
     @Override
     public MutationEffects restoreChunkState(int chunkIndex, int[] state) {
-        level.restoreChunkState(chunkIndex, Objects.requireNonNull(state, "state"));
+        level.restoreChunkStateForRuntimeMutation(chunkIndex, Objects.requireNonNull(state, "state"));
         return MutationEffects.dirtyRegionProcessing();
     }
 
     @Override
     public MutationEffects restoreBlockState(int blockIndex, int[] state) {
-        level.restoreBlockState(blockIndex, Objects.requireNonNull(state, "state"));
+        level.restoreBlockStateForRuntimeMutation(blockIndex, Objects.requireNonNull(state, "state"));
         return MutationEffects.dirtyRegionProcessing();
     }
 
     @Override
     public MutationEffects setBlockInMap(int layer, int blockX, int blockY, int blockIndex) {
-        level.setBlockInMap(layer, blockX, blockY, blockIndex);
+        level.setBlockInMapForRuntimeMutation(layer, blockX, blockY, blockIndex);
         return MutationEffects.dirtyRegionProcessing();
     }
 }

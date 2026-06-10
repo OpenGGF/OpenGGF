@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.IntConsumer;
 
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
@@ -381,6 +382,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
     private int cachedDeleteAnimFrame = -1;
     private int cachedDeleteSignFrame = -1;
     private int cachedClearRestartIndex = -1;
+    private String cachedLaunchErrorMessage;
 
     private S3kSaveScreenObjectState buildObjectState() {
         selectorState.setVisible(isSelectorVisible());
@@ -396,7 +398,8 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
                 && deleteRobotnikState == cachedDeleteState
                 && deleteMainAnimFrameIndex == cachedDeleteAnimFrame
                 && deleteSignFrame == cachedDeleteSignFrame
-                && clearIdx == cachedClearRestartIndex) {
+                && clearIdx == cachedClearRestartIndex
+                && Objects.equals(launchErrorMessage, cachedLaunchErrorMessage)) {
             // Update selector state in-place (position animates smoothly)
             return cachedObjectState;
         }
@@ -408,13 +411,15 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
         cachedDeleteAnimFrame = deleteMainAnimFrameIndex;
         cachedDeleteSignFrame = deleteSignFrame;
         cachedClearRestartIndex = clearIdx;
+        cachedLaunchErrorMessage = launchErrorMessage;
 
         cachedObjectState = new S3kSaveScreenObjectState(
                 assets.getSaveScreenLayoutObjects(),
                 selectorState,
                 buildVisualState(),
                 buildSelectedSlotIcon(),
-                deleteWorldX);
+                deleteWorldX,
+                launchErrorMessage);
         return cachedObjectState;
     }
 

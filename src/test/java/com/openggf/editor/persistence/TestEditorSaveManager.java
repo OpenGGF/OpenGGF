@@ -2,6 +2,7 @@ package com.openggf.editor.persistence;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.game.GameId;
+import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.level.AbstractLevel;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
@@ -71,6 +72,59 @@ class TestEditorSaveManager {
         assertTrue(envelope.payload().chunks().isEmpty());
         assertTrue(envelope.payload().mapCells().isEmpty());
         assertFalse(edited.isModifiedSinceLastSave());
+    }
+
+    @Test
+    void saveOmitsRuntimeTerrainMutationsAppliedThroughMutationSurface() throws Exception {
+        MutableLevel edited = createMutableLevel();
+        LevelMutationSurface surface = LevelMutationSurface.forLevel(edited);
+
+        surface.setBlockInMap(0, 1, 1, 2);
+        surface.restoreBlockState(1, new int[] { 2 });
+        surface.restoreChunkState(2, chunkState(7));
+        EditorSaveManager manager = new EditorSaveManager(tempDir);
+
+        EditorSaveManager.SaveResult save = manager.save(GameId.S2, 4, 0, edited);
+        EditorSaveEnvelope envelope = MAPPER.readValue(save.file().toFile(), EditorSaveEnvelope.class);
+
+        assertEquals(2, Byte.toUnsignedInt(edited.getMap().getValue(0, 1, 1)),
+                "runtime mutation must still update live gameplay terrain");
+        assertEquals(2, edited.getBlock(1).getChunkDesc(0, 0).getChunkIndex(),
+                "runtime block mutation must still update the live block");
+        assertEquals(7, edited.getChunk(2).getPatternDesc(0, 0).getPatternIndex(),
+                "runtime chunk mutation must still update the live chunk");
+        assertTrue(envelope.payload().blocks().isEmpty());
+        assertTrue(envelope.payload().chunks().isEmpty());
+        assertTrue(envelope.payload().mapCells().isEmpty());
+    }
+
+    @Test
+    void saveKeepsEditorIntentWhenRuntimeMutationTouchesAlreadyEditedTerrain() throws Exception {
+        MutableLevel edited = createMutableLevel();
+        edited.setBlockInMap(0, 1, 1, 1);
+        edited.setChunkInBlock(1, 0, 0, new ChunkDesc(1));
+        edited.setPatternDescInChunk(2, 0, 0, new PatternDesc(7));
+        LevelMutationSurface surface = LevelMutationSurface.forLevel(edited);
+
+        surface.setBlockInMap(0, 1, 1, 2);
+        surface.restoreBlockState(1, new int[] { 2 });
+        surface.restoreChunkState(2, chunkState(8));
+        EditorSaveManager manager = new EditorSaveManager(tempDir);
+
+        EditorSaveManager.SaveResult save = manager.save(GameId.S2, 4, 0, edited);
+        EditorSaveEnvelope envelope = MAPPER.readValue(save.file().toFile(), EditorSaveEnvelope.class);
+
+        assertEquals(2, Byte.toUnsignedInt(edited.getMap().getValue(0, 1, 1)),
+                "runtime mutation must stay present in the live level");
+        assertEquals(2, edited.getBlock(1).getChunkDesc(0, 0).getChunkIndex(),
+                "runtime block mutation must stay present in the live level");
+        assertEquals(8, edited.getChunk(2).getPatternDesc(0, 0).getPatternIndex(),
+                "runtime chunk mutation must stay present in the live level");
+        assertEquals(List.of(new EditorSavePayload.MapCell(0, 1, 1, 1)), envelope.payload().mapCells());
+        assertEquals(1, envelope.payload().blocks().size());
+        assertEquals(1, envelope.payload().blocks().get(0).state()[0]);
+        assertEquals(1, envelope.payload().chunks().size());
+        assertEquals(7, envelope.payload().chunks().get(0).state()[0]);
     }
 
     @Test
@@ -200,6 +254,12 @@ class TestEditorSaveManager {
 
     private static MutableLevel createMutableLevel() {
         return MutableLevel.snapshot(new SyntheticLevel());
+    }
+
+    private static int[] chunkState(int pattern00) {
+        int[] state = new Chunk().saveState();
+        state[0] = pattern00;
+        return state;
     }
 
     private static final class SyntheticLevel extends AbstractLevel {

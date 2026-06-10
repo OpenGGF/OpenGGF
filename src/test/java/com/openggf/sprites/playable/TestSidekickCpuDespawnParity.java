@@ -5,15 +5,20 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.objects.AizTransitionFloorObjectInstance;
+import com.openggf.game.sonic3k.objects.CorkFloorObjectInstance;
 import com.openggf.graphics.GLCommand;
+import com.openggf.camera.Camera;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.PerObjectRewindSnapshot.SidekickCpuRewindExtra;
 import com.openggf.physics.Direction;
+import com.openggf.sprites.managers.SpriteManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import java.util.Arrays;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -357,6 +362,120 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void s3kLevelBoundaryKillPreservesCpuGlobalsUntilDespawnMarker() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.useS3kTailsRadii();
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x2D40);
+        tails.setCentreY((short) 0x0402);
+        tails.setAir(true);
+        tails.setXSpeed((short) 0x00F7);
+        tails.setYSpeed((short) 0x0198);
+        tails.setGSpeed((short) -0x00FC);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x2DCB);
+        Arrays.fill(yHistory, (short) 0x0339);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 16);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(0x06, 0, 0x003E, 0x0002, true, 0x2648, 0x0329);
+        controller.update(0x1126);
+
+        assertEquals(0x0018, controller.getDiagnosticGeneratedHeldInput(),
+                "Normal routine should have written Ctrl_2_logical RIGHT|JUMP before the kill");
+        assertEquals(0x003F, controller.getDiagnosticRespawnCounter());
+        assertEquals(0x0002, controller.getDiagnosticInteractId());
+        assertEquals(1, controller.getDiagnosticJumpingFlag());
+
+        controller.despawn(SidekickCpuController.DespawnCause.LEVEL_BOUNDARY);
+
+        assertEquals(SidekickCpuController.State.DEAD_FALLING, controller.getState());
+        assertEquals(0x0006, controller.getDiagnosticRomCpuRoutine(),
+                "Kill_Character writes object routine 6 but does not touch Tails_CPU_routine "
+                        + "(sonic3k.asm:21136-21151,26354-26364)");
+        assertEquals(0x003F, controller.getDiagnosticRespawnCounter(),
+                "Kill_Character does not clear Tails_CPU_flight_timer; sub_13ECA does "
+                        + "(sonic3k.asm:21136-21151,26800-26803)");
+        assertEquals(0x0002, controller.getDiagnosticInteractId(),
+                "Kill_Character does not clear Tails_CPU_interact; AIZ F7171 keeps the "
+                        + "0x0002 stood-on object pointer word through object routine 6");
+        assertEquals(0x0018, controller.getDiagnosticGeneratedHeldInput(),
+                "Ctrl_2_logical is a ROM global latch and survives the kill frame");
+        assertEquals(1, controller.getDiagnosticJumpingFlag(),
+                "Tails_CPU_auto_jump_flag is not cleared by Kill_Character");
+
+        controller.update(0x1127);
+
+        assertEquals(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState());
+        assertEquals(0x0002, controller.getDiagnosticRomCpuRoutine(),
+                "sub_13ECA writes Tails_CPU_routine=2 on the next CPU tick");
+        assertEquals(0x0000, controller.getDiagnosticRespawnCounter(),
+                "sub_13ECA clears Tails_CPU_flight_timer");
+        assertEquals(0x0002, controller.getDiagnosticInteractId(),
+                "sub_13ECA also leaves Tails_CPU_interact untouched "
+                        + "(sonic3k.asm:26800-26809)");
+        assertEquals(0x0018, controller.getDiagnosticGeneratedHeldInput(),
+                "sub_13ECA does not clear Ctrl_2_logical during the marker frame");
+        assertEquals(1, controller.getDiagnosticJumpingFlag(),
+                "sub_13ECA does not clear Tails_CPU_auto_jump_flag (sonic3k.asm:26800-26809)");
+
+        controller.update(0x1128);
+
+        assertEquals(0x0000, controller.getDiagnosticGeneratedHeldInput(),
+                "routine 2 exposes the current Ctrl_2_logical latch after the marker frame");
+        assertEquals(1, controller.getDiagnosticJumpingFlag(),
+                "routine 2 wait path also leaves Tails_CPU_auto_jump_flag intact");
+    }
+
+    @Test
+    void groundedPushPreservesAutoJumpFlagUntilPushStateClears() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setPushing(true);
+        tails.setCentreX((short) 0x3693);
+        tails.setCentreY((short) 0x01DF);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x36AF);
+        Arrays.fill(yHistory, (short) 0x01D9);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_LEFT);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 48);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(0x06, 0, 0, 0x0002, true, 0x3784, 0x015C);
+
+        controller.update(0x3DB3);
+
+        assertEquals(1, controller.getDiagnosticJumpingFlag(),
+                "AIZ2 F15795 keeps Tails_CPU_auto_jump_flag set while Status_Push remains "
+                        + "visible to TailsCPU_Normal even though Tails is grounded.");
+        assertEquals(0, controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_JUMP,
+                "The preserved grounded push latch must not manufacture a held jump in Ctrl_2.");
+
+        tails.setPushing(false);
+        controller.update(0x3DC5);
+
+        assertEquals(0, controller.getDiagnosticJumpingFlag(),
+                "AIZ2 F15813 clears the auto-jump flag once the grounded push state has "
+                        + "fallen back to the normal path.");
+        assertEquals(AbstractPlayableSprite.INPUT_JUMP,
+                controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_JUMP,
+                "The grounded clear frame still exposes the final held jump in Ctrl_2.");
+    }
+
+    @Test
     void s3kDeadFallWaitsForCameraYPlus100BeforeDespawnMarker() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
@@ -505,17 +624,132 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
-    void s3kDiagnosticInteractDoesNotExposeS2ObjectIdSnapshot() {
+    void s3kDiagnosticInteractHydratesRecordedPointerWord() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        controller.hydrateFromRomCpuState(6, 0, 0, 0x35, false, 0, 0);
+        controller.hydrateFromRomCpuState(6, 0, 0, 0x0004, false, 0, 0);
+
+        assertEquals(0x0004, controller.getDiagnosticInteractId(),
+                "S3K Tails_CPU_interact is the recorded pointer-word diagnostic "
+                        + "rather than the S2 Tails_interact_ID object-id byte");
+    }
+
+    @Test
+    void s3kDiagnosticInteractRefreshesOnCpuUpdateAfterLanding() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(6, 0, 0, 0, false, tails.getCentreX(), tails.getCentreY());
+        tails.setOnObject(true);
+        tails.setRenderFlagOnScreen(true);
+        tails.setLatchedSolidObjectInstance(new AizTransitionFloorObjectInstance());
 
         assertEquals(0, controller.getDiagnosticInteractId(),
-                "S3K Tails_CPU_interact is a pointer-word diagnostic, not the S2 "
-                        + "Tails_interact_ID object-id snapshot");
+                "sub_13EFC samples the sidekick object state during Tails CPU control; "
+                        + "a landing resolved later in the frame must not change the "
+                        + "ROM-visible global until the next CPU update");
+
+        controller.update(0);
+
+        assertEquals(0x0004, controller.getDiagnosticInteractId(),
+                "sub_13EFC refreshes Tails_CPU_interact from word 0 of the stood-on object "
+                        + "SST; Obj_AIZTransitionFloor lives at 0x0004FE38 "
+                        + "(sonic3k.asm:26842-26843,104777)");
+    }
+
+    @Test
+    void s3kEstablishedFollowerHandoffPreservesDiagnosticInteractWord() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(6, 0, 0, 0x0004, false, 0x2FC5, 0x037A);
+        controller.forceStateForTest(SidekickCpuController.State.INIT, 0);
+        controller.captureLevelStartLeaderAnchor(0x00D1, 0x02FD);
+        controller.setEnteredFromSeedCompareFrame0(true);
+        tails.setCentreX((short) 0x00B1);
+        tails.setCentreY((short) 0x0301);
+        tails.setOnObject(false);
+
+        controller.update(0);
+
+        assertEquals(0x0004, controller.getDiagnosticInteractId(),
+                "A mid-run established-follower handoff does not run SpawnLevelMainSprites; "
+                        + "S3K Tails_CPU_interact survives the AIZ1->AIZ2 reload even after "
+                        + "Tails leaves the transition floor (sonic3k.asm:8359-8369,26816-26843)");
+    }
+
+    @Test
+    void s3kDiagnosticInteractPreservesWordWhenStaleRideHasNoRomPointer() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(6, 0, 0, 0x0004, false, tails.getCentreX(), tails.getCentreY());
+        tails.setOnObject(true);
+        tails.setRenderFlagOnScreen(true);
+        tails.setLatchedSolidObject(0x30, new DestroyedRideObject(0x30));
+
+        controller.update(0);
+
+        assertEquals(0x0004, controller.getDiagnosticInteractId(),
+                "S3K sub_13EFC only refreshes Tails_CPU_interact from a real object "
+                        + "routine pointer word; stale/engine-only ride latches after a reload "
+                        + "must leave the previous ROM global intact");
+    }
+
+    @Test
+    void s3kDiagnosticInteractRefreshesFromCorkFloorPointerHighWord() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(6, 0, 0, 0x0004, false, tails.getCentreX(), tails.getCentreY());
+        tails.setOnObject(true);
+        tails.setRenderFlagOnScreen(true);
+        tails.setLatchedSolidObject(0x2A, new CorkFloorObjectInstance(
+                new ObjectSpawn(0x0240, 0x033C, 0x2A, 0, 0, false, 0)));
+
+        controller.update(0);
+
+        assertEquals(0x0002, controller.getDiagnosticInteractId(),
+                "S3K Obj_CorkFloor lives at 0x0002A618, so sub_13EFC should "
+                        + "refresh Tails_CPU_interact to pointer high word 0x0002");
+    }
+
+    @Test
+    void s3kDespawnMarkerPreservesDiagnosticInteractWord() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x0885);
+        tails.setCentreY((short) 0x033B);
+        tails.setXSpeed((short) 0x0445);
+        tails.setGSpeed((short) 0x0445);
+        tails.setAir(false);
+        tails.setRenderFlagOnScreen(false);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(6, 0, 0, 0x0002, false, 0x2FC5, 0x037A);
+
+        controller.despawn(SidekickCpuController.DespawnCause.EXPLICIT);
+
+        assertEquals(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState());
+        assertEquals((short) 0x7F00, tails.getCentreX());
+        assertEquals(0x0002, controller.getDiagnosticInteractId(),
+                "S3K sub_13ECA writes x_pos/y_pos/status/object_control/CPU routine "
+                        + "but does not clear Tails_CPU_interact (sonic3k.asm:26800-26809); "
+                        + "AIZ F6255 keeps the prior 0x0002 CorkFloor pointer word "
+                        + "through the marker warp");
     }
 
     private static void installEmptyObjectManager() throws Exception {
@@ -620,6 +854,63 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void blinkHiddenSidekickDoesNotRefreshRenderFlagFromCameraVisibility() {
+        SpriteManager sprites = new SpriteManager();
+        Camera camera = new Camera();
+        camera.setX((short) 0x1CA1);
+        camera.setY((short) 0x0360);
+
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.setCentreX((short) 0x1C8B);
+        tails.setCentreY((short) 0x03C0);
+        tails.setInvulnerableFrames(0x02);
+        tails.setRenderFlagOnScreen(false);
+        sprites.addSprite(tails);
+
+        sprites.refreshPlayableRenderFlags(camera);
+
+        assertFalse(tails.isRenderFlagOnScreen(),
+                "ROM Tails_Display skips Draw_Sprite on blink-hidden frames, so Render_Sprites leaves bit 7 unchanged");
+
+        tails.setInvulnerableFrames(0x04);
+
+        sprites.refreshPlayableRenderFlags(camera);
+
+        assertTrue(tails.isRenderFlagOnScreen(),
+                "Blink-visible frames enqueue Draw_Sprite and refresh render_flags bit 7 from camera visibility");
+
+        tails.setInvulnerableFrames(0x47);
+        tails.setRenderFlagOnScreen(false);
+
+        sprites.refreshPlayableRenderFlags(camera);
+
+        assertFalse(tails.isRenderFlagOnScreen(),
+                "AIZ f2679 stores the post-decrement timer ($47), but ROM tested pre-decrement $48 and skipped Draw_Sprite");
+
+        tails.setInvulnerableFrames(0x46);
+
+        sprites.refreshPlayableRenderFlags(camera);
+
+        assertTrue(tails.isRenderFlagOnScreen(),
+                "AIZ f2680 stores post-decrement $46 after ROM tested pre-decrement $47 and refreshed render_flags");
+    }
+
+    @Test
+    void expiringStoredInvulnerabilityTimerDoesNotBlockTouchHurt() {
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.setCentreX((short) 0x11E6);
+        tails.setInvulnerableFrames(1);
+
+        assertTrue(tails.applyHurt(0x11F0),
+                "The stored post-display timer value 1 is the expiring sample; touch hurt must see it as vulnerable");
+        assertTrue(tails.isHurt());
+        assertEquals(0x78, tails.getInvulnerableFrames());
+    }
+
+    @Test
     void s3kHurtRoutineDoesNotAdvanceNormalDespawnTimer() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
@@ -712,5 +1003,160 @@ class TestSidekickCpuDespawnParity {
                 "S2 TailsCPU_UpdateObjInteract writes id(Object_RAM[interact]) every "
                         + "non-despawning frame; a deleted slot reads id 0 "
                         + "(docs/s2disasm/s2.asm:39435-39445)");
+    }
+
+    @Test
+    void panicRoutineClearsTraceVisibleCtrl2LatchFromPreviousFollowStep() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x138C);
+        tails.setCentreY((short) 0x0324);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x1400);
+        Arrays.fill(yHistory, (short) 0x0324);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 16);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(0x06, 0, 0x007A, 0, false, 0x1204, 0x0324);
+        controller.update(0x23C6);
+        assertEquals(AbstractPlayableSprite.INPUT_RIGHT, controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_RIGHT,
+                "The setup should create a non-zero follow-steering Ctrl_2 latch first");
+
+        controller.setController2Input(0, 0);
+        tails.setGSpeed((short) 0x0038);
+        controller.hydrateFromRomCpuState(0x08, 0, 0x007A, 0, false, 0x1204, 0x0324);
+        controller.update(0x23C6);
+
+        assertEquals(0, controller.getDiagnosticGeneratedHeldInput(),
+                "TailsCPU_Panic does not reuse the previous follow-steering Ctrl_2_logical byte");
+        assertEquals(0, controller.getDiagnosticGeneratedPressedInput());
+    }
+
+    @Test
+    void panicRoutineWritesDownIntoTraceVisibleCtrl2LatchWhileCharging() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x1444);
+        tails.setCentreY((short) 0x043D);
+        tails.setGSpeed((short) 0);
+        tails.setSpindash(false);
+        tails.setPinballMode(true);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(0x08, 0, 0x00AB, 0, false, 0x1204, 0x0324);
+        controller.update(0x23F8);
+
+        assertEquals(AbstractPlayableSprite.INPUT_DOWN, controller.getDiagnosticGeneratedHeldInput());
+        assertEquals(AbstractPlayableSprite.INPUT_DOWN, controller.getDiagnosticGeneratedPressedInput(),
+                "TailsCPU_Panic writes #(button_down<<8)|button_down to Ctrl_2_Logical");
+    }
+
+    @Test
+    void normalRoutineUsesDelayedLogicalJumpPressHistory() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        sonic.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sonic.setCentreX((short) 0x1200);
+        sonic.setCentreY((short) 0x0324);
+        sonic.setLogicalInputState(false, false, false, true, true, true);
+        sonic.recordFollowerHistoryForTick();
+        sonic.endOfTick();
+        for (int i = 0; i < 16; i++) {
+            sonic.setLogicalInputState(false, false, false, true, true, false);
+            sonic.endOfTick();
+        }
+
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x1100);
+        tails.setCentreY((short) 0x0324);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(0x06, 0, 0, 0, false, 0, 0);
+        controller.update(0x2340);
+
+        assertEquals(AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP,
+                controller.getDiagnosticGeneratedHeldInput());
+        assertEquals(AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP,
+                controller.getDiagnosticGeneratedPressedInput(),
+                "TailsCPU_Normal copies the delayed Ctrl_1_Logical low-byte jump press; "
+                        + "it must not reconstruct that byte from held-history edges");
+    }
+
+    @Test
+    void normalRoutineSuppressesRepeatedDelayedJumpPressHistory() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        sonic.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sonic.setCentreX((short) 0x1200);
+        sonic.setCentreY((short) 0x0324);
+        sonic.setLogicalInputState(false, false, false, true, true, true);
+        sonic.recordFollowerHistoryForTick();
+        sonic.endOfTick();
+        sonic.endOfTick();
+        for (int i = 0; i < 16; i++) {
+            sonic.setLogicalInputState(false, false, false, true, true, false);
+            sonic.endOfTick();
+        }
+
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x1100);
+        tails.setCentreY((short) 0x0324);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(0x06, 0, 0, 0, false, 0, 0);
+        controller.update(0x2341);
+
+        assertEquals(AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP,
+                controller.getDiagnosticGeneratedHeldInput());
+        assertEquals(0, controller.getDiagnosticGeneratedPressedInput() & AbstractPlayableSprite.INPUT_JUMP,
+                "A repeated delayed press-history byte is not a new Ctrl_2 low-byte press");
+    }
+
+    @Test
+    void groundedPinballSuppressesJumpMovementButPreservesCtrl2PressDiagnostic() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        sonic.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sonic.setCentreX((short) 0x1200);
+        sonic.setCentreY((short) 0x0324);
+        sonic.setLogicalInputState(false, false, false, true, true, true);
+        sonic.recordFollowerHistoryForTick();
+        sonic.endOfTick();
+        for (int i = 0; i < 16; i++) {
+            sonic.setLogicalInputState(false, false, false, true, true, false);
+            sonic.endOfTick();
+        }
+
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x1100);
+        tails.setCentreY((short) 0x0324);
+        tails.setRolling(true);
+        tails.setPinballMode(true);
+        tails.setAir(false);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(0x06, 0, 0, 0, false, 0, 0);
+        controller.update(0x2342);
+
+        assertFalse(controller.getInputJumpPress(),
+                "Obj02_MdRoll skips Tails_Jump while pinball_mode is set");
+        assertEquals(AbstractPlayableSprite.INPUT_JUMP,
+                controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_JUMP,
+                "The movement guard must not rewrite the ROM-visible Ctrl_2_Logical byte");
+        assertEquals(AbstractPlayableSprite.INPUT_JUMP,
+                controller.getDiagnosticGeneratedPressedInput() & AbstractPlayableSprite.INPUT_JUMP,
+                "The movement guard must not rewrite the ROM-visible Ctrl_2_Press_Logical byte");
     }
 }

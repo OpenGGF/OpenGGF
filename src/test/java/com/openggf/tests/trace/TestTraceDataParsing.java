@@ -784,7 +784,7 @@ public class TestTraceDataParsing {
             """);
         Files.writeString(dir.resolve("aux_state.jsonl"), """
             {"frame":0,"vfc":1,"event":"tails_cpu_normal_step","character":"tails","status":"0x00","object_control":"0x00","ground_vel":"0x000C","x_vel":"0x0000","delayed_stat":"0x08","delayed_input":"0x0800","loc_13dd0_branch":"leader_on_object","ctrl2_logical":"0x0808","ctrl2_held_logical":"0x08","path_pre_ground_vel":"0x000C","path_pre_x_vel":"0x0000","path_pre_status":"0x00","path_post_ground_vel":"0x000C","path_post_x_vel":"0x000C","path_post_status":"0x00"}
-            {"frame":0,"vfc":1,"event":"sidekick_interact_object","character":"tails","interact":"0xB128","interact_slot":4,"tails_render_flags":"0x80","tails_object_control":"0x03","tails_status":"0x08","tails_on_object":true,"object_code":"0x000220C2","object_routine":"0x02","object_status":"0x10","object_x":"0x2D95","object_y":"0x0420","object_subtype":"0x40","object_render_flags":"0x80","object_object_control":"0x00","object_active":true,"object_destroyed":false,"object_p1_standing":false,"object_p2_standing":true}
+            {"frame":0,"vfc":1,"event":"sidekick_interact_object","character":"tails","interact":"0xB128","interact_slot":4,"tails_render_flags":"0x80","tails_object_control":"0x03","tails_invulnerability_timer":"0x2F","tails_width_pixels":"0x14","tails_height_pixels":"0x18","camera_x_copy":"0x1CA1","camera_y_copy":"0x0360","tails_status":"0x08","tails_on_object":true,"object_code":"0x000220C2","object_routine":"0x02","object_status":"0x10","object_x":"0x2D95","object_y":"0x0420","object_subtype":"0x40","object_render_flags":"0x80","object_object_control":"0x00","object_active":true,"object_destroyed":false,"object_p1_standing":false,"object_p2_standing":true}
             {"frame":0,"vfc":1,"event":"sonic_record_pos","hits":[{"pc":"0x10D80","pos_table_index":"0x3C","ctrl1_logical":"0x4000","ctrl1_locked":0,"ctrl1_raw":"0x0404","object_control":"0x00","status":"0x07","status_secondary":"0x11","x":"0x49EE","y":"0x01A7"}]}
             """);
 
@@ -801,6 +801,11 @@ public class TestTraceDataParsing {
         assertNotNull(interact);
         assertEquals(4, interact.interactSlot());
         assertEquals(0x000220C2, interact.objectCode());
+        assertEquals(0x2F, interact.tailsInvulnerabilityTimer());
+        assertEquals(0x14, interact.tailsWidthPixels());
+        assertEquals(0x18, interact.tailsHeightPixels());
+        assertEquals(0x1CA1, interact.cameraXCopy());
+        assertEquals(0x0360, interact.cameraYCopy());
         assertTrue(interact.objectP2Standing());
         TraceEvent.SonicRecordPos recordPos = data.sonicRecordPosForFrame(0);
         assertNotNull(recordPos);

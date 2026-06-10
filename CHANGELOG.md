@@ -4,6 +4,25 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Trace replay lag frames are classified consistently across all games:**
+  S1/S2 use gameplay-frame counter advancement as the full-frame signal, S3K
+  treats lag-counter-only rows as VBlank-only frames, and gameplay advancement
+  wins when both counters move.
+
+- **The S3K AIZ release trace gate is green again:** AIZ egg-capsule results
+  timing now preserves the ROM-visible Tails ending-pose/control-lock ordering,
+  and trace comparison accepts the recorder's decision-time sidekick input tap
+  without hydrating engine state from the trace.
+
+- **Editor save files no longer persist runtime terrain events:** gameplay
+  layout mutations update the live level and redraw state without changing the
+  editor-save baseline, preventing event terrain such as the AIZ intro swap
+  from being baked into future edit loads.
+
+- **Data Select launch errors are visible on the save screen:** stored launch
+  failures are now carried through presentation state and rendered as clipped
+  safe-glyph text instead of only being logged internally.
+
 - **LBZ1 miniboss and the LBZ1 → LBZ2 act transition reach ROM parity:** the
   miniboss now rises 2px per hit-flash frame with the ROM palette flash, the
   bit-2 arm ring detaches one panel per frame at three hits remaining, defeat
@@ -59,6 +78,13 @@ All notable changes to the OpenGGF project are documented in this file.
 - **Malformed user config files are now preserved:** unreadable `config.yaml`
   files are moved to unique `.corrupt` siblings before defaults are saved, and
   legacy `config.json` migration now preserves existing `.bak` files.
+
+- **Transient storage errors no longer look like corruption:** save-slot and
+  configuration reads now quarantine only malformed or invalid payloads, leave
+  transient I/O failures in place, and configuration-focused tests use explicit
+  temp roots instead of mutating the process working directory. The S3K
+  GumballMachine also no longer stores a static object reference across stage
+  teardown.
 
 - **Release architecture guards now fail closed:** gameplay map-mutation
   scanner roots must exist and contain Java sources, map mutation bypass forms

@@ -102,6 +102,8 @@ public class S3kDataSelectRenderer {
     private static final int NO_SAVE_TEXT_OFFSET = 0x0C06;
     private static final int SAVE_TEXT_OFFSET = 0x0C0C;
     private static final int DELETE_TEXT_OFFSET = 0x0CEC;
+    private static final int LAUNCH_ERROR_TEXT_Y = 208;
+    private static final int LAUNCH_ERROR_HORIZONTAL_MARGIN_TILES = 2;
     private static final int SELECTED_ICON_DMA_TILE_COUNT = (0x460 * 2) / Pattern.PATTERN_SIZE_IN_ROM;
     private static final int SELECTED_ICON_TARGET_X = -40;
     private static final int SELECTED_ICON_TARGET_Y = -120;
@@ -124,6 +126,8 @@ public class S3kDataSelectRenderer {
     private int[] cachedNoTextWords;
     private int[] cachedSaveTextWords;
     private int[] cachedDeleteTextWords;
+    private String cachedLaunchErrorText;
+    private int[] cachedLaunchErrorWords;
     private final int[][] cachedHeaderWords = new int[4][];
     private final java.util.Map<Integer, int[]> cachedZoneLabelWords = new java.util.HashMap<>();
     private final java.util.Map<Integer, int[]> cachedDigitWords = new java.util.HashMap<>();
@@ -211,6 +215,10 @@ public class S3kDataSelectRenderer {
             graphics.beginPatternBatch();
             renderSelector(graphics, assets, objectState, cameraX);
             flushLayer(graphics);
+
+            graphics.beginPatternBatch();
+            renderLaunchErrorMessage(graphics, objectState.launchErrorMessage());
+            flushLayer(graphics);
         } finally {
             graphics.setBatchingEnabled(prevBatchingEnabled);
             graphics.setInstancedBatchingEnabled(prevInstancedBatchingEnabled);
@@ -259,6 +267,8 @@ public class S3kDataSelectRenderer {
         cachedNoTextWords = null;
         cachedSaveTextWords = null;
         cachedDeleteTextWords = null;
+        cachedLaunchErrorText = null;
+        cachedLaunchErrorWords = null;
         Arrays.fill(cachedHeaderWords, null);
         cachedZoneLabelWords.clear();
         cachedDigitWords.clear();
@@ -801,6 +811,33 @@ public class S3kDataSelectRenderer {
         renderPlaneOverlayTilemap(graphics, cachedDeleteTextWords, 6, 1, DELETE_TEXT_OFFSET, cameraX, highPriority);
     }
 
+    private void renderLaunchErrorMessage(GraphicsManager graphics, String message) {
+        if (message == null || message.isBlank()) {
+            return;
+        }
+        int[] words = launchErrorWords(message);
+        int x = Math.max(0, (viewportWidth - words.length * Pattern.PATTERN_WIDTH) / 2);
+        renderTilemap(graphics, words, words.length, 1,
+                SCREEN_SPACE_WORLD_ORIGIN + x,
+                SCREEN_SPACE_WORLD_ORIGIN + LAUNCH_ERROR_TEXT_Y);
+    }
+
+    private int[] launchErrorWords(String message) {
+        String text = fitLaunchErrorText(message);
+        if (!text.equals(cachedLaunchErrorText)) {
+            cachedLaunchErrorText = text;
+            cachedLaunchErrorWords = safeTextWords(text);
+        }
+        return cachedLaunchErrorWords;
+    }
+
+    private String fitLaunchErrorText(String message) {
+        String text = message.trim();
+        int maxTiles = Math.max(1, (viewportWidth / Pattern.PATTERN_WIDTH)
+                - (LAUNCH_ERROR_HORIZONTAL_MARGIN_TILES * 2));
+        return text.length() <= maxTiles ? text : text.substring(0, maxTiles);
+    }
+
     private void renderPlaneABase(GraphicsManager graphics, int[] words, int cameraX, boolean highPriority) {
         renderTilemap(graphics, words, PLANE_WIDTH_TILES, PLANE_HEIGHT_TILES,
                 SCREEN_SPACE_WORLD_ORIGIN - cameraX, SCREEN_SPACE_WORLD_ORIGIN,
@@ -926,6 +963,18 @@ public class S3kDataSelectRenderer {
         int[] words = new int[text.length()];
         for (int i = 0; i < text.length(); i++) {
             words[i] = saveTextWord(text.charAt(i));
+        }
+        return words;
+    }
+
+    private int[] safeTextWords(String text) {
+        int[] words = new int[text.length()];
+        for (int i = 0; i < text.length(); i++) {
+            try {
+                words[i] = saveTextWord(text.charAt(i));
+            } catch (IllegalArgumentException ignored) {
+                words[i] = blankPriorityWord();
+            }
         }
         return words;
     }

@@ -43,6 +43,22 @@ class TestSaveManager {
     }
 
     @Test
+    void transientReadIOException_leavesSaveInPlace() throws Exception {
+        Path slot = root.resolve("s3k").resolve("slot1.json");
+        Files.createDirectories(slot.getParent());
+        Files.writeString(slot, "valid bytes temporarily locked by another process");
+        SaveManager manager = new SaveManager(root, file -> {
+            throw new java.io.IOException("sharing violation");
+        });
+
+        SaveSlotSummary summary = manager.readSlotSummary("s3k", 1);
+
+        assertEquals(SaveSlotState.EMPTY, summary.state());
+        assertTrue(Files.exists(slot), "transient I/O must not quarantine the original save");
+        assertFalse(Files.exists(slot.resolveSibling("slot1.json.corrupt")));
+    }
+
+    @Test
     void hashMismatch_keepsPayloadForRecoveryButIsNotLoadable() throws Exception {
         SaveManager manager = new SaveManager(root);
         manager.writeSlot("s3k", 1, Map.of("zone", 0, "act", 0));

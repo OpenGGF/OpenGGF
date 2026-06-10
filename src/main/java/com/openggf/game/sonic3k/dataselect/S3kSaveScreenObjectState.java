@@ -14,19 +14,28 @@ public record S3kSaveScreenObjectState(
         S3kSaveScreenSelectorState selectorState,
         VisualState visualState,
         SelectedSlotIcon selectedSlotIcon,
-        int deleteWorldX) {
+        int deleteWorldX,
+        String launchErrorMessage) {
 
     public S3kSaveScreenObjectState(S3kSaveScreenLayoutObjects layoutObjects,
                                     S3kSaveScreenSelectorState selectorState,
                                     VisualState visualState) {
-        this(layoutObjects, selectorState, visualState, null, layoutObjects.deleteIcon().worldX());
+        this(layoutObjects, selectorState, visualState, null, layoutObjects.deleteIcon().worldX(), null);
     }
 
     public S3kSaveScreenObjectState(S3kSaveScreenLayoutObjects layoutObjects,
                                     S3kSaveScreenSelectorState selectorState,
                                     VisualState visualState,
                                     SelectedSlotIcon selectedSlotIcon) {
-        this(layoutObjects, selectorState, visualState, selectedSlotIcon, layoutObjects.deleteIcon().worldX());
+        this(layoutObjects, selectorState, visualState, selectedSlotIcon, layoutObjects.deleteIcon().worldX(), null);
+    }
+
+    public S3kSaveScreenObjectState(S3kSaveScreenLayoutObjects layoutObjects,
+                                    S3kSaveScreenSelectorState selectorState,
+                                    VisualState visualState,
+                                    SelectedSlotIcon selectedSlotIcon,
+                                    int deleteWorldX) {
+        this(layoutObjects, selectorState, visualState, selectedSlotIcon, deleteWorldX, null);
     }
 
     public S3kSaveScreenObjectState {

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 
 /**
@@ -15,16 +17,23 @@ import com.openggf.level.objects.ObjectSpawn;
  * sequence, which owns the later cannon launch into ICZ1.
  */
 public final class CnzEggCapsuleInstance extends AbstractS3kUprightEggCapsuleInstance {
-    private final Runnable resultsCompleteCallback;
+    public enum CompletionContinuation {
+        NONE,
+        CNZ_END_BOSS_SEQUENCE
+    }
+
+    private final CompletionContinuation completionContinuation;
     private boolean resultsCompleteNotified;
 
     public CnzEggCapsuleInstance(ObjectSpawn spawn) {
-        this(spawn, null);
+        this(spawn, CompletionContinuation.NONE);
     }
 
-    public CnzEggCapsuleInstance(ObjectSpawn spawn, Runnable resultsCompleteCallback) {
+    public CnzEggCapsuleInstance(ObjectSpawn spawn, CompletionContinuation completionContinuation) {
         super(spawn, "CNZEggCapsule");
-        this.resultsCompleteCallback = resultsCompleteCallback;
+        this.completionContinuation = completionContinuation != null
+                ? completionContinuation
+                : CompletionContinuation.NONE;
     }
 
     @Override
@@ -47,8 +56,20 @@ public final class CnzEggCapsuleInstance extends AbstractS3kUprightEggCapsuleIns
             services().gameState().setEndOfLevelFlag(false);
             services().gameState().setEndOfLevelActive(false);
         }
-        if (resultsCompleteCallback != null) {
-            resultsCompleteCallback.run();
+        if (completionContinuation == CompletionContinuation.CNZ_END_BOSS_SEQUENCE) {
+            notifyCnzEndBossSequence();
+        }
+    }
+
+    private void notifyCnzEndBossSequence() {
+        if (services().objectManager() == null) {
+            return;
+        }
+        for (ObjectInstance instance : services().objectManager().getActiveObjects()) {
+            if (instance instanceof CnzEndBossInstance boss && !boss.isDestroyed()) {
+                boss.onCapsuleResultsComplete();
+                return;
+            }
         }
     }
 }

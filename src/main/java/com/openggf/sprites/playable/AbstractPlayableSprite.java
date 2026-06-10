@@ -300,6 +300,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * the pre-tick (mid-frame, ROM-equivalent) view.
          */
         private boolean onObjectAtFrameStart = false;
+        private boolean pushingAtFrameStart = false;
 
         /**
          * ROM-style latched solid interaction object id.
@@ -370,6 +371,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Frames remaining for post-hit invulnerability.
          */
         protected int invulnerableFrames = 0;
+        private boolean suppressNextInvulnerabilityDecrement = false;
 
         /**
          * Frames remaining for invincibility power-up.
@@ -870,18 +872,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         // Rewind state capture / restore
         // -----------------------------------------------------------------------
 
-        /**
-         * Captures the full mutable gameplay surface of this playable sprite into a
-         * {@link PerObjectRewindSnapshot} with an attached {@link PlayerRewindExtra}.
-         *
-         * <p>The returned snapshot has null {@code badnikExtra} (not applicable for
-         * players) and carries all sprite base fields (position, subpixel, dimensions)
-         * plus the full {@code AbstractPlayableSprite} mutable surface.
-         *
-         * <p>Render-service references and character physics constants are
-         * excluded. Animation cursor state is captured so a restored frame can
-         * render exactly even when rewind happens while paused.
-         */
+        /** Captures the mutable playable-sprite surface for rewind restore. */
         public PerObjectRewindSnapshot captureRewindState() {
                 return captureRewindState(true);
         }
@@ -906,7 +897,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         pinballMode, pinballSpeedLock, preserveRollingOnNextLanding,
                         preserveRollingOnNextRollStop, objectPreservedRollBoostFollowup,
                         objectPreservedRollWallProbe, objectPreservedRollVelocityCarry, tunnelMode,
-                        onObject, onObjectAtFrameStart,
+                        onObject, onObjectAtFrameStart, pushingAtFrameStart,
                         latchedSolidObjectId, interactSlotIndex, slopeRepelJustSlipped,
                         stickToConvex, sliding, pushing,
                         skidding, skidDustTimer,
@@ -915,7 +906,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         springing, springingFrames,
                         dead, drowningDeath, drownPreDeathTimer,
                         hurt, deathCountdown,
-                        invulnerableFrames, invincibleFrames,
+                        invulnerableFrames, suppressNextInvulnerabilityDecrement, invincibleFrames,
                         spindash, spindashCounter,
                         crouching, lookingUp, lookDelayCounter,
                         doubleJumpFlag, doubleJumpProperty,
@@ -1033,6 +1024,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.tunnelMode = extra.tunnelMode();
                 this.onObject = extra.onObject();
                 this.onObjectAtFrameStart = extra.onObjectAtFrameStart();
+                this.pushingAtFrameStart = extra.pushingAtFrameStart();
                 this.latchedSolidObjectId = extra.latchedSolidObjectId();
                 this.interactSlotIndex = extra.interactSlotIndex();
                 this.slopeRepelJustSlipped = extra.slopeRepelJustSlipped();
@@ -1052,6 +1044,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.hurt = extra.hurt();
                 this.deathCountdown = extra.deathCountdown();
                 this.invulnerableFrames = extra.invulnerableFrames();
+                this.suppressNextInvulnerabilityDecrement = extra.suppressNextInvulnerabilityDecrement();
                 this.invincibleFrames = extra.invincibleFrames();
                 this.spindash = extra.spindash();
                 this.spindashCounter = extra.spindashCounter();
@@ -1463,6 +1456,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return renderFlagOnScreen;
         }
 
+        public boolean shouldRefreshRenderFlagThisFrame() {
+                if (isHidden()) {
+                        return false;
+                }
+                return isHurt()
+                        || invulnerableFrames <= 0
+                        || ((invulnerableFrames + 1) & 0x04) != 0;
+        }
         public boolean hasRenderFlagOnScreenState() {
                 return renderFlagOnScreenValid;
         }
@@ -1615,9 +1616,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (!air && this.air && hurt) {
                         hurt = false;
                         setHighPriority(false);
-                        // ROM: Sonic_HurtStop resets invulnerable_time to $78 on landing.
-                        // All 120 frames of post-hit flashing occur after landing.
+                        // HurtStop's direct draw path delays decrementing the reset timer by one frame.
                         invulnerableFrames = 0x78;
+                        suppressNextInvulnerabilityDecrement = true;
                 }
                 // Reset rolling jump flag when landing
                 if (!air && this.air) {
@@ -1680,6 +1681,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 hurt = false;
                 setHighPriority(false);
                 invulnerableFrames = 0x78;
+                suppressNextInvulnerabilityDecrement = true;
                 setXSpeed((short) 0);
                 setYSpeed((short) 0);
                 setGSpeed((short) 0);
@@ -1746,6 +1748,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public void captureOnObjectAtFrameStart() {
                 this.onObjectAtFrameStart = this.onObject;
+                this.pushingAtFrameStart = this.pushing;
         }
 
         /**
@@ -1758,6 +1761,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public boolean getOnObjectAtFrameStart() {
                 return onObjectAtFrameStart;
+        }
+
+        public boolean getPushingAtFrameStart() {
+                return pushingAtFrameStart;
         }
 
         public int getLatchedSolidObjectId() {
@@ -2120,6 +2127,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setInvulnerableFrames(int frames) {
                 invulnerableFrames = Math.max(0, frames);
+                if (invulnerableFrames == 0) {
+                        suppressNextInvulnerabilityDecrement = false;
+                }
         }
 
         public int getInvincibleFrames() {
@@ -2223,7 +2233,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // During hurt routine (routine 4), DisplaySprite is called directly,
                 // so the timer stays frozen until Sonic lands.
                 if (invulnerableFrames > 0 && !hurt) {
-                        invulnerableFrames--;
+                        if (suppressNextInvulnerabilityDecrement) {
+                                suppressNextInvulnerabilityDecrement = false;
+                        } else {
+                                invulnerableFrames--;
+                        }
                 }
                 if (invincibleFrames > 0) {
                         invincibleFrames--;
@@ -2400,10 +2414,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (debugMode || invincibleFrames > 0 || isSuperSonic()) {
                         return true;
                 }
-                // ROM: Touch_ChkHurt only checks invulnerable_time, not routine number.
-                // With the timer frozen during hurt (see tickStatus), invulnerableFrames
-                // is always > 0 while hurt, so the hurt flag check is unnecessary.
-                return !ignoreIFrames && invulnerableFrames > 0;
+                // The engine stores the post-display-decrement value that trace
+                // comparison sees. Touch damage consumes that ROM-visible value:
+                // a stored 1 is the expiring display sample and must not block
+                // the same frame's TouchResponse hit.
+                return !ignoreIFrames && invulnerableFrames > 1;
         }
 
         /**
@@ -3061,26 +3076,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         /**
          * Publishes the logical pad state plus the low-byte jump press bit.
-         * ROM stores the whole Ctrl_1_Logical word in Sonic_Stat_Record_Buf;
-         * Tails_CPU_Control later copies that delayed word to Ctrl_2_logical
-         * (S3K sonic3k.asm:26683-26803). The existing compact history stores
-         * held buttons only, so the low-byte press bit is tracked separately
-         * without changing getInputHistory() consumers.
          */
         public void setLogicalInputState(boolean up, boolean down, boolean left, boolean right, boolean jump,
                         boolean jumpPress) {
-                // ROM Obj01_Control skips re-copying Ctrl_1 into Ctrl_1_Logical while
-                // Control_Locked is set (s2.asm:36227-36229, sonic3k.asm equivalent), so a
-                // previously held pad word is latched. BUT an object/event that explicitly
-                // writes Ctrl_1_Logical during the lock (e.g. the end-of-act signpost
-                // Obj0D_Main_State3 forcing RIGHT, s2.asm:34825-34826) overwrites that word,
-                // and the short-circuit preserves the new value. The engine models such a
-                // write as forcedInputMask; when one is active we must publish the forced
-                // word (SpriteManager already folds it into the logical args) rather than
-                // latch the stale pre-lock state. The forced-write bypass is kept here so
-                // any game that enables controlLockLatchesLogicalInput preserves explicit
-                // object writes instead of stale history. S2 deliberately leaves that flag
-                // disabled for now; see PhysicsFeatureSet.SONIC_2 for the bounded defer.
+                // Latch logical input during ROM control locks unless an explicit forced
+                // write is active; forced writes intentionally replace the latched word.
                 if (isControlLocked()
                                 && getForcedInputMask() == 0
                                 && physicsFeatureSet != null

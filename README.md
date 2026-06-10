@@ -224,6 +224,11 @@ behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Develop sync and release-hardening integration (2026-06-11).** Merged the
+  latest `origin/develop` release-prep work, carrying configuration/save
+  resilience updates, data-select presentation fixes, sidekick and trace
+  diagnostic refinements, touch-response and mutable-level hardening, and the
+  release task/review documentation used to track the 0.6 prerelease line.
 - **Release-readiness review remediation follow-up (2026-06-10).** Merged
   `bugfix/ai-release-review-fixes-20260609`, closing the verified
   release-review blocker/high/medium findings from `fable-arch-review.md`.

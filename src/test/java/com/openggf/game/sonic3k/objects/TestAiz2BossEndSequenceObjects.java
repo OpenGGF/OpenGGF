@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.session.EngineServices;
 import com.openggf.tests.TestEnvironment;
 
@@ -15,6 +16,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.EggPrisonAnimalInstance;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
@@ -33,6 +35,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 
@@ -535,6 +538,125 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
+    void aizCapsuleResultsStartLocksSonicButDefersSidekickEndingPoseCheck() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+
+        GameStateManager gameState = new GameStateManager();
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        sonic.setAir(false);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        SidekickCpuController tailsCpu = new SidekickCpuController(tails, sonic);
+        tailsCpu.setController2SignedLocked(true);
+        tails.setCpuController(tailsCpu);
+
+        AizFloatingCapsuleForTest capsule = new AizFloatingCapsuleForTest();
+        capsule.setServices(new QueryOnlyServices(camera, sonic, List.of(tails))
+                .withGameState(gameState));
+        setField(capsule, "opened", 1);
+        setField(capsule, "postOpenTimer", 0);
+
+        capsule.update(0, sonic);
+
+        assertTrue(getBooleanField(capsule, "resultsStarted"));
+        assertTrue(sonic.isObjectControlled(),
+                "sub_868F8 calls Set_PlayerEndingPose for Player_1 when results start "
+                        + "(sonic3k.asm:181900-181918)");
+        assertTrue(tailsCpu.isController2SignedLocked(),
+                "AIZ Player_2 remains under Ctrl_2_locked until Check_TailsEndPose runs "
+                        + "(sonic3k.asm:181919-181939)");
+        assertFalse(tails.isObjectControlled(),
+                "Check_TailsEndPose owns Player_2's Set_PlayerEndingPose call, so results "
+                        + "start must not pre-emptively set object_control=$81.");
+    }
+
+    @Test
+    void aizCapsuleResultsActiveWaitRunsTailsEndingPoseBeforeResultsExit() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+
+        GameStateManager gameState = new GameStateManager();
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        SidekickCpuController tailsCpu = new SidekickCpuController(tails, sonic);
+        tailsCpu.setController2SignedLocked(true);
+        tails.setCpuController(tailsCpu);
+
+        Aiz2EndEggCapsuleInstance capsule = new Aiz2EndEggCapsuleInstance(0x49E9, 0x0163);
+        capsule.setServices(new QueryOnlyServices(camera, sonic, List.of(tails))
+                .withGameState(gameState));
+        setField(capsule, "opened", 1);
+        setField(capsule, "resultsStarted", 1);
+        setField(capsule, "resultsActiveWaitEntries", 5);
+
+        capsule.update(0, sonic);
+
+        assertFalse(Aiz2BossEndSequenceState.isEggCapsuleReleased(),
+                "Obj_LevelResults has not cleared _unkFAA8 / set End_of_level_flag yet");
+        assertTrue(tailsCpu.isController2SignedLocked(),
+                "The collapsed engine owner applies Set_PlayerEndingPose before the next "
+                        + "Tails_Control sample observes Ctrl_2_locked clear.");
+        assertTrue(tails.isObjectControlled());
+
+        capsule.update(1, sonic);
+
+        assertFalse(tailsCpu.isController2SignedLocked(),
+                "Obj_EggCapsule routine $0C calls Check_TailsEndPose while results are still active "
+                        + "(sonic3k.asm:181670-181672,181919-181939).");
+        assertTrue(tails.isObjectControlled());
+    }
+
+    @Test
+    void aizCapsuleResultsActiveWaitRequiresEligibleGroundedSidekick() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+
+        GameStateManager gameState = new GameStateManager();
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        tails.setAir(true);
+        SidekickCpuController tailsCpu = new SidekickCpuController(tails, sonic);
+        tailsCpu.setController2SignedLocked(true);
+        tails.setCpuController(tailsCpu);
+
+        Aiz2EndEggCapsuleInstance capsule = new Aiz2EndEggCapsuleInstance(0x49E9, 0x0163);
+        capsule.setServices(new QueryOnlyServices(camera, sonic, List.of(tails))
+                .withGameState(gameState));
+        setField(capsule, "opened", 1);
+        setField(capsule, "resultsStarted", 1);
+        setField(capsule, "resultsActiveWaitEntries", 5);
+
+        capsule.update(0, sonic);
+
+        assertTrue(tailsCpu.isController2SignedLocked(),
+                "Check_TailsEndPose returns while Player_2 still has Status_InAir "
+                        + "(sonic3k.asm:181919-181939).");
+        assertFalse(tails.isObjectControlled());
+
+        tails.setDead(true);
+        tails.setAir(false);
+        capsule.update(1, sonic);
+
+        assertTrue(tailsCpu.isController2SignedLocked(),
+                "Check_TailsEndPose also rejects Player_2 object routines >= 6; "
+                        + "the engine mirror for that gate is a dead sidekick.");
+        assertFalse(tails.isObjectControlled());
+
+        tails.setDead(false);
+        capsule.update(2, sonic);
+
+        assertTrue(tailsCpu.isController2SignedLocked(),
+                "Set_PlayerEndingPose is applied before the next sidekick control sample "
+                        + "can observe the Ctrl_2_locked clear.");
+        assertTrue(tails.isObjectControlled());
+
+        capsule.update(3, sonic);
+
+        assertFalse(tailsCpu.isController2SignedLocked());
+        assertTrue(tails.isObjectControlled());
+    }
+
+    @Test
     void aizCapsuleClearsSignedSidekickLockWhenEndingPoseCheckRuns() throws Exception {
         Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
@@ -546,6 +668,9 @@ class TestAiz2BossEndSequenceObjects {
         SidekickCpuController tailsCpu = new SidekickCpuController(tails, sonic);
         tailsCpu.setController2SignedLocked(true);
         tails.setCpuController(tailsCpu);
+        tails.setXSpeed((short) 0x0120);
+        tails.setYSpeed((short) 0xFFE0);
+        tails.setGSpeed((short) 0x0100);
 
         Aiz2EndEggCapsuleInstance capsule = new Aiz2EndEggCapsuleInstance(0x49E9, 0x0163);
         capsule.setServices(new QueryOnlyServices(camera, sonic, List.of(tails))
@@ -558,6 +683,17 @@ class TestAiz2BossEndSequenceObjects {
         assertFalse(tailsCpu.isController2SignedLocked(),
                 "Check_TailsEndPose clears Ctrl_2_locked before Set_PlayerEndingPose "
                         + "(sonic3k.asm:181919-181939)");
+        assertEquals(0, tailsCpu.getDiagnosticGeneratedHeldInput(),
+                "After Ctrl_2_locked clears, Tails_Control copies raw Ctrl_2 into "
+                        + "Ctrl_2_logical before the ending-pose object-control gate "
+                        + "(sonic3k.asm:26196-26203).");
+        assertTrue(tails.isObjectControlled(),
+                "Check_TailsEndPose immediately applies Set_PlayerEndingPose to Player_2.");
+        assertFalse(tails.isObjectControlAllowsCpu());
+        assertEquals(0, tails.getXSpeed());
+        assertEquals(0, tails.getYSpeed());
+        assertEquals(0, tails.getGSpeed());
+        assertEquals(Sonic3kAnimationIds.VICTORY.id(), tails.getAnimationId());
     }
 
     @Test
@@ -748,6 +884,98 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
+    void controllerKeepsSidekickInEndingPoseObjectControlDuringPostResultsHold() {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+        camera.setMaxX((short) 0x4880);
+        camera.setX((short) 0x4880);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        tails.setXSpeed((short) 0x0120);
+        tails.setYSpeed((short) 0xFFE0);
+        tails.setGSpeed((short) 0x0100);
+
+        Aiz2BossEndSequenceController controller = new Aiz2BossEndSequenceController(0x4880, 0x0000);
+        controller.setServices(new QueryOnlyServices(camera, player, List.of(tails)));
+        Aiz2BossEndSequenceState.releaseEggCapsule();
+
+        controller.update(1, player);
+
+        assertTrue(tails.isObjectControlled(),
+                "AIZ Obj_EggCapsule loc_866CC/Check_TailsEndPose keeps Player_2 "
+                        + "under object_control=$81 while _unkFAA8 remains set "
+                        + "(sonic3k.asm:181670-181672,181919-181939).");
+        assertFalse(tails.isObjectControlAllowsCpu());
+        assertEquals(0, tails.getXSpeed());
+        assertEquals(0, tails.getYSpeed());
+        assertEquals(0, tails.getGSpeed());
+    }
+
+    @Test
+    void controllerRestoresSidekickObjectControlWhenPostCapsuleWalkBegins() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+        camera.setMaxX((short) 0x4880);
+        camera.setX((short) 0x4880);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setCentreX((short) 0x4900);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        tails.setObjectControlled(true);
+        tails.setObjectControlAllowsCpu(false);
+        tails.setObjectControlSuppressesMovement(true);
+        tails.setAnimationId(Sonic3kAnimationIds.VICTORY);
+
+        Aiz2BossEndSequenceController controller = new Aiz2BossEndSequenceController(0x4880, 0x0000);
+        controller.setServices(new QueryOnlyServices(camera, player, List.of(tails)));
+        setField(controller, "postResultsControlRestoreDelay", 0);
+        Aiz2BossEndSequenceState.releaseEggCapsule();
+
+        controller.update(1, player);
+
+        assertFalse(tails.isObjectControlled(),
+                "ROM loc_7D078 runs Restore_PlayerControl2 once _unkFAA8 clears, "
+                        + "before the AIZ2 post-capsule walk takes over "
+                        + "(sonic3k.asm:166696-166703).");
+        assertTrue(tails.isControlLocked(),
+                "The AIZ2 controller still holds Player 2 input during Sonic's "
+                        + "walk-right sequence.");
+    }
+
+    @Test
+    void aiz2ResultsExitKeepsEndingPoseUntilOwnerRestoresControl() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        tails.setObjectControlled(true);
+        tails.setObjectControlAllowsCpu(false);
+        tails.setObjectControlSuppressesMovement(true);
+        tails.setControlLocked(true);
+
+        Aiz2Act2QueryServices services = new Aiz2Act2QueryServices(camera, player, List.of(tails));
+        Aiz2EndEggCapsuleInstance capsule = new Aiz2EndEggCapsuleInstance(0x4A08, 0x011A);
+        capsule.setServices(services);
+        S3kResultsScreenObjectInstance results = (S3kResultsScreenObjectInstance)
+                ObjectConstructionContext.construct(services, capsule::createResultsScreen);
+        results.setServices(services);
+
+        Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
+        onExitReady.setAccessible(true);
+        onExitReady.invoke(results);
+
+        assertTrue(tails.isObjectControlled(),
+                "Obj_LevelResultsWait2 clears _unkFAA8 and deletes itself for Act 2, but AIZ2 "
+                        + "does not run Restore_PlayerControl2 until loc_7D078 after "
+                        + "Check_TailsEndPose (sonic3k.asm:62693-62705,166696-166703).");
+        assertFalse(tails.isObjectControlAllowsCpu());
+        assertTrue(tails.isObjectControlSuppressesMovement());
+        assertTrue(tails.isControlLocked());
+    }
+
+    @Test
     void hydrocityTransitionUsesRomCentreYRatherThanSpriteTopY() throws Exception {
         Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
@@ -861,6 +1089,11 @@ class TestAiz2BossEndSequenceObjects {
         AbstractObjectInstance createAnimal(ObjectSpawn spawn) {
             return createCapsuleAnimal(spawn, 0, 0, 0);
         }
+
+        @Override
+        protected AbstractObjectInstance createResultsScreen() {
+            return new EggPrisonAnimalInstance(new ObjectSpawn(0, 0, 0x28, 0, 0, false, 0), 0, 0);
+        }
     }
 
     private static final class AizFloatingCapsuleForTest extends Aiz2EndEggCapsuleInstance {
@@ -870,6 +1103,11 @@ class TestAiz2BossEndSequenceObjects {
 
         AbstractObjectInstance createAnimal(ObjectSpawn spawn) {
             return createCapsuleAnimal(spawn, 0, 0, 0);
+        }
+
+        @Override
+        protected AbstractObjectInstance createResultsScreen() {
+            return new EggPrisonAnimalInstance(new ObjectSpawn(0, 0, 0x28, 0, 0, false, 0), 0, 0);
         }
     }
 
@@ -907,7 +1145,7 @@ class TestAiz2BossEndSequenceObjects {
         }
     }
 
-    private static final class QueryOnlyServices extends TestObjectServices {
+    private static class QueryOnlyServices extends TestObjectServices {
         private final Camera camera;
         private final ObjectPlayerQuery playerQuery;
 
@@ -929,6 +1167,24 @@ class TestAiz2BossEndSequenceObjects {
         @Override
         public List<com.openggf.game.PlayableEntity> sidekicks() {
             throw new AssertionError("AIZ2 end sequence should use ObjectPlayerQuery for cutscene sidekick control");
+        }
+    }
+
+    private static final class Aiz2Act2QueryServices extends QueryOnlyServices {
+        Aiz2Act2QueryServices(Camera camera, TestablePlayableSprite main, List<TestablePlayableSprite> sidekicks) {
+            super(camera, main, sidekicks);
+            withGameState(new GameStateManager());
+            withConfiguration(SonicConfigurationService.createStandalone());
+        }
+
+        @Override
+        public int romZoneId() {
+            return 0;
+        }
+
+        @Override
+        public int currentAct() {
+            return 1;
         }
     }
 
