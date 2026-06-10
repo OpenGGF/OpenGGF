@@ -111,6 +111,25 @@ class TestSidekickCpuControllerFlightAutoRecovery {
     }
 
     @Test
+    void diagnosticRespawnCounterMirrorsFlightTimerDuringFlightAutoRecovery() {
+        TestableSprite sonic = sonicAt(0x1000, 0x0400);
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x3000);
+        tails.setCentreY((short) 0x0400);
+        tails.setAir(true);
+        tails.setRenderFlagOnScreen(false);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, 0);
+
+        controller.update(10);
+
+        assertEquals(1, controller.getDiagnosticRespawnCounter(),
+                "Routine 0x04 exposes ROM Tails_CPU_flight_timer, not the respawn/despawn counter");
+    }
+
+    @Test
     void onScreenFlightAutoRecoveryReassertsAirBit() {
         TestableSprite sonic = sonicAt(0x1000, 0x0400);
         TestableSprite tails = new TestableSprite("tails_p2");

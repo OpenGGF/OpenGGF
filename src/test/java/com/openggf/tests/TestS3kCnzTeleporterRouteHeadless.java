@@ -218,7 +218,7 @@ class TestS3kCnzTeleporterRouteHeadless {
     }
 
     @Test
-    void cnzPostCapsuleRouteSpawnsCannonAndRequestsIczAfterLaunchThreshold() {
+    void cnzPostCapsuleRouteSpawnsCannonAndRequestsIczAfterLaunchThreshold() throws Exception {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
                 .build();
@@ -263,10 +263,31 @@ class TestS3kCnzTeleporterRouteHeadless {
 
         assertTrue(GameServices.level().consumeZoneActRequest(),
                 "Obj_CNZEndBoss loc_6E80C should request StartNewLevel once the launcher carries Sonic offscreen");
-        assertEquals(Sonic3kZoneIds.ZONE_ICZ, GameServices.level().getRequestedZone());
-        assertEquals(0, GameServices.level().getRequestedAct());
+        int requestedZone = GameServices.level().getRequestedZone();
+        int requestedAct = GameServices.level().getRequestedAct();
+        assertEquals(Sonic3kZoneIds.ZONE_ICZ, requestedZone);
+        assertEquals(0, requestedAct);
         assertTrue(GameServices.level().isLevelInactiveForTransition(),
                 "The ICZ request should freeze level updates while the fade transition owns the load");
+        assertEquals(0, fixture.sprite().getXSpeed(),
+                "The frozen fade window must not leave Sonic carrying the CNZ cannon launch x velocity into ICZ");
+        assertEquals(0, fixture.sprite().getYSpeed(),
+                "The frozen fade window must not leave Sonic visibly flying upward from the CNZ cannon");
+        assertFalse(fixture.sprite().getAir(),
+                "The ICZ transition request should neutralize airborne launcher state before the level freezes");
+        assertTrue(fixture.sprite().isControlLocked(),
+                "The neutral transition pose should keep control locked until the ICZ load reinitializes the player");
+        assertTrue(fixture.sprite().isHidden(),
+                "Sonic should be hidden during the frozen fade instead of remaining visible off screen");
+
+        GameServices.level().loadZoneAndAct(requestedZone, requestedAct);
+
+        assertFalse(fixture.sprite().isHidden(),
+                "ICZ load should clear the neutral fade pose and own the new player state");
+        assertEquals(0, fixture.sprite().getXSpeed(),
+                "ICZ load must not inherit the CNZ cannon launch x velocity");
+        assertEquals(0, fixture.sprite().getYSpeed(),
+                "ICZ load must not inherit the CNZ cannon launch y velocity");
     }
 
     /**

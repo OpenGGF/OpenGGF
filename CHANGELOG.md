@@ -9,6 +9,17 @@ All notable changes to the OpenGGF project are documented in this file.
   post-capsule sequence now continues through the ROM cannon-launch handoff into
   ICZ1 instead of silently ending at the egg capsule.
 
+- **CNZ2's ICZ handoff no longer shows or carries launcher state:** the
+  post-capsule cannon transition now neutralizes and hides playable sprites for
+  the frozen fade window, so Sonic is not left visibly flying off screen or
+  carrying cannon velocity into the ICZ1 load.
+
+- **S3K sidekick CPU diagnostics now expose ROM-visible fields more narrowly:**
+  the AIZ trace comparator sees the flight auto-recovery timer through the
+  respawn-counter field, and S3K `Tails_CPU_interact` no longer reports the
+  unrelated S2 object-id snapshot while pointer-word projection remains
+  unimplemented.
+
 - **S2 sidekick CPU traces now expose per-frame CPU state:** the seven stuck
   S2 level-select fixtures were regenerated with `cpu_state_per_frame`, and
   trace replay now compares read-only Tails CPU routine, counters, targets,

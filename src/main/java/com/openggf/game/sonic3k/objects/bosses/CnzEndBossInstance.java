@@ -217,9 +217,23 @@ public final class CnzEndBossInstance extends AbstractObjectInstance {
     private void requestIczTransition() {
         transitionRequested = true;
         int act = ICZ_START_ZONE_WORD & 0xFF;
+        preparePlayersForIczFade();
         services().requestZoneAndAct(Sonic3kZoneIds.ZONE_ICZ, act, true);
-        restorePlayerControl();
         setDestroyed(true);
+    }
+
+    private void preparePlayersForIczFade() {
+        PlayableEntity focused = services().camera().getFocusedSprite();
+        List<PlayableEntity> players = services().playerQuery()
+                .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS);
+        for (PlayableEntity candidate : players) {
+            if (candidate instanceof AbstractPlayableSprite sprite) {
+                neutralizeLauncherStateForFade(sprite);
+            }
+        }
+        if (focused instanceof AbstractPlayableSprite focusedPlayer && !players.contains(focusedPlayer)) {
+            neutralizeLauncherStateForFade(focusedPlayer);
+        }
     }
 
     /**
@@ -248,6 +262,21 @@ public final class CnzEndBossInstance extends AbstractObjectInstance {
         ObjectControlState.none().applyTo(sprite);
         sprite.setHidden(false);
         sprite.setRolling(false);
+    }
+
+    private void neutralizeLauncherStateForFade(AbstractPlayableSprite sprite) {
+        releaseSprite(sprite);
+        sprite.setXSpeed((short) 0);
+        sprite.setYSpeed((short) 0);
+        sprite.setGSpeed((short) 0);
+        sprite.setAir(false);
+        sprite.setJumping(false);
+        sprite.setOnObject(false);
+        sprite.setObjectMappingFrameControl(false);
+        sprite.setHidden(true);
+        sprite.setControlLocked(true);
+        sprite.setPriorityBucket(RenderPriority.PLAYER_DEFAULT);
+        sprite.setHighPriority(false);
     }
 
     /**

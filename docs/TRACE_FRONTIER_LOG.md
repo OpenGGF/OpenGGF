@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+## 2026-06-10 - S3K AIZ sidekick diagnostics narrowed; gate remains red
+
+- Scope: follow-up to the S3K AIZ release-blocker trace after removing the
+  uncited sidekick speed heuristic. This pass changed only engine-side
+  diagnostic projection used by trace comparison; it does not hydrate state from
+  the trace or relax any replay assertions.
+- Diagnostic corrections:
+  - `tails_cpu_respawn_counter` now exposes the S3K flight auto-recovery timer
+    while the CPU routine is on the ROM routine-$04 recovery path.
+  - S3K `tails_cpu_interact` no longer exposes the engine's S2-style
+    `lastInteractObjectId` snapshot. The ROM field is a pointer-word copied
+    from the interacted object routine and cleared with object RAM, so the
+    comparison-only projection reports the cleared word until full pointer-word
+    projection exists.
+- Current frontier after rerun:
+  - `TestS3kAizTraceReplay#replayMatchesTrace` is still RED.
+  - First release-blocking error moved to frame 2679:
+    `tails_cpu_respawn_counter expected=0x0031 actual=0x0000`.
+  - The frame-2679 context shows matching positions/velocities, ROM
+    `render_flags=0x04`, and engine `onObj=false`/`ride=s-1`, which points at
+    S3K render-flag/despawn-counter timing before the known later
+    `Status_Push` bypass work.
+- Verification:
+  - `mvn "-Dtest=com.openggf.sprites.playable.TestSidekickCpuDespawnParity,com.openggf.sprites.playable.TestSidekickCpuControllerFlightAutoRecovery" test`
+    -> PASS for the selected diagnostic coverage.
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" "-DfailIfNoTests=false" test`
+    -> RED at frame 2679 as described above.
+- Release state: the S3K AIZ trace gate remains blocked. The next fix should
+  model the ROM-visible render flag/despawn counter behavior first, then return
+  to the later delayed `Status_Push` bypass divergence.
+
 ## 2026-06-10 - S2 native-prelude history restored for green trace gates
 
 - Scope: follow-up to the CPU-present comparator correction below. The false

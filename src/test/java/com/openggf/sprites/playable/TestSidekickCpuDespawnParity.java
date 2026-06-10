@@ -478,6 +478,46 @@ class TestSidekickCpuDespawnParity {
         assertTrue(tails.getAir());
     }
 
+    @Test
+    void s3kDiagnosticInteractDefaultsToClearedRomWord() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+
+        assertEquals(0, controller.getDiagnosticInteractId(),
+                "S3K Tails_CPU_interact is cleared with active play RAM and starts at word 0 "
+                        + "(docs/skdisasm/sonic3k.asm:5415,7621,26816-26843)");
+    }
+
+    @Test
+    void s2DiagnosticInteractKeepsUnsetSentinelUntilFirstSnapshotRefresh() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+
+        assertEquals(-1, controller.getDiagnosticInteractId(),
+                "S2 keeps the engine unset sentinel until TailsCPU_UpdateObjInteract seeds "
+                        + "the id snapshot used by the slot-mismatch despawn guard");
+    }
+
+    @Test
+    void s3kDiagnosticInteractDoesNotExposeS2ObjectIdSnapshot() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(6, 0, 0, 0x35, false, 0, 0);
+
+        assertEquals(0, controller.getDiagnosticInteractId(),
+                "S3K Tails_CPU_interact is a pointer-word diagnostic, not the S2 "
+                        + "Tails_interact_ID object-id snapshot");
+    }
+
     private static void installEmptyObjectManager() throws Exception {
         var field = GameServices.level().getClass().getDeclaredField("objectManager");
         field.setAccessible(true);

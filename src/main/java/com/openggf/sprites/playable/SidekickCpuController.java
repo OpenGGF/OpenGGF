@@ -469,10 +469,27 @@ public class SidekickCpuController {
         if (state == State.APPROACHING) {
             return respawnStrategy.diagnosticRespawnCounter(despawnCounter);
         }
+        if (state == State.FLIGHT_AUTO_RECOVERY) {
+            return flightTimer;
+        }
         return despawnCounter;
     }
 
     public int getDiagnosticInteractId() {
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        if (fs != null
+                && fs.sidekickDespawnUsesRidingInstanceLoss()
+                && !fs.sidekickDespawnUsesObjectIdMismatch()) {
+            // S3K Tails_CPU_interact is a RAM word copied from a stood-on
+            // object's routine pointer and cleared with object RAM
+            // (docs/skdisasm/sonic3k.asm:5415,7621,26816-26843). The engine's
+            // lastInteractObjectId is the S2 id-snapshot model, so exposing it
+            // here reports object IDs (0x2E/0x30/...) instead of ROM pointer
+            // words and masks earlier CPU-control divergences. Until the
+            // comparator grows full S3K pointer-word projection, the ROM-visible
+            // cleared word is the only safe comparison-only value.
+            return 0;
+        }
         return lastInteractObjectId;
     }
 
