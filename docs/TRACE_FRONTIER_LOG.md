@@ -9966,3 +9966,31 @@ Result:
   fields match. The active owner is the vertical `Obj_HCZWaterWall`
   rise/eruption handoff and spray/debris cluster, not the trigger-frame
   capture.
+
+## 2026-06-11 — HCZ complete-run vertical water-wall KosM wait
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `bugfix/ai-release-remediation`.
+Commands:
+`mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestHCZWaterWallObjectInstance" test`
+`mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+
+Fix:
+- `HCZWaterWallObjectInstance` now keeps the vertical geyser in the
+  `loc_302E6` queued-art branch for the ROM-observed Kosinski module wait
+  before setup. While `Kos_modules_left` is nonzero the ROM only pulls both
+  players up by 8 px; when it clears, `loc_302FA` falls through into the first
+  `loc_30338` rise tick in the same object update
+  (`docs/skdisasm/sonic3k.asm:65116-65148`). The engine now models both the
+  pending-art wait and the setup-to-rise fall-through, preventing the eruption
+  branch from starting four frames early.
+
+Result:
+- Focused HCZ water-wall tests are green.
+- HCZ complete-run remains red, but the frontier advanced from frame **3124**
+  to frame **3318**.
+- First error is now frame **3318** `tails_y` expected `0x0349`, actual
+  `0x0348`. Player position, speeds, camera, rings, sidekick CPU routine,
+  sidekick CPU target/input fields, and `tails_y_speed` match. The next owner
+  is a sidekick post-water-wall/conveyor interaction parity issue around
+  `HCZConveyorBeltObjectInstance` and the sidekick follow/physics handoff, not
+  the vertical water-wall eruption handoff.

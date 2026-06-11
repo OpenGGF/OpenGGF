@@ -90,6 +90,11 @@ All notable changes to the OpenGGF project are documented in this file.
   geometry and defers the released sidekick's first gravity tick, moving the
   HCZ complete-run trace past the early monitor release frontier.
 
+- **HCZ vertical water-wall timing matches the ROM KosM gate:** the S3K
+  vertical geyser now waits for the queued Kosinski module before entering the
+  rise routine and preserves the setup-to-rise fall-through, preventing an
+  early eruption handoff in the HCZ complete-run trace.
+
 - **HCZ water-rush tunnel entry follows ROM ordering:** S3K button contact now
   publishes its level trigger from the standing solid callback, top-solid
   button boundary rejection matches `SolidObjectTop_1P`, and HCZ water tunnels
