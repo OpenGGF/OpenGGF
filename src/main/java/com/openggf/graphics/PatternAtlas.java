@@ -28,6 +28,10 @@ public class PatternAtlas {
     private static final float UV_INSET_PIXELS = 0.01f;
     private static final int MAX_ATLASES = 2;
     private static final int NATIVE_PATTERN_ID_MAX = 0x7FF;
+    // Max distinct dirty slots tracked exactly per page per batch. Below/at this count,
+    // endBatch() uploads each dirty tile individually; past it, the bounding rectangle
+    // of ALL dirty tiles (bounds keep updating after overflow) is uploaded instead.
+    private static final int DIRTY_SLOT_TRACK_LIMIT = 64;
 
     private final int atlasWidth;
     private final int atlasHeight;
@@ -52,12 +56,59 @@ public class PatternAtlas {
 
     // Batch upload support: CPU-side pixel buffer mirrors the GPU atlas.
     // During batch mode, uploadPattern() writes to cpuPixels only (no GL calls).
-    // endBatch() uploads each dirty page with a single glTexSubImage2D.
+    // endBatch() uploads only the dirty region of each dirty page: individual tiles
+    // while the exact dirty-slot list holds, otherwise the dirty bounding rectangle.
     private byte[][] cpuPixels;      // per-atlas-page pixel data [atlasWidth * atlasHeight]
     private boolean[] dirtyPages;    // tracks which pages were written during batch
+    // Exact dirty-slot tracking (per page): fixed-capacity slot list with overflow flag.
+    // Bounds (min/max dirty tile x/y) keep updating even after the slot list overflows.
+    private int[][] dirtySlots;
+    private int[] dirtySlotCounts;
+    private boolean[] dirtySlotOverflow;
+    private int[] dirtyMinTileX;
+    private int[] dirtyMinTileY;
+    private int[] dirtyMaxTileX;
+    private int[] dirtyMaxTileY;
     private boolean batchMode = false;
     private byte[] patternUploadScratch;
     private final PerformanceProfiler profiler;
+    // GL upload seam: production sink issues the real GL calls; tests install a
+    // recording sink so dirty-tracking/upload decisions run without a GL context.
+    private AtlasUploadSink uploadSink = new GlUploadSink();
+
+    /**
+     * Package-private seam between upload-decision logic and the GL calls that
+     * execute it. {@code src} is CPU-side pixel data ({@code srcStride} bytes per
+     * row); the sink uploads the {@code width}x{@code height} rectangle whose
+     * top-left source byte is {@code src[srcOffset]} to texel ({@code x},{@code y}).
+     */
+    interface AtlasUploadSink {
+        void begin(int textureId);
+
+        void upload(byte[] src, int srcOffset, int srcStride, int x, int y, int width, int height);
+
+        void end();
+    }
+
+    /** Test seam: replace the GL upload sink with a recording implementation. */
+    void setUploadSink(AtlasUploadSink sink) {
+        this.uploadSink = sink;
+    }
+
+    /**
+     * Test seam: give headless-created pages synthetic non-zero texture ids so
+     * endBatch() flushes them through the (stubbed) upload sink. Pages are treated
+     * as already in sync with the CPU mirror (no full-page dirty mark).
+     */
+    void assignHeadlessTextureIdsForTesting() {
+        int nextId = 1;
+        for (AtlasPage page : pages) {
+            if (page.textureId() == 0) {
+                page.setTextureId(nextId);
+            }
+            nextId++;
+        }
+    }
 
     /** Describes a registered virtual pattern ID range for collision detection. */
     public record PatternRange(int base, int size, String category) {}
@@ -169,23 +220,106 @@ public class PatternAtlas {
         if (initialized) {
             return;
         }
+        // Eagerly allocate the CPU-side pixel mirror BEFORE creating textures so
+        // ALL uploads populate it and fresh textures can be marked fully dirty
+        // (their GL contents are undefined until the first flush syncs the mirror).
+        ensureCpuMirror();
         if (pages.isEmpty()) {
             pages.add(createPage(0));
         } else {
             for (AtlasPage page : pages) {
                 if (page.textureId() == 0) {
                     page.setTextureId(createTexture());
+                    markPageFullyDirty(page.atlasIndex());
                 }
             }
         }
-        // Eagerly allocate CPU-side pixel buffer so ALL uploads
-        // (initial load + batch overlays) populate it.
-        if (cpuPixels == null) {
-            int pagePixels = atlasWidth * atlasHeight;
-            cpuPixels = new byte[MAX_ATLASES][pagePixels];
-            dirtyPages = new boolean[MAX_ATLASES];
-        }
         initialized = true;
+    }
+
+    private void ensureCpuMirror() {
+        if (cpuPixels != null) {
+            return;
+        }
+        int pagePixels = atlasWidth * atlasHeight;
+        cpuPixels = new byte[MAX_ATLASES][pagePixels];
+        dirtyPages = new boolean[MAX_ATLASES];
+        dirtySlots = new int[MAX_ATLASES][DIRTY_SLOT_TRACK_LIMIT];
+        dirtySlotCounts = new int[MAX_ATLASES];
+        dirtySlotOverflow = new boolean[MAX_ATLASES];
+        dirtyMinTileX = new int[MAX_ATLASES];
+        dirtyMinTileY = new int[MAX_ATLASES];
+        dirtyMaxTileX = new int[MAX_ATLASES];
+        dirtyMaxTileY = new int[MAX_ATLASES];
+        for (int i = 0; i < MAX_ATLASES; i++) {
+            clearDirtyState(i);
+        }
+    }
+
+    /**
+     * Marks every tile of a page dirty so the next {@link #endBatch()} uploads the
+     * whole page. Used when a GL texture is (re)created for a page whose contents
+     * are undefined relative to the CPU mirror. Package-private for tests.
+     */
+    void markPageFullyDirty(int atlasIndex) {
+        // Never skip silently: an undefined GL texture must not be treated as clean.
+        ensureCpuMirror();
+        if (atlasIndex < 0 || atlasIndex >= dirtyPages.length) {
+            throw new IllegalArgumentException("atlasIndex out of range: " + atlasIndex);
+        }
+        dirtyPages[atlasIndex] = true;
+        dirtySlotOverflow[atlasIndex] = true;
+        dirtyMinTileX[atlasIndex] = 0;
+        dirtyMinTileY[atlasIndex] = 0;
+        dirtyMaxTileX[atlasIndex] = tilesPerRow - 1;
+        dirtyMaxTileY[atlasIndex] = tilesPerColumn - 1;
+    }
+
+    private void clearDirtyState(int atlasIndex) {
+        dirtyPages[atlasIndex] = false;
+        dirtySlotCounts[atlasIndex] = 0;
+        dirtySlotOverflow[atlasIndex] = false;
+        dirtyMinTileX[atlasIndex] = Integer.MAX_VALUE;
+        dirtyMinTileY[atlasIndex] = Integer.MAX_VALUE;
+        dirtyMaxTileX[atlasIndex] = -1;
+        dirtyMaxTileY[atlasIndex] = -1;
+    }
+
+    private void markTileDirty(int atlasIndex, int slot, int tileX, int tileY) {
+        if (dirtyPages == null || atlasIndex < 0 || atlasIndex >= dirtyPages.length) {
+            return;
+        }
+        dirtyPages[atlasIndex] = true;
+        // Bounds must keep updating even after the exact slot list overflows so the
+        // fallback rectangle always covers the union of every dirty tile.
+        if (tileX < dirtyMinTileX[atlasIndex]) {
+            dirtyMinTileX[atlasIndex] = tileX;
+        }
+        if (tileX > dirtyMaxTileX[atlasIndex]) {
+            dirtyMaxTileX[atlasIndex] = tileX;
+        }
+        if (tileY < dirtyMinTileY[atlasIndex]) {
+            dirtyMinTileY[atlasIndex] = tileY;
+        }
+        if (tileY > dirtyMaxTileY[atlasIndex]) {
+            dirtyMaxTileY[atlasIndex] = tileY;
+        }
+        if (dirtySlotOverflow[atlasIndex]) {
+            return;
+        }
+        int[] slots = dirtySlots[atlasIndex];
+        int count = dirtySlotCounts[atlasIndex];
+        for (int i = 0; i < count; i++) {
+            if (slots[i] == slot) {
+                return;
+            }
+        }
+        if (count < DIRTY_SLOT_TRACK_LIMIT) {
+            slots[count] = slot;
+            dirtySlotCounts[atlasIndex] = count + 1;
+        } else {
+            dirtySlotOverflow[atlasIndex] = true;
+        }
     }
 
     public Entry cachePattern(Pattern pattern, int patternId) {
@@ -326,6 +460,13 @@ public class PatternAtlas {
         pages.clear();
         cpuPixels = null;
         dirtyPages = null;
+        dirtySlots = null;
+        dirtySlotCounts = null;
+        dirtySlotOverflow = null;
+        dirtyMinTileX = null;
+        dirtyMinTileY = null;
+        dirtyMaxTileX = null;
+        dirtyMaxTileY = null;
         if (patternUploadBuffer != null) {
             MemoryUtil.memFree(patternUploadBuffer);
             patternUploadBuffer = null;
@@ -406,17 +547,15 @@ public class PatternAtlas {
      * Call {@link #endBatch()} to flush everything to the GPU in one call per page.
      */
     public void beginBatch() {
-        if (cpuPixels == null) {
-            int pagePixels = atlasWidth * atlasHeight;
-            cpuPixels = new byte[MAX_ATLASES][pagePixels];
-            dirtyPages = new boolean[MAX_ATLASES];
-        }
+        ensureCpuMirror();
         batchMode = true;
     }
 
     /**
-     * End batch mode and upload every dirty atlas page to the GPU
-     * with a single {@code glTexSubImage2D} per page.
+     * End batch mode and upload the dirty region of every dirty atlas page to the
+     * GPU: individual 8x8 tile uploads under one texture bind while the exact
+     * dirty-slot list holds (≤{@value #DIRTY_SLOT_TRACK_LIMIT} distinct tiles),
+     * otherwise one upload of the dirty tiles' bounding rectangle.
      */
     public void endBatch() {
         if (!batchMode) {
@@ -433,24 +572,17 @@ public class PatternAtlas {
         // which preserves the active section by shifting its start timestamp.
         long uploadStartNanos = System.nanoTime();
         try {
-            int pagePixels = atlasWidth * atlasHeight;
-            ByteBuffer buf = ensureFullPageUploadBuffer();
             for (int i = 0; i < pages.size(); i++) {
-                if (!dirtyPages[i]) {
+                if (i >= dirtyPages.length || !dirtyPages[i]) {
                     continue;
                 }
                 int textureId = getTextureId(i);
                 if (textureId == 0) {
+                    // No texture yet (headless page): keep the dirty state pending so a
+                    // later flush after texture creation still syncs the mirror.
                     continue;
                 }
-                buf.clear();
-                buf.put(cpuPixels[i], 0, pagePixels);
-                buf.flip();
-                glBindTexture(GL_TEXTURE_2D, textureId);
-                glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, atlasWidth, atlasHeight,
-                        GL_RED, GL_UNSIGNED_BYTE, buf);
-                glBindTexture(GL_TEXTURE_2D, 0);
-                dirtyPages[i] = false;
+                flushDirtyPage(i, textureId);
             }
         } finally {
             if (profiler != null) {
@@ -460,7 +592,42 @@ public class PatternAtlas {
         }
     }
 
-    private void uploadPattern(Pattern pattern, Entry entry) {
+    private void flushDirtyPage(int atlasIndex, int textureId) {
+        byte[] page = cpuPixels[atlasIndex];
+        uploadSink.begin(textureId);
+        try {
+            if (!dirtySlotOverflow[atlasIndex]) {
+                // Small change: upload each dirty tile individually under one bind.
+                byte[] tile = ensurePatternUploadScratch();
+                int[] slots = dirtySlots[atlasIndex];
+                int count = dirtySlotCounts[atlasIndex];
+                for (int i = 0; i < count; i++) {
+                    int slot = slots[i];
+                    int pixelX = (slot % tilesPerRow) * TILE_SIZE;
+                    int pixelY = (slot / tilesPerRow) * TILE_SIZE;
+                    for (int row = 0; row < TILE_SIZE; row++) {
+                        System.arraycopy(page, (pixelY + row) * atlasWidth + pixelX,
+                                tile, row * TILE_SIZE, TILE_SIZE);
+                    }
+                    uploadSink.upload(tile, 0, TILE_SIZE, pixelX, pixelY, TILE_SIZE, TILE_SIZE);
+                }
+            } else {
+                // Large change: upload the bounding rectangle of all dirty tiles.
+                int x0 = dirtyMinTileX[atlasIndex] * TILE_SIZE;
+                int y0 = dirtyMinTileY[atlasIndex] * TILE_SIZE;
+                int width = (dirtyMaxTileX[atlasIndex] + 1) * TILE_SIZE - x0;
+                int height = (dirtyMaxTileY[atlasIndex] + 1) * TILE_SIZE - y0;
+                uploadSink.upload(page, y0 * atlasWidth + x0, atlasWidth, x0, y0, width, height);
+            }
+        } finally {
+            uploadSink.end();
+        }
+        // Cleared only after a successful flush: a throwing sink must leave the
+        // dirty state intact so a later flush can still sync GPU and mirror.
+        clearDirtyState(atlasIndex);
+    }
+
+    void uploadPattern(Pattern pattern, Entry entry) {
         int pixelX = entry.tileX() * TILE_SIZE;
         int pixelY = entry.tileY() * TILE_SIZE;
         byte[] patternPixels = ensurePatternUploadScratch();
@@ -477,24 +644,63 @@ public class PatternAtlas {
         }
 
         if (batchMode) {
-            // Mark page dirty — actual GL upload deferred to endBatch()
-            if (dirtyPages != null && entry.atlasIndex() < dirtyPages.length) {
-                dirtyPages[entry.atlasIndex()] = true;
-            }
+            // Record the dirty tile — actual GL upload deferred to endBatch()
+            markTileDirty(entry.atlasIndex(), entry.slot(), entry.tileX(), entry.tileY());
             return;
         }
 
-        // Immediate upload (non-batch path)
-        ByteBuffer patternBuffer = ensurePatternUploadBuffer();
-        patternBuffer.clear();
-        patternBuffer.put(patternPixels, 0, TILE_SIZE * TILE_SIZE);
-        patternBuffer.flip();
-
+        // Immediate upload (non-batch path): bind, upload one tile, unbind.
         int textureId = getTextureId(entry.atlasIndex());
-        glBindTexture(GL_TEXTURE_2D, textureId);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, pixelX, pixelY, TILE_SIZE, TILE_SIZE,
-                GL_RED, GL_UNSIGNED_BYTE, patternBuffer);
-        glBindTexture(GL_TEXTURE_2D, 0);
+        uploadSink.begin(textureId);
+        try {
+            uploadSink.upload(patternPixels, 0, TILE_SIZE, pixelX, pixelY, TILE_SIZE, TILE_SIZE);
+        } finally {
+            uploadSink.end();
+        }
+    }
+
+    /** Production sink: stages CPU pixels into a direct buffer and issues the GL calls. */
+    private final class GlUploadSink implements AtlasUploadSink {
+        @Override
+        public void begin(int textureId) {
+            glBindTexture(GL_TEXTURE_2D, textureId);
+        }
+
+        @Override
+        public void upload(byte[] src, int srcOffset, int srcStride, int x, int y,
+                int width, int height) {
+            if (srcStride == width) {
+                // Tightly packed source rows: stage exactly width*height bytes.
+                int length = width * height;
+                ByteBuffer buf = length <= TILE_SIZE * TILE_SIZE
+                        ? ensurePatternUploadBuffer() : ensureFullPageUploadBuffer();
+                buf.clear();
+                buf.put(src, srcOffset, length);
+                buf.flip();
+                glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, width, height,
+                        GL_RED, GL_UNSIGNED_BYTE, buf);
+                return;
+            }
+            // Strided source (dirty rectangle inside a page row): stage the spanning
+            // bytes once and let GL_UNPACK_ROW_LENGTH skip the non-dirty columns.
+            ByteBuffer buf = ensureFullPageUploadBuffer();
+            buf.clear();
+            buf.put(src, srcOffset, (height - 1) * srcStride + width);
+            buf.flip();
+            glPixelStorei(GL_UNPACK_ROW_LENGTH, srcStride);
+            try {
+                glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, width, height,
+                        GL_RED, GL_UNSIGNED_BYTE, buf);
+            } finally {
+                // Reset so later uploads are not poisoned by stale pixel-store state.
+                glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+            }
+        }
+
+        @Override
+        public void end() {
+            glBindTexture(GL_TEXTURE_2D, 0);
+        }
     }
 
     private byte[] ensurePatternUploadScratch() {
@@ -526,6 +732,11 @@ public class PatternAtlas {
 
     private AtlasPage createPage(int atlasIndex, boolean headless) {
         int textureId = headless ? 0 : createTexture();
+        if (textureId != 0) {
+            // Fresh GL texture contents are undefined: schedule a full sync from the
+            // CPU mirror so dirty-rect uploads never leave stale/undefined texels.
+            markPageFullyDirty(atlasIndex);
+        }
         return new AtlasPage(atlasIndex, textureId, maxSlots);
     }
 

@@ -200,6 +200,18 @@ re-uploads the full 1 MB page: **~512:1 upload amplification** for a typical
 2 KB DPLC change, up to 2 MB/frame if both atlas pages (MAX_ATLASES=2) are
 dirtied.
 
+**Phase 2A upload measurement (Task 4, simulated):** `PatternAtlas.endBatch()`
+now tracks exact dirty slots (up to 64 per page, individual 8x8 tile uploads
+under one bind) with a dirty-bounding-rectangle fallback past that
+(`GL_UNPACK_ROW_LENGTH`-strided, reset in finally). Measured through the
+package-private upload-accounting sink in `TestPatternAtlasDirtyUploads`
+(headless simulation — real GL scenes can't run headless, numbers are the
+agreed simulated substitute for the two baseline workloads):
+typical DPLC change (32 scattered tiles/endBatch) = **2,048 bytes vs
+1,048,576-byte full-page baseline → 512.0x reduction**; CNZ slot-machine
+burst (48 tiles every frame) = **3,072 bytes/endBatch → 341.3x reduction**.
+Both exceed the ≥100x spec acceptance target for DPLC animation.
+
 **`TilemapTexture.upload` (TilemapTexture.java:40-59):** uploads the full
 `widthTiles x heightTiles` RGBA8 BG tilemap window via one `glTexSubImage2D`
 (4 bytes/texel) every time the window content is rebuilt — the rebuild is
