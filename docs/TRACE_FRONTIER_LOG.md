@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+## 2026-06-11 - S3K ICZ complete-run progressed to snowboard speed frontier
+
+- Scope: follow-up to the ICZ frame-171 snowboard jump timing mismatch. Trace
+  data remained comparison-only diagnostic input; no engine state was hydrated
+  from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - `IczSnowboardIntroInstance` now holds the ICZ snowboard intro's
+    `Ctrl_1_locked`-equivalent state across the active overlay and mirrors ROM
+    `Obj_LevelIntroICZ1` `loc_3984E` by copying raw A/B/C/Start input into a
+    logical jump edge for the next player frame instead of jumping in the same
+    object update.
+  - `HeadlessTestRunner` no longer injects its BK2 synthetic logical action
+    edge while the focused sprite is control-locked; object scripts can still
+    consume raw frame input through the normal published input state.
+  - Focused coverage asserts both the control-lock harness gate and the ICZ
+    snowboard frame-171 grounded sample followed by the next-frame jump.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestHeadlessTestRunnerBk2Input,com.openggf.tests.TestS3kIcz1SnowboardIntroHeadless#sonicAndTailsStartsSnowboardIntroWithTailsDormantMarker" test`
+    -> GREEN. Surefire report: `Tests run: 3, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 171 to frame 488. New
+    first error: main-player `x_speed` `expected=0x120D`, `actual=0x126F`; ICZ
+    error count is 3204.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  snowboard speed maintenance/motion around frame 488, where the engine still
+  reports the pre-deceleration `x_speed=0x126F` while the ROM has decelerated to
+  `0x120D`.
+
 ## 2026-06-11 - S3K ICZ complete-run progressed to air-state frontier
 
 - Scope: follow-up to the ICZ frame-163 snowboard-route ring-count mismatch.

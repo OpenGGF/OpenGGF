@@ -153,6 +153,25 @@ public class TestS3kIcz1SnowboardIntroHeadless {
                 "ICZ snowboard object_control=#2 must not suppress Test_Ring_Collisions");
         assertEquals(1, sonic.getRingCount(),
                 "Sonic should collect the first ICZ1 snowboard-route ring while object_control=#2 is active");
+
+        for (int frame = 164; frame < 171; frame++) {
+            fixture.stepFrame(false, false, false, true, false);
+        }
+        fixture.stepFrame(false, false, false, true, true);
+
+        assertFalse(sonic.getAir(),
+                "ROM loc_3984E queues A/B/C input after Sonic's frame, so the snowboard jump cannot happen early");
+        assertFalse(sonic.getRolling(),
+                "Frame-171 ICZ snowboard trace remains grounded and unrolled until the queued logical jump is consumed");
+        assertEquals(5, sonic.getRingCount(),
+                "The low-bit ICZ snowboard object_control state should keep collecting route rings before jump handoff");
+
+        fixture.stepFrame(false, false, false, true, false);
+
+        assertTrue(sonic.getAir(),
+                "The queued snowboard jump press should be consumed by normal player physics on the next frame");
+        assertTrue(sonic.getRolling(),
+                "The queued snowboard jump should use the normal rolling jump transition");
     }
 
     @Test

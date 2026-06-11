@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K ICZ1 snowboard jump timing now follows locked-controller ROM input
+  handoff:** the snowboard intro now keeps `Ctrl_1_locked`-equivalent state
+  queued across object ticks and publishes raw A/B/C/Start input as a normal
+  logical jump edge on the next player frame, while the headless BK2 harness no
+  longer injects synthetic logical action edges through control lock. This moves
+  the ICZ complete-run trace from the frame-171 air-state mismatch to the
+  frame-488 snowboard speed frontier.
+
 - **S3K ICZ1 snowboard object control no longer blocks route rings:** the
   snowboard intro now models ROM `object_control=#3/#2` as low-bit object
   ownership rather than bit-7 touch suppression, so Sonic can collect placed
