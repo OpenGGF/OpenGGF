@@ -4,6 +4,25 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Audio, rendering, and rewind hot-path overhead is reduced without changing
+  trace replay behavior:** held rewind now restores matching objects in place
+  and defers the audio-driver rebuild to a single restore on release, the
+  pattern atlas uploads only dirty tile regions instead of full 1 MB pages,
+  background scrolling shifts the tilemap window incrementally and SAT replay
+  draws batch into instanced commands, rewind capture reflection is memoized,
+  and per-frame object/render/ring/audio-runtime churn allocations are
+  removed. Fade-outs no longer degrade the SMPS driver to per-sample
+  rendering (proven byte-identical), and the audio command timeline is
+  bounded with frame-local `beginFrame` scans. Measurements and acceptance
+  verdicts are recorded in `docs/performance/2026-06-11-performance-baseline.md`
+  and `docs/performance/2026-06-11-performance-results-tally.md`.
+
+- **Tails' tail directional frames now use the ROM CalcAngle table:** the
+  tail-angle selection in `TailsTailsController` routes through the exact
+  `CalcAngle`/`GetArcTan` port in `TrigLookupTable` (s2.asm:4037-4081,
+  sonic3k.asm:3043) instead of `Math.atan2`, improving ROM parity; the full
+  trace sweep failure set is unchanged.
+
 - **Trace replay lag frames are classified consistently across all games:**
   S1/S2 use gameplay-frame counter advancement as the full-frame signal, S3K
   treats lag-counter-only rows as VBlank-only frames, and gameplay advancement

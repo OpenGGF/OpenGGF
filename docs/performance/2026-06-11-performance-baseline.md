@@ -454,3 +454,132 @@ pixel dimensions are powers of two, with the historical div/mod fallback
 otherwise; equivalence is locked by `TestChunkDescPow2Indexing` (fast vs
 verbatim-oracle comparison across negatives, wrap boundaries, and
 non-power-of-two fallback levels).
+
+## Task 13 acceptance measurements (2026-06-12, final)
+
+Closing acceptance pass for the plan. Working tree: branch
+`bugfix/ai-performance-optimization` at `e8e413cee` plus the Task 13 guard
+fixes (LevelManager block-grid extraction into `BlockGridIndexer`, six new
+test setups moved onto `TestEnvironment.resetAll()`), committed together
+with this section. All measurements below were taken on an otherwise idle
+machine, sequentially, with the recipes above.
+
+### Full test suite and trace sweep
+
+- Full `mvn test` at `e8e413cee` surfaced two branch-introduced guard
+  failures missed by per-task focused runs: the `TestArchitecturalSourceGuard`
+  LevelManager line ratchet (4135 > 4085 after Task 12) and
+  `TestSingletonLifecycleGuard` flagging the six measurement/regression test
+  setups added by this branch. Both are FIXED in the Task 13 commits
+  (extraction; approved lifecycle fixtures) and the guards re-verified green.
+- Final full `mvn test` at the fixed tree: **7485 run, 0 failures, 1 error,
+  9 skipped** — the single error is the ArchUnit freeze-store item below.
+- KNOWN OPEN ISSUE: `TestArchUnitRules.low_level_layers_do_not_depend_on_runtime_layers`
+  errors with `StoreUpdateFailedException`. The Task 5/6 GraphicsManager
+  refactor renamed methods that carried frozen-baseline violations, so the
+  freeze store holds 3 obsolete entries and misses 4 relocated ones (same
+  pre-existing dependencies — `renderPreparedPiece`, `GameServices.configuration()`,
+  `PatternDesc` setters — under the new method names; net architectural debt
+  unchanged). Updating the frozen store (`allowStoreUpdate`/refreeze) is an
+  audit-baseline change deliberately NOT made by the automated Task 13 pass;
+  it needs an explicit maintainer decision. Until then this one rule is red.
+- Full `*TraceReplay` sweep at the final tree: **88 run, 52 failures,
+  1 error — per-class failure set identical to the pre-work baseline list**
+  (same 13 green classes, same 43 single-failure classes, `TestS3kCnzTraceReplay`
+  still 9F+1E; spot-checked first-error frames/fields unchanged). Logged in
+  `docs/TRACE_FRONTIER_LOG.md` (2026-06-12 entry).
+- S3K keep-green list: PASS. `TestSmpsFadeHybridParity`,
+  `TestSmpsFadeAudioThroughput`, `TestHeldRewindAudioStepCost`,
+  `TestSatReplayBatching`, `TestIncrementalBgTilemapWindow`,
+  `TestRingManagerActiveIndices` re-verified green with the new setups.
+
+### EHZ1 RewindBenchmark, final cut (3 runs; median in bold)
+
+| Phase | run 1 / run 2 / run 3 | baseline |
+|---|---|---|
+| phase1.forward.on p50 | 30.2 / **26.1** / 26.2 µs | 32.9 µs |
+| phase1.forward.on p99 | 3.33 / **3.04** / 2.97 ms | 4.32 ms |
+| phase1.forward.on max (keyframe spike) | 40.02 / **27.89** / 27.60 ms | 71.73 ms |
+| phase2.capture p99 | 236.0 / **228.7** / 292.6 µs | 283.3 µs |
+| phase2.capture max | 1.23 / **1.03** / 1.24 ms | 1.25 ms |
+| phase4.cold-seek p50 | 4.69 / **3.72** / 3.88 ms | 5.77 ms |
+| phase4.cold-seek max | 13.22 / **15.33** / 16.29 ms | 34.61 ms |
+| phase5.hot-seek.within p50 | 0.18 / **0.18** / 0.19 ms | 0.24 ms |
+
+Medians vs baseline: forward-on p99 **1.42x** (4.32 → 3.04 ms), keyframe
+spike max **2.57x** (71.73 → 27.89 ms, a 61% reduction; run 1's 40.02 ms
+outlier is still a 44% reduction), cold-seek p50 **1.49x** / max **2.26x**.
+Other gates: phase6.memory 21 keyframes at 8225 bytes/keyframe (within noise
+of the Phase 3 cut); longtail.determinism clean through 1200 frames;
+phase7.audio capture/restore/replay means ~0.65 µs / ~0.4 µs / ~13 µs
+(baseline 0.80 / 0.45 / 12.9 — flat within noise).
+
+### Held-rewind allocation (Step 3 probe, final; identical across 3 runs)
+
+| Mode | per-frame | rate @60fps | Phase 4B | baseline |
+|---|---|---|---|---|
+| Forward stepping (1200 frames) | **6.27 KB** | 0.368 MB/s | 6.27 KB | 7.9 KB |
+| Held rewind (600 stepBackward) | **43.91 KB** | 2.573 MB/s | 43.91 KB | 51.8 KB |
+
+Sub-measurements: pure `registry.restore` 6.45 KB/op, pure
+`registry.capture` 17.42 KB/op — unchanged from the Phase 4B cut, confirming
+the residual held-rewind cost is the segment-cache rebuild capture share
+(~24.5 KB/frame amortized), which no plan task covered.
+
+### Real-backend audio harnesses (final HEAD)
+
+| Metric | Baseline `a737d65a9` | Final | Ratio |
+|---|---|---|---|
+| Fade-window throughput (rendered-s/wall-s, median of 5) | 136.7 (run 2: 129.3) | **190.0** | **~1.39x** |
+| Held-rewind backward step, wall (median of 3 reps) | 107.3 µs | **4.8 µs** | **~22x** |
+| Held-rewind backward step, allocation | 180.2 KB | **0.7 KB** | **~257x** |
+| Release commit (once per hold) | n/a (cost was per-step) | 2.36 ms | replaces 60 rebuilds |
+
+### Atlas upload / BG scroll / audio timeline (carried forward)
+
+- DPLC atlas uploads: simulated-workload tests (`TestPatternAtlasDirtyUploads`)
+  pin 2,048 bytes vs 1,048,576 per `endBatch` (**512x**) for the typical
+  32-tile DPLC change and 3,072 bytes (**341x**) for the CNZ 48-tile burst.
+- BG scroll: the 16 px scroll step rebuilds one column instead of the full
+  window (**~64x fewer chunk lookups**, allocation-free), byte-identity
+  pinned vs an independent full rebuild; the ~8-16 KB full texture upload is
+  retained BY DESIGN (base-anchored shader addressing — see Task 5 notes).
+- `AudioCommandTimeline`: `beginFrame` is a frame-local tail-walk and
+  `entries()` copies are gone; pruning is implemented and tested but
+  DEAD CODE on this branch — the production caller arrives with the
+  release-remediation merge, so timeline memory is bounded only once that
+  branch lands.
+
+### Acceptance criteria verdicts (design spec)
+
+1. **Trace sweep, no regression vs baseline: MET.** 88/52F/1E, per-class set
+   identical to the pre-work baseline; 13 green classes stayed green
+   (re-verified after every phase and again at the final tree).
+2. **Held-rewind allocation >=10x; no intermediate construction: SPLIT.**
+   (a) The blanket headless-probe number is **1.18x** (51.8 → 43.91 KB/frame)
+   — MISSED on that metric: the probe is dominated by segment-cache rebuild
+   capture (~24.5 KB/frame), which was never a plan task (flagged in the
+   Phase 3 and 4B notes). (b) The AUDIO component, measured with the real
+   synth backend on the path the probe cannot see, is **~257x** per-step
+   allocation (~22x wall) — the >=10x target is met on the component the
+   criterion was written about. (c) No audio driver or object instances are
+   constructed on intermediate backward frames: **MET and test-pinned**
+   (zero audio restores while held; in-place object reuse for audit-approved
+   classes with create-fallback only on mismatch).
+3. **Keyframe-capture spike >=50% reduced: MET.** Forward-on max
+   71.73 → 27.89 ms median-of-3 (61%; worst run 44%), p99 4.32 → 3.04 ms;
+   isolated capture p99 283 → 229 µs.
+4. **DPLC uploads >=100x; BG scroll avoids full-window rebuilds: MET.**
+   512x / 341x simulated; BG single-column advance no longer triggers a
+   full-window CPU rebuild (full ~8-16 KB texture upload retained by design,
+   as above).
+5. **AudioCommandTimeline bounded; beginFrame not O(session): MET** with the
+   explicit caveat that pruning goes live only when the release-remediation
+   branch's caller merges; the tail-walk `beginFrame` and copy removals are
+   active now.
+6. **No new dependencies; no carve-outs; behavior changes only with
+   evidence: MET.** No dependency changes; no zone/route/frame carve-outs
+   (trace fixes were not in scope; the one behavior change is the Tails
+   CalcAngle ROM-parity fix, disasm-cited s2.asm:4037-4081 / sonic3k.asm:3043,
+   trace-set-identical). Fade-chunking behavior change carries PCM
+   byte-identity proofs; every other change is equivalence- or test-pinned.

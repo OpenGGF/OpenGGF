@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+## 2026-06-12 - Performance-optimization final acceptance sweep (Task 13)
+
+- Scope: closing acceptance sweep for the performance-optimization plan
+  (`docs/superpowers/plans/2026-06-11-performance-optimization.md`), run at
+  the end of the branch after all 12 implementation tasks plus the final
+  guard fixes (LevelManager block-grid extraction, lifecycle-fixture test
+  setups). Compared against the 2026-06-11 pre-work baseline below.
+- Command: `mvn "-Dtest=*TraceReplay" test` in worktree
+  `sonic-engine-performance-optimization` (branch
+  `bugfix/ai-performance-optimization`, working tree at `e8e413cee` plus the
+  final guard fixes committed with this entry).
+- Result: **Tests run: 88, Failures: 52, Errors: 1, Skipped: 0 — failure set
+  identical to the pre-work baseline.** Per-class distribution matches
+  exactly: the same 13 classes pass (8 `TestS1Credits*`, `TestS1Ghz1`,
+  `TestS2Ehz1`, `TestS2Scz`/`TestS2Wfz` LevelSelect, `TestS3kAiz` 16/16), the
+  same 43 classes fail with 1 failure each, and `TestS3kCnzTraceReplay` stays
+  mixed at 9 failures + 1 NPE error. Spot-checked first-error frames/fields
+  are unchanged (e.g. Ghz1CompleteRun frame 1394 x_speed, ArzLevelSelect
+  frame 1285 tails_cpu_interact, MgzCompleteRun frame 738 rings,
+  MhzCompleteRun frame 0 tails_cpu_routine). No lwjgl/glfw or
+  `TestBundledConfigResource` environment noise.
+- Verdict: spec acceptance criterion 1 (no trace regression vs the pre-work
+  baseline) is MET. Final measurements live in
+  `docs/performance/2026-06-11-performance-baseline.md` (Task 13 section)
+  and `docs/performance/2026-06-11-performance-results-tally.md`.
+
 ## 2026-06-11 - Performance-optimization pre-work full sweep baseline
 
 - Scope: Task 0 of the performance-optimization plan
