@@ -74,6 +74,10 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
     // ===== Timer durations (in frames) =====
     // ROM: move.w #2*60,$30(a0) — 120 frames when turning off
     private static final int IDLE_DURATION = 2 * 60;    // 120 frames
+    // The ROM stores #120 after the first negative countdown tick; because the
+    // engine's Java update observes the post-setup state in the same call, keep
+    // the terminal zero tick idle before the fan resumes player interaction.
+    private static final int ENGINE_IDLE_COUNTDOWN_RESET = IDLE_DURATION + 1;
     // ROM: move.w #3*60,$30(a0) — 180 frames when turning on
     private static final int ACTIVE_DURATION = 3 * 60;  // 180 frames
 
@@ -217,7 +221,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
         timer--;
         if (timer < 0) {
             speedRamp = 0;
-            timer = IDLE_DURATION;
+            timer = ENGINE_IDLE_COUNTDOWN_RESET;
             toggleFlag ^= 1;  // ROM: bchg #0,$32(a0)
             if (toggleFlag == 0) {
                 // Fan just turned on

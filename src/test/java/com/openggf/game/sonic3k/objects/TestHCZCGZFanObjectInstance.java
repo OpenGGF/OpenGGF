@@ -6,6 +6,7 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -31,6 +32,29 @@ class TestHCZCGZFanObjectInstance {
                 "Duplicate sidekick entries should be de-duplicated by the participation policy");
         assertEquals(main.getCentreY(), knuckles.getCentreY(),
                 "All engine sidekicks should still receive the independent fan push");
+    }
+
+    @Test
+    void timerFanKeepsTerminalIdleTickBeforeSettingConveyorMarker() {
+        HCZCGZFanObjectInstance fan = new HCZCGZFanObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic3kObjectIds.HCZ_CGZ_FAN, 0x44, 0, false, 0));
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x1000, (short) 0x0F80);
+        player.setCentreX((short) 0x1000);
+        player.setCentreY((short) 0x0F80);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        fan.setServices(new QueryOnlyPlayerServices(player, List.of()));
+
+        for (int frame = 0; frame <= 121; frame++) {
+            player.setGSpeed((short) 0);
+            fan.update(frame, player);
+            assertEquals(0, player.getGSpeed(),
+                    "Timer fan should not set the conveyor marker during the terminal idle tick");
+        }
+
+        fan.update(122, player);
+
+        assertEquals(1, player.getGSpeed(),
+                "The next update after the terminal idle tick should resume fan/conveyor interaction");
     }
 
     private static TestablePlayableSprite playerInFanColumn(String code) {

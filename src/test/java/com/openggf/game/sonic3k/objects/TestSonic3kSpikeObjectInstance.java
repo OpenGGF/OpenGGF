@@ -21,6 +21,16 @@ class TestSonic3kSpikeObjectInstance {
     }
 
     @Test
+    void spikesUseSolidObjectFullAirborneStaleStandingBitReturn() {
+        Sonic3kSpikeObjectInstance spikes = new Sonic3kSpikeObjectInstance(
+                new ObjectSpawn(0x01D0, 0x05F0, Sonic3kObjectIds.SPIKES, 0x00, 0, false, 0));
+
+        assertTrue(spikes.airborneStaleStandingBitReturnsNoContact(null),
+                "Obj_Spikes calls SolidObjectFull; an airborne player with this object's standing bit set "
+                        + "must clear support and return before SolidObject_cont creates a fresh contact");
+    }
+
+    @Test
     void spikesInitFrameDoesNotMoveOrRunSolidBodyUntilNextExecution() {
         Sonic3kSpikeObjectInstance spikes = new Sonic3kSpikeObjectInstance(
                 new ObjectSpawn(0x2000, 0x0145, Sonic3kObjectIds.SPIKES, 0x01, 0x02, false, 0));

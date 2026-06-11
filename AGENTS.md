@@ -118,7 +118,7 @@ See `TestHeadlessWallCollision.java` for a complete example.
 
 ### Tier 1: `GameServices` (Static Facade)
 
-Non-object code (managers, event handlers, controllers) accesses core managers through `GameServices` instead of direct `getInstance()` calls. Exposes gameplay-scoped accessors (`camera()`, `level()`, `gameState()`, `timers()`, `sprites()`, `fade()`, `collision()`, `parallax()`, `water()`, `debugOverlay()`, ...) requiring an active `GameplayModeContext`, plus engine globals (`rom()`, `audio()`, `graphics()`, `configuration()`, `module()`, ...) resolved via `EngineServices`, plus `*OrNull()` variants. See `GameServices.java` for the full surface.
+Non-object code (managers, event handlers, controllers) accesses core managers through `GameServices` instead of direct `getInstance()` calls. Exposes gameplay-scoped accessors (`camera()`, `level()`, `gameState()`, `timers()`, `sprites()`, `fade()`, `collision()`, `parallax()`, `water()`, ...) requiring an active `GameplayModeContext`, plus engine globals (`rom()`, `audio()`, `graphics()`, `configuration()`, `module()`, `debugOverlay()`, ...) resolved via `EngineServices`, plus `*OrNull()` variants. See `GameServices.java` for the full surface.
 
 ### Tier 2: `ObjectServices` (Per-Object Injection)
 
@@ -372,7 +372,7 @@ Five `com.openggf.tools` CLIs reduce context loss when implementing objects/zone
     *   **Chunk:** A 16x16 pixel tile, composed of Patterns.
     *   **Block:** A 128x128 pixel area, composed of Chunks.
 *   **Dependencies:** Running the engine requires LWJGL (OpenGL, OpenAL, GLFW bindings) and JOML (math library), already declared as dependencies in `pom.xml`.
-*   **Debug:** `debug.flags.debugView` (true by default) overlays sensor and collision info during gameplay.
+*   **Debug:** `debug.flags.debugView` (false by default) enables runtime debug shortcuts and overlay rendering; when enabled, debug mode overlays sensor and collision info during gameplay.
 *   **Level Loading:** Performed by `LevelManager`, which reads from the ROM through classes in `com.openggf.data`.
 *   **Conditional Tests**: `TestCollisionLogic` uses `Assume.assumeTrue` to skip when a ROM file is not present. This is a known and accepted conditional skip, not a hard `@Ignore`.
 *   **File Endings**: Ensure all source code files end with a newline character.

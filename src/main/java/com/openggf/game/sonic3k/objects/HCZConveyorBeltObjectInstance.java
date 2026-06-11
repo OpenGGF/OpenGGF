@@ -8,6 +8,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -286,14 +287,14 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance {
         // ROM: Left input (sonic3k.asm:66391-66399)
         if (player.isLeftPressed()) {
             // ROM: subq.w #1,x_pos(a1)
-            player.setCentreX((short) (player.getCentreX() - 1));
+            NativePositionOps.addXPosPreserveSubpixel(player, -1);
             advanceAnimOnInput(state);
         }
 
         // ROM: Right input (sonic3k.asm:66400-66408)
         if (player.isRightPressed()) {
             // ROM: addq.w #1,x_pos(a1)
-            player.setCentreX((short) (player.getCentreX() + 1));
+            NativePositionOps.addXPosPreserveSubpixel(player, 1);
             advanceAnimOnInput(state);
         }
 
@@ -317,7 +318,7 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance {
             // ROM: btst #0,status(a0) / beq.s / neg.w d0 (sonic3k.asm:66414-66416)
             autoMove = -autoMove;
         }
-        player.setCentreX((short) (player.getCentreX() + autoMove));
+        NativePositionOps.addXPosPreserveSubpixel(player, autoMove);
 
         // ROM: Bounds check (sonic3k.asm:66420-66424)
         int playerX = player.getCentreX() & 0xFFFF;
@@ -439,17 +440,8 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance {
         // ROM: andi.b #$FC,render_flags(a1) — clear facing and V-flip
         player.setRenderFlips(false, false);
 
-        // Clear rolling state so the player is vulnerable to enemy touch responses
-        // while on the belt (e.g. Chopper can grab and hurt the player). The ROM
-        // capture sequence doesn't have an explicit bclr #Status_Roll, but observed
-        // gameplay confirms the player is NOT in an attacking state on the belt.
-        // Must clear BEFORE setCentreY so the snap uses standing-height coordinates.
-        if (player.getRolling()) {
-            player.setRolling(false);
-        }
-
         // ROM: move.w d0,y_pos(a1) — snap to belt surface
-        player.setCentreY((short) snapY);
+        NativePositionOps.writeYPosPreserveSubpixel(player, snapY);
 
         // ROM: move.b #0,anim(a1) — idle animation base
         player.setAnimationId(0);
@@ -617,7 +609,7 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance {
         int yOffset = Y_OFFSET_TABLE[yIndex];
 
         // ROM: ext.w d1 / add.w y_pos(a0),d1 / move.w d1,y_pos(a1)
-        player.setCentreY((short) (objY + yOffset));
+        NativePositionOps.writeYPosPreserveSubpixel(player, objY + yOffset);
     }
 
     /**

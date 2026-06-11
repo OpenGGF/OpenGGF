@@ -41,7 +41,11 @@ public class DebugOverlayManager {
     }
 
     public void updateInput(InputHandler handler) {
-        if (handler == null) {
+        updateInput(handler, true);
+    }
+
+    public void updateInput(InputHandler handler, boolean debugShortcutsEnabled) {
+        if (handler == null || !debugShortcutsEnabled) {
             return;
         }
         for (DebugOverlayToggle toggle : DebugOverlayToggle.values()) {

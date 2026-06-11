@@ -21,6 +21,7 @@ import java.util.Objects;
 public final class LiveRewindInputSource implements InputSource {
 
     private final List<Bk2FrameInput> frames = new ArrayList<>();
+    private int baseFrame;
 
     public LiveRewindInputSource() {
         frames.add(new Bk2FrameInput(0, 0, 0, false, 0, 0, false,
@@ -30,7 +31,7 @@ public final class LiveRewindInputSource implements InputSource {
     public void appendFrame(InputHandler input, SonicConfigurationService config) {
         Objects.requireNonNull(input, "input");
         Objects.requireNonNull(config, "config");
-        int frameIndex = frames.size();
+        int frameIndex = baseFrame + frames.size();
         frames.add(new Bk2FrameInput(
                 frameIndex,
                 heldMask(input, config,
@@ -56,24 +57,38 @@ public final class LiveRewindInputSource implements InputSource {
     }
 
     public void discardAfter(int frame) {
-        int keepCount = Math.max(1, Math.min(frames.size(), frame + 1));
+        int keepCount = Math.max(1, Math.min(frames.size(), frame - baseFrame + 1));
         while (frames.size() > keepCount) {
             frames.remove(frames.size() - 1);
         }
     }
 
+    public void discardBefore(int frame) {
+        int removeCount = Math.min(Math.max(0, frame - baseFrame), frames.size() - 1);
+        if (removeCount <= 0) {
+            return;
+        }
+        frames.subList(0, removeCount).clear();
+        baseFrame += removeCount;
+    }
+
+    public int earliestFrame() {
+        return baseFrame;
+    }
+
     @Override
     public int frameCount() {
-        return frames.size();
+        return baseFrame + frames.size();
     }
 
     @Override
     public Bk2FrameInput read(int frame) {
-        if (frame < 0 || frame >= frames.size()) {
+        int index = frame - baseFrame;
+        if (index < 0 || index >= frames.size()) {
             throw new IndexOutOfBoundsException("Live rewind frame " + frame
-                    + " outside 0.." + (frames.size() - 1));
+                    + " outside " + baseFrame + ".." + (frameCount() - 1));
         }
-        return frames.get(frame);
+        return frames.get(index);
     }
 
     private static int heldMask(InputHandler input, SonicConfigurationService config,

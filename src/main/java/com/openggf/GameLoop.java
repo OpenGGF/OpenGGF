@@ -543,7 +543,11 @@ public class GameLoop {
 
         // Handle pause toggle - must work even when paused
         int pauseKey = configService.getInt(SonicConfiguration.PAUSE_KEY);
-        if (inputHandler.isKeyPressed(pauseKey)) {
+        if (!userPauseInputAllowedForCurrentMode() && userPaused) {
+            userPaused = false;
+            updateAudioPauseState();
+        }
+        if (userPauseInputAllowedForCurrentMode() && inputHandler.isKeyPressed(pauseKey)) {
             toggleUserPause();
         }
 
@@ -582,8 +586,11 @@ public class GameLoop {
         profiler.endSection("timers");
 
         profiler.beginSection("input");
-        debugOverlayManager.updateInput(inputHandler);
-        debugOverlayManager.getObjectArtViewer().updateInput(inputHandler);
+        boolean debugShortcutsEnabled = debugShortcutsEnabled();
+        debugOverlayManager.updateInput(inputHandler, debugShortcutsEnabled);
+        if (debugShortcutsEnabled) {
+            debugOverlayManager.getObjectArtViewer().updateInput(inputHandler);
+        }
 
         // Check for Special Stage toggle (TAB by default)
         if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_KEY))) {
@@ -591,7 +598,9 @@ public class GameLoop {
         }
 
         // Check for Bonus Stage toggle (Shift+B)
-        BonusStageType debugBonusType = resolveBonusStageDebugShortcut(inputHandler);
+        BonusStageType debugBonusType = debugShortcutsEnabled
+                ? resolveBonusStageDebugShortcut(inputHandler)
+                : BonusStageType.NONE;
         if (debugBonusType != BonusStageType.NONE) {
             handleBonusStageDebugKey(debugBonusType);
         }
@@ -928,7 +937,8 @@ public class GameLoop {
             }
         }
 
-        boolean freezeForArtViewer = debugOverlayManager.isEnabled(DebugOverlayToggle.OBJECT_ART_VIEWER);
+        boolean freezeForArtViewer = debugShortcutsEnabled()
+                && debugOverlayManager.isEnabled(DebugOverlayToggle.OBJECT_ART_VIEWER);
         // Freeze level updates during special/bonus stage entry transitions
         boolean freezeForSpecialStage = specialStageTransitionPending;
         boolean freezeForBonusStage = bonusStageTransitionPending;
@@ -1207,7 +1217,18 @@ public class GameLoop {
     }
 
     private boolean isUnmodifiedDebugKeyPressed(int keyCode) {
-        return inputHandler.isKeyPressedWithoutModifiers(keyCode);
+        return debugShortcutsEnabled() && inputHandler.isKeyPressedWithoutModifiers(keyCode);
+    }
+
+    private boolean debugShortcutsEnabled() {
+        return configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
+    }
+
+    private boolean userPauseInputAllowedForCurrentMode() {
+        return switch (currentGameMode) {
+            case LEVEL, TITLE_CARD, SPECIAL_STAGE, SPECIAL_STAGE_RESULTS, BONUS_STAGE -> true;
+            default -> false;
+        };
     }
 
     static BonusStageType resolveBonusStageDebugShortcut(InputHandler inputHandler) {

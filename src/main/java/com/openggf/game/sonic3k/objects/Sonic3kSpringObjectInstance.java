@@ -467,8 +467,14 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         }
         // ROM runs Player_2 before the spring object, so an air->ground landing
         // onto the spring line can reach sub_2326C with Status_InAir already
-        // clear. Engine ordering can leave the sidekick airborne until the next
-        // tick; accept only the frame that has reached the spring's Y line.
+        // clear. Underwater falling keeps the ROM sidekick in airborne water
+        // physics for the HCZ spring/waterline case, so do not synthesize this
+        // grounded handoff while Status_Underwater is set.
+        if (player.isInWater()) {
+            return false;
+        }
+        // Engine ordering can leave the sidekick airborne until the next tick;
+        // accept only the frame that has reached the spring's Y line.
         return player.getYSpeed() > 0 && (player.getCentreY() & 0xFFFF) >= (spawn.y() & 0xFFFF);
     }
 

@@ -108,6 +108,8 @@ public class Engine {
 	// Match the rest of the debug overlay — no drop shadow.
 	private final PixelFontTextRenderer traceHudTextRenderer =
 		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
+	private final PixelFontTextRenderer pauseTextRenderer =
+		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
 	private DisplayColorProfileController displayColorProfileController;
 
 	private static volatile DebugState debugState = DebugState.NONE;
@@ -347,15 +349,16 @@ public class Engine {
 			// Get the window size passed to glfwCreateWindow
 			glfwGetWindowSize(window, pWidth, pHeight);
 
-			// Get the resolution of the primary monitor
-			GLFWVidMode vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-
-			// Center the window
-			glfwSetWindowPos(
-					window,
-					(vidmode.width() - pWidth.get(0)) / 2,
-					(vidmode.height() - pHeight.get(0)) / 2
-			);
+			// Center the window when the desktop video mode is available.
+			long primaryMonitor = glfwGetPrimaryMonitor();
+			GLFWVidMode vidmode = primaryMonitor != NULL ? glfwGetVideoMode(primaryMonitor) : null;
+			if (vidmode != null) {
+				glfwSetWindowPos(
+						window,
+						(vidmode.width() - pWidth.get(0)) / 2,
+						(vidmode.height() - pHeight.get(0)) / 2
+				);
+			}
 		}
 
 		// Make the OpenGL context current
@@ -836,7 +839,7 @@ public class Engine {
 						case S3K -> "s3k";
 					};
 					SaveSlotSummary summary = saveManager.readSlotSummary(gameCode, action.slot());
-					yield summary.state() == com.openggf.game.save.SaveSlotState.EMPTY ? null : summary.payload();
+					yield summary.isLoadable() ? summary.payload() : null;
 				} catch (IOException e) {
 					throw new RuntimeException("Failed to read save slot " + action.slot() + " for data select launch", e);
 				}
@@ -1150,8 +1153,14 @@ public class Engine {
 		if (monitor == NULL) {
 			monitor = glfwGetPrimaryMonitor();
 		}
+		if (monitor == NULL) {
+			return;
+		}
 		GLFWVidMode vidmode = glfwGetVideoMode(monitor);
-		int maxScale = Math.min(vidmode.width() / nativeW, vidmode.height() / nativeH);
+		Integer maxScale = computeIntegerScaleUpperBound(nativeW, nativeH, vidmode);
+		if (maxScale == null) {
+			return;
+		}
 
 		double currentScale = Math.min((double) windowWidth / nativeW, (double) windowHeight / nativeH);
 
@@ -1173,6 +1182,20 @@ public class Engine {
 			glfwSetWindowSize(window, targetW, targetH);
 			isSnappingWindowSize = false;
 		}
+	}
+
+	static Integer computeIntegerScaleUpperBound(int nativeW, int nativeH, GLFWVidMode vidmode) {
+		if (vidmode == null) {
+			return null;
+		}
+		return computeIntegerScaleUpperBound(nativeW, nativeH, vidmode.width(), vidmode.height());
+	}
+
+	static Integer computeIntegerScaleUpperBound(int nativeW, int nativeH, int modeW, int modeH) {
+		if (nativeW <= 0 || nativeH <= 0 || modeW <= 0 || modeH <= 0) {
+			return null;
+		}
+		return Math.max(1, Math.min(modeW / nativeW, modeH / nativeH));
 	}
 
 	private void loop() {
@@ -1349,11 +1372,16 @@ public class Engine {
 		}
 
 		boolean playbackHud = playbackDebugManager.isHudVisible();
+		boolean userPaused = gameLoop != null && gameLoop.isUserPaused();
 		boolean needsOverlay = (getCurrentGameMode() == GameMode.SPECIAL_STAGE) ||
-				((debugViewEnabled || playbackHud) && getCurrentGameMode() != GameMode.SPECIAL_STAGE);
+				((debugViewEnabled || playbackHud || userPaused) && getCurrentGameMode() != GameMode.SPECIAL_STAGE);
 
 		if (needsOverlay) {
 			prepareOverlayState();
+		}
+
+		if (userPaused) {
+			renderUserPauseIndicator();
 		}
 
 		profiler.beginSection("debug");
@@ -1448,6 +1476,13 @@ public class Engine {
 
 	private void applyBlackClearColor() {
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	}
+
+	private void renderUserPauseIndicator() {
+		pauseTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+		String text = "PAUSED";
+		int x = Math.max(0, (viewportWidth - pauseTextRenderer.measureWidth(text)) / 2);
+		pauseTextRenderer.drawShadowedText(text, x, 32, DebugColor.WHITE);
 	}
 
 	private void applyLevelClearColor() {
@@ -1747,6 +1782,7 @@ public class Engine {
 			}
 		});
 		cleanupStep("trace HUD renderer", traceHudTextRenderer::cleanup);
+		cleanupStep("pause text renderer", pauseTextRenderer::cleanup);
 		cleanupStep("graphics manager", graphicsManager::cleanup);
 		cleanupStep("presence", gameLoop::closePresence);
 		cleanupStep("audio manager", audioManager::destroy);

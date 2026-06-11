@@ -19,13 +19,14 @@ input:
     left: LEFT   # Player 1: move left
     right: RIGHT   # Player 1: move right
     jump: SPACE   # Player 1: jump
+    start: BACKSPACE   # Player 1: start (in-game pause)
   player2:
     up: I   # Player 2: look up
     down: K   # Player 2: crouch/roll
     left: J   # Player 2: move left
     right: L   # Player 2: move right
     jump: RIGHT_SHIFT   # Player 2: jump
-    start: ENTER   # Player 2: start
+    start: RIGHT_CONTROL   # Player 2: start
 
 # ── Audio ──
 audio:
@@ -64,6 +65,7 @@ rewind:
   tapeCoastDeceleration: 0.5   # Per-tick speed decrease after release
   tapeCoastMaxSteps: 4.0   # Maximum rewind steps per tick
   tapeCoastMinSteps: 0.25   # Minimum rewind steps per tick; below 1.0 gives slow-motion rewind
+  historySeconds: 60   # Seconds of live rewind keyframe and input history to retain
   audioHistoryLimitType: "time"   # How the rewind audio PCM history ring is sized
   audioHistorySeconds: 60   # Seconds of PCM history kept when audioHistoryLimitType=time
   audioHistorySizeMb: 10   # Megabytes of PCM history kept when audioHistoryLimitType=size
@@ -78,6 +80,13 @@ discord:
   enabled: false   # Enable Discord Rich Presence updates
   showTimer: true   # Show the level timer in Rich Presence
   showZone: true   # Show the zone and act in Rich Presence
+
+# ── Trace Capture ──
+capture:
+  outputDir: "target/trace-videos"   # Output directory for trace capture videos
+  scale: 4   # Integer nearest-neighbor upscale factor for capture output
+  fps: 60   # Output frame rate for trace capture
+  codec: "ffv1"   # Capture video codec (e.g. ffv1)
 
 # ════════════════════════════════════════════
 #  DEBUG  (developer tooling — safe to ignore for normal play)

@@ -12,6 +12,7 @@ import com.openggf.game.sonic3k.Sonic3kSuperStateController;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidRoutineKind;
 import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.TestObjectServices;
@@ -167,6 +168,57 @@ class TestSonic3kMonitorObjectInstance {
                 "Obj_MonitorBreak sets Status_InAir when the monitor still has p1_pushing set");
         assertFalse(player.getPushing(),
                 "Obj_MonitorBreak clears the player's pushing status via andi.b #$D7");
+    }
+
+    @Test
+    void breakWithSameFrameClearedSidekickStandingContactReleasesSidekickIntoAir() {
+        Sonic3kMonitorObjectInstance monitor = monitor();
+        DummyPlayer sonic = new DummyPlayer();
+        sonic.setRolling(true);
+        sonic.setAnimationId(Sonic3kAnimationIds.ROLL);
+        sonic.setYSpeed((short) 0x05A0);
+
+        DummyPlayer tails = new DummyPlayer();
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setOnObject(true);
+        tails.setPushing(true);
+
+        monitor.onSolidContact(tails, new SolidContact(true, false, false, true, false), 125);
+        monitor.onSolidContactCleared(tails, 125);
+        monitor.onTouchResponse(sonic, TOUCH_RESULT, 125);
+
+        assertTrue(tails.getAir(),
+                "Obj_MonitorBreak must still see a same-frame P2 standing contact when Sonic breaks the shell");
+        assertFalse(tails.isOnObject(),
+                "Breaking a monitor clears the released sidekick's object ride bit");
+        assertFalse(tails.getPushing(),
+                "Breaking a monitor clears the released sidekick's pushing bit");
+    }
+
+    @Test
+    void breakInfersSidekickStandingBitFromMonitorEdgeGeometry() {
+        DummyPlayer tails = new DummyPlayer();
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x0141);
+        tails.setCentreY((short) 0x03F0);
+        tails.setAir(false);
+
+        Sonic3kMonitorObjectInstance monitor = new Sonic3kMonitorObjectInstance(
+                new ObjectSpawn(0x0128, 0x03F0, 0x01, 0x03, 0, false, 0));
+        monitor.setServices(new TestObjectServices().withSidekicks(List.of(tails)));
+
+        DummyPlayer sonic = new DummyPlayer();
+        sonic.setRolling(true);
+        sonic.setAnimationId(Sonic3kAnimationIds.ROLL);
+        sonic.setYSpeed((short) 0x05A0);
+
+        monitor.onTouchResponse(sonic, TOUCH_RESULT, 125);
+
+        assertTrue(tails.getAir(),
+                "S3K Monitor_ChkOverEdge keeps the P2 standing bit through the exact right edge before break release");
+        assertEquals(0, tails.getYSpeed(),
+                "Monitor break release changes P2 status without injecting immediate vertical velocity");
     }
 
     @Test

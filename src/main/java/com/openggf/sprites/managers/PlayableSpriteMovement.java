@@ -347,6 +347,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// repopulates it before updateCrouchState consumes it (see field comment).
 		preFrictionGroundSpeed = NO_PRE_FRICTION_SNAPSHOT;
 		slopeResistAppliedThisFrame = false;
+		sprite.clearDeferredGroundWallVelocityResponse();
 
 		// Snapshot pre-physics state for per-object hooks running AFTER
 		// physics in the engine's frame order. ROM order runs cage/object
@@ -589,6 +590,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		doCheckStartRoll();
 		doLevelBoundary();
 		sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
+		collisionSystem().applyDeferredGroundWallVelocityResponse(sprite);
 		doAnglePosWithSensorUpdate(originalX, originalY);
 		applyMissedDetachSlopeResist();
 		doSlopeRepel();
@@ -612,6 +614,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		doRollSpeed();
 		doLevelBoundary();
 		sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
+		collisionSystem().applyDeferredGroundWallVelocityResponse(sprite);
 		doAnglePosWithSensorUpdate(originalX, originalY);
 		doSlopeRepel();
 	}
@@ -2270,6 +2273,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 *   add.l   d0,d3                  ; Position uses OLD y_vel (d0, before gravity)
 	 */
 	private void doObjectMoveAndFall() {
+		int suppressedAxes = sprite.consumeSuppressedObjectMoveAndFallAxes();
+		if (suppressedAxes == 0x3) {
+			return;
+		}
 		SidekickCpuController cpu = sprite.getCpuController();
 		if (cpu != null && cpu.usesFlyingCarryMovement()) {
 			// Tails_FlyingSwimming applies Tails_Move_FlySwim before
@@ -2291,7 +2298,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 		short oldYSpeed = sprite.getYSpeed();  // Save old y_vel before gravity
 		applyGravity();                         // Gated on isObjectControlled()
-		sprite.move(sprite.getXSpeed(), oldYSpeed);  // Move using OLD y_vel
+		short xMoveSpeed = (suppressedAxes & 0x1) != 0 ? 0 : sprite.getXSpeed();
+		short yMoveSpeed = (suppressedAxes & 0x2) != 0 ? 0 : oldYSpeed;
+		sprite.move(xMoveSpeed, yMoveSpeed);  // Move using OLD y_vel
 	}
 
 	/**
@@ -2315,6 +2324,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 */
 	private void applyGravity() {
 		if (sprite.isObjectControlSuppressesMovement()) {
+			return;
+		}
+		if (sprite.consumeSuppressNextGravityStep()) {
 			return;
 		}
 		SidekickCpuController cpu = sprite.getCpuController();

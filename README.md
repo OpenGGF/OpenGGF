@@ -226,7 +226,8 @@ live in `CHANGELOG.md`; this README keeps only the high-level shape of the relea
 
 - **Release-readiness review remediation follow-up (2026-06-10).** Merged
   `bugfix/ai-release-review-fixes-20260609`, closing the verified
-  release-review blocker/high/medium findings from `fable-arch-review.md`.
+  release-review blocker/high/medium findings that were later consolidated into
+  `docs/superpowers/plans/2026-06-11-release-remediation.md`.
   The branch restores the S3K AIZ trace gate, fixes rewind map copy-on-write
   isolation, hardens develop trace CI, quarantines malformed config/editor
   saves, tightens architecture guards, and clarifies release config/docs.

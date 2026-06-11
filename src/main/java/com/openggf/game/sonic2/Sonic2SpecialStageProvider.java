@@ -194,13 +194,8 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
         }
         DefaultObjectServices services = new DefaultObjectServices(
                 gameplayMode, EngineServices.current());
-        ObjectConstructionContext.setConstructionContext(services);
-        try {
-            return new SpecialStageResultsScreenObjectInstance(
-                    ringsCollected, gotEmerald, stageIndex, totalEmeraldCount, services);
-        } finally {
-            ObjectConstructionContext.clearConstructionContext();
-        }
+        return ObjectConstructionContext.construct(services, () -> new SpecialStageResultsScreenObjectInstance(
+                ringsCollected, gotEmerald, stageIndex, totalEmeraldCount, services));
     }
 
     // ==================== MiniGameProvider Methods ====================

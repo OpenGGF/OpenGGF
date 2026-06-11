@@ -1,7 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.camera.Camera;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.debug.DebugRenderContext;
@@ -445,18 +444,11 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
 
     /**
      * Check if the base position (objoff_30) is within the despawn range of the camera.
-     * Mirrors the ROM's MarkObjGone check: ((baseX & 0xFF80) - cameraCoarse) <= 0x280.
+     * Mirrors the ROM's MarkObjGone check with Camera_X_pos_coarse_back:
+     * ((baseX & 0xFF80) - ((cameraX - 0x80) & 0xFF80)) <= 0x280.
      */
     private boolean isBasePositionOnScreen() {
-        Camera camera =
-                services().camera();
-        if (camera == null) {
-            return true;
-        }
-        int camXCoarse = camera.getX() & 0xFF80;
-        int diff = (baseX & 0xFF80) - camXCoarse;
-        // Unsigned comparison: diff treated as unsigned 16-bit must be <= 0x280
-        return (diff & 0xFFFF) <= 0x280;
+        return isInRangeAt(baseX);
     }
 
     @Override

@@ -385,22 +385,19 @@ public class SlidingSpikesObjectInstance extends AbstractObjectInstance
      * sliding x_pos. This anchors despawn to the spike's wall mount, not its tip.
      * <p>
      * MarkObjGone2 (docs/s2disasm/s2.asm:30231-30248) deletes the object when:
-     * <pre>(x &amp; $FF80) - Camera_X_pos_coarse &gt; $80 + roundToNextMultiple(screen_width,$80) + $80</pre>
-     * where {@code Camera_X_pos_coarse = Camera_X_pos &amp; $FF80}, the subtract is a
-     * 16-bit {@code sub.w} and the compare is an unsigned {@code bhi}. At native
-     * 320px width the limit is {@code $80 + $180 + $80 = $280}.
+     * <pre>(x &amp; $FF80) - Camera_X_pos_coarse_back &gt; $80 + roundToNextMultiple(screen_width,$80) + $80</pre>
+     * where {@code Camera_X_pos_coarse_back = (Camera_X_pos - $80) &amp; $FF80}, the
+     * subtract is a 16-bit {@code sub.w} and the compare is an unsigned {@code bhi}.
+     * At native 320px width the limit is {@code $80 + $180 + $80 = $280}.
      */
     private boolean isBasePositionOnScreen() {
         var camera = services().camera();
         if (camera == null) {
             return true;  // Assume on-screen if no camera
         }
-        // ROM MarkObjGone2 is X-only; Y plays no part in the despawn test.
         int baseAligned = baseX & 0xFF80;
-        int cameraCoarse = camera.getX() & 0xFF80;  // Camera_X_pos_coarse
-        // 16-bit sub.w followed by unsigned bhi: preserve wrap semantics.
-        int dist = (baseAligned - cameraCoarse) & 0xFFFF;
-        // limit = $80 + roundToNextMultiple(screen_width,$80) + $80
+        int cameraCoarseBack = (camera.getX() - 0x80) & 0xFF80;
+        int dist = (baseAligned - cameraCoarseBack) & 0xFFFF;
         int roundedWidth = (viewportWidth() + 0x7F) & ~0x7F;
         int limit = 0x80 + roundedWidth + 0x80;
         return dist <= limit;

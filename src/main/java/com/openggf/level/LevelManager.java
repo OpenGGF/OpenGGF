@@ -23,6 +23,7 @@ import com.openggf.debug.PerformanceProfiler;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
 import com.openggf.game.render.AdvancedRenderModeController;
@@ -661,14 +662,8 @@ public class LevelManager {
      */
     public void initZoneFeatures() throws IOException {
         zoneFeatureProvider = gameModule.getZoneFeatureProvider();
-        SpecialRenderEffectRegistry specialRenderEffectRegistry = GameServices.specialRenderEffectRegistryOrNull();
-        AdvancedRenderModeController advancedRenderModeController = GameServices.advancedRenderModeControllerOrNull();
-        if (specialRenderEffectRegistry != null) {
-            specialRenderEffectRegistry.clear();
-        }
-        if (advancedRenderModeController != null) {
-            advancedRenderModeController.clear();
-        }
+        resetZoneScopedRegistriesForLevelLoad();
+        applyLevelLoadPaletteOverrides();
         initializeZoneFeatureProvider(zoneFeatureProvider);
     }
 
@@ -676,15 +671,30 @@ public class LevelManager {
         if (zoneFeatureProvider == null) {
             zoneFeatureProvider = gameModule.getZoneFeatureProvider();
         }
+        resetZoneScopedRegistriesForLevelLoad();
+        applyLevelLoadPaletteOverrides();
+        initializeZoneFeatureProvider(zoneFeatureProvider);
+    }
+
+    void resetZoneScopedRegistriesForLevelLoad() {
+        PaletteOwnershipRegistry paletteOwnershipRegistry = GameServices.paletteOwnershipRegistryOrNull();
         SpecialRenderEffectRegistry specialRenderEffectRegistry = GameServices.specialRenderEffectRegistryOrNull();
         AdvancedRenderModeController advancedRenderModeController = GameServices.advancedRenderModeControllerOrNull();
+        if (paletteOwnershipRegistry != null) {
+            paletteOwnershipRegistry.clear();
+        }
         if (specialRenderEffectRegistry != null) {
             specialRenderEffectRegistry.clear();
         }
         if (advancedRenderModeController != null) {
             advancedRenderModeController.clear();
         }
-        initializeZoneFeatureProvider(zoneFeatureProvider);
+    }
+
+    private void applyLevelLoadPaletteOverrides() {
+        if (game instanceof LevelLoadPaletteOverrideProvider provider && level != null) {
+            provider.applyLevelLoadPaletteOverrides(level, currentZone, currentAct);
+        }
     }
 
     private void initializeZoneFeatureProvider(ZoneFeatureProvider zoneFeatureProvider) throws IOException {
@@ -3074,6 +3084,10 @@ public class LevelManager {
 
     private void applyPersistedEditorEdits() {
         if (level == null || gameModule == null) {
+            return;
+        }
+        if (gameModule.getGameId() == GameId.S3K) {
+            LOGGER.fine("Skipping persisted S3K editor edits until MutableLevel supports S3K runtime overlays");
             return;
         }
         MutableLevel mutableLevel = level instanceof MutableLevel existing

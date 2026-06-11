@@ -201,6 +201,39 @@ public record PhysicsFeatureSet(
          *  with no intermediate adjustment (s2.asm:38933, 38945); S1 has no
          *  CPU sidekick. */
         int sidekickFollowLeadOffset,
+        /** Whether the sidekick follow +/-1 x-position nudge is blocked by
+         *  {@code object_control} bit 0.
+         *  <p>S3K: true -- loc_13E0A / loc_13E34 skip the nudge when bit 0 of
+         *  {@code object_control(a0)} is set (sonic3k.asm:26722-26724,
+         *  26739-26741).
+         *  <p>S2: false -- {@code TailsCPU_Normal_FollowLeft/FollowRight}
+         *  gate the nudge only on inertia and facing, with no object-control
+         *  bit-0 test (s2.asm:38952-38975).
+         *  <p>S1: false (no Tails CPU sidekick). */
+        boolean sidekickFollowNudgeBlockedByObjectControlBit0,
+        /** Whether delayed sidekick jump press is reconstructed as a one-frame
+         *  pulse from adjacent follower-history slots.
+         *  <p>S3K: true for the observed {@code Ctrl_1_logical} publication
+         *  cadence in the HCZ breakable-bar/debris water route: held A/B/C
+         *  remains set in the delayed word while the low-byte jump press is
+         *  visible for one follower-history sample only (HCZ complete-run
+         *  f2893 -> f2894, {@code delayed_input=$1514 -> $1504}).
+         *  <p>S2: false to preserve existing level-select traces where the
+         *  recorded low-byte press can be consumed on consecutive delayed
+         *  samples. */
+        boolean sidekickDelayedJumpPressUsesHistoryEdge,
+        /** Whether the sidekick PANIC routine treats the engine's
+         *  {@code pinballMode} field as equivalent to ROM
+         *  {@code spin_dash_flag}.
+         *  <p>S3K: true -- AutoSpin tunnel control is represented in the
+         *  engine by {@code pinballMode}, but ROM tests the shared
+         *  {@code spin_dash_flag} byte in {@code sub_13EF0}
+         *  (sonic3k.asm:26858).
+         *  <p>S2: false -- {@code TailsCPU_Panic} tests only
+         *  {@code spindash_flag}; {@code pinball_mode} is a separate byte and
+         *  does not force Ctrl_2 down (s2.asm:39458-39467).
+         *  <p>S1: false (no Tails CPU sidekick). */
+        boolean sidekickPanicTreatsPinballModeAsSpindashFlag,
         /**
          * Whether the sidekick CPU's SPAWNING-state catch-up trigger requires
          * the leader to be on the ground / not in water / not roll-jumping
@@ -1011,6 +1044,9 @@ public record PhysicsFeatureSet(
                     source.sidekickFollowSnapThreshold(),
                     source.sidekickDespawnX(),
                     source.sidekickFollowLeadOffset(),
+                    source.sidekickFollowNudgeBlockedByObjectControlBit0(),
+                    source.sidekickDelayedJumpPressUsesHistoryEdge(),
+                    source.sidekickPanicTreatsPinballModeAsSpindashFlag(),
                     source.sidekickSpawningRequiresGroundedLeader(),
                     source.useScreenYWrapValueForVisibility(),
                     source.sidekickDespawnUsesObjectIdMismatch(),
@@ -1063,7 +1099,11 @@ public record PhysicsFeatureSet(
             null, (short) 0, true, false /* groundWallPushRequiresFacingIntoWall: S1 wall response sets push unconditionally (s1disasm/_incObj/01 Sonic.asm:551-568) */, false /* animationChangeClearsPush: S1 clear is FixBugs-only (s1disasm/_incObj/01 Sonic.asm:2055-2065) */, false,
             false /* slopeResistStartsFromRest: S1 Sonic_SlopeResist returns on zero inertia (s1disasm/_incObj/01 Sonic.asm:1043-1044) */,
             false, false, false, false, true, false, false, false, true, FAST_SCROLL_CAP_S2, false, true, false,
-            SIDEKICK_FOLLOW_SNAP_S2, SIDEKICK_DESPAWN_X_S2, SIDEKICK_FOLLOW_LEAD_OFFSET_NONE, true /* sidekickSpawningRequiresGroundedLeader: S1 has no Tails CPU */, false /* useScreenYWrapValueForVisibility: S1 keeps 32-margin */,
+            SIDEKICK_FOLLOW_SNAP_S2, SIDEKICK_DESPAWN_X_S2, SIDEKICK_FOLLOW_LEAD_OFFSET_NONE,
+            false /* sidekickFollowNudgeBlockedByObjectControlBit0: S1 has no Tails CPU */,
+            false /* sidekickDelayedJumpPressUsesHistoryEdge: S1 has no Tails CPU */,
+            false /* sidekickPanicTreatsPinballModeAsSpindashFlag: S1 has no Tails CPU */,
+            true /* sidekickSpawningRequiresGroundedLeader: S1 has no Tails CPU */, false /* useScreenYWrapValueForVisibility: S1 keeps 32-margin */,
             true /* sidekickDespawnUsesObjectIdMismatch: S1 has no Tails CPU; symmetric with S2 */,
             SIDEKICK_FLY_LAND_BLOCKERS_NONE, false /* sidekickFlyLandRequiresLeaderAlive: S1 has no CPU sidekick */,
             SIDEKICK_CATCH_UP_Y_OFFSET_S3K, SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K,
@@ -1113,7 +1153,11 @@ public record PhysicsFeatureSet(
             false, false, false, false,
             true /* fullSolidBottomOverlapUsesCurrentYRadiusOnly: S2 SolidObject_cont uses the player's CURRENT y_radius symmetrically on both halves of the underside box (d2 = obHeight/2 + y_radius(a1); bottom boundary d4 = 2*d2), s2.asm:35355-35367. This matches S1 (s1disasm/_incObj/sub SolidObject.asm:109-119). Only S3K loc_1DFD6 (sonic3k.asm:41422-41436) substitutes default_y_radius for the bottom extra term, giving the taller asymmetric box — so S3K stays false. Previously false here gave Sonic a 5px-too-tall underside box that triggered a phantom Stomper (Obj2A) ceiling hit during a MCZ rolling jump (y_radius 0x0E vs standing 0x13), zeroing y_speed at MCZ1 trace frame 2005 where ROM never collides. */,
             FAST_SCROLL_CAP_S2, false, false, false,
-            SIDEKICK_FOLLOW_SNAP_S2, SIDEKICK_DESPAWN_X_S2, SIDEKICK_FOLLOW_LEAD_OFFSET_NONE, true, false /* useScreenYWrapValueForVisibility: S2 keeps 32-margin */,
+            SIDEKICK_FOLLOW_SNAP_S2, SIDEKICK_DESPAWN_X_S2, SIDEKICK_FOLLOW_LEAD_OFFSET_NONE,
+            false /* sidekickFollowNudgeBlockedByObjectControlBit0: S2 TailsCPU_Normal has no object_control bit-0 gate on FollowLeft/FollowRight nudge (s2.asm:38952-38975) */,
+            false /* sidekickDelayedJumpPressUsesHistoryEdge: preserve S2 delayed low-byte press replay baseline */,
+            false /* sidekickPanicTreatsPinballModeAsSpindashFlag: S2 TailsCPU_Panic only tests spindash_flag, not pinball_mode (s2.asm:39458-39467) */,
+            true, false /* useScreenYWrapValueForVisibility: S2 keeps 32-margin */,
             true /* sidekickDespawnUsesObjectIdMismatch: S2 cmp.b id(a3),d0 in TailsCPU_CheckDespawn (s2.asm:39067) */,
             SIDEKICK_FLY_LAND_BLOCKERS_S2, false /* sidekickFlyLandRequiresLeaderAlive: S2 TailsCPU_Flying_Part2 has no Sonic-routine check */,
             SIDEKICK_CATCH_UP_Y_OFFSET_S3K, SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K,
@@ -1132,7 +1176,7 @@ public record PhysicsFeatureSet(
             true /* levelBoundaryUsesCentreY: S2 ROM compares y_pos(a0), i.e. centre-Y, at s2.asm:36950 */,
             false /* solidObjectTopBranchAlwaysLiftsOnUpwardVelocity: S2 SolidObject_Landed (s2.asm:35379-35380) tests y_vel before lift and branches to SolidObject_Miss when upward */,
             true /* sidekickNormalCpuSkipsHurtRoutine: S2 Obj02_Index routes routine 4 to Obj02_Hurt (s2.asm:38883-38891), which never reaches Obj02_Control->TailsCPU_Control->TailsCPU_CheckDespawn (s2.asm:41057-41073), so Tails_respawn_counter freezes during the hurt routine. Verified on the MCZ1 level-select trace: Tails hurt off-screen ~45 frames, counter frozen at 0xBA, so it is only 0xFF (<$12C) when the engine spuriously despawned. */,
-            false /* controlLockLatchesLogicalInput: keep S2 control-lock call sites on the post-filtered zero-input baseline until the Tails follow-history latch can be validated without regressing EHZ/MTZ traces. */,
+            true /* controlLockLatchesLogicalInput: S2 Obj01_Control skips Ctrl_1->Ctrl_1_Logical while Control_Locked (s2.asm:36227-36229), and Sonic_RecordPos stores that latched word for TailsCPU_Normal's delayed Stat_Record read (s2.asm:36344-36346,38939-38946). Forced-input writers bypass the latch so signpost/auto-walk scripts still publish their ROM logical input. */,
             true /* hurtRoutineLatchesLogicalInput: S2 Obj01_Hurt calls Sonic_RecordPos without refreshing Ctrl_1_logical through Obj01_Control (s2.asm:37810-37835) */,
             true /* waterExitBoostSkipsFastUpwardVelocity: S2 Sonic_Water skips asl y_vel when y_vel < -$400 (s2.asm:36120-36124) */,
             false /* slopeResistAppliesAtZeroInertia: S2 Sonic_SlopeResist/Tails_SlopeResist (s2.asm:37394-37395, 40249-40250) return unconditionally on tst.w inertia(a0)/beq when stationary. Required for EHZ trace F3644 Tails-on-loop divergence. */,
@@ -1165,7 +1209,11 @@ public record PhysicsFeatureSet(
             true /* pinballLandingPreservesRoll: S3K Player_TouchFloor_Check_Spindash skips the roll-clear body while spin_dash_flag is set (sonic3k.asm:24325-24327) */,
             true /* pinballLandingPreservesPinballMode: S3K Player_TouchFloor_Check_Spindash leaves spin_dash_flag set while AutoSpin tunnel control is active */,
             true, true, true, true, false, FAST_SCROLL_CAP_S3K, true, false, true,
-            SIDEKICK_FOLLOW_SNAP_S3K, SIDEKICK_DESPAWN_X_S3K, SIDEKICK_FOLLOW_LEAD_OFFSET_S3K, false, true /* useScreenYWrapValueForVisibility: S3K Render_Sprites height_pixels=0x18 */,
+            SIDEKICK_FOLLOW_SNAP_S3K, SIDEKICK_DESPAWN_X_S3K, SIDEKICK_FOLLOW_LEAD_OFFSET_S3K,
+            true /* sidekickFollowNudgeBlockedByObjectControlBit0: S3K loc_13E0A/loc_13E34 test object_control bit 0 before nudging x_pos (sonic3k.asm:26722-26724,26739-26741) */,
+            true /* sidekickDelayedJumpPressUsesHistoryEdge: HCZ f2893/f2894 shows held A/B/C carried while low-byte jump press clears on the next delayed sample */,
+            true /* sidekickPanicTreatsPinballModeAsSpindashFlag: S3K AutoSpin is represented by engine pinballMode, while ROM sub_13EF0 tests spin_dash_flag (sonic3k.asm:26858) */,
+            false, true /* useScreenYWrapValueForVisibility: S3K Render_Sprites height_pixels=0x18 */,
             false /* sidekickDespawnUsesObjectIdMismatch: S3K cmp.w (a3),d0 in sub_13EFC (sonic3k.asm:26823) compares routine-pointer high word; all gameplay objects share the same high word so the check almost never fires */,
             SIDEKICK_FLY_LAND_BLOCKERS_S3K, true /* sidekickFlyLandRequiresLeaderAlive: sonic3k.asm:26629 cmpi.b #6,(Player_1+routine).w / bhs.s loc_13D42 */,
             SIDEKICK_CATCH_UP_Y_OFFSET_S3K, SIDEKICK_FLIGHT_AUTO_LAND_FRAMES_S3K,

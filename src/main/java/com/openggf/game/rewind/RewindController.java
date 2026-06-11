@@ -150,6 +150,33 @@ public final class RewindController {
     }
 
     /**
+     * Drops rewind history older than {@code retainedFrames}, aligned to a
+     * retained keyframe so replay from the new earliest frame still has every
+     * input row needed to reach current time.
+     *
+     * @return the earliest retained frame after pruning
+     */
+    public int pruneHistoryToRetainFrames(int retainedFrames) {
+        if (retainedFrames <= 0) {
+            return earliestAvailableFrame();
+        }
+        int requestedEarliestFrame = currentFrame - retainedFrames;
+        if (requestedEarliestFrame <= earliestAvailableFrame()) {
+            return earliestAvailableFrame();
+        }
+        var retainedFloor = keyframes.latestAtOrBefore(requestedEarliestFrame);
+        if (retainedFloor.isEmpty()) {
+            return earliestAvailableFrame();
+        }
+        int retainedKeyframe = retainedFloor.get().frame();
+        keyframes.discardBefore(retainedKeyframe);
+        if (audioKeyframes != null) {
+            audioKeyframes.discardBefore(retainedKeyframe);
+        }
+        return earliestAvailableFrame();
+    }
+
+    /**
      * Seeks to {@code targetFrame} by restoring the latest keyframe at or
      * before it, then stepping forward. Held-rewind callers should use
      * {@link #stepBackward()} for steady-state O(1) cost.

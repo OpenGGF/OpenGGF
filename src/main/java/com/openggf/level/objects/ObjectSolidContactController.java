@@ -142,6 +142,10 @@ final class ObjectSolidContactController {
         return key != null && set.contains(key);
     }
 
+    boolean hasStandingLatch(PlayableEntity player, ObjectInstance instance) {
+        return hasObjectStandingBit(player, instance);
+    }
+
     private void setObjectPushingBit(PlayableEntity player, ObjectInstance instance) {
         if (player == null) {
             return;

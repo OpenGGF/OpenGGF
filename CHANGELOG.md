@@ -4,15 +4,37 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Release input/config blockers are tightened:** runtime debug and cheat keys
+  now honor `debug.flags.debugView`, the F12 art viewer cannot invisibly freeze
+  release gameplay, pause no longer collides with Player 2 Start or toggles menu
+  screens, zero-life gameplay remains pausable until Game Over / Continue flow
+  is implemented, digit key bindings round-trip correctly, and invalid
+  `display.fps` values clamp to a safe minimum.
+
 - **Boss hit-flash renders again in Sonic 1 and Sonic 2 SCZ/DEZ:** palette
   writes submitted through `PaletteOwnershipRegistry` are now resolved by a
   game-agnostic frame fallback in the render pipeline, so games and zones
-  without a registry-resolving palette cycler no longer silently drop them.
+  without a registry-resolving palette cycler no longer silently drop them. The
+  fallback also uses feature-remapped zone/act keys for underwater palette
+  lookup, matching the water-config storage path for remapped zones.
+
+- **S3K level-load palette ownership survives registry resets:** ICZ1's
+  lock-on startup mountain palette is reapplied through a post-reset
+  level-load hook, so the runtime palette owner remains
+  `s3k.icz.startupPalette` after zone-scoped registries are cleared.
 
 - **The AIZ fire-transition background renders correctly at standard aspect:**
   the tilemap shader now receives the per-column VScroll texture's actual
   entry count instead of deriving it from the background FBO width, finishing
   the widescreen vscroll fix that previously only covered the parallax shader.
+  BG per-column VScroll is now owned by the parallax compositing pass only, so
+  the fire-wave offset is no longer applied once during the tile FBO pass and
+  again during the scroll pass.
+
+- **Resize handling tolerates unavailable desktop video modes:** startup window
+  centering and post-resize integer-scale snapping now skip the operation when
+  GLFW cannot report a monitor or video mode, avoiding an uncaught desktop
+  boundary crash during display topology changes.
 
 - **S3K runtime terrain overlays no longer corrupt rewind keyframes:** the
   AIZ intro terrain swap and AIZ2 battleship chunk/block overlays now install
@@ -29,6 +51,65 @@ All notable changes to the OpenGGF project are documented in this file.
   treats lag-counter-only rows as VBlank-only frames, and gameplay advancement
   wins when both counters move.
 
+- **Sidekick PANIC facing matches the ROM equality case:** when the CPU
+  sidekick is horizontally aligned with the leader during PANIC, the routine now
+  faces left just like the S2/S3K `TailsCPU_Panic` subtract-and-carry branch.
+
+- **S3K sidekick fresh spawns honor the Obj_Tails init-only frame:** fresh
+  routine-0 sidekick spawns now reset kinematics and advance to the normal CPU
+  routine without running same-frame follow steering, while dormant sentinel
+  entries keep ROM `object_control=$83` movement suppression.
+
+- **S2 underwater sidekick push bypass follows the ROM branch:** live
+  `Status_Push` with delayed Sonic not pushing now skips follow steering even
+  underwater and at low x speed, instead of inheriting S3K's AIZ reload
+  pulse-filter heuristic.
+
+- **Sidekick delayed jump presses replay consecutive ROM press bytes:** the CPU
+  follow path now consumes the delayed `Ctrl_1_logical` press byte directly, so
+  back-to-back recorded A/B/C press bytes are not collapsed by an engine edge
+  reconstruction filter.
+
+- **Sidekick fly-in water clamps use the gameplay waterline:** Tails respawn
+  fly-in now clamps `target_y` against `Water_Level_1` semantics via
+  `WaterSystem.getGameplayWaterLevelY(...)`, preserving oscillated gameplay
+  water surfaces instead of using the non-oscillated base water register.
+
+- **S2 airborne push handoff falls through to follow steering:** the CPU
+  sidekick no longer suppresses FollowLeft/FollowRight merely because both live
+  Tails and delayed Sonic carry `Status_Push`; the ROM only bypasses steering
+  when delayed Sonic is not pushing.
+
+- **S2 sidekick PANIC ignores standalone pinball mode:** `TailsCPU_Panic` now
+  treats only `spindash_flag` as the Ctrl_2 down/jump gate for Sonic 2, while
+  S3K AutoSpin keeps the existing `pinballMode` bridge through a
+  `PhysicsFeatureSet` flag.
+
+- **S3K monitor breaks release edge-standing sidekicks with ROM cadence:**
+  monitor break handling now recovers the P2 standing bit from monitor-edge
+  geometry and defers the released sidekick's first gravity tick, moving the
+  HCZ complete-run trace past the early monitor release frontier.
+
+- **HCZ water-rush tunnel entry follows ROM ordering:** S3K button contact now
+  publishes its level trigger from the standing solid callback, top-solid
+  button boundary rejection matches `SolidObjectTop_1P`, and HCZ water tunnels
+  run after player/object processing through the normal zone-feature phase.
+  The tunnel routine preserves `ground_vel` as the ROM does, moving the HCZ
+  complete-run trace through the button and tunnel-entry frontiers to the next
+  sidekick push-state mismatch.
+
+- **S3K HCZ trace parity advanced through object setup and spring handoff:**
+  Poindexter now waits for its ROM offscreen/setup cadence before moving or
+  exposing collision, S2/S3K spikes share the `SolidObjectFull` airborne
+  stale-standing-bit no-contact contract, and underwater airborne approaches to
+  S3K horizontal springs no longer synthesize a grounded proactive landing
+  handoff.
+
+- **S2 dead-Sonic Tails flight uses the ROM routine-4 path:** the CPU sidekick
+  now enters the normal Flying routine without a respawn teleport, clears the
+  same spindash/status bits as the ROM, and applies the fly-in landing Walk
+  animation, in-air status, priority, and solid-bit side effects.
+
 - **The S3K AIZ release trace gate is green again:** AIZ egg-capsule results
   timing now preserves the ROM-visible Tails ending-pose/control-lock ordering,
   and trace comparison accepts the recorder's decision-time sidekick input tap
@@ -42,6 +123,41 @@ All notable changes to the OpenGGF project are documented in this file.
 - **Data Select launch errors are visible on the save screen:** stored launch
   failures are now carried through presentation state and rendered as clipped
   safe-glyph text instead of only being logged internally.
+
+- **Editor saves handle storage edge cases without losing edits:** transient
+  read failures now leave editor save files in place instead of quarantining
+  valid edits, filesystems without atomic moves fall back to a normal replace,
+  and incompatible block/chunk state lengths now quarantine before any partial
+  map edits are applied.
+
+- **Live rewind history is bounded:** opt-in live rewind now prunes gameplay
+  keyframes, audio logical keyframes, and recorded live inputs to the configured
+  `rewind.historySeconds` horizon, aligned to a retained keyframe so replay
+  remains deterministic without unbounded per-act growth.
+
+- **Live rewind no longer rebuilds level tilemaps on unchanged geometry:**
+  level rewind restores now skip full foreground/background tilemap
+  invalidation when the restored block, chunk, and map arrays are already the
+  live references, avoiding redundant GPU/cache rebuilds while holding rewind.
+
+- **Deferred GL command groups keep their own command-list snapshot:** fallback
+  line-render command groups no longer alias caller-owned reusable lists, so
+  later bucket draws cannot replace or duplicate earlier deferred line commands.
+
+- **Resolved integer config values are cached safely:** repeated per-frame key
+  binding reads now reuse parsed GLFW key codes until configuration changes,
+  avoiding steady string parsing and fallback exception allocation in gameplay
+  input paths.
+
+- **S3K persisted editor saves no longer disable runtime events:** automatic
+  editor-save application is temporarily skipped for S3K levels until
+  `MutableLevel` can execute S3K runtime terrain overlays directly, preserving
+  AIZ/CNZ/MGZ event handlers that still require `Sonic3kLevel`.
+
+- **Trace capture stop cannot hang forever on a stalled encoder:** the
+  background `EncoderSink` stop path now times out, aborts the encoder, and
+  reports a `CaptureException` instead of waiting indefinitely if ffmpeg stops
+  consuming frames.
 
 - **S3K release-route crashes and dead ends are guarded:** completed-emerald
   big-ring touches no longer request the unregistered HPZ zone, and the CNZ2

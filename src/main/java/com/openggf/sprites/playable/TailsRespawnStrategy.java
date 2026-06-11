@@ -14,6 +14,7 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
     private static final int MAX_FLY_ACCEL = 12;
     private static final int S2_FLYING_OFFSCREEN_TIMEOUT_FRAMES = 300;
     private final int flyAnimId;
+    private final int walkAnimId;
     /** S2 fallback if no PhysicsFeatureSet is resolved (legacy unit-test sidekicks). */
     private static final int FLY_LAND_BLOCKERS_FALLBACK = PhysicsFeatureSet.SIDEKICK_FLY_LAND_BLOCKERS_S2;
     /** Sonic OST routine value at/above which the leader is considered dead/dying.
@@ -28,6 +29,7 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
     public TailsRespawnStrategy(SidekickCpuController controller) {
         this.controller = controller;
         this.flyAnimId = controller.resolveAnimationId(CanonicalAnimation.FLY);
+        this.walkAnimId = controller.resolveAnimationId(CanonicalAnimation.WALK);
     }
 
     @Override
@@ -57,6 +59,29 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         sidekick.setControlLocked(true);
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         return true;
+    }
+
+    /**
+     * S2 TailsCPU_Normal's dead-Sonic branch enters TailsCPU_Flying directly:
+     * it writes routine 4 and flight state, but does not run TailsCPU_Respawn's
+     * teleport-to-above-Sonic setup (docs/s2disasm/s2.asm:39254-39264).
+     */
+    public void beginDeadLeaderFlight(AbstractPlayableSprite sidekick, AbstractPlayableSprite leader) {
+        offscreenFlightFrames = 0;
+        diagnosticTargetX = leader.getCentreX() & 0xFFFF;
+        diagnosticTargetY = controller.clampTargetYToWater(leader.getCentreY()) & 0xFFFF;
+        sidekick.setAir(true);
+        sidekick.clearRollingFlagPreserveRadii();
+        sidekick.clearUnderwaterStatusPreserveWaterPhysics();
+        sidekick.setOnObject(false);
+        sidekick.setPushing(false);
+        sidekick.setLatchedSolidObjectId(0);
+        sidekick.setDirection(Direction.RIGHT);
+        sidekick.setSpindash(false);
+        sidekick.setSpindashCounter((short) 0);
+        sidekick.setForcedAnimationId(flyAnimId);
+        sidekick.setControlLocked(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
     }
 
     @Override
@@ -141,6 +166,17 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
 
     @Override
     public void onApproachComplete(AbstractPlayableSprite sidekick, AbstractPlayableSprite leader) {
+        // S2 TailsCPU_Flying completion writes anim=Walk and status=$02
+        // (Status_InAir only), then inherits priority/solid bits from Sonic
+        // (docs/s2disasm/s2.asm:39229-39245).
+        sidekick.setAnimationId(walkAnimId);
+        sidekick.clearRollingFlagPreserveRadii();
+        sidekick.clearUnderwaterStatusPreserveWaterPhysics();
+        sidekick.setOnObject(false);
+        sidekick.setPushing(false);
+        sidekick.setLatchedSolidObjectId(0);
+        sidekick.setDirection(Direction.RIGHT);
+        sidekick.setAir(true);
         sidekick.setHighPriority(leader.isHighPriority());
         sidekick.setTopSolidBit(leader.getTopSolidBit());
         sidekick.setLrbSolidBit(leader.getLrbSolidBit());

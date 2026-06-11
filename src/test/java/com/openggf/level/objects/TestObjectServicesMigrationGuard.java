@@ -62,15 +62,8 @@ class TestObjectServicesMigrationGuard {
      * getInstance() or GameServices for non-object purposes.
      */
     private static final Set<String> PERMANENT_EXCEPTIONS = Set.of(
-            "com.openggf.game.sonic1.objects.Sonic1ObjectRegistry",
-            "com.openggf.game.sonic2.objects.Sonic2ObjectRegistry",
-            "com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry",
-
-            // NOT_OBJECT: utility/helper/standalone classes, no AbstractObjectInstance inheritance
-            "com.openggf.game.sonic2.objects.SpecialStageResultsScreenObjectInstance",
-            "com.openggf.game.sonic3k.objects.AizIntroArtLoader",
-            "com.openggf.game.sonic3k.objects.AizIntroPaletteCycler",
-            "com.openggf.game.sonic3k.objects.AizIntroTerrainSwap"
+            // All previous whole-class exceptions have been migrated or are clean.
+            // Add only narrowly justified non-object/registry exceptions here.
     );
 
     /** Packages containing object instance classes to scan. */
@@ -157,12 +150,9 @@ class TestObjectServicesMigrationGuard {
             approved("com.openggf.level.objects.ObjectManager", "EngineServices.",
                     "EngineServices.current()",
                     "ObjectServices composition boundary"),
-            approved("com.openggf.level.objects.ObjectManager", "GameServices.",
-                    "GameServices.collision().getTrace()",
-                    "solid-contact trace emission through the active collision trace"),
-            approved("com.openggf.game.sonic2.objects.Sonic2ObjectRegistry", "GameServices.",
-                    "GameServices.level().getObjectRenderManager()",
-                    "legacy Sonic 2 object render context wiring")
+            approved("com.openggf.level.objects.ObjectManager", "SessionManager.",
+                    "SessionManager.getCurrentGameplayMode()",
+                    "ObjectServices composition boundary")
     );
 
     private static final Set<String> SHARED_OBJECT_SOURCE_EXCEPTIONS = Set.of(
@@ -187,6 +177,21 @@ class TestObjectServicesMigrationGuard {
             fail("Object implementation classes must access runtime dependencies through ObjectServices.\n"
                     + "Move the dependency behind services(), tryServices(), ObjectServices, or an approved bridge.\n\n  "
                     + String.join("\n  ", violations));
+        }
+    }
+
+    @Test
+    void approvedGlobalRuntimeAccessEntriesStillMatchCurrentSource() throws IOException {
+        Path srcMain = Path.of("src/main/java");
+        for (ApprovedGlobalRuntimeAccess approved : APPROVED_GLOBAL_RUNTIME_ACCESSES) {
+            Path sourceFile = srcMain.resolve(approved.className().replace('.', '/') + ".java");
+            assertTrue(Files.isRegularFile(sourceFile),
+                    "approved global-access class must still exist: " + approved.className());
+            SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(Files.readAllLines(sourceFile));
+            assertTrue(source.text().contains(approved.pattern())
+                            && source.text().contains(approved.sourceFragment()),
+                    "approved global-access entry must match current source: "
+                            + approved.className() + " / " + approved.sourceFragment());
         }
     }
 
@@ -685,6 +690,7 @@ class TestObjectServicesMigrationGuard {
         List<String> patterns = new ArrayList<>();
         patterns.add("GameServices.");
         patterns.add("EngineServices.");
+        patterns.add("SessionManager.");
         patterns.add("RuntimeManager.getCurrent(");
         patterns.add("EngineContext.fromLegacySingletonsForBootstrap(");
         patterns.add("GameModuleRegistry.getCurrent(");

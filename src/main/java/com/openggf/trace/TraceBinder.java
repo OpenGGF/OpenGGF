@@ -425,11 +425,11 @@ public class TraceBinder {
                 expected.targetY() & 0xFFFF, actual.targetY() & 0xFFFF, 0, 1, false));
         int expectedHeld = normalizeRomCtrl2LogicalByte(expected.ctrl2Held());
         int expectedHeldAlternate = expectedNormalStep != null
-                ? normalizeRomCtrl2LogicalByte(expectedNormalStep.delayedInput())
+                ? normalizeRomCtrl2LogicalByte(expectedNormalStep.ctrl2Logical())
                 : expectedHeld;
         int expectedPressed = normalizeRomCtrl2PressedByte(expected.ctrl2Pressed());
         int expectedPressedAlternate = expectedNormalStep != null
-                ? normalizeRomCtrl2PressedByte(expectedNormalStep.delayedInput())
+                ? normalizeRomCtrl2PressedByte(expectedNormalStep.ctrl2Logical())
                 : expectedPressed;
         fields.put(prefix + "cpu_ctrl2_held", compareNumericEither(prefix + "cpu_ctrl2_held",
                 expectedHeld, expectedHeldAlternate, actual.generatedHeld() & 0xFF, 0, 1, false));

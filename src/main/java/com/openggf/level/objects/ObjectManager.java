@@ -8,7 +8,6 @@ import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.GameStateManager;
-import com.openggf.game.GameServices;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.ObjectSolidExecutionContext;
 import com.openggf.game.solid.PlayerSolidContactResult;
@@ -1991,6 +1990,11 @@ public class ObjectManager {
     /** Is this specific player riding this specific object? */
     public boolean isRidingObject(PlayableEntity player, ObjectInstance instance) {
         return solidContacts.isPlayerRiding(player, instance);
+    }
+
+    /** Returns whether this object currently owns ROM's standing bit for the player. */
+    public boolean hasObjectStandingBit(PlayableEntity player, ObjectInstance instance) {
+        return solidContacts.hasStandingLatch(player, instance);
     }
 
     /** Is ANY player riding anything? */

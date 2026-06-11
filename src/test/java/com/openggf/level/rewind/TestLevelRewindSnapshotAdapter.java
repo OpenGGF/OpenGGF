@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -86,6 +87,40 @@ class TestLevelRewindSnapshotAdapter {
         verify(manager).setFrameCounter(88);
         verify(manager).invalidateAllTilemaps();
         verify(manager).restoreRespawnRequestedForRewind(true);
+        verify(manager).restoreCheckpointStateForRewind(null);
+    }
+
+    @Test
+    void restoreSkipsTilemapInvalidationWhenGeometryReferencesAreAlreadyCurrent() {
+        StubLevel level = new StubLevel();
+        LevelGamestate levelState = new LevelGamestate();
+        LevelManager manager = mock(LevelManager.class);
+        when(manager.getCurrentLevel()).thenReturn(level);
+        when(manager.getLevelGamestate()).thenReturn(levelState);
+        LevelSnapshot snapshot = new LevelSnapshot(
+                level.currentEpoch(),
+                level.blocksReference(),
+                level.chunksReference(),
+                level.getMap().getData(),
+                44,
+                true,
+                5,
+                67,
+                true,
+                false,
+                null);
+
+        LevelRewindSnapshotAdapter.create(manager).restore(snapshot);
+
+        assertSame(snapshot.blocks(), level.blocksReference());
+        assertSame(snapshot.chunks(), level.chunksReference());
+        assertSame(snapshot.mapData(), level.getMap().getData());
+        assertEquals(5, levelState.getRings());
+        assertEquals(67, levelState.getTimerFrames());
+        assertTrue(levelState.isTimerPaused());
+        verify(manager, never()).invalidateAllTilemaps();
+        verify(manager).setFrameCounter(44);
+        verify(manager).restoreRespawnRequestedForRewind(false);
         verify(manager).restoreCheckpointStateForRewind(null);
     }
 

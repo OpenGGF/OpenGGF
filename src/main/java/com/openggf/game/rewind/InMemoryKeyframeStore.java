@@ -37,4 +37,9 @@ public final class InMemoryKeyframeStore implements KeyframeStore {
     public void discardAfter(int frame) {
         entries.tailMap(frame, false).clear();
     }
+
+    @Override
+    public void discardBefore(int frame) {
+        entries.headMap(frame, false).clear();
+    }
 }

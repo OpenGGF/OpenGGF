@@ -62,4 +62,14 @@ class TestVScrollColumnCount {
         assertTrue(renderer.contains("SonicConfiguration.SCREEN_WIDTH_PIXELS"),
                 "The active display width should come from the logical screen-width configuration");
     }
+
+    @Test
+    void backgroundPerColumnVScrollIsOwnedByParallaxCompositingPassOnly() throws IOException {
+        String renderer = Files.readString(Path.of("src/main/java/com/openggf/level/LevelRenderer.java"));
+
+        assertTrue(renderer.contains("pendingBgVScrollColumnData = vScrollColumnData;"),
+                "BG per-column VScroll must still feed the parallax compositing pass");
+        assertFalse(renderer.contains("pendingBgTilePassPerColumnVScroll"),
+                "BG tile FBO pass must not also consume per-column VScroll; doing both doubles AIZ fire-wave offsets");
+    }
 }

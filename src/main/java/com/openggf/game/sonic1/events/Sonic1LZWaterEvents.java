@@ -966,14 +966,10 @@ public class Sonic1LZWaterEvents {
      * Check for water slide chunks under the player and apply slide physics.
      * ROM equivalent: LZWaterSlides subroutine.
      *
-     * <p>Currently a TODO stub. Full implementation requires:
-     * <ul>
-     *   <li>Reading the 128x128 block (chunk) ID at the player's feet position
-     *       from {@code v_lvllayout}. The ROM computes this as:
-     *       {@code offset = (Y >> 1) & 0x380 + (X & 0x7F) -> v_lvllayout[offset]}</li>
-     *   <li>Matching against {@link #SLIDE_CHUNK_IDS}</li>
-     *   <li>Setting gSpeed/inertia from {@link #SLIDE_SPEEDS}</li>
-     * </ul>
+     * <p>The level event manager samples the 128x128 chunk ID at the player's
+     * ROM obX/obY-equivalent position and passes it here. This method then
+     * matches that chunk ID against {@link #SLIDE_CHUNK_IDS} and applies the
+     * corresponding {@link #SLIDE_SPEEDS} inertia.
      *
      * <p>Slide chunk IDs (ROM: Slide_Chunks): 2, 7, 3, $4C, $4B, 8, 4
      * <p>Slide speeds (ROM: Slide_Speeds): 10, -11, 10, -10, -11, -12, 11

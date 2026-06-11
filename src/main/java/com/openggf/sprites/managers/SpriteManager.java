@@ -389,9 +389,10 @@ public class SpriteManager {
 		boolean testButton = !suppressInput && handler.isKeyDown(testKey);
 		boolean speedUp = isDebugSpeedUpModifierDown(handler);
 		boolean slowDown = isDebugSlowDownModifierDown(handler);
-		boolean debugModePressed = handler.isKeyPressed(debugModeKey);
-		boolean superSonicDebugPressed = handler.isKeyPressed(superSonicDebugKey);
-		boolean giveEmeraldsPressed = handler.isKeyPressed(giveEmeraldsKey);
+		boolean debugShortcutsEnabled = configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
+		boolean debugModePressed = debugShortcutsEnabled && handler.isKeyPressed(debugModeKey);
+		boolean superSonicDebugPressed = debugShortcutsEnabled && handler.isKeyPressed(superSonicDebugKey);
+		boolean giveEmeraldsPressed = debugShortcutsEnabled && handler.isKeyPressed(giveEmeraldsKey);
 
 		// Give all chaos emeralds (debug)
 		if (giveEmeraldsPressed) {
@@ -433,6 +434,7 @@ public class SpriteManager {
 						// CPU-controlled sprite: run AI to generate virtual input
 						var cpuController = playable.getCpuController();
 						cpuControllerForDiagnostics = cpuController;
+						playable.capturePreCpuControlSnapshot();
 						boolean isFirstSidekick = !sidekicks.isEmpty() && sidekicks.getFirst() == playable;
 						if (isFirstSidekick) {
 							cpuController.setController2Input(p2Held, p2Logical);

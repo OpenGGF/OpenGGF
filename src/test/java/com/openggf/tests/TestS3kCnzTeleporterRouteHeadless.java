@@ -204,7 +204,16 @@ class TestS3kCnzTeleporterRouteHeadless {
                 "The bounded Task 8 defeat handoff should spawn the CNZ-local egg capsule wrapper");
 
         capsule.forceResultsCompleteForTest();
+        fixture.sprite().setCentreX((short) 0x4A20);
         boss.update(1, fixture.sprite());
+        assertEquals(1, boss.getPostCapsuleReleaseCountForTest(),
+                "CNZ post-capsule control/music restore should fire once when results complete");
+
+        for (int i = 0; i < 4; i++) {
+            boss.update(2 + i, fixture.sprite());
+        }
+        assertEquals(1, boss.getPostCapsuleReleaseCountForTest(),
+                "Waiting left of the launcher trigger must not replay CNZ2 music/control restore every frame");
 
         assertFalse(fixture.sprite().isControlLocked(),
                 "Capsule release should return player control once the results screen has finished");

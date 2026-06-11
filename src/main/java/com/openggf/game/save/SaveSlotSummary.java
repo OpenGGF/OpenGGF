@@ -8,6 +8,10 @@ public record SaveSlotSummary(int slot, SaveSlotState state, Map<String, Object>
         return new SaveSlotSummary(slot, SaveSlotState.EMPTY, Map.of());
     }
 
+    public static SaveSlotSummary unavailable(int slot) {
+        return new SaveSlotSummary(slot, SaveSlotState.UNAVAILABLE, Map.of());
+    }
+
     public boolean isLoadable() {
         return state == SaveSlotState.VALID;
     }

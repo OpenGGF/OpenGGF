@@ -73,6 +73,10 @@ public final class AudioKeyframeStore {
         keyframes.tailMap(frame, false).clear();
     }
 
+    public void discardBefore(long frame) {
+        keyframes.headMap(frame, false).clear();
+    }
+
     public void clear() {
         keyframes.clear();
     }

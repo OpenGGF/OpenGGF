@@ -193,8 +193,6 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance {
         // ROM: every 4 frames toggle visibility (andi.b #3,d0)
         private static final int BOB_MASK = 3;
         // ROM: cmpi.w #$280,d0 — coarse range threshold for culling
-        private static final int COARSE_RANGE_THRESHOLD = 0x280;
-
         private static final SolidObjectParams SOLID_PARAMS =
                 new SolidObjectParams(HALF_WIDTH, HALF_HEIGHT, HALF_HEIGHT + 1);
 
@@ -268,8 +266,7 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance {
 
             // ROM coarse range check (loc_2B6D8, sonic3k.asm lines 59994-59998):
             // andi.w #$FF80,d0 / sub.w (Camera_X_pos_coarse_back).w,d0 / cmpi.w #$280,d0
-            int coarse = (x & 0xFF80) - services().camera().getX();
-            if (coarse < 0 || coarse > COARSE_RANGE_THRESHOLD) {
+            if (!isInRangeAt(x)) {
                 destroyWithSplash();
                 return;
             }

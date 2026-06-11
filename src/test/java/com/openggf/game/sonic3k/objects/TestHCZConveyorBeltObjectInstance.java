@@ -129,6 +129,64 @@ class TestHCZConveyorBeltObjectInstance {
     }
 
     @Test
+    void capturePreservesStatusRollLikeRom() throws Exception {
+        camera.setX((short) 0x0C00);
+        TestObjectServices services = new TestObjectServices().withCamera(camera);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x0C00, (short) 0x0221);
+        player.setRolling(true);
+        player.setCentreX((short) 0x0C00);
+        player.setCentreY((short) 0x0221);
+        player.setYSpeed((short) 0);
+        HCZConveyorBeltObjectInstance belt = buildBelt(services, 0x0B28, 0x0200, 0x00, 0);
+
+        belt.update(10, player);
+
+        assertTrue(player.isObjectControlled());
+        assertTrue(player.getRolling(), "Obj_HCZConveyorBelt capture does not bclr Status_Roll");
+        assertEquals(7, player.getXRadius());
+        assertEquals(14, player.getYRadius());
+    }
+
+    @Test
+    void capturePreservesSubpixelsLikeRomYPosWrite() throws Exception {
+        camera.setX((short) 0x0C00);
+        TestObjectServices services = new TestObjectServices().withCamera(camera);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x0C00, (short) 0x0221);
+        player.setYSpeed((short) 0);
+        player.setSubpixelRaw(0x4800, 0x3000);
+        HCZConveyorBeltObjectInstance belt = buildBelt(services, 0x0B28, 0x0200, 0x00, 0);
+
+        belt.update(10, player);
+
+        assertTrue(player.isObjectControlled());
+        assertEquals(0x0214, player.getCentreY() & 0xFFFF);
+        assertEquals(0x4800, player.getXSubpixelRaw());
+        assertEquals(0x3000, player.getYSubpixelRaw());
+    }
+
+    @Test
+    void activeMovementAndAnimationPreserveSubpixelsLikeRomWordWrites() throws Exception {
+        camera.setX((short) 0x0C00);
+        TestObjectServices services = new TestObjectServices().withCamera(camera);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x0C00, (short) 0x0221);
+        player.setYSpeed((short) 0);
+        HCZConveyorBeltObjectInstance belt = buildBelt(services, 0x0B28, 0x0200, 0x00, 0);
+
+        belt.update(10, player);
+        player.setSubpixelRaw(0x5200, 0x0400);
+        player.setDirectionalInputPressed(false, false, true, false);
+
+        belt.update(11, player);
+
+        assertTrue(player.isObjectControlled());
+        assertEquals(0x0C01, player.getCentreX() & 0xFFFF,
+                "left input subtracts 1, then the rightward belt adds 2");
+        assertEquals(0x0214, player.getCentreY() & 0xFFFF);
+        assertEquals(0x5200, player.getXSubpixelRaw());
+        assertEquals(0x0400, player.getYSubpixelRaw());
+    }
+
+    @Test
     void updatePlayerRemainsNativeP1WhenQueryOnlyReturnsNativeP2() throws Exception {
         camera.setX((short) 0x0C00);
         TestablePlayableSprite updatePlayer = new TestablePlayableSprite("sonic", (short) 0x0C00, (short) 0x0221);

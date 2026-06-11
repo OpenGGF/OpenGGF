@@ -1,5 +1,63 @@
 # Trace Frontier Log
 
+## 2026-06-11 - S3K HCZ complete-run progressed to button solid frontier
+
+- Scope: release-remediation follow-up after the frame-125 monitor/Tails
+  release fix. Trace data remained comparison-only diagnostic input; no engine
+  state was hydrated from trace rows, and no zone/route/frame exception was
+  added.
+- Fixes:
+  - Poindexter now models the ROM wait-offscreen/setup cadence before movement
+    and collision flags become active, moving HCZ past the frame-374
+    main-player `y_speed` mismatch.
+  - S3K spikes opt into the shared `SolidObjectFull` airborne stale-standing-bit
+    no-contact contract, matching the ROM helper path used by S2/S3K spikes.
+  - Underwater airborne approaches to S3K horizontal springs no longer synthesize
+    the grounded proactive landing handoff; ordinary side contact remains
+    available, moving HCZ past the frame-624 spring handoff mismatch.
+- Verification:
+  - `mvn "-Dtest=com.openggf.game.sonic3k.objects.badniks.TestPoindexterBadnikInstance" test`
+    -> PASS for the Poindexter unit slice.
+  - `mvn "-Dtest=com.openggf.game.sonic3k.objects.TestSonic3kSpikeObjectInstance,com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" test`
+    -> PASS for the shared spike stale-standing-bit slice.
+  - `mvn "-Dtest=com.openggf.game.sonic3k.objects.TestSonic3kSpringObjectInstance" test`
+    -> PASS for the underwater horizontal-spring approach guard.
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+    -> RED, but the first error moved to frame 896: main-player `y_speed`
+    `expected=0x0220`, `actual=0x0000`, with engine diagnostics showing riding
+    slot 19 / object `0x33` Button.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  shared solid/riding state around the frame-896 button contact and distinguish
+  active support from latched diagnostic state before changing button-specific
+  behavior further.
+
+## 2026-06-11 - S3K HCZ complete-run monitor release frontier moved
+
+- Scope: follow-up to the release-remediation SK-1 complete-run verification
+  pass. The fix keeps trace data comparison-only: the HCZ frame-125 trace
+  context was used to identify ROM monitor status/geometry ordering, not to
+  hydrate engine state or add a route/frame exception.
+- Fix:
+  - S3K monitor break handling now recovers the ROM P2 standing-bit case from
+    monitor-edge geometry when the engine's batched solid-contact pass has no
+    current ride record for the sidekick.
+  - CPU sidekicks released by a broken S3K monitor suppress the immediate
+    same-frame gravity tick, matching the ROM ordering where
+    `Monitor_ChkOverEdge`/`Obj_MonitorBreak` expose `Status_InAir` before the
+    next sidekick movement/gravity step.
+- Verification:
+  - `mvn "-Dtest=com.openggf.game.sonic3k.objects.TestSonic3kMonitorObjectInstance" test`
+    -> PASS for the S3K monitor unit slice. Maven Silent Extension still
+    reports the known cached S3K CNZ backlog in the aggregate summary.
+  - `mvn "-Dtest=com.openggf.tests.TestSonic3kMonitorObjectInstance" test`
+    -> PASS for the stale P2 standing-bit cleanup guard.
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+    -> RED, but the first error moved from frame 125 `tails_air` to frame 374
+    main-player `y_speed` (`expected=0x0060`, `actual=-0060`).
+- Release state: HCZ complete-run remains red, but the monitor/Tails release
+  blocker at frame 125 is resolved. Continue from frame 374; do not reopen the
+  solved frame-125 monitor release unless a regression reintroduces it.
+
 ## 2026-06-10 - S3K AIZ release trace green; S2/S3K sidekick baseline recorded
 
 - Scope: follow-up to the AIZ sidekick release blocker and the requested
@@ -9757,3 +9815,103 @@ sidekick — never a zone id/route/frame. No per-frame writeback. Files: `TraceR
 Follow-up (out of scope here, requires sidekick-AI / object work, not a one-time seed): model S3K mid-run
 sidekick dormancy (HCZ/MGZ intro-fall straight-drop with no horizontal CPU follow; ICZ parked-Tails; LBZ
 spawn-offset hold) and the CNZ/MHZ inter-zone object-driven descent so these advance past f1.
+
+## 2026-06-11 — HCZ complete-run water-rush tunnel entry
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `bugfix/ai-release-remediation`.
+Command:
+`mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestSonic3kButtonObjectInstance,com.openggf.game.sonic3k.features.TestHCZWaterTunnelHandler,com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+
+Fixes:
+- `Sonic3kButtonObjectInstance` now sets `Level_trigger_array` from the standing solid-contact callback as well as the object update path. This mirrors `Obj_Button` calling `SolidObjectTop` and then immediately testing standing bits before setting the trigger.
+- `Sonic3kButtonObjectInstance` rejects exact top-solid surface-boundary contact for top-solid buttons, matching `SolidObjectTop_1P`'s unsigned lower-bound rejection at exact zero distance.
+- `HCZWaterTunnelHandler` no longer clears `ground_vel`; ROM `HCZ_WaterTunnels` writes only `x_vel` and `y_vel`.
+- HCZ water tunnels now run from the normal zone-feature update phase after player/object processing, matching `LevelLoop -> Process_Sprites -> ... -> Handle_Onscreen_Water_Height -> sub_6F4A`. The handler again respects `_unkF7C7` directly; `Obj_HCZWaterRush` clears that latch before the tunnel phase when the trigger takes effect.
+
+Result:
+- Button unit tests: green.
+- HCZ tunnel unit tests: green.
+- HCZ complete-run frontier advanced through the frame-896 button landing and frame-898 tunnel entry to frame **940**, first error `tails_g_speed` expected `0x0000`, actual `0x000C`.
+- New blocker: CPU Tails push/follow steering state after the water-rush tunnel sequence. Main player x/y/speeds/camera match through the new frontier; the remaining mismatch is sidekick `Status_Push`/ground-speed cadence.
+
+## 2026-06-11 — HCZ complete-run breakable-bar/sidekick follow slice
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `bugfix/ai-release-remediation`.
+Command:
+`mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestHCZBreakableBarObjectInstance,com.openggf.game.sonic3k.objects.TestSonic3kButtonObjectInstance,com.openggf.game.sonic3k.features.TestHCZWaterTunnelHandler,com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+
+Fixes:
+- HCZ breakable-bar capture now uses the ROM pre-physics position window for the post-physics engine object phase, preserves `ground_vel`, and preserves subpixels on native `x_pos`/`y_pos` writes.
+- CPU Tails ground-wall push handling now defers the wall velocity response until after the same-frame movement step, matching the ROM ordering through the HCZ water-rush side contact.
+- Tails CPU auto-jump carry now distinguishes the fresh low-byte press window from the following held-only airborne frame, clearing the repeated `Ctrl_2_Press_Logical` jump bit at the HCZ f974 shape without suppressing the earlier f973 press.
+
+Result:
+- HCZ breakable-bar unit tests: green.
+- Button and HCZ tunnel unit tests: green.
+- Sidekick follow/despawn parity slice: green (`112` tests).
+- HCZ complete-run frontier advanced through frames 940, 953, 957, 973, and 974 to frame **1020**, first error `x` expected `0x076C`, actual `0x0771`; ROM has already stopped Sonic at the breakable-bar/spike cluster while the engine keeps `x_speed=0x03F0`.
+- New blocker: investigate main-player object-control/stop timing around HCZ breakable bar/spike debris near `@0758,0590` / `@0796,05B2`. Continue from ROM-state/object-contact conditions, not a route or frame exception.
+
+## 2026-06-11 — HCZ complete-run breakable-bar capture timing
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `bugfix/ai-release-remediation`.
+Command:
+`mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestHCZBreakableBarObjectInstance,com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+
+Fix:
+- `HCZBreakableBarObjectInstance` capture checks now use the current post-physics ROM `x_pos`/`y_pos` for both vertical and horizontal bars. The f1020 blocker was a vertical subtype `0x15` bar at `@0758,0590`; ROM sees Sonic after player physics at `x=0x0771`, accepts the vertical capture window, writes `x_pos=bar_x+$14`, and clears `x_vel/y_vel` while preserving `ground_vel`. The previous engine pre-physics snapshot rejected `x=0x0769` and captured one frame late.
+- Focused unit coverage now asserts the post-physics capture ordering and right-edge clamp behavior.
+
+Result:
+- HCZ breakable-bar unit tests: green (`10` tests).
+- HCZ complete-run frontier advanced from frame **1020** to frame **1581**.
+- New blocker: frame **1581** rolling/status mismatch in an HCZ object-control water/conveyor cluster. ROM keeps Sonic rolling (`status=0x46`, rolling bit set) while the engine has `status=0x42`/rolling false under object control, with camera Y also 5 px low (`expected=0x06DA`, `actual=0x06DF`). Continue by modeling the object/control state that clears or preserves `Status_Roll`, not by route/frame exception.
+
+## 2026-06-11 — HCZ complete-run collapsing bridge release table
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `bugfix/ai-release-remediation`.
+Command:
+`mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+
+Fix:
+- `CollapsingBridgeObjectInstance` now exposes the S3K ROM code-pointer high word for sidekick interact checks, so CPU Tails can observe the bridge the way `TailsCPU_Normal` observes `object_control`/interact state.
+- Directional collapse selection now uses the ROM P1/P2 standing bits through `ObjectManager.hasObjectStandingBit(...)` instead of assuming the main-player standing state owns the collapse direction.
+- Wave-collapse support now seeds all current riders and releases each rider independently, matching the parent-platform wait path instead of dropping sidekicks when Sonic's release condition fires.
+- The directional fragment spawn path still selects the flipped `$34` delay table when ROM enters `loc_20AF6`, but player release checks now keep using the parent `$30` delay table. The disassembly passes `$34` only to `ObjPlatformCollapse_SmashObject`; `Obj_PlatformCollapseWaitHandlePlayer` reloads `$30` before `Check_CollapsePlayerRelease`.
+
+Result:
+- HCZ complete-run remains red, but the frontier advanced from frame **2501** to frame **2635**.
+- First error is now frame **2635** `tails_air` expected `0`, actual `1`. ROM keeps Tails grounded around `x=0x1322, y=0x0AB0` in the bubbler/air-countdown floor-contact cluster, while the engine has Tails airborne with no object ride. Continue by modeling the ROM object/contact state around the bubbler and air-countdown objects, not by route/frame exception.
+
+## 2026-06-11 — HCZ complete-run water reset and large fan load wait
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `bugfix/ai-release-remediation`.
+Commands:
+`mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestHczLargeFanCoordinateParity,com.openggf.game.sonic3k.objects.TestHczLargeFanRegistry" test`
+`mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+
+Fix:
+- S3K water entry/exit now replenishes the ROM air timer on both transitions for the fixed-level-object bubble cadence path. `Sonic_Water` and `Tails_Water` call `Player_ResetAirTimer` on underwater entry and out-water exit (`docs/skdisasm/sonic3k.asm:22221`, `docs/skdisasm/sonic3k.asm:22252`, `docs/skdisasm/sonic3k.asm:27436`, `docs/skdisasm/sonic3k.asm:27470`). This clears the frame-2635 premature Tails drowning/air-state divergence.
+- `HCZLargeFanObjectInstance` now models the ROM queued-art wait before the falling fan initializes. `Obj_HCZLargeFan` queues `ArtKosM_HCZLargeFan`, waits for `Kos_modules_left`, then initializes and falls through into the first drop tick (`docs/skdisasm/sonic3k.asm:65599-65627`). This clears the frame-2801 early fan-drop launch.
+
+Result:
+- Focused large-fan tests are green.
+- HCZ complete-run remains red, but the frontier advanced from frame **2635** to frame **2894**.
+- First error is now frame **2894** `tails_cpu_ctrl2_pressed` expected `0x0000`, actual `0x0010`. ROM and engine positions, velocities, camera, rings, and Tails kinematics still match at the first error; the new owner is sidekick follow-history jump-edge publication. ROM `tails_cpu_normal_step` has `delayed_input=0x1504` and `ctrl2_logical=0x0000`, while the engine still reports a synthesized abstract jump press for that delayed held-input shape.
+
+## 2026-06-11 — HCZ complete-run sidekick delayed jump-press edge
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `bugfix/ai-release-remediation`.
+Commands:
+`mvn "-Dmse=off" "-Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity,com.openggf.sprites.playable.TestSidekickCpuDespawnParity,com.openggf.tests.trace.TestTraceBinder" test`
+`mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+
+Fix:
+- `TraceBinder` now uses the recorder's generated `tails_cpu_normal_step.ctrl2_logical` as the normal-step alternate for sidekick Ctrl_2 comparisons, instead of treating the delayed held/press input word itself as generated Ctrl_2. This keeps delayed input diagnostic data from masking a real generated-press mismatch.
+- `PhysicsFeatureSet.sidekickDelayedJumpPressUsesHistoryEdge` gates S3K delayed sidekick jump-press reconstruction. S3K now treats repeated delayed jump-press history as a one-sample pulse while preserving the delayed held A/B/C bit; S2 keeps the existing repeated-press replay behavior.
+- Focused sidekick coverage now pins the HCZ f2894 shape: held jump remains visible, but the low-byte jump press clears on the adjacent delayed follower-history sample.
+
+Result:
+- Focused sidekick/binder tests are green (`141` tests).
+- HCZ complete-run remains red, but the frontier advanced from frame **2894** to frame **2976**.
+- First error is now frame **2976** `y` expected `0x0A4E`, actual `0x0A4B`, with matching player `x`, speeds, rings, sidekick kinematics, and sidekick Ctrl_2 fields. Camera Y is also 3 px high in the engine (`expected=0x0A10`, `actual=0x0A0D`). The new owner is the main-player vertical/camera path around the post-breakable-bar underwater debris/air-countdown cluster, not sidekick input publication.

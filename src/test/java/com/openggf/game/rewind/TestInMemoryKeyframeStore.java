@@ -45,4 +45,19 @@ class TestInMemoryKeyframeStore {
         s.put(60, snap(2));
         assertEquals(2, ((Integer) s.latestAtOrBefore(60).get().snapshot().get("marker")));
     }
+
+    @Test
+    void discardBeforeDropsOlderKeyframesOnly() {
+        InMemoryKeyframeStore s = new InMemoryKeyframeStore();
+        s.put(0, snap(0));
+        s.put(60, snap(60));
+        s.put(120, snap(120));
+
+        s.discardBefore(60);
+
+        assertTrue(s.latestAtOrBefore(59).isEmpty());
+        assertEquals(60, s.earliestFrame());
+        assertEquals(60, s.latestAtOrBefore(60).orElseThrow().frame());
+        assertEquals(120, s.latestAtOrBefore(999).orElseThrow().frame());
+    }
 }

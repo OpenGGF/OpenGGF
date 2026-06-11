@@ -434,7 +434,7 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
-    void groundedPushPreservesAutoJumpFlagUntilPushStateClears() {
+    void groundedPushAutoJumpFlagStillEmitsJumpThenClearsLikeRom() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
@@ -458,21 +458,71 @@ class TestSidekickCpuDespawnParity {
 
         controller.update(0x3DB3);
 
-        assertEquals(1, controller.getDiagnosticJumpingFlag(),
-                "AIZ2 F15795 keeps Tails_CPU_auto_jump_flag set while Status_Push remains "
-                        + "visible to TailsCPU_Normal even though Tails is grounded.");
-        assertEquals(0, controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_JUMP,
-                "The preserved grounded push latch must not manufacture a held jump in Ctrl_2.");
+        assertEquals(0, controller.getDiagnosticJumpingFlag(),
+                "S2/S3K TailsCPU_Normal clears Tails_CPU_auto_jump_flag whenever Status_InAir is clear; "
+                        + "Status_Push is not part of the clear gate (s2.asm:38994-39022, "
+                        + "sonic3k.asm:26753-26782).");
+        assertEquals(AbstractPlayableSprite.INPUT_JUMP,
+                controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_JUMP,
+                "While Tails_CPU_auto_jump_flag is set, the ROM ORs A/B/C into Ctrl_2 before "
+                        + "the grounded clear path; grounded pushing must not suppress that held jump.");
 
         tails.setPushing(false);
         controller.update(0x3DC5);
 
         assertEquals(0, controller.getDiagnosticJumpingFlag(),
-                "AIZ2 F15813 clears the auto-jump flag once the grounded push state has "
-                        + "fallen back to the normal path.");
-        assertEquals(AbstractPlayableSprite.INPUT_JUMP,
-                controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_JUMP,
-                "The grounded clear frame still exposes the final held jump in Ctrl_2.");
+                "Once the ROM clear path has run, the auto-jump flag remains clear on later frames.");
+    }
+
+    @Test
+    void s2DeadFallWaitsForTailsMaxYPlus100BeforeDespawnMarker() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x1800);
+        tails.setCentreY((short) 0x04FF);
+        tails.setAir(true);
+        tails.setYSpeed((short) 0x0200);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.DEAD_FALLING, 0);
+        controller.setLevelBounds(null, null, 0x0400);
+
+        controller.update(0x2200);
+
+        assertEquals(SidekickCpuController.State.DEAD_FALLING, controller.getState(),
+                "S2 Obj02_CheckGameOver returns while y_pos <= Tails_Max_Y_pos+$100");
+        assertEquals((short) 0x1800, tails.getCentreX());
+        assertTrue(controller.isDeferredDespawnDeadFallContinuingThisFrame(),
+                "The movement phase owns the pre-threshold ObjectMoveAndFall step");
+    }
+
+    @Test
+    void s2DeadFallAppliesDespawnMarkerAfterTailsMaxYPlus100Threshold() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x1800);
+        tails.setCentreY((short) 0x0501);
+        tails.setSubpixelRaw(0x0000, 0x2C00);
+        tails.setAir(true);
+        tails.setXSpeed((short) 0);
+        tails.setYSpeed((short) 0x0200);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.DEAD_FALLING, 0);
+        controller.setLevelBounds(null, null, 0x0400);
+
+        controller.update(0x2201);
+
+        assertEquals(SidekickCpuController.State.SPAWNING, controller.getState(),
+                "Once y_pos exceeds Tails_Max_Y_pos+$100, Obj02_CheckGameOver branches to TailsCPU_Despawn");
+        assertEquals((short) 0x4000, tails.getCentreX());
+        assertEquals((short) 0x0002, tails.getCentreY(),
+                "TailsCPU_Despawn writes y_pos=0, then Obj02_Dead continues with ObjectMoveAndFall");
+        assertEquals((short) 0x0238, tails.getYSpeed());
     }
 
     @Test
@@ -939,6 +989,35 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void s3kHurtRoutineDoesNotAdvancePanicDespawnTimer() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x0B04);
+        tails.setCentreY((short) 0x0DF2);
+        tails.setAir(true);
+        tails.setHurt(true);
+        tails.setRenderFlagOnScreen(false);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(0x08, 0, 299, 0, false, 0, 0);
+        tails.setHurt(true);
+        tails.setRenderFlagOnScreen(false);
+
+        controller.update(1910);
+
+        assertEquals(SidekickCpuController.State.PANIC, controller.getState(),
+                "S3K Tails_Index routine 4 dispatches the hurt/object path before Tails_Control, "
+                        + "so PANIC must not run TailsCPU_CheckDespawn while hurt");
+        assertEquals(299, controller.getDiagnosticRespawnCounter());
+        assertEquals(0, controller.getDiagnosticGeneratedHeldInput(),
+                "The skipped CPU path must preserve the previous Ctrl_2 logical latch");
+        assertEquals((short) 0x0B04, tails.getCentreX());
+        assertEquals((short) 0x0DF2, tails.getCentreY());
+    }
+
+    @Test
     void despawnTimerUsesCachedRenderFlagInsteadOfCurrentCameraGeometry() throws Exception {
         installEmptyObjectManager();
         TestableSprite sonic = new TestableSprite("sonic");
@@ -1061,6 +1140,57 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void s2PanicIgnoresPinballModeWhenSpindashFlagIsClear() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x1444);
+        tails.setCentreY((short) 0x043D);
+        tails.setGSpeed((short) 0x0038);
+        tails.setSpindash(false);
+        tails.setPinballMode(true);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(0x08, 0, 0x00AB, 0, false, 0x1204, 0x0324);
+        controller.update(0x23F9);
+
+        assertEquals(0, controller.getDiagnosticGeneratedHeldInput(),
+                "S2 TailsCPU_Panic only tests spindash_flag; pinball_mode with nonzero inertia "
+                        + "must return before writing Ctrl_2 down (s2.asm:39458-39467).");
+        assertEquals(0, controller.getDiagnosticGeneratedPressedInput());
+    }
+
+    @Test
+    void panicContinuesAfterCheckDespawnMarkerAndRewritesCtrl2Latch() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x0100);
+        tails.setCentreY((short) 0x0200);
+        tails.setGSpeed((short) 0);
+        tails.setSpindash(false);
+        tails.setPinballMode(false);
+        tails.setRenderFlagOnScreen(false);
+
+        sonic.setCentreX((short) 0x0200);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(0x08, 0, 299, 0, false, 0, 0);
+        tails.setRenderFlagOnScreen(false);
+
+        controller.update(5);
+
+        assertEquals(SidekickCpuController.State.SPAWNING, controller.getState(),
+                "TailsCPU_CheckDespawn's timeout branch writes routine=2 via TailsCPU_Despawn");
+        assertEquals((short) 0x4000, tails.getCentreX());
+        assertEquals(AbstractPlayableSprite.INPUT_DOWN, controller.getDiagnosticGeneratedHeldInput(),
+                "TailsCPU_Panic calls CheckDespawn with bsr; after TailsCPU_Despawn returns, "
+                        + "the PANIC body still writes DOWN to Ctrl_2_Logical");
+    }
+
+    @Test
     void normalRoutineUsesDelayedLogicalJumpPressHistory() {
         TestableSprite sonic = new TestableSprite("sonic");
         sonic.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
@@ -1093,7 +1223,7 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
-    void normalRoutineSuppressesRepeatedDelayedJumpPressHistory() {
+    void normalRoutineClearsRepeatedDelayedJumpPressHistoryAfterFirstS3kSample() {
         TestableSprite sonic = new TestableSprite("sonic");
         sonic.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
         sonic.setCentreX((short) 0x1200);
@@ -1119,8 +1249,10 @@ class TestSidekickCpuDespawnParity {
 
         assertEquals(AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP,
                 controller.getDiagnosticGeneratedHeldInput());
-        assertEquals(0, controller.getDiagnosticGeneratedPressedInput() & AbstractPlayableSprite.INPUT_JUMP,
-                "A repeated delayed press-history byte is not a new Ctrl_2 low-byte press");
+        assertEquals(0,
+                controller.getDiagnosticGeneratedPressedInput() & AbstractPlayableSprite.INPUT_JUMP,
+                "S3K keeps the delayed held A/B/C bit visible but clears the repeated low-byte "
+                        + "jump press after the first follower-history sample.");
     }
 
     @Test

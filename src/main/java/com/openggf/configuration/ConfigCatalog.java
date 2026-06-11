@@ -117,6 +117,8 @@ public final class ConfigCatalog {
                 "Maximum rewind steps per tick"));
         put(LIVE_REWIND_TAPE_COAST_MIN_STEPS, of("rewind", "tapeCoastMinSteps", DOUBLE,
                 "Minimum rewind steps per tick; below 1.0 gives slow-motion rewind"));
+        put(REWIND_HISTORY_SECONDS, of("rewind", "historySeconds", INT,
+                "Seconds of live rewind keyframe and input history to retain"));
         put(REWIND_AUDIO_HISTORY_LIMIT_TYPE, ofEnum("rewind", "audioHistoryLimitType",
                 "How the rewind audio PCM history ring is sized", Set.of("time", "size")));
         put(REWIND_AUDIO_HISTORY_SECONDS, of("rewind", "audioHistorySeconds", INT,
@@ -258,6 +260,7 @@ public final class ConfigCatalog {
         SECTION_TITLES.put("rewind", "Rewind (live)");
         SECTION_TITLES.put("crossGame", "Cross-Game");
         SECTION_TITLES.put("discord", "Discord Rich Presence");
+        SECTION_TITLES.put("capture", "Trace Capture");
     }
 
     private ConfigCatalog() {

@@ -17,8 +17,10 @@ import org.mockito.Mockito;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -56,6 +58,18 @@ public class CollisionSystemTest {
 
         assertNotNull(fresh.getTrace());
         assertEquals(NoOpCollisionTrace.INSTANCE, fresh.getTrace());
+    }
+
+    @Test
+    public void resetStateClearsPendingOddSensorFallbackAngles() throws Exception {
+        AbstractPlayableSprite player = Mockito.mock(AbstractPlayableSprite.class);
+        Map<AbstractPlayableSprite, Byte> pending = pendingOddSensorFallbackAngles(collisionSystem);
+        pending.put(player, (byte) 0xA0);
+
+        collisionSystem.resetState();
+
+        assertTrue(pending.isEmpty(),
+                "RIGHTWALL odd-sensor fallback memory must not survive CollisionSystem.resetState()");
     }
 
     @Test
@@ -733,6 +747,14 @@ public class CollisionSystemTest {
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Failed reading probe accessor " + accessor, e);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<AbstractPlayableSprite, Byte> pendingOddSensorFallbackAngles(CollisionSystem collisionSystem)
+            throws Exception {
+        Field field = CollisionSystem.class.getDeclaredField("pendingOddSensorFallbackAngles");
+        field.setAccessible(true);
+        return (Map<AbstractPlayableSprite, Byte>) field.get(collisionSystem);
     }
 
     private static Direction readProbeDirection(Object probe, String accessor) {
