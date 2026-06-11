@@ -1,6 +1,7 @@
 package com.openggf.sprites.managers;
 
 import com.openggf.game.GameModule;
+import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.PhysicsFeatureSet;
@@ -79,6 +80,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	// Cached speed constants (don't change with speed shoes)
 	private final short slopeRunning;
 	private final short minStartRollSpeed;
+	private final short minRollSpeed;
 	private final short maxRoll;
 	private final short slopeRollingUp;
 	private final short slopeRollingDown;
@@ -122,6 +124,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		this.bootstrapGameState = gameState;
 		slopeRunning = sprite.getSlopeRunning();
 		minStartRollSpeed = sprite.getMinStartRollSpeed();
+		minRollSpeed = sprite.getMinRollSpeed();
 		maxRoll = sprite.getMaxRoll();
 		slopeRollingUp = sprite.getSlopeRollingUp();
 		slopeRollingDown = sprite.getSlopeRollingDown();
@@ -234,7 +237,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private Camera camera() {
-		return sprite.currentCamera();
+		return GameServices.cameraOrNull();
 	}
 
 	private Camera playerCameraBiasController() {
@@ -2133,8 +2136,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			gSpeed = applyFriction(gSpeed, naturalDecel);
 		}
 
-		// Stop rolling check
-		if (gSpeed == 0) {
+		// Stop rolling check. ROM compares abs(ground_vel) against min_roll_speed
+		// ($80 for Sonic/Tails/Knuckles), then unrolls below the threshold.
+		if (Math.abs(gSpeed) < minRollSpeed) {
 			if (sprite.getPinballMode()) {
 				gSpeed = (short) (sprite.getDirection() == Direction.LEFT ? -0x400 : 0x400);
 			} else if (objectPreservedRollStop) {

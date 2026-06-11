@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+## 2026-06-11 - S3K HCZ complete-run progressed to air-count y-speed frontier
+
+- Scope: follow-up to the HCZ frame-3850 native-P2 rolling-state mismatch.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no zone/route/frame exception was added.
+- Fix:
+  - Shared playable roll-stop now compares `abs(ground_vel)` against the
+    sprite's `min_roll_speed` (`$80` for Sonic/Tails/Knuckles), matching
+    `Tails_RollSpeed` / `Sonic_RollSpeed`, instead of waiting for ground speed
+    to decay all the way to zero.
+  - Roll-stop still preserves the post-deceleration `ground_vel` for velocity
+    conversion, while clearing `Status_Roll`, restoring standing radii, and
+    applying the ROM `y_radius-default_y_radius` center-Y adjustment.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestPlayableSpriteRollSpeed" test`
+    -> PASS, 1 test.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+    -> RED, but the first error moved from frame 3850 to frame 4286:
+    main-player `y_speed` `expected=0x0000`, `actual=0x0038`.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the frame-4286 main-player airborne/y-speed handoff around the HCZ air-count
+  fixed controllers and nearby conveyor/solid objects. The frame-3850
+  native-P2 Tails roll-stop is resolved.
+
 ## 2026-06-11 - S3K HCZ complete-run progressed to post-conveyor Tails landing
 
 - Scope: follow-up to the HCZ frame-3355 conveyor capture mismatch. Trace data

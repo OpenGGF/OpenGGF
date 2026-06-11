@@ -65,6 +65,13 @@ All notable changes to the OpenGGF project are documented in this file.
   belts remain alive long enough to recapture native P2 on the frame the ROM
   still processes them.
 
+- **Playable roll-stop uses the ROM minimum roll speed:** shared
+  `Sonic_RollSpeed` / `Tails_RollSpeed` handling now clears rolling when
+  `abs(ground_vel)` falls below the sprite's `min_roll_speed` instead of
+  waiting for zero speed. This restores Tails' standing radii and one-pixel
+  `y_pos` adjustment at the HCZ complete-run frame-3850 frontier and advances
+  the trace to the next main-player air-count handoff.
+
 - **S2 underwater sidekick push bypass follows the ROM branch:** live
   `Status_Push` with delayed Sonic not pushing now skips follow steering even
   underwater and at low x speed, instead of inheriting S3K's AIZ reload
