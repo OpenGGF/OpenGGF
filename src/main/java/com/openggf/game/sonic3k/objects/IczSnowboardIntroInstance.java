@@ -223,7 +223,9 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         player.setRolling(true);
         player.setCentreYPreserveSubpixel((short) centreY);
         player.setControlLocked(true);
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        // ROM Obj_LevelIntroICZ1 writes object_control = #3 here: low-bit object ownership,
+        // not the bit-7 touch-response suppression state.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setObjectMappingFrameControl(true);
         player.clearForcedInputMask();
     }
@@ -347,7 +349,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         if (slopeIndex >= table.length) {
             player.setTopSolidBit((byte) 0x0E);
             player.setLrbSolidBit((byte) 0x0F);
-            ObjectControlState.engineScriptedTouchSuppressedMovementActive().applyTo(player);
+            ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(player);
             state = State.SNOWBOARDING;
             return;
         }
@@ -419,7 +421,9 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         sonicSnowboardTouchedGround = false;
         player.setMappingFrame(0);
         player.setHidden(true);
-        ObjectControlState.engineScriptedTouchSuppressedMovementActive().applyTo(player);
+        // ROM loc_397FA writes object_control = #2 for the snowboard overlay.
+        // Movement remains active in the engine, but touch responses still run.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(player);
         player.setObjectMappingFrameControl(true);
         state = State.SNOWBOARDING;
     }

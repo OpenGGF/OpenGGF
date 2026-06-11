@@ -143,6 +143,16 @@ public class TestS3kIcz1SnowboardIntroHeadless {
         }
         assertEquals(0x0800, sonic.getGSpeed() & 0xFFFF,
                 "ROM loc_3943A follows the airborne snowboard overlay without the loc_394A0 ground-speed floor");
+
+        for (int frame = 118; frame < 164; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+        }
+        assertTrue(sonic.isObjectControlled(),
+                "ROM loc_397FA keeps Sonic under object_control=#2 during the snowboard overlay");
+        assertFalse(sonic.isTouchResponseSuppressedByObjectControl(),
+                "ICZ snowboard object_control=#2 must not suppress Test_Ring_Collisions");
+        assertEquals(1, sonic.getRingCount(),
+                "Sonic should collect the first ICZ1 snowboard-route ring while object_control=#2 is active");
     }
 
     @Test

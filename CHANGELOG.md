@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K ICZ1 snowboard object control no longer blocks route rings:** the
+  snowboard intro now models ROM `object_control=#3/#2` as low-bit object
+  ownership rather than bit-7 touch suppression, so Sonic can collect placed
+  rings while the active snowboard overlay owns the sprite. This moves the ICZ
+  complete-run trace from the frame-163 ring mismatch to the frame-171 air-state
+  frontier.
+
 - **S3K ICZ1 snowboard speed maintenance now waits for the ROM grounded
   overlay routine:** the active snowboard overlay no longer applies the
   `$1000` ground-speed floor while the ROM would still be in the airborne

@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+## 2026-06-11 - S3K ICZ complete-run progressed to air-state frontier
+
+- Scope: follow-up to the ICZ frame-163 snowboard-route ring-count mismatch.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - `IczSnowboardIntroInstance` now models the ICZ snowboard intro's ROM
+    `object_control` writes as low-bit object ownership instead of bit-7
+    touch-response suppression. Startup `object_control=#3` keeps scripted
+    movement suppressed, while the active snowboard overlay's `object_control=#2`
+    leaves movement active in the engine but still allows `Test_Ring_Collisions`.
+  - `RingManager` unit coverage now asserts that native low-bit object control
+    does not suppress placed-ring collection, while the ICZ headless bootstrap
+    test asserts the active snowboard overlay remains object-controlled without
+    suppressing touch responses and collects the first snowboard-route ring.
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.TestRingManager#testNativeBit7ObjectControlSuppressesStageRingCollection+testNativeLowBitObjectControlAllowsStageRingCollection" test`
+    -> GREEN. Surefire report: `Tests run: 2, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dtest=com.openggf.tests.TestS3kIcz1SnowboardIntroHeadless#sonicAndTailsStartsSnowboardIntroWithTailsDormantMarker" test`
+    -> GREEN. Surefire report: `Tests run: 1, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 163 to frame 171. New
+    first error: main-player `air` `expected=0`, `actual=1`; ICZ error count
+    is 3500.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the snowboard landing/air-state handoff around frame 171.
+
 ## 2026-06-11 - S3K ICZ complete-run progressed to ring frontier
 
 - Scope: follow-up to the ICZ frame-117 snowboard ground-speed mismatch. Trace
