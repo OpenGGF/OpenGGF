@@ -739,6 +739,15 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
+     * Checks this object against Render_Sprites-style bounds, where the right
+     * and bottom edges are exclusive. Use for routines that observe the ROM
+     * render_flags on-screen bit rather than MarkObjGone's inclusive point test.
+     */
+    protected boolean isWithinRenderSpriteBounds(int xMargin, int yMargin) {
+        return cameraBounds.containsRenderSpriteBounds(getX(), getY(), xMargin, yMargin);
+    }
+
+    /**
      * Configured viewport width in pixels (cameraBounds is updated each frame from
      * camera.getWidth()). Returns 320 at native (NATIVE_4_3), 528 at ULTRA_21_9.
      */

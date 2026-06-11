@@ -1,5 +1,28 @@
 # Trace Frontier Log
 
+## 2026-06-11 - S3K HCZ complete-run progressed to monitor/Tails y-speed frontier
+
+- Scope: follow-up to the HCZ frame-5726 native-P2/Tails `y_speed` sign
+  mismatch around the Poindexter bounce. Trace data remained comparison-only
+  diagnostic input; no engine state was hydrated from trace rows, and no
+  zone/route/frame exception was added.
+- Fix:
+  - `PoindexterBadnikInstance` now uses Render_Sprites-style exclusive
+    right/bottom bounds with the ROM `$20` `Obj_WaitOffscreen` band. The
+    previous inclusive point-margin check restored setup one object tick too
+    early, so `Set_VelocityXTrackSonic` sampled Sonic at the equality case and
+    sent the badnik left instead of matching the ROM's rightward cadence.
+- Verification:
+  - `mvn "-Dtest=com.openggf.game.sonic3k.objects.badniks.TestPoindexterBadnikInstance,com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#hczPoindexterOccupiesRomSlotBeforeTailsBounce" test`
+    -> PASS for the focused unit/route guard slice (`MSE:OK`, known relaxed
+    trace failures still reported in the aggregate summary).
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first error moved from frame 5726 to frame 5995:
+    native-P2/Tails `y_speed` `expected=0x0390`, `actual=0x0358`.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the frame-5995 monitor / monitor-contents / Tails y-speed handoff without
+  reopening the solved Poindexter wait-offscreen cadence unless it regresses.
+
 ## 2026-06-11 - S3K HCZ complete-run progressed to Tails y-speed sign frontier
 
 - Scope: follow-up to the HCZ frame-4872 main-player `x`/camera-X mismatch.

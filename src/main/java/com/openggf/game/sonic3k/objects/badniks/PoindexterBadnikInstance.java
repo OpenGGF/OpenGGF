@@ -105,7 +105,7 @@ public final class PoindexterBadnikInstance extends AbstractS3kBadnikInstance {
         // only after Render_Sprites marks it visible; the restored routine runs
         // on the following object tick.
         if (waitingForOnscreen) {
-            if (!isOnScreen(WAIT_OFFSCREEN_MARGIN)) {
+            if (!isWithinRenderSpriteBounds(WAIT_OFFSCREEN_MARGIN, WAIT_OFFSCREEN_MARGIN)) {
                 updateDynamicSpawn(currentX, currentY);
                 return;
             }

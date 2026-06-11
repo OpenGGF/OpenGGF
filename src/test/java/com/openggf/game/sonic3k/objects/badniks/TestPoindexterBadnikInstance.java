@@ -71,6 +71,23 @@ class TestPoindexterBadnikInstance {
     }
 
     @Test
+    void waitOffscreenUsesRenderExclusiveBottomEdge() {
+        PoindexterBadnikInstance poindexter = poindexter();
+
+        AbstractObjectInstance.updateCameraBounds(0x180, 0, 0x2E0, 0xE0, 0);
+        poindexter.update(0, playerAt(0x260, 0x100));
+
+        assertTrue(poindexter.isWaitingForOnscreenForTest(),
+                "Render_Sprites rejects the bottom edge when y == bottom + $20");
+
+        AbstractObjectInstance.updateCameraBounds(0x180, 0, 0x2E0, 0xE1, 0);
+        poindexter.update(1, playerAt(0x260, 0x100));
+
+        assertFalse(poindexter.isWaitingForOnscreenForTest(),
+                "One pixel inside the Render_Sprites $20 band restores the normal routine");
+    }
+
+    @Test
     void exposesRomRenderBoundsFromObjData() {
         PoindexterBadnikInstance poindexter = poindexter();
 

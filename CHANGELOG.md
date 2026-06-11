@@ -61,6 +61,11 @@ All notable changes to the OpenGGF project are documented in this file.
   children, matching the S3K `Obj_Explosion` routine instead of spawning those
   children directly from the destruction helper.
 
+- **Poindexter wait-offscreen uses ROM render bounds:** HCZ Poindexters now
+  restore their normal routine from Render_Sprites-style exclusive bounds with
+  the ROM `$20` offscreen band, fixing the complete-run Tails bounce cadence
+  and advancing the HCZ trace frontier past frame 5726.
+
 - **S3K sidekick fresh spawns honor the Obj_Tails init-only frame:** fresh
   routine-0 sidekick spawns now reset kinematics and advance to the normal CPU
   routine without running same-frame follow steering, while dormant sentinel
