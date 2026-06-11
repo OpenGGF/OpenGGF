@@ -330,7 +330,7 @@ public class InstancedPatternRenderer {
         priorityAttribs = null;
         initialized = false;
         supported = false;
-        commandPool.clear();
+        drainCommandPool();
     }
 
     /**
@@ -349,7 +349,15 @@ public class InstancedPatternRenderer {
         priorityAttribs = null;
         initialized = false;
         supported = false;
-        commandPool.clear();
+        drainCommandPool();
+    }
+
+    /** Frees each pooled command's native instance buffer before discarding it. */
+    private void drainCommandPool() {
+        InstancedBatchCommand command;
+        while ((command = commandPool.pollFirst()) != null) {
+            command.release();
+        }
     }
 
     private void initBuffers() {
@@ -515,6 +523,14 @@ public class InstancedPatternRenderer {
             instanceBuffer.clear();
             instanceBuffer.put(data, 0, floatCount);
             instanceBuffer.flip();
+        }
+
+        /** Frees the native instance buffer. Call only when discarding the command. */
+        private void release() {
+            if (instanceBuffer != null) {
+                MemoryUtil.memFree(instanceBuffer);
+                instanceBuffer = null;
+            }
         }
 
         @Override

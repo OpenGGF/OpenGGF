@@ -38,6 +38,8 @@ public class LevelTilemapManager {
     // S3K CNZ1BGE_Boss fills Plane B with $10 (16) chunks = 256px and loops that band
     // via the VDP vertical scroll register (docs/skdisasm/sonic3k.asm:107498-107507).
     static final int BG_LOOP_BAND_HEIGHT_PX = VDP_BG_PLANE_HEIGHT_TILES * Pattern.PATTERN_HEIGHT;
+    // Tile columns spanned by one 16px chunk column (the BG window step granularity).
+    static final int CHUNK_TILE_SPAN = LevelConstants.CHUNK_WIDTH / Pattern.PATTERN_WIDTH;
 
     // --- Dependencies ---
     private LevelGeometry geometry;
@@ -60,6 +62,23 @@ public class LevelTilemapManager {
     // room floor below it.
     private int bgLoopBandBaseY = -1;
     private int currentBgPeriodWidth = VDP_BG_PLANE_WIDTH_PX;
+
+    // --- Incremental BG window shift state ---
+    // True only when the pending backgroundTilemapDirty was caused exclusively by
+    // requestBgWindowBaseX (a wrapped-BG window base-X step). Any other invalidation
+    // clears it, forcing the full rebuild path.
+    private boolean bgWindowShiftCandidate = false;
+    // Snapshot of the inputs that produced the current backgroundTilemapData via a
+    // full build (or a subsequent in-place shift). Invalid whenever the live array
+    // may no longer match a from-scratch build with the recorded parameters.
+    private boolean bgLastBuildValid = false;
+    private Level bgLastBuildLevel;
+    private int bgLastBuildBlockPixelSize;
+    private int bgLastBuildBgContiguousWidthPx;
+    private BgBuildParams bgLastBuildParams;
+    // Diagnostics for tests: count full BG rebuilds vs incremental column shifts.
+    int bgFullRebuildCount = 0;
+    int bgIncrementalShiftCount = 0;
 
     // --- Foreground tilemap data ---
     private byte[] foregroundTilemapData;
@@ -96,6 +115,21 @@ public class LevelTilemapManager {
      * Immutable record holding the data produced by {@link #buildTilemapData}.
      */
     record TilemapData(byte[] data, int widthTiles, int heightTiles) {
+    }
+
+    /**
+     * Derived build parameters for one tilemap layer. For the background layer these
+     * capture everything (besides the level data itself) that determines the built
+     * bytes, so an unchanged-except-base-X comparison can prove a one-column window
+     * shift is byte-equivalent to a full rebuild.
+     */
+    private record BgBuildParams(
+            boolean bgWrap,
+            boolean bgLinearRowOverflow,
+            int xQueryOffset,
+            int yQueryOffset,
+            int builtWidthPx,
+            int builtHeightPx) {
     }
 
     /**
@@ -145,6 +179,7 @@ public class LevelTilemapManager {
         if (lastRequiresFullWidthBgTilemap != null
                 && lastRequiresFullWidthBgTilemap != requiresFullWidthBgTilemap) {
             backgroundTilemapDirty = true;
+            bgWindowShiftCandidate = false;
         }
         if (!backgroundTilemapDirty && backgroundTilemapData != null && patternLookupData != null) {
             lastRequiresFullWidthBgTilemap = requiresFullWidthBgTilemap;
@@ -161,8 +196,21 @@ public class LevelTilemapManager {
             return;
         }
 
-        buildBackgroundTilemapData(blockLookup, zoneFeatureProvider, currentZone,
-                parallaxManager, verticalWrapEnabled);
+        // Pure base-X window step: shift the retained bytes one chunk column and
+        // rebuild only the entering column on the CPU, skipping the full
+        // block/chunk/pattern rebuild loop. Any unproven precondition falls back
+        // to the full rebuild below. The GPU upload is always the FULL array:
+        // the renderer/shader address the texture relative to the current base X
+        // (local column c samples world column c*8 + xQueryOffset), so a base
+        // step re-addresses every texture column — a column-only upload would
+        // leave the other columns holding the previous window's content.
+        boolean shifted = bgWindowShiftCandidate
+                && tryIncrementalBgWindowShift(blockLookup, zoneFeatureProvider, currentZone);
+        bgWindowShiftCandidate = false;
+        if (!shifted) {
+            buildBackgroundTilemapData(blockLookup, zoneFeatureProvider, currentZone,
+                    parallaxManager, verticalWrapEnabled);
+        }
         lastRequiresFullWidthBgTilemap = requiresFullWidthBgTilemap;
         backgroundTilemapDirty = false;
 
@@ -259,15 +307,34 @@ public class LevelTilemapManager {
                                             int currentZone,
                                             ParallaxManager parallaxManager,
                                             boolean verticalWrapEnabled) {
-        TilemapData data = buildTilemapData((byte) 1, blockLookup, zoneFeatureProvider,
-                currentZone, parallaxManager, verticalWrapEnabled);
+        BgBuildParams params = computeBuildParams((byte) 1, zoneFeatureProvider, currentZone);
+        TilemapData data = buildTilemapData((byte) 1, params, blockLookup);
         backgroundTilemapData = data.data;
         backgroundTilemapWidthTiles = data.widthTiles;
         backgroundTilemapHeightTiles = data.heightTiles;
 
-        // For VDP wrap height detection, only scan the contiguous BG data region (columns 0-N).
-        // HTZ has earthquake cave data at distant columns (54+, rows 48+) that must not
-        // inflate the data height beyond 32 — the normal sky BG wraps at 32 rows.
+        bgLastBuildValid = true;
+        bgLastBuildLevel = geometry.level();
+        bgLastBuildBlockPixelSize = geometry.blockPixelSize();
+        bgLastBuildBgContiguousWidthPx = geometry.bgContiguousWidthPx();
+        bgLastBuildParams = params;
+        bgFullRebuildCount++;
+
+        int actualHeightTiles = recomputeBgVdpWrapHeight();
+        LOGGER.fine("BG tilemap " + backgroundTilemapWidthTiles + "x" + backgroundTilemapHeightTiles
+                + " actualDataHeight=" + actualHeightTiles
+                + " VDPWrapHeight=" + backgroundVdpWrapHeightTiles);
+    }
+
+    /**
+     * Rescans the live BG tilemap bytes for the VDP wrap height. For VDP wrap height
+     * detection, only scan the contiguous BG data region (columns 0-N). HTZ has
+     * earthquake cave data at distant columns (54+, rows 48+) that must not inflate
+     * the data height beyond 32 — the normal sky BG wraps at 32 rows.
+     *
+     * @return the detected actual data height in tiles (for logging)
+     */
+    private int recomputeBgVdpWrapHeight() {
         int scanWidthTiles = Math.min(backgroundTilemapWidthTiles,
                 geometry.bgContiguousWidthPx() / Pattern.PATTERN_WIDTH);
         int actualHeightTiles = findActualBgTilemapDataHeight(backgroundTilemapData,
@@ -275,9 +342,81 @@ public class LevelTilemapManager {
         backgroundVdpWrapHeightTiles = (actualHeightTiles > 0
                 && actualHeightTiles <= VDP_BG_PLANE_HEIGHT_TILES)
                 ? VDP_BG_PLANE_HEIGHT_TILES : 0;
-        LOGGER.fine("BG tilemap " + backgroundTilemapWidthTiles + "x" + backgroundTilemapHeightTiles
-                + " actualDataHeight=" + actualHeightTiles
-                + " VDPWrapHeight=" + backgroundVdpWrapHeightTiles);
+        return actualHeightTiles;
+    }
+
+    /**
+     * Attempts an in-place one-chunk-column shift of the retained BG tilemap bytes
+     * for a pure base-X window step. Every precondition that could change column
+     * content must provably match the snapshot of the last full build; otherwise
+     * this declines and the caller performs the full rebuild.
+     *
+     * @return true when the shift was performed (backgroundTilemapData now holds
+     *         bytes identical to a full rebuild at the new base X)
+     */
+    private boolean tryIncrementalBgWindowShift(BlockLookup blockLookup,
+                                                ZoneFeatureProvider zoneFeatureProvider,
+                                                int currentZone) {
+        if (!bgLastBuildValid || bgLastBuildParams == null || backgroundTilemapData == null) {
+            return false;
+        }
+        Level level = geometry.level();
+        if (level == null
+                || level != bgLastBuildLevel
+                || geometry.blockPixelSize() != bgLastBuildBlockPixelSize
+                || geometry.bgContiguousWidthPx() != bgLastBuildBgContiguousWidthPx) {
+            return false;
+        }
+        BgBuildParams params = computeBuildParams((byte) 1, zoneFeatureProvider, currentZone);
+        BgBuildParams last = bgLastBuildParams;
+        if (!params.bgWrap()
+                || !last.bgWrap()
+                || params.bgLinearRowOverflow() != last.bgLinearRowOverflow()
+                || params.yQueryOffset() != last.yQueryOffset()
+                || params.builtWidthPx() != last.builtWidthPx()
+                || params.builtHeightPx() != last.builtHeightPx()) {
+            return false;
+        }
+        int chunkWidth = LevelConstants.CHUNK_WIDTH;
+        int step = params.xQueryOffset() - last.xQueryOffset();
+        if (step != chunkWidth && step != -chunkWidth) {
+            return false;
+        }
+        int widthTiles = params.builtWidthPx() / Pattern.PATTERN_WIDTH;
+        int heightTiles = params.builtHeightPx() / Pattern.PATTERN_HEIGHT;
+        if (widthTiles != backgroundTilemapWidthTiles
+                || heightTiles != backgroundTilemapHeightTiles
+                || params.builtWidthPx() % chunkWidth != 0
+                || params.builtHeightPx() % LevelConstants.CHUNK_HEIGHT != 0
+                || backgroundTilemapData.length != widthTiles * heightTiles * 4) {
+            return false;
+        }
+
+        byte[] data = backgroundTilemapData;
+        int rowBytes = widthTiles * 4;
+        int shiftBytes = CHUNK_TILE_SPAN * 4;
+        int enteringLocalX;
+        if (step > 0) {
+            // Window advanced right: drop the leftmost chunk column, rebuild the rightmost.
+            for (int ty = 0; ty < heightTiles; ty++) {
+                int rowOffset = ty * rowBytes;
+                System.arraycopy(data, rowOffset + shiftBytes, data, rowOffset, rowBytes - shiftBytes);
+            }
+            enteringLocalX = params.builtWidthPx() - chunkWidth;
+        } else {
+            // Window retreated left: drop the rightmost chunk column, rebuild the leftmost.
+            for (int ty = 0; ty < heightTiles; ty++) {
+                int rowOffset = ty * rowBytes;
+                System.arraycopy(data, rowOffset, data, rowOffset + shiftBytes, rowBytes - shiftBytes);
+            }
+            enteringLocalX = 0;
+        }
+        fillChunkColumn(data, widthTiles, heightTiles, (byte) 1, enteringLocalX, params,
+                blockLookup, level, geometry.blockPixelSize());
+        bgLastBuildParams = params;
+        bgIncrementalShiftCount++;
+        recomputeBgVdpWrapHeight();
+        return true;
     }
 
     /**
@@ -331,13 +470,9 @@ public class LevelTilemapManager {
         return state != null && state.requiresFullWidthBgTilemap();
     }
 
-    private TilemapData buildTilemapData(byte layerIndex, BlockLookup blockLookup,
-                                         ZoneFeatureProvider zoneFeatureProvider,
-                                         int currentZone,
-                                         ParallaxManager parallaxManager,
-                                         boolean verticalWrapEnabled) {
-        Level level = geometry.level();
-        int blockPixelSize = geometry.blockPixelSize();
+    private BgBuildParams computeBuildParams(byte layerIndex,
+                                             ZoneFeatureProvider zoneFeatureProvider,
+                                             int currentZone) {
         int layerLevelWidth = getLayerLevelWidthPx(layerIndex);
         int levelHeight = getLayerLevelHeightPx(layerIndex);
 
@@ -383,74 +518,103 @@ public class LevelTilemapManager {
         int bgYQueryOffset = bgLoopBand ? bgLoopBandBaseY : 0;
         int builtHeight = bgLoopBand ? BG_LOOP_BAND_HEIGHT_PX : levelHeight;
 
-        int widthTiles = levelWidth / Pattern.PATTERN_WIDTH;
-        int heightTiles = builtHeight / Pattern.PATTERN_HEIGHT;
+        return new BgBuildParams(bgWrap, bgLinearRowOverflow, bgXQueryOffset, bgYQueryOffset,
+                levelWidth, builtHeight);
+    }
+
+    private TilemapData buildTilemapData(byte layerIndex, BlockLookup blockLookup,
+                                         ZoneFeatureProvider zoneFeatureProvider,
+                                         int currentZone,
+                                         ParallaxManager parallaxManager,
+                                         boolean verticalWrapEnabled) {
+        return buildTilemapData(layerIndex,
+                computeBuildParams(layerIndex, zoneFeatureProvider, currentZone), blockLookup);
+    }
+
+    private TilemapData buildTilemapData(byte layerIndex, BgBuildParams params, BlockLookup blockLookup) {
+        Level level = geometry.level();
+        int blockPixelSize = geometry.blockPixelSize();
+
+        int widthTiles = params.builtWidthPx() / Pattern.PATTERN_WIDTH;
+        int heightTiles = params.builtHeightPx() / Pattern.PATTERN_HEIGHT;
         byte[] data = new byte[widthTiles * heightTiles * 4];
 
-        int chunkWidth = LevelConstants.CHUNK_WIDTH;
-        int chunkHeight = LevelConstants.CHUNK_HEIGHT;
-
-        for (int y = 0; y < builtHeight; y += chunkHeight) {
-            int chunkY = y / chunkHeight;
-            // queryY anchors the BG loop band at its base layout Y (0 for normal builds).
-            int queryY = y + bgYQueryOffset;
-            for (int x = 0; x < levelWidth; x += chunkWidth) {
-                int chunkX = x / chunkWidth;
-
-                // Query the BG map at the offset position (wrapping handled by blockLookup)
-                int queryX = x + bgXQueryOffset;
-                Block block = bgLinearRowOverflow
-                        ? lookupBackgroundBlockWithLinearRowOverflow(level, queryX, queryY, blockPixelSize)
-                        : blockLookup.lookup(layerIndex, queryX, queryY);
-                if (block == null) {
-                    writeEmptyChunk(data, widthTiles, heightTiles, chunkX, chunkY);
-                    continue;
-                }
-
-                // xBlockBit uses the query position to select the correct chunk within the block.
-                int xBlockBit = (queryX % blockPixelSize) / chunkWidth;
-                int yBlockBit = (queryY % blockPixelSize) / chunkHeight;
-                ChunkDesc chunkDesc = block.getChunkDesc(xBlockBit, yBlockBit);
-                int chunkIndex = chunkDesc.getChunkIndex();
-
-                if (chunkIndex < 0 || chunkIndex >= level.getChunkCount()) {
-                    writeEmptyChunk(data, widthTiles, heightTiles, chunkX, chunkY);
-                    continue;
-                }
-
-                Chunk chunk = level.getChunk(chunkIndex);
-                if (chunk == null) {
-                    writeEmptyChunk(data, widthTiles, heightTiles, chunkX, chunkY);
-                    continue;
-                }
-
-                boolean chunkHFlip = chunkDesc.getHFlip();
-                boolean chunkVFlip = chunkDesc.getVFlip();
-
-                for (int cY = 0; cY < 2; cY++) {
-                    for (int cX = 0; cX < 2; cX++) {
-                        int logicalX = chunkHFlip ? 1 - cX : cX;
-                        int logicalY = chunkVFlip ? 1 - cY : cY;
-
-                        PatternDesc patternDesc = chunk.getPatternDesc(logicalX, logicalY);
-                        int newIndex = patternDesc.get();
-                        if (chunkHFlip) {
-                            newIndex ^= 0x800;
-                        }
-                        if (chunkVFlip) {
-                            newIndex ^= 0x1000;
-                        }
-                        reusablePatternDesc.set(newIndex);
-
-                        int tileX = chunkX * 2 + cX;
-                        int tileY = chunkY * 2 + cY;
-                        writeTileDescriptor(data, widthTiles, heightTiles, tileX, tileY, reusablePatternDesc);
-                    }
-                }
-            }
+        for (int x = 0; x < params.builtWidthPx(); x += LevelConstants.CHUNK_WIDTH) {
+            fillChunkColumn(data, widthTiles, heightTiles, layerIndex, x, params,
+                    blockLookup, level, blockPixelSize);
         }
 
         return new TilemapData(data, widthTiles, heightTiles);
+    }
+
+    /**
+     * Fills one 16px-wide chunk column of tilemap data at local pixel X
+     * {@code localX}. Shared by the full build loop and the incremental BG window
+     * shift so both produce byte-identical column content.
+     */
+    private void fillChunkColumn(byte[] data, int widthTiles, int heightTiles, byte layerIndex,
+                                 int localX, BgBuildParams params, BlockLookup blockLookup,
+                                 Level level, int blockPixelSize) {
+        int chunkWidth = LevelConstants.CHUNK_WIDTH;
+        int chunkHeight = LevelConstants.CHUNK_HEIGHT;
+        int chunkX = localX / chunkWidth;
+        // Query the map at the offset position (wrapping handled by blockLookup)
+        int queryX = localX + params.xQueryOffset();
+
+        for (int y = 0; y < params.builtHeightPx(); y += chunkHeight) {
+            int chunkY = y / chunkHeight;
+            // queryY anchors the BG loop band at its base layout Y (0 for normal builds).
+            int queryY = y + params.yQueryOffset();
+
+            Block block = params.bgLinearRowOverflow()
+                    ? lookupBackgroundBlockWithLinearRowOverflow(level, queryX, queryY, blockPixelSize)
+                    : blockLookup.lookup(layerIndex, queryX, queryY);
+            if (block == null) {
+                writeEmptyChunk(data, widthTiles, heightTiles, chunkX, chunkY);
+                continue;
+            }
+
+            // xBlockBit uses the query position to select the correct chunk within the block.
+            int xBlockBit = (queryX % blockPixelSize) / chunkWidth;
+            int yBlockBit = (queryY % blockPixelSize) / chunkHeight;
+            ChunkDesc chunkDesc = block.getChunkDesc(xBlockBit, yBlockBit);
+            int chunkIndex = chunkDesc.getChunkIndex();
+
+            if (chunkIndex < 0 || chunkIndex >= level.getChunkCount()) {
+                writeEmptyChunk(data, widthTiles, heightTiles, chunkX, chunkY);
+                continue;
+            }
+
+            Chunk chunk = level.getChunk(chunkIndex);
+            if (chunk == null) {
+                writeEmptyChunk(data, widthTiles, heightTiles, chunkX, chunkY);
+                continue;
+            }
+
+            boolean chunkHFlip = chunkDesc.getHFlip();
+            boolean chunkVFlip = chunkDesc.getVFlip();
+
+            for (int cY = 0; cY < 2; cY++) {
+                for (int cX = 0; cX < 2; cX++) {
+                    int logicalX = chunkHFlip ? 1 - cX : cX;
+                    int logicalY = chunkVFlip ? 1 - cY : cY;
+
+                    PatternDesc patternDesc = chunk.getPatternDesc(logicalX, logicalY);
+                    int newIndex = patternDesc.get();
+                    if (chunkHFlip) {
+                        newIndex ^= 0x800;
+                    }
+                    if (chunkVFlip) {
+                        newIndex ^= 0x1000;
+                    }
+                    reusablePatternDesc.set(newIndex);
+
+                    int tileX = chunkX * 2 + cX;
+                    int tileY = chunkY * 2 + cY;
+                    writeTileDescriptor(data, widthTiles, heightTiles, tileX, tileY, reusablePatternDesc);
+                }
+            }
+        }
     }
 
     private Block lookupBackgroundBlockWithLinearRowOverflow(Level level, int x, int y, int blockPixelSize) {
@@ -536,6 +700,25 @@ public class LevelTilemapManager {
     }
 
     /**
+     * Requests a BG tilemap window base-X change driven purely by the wrapped-BG
+     * camera window stepping to a new 16px-aligned base. Unlike
+     * {@link #setBgTilemapBaseX(int)} + {@link #setBackgroundTilemapDirty(boolean)},
+     * this marks the rebuild as a window-only change, allowing the next
+     * {@link #ensureBackgroundTilemapData} to take the incremental one-column
+     * shift path when all other build inputs are provably unchanged.
+     */
+    public void requestBgWindowBaseX(int newBase) {
+        if (newBase == bgTilemapBaseX) {
+            return;
+        }
+        // Only a clean (or already window-only-dirty) tilemap can stay a shift
+        // candidate; mixing with any other pending invalidation forces full rebuild.
+        bgWindowShiftCandidate = !backgroundTilemapDirty || bgWindowShiftCandidate;
+        bgTilemapBaseX = newBase;
+        backgroundTilemapDirty = true;
+    }
+
+    /**
      * Handles dirty block/map-cell updates from a MutableLevel.
      * Currently triggers a full foreground tilemap rebuild; incremental
      * partial updates can be added later if needed for performance.
@@ -551,6 +734,7 @@ public class LevelTilemapManager {
         // incremental tile updates in Phase 3 — correctness is the priority.
         foregroundTilemapDirty = true;
         backgroundTilemapDirty = true;
+        bgWindowShiftCandidate = false;
     }
 
     /**
@@ -560,6 +744,7 @@ public class LevelTilemapManager {
      */
     public void invalidateAllTilemaps() {
         backgroundTilemapDirty = true;
+        bgWindowShiftCandidate = false;
         foregroundTilemapDirty = true;
         patternLookupDirty = true;
     }
@@ -618,7 +803,15 @@ public class LevelTilemapManager {
             return false;
         }
         int offset = (tileY * backgroundTilemapWidthTiles + tileX) * 4;
-        return writeTilemapDescriptor(backgroundTilemapData, offset, descriptor);
+        boolean changed = writeTilemapDescriptor(backgroundTilemapData, offset, descriptor);
+        if (changed) {
+            // The live array no longer matches a from-scratch build; a later window
+            // step must take the full rebuild path (which, as today, discards these
+            // runtime overlay writes) rather than shifting the modified bytes.
+            bgLastBuildValid = false;
+            bgWindowShiftCandidate = false;
+        }
+        return changed;
     }
 
     // -----------------------------------------------------------------------
@@ -826,6 +1019,10 @@ public class LevelTilemapManager {
         backgroundTilemapHeightTiles = prebuiltBgHeight;
         lastRequiresFullWidthBgTilemap = zoneRuntimeRequiresFullWidthBgTilemap();
         backgroundTilemapDirty = false;
+        // Prebuilt data may have been built under different window settings; the
+        // next window step must full-rebuild rather than shift.
+        bgLastBuildValid = false;
+        bgWindowShiftCandidate = false;
 
         patternLookupDirty = true;
 
@@ -872,6 +1069,10 @@ public class LevelTilemapManager {
         foregroundTilemapDirty = true;
         patternLookupDirty = true;
         multiAtlasWarningLogged = false;
+        bgWindowShiftCandidate = false;
+        bgLastBuildValid = false;
+        bgLastBuildLevel = null;
+        bgLastBuildParams = null;
     }
 
     // -----------------------------------------------------------------------
@@ -918,7 +1119,19 @@ public class LevelTilemapManager {
         return bgTilemapBaseX;
     }
 
+    /**
+     * Directly sets the BG window base X and marks the background tilemap dirty
+     * for a full rebuild (full-width selection, resets, fresh builds). For the
+     * camera-driven 16px window steps that may take the incremental shift path,
+     * use {@link #requestBgWindowBaseX(int)} instead.
+     */
     public void setBgTilemapBaseX(int bgTilemapBaseX) {
+        // Direct base writes are not window-only steps; clear any pending shift
+        // candidacy and force a full rebuild.
+        this.bgWindowShiftCandidate = false;
+        if (this.bgTilemapBaseX != bgTilemapBaseX) {
+            this.backgroundTilemapDirty = true;
+        }
         this.bgTilemapBaseX = bgTilemapBaseX;
     }
 
@@ -943,6 +1156,11 @@ public class LevelTilemapManager {
     }
 
     public void setBackgroundTilemapDirty(boolean dirty) {
+        if (dirty) {
+            // Generic invalidation: only requestBgWindowBaseX may mark a
+            // window-only change eligible for the incremental shift path.
+            this.bgWindowShiftCandidate = false;
+        }
         this.backgroundTilemapDirty = dirty;
     }
 

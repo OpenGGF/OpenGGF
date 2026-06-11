@@ -1839,8 +1839,8 @@ public class LevelManager {
                 && zoneFeatureProvider != null && zoneFeatureProvider.bgWrapsHorizontally()) {
             int newBase = Math.floorDiv(bgCameraX, 16) * 16;
             if (newBase != tilemapManager.getBgTilemapBaseX()) {
-                tilemapManager.setBgTilemapBaseX(newBase);
-                tilemapManager.setBackgroundTilemapDirty(true);
+                // Window-only change: eligible for the incremental one-column shift.
+                tilemapManager.requestBgWindowBaseX(newBase);
             }
         } else if (tilemapManager.getBgTilemapBaseX() != 0) {
             tilemapManager.setBgTilemapBaseX(0);
