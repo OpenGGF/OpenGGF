@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+## 2026-06-11 - S3K HCZ complete-run progressed to dry fan/platform frontier
+
+- Scope: follow-up to the HCZ frame-6912 one-pixel/subpixel vertical mismatch
+  near the underwater fan-bubble and fixed air-countdown cluster. Trace data
+  remained comparison-only diagnostic input; no engine state was hydrated from
+  trace rows, and no zone/route/frame exception was added.
+- Fix:
+  - `HCZCGZFanObjectInstance` now applies `Obj_HCZCGZFan` lift with
+    `NativePositionOps.addYPosPreserveSubpixel(...)`. The ROM uses
+    `add.w d1,y_pos(a1)` (`sonic3k.asm:65486-65500`), which changes only the
+    native position word and preserves the low subpixel word; the engine had
+    used `setCentreY(...)`, clearing subpixel state and causing the later
+    one-pixel carry drift.
+- Verification:
+  - `mvn "-Dtest=com.openggf.game.sonic3k.objects.TestHCZCGZFanObjectInstance" test`
+    -> PASS for the selected fan slice (`MSE:OK`; known relaxed aggregate
+    trace failures still reported).
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first error moved from frame 6912 to frame 7341:
+    main-player `y_speed` `expected=0x0000`, `actual=-0218`.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the dry HCZ fan/platform cluster around frames 7341+ where ROM zeros Sonic's
+  vertical speed while the engine preserves upward lift velocity.
+
 ## 2026-06-11 - S3K HCZ complete-run progressed to post-monitor y frontier
 
 - Scope: follow-up to the HCZ frame-5995 native-P2/Tails `y_speed` mismatch

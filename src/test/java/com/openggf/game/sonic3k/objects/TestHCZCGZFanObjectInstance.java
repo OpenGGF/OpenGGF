@@ -57,6 +57,21 @@ class TestHCZCGZFanObjectInstance {
                 "The next update after the terminal idle tick should resume fan/conveyor interaction");
     }
 
+    @Test
+    void fanLiftPreservesNativeYSubpixel() {
+        HCZCGZFanObjectInstance fan = new HCZCGZFanObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic3kObjectIds.HCZ_CGZ_FAN, 0x10, 0, false, 0));
+        TestablePlayableSprite player = playerInFanColumn("sonic");
+        player.setSubpixelRaw(0, 0xF000);
+        fan.setServices(new QueryOnlyPlayerServices(player, List.of()));
+
+        fan.update(0, player);
+
+        assertEquals(0xF000, player.getYSubpixelRaw(),
+                "Obj_HCZCGZFan add.w y_pos must preserve the low subpixel word");
+        assertTrue(player.getAir());
+    }
+
     private static TestablePlayableSprite playerInFanColumn(String code) {
         TestablePlayableSprite player = new TestablePlayableSprite(code, (short) 0x1000, (short) 0x1000);
         player.setCentreX((short) 0x1000);

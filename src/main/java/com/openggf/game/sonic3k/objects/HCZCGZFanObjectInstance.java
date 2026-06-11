@@ -20,6 +20,7 @@ import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.ArrayList;
@@ -363,8 +364,8 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
         force = (-force) & 0xFFFF;
         int push = ((short) force) >> 6;  // asr.w #6
 
-        // ROM: add.w d1,y_pos(a1) — directly adjust player Y
-        player.setCentreY((short) (player.getCentreY() + push));
+        // ROM: add.w d1,y_pos(a1) — directly adjust the native Y word.
+        NativePositionOps.addYPosPreserveSubpixel(player, push);
 
         // Player state changes (sonic3k.asm:65500-65510)
         // ROM: bset #Status_InAir,status(a1)

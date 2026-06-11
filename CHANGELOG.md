@@ -72,6 +72,11 @@ All notable changes to the OpenGGF project are documented in this file.
   let the normal movement gravity path run so water reduction is applied in
   the ROM order. This advances the HCZ complete-run trace past frame 5995.
 
+- **HCZ fan lift preserves native Y subpixels:** `Obj_HCZCGZFan` now applies
+  its vertical lift through the native `add.w y_pos` path, preserving the low
+  16-bit subpixel fraction instead of resetting it. This advances the HCZ
+  complete-run trace past the fan-bubble frame-6912 drift.
+
 - **S3K sidekick fresh spawns honor the Obj_Tails init-only frame:** fresh
   routine-0 sidekick spawns now reset kinematics and advance to the normal CPU
   routine without running same-frame follow steering, while dormant sentinel
