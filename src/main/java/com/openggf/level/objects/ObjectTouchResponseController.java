@@ -309,6 +309,7 @@ final class ObjectTouchResponseController {
 
         if (sidekick.isDebugMode()) {
             buffers.overlapping.clear();
+            debugState.clear();
             return;
         }
 
@@ -323,6 +324,7 @@ final class ObjectTouchResponseController {
         // collisions during catch-up flight.
         if (sidekick.isTouchResponseSuppressedByObjectControl()) {
             buffers.overlapping.clear();
+            debugState.clear();
             return;
         }
 
@@ -335,6 +337,8 @@ final class ObjectTouchResponseController {
             playerY += 12;
             playerHeight = 20;
         }
+        debugState.setPlayer(playerX, playerY, playerHeight, baseYRadius, crouching);
+        debugState.clear();
 
         buffers.building.clear();
 
@@ -348,8 +352,8 @@ final class ObjectTouchResponseController {
      * Shared collision loop for both main player and sidekick touch responses.
      * Iterates active objects, checks touch regions and overlap, dispatches to the
      * appropriate response handler. Behavioral differences are parameterized:
-     * - Main player: records debug hits
-     * - Sidekick: no debug recording and uses Hurt_Sidekick handling
+     * - Both actors record debug hits when the trace/debug overlay enables it
+     * - Sidekick: uses Hurt_Sidekick handling
      * - Both players exit after the first overlapping object; the ROM's handler
      *   returns from ReactToItem after processing one touch response.
      *
@@ -447,7 +451,7 @@ final class ObjectTouchResponseController {
             int objX = usePreUpdateState ? instance.getPreUpdateX() : instance.getX();
             int objY = usePreUpdateState ? instance.getPreUpdateY() : instance.getY();
             boolean overlap = isOverlapping(playerX, playerY, playerHeight, objX, objY, width, height, playerWidth);
-            if (!isSidekick && debugState.isEnabled()) {
+            if (debugState.isEnabled()) {
                 int slotIndex = instance instanceof AbstractObjectInstance aoi
                         ? aoi.getSlotIndex()
                         : -1;
@@ -557,6 +561,15 @@ final class ObjectTouchResponseController {
 
             boolean overlap = isOverlappingXY(playerX, playerY, playerHeight,
                     region.x(), region.y(), width, height, playerWidth);
+            if (debugState.isEnabled()) {
+                int slotIndex = instance instanceof AbstractObjectInstance aoi
+                        ? aoi.getSlotIndex()
+                        : -1;
+                debugState.addHit(
+                        new TouchResponseDebugHit(slotIndex, instance.getSpawn(), region.x(), region.y(),
+                                flags, sizeIndex, width, height, category, overlap,
+                                instance instanceof AbstractObjectInstance aoi ? aoi.traceDebugDetails() : ""));
+            }
             if (!overlap) {
                 continue;
             }
