@@ -66,6 +66,12 @@ All notable changes to the OpenGGF project are documented in this file.
   the ROM `$20` offscreen band, fixing the complete-run Tails bounce cadence
   and advancing the HCZ trace frontier past frame 5726.
 
+- **S3K monitor sidekick release composes with water gravity:** dry CPU
+  sidekicks released from a broken monitor still skip the same-frame gravity
+  tick needed for the early HCZ monitor cadence, while underwater releases now
+  let the normal movement gravity path run so water reduction is applied in
+  the ROM order. This advances the HCZ complete-run trace past frame 5995.
+
 - **S3K sidekick fresh spawns honor the Obj_Tails init-only frame:** fresh
   routine-0 sidekick spawns now reset kinematics and advance to the normal CPU
   routine without running same-frame follow steering, while dormant sentinel

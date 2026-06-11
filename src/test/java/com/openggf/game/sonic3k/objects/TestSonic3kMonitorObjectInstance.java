@@ -222,6 +222,59 @@ class TestSonic3kMonitorObjectInstance {
     }
 
     @Test
+    void drySidekickMonitorReleaseSuppressesNextGravityStep() {
+        DummyPlayer tails = new DummyPlayer();
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setOnObject(true);
+
+        Sonic3kMonitorObjectInstance monitor = new Sonic3kMonitorObjectInstance(
+                new ObjectSpawn(0x0128, 0x03F0, 0x01, 0x03, 0, false, 0));
+        monitor.setServices(new TestObjectServices().withSidekicks(List.of(tails)));
+
+        DummyPlayer sonic = new DummyPlayer();
+        sonic.setRolling(true);
+        sonic.setAnimationId(Sonic3kAnimationIds.ROLL);
+        sonic.setYSpeed((short) 0x05A0);
+        tails.setCentreX((short) 0x0141);
+        tails.setCentreY((short) 0x03F0);
+
+        monitor.onTouchResponse(sonic, TOUCH_RESULT, 125);
+
+        assertTrue(tails.getAir(),
+                "Obj_MonitorBreak releases P2 by setting Status_InAir");
+        assertTrue(tails.consumeSuppressNextGravityStep(),
+                "Dry Obj_MonitorBreak release skips the same-frame gravity step observed at HCZ frame 125");
+    }
+
+    @Test
+    void underwaterSidekickMonitorReleaseDoesNotSuppressNextGravityStep() {
+        DummyPlayer tails = new DummyPlayer();
+        tails.setCpuControlled(true);
+        tails.setInWater(true);
+        tails.setAir(false);
+        tails.setOnObject(true);
+
+        Sonic3kMonitorObjectInstance monitor = new Sonic3kMonitorObjectInstance(
+                new ObjectSpawn(0x0128, 0x03F0, 0x01, 0x03, 0, false, 0));
+        monitor.setServices(new TestObjectServices().withSidekicks(List.of(tails)));
+
+        DummyPlayer sonic = new DummyPlayer();
+        sonic.setRolling(true);
+        sonic.setAnimationId(Sonic3kAnimationIds.ROLL);
+        sonic.setYSpeed((short) 0x05A0);
+        tails.setCentreX((short) 0x0141);
+        tails.setCentreY((short) 0x03F0);
+
+        monitor.onTouchResponse(sonic, TOUCH_RESULT, 125);
+
+        assertTrue(tails.getAir(),
+                "Obj_MonitorBreak releases underwater P2 by setting Status_InAir");
+        assertFalse(tails.consumeSuppressNextGravityStep(),
+                "Underwater release must run the later movement gravity path so water reduction composes normally");
+    }
+
+    @Test
     void solidContactLandsAtZeroDistanceUsingS3kSolidObjectVerticalOffset() {
         TestObjectServices services = new TestObjectServices();
         ObjectManager objectManager = new ObjectManager(

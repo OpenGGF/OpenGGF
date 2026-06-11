@@ -694,7 +694,8 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         player.setOnObject(false);
         player.setPushing(false);
         player.setAir(true);
-        if (player.isCpuControlled() && player instanceof AbstractPlayableSprite sprite) {
+        if (player.isCpuControlled() && player instanceof AbstractPlayableSprite sprite
+                && !sprite.isInWater()) {
             sprite.suppressNextGravityStep();
         }
     }

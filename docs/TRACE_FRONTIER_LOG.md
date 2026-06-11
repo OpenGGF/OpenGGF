@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+## 2026-06-11 - S3K HCZ complete-run progressed to post-monitor y frontier
+
+- Scope: follow-up to the HCZ frame-5995 native-P2/Tails `y_speed` mismatch
+  after the Poindexter wait-offscreen fix. Trace data remained comparison-only
+  diagnostic input; no engine state was hydrated from trace rows, and no
+  zone/route/frame exception was added.
+- Fix:
+  - `Sonic3kMonitorObjectInstance` now gates the CPU-sidekick same-frame
+    gravity suppression on the sidekick's water state when `Obj_MonitorBreak`
+    releases a rider from the monitor. Dry releases keep the existing skip,
+    matching the early HCZ monitor frame where ROM does not add gravity on the
+    release frame. Underwater releases no longer suppress the movement gravity
+    path, allowing the later water reduction to compose with `y_vel` in ROM
+    order instead of leaving Tails at `0x0358`.
+- Verification:
+  - `mvn "-Dtest=com.openggf.game.sonic3k.objects.TestSonic3kMonitorObjectInstance#drySidekickMonitorReleaseSuppressesNextGravityStep+underwaterSidekickMonitorReleaseDoesNotSuppressNextGravityStep,com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> focused monitor release tests PASS; HCZ replay remains RED, but the
+    first error moved from frame 5995 to frame 6912: main-player `y`
+    `expected=0x0709`, `actual=0x0708`.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the frame-6912 one-pixel/subpixel vertical drift around the HCZ fan/bubble
+  cluster without reopening the solved monitor-release gravity gate unless it
+  regresses.
+
 ## 2026-06-11 - S3K HCZ complete-run progressed to monitor/Tails y-speed frontier
 
 - Scope: follow-up to the HCZ frame-5726 native-P2/Tails `y_speed` sign
