@@ -1032,8 +1032,12 @@ public class HczMinibossInstance extends AbstractBossInstance {
             }
         }
         return String.format(
-                "r=%02X xV=%04X yV=%04X wait=%d cb=%s pass=%d closed=%s vortex=%s waterR=%02X water=%04X,%04X wf=%d wa=%02X/%02X pullReady=%s rockets=%s",
+                "r=%02X hits=%d def=%s inv=%s/%d xV=%04X yV=%04X wait=%d cb=%s pass=%d closed=%s vortex=%s waterR=%02X water=%04X,%04X wf=%d wa=%02X/%02X pullReady=%s rockets=%s",
                 state.routine & 0xFF,
+                state.hitCount,
+                state.defeated,
+                state.invulnerable,
+                state.invulnerabilityTimer,
                 state.xVel & 0xFFFF,
                 state.yVel & 0xFFFF,
                 waitTimer,
