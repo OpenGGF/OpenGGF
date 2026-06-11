@@ -1,5 +1,39 @@
 # Trace Frontier Log
 
+## 2026-06-11 - Performance-optimization pre-work full sweep baseline
+
+- Scope: Task 0 of the performance-optimization plan
+  (`docs/superpowers/plans/2026-06-11-performance-optimization.md`). Full
+  `*TraceReplay` sweep recorded as the pre-work frontier; no engine changes in
+  this pass. Later perf phases compare against this list — only a trace that
+  passes here and fails after a phase is a perf regression.
+- Command: `mvn "-Dtest=*TraceReplay" test` in worktree
+  `sonic-engine-performance-optimization` (branch
+  `bugfix/ai-performance-optimization`, based on `develop` @ `35b3cabad`).
+- Result: **Tests run: 88, Failures: 52, Errors: 1, Skipped: 0.** No
+  lwjgl/glfw or `TestBundledConfigResource` environment noise in this sweep.
+- Passing classes: all 8 `TestS1Credits*TraceReplay`, `TestS1Ghz1TraceReplay`,
+  `TestS2Ehz1TraceReplay`, `TestS2SczLevelSelectTraceReplay`,
+  `TestS2WfzLevelSelectTraceReplay`, `TestS3kAizTraceReplay` (16/16).
+- Failing classes (error count, first-error frame/field) — full per-class
+  table lives in `docs/performance/2026-06-11-performance-baseline.md`:
+  - S1: all 19 `CompleteRun` classes + `TestS1Mz1TraceReplay` fail (e.g.
+    Ghz1CompleteRun 292 errors, first frame 1394 x_speed; Lz1 2992 errors,
+    first frame 302 y_speed).
+  - S2: all LevelSelect classes except SCZ/WFZ fail (e.g. ArzLevelSelect 34
+    errors, first frame 1285 tails_cpu_interact; Mtz3 3259 errors, first
+    frame 461 tails_cpu_interact), plus `TestS2DezEndingLevelSelectTraceReplay`
+    (137 errors, first frame 1557 x_speed).
+  - S3K: all 6 `CompleteRun` classes fail (AIZ 5084 errors first frame 1095
+    x_speed; CNZ 4826 frame 0 y_speed; HCZ 4925 frame 125 tails_air; ICZ 4230
+    frame 0 tails_cpu_respawn_counter; MGZ 7021 frame 738 rings; MHZ 3523
+    frame 0 tails_cpu_routine). `TestS3kMgzTraceReplay` fails with an input
+    alignment error at trace frame 33271; `TestS3kCnzTraceReplay` is mixed
+    (7 pass / 9 fail / 1 NPE error incl. `replayMatchesTrace` input alignment
+    at frame 39672).
+- S3K green list at the same commit: PASS
+  (`MSE:OK modules=1 passed=51 failed=0 errors=0 skipped=0`).
+
 ## 2026-06-10 - S3K AIZ release trace green; S2/S3K sidekick baseline recorded
 
 - Scope: follow-up to the AIZ sidekick release blocker and the requested
