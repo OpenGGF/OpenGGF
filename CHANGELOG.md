@@ -100,6 +100,12 @@ All notable changes to the OpenGGF project are documented in this file.
   disabled after arming. This advances the HCZ complete-run trace to the
   frame-8968 native-P2 vertical frontier.
 
+- **HCZ miniboss vortex pull waits for the ROM water-effect wind-up:** the
+  miniboss now keeps player suction disabled through the water-effect child's
+  routine-$06 `byte_6ADEC` wind-up, then applies the routine-$08 pull with
+  native subpixel movement. This advances the HCZ complete-run trace to the
+  frame-9045 native-P2 vertical-speed frontier.
+
 - **S3K sidekick fresh spawns honor the Obj_Tails init-only frame:** fresh
   routine-0 sidekick spawns now reset kinematics and advance to the normal CPU
   routine without running same-frame follow steering, while dormant sentinel

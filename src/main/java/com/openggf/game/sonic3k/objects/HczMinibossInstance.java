@@ -98,6 +98,8 @@ public class HczMinibossInstance extends AbstractBossInstance {
     private static final int VORTEX_TIME = 0x17F;
     private static final int COOLDOWN_TIME = 0x7F;
     private static final int REOPEN_TIME = 0x3F;
+    // byte_6ADEC routine $06 wind-up before loc_6A5D8 starts sub_6A9B8 player pull.
+    private static final int VORTEX_PULL_WINDUP_TIME = 92;
 
     private static final int ENGINE_OFFSET_Y = 0x24;
     private static final int ENGINE_FRAME = 0x15;
@@ -203,6 +205,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
     private boolean arenaXLocked;
     private boolean customFlashDirty;
     private boolean vortexActive;
+    private int vortexPullWindupTimer;
     private boolean defeatRenderComplete;
     private boolean crossedWaterThisPass;
     private boolean waterPaletteLoaded;
@@ -315,6 +318,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
         arenaXLocked = false;
         customFlashDirty = false;
         vortexActive = false;
+        vortexPullWindupTimer = 0;
         defeatRenderComplete = false;
         crossedWaterThisPass = false;
         waterPaletteLoaded = false;
@@ -419,6 +423,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
         waitTimer = -1;
         waitCallback = WaitCallback.NONE;
         vortexActive = false;
+        vortexPullWindupTimer = 0;
         state.invulnerable = false;
         state.invulnerabilityTimer = 0;
         loadBossPalette();
@@ -622,6 +627,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
         state.xVel = 0;
         state.yVel = 0;
         vortexActive = true;
+        vortexPullWindupTimer = VORTEX_PULL_WINDUP_TIME;
         crossedWaterThisPass = true;
         services().playSfx(Sonic3kSfx.BOSS_ROTATE.id);
         spawnVortexBubbleBatch();
@@ -630,6 +636,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
 
     private void endVortex() {
         vortexActive = false;
+        vortexPullWindupTimer = 0;
         releaseVortexPlayers();
         for (VortexBubbleChild bubble : vortexBubbles) {
             bubble.signalVortexEnd();
@@ -742,7 +749,11 @@ public class HczMinibossInstance extends AbstractBossInstance {
         if ((lastFrameCounter & (CONTINUOUS_SFX_INTERVAL - 1)) == 0 && isOnScreen()) {
             services().playSfx(Sonic3kSfx.BOSS_ROTATE.id);
         }
-        applyVortexPull(player);
+        if (vortexPullWindupTimer > 0) {
+            vortexPullWindupTimer--;
+        } else {
+            applyVortexPull(player);
+        }
         tickWait();
     }
 
@@ -937,13 +948,13 @@ public class HczMinibossInstance extends AbstractBossInstance {
 
         xVel = (short) (xVel + xAccel);
         sprite.setXSpeed(xVel);
-        sprite.shiftX(xVel >> 8);
+        sprite.move(xVel, (short) 0);
 
-        int yDist = sprite.getY() - vortexY;
+        int yDist = sprite.getCentreY() - vortexY;
         if (yDist < -0x10) {
-            sprite.setY((short) (sprite.getY() + 1));
+            sprite.move((short) 0, (short) 0x80);
         } else if (yDist > 0x10) {
-            sprite.setY((short) (sprite.getY() - 1));
+            sprite.move((short) 0, (short) -0x80);
         }
     }
 

@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+## 2026-06-11 - S3K HCZ complete-run progressed to vortex routine-8 frontier
+
+- Scope: follow-up to the HCZ frame-8968 native-P2/Tails vertical mismatch
+  after the miniboss rocket phase-reset ordering fix. Trace data remained
+  comparison-only diagnostic input; no engine state was hydrated from trace
+  rows, and no zone/route/frame exception was added.
+- Fix:
+  - `HczMinibossInstance` now delays player vortex pull until the ROM
+    water-effect child has finished its routine `$06` `byte_6ADEC`
+    `Animate_RawNoSSTMultiDelay` wind-up. Player pull now begins with the
+    routine `$08` path that calls `sub_6A9B8`, instead of starting as soon as
+    the parent sets the vortex-active bit.
+  - The player pull applies the ROM longword/subpixel movement path: horizontal
+    pull adds the 16:8 velocity into native position state, and vertical pull
+    nudges by `$8000` subpixels toward the vortex centre.
+- Verification:
+  - `mvn "-Dtest=TestS3kHczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first HCZ error moved from frame 8968 to frame 9045. New
+    first error: native-P2/Tails `y_speed` `expected=-02A0`, `actual=0x0000`;
+    HCZ error count is 2063.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the frame-9045 native-P2/Tails vertical speed split while the ROM
+  water-effect child is in routine `$08`.
+
 ## 2026-06-11 - S3K HCZ complete-run progressed to post-miniboss vertical frontier
 
 - Scope: follow-up to the HCZ frame-8683 native-P2/Tails rolling mismatch after
