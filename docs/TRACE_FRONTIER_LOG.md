@@ -1,5 +1,26 @@
 # Trace Frontier Log
 
+## 2026-06-11 - S3K HCZ complete-run progressed to post-vortex Tails X frontier
+
+- Scope: follow-up to the HCZ frame-9337 post-vortex release speed mismatch.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no zone/route/frame exception was added.
+- Fix:
+  - `HczMinibossInstance` now preserves the ROM's final water-effect routine
+    `$0A` transition ordering by running one last vortex pull tick from the
+    boss cooldown routine before releasing captured players on the next update.
+    This mirrors `loc_6A5D8` calling `sub_6A9B8` before the water-effect child
+    enters routine `$0A`.
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first HCZ error moved from frame 9337 to frame 9338. New
+    first error: native-P2/Tails `x` `expected=0x3782`, `actual=0x3781`; HCZ
+    error count is 2832.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the post-vortex sidekick movement/interaction handoff around frame 9338,
+  where main-player speed now matches the ROM and native-P2/Tails is one pixel
+  left of the ROM position after release.
+
 ## 2026-06-11 - S3K HCZ complete-run progressed to post-vortex release frontier
 
 - Scope: follow-up to the HCZ frame-9045 vortex/air-countdown mismatch. Trace
