@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K ICZ complete-run progressed to post-launch vertical-position frontier
+
+- Scope: follow-up to the ICZ frame-1667 swinging-platform camera/player drift.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - `IczSwingingPlatformObjectInstance` now mirrors ROM
+    `Obj_ICZSwingingPlatform`: child routine `sub_8B0B0` writes parent swing
+    velocity/flag and clamps player velocity immediately, then parent
+    `loc_8AD20` arms the swing routine without running the first
+    `MoveSprite_CircularSimple` motion until the next object update.
+  - Focused ICZ swinging-platform coverage now asserts the trigger frame keeps
+    the platform at spawn while preserving the immediate player
+    `x_vel`/`ground_vel` clamp.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIczSwingingPlatformObject" test`
+    -> GREEN. Surefire report: `Tests run: 8, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 1667 to frame 1708. New
+    first error: main-player `y` `expected=0x0674`, `actual=0x0673`; Sonic
+    `x`, subpixels, `x_speed`, `y_speed`, `g_speed`, angle, status, rings, and
+    Tails CPU state match at the first error. ICZ error count is 3363.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-1708 one-pixel vertical publication after the platform launch and
+  nearby ICZ harmful-ice/top-solid interaction; do not add a trace/frame
+  exception.
+
 ## 2026-06-12 - S3K ICZ complete-run progressed to swinging-platform camera frontier
 
 - Scope: follow-up to the ICZ frame-1646 post-pile terrain-angle frontier.

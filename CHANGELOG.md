@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K ICZ swinging platform waits one ROM frame before first swing move:**
+  `Obj_ICZSwingingPlatform` now arms its parent swing from the child solid
+  trigger without immediately applying circular movement, matching the ROM
+  `sub_8B0B0` -> `loc_8AD20` handoff. This moves the ICZ complete-run trace
+  from the frame-1667 swinging-platform camera frontier to the frame-1708
+  post-launch vertical-position frontier.
+
 - **S3K horizontal springs preserve grounded slope angle:** `Obj_Spring`
   horizontal launch now keeps the current player angle when the ROM routine
   updates `x_vel`, `ground_vel`, and move-lock state without writing
