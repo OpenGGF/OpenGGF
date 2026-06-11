@@ -632,9 +632,10 @@ public class TestGroundSensor {
                                               Direction direction,
                                               boolean vertical) throws Exception {
         var method = GroundSensor.class.getDeclaredMethod(
-                "scanBackgroundCollision", short.class, short.class, int.class, Direction.class, boolean.class);
+                "scanBackgroundCollision",
+                LevelManager.class, short.class, short.class, int.class, Direction.class, boolean.class);
         method.setAccessible(true);
-        return (SensorResult) method.invoke(sensor, fgX, fgY, solidityBit, direction, vertical);
+        return (SensorResult) method.invoke(sensor, mockLevelManager, fgX, fgY, solidityBit, direction, vertical);
     }
 
     private record TestZoneScrollHandler(int bgCameraX, short bgVscroll) implements ZoneScrollHandler {

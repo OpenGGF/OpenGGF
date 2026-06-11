@@ -426,12 +426,14 @@ class TestS3kMgz2BgRiseHeadless {
             short originalX = (short) (sprite.getCentreX() + rotatedX(groundSensor));
             short originalY = (short) (sprite.getCentreY() + rotatedY(groundSensor));
             int solidityBit = sprite.getLrbSolidBit();
+            LevelManager levelManager = GameServices.level();
             SensorResult fgResult = invokeSensorMethod(groundSensor, "scanHorizontal",
-                    new Class<?>[] {short.class, short.class, int.class, Direction.class},
-                    originalX, originalY, solidityBit, config.direction());
+                    new Class<?>[] {LevelManager.class, short.class, short.class, int.class, Direction.class},
+                    levelManager, originalX, originalY, solidityBit, config.direction());
             SensorResult bgResult = invokeSensorMethod(groundSensor, "scanBackgroundCollision",
-                    new Class<?>[] {short.class, short.class, int.class, Direction.class, boolean.class},
-                    originalX, originalY, solidityBit, config.direction(), config.vertical());
+                    new Class<?>[] {LevelManager.class, short.class, short.class, int.class, Direction.class,
+                            boolean.class},
+                    levelManager, originalX, originalY, solidityBit, config.direction(), config.vertical());
             SensorResult selected = copySensorResult(groundSensor.scan((short) 0, (short) 0));
             return String.format("%s@(%d,%d) fg=%s bg=%s selected=%s %s",
                     groundSensor.getDirection(), originalX, originalY,
@@ -485,14 +487,16 @@ class TestS3kMgz2BgRiseHeadless {
             int solidityBit = (groundSensor.getDirection() == Direction.DOWN)
                     ? sprite.getTopSolidBit()
                     : sprite.getLrbSolidBit();
+            LevelManager levelManager = GameServices.level();
             SensorResult fgResult = config.vertical()
                     ? invokeSensorMethod(groundSensor, "scanVertical",
-                    new Class<?>[] {short.class, short.class, int.class, Direction.class},
-                    originalX, originalY, solidityBit, config.direction())
+                    new Class<?>[] {LevelManager.class, short.class, short.class, int.class, Direction.class},
+                    levelManager, originalX, originalY, solidityBit, config.direction())
                     : null;
             SensorResult bgResult = invokeSensorMethod(groundSensor, "scanBackgroundCollision",
-                    new Class<?>[] {short.class, short.class, int.class, Direction.class, boolean.class},
-                    originalX, originalY, solidityBit, config.direction(), config.vertical());
+                    new Class<?>[] {LevelManager.class, short.class, short.class, int.class, Direction.class,
+                            boolean.class},
+                    levelManager, originalX, originalY, solidityBit, config.direction(), config.vertical());
             SensorResult selected = copySensorResult(groundSensor.scan((short) 0, (short) 0));
             return String.format("%s@(%d,%d) fg=%s bg=%s selected=%s %s",
                     groundSensor.getDirection(), originalX, originalY,

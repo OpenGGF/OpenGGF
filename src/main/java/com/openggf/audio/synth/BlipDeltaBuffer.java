@@ -316,8 +316,9 @@ public class BlipDeltaBuffer {
             if (remain > 0) {
                 System.arraycopy(bufferL, count, bufferL, 0, remain);
                 System.arraycopy(bufferR, count, bufferR, 0, remain);
-                Arrays.fill(bufferL, remain, size, 0);
-                Arrays.fill(bufferR, remain, size, 0);
+                int clearTo = Math.min(size, remain + count);
+                Arrays.fill(bufferL, remain, clearTo, 0);
+                Arrays.fill(bufferR, remain, clearTo, 0);
             }
         }
 
