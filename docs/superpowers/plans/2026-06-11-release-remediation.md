@@ -1,10 +1,10 @@
-# Release Remediation Implementation Plan
+# Release Remediation Master Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Consolidate the sidekick CPU audit and release-review findings into one actionable remediation plan, then fix the confirmed issues according to OpenGGF's ROM-accuracy, trace, documentation, and release policies.
+**Goal:** Consolidate the sidekick CPU audit, release-review findings, performance audit, and recommended remediation plans into one actionable plan, then fix the confirmed issues according to OpenGGF's ROM-accuracy, trace, documentation, performance, and release policies.
 
-**Architecture:** Treat the temp audit files as source evidence, not shippable artifacts. Fix release-facing regressions first, then sidekick trace parity, then medium-risk framework correctness, then documentation and hygiene. Every behavior change needs a failing test first, ROM/disassembly citation where it affects parity, and focused verification before broader sweeps.
+**Architecture:** Treat the temp audit files as source evidence, not shippable artifacts. Fix release-facing regressions first, then sidekick trace parity, then medium-risk framework correctness, then performance work whose equivalence can be proven, then documentation and hygiene. Every behavior change needs a failing test first, ROM/disassembly citation where it affects parity, and focused verification before broader sweeps.
 
 **Tech Stack:** Java 21, Maven, JUnit 5, OpenGGF trace replay fixtures, Sonic 1/Sonic 2/Sonic 3&K disassemblies under `docs/`, project branch-policy trailers.
 
@@ -14,9 +14,11 @@
 
 - `SIDEKICK_CPU_AUDIT.tmp.md`: disassembly-complete audit of `SidekickCpuController`, `TailsRespawnStrategy`, playable history buffers, and signpost/end-of-act side effects.
 - `RELEASE_REVIEW_FINDINGS.tmp.md`: release architecture/code review findings, including entries already fixed, refuted entries, backlog entries, and confirmed release-facing defects.
+- `docs/superpowers/plans/2026-06-11-performance-optimization.md`: performance remediation plan for audio, rendering, rewind, object, and hot-loop overhead.
+- `docs/superpowers/specs/2026-06-11-performance-optimization-design.md`: source-backed performance problem statement and phase design.
 - Conversation remediation plan from 2026-06-11: prioritize release blockers, sidekick parity, medium-risk correctness, docs/release hygiene, and verification.
 
-These `.tmp.md` files must remain uncommitted. This plan is the durable replacement artifact.
+These `.tmp.md` and performance scratch files must remain uncommitted or be removed after their contents are folded here. This plan is the durable replacement artifact and the single source of truth for the release-remediation goal.
 
 ## Implementation Status Snapshot
 
@@ -58,6 +60,7 @@ Still outstanding:
 - Rejected HCZ frame-896 hypothesis: button-local `isSolidFor` counters/underwater-entry deferrals and a broad shared first-frame render-flag lifecycle change were tested. Neither moved the HCZ trace; the shared lifecycle attempt regressed a focused `TestSolidObjectManager` boundary case, so both directions were removed. The accepted direction was ROM `SolidObjectTop_1P` boundary rejection plus `Obj_Button` same-frame trigger publication.
 - Remaining SK-1 verification: S3K complete-run trace coverage for fresh sidekick spawn/init-only frame and dormant park semantics. HCZ frame-2894 sidekick follow-history jump-edge publication, frame-3318 conveyor release center preservation, frame-3355 conveyor coarse-back culling, frame-3850 native-P2 roll-stop, frame-4286 water-skim airborne gravity handoff, frame-4403 water-skim subpixel pin, and frame-4872 AutoSpin wall-mode X preservation are covered and advanced; HCZ now needs ROM-state triage of the frame-5726 native-P2/Tails vertical-velocity sign frontier, while ICZ/LBZ/MGZ complete-run coverage remains outstanding.
 - Remaining sidekick audit backlog: complete-run SK-1 trace verification for ICZ/LBZ/MGZ, CNZ/MGZ input-alignment frontiers, MGZ complete-run ring mismatch, and ICZ frame-0 rolling mismatch. The former HCZ frame-2894 sidekick input frontier is now resolved.
+- Performance remediation remains planned but not executed on this branch. Its work is intentionally sequenced after the active correctness/trace issues because several proposed optimizations cross audio, rendering, rewind, and object lifecycles and require baseline measurement plus trace sweeps before implementation.
 - Lower-priority release-review hygiene that was not part of the release-blocker fix set.
 
 ## Non-Negotiable Rules
@@ -368,6 +371,62 @@ Status:
 
 ---
 
+## Performance Problem Statements
+
+The performance audit found real hot-path waste, but most items are not release blockers and must be implemented as independently reversible, evidence-backed phases. Any behavior-sensitive optimization is dropped unless old-vs-new equivalence is proven by tests, trace sweeps, or deterministic audio/render evidence.
+
+### PERF-0: Missing baseline measurement
+
+Performance work needs a stable baseline before any optimization claims are credible.
+
+Required fix:
+- Capture a clean-source baseline: S3K green-list tests and current `*TraceReplay` frontiers.
+- Capture frame-time p50/p99/max and keyframe-spike data over a deterministic driver.
+- Capture held-rewind allocation data and GPU upload counters.
+- Record durable results under `docs/performance/` or this plan, and update `docs/TRACE_FRONTIER_LOG.md` for trace sweeps.
+
+### PERF-1: Exact-equivalence hot-path overhead
+
+Verified low-risk waste includes broad zero-filling in `BlipDeltaBuffer`, synchronized read-only `SessionManager` accessors, repeated `GroundSensor` service resolution, uncached generic rewind eligibility/reflection, unconditional render-bucket invalidation, boxed ring active-index storage, and audio-runtime scratch churn.
+
+Required fix:
+- Land in small commits with equivalence tests where behavior cannot go red first.
+- Preserve byte-identical audio and rewind capture behavior.
+- Run focused tests plus S3K green-list tests and trace replay sweep after the phase.
+
+### PERF-2: Over-broad rendering uploads
+
+The renderer uploads whole atlas pages and rebuilds broad BG windows where only small DPLC regions or one scroll column changed. SAT replay and scroll buffers also allocate or draw more than necessary.
+
+Required fix:
+- Add dirty-rect or dirty-slot atlas uploads.
+- Add incremental BG window rebuild for single-column scroll.
+- Batch SAT replay and remove boxed atlas lookup/native upload-buffer churn.
+- Verify visually and with trace sweeps; measure upload-byte reduction.
+
+### PERF-3: Held-rewind allocation storm and keyframe reflection spikes
+
+Held rewind rebuilds audio driver state and object instances on intermediate backward frames, while keyframe capture repeatedly pays reflection and codec lookup costs.
+
+Required fix:
+- Restore matching objects in place only after auditing non-captured fields and proving full-state equivalence.
+- Defer intermediate audio logical restore during held rewind, restoring once at release/seek commit.
+- Bound and index `AudioCommandTimeline`.
+- Add typed compact access plans and reduce restore-path blob copies.
+- Prove rewind determinism and measure allocation reduction before claiming completion.
+
+### PERF-4: Behavior-sensitive cleanup needs explicit evidence gates
+
+Audio fade fallback removal, resampler math changes, trig-table routing, and object/render scratch reuse can alter observable behavior if implemented loosely.
+
+Required fix:
+- Compare closed-form tempo math and resampler output against current algorithms.
+- Remove fade fallback only if deterministic audio output is sample-identical.
+- Route trig calls through ROM lookup tables only with disassembly citations for each call site.
+- Keep object/render scratch ownership local and never expose mutable scratch to callers.
+
+---
+
 ## Documentation and Release Hygiene Problem Statements
 
 ### DOC-1: S3K discrepancy registry is stale for AIZ2 battleship wrap
@@ -622,6 +681,63 @@ Prioritize MTZ/MCZ/OOZ routes with sidekick death windows.
 - [ ] **Step 5: Run full Maven test suite before final completion.**
 - [ ] **Step 6: Update `docs/TRACE_FRONTIER_LOG.md` for every frontier movement/regression/sweep.**
 
+### Task 11: Performance Baseline and Exact-Equivalence Phase
+
+**Files:**
+- Optional create: `docs/performance/2026-06-11-performance-baseline.md`
+- Modify only with tests: audio/session/collision/rewind/render/ring files named in PERF-1
+
+- [ ] **Step 1: Confirm clean correctness baseline.**
+
+Run the S3K green list and current trace sweep, recording known failures/frontiers before perf work.
+
+- [ ] **Step 2: Capture frame-time, rewind-allocation, and GPU-upload baseline.**
+
+Use existing deterministic drivers and scratch counters where needed. Do not commit temporary counters unless they become debug/test helpers.
+
+- [ ] **Step 3: Implement only exact-equivalence quick wins.**
+
+Start with PERF-1 items whose behavior is pinned by unit/equivalence tests.
+
+- [ ] **Step 4: Verify no trace or deterministic output regression.**
+
+Run focused tests, S3K green list, and `*TraceReplay` sweep before committing.
+
+### Task 12: Rendering Upload Reduction Phase
+
+**Files:**
+- `src/main/java/com/openggf/graphics/PatternAtlas.java`
+- `src/main/java/com/openggf/level/LevelTilemapManager.java`
+- `src/main/java/com/openggf/graphics/GraphicsManager.java`
+- `src/main/java/com/openggf/graphics/HScrollBuffer.java`
+- `src/main/java/com/openggf/graphics/VScrollBuffer.java`
+
+- [ ] **Step 1: Add tests/counters for dirty atlas and BG-scroll uploads.**
+- [ ] **Step 2: Implement dirty atlas uploads and incremental BG window rebuilds.**
+- [ ] **Step 3: Batch SAT replay and remove upload-buffer allocation churn.**
+- [ ] **Step 4: Run visual validation plus trace sweeps.**
+
+### Task 13: Rewind and Audio Performance Phase
+
+**Files:**
+- `src/main/java/com/openggf/level/objects/ObjectManager.java`
+- `src/main/java/com/openggf/game/rewind/*`
+- `src/main/java/com/openggf/audio/**`
+
+- [ ] **Step 1: Audit object non-captured fields before in-place restore.**
+- [ ] **Step 2: Add release-equivalence tests for held-rewind audio restore deferral.**
+- [ ] **Step 3: Bound `AudioCommandTimeline` and reduce rewind restore copies.**
+- [ ] **Step 4: Run rewind determinism tests and full trace sweep.**
+
+### Task 14: Evidence-Gated Performance Cleanup
+
+**Files:**
+- Audio math, ring-buffer, object scratch, trig, and level math files named in PERF-4
+
+- [ ] **Step 1: Prove closed-form tempo/resampler/ring-buffer equivalence.**
+- [ ] **Step 2: Drop or implement fade fallback and trig-table items based on evidence.**
+- [ ] **Step 3: Measure final performance deltas and update changelog/trace log.**
+
 ---
 
 ## Current Prioritization
@@ -631,7 +747,8 @@ Prioritize MTZ/MCZ/OOZ routes with sidekick death windows.
 3. RB-4/RB-5/RB-6 input config defaults, digit keys, pause behavior, and FPS validation.
 4. SK-1 S3K sidekick fresh spawn/init-only first frame.
 5. SK-2/SK-3/SK-4/SK-5 sidekick parity cleanup.
-6. MC-1 through MC-5 medium-risk framework/object fixes.
-7. DOC-1 through DOC-4 documentation and release hygiene.
+6. MC-1 through MC-9 medium-risk framework/object fixes.
+7. PERF-0 through PERF-4 performance remediation, sequenced by evidence and reversibility.
+8. DOC-1 through DOC-5 documentation and release hygiene.
 
-This order fixes shipped user-facing regressions before deep trace frontier work, while still preserving the sidekick audit as a first-class release remediation track.
+This order fixes shipped user-facing regressions before deep trace frontier work, and fixes correctness/parity before performance cleanup whose success depends on stable trace baselines.
