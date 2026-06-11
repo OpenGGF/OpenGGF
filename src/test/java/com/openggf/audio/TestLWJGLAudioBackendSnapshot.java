@@ -57,6 +57,49 @@ class TestLWJGLAudioBackendSnapshot {
     }
 
     @Test
+    void restoreLogicalSnapshotReusesExistingDriverInstanceBitExactly() {
+        SmpsDriver source = configuredDriver();
+        addSequencer(source);
+        primeSynth(source);
+        source.renderFrames(new short[74], 0, 37);
+
+        AudioBackendLogicalSnapshot snapshot = new AudioBackendLogicalSnapshot(
+                AudioSourceDescriptor.baseMusic(0x81),
+                false,
+                false,
+                false,
+                1,
+                List.of(),
+                source.captureSnapshot(),
+                null);
+
+        LWJGLAudioBackend freshBackend = new LWJGLAudioBackend(SonicConfigurationService.getInstance());
+        freshBackend.restoreLogicalSnapshot(snapshot);
+        SmpsDriver fresh = freshBackend.musicDriverForTesting();
+        assertNotNull(fresh);
+
+        LWJGLAudioBackend reuseBackend = new LWJGLAudioBackend(SonicConfigurationService.getInstance());
+        reuseBackend.restoreLogicalSnapshot(snapshot);
+        SmpsDriver first = reuseBackend.musicDriverForTesting();
+        // Dirty the instance so the second restore must fully overwrite it.
+        perturbSynth(first);
+        first.renderFrames(new short[128], 0, 64);
+        reuseBackend.restoreLogicalSnapshot(snapshot);
+        SmpsDriver reused = reuseBackend.musicDriverForTesting();
+        assertSame(first, reused, "snapshot with synth state must restore into the existing driver");
+
+        perturbSynth(fresh);
+        perturbSynth(reused);
+        short[] expected = new short[192];
+        short[] actual = new short[192];
+        fresh.renderFrames(expected, 0, expected.length / 2);
+        reused.renderFrames(actual, 0, actual.length / 2);
+
+        assertArrayEquals(expected, actual,
+                "reused driver instance must render bit-exactly like a freshly constructed restore");
+    }
+
+    @Test
     void restoreLogicalSnapshotRebindsRuntimeAndDropsUnrestorableOverridePlaceholders() {
         SmpsDriver source = configuredDriver();
         addSequencer(source);

@@ -23,6 +23,7 @@ public final class RewindController {
     private final SectionProfiler profiler;
 
     private int currentFrame;
+    private boolean audioRestoreDeferred;
 
     public RewindController(
             RewindRegistry registry,
@@ -85,6 +86,7 @@ public final class RewindController {
      * level-load state while keeping rewind available in the new segment.
      */
     public void resetBufferAtCurrentFrame() {
+        dropDeferredAudioRestore();
         segmentCache.invalidate();
         keyframes.clear();
         keyframes.put(currentFrame, registry.capture());
@@ -103,6 +105,7 @@ public final class RewindController {
      * and any companion audio state to keep the two sides aligned.
      */
     public void resetToFrameZero() {
+        dropDeferredAudioRestore();
         segmentCache.invalidate();
         keyframes.clear();
         currentFrame = 0;
@@ -118,6 +121,7 @@ public final class RewindController {
         if (currentFrame + 1 >= inputs.frameCount()) {
             return;   // end of trace
         }
+        commitDeferredAudioRestore();
         beginAudioFrame(currentFrame + 1);
         Bk2FrameInput in = inputs.read(currentFrame + 1);
         engineStepper.step(in);
@@ -139,6 +143,7 @@ public final class RewindController {
         if (currentFrame + 1 >= inputs.frameCount()) {
             return false;
         }
+        commitDeferredAudioRestore();
         currentFrame++;
         beginAudioFrame(currentFrame);
         segmentCache.invalidate();
@@ -188,6 +193,9 @@ public final class RewindController {
             if (profiler != null) profiler.beginSection("rewind.seek");
             keyframes.discardAfter(currentFrame);
             discardAudioAfter(currentFrame);
+            // The seek's own restore lands the committed target state, so any
+            // restore deferred by held backward stepping is superseded here.
+            dropDeferredAudioRestore();
             restoreAudioLogicalState(currentFrame);
             beginAudioFrame(currentFrame);
             primeStepperAtFrame(currentFrame);
@@ -260,7 +268,17 @@ public final class RewindController {
             currentFrame = target;
             keyframes.discardAfter(currentFrame);
             discardAudioAfter(currentFrame);
-            restoreAudioLogicalState(currentFrame);
+            // While reverse audio presentation is active (held rewind), the
+            // audible output comes from the PcmHistoryRing, not the logical
+            // SMPS driver state, so the expensive logical restore is deferred
+            // until the rewind commits (release, seek, forward resume, or
+            // buffer re-root) via commitDeferredAudioRestore().
+            if (shouldDeferAudioRestore()) {
+                audioRestoreDeferred = true;
+            } else {
+                audioRestoreDeferred = false;
+                restoreAudioLogicalState(currentFrame);
+            }
             beginAudioFrame(currentFrame);
             primeStepperAtFrame(currentFrame);
             afterAudioRestore(AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE);
@@ -268,6 +286,51 @@ public final class RewindController {
             if (profiler != null) profiler.endSection("rewind.step");
         }
         return true;
+    }
+
+    /**
+     * Performs the logical audio restore that was deferred during held-rewind
+     * backward stepping, landing exactly one restore at the committed frame.
+     * Invoked automatically on every forward-resume path through this
+     * controller (level-boundary re-roots instead {@link
+     * #dropDeferredAudioRestore() drop} the pending restore); held-rewind
+     * hosts must call it before issuing a non-suppressed
+     * {@code afterRewindRestore} so the presentation cleanup
+     * (stopAllSfx / restoreMusic / stopPlayback) acts on committed-frame state.
+     */
+    public void commitDeferredAudioRestore() {
+        if (!audioRestoreDeferred) {
+            return;
+        }
+        audioRestoreDeferred = false;
+        restoreAudioLogicalState(currentFrame);
+        beginAudioFrame(currentFrame);
+    }
+
+    /**
+     * Discards a pending deferred restore without applying it. Buffer re-roots
+     * follow a committed level/act boundary whose load path has already
+     * reinitialized audio for the new level ({@code LevelManager.loadLevel}
+     * runs its init steps — including fresh audio init — before
+     * {@code resetToFrameZero}; seamless transitions likewise precede
+     * {@code resetBufferAtCurrentFrame}). A deferred commit must never run
+     * after audio has been freshly reinitialized for a new level: committing
+     * the stale pre-rewind state here would overwrite the fresh state and
+     * capture it into the re-rooted audio keyframe.
+     */
+    private void dropDeferredAudioRestore() {
+        audioRestoreDeferred = false;
+    }
+
+    /**
+     * The gate intentionally keys off reverse-presentation state: the
+     * held-rewind hosts (LiveRewindManager / TraceSessionLauncher) own that
+     * lifecycle and bracket exactly the window where audible output comes from
+     * the PcmHistoryRing, while non-presentation backward stepping (e.g. trace
+     * tooling via PlaybackController) must stay eager.
+     */
+    private boolean shouldDeferAudioRestore() {
+        return audioManager != null && audioManager.isReverseAudioPresentationActive();
     }
 
     private AudioReplayScope beginAudioReplay(int fromFrame, int targetFrame, AudioReplayReason reason) {

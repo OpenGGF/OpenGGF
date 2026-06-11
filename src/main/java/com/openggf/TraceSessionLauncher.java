@@ -388,6 +388,9 @@ public final class TraceSessionLauncher {
         }
         realtimeRewinding = false;
         if (rewindController != null) {
+            // Land the single deferred logical restore at the committed frame
+            // before the presentation cleanup acts on backend logical state.
+            rewindController.commitDeferredAudioRestore();
             GameServices.audio().afterRewindRestore(rewindController.currentFrame(), policy);
         } else {
             GameServices.audio().endReverseAudioPresentation();
@@ -416,6 +419,7 @@ public final class TraceSessionLauncher {
         TraceGhostHook.clear(ghostHook);
         GameServices.playbackDebug().endSession();
         if (rewindController != null) {
+            rewindController.commitDeferredAudioRestore();
             GameServices.audio().afterRewindRestore(
                     rewindController.currentFrame(),
                     AudioPresentationPolicy.STOP_ALL_PRESENTATION);

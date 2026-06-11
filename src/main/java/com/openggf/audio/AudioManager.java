@@ -688,6 +688,10 @@ public class AudioManager {
         }
     }
 
+    public boolean isReverseAudioPresentationActive() {
+        return reverseAudioPresentationActive;
+    }
+
     public void endReverseAudioPresentation() {
         reverseAudioPresentationActive = false;
         deterministicAudioRuntime.endReversePresentation();
