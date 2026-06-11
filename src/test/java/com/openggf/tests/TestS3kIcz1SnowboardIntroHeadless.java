@@ -129,6 +129,14 @@ public class TestS3kIcz1SnowboardIntroHeadless {
         assertEquals(SidekickCpuController.State.DORMANT_MARKER, tails.getCpuController().getState());
         assertTrue(tails.isObjectControlled(),
                 "ROM loc_13A74 writes object_control=$83 for the dormant marker");
+
+        for (int frame = 0; frame < 30; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+        }
+        assertEquals(0x00F2, sonic.getCentreY() & 0xFFFF,
+                "ROM Obj_LevelIntroICZ1 clears object_control before the frame-29 SpeedToPos sample");
+        assertEquals(0x8000, sonic.getYSubpixelRaw());
+        assertEquals(0x02B8, sonic.getYSpeed() & 0xFFFF);
     }
 
     @Test

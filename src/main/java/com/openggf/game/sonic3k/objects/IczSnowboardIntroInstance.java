@@ -240,7 +240,17 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
             return;
         }
         releaseStartupObjectControl(player);
+        applyStartupReleaseFrameMotion(player);
         state = State.WAIT_FOR_BOARD_JUMP;
+    }
+
+    private void applyStartupReleaseFrameMotion(AbstractPlayableSprite player) {
+        // ROM frame order runs Obj_LevelIntroICZ1's timer release before the
+        // player's Obj01_MdAir update is sampled for the trace frame. That frame
+        // therefore performs MoveSprite_TestGravity: SpeedToPos with the old
+        // y_vel, then y_vel += gravity.
+        player.move(player.getXSpeed(), player.getYSpeed());
+        player.setYSpeed((short) (player.getYSpeed() + player.getGravity()));
     }
 
     private void updateWaitForBoardJump(AbstractPlayableSprite player) {

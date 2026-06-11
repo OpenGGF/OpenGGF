@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K ICZ1 snowboard release follows the ROM same-frame motion order:** when
+  `Obj_LevelIntroICZ1` clears startup object control, the engine now performs
+  the same sampled-frame player SpeedToPos integration and gravity increment
+  that the ROM's player air path applies. This moves the ICZ complete-run trace
+  from the frame-29 snowboard release mismatch to the frame-117 snowboard
+  ground-speed frontier.
+
 - **S3K ICZ1 Sonic+Tails now enters the ROM snowboard bootstrap path:** the
   ICZ level-event bootstrap now spawns `Obj_LevelIntroICZ1` for Sonic player
   modes (`Player_mode < 2`) and parks CPU Tails in the routine-`$0A`

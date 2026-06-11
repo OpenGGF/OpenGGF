@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+## 2026-06-11 - S3K ICZ complete-run progressed to snowboard ground-speed frontier
+
+- Scope: follow-up to the ICZ frame-29 snowboard startup release mismatch.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - `IczSnowboardIntroInstance` now compensates for the engine's object-after-
+    physics ordering at the ROM startup-release boundary. When
+    `Obj_LevelIntroICZ1` clears object control, the object applies the same
+    sampled-frame player air update the ROM has already run by trace capture:
+    SpeedToPos with the startup velocities, then `y_vel += gravity`.
+  - The headless ICZ1 Sonic+Tails bootstrap test now asserts the release-frame
+    ROM-visible `y`, `y_sub`, and `y_speed` values.
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.TestS3kIcz1SnowboardIntroHeadless#sonicAndTailsStartsSnowboardIntroWithTailsDormantMarker" test`
+    -> GREEN. Surefire report: `Tests run: 1, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 29 to frame 117. New first
+    error: main-player `g_speed` `expected=0x0800`, `actual=0x1000`; ICZ
+    error count is 3462.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the snowboard board-jump/ground-speed handoff around frame 117, where the ROM
+  still reports `ground_vel=$0800` while the engine has doubled it to `$1000`.
+
 ## 2026-06-11 - S3K ICZ complete-run progressed to snowboard-motion frontier
 
 - Scope: follow-up to the ICZ complete-run frame-0 Sonic rolling mismatch and
