@@ -106,6 +106,13 @@ All notable changes to the OpenGGF project are documented in this file.
   native subpixel movement. This advances the HCZ complete-run trace to the
   frame-9045 native-P2 vertical-speed frontier.
 
+- **HCZ miniboss vortex first contact follows ROM capture order:** the
+  water-effect child now owns the routine-$06/routine-$08 pull gate directly,
+  and the first-contact path runs the ROM pull helper before setting
+  `Status_InAir`, object control, float animation, and clearing x/y/ground
+  speed. This advances the HCZ complete-run trace to the frame-9337
+  post-vortex release frontier.
+
 - **S3K sidekick fresh spawns honor the Obj_Tails init-only frame:** fresh
   routine-0 sidekick spawns now reset kinematics and advance to the normal CPU
   routine without running same-frame follow steering, while dormant sentinel

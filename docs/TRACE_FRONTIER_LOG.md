@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+## 2026-06-11 - S3K HCZ complete-run progressed to post-vortex release frontier
+
+- Scope: follow-up to the HCZ frame-9045 vortex/air-countdown mismatch. Trace
+  data remained comparison-only diagnostic input; no engine state was hydrated
+  from trace rows, and no zone/route/frame exception was added.
+- Fix:
+  - `HczMinibossInstance` now drives the water-effect child with explicit
+    routine `$06`/`$08` raw-animation state instead of a fixed parent-side
+    wind-up counter. The pull gate opens only after the routine `$06`
+    `byte_6ADEC` `Animate_RawNoSSTMultiDelay` callback enters routine `$08`.
+  - Vortex first contact now follows the ROM `sub_6A9B8` order: run the
+    `sub_6AA30` horizontal/vertical pull helper first, then run the
+    `sub_6AA00` capture step that sets `Status_InAir`, object control, float
+    animation, and clears x/y/ground speed. This removes the one-frame
+    native-P2 `tails_air`/first-pull velocity split at the previous frontier.
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first HCZ error moved from frame 9045 to frame 9337. New
+    first error: main-player `x_speed` `expected=0x02C0`, `actual=0x0274`;
+    HCZ error count is 2875.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the post-vortex release/normal-physics handoff around frame 9337, where the
+  water-effect child has returned to routine `$0A`/idle and the main player is
+  under normal control with lower-than-ROM `x_speed`.
+
 ## 2026-06-11 - S3K HCZ complete-run progressed to vortex routine-8 frontier
 
 - Scope: follow-up to the HCZ frame-8968 native-P2/Tails vertical mismatch

@@ -98,13 +98,26 @@ public class HczMinibossInstance extends AbstractBossInstance {
     private static final int VORTEX_TIME = 0x17F;
     private static final int COOLDOWN_TIME = 0x7F;
     private static final int REOPEN_TIME = 0x3F;
-    // byte_6ADEC routine $06 wind-up before loc_6A5D8 starts sub_6A9B8 player pull.
-    private static final int VORTEX_PULL_WINDUP_TIME = 92;
 
     private static final int ENGINE_OFFSET_Y = 0x24;
     private static final int ENGINE_FRAME = 0x15;
     private static final int WATER_EFFECT_OFFSET_Y = 0x148;
     private static final int WATER_EFFECT_BASE_FRAME = 0x16;
+    private static final int WATER_EFFECT_ROUTINE_IDLE = 4;
+    private static final int WATER_EFFECT_ROUTINE_WINDUP = 6;
+    private static final int WATER_EFFECT_ROUTINE_PULL = 8;
+    private static final int WATER_EFFECT_ROUTINE_COOLDOWN = 10;
+    private static final int WATER_EFFECT_CALLBACK_COMMAND = 0xF4;
+    private static final int[] WATER_EFFECT_WINDUP_SCRIPT = {
+            0x16, 7, 0x17, 7, 0x18, 7,
+            0x16, 6, 0x17, 6, 0x18, 6,
+            0x16, 5, 0x17, 5, 0x18, 5,
+            0x16, 4, 0x17, 4, 0x18, 4,
+            0x16, 3, 0x17, 3, 0x18, 3,
+            0x16, 2, 0x17, 2, 0x18, 2,
+            WATER_EFFECT_CALLBACK_COMMAND
+    };
+    private static final int[] WATER_EFFECT_PULL_SCRIPT = {1, 0x16, 0x17, 0x18, 0xFC};
     private static final int FLOOR_CHECK_RADIUS = 0x28;
     private static final int ROCKET_PHASE_STEP = 4;
     private static final int VORTEX_PHASE_STEP = 2;
@@ -205,11 +218,14 @@ public class HczMinibossInstance extends AbstractBossInstance {
     private boolean arenaXLocked;
     private boolean customFlashDirty;
     private boolean vortexActive;
-    private int vortexPullWindupTimer;
     private boolean defeatRenderComplete;
     private boolean crossedWaterThisPass;
     private boolean waterPaletteLoaded;
+    private int waterEffectRoutine;
     private int waterEffectFrame;
+    private int waterEffectAnimFrame;
+    private int waterEffectAnimTimer;
+    private boolean waterEffectPullReady;
     private int lastFrameCounter;
     private List<VortexBubbleChild> vortexBubbles;
     private S3kBossExplosionController defeatExplosionController;
@@ -318,11 +334,14 @@ public class HczMinibossInstance extends AbstractBossInstance {
         arenaXLocked = false;
         customFlashDirty = false;
         vortexActive = false;
-        vortexPullWindupTimer = 0;
         defeatRenderComplete = false;
         crossedWaterThisPass = false;
         waterPaletteLoaded = false;
+        waterEffectRoutine = WATER_EFFECT_ROUTINE_IDLE;
         waterEffectFrame = WATER_EFFECT_BASE_FRAME;
+        waterEffectAnimFrame = 0;
+        waterEffectAnimTimer = 0;
+        waterEffectPullReady = false;
         vortexBubbles = new ArrayList<>();
         defeatExplosionController = null;
         rocketTouchChildren = null;
@@ -423,7 +442,10 @@ public class HczMinibossInstance extends AbstractBossInstance {
         waitTimer = -1;
         waitCallback = WaitCallback.NONE;
         vortexActive = false;
-        vortexPullWindupTimer = 0;
+        waterEffectRoutine = WATER_EFFECT_ROUTINE_IDLE;
+        waterEffectAnimFrame = 0;
+        waterEffectAnimTimer = 0;
+        waterEffectPullReady = false;
         state.invulnerable = false;
         state.invulnerabilityTimer = 0;
         loadBossPalette();
@@ -456,7 +478,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
         }
 
         updateRocketOrbit();
-        updateWaterEffect(frameCounter);
+        updateWaterEffect();
         updateCustomFlash();
         updateDynamicSpawn(state.x, state.y);
     }
@@ -627,7 +649,11 @@ public class HczMinibossInstance extends AbstractBossInstance {
         state.xVel = 0;
         state.yVel = 0;
         vortexActive = true;
-        vortexPullWindupTimer = VORTEX_PULL_WINDUP_TIME;
+        waterEffectRoutine = WATER_EFFECT_ROUTINE_WINDUP;
+        waterEffectAnimFrame = 0;
+        waterEffectAnimTimer = 1;
+        waterEffectPullReady = false;
+        waterEffectFrame = WATER_EFFECT_BASE_FRAME;
         crossedWaterThisPass = true;
         services().playSfx(Sonic3kSfx.BOSS_ROTATE.id);
         spawnVortexBubbleBatch();
@@ -636,7 +662,10 @@ public class HczMinibossInstance extends AbstractBossInstance {
 
     private void endVortex() {
         vortexActive = false;
-        vortexPullWindupTimer = 0;
+        waterEffectRoutine = WATER_EFFECT_ROUTINE_COOLDOWN;
+        waterEffectAnimFrame = 0;
+        waterEffectAnimTimer = 0;
+        waterEffectPullReady = false;
         releaseVortexPlayers();
         for (VortexBubbleChild bubble : vortexBubbles) {
             bubble.signalVortexEnd();
@@ -746,13 +775,15 @@ public class HczMinibossInstance extends AbstractBossInstance {
     }
 
     private void updateVortex(AbstractPlayableSprite player) {
-        if ((lastFrameCounter & (CONTINUOUS_SFX_INTERVAL - 1)) == 0 && isOnScreen()) {
+        if (waterEffectRoutine == WATER_EFFECT_ROUTINE_PULL
+                && (lastFrameCounter & (CONTINUOUS_SFX_INTERVAL - 1)) == 0
+                && isOnScreen()) {
             services().playSfx(Sonic3kSfx.BOSS_ROTATE.id);
         }
-        if (vortexPullWindupTimer > 0) {
-            vortexPullWindupTimer--;
-        } else {
+        if (waterEffectRoutine == WATER_EFFECT_ROUTINE_PULL && waterEffectPullReady) {
             applyVortexPull(player);
+        } else if (waterEffectRoutine == WATER_EFFECT_ROUTINE_PULL) {
+            waterEffectPullReady = true;
         }
         tickWait();
     }
@@ -917,12 +948,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
             return;
         }
 
-        if (!sprite.isObjectControlled()) {
-            ObjectControlState.nativeBit7FullControl().applyTo(sprite);
-            sprite.setForcedAnimationId(Sonic3kAnimationIds.FLOAT2.id());
-            sprite.setXSpeed((short) 0);
-            sprite.setYSpeed((short) 0);
-        }
+        boolean firstContact = !sprite.isObjectControlled();
 
         int vortexX = getWaterEffectX();
         int playerX = sprite.getCentreX();
@@ -956,6 +982,17 @@ public class HczMinibossInstance extends AbstractBossInstance {
         } else if (yDist > 0x10) {
             sprite.move((short) 0, (short) -0x80);
         }
+
+        // sub_6A9B8 calls sub_6AA30 before sub_6AA00, so first contact moves
+        // the player once and then clears x/y/ground speed while setting control.
+        if (firstContact) {
+            ObjectControlState.nativeBit7FullControl().applyTo(sprite);
+            sprite.setAir(true);
+            sprite.setForcedAnimationId(Sonic3kAnimationIds.FLOAT2.id());
+            sprite.setXSpeed((short) 0);
+            sprite.setYSpeed((short) 0);
+            sprite.setGSpeed((short) 0);
+        }
     }
 
     @Override
@@ -979,7 +1016,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
             }
         }
         return String.format(
-                "r=%02X xV=%04X yV=%04X wait=%d cb=%s pass=%d closed=%s vortex=%s wind=%d water=%04X,%04X wf=%d rockets=%s",
+                "r=%02X xV=%04X yV=%04X wait=%d cb=%s pass=%d closed=%s vortex=%s waterR=%02X water=%04X,%04X wf=%d wa=%02X/%02X pullReady=%s rockets=%s",
                 state.routine & 0xFF,
                 state.xVel & 0xFFFF,
                 state.yVel & 0xFFFF,
@@ -988,10 +1025,13 @@ public class HczMinibossInstance extends AbstractBossInstance {
                 passCounter,
                 closedBody,
                 vortexActive,
-                vortexPullWindupTimer,
+                waterEffectRoutine & 0xFF,
                 getWaterEffectX() & 0xFFFF,
                 getWaterEffectY() & 0xFFFF,
                 waterEffectFrame,
+                waterEffectAnimFrame & 0xFF,
+                waterEffectAnimTimer & 0xFF,
+                waterEffectPullReady,
                 rocketSummary.isEmpty() ? "none" : rocketSummary.toString());
     }
 
@@ -1191,16 +1231,65 @@ public class HczMinibossInstance extends AbstractBossInstance {
         advanceRocketOrbit(0);
     }
 
-    private void updateWaterEffect(int frameCounter) {
+    private void updateWaterEffect() {
         if (!isWaterEffectVisible()) {
+            waterEffectRoutine = WATER_EFFECT_ROUTINE_IDLE;
             waterEffectFrame = WATER_EFFECT_BASE_FRAME;
             return;
         }
+        switch (waterEffectRoutine) {
+            case WATER_EFFECT_ROUTINE_WINDUP -> animateWaterEffectWindup();
+            case WATER_EFFECT_ROUTINE_PULL -> animateWaterEffectPull();
+            case WATER_EFFECT_ROUTINE_COOLDOWN -> {
+                waterEffectFrame = WATER_EFFECT_BASE_FRAME;
+                waterEffectRoutine = WATER_EFFECT_ROUTINE_IDLE;
+            }
+            default -> waterEffectFrame = WATER_EFFECT_BASE_FRAME;
+        }
+    }
+
+    private void animateWaterEffectWindup() {
+        waterEffectAnimTimer--;
+        if (waterEffectAnimTimer >= 0) {
+            return;
+        }
+
+        waterEffectAnimFrame += 2;
+        int command = WATER_EFFECT_WINDUP_SCRIPT[waterEffectAnimFrame] & 0xFF;
+        if (command < 0x80) {
+            waterEffectFrame = command;
+            waterEffectAnimTimer = WATER_EFFECT_WINDUP_SCRIPT[waterEffectAnimFrame + 1] & 0xFF;
+            return;
+        }
+
+        waterEffectRoutine = WATER_EFFECT_ROUTINE_PULL;
+        waterEffectAnimFrame = 0;
+        waterEffectAnimTimer = 0;
+        waterEffectPullReady = false;
+        waterEffectFrame = WATER_EFFECT_BASE_FRAME;
+    }
+
+    private void animateWaterEffectPull() {
         if (!vortexActive) {
             waterEffectFrame = WATER_EFFECT_BASE_FRAME;
             return;
         }
-        waterEffectFrame = WATER_EFFECT_BASE_FRAME + ((frameCounter >> 1) % 3);
+        waterEffectAnimTimer--;
+        if (waterEffectAnimTimer >= 0) {
+            return;
+        }
+
+        waterEffectAnimFrame++;
+        int command = WATER_EFFECT_PULL_SCRIPT[waterEffectAnimFrame] & 0xFF;
+        if (command < 0x80) {
+            waterEffectFrame = command;
+            waterEffectAnimTimer = WATER_EFFECT_PULL_SCRIPT[0] & 0xFF;
+            return;
+        }
+
+        waterEffectFrame = WATER_EFFECT_PULL_SCRIPT[1] & 0xFF;
+        waterEffectAnimFrame = 1;
+        waterEffectAnimTimer = WATER_EFFECT_PULL_SCRIPT[0] & 0xFF;
     }
 
     /**
