@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K ICZ1 big snow pile jump preserves ROM `y_pos`:** the post-crash
+  `Obj_ICZ1BigSnowPile` jump escape now keeps Sonic's centre position stable
+  while changing roll radii and publishing `y_vel=-$600`, matching the ROM
+  radius writes that do not modify `y_pos`. This moves the ICZ complete-run
+  trace from the frame-1314 post-crash pile-jump Y-position frontier to the
+  frame-1646 post-pile terrain-angle frontier.
+
 - **S3K ICZ1 snowboard crash releases dormant Tails into ROM catch-up:** the
   snowboard crash handoff now mirrors `Obj_LevelIntroICZ1` by changing parked
   CPU Tails from routine `$0A` to routine `$02` while preserving the off-screen

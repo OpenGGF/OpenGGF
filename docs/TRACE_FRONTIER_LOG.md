@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K ICZ complete-run progressed to post-pile terrain-angle frontier
+
+- Scope: follow-up to the ICZ frame-1314 post-crash pile-jump handoff. Trace
+  data remained comparison-only diagnostic input; no engine state was hydrated
+  from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - `IczBigSnowPileInstance.handleJumpEscape()` now mirrors ROM
+    `Obj_ICZ1BigSnowPile`: the jump escape writes `y_vel=-$600`, marks Sonic
+    airborne/jumping/rolling, and changes radii without moving the ROM
+    `y_pos`. The engine restores Sonic's centre Y after the roll-radius update
+    so the same visible sample stays at the pre-jump position.
+  - Focused ICZ headless coverage now drives the post-crash big snow pile to
+    jump escape and asserts the same-frame `y_vel=-$600` plus unchanged centre
+    Y publication.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIcz1SnowboardIntroHeadless#bigSnowPileFallsAfterCrashAndRequiresJumpEscape" test`
+    -> GREEN. Surefire report: `Tests run: 1, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 1314 to frame 1646. New
+    first error: main-player `angle` `expected=0x0004`, `actual=0x0000`; Sonic
+    `x`, `y`, velocities, status, rings, and camera all match at the first
+    error. ICZ error count is 3717.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  ROM terrain-angle publication around the post-pile route and nearby ICZ ice
+  objects/ground probes; do not add a trace/frame exception.
+
 ## 2026-06-12 - S3K ICZ complete-run progressed to post-crash pile-jump frontier
 
 - Scope: follow-up to the ICZ frame-1112 dormant-Tails CPU routine handoff

@@ -294,11 +294,15 @@ public class TestS3kIcz1SnowboardIntroHeadless {
         assertTrue(sawBigSnowPile, "ICZ1 background event should spawn Obj_ICZ1BigSnowPile");
         assertTrue(sawLockedOnLandedPile, "Sonic should remain locked while standing under the fallen pile");
 
+        int pileEscapeY = sonic.getCentreY();
         fixture.stepFrame(false, false, false, false, true);
 
         assertFalse(sonic.isControlLocked(), "Jumping out of the pile should unlock Sonic");
         assertTrue(sonic.getAir(), "Jumping out of the pile should force Sonic airborne");
-        assertTrue(sonic.getYSpeed() < 0, "Jumping out of the pile should apply upward velocity");
+        assertEquals(0xFA00, sonic.getYSpeed() & 0xFFFF,
+                "ROM Obj_ICZ1BigSnowPile writes y_vel=-$600 on the jump release");
+        assertEquals(pileEscapeY, sonic.getCentreY(),
+                "ROM publishes the pile jump state before the first airborne movement sample");
 
         for (int frame = 0; frame < 12; frame++) {
             fixture.stepFrame(false, false, false, false, false);
