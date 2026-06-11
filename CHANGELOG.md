@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K horizontal springs preserve grounded slope angle:** `Obj_Spring`
+  horizontal launch now keeps the current player angle when the ROM routine
+  updates `x_vel`, `ground_vel`, and move-lock state without writing
+  `angle(a1)`. This moves the ICZ complete-run trace from the frame-1646
+  post-pile terrain-angle frontier to the frame-1667 swinging-platform camera
+  frontier.
+
 - **S3K ICZ1 big snow pile jump preserves ROM `y_pos`:** the post-crash
   `Obj_ICZ1BigSnowPile` jump escape now keeps Sonic's centre position stable
   while changing roll radii and publishing `y_vel=-$600`, matching the ROM

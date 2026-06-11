@@ -251,7 +251,6 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         // already clear (sonic3k.asm:47957-48024).
         if (!wasAirborne) {
             player.setAir(false);
-            player.setAngle((byte) 0);
             player.setGroundMode(GroundMode.GROUND);
         }
 

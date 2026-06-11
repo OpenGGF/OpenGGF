@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K ICZ complete-run progressed to swinging-platform camera frontier
+
+- Scope: follow-up to the ICZ frame-1646 post-pile terrain-angle frontier.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - `Sonic3kSpringObjectInstance.applyHorizontalSpring()` now mirrors ROM
+    `Obj_Spring`/`sub_23190`: horizontal springs update `x_vel`,
+    `ground_vel`, direction, and move-lock state, but do not write
+    `angle(a1)`. Grounded launches therefore preserve the terrain angle that
+    player collision published before the spring contact.
+  - Focused S3K spring coverage now asserts grounded horizontal contacts remain
+    grounded and keep a shallow floor angle through the launch.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kSpringObjectInstance" test`
+    -> GREEN. Surefire report: `Tests run: 2, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 1646 to frame 1667. New
+    first error: `camera_x` `expected=0x3C2A`, `actual=0x3C33`; Sonic
+    `x_speed`, `y_speed`, `g_speed`, `angle`, status, rings, and Tails CPU
+    state match at the first error. ICZ error count is 3653.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-1667 player/camera drift around the ICZ swinging platform at
+  `$3CE0,$0784`; do not add a trace/frame exception.
+
 ## 2026-06-12 - S3K ICZ complete-run progressed to post-pile terrain-angle frontier
 
 - Scope: follow-up to the ICZ frame-1314 post-crash pile-jump handoff. Trace
