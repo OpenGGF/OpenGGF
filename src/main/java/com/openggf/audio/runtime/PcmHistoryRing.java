@@ -9,6 +9,9 @@ public final class PcmHistoryRing {
     private final int capacityFrames;
     private long nextFrameIndex;
     private int storedFrames;
+    // Always equals ringSlot(nextFrameIndex); maintained incrementally so the
+    // per-frame write path avoids a long floorMod inside the stream lock.
+    private int writeSlot;
 
     public PcmHistoryRing(int capacityFrames) {
         if (capacityFrames <= 0) {
@@ -36,14 +39,18 @@ public final class PcmHistoryRing {
 
     public void write(short[] source, int frames) {
         validateBuffer(source, frames);
-        for (int frame = 0; frame < frames; frame++) {
-            int sourceIndex = frame * CHANNELS;
-            int targetIndex = ringSlot(nextFrameIndex) * CHANNELS;
-            samples[targetIndex] = source[sourceIndex];
-            samples[targetIndex + 1] = source[sourceIndex + 1];
-            nextFrameIndex++;
-            storedFrames = Math.min(capacityFrames, storedFrames + 1);
+        int copied = 0;
+        while (copied < frames) {
+            int chunk = Math.min(frames - copied, capacityFrames - writeSlot);
+            System.arraycopy(source, copied * CHANNELS, samples, writeSlot * CHANNELS, chunk * CHANNELS);
+            writeSlot += chunk;
+            if (writeSlot == capacityFrames) {
+                writeSlot = 0;
+            }
+            copied += chunk;
         }
+        nextFrameIndex += frames;
+        storedFrames = (int) Math.min(capacityFrames, (long) storedFrames + frames);
     }
 
     public ReverseCursor createReverseCursor() {
@@ -58,11 +65,13 @@ public final class PcmHistoryRing {
         long oldestRetainedFrame = cursor.oldestReadableFrame;
         nextFrameIndex = Math.max(oldestRetainedFrame, newNextFrameIndex);
         storedFrames = (int) Math.max(0, Math.min(capacityFrames, nextFrameIndex - oldestRetainedFrame));
+        writeSlot = ringSlot(nextFrameIndex);
     }
 
     public void clear() {
         nextFrameIndex = 0;
         storedFrames = 0;
+        writeSlot = 0;
         Arrays.fill(samples, (short) 0);
     }
 

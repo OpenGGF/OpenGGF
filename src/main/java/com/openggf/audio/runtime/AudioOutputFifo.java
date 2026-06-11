@@ -27,12 +27,16 @@ public final class AudioOutputFifo {
         if (writable < frames) {
             overruns++;
         }
-        for (int frame = 0; frame < writable; frame++) {
-            int sourceIndex = frame * CHANNELS;
-            int targetIndex = writeFrame * CHANNELS;
-            samples[targetIndex] = source[sourceIndex];
-            samples[targetIndex + 1] = source[sourceIndex + 1];
-            writeFrame = (writeFrame + 1) % capacityFrames;
+        // writable <= capacityFrames, so at most two segments around the wrap point.
+        int copied = 0;
+        while (copied < writable) {
+            int chunk = Math.min(writable - copied, capacityFrames - writeFrame);
+            System.arraycopy(source, copied * CHANNELS, samples, writeFrame * CHANNELS, chunk * CHANNELS);
+            writeFrame += chunk;
+            if (writeFrame == capacityFrames) {
+                writeFrame = 0;
+            }
+            copied += chunk;
         }
         availableFrames += writable;
         return writable;
@@ -41,12 +45,16 @@ public final class AudioOutputFifo {
     public int drain(short[] target, int frames) {
         validateBuffer(target, frames);
         int readable = Math.min(frames, availableFrames);
-        for (int frame = 0; frame < readable; frame++) {
-            int sourceIndex = readFrame * CHANNELS;
-            int targetIndex = frame * CHANNELS;
-            target[targetIndex] = samples[sourceIndex];
-            target[targetIndex + 1] = samples[sourceIndex + 1];
-            readFrame = (readFrame + 1) % capacityFrames;
+        // readable <= capacityFrames, so at most two segments around the wrap point.
+        int copied = 0;
+        while (copied < readable) {
+            int chunk = Math.min(readable - copied, capacityFrames - readFrame);
+            System.arraycopy(samples, readFrame * CHANNELS, target, copied * CHANNELS, chunk * CHANNELS);
+            readFrame += chunk;
+            if (readFrame == capacityFrames) {
+                readFrame = 0;
+            }
+            copied += chunk;
         }
         availableFrames -= readable;
 

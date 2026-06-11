@@ -111,6 +111,7 @@ public class BlipResampler {
         head = 0;
         inputIndex = 0;
         outputPos = 0.0;
+        cachedPhaseOutputPos = Double.NaN;
     }
 
     /**
@@ -213,21 +214,43 @@ public class BlipResampler {
         return interpolate(historyR);
     }
 
+    // Phase index is a pure function of outputPos; cache it so the second channel of
+    // each output sample (L then R at the same outputPos) skips the recomputation.
+    private double cachedPhaseOutputPos = Double.NaN;
+    private int cachedPhase;
+
     private int interpolate(int[] history) {
+        final double pos = outputPos;
         // Direct cast is equivalent to Math.floor() for positive values (outputPos is always >= 0)
-        long center = (long) outputPos;
-        double frac = outputPos - center;
-        int phase = (int) (frac * PHASE_COUNT);
-        if (phase >= PHASE_COUNT) phase = PHASE_COUNT - 1;
-        double[] coeffs = SINC_TABLE[phase];
+        long center = (long) pos;
+        if (pos != cachedPhaseOutputPos) {
+            double frac = pos - center;
+            int phase = (int) (frac * PHASE_COUNT);
+            if (phase >= PHASE_COUNT) phase = PHASE_COUNT - 1;
+            cachedPhase = phase;
+            cachedPhaseOutputPos = pos;
+        }
+        double[] coeffs = SINC_TABLE[cachedPhase];
 
         long start = center - (FILTER_TAPS / 2) + 1;
 
         double sum = 0.0;
-        for (int tap = 0; tap < FILTER_TAPS; tap++) {
-            long idx = start + tap;
-            int sample = sampleAt(history, idx);
-            sum += sample * coeffs[tap];
+        if (start >= inputIndex - BUFFER_SIZE && center + (FILTER_TAPS / 2) < inputIndex) {
+            // Every tap lies inside the live ring window (callers gate on
+            // hasOutputSample(), so this holds in steady state): sampleAt's range
+            // check is dead here and the ring position can advance incrementally.
+            // Same samples, same coefficients, same accumulation order — bit-exact.
+            int pos0 = (head - (int) (inputIndex - start)) & BUFFER_MASK;
+            for (int tap = 0; tap < FILTER_TAPS; tap++) {
+                sum += history[pos0] * coeffs[tap];
+                pos0 = (pos0 + 1) & BUFFER_MASK;
+            }
+        } else {
+            for (int tap = 0; tap < FILTER_TAPS; tap++) {
+                long idx = start + tap;
+                int sample = sampleAt(history, idx);
+                sum += sample * coeffs[tap];
+            }
         }
 
         return (int) Math.round(sum);

@@ -890,15 +890,36 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     }
 
     public boolean requiresSampleAccurateFallback() {
-        return fadeState.active || speedMultiplier > 1;
+        // Fades do not force per-sample rendering: fade volume steps are applied only
+        // inside processTempoFrame() (processFade), hybrid chunks never cross a
+        // tempo-frame boundary, and getSamplesUntilNextObservableEvent() clamps to
+        // the next tempo frame while a fade is active. Proven PCM-identical by
+        // TestSmpsFadeHybridParity (fade-out, fade-in, and fade-with-SFX windows).
+        return speedMultiplier > 1;
     }
 
-    private int samplesUntilTempoTicks(int ticks) {
+    // Package-private for TestSmpsSequencerTempoMath equivalence proofs.
+    int samplesUntilTempoTicks(int ticks) {
         if (ticks <= 0) {
             return 0;
         }
         if ((tempoWeight == 0 && !ticksEveryFrameWithZeroTempo()) || samplesPerFrame <= 0) {
             return Integer.MAX_VALUE;
+        }
+
+        double firstRemaining = samplesPerFrame - sampleCounter;
+        // Closed form: after the first frame boundary every later frame costs exactly
+        // samplesPerFrame, so the total is firstRemaining + (ticks - 1) * samplesPerFrame.
+        // That matches the reference loop bit-for-bit only when both doubles are exact
+        // integers (then every sum/product below 2^53 is exact regardless of evaluation
+        // order, and totals beyond int range saturate identically through the cast).
+        // Production rates (e.g. 44100/48000 Hz over 60/50 fps) hit this path; the
+        // fractional internal-rate output keeps the loop to preserve exact behaviour,
+        // as does a counter left above the frame size by a PAL->NTSC region switch.
+        if (firstRemaining > 0.0
+                && samplesPerFrame == Math.floor(samplesPerFrame)
+                && sampleCounter == Math.floor(sampleCounter)) {
+            return (int) Math.ceil(firstRemaining + (ticks - 1) * samplesPerFrame);
         }
 
         double counter = sampleCounter;
