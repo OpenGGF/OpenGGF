@@ -137,6 +137,12 @@ public class TestS3kIcz1SnowboardIntroHeadless {
                 "ROM Obj_LevelIntroICZ1 clears object_control before the frame-29 SpeedToPos sample");
         assertEquals(0x8000, sonic.getYSubpixelRaw());
         assertEquals(0x02B8, sonic.getYSpeed() & 0xFFFF);
+
+        for (int frame = 30; frame < 118; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+        }
+        assertEquals(0x0800, sonic.getGSpeed() & 0xFFFF,
+                "ROM loc_3943A follows the airborne snowboard overlay without the loc_394A0 ground-speed floor");
     }
 
     @Test

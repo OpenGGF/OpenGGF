@@ -302,6 +302,8 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         player.clearForcedInputMask();
         currentX = player.getCentreX();
         currentY = player.getCentreY();
+        // ROM loc_3943A follows Sonic while airborne; loc_394A0 speed maintenance starts after that routine handoff.
+        boolean speedMaintenanceActive = sonicSnowboardTouchedGround;
         handleSnowboardJump(player);
         currentMappingFrame = resolveSonicSnowboardMappingFrame(player);
 
@@ -310,10 +312,12 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         }
         spawnDustIfNeeded(player);
 
-        if (player.getGSpeed() < MIN_SNOWBOARD_G_SPEED) {
-            player.setGSpeed((short) MIN_SNOWBOARD_G_SPEED);
-        } else if (currentMappingFrame == 8 && player.getGSpeed() >= MIN_SNOWBOARD_G_SPEED) {
-            player.setGSpeed((short) (player.getGSpeed() - FAST_FRAME_G_SPEED_DECEL));
+        if (speedMaintenanceActive) {
+            if (player.getGSpeed() < MIN_SNOWBOARD_G_SPEED) {
+                player.setGSpeed((short) MIN_SNOWBOARD_G_SPEED);
+            } else if (currentMappingFrame == 8 && player.getGSpeed() >= MIN_SNOWBOARD_G_SPEED) {
+                player.setGSpeed((short) (player.getGSpeed() - FAST_FRAME_G_SPEED_DECEL));
+            }
         }
 
         if (player.getCentreX() >= FIRST_SCRIPT_MIN_X && player.getCentreX() < FIRST_SCRIPT_MAX_X) {

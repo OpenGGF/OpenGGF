@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+## 2026-06-11 - S3K ICZ complete-run progressed to ring frontier
+
+- Scope: follow-up to the ICZ frame-117 snowboard ground-speed mismatch. Trace
+  data remained comparison-only diagnostic input; no engine state was hydrated
+  from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - `IczSnowboardIntroInstance` now keeps snowboard ground-speed maintenance
+    inactive until the ROM-equivalent Sonic snowboard overlay has already seen
+    Sonic grounded. This mirrors `loc_3943A` changing the overlay routine to
+    `loc_394A0` on the first grounded update without also running the
+    `loc_394A0` `$1000` ground-speed floor in that same object tick.
+  - The headless ICZ1 Sonic+Tails bootstrap test now asserts the frame-117
+    ROM-visible `g_speed=$0800` before the active overlay routine begins speed
+    maintenance.
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.TestS3kIcz1SnowboardIntroHeadless#sonicAndTailsStartsSnowboardIntroWithTailsDormantMarker" test`
+    -> GREEN. Surefire report: `Tests run: 1, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 117 to frame 163. New
+    first error: `rings` `expected=1`, `actual=0`; ICZ error count is 3483.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the ring-count divergence at frame 163 after the snowboard launch path.
+
 ## 2026-06-11 - S3K ICZ complete-run progressed to snowboard ground-speed frontier
 
 - Scope: follow-up to the ICZ frame-29 snowboard startup release mismatch.

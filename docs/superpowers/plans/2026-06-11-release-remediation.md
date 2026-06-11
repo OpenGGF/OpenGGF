@@ -60,6 +60,11 @@ Completed in `bugfix/ai-release-remediation`:
   cleared. The ICZ complete-run trace moved from frame 29 main-player
   `y_speed expected=0x02B8 actual=0x0280` to frame 117 main-player `g_speed
   expected=0x0800 actual=0x1000`.
+- ICZ snowboard overlay progression: snowboard ground-speed maintenance now
+  waits until the ROM-equivalent active overlay routine has already seen Sonic
+  grounded. The ICZ complete-run trace moved from frame 117 main-player
+  `g_speed expected=0x0800 actual=0x1000` to frame 163 `rings expected=1
+  actual=0`.
 
 Still outstanding:
 
@@ -68,7 +73,7 @@ Still outstanding:
 - Rejected HCZ frame-9482 hypothesis: the fixed S3K `Obj_AirCountdown` sidecar is not the missing writer. `AirCountdown_Countdown` only sets `Status_InAir` on the drowning-death path after `Player_TouchFloor`, not on every underwater countdown tick; a local broad `owner.setAir(true)` probe regressed HCZ from frame 9482 to frame 298 (`air expected=0`, `actual=1`). Treat the frame-9482 `airCnt` aux rows as timing/context diagnostics, not as the direct release writer.
 - Rejected HCZ frame-896 hypothesis: button-local `isSolidFor` counters/underwater-entry deferrals and a broad shared first-frame render-flag lifecycle change were tested. Neither moved the HCZ trace; the shared lifecycle attempt regressed a focused `TestSolidObjectManager` boundary case, so both directions were removed. The accepted direction was ROM `SolidObjectTop_1P` boundary rejection plus `Obj_Button` same-frame trigger publication.
 - Remaining SK-1 verification: S3K complete-run trace coverage for fresh sidekick spawn/init-only frame and dormant park semantics. HCZ frame-2894 sidekick follow-history jump-edge publication, frame-3318 conveyor release center preservation, frame-3355 conveyor coarse-back culling, frame-3850 native-P2 roll-stop, frame-4286 water-skim airborne gravity handoff, frame-4403 water-skim subpixel pin, frame-4872 AutoSpin wall-mode X preservation, and the frame-5726 through 9337 HCZ object/sidekick/miniboss slices are covered and advanced; HCZ now needs ROM-state triage of the frame-9482 post-vortex air-state frontier, while ICZ/LBZ/MGZ complete-run coverage remains outstanding.
-- Remaining sidekick audit backlog: complete-run SK-1 trace verification for LBZ/MGZ, ICZ frame-117 snowboard ground-speed handoff, CNZ/MGZ input-alignment frontiers, and MGZ complete-run ring mismatch. The former HCZ frame-2894 sidekick input frontier and ICZ frame-0/frame-29 snowboard startup mismatches are now resolved.
+- Remaining sidekick audit backlog: complete-run SK-1 trace verification for LBZ/MGZ, ICZ frame-163 ring frontier, CNZ/MGZ input-alignment frontiers, and MGZ complete-run ring mismatch. The former HCZ frame-2894 sidekick input frontier and ICZ frame-0/frame-29/frame-117 snowboard startup/ground-speed mismatches are now resolved.
 - Performance remediation remains planned but not executed on this branch. Its work is intentionally sequenced after the active correctness/trace issues because several proposed optimizations cross audio, rendering, rewind, and object lifecycles and require baseline measurement plus trace sweeps before implementation.
 - Lower-priority release-review hygiene that was not part of the release-blocker fix set.
 

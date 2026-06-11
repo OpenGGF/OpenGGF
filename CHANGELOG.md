@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K ICZ1 snowboard speed maintenance now waits for the ROM grounded
+  overlay routine:** the active snowboard overlay no longer applies the
+  `$1000` ground-speed floor while the ROM would still be in the airborne
+  follow routine (`loc_3943A`). This moves the ICZ complete-run trace from the
+  frame-117 ground-speed mismatch to the frame-163 ring frontier.
+
 - **S3K ICZ1 snowboard release follows the ROM same-frame motion order:** when
   `Obj_LevelIntroICZ1` clears startup object control, the engine now performs
   the same sampled-frame player SpeedToPos integration and gravity increment
