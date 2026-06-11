@@ -278,3 +278,75 @@ sprite/object bucket rebuilds, allocation-free ring active-index iteration in
 that only runs with the GL pass. Restore/seek numbers carry run-to-run JIT/GC
 variance (phase3.restore max regressed within noise); the structural rewind
 fixes land in Phase 3. No acceptance-target claims at this cut.
+
+## Phase 3 re-measurement (after Tasks 7-9)
+
+Cut: Task 7 (in-place object restore), Task 8 (held-rewind audio restore
+deferral), Task 9 (bounded audio command timeline, typed compact field
+access, restore-path blob copy removal, precomputed snapshot sort keys).
+Trace sweep at this cut: **88 run, 52 failures + 1 error — failure set
+identical to the pre-work baseline list** (all 13 baseline-green classes
+stayed green). S3K green list: PASS.
+
+### Held-rewind allocation (Step 3 probe, same recipe)
+
+| Mode | frames | wall | allocated | per-frame | rate (wall) | rate @60fps | baseline |
+|---|---|---|---|---|---|---|---|
+| Forward stepping | 1200 | 0.264 s | 9.17 MB | 7.46 KB | 34.7 MB/s | 0.458 MB/s | 7.9 KB / 0.47 MB/s |
+| Held rewind (stepBackward) | 600 | 0.282 s | 27.69 MB | **45.06 KB** | 98.2 MB/s | **2.769 MB/s** | 51.8 KB / 3.04 MB/s |
+
+**Acceptance target (≥10x reduction vs 51.8 KB/frame): MISSED in this
+headless probe.** Measured reduction is **1.15x** (51.8 → 45.1 KB/frame;
+3.04 → 2.77 MB/s @60fps). Honest gap analysis, from added probe
+sub-measurements at the same cut:
+
+- Pure `registry.restore(snapshot)`: **6.45 KB/restore** (Task 7's in-place
+  restore is doing its job — restore is no longer the dominant allocator).
+- Pure `registry.capture()`: **17.42 KB/capture**.
+- `stepBackward` decomposition: each 60-frame backward segment crossing
+  rebuilds the segment cache by replaying ~59 forward steps and capturing
+  every frame — amortized ~24.5 KB/frame of `registry.capture()` plus
+  ~7.3 KB/frame of forward engine stepping, on top of the per-frame 6.45 KB
+  restore. Segment-rebuild capture allocation now dominates held rewind and
+  was not a Phase 3 target (no plan task pools the per-frame capture
+  snapshots/buffers inside `SegmentCache`).
+- The headless probe structurally cannot see the two biggest production
+  Phase 3 wins, as the Step 3 baseline itself noted: the audio driver
+  rebuild chain (`SmpsDriver`/`SmpsSequencer`/`Ym2612Chip`/`BlipResampler`
+  per backward frame) never runs under `NullAudioBackend`, and Task 8's
+  restore deferral only engages while reverse audio presentation is active
+  (live held rewind), which the probe does not activate. Task 9's
+  command-timeline bounding removes a session-lifetime leak and per-restore
+  full-list copies whose allocation profile in this 1200-frame fixture is
+  negligible by construction.
+
+Reaching 10x on this probe's definition would require allocation-free (or
+pooled) `registry.capture()` for segment-cache rebuilds; Phase 4B (Task 11,
+object/render allocation cleanup) is the remaining in-plan lever, but no
+current task covers capture pooling — flagging for Task 13 acceptance.
+
+### EHZ1 RewindBenchmark percentiles (same recipe as Step 2)
+
+| Phase | p50 | p99 | max | Phase 1 cut p50 / p99 / max | baseline p50 / p99 / max |
+|---|---|---|---|---|---|
+| phase1.forward.off | 0.9 µs | 351.6 µs | 13.48 ms | 0.5 µs / 315.5 µs / 15.70 ms | 0.4 µs / 390.2 µs / 16.93 ms |
+| phase1.forward.on | 28.5 µs | 3.07 ms | 30.84 ms | 30.9 µs / 3.76 ms / 39.58 ms | 32.9 µs / 4.32 ms / 71.73 ms |
+| phase2.capture | 42.5 µs | 229.7 µs | 1.00 ms | 44.3 µs / 277.8 µs / 1.24 ms | 43.4 µs / 283.3 µs / 1.25 ms |
+| phase3.restore | 77.1 µs | 452.4 µs | 6.75 ms | 77.3 µs / 417.1 µs / 7.63 ms | 75.8 µs / 374.3 µs / 6.57 ms |
+| phase4.cold-seek | 3.70 ms | 12.85 ms | 12.85 ms | 4.27 ms / 17.12 ms / 17.12 ms | 5.77 ms / 34.61 ms / 34.61 ms |
+| phase5.hot-seek.within-segment | 0.18 ms | 43.17 ms | 43.17 ms | 0.16 ms / 51.04 ms / 51.04 ms | 0.24 ms / 72.14 ms / 72.14 ms |
+
+**Keyframe-spike comparison:** forward-on p99 improved again
+(baseline 4.32 ms → Phase 1 3.76 ms → **3.07 ms**) and the max is down to
+30.84 ms (from 71.73 ms baseline). Steady-state capture improved at the tail
+(p99 283.3 → 229.7 µs, max 1.25 → 1.00 ms) from Task 9's typed compact
+field access; p50 is flat as expected.
+
+**Cold-seek:** p50 5.77 → 3.70 ms, max 34.61 → 12.85 ms vs baseline (a 2.7x
+max improvement, mostly Task 7's in-place restore on the seek replay path).
+
+Other gates at this cut: phase6.memory 21 keyframes at 8225 bytes/keyframe
+(baseline 8158 — +0.8%, within the snapshot-content noise of intervening
+develop-based work); longtail.determinism clean through 1200 frames;
+phase7.audio capture/restore-logical means 654/384 ns (baseline 803/445 ns),
+replay-logical mean 13.2 µs (baseline 12.9 µs, flat within noise).

@@ -196,6 +196,46 @@ class TestAudioCommandTimeline {
                 audio.commandTimeline().entries().get(0).command()).sfxName());
     }
 
+    @Test
+    void pruneHistoryBoundsCommandTimelineAndKeepsRetainedReplayValid() {
+        RewindRegistry registry = new RewindRegistry();
+        registry.register(new CounterSnap());
+        RewindController controller = new RewindController(
+                registry,
+                new InMemoryKeyframeStore(),
+                new FixedInputSource(100),
+                input -> {},
+                10,
+                audio);
+        for (int i = 0; i < 35; i++) {
+            controller.step();
+            audio.playSfx("sfx-" + controller.currentFrame());
+        }
+
+        AudioCommandTimeline timeline = audio.commandTimeline();
+        assertEquals(35, timeline.entryCount());
+        assertEquals(0, timeline.firstRetainedEntryIndex());
+
+        int earliest = controller.pruneHistoryToRetainFrames(12);
+
+        assertEquals(20, earliest);
+        // Entries before the earliest retained audio keyframe (frame 20,
+        // captured with 19 commands recorded) are pruned; absolute indices
+        // are preserved for the survivors.
+        assertEquals(19, timeline.firstRetainedEntryIndex());
+        assertEquals(35, timeline.entryCount());
+        for (int i = timeline.firstRetainedEntryIndex(); i < timeline.entryCount(); i++) {
+            assertEquals("sfx-" + timeline.entryAt(i).frame(),
+                    ((AudioCommand.PlaySfx) timeline.entryAt(i).command()).sfxName());
+        }
+
+        // Rewinding to a retained frame after pruning still replays cleanly.
+        controller.seekTo(25);
+        assertEquals(25, controller.currentFrame());
+        assertEquals("sfx-25", ((AudioCommand.PlaySfx)
+                timeline.entryAt(timeline.entryCount() - 1).command()).sfxName());
+    }
+
     private static final class CounterSnap implements RewindSnapshottable<Integer> {
         private int value;
 

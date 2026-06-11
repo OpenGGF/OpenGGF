@@ -2,6 +2,7 @@ package com.openggf.game.rewind;
 
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.rewind.AudioKeyframeStore;
+import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.audio.rewind.AudioReplayReason;
 import com.openggf.audio.rewind.AudioReplayScope;
@@ -152,6 +153,46 @@ public final class RewindController {
             captureAudioKeyframe(currentFrame);
         }
         return true;
+    }
+
+    /**
+     * Drops rewind history older than {@code retainedFrames}, aligned to a
+     * retained keyframe so replay from the new earliest frame still has every
+     * input row needed to reach current time. Audio history is pruned in
+     * lockstep: audio keyframes below the retained keyframe are dropped, and
+     * the command timeline is pruned to the earliest retained audio
+     * keyframe's {@code commandEntryCount} so all surviving keyframes keep
+     * valid replay ranges.
+     *
+     * <p>No production caller exists on this branch yet — the method is
+     * mirrored from the release-remediation branch (whose
+     * {@code LiveRewindManager.pruneOldHistory} invokes it) so the branches
+     * stay in sync and the tests ship with the implementation.
+     *
+     * @return the earliest retained frame after pruning
+     */
+    public int pruneHistoryToRetainFrames(int retainedFrames) {
+        if (retainedFrames <= 0) {
+            return earliestAvailableFrame();
+        }
+        int requestedEarliestFrame = currentFrame - retainedFrames;
+        if (requestedEarliestFrame <= earliestAvailableFrame()) {
+            return earliestAvailableFrame();
+        }
+        var retainedFloor = keyframes.latestAtOrBefore(requestedEarliestFrame);
+        if (retainedFloor.isEmpty()) {
+            return earliestAvailableFrame();
+        }
+        int retainedKeyframe = retainedFloor.get().frame();
+        keyframes.discardBefore(retainedKeyframe);
+        if (audioKeyframes != null) {
+            audioKeyframes.discardBefore(retainedKeyframe);
+            AudioLogicalSnapshot earliestAudio = audioKeyframes.earliestSnapshot();
+            if (earliestAudio != null) {
+                audioManager.pruneAudioCommandsBefore(earliestAudio.commandEntryCount());
+            }
+        }
+        return earliestAvailableFrame();
     }
 
     /**

@@ -3002,9 +3002,15 @@ public class ObjectManager {
                         ));
                     }
                 }
+                // Memoized sort keys: a plain extractor would rebuild the
+                // spawn-key string per comparison (O(n log n) string builds
+                // per capture). Keys are computed once per entry; the sorted
+                // order — part of snapshot determinism — is unchanged.
+                Map<Object, String> slotSpawnKeys = new java.util.IdentityHashMap<>();
                 slots.sort(Comparator
                         .comparingInt(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry::slotIndex)
-                        .thenComparing(entry -> stableSpawnKey(entry.spawn())));
+                        .thenComparing(entry -> slotSpawnKeys.computeIfAbsent(
+                                entry, e -> stableSpawnKey(entry.spawn()))));
 
                 // Capture reservedChildSlots
                 List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ChildSpawnEntry> childSpawns = new ArrayList<>();
@@ -3015,10 +3021,14 @@ public class ObjectManager {
                             Arrays.copyOf(slotArray, slotArray.length)
                     ));
                 }
+                Map<Object, String> childParentKeys = new java.util.IdentityHashMap<>();
+                Map<Object, String> childSlotKeys = new java.util.IdentityHashMap<>();
                 childSpawns.sort(Comparator
                         .comparing((com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ChildSpawnEntry entry) ->
-                                stableSpawnKey(entry.parentSpawn()))
-                        .thenComparing(entry -> Arrays.toString(entry.reservedSlots())));
+                                childParentKeys.computeIfAbsent(
+                                        entry, e -> stableSpawnKey(entry.parentSpawn())))
+                        .thenComparing(entry -> childSlotKeys.computeIfAbsent(
+                                entry, e -> Arrays.toString(entry.reservedSlots()))));
 
                 List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry> dynamicEntries =
                         new ArrayList<>();
@@ -3037,16 +3047,18 @@ public class ObjectManager {
                 com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SolidContactState solidContactState =
                         solidContacts.captureRewindState();
 
+                // No List.copyOf wrappers here: the ObjectManagerSnapshot
+                // compact constructor already copies its list components.
                 return new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot(
                         bits,
-                        List.copyOf(slots),
+                        slots,
                         frameCounter,
                         vblaCounter,
                         currentExecSlot,
                         slotAllocator.peakSlotCount(),
                         bucketsDirty,
-                        List.copyOf(childSpawns),
-                        List.copyOf(dynamicEntries),
+                        childSpawns,
+                        dynamicEntries,
                         placement.captureRewindState(twoAxisCameraYCoarse),
                         solidContactState.riding(),
                         solidContactState,

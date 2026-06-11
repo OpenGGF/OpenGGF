@@ -694,10 +694,12 @@ public final class GenericFieldCapturer {
     private static void restoreCodecField(Field field, Object target, CodecFieldSnapshot snapshot) {
         RewindCodec codec = RewindCodecs.codecFor(field)
                 .orElseThrow(() -> new IllegalStateException("Missing rewind codec for " + FieldKey.of(field)));
+        // sharedReader: the snapshot owns its arrays (cloned at construction,
+        // read-only afterwards), so the reader can use them without a copy.
         codec.restore(
                 field,
                 target,
-                RewindStateBuffer.reader(snapshot.scalarData()),
+                RewindStateBuffer.sharedReader(snapshot.scalarData()),
                 snapshot.opaqueValues(),
                 new RewindCodec.OpaqueIndex());
     }

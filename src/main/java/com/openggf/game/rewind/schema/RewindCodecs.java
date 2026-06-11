@@ -410,32 +410,86 @@ public final class RewindCodecs {
     }
 
     private static final class ScalarCodec implements RewindCodec {
-        private final Class<?> type;
+        private final boolean primitive;
+        private final RewindScalarTag tag;
 
         private ScalarCodec(Class<?> type) {
-            this.type = type;
+            this.primitive = type.isPrimitive();
+            this.tag = RewindScalarTag.forType(type);
+            if (tag == null) {
+                throw new IllegalArgumentException("Unsupported scalar rewind type: " + type.getName());
+            }
         }
 
         @Override
         public void capture(Field field, Object target, RewindStateBuffer scalarData, List<Object> opaqueValues) {
-            Object value = get(field, target);
-            if (!type.isPrimitive()) {
-                scalarData.writeBoolean(value != null);
-                if (value == null) {
-                    return;
-                }
+            if (primitive) {
+                capturePrimitive(field, target, scalarData);
+                return;
             }
-            writeScalar(type, value, scalarData);
+            Object value = get(field, target);
+            scalarData.writeBoolean(value != null);
+            if (value != null) {
+                writeScalar(tag, value, scalarData);
+            }
         }
 
         @Override
         public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, Object[] opaqueValues, OpaqueIndex opaqueIndex) {
-            if (!type.isPrimitive() && !scalarData.readBoolean()) {
-                set(field, target, null);
+            if (primitive) {
+                restorePrimitive(field, target, scalarData);
                 return;
             }
-            set(field, target, readScalar(type, scalarData));
+            set(field, target, scalarData.readBoolean() ? readScalar(tag, scalarData) : null);
         }
+
+        private void capturePrimitive(Field field, Object target, RewindStateBuffer scalarData) {
+            try {
+                switch (tag) {
+                    case BOOLEAN -> scalarData.writeBoolean(field.getBoolean(target));
+                    case BYTE -> scalarData.writeByte(field.getByte(target));
+                    case CHAR -> scalarData.writeShort(field.getChar(target));
+                    case SHORT -> scalarData.writeShort(field.getShort(target));
+                    case INT -> scalarData.writeInt(field.getInt(target));
+                    case LONG -> scalarData.writeLong(field.getLong(target));
+                    case FLOAT -> scalarData.writeFloat(field.getFloat(target));
+                    case DOUBLE -> scalarData.writeDouble(field.getDouble(target));
+                    // A silently unwritten tag would misalign the buffer.
+                    default -> throw new IllegalStateException(
+                            "Unhandled scalar tag " + tag + " for " + field);
+                }
+            } catch (IllegalAccessException e) {
+                throw new IllegalStateException("Cannot read rewind field " + field, e);
+            }
+        }
+
+        private void restorePrimitive(Field field, Object target, RewindStateBuffer.Reader scalarData) {
+            try {
+                switch (tag) {
+                    case BOOLEAN -> field.setBoolean(target, scalarData.readBoolean());
+                    case BYTE -> field.setByte(target, scalarData.readByte());
+                    case CHAR -> field.setChar(target, (char) (scalarData.readShort() & 0xFFFF));
+                    case SHORT -> field.setShort(target, scalarData.readShort());
+                    case INT -> field.setInt(target, scalarData.readInt());
+                    case LONG -> field.setLong(target, scalarData.readLong());
+                    case FLOAT -> field.setFloat(target, scalarData.readFloat());
+                    case DOUBLE -> field.setDouble(target, scalarData.readDouble());
+                    // A silently unread tag would misalign the buffer.
+                    default -> throw new IllegalStateException(
+                            "Unhandled scalar tag " + tag + " for " + field);
+                }
+            } catch (IllegalAccessException e) {
+                throw new IllegalStateException("Cannot write rewind field " + field, e);
+            }
+        }
+    }
+
+    /**
+     * True for the plain scalar codec whose primitive wire format matches
+     * {@link RewindFieldPlan}'s typed fast path (no null marker byte).
+     */
+    static boolean isPlainScalarCodec(RewindCodec codec) {
+        return codec instanceof ScalarCodec;
     }
 
     private static final class EnumCodec implements RewindCodec {
@@ -1558,46 +1612,47 @@ public final class RewindCodecs {
     }
 
     private static void writeScalar(Class<?> type, Object value, RewindStateBuffer scalarData) {
-        if (type == boolean.class || type == Boolean.class) {
-            scalarData.writeBoolean((Boolean) value);
-        } else if (type == byte.class || type == Byte.class) {
-            scalarData.writeByte((Byte) value);
-        } else if (type == char.class || type == Character.class) {
-            scalarData.writeShort((Character) value);
-        } else if (type == short.class || type == Short.class) {
-            scalarData.writeShort((Short) value);
-        } else if (type == int.class || type == Integer.class) {
-            scalarData.writeInt((Integer) value);
-        } else if (type == long.class || type == Long.class) {
-            scalarData.writeLong((Long) value);
-        } else if (type == float.class || type == Float.class) {
-            scalarData.writeFloat((Float) value);
-        } else if (type == double.class || type == Double.class) {
-            scalarData.writeDouble((Double) value);
-        } else {
+        RewindScalarTag tag = RewindScalarTag.forType(type);
+        if (tag == null) {
             throw new IllegalArgumentException("Unsupported scalar rewind type: " + type.getName());
+        }
+        writeScalar(tag, value, scalarData);
+    }
+
+    private static void writeScalar(RewindScalarTag tag, Object value, RewindStateBuffer scalarData) {
+        switch (tag) {
+            case BOOLEAN -> scalarData.writeBoolean((Boolean) value);
+            case BYTE -> scalarData.writeByte((Byte) value);
+            case CHAR -> scalarData.writeShort((Character) value);
+            case SHORT -> scalarData.writeShort((Short) value);
+            case INT -> scalarData.writeInt((Integer) value);
+            case LONG -> scalarData.writeLong((Long) value);
+            case FLOAT -> scalarData.writeFloat((Float) value);
+            case DOUBLE -> scalarData.writeDouble((Double) value);
+            // A silently unwritten tag would misalign the buffer.
+            default -> throw new IllegalStateException("Unhandled scalar tag " + tag);
         }
     }
 
     private static Object readScalar(Class<?> type, RewindStateBuffer.Reader scalarData) {
-        if (type == boolean.class || type == Boolean.class) {
-            return scalarData.readBoolean();
-        } else if (type == byte.class || type == Byte.class) {
-            return scalarData.readByte();
-        } else if (type == char.class || type == Character.class) {
-            return (char) (scalarData.readShort() & 0xFFFF);
-        } else if (type == short.class || type == Short.class) {
-            return scalarData.readShort();
-        } else if (type == int.class || type == Integer.class) {
-            return scalarData.readInt();
-        } else if (type == long.class || type == Long.class) {
-            return scalarData.readLong();
-        } else if (type == float.class || type == Float.class) {
-            return scalarData.readFloat();
-        } else if (type == double.class || type == Double.class) {
-            return scalarData.readDouble();
+        RewindScalarTag tag = RewindScalarTag.forType(type);
+        if (tag == null) {
+            throw new IllegalArgumentException("Unsupported scalar rewind type: " + type.getName());
         }
-        throw new IllegalArgumentException("Unsupported scalar rewind type: " + type.getName());
+        return readScalar(tag, scalarData);
+    }
+
+    private static Object readScalar(RewindScalarTag tag, RewindStateBuffer.Reader scalarData) {
+        return switch (tag) {
+            case BOOLEAN -> scalarData.readBoolean();
+            case BYTE -> scalarData.readByte();
+            case CHAR -> (char) (scalarData.readShort() & 0xFFFF);
+            case SHORT -> scalarData.readShort();
+            case INT -> scalarData.readInt();
+            case LONG -> scalarData.readLong();
+            case FLOAT -> scalarData.readFloat();
+            case DOUBLE -> scalarData.readDouble();
+        };
     }
 
     private RewindCodecs() {}
