@@ -22,6 +22,7 @@ import com.openggf.util.AnimationTimer;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.RecordComponent;
@@ -69,6 +70,10 @@ public final class GenericFieldCapturer {
     private static final ConcurrentMap<Class<?>, List<Field>> CAPTURABLE_FIELDS_CACHE =
             new ConcurrentHashMap<>();
     private static final ConcurrentMap<Class<?>, List<Field>> OBJECT_SUBCLASS_VALUE_FIELDS_CACHE =
+            new ConcurrentHashMap<>();
+    private static final ConcurrentMap<Class<?>, RecordClonePlan> RECORD_CLONE_PLAN_CACHE =
+            new ConcurrentHashMap<>();
+    private static final ConcurrentMap<RestoreFieldKey, Optional<Field>> RESTORE_FIELD_CACHE =
             new ConcurrentHashMap<>();
 
     public static GenericObjectSnapshot capture(Object target) {
@@ -222,6 +227,7 @@ public final class GenericFieldCapturer {
         for (Class<?> cls : hierarchy) {
             for (Field field : sortedDeclaredFields(cls)) {
                 if (!isSkipped(field)) {
+                    field.setAccessible(true);
                     fields.add(field);
                 }
             }
@@ -510,6 +516,30 @@ public final class GenericFieldCapturer {
     }
 
     private static Object deepCloneArray(Class<?> componentType, Object value) {
+        if (value instanceof boolean[] booleans) {
+            return booleans.clone();
+        }
+        if (value instanceof byte[] bytes) {
+            return bytes.clone();
+        }
+        if (value instanceof char[] chars) {
+            return chars.clone();
+        }
+        if (value instanceof short[] shorts) {
+            return shorts.clone();
+        }
+        if (value instanceof int[] ints) {
+            return ints.clone();
+        }
+        if (value instanceof long[] longs) {
+            return longs.clone();
+        }
+        if (value instanceof float[] floats) {
+            return floats.clone();
+        }
+        if (value instanceof double[] doubles) {
+            return doubles.clone();
+        }
         int length = Array.getLength(value);
         if (RewindStateful.class.isAssignableFrom(componentType)) {
             Object[] clone = new Object[length];
@@ -553,26 +583,42 @@ public final class GenericFieldCapturer {
     }
 
     private static Object deepCloneRecord(Class<?> declaredType, Object value) {
+        RecordClonePlan plan = RECORD_CLONE_PLAN_CACHE.computeIfAbsent(declaredType,
+                GenericFieldCapturer::buildRecordClonePlan);
         try {
-            RecordComponent[] components = declaredType.getRecordComponents();
-            Class<?>[] parameterTypes = new Class<?>[components.length];
+            RecordComponent[] components = plan.components();
             Object[] args = new Object[components.length];
             for (int i = 0; i < components.length; i++) {
-                parameterTypes[i] = components[i].getType();
-                components[i].getAccessor().setAccessible(true);
-                args[i] = deepCloneValue(components[i].getType(), components[i].getAccessor().invoke(value));
+                args[i] = deepCloneValue(components[i].getType(), plan.accessors()[i].invoke(value));
             }
-            Constructor<?> constructor = declaredType.getDeclaredConstructor(parameterTypes);
-            constructor.setAccessible(true);
-            return constructor.newInstance(args);
+            return plan.constructor().newInstance(args);
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException("Could not clone record value of type " + declaredType.getName(), e);
         }
     }
 
+    private static RecordClonePlan buildRecordClonePlan(Class<?> declaredType) {
+        try {
+            RecordComponent[] components = declaredType.getRecordComponents();
+            Method[] accessors = new Method[components.length];
+            Class<?>[] parameterTypes = new Class<?>[components.length];
+            for (int i = 0; i < components.length; i++) {
+                accessors[i] = components[i].getAccessor();
+                accessors[i].setAccessible(true);
+                parameterTypes[i] = components[i].getType();
+            }
+            Constructor<?> constructor = declaredType.getDeclaredConstructor(parameterTypes);
+            constructor.setAccessible(true);
+            return new RecordClonePlan(components, accessors, constructor);
+        } catch (NoSuchMethodException e) {
+            throw new IllegalStateException("Could not clone record value of type " + declaredType.getName(), e);
+        }
+    }
+
+    private record RecordClonePlan(RecordComponent[] components, Method[] accessors, Constructor<?> constructor) {}
+
     private static Object readField(Field field, Object target) {
         try {
-            field.setAccessible(true);
             return field.get(target);
         } catch (IllegalAccessException e) {
             throw new IllegalStateException("Could not read rewind field " + FieldKey.of(field), e);
@@ -581,7 +627,6 @@ public final class GenericFieldCapturer {
 
     private static void writeField(Field field, Object target, Object value) {
         try {
-            field.setAccessible(true);
             if (RewindStateful.class.isAssignableFrom(field.getType())) {
                 restoreStatefulValue(field.get(target), value, FieldKey.of(field));
                 return;
@@ -634,7 +679,6 @@ public final class GenericFieldCapturer {
     }
 
     private static CodecFieldSnapshot captureCodecField(Field field, Object target) {
-        field.setAccessible(true);
         RewindCodec codec = RewindCodecs.codecFor(field)
                 .orElseThrow(() -> new IllegalStateException("Missing rewind codec for " + FieldKey.of(field)));
         CodecScratch scratch = CODEC_SCRATCH.get();
@@ -648,7 +692,6 @@ public final class GenericFieldCapturer {
     }
 
     private static void restoreCodecField(Field field, Object target, CodecFieldSnapshot snapshot) {
-        field.setAccessible(true);
         RewindCodec codec = RewindCodecs.codecFor(field)
                 .orElseThrow(() -> new IllegalStateException("Missing rewind codec for " + FieldKey.of(field)));
         codec.restore(
@@ -758,18 +801,27 @@ public final class GenericFieldCapturer {
     }
 
     private static Field findField(Class<?> targetType, FieldKey key) {
-        for (Class<?> cls = targetType; cls != null && cls != Object.class; cls = cls.getSuperclass()) {
-            if (!cls.getName().equals(key.declaringClassName())) {
+        return RESTORE_FIELD_CACHE.computeIfAbsent(new RestoreFieldKey(targetType, key),
+                GenericFieldCapturer::resolveRestoreField).orElse(null);
+    }
+
+    private static Optional<Field> resolveRestoreField(RestoreFieldKey lookup) {
+        for (Class<?> cls = lookup.targetType(); cls != null && cls != Object.class; cls = cls.getSuperclass()) {
+            if (!cls.getName().equals(lookup.key().declaringClassName())) {
                 continue;
             }
             try {
-                return cls.getDeclaredField(key.fieldName());
+                Field field = cls.getDeclaredField(lookup.key().fieldName());
+                field.setAccessible(true);
+                return Optional.of(field);
             } catch (NoSuchFieldException e) {
-                return null;
+                return Optional.empty();
             }
         }
-        return null;
+        return Optional.empty();
     }
+
+    private record RestoreFieldKey(Class<?> targetType, FieldKey key) {}
 
     private record StatefulValueSnapshot(Class<?> stateType, Object state) {}
 

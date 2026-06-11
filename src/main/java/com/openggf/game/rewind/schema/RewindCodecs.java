@@ -38,8 +38,16 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class RewindCodecs {
+    private static final ConcurrentHashMap<Field, Optional<RewindCodec>> FIELD_CODEC_CACHE =
+            new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Class<?>, List<Field>> PLAIN_STATE_FIELDS_CACHE =
+            new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Class<?>, RecordCodec> NESTED_RECORD_CODEC_CACHE =
+            new ConcurrentHashMap<>();
+
     private static final Set<Class<?>> WRAPPER_TYPES = Set.of(
             Boolean.class,
             Byte.class,
@@ -53,8 +61,24 @@ public final class RewindCodecs {
 
     public static Optional<RewindCodec> codecFor(Field field) {
         Objects.requireNonNull(field, "field");
+        // Not computeIfAbsent: buildCodecFor re-enters codecFor for plain-state holder
+        // fields, and ConcurrentHashMap forbids map updates inside a mapping function.
+        Optional<RewindCodec> cached = FIELD_CODEC_CACHE.get(field);
+        if (cached != null) {
+            return cached;
+        }
+        Optional<RewindCodec> built = buildCodecFor(field);
+        Optional<RewindCodec> existing = FIELD_CODEC_CACHE.putIfAbsent(field, built);
+        return existing != null ? existing : built;
+    }
+
+    private static Optional<RewindCodec> buildCodecFor(Field field) {
         Optional<RewindCodec> collectionCodec = collectionCodecFor(field);
-        return collectionCodec.isPresent() ? collectionCodec : codecFor(field.getType());
+        Optional<RewindCodec> codec = collectionCodec.isPresent() ? collectionCodec : codecFor(field.getType());
+        if (codec.isPresent()) {
+            field.setAccessible(true);
+        }
+        return codec;
     }
 
     public static Optional<RewindCodec> codecFor(Class<?> type) {
@@ -239,6 +263,10 @@ public final class RewindCodecs {
     }
 
     private static List<Field> plainStateFields(Class<?> type) {
+        return PLAIN_STATE_FIELDS_CACHE.computeIfAbsent(type, RewindCodecs::buildPlainStateFields);
+    }
+
+    private static List<Field> buildPlainStateFields(Class<?> type) {
         List<Field> fields = new ArrayList<>(List.of(type.getDeclaredFields()));
         fields.removeIf(field -> {
             int mods = field.getModifiers();
@@ -1409,10 +1437,14 @@ public final class RewindCodecs {
         } else if (type.isEnum()) {
             scalarData.writeInt(((Enum<?>) value).ordinal());
         } else if (type.isRecord()) {
-            new RecordCodec(type).captureRecordValue(value, scalarData);
+            nestedRecordCodec(type).captureRecordValue(value, scalarData);
         } else {
             writeScalar(type, value, scalarData);
         }
+    }
+
+    private static RecordCodec nestedRecordCodec(Class<?> type) {
+        return NESTED_RECORD_CODEC_CACHE.computeIfAbsent(type, RecordCodec::new);
     }
 
     private static Object readRecordComponent(Class<?> type, RewindStateBuffer.Reader scalarData) {
@@ -1426,7 +1458,7 @@ public final class RewindCodecs {
             return type.getEnumConstants()[scalarData.readInt()];
         }
         if (type.isRecord()) {
-            return new RecordCodec(type).readRecordValue(scalarData);
+            return nestedRecordCodec(type).readRecordValue(scalarData);
         }
         return readScalar(type, scalarData);
     }

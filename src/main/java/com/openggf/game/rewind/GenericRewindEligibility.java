@@ -12,6 +12,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class GenericRewindEligibility {
     private static final Set<Class<?>> PRODUCTION_ELIGIBLE = Set.of();
     private static final Set<Class<?>> TEST_OR_MIGRATION_ELIGIBLE = ConcurrentHashMap.newKeySet();
+    private static final ConcurrentHashMap<Class<?>, Boolean> DEFAULT_OBJECT_CAPTURE_CACHE =
+            new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Class<?>, Boolean> DEFAULT_BADNIK_CAPTURE_CACHE =
+            new ConcurrentHashMap<>();
 
     public static boolean isEligible(Class<?> type) {
         Objects.requireNonNull(type, "type");
@@ -20,6 +24,11 @@ public final class GenericRewindEligibility {
 
     public static boolean usesDefaultObjectSubclassCapture(Class<?> type) {
         Objects.requireNonNull(type, "type");
+        return DEFAULT_OBJECT_CAPTURE_CACHE.computeIfAbsent(type,
+                GenericRewindEligibility::computeUsesDefaultObjectSubclassCapture);
+    }
+
+    private static boolean computeUsesDefaultObjectSubclassCapture(Class<?> type) {
         return AbstractObjectInstance.class.isAssignableFrom(type)
                 && type != AbstractObjectInstance.class
                 && !Modifier.isAbstract(type.getModifiers())
@@ -28,6 +37,11 @@ public final class GenericRewindEligibility {
 
     public static boolean usesDefaultBadnikSubclassCapture(Class<?> type) {
         Objects.requireNonNull(type, "type");
+        return DEFAULT_BADNIK_CAPTURE_CACHE.computeIfAbsent(type,
+                GenericRewindEligibility::computeUsesDefaultBadnikSubclassCapture);
+    }
+
+    private static boolean computeUsesDefaultBadnikSubclassCapture(Class<?> type) {
         return AbstractBadnikInstance.class.isAssignableFrom(type)
                 && type != AbstractBadnikInstance.class
                 && !Modifier.isAbstract(type.getModifiers())
