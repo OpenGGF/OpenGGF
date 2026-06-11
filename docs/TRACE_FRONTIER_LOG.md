@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-06-11 - S3K HCZ complete-run progressed to miniboss/Tails y frontier
+
+- Scope: follow-up to the HCZ dry fan/platform frame-7341 `y_speed`
+  mismatch. Trace data remained comparison-only diagnostic input; no engine
+  state was hydrated from trace rows, and no zone/route/frame exception was
+  added.
+- Fix:
+  - `HCZCGZFanObjectInstance` now uses the ROM's stored `$40(a0)` origin for
+    `Sprite_OnScreen_Test2` unload checks on both the fan and sliding platform
+    halves, so sliding fan/platform pairs remain active until their placement
+    origin leaves range.
+  - Platform-mode fans now run the platform half as the manual solid checkpoint
+    owner, then update the fan half after the platform writes the child fan's
+    current `x_pos`. This mirrors `loc_30850` setting `x_pos(a1)` before the
+    allocated fan child's `loc_3064E` routine applies lift
+    (`sonic3k.asm:65315-65336`, `65394-65520`, `65523-65580`).
+- Verification:
+  - `mvn "-Dtest=com.openggf.game.sonic3k.objects.TestHCZCGZFanObjectInstance" test`
+    -> PASS for the selected fan slice (`MSE:OK`; known relaxed aggregate
+    trace failures still reported).
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first error moved from frame 7341 to frame 8451:
+    native-P2/Tails `y` `expected=0x06B7`, `actual=0x06B6`.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the frame-8451 one-pixel Tails Y mismatch around the HCZ miniboss/water
+  cluster without reopening the solved dry fan/platform ordering unless it
+  regresses.
+
 ## 2026-06-11 - S3K HCZ complete-run progressed to dry fan/platform frontier
 
 - Scope: follow-up to the HCZ frame-6912 one-pixel/subpixel vertical mismatch

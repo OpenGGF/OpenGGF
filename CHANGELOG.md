@@ -77,6 +77,12 @@ All notable changes to the OpenGGF project are documented in this file.
   16-bit subpixel fraction instead of resetting it. This advances the HCZ
   complete-run trace past the fan-bubble frame-6912 drift.
 
+- **HCZ sliding fan pairs follow ROM ordering and unload anchors:** platform
+  mode now runs the sliding block's inline solid checkpoint before applying
+  the paired fan lift, using the platform-updated fan X just like the ROM child
+  slot. Both halves also unload from their stored origin instead of the current
+  sliding X. This advances the HCZ complete-run trace past frame 7341.
+
 - **S3K sidekick fresh spawns honor the Obj_Tails init-only frame:** fresh
   routine-0 sidekick spawns now reset kinematics and advance to the normal CPU
   routine without running same-frame follow steering, while dormant sentinel

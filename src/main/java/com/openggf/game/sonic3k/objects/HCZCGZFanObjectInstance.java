@@ -16,6 +16,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -206,6 +207,16 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
             subtype |= BIT_ALWAYS_ON;
         }
 
+        // ROM platform mode makes the original slot the sliding platform and
+        // updates the fan child after the platform has written the fan x_pos.
+        if (platformChild != null) {
+            return;
+        }
+
+        updateFanRoutine(frameCounter, player);
+    }
+
+    private void updateFanRoutine(int frameCounter, AbstractPlayableSprite player) {
         // ROM: tst.b $42(a0) — latched-on flag (sonic3k.asm:65368-65370)
         if (latchedOn) {
             updateRampUp(frameCounter, player);
@@ -480,6 +491,13 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
     }
 
     @Override
+    public int getOutOfRangeReferenceX() {
+        // ROM: loc_30774 feeds $40(a0), not the current sliding fan x_pos, to
+        // Sprite_OnScreen_Test2.
+        return originalX;
+    }
+
+    @Override
     public void appendDebugRenderCommands(DebugRenderContext ctx) {
         if (ctx == null) return;
         ctx.drawCross(x, y, 4, 0.2f, 0.8f, 1f);
@@ -600,6 +618,9 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
             x = originalX + offset;
             // ROM: move.w d0,x_pos(a1) — set fan X too
             fanParent.setFanX(x);
+
+            checkpointAll();
+            fanParent.updateFanRoutine(frameCounter, player);
         }
 
         private void extendPlatform() {
@@ -632,6 +653,18 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
 
         @Override
         public int getPriorityBucket() { return RenderPriority.clamp(PLATFORM_PRIORITY); }
+
+        @Override
+        public SolidExecutionMode solidExecutionMode() {
+            return SolidExecutionMode.MANUAL_CHECKPOINT;
+        }
+
+        @Override
+        public int getOutOfRangeReferenceX() {
+            // ROM: loc_308B8 feeds $40(a0), not the current platform x_pos, to
+            // Sprite_OnScreen_Test2.
+            return originalX;
+        }
 
         @Override
         public void appendDebugRenderCommands(DebugRenderContext ctx) {
