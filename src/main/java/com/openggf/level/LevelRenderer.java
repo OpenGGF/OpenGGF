@@ -912,16 +912,17 @@ public final class LevelRenderer {
 
         // Priority membership is mutable at runtime (plane switchers, hurt/death,
         // zone event overrides, follower objects mirroring player priority).
-        // Rebuild buckets from live state right before drawing the unified pass.
+        // Re-validate the cached buckets against live state right before drawing
+        // the unified pass; they only rebuild when the inputs actually changed.
         if (spriteManager != null) {
-            spriteManager.invalidateRenderBuckets();
+            spriteManager.refreshRenderBucketsIfChanged();
         }
         ObjectManager objectManager = lm.objectManager;
         RingManager ringManager = lm.ringManager;
         GraphicsManager graphicsManager = lm.graphicsManager;
         ZoneFeatureProvider zoneFeatureProvider = lm.zoneFeatureProvider;
         if (objectManager != null) {
-            objectManager.invalidateRenderBuckets();
+            objectManager.refreshRenderBucketsIfChanged();
         }
 
         graphicsManager.setUseSpritePriorityShader(true);
@@ -1019,10 +1020,10 @@ public final class LevelRenderer {
         profiler.beginSection("render.sprites");
 
         if (spriteManager != null && options.includePlayerSprites()) {
-            spriteManager.invalidateRenderBuckets();
+            spriteManager.refreshRenderBucketsIfChanged();
         }
         if (objectManager != null && options.includeObjectSprites()) {
-            objectManager.invalidateRenderBuckets();
+            objectManager.refreshRenderBucketsIfChanged();
         }
 
         graphicsManager.setUseSpritePriorityShader(true);

@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -138,8 +137,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         if (lightningAttractionActive) {
             int pcx = player.getCentreX();
             int pcy = player.getCentreY();
-            int[] activeIndices = placement.getActiveSpawnIndices();
-            for (int index : activeIndices) {
+            int activeCount = placement.activeIndexCount();
+            for (int i = 0; i < activeCount; i++) {
+                int index = placement.activeIndexAt(i);
                 if (index < 0 || placement.isCollected(index)) {
                     continue;
                 }
@@ -178,8 +178,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         if (!stageRingsUseObjectTouchCollection && player.getInvulnerableFrames() >= 90) {
             return;
         }
-        int[] activeIndices = placement.getActiveSpawnIndices();
-        if (activeIndices.length == 0) {
+        int activeCount = placement.activeIndexCount();
+        if (activeCount == 0) {
             return;
         }
 
@@ -199,7 +199,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         int ringWidth = featureSet != null ? featureSet.ringCollisionWidth() : RING_COLLISION_HALF;
         int ringHeight = featureSet != null ? featureSet.ringCollisionHeight() : RING_COLLISION_HALF;
 
-        for (int index : activeIndices) {
+        for (int i = 0; i < activeCount; i++) {
+            int index = placement.activeIndexAt(i);
             if (index < 0 || placement.isCollected(index)) {
                 continue;
             }
@@ -291,8 +292,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         }
 
         int spinFrameIndex = renderer.getSpinFrameIndex(frameCounter);
-        int[] activeIndices = placement.getActiveSpawnIndices();
-        for (int index : activeIndices) {
+        int activeCount = placement.activeIndexCount();
+        for (int i = 0; i < activeCount; i++) {
+            int index = placement.activeIndexAt(i);
             if (index < 0) {
                 continue;
             }
@@ -880,7 +882,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
         private final boolean useRawCameraWindow;
         private final BitSet collected = new BitSet();
-        private final ArrayList<Integer> activeIndices = new ArrayList<>();
+        private int[] activeIndices = new int[256];
+        private int activeIndexCount;
+        private final BitSet activeIndexMembership = new BitSet();
         private int[] sparkleStartFrames;
         private int cursorIndex = 0;
         private int lastCameraX = Integer.MIN_VALUE;
@@ -904,7 +908,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         }
 
         private void reset(int cameraX) {
-            activeIndices.clear();
+            clearActiveIndices();
             collected.clear();
             Arrays.fill(sparkleStartFrames, NO_SPARKLE);
             cursorIndex = 0;
@@ -974,13 +978,19 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         private void trimActive(int cameraX) {
             int windowStart = ringWindowStart(cameraX);
             int windowEnd = ringWindowEnd(cameraX);
-            Iterator<Integer> iterator = activeIndices.iterator();
-            while (iterator.hasNext()) {
-                RingSpawn spawn = spawns.get(iterator.next());
+            // Order-preserving compaction: active-ring order feeds collection
+            // and draw order, so removals must not reorder survivors.
+            int write = 0;
+            for (int read = 0; read < activeIndexCount; read++) {
+                int index = activeIndices[read];
+                RingSpawn spawn = spawns.get(index);
                 if (spawn.x() < windowStart || spawn.x() > windowEnd) {
-                    iterator.remove();
+                    activeIndexMembership.clear(index);
+                } else {
+                    activeIndices[write++] = index;
                 }
             }
+            activeIndexCount = write;
         }
 
         private void refreshWindow(int cameraX) {
@@ -989,20 +999,18 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             int start = lowerBound(windowStart);
             int end = upperBound(windowEnd);
             cursorIndex = end;
-            activeIndices.clear();
+            clearActiveIndices();
             for (int i = start; i < end; i++) {
                 addActiveIndex(i);
             }
         }
 
         private int[] snapshotActiveSpawnIndices() {
-            return activeIndices.stream()
-                    .mapToInt(Integer::intValue)
-                    .toArray();
+            return Arrays.copyOf(activeIndices, activeIndexCount);
         }
 
         private void restoreActiveSpawnIndices(int[] activeSpawnIndices) {
-            activeIndices.clear();
+            clearActiveIndices();
             if (activeSpawnIndices == null) {
                 return;
             }
@@ -1015,20 +1023,22 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
         @Override
         public Collection<RingSpawn> getActiveSpawns() {
-            if (activeIndices.isEmpty()) {
+            if (activeIndexCount == 0) {
                 return List.of();
             }
-            List<RingSpawn> activeSpawns = new ArrayList<>(activeIndices.size());
-            for (int index : activeIndices) {
-                activeSpawns.add(spawns.get(index));
+            List<RingSpawn> activeSpawns = new ArrayList<>(activeIndexCount);
+            for (int i = 0; i < activeIndexCount; i++) {
+                activeSpawns.add(spawns.get(activeIndices[i]));
             }
             return List.copyOf(activeSpawns);
         }
 
-        private int[] getActiveSpawnIndices() {
-            return activeIndices.stream()
-                    .mapToInt(Integer::intValue)
-                    .toArray();
+        private int activeIndexCount() {
+            return activeIndexCount;
+        }
+
+        private int activeIndexAt(int position) {
+            return activeIndices[position];
         }
 
         private RingSpawn getSpawn(int index) {
@@ -1036,9 +1046,19 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         }
 
         private void addActiveIndex(int index) {
-            if (!activeIndices.contains(index)) {
-                activeIndices.add(index);
+            if (activeIndexMembership.get(index)) {
+                return;
             }
+            activeIndexMembership.set(index);
+            if (activeIndexCount == activeIndices.length) {
+                activeIndices = Arrays.copyOf(activeIndices, activeIndices.length * 2);
+            }
+            activeIndices[activeIndexCount++] = index;
+        }
+
+        private void clearActiveIndices() {
+            activeIndexCount = 0;
+            activeIndexMembership.clear();
         }
 
         private int ringWindowStart(int cameraX) {

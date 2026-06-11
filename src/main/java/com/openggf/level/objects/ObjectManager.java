@@ -105,6 +105,12 @@ public class ObjectManager {
     @SuppressWarnings("unchecked")
     private final List<ObjectInstance>[] highPriorityBuckets = new ArrayList[BUCKET_COUNT];
     private boolean bucketsDirty = true;
+    // Render-input snapshot from the last bucket rebuild, used by
+    // refreshRenderBucketsIfChanged() to detect priority/membership changes
+    // without rebuilding every frame.
+    private ObjectInstance[] bucketSnapshotInstances = new ObjectInstance[64];
+    private long[] bucketSnapshotKeys = new long[64];
+    private int bucketSnapshotCount;
 
     // Cached combined active objects list to avoid allocation in getActiveObjects()
     private final List<ObjectInstance> cachedActiveObjects = new ArrayList<>();
@@ -313,6 +319,91 @@ public class ObjectManager {
      */
     public void invalidateRenderBuckets() {
         bucketsDirty = true;
+    }
+
+    /**
+     * Marks the cached render buckets dirty only when their inputs actually
+     * changed since the last rebuild. Object priority is exposed through
+     * virtual {@link ObjectInstance#isHighPriority()} /
+     * {@link ObjectInstance#getPriorityBucket()} implementations (many follow
+     * other entities' state live), so there is no central mutation hook; this
+     * cheap once-per-frame scan replaces the previous unconditional per-frame
+     * rebuild while staying immune to untracked priority changes.
+     */
+    public void refreshRenderBucketsIfChanged() {
+        if (bucketsDirty) {
+            return;
+        }
+        if (renderBucketInputsChanged()) {
+            bucketsDirty = true;
+        }
+    }
+
+    private boolean renderBucketInputsChanged() {
+        // Early-out for the common membership-change case; the per-index
+        // identity comparison below would also catch it.
+        if (activeObjects.size() + dynamicObjects.size() != bucketSnapshotCount) {
+            return true;
+        }
+        int position = 0;
+        for (ObjectInstance instance : activeObjects.values()) {
+            if (position >= bucketSnapshotCount
+                    || bucketSnapshotInstances[position] != instance
+                    || bucketSnapshotKeys[position] != renderBucketKey(instance)) {
+                return true;
+            }
+            position++;
+        }
+        for (ObjectInstance instance : dynamicObjects) {
+            if (position >= bucketSnapshotCount
+                    || bucketSnapshotInstances[position] != instance
+                    || bucketSnapshotKeys[position] != renderBucketKey(instance)) {
+                return true;
+            }
+            position++;
+        }
+        return position != bucketSnapshotCount;
+    }
+
+    private void captureRenderBucketSnapshot() {
+        int required = activeObjects.size() + dynamicObjects.size();
+        if (bucketSnapshotInstances.length < required) {
+            int newLength = Math.max(required, bucketSnapshotInstances.length * 2);
+            bucketSnapshotInstances = new ObjectInstance[newLength];
+            bucketSnapshotKeys = new long[newLength];
+        }
+        int position = 0;
+        for (ObjectInstance instance : activeObjects.values()) {
+            bucketSnapshotInstances[position] = instance;
+            bucketSnapshotKeys[position] = renderBucketKey(instance);
+            position++;
+        }
+        for (ObjectInstance instance : dynamicObjects) {
+            bucketSnapshotInstances[position] = instance;
+            bucketSnapshotKeys[position] = renderBucketKey(instance);
+            position++;
+        }
+        // Release stale references beyond the live range so removed objects
+        // are not retained by the snapshot.
+        for (int i = position; i < bucketSnapshotCount; i++) {
+            bucketSnapshotInstances[i] = null;
+        }
+        bucketSnapshotCount = position;
+    }
+
+    // Packed-key layout: bit 0 = highPriority, bits 1-3 = bucket index,
+    // bits 8+ = slot index. The shifted bucket index must stay below bit 8 or
+    // it would bleed into the slot field and silently corrupt change detection.
+    static {
+        if (RenderPriority.MAX - RenderPriority.MIN >= 8) {
+            throw new AssertionError("renderBucketKey bucket bits overflow");
+        }
+    }
+
+    private static long renderBucketKey(ObjectInstance instance) {
+        long slot = instance instanceof AbstractObjectInstance aoi ? aoi.getSlotIndex() : Integer.MAX_VALUE;
+        int bucket = RenderPriority.clamp(instance.getPriorityBucket()) - RenderPriority.MIN;
+        return (slot << 8) | (long) (bucket << 1) | (instance.isHighPriority() ? 1L : 0L);
     }
 
     public void update(int cameraX, PlayableEntity player, List<? extends PlayableEntity> sidekicks, int touchFrameCounter) {
@@ -1003,6 +1094,8 @@ public class ObjectManager {
             lowPriorityBuckets[i].sort(RENDER_SLOT_DESCENDING);
             highPriorityBuckets[i].sort(RENDER_SLOT_DESCENDING);
         }
+
+        captureRenderBucketSnapshot();
     }
 
     public void drawPriorityBucket(int bucket, boolean highPriority) {

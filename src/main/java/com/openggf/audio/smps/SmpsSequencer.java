@@ -775,6 +775,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     @Override
     public int read(short[] buffer) {
+        return read(buffer, buffer.length);
+    }
+
+    @Override
+    public int read(short[] buffer, int length) {
         if (!primed) {
             if (config.isTempoOnFirstTick()) {
                 if (tempoWeight != 0) {
@@ -793,17 +798,17 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         }
 
         if (tempoWeight == 0 && config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW2) {
-            return buffer.length;
+            return length;
         }
 
-        for (int i = 0; i < buffer.length; i++) {
+        for (int i = 0; i < length; i++) {
             advance(1.0);
             if (synth instanceof VirtualSynthesizer) {
                 ((VirtualSynthesizer) synth).render(scratchSample);
             }
             buffer[i] = scratchSample[0];
         }
-        return buffer.length;
+        return length;
     }
 
     public void advance(double samples) {

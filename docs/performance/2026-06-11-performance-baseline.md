@@ -218,3 +218,51 @@ mvn test "-Dtest=RewindBenchmark" "-Dopenggf.rewind.benchmark.run=true"
 # Held-rewind allocation: re-create the temporary ThreadMXBean probe
 # (forward 1200 frames, then 600 stepBackward; report per-frame KB and MB/s)
 ```
+
+**Rebuilding the held-rewind allocation probe (Step 3):** copy
+`RewindBenchmark`'s EHZ1 fixture/bootstrap (same trace, keyframeInterval=60,
+`RewindController` wiring) into a temporary JUnit method. Cast
+`ManagementFactory.getThreadMXBean()` to `com.sun.management.ThreadMXBean`
+and read `getThreadAllocatedBytes(Thread.currentThread().threadId())`
+immediately before and after (a) a 1200-frame forward-stepping loop and (b) a
+600-iteration consecutive `stepBackward()` loop, alongside `System.nanoTime()`
+for wall time. Report allocated-delta / iterations as per-frame KB plus MB/s
+at measured wall and at a 60 fps frame budget, as in the Step 3 table. Do not
+commit the probe.
+
+## Phase 1 re-measurement (after Tasks 1-3)
+
+Re-run of the EHZ1 `RewindBenchmark` (same recipe as Step 2) at the Phase 1
+cut: Task 1 (exact audio/session/collision quick wins), Task 2 (rewind capture
+reflection memoization), Task 3 (lazy render buckets, primitive ring active
+indices, deterministic-audio-runtime fast paths). Trace sweep at this cut:
+**88 run, 52 failures + 1 error — failure-set identical to the pre-work
+baseline list above** (all 13 baseline-green classes stayed green).
+
+| Phase | p50 | p99 | max | baseline p50 / p99 / max |
+|---|---|---|---|---|
+| phase1.forward.off | 0.5 µs | 315.5 µs | 15.70 ms | 0.4 µs / 390.2 µs / 16.93 ms |
+| phase1.forward.on | 30.9 µs | 3.76 ms | 39.58 ms | 32.9 µs / 4.32 ms / 71.73 ms |
+| phase2.capture | 44.3 µs | 277.8 µs | 1.24 ms | 43.4 µs / 283.3 µs / 1.25 ms |
+| phase3.restore | 77.3 µs | 417.1 µs | 7.63 ms | 75.8 µs / 374.3 µs / 6.57 ms |
+| phase4.cold-seek | 4.27 ms | 17.12 ms | 17.12 ms | 5.77 ms / 34.61 ms / 34.61 ms |
+| phase5.hot-seek.within-segment | 0.16 ms | 51.04 ms | 51.04 ms | 0.24 ms / 72.14 ms / 72.14 ms |
+
+**Keyframe-spike comparison:** framework-on p99 improved 4.32 ms → 3.76 ms and
+the warmup-dominated max dropped 71.73 ms → 39.58 ms; steady-state capture is
+flat (p50 43.4 → 44.3 µs, max 1.25 → 1.24 ms), as expected — Phase 1 did not
+target the capture body itself beyond Task 2's reflection memoization, which
+shows up in the forward-on tail rather than the isolated capture phase.
+
+Other gates at this cut: phase6.memory unchanged (21 keyframes, 8158
+bytes/keyframe, 171,320 retained bytes); longtail.determinism still clean
+through 1200 frames; phase7.audio replay mean 11.5 µs (baseline 12.9 µs) with
+allocatedBytes 466,376 over 500 iterations (~933 B/replay, unchanged) and
+gcCountDelta=0.
+
+Caveat: this benchmark is headless, so Task 3's render-path wins (lazy
+sprite/object bucket rebuilds, allocation-free ring active-index iteration in
+`draw()`) do not appear in these numbers — they remove per-rendered-frame work
+that only runs with the GL pass. Restore/seek numbers carry run-to-run JIT/GC
+variance (phase3.restore max regressed within noise); the structural rewind
+fixes land in Phase 3. No acceptance-target claims at this cut.
