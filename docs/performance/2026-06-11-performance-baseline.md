@@ -350,3 +350,62 @@ Other gates at this cut: phase6.memory 21 keyframes at 8225 bytes/keyframe
 develop-based work); longtail.determinism clean through 1200 frames;
 phase7.audio capture/restore-logical means 654/384 ns (baseline 803/445 ns),
 replay-logical mean 13.2 µs (baseline 12.9 µs, flat within noise).
+
+## Audio-backend measurement (real synth stack)
+
+The headless probes above run under `NullAudioBackend` and structurally cannot
+see synthesis-path or driver-rebuild wins. Two ROM-gated measurement harnesses
+(`@Tag("performance-measurement")`, sanity-only assertions) close that gap by
+driving the REAL synth stack: `TestSmpsFadeAudioThroughput`
+(`com.openggf.audio.driver`) builds a fresh `SmpsDriver` with ROM-loaded EHZ
+music per iteration, pre-rolls 1.5 s untimed, triggers the ROM-default fade-out
+(0x28 steps, delay 3), and times the full ~4.5 s fade window rendered in
+production-shaped 1024-frame chunks (median of 5 in-test iterations, reported
+as rendered-seconds of audio per wall-second); `TestHeldRewindAudioStepCost`
+(`com.openggf.game.rewind`) wires `HeadlessSmpsAudioBackend` plus the
+capture-pipeline deterministic runtime (`beginCaptureMode`, the
+`TraceCaptureSession` boot order) into the held-rewind fixture — 120 forward
+frames with EHZ music synthesizing one 60 fps capture frame each, then reverse
+audio presentation and 60 timed `stepBackward()` calls (wall ns per step,
+ThreadMXBean allocated bytes over the block, median of 3 in-test repetitions)
+plus the single release-commit cost. Both files compile unmodified against the
+pre-optimization baseline (`commitDeferredAudioRestore` is looked up
+reflectively; only the era-stable `SmpsDriver.read(short[])` overload is used),
+so baseline numbers came from running the identical files in a temporary
+worktree at `a737d65a9`; HEAD numbers are from `d64804f15`. Two full runs per
+era confirmed stability; the tables show the first run, with the second run's
+median in parentheses.
+
+| Metric | Baseline `a737d65a9` | HEAD `d64804f15` | Ratio |
+|---|---|---|---|
+| Fade-window render throughput (rendered-s/wall-s, median of 5) | 136.7 (129.3) | 180.2 (170.9) | **~1.32x faster synthesis** |
+| — iteration spread (run 1) | 72.5–141.1 | 96.1–189.5 | first iteration is JIT-cold in both eras |
+| Held-rewind backward step, wall µs/step (median of 3 reps) | 107.3 (125.7) | 4.8 (5.1) | **~22–25x faster** |
+| — per-rep medians (run 1) | [166.0, 107.3, 73.1] | [4.9, 4.8, 4.0] | |
+| Held-rewind backward step, allocated KB/step (median of 3 reps) | 180.2 (180.3) | 0.7 (0.7) | **~257x less allocation** |
+| Release commit on rewind release, µs (median of 3 reps) | 59.9 (54.6) | 2,651 (2,607) | absolute context, see below |
+
+The held-rewind rows isolate the Task 8 deferral plus Task 7/9 restore-cost
+work on the path the `NullAudioBackend` probe could not measure: at baseline
+every backward step eagerly rebuilt the logical audio state (full
+`SmpsDriver`/`Ym2612Chip`/`PsgChipGPGX`/`BlipResampler` rebuild —
+~107 µs and ~180 KB allocated per held frame); at HEAD the per-step cost is
+~5 µs / 0.7 KB and the one-time deferred restore (~2.6 ms, first repetition
+~13 ms JIT-cold) lands once on release instead of 60 times during the hold.
+Net for a 60-frame hold-and-release: ~6.4 ms + 10.8 MB allocated at baseline
+vs ~2.9 ms + 42 KB at HEAD. Apples-to-apples caveats: the baseline has no
+deferral API, so its "release commit" is just presentation cleanup
+(stopAllSfx/restoreMusic) — its restore cost is already inside the per-step
+number; and the harness's engine stepper is a scripted audio-only stepper, so
+the step costs above are the audio share alone, excluding object/level
+snapshot restore (covered by the probes above). The fade-throughput row
+captures the synthesis-path wins (Task 10 sample math, Task 1 hot-path
+overhead) end-to-end through the FM/PSG/blip stack.
+
+Run commands (repeat in a `git worktree add <tmp> a737d65a9` copy with the two
+test files and the S2 ROM for the baseline side):
+
+```bash
+mvn "-Dtest=TestSmpsFadeAudioThroughput,TestHeldRewindAudioStepCost" "-DfailIfNoTests=false" test
+# parseable result lines: FADE_THROUGHPUT ... / HELD_REWIND_STEP_COST ...
+```
