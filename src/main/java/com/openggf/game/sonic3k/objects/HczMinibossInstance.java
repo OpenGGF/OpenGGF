@@ -10,6 +10,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.Palette;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -186,6 +187,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
     private static final int[] FLASH_BRIGHT = {0x0AAA, 0x0AAA, 0x0888, 0x0AAA, 0x0EEE, 0x0888, 0x0AAA};
 
     private RocketState[] rockets;
+    private RocketTouchChild[] rocketTouchChildren;
 
     private int anchorY;
     private int waterLevelY;
@@ -315,6 +317,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
         waterEffectFrame = WATER_EFFECT_BASE_FRAME;
         vortexBubbles = new ArrayList<>();
         defeatExplosionController = null;
+        rocketTouchChildren = null;
         resetRocketPhases();
     }
 
@@ -359,7 +362,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
             return null;
         }
 
-        List<TouchResponseProvider.TouchRegion> regions = new ArrayList<>(6);
+        List<TouchResponseProvider.TouchRegion> regions = new ArrayList<>(2);
         int coreFlags = getCoreCollisionFlags();
         if (coreFlags != 0) {
             regions.add(new TouchResponseProvider.TouchRegion(state.x, state.y, coreFlags));
@@ -368,9 +371,6 @@ public class HczMinibossInstance extends AbstractBossInstance {
         if (!closedBody) {
             regions.add(new TouchResponseProvider.TouchRegion(
                     state.x, state.y + ENGINE_OFFSET_Y, ENGINE_COLLISION_FLAGS));
-        }
-        for (RocketState rocket : rockets()) {
-            regions.add(new TouchResponseProvider.TouchRegion(rocket.x, rocket.y, getRocketCollisionFlags()));
         }
         return regions.toArray(new TouchResponseProvider.TouchRegion[0]);
     }
@@ -498,6 +498,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
         state.yVel = DESCEND_VEL;
         crossedWaterThisPass = false;
         resetRocketPhases();
+        spawnRocketTouchChildren();
         setWait(DESCEND_TIME, WaitCallback.FINISH_DESCENT);
     }
 
@@ -1033,8 +1034,14 @@ public class HczMinibossInstance extends AbstractBossInstance {
      * "figure-8 twist" orbit where rockets cross in front of the boss.
      */
     private void updateRocketOrbit() {
-        tickRocketSpeedTimer();
         int phaseStep = rocketOrbitSpeed;
+        // ROM order: Obj_HCZMiniboss_Rockets runs sub_6AB1A before Obj_Wait
+        // can dispatch the delayed speed callback (sonic3k.asm:139613-139707).
+        advanceRocketOrbit(phaseStep);
+        tickRocketSpeedTimer();
+    }
+
+    private void advanceRocketOrbit(int phaseStep) {
         int engineIndex = 0;
         RocketState[] rocketStates = rockets();
         for (int i = 0; i < rocketStates.length; i++) {
@@ -1053,6 +1060,10 @@ public class HczMinibossInstance extends AbstractBossInstance {
             }
         }
         state.routineSecondary = engineIndex;
+    }
+
+    private void refreshRocketOrbitPositions() {
+        advanceRocketOrbit(0);
     }
 
     private void updateWaterEffect(int frameCounter) {
@@ -1209,6 +1220,95 @@ public class HczMinibossInstance extends AbstractBossInstance {
         }
     }
 
+    private void spawnRocketTouchChildren() {
+        if (rocketTouchChildren != null) {
+            return;
+        }
+        // ROM allocates four Obj_HCZMiniboss_Rockets child slots via
+        // CreateChild1_Normal; each child adds itself to Collision_response_list.
+        RocketState[] rocketStates = rockets();
+        rocketTouchChildren = new RocketTouchChild[rocketStates.length];
+        for (int i = 0; i < rocketStates.length; i++) {
+            final int childIndex = i;
+            rocketTouchChildren[i] = spawnChild(() -> new RocketTouchChild(
+                    childIndex, spawn.objectId(), spawn.layoutIndex()));
+        }
+    }
+
+    private final class RocketTouchChild extends AbstractObjectInstance implements TouchResponseProvider {
+        private final int rocketIndex;
+        private final int objectId;
+        private final int layoutIndex;
+
+        private RocketTouchChild(int rocketIndex, int objectId, int layoutIndex) {
+            super(new ObjectSpawn(
+                    rockets()[rocketIndex].x,
+                    rockets()[rocketIndex].y,
+                    objectId,
+                    rocketIndex * 2,
+                    0,
+                    false,
+                    0),
+                    "HCZMinibossRocketTouch");
+            this.rocketIndex = rocketIndex;
+            this.objectId = objectId;
+            this.layoutIndex = layoutIndex;
+        }
+
+        @Override
+        public int getX() {
+            return rockets()[rocketIndex].x;
+        }
+
+        @Override
+        public int getY() {
+            return rockets()[rocketIndex].y;
+        }
+
+        @Override
+        public ObjectSpawn getSpawn() {
+            return new ObjectSpawn(
+                    getX(),
+                    getY(),
+                    objectId,
+                    rocketIndex * 2,
+                    0,
+                    false,
+                    0,
+                    layoutIndex);
+        }
+
+        @Override
+        public int getCollisionFlags() {
+            return getRocketCollisionFlags();
+        }
+
+        @Override
+        public int getCollisionProperty() {
+            return 0;
+        }
+
+        @Override
+        public TouchResponseProfile getTouchResponseProfile() {
+            return TouchResponseProfile.standardEnemy();
+        }
+
+        @Override
+        public boolean isPersistent() {
+            return HczMinibossInstance.this.isPersistent();
+        }
+
+        @Override
+        public boolean isDestroyed() {
+            return HczMinibossInstance.this.isDestroyed() || defeatRenderComplete;
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // The parent compositor draws rockets in its front/back priority passes.
+        }
+    }
+
     private void resetRocketPhases() {
         RocketState[] rocketStates = rockets();
         rocketStates[0].phaseX = 0x00;
@@ -1219,7 +1319,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
         rocketStates[2].phaseY = 0x00;
         rocketStates[3].phaseX = 0x00;
         rocketStates[3].phaseY = 0x80;
-        updateRocketOrbit();
+        refreshRocketOrbitPositions();
     }
 
     private RocketState[] rockets() {

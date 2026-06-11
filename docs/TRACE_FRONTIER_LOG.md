@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-06-11 - S3K HCZ complete-run progressed to miniboss rocket timing frontier
+
+- Scope: follow-up to the HCZ frame-8451 native-P2/Tails one-pixel `y`
+  mismatch around the HCZ miniboss/water cluster. Trace data remained
+  comparison-only diagnostic input; no engine state was hydrated from trace
+  rows, and no zone/route/frame exception was added.
+- Fix:
+  - `HczMinibossInstance` now models the miniboss rockets as separate touch
+    child slots instead of parent multi-regions, matching
+    `CreateChild1_Normal` allocating four `Obj_HCZMiniboss_Rockets` children
+    and each child adding itself to `Collision_response_list` through
+    `Child_DrawTouch_Sprite_FlickerMove`
+    (`sonic3k.asm:139562-139608`, `140645-140655`, `176919-176951`,
+    `178131-178139`).
+  - Rocket orbit reset now recomputes child positions without consuming a phase
+    step, and speed-timer callbacks run after the frame's orbit update, matching
+    the ROM order where `sub_6AB1A` advances `$3C/$3D` before `Obj_Wait`
+    dispatches the delayed routine callback
+    (`sonic3k.asm:139613-139707`, `140389-140461`).
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first error moved from frame 8451 to frame 8452 and the
+    error count dropped from 3068 to 3023. New first error: native-P2/Tails
+    `y` `expected=0x06B4`, `actual=0x06B3`.
+- Release state: HCZ complete-run remains red. The next fix should continue
+  from the frame-8452 Tails/miniboss-water cluster with the rocket slot model
+  in place, rather than reverting to parent-composed rocket touch regions.
+
 ## 2026-06-11 - S3K HCZ complete-run progressed to miniboss/Tails y frontier
 
 - Scope: follow-up to the HCZ dry fan/platform frame-7341 `y_speed`

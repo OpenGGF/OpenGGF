@@ -83,6 +83,11 @@ All notable changes to the OpenGGF project are documented in this file.
   slot. Both halves also unload from their stored origin instead of the current
   sliding X. This advances the HCZ complete-run trace past frame 7341.
 
+- **HCZ miniboss rockets use ROM child touch timing:** the miniboss now exposes
+  rocket hurt boxes through child touch slots and applies rocket phase/timer
+  updates in the ROM `sub_6AB1A`/`Obj_Wait` order. This advances the HCZ
+  complete-run trace past frame 8451.
+
 - **S3K sidekick fresh spawns honor the Obj_Tails init-only frame:** fresh
   routine-0 sidekick spawns now reset kinematics and advance to the normal CPU
   routine without running same-frame follow steering, while dormant sentinel
