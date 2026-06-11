@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-06-11 - S3K ICZ complete-run progressed to snowboard-motion frontier
+
+- Scope: follow-up to the ICZ complete-run frame-0 Sonic rolling mismatch and
+  CPU Tails dormant-marker bootstrap gap. Trace data remained comparison-only
+  diagnostic input; no engine state was hydrated from trace rows, and no
+  trace/route/frame exception was added.
+- Fix:
+  - `Sonic3kICZEvents` now treats Sonic+Tails and Sonic-alone as the ROM
+    `Player_mode < 2` snowboard-intro path from `SpawnLevelMainSprites`
+    (`loc_690A`), spawning `Obj_LevelIntroICZ1` for ICZ1 instead of limiting
+    the intro object to Sonic-alone mode.
+  - `Sonic3kLevelEventManager` now applies the ICZ1 bootstrap lock to the
+    focused player and parks registered sidekicks through the existing
+    level-event dormant marker path, matching `Tails_CPU_Control` `loc_13A74`
+    (`Tails_CPU_routine=$0A`, `object_control=$83`, parked at `$7F00,0`).
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.TestS3kIcz1SnowboardIntroHeadless#sonicAndTailsStartsSnowboardIntroWithTailsDormantMarker" test`
+    -> GREEN. Surefire report: `Tests run: 1, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 0 to frame 29. New first
+    error: main-player `y` `expected=0x00F2`, `actual=0x00F0`; ICZ error count
+    is 3453.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  startup snowboard motion/player physics while object-controlled, where the
+  ROM has integrated Sonic to `y=0x00F2` with `y_sub=0x8000` by frame 29 while
+  the engine remains at `y=0x00F0` with zero subpixel.
+
 ## 2026-06-11 - S3K HCZ complete-run progressed to post-vortex air-state frontier
 
 - Scope: follow-up to the HCZ frame-9337 post-vortex release speed mismatch.

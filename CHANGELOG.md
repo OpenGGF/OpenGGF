@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K ICZ1 Sonic+Tails now enters the ROM snowboard bootstrap path:** the
+  ICZ level-event bootstrap now spawns `Obj_LevelIntroICZ1` for Sonic player
+  modes (`Player_mode < 2`) and parks CPU Tails in the routine-`$0A`
+  dormant marker with object control, moving the ICZ complete-run trace from
+  its frame-0 rolling mismatch to the next snowboard-motion frontier at frame
+  29.
+
 - **Release input/config blockers are tightened:** runtime debug and cheat keys
   now honor `debug.flags.debugView`, the F12 art viewer cannot invisibly freeze
   release gameplay, pause no longer collides with Player 2 Start or toggles menu

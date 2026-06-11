@@ -54,6 +54,7 @@ Completed in `bugfix/ai-release-remediation`:
 - Display boundary hardening: guarded startup centering and post-resize integer-scale snapping when GLFW cannot report a monitor or video mode.
 - Documentation/hook/architecture hygiene: removed stale S3K AIZ2 battleship and S2 latch discrepancy entries, corrected AGENTS/CLAUDE drift, added known-bug/changelog notes, fixed the PowerShell trailer parser no-space substring bug, replaced the two production raw construction-context set/clear call sites with scoped helpers, pruned stale object-service migration guard baselines, added `SessionManager` guard coverage, and removed stale mutation-routing allow-list entries.
 - HCZ miniboss trace diagnostics: added focused trace context for the current frame-9482 frontier, including miniboss hit count/defeat/invulnerability state, ground probes, accepted hit frame/source, and final-hit routine/wait/water-effect routine (`lastHit=9362/Sonic:ENEMY hr=16 hw=52 hwr=04`).
+- ICZ complete-run bootstrap progression: Sonic+Tails now follows the ROM `Player_mode < 2` ICZ1 snowboard-intro path, and CPU Tails is parked through the routine-`$0A` dormant marker (`object_control=$83`, `$7F00,0`). The ICZ complete-run trace moved from frame 0 `rolling expected=1 actual=0` to frame 29 main-player `y expected=0x00F2 actual=0x00F0`.
 
 Still outstanding:
 
@@ -62,7 +63,7 @@ Still outstanding:
 - Rejected HCZ frame-9482 hypothesis: the fixed S3K `Obj_AirCountdown` sidecar is not the missing writer. `AirCountdown_Countdown` only sets `Status_InAir` on the drowning-death path after `Player_TouchFloor`, not on every underwater countdown tick; a local broad `owner.setAir(true)` probe regressed HCZ from frame 9482 to frame 298 (`air expected=0`, `actual=1`). Treat the frame-9482 `airCnt` aux rows as timing/context diagnostics, not as the direct release writer.
 - Rejected HCZ frame-896 hypothesis: button-local `isSolidFor` counters/underwater-entry deferrals and a broad shared first-frame render-flag lifecycle change were tested. Neither moved the HCZ trace; the shared lifecycle attempt regressed a focused `TestSolidObjectManager` boundary case, so both directions were removed. The accepted direction was ROM `SolidObjectTop_1P` boundary rejection plus `Obj_Button` same-frame trigger publication.
 - Remaining SK-1 verification: S3K complete-run trace coverage for fresh sidekick spawn/init-only frame and dormant park semantics. HCZ frame-2894 sidekick follow-history jump-edge publication, frame-3318 conveyor release center preservation, frame-3355 conveyor coarse-back culling, frame-3850 native-P2 roll-stop, frame-4286 water-skim airborne gravity handoff, frame-4403 water-skim subpixel pin, frame-4872 AutoSpin wall-mode X preservation, and the frame-5726 through 9337 HCZ object/sidekick/miniboss slices are covered and advanced; HCZ now needs ROM-state triage of the frame-9482 post-vortex air-state frontier, while ICZ/LBZ/MGZ complete-run coverage remains outstanding.
-- Remaining sidekick audit backlog: complete-run SK-1 trace verification for ICZ/LBZ/MGZ, CNZ/MGZ input-alignment frontiers, MGZ complete-run ring mismatch, and ICZ frame-0 rolling mismatch. The former HCZ frame-2894 sidekick input frontier is now resolved.
+- Remaining sidekick audit backlog: complete-run SK-1 trace verification for LBZ/MGZ, ICZ frame-29 snowboard-motion/subpixel mismatch, CNZ/MGZ input-alignment frontiers, and MGZ complete-run ring mismatch. The former HCZ frame-2894 sidekick input frontier and ICZ frame-0 rolling mismatch are now resolved.
 - Performance remediation remains planned but not executed on this branch. Its work is intentionally sequenced after the active correctness/trace issues because several proposed optimizations cross audio, rendering, rewind, and object lifecycles and require baseline measurement plus trace sweeps before implementation.
 - Lower-priority release-review hygiene that was not part of the release-blocker fix set.
 
@@ -209,7 +210,7 @@ Primary files:
 Required fix:
 - Add S3K sidekick fresh-spawn reset at level load.
 - Add init-only first sidekick frame semantics.
-- Add ICZ/SSZ dormant park entry with `object_control=$83` semantics at the routine-0 boundary.
+- Add ICZ/SSZ dormant park entry with `object_control=$83` semantics at the routine-0 boundary. ICZ is now covered for the Sonic player-mode snowboard-intro bootstrap; SSZ remains to be checked when its trace is in scope.
 - Verify against S3K complete-run first-frame traces and must-keep-green S3K tests.
 
 ### SK-2: S2 `controlLockLatchesLogicalInput` is disabled despite forced-input bypass

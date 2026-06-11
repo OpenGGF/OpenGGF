@@ -9,6 +9,7 @@ import com.openggf.game.render.SpecialRenderEffectStage;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
@@ -100,6 +101,34 @@ public class TestS3kIcz1SnowboardIntroHeadless {
         assertTrue(sawSlopeRegion, "Sonic should reach the snowboard slope handoff region");
         assertTrue(sawCrashHandoff, "Sonic should crash off the snowboard and hand control to the ICZ1 event");
         assertFalse(sonic.isObjectControlled(), "The snowboard intro should stop object-controlling Sonic after the crash");
+    }
+
+    @Test
+    public void sonicAndTailsStartsSnowboardIntroWithTailsDormantMarker() {
+        SonicConfigurationService.getInstance()
+                .setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(ZONE_ICZ, ACT_1)
+                .build();
+        AbstractPlayableSprite sonic = fixture.sprite();
+        List<AbstractPlayableSprite> sidekicks = GameServices.sprites().getRegisteredSidekicks();
+
+        assertTrue(hasSnowboardIntroObject(),
+                "ROM SpawnLevelMainSprites loc_690A spawns Obj_LevelIntroICZ1 for Player_mode < 2");
+        assertEquals(0x0800, sonic.getXSpeed() & 0xFFFF);
+        assertEquals(0x0280, sonic.getYSpeed() & 0xFFFF);
+        assertEquals(0x0800, sonic.getGSpeed() & 0xFFFF);
+        assertTrue(sonic.getAir(), "ICZ1 snowboard startup begins airborne");
+        assertTrue(sonic.getRolling(), "ICZ1 snowboard startup begins in rolling posture");
+        assertFalse(sidekicks.isEmpty(), "Sonic+Tails ICZ1 should keep Player_2 registered");
+        AbstractPlayableSprite tails = sidekicks.getFirst();
+        assertEquals(0x7F00, tails.getCentreX() & 0xFFFF,
+                "ROM loc_13A74 calls sub_13ECA to park CPU Tails off-screen");
+        assertEquals(0x0000, tails.getCentreY() & 0xFFFF);
+        assertEquals(SidekickCpuController.State.DORMANT_MARKER, tails.getCpuController().getState());
+        assertTrue(tails.isObjectControlled(),
+                "ROM loc_13A74 writes object_control=$83 for the dormant marker");
     }
 
     @Test

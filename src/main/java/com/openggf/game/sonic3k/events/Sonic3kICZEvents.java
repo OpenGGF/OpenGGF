@@ -29,8 +29,8 @@ import java.io.IOException;
  *   <li>{@code sonic3k.asm:39454} {@code ICZ2_Resize}</li>
  * </ul>
  *
- * <p>This pass enables the full ICZ intro system shell for Sonic-alone only.
- * Other player-mode branches remain inactive until their ROM paths are ported.
+ * <p>This pass enables the ICZ1 snowboard intro for the ROM Sonic player modes.
+ * Tails-alone and Knuckles branches remain inactive until their ROM paths are ported.
  */
 public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     private static final int ICZ1_EVENTS_FG5_CAMERA_X_1 = 0x3700;
@@ -92,10 +92,12 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     private int bigSnowVelocity;
     private boolean bigSnowPileSpawned;
     private boolean act2TransitionRequested;
+    private int activeAct;
 
     @Override
     public void init(int act) {
         super.init(act);
+        activeAct = act;
         eventsFg5 = false;
         introSpawned = false;
         backgroundRoutine = 0;
@@ -106,7 +108,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         act2TransitionRequested = false;
         indoorPaletteCyclingActive = initialIndoorPaletteCycleState(act);
         applyInitialBackgroundPalette(act);
-        if (act == 0 && playerCharacter() == PlayerCharacter.SONIC_ALONE) {
+        if (act == 0 && hasSonicSnowboardIntroPlayerMode()) {
             spawnSonicSnowboardIntro();
         }
     }
@@ -210,6 +212,16 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
                 0, 0, 0, false,
                 IczSnowboardIntroInstance.INITIAL_SNOWBOARD_Y);
         spawnObject(() -> new IczSnowboardIntroInstance(spawn));
+    }
+
+    public boolean shouldEnterIntroSidekickDormantMarker(AbstractPlayableSprite sidekick) {
+        return sidekick != null && activeAct == 0 && hasSonicSnowboardIntroPlayerMode();
+    }
+
+    public boolean hasSonicSnowboardIntroPlayerMode() {
+        PlayerCharacter character = playerCharacter();
+        return character == PlayerCharacter.SONIC_AND_TAILS
+                || character == PlayerCharacter.SONIC_ALONE;
     }
 
     private void updateAct1Resize() {

@@ -274,7 +274,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
     @Override
     public boolean shouldEnterSidekickDormantMarker(AbstractPlayableSprite sidekick) {
-        return aizEvents != null && aizEvents.shouldEnterIntroSidekickDormantMarker(sidekick);
+        return (aizEvents != null && aizEvents.shouldEnterIntroSidekickDormantMarker(sidekick))
+                || (iczEvents != null && iczEvents.shouldEnterIntroSidekickDormantMarker(sidekick));
     }
 
     private void installZoneRuntimeState(int zone, int act) {
@@ -442,6 +443,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      *       while Obj_AIZPlaneIntro owns the opening pan</li>
      *   <li>HCZ1 ($0100): Sonic/Tails anim $1B (tumble), Knuckles anim $21 (glide drop)</li>
      *   <li>MGZ1 ($0200): anim $1B, airborne (loc_68A6)</li>
+     *   <li>ICZ1 ($0500): Sonic player modes spawn Obj_LevelIntroICZ1 and
+     *       park CPU Tails in routine-$0A dormant marker (loc_690A / loc_13A74)</li>
      *   <li>LRZ1 ($0900) Knuckles: anim $1B, airborne (loc_68A6)</li>
      *   <li>SSZ ($1600): anim $1B, airborne (loc_68A6)</li>
      * </ul>
@@ -460,8 +463,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             applySimpleFallingIntro("MGZ1");
         }
         if (currentZone == Sonic3kZoneIds.ZONE_ICZ && currentAct == 0
-                && getPlayerCharacter() == PlayerCharacter.SONIC_ALONE) {
+                && iczEvents != null && iczEvents.hasSonicSnowboardIntroPlayerMode()) {
             IczSnowboardIntroInstance.applyInitialPlayerLock(GameServices.camera().getFocusedSprite());
+            applyIczIntroSidekickDormantMarkersAfterSpawn();
         }
         if (currentZone == Sonic3kZoneIds.ZONE_LBZ && currentAct == 0) {
             spawnLbz1GroundLaunchIntro(false);
@@ -479,6 +483,19 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private void applyAizIntroSidekickDormantMarkersAfterSpawn() {
         SpriteManager spriteManager = GameServices.spritesOrNull();
         if (spriteManager == null) {
+            return;
+        }
+        for (AbstractPlayableSprite sidekick : spriteManager.getRegisteredSidekicks()) {
+            SidekickCpuController controller = sidekick.getCpuController();
+            if (controller != null && shouldEnterSidekickDormantMarker(sidekick)) {
+                controller.applyLevelEventDormantMarkerForBootstrap();
+            }
+        }
+    }
+
+    private void applyIczIntroSidekickDormantMarkersAfterSpawn() {
+        SpriteManager spriteManager = GameServices.spritesOrNull();
+        if (spriteManager == null || iczEvents == null) {
             return;
         }
         for (AbstractPlayableSprite sidekick : spriteManager.getRegisteredSidekicks()) {
