@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K ICZ1 snowboard crash releases dormant Tails into ROM catch-up:** the
+  snowboard crash handoff now mirrors `Obj_LevelIntroICZ1` by changing parked
+  CPU Tails from routine `$0A` to routine `$02` while preserving the off-screen
+  marker position and `object_control=$83`. This moves the ICZ complete-run
+  trace from the frame-1112 dormant-Tails routine frontier to the frame-1314
+  post-crash pile-jump Y-position frontier.
+
 - **S3K ICZ1 snowboard slope tables preserve ROM subpixels:** the scripted
   slope table now mirrors `move.w x_pos/y_pos` by changing Sonic's centre
   pixels without clearing `x_sub`/`y_sub`, so the post-slope snowboard motion

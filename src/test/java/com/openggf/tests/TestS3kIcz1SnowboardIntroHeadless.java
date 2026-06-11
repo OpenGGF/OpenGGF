@@ -189,6 +189,24 @@ public class TestS3kIcz1SnowboardIntroHeadless {
                 "Sonic's frame-488 x_vel should reflect the ROM post-slope snowboard speed sample");
         assertEquals(0x076B, sonic.getYSpeed() & 0xFFFF,
                 "Sonic's frame-488 y_vel should reflect the ROM post-slope snowboard speed sample");
+
+        boolean sawCrashHandoff = false;
+        for (int frame = 489; frame <= 1120; frame++) {
+            fixture.stepFrame(false, false, false, true, false);
+            if (!hasSnowboardIntroObject()) {
+                sawCrashHandoff = true;
+                break;
+            }
+        }
+
+        assertTrue(sawCrashHandoff, "Sonic+Tails ICZ1 should reach the snowboard crash handoff");
+        assertEquals(0x7F00, tails.getCentreX() & 0xFFFF,
+                "ROM keeps dormant Tails parked until routine 2 performs its own catch-up warp");
+        assertEquals(0x0000, tails.getCentreY() & 0xFFFF);
+        assertTrue(tails.isObjectControlled(),
+                "ROM leaves object_control=$83 intact when Obj_LevelIntroICZ1 writes Tails_CPU_routine=2");
+        assertEquals(SidekickCpuController.State.CATCH_UP_FLIGHT, tails.getCpuController().getState(),
+                "ROM Obj_LevelIntroICZ1 crash release writes Tails_CPU_routine=2");
     }
 
     @Test

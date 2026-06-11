@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K ICZ complete-run progressed to post-crash pile-jump frontier
+
+- Scope: follow-up to the ICZ frame-1112 dormant-Tails CPU routine handoff
+  after the snowboard crash. Trace data remained comparison-only diagnostic
+  input; no engine state was hydrated from trace rows, and no trace/route/frame
+  exception was added.
+- Fix:
+  - `IczSnowboardIntroInstance.crash()` now mirrors ROM `Obj_LevelIntroICZ1`
+    by releasing level-event dormant sidekicks from `Tails_CPU_routine=$0A` to
+    `$02` through `SidekickCpuController.releaseDormantMarkerForLevelEvent()`.
+    The transition preserves the off-screen marker position and
+    `object_control=$83` until routine `$02` performs its own catch-up warp.
+  - Focused ICZ headless coverage now advances Sonic+Tails through the
+    snowboard crash and asserts that Tails remains parked at `$7F00,0` while
+    the CPU controller publishes the ROM routine-`$02` catch-up state.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIcz1SnowboardIntroHeadless#sonicAndTailsStartsSnowboardIntroWithTailsDormantMarker" test`
+    -> GREEN. Surefire report: `Tests run: 1, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 1112 to frame 1314. New
+    first error: main-player `y` `expected=0x06EC`, `actual=0x06E7` on the
+    post-crash pile-jump handoff; Sonic `x`, subpixels, velocities, status,
+    rings, camera, and Tails CPU routine/counters match at the first error. ICZ
+    error count is 3787.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-1314 jump/pile handoff around `IczBigSnowPileInstance` or the
+  corresponding post-crash level-event object, where the engine starts Sonic's
+  upward motion five pixels earlier than the ROM-visible sample.
+
 ## 2026-06-11 - S3K ICZ complete-run progressed to dormant-Tails routine frontier
 
 - Scope: follow-up to the ICZ frame-505 one-pixel/subpixel snowboard drift.

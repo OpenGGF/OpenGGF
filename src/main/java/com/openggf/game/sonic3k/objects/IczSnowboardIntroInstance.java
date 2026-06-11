@@ -375,9 +375,19 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         // ROM: Obj_LevelIntroICZ1 writes anim(a2) = #$19 on the crash release.
         player.setAnimationId(0x19);
         releasePlayerLocks(player);
+        releaseDormantSidekicksForCrashHandoff();
         services().gameState().setScreenShakeActive(true);
         services().playSfx(Sonic3kSfx.CRASH.id);
         setDestroyed(true);
+    }
+
+    private void releaseDormantSidekicksForCrashHandoff() {
+        for (PlayableEntity sidekickEntity : services().sidekicks()) {
+            if (sidekickEntity instanceof AbstractPlayableSprite sidekick
+                    && sidekick.getCpuController() != null) {
+                sidekick.getCpuController().releaseDormantMarkerForLevelEvent();
+            }
+        }
     }
 
     private void spawnDustIfNeeded(AbstractPlayableSprite player) {
