@@ -66,7 +66,7 @@ class TestHCZWaterTunnelHandler {
     }
 
     @Test
-    void verticalInfluenceTunnelSuppressesNextGenericYMoveStep() {
+    void verticalInfluenceTunnelLeavesGenericYMoveForRomSecondDisplacementStep() {
         AbstractPlayableSprite main = playerAt(0x1970, 0x0A50);
 
         HCZWaterTunnelHandler.update(query(main), 0);
@@ -74,7 +74,7 @@ class TestHCZWaterTunnelHandler {
         assertTrue(HCZWaterTunnelHandler.isPlayerInTunnel(0));
         verify(main).move((short) 0x0300, (short) -0x0280);
         verify(main).setForceFloorCheck(true);
-        verify(main).suppressNextObjectMoveAndFallY();
+        verify(main, never()).suppressNextObjectMoveAndFallY();
     }
 
     @Test

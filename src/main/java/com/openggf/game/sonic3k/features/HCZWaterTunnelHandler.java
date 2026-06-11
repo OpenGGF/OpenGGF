@@ -258,14 +258,6 @@ public final class HCZWaterTunnelHandler {
             // displacement step: add velocity<<8 to the 32-bit position.
             // player.move() does exactly this (adds speed<<8 to pixel:subpixel).
             player.move(xVel, yVel);
-            // Vertical/influence-axis tunnel entries already own the pipe's Y
-            // pull in this zone hook. Keep the next generic X movement so the
-            // airborne air-drag path still advances the player horizontally,
-            // but suppress generic Y movement to avoid double-applying the
-            // tunnel's upward velocity.
-            if (entry[INFLUENCE_FLAG] != 0) {
-                player.suppressNextObjectMoveAndFallY();
-            }
             // ROM: move.b #$F,anim(a1)
             player.setAnimationId(Sonic3kAnimationIds.FLOAT2);
             player.setForcedAnimationId(Sonic3kAnimationIds.FLOAT2);

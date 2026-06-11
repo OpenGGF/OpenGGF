@@ -9915,3 +9915,28 @@ Result:
 - Focused sidekick/binder tests are green (`141` tests).
 - HCZ complete-run remains red, but the frontier advanced from frame **2894** to frame **2976**.
 - First error is now frame **2976** `y` expected `0x0A4E`, actual `0x0A4B`, with matching player `x`, speeds, rings, sidekick kinematics, and sidekick Ctrl_2 fields. Camera Y is also 3 px high in the engine (`expected=0x0A10`, `actual=0x0A0D`). The new owner is the main-player vertical/camera path around the post-breakable-bar underwater debris/air-countdown cluster, not sidekick input publication.
+
+## 2026-06-11 — HCZ complete-run vertical water-tunnel second displacement
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `bugfix/ai-release-remediation`.
+Commands:
+`mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.features.TestHCZWaterTunnelHandler,com.openggf.sprites.playable.TestAbstractPlayableSpriteRewindCapture" test`
+`mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+
+Fix:
+- `HCZWaterTunnelHandler` no longer suppresses the generic `ObjectMoveAndFall`
+  Y displacement for vertical/influence-axis tunnel entries. ROM
+  `HCZ_WaterTunnels` writes `y_vel`, directly adds `y_vel<<8` to `y_pos`, and
+  then leaves the stored velocity visible to the normal player movement and
+  wind-tunnel floor-check path (`docs/skdisasm/sonic3k.asm:8877-8891`,
+  `docs/skdisasm/sonic3k.asm:24204-24233`).
+
+Result:
+- Focused HCZ tunnel and playable rewind tests are green.
+- HCZ complete-run remains red, but the frontier advanced from frame **2976**
+  to frame **3066**.
+- First error is now frame **3066** `y` expected `0x07B7`, actual `0x07BF`.
+  Player `x`, speeds, status, rings, and sidekick CPU fields match; the active
+  owner is the object-controlled HCZ water-wall / air-countdown cluster around
+  `Obj_HCZWaterWall` and the fixed air-countdown child, not the earlier tunnel
+  entry.
