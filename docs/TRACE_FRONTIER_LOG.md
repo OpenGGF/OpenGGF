@@ -9940,3 +9940,29 @@ Result:
   owner is the object-controlled HCZ water-wall / air-countdown cluster around
   `Obj_HCZWaterWall` and the fixed air-countdown child, not the earlier tunnel
   entry.
+
+## 2026-06-11 — HCZ complete-run vertical water-wall trigger fall-through
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `bugfix/ai-release-remediation`.
+Commands:
+`mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestHCZWaterWallObjectInstance" test`
+`mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+
+Fix:
+- `HCZWaterWallObjectInstance` now models the vertical geyser trigger
+  fall-through from `loc_30294` into `loc_302E6` in the same object tick.
+  ROM sets `object_control=$81`, stores the `loc_302E6` routine pointer, and
+  immediately executes the pending-art wait branch, pulling both players up by
+  8 px while `Kos_modules_left` is nonzero
+  (`docs/skdisasm/sonic3k.asm:65096-65123`).
+
+Result:
+- Focused HCZ water-wall tests are green.
+- HCZ complete-run remains red, but the frontier advanced from frame **3066**
+  to frame **3124**.
+- First error is now frame **3124** `y` expected `0x05E7`, actual `0x05E5`;
+  `camera_y` is also 2 px high in the engine (`expected=0x05A7`,
+  `actual=0x05A5`). Player `x`, speeds, status, rings, and sidekick CPU
+  fields match. The active owner is the vertical `Obj_HCZWaterWall`
+  rise/eruption handoff and spray/debris cluster, not the trigger-frame
+  capture.

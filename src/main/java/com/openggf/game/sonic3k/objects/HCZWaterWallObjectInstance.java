@@ -320,8 +320,10 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
 
         if (xInRange && yInRange) {
             vertPhase = VertPhase.ART_LOAD;
-            // Set object_control = $81 for player(s)
+            // Set object_control = $81 for player(s), then fall through into
+            // loc_302E6 in the same tick while the queued art is pending.
             lockPlayers(player);
+            updateVertArtLoad(player);
             return;
         }
 

@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Method;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -21,13 +22,17 @@ class TestHCZWaterWallObjectInstance {
         HCZWaterWallObjectInstance waterWall = new HCZWaterWallObjectInstance(
                 new ObjectSpawn(0x0200, 0x0200, 0x3B, 1, 0, false, 0));
         waterWall.setServices(new TestObjectServices().withSidekicks(List.of(sidekick)));
+        int playerInitialY = player.getY();
+        int sidekickInitialY = sidekick.getY();
 
         waterWall.update(0, player);
 
         assertFullControl(player);
         assertTrue(player.isControlLocked());
+        assertEquals(playerInitialY - 8, player.getY());
         assertFullControl(sidekick);
         assertTrue(sidekick.isControlLocked());
+        assertEquals(sidekickInitialY - 8, sidekick.getY());
 
         invokeReleasePlayers(waterWall, player);
 
