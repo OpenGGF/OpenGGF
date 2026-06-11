@@ -228,6 +228,8 @@ public class HczMinibossInstance extends AbstractBossInstance {
     private boolean waterEffectPullReady;
     private boolean vortexFinalPullPending;
     private int lastFrameCounter;
+    private int lastHitFrame = -1;
+    private String lastHitSource = "none";
     private List<VortexBubbleChild> vortexBubbles;
     private S3kBossExplosionController defeatExplosionController;
 
@@ -344,6 +346,8 @@ public class HczMinibossInstance extends AbstractBossInstance {
         waterEffectAnimTimer = 0;
         waterEffectPullReady = false;
         vortexFinalPullPending = false;
+        lastHitFrame = -1;
+        lastHitSource = "none";
         vortexBubbles = new ArrayList<>();
         defeatExplosionController = null;
         rocketTouchChildren = null;
@@ -421,6 +425,8 @@ public class HczMinibossInstance extends AbstractBossInstance {
         }
 
         state.hitCount--;
+        lastHitFrame = services().objectManager() != null ? services().objectManager().getFrameCounter() : -1;
+        lastHitSource = describeHitSource(playerEntity, result);
         state.invulnerabilityTimer = INVULN_TIME;
         state.invulnerable = true;
         paletteFlasher.startFlash();
@@ -1032,12 +1038,14 @@ public class HczMinibossInstance extends AbstractBossInstance {
             }
         }
         return String.format(
-                "r=%02X hits=%d def=%s inv=%s/%d xV=%04X yV=%04X wait=%d cb=%s pass=%d closed=%s vortex=%s waterR=%02X water=%04X,%04X wf=%d wa=%02X/%02X pullReady=%s rockets=%s",
+                "r=%02X hits=%d def=%s inv=%s/%d lastHit=%d/%s xV=%04X yV=%04X wait=%d cb=%s pass=%d closed=%s vortex=%s waterR=%02X water=%04X,%04X wf=%d wa=%02X/%02X pullReady=%s rockets=%s",
                 state.routine & 0xFF,
                 state.hitCount,
                 state.defeated,
                 state.invulnerable,
                 state.invulnerabilityTimer,
+                lastHitFrame,
+                lastHitSource,
                 state.xVel & 0xFFFF,
                 state.yVel & 0xFFFF,
                 waitTimer,
@@ -1053,6 +1061,12 @@ public class HczMinibossInstance extends AbstractBossInstance {
                 waterEffectAnimTimer & 0xFF,
                 waterEffectPullReady,
                 rocketSummary.isEmpty() ? "none" : rocketSummary.toString());
+    }
+
+    private String describeHitSource(PlayableEntity playerEntity, TouchResponseResult result) {
+        String actor = playerEntity != null ? playerEntity.getClass().getSimpleName() : "unknown";
+        String category = result != null && result.category() != null ? result.category().name() : "unknown";
+        return actor + ":" + category;
     }
 
     /**
