@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+## 2026-06-11 - S3K ICZ complete-run progressed to one-pixel snowboard frontier
+
+- Scope: follow-up to the ICZ frame-488 snowboard speed/motion mismatch. Trace
+  data remained comparison-only diagnostic input; no engine state was hydrated
+  from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - `IczSnowboardIntroInstance.updateScriptedSlope()` now mirrors ROM
+    `Obj_LevelIntroICZ1` `loc_395FE`: after applying the final slope-table
+    sample, it immediately restores `top_solid_bit=$E`, `lrb_solid_bit=$F`,
+    and movement-active `object_control=#2`, then enters the normal snowboard
+    overlay state for the next object tick.
+  - Focused ICZ headless coverage now asserts the first normal snowboard
+    movement sample after the scripted slope exit, including the ROM
+    `x_vel=$120D` and `y_vel=$076B` values at the former frontier.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIcz1SnowboardIntroHeadless#sonicAndTailsStartsSnowboardIntroWithTailsDormantMarker" test`
+    -> GREEN. Surefire report: `Tests run: 1, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 488 to frame 505. New
+    first error: main-player `x` `expected=0x1487`, `actual=0x1486`; paired
+    `y`/camera fields are also one pixel behind, while `x_speed=0x120D`,
+    `y_speed=0x076B`, `g_speed=0x1395`, and `angle=0x10` match. ICZ error
+    count is 3351.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-505 one-pixel/subpixel snowboard drift after the slope handoff,
+  where ROM reports `sub=(0800,FB00)` and the engine reports
+  `sub=(EA00,8600)` with matching velocities.
+
 ## 2026-06-11 - S3K ICZ complete-run progressed to snowboard speed frontier
 
 - Scope: follow-up to the ICZ frame-171 snowboard jump timing mismatch. Trace

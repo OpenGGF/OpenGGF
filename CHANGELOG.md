@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K ICZ1 snowboard slope handoff now publishes ROM object control on the
+  final table sample:** the scripted slope exit now applies the last
+  `loc_395FE` position row and immediately switches Sonic back to
+  movement-active `object_control=#2`, matching the ROM's same-routine handoff
+  into the normal snowboard overlay. This moves the ICZ complete-run trace from
+  the frame-488 speed mismatch to the frame-505 one-pixel/subpixel position
+  frontier.
+
 - **S3K ICZ1 snowboard jump timing now follows locked-controller ROM input
   handoff:** the snowboard intro now keeps `Ctrl_1_locked`-equivalent state
   queued across object ticks and publishes raw A/B/C/Start input as a normal

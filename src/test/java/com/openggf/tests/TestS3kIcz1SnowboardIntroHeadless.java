@@ -172,6 +172,19 @@ public class TestS3kIcz1SnowboardIntroHeadless {
                 "The queued snowboard jump press should be consumed by normal player physics on the next frame");
         assertTrue(sonic.getRolling(),
                 "The queued snowboard jump should use the normal rolling jump transition");
+
+        for (int frame = 173; frame <= 488; frame++) {
+            fixture.stepFrame(false, false, false, true, false);
+        }
+
+        assertEquals(0x1354, sonic.getCentreX(),
+                "ROM loc_395FE should publish object_control=#2 on the final slope-table sample");
+        assertEquals(0x0411, sonic.getCentreY(),
+                "Frame-488 ICZ snowboard trace should include the first normal movement sample after slope exit");
+        assertEquals(0x120D, sonic.getXSpeed() & 0xFFFF,
+                "Sonic's frame-488 x_vel should reflect the ROM post-slope snowboard speed sample");
+        assertEquals(0x076B, sonic.getYSpeed() & 0xFFFF,
+                "Sonic's frame-488 y_vel should reflect the ROM post-slope snowboard speed sample");
     }
 
     @Test

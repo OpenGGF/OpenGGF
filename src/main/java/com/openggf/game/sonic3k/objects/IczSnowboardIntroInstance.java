@@ -359,6 +359,12 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         currentMappingFrame = entry[2];
         player.setCentreX((short) currentX);
         player.setCentreY((short) currentY);
+        if (slopeIndex >= table.length) {
+            player.setTopSolidBit((byte) 0x0E);
+            player.setLrbSolidBit((byte) 0x0F);
+            ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(player);
+            state = State.SNOWBOARDING;
+        }
     }
 
     private void crash(AbstractPlayableSprite player) {
