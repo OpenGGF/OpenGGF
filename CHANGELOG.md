@@ -80,6 +80,12 @@ All notable changes to the OpenGGF project are documented in this file.
   advances the HCZ complete-run trace past the frame-4286 `y_speed` frontier
   and the frame-4403 one-pixel vertical carry.
 
+- **AutoSpin forced roll preserves ROM x_pos on wall modes:** S3K
+  `Obj_AutoSpin` now restores centre X after the engine shrinks the wall-mode
+  roll width, matching the ROM routine that writes only radii and
+  `y_pos += 5`. This advances the HCZ complete-run trace past the frame-4872
+  PathSwap/AutoSpin horizontal frontier.
+
 - **S2 underwater sidekick push bypass follows the ROM branch:** live
   `Status_Push` with delayed Sonic not pushing now skips follow steering even
   underwater and at low x speed, instead of inheriting S3K's AIZ reload

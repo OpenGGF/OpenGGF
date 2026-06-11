@@ -1,5 +1,27 @@
 # Trace Frontier Log
 
+## 2026-06-11 - S3K HCZ complete-run progressed to Tails y-speed sign frontier
+
+- Scope: follow-up to the HCZ frame-4872 main-player `x`/camera-X mismatch.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no zone/route/frame exception was added.
+- Fix:
+  - `AutoSpinObjectInstance.forceRoll(...)` now preserves centre X across
+    `setRolling(true)`. On wall modes, the engine's top-left sprite box changes
+    width when entering roll; ROM `Obj_AutoSpin` writes `y_radius`, `x_radius`,
+    `anim`, and `y_pos += 5`, but never writes `x_pos`
+    (`sonic3k.asm:42458-42469`).
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestAutoSpinObjectInstance" test`
+    -> PASS, 2 tests.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+    -> RED, but the first error moved from frame 4872 to frame 5726:
+    native-P2/Tails `y_speed` `expected=-0490`, `actual=0x0490`.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the frame-5726 Tails vertical-velocity sign mismatch around the
+  collapsing-bridge/monitor/air-count cluster without reopening the solved
+  frame-4872 AutoSpin wall-mode X preservation unless it regresses.
+
 ## 2026-06-11 - S3K HCZ complete-run progressed to post-skim y/camera frontier
 
 - Scope: follow-up to the HCZ frame-4286 main-player `y_speed` mismatch.
