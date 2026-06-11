@@ -76,6 +76,17 @@ public class ObjectManager {
     private final List<ObjectInstance> dynamicObjects = new ArrayList<>();
     private final List<ObjectInstance> dynamicFallbackScratch = new ArrayList<>();
     private final List<ObjectInstance> activeFallbackScratch = new ArrayList<>();
+    // Per-frame scratch collections reused to avoid steady-state allocation.
+    // Ownership stays inside the populating method (cleared in finally / at the
+    // single reset point); never returned to callers that retain references.
+    private final Set<ObjectInstance> processedInExecLoopScratch =
+            Collections.newSetFromMap(new IdentityHashMap<>());
+    private final List<PlayableEntity> activePlayersScratch = new ArrayList<>(4);
+    private final List<ObjectSpawn> newSpawnsScratch = new ArrayList<>();
+    private final List<ObjectInstance> postPlayerHooksScratch = new ArrayList<>();
+    // Cached spawn-order comparators (built lazily; placement is constructor-set).
+    private Comparator<ObjectSpawn> forwardSpawnOrder;
+    private Comparator<ObjectSpawn> backwardSpawnOrder;
     private final List<GLCommand> renderCommands = new ArrayList<>();
     private int frameCounter;
     private int vblaCounter;
@@ -583,10 +594,17 @@ public class ObjectManager {
         }
     }
 
+    /**
+     * Builds the per-frame active player list into a reused scratch list.
+     * The result is consumed synchronously by
+     * {@link SolidExecutionRegistry#beginFrame} (no implementation retains the
+     * reference); callers must not hold the returned list across frames.
+     */
     private List<PlayableEntity> collectActivePlayers(PlayableEntity player,
             List<? extends PlayableEntity> sidekicks) {
         List<? extends PlayableEntity> activeSidekicks = sidekicks != null ? sidekicks : List.of();
-        ArrayList<PlayableEntity> players = new ArrayList<>(1 + activeSidekicks.size());
+        List<PlayableEntity> players = activePlayersScratch;
+        players.clear();
         if (player != null) {
             players.add(player);
         }
@@ -811,7 +829,8 @@ public class ObjectManager {
         boolean objectsRemoved = false;
         // Track objects processed by the slot-based loop so the fallback loop
         // doesn't double-update objects that lost their slot mid-frame.
-        Set<ObjectInstance> processedInExecLoop = Collections.newSetFromMap(new IdentityHashMap<>());
+        // Reused per frame; cleared in the finally block below.
+        Set<ObjectInstance> processedInExecLoop = processedInExecLoopScratch;
         try {
             // ROM parity: Iterate slots in ascending order, matching ExecuteObjects.
             for (currentExecSlot = 0; currentExecSlot < execOrder.length; currentExecSlot++) {
@@ -925,6 +944,7 @@ public class ObjectManager {
             currentExecSlot = -1;
             updating = false;
             deferredDynamicExecThisFrame.clear();
+            processedInExecLoopScratch.clear();
             if (objectsRemoved) {
                 bucketsDirty = true;
                 activeObjectsCacheDirty = true;
@@ -1346,14 +1366,24 @@ public class ObjectManager {
         if (player == null) {
             return;
         }
-        List<ObjectInstance> snapshot = new ArrayList<>(getActiveObjects());
-        for (ObjectInstance instance : snapshot) {
-            if (instance == null || instance.isDestroyed()) {
-                continue;
+        // Snapshot the pre-hook population into a reused scratch list so hooks
+        // can mutate the active set without ConcurrentModification while the
+        // per-frame copy allocation is avoided. Cleared in finally; the scratch
+        // never escapes this method.
+        List<ObjectInstance> snapshot = postPlayerHooksScratch;
+        snapshot.clear();
+        snapshot.addAll(getActiveObjects());
+        try {
+            for (ObjectInstance instance : snapshot) {
+                if (instance == null || instance.isDestroyed()) {
+                    continue;
+                }
+                if (instance instanceof PostPlayerUpdateHook hook) {
+                    hook.updatePostPlayer(frameCounter, player);
+                }
             }
-            if (instance instanceof PostPlayerUpdateHook hook) {
-                hook.updatePostPlayer(frameCounter, player);
-            }
+        } finally {
+            postPlayerHooksScratch.clear();
         }
     }
 
@@ -2588,7 +2618,11 @@ public class ObjectManager {
         // left-to-right (a0 += 6), while backward scans process right-to-left
         // (a0 -= 6). Preserve that direction so FindFreeObj assigns the same
         // slot numbers the ROM would have used.
-        List<ObjectSpawn> sortedNewSpawns = new ArrayList<>();
+        // Reused scratch list + cached comparators: no constructor runs from
+        // this loop ever re-enters syncActiveSpawnsLoad, and the list is
+        // cleared in finally so it never leaks past this call.
+        List<ObjectSpawn> sortedNewSpawns = newSpawnsScratch;
+        sortedNewSpawns.clear();
         for (ObjectSpawn spawn : activeSpawns) {
             if (!activeObjects.containsKey(spawn)
                     && !(placement.isRemembered(spawn) && !placement.isStayActive(spawn))
@@ -2596,16 +2630,17 @@ public class ObjectManager {
                 sortedNewSpawns.add(spawn);
             }
         }
-        Comparator<ObjectSpawn> spawnOrder = Comparator
-                .comparingInt(ObjectSpawn::x)
-                .thenComparingInt(placement::getSpawnIndex);
-        if (placement.isLastScrollBackward()) {
-            spawnOrder = Comparator
+        if (forwardSpawnOrder == null) {
+            forwardSpawnOrder = Comparator
+                    .comparingInt(ObjectSpawn::x)
+                    .thenComparingInt(placement::getSpawnIndex);
+            backwardSpawnOrder = Comparator
                     .comparingInt(ObjectSpawn::x)
                     .reversed()
                     .thenComparing(Comparator.comparingInt(placement::getSpawnIndex).reversed());
         }
-        sortedNewSpawns.sort(spawnOrder);
+        sortedNewSpawns.sort(
+                placement.isLastScrollBackward() ? backwardSpawnOrder : forwardSpawnOrder);
 
         // Allocate parent slots for all new objects (matching ObjPosLoad).
         // ROM parity: ObjPosLoad assigns one slot per object in X order.
@@ -2613,48 +2648,52 @@ public class ObjectManager {
         // if the constructor spawns children (e.g., GlassBlock's reflection),
         // getSlotIndex() returns the correct value and allocateSlotAfter()
         // gives the child a HIGHER slot (matching ROM's FindNextFreeObj).
-        for (ObjectSpawn spawn : sortedNewSpawns) {
-            if (!isSpawnVerticallyEligibleForLoad(spawn, allowVerticalLoadBypassForS2)) {
-                if (slotLayout.twoAxisCursorPlacement()) {
-                    placement.markDeferredVerticalLoad(spawn);
-                }
-                continue;
-            }
-            // Pre-allocate parent slot — consumed by AbstractObjectInstance's
-            // constructor via the PRE_ALLOCATED_SLOT ThreadLocal.
-            int preSlot = allocateSlot();
-            ObjectInstance instance = ObjectConstructionContext.with(objectServices, preSlot,
-                    () -> registry != null ? registry.create(spawn) : null);
-            if (instance != null) {
-                if (instance instanceof AbstractObjectInstance aoi) {
-                    aoi.setServices(objectServices);
-                    // Slot already set by constructor via PRE_ALLOCATED_SLOT.
-                    // Ensure it's set (defensive, in case constructor didn't consume it).
-                    if (aoi.getSlotIndex() < 0 && preSlot >= 0) {
-                        aoi.setSlotIndex(preSlot);
+        try {
+            for (ObjectSpawn spawn : sortedNewSpawns) {
+                if (!isSpawnVerticallyEligibleForLoad(spawn, allowVerticalLoadBypassForS2)) {
+                    if (slotLayout.twoAxisCursorPlacement()) {
+                        placement.markDeferredVerticalLoad(spawn);
                     }
-                    // ROM: S1 OPL_MakeItem stores the counter value as
-                    // obRespawnNo for RememberState to use on unload.
-                    if (placement.isCounterBasedRespawn()) {
-                        int counter = placement.getCounterForSpawn(spawn);
-                        if (counter >= 0) {
-                            aoi.setRespawnStateIndex(counter);
+                    continue;
+                }
+                // Pre-allocate parent slot — consumed by AbstractObjectInstance's
+                // constructor via the PRE_ALLOCATED_SLOT ThreadLocal.
+                int preSlot = allocateSlot();
+                ObjectInstance instance = ObjectConstructionContext.with(objectServices, preSlot,
+                        () -> registry != null ? registry.create(spawn) : null);
+                if (instance != null) {
+                    if (instance instanceof AbstractObjectInstance aoi) {
+                        aoi.setServices(objectServices);
+                        // Slot already set by constructor via PRE_ALLOCATED_SLOT.
+                        // Ensure it's set (defensive, in case constructor didn't consume it).
+                        if (aoi.getSlotIndex() < 0 && preSlot >= 0) {
+                            aoi.setSlotIndex(preSlot);
+                        }
+                        // ROM: S1 OPL_MakeItem stores the counter value as
+                        // obRespawnNo for RememberState to use on unload.
+                        if (placement.isCounterBasedRespawn()) {
+                            int counter = placement.getCounterForSpawn(spawn);
+                            if (counter >= 0) {
+                                aoi.setRespawnStateIndex(counter);
+                            }
+                        }
+                    } else {
+                        // Non-AbstractObjectInstance: release pre-allocated slot
+                        if (preSlot >= 0) {
+                            releaseSlot(preSlot);
                         }
                     }
+                    registerActiveObject(spawn, instance);
+                    changed = true;
                 } else {
-                    // Non-AbstractObjectInstance: release pre-allocated slot
+                    // Creation failed: release pre-allocated slot
                     if (preSlot >= 0) {
                         releaseSlot(preSlot);
                     }
                 }
-                registerActiveObject(spawn, instance);
-                changed = true;
-            } else {
-                // Creation failed: release pre-allocated slot
-                if (preSlot >= 0) {
-                    releaseSlot(preSlot);
-                }
             }
+        } finally {
+            newSpawnsScratch.clear();
         }
 
         if (changed) {

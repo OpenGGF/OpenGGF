@@ -178,10 +178,27 @@ public class TestHudRenderManager {
         hud.setLivesNumbersPatternIndex(220);
         hud.setStaticHudArt(0x28020, staticArt);
 
+        // HudRenderManager reuses one mutable PatternDesc across pieces (the
+        // renderer consumes it synchronously), so record the palette index at
+        // invocation time instead of verifying the captured reference later.
+        List<int[]> staticPieceCalls = new java.util.ArrayList<>();
+        org.mockito.Mockito.doAnswer(invocation -> {
+            int patternId = invocation.getArgument(0);
+            com.openggf.level.PatternDesc desc = invocation.getArgument(1);
+            staticPieceCalls.add(new int[] {
+                    patternId, desc.getPaletteIndex(),
+                    invocation.getArgument(2), invocation.getArgument(3) });
+            return null;
+        }).when(graphicsManager).renderPatternWithId(anyInt(), any(), anyInt(), anyInt());
+
         hud.draw(levelState, null);
 
-        verify(graphicsManager).renderPatternWithId(eq(0x28020), argThat(desc -> desc.getPaletteIndex() == 0), eq(16), eq(200));
-        verify(graphicsManager).renderPatternWithId(eq(0x28021), argThat(desc -> desc.getPaletteIndex() == 1), eq(24), eq(200));
+        org.junit.jupiter.api.Assertions.assertTrue(staticPieceCalls.stream().anyMatch(
+                call -> call[0] == 0x28020 && call[1] == 0 && call[2] == 16 && call[3] == 200),
+                "expected lives piece 0x28020 rendered with palette 0 at (16,200)");
+        org.junit.jupiter.api.Assertions.assertTrue(staticPieceCalls.stream().anyMatch(
+                call -> call[0] == 0x28021 && call[1] == 1 && call[2] == 24 && call[3] == 200),
+                "expected lives piece 0x28021 rendered with palette 1 at (24,200)");
         verify(graphicsManager, never()).cachePaletteTexture(any(), anyInt());
     }
 

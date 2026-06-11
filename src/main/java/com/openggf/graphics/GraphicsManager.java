@@ -42,6 +42,9 @@ public class GraphicsManager {
 	private static GraphicsManager graphicsManager;
 	List<GLCommandable> commands = new ArrayList<>();
 	private List<GLCommandable> commandCaptureTarget;
+	// Pool of reusable capture lists for executeCapturedCommands() (stack so
+	// nested captures don't share a list). Lists are cleared before pooling.
+	private final java.util.ArrayDeque<List<GLCommandable>> captureListPool = new java.util.ArrayDeque<>(2);
 	private final Queue<PendingRenderThreadTask<?>> pendingRenderThreadTasks = new ConcurrentLinkedQueue<>();
 
 	private final Map<String, Integer> paletteTextureMap = new HashMap<>(); // Map for palette textures
@@ -191,22 +194,27 @@ public class GraphicsManager {
 
 	public void executeCapturedCommands(Runnable producer, int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
 		List<GLCommandable> previousCaptureTarget = commandCaptureTarget;
-		List<GLCommandable> capturedCommands = new ArrayList<>();
+		// Reuse capture lists via a small pool (a stack, so nested captures each
+		// get their own list); returned to the pool cleared in the finally block.
+		List<GLCommandable> capturedCommands = captureListPool.pollLast();
+		if (capturedCommands == null) {
+			capturedCommands = new ArrayList<>();
+		}
 		commandCaptureTarget = capturedCommands;
 		try {
 			producer.run();
 			if (headlessMode || capturedCommands.isEmpty() || !glInitialized) {
-				capturedCommands.clear();
 				return;
 			}
 			PatternRenderCommand.resetFrameState();
-			for (GLCommandable command : capturedCommands) {
-				command.execute(cameraX, cameraY, cameraWidth, cameraHeight);
+			for (int i = 0, n = capturedCommands.size(); i < n; i++) {
+				capturedCommands.get(i).execute(cameraX, cameraY, cameraWidth, cameraHeight);
 			}
 			PatternRenderCommand.cleanupFrameState(this);
 		} finally {
 			commandCaptureTarget = previousCaptureTarget;
 			capturedCommands.clear();
+			captureListPool.addLast(capturedCommands);
 		}
 	}
 
@@ -1501,42 +1509,46 @@ public class GraphicsManager {
 
 		boolean applyMask = spriteMaskRequested;
 
-		// SpriteSatMaskPostProcessor.process(...) is the only consumer of `spriteSatEntries`
-		// and either returns a fresh ArrayList or List.of(); it never retains the input
-		// reference. So we can pass the live list directly and clear it after, eliminating
-		// the per-frame defensive copy that the old implementation made into `collectedEntries`.
+		// SpriteSatMaskPostProcessor.process(...) never retains the input reference:
+		// with masking on it builds a fresh list; with masking off it returns
+		// `spriteSatEntries` itself (no defensive copy). The replay below consumes
+		// the processed list synchronously, so the live buffer is cleared in the
+		// finally block only after the replay finished with it.
 		List<SpriteSatEntry> processedEntries = SpriteSatMaskPostProcessor.process(spriteSatEntries, applyMask);
 
 		spriteSatCollectionActive = false;
 		spriteMaskRequested = false;
-		spriteSatEntries.clear();
 		currentSpriteSatDebugSource = null;
 		currentSpriteSatBucket = RenderPriority.MIN;
 
-		if (processedEntries.isEmpty()) {
-			return;
-		}
+		try {
+			if (processedEntries.isEmpty()) {
+				return;
+			}
 
-		// The SAT replay must not re-enter renderPatternWithId(): that could merge the
-		// carefully ordered SAT sequence into a still-open batch owned by another layer,
-		// flattening or reordering it. Instead the replay owns its emission: a dedicated
-		// instanced batch (flushed before any direct command so order is preserved, with
-		// per-instance VDP priority carried in the instance data), or — when instanced
-		// batching is unavailable — the original direct per-tile commands.
-		flushPatternBatch();
-		setCurrentSpriteHighPriority(false);
-		if (canBatchSpriteSatReplay()) {
-			replaySpriteSatEntriesBatched(processedEntries);
-			return;
+			// The SAT replay must not re-enter renderPatternWithId(): that could merge the
+			// carefully ordered SAT sequence into a still-open batch owned by another layer,
+			// flattening or reordering it. Instead the replay owns its emission: a dedicated
+			// instanced batch (flushed before any direct command so order is preserved, with
+			// per-instance VDP priority carried in the instance data), or — when instanced
+			// batching is unavailable — the original direct per-tile commands.
+			flushPatternBatch();
+			setCurrentSpriteHighPriority(false);
+			if (canBatchSpriteSatReplay()) {
+				replaySpriteSatEntriesBatched(processedEntries);
+				return;
+			}
+			List<PatternRenderCommand> commands = buildSpriteSatReplayCommands(processedEntries);
+			// `commands` is a reused buffer (`reusableReplayCommands`); copy via index iteration
+			// without releasing the reference, then clear the buffer once registerCommand has
+			// consumed each entry.
+			for (int i = 0, n = commands.size(); i < n; i++) {
+				registerCommand(commands.get(i));
+			}
+			reusableReplayCommands.clear();
+		} finally {
+			spriteSatEntries.clear();
 		}
-		List<PatternRenderCommand> commands = buildSpriteSatReplayCommands(processedEntries);
-		// `commands` is a reused buffer (`reusableReplayCommands`); copy via index iteration
-		// without releasing the reference, then clear the buffer once registerCommand has
-		// consumed each entry.
-		for (int i = 0, n = commands.size(); i < n; i++) {
-			registerCommand(commands.get(i));
-		}
-		reusableReplayCommands.clear();
 	}
 
 	private boolean canBatchSpriteSatReplay() {

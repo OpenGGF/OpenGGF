@@ -409,3 +409,30 @@ test files and the S2 ROM for the baseline side):
 mvn "-Dtest=TestSmpsFadeAudioThroughput,TestHeldRewindAudioStepCost" "-DfailIfNoTests=false" test
 # parseable result lines: FADE_THROUGHPUT ... / HELD_REWIND_STEP_COST ...
 ```
+
+## Phase 4B re-measurement (after Task 11)
+
+Cut: Task 11 (object and render allocation cleanup — ObjectManager /
+ObjectPlacementController / SpriteManager / ObjectSolidContactController
+per-frame scratch reuse, HUD desc reuse, SAT masking-off copy removal,
+captured-command list pooling, S3K dynamic-art batched uploads with reused
+tile scratch). Step 3 probe, same recipe (EHZ1 fixture, forward 1200 then
+600 consecutive `stepBackward()`; values stable across 3 runs):
+
+| Mode | frames | wall | allocated | per-frame | rate @60fps | Phase 3 | baseline |
+|---|---|---|---|---|---|---|---|
+| Forward stepping | 1200 | 0.225 s | 7.71 MB | **6.27 KB** | 0.367 MB/s | 7.46 KB | 7.9 KB |
+| Held rewind (stepBackward) | 600 | 0.282 s | 26.98 MB | **43.91 KB** | 2.573 MB/s | 45.06 KB | 51.8 KB |
+
+Forward-play allocation is down 16% vs Phase 3 (7.46 → 6.27 KB/frame) —
+that is the direct effect of the object-pipeline and render scratch reuse on
+the per-frame engine step. Held rewind moved only 45.06 → 43.91 KB/frame
+(cumulative 1.18x vs the 51.8 KB baseline): as the Phase 3 analysis flagged,
+this probe's held-rewind number is dominated by the ~24.5 KB/frame
+`registry.capture()` share during segment-cache rebuilds, and capture pooling
+is not covered by Task 11 (or any current task) — the forward-step share of
+the rebuild is what shrank here. Still flagged for Task 13 acceptance.
+
+Trace sweep at this cut: **88 run, 52 failures + 1 error — failure set
+identical to the pre-work baseline list** (all baseline-green classes stayed
+green). S3K keep-green list: PASS. Rewind package suite: 250 passed.

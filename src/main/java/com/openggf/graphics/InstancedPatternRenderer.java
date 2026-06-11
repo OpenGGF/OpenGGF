@@ -32,6 +32,9 @@ public class InstancedPatternRenderer {
 
     private static final int MAX_PATTERNS_PER_BATCH = 4096;
     private static final int FLOATS_PER_INSTANCE = 10; // x,y,w,h,u0,v0,u1,v1,palette,highPriority
+    // Flushes per frame roughly track render-priority boundaries, so 8 pooled
+    // commands cover typical frames; pooled commands hold native FloatBuffers,
+    // hence the hard cap rather than an unbounded pool.
     private static final int COMMAND_POOL_LIMIT = 8;
     private static final String PRIORITY_FRAGMENT_SHADER_PATH = "shaders/shader_instanced_priority.glsl";
 
