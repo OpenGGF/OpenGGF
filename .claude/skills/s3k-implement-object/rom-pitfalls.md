@@ -113,6 +113,30 @@ non-playable/object-local state.
 
 ---
 
+## P4b — Rolling status/radius writes without a ROM y_pos write
+
+**Symptom.** A player or sidekick shifts vertically by 1-5 px on an object
+release frame even though the ROM trace keeps `y_pos` unchanged. The frame
+often also flips `Status_Roll`, `Status_InAir`, or collision radii.
+
+**Root cause.** Engine `setRolling(true)` changes top-left-based sprite
+dimensions, which changes `getCentreY()` unless the object restores the
+pre-change center. ROM status/radius writes do not imply a `y_pos` write.
+
+**What to check.** If the ROM block writes `y_radius`, `x_radius`,
+`Status_Roll`, `jumping`, or `anim` but does not write `x_pos`/`y_pos`,
+capture the native center before the engine dimension change and restore it
+with `setCentreYPreserveSubpixel(...)` after `setRolling(...)`. Do not use
+`getRollHeightAdjustment()` unless the ROM explicitly adjusts `y_pos`.
+
+**ROM citation.** `Obj_HCZConveyorBelt` release `loc_312D4`
+(`docs/skdisasm/sonic3k.asm:66440-66457`) writes status/radii/animation but
+does not write `y_pos`.
+
+**Originating commit.** `fix: preserve HCZ conveyor release center y`.
+
+---
+
 ## P5 — SolidObject returns non-solid prematurely on state transition
 
 **Symptom.** Rider drops from a moving solid on the exact frame of an

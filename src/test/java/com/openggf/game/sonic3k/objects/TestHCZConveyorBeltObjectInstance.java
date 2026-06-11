@@ -95,6 +95,8 @@ class TestHCZConveyorBeltObjectInstance {
         assertFalse(player.isObjectControlled());
         assertFalse(player.isObjectControlAllowsCpu());
         assertFalse(player.isObjectControlSuppressesMovement());
+        assertEquals(0x0214, player.getCentreY() & 0xFFFF,
+                "Obj_HCZConveyorBelt loc_312D4 does not write y_pos when releasing");
         assertEquals(-0x500, player.getYSpeed());
 
         player.setJumpInputPressed(false);

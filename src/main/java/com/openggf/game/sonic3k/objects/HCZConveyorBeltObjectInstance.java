@@ -468,6 +468,7 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance {
      */
     private void releaseBelt(AbstractPlayableSprite player, PlayerBeltState state,
                              int frameCounter) {
+        int releaseCentreY = player.getCentreY() & 0xFFFF;
         // ROM: loc_312D4 does NOT modify ground_vel on release. The alternation
         // between top/bottom surfaces is driven by external forces (the HCZ fan)
         // setting ground_vel=1 each frame while the player is in its push column.
@@ -494,6 +495,9 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance {
 
         // ROM: bset #Status_Roll,status(a1) (sonic3k.asm:66454)
         player.setRolling(true);
+        // Engine setRolling(true) shrinks top-left-based sprite dimensions, but
+        // ROM loc_312D4 only writes radii/status/anim and leaves y_pos unchanged.
+        player.setCentreYPreserveSubpixel((short) releaseCentreY);
 
         // ROM: bclr #Status_RollJump,status(a1) (sonic3k.asm:66455)
         player.setRollingJump(false);

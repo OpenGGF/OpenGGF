@@ -95,6 +95,11 @@ All notable changes to the OpenGGF project are documented in this file.
   rise routine and preserves the setup-to-rise fall-through, preventing an
   early eruption handoff in the HCZ complete-run trace.
 
+- **HCZ conveyor release preserves ROM center position:** S3K conveyor-belt
+  jump/release now keeps `y_pos` stable while setting rolling status and radii,
+  matching `Obj_HCZConveyorBelt` and moving the HCZ complete-run trace to the
+  next sidekick landing frontier.
+
 - **HCZ water-rush tunnel entry follows ROM ordering:** S3K button contact now
   publishes its level trigger from the standing solid callback, top-solid
   button boundary rejection matches `SolidObjectTop_1P`, and HCZ water tunnels

@@ -9994,3 +9994,30 @@ Result:
   is a sidekick post-water-wall/conveyor interaction parity issue around
   `HCZConveyorBeltObjectInstance` and the sidekick follow/physics handoff, not
   the vertical water-wall eruption handoff.
+
+## 2026-06-11 — HCZ complete-run conveyor release center preservation
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `bugfix/ai-release-remediation`.
+Commands:
+`mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestHCZConveyorBeltObjectInstance" test`
+`mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+
+Fix:
+- `HCZConveyorBeltObjectInstance` now preserves ROM `y_pos` when
+  `loc_312D4` releases a player from the belt. The ROM writes
+  `Status_InAir`, `jumping`, rolling radii, animation, and `Status_Roll`, but
+  never writes `y_pos` in the release block
+  (`docs/skdisasm/sonic3k.asm:66440-66457`). Engine `setRolling(true)`
+  changes top-left-based sprite dimensions, so the object now restores the
+  pre-release center Y after the rolling dimension change while preserving
+  subpixels.
+
+Result:
+- Focused HCZ conveyor tests are green.
+- HCZ complete-run remains red, but the frontier advanced from frame **3318**
+  to frame **3355**.
+- First error is now frame **3355** `tails_y_speed` expected `0x0000`, actual
+  `0x0318`; `tails_x_speed` and `tails_y` diverge on the same frame. The
+  active owner is the sidekick landing / fixed air-countdown object handoff
+  around nearby `0x0002CFA8` air-countdown slots and sidekick follow physics,
+  not the conveyor release `y_pos` write.
