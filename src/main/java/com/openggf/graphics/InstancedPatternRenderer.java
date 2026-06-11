@@ -91,12 +91,19 @@ public class InstancedPatternRenderer {
         this.drainGlErrors = configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
     }
 
+    // Display height resolved once per batch in beginBatch() and reused by every
+    // addPattern/addStripPattern call (thousands per frame). Safe because FBO
+    // projection state never changes between beginBatch() and endBatch(): call
+    // sites (e.g. special-stage background renderers) set up FBO projection
+    // BEFORE creating the batch and restore it after the batch is flushed.
+    private int batchDisplayHeight;
+
     /**
-     * Gets the current display height for Y coordinate calculations.
+     * Resolves the current display height for Y coordinate calculations.
      * When rendering to an FBO, this returns the FBO height.
      * Otherwise returns the normal screen height.
      */
-    private int getCurrentDisplayHeight() {
+    private int resolveDisplayHeight() {
         Engine engine = graphicsManager.getEngine();
         if (engine != null && engine.isFBOProjectionActive()) {
             return engine.getCurrentDisplayHeight();
@@ -170,6 +177,7 @@ public class InstancedPatternRenderer {
 
     public void beginBatch() {
         instanceCount = 0;
+        batchDisplayHeight = resolveDisplayHeight();
         batchActive = true;
     }
 
@@ -181,9 +189,8 @@ public class InstancedPatternRenderer {
         if (!batchActive || instanceCount >= MAX_PATTERNS_PER_BATCH) {
             return false;
         }
-        // Use dynamic display height for FBO rendering support
-        int currentHeight = getCurrentDisplayHeight();
-        int screenY = currentHeight - y - 8;
+        // Display height resolved once per batch in beginBatch() (FBO-aware)
+        int screenY = batchDisplayHeight - y - 8;
         float u0 = entry.u0();
         float u1 = entry.u1();
         float v0 = entry.v0();
@@ -225,9 +232,8 @@ public class InstancedPatternRenderer {
         if (!batchActive || instanceCount >= MAX_PATTERNS_PER_BATCH) {
             return false;
         }
-        // Use dynamic display height for FBO rendering support
-        int currentHeight = getCurrentDisplayHeight();
-        int screenY = currentHeight - y - 2;
+        // Display height resolved once per batch in beginBatch() (FBO-aware)
+        int screenY = batchDisplayHeight - y - 2;
 
         int rowTop = stripIndex * 2;
         int rowBottom = stripIndex * 2 + 1;
