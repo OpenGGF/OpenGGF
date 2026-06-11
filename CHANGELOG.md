@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K ICZ1 snowboard slope tables preserve ROM subpixels:** the scripted
+  slope table now mirrors `move.w x_pos/y_pos` by changing Sonic's centre
+  pixels without clearing `x_sub`/`y_sub`, so the post-slope snowboard motion
+  keeps the ROM fixed-point accumulator. This moves the ICZ complete-run trace
+  from the frame-505 one-pixel/subpixel position frontier to the frame-1112
+  dormant-Tails CPU routine frontier after the snowboard crash.
+
 - **S3K ICZ1 snowboard slope handoff now publishes ROM object control on the
   final table sample:** the scripted slope exit now applies the last
   `loc_395FE` position row and immediately switches Sonic back to

@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-06-11 - S3K ICZ complete-run progressed to dormant-Tails routine frontier
+
+- Scope: follow-up to the ICZ frame-505 one-pixel/subpixel snowboard drift.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - `IczSnowboardIntroInstance.updateScriptedSlope()` now treats the slope
+    table's `x_pos`/`y_pos` writes like ROM `move.w` operations: centre pixels
+    change, but the low-word `x_sub`/`y_sub` accumulator is preserved.
+  - Focused ICZ headless coverage now asserts the former frame-488 post-slope
+    sample has ROM `x_sub=0x2B00` and `y_sub=0xE000`, proving the final
+    scripted table row carried the ROM accumulator into normal snowboard
+    movement.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIcz1SnowboardIntroHeadless#sonicAndTailsStartsSnowboardIntroWithTailsDormantMarker" test`
+    -> GREEN. Surefire report: `Tests run: 1, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 505 to frame 1112. New
+    first error: native-P2/Tails CPU routine `expected=0x0002`,
+    `actual=0x000A`; Sonic position, subpixels, crash velocities, camera, rings,
+    and dormant Tails position/status match at the first error. ICZ error count
+    is 3000.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-1112 dormant-Tails CPU routine handoff after the snowboard crash,
+  where ROM has left routine `$0A` for routine `$02` but the engine still keeps
+  the sidekick parked at the `$7F00,0` dormant marker.
+
 ## 2026-06-11 - S3K ICZ complete-run progressed to one-pixel snowboard frontier
 
 - Scope: follow-up to the ICZ frame-488 snowboard speed/motion mismatch. Trace

@@ -357,8 +357,8 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         currentX = entry[0];
         currentY = entry[1];
         currentMappingFrame = entry[2];
-        player.setCentreX((short) currentX);
-        player.setCentreY((short) currentY);
+        player.setCentreXPreserveSubpixel((short) currentX);
+        player.setCentreYPreserveSubpixel((short) currentY);
         if (slopeIndex >= table.length) {
             player.setTopSolidBit((byte) 0x0E);
             player.setLrbSolidBit((byte) 0x0F);

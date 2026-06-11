@@ -181,6 +181,10 @@ public class TestS3kIcz1SnowboardIntroHeadless {
                 "ROM loc_395FE should publish object_control=#2 on the final slope-table sample");
         assertEquals(0x0411, sonic.getCentreY(),
                 "Frame-488 ICZ snowboard trace should include the first normal movement sample after slope exit");
+        assertEquals(0x2B00, sonic.getXSubpixelRaw(),
+                "ROM move.w x_pos table writes preserve the existing x_sub accumulator through slope exit");
+        assertEquals(0xE000, sonic.getYSubpixelRaw(),
+                "ROM move.w y_pos table writes preserve the existing y_sub accumulator through slope exit");
         assertEquals(0x120D, sonic.getXSpeed() & 0xFFFF,
                 "Sonic's frame-488 x_vel should reflect the ROM post-slope snowboard speed sample");
         assertEquals(0x076B, sonic.getYSpeed() & 0xFFFF,
