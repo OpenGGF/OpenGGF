@@ -115,8 +115,9 @@ All notable changes to the OpenGGF project are documented in this file.
 
 - **HCZ miniboss vortex release keeps the ROM final pull tick:** the
   water-effect routine-$0A transition now gives captured players the final
-  `sub_6A9B8` pull tick before release, matching the ROM cooldown ordering and
-  advancing the HCZ complete-run trace to the frame-9338 native-P2 X frontier.
+  `sub_6A9B8` pull tick before same-update release, matching the ROM cooldown
+  ordering and advancing the HCZ complete-run trace to the frame-9482
+  post-vortex air-state frontier.
 
 - **S3K sidekick fresh spawns honor the Obj_Tails init-only frame:** fresh
   routine-0 sidekick spawns now reset kinematics and advance to the normal CPU

@@ -227,7 +227,6 @@ public class HczMinibossInstance extends AbstractBossInstance {
     private int waterEffectAnimTimer;
     private boolean waterEffectPullReady;
     private boolean vortexFinalPullPending;
-    private boolean vortexReleasePending;
     private int lastFrameCounter;
     private List<VortexBubbleChild> vortexBubbles;
     private S3kBossExplosionController defeatExplosionController;
@@ -345,7 +344,6 @@ public class HczMinibossInstance extends AbstractBossInstance {
         waterEffectAnimTimer = 0;
         waterEffectPullReady = false;
         vortexFinalPullPending = false;
-        vortexReleasePending = false;
         vortexBubbles = new ArrayList<>();
         defeatExplosionController = null;
         rocketTouchChildren = null;
@@ -451,7 +449,6 @@ public class HczMinibossInstance extends AbstractBossInstance {
         waterEffectAnimTimer = 0;
         waterEffectPullReady = false;
         vortexFinalPullPending = false;
-        vortexReleasePending = false;
         state.invulnerable = false;
         state.invulnerabilityTimer = 0;
         loadBossPalette();
@@ -466,11 +463,6 @@ public class HczMinibossInstance extends AbstractBossInstance {
         lastFrameCounter = frameCounter;
         updateWaterLevel();
         ensureWaterEffectPalette();
-
-        if (vortexReleasePending) {
-            releaseVortexPlayers();
-            vortexReleasePending = false;
-        }
 
         switch (state.routine) {
             case ROUTINE_INIT -> updateInit();
@@ -666,7 +658,6 @@ public class HczMinibossInstance extends AbstractBossInstance {
         waterEffectAnimTimer = 1;
         waterEffectPullReady = false;
         vortexFinalPullPending = false;
-        vortexReleasePending = false;
         waterEffectFrame = WATER_EFFECT_BASE_FRAME;
         crossedWaterThisPass = true;
         services().playSfx(Sonic3kSfx.BOSS_ROTATE.id);
@@ -681,7 +672,6 @@ public class HczMinibossInstance extends AbstractBossInstance {
         waterEffectAnimTimer = 0;
         waterEffectPullReady = false;
         vortexFinalPullPending = true;
-        vortexReleasePending = false;
         for (VortexBubbleChild bubble : vortexBubbles) {
             bubble.signalVortexEnd();
         }
@@ -809,7 +799,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
                 applyVortexPull(player);
             }
             vortexFinalPullPending = false;
-            vortexReleasePending = true;
+            releaseVortexPlayers();
         }
         updateWaitOnly();
     }
