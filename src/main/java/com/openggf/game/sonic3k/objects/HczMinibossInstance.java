@@ -958,6 +958,43 @@ public class HczMinibossInstance extends AbstractBossInstance {
         }
     }
 
+    @Override
+    public String traceDebugDetails() {
+        StringBuilder rocketSummary = new StringBuilder();
+        if (rockets != null) {
+            int count = Math.min(rockets.length, 4);
+            for (int i = 0; i < count; i++) {
+                RocketState rocket = rockets[i];
+                if (rocket == null) {
+                    continue;
+                }
+                if (!rocketSummary.isEmpty()) {
+                    rocketSummary.append(',');
+                }
+                rocketSummary.append(i)
+                        .append(':')
+                        .append(rocket.routine & 0xFF)
+                        .append('/')
+                        .append(rocket.speed);
+            }
+        }
+        return String.format(
+                "r=%02X xV=%04X yV=%04X wait=%d cb=%s pass=%d closed=%s vortex=%s wind=%d water=%04X,%04X wf=%d rockets=%s",
+                state.routine & 0xFF,
+                state.xVel & 0xFFFF,
+                state.yVel & 0xFFFF,
+                waitTimer,
+                waitCallback,
+                passCounter,
+                closedBody,
+                vortexActive,
+                vortexPullWindupTimer,
+                getWaterEffectX() & 0xFFFF,
+                getWaterEffectY() & 0xFFFF,
+                waterEffectFrame,
+                rocketSummary.isEmpty() ? "none" : rocketSummary.toString());
+    }
+
     /**
      * sub_489BA: Fold phase into 0-$7F range and look up signed offset from
      * HCZMiniboss_RocketTwistLookup. Used for BOTH X and Y orbit offsets.
