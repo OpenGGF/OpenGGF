@@ -94,6 +94,12 @@ All notable changes to the OpenGGF project are documented in this file.
   during wind-up, preventing the false Tails hurt at frame 8452 and advancing
   the HCZ complete-run trace to the frame-8683 rolling-state frontier.
 
+- **HCZ miniboss rocket wind-up stays armed after phase reset:** the miniboss
+  fight now resets rocket phases before starting the ROM wind-up sequence, so
+  the first fight no longer parks every child back in routine 2 with collision
+  disabled after arming. This advances the HCZ complete-run trace to the
+  frame-8968 native-P2 vertical frontier.
+
 - **S3K sidekick fresh spawns honor the Obj_Tails init-only frame:** fresh
   routine-0 sidekick spawns now reset kinematics and advance to the normal CPU
   routine without running same-frame follow steering, while dormant sentinel

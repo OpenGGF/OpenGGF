@@ -497,11 +497,11 @@ public class HczMinibossInstance extends AbstractBossInstance {
     private void startFight() {
         services().gameState().setCurrentBossId(0x99);
         services().playMusic(Sonic3kMusic.MINIBOSS.id);
+        resetRocketPhases();
         beginRocketWindUp();
         state.routine = ROUTINE_DESCEND;
         state.yVel = DESCEND_VEL;
         crossedWaterThisPass = false;
-        resetRocketPhases();
         spawnRocketTouchChildren();
         setWait(DESCEND_TIME, WaitCallback.FINISH_DESCENT);
     }

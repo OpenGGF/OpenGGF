@@ -1,5 +1,26 @@
 # Trace Frontier Log
 
+## 2026-06-11 - S3K HCZ complete-run progressed to post-miniboss vertical frontier
+
+- Scope: follow-up to the HCZ frame-8683 native-P2/Tails rolling mismatch after
+  the miniboss rocket children were split into per-child ROM routines. Trace
+  data remained comparison-only diagnostic input; no engine state was hydrated
+  from trace rows, and no zone/route/frame exception was added.
+- Fix:
+  - `HczMinibossInstance.startFight()` now resets rocket phases before starting
+    the ROM wind-up sequence. The previous order called `beginRocketWindUp()`
+    and then immediately parked every rocket back in routine 2 with collision
+    disabled, so the first fight could not arm the child hurt boxes at the ROM
+    rocket-impact frame.
+- Verification:
+  - `mvn "-Dtest=TestS3kHczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first HCZ error moved from frame 8683 to frame 8968. New
+    first error: native-P2/Tails `y` `expected=0x06B6`, `actual=0x06B7`; HCZ
+    error count is 2915.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the frame-8968 one-pixel native-P2/Tails vertical mismatch after the miniboss
+  rocket impact/rolling-state window is cleared.
+
 ## 2026-06-11 - S3K HCZ complete-run progressed to post-miniboss rolling frontier
 
 - Scope: follow-up to the HCZ frame-8452 native-P2/Tails false hurt around the
