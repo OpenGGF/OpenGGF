@@ -137,6 +137,29 @@ does not write `y_pos`.
 
 ---
 
+## P4c — Camera culling uses ROM coarse-back camera registers
+
+**Symptom.** An object disappears one frame before the ROM would process it,
+often causing a missed same-frame sidekick/player interaction near the right
+edge of the object's cull window.
+
+**Root cause.** Engine code compares against `camera.getX() & $FF80`, while
+the S3K object routine reads `Camera_X_pos_coarse_back`, which `Load_Sprites`
+sets to `(Camera_X_pos - $80) & $FF80` before `Process_Sprites`.
+
+**What to check.** When an S3K object routine cites
+`Camera_X_pos_coarse_back`, compute the same `$80`-shifted coarse value before
+left/right cull comparisons. Do not substitute the current raw camera coarse
+unless the ROM routine actually reads `Camera_X_pos`.
+
+**ROM citation.** `Obj_HCZConveyorBelt` cull check
+(`docs/skdisasm/sonic3k.asm:66355-66364`) and `Load_Sprites`
+coarse-back setup (`docs/skdisasm/sonic3k.asm:37472-37478`).
+
+**Originating commit.** `fix: model HCZ conveyor coarse-back culling`.
+
+---
+
 ## P5 — SolidObject returns non-solid prematurely on state transition
 
 **Symptom.** Rider drops from a moving solid on the exact frame of an

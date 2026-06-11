@@ -1,5 +1,27 @@
 # Trace Frontier Log
 
+## 2026-06-11 - S3K HCZ complete-run progressed to post-conveyor Tails landing
+
+- Scope: follow-up to the HCZ frame-3355 conveyor capture mismatch. Trace data
+  remained comparison-only diagnostic input; no engine state was hydrated from
+  trace rows, and no zone/route/frame exception was added.
+- Fix:
+  - `Obj_HCZConveyorBelt` now culls against ROM `Camera_X_pos_coarse_back`
+    semantics, `((Camera_X_pos - $80) & $FF80)`, instead of raw
+    `cameraX & $FF80`. This keeps subtype-5 HCZ conveyor objects alive for the
+    frame-3355 native-P2 capture before they fall off the ROM cull window.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestHCZConveyorBeltObjectInstance" test`
+    -> PASS, 10 tests.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+    -> RED, but the first error moved from frame 3355 to frame 3850:
+    `tails_y` `expected=0x0470`, `actual=0x0471`; the same frame also shows
+    `tails_rolling` expected false while the engine remains rolling.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the frame-3850 native-P2 landing/state handoff around nearby path-swap and
+  floating-platform objects without reopening the solved frame-3355 conveyor
+  cull/capture path unless it regresses.
+
 ## 2026-06-11 - S3K HCZ complete-run progressed to button solid frontier
 
 - Scope: release-remediation follow-up after the frame-125 monitor/Tails

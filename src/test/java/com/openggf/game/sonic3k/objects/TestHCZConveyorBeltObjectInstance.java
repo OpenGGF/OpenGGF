@@ -131,6 +131,29 @@ class TestHCZConveyorBeltObjectInstance {
     }
 
     @Test
+    void coarseBackCameraCullKeepsTrace3355BeltAliveForNativeP2Capture() throws Exception {
+        camera.setX((short) 0x1A21);
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x1ABE, (short) 0x0368);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x19AA, (short) 0x0322);
+        nativeP2.setYSpeed((short) 0x0318);
+        nativeP2.setXSpeed((short) 0x02DF);
+        ObjectServices services = new QueryOnlyPlayerServices(camera, main, List.of(nativeP2), List.of(nativeP2));
+        HCZConveyorBeltObjectInstance belt = buildBelt(services, 0x1928, 0x030B, 0x05, 0);
+
+        belt.update(3355, main);
+
+        assertFalse(belt.isDestroyed(),
+                "Obj_HCZConveyorBelt culls against Camera_X_pos_coarse_back, not raw cameraX&$FF80");
+        assertTrue(nativeP2.isObjectControlled());
+        assertTrue(nativeP2.isObjectControlAllowsCpu());
+        assertTrue(nativeP2.isObjectControlSuppressesMovement());
+        assertEquals(0, nativeP2.getXSpeed());
+        assertEquals(0, nativeP2.getYSpeed());
+        assertEquals(0x63, nativeP2.getMappingFrame());
+        assertEquals(0x031F, nativeP2.getCentreY() & 0xFFFF);
+    }
+
+    @Test
     void capturePreservesStatusRollLikeRom() throws Exception {
         camera.setX((short) 0x0C00);
         TestObjectServices services = new TestObjectServices().withCamera(camera);

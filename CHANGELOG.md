@@ -60,6 +60,11 @@ All notable changes to the OpenGGF project are documented in this file.
   routine without running same-frame follow steering, while dormant sentinel
   entries keep ROM `object_control=$83` movement suppression.
 
+- **HCZ conveyor belts now cull against the ROM coarse-back camera:** S3K
+  `Obj_HCZConveyorBelt` uses `Camera_X_pos_coarse_back`, so paired upper/lower
+  belts remain alive long enough to recapture native P2 on the frame the ROM
+  still processes them.
+
 - **S2 underwater sidekick push bypass follows the ROM branch:** live
   `Status_Push` with delayed Sonic not pushing now skips follow steering even
   underwater and at low x speed, instead of inheriting S3K's AIZ reload

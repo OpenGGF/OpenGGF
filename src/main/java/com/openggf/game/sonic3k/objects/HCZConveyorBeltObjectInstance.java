@@ -212,8 +212,9 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance {
         }
 
         // Camera culling (sonic3k.asm:66355-66364)
-        // ROM: move.w (Camera_X_pos_coarse_back).w,d1 — camera X rounded to 128px boundary
-        int cameraX = services().camera().getX() & 0xFF80;
+        // ROM reads Camera_X_pos_coarse_back, which Load_Sprites recomputes as
+        // (Camera_X_pos - $80) & $FF80 before Process_Sprites.
+        int cameraX = ((services().camera().getX() & 0xFFFF) - 0x80) & 0xFF80;
         int leftCheck = (leftBound & 0xFF80) - CAMERA_MARGIN;
         if (cameraX < leftCheck) {
             unloadBelt();
