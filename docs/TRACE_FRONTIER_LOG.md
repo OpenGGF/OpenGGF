@@ -13,17 +13,21 @@
   - This compensates for engine hook ordering: the engine runs the skim handler
     before player physics, while the ROM splash object runs in object order
     after the player dispatcher (`sonic3k.asm:75442-75443`, `75473-75476`).
+  - The sustained skim surface pin now uses `setCentreYPreserveSubpixel(...)`
+    instead of `setCentreY(...)`. ROM `move.w d0,y_pos(a1)` overwrites only the
+    high position word, so clearing the low `y_sub` word introduced a later
+    one-pixel carry even when velocity, angle, and ground mode already matched.
 - Verification:
   - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.features.TestHCZWaterSkimHandler" test`
     -> PASS, 5 tests.
   - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
-    -> RED, but the first error moved from frame 4286 to frame 4403:
-    main-player `y` `expected=0x0623`, `actual=0x0624`; camera Y also differs
-    by one pixel (`expected=0x05C3`, `actual=0x05C4`).
+    -> RED, but the first error moved from frame 4403 to frame 4872:
+    main-player `x` `expected=0x2AB3`, `actual=0x2AAE`; camera X also differs
+    by five pixels (`expected=0x2A23`, `actual=0x2A1E`).
 - Release state: HCZ complete-run remains red. The next fix should investigate
-  the frame-4403 one-pixel main-player vertical/camera mismatch around the
-  spike/Buggernaut/floating-platform cluster without reopening the solved HCZ
-  water-skim frame-4286 `y_speed` handoff unless it regresses.
+  the frame-4872 PathSwap/AutoSpin/rolling-transition horizontal frontier
+  without reopening the solved HCZ water-skim frame-4286 `y_speed` handoff or
+  frame-4403 subpixel carry unless either regresses.
 
 ## 2026-06-11 - S3K HCZ complete-run progressed to air-count y-speed frontier
 

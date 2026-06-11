@@ -233,7 +233,7 @@ public final class HCZWaterSkimHandler {
 
         // NOW pin player Y to water surface (only if still skimming)
         // ROM: move.w d0,y_pos(a1) / move.w #0,y_vel(a1) (sonic3k.asm:75442-75443)
-        player.setCentreY((short) pinnedY);
+        player.setCentreYPreserveSubpixel((short) pinnedY);
         player.setYSpeed((short) 0);
         if (player.getAir()) {
             // Obj_HCZWaterSplash runs in object order after the player

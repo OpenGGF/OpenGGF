@@ -90,6 +90,7 @@ class TestHCZWaterSkimHandler {
         HCZWaterSkimHandler.update(query, 0x200, 2);
 
         assertTrue(HCZWaterSkimHandler.isSkimActiveP1());
+        verify(main).setCentreYPreserveSubpixel((short) 0x1EF);
         verify(main).suppressNextGravityStep();
     }
 
