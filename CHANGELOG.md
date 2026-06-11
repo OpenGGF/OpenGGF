@@ -88,6 +88,12 @@ All notable changes to the OpenGGF project are documented in this file.
   updates in the ROM `sub_6AB1A`/`Obj_Wait` order. This advances the HCZ
   complete-run trace past frame 8451.
 
+- **HCZ miniboss rockets follow per-child ROM routines:** the four rocket
+  children now keep their own routine, timer, speed, and collision-arm state.
+  In particular, subtype 4/6 rockets honor the ROM's routine-6 no-motion wait
+  during wind-up, preventing the false Tails hurt at frame 8452 and advancing
+  the HCZ complete-run trace to the frame-8683 rolling-state frontier.
+
 - **S3K sidekick fresh spawns honor the Obj_Tails init-only frame:** fresh
   routine-0 sidekick spawns now reset kinematics and advance to the normal CPU
   routine without running same-frame follow steering, while dormant sentinel

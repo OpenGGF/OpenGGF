@@ -199,10 +199,6 @@ public class HczMinibossInstance extends AbstractBossInstance {
     private int storedHorizontalVelocity;
     private int passCounter;
     private boolean closedBody;
-    private boolean rocketsArmed;
-    private int rocketOrbitSpeed;
-    private int rocketSpeedTimer;
-    private RocketSpeedCallback rocketSpeedCallback = RocketSpeedCallback.NONE;
     private boolean arenaYLocked;
     private boolean arenaXLocked;
     private boolean customFlashDirty;
@@ -240,14 +236,15 @@ public class HczMinibossInstance extends AbstractBossInstance {
 
     private enum RocketSpeedCallback {
         NONE,
-        WIND_DOWN_TO_SPEED_2,
+        WIND_UP_TO_ROUTINE_8,
+        WIND_UP_ARM_SPEED_2,
+        WIND_UP_TO_FULL_SPEED,
         WIND_DOWN_TO_SPEED_1,
-        WIND_DOWN_TO_SPEED_0,
-        WIND_UP_TO_SPEED_2,
-        WIND_UP_TO_FULL_SPEED
+        WIND_DOWN_RETURN_TO_INIT
     }
 
     private static final class RocketState implements com.openggf.game.rewind.RewindStateful<RocketState.RewindState> {
+        private final int subtype;
         private int phaseX;
         private int phaseY;
         private int x;
@@ -255,20 +252,26 @@ public class HczMinibossInstance extends AbstractBossInstance {
         private int frame;
         private boolean front;
         private boolean hFlip;
+        private boolean collisionArmed;
+        private int routine;
+        private int speed;
+        private int timer;
+        private RocketSpeedCallback callback = RocketSpeedCallback.NONE;
 
         private record RewindState(int phaseX, int phaseY, int x, int y, int frame,
-                                   boolean front, boolean hFlip) {}
+                                   boolean front, boolean hFlip, boolean collisionArmed,
+                                   int routine, int speed, int timer, RocketSpeedCallback callback) {}
 
-        private RocketState(int phaseX, int phaseY, boolean hFlip) {
-            this.phaseX = phaseX;
-            this.phaseY = phaseY;
-            this.hFlip = hFlip;
+        private RocketState(int subtype) {
+            this.subtype = subtype;
+            this.hFlip = subtype >= 4;
             this.frame = 1;
         }
 
         @Override
         public RewindState captureRewindStateValue() {
-            return new RewindState(phaseX, phaseY, x, y, frame, front, hFlip);
+            return new RewindState(phaseX, phaseY, x, y, frame, front, hFlip, collisionArmed,
+                    routine, speed, timer, callback);
         }
 
         @Override
@@ -280,6 +283,11 @@ public class HczMinibossInstance extends AbstractBossInstance {
             frame = state.frame();
             front = state.front();
             hFlip = state.hFlip();
+            collisionArmed = state.collisionArmed();
+            routine = state.routine();
+            speed = state.speed();
+            timer = state.timer();
+            callback = state.callback();
         }
     }
 
@@ -299,10 +307,6 @@ public class HczMinibossInstance extends AbstractBossInstance {
         storedHorizontalVelocity = 0;
         passCounter = 0;
         closedBody = false;
-        rocketsArmed = false;
-        rocketOrbitSpeed = ROCKET_PHASE_STEP;
-        rocketSpeedTimer = -1;
-        rocketSpeedCallback = RocketSpeedCallback.NONE;
         waitTimer = -1;
         waitCallback = WaitCallback.NONE;
         ascendTargetY = anchorY;
@@ -608,7 +612,6 @@ public class HczMinibossInstance extends AbstractBossInstance {
         state.routine = ROUTINE_WAIT;
         state.xVel = 0;
         state.yVel = 0;
-        rocketsArmed = false;
         beginRocketWindDown();
         services().playSfx(Sonic3kSfx.DOOR_CLOSE.id);
         setWait(0x9F, WaitCallback.BEGIN_VORTEX_SEQUENCE);
@@ -966,61 +969,90 @@ public class HczMinibossInstance extends AbstractBossInstance {
 
     /**
      * Rocket wind-down sequence: matches the disasm's rocket routine $C → 8 chain.
-     * Rockets orbit to home at full speed, then decelerate through speed 2 → 1 → 0.
+     * Rockets orbit to subtype-specific home phases at full speed, then each child
+     * runs its own speed 2 → 1 → routine 2 wait chain.
      * Called when the boss closes for the vortex (bit 3 cleared / startVortexWindup).
      */
     private void beginRocketWindDown() {
-        rocketOrbitSpeed = ROCKET_PHASE_STEP;
-        setRocketSpeedTimer(0x1F, RocketSpeedCallback.WIND_DOWN_TO_SPEED_2);
+        for (RocketState rocket : rockets()) {
+            if (rocket.routine == 10) {
+                rocket.routine = 12;
+                rocket.speed = ROCKET_PHASE_STEP;
+            }
+        }
     }
 
     /**
      * Rocket wind-up sequence: matches the disasm's rocket routine 2 → 4 → 8 → $A chain.
-     * Rockets start slow (speed 1), pause, then ramp to full speed (4).
+     * Rockets start at ROM phases from word_6A344. Subtypes 0/2 advance during the
+     * first wait; subtypes 4/6 hold in routine 6 before joining routine 8.
      * Called when the boss reopens after the vortex (bit 3 set / startPostVortexPause).
      */
     private void beginRocketWindUp() {
-        rocketOrbitSpeed = 1;
-        setRocketSpeedTimer(0x3F, RocketSpeedCallback.WIND_UP_TO_SPEED_2);
+        for (RocketState rocket : rockets()) {
+            initializeRocketWindUp(rocket);
+        }
     }
 
-    private void setRocketSpeedTimer(int frames, RocketSpeedCallback callback) {
-        rocketSpeedTimer = frames;
-        rocketSpeedCallback = callback;
+    private void initializeRocketWindUp(RocketState rocket) {
+        int initialPhase = switch (rocket.subtype) {
+            case 0 -> 0x0000;
+            case 2 -> 0x8080;
+            case 4 -> 0x8000;
+            case 6 -> 0x0080;
+            default -> 0x0000;
+        };
+        rocket.phaseX = (initialPhase >> 8) & 0xFF;
+        rocket.phaseY = initialPhase & 0xFF;
+        rocket.routine = rocket.subtype >= 4 ? 6 : 4;
+        rocket.speed = 1;
+        rocket.timer = 0x3F;
+        rocket.callback = RocketSpeedCallback.WIND_UP_TO_ROUTINE_8;
+        rocket.collisionArmed = false;
+        refreshRocketPosition(rocket);
     }
 
-    private void tickRocketSpeedTimer() {
-        if (rocketSpeedTimer < 0) {
+    private void tickRocketWait(RocketState rocket) {
+        if (rocket.timer < 0) {
             return;
         }
-        rocketSpeedTimer--;
-        if (rocketSpeedTimer >= 0) {
+        rocket.timer--;
+        if (rocket.timer >= 0) {
             return;
         }
-        RocketSpeedCallback callback = rocketSpeedCallback;
-        rocketSpeedCallback = RocketSpeedCallback.NONE;
-        rocketSpeedTimer = -1;
-        runRocketSpeedCallback(callback);
+        RocketSpeedCallback callback = rocket.callback;
+        rocket.callback = RocketSpeedCallback.NONE;
+        rocket.timer = -1;
+        runRocketCallback(rocket, callback);
     }
 
-    private void runRocketSpeedCallback(RocketSpeedCallback callback) {
+    private void runRocketCallback(RocketState rocket, RocketSpeedCallback callback) {
         switch (callback) {
-            case WIND_DOWN_TO_SPEED_2 -> {
-                rocketOrbitSpeed = 2;
-                setRocketSpeedTimer(0x1F, RocketSpeedCallback.WIND_DOWN_TO_SPEED_1);
+            case WIND_UP_TO_ROUTINE_8 -> {
+                rocket.routine = 8;
+                rocket.timer = 0x3F;
+                rocket.callback = RocketSpeedCallback.WIND_UP_ARM_SPEED_2;
             }
-            case WIND_DOWN_TO_SPEED_1 -> {
-                rocketOrbitSpeed = 1;
-                setRocketSpeedTimer(0x1F, RocketSpeedCallback.WIND_DOWN_TO_SPEED_0);
-            }
-            case WIND_DOWN_TO_SPEED_0 -> rocketOrbitSpeed = 0;
-            case WIND_UP_TO_SPEED_2 -> {
-                rocketOrbitSpeed = 2;
-                setRocketSpeedTimer(0x3F, RocketSpeedCallback.WIND_UP_TO_FULL_SPEED);
+            case WIND_UP_ARM_SPEED_2 -> {
+                rocket.speed = 2;
+                rocket.collisionArmed = true;
+                rocket.timer = 0x1F;
+                rocket.callback = RocketSpeedCallback.WIND_UP_TO_FULL_SPEED;
             }
             case WIND_UP_TO_FULL_SPEED -> {
-                rocketOrbitSpeed = ROCKET_PHASE_STEP;
-                rocketsArmed = true;
+                rocket.routine = 10;
+                rocket.speed = ROCKET_PHASE_STEP;
+                rocket.collisionArmed = true;
+            }
+            case WIND_DOWN_TO_SPEED_1 -> {
+                rocket.routine = rocket.subtype >= 4 ? 4 : 6;
+                rocket.speed = 1;
+                rocket.timer = 0x3F;
+                rocket.callback = RocketSpeedCallback.WIND_DOWN_RETURN_TO_INIT;
+            }
+            case WIND_DOWN_RETURN_TO_INIT -> {
+                rocket.routine = 2;
+                rocket.collisionArmed = false;
             }
             case NONE -> {
             }
@@ -1034,11 +1066,38 @@ public class HczMinibossInstance extends AbstractBossInstance {
      * "figure-8 twist" orbit where rockets cross in front of the boss.
      */
     private void updateRocketOrbit() {
-        int phaseStep = rocketOrbitSpeed;
-        // ROM order: Obj_HCZMiniboss_Rockets runs sub_6AB1A before Obj_Wait
-        // can dispatch the delayed speed callback (sonic3k.asm:139613-139707).
-        advanceRocketOrbit(phaseStep);
-        tickRocketSpeedTimer();
+        int engineIndex = 0;
+        RocketState[] rocketStates = rockets();
+        for (int i = 0; i < rocketStates.length; i++) {
+            RocketState rocket = rocketStates[i];
+            updateRocketState(rocket);
+            if (i == 0) {
+                engineIndex = (rocket.phaseY >> 3) & 0x0F;
+            }
+        }
+        state.routineSecondary = engineIndex;
+    }
+
+    private void updateRocketState(RocketState rocket) {
+        switch (rocket.routine) {
+            case 4, 8 -> {
+                advanceRocket(rocket, rocket.speed);
+                tickRocketWait(rocket);
+            }
+            case 6 -> tickRocketWait(rocket);
+            case 10 -> advanceRocket(rocket, rocket.speed);
+            case 12 -> {
+                advanceRocket(rocket, rocket.speed);
+                if (rocket.phaseX == rocketWindDownTarget(rocket)) {
+                    rocket.routine = 8;
+                    rocket.collisionArmed = false;
+                    rocket.speed = 2;
+                    rocket.timer = 0x1F;
+                    rocket.callback = RocketSpeedCallback.WIND_DOWN_TO_SPEED_1;
+                }
+            }
+            default -> refreshRocketPosition(rocket);
+        }
     }
 
     private void advanceRocketOrbit(int phaseStep) {
@@ -1046,20 +1105,38 @@ public class HczMinibossInstance extends AbstractBossInstance {
         RocketState[] rocketStates = rockets();
         for (int i = 0; i < rocketStates.length; i++) {
             RocketState rocket = rocketStates[i];
-            rocket.phaseX = (rocket.phaseX + phaseStep) & 0xFF;
-            rocket.phaseY = (rocket.phaseY + phaseStep) & 0xFF;
-            int offsetX = rocketTwistOffset(rocket.phaseX);
-            int offsetY = rocketTwistOffset(rocket.phaseY);
-            rocket.x = state.x + offsetX;
-            rocket.y = state.y + offsetY;
-            int frameIndex = (rocket.phaseY >> 4) & 0x0F;
-            rocket.frame = ROCKET_FRAMES[frameIndex];
-            rocket.front = frameIndex < 8;
+            advanceRocket(rocket, phaseStep);
             if (i == 0) {
                 engineIndex = (rocket.phaseY >> 3) & 0x0F;
             }
         }
         state.routineSecondary = engineIndex;
+    }
+
+    private void advanceRocket(RocketState rocket, int phaseStep) {
+        rocket.phaseX = (rocket.phaseX + phaseStep) & 0xFF;
+        rocket.phaseY = (rocket.phaseY + phaseStep) & 0xFF;
+        refreshRocketPosition(rocket);
+    }
+
+    private void refreshRocketPosition(RocketState rocket) {
+        int offsetX = rocketTwistOffset(rocket.phaseX);
+        int offsetY = rocketTwistOffset(rocket.phaseY);
+        rocket.x = state.x + offsetX;
+        rocket.y = state.y + offsetY;
+        int frameIndex = (rocket.phaseY >> 4) & 0x0F;
+        rocket.frame = ROCKET_FRAMES[frameIndex];
+        rocket.front = frameIndex < 8;
+    }
+
+    private int rocketWindDownTarget(RocketState rocket) {
+        return switch (rocket.subtype) {
+            case 0 -> 0x80;
+            case 2 -> 0x00;
+            case 4 -> 0xC0;
+            case 6 -> 0x40;
+            default -> 0x80;
+        };
     }
 
     private void refreshRocketOrbitPositions() {
@@ -1280,7 +1357,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
 
         @Override
         public int getCollisionFlags() {
-            return getRocketCollisionFlags();
+            return getRocketCollisionFlags(rocketIndex);
         }
 
         @Override
@@ -1310,15 +1387,13 @@ public class HczMinibossInstance extends AbstractBossInstance {
     }
 
     private void resetRocketPhases() {
-        RocketState[] rocketStates = rockets();
-        rocketStates[0].phaseX = 0x00;
-        rocketStates[0].phaseY = 0x00;
-        rocketStates[1].phaseX = 0x80;
-        rocketStates[1].phaseY = 0x80;
-        rocketStates[2].phaseX = 0x80;
-        rocketStates[2].phaseY = 0x00;
-        rocketStates[3].phaseX = 0x00;
-        rocketStates[3].phaseY = 0x80;
+        for (RocketState rocket : rockets()) {
+            initializeRocketWindUp(rocket);
+            rocket.routine = 2;
+            rocket.timer = -1;
+            rocket.callback = RocketSpeedCallback.NONE;
+            rocket.collisionArmed = false;
+        }
         refreshRocketOrbitPositions();
     }
 
@@ -1332,10 +1407,10 @@ public class HczMinibossInstance extends AbstractBossInstance {
             return;
         }
         rockets = new RocketState[] {
-                new RocketState(0x00, 0x00, false),
-                new RocketState(0x80, 0x80, false),
-                new RocketState(0x80, 0x00, true),
-                new RocketState(0x00, 0x80, true)
+                new RocketState(0),
+                new RocketState(2),
+                new RocketState(4),
+                new RocketState(6)
         };
     }
 
@@ -1346,8 +1421,8 @@ public class HczMinibossInstance extends AbstractBossInstance {
         return CORE_COLLISION_FLAGS;
     }
 
-    private int getRocketCollisionFlags() {
-        if (!isFightVisible() || state.defeated || !rocketsArmed) {
+    private int getRocketCollisionFlags(int rocketIndex) {
+        if (!isFightVisible() || state.defeated || !rockets()[rocketIndex].collisionArmed) {
             return 0;
         }
         return ROCKET_COLLISION_FLAGS;
@@ -1519,7 +1594,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
         // Rockets orbit the boss with a front/back split matching VDP priority:
         // Back rockets (priority $200, phaseY index < 8) drawn BEHIND boss body.
         // Front rockets (priority $280, phaseY index >= 8) drawn IN FRONT of boss body.
-        boolean showRocketExhaust = rocketsArmed && (lastFrameCounter & 1) == 0;
+        boolean showRocketExhaust = areRocketExhaustsVisible() && (lastFrameCounter & 1) == 0;
         for (RocketState rocket : rockets()) {
             if (!rocket.front) {
                 if (showRocketExhaust) {
@@ -1548,6 +1623,15 @@ public class HczMinibossInstance extends AbstractBossInstance {
                 renderer.drawFrameIndex(rocket.frame, rocket.x, rocket.y, rocket.hFlip, false);
             }
         }
+    }
+
+    private boolean areRocketExhaustsVisible() {
+        for (RocketState rocket : rockets()) {
+            if (rocket.collisionArmed) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

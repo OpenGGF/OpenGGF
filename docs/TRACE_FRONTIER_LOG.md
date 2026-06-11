@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+## 2026-06-11 - S3K HCZ complete-run progressed to post-miniboss rolling frontier
+
+- Scope: follow-up to the HCZ frame-8452 native-P2/Tails false hurt around the
+  HCZ miniboss rocket children. Trace data remained comparison-only diagnostic
+  input; no engine state was hydrated from trace rows, and no zone/route/frame
+  exception was added.
+- Fix:
+  - `HczMinibossInstance` now tracks each rocket child's ROM routine, speed
+    byte, wait timer, callback, and collision-arm state independently instead
+    of using one parent-wide rocket speed/collision flag.
+  - The wind-up sequence now mirrors `Obj_HCZMiniboss_Rockets`: subtypes 0/2
+    enter routine 4 and advance during the first `$3F` wait, while subtypes
+    4/6 enter routine 6 and hold position before joining routine 8. The
+    wind-down sequence now lets each child run routine `$C` until its own
+    subtype target phase (`$80, $00, $C0, $40`) is reached before clearing
+    collision and entering the return-to-init wait chain
+    (`sonic3k.asm:139572-139707`, `140389-140461`).
+- Verification:
+  - `mvn "-Dtest=TestS3kHczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first error moved from frame 8452 to frame 8683. New first
+    error: native-P2/Tails `rolling` `expected=0`, `actual=1`; HCZ error count
+    is 3224.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the frame-8683 Tails rolling-state mismatch after the miniboss rocket false
+  hurt is no longer present.
+
 ## 2026-06-11 - S3K HCZ complete-run progressed to miniboss rocket timing frontier
 
 - Scope: follow-up to the HCZ frame-8451 native-P2/Tails one-pixel `y`
