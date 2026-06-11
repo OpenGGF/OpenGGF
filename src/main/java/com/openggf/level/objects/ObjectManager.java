@@ -147,6 +147,19 @@ public class ObjectManager {
             com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>>
             pendingPlayerBoundEntries = new java.util.HashMap<>();
 
+    // Rewind: in-place restore support. Matching live instances are reused by the
+    // snapshot restore instead of destroy/recreate when the class passes the
+    // non-captured-field audit (see isRewindInPlaceReuseSafeClass). The scratch map
+    // indexes live instances by spawn identity for one restore pass; the
+    // side-effect map latches classes whose constructors spawn children / reserve
+    // child slots during an in-restore recreate (observed per session) onto the
+    // recreate path, because reuse would skip those construction side effects.
+    private boolean rewindInPlaceRestoreEnabled = true;
+    private final Map<ObjectSpawn, ObjectInstance> rewindRestoreReuseScratch = new IdentityHashMap<>();
+    private final Map<Class<?>, Boolean> rewindRestoreConstructionSideEffects = new HashMap<>();
+    private static final java.util.concurrent.ConcurrentMap<Class<?>, Boolean>
+            REWIND_IN_PLACE_REUSE_SAFE_CLASSES = new java.util.concurrent.ConcurrentHashMap<>();
+
     private final PlaneSwitchers planeSwitchers;
     private final ObjectSolidContactController solidContacts;
     private final ObjectTouchResponseController touchResponses;
@@ -2942,18 +2955,22 @@ public class ObjectManager {
      *   <li>Clears the current active object table (without triggering ObjectPlacementController state
      *       side-effects).</li>
      *   <li>Restores scalar counters and {@link SlotAllocator} occupancy.</li>
-     *   <li>Re-instantiates each captured object from its {@link ObjectSpawn} using the
+     *   <li>Reuses the live instance in place when the snapshot entry matches it on
+     *       (spawn identity, slot index, class) and the class passes the
+     *       non-captured-field audit ({@link #isRewindInPlaceReuseSafeClass});
+     *       otherwise re-instantiates from its {@link ObjectSpawn} using the
      *       same {@link ObjectRegistry#create} pipeline used by {@code syncActiveSpawnsLoad},
      *       with the slot pre-assigned from the snapshot.</li>
-     *   <li>Calls {@link AbstractObjectInstance#restoreRewindState} on each new instance
-     *       to hydrate the captured field surface.</li>
+     *   <li>Calls {@link AbstractObjectInstance#restoreRewindState} on each restored
+     *       instance to hydrate the captured field surface.</li>
      *   <li>Restores {@code reservedChildSlots} entries.</li>
      * </ol>
      *
      * <p><strong>Holder re-resolution contract:</strong> Holders of direct
      * {@link ObjectInstance} references (Camera target, {@code LevelEventManager} boss
-     * reference, etc.) <em>must</em> re-resolve their references after restore — the
-     * instances are fresh Java objects even though they represent the same logical slot.
+     * reference, etc.) <em>must</em> re-resolve their references after restore — an
+     * instance may be a fresh Java object even though it represents the same logical
+     * slot (in-place reuse keeps identities only for audited matching entries).
      * Camera already re-resolves its target via {@code SpriteManager} on each snapshot
      * restore (Track C). Other subsystems should do the same.
      *
@@ -2980,6 +2997,7 @@ public class ObjectManager {
                         slots.add(new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry(
                                 aoi.getSlotIndex(),
                                 spawn,
+                                aoi.getClass().getName(),
                                 captureObjectRewindState(aoi, rewindContext)
                         ));
                     }
@@ -3044,7 +3062,17 @@ public class ObjectManager {
             @Override
             public void restore(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot s) {
                 com.openggf.game.rewind.schema.RewindCaptureContext rewindContext = rewindCaptureContext();
-                // 1. Clear current active objects (without mutating ObjectPlacementController state)
+                // 0. Index live instances by spawn identity so matching snapshot entries
+                //    can reuse them in place instead of paying a full reconstruction.
+                Map<ObjectSpawn, ObjectInstance> previousActive = rewindRestoreReuseScratch;
+                previousActive.clear();
+                if (rewindInPlaceRestoreEnabled && !activeObjects.isEmpty()) {
+                    previousActive.putAll(activeObjects);
+                }
+                // 1. Clear current active objects (without mutating ObjectPlacementController state).
+                //    Extra live objects absent from the snapshot are dropped here exactly as the
+                //    pre-reuse path dropped them (reference drop, no onUnload), via not being
+                //    re-registered below.
                 clearActiveObjects();
                 dynamicObjects.clear();
                 Arrays.fill(execOrder, null);
@@ -3059,30 +3087,58 @@ public class ObjectManager {
                 bucketsDirty = s.bucketsDirty();
                 activeObjectsCacheDirty = true;
 
-                // 3. Re-instantiate each captured object from its spawn
-                for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry entry : s.slots()) {
-                    ObjectSpawn spawn = entry.spawn();
-                    int targetSlot = entry.slotIndex();
-                    // Use PRE_ALLOCATED_SLOT so the constructor picks up the correct slot
-                    ObjectInstance inst = ObjectConstructionContext.withRewindActiveRestore(
-                            () -> ObjectConstructionContext.with(objectServices, targetSlot,
-                                    () -> registry != null ? registry.create(spawn) : null));
-                    if (inst instanceof AbstractObjectInstance aoi) {
-                        aoi.setServices(objectServices);
-                        if (aoi.getSlotIndex() < 0 && targetSlot >= 0) {
-                            aoi.setSlotIndex(targetSlot);
+                // 3. Restore each captured object: reuse the live instance in place when it
+                //    is provably equivalent to a fresh reconstruction, otherwise recreate
+                //    from the spawn as before. The finally-clear guarantees the scratch
+                //    map never retains stale instance refs past this restore, even when a
+                //    factory or per-object restore throws.
+                try {
+                    for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry entry : s.slots()) {
+                        ObjectSpawn spawn = entry.spawn();
+                        int targetSlot = entry.slotIndex();
+                        ObjectInstance previous = previousActive.get(spawn);
+                        ObjectInstance inst;
+                        if (previous instanceof AbstractObjectInstance previousAoi
+                                && canReuseForRewindRestore(previousAoi, entry)) {
+                            // Reused instances keep their injected services and renderer wiring.
+                            inst = previous;
+                        } else {
+                            // Use PRE_ALLOCATED_SLOT so the constructor picks up the correct slot
+                            int dynamicCountBefore = dynamicObjects.size();
+                            int reservedChildBefore = reservedChildSlots.size();
+                            inst = ObjectConstructionContext.withRewindActiveRestore(
+                                    () -> ObjectConstructionContext.with(objectServices, targetSlot,
+                                            () -> registry != null ? registry.create(spawn) : null));
+                            if (inst != null) {
+                                // Constructors that spawn children or reserve child slots have
+                                // restore-relevant construction side effects that in-place reuse
+                                // would skip; latch those classes onto the recreate path.
+                                boolean constructionSideEffects =
+                                        dynamicObjects.size() != dynamicCountBefore
+                                        || reservedChildSlots.size() != reservedChildBefore;
+                                rewindRestoreConstructionSideEffects.merge(
+                                        inst.getClass(), constructionSideEffects, Boolean::logicalOr);
+                            }
                         }
-                        // 4. Restore per-instance state
-                        restoreObjectRewindState(aoi, entry.state(), rewindContext);
-                        registerActiveObject(spawn, inst);
-                        // Wire into execOrder if within the managed slot window
-                        int execIdx = execIndexForSlot(aoi.getSlotIndex());
-                        if (execIdx >= 0 && execIdx < execOrder.length) {
-                            execOrder[execIdx] = aoi;
+                        if (inst instanceof AbstractObjectInstance aoi) {
+                            aoi.setServices(objectServices);
+                            if (aoi.getSlotIndex() < 0 && targetSlot >= 0) {
+                                aoi.setSlotIndex(targetSlot);
+                            }
+                            // 4. Restore per-instance state
+                            restoreObjectRewindState(aoi, entry.state(), rewindContext);
+                            registerActiveObject(spawn, inst);
+                            // Wire into execOrder if within the managed slot window
+                            int execIdx = execIndexForSlot(aoi.getSlotIndex());
+                            if (execIdx >= 0 && execIdx < execOrder.length) {
+                                execOrder[execIdx] = aoi;
+                            }
+                        } else if (inst != null) {
+                            registerActiveObject(spawn, inst);
                         }
-                    } else if (inst != null) {
-                        registerActiveObject(spawn, inst);
                     }
+                } finally {
+                    previousActive.clear();
                 }
 
                 // 5. Restore reservedChildSlots
@@ -3164,6 +3220,140 @@ public class ObjectManager {
             }
         }
         return false;
+    }
+
+    /**
+     * Test hook: toggles the in-place reuse fast path of the rewind restore.
+     * When disabled, every snapshot entry is destroy/recreated (the pre-reuse
+     * behavior), which the in-place restore equivalence test uses as the
+     * reference path.
+     */
+    public void setRewindInPlaceRestoreEnabledForTest(boolean enabled) {
+        this.rewindInPlaceRestoreEnabled = enabled;
+    }
+
+    private boolean canReuseForRewindRestore(AbstractObjectInstance previous,
+            com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry entry) {
+        if (previous.getSlotIndex() != entry.slotIndex()) {
+            return false;
+        }
+        Class<?> type = previous.getClass();
+        if (entry.className() == null || !type.getName().equals(entry.className())) {
+            return false;
+        }
+        // Require one observed in-restore reconstruction of this class without
+        // construction side effects before reusing instances of it.
+        Boolean observed = rewindRestoreConstructionSideEffects.get(type);
+        if (observed == null || observed) { // null = never observed in-restore, true = has side effects
+            return false;
+        }
+        return isRewindInPlaceReuseSafeClass(type);
+    }
+
+    private static final Set<Class<?>> REWIND_IMMUTABLE_VALUE_TYPES = Set.of(
+            Boolean.class, Byte.class, Character.class, Short.class,
+            Integer.class, Long.class, Float.class, Double.class, String.class);
+
+
+    /**
+     * Returns true when instances of {@code type} may be reused in place by the
+     * rewind restore instead of destroy/recreated.
+     *
+     * <p>The destroy/recreate path resets every non-captured field to its
+     * constructor value on each restore; in-place reuse keeps the live value.
+     * The two are equivalent only when every field declared below
+     * {@link AbstractObjectInstance} is either (a) captured by the default
+     * capture path (restored from the snapshot on both paths) or (b) a
+     * {@code final} construction-constant — an immutable value or a structural
+     * reference the constructor derives deterministically (renderer handles,
+     * mapping/sheet data, services). Classes with concrete capture/restore
+     * overrides (unprovable hand-written coverage), non-final non-captured
+     * fields (frame-coupled mutable state), or non-captured object/player
+     * references, collections, or arrays (mutable or identity-coupled content)
+     * fall back to recreate.
+     *
+     * <p>{@code AbstractObjectInstance} itself is fully covered by the base
+     * snapshot record (its only non-captured members are the final
+     * {@code spawn}/{@code name} and the intentionally retained
+     * {@code services} handle). {@code AbstractBadnikInstance} is hand-audited:
+     * its movement fields ride {@code BadnikRewindExtra}, {@code destructionConfig}
+     * is a final structural config, and the three {@code cachedDebug*} fields are
+     * self-correcting render caches (the label regenerates whenever
+     * {@code animFrame}/{@code facingLeft} change, so a stale cache is only kept
+     * when it is already correct).
+     *
+     * <p>Public for the in-place restore audit test.
+     */
+    public static boolean isRewindInPlaceReuseSafeClass(Class<?> type) {
+        return REWIND_IN_PLACE_REUSE_SAFE_CLASSES.computeIfAbsent(type,
+                ObjectManager::computeRewindInPlaceReuseSafeClass);
+    }
+
+    private static boolean computeRewindInPlaceReuseSafeClass(Class<?> type) {
+        if (!AbstractObjectInstance.class.isAssignableFrom(type)
+                || Modifier.isAbstract(type.getModifiers())
+                || type.isAnnotationPresent(com.openggf.game.rewind.RewindRecreateOnRestore.class)) {
+            // The annotation pins classes whose constructors have restore-relevant
+            // side effects the field audit cannot see (e.g. global zone-state
+            // writes) onto the destroy/recreate path.
+            return false;
+        }
+        boolean badnik = AbstractBadnikInstance.class.isAssignableFrom(type);
+        boolean defaultCapture = badnik
+                ? com.openggf.game.rewind.GenericRewindEligibility.usesDefaultBadnikSubclassCapture(type)
+                : com.openggf.game.rewind.GenericRewindEligibility.usesDefaultObjectSubclassCapture(type);
+        if (!defaultCapture) {
+            // Concrete capture/restore override: hand-written coverage is not
+            // reflectively provable, so keep the recreate semantics.
+            return false;
+        }
+        Set<java.lang.reflect.Field> captured = new HashSet<>(
+                com.openggf.game.rewind.GenericFieldCapturer.defaultObjectSubclassCapturedFieldsForAudit(type));
+        for (Class<?> cls = type;
+                cls != null && cls != AbstractObjectInstance.class;
+                cls = cls.getSuperclass()) {
+            if (cls == AbstractBadnikInstance.class) {
+                continue; // hand-audited; see method Javadoc
+            }
+            for (java.lang.reflect.Field field : cls.getDeclaredFields()) {
+                if (Modifier.isStatic(field.getModifiers()) || field.isSynthetic()) {
+                    continue;
+                }
+                if (captured.contains(field)) {
+                    continue;
+                }
+                if (!isRewindReuseSafeNonCapturedField(field)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private static boolean isRewindReuseSafeNonCapturedField(java.lang.reflect.Field field) {
+        if (!Modifier.isFinal(field.getModifiers())) {
+            // Mutable non-captured state: recreate resets it, reuse cannot.
+            return false;
+        }
+        Class<?> type = field.getType();
+        if (type.isPrimitive() || type.isEnum() || REWIND_IMMUTABLE_VALUE_TYPES.contains(type)) {
+            return true;
+        }
+        if (type.isArray()
+                || Collection.class.isAssignableFrom(type)
+                || Map.class.isAssignableFrom(type)) {
+            // Non-captured mutable container content.
+            return false;
+        }
+        if (ObjectInstance.class.isAssignableFrom(type)
+                || PlayableEntity.class.isAssignableFrom(type)) {
+            // Cross-instance identity link; the target may be recreated by restore.
+            return false;
+        }
+        // Final structural reference (renderer handle, sheet/mapping data,
+        // services, spawn): the constructor derives it deterministically, so the
+        // live value matches what a reconstruction would compute.
+        return true;
     }
 
     private long[] captureOwnedUsedSlotBits() {
