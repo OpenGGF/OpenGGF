@@ -72,6 +72,12 @@ All notable changes to the OpenGGF project are documented in this file.
   `y_pos` adjustment at the HCZ complete-run frame-3850 frontier and advances
   the trace to the next main-player air-count handoff.
 
+- **HCZ water-skim airborne handoff respects ROM object order:** the S3K
+  water-skim handler now suppresses the same-frame generic gravity tick when
+  the splash object pins or speed-exits an airborne player. This matches
+  `Obj_HCZWaterSplash` running after the player dispatcher and advances the HCZ
+  complete-run trace past the frame-4286 `y_speed` frontier.
+
 - **S2 underwater sidekick push bypass follows the ROM branch:** live
   `Status_Push` with delayed Sonic not pushing now skips follow steering even
   underwater and at low x speed, instead of inheriting S3K's AIZ reload

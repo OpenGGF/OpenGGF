@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+## 2026-06-11 - S3K HCZ complete-run progressed to post-skim y/camera frontier
+
+- Scope: follow-up to the HCZ frame-4286 main-player `y_speed` mismatch.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no zone/route/frame exception was added.
+- Fix:
+  - `HCZWaterSkimHandler` now suppresses the immediate generic airborne
+    gravity step when `Obj_HCZWaterSplash` semantics pin an airborne skimming
+    player to the water surface or clear the splash active bit on speed/terrain
+    exit.
+  - This compensates for engine hook ordering: the engine runs the skim handler
+    before player physics, while the ROM splash object runs in object order
+    after the player dispatcher (`sonic3k.asm:75442-75443`, `75473-75476`).
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.features.TestHCZWaterSkimHandler" test`
+    -> PASS, 5 tests.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+    -> RED, but the first error moved from frame 4286 to frame 4403:
+    main-player `y` `expected=0x0623`, `actual=0x0624`; camera Y also differs
+    by one pixel (`expected=0x05C3`, `actual=0x05C4`).
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the frame-4403 one-pixel main-player vertical/camera mismatch around the
+  spike/Buggernaut/floating-platform cluster without reopening the solved HCZ
+  water-skim frame-4286 `y_speed` handoff unless it regresses.
+
 ## 2026-06-11 - S3K HCZ complete-run progressed to air-count y-speed frontier
 
 - Scope: follow-up to the HCZ frame-3850 native-P2 rolling-state mismatch.

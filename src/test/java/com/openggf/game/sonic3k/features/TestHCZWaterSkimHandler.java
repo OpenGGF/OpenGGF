@@ -78,6 +78,38 @@ class TestHCZWaterSkimHandler {
         assertTrue(HCZWaterSkimHandler.isSkimActiveP2());
     }
 
+    @Test
+    void airborneSustainSuppressesSameFrameGravityBecauseRomObjectRunsAfterPlayer() {
+        AbstractPlayableSprite main = skimmingCandidate();
+        when(main.getAir()).thenReturn(true);
+        ObjectPlayerQuery query = new ObjectPlayerQuery(
+                () -> main,
+                List::of);
+
+        HCZWaterSkimHandler.update(query, 0x200, 1);
+        HCZWaterSkimHandler.update(query, 0x200, 2);
+
+        assertTrue(HCZWaterSkimHandler.isSkimActiveP1());
+        verify(main).suppressNextGravityStep();
+    }
+
+    @Test
+    void airborneSpeedExitSuppressesSameFrameGravityBecauseRomObjectRunsAfterPlayer() {
+        AbstractPlayableSprite main = skimmingCandidate();
+        when(main.getAir()).thenReturn(true);
+        when(main.getXSpeed()).thenReturn((short) 0x700, (short) 0x6FF);
+        ObjectPlayerQuery query = new ObjectPlayerQuery(
+                () -> main,
+                List::of);
+
+        HCZWaterSkimHandler.update(query, 0x200, 1);
+        HCZWaterSkimHandler.update(query, 0x200, 2);
+
+        assertFalse(HCZWaterSkimHandler.isSkimActiveP1());
+        verify(main).setWaterSkimActive(false);
+        verify(main).suppressNextGravityStep();
+    }
+
     private static AbstractPlayableSprite skimmingCandidate() {
         AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
         when(player.getYSpeed()).thenReturn((short) 0);
