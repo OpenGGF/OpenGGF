@@ -436,3 +436,21 @@ the rebuild is what shrank here. Still flagged for Task 13 acceptance.
 Trace sweep at this cut: **88 run, 52 failures + 1 error — failure set
 identical to the pre-work baseline list** (all baseline-green classes stayed
 green). S3K keep-green list: PASS. Rewind package suite: 250 passed.
+
+## Phase 4C trig audit (Task 12)
+
+Evidence-gated audit of the three named `Math.sin`/`Math.atan2` call sites.
+Verdicts recorded so the audit is not repeated:
+
+| Site | ROM routine / citation | Verdict |
+|---|---|---|
+| `AbstractBadnikInstance.oscillateVertical` (sine bob) | n/a — no ROM counterpart engaged | **LEAVE** — dead code: zero callers in `src/main` and `src/test` (the "per badnik per frame" cost premise is wrong; the helper never runs). Nothing to gate against; removing or porting it is out of scope. |
+| `BreathingBubbleInstance.update` (bubble X wobble, `Math.sin`) | S1 `Drown_WobbleData` (`docs/s1disasm/_incObj/0A Drowning Countdown.asm:151`, used by `_incObj/64 Bubbles.asm:68-76` and `0A Drowning Countdown.asm:71-84`); S2 `Obj0A_WobbleData` (`s2.asm:41921-41935`, table at `s2.asm:42030`) | **LEAVE** — the ROM uses a bespoke 128-entry signed wobble table (amplitude ±4, period 128 frames, random initial phase from `RandomNumber`, applied to a stored origin X), NOT `CalcSine`/`SINCOSLIST`. A `TrigLookupTable` swap would not reproduce the ROM arithmetic. **Parity gap (future work):** engine uses `2*sin(2*pi*t/32)` with facing-based sign and no random phase; a faithful port needs the wobble table + `obAngle` random seed + the `-$88` subpixel rise speed. |
+| `TailsTailsController.computeDirectionalOffset`/`computeDirectionalFlips` (`Math.atan2`) | S2 `TAnim_GetTailFrame` (`s2.asm:41478-41481`) -> `CalcAngle` (`s2.asm:4037-4081`, `Angle_Data` table); S3K tail directional handler `loc_15A3C` (`sonic3k.asm`) -> `GetArcTan` (`sonic3k.asm:3043`, `ArcTanTable`) — structurally identical routine | **REPLACED** — routed through the existing exact ROM port `TrigLookupTable.calcAngle()`. Trace sweep after the swap: 88 run, 52 failures + 1 error; per-class error counts and first-error frames identical to the pre-work baseline list (all 13 green classes stayed green). Remaining (pre-existing, untouched) gap: engine early-returns offset 0 for zero velocity, while ROM `CalcAngle` returns 0x40 and continues through the facing adjustment. |
+
+Chunk-desc lookup math (`LevelManager.getChunkDescAt` + loop-low-plane
+overload) now uses shift/mask fast paths when `blockPixelSize` and the layer
+pixel dimensions are powers of two, with the historical div/mod fallback
+otherwise; equivalence is locked by `TestChunkDescPow2Indexing` (fast vs
+verbatim-oracle comparison across negatives, wrap boundaries, and
+non-power-of-two fallback levels).

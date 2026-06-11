@@ -1,6 +1,7 @@
 package com.openggf.sprites.managers;
 
 import com.openggf.physics.Direction;
+import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 
@@ -308,9 +309,11 @@ public class TailsTailsController {
             return 0;
         }
 
-        // CalcAngle: 0=right, 64=down, 128=left, 192=up (Genesis convention, Y-down)
-        double rad = Math.atan2(yVel, xVel);
-        int d0 = ((int) Math.round(rad * 128.0 / Math.PI)) & 0xFF;
+        // ROM: TAnim_GetTailFrame (s2.asm:41478-41481) calls CalcAngle
+        // (s2.asm:4037-4081, Angle_Data table); S3K's tail routine calls the
+        // identical GetArcTan (sonic3k.asm:3043, ArcTanTable).
+        // 0=right, 64=down, 128=left, 192=up (Genesis convention, Y-down).
+        int d0 = TrigLookupTable.calcAngle(xVel, yVel);
 
         // ROM: Adjust for facing direction
         boolean facingLeft = Direction.LEFT.equals(sprite.getDirection());
@@ -339,9 +342,8 @@ public class TailsTailsController {
             return new boolean[]{ facingLeft, false };
         }
 
-        // CalcAngle
-        double rad = Math.atan2(yVel, xVel);
-        int d0 = ((int) Math.round(rad * 128.0 / Math.PI)) & 0xFF;
+        // ROM: CalcAngle (s2.asm:4037-4081) / GetArcTan (sonic3k.asm:3043)
+        int d0 = TrigLookupTable.calcAngle(xVel, yVel);
 
         boolean facingLeft = Direction.LEFT.equals(sprite.getDirection());
         if (!facingLeft) {
