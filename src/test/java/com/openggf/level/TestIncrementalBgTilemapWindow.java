@@ -3,8 +3,7 @@ package com.openggf.level;
 import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
 import com.openggf.game.ZoneFeatureProvider;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.TilemapGpuRenderer;
@@ -52,7 +51,7 @@ public class TestIncrementalBgTilemapWindow {
     @BeforeEach
     public void setUp() {
         GraphicsManager.destroyForReinit();
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetAll();
         graphicsManager = GraphicsManager.getInstance();
         graphicsManager.initHeadless();
 

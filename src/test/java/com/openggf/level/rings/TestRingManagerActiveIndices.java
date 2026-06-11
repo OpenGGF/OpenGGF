@@ -1,8 +1,7 @@
 package com.openggf.level.rings;
 
 import com.openggf.game.rewind.snapshot.RingSnapshot;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,9 +29,8 @@ class TestRingManagerActiveIndices {
     @BeforeEach
     void setUp() {
         // A leaked fork-mate session could swap the ring window mode (S3K uses
-        // the raw camera window); clear before building the manager.
-        SessionManager.clear();
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        // the raw camera window); reset before building the manager.
+        TestEnvironment.resetAll();
     }
 
     @AfterEach

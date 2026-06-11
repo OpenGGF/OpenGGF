@@ -8,8 +8,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
 import com.openggf.debug.PerformanceProfiler;
 import com.openggf.debug.playback.Bk2FrameInput;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
 import org.junit.jupiter.api.AfterAll;
@@ -60,7 +59,7 @@ class TestHeldRewindAudioStepCost {
 
     @BeforeAll
     static void setUpClass() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetAll();
         File romFile = ensureRomAvailable();
         if (romFile == null) {
             return;

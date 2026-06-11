@@ -5,8 +5,7 @@ import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.synth.Ym2612Chip;
 import com.openggf.data.Rom;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.audio.Sonic2SmpsSequencerConfig;
 import com.openggf.game.sonic2.audio.smps.Sonic2SmpsLoader;
@@ -62,7 +61,7 @@ public class TestSmpsFadeHybridParity {
 
     @BeforeAll
     public static void setUpClass() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetAll();
         File romFile = ensureRomAvailable();
         if (romFile == null) {
             return;

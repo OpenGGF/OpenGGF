@@ -1,7 +1,6 @@
 package com.openggf.graphics;
 
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.render.SpritePieceRenderer;
@@ -32,7 +31,7 @@ public class TestSatReplayBatching {
     @BeforeEach
     public void setUp() {
         GraphicsManager.destroyForReinit();
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetAll();
         graphicsManager = GraphicsManager.getInstance();
         graphicsManager.initHeadless();
     }
