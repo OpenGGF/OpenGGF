@@ -20,6 +20,8 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 7. [HCZ Object Mappings: Removal of `docs/` Runtime Reads](#hcz-object-mappings-removal-of-docs-runtime-reads)
 8. [AIZ2 Battleship Post-Bombing Wrap Distance](#aiz2-battleship-post-bombing-wrap-distance)
 9. [LBZ1 Miniboss Box Pieces: PLC VRAM Restore Skipped](#lbz1-miniboss-box-pieces-plc-vram-restore-skipped)
+10. [LBZ2 Launch Pad Collapse: Mutation Pipeline Offset](#lbz2-launch-pad-collapse-mutation-pipeline-offset)
+11. [LBZ2 End Boss Smoke Puffs: Immortal-Object Quirk Not Replicated](#lbz2-end-boss-smoke-puffs-immortal-object-quirk-not-replicated)
 
 ---
 
@@ -359,3 +361,76 @@ conflict entirely instead of emulating the overwrite-and-restore cycle.
 `TestS3kLbz1KnucklesSequenceHeadless#lbz1RobotnikFoldsAwayBurstPanelsAndKeepsDriftersUntilOffscreen`
 covers the piece lifecycle including the off-screen cull;
 `TestSonic3kPlcArtRegistry` guards the standalone sheets.
+
+---
+
+## LBZ2 Launch Pad Collapse: Mutation Pipeline Offset
+
+**Location:** `Sonic3kLBZEvents.java`, `LbzZoneRuntimeState.java`
+
+**ROM Reference:** LBZ2 launch finale dynamic events and foreground scroll state
+
+### Original Implementation
+
+The ROM drives the LBZ2 launch-pad collapse through its launch event RAM and
+foreground scroll mechanics. The visible effect is a small foreground terrain
+clear while the Death Egg launch scroll state is active.
+
+### Our Implementation
+
+The engine keeps `Events_fg_5` reserved for the LBZ1 -> LBZ2 transition path and
+uses semantic launch state in `LbzZoneRuntimeState` instead. The pad-collapse
+request is consumed by `Sonic3kLBZEvents`, which routes the terrain clear through
+`ZoneLayoutMutationPipeline` / `LevelMutationSurface` and combines it with the
+launch foreground-scroll offset.
+
+### Rationale
+
+This is an intentional engine-equivalent divergence. Routing the collapse through
+the shared mutation pipeline keeps gameplay tile edits rewind-safe, redraw-aware,
+and covered by the no-direct-map-mutation policy while preserving the visible
+launch-pad collapse behavior.
+
+### Verification
+
+`TestSonic3kLbzLaunchSignals` covers the semantic pad-collapse signal and
+mutation routing, `TestLbzLaunchRuntimeState` covers rewind capture/restore for
+the launch state, and `TestNoDirectMapMutationsInGameplay` guards against direct
+gameplay map writes.
+
+---
+
+## LBZ2 End Boss Smoke Puffs: Immortal-Object Quirk Not Replicated
+
+**Location:** `LbzEndBossInstance.LbzEndBossSmokePuffChild`
+
+**ROM Reference:** `sonic3k.asm` `loc_73BA0`/`loc_73BDC`, anim script `byte_741F8`
+
+### Original Implementation
+
+The LBZ2 end-boss smoke puff is meant to delay `-2*(subtype-$10)` frames, play
+frames `7,7,8,9` at delay 5, then delete via the `$F4` anim command, whose
+handler (`AnimateRaw_CustomCode`) aliases `Obj_Wait` with `$34 =
+Go_Delete_Sprite`. However, the puff's main loop `loc_73BDC` executes
+`addq.w #1,$2E(a0)` every frame, while the `$F4` command only runs
+`subq.w #1,$2E(a0)` once per anim pass (~19 frames). `$2E` therefore grows
+monotonically and never goes negative, so `Go_Delete_Sprite` never fires: the
+ROM object loops its smoke frames in a leaked object slot until the level
+unloads (invisible for the rising subtype-0 puffs once off-screen, and masked
+by the short fight duration for the explosion-spray puffs).
+
+### Our Implementation
+
+The engine implements the clearly-intended behaviour: delay, play `7,7,8,9` at
+the ROM cadence, then expire the child.
+
+### Rationale
+
+Replicating the slot leak would accumulate stale objects with no gameplay or
+visual value the original authors intended. All other smoke parameters (delays,
+frame cadence, subtype-0 rise velocity) match the ROM.
+
+### Verification
+
+`TestLbzEndBossInstance` covers the spike-ball spray spawning the four delayed
+smoke puffs and the rolling-smoke speed gate.

@@ -4,6 +4,30 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **LBZ2 end boss (first Robotnik fight) reaches ROM parity:** the hit flash
+  now restores the collision byte Touch_Enemy saved at hit time (so the raised
+  launcher stays `$0F`-sized after a hit), defeat awards 1000 points, flashes
+  palette line 1 colour 11, and no longer emits an invented smoke/sfx loop on
+  top of the shared `Child6_CreateBossExplosion` controller. The tower solid
+  and bobbing platforms are anchored at their spawn positions instead of riding
+  the rising launcher, the platform chain implements the ROM
+  `MoveSprite_CircularSimple` link-list (leader phase `0→$C0`, `$81`-frame
+  hold, sin/cos×16px chained offsets), the Robotnik runner keeps his `-$180`
+  dash velocity through the jump, spike balls use the raw `byte_73F3A` subtype
+  sequence, explode on right-wall or floor-loss contact instead of bouncing,
+  accelerate without a speed cap, gate rolling smoke on the ROM's unsigned
+  speed compare, and spray the exact `ChildObjDat_741A0` debris velocities,
+  frames, flips, and smoke delays. Debris uses MoveSprite `$38` gravity with
+  flicker draw and camera-relative deletion, all child movement is
+  subpixel-accurate, and `Camera_max_X_pos` extends via the ROM
+  `Obj_IncLevEndXGradual` `$4000`/frame accumulator after defeat.
+
+- **LBZ2 launch finale now applies its Death Egg stage changes:** the Act 2
+  launch sequence loads the ROM-backed Death Egg block/chunk/art replacement,
+  switches to the launch-specific parallax deformation, queues the post-results
+  boss explosion and Death Egg small art, and documents the engine-equivalent
+  pad-collapse mutation path.
+
 - **Trace replay lag frames are classified consistently across all games:**
   S1/S2 use gameplay-frame counter advancement as the full-frame signal, S3K
   treats lag-counter-only rows as VBlank-only frames, and gameplay advancement

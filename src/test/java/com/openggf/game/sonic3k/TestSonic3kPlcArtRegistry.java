@@ -222,6 +222,95 @@ public class TestSonic3kPlcArtRegistry {
     }
 
     @Test
+    public void lbz2PlanIncludesEndSequenceArtOnlyInAct2() {
+        Sonic3kPlcArtRegistry.ZoneArtPlan act1 = Sonic3kPlcArtRegistry.getPlan(0x06, 0);
+        Sonic3kPlcArtRegistry.ZoneArtPlan act2 = Sonic3kPlcArtRegistry.getPlan(0x06, 1);
+
+        assertFalse(act1.standaloneArt().stream()
+                        .anyMatch(e -> Sonic3kObjectArtKeys.LBZ_END_BOSS.equals(e.key())),
+                "LBZ end-boss art is queued by the LBZ2 end sequence, not LBZ1.");
+        assertFalse(act1.standaloneArt().stream()
+                        .anyMatch(e -> Sonic3kObjectArtKeys.LBZ_FINAL_BOSS_1.equals(e.key())),
+                "LBZ final-boss art is queued by the LBZ2 final arena, not LBZ1.");
+        assertFalse(act1.standaloneArt().stream()
+                        .anyMatch(e -> Sonic3kObjectArtKeys.LBZ2_DEATH_EGG_SMALL.equals(e.key())),
+                "LBZ2 Death Egg miniature art must not pollute the LBZ1 plan.");
+        assertFalse(act1.standaloneArt().stream()
+                        .anyMatch(e -> Sonic3kObjectArtKeys.FBZ_ROBOTNIK_RUN.equals(e.key())),
+                "The LBZ end-boss Robotnik runner is LBZ2-only.");
+        assertFalse(act1.levelArt().stream()
+                        .anyMatch(e -> Sonic3kObjectArtKeys.LBZ_KNUX_PILLAR.equals(e.key())),
+                "The LBZ2 Knuckles pillar depends on the Death Egg terrain swap and is LBZ2-only.");
+
+        Sonic3kPlcArtRegistry.StandaloneArtEntry endBoss =
+                requireStandaloneArt(act2, Sonic3kObjectArtKeys.LBZ_END_BOSS);
+        assertEquals(Sonic3kConstants.ART_KOSM_LBZ_END_BOSS_ADDR, endBoss.artAddr());
+        assertEquals(CompressionType.KOSINSKI_MODULED, endBoss.compression());
+        assertEquals(Sonic3kConstants.ART_KOSM_LBZ_END_BOSS_SIZE, endBoss.artSize());
+        assertEquals(Sonic3kConstants.MAP_LBZ_END_BOSS_ADDR, endBoss.mappingAddr());
+        assertEquals(1, endBoss.palette());
+        assertEquals(15, endBoss.mappingFrameCount());
+
+        Sonic3kPlcArtRegistry.StandaloneArtEntry finalBoss =
+                requireStandaloneArt(act2, Sonic3kObjectArtKeys.LBZ_FINAL_BOSS_1);
+        assertEquals(Sonic3kConstants.ART_NEM_LBZ_FINAL_BOSS_1_ADDR, finalBoss.artAddr());
+        assertEquals(CompressionType.NEMESIS, finalBoss.compression());
+        assertEquals(Sonic3kConstants.ART_NEM_LBZ_FINAL_BOSS_1_SIZE, finalBoss.artSize());
+        assertEquals(Sonic3kConstants.MAP_LBZ_FINAL_BOSS_1_ADDR, finalBoss.mappingAddr());
+        assertEquals(1, finalBoss.palette());
+        assertEquals(46, finalBoss.mappingFrameCount());
+
+        Sonic3kPlcArtRegistry.StandaloneArtEntry deathEgg =
+                requireStandaloneArt(act2, Sonic3kObjectArtKeys.LBZ2_DEATH_EGG_SMALL);
+        assertEquals(Sonic3kConstants.ART_KOSM_LBZ2_DEATH_EGG_SMALL_ADDR, deathEgg.artAddr());
+        assertEquals(CompressionType.KOSINSKI_MODULED, deathEgg.compression());
+        assertEquals(Sonic3kConstants.ART_KOSM_LBZ2_DEATH_EGG_SMALL_SIZE, deathEgg.artSize());
+        assertEquals(Sonic3kConstants.MAP_LBZ_DEATH_EGG_SMALL_ADDR, deathEgg.mappingAddr());
+        assertEquals(1, deathEgg.palette());
+        assertEquals(12, deathEgg.mappingFrameCount());
+
+        Sonic3kPlcArtRegistry.StandaloneArtEntry runner =
+                requireStandaloneArt(act2, Sonic3kObjectArtKeys.FBZ_ROBOTNIK_RUN);
+        assertEquals(Sonic3kConstants.ART_NEM_FBZ_ROBOTNIK_RUN_ADDR, runner.artAddr());
+        assertEquals(CompressionType.NEMESIS, runner.compression());
+        assertEquals(Sonic3kConstants.ART_NEM_FBZ_ROBOTNIK_RUN_SIZE, runner.artSize());
+        assertEquals(Sonic3kConstants.MAP_FBZ_ROBOTNIK_RUN_ADDR, runner.mappingAddr());
+        assertEquals(0, runner.palette());
+
+        Sonic3kPlcArtRegistry.StandaloneArtEntry cutsceneKnuckles =
+                requireStandaloneArt(act2, Sonic3kObjectArtKeys.CUTSCENE_KNUCKLES);
+        assertEquals(Sonic3kConstants.ART_UNC_CUTSCENE_KNUX_ADDR, cutsceneKnuckles.artAddr());
+        assertEquals(CompressionType.UNCOMPRESSED, cutsceneKnuckles.compression());
+        assertEquals(Sonic3kConstants.ART_UNC_CUTSCENE_KNUX_SIZE, cutsceneKnuckles.artSize());
+        assertEquals(Sonic3kConstants.MAP_CUTSCENE_KNUX_ADDR, cutsceneKnuckles.mappingAddr());
+        assertEquals(Sonic3kConstants.DPLC_CUTSCENE_KNUX_ADDR, cutsceneKnuckles.dplcAddr());
+
+        Sonic3kPlcArtRegistry.StandaloneArtEntry bossExplosion =
+                requireStandaloneArt(act2, ObjectArtKeys.BOSS_EXPLOSION);
+        assertEquals(Sonic3kConstants.ART_NEM_BOSS_EXPLOSION_ADDR, bossExplosion.artAddr());
+        assertEquals(CompressionType.NEMESIS, bossExplosion.compression());
+        assertEquals(Sonic3kConstants.MAP_BOSS_EXPLOSION_ADDR, bossExplosion.mappingAddr());
+
+        Sonic3kPlcArtRegistry.LevelArtEntry pillar =
+                requireLevelArt(act2, Sonic3kObjectArtKeys.LBZ_KNUX_PILLAR);
+        assertEquals(Sonic3kConstants.MAP_LBZ_KNUX_PILLAR_ADDR, pillar.mappingAddr());
+        assertEquals(Sonic3kConstants.ART_TILE_LBZ_KNUX_PILLAR, pillar.artTileBase());
+        assertEquals(2, pillar.palette());
+    }
+
+    @Test
+    public void lbz2StandaloneTileBasesAreHeldAsConstantsBecauseRegistryDoesNotCarryVramDestinations() {
+        assertEquals(0x0425, Sonic3kConstants.ART_TILE_LBZ_END_BOSS);
+        assertEquals(0x03AA, Sonic3kConstants.ART_TILE_LBZ_FINAL_BOSS_1);
+        assertEquals(0x04AE, Sonic3kConstants.ART_TILE_LBZ2_DEATH_EGG_SMALL);
+        assertEquals(0x04A9, Sonic3kConstants.ART_TILE_FBZ_ROBOTNIK_RUN);
+        assertEquals(0x052E, Sonic3kConstants.ART_TILE_ROBOTNIK_SHIP);
+        assertEquals(0x0500, Sonic3kConstants.ART_TILE_BOSS_EXPLOSION);
+        assertEquals(0x05A0, Sonic3kConstants.ART_TILE_LBZ_KNUX_PILLAR);
+        assertEquals(0x04DA, Sonic3kConstants.ARTTILE_CUTSCENE_KNUX);
+    }
+
+    @Test
     public void lbzPlanIncludesRideGrappleLevelArt() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x06, 0);
 
@@ -281,6 +370,68 @@ public class TestSonic3kPlcArtRegistry {
             assertEquals(7, frames.get(4).pieces().size());
             assertEquals(10, frames.get(5).pieces().size());
             assertEquals(3, frames.get(6).pieces().size());
+        }
+    }
+
+    @Test
+    public void lbz2EndSequenceMappingsMatchRomFrameCounts() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            RomByteReader reader = RomByteReader.fromRom(rom);
+
+            assertEquals(15,
+                    S3kSpriteDataLoader.loadMappingFrames(reader, Sonic3kConstants.MAP_LBZ_END_BOSS_ADDR).size(),
+                    "Map_LBZEndBoss has 15 frames.");
+            assertEquals(46,
+                    S3kSpriteDataLoader.loadMappingFrames(reader, Sonic3kConstants.MAP_LBZ_FINAL_BOSS_1_ADDR).size(),
+                    "Map_LBZFinalBoss1 has 46 frames.");
+            assertEquals(12,
+                    S3kSpriteDataLoader.loadMappingFrames(reader, Sonic3kConstants.MAP_LBZ_DEATH_EGG_SMALL_ADDR).size(),
+                    "Map_LBZDeathEggSmall has 12 frames.");
+            assertEquals(2,
+                    S3kSpriteDataLoader.loadMappingFrames(reader, Sonic3kConstants.MAP_LBZ_KNUX_PILLAR_ADDR).size(),
+                    "Map_LBZKnuxPillar has 2 frames.");
+        }
+    }
+
+    @Test
+    public void lbz2EndSequenceMappingsMatchRomShape() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            List<SpriteMappingFrame> endBoss = S3kSpriteDataLoader.loadMappingFrames(
+                    reader, Sonic3kConstants.MAP_LBZ_END_BOSS_ADDR);
+            assertLbz2Piece(endBoss.get(0), 0, 6, 3, 1, 0x00);
+            assertLbz2Piece(endBoss.get(0), 1, 6, 4, 3, 0x03);
+            assertLbz2Piece(endBoss.get(1), 0, 1, 1, 1, 0x0F);
+            assertLbz2Piece(endBoss.get(14), 0, 2, 1, 2, 0x31);
+
+            List<SpriteMappingFrame> finalBoss = S3kSpriteDataLoader.loadMappingFrames(
+                    reader, Sonic3kConstants.MAP_LBZ_FINAL_BOSS_1_ADDR);
+            assertLbz2Piece(finalBoss.get(0), 0, 4, 4, 4, 0x00);
+            assertLbz2Piece(finalBoss.get(0), 1, 4, 4, 1, 0x10);
+            assertLbz2Piece(finalBoss.get(1), 0, 6, 4, 4, 0x14);
+            assertLbz2Piece(finalBoss.get(3), 0, 1, 2, 2, 0x34);
+            assertEquals(0, finalBoss.get(45).pieces().size(), "Map_LBZFinalBoss1 frame 0x2D is blank.");
+
+            List<SpriteMappingFrame> deathEgg = S3kSpriteDataLoader.loadMappingFrames(
+                    reader, Sonic3kConstants.MAP_LBZ_DEATH_EGG_SMALL_ADDR);
+            assertLbz2Piece(deathEgg.get(0), 0, 4, 3, 4, 0x00);
+            assertLbz2Piece(deathEgg.get(0), 1, 4, 3, 4, 0x0C);
+            assertLbz2Piece(deathEgg.get(1), 0, 1, 1, 1, 0x24);
+            assertLbz2Piece(deathEgg.get(11), 0, 1, 2, 2, 0x4E);
+
+            List<SpriteMappingFrame> pillar = S3kSpriteDataLoader.loadMappingFrames(
+                    reader, Sonic3kConstants.MAP_LBZ_KNUX_PILLAR_ADDR);
+            assertLbz2Piece(pillar.get(0), 0, 1, 4, 4, 0x00);
+            assertLbz2Piece(pillar.get(1), 0, 8, 4, 4, 0x00);
+            assertLbz2Piece(pillar.get(1), 3, 8, 4, 4, 0x00);
         }
     }
 
@@ -1099,6 +1250,16 @@ public class TestSonic3kPlcArtRegistry {
             assertEquals(expectedPieces[i][1], piece.heightTiles(), "LBZ flame thrower piece " + i + " height");
             assertEquals(expectedPieces[i][2], piece.tileIndex(), "LBZ flame thrower piece " + i + " tile");
         }
+    }
+
+    private static void assertLbz2Piece(SpriteMappingFrame frame, int pieceIndex,
+                                        int expectedPieceCount, int widthTiles,
+                                        int heightTiles, int tileIndex) {
+        assertEquals(expectedPieceCount, frame.pieces().size(), "LBZ2 mapping frame piece count");
+        SpriteMappingPiece piece = frame.pieces().get(pieceIndex);
+        assertEquals(widthTiles, piece.widthTiles(), "LBZ2 mapping piece width");
+        assertEquals(heightTiles, piece.heightTiles(), "LBZ2 mapping piece height");
+        assertEquals(tileIndex, piece.tileIndex(), "LBZ2 mapping piece tile");
     }
 
     private static Sonic3kPlcArtRegistry.LevelArtEntry requireLevelArt(Sonic3kPlcArtRegistry.ZoneArtPlan plan,

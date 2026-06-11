@@ -21,6 +21,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -111,6 +112,7 @@ class TestS3kLbzPatternAnimation {
 
         assertGraphChannelsInstalled(
                 "s3k.lbz.shared",
+                "s3k.lbz2.rideTrigger",
                 "s3k.lbz2.scroll",
                 "s3k.lbz2.waterline",
                 "s3k.lbz2.script.0",
@@ -121,6 +123,43 @@ class TestS3kLbzPatternAnimation {
                 new TileRange(0x160, 0x16F),
                 new TileRange(0x2D3, 0x2E2),
                 new TileRange(0x2E3, 0x2E4));
+    }
+
+    @Test
+    void lbz2RideTriggerConsumesRuntimeSignalAndSkipsRomGatedScrollUploadForOneFrame() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(0x06, 1)
+                .build();
+
+        fixture.camera().setFrozen(true);
+        fixture.camera().setX((short) 0);
+
+        Sonic3kPatternAnimator animator = resolvePatternAnimator();
+        LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(GameServices.zoneRuntimeRegistry())
+                .orElseThrow(() -> new AssertionError("Expected LBZ runtime state"));
+        Level level = GameServices.level().getCurrentLevel();
+        assertNotNull(level, "Level must be loaded");
+
+        animator.update();
+        TileRange scrollTiles = new TileRange(0x2E3, 0x2E4);
+        byte[] phaseZero = snapshotRange(level, scrollTiles.startTile(), scrollTiles.endTileInclusive());
+
+        fixture.camera().setX((short) 0x20);
+        state.requestLbz2RideAnimatedTiles();
+        animator.update();
+
+        assertFalse(state.consumeLbz2RideAnimatedTilesRequested(),
+                "LBZ2 ride animated-tile graph channel must consume the runtime one-shot");
+        assertArrayEquals(phaseZero,
+                snapshotRange(level, scrollTiles.startTile(), scrollTiles.endTileInclusive()),
+                "Anim_Counters+$F skips the LBZ2 scroll-tile upload on the triggered frame");
+
+        animator.update();
+
+        byte[] afterUngatedFrame = snapshotRange(level, scrollTiles.startTile(), scrollTiles.endTileInclusive());
+        if (Arrays.equals(phaseZero, afterUngatedFrame)) {
+            fail("Expected LBZ2 scroll tiles to advance on the frame after the one-shot trigger is consumed");
+        }
     }
 
     private static void assertGraphChannelsInstalled(String... expectedChannelIds) {

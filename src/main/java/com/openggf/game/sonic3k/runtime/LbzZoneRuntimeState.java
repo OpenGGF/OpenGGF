@@ -5,8 +5,30 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 
 import java.nio.ByteBuffer;
 import java.util.Objects;
+import java.util.OptionalInt;
 
 public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
+    private static final int LEGACY_CAPTURE_BYTES = 12;
+    private static final int LAUNCH_EXTENSION_VERSION_1 = 1;
+    private static final int LAUNCH_EXTENSION_VERSION_2 = 2;
+    private static final int LAUNCH_EXTENSION_VERSION = 3;
+    private static final int LAUNCH_EXTENSION_BYTES_V1 = 34;
+    private static final int LAUNCH_EXTENSION_BYTES_V2 = 41;
+    private static final int LAUNCH_EXTENSION_BYTES = 49;
+    private static final int LAUNCH_FLAG_ACTIVE = 1;
+    private static final int LAUNCH_FLAG_DEATH_EGG_RUMBLE = 1 << 1;
+    private static final int LAUNCH_FLAG_START_REQUESTED = 1 << 2;
+    private static final int LAUNCH_FLAG_PAD_COLLAPSE_REQUESTED = 1 << 3;
+    private static final int LAUNCH_FLAG_FINAL_FALL_REQUESTED = 1 << 4;
+    private static final int LAUNCH_FLAG_RIDER_ANCHOR_REGISTERED = 1 << 5;
+    private static final int LAUNCH_FLAG_LBZ2_RIDE_ANIMATED_TILES_REQUESTED = 1 << 6;
+    private static final int LAUNCH_FLAG_PAD_COLLAPSE_ACTIVE = 1 << 7;
+    private static final int LAUNCH_FLAG_FINAL_FALL_ACTIVE = 1 << 8;
+    private static final int LAUNCH_FLAG_DEATH_EGG_TERRAIN_SWAP_QUEUED = 1 << 9;
+    private static final int LAUNCH_FLAG_DEATH_EGG_TERRAIN_SWAP_APPLIED = 1 << 10;
+    private static final int LAUNCH_FLAG_WATER_DISABLED = 1 << 11;
+    private static final int LAUNCH_FLAG_FINALE_CUTSCENE_ANCHOR_REGISTERED = 1 << 12;
+
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
     private boolean alarmAnimationActive;
@@ -18,6 +40,30 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     private int rollingDrumP1Angle;
     private int rollingDrumP2Angle;
     private int pendingScreenShakeOffset;
+    private boolean launchActive;
+    private boolean deathEggRumble;
+    private int fgLaunchSpeed;
+    private int bgLaunchSpeed;
+    private int fgAccum;
+    private int bgAccum;
+    private int launchYDelta;
+    private int preLaunchDelay;
+    private int detachScroll;
+    private int waterTargetY;
+    private boolean launchStartRequested;
+    private boolean padCollapseStartRequested;
+    private boolean finalFallRequested;
+    private boolean launchRiderAnchorRegistered;
+    private boolean lbz2RideAnimatedTilesRequested;
+    private boolean padCollapseActive;
+    private boolean finalFallActive;
+    private boolean deathEggTerrainSwapQueued;
+    private boolean deathEggTerrainSwapApplied;
+    private boolean waterDisabled;
+    private int launchRiderAnchorId;
+    private int deathEggDeformWrapLatch;
+    private boolean finaleCutsceneAnchorRegistered;
+    private int finaleCutsceneAnchorId;
 
     public LbzZoneRuntimeState(int actIndex, PlayerCharacter playerCharacter) {
         this.actIndex = actIndex;
@@ -113,9 +159,216 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         return offset;
     }
 
+    public boolean isLaunchActive() {
+        return launchActive;
+    }
+
+    public void setLaunchActive(boolean launchActive) {
+        this.launchActive = launchActive;
+    }
+
+    public boolean isDeathEggRumble() {
+        return deathEggRumble;
+    }
+
+    public void setDeathEggRumble(boolean deathEggRumble) {
+        this.deathEggRumble = deathEggRumble;
+    }
+
+    public int getFgLaunchSpeed() {
+        return fgLaunchSpeed;
+    }
+
+    public void setFgLaunchSpeed(int fgLaunchSpeed) {
+        this.fgLaunchSpeed = fgLaunchSpeed;
+    }
+
+    public int getBgLaunchSpeed() {
+        return bgLaunchSpeed;
+    }
+
+    public void setBgLaunchSpeed(int bgLaunchSpeed) {
+        this.bgLaunchSpeed = bgLaunchSpeed;
+    }
+
+    public int getFgAccum() {
+        return fgAccum;
+    }
+
+    public void setFgAccum(int fgAccum) {
+        this.fgAccum = fgAccum;
+    }
+
+    public int getBgAccum() {
+        return bgAccum;
+    }
+
+    public void setBgAccum(int bgAccum) {
+        this.bgAccum = bgAccum;
+    }
+
+    public int getLaunchYDelta() {
+        return launchYDelta;
+    }
+
+    public void setLaunchYDelta(int launchYDelta) {
+        this.launchYDelta = launchYDelta;
+    }
+
+    public int getPreLaunchDelay() {
+        return preLaunchDelay;
+    }
+
+    public void setPreLaunchDelay(int preLaunchDelay) {
+        this.preLaunchDelay = preLaunchDelay;
+    }
+
+    public int getDetachScroll() {
+        return detachScroll;
+    }
+
+    public void setDetachScroll(int detachScroll) {
+        this.detachScroll = detachScroll;
+    }
+
+    public int getWaterTargetY() {
+        return waterTargetY;
+    }
+
+    public void setWaterTargetY(int waterTargetY) {
+        this.waterTargetY = waterTargetY & 0xFFFF;
+    }
+
+    public void setWaterTargetYForTest(int waterTargetY) {
+        setWaterTargetY(waterTargetY);
+    }
+
+    public boolean isPadCollapseActive() {
+        return padCollapseActive;
+    }
+
+    public void setPadCollapseActive(boolean padCollapseActive) {
+        this.padCollapseActive = padCollapseActive;
+    }
+
+    public boolean isFinalFallActive() {
+        return finalFallActive;
+    }
+
+    public void setFinalFallActive(boolean finalFallActive) {
+        this.finalFallActive = finalFallActive;
+    }
+
+    public boolean isDeathEggTerrainSwapQueued() {
+        return deathEggTerrainSwapQueued;
+    }
+
+    public void setDeathEggTerrainSwapQueued(boolean deathEggTerrainSwapQueued) {
+        this.deathEggTerrainSwapQueued = deathEggTerrainSwapQueued;
+    }
+
+    public boolean isDeathEggTerrainSwapApplied() {
+        return deathEggTerrainSwapApplied;
+    }
+
+    public void setDeathEggTerrainSwapApplied(boolean deathEggTerrainSwapApplied) {
+        this.deathEggTerrainSwapApplied = deathEggTerrainSwapApplied;
+    }
+
+    public boolean isWaterDisabled() {
+        return waterDisabled;
+    }
+
+    public void setWaterDisabled(boolean waterDisabled) {
+        this.waterDisabled = waterDisabled;
+    }
+
+    public int getDeathEggDeformWrapLatch() {
+        return deathEggDeformWrapLatch;
+    }
+
+    public void setDeathEggDeformWrapLatch(int deathEggDeformWrapLatch) {
+        this.deathEggDeformWrapLatch = deathEggDeformWrapLatch & 0xFFFF;
+    }
+
+    public void requestLaunchStart() {
+        launchStartRequested = true;
+    }
+
+    public boolean consumeLaunchStartRequested() {
+        boolean requested = launchStartRequested;
+        launchStartRequested = false;
+        return requested;
+    }
+
+    public void requestPadCollapseStart() {
+        padCollapseStartRequested = true;
+    }
+
+    public boolean consumePadCollapseStartRequested() {
+        boolean requested = padCollapseStartRequested;
+        padCollapseStartRequested = false;
+        return requested;
+    }
+
+    public void requestFinalFall() {
+        finalFallRequested = true;
+    }
+
+    public boolean consumeFinalFallRequested() {
+        boolean requested = finalFallRequested;
+        finalFallRequested = false;
+        return requested;
+    }
+
+    public void requestLbz2RideAnimatedTiles() {
+        lbz2RideAnimatedTilesRequested = true;
+    }
+
+    public boolean consumeLbz2RideAnimatedTilesRequested() {
+        boolean requested = lbz2RideAnimatedTilesRequested;
+        lbz2RideAnimatedTilesRequested = false;
+        return requested;
+    }
+
+    /**
+     * Reference-free launch rider identity for later object/event agents.
+     *
+     * <p>The ROM uses an object pointer in {@code Events_bg+0}; the Java
+     * runtime state stores only a caller-supplied stable anchor id so rewind
+     * snapshots never capture object references.
+     */
+    public void registerLaunchRiderAnchor(int anchorId) {
+        launchRiderAnchorRegistered = true;
+        launchRiderAnchorId = anchorId;
+    }
+
+    public OptionalInt getLaunchRiderAnchorId() {
+        return launchRiderAnchorRegistered ? OptionalInt.of(launchRiderAnchorId) : OptionalInt.empty();
+    }
+
+    public void clearLaunchRiderAnchor() {
+        launchRiderAnchorRegistered = false;
+        launchRiderAnchorId = 0;
+    }
+
+    public void registerFinaleCutsceneAnchor(int anchorId) {
+        finaleCutsceneAnchorRegistered = true;
+        finaleCutsceneAnchorId = anchorId;
+    }
+
+    public OptionalInt getFinaleCutsceneAnchorId() {
+        return finaleCutsceneAnchorRegistered ? OptionalInt.of(finaleCutsceneAnchorId) : OptionalInt.empty();
+    }
+
+    public void clearFinaleCutsceneAnchor() {
+        finaleCutsceneAnchorRegistered = false;
+        finaleCutsceneAnchorId = 0;
+    }
+
     @Override
     public byte[] captureBytes() {
-        ByteBuffer buffer = ByteBuffer.allocate(12);
+        ByteBuffer buffer = ByteBuffer.allocate(LEGACY_CAPTURE_BYTES + LAUNCH_EXTENSION_BYTES);
         buffer.put((byte) (alarmAnimationActive ? 1 : 0));
         buffer.put((byte) activeInteriorLayoutMod);
         buffer.put((byte) (interiorLayoutMod3Disabled ? 1 : 0));
@@ -125,6 +378,19 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         buffer.put((byte) (robotnikIntroActive ? 1 : 0));
         buffer.put((byte) (lbz2LayoutAdjustApplied ? 1 : 0));
         buffer.put((byte) (lbz2EntryCorridorApplied ? 1 : 0));
+        buffer.put((byte) LAUNCH_EXTENSION_VERSION);
+        buffer.putInt(launchFlags());
+        buffer.putInt(fgLaunchSpeed);
+        buffer.putInt(bgLaunchSpeed);
+        buffer.putInt(fgAccum);
+        buffer.putInt(bgAccum);
+        buffer.putInt(launchYDelta);
+        buffer.putInt(preLaunchDelay);
+        buffer.putInt(detachScroll);
+        buffer.putInt(waterTargetY);
+        buffer.putInt(launchRiderAnchorId);
+        buffer.putInt(deathEggDeformWrapLatch);
+        buffer.putInt(finaleCutsceneAnchorId);
         return buffer.array();
     }
 
@@ -137,6 +403,7 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         if (bytes.length == 3) {
             rollingDrumP1Angle = bytes[1] & 0xFF;
             rollingDrumP2Angle = bytes[2] & 0xFF;
+            clearLaunchState();
             return;
         }
         if (bytes.length >= 2) {
@@ -161,5 +428,130 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
             lbz2LayoutAdjustApplied = bytes[10] != 0;
             lbz2EntryCorridorApplied = bytes[11] != 0;
         }
+        if (bytes.length < LEGACY_CAPTURE_BYTES + LAUNCH_EXTENSION_BYTES_V1) {
+            clearLaunchState();
+            return;
+        }
+        ByteBuffer buffer = ByteBuffer.wrap(bytes);
+        buffer.position(LEGACY_CAPTURE_BYTES);
+        int version = buffer.get() & 0xFF;
+        if (version == LAUNCH_EXTENSION_VERSION_1) {
+            restoreLaunchFlags(buffer.get() & 0xFF);
+            restoreLaunchInts(buffer, false, false);
+            return;
+        }
+        if (version == LAUNCH_EXTENSION_VERSION_2) {
+            restoreLaunchFlags(buffer.getInt());
+            restoreLaunchInts(buffer, true, false);
+            return;
+        }
+        if (version != LAUNCH_EXTENSION_VERSION || bytes.length < LEGACY_CAPTURE_BYTES + LAUNCH_EXTENSION_BYTES) {
+            clearLaunchState();
+            return;
+        }
+        int flags = buffer.getInt();
+        restoreLaunchFlags(flags);
+        restoreLaunchInts(buffer, true, true);
+    }
+
+    private void restoreLaunchFlags(int flags) {
+        launchActive = (flags & LAUNCH_FLAG_ACTIVE) != 0;
+        deathEggRumble = (flags & LAUNCH_FLAG_DEATH_EGG_RUMBLE) != 0;
+        launchStartRequested = (flags & LAUNCH_FLAG_START_REQUESTED) != 0;
+        padCollapseStartRequested = (flags & LAUNCH_FLAG_PAD_COLLAPSE_REQUESTED) != 0;
+        finalFallRequested = (flags & LAUNCH_FLAG_FINAL_FALL_REQUESTED) != 0;
+        launchRiderAnchorRegistered = (flags & LAUNCH_FLAG_RIDER_ANCHOR_REGISTERED) != 0;
+        lbz2RideAnimatedTilesRequested =
+                (flags & LAUNCH_FLAG_LBZ2_RIDE_ANIMATED_TILES_REQUESTED) != 0;
+        padCollapseActive = (flags & LAUNCH_FLAG_PAD_COLLAPSE_ACTIVE) != 0;
+        finalFallActive = (flags & LAUNCH_FLAG_FINAL_FALL_ACTIVE) != 0;
+        deathEggTerrainSwapQueued = (flags & LAUNCH_FLAG_DEATH_EGG_TERRAIN_SWAP_QUEUED) != 0;
+        deathEggTerrainSwapApplied = (flags & LAUNCH_FLAG_DEATH_EGG_TERRAIN_SWAP_APPLIED) != 0;
+        waterDisabled = (flags & LAUNCH_FLAG_WATER_DISABLED) != 0;
+        finaleCutsceneAnchorRegistered =
+                (flags & LAUNCH_FLAG_FINALE_CUTSCENE_ANCHOR_REGISTERED) != 0;
+    }
+
+    private void restoreLaunchInts(ByteBuffer buffer, boolean hasWaterTarget, boolean hasDeathEggDeformState) {
+        fgLaunchSpeed = buffer.getInt();
+        bgLaunchSpeed = buffer.getInt();
+        fgAccum = buffer.getInt();
+        bgAccum = buffer.getInt();
+        launchYDelta = buffer.getInt();
+        preLaunchDelay = buffer.getInt();
+        detachScroll = buffer.getInt();
+        waterTargetY = hasWaterTarget ? buffer.getInt() : 0;
+        launchRiderAnchorId = buffer.getInt();
+        deathEggDeformWrapLatch = hasDeathEggDeformState ? buffer.getInt() : 0;
+        finaleCutsceneAnchorId = hasDeathEggDeformState ? buffer.getInt() : 0;
+    }
+
+    private void clearLaunchState() {
+        launchActive = false;
+        deathEggRumble = false;
+        fgLaunchSpeed = 0;
+        bgLaunchSpeed = 0;
+        fgAccum = 0;
+        bgAccum = 0;
+        launchYDelta = 0;
+        preLaunchDelay = 0;
+        detachScroll = 0;
+        waterTargetY = 0;
+        launchStartRequested = false;
+        padCollapseStartRequested = false;
+        finalFallRequested = false;
+        lbz2RideAnimatedTilesRequested = false;
+        padCollapseActive = false;
+        finalFallActive = false;
+        deathEggTerrainSwapQueued = false;
+        deathEggTerrainSwapApplied = false;
+        waterDisabled = false;
+        deathEggDeformWrapLatch = 0;
+        clearLaunchRiderAnchor();
+        clearFinaleCutsceneAnchor();
+    }
+
+    private int launchFlags() {
+        int flags = 0;
+        if (launchActive) {
+            flags |= LAUNCH_FLAG_ACTIVE;
+        }
+        if (deathEggRumble) {
+            flags |= LAUNCH_FLAG_DEATH_EGG_RUMBLE;
+        }
+        if (launchStartRequested) {
+            flags |= LAUNCH_FLAG_START_REQUESTED;
+        }
+        if (padCollapseStartRequested) {
+            flags |= LAUNCH_FLAG_PAD_COLLAPSE_REQUESTED;
+        }
+        if (finalFallRequested) {
+            flags |= LAUNCH_FLAG_FINAL_FALL_REQUESTED;
+        }
+        if (launchRiderAnchorRegistered) {
+            flags |= LAUNCH_FLAG_RIDER_ANCHOR_REGISTERED;
+        }
+        if (lbz2RideAnimatedTilesRequested) {
+            flags |= LAUNCH_FLAG_LBZ2_RIDE_ANIMATED_TILES_REQUESTED;
+        }
+        if (padCollapseActive) {
+            flags |= LAUNCH_FLAG_PAD_COLLAPSE_ACTIVE;
+        }
+        if (finalFallActive) {
+            flags |= LAUNCH_FLAG_FINAL_FALL_ACTIVE;
+        }
+        if (deathEggTerrainSwapQueued) {
+            flags |= LAUNCH_FLAG_DEATH_EGG_TERRAIN_SWAP_QUEUED;
+        }
+        if (deathEggTerrainSwapApplied) {
+            flags |= LAUNCH_FLAG_DEATH_EGG_TERRAIN_SWAP_APPLIED;
+        }
+        if (waterDisabled) {
+            flags |= LAUNCH_FLAG_WATER_DISABLED;
+        }
+        if (finaleCutsceneAnchorRegistered) {
+            flags |= LAUNCH_FLAG_FINALE_CUTSCENE_ANCHOR_REGISTERED;
+        }
+        return flags;
     }
 }

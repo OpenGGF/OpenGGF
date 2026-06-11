@@ -7,21 +7,29 @@ import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.LbzInvisibleBarrierInstance;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.Sonic3kLevel;
+import com.openggf.level.AbstractLevel;
+import com.openggf.level.Chunk;
 import com.openggf.level.Level;
+import com.openggf.level.LevelConstants;
 import com.openggf.level.Map;
+import com.openggf.level.Pattern;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.resources.LoadOp;
+import com.openggf.level.resources.ResourceLoader;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Optional;
 
 /**
  * Launch Base Zone dynamic level events.
@@ -81,6 +89,25 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private static final int LBZ2_CORRIDOR_SRC_X = 0x94;
     private static final int LBZ2_CORRIDOR_DEST_X = 6;
     private static final int LBZ2_CORRIDOR_SIZE = 6;
+    /** ROM LBZ2_Resize: Death Egg terrain/art swap threshold. */
+    private static final int LBZ2_DEATH_EGG_SWAP_CAMERA_X = 0x3BC0;
+    private static final int LBZ2_DEATH_EGG_SWAP_CAMERA_Y = 0x0500;
+    private static final int LBZ2_LAUNCH_CAMERA_MAX_X = 0x4390;
+    private static final int LBZ2_LAUNCH_CAMERA_MAX_Y = 0x0668;
+    private static final int LBZ2_LAUNCH_PRE_DELAY = 0x3C;
+    private static final int LBZ2_LAUNCH_FG_SPEED = 0x1E00;
+    private static final int LBZ2_LAUNCH_BG_SPEED = 0x6200;
+    private static final int LBZ2_LAUNCH_BG_SCROLL_LOCK_SPEED = 0x2200;
+    private static final int LBZ2_LAUNCH_BG_MIN_FALL_SPEED = -0x18000;
+    private static final int LBZ2_LAUNCH_DECEL = 0x100;
+    private static final int LBZ2_WATER_DRAIN_LIMIT = 0x0F00;
+    private static final int LBZ2_WATER_DRAIN_CLAMP = 0x0F80;
+    private static final int LBZ2_PAD_DETACH_SCROLL_DONE = 0x28;
+    private static final int LBZ2_FINAL_FALL_CAMERA_DY = -2;
+    private static final int LBZ2_PAD_CLEAR_X = 0x87;
+    private static final int LBZ2_PAD_CLEAR_Y = 0x0B;
+    private static final int LBZ2_PAD_CLEAR_WIDTH = 3;
+    private static final int LBZ2_PAD_CLEAR_HEIGHT = 2;
 
     private boolean endingCollapseActive;
     private boolean endingCollapseFinished;
@@ -142,6 +169,8 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         }
         if (act != 0) {
             updateAct2EntryLayout();
+            updateAct2DeathEggTerrainSwap();
+            updateAct2Launch(frameCounter);
             return;
         }
         applyRestartFromBossAreaInitIfNeeded();
@@ -330,6 +359,62 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         eventsFg5 = flag;
     }
 
+    public void requestLaunchStart() {
+        currentLbzRuntimeState().ifPresent(LbzZoneRuntimeState::requestLaunchStart);
+    }
+
+    public boolean consumeLaunchStartRequested() {
+        return currentLbzRuntimeState()
+                .map(LbzZoneRuntimeState::consumeLaunchStartRequested)
+                .orElse(false);
+    }
+
+    public void requestPadCollapseStart() {
+        currentLbzRuntimeState().ifPresent(LbzZoneRuntimeState::requestPadCollapseStart);
+    }
+
+    public boolean consumePadCollapseStartRequested() {
+        return currentLbzRuntimeState()
+                .map(LbzZoneRuntimeState::consumePadCollapseStartRequested)
+                .orElse(false);
+    }
+
+    public void requestFinalFall() {
+        currentLbzRuntimeState().ifPresent(LbzZoneRuntimeState::requestFinalFall);
+    }
+
+    public boolean consumeFinalFallRequested() {
+        return currentLbzRuntimeState()
+                .map(LbzZoneRuntimeState::consumeFinalFallRequested)
+                .orElse(false);
+    }
+
+    public void requestLbz2RideAnimatedTiles() {
+        currentLbzRuntimeState().ifPresent(LbzZoneRuntimeState::requestLbz2RideAnimatedTiles);
+    }
+
+    public boolean consumeLbz2RideAnimatedTilesRequested() {
+        return currentLbzRuntimeState()
+                .map(LbzZoneRuntimeState::consumeLbz2RideAnimatedTilesRequested)
+                .orElse(false);
+    }
+
+    public boolean isLaunchActive() {
+        return currentLbzRuntimeState()
+                .map(LbzZoneRuntimeState::isLaunchActive)
+                .orElse(false);
+    }
+
+    public int getLaunchYDelta() {
+        return currentLbzRuntimeState()
+                .map(LbzZoneRuntimeState::getLaunchYDelta)
+                .orElse(0);
+    }
+
+    public void registerLaunchRiderAnchor(int anchorId) {
+        currentLbzRuntimeState().ifPresent(state -> state.registerLaunchRiderAnchor(anchorId));
+    }
+
     /**
      * ROM: LBZ1 screen init. When the player restarts from the lamppost past
      * the collapsed building (Camera_X_pos >= $3B60, non-Knuckles), the init
@@ -488,6 +573,338 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         }
     }
 
+    private void updateAct2DeathEggTerrainSwap() {
+        LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(zoneRuntimeRegistry()).orElse(null);
+        if (state == null || state.isDeathEggTerrainSwapApplied()) {
+            return;
+        }
+        Camera camera = camera();
+        if ((camera.getX() & 0xFFFF) < LBZ2_DEATH_EGG_SWAP_CAMERA_X
+                || (camera.getY() & 0xFFFF) < LBZ2_DEATH_EGG_SWAP_CAMERA_Y) {
+            return;
+        }
+        state.setDeathEggTerrainSwapQueued(true);
+        applyDeathEggTerrainSwapHook(state);
+    }
+
+    private void applyDeathEggTerrainSwapHook(LbzZoneRuntimeState state) {
+        Level level = levelManager().getCurrentLevel();
+        if (level == null) {
+            return;
+        }
+
+        byte[] blocks16x16;
+        byte[] chunks128x128;
+        byte[] terrainArt;
+        byte[] deathEgg2Art;
+        try {
+            ResourceLoader loader = new ResourceLoader(rom());
+            blocks16x16 = loader.loadSingle(
+                    LoadOp.kosinskiBase(Sonic3kConstants.LBZ2_16X16_DEATH_EGG_KOS_ADDR));
+            chunks128x128 = loader.loadSingle(
+                    LoadOp.kosinskiBase(Sonic3kConstants.LBZ2_128X128_DEATH_EGG_KOS_ADDR));
+            terrainArt = loader.loadSingle(
+                    LoadOp.kosinskiMBase(Sonic3kConstants.LBZ2_8X8_DEATH_EGG_KOSM_ADDR));
+            deathEgg2Art = loader.loadSingle(
+                    LoadOp.kosinskiMBase(Sonic3kConstants.ART_KOSM_LBZ2_DEATH_EGG_2_8X8_ADDR));
+        } catch (IOException ex) {
+            throw new IllegalStateException("Unable to read LBZ2 Death Egg terrain resources from S3K ROM", ex);
+        }
+        validateResourceSize("LBZ2_16x16_DeathEgg_Kos",
+                blocks16x16, Sonic3kConstants.LBZ2_16X16_DEATH_EGG_OUTPUT_SIZE);
+        validateResourceSize("LBZ2_128x128_DeathEgg_Kos",
+                chunks128x128, Sonic3kConstants.LBZ2_128X128_DEATH_EGG_OUTPUT_SIZE);
+        validateResourceSize("LBZ2_8x8_DeathEgg_KosM",
+                terrainArt, Sonic3kConstants.LBZ2_8X8_DEATH_EGG_OUTPUT_SIZE);
+        validateResourceSize("ArtKosM_LBZ2DeathEgg2_8x8",
+                deathEgg2Art, Sonic3kConstants.ART_KOSM_LBZ2_DEATH_EGG_2_8X8_OUTPUT_SIZE);
+
+        LayoutMutationContext context = new LayoutMutationContext(
+                LevelMutationSurface.forLevel(level),
+                levelManager()::applyMutationEffects);
+        zoneLayoutMutationPipeline().applyImmediately(
+                mutationContext -> applyDeathEggTerrainResources(
+                        mutationContext, blocks16x16, chunks128x128, terrainArt, deathEgg2Art),
+                context);
+        state.setDeathEggTerrainSwapApplied(true);
+    }
+
+    private MutationEffects applyDeathEggTerrainResources(LayoutMutationContext context,
+                                                          byte[] blocks16x16,
+                                                          byte[] chunks128x128,
+                                                          byte[] terrainArt,
+                                                          byte[] deathEgg2Art) {
+        MutationEffects effects = MutationEffects.NONE;
+        effects = mergeEffects(effects, copyDeathEgg16x16Blocks(context, blocks16x16));
+        effects = mergeEffects(effects, copyDeathEgg128x128Chunks(context, chunks128x128));
+        effects = mergeEffects(effects, copyArtToPatternTile(
+                context, terrainArt, Sonic3kConstants.LBZ2_8X8_DEATH_EGG_DEST_TILE));
+        effects = mergeEffects(effects, copyArtToPatternTile(
+                context, deathEgg2Art, Sonic3kConstants.ART_TILE_LBZ2_DEATH_EGG_2));
+        return mergeEffects(effects, MutationEffects.redrawAllTilemaps());
+    }
+
+    private MutationEffects copyDeathEgg16x16Blocks(LayoutMutationContext context, byte[] blocks16x16) {
+        Level level = levelManager() != null ? levelManager().getCurrentLevel() : null;
+        if (level == null) {
+            return MutationEffects.NONE;
+        }
+        LevelMutationSurface surface = context.surface();
+        MutationEffects effects = MutationEffects.NONE;
+        int startChunkIndex = Sonic3kConstants.LBZ2_16X16_DEATH_EGG_DEST_BLOCK;
+        int chunkCount = blocks16x16.length / Chunk.CHUNK_SIZE_IN_ROM;
+        ensureChunkCapacity(level, startChunkIndex + chunkCount);
+        for (int i = 0; i < chunkCount; i++) {
+            int chunkIndex = startChunkIndex + i;
+            int srcOffset = i * Chunk.CHUNK_SIZE_IN_ROM;
+            int[] state = new int[Chunk.PATTERNS_PER_CHUNK + 2];
+            for (int pattern = 0; pattern < Chunk.PATTERNS_PER_CHUNK; pattern++) {
+                state[pattern] = readWord(blocks16x16, srcOffset + pattern * 2);
+            }
+            if (chunkIndex < level.getChunkCount()) {
+                Chunk existing = level.getChunk(chunkIndex);
+                state[Chunk.PATTERNS_PER_CHUNK] = existing.getSolidTileIndex();
+                state[Chunk.PATTERNS_PER_CHUNK + 1] = existing.getSolidTileAltIndex();
+            }
+            effects = mergeEffects(effects, surface.restoreChunkState(chunkIndex, state));
+        }
+        return effects;
+    }
+
+    private static void ensureChunkCapacity(Level level, int minChunkCount) {
+        if (level.getChunkCount() >= minChunkCount || !(level instanceof AbstractLevel abstractLevel)) {
+            return;
+        }
+        Chunk[] chunks = Arrays.copyOf(abstractLevel.chunksReference(), minChunkCount);
+        for (int i = level.getChunkCount(); i < minChunkCount; i++) {
+            chunks[i] = new Chunk();
+        }
+        abstractLevel.replaceChunks(chunks);
+    }
+
+    private MutationEffects copyDeathEgg128x128Chunks(LayoutMutationContext context, byte[] chunks128x128) {
+        LevelMutationSurface surface = context.surface();
+        MutationEffects effects = MutationEffects.NONE;
+        int startBlockIndex = Sonic3kConstants.LBZ2_128X128_DEATH_EGG_DEST_CHUNK;
+        int blockCount = chunks128x128.length / LevelConstants.BLOCK_SIZE_IN_ROM;
+        int chunksPerBlock = LevelConstants.BLOCK_SIZE_IN_ROM / 2;
+        for (int i = 0; i < blockCount; i++) {
+            int blockIndex = startBlockIndex + i;
+            int srcOffset = i * LevelConstants.BLOCK_SIZE_IN_ROM;
+            int[] state = new int[chunksPerBlock];
+            for (int chunk = 0; chunk < chunksPerBlock; chunk++) {
+                state[chunk] = readWord(chunks128x128, srcOffset + chunk * 2);
+            }
+            effects = mergeEffects(effects, surface.restoreBlockState(blockIndex, state));
+        }
+        return effects;
+    }
+
+    private MutationEffects copyArtToPatternTile(LayoutMutationContext context, byte[] art, int startPatternIndex) {
+        LevelMutationSurface surface = context.surface();
+        MutationEffects effects = MutationEffects.NONE;
+        int patternCount = art.length / Pattern.PATTERN_SIZE_IN_ROM;
+        for (int i = 0; i < patternCount; i++) {
+            int patternIndex = startPatternIndex + i;
+            int srcOffset = i * Pattern.PATTERN_SIZE_IN_ROM;
+            Pattern pattern = new Pattern();
+            pattern.fromSegaFormat(Arrays.copyOfRange(art, srcOffset,
+                    srcOffset + Pattern.PATTERN_SIZE_IN_ROM));
+            effects = mergeEffects(effects, surface.setPattern(patternIndex, pattern));
+        }
+        return effects;
+    }
+
+    private static void validateResourceSize(String name, byte[] resource, int expectedSize) {
+        if (resource.length != expectedSize) {
+            throw new IllegalStateException(String.format(
+                    "%s decompressed to 0x%X bytes, expected 0x%X",
+                    name, resource.length, expectedSize));
+        }
+    }
+
+    private void updateAct2Launch(int frameCounter) {
+        LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(zoneRuntimeRegistry()).orElse(null);
+        if (state == null) {
+            return;
+        }
+        if (state.consumeLaunchStartRequested()) {
+            startLaunch(state);
+        }
+        if (state.consumePadCollapseStartRequested()) {
+            state.setPadCollapseActive(true);
+            state.setWaterDisabled(false);
+            state.setDetachScroll(0);
+        }
+        if (state.consumeFinalFallRequested()) {
+            state.setFinalFallActive(true);
+        }
+        if (state.isFinalFallActive()) {
+            camera().setFrozen(true);
+            camera().setY((short) ((camera().getY() & 0xFFFF) + LBZ2_FINAL_FALL_CAMERA_DY));
+            return;
+        }
+        if (!state.isLaunchActive()) {
+            return;
+        }
+        updateDeathEggRumble(state, frameCounter);
+        if (state.isPadCollapseActive()) {
+            updatePadCollapsePreDetach(state);
+        }
+        updateLaunchMotion(state);
+        if (state.isPadCollapseActive()) {
+            updatePadCollapse(state, frameCounter);
+        }
+    }
+
+    private void startLaunch(LbzZoneRuntimeState state) {
+        state.setLaunchActive(true);
+        state.setDeathEggRumble(true);
+        state.setPreLaunchDelay(LBZ2_LAUNCH_PRE_DELAY);
+        state.setFgLaunchSpeed(LBZ2_LAUNCH_FG_SPEED);
+        state.setBgLaunchSpeed(LBZ2_LAUNCH_BG_SPEED);
+        state.setWaterTargetY(camera().getY() & 0xFFFF);
+        gameState().setScreenShakeActive(true);
+        Camera camera = camera();
+        camera.setMaxX((short) LBZ2_LAUNCH_CAMERA_MAX_X);
+        camera.setMaxY((short) LBZ2_LAUNCH_CAMERA_MAX_Y);
+        camera.setMaxYTarget((short) LBZ2_LAUNCH_CAMERA_MAX_Y);
+        camera.setFrozen(true);
+    }
+
+    private void updateLaunchMotion(LbzZoneRuntimeState state) {
+        AbstractPlayableSprite player = camera().getFocusedSprite();
+        if (player != null && player.getDead()) {
+            state.setLaunchYDelta(0);
+            return;
+        }
+        Camera camera = camera();
+        if (camera.getFrozen() && player != null) {
+            int targetCameraX = (player.getCentreX() & 0xFFFF) - 0xA0;
+            int dx = Math.max(0, targetCameraX - (camera.getX() & 0xFFFF));
+            if (dx > 0) {
+                camera.setX((short) ((camera.getX() & 0xFFFF) + dx));
+            }
+        }
+        if ((camera.getX() & 0xFFFF) >= LBZ2_LAUNCH_CAMERA_MAX_X
+                || (camera.getY() & 0xFFFF) >= LBZ2_LAUNCH_CAMERA_MAX_Y) {
+            camera.setFrozen(false);
+        }
+        if (state.getPreLaunchDelay() > 0) {
+            state.setPreLaunchDelay(state.getPreLaunchDelay() - 1);
+            state.setLaunchYDelta(0);
+            return;
+        }
+        if ((camera.getX() & 0xFFFF) >= LBZ2_LAUNCH_CAMERA_MAX_X) {
+            camera.setMinX(camera.getMaxX());
+        }
+        if ((camera.getY() & 0xFFFF) >= LBZ2_LAUNCH_CAMERA_MAX_Y) {
+            camera.setMinY(camera.getMaxY());
+        }
+
+        int oldFgHigh = state.getFgAccum() >> 16;
+        int fgAccum = state.getFgAccum() + state.getFgLaunchSpeed();
+        state.setFgAccum(fgAccum);
+        int fgDelta = (fgAccum >> 16) - oldFgHigh;
+
+        int oldBgHigh = state.getBgAccum() >> 16;
+        int bgStep = camera.getFrozen() ? LBZ2_LAUNCH_BG_SCROLL_LOCK_SPEED : state.getBgLaunchSpeed();
+        int bgAccum = state.getBgAccum() + bgStep;
+        state.setBgAccum(bgAccum);
+        int bgDelta = (bgAccum >> 16) - oldBgHigh;
+
+        if (camera.getFrozen() && fgDelta != 0) {
+            camera.setY((short) ((camera.getY() & 0xFFFF) + fgDelta));
+        }
+        int combinedDelta = fgDelta + bgDelta;
+        int waterTarget = state.getWaterTargetY() + combinedDelta;
+        if (waterTarget >= LBZ2_WATER_DRAIN_LIMIT) {
+            waterTarget = LBZ2_WATER_DRAIN_CLAMP;
+        }
+        state.setWaterTargetY(waterTarget);
+        try {
+            waterSystem().setWaterLevelTarget(Sonic3kZoneIds.ZONE_LBZ, 1, state.getWaterTargetY());
+        } catch (RuntimeException ignored) {
+            // Unit-test contexts may not have an LBZ water configuration.
+        }
+        state.setLaunchYDelta(combinedDelta);
+    }
+
+    private static void updateLaunchFallingAccel(LbzZoneRuntimeState state) {
+        if (state.getFgLaunchSpeed() > 0) {
+            state.setFgLaunchSpeed(state.getFgLaunchSpeed() - LBZ2_LAUNCH_DECEL);
+        } else if (state.getBgLaunchSpeed() > LBZ2_LAUNCH_BG_MIN_FALL_SPEED) {
+            state.setBgLaunchSpeed(state.getBgLaunchSpeed() - LBZ2_LAUNCH_DECEL);
+        }
+    }
+
+    private void updateDeathEggRumble(LbzZoneRuntimeState state, int frameCounter) {
+        if (!state.isDeathEggRumble()) {
+            return;
+        }
+        if (!gameState().isScreenShakeActive()) {
+            state.setDeathEggRumble(false);
+            return;
+        }
+        requestScreenShakeOffset(frameCounter);
+        if (((frameCounter - 1) & 0x0F) == 0) {
+            audio().playSfx(Sonic3kSfx.DEATH_EGG_RISE_LOUD.id);
+        }
+    }
+
+    private static void updatePadCollapsePreDetach(LbzZoneRuntimeState state) {
+        if (state.isWaterDisabled()) {
+            return;
+        }
+        updateLaunchFallingAccel(state);
+        if (state.getBgLaunchSpeed() < 0) {
+            state.setWaterDisabled(true);
+        }
+    }
+
+    private void updatePadCollapse(LbzZoneRuntimeState state, int frameCounter) {
+        if (!state.isWaterDisabled()) {
+            return;
+        }
+        if ((frameCounter & 3) != 0) {
+            return;
+        }
+        int detachScroll = state.getDetachScroll() + 1;
+        if (detachScroll < LBZ2_PAD_DETACH_SCROLL_DONE) {
+            state.setDetachScroll(detachScroll);
+            return;
+        }
+        state.setDetachScroll(0);
+        state.setPadCollapseActive(false);
+        clearLaunchPadTerrain();
+    }
+
+    private void clearLaunchPadTerrain() {
+        Level level = levelManager().getCurrentLevel();
+        if (level == null || level.getMap() == null) {
+            return;
+        }
+        LayoutMutationContext context = new LayoutMutationContext(
+                LevelMutationSurface.forLevel(level),
+                levelManager()::applyMutationEffects);
+        zoneLayoutMutationPipeline().applyImmediately(
+                mutationContext -> {
+                    MutationEffects combined = MutationEffects.NONE;
+                    LevelMutationSurface surface = mutationContext.surface();
+                    for (int row = 0; row < LBZ2_PAD_CLEAR_HEIGHT; row++) {
+                        for (int col = 0; col < LBZ2_PAD_CLEAR_WIDTH; col++) {
+                            combined = mergeEffects(combined, surface.setBlockInMap(
+                                    FG_LAYER,
+                                    LBZ2_PAD_CLEAR_X + col,
+                                    LBZ2_PAD_CLEAR_Y + row,
+                                    0));
+                        }
+                    }
+                    return combined;
+                },
+                context);
+    }
+
     /**
      * ROM: {@code Adjust_LBZ2Layout} — fixes up the LBZ2 layout around the
      * act-transition seam: moves the chunk at FG (5,18) down a row and replaces
@@ -567,6 +984,13 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         S3kRuntimeStates.currentLbz(zoneRuntimeRegistry())
                 .ifPresent(state -> state.requestScreenShakeOffset(
                         SCREEN_SHAKE_CONTINUOUS[frameCounter & 0x3F]));
+    }
+
+    private Optional<LbzZoneRuntimeState> currentLbzRuntimeState() {
+        if (!hasRuntime()) {
+            return Optional.empty();
+        }
+        return S3kRuntimeStates.currentLbz(zoneRuntimeRegistry());
     }
 
     private static LayoutMod modById(int id) {
@@ -649,6 +1073,10 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
                 left.allTilemapsRedrawRequired() || right.allTilemapsRedrawRequired(),
                 left.objectResyncRequired() || right.objectResyncRequired(),
                 left.ringResyncRequired() || right.ringResyncRequired());
+    }
+
+    private static int readWord(byte[] data, int offset) {
+        return ((data[offset] & 0xFF) << 8) | (data[offset + 1] & 0xFF);
     }
 
     private record LayoutMod(int id,

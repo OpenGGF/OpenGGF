@@ -198,6 +198,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     private int pachinkoSourceOffset;
     private int pachinkoStripeOffset;
     private int lbzRegularScriptCount;
+    private boolean lbz2RideTriggerActiveThisFrame;
     private int frameCounter;
 
     // Gumball bonus stage: direct DMA of uncompressed art based on BG scroll
@@ -582,6 +583,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             return;
         }
         if (!graph.channels().isEmpty()) {
+            lbz2RideTriggerActiveThisFrame = false;
             graph.update(new ChannelContext(
                     graph, null, level, GameServices.zoneRuntimeState(), zoneIndex, actIndex, frameCounter++));
             return;
@@ -729,7 +731,8 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     }
 
     boolean shouldRunLbzSharedChannel() {
-        return lbzSharedData != null;
+        return lbzSharedData != null
+                && !(actIndex == 1 && lbz2RideTriggerActiveThisFrame);
     }
 
     boolean shouldRunLbz1CustomChannels() {
@@ -743,7 +746,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     }
 
     boolean shouldRunLbz2ScrollChannel() {
-        return actIndex == 1 && lbz2ScrollData != null;
+        return actIndex == 1 && lbz2ScrollData != null && !lbz2RideTriggerActiveThisFrame;
     }
 
     boolean shouldRunLbz2WaterlineChannel() {
@@ -753,6 +756,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
                 && lbz2WaterlineAboveData != null
                 && lbz2UpperBgData != null
                 && lbzWaterlineScrollData != null;
+    }
+
+    boolean shouldRunLbz2RideTriggerChannel() {
+        return actIndex == 1 && GameServices.hasRuntime();
     }
 
     void tickScript(AniPlcScriptState script) {
@@ -837,6 +844,14 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
 
     void updateLbz2WaterlineTilesForGraph() {
         updateLbz2WaterlineTiles();
+    }
+
+    void consumeLbz2RideTriggerForGraph() {
+        if (actIndex != 1 || !GameServices.hasRuntime()) {
+            return;
+        }
+        LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(GameServices.zoneRuntimeRegistry()).orElse(null);
+        lbz2RideTriggerActiveThisFrame = state != null && state.consumeLbz2RideAnimatedTilesRequested();
     }
 
     private void updateHcz1BackgroundStrips() {

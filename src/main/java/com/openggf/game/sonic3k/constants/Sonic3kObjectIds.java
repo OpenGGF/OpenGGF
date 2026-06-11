@@ -174,7 +174,15 @@ public final class Sonic3kObjectIds {
     public static final int LBZ_MINIBOSS_BOX = 0xC4;
     // S3KL object table: Obj_LBZMinibossBoxKnux (Knuckles dual-boss staging box).
     public static final int LBZ_MINIBOSS_BOX_KNUX = 0xC5;
+    // S3KL object table: Obj_LBZ2RobotnikShip.
+    public static final int LBZ2_ROBOTNIK_SHIP = 0xC6;
+    // S3KL object table: Obj_LBZKnuxPillar.
+    public static final int LBZ_KNUX_PILLAR = 0xC8;
     public static final int LBZ_MINIBOSS = 0xC9;
+    // S3KL object table: Obj_LBZFinalBoss1.
+    public static final int LBZ_FINAL_BOSS_1 = 0xCA;
+    // S3KL object table: Obj_LBZEndBoss.
+    public static final int LBZ_END_BOSS = 0xCB;
     public static final int PACHINKO_TRIANGLE_BUMPER = 0xE6;
     public static final int PACHINKO_FLIPPER = 0xE7;
     public static final int PACHINKO_ENERGY_TRAP = 0xE8;

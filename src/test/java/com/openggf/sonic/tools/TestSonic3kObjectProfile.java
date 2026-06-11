@@ -96,5 +96,27 @@ public class TestSonic3kObjectProfile {
                     "CNZ object $" + Integer.toHexString(objectId) + " must stay out of the SKL set");
         }
     }
-}
 
+    @Test
+    public void lbz2EndSequenceActorsAreMarkedImplementedForS3klLevelsOnly() {
+        Sonic3kObjectProfile profile = new Sonic3kObjectProfile();
+        List<LevelConfig> levels = profile.getLevels();
+
+        LevelConfig lbz2 = levels.stream()
+                .filter(level -> level.levelData() == LevelData.S3K_LAUNCH_BASE_2)
+                .findFirst()
+                .orElseThrow();
+        LevelConfig mhz1 = levels.stream()
+                .filter(level -> level.levelData() == LevelData.S3K_MUSHROOM_HILL_1)
+                .findFirst()
+                .orElseThrow();
+
+        int[] implementedLbz2Ids = {0xC6, 0xC8, 0xCA, 0xCB};
+        for (int objectId : implementedLbz2Ids) {
+            assertTrue(profile.getImplementedIds(lbz2).contains(objectId),
+                    "LBZ2 object $" + Integer.toHexString(objectId) + " should be reported as implemented");
+            assertFalse(profile.getImplementedIds(mhz1).contains(objectId),
+                    "LBZ2 object $" + Integer.toHexString(objectId) + " must stay out of the SKL set");
+        }
+    }
+}

@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k;
 
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.resources.CompressionType;
 
 import java.util.ArrayList;
@@ -1485,6 +1486,89 @@ public final class Sonic3kPlcArtRegistry {
                     Sonic3kConstants.MAP_LBZ_MINIBOSS_ADDR,
                     1,
                     -1
+            ));
+        }
+        if (actIndex == 1) {
+            // Obj_LBZEndBoss queues ArtKosM_LBZEndBoss to ArtTile_LBZEndBoss and uses palette line 1.
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.LBZ_END_BOSS,
+                    Sonic3kConstants.ART_KOSM_LBZ_END_BOSS_ADDR,
+                    CompressionType.KOSINSKI_MODULED,
+                    Sonic3kConstants.ART_KOSM_LBZ_END_BOSS_SIZE,
+                    Sonic3kConstants.MAP_LBZ_END_BOSS_ADDR,
+                    1,
+                    -1,
+                    15
+            ));
+            // PLC_71 / Obj_LBZFinalBoss1: ArtNem_LBZFinalBoss1, Map_LBZFinalBoss1, palette line 1.
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.LBZ_FINAL_BOSS_1,
+                    Sonic3kConstants.ART_NEM_LBZ_FINAL_BOSS_1_ADDR,
+                    CompressionType.NEMESIS,
+                    Sonic3kConstants.ART_NEM_LBZ_FINAL_BOSS_1_SIZE,
+                    Sonic3kConstants.MAP_LBZ_FINAL_BOSS_1_ADDR,
+                    1,
+                    -1,
+                    46
+            ));
+            // Death Egg launch miniature art uses Pal_LBZEnding on palette line 1.
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.LBZ2_DEATH_EGG_SMALL,
+                    Sonic3kConstants.ART_KOSM_LBZ2_DEATH_EGG_SMALL_ADDR,
+                    CompressionType.KOSINSKI_MODULED,
+                    Sonic3kConstants.ART_KOSM_LBZ2_DEATH_EGG_SMALL_SIZE,
+                    Sonic3kConstants.MAP_LBZ_DEATH_EGG_SMALL_ADDR,
+                    1,
+                    -1,
+                    12
+            ));
+            // PLC_77 / Robotnik runner child: ArtNem_FBZRobotnikRun, Map_FBZRobotnikRun, palette line 0.
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.FBZ_ROBOTNIK_RUN,
+                    Sonic3kConstants.ART_NEM_FBZ_ROBOTNIK_RUN_ADDR,
+                    CompressionType.NEMESIS,
+                    Sonic3kConstants.ART_NEM_FBZ_ROBOTNIK_RUN_SIZE,
+                    Sonic3kConstants.MAP_FBZ_ROBOTNIK_RUN_ADDR,
+                    0,
+                    -1
+            ));
+            // PLC_77 / Obj_LBZ2RobotnikShip reuses the shared Robotnik ship sheet.
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.ROBOTNIK_SHIP,
+                    Sonic3kConstants.ART_NEM_ROBOTNIK_SHIP_ADDR,
+                    CompressionType.NEMESIS,
+                    0,
+                    Sonic3kConstants.MAP_ROBOTNIK_SHIP_ADDR,
+                    0,
+                    -1
+            ));
+            // CutsceneKnux_LBZ2 subtype 0x18 reuses the shared DPLC-driven cutscene Knuckles sheet.
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.CUTSCENE_KNUCKLES,
+                    Sonic3kConstants.ART_UNC_CUTSCENE_KNUX_ADDR,
+                    CompressionType.UNCOMPRESSED,
+                    Sonic3kConstants.ART_UNC_CUTSCENE_KNUX_SIZE,
+                    Sonic3kConstants.MAP_CUTSCENE_KNUX_ADDR,
+                    1,
+                    Sonic3kConstants.DPLC_CUTSCENE_KNUX_ADDR
+            ));
+            // PLC_77 and PLC_71 both include the shared boss explosion art at ArtTile_BossExplosion.
+            standalone.add(new StandaloneArtEntry(
+                    ObjectArtKeys.BOSS_EXPLOSION,
+                    Sonic3kConstants.ART_NEM_BOSS_EXPLOSION_ADDR,
+                    CompressionType.NEMESIS,
+                    0,
+                    Sonic3kConstants.MAP_BOSS_EXPLOSION_ADDR,
+                    0,
+                    -1
+            ));
+            // Obj_LBZKnuxPillar renders from the Death Egg 2 tiles installed by the terrain swap.
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LBZ_KNUX_PILLAR,
+                    Sonic3kConstants.MAP_LBZ_KNUX_PILLAR_ADDR,
+                    Sonic3kConstants.ART_TILE_LBZ_KNUX_PILLAR,
+                    2,
+                    null
             ));
         }
 
