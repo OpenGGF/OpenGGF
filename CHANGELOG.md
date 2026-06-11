@@ -55,6 +55,12 @@ All notable changes to the OpenGGF project are documented in this file.
   sidekick is horizontally aligned with the leader during PANIC, the routine now
   faces left just like the S2/S3K `TailsCPU_Panic` subtract-and-carry branch.
 
+- **Badnik destruction child allocation follows the explosion routine:** the
+  shared S2/S3K destruction path now transfers the defeated badnik slot to
+  `Obj_Explosion` and lets the explosion's first update allocate animal/points
+  children, matching the S3K `Obj_Explosion` routine instead of spawning those
+  children directly from the destruction helper.
+
 - **S3K sidekick fresh spawns honor the Obj_Tails init-only frame:** fresh
   routine-0 sidekick spawns now reset kinematics and advance to the normal CPU
   routine without running same-frame follow steering, while dormant sentinel
