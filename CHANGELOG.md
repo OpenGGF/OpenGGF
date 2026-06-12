@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- S3K AIZ zone-event rewind state is now schema-captured (auto-derived from
+  handler fields) instead of a hand-counted byte layout; a guard test fails
+  when a handler field is neither captured nor explicitly rewind-transient,
+  and malformed schema payloads are rejected without corrupting later sidecars.
+
 - New debug flag `debug.rewind.determinismAudit`: re-simulates each completed
   rewind keyframe segment during live play and logs the first state divergence,
   pinpointing state that is missing from rewind capture. Disarms after the first

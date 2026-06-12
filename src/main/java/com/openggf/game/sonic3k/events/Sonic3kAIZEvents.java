@@ -6,6 +6,7 @@ import com.openggf.game.CheckpointState;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
@@ -208,6 +209,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     /** Camera X at which parallax trees delete themselves. ROM: cmpi.w #$4880,(Camera_X_pos).w. */
     private static final int BATTLESHIP_TREE_DELETE_CAMERA_X = 0x4880;
 
+    @RewindTransient(reason = "level-load bootstrap configuration is structural; mutable transition state is captured separately")
     private final Sonic3kLoadBootstrap bootstrap;
     private boolean introSpawned;
     /** One-shot guard: once AIZ intro minX is locked at $1308, stop rewriting minX each frame. */

@@ -19,6 +19,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.nio.ByteBuffer;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
@@ -341,6 +342,48 @@ class TestSonic3kLevelEventRewindSnapshot {
     }
 
     @Test
+    void malformedAizSchemaPayloadDoesNotAbortLaterZoneRestore() throws Exception {
+        Sonic3kLevelEventManager hczSource = new Sonic3kLevelEventManager();
+        hczSource.initLevel(Sonic3kZoneIds.ZONE_HCZ, 1);
+        var hcz = hczSource.getHczEventsForTest();
+        assertNotNull(hcz);
+        hcz.setBgRoutine(8);
+        hcz.setWallMoving(true);
+        hcz.setShakeTimer(12);
+        LevelEventSnapshot hczSnapshot = hczSource.capture();
+
+        Sonic3kLevelEventManager target = new Sonic3kLevelEventManager();
+        target.initLevel(Sonic3kZoneIds.ZONE_AIZ, 1);
+        Sonic3kLevelEventManager hczTargetOwner = new Sonic3kLevelEventManager();
+        hczTargetOwner.initLevel(Sonic3kZoneIds.ZONE_HCZ, 1);
+        set(target, "hczEvents", hczTargetOwner.getHczEventsForTest());
+        var hczTarget = target.getHczEventsForTest();
+        assertNotNull(hczTarget);
+        hczTarget.setBgRoutine(0);
+        hczTarget.setWallMoving(false);
+        hczTarget.setShakeTimer(0);
+
+        byte[] malformedExtra = insertMalformedAizPayload(hczSnapshot.extra());
+        LevelEventSnapshot malformedSnapshot = new LevelEventSnapshot(
+                hczSnapshot.currentZone(),
+                hczSnapshot.currentAct(),
+                hczSnapshot.eventRoutineFg(),
+                hczSnapshot.eventRoutineBg(),
+                hczSnapshot.frameCounter(),
+                hczSnapshot.timerFrames(),
+                hczSnapshot.bossActive(),
+                hczSnapshot.eventDataFg(),
+                hczSnapshot.eventDataBg(),
+                malformedExtra);
+
+        assertDoesNotThrow(() -> target.restore(malformedSnapshot),
+                "schema-invalid AIZ sidecar should not abort later zone sidecars");
+        assertEquals(8, hczTarget.getBgRoutine());
+        assertTrue(hczTarget.isWallMoving());
+        assertEquals(12, hczTarget.getShakeTimer());
+    }
+
+    @Test
     void roundTripFixedAirCountdownSidecarRam() throws Exception {
         Sonic3kLevelEventManager mgr = new Sonic3kLevelEventManager();
         mgr.initLevel(Sonic3kZoneIds.ZONE_CNZ, 1);
@@ -427,6 +470,20 @@ class TestSonic3kLevelEventRewindSnapshot {
                 + get(controller, "obj3a") + ","
                 + get(controller, "obj3c") + ","
                 + get(controller, "obj3e");
+    }
+
+    private static byte[] insertMalformedAizPayload(byte[] hczExtra) {
+        int managerBytes = 30;
+        int originalAizAbsentFlagBytes = 1;
+        ByteBuffer buf = ByteBuffer.allocate(managerBytes + 1 + Integer.BYTES + 1
+                + hczExtra.length - managerBytes - originalAizAbsentFlagBytes);
+        buf.put(hczExtra, 0, managerBytes);
+        buf.put((byte) 1);
+        buf.putInt(1);
+        buf.put((byte) 0);
+        buf.put(hczExtra, managerBytes + originalAizAbsentFlagBytes,
+                hczExtra.length - managerBytes - originalAizAbsentFlagBytes);
+        return buf.array();
     }
 
     private static void set(Object target, String name, Object value) throws Exception {

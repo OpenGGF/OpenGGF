@@ -5,6 +5,7 @@ import com.openggf.game.CheckpointRuntimeStateProvider;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.schema.ZoneEventSchemaSidecar;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -1273,7 +1274,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // Layout:
         //   30 bytes  manager-level (bootstrap mode ordinal + 4 booleans + CNZ release/size counters + size-change state)
         //   1 byte    aiz handler present flag
-        //   84 bytes  aiz state (20 booleans + 15 ints + 1 ordinal int = 20+60+4 = 84)
+        //   4 bytes   aiz schema payload length, when present
+        //   N bytes   aiz schema payload, when present
         //   1 byte    hcz handler present flag
         //   43 bytes  hcz state (7 booleans + 9 ints = 7+36 = 43)
         //   1 byte    cnz handler present flag
@@ -1285,14 +1287,14 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         //   1 byte    icz handler present flag
         //   25 bytes  icz state (5 booleans + 5 ints; see Sonic3kICZEvents.rewindStateBytes())
         //   28 bytes  fixed Breathing_bubbles/Breathing_bubbles_P2 sidecars
-        int aizSize = 20 + 15 * 4 + 4; // 84
+        byte[] aizBytes = aizEvents != null ? ZoneEventSchemaSidecar.capture(aizEvents) : null;
         int hczSize = 7 + 9 * 4; // 43
         int cnzSize = 4 * 2 + 10 + 15 * 4 + 4; // 82
         int mgzSize = 16 + 23 * 4 + 3 * 10 * 4; // 228
         int mhzSize = Sonic3kMHZEvents.rewindStateBytes(); // 184
-        int iczSize = Sonic3kICZEvents.rewindStateBytes(); // 24
+        int iczSize = Sonic3kICZEvents.rewindStateBytes(); // 25
         int size = 30;
-        size += 1 + (aizEvents != null ? aizSize : 0);
+        size += aizBytes != null ? 1 + Integer.BYTES + aizBytes.length : 1;
         size += 1 + (hczEvents != null ? hczSize : 0);
         size += 1 + (cnzEvents != null ? cnzSize : 0);
         size += 1 + (mgzEvents != null ? mgzSize : 0);
@@ -1314,9 +1316,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         buf.putInt(cnzAct2MinYAccumulator);
         buf.putInt(cnzAct2MaxYAccumulator);
         // AIZ
-        if (aizEvents != null) {
+        if (aizBytes != null) {
             buf.put((byte) 1);
-            writeAizState(buf, aizEvents);
+            buf.putInt(aizBytes.length);
+            buf.put(aizBytes);
         } else {
             buf.put((byte) 0);
         }
@@ -1382,19 +1385,31 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         cnzAct2MinYAccumulator = buf.remaining() >= Integer.BYTES ? buf.getInt() : 0;
         cnzAct2MaxYAccumulator = buf.remaining() >= Integer.BYTES ? buf.getInt() : 0;
         // Size constants must match the write methods
-        final int aizBytes = 20 + 15 * 4 + 4; // 84
         final int hczBytes = 7 + 9 * 4;        // 43
         final int cnzBytes = 4 * 2 + 10 + 15 * 4 + 4; // 82
         final int mgzBytes = 16 + 23 * 4 + 3 * 10 * 4; // 228
         final int mhzBytes = Sonic3kMHZEvents.rewindStateBytes(); // 184
-        final int iczBytes = Sonic3kICZEvents.rewindStateBytes(); // 24
+        final int iczBytes = Sonic3kICZEvents.rewindStateBytes(); // 25
         // AIZ
         if (buf.remaining() >= 1) {
             boolean aizPresent = buf.get() != 0;
-            if (aizPresent && aizEvents != null && buf.remaining() >= aizBytes) {
-                readAizState(buf, aizEvents);
-            } else if (aizPresent && buf.remaining() >= aizBytes) {
-                buf.position(buf.position() + aizBytes);
+            if (aizPresent) {
+                if (buf.remaining() < Integer.BYTES) {
+                    return;
+                }
+                int aizLength = buf.getInt();
+                if (aizLength < 0 || buf.remaining() < aizLength) {
+                    return;
+                }
+                byte[] bytes = new byte[aizLength];
+                buf.get(bytes);
+                if (aizEvents != null) {
+                    try {
+                        ZoneEventSchemaSidecar.restore(aizEvents, bytes);
+                    } catch (IllegalArgumentException e) {
+                        LOG.warning("Skipping malformed AIZ zone-event rewind sidecar: " + e.getMessage());
+                    }
+                }
             }
         }
         // HCZ
@@ -1445,89 +1460,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (buf.remaining() >= S3kFixedAirCountdownManager.REWIND_STATE_BYTES) {
             fixedAirCountdownManager.readRewindState(buf);
         }
-    }
-
-    // --- AIZ write/read (84 bytes) ---
-
-    private static void writeAizState(java.nio.ByteBuffer buf, Sonic3kAIZEvents a) {
-        // 20 booleans (1 byte each) = 20
-        buf.put((byte)(a.isIntroSpawned()                    ? 1 : 0));
-        buf.put((byte)(a.isIntroMinXLocked()                 ? 1 : 0));
-        buf.put((byte)(a.isIntroSidekickMarkerReleased()     ? 1 : 0));
-        buf.put((byte)(a.isIntroNormalRefreshPending()       ? 1 : 0));
-        buf.put((byte)(a.isPaletteSwapped()                  ? 1 : 0));
-        buf.put((byte)(a.isBoundariesUnlocked()              ? 1 : 0));
-        buf.put((byte)(a.isFireMinXLockReached()             ? 1 : 0));
-        buf.put((byte)(a.isMinibossSpawned()                 ? 1 : 0));
-        buf.put((byte)(a.isEventsFg4Raw()                    ? 1 : 0));
-        buf.put((byte)(a.isEventsFg5()                       ? 1 : 0));
-        buf.put((byte)(a.isBossFlag()                        ? 1 : 0));
-        buf.put((byte)(a.isBattleshipAutoScrollActiveRaw()   ? 1 : 0));
-        buf.put((byte)(a.isBattleshipSpawned()               ? 1 : 0));
-        buf.put((byte)(a.isEndBossSpawned()                  ? 1 : 0));
-        buf.put((byte)(a.isBattleshipTerrainLoaded()         ? 1 : 0));
-        buf.put((byte)(a.isAct2TransitionRequestedRaw()      ? 1 : 0));
-        buf.put((byte)(a.isFireTransitionMutationRequested() ? 1 : 0));
-        buf.put((byte)(a.isPostFireHazeActiveRaw()           ? 1 : 0));
-        buf.put((byte)(a.isFireOverlayTilesLoaded()          ? 1 : 0));
-        buf.put((byte)(a.isAct2WaitFireDrawActive()          ? 1 : 0));
-        // 15 ints = 60 bytes
-        buf.putInt(a.getAppliedTreeRevealChunkCopiesMask());
-        buf.putInt(a.getAiz2ResizeRoutine());
-        buf.putInt(a.getBattleshipWrapX());
-        buf.putInt(a.getScreenShakeTimer());
-        buf.putInt(a.getLevelRepeatOffsetRaw());
-        buf.putInt(a.getBattleshipBgYOffsetRaw());
-        buf.putInt(a.getBattleshipSmoothScrollXRaw());
-        buf.putInt(a.getBattleshipPostScrollCameraX());
-        buf.putInt(a.getScreenShakeOffsetYRaw());
-        buf.putInt(a.getFireBgCopyFixed());
-        buf.putInt(a.getFireRiseSpeed());
-        buf.putInt(a.getFireWavePhase());
-        buf.putInt(a.getFireTransitionFrames());
-        buf.putInt(a.getFirePhaseFrames());
-        buf.putInt(a.getFireOverlayTileCount());
-        // 1 enum ordinal = 4 bytes
-        buf.putInt(a.getFireSequencePhaseOrdinal());
-    }
-
-    private static void readAizState(java.nio.ByteBuffer buf, Sonic3kAIZEvents a) {
-        a.setIntroSpawned(buf.get() != 0);
-        a.setIntroMinXLocked(buf.get() != 0);
-        a.setIntroSidekickMarkerReleased(buf.get() != 0);
-        a.setIntroNormalRefreshPending(buf.get() != 0);
-        a.setPaletteSwapped(buf.get() != 0);
-        a.setBoundariesUnlocked(buf.get() != 0);
-        a.setFireMinXLockReached(buf.get() != 0);
-        a.setMinibossSpawned(buf.get() != 0);
-        a.setEventsFg4Raw(buf.get() != 0);
-        a.setEventsFg5(buf.get() != 0);
-        a.setBossFlag(buf.get() != 0);
-        a.setBattleshipAutoScrollActiveRaw(buf.get() != 0);
-        a.setBattleshipSpawned(buf.get() != 0);
-        a.setEndBossSpawned(buf.get() != 0);
-        a.setBattleshipTerrainLoaded(buf.get() != 0);
-        a.setAct2TransitionRequestedRaw(buf.get() != 0);
-        a.setFireTransitionMutationRequested(buf.get() != 0);
-        a.setPostFireHazeActiveRaw(buf.get() != 0);
-        a.setFireOverlayTilesLoaded(buf.get() != 0);
-        a.setAct2WaitFireDrawActive(buf.get() != 0);
-        a.setAppliedTreeRevealChunkCopiesMask(buf.getInt());
-        a.setAiz2ResizeRoutine(buf.getInt());
-        a.setBattleshipWrapX(buf.getInt());
-        a.setScreenShakeTimer(buf.getInt());
-        a.setLevelRepeatOffsetRaw(buf.getInt());
-        a.setBattleshipBgYOffsetRaw(buf.getInt());
-        a.setBattleshipSmoothScrollXRaw(buf.getInt());
-        a.setBattleshipPostScrollCameraX(buf.getInt());
-        a.setScreenShakeOffsetYRaw(buf.getInt());
-        a.setFireBgCopyFixed(buf.getInt());
-        a.setFireRiseSpeed(buf.getInt());
-        a.setFireWavePhase(buf.getInt());
-        a.setFireTransitionFrames(buf.getInt());
-        a.setFirePhaseFrames(buf.getInt());
-        a.setFireOverlayTileCount(buf.getInt());
-        a.setFireSequencePhaseOrdinal(buf.getInt());
     }
 
     // --- HCZ write/read (43 bytes: 7 booleans + 9 ints) ---
@@ -1749,7 +1681,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         m.setCollapseScrollPosition(sp);
     }
 
-    // --- ICZ write/read (24 bytes) ---
+    // --- ICZ write/read (25 bytes) ---
 
     private static void writeIczState(java.nio.ByteBuffer buf, Sonic3kICZEvents icz) {
         icz.writeRewindState(buf);
