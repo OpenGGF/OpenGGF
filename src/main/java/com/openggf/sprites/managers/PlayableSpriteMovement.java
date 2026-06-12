@@ -3564,7 +3564,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
 		boolean extended = featureSet != null && featureSet.extendedEdgeBalance();
-		boolean singleFacingBalanceSet = featureSet != null && featureSet.singleFacingBalanceAnimationSet();
+		boolean singleFacingBalanceSet = usesSingleFacingBalance(featureSet);
 
 		// ROM Sonic_Move (s2.asm:36285) / Tails_Move (s2.asm:39359) read
 		// `width_pixels(a1)` from the object's SST for the balance computation,
@@ -3628,7 +3628,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				int balanceState;
 				if (singleFacingBalanceSet) {
 					sprite.setDirection(Direction.LEFT);
-					balanceState = precarious ? 2 : 1;
+					balanceState = singleFacingBalanceState(precarious);
 				} else {
 					balanceState = facingTowardEdge ? (precarious ? 2 : 1) : (precarious ? 4 : 3);
 					if (balanceState == 4) {
@@ -3651,7 +3651,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				int balanceState;
 				if (singleFacingBalanceSet) {
 					sprite.setDirection(Direction.RIGHT);
-					balanceState = precarious ? 2 : 1;
+					balanceState = singleFacingBalanceState(precarious);
 				} else {
 					balanceState = facingTowardEdge ? (precarious ? 2 : 1) : (precarious ? 4 : 3);
 					if (balanceState == 4) {
@@ -3666,6 +3666,20 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setDirection(Direction.RIGHT);
 			}
 		}
+	}
+
+	private boolean usesSingleFacingBalance(PhysicsFeatureSet featureSet) {
+		return (featureSet != null && featureSet.singleFacingBalanceAnimationSet())
+				|| profileUsesSingleFacingBalance();
+	}
+
+	private boolean profileUsesSingleFacingBalance() {
+		PhysicsProfile profile = sprite.getPhysicsProfile();
+		return profile != null && profile.singleFacingBalance();
+	}
+
+	private int singleFacingBalanceState(boolean precarious) {
+		return profileUsesSingleFacingBalance() ? 1 : (precarious ? 2 : 1);
 	}
 
 	/**
@@ -3828,9 +3842,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		boolean precarious = distanceFromPrecarious < 6;
 
 		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-		if (featureSet != null && featureSet.singleFacingBalanceAnimationSet()) {
+		if (usesSingleFacingBalance(featureSet)) {
 			sprite.setDirection(isLeftEdge ? Direction.LEFT : Direction.RIGHT);
-			sprite.setBalanceState(precarious ? 2 : 1);
+			sprite.setBalanceState(singleFacingBalanceState(precarious));
 			return;
 		}
 

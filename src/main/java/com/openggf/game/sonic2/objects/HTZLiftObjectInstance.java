@@ -130,6 +130,12 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
     public int getY() {
         return yFixed >> 8;
     }
+
+    @Override
+    public int getBalanceWidthPixels() {
+        return COLLISION_WIDTH;
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;

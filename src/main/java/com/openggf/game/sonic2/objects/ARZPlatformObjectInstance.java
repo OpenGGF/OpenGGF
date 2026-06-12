@@ -162,6 +162,11 @@ public class ARZPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        return widthPixels;
+    }
+
+    @Override
     public boolean isTopSolidOnly() {
         return routine != 8;
     }

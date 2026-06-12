@@ -37,6 +37,19 @@ class TestS2HtzLiftPlatformSurfaceRegression {
     }
 
     @Test
+    void htzLiftUsesObj16WidthPixelsForObjectEdgeBalance() {
+        HTZLiftObjectInstance lift = new HTZLiftObjectInstance(
+                new ObjectSpawn(0x01F8, 0x03EA, 0x16, 0x14, 0, false, 0),
+                "HTZLift");
+
+        // Obj16_Init writes width_pixels=$20 before PlatformObject
+        // (docs/s2disasm/s2.asm:47763-47771). The player balance routine reads
+        // that SST byte directly, so Tails at HTZ1 f192 is still inside the
+        // platform instead of on its left balance edge.
+        assertEquals(0x20, lift.getBalanceWidthPixels());
+    }
+
+    @Test
     void htzLiftFirstStandingFrameArmsSlideWithoutMovingUntilNextObjectUpdate() {
         ObjectManager objectManager = mock(ObjectManager.class);
         HTZLiftObjectInstance lift = new HTZLiftObjectInstance(

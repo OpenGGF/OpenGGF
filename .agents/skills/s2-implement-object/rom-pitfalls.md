@@ -1924,6 +1924,42 @@ bullet offset/range-unload parity.
 
 ---
 
+## P45 — Rideable object balance bounds must expose ROM `width_pixels`
+
+**Pattern.** S2/S3K player balance-on-object routines read `width_pixels(a1)`
+from the stood-on object's SST, not the object's visible mapping width and not a
+shared engine default. Objects whose init routine writes a non-default
+`width_pixels` must expose that value through `getBalanceWidthPixels()` or
+edge-balance will trigger on the wrong frame.
+
+**Engine symptom.** Tails can flip facing or set/clear the object-standing status
+bit one frame too early/late while standing near a rideable object's edge. In
+EHZ1, Obj18's subtype width was missing from balance bounds, so Tails was
+treated as beyond the left edge on frame 395 even though the ROM still had
+`status=$08`. A first-pass Tails facing fix exposed the same class in HTZ1:
+Obj16 writes `width_pixels=$20`, so the default 16-pixel balance width falsely
+placed Tails on the left edge around frame 192.
+
+**What to check.** When porting rideable platforms, lifts, and blocks, identify
+the object init value written to `width_pixels`. If the value varies by subtype
+or differs from the shared default, override `getBalanceWidthPixels()` using the
+ROM value. Keep this separate from collision half-widths when the object uses
+different data for `SolidObject` bounds versus player balance checks.
+
+**ROM citation.** S2 Sonic/Tails balance reads `width_pixels(a1)` in
+`docs/s2disasm/s2.asm:36287-36296` and `docs/s2disasm/s2.asm:39361-39368`;
+Tails' single-facing balance edge branch is `docs/s2disasm/s2.asm:39733-39743`.
+Obj16 HTZ lift initializes `width_pixels=$20` at
+`docs/s2disasm/s2.asm:47763-47771`. S3K Tails uses the same single-facing
+balance convention at `docs/skdisasm/sonic3k.asm:27842-27859`.
+
+**Originating commit.** `<pending>` S2 Tails object-edge balance width sweep:
+`ARZPlatformObjectInstance.getBalanceWidthPixels()` returns subtype width,
+`HTZLiftObjectInstance.getBalanceWidthPixels()` returns `$20`, and
+`PhysicsProfile.singleFacingBalance()` gates Tails' single-facing balance path.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

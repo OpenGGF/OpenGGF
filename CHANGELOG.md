@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 sidekick object-edge balance now uses ROM object width and Tails facing:**
+  Obj18 ARZ platforms and Obj16 HTZ lifts expose their ROM `width_pixels` to the
+  player balance routine, and Tails' S2/S3K physics profile now uses the
+  single-facing balance branch instead of Sonic's four-state facing-away logic.
+  This clears `s2_ehz1` and `s2_scz1`; the full trace sweep remains red on the
+  existing outstanding frontiers.
+
 - **S2 sidekick flight entry now preserves CPU flight latches:** Tails CPU
   respawn and dead-leader flight entry no longer clear the ROM-visible
   `Tails_CPU_jumping` latch, and flying approach diagnostics now keep the live
