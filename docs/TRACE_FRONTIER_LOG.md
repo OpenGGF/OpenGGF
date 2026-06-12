@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+## 2026-06-12 - Merged develop post-reconcile full trace sweep
+
+- Scope: full `*TraceReplay` regression sweep on `develop` after reconciling
+  local progress with `origin/develop` and merging
+  `bugfix/ai-release-remediation`. Trace data remained comparison-only
+  diagnostic input; no trace state was written back into engine runtime.
+- Command:
+  - `mvn "-Dmse=off" "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g" test`
+- Result:
+  - Completed as ordinary trace failures: **Tests run: 90, Failures: 58,
+    Errors: 1, Skipped: 0** from Maven/Surefire.
+  - Parsed trace-class reports still show the current release-remediation
+    frontier shape: 59 trace classes, 106 trace tests, 58 failures, 1 error,
+    0 skipped.
+  - No compile, forked-JVM, lwjgl/glfw, or ROM-loading infrastructure failure
+    blocked the sweep.
+- Release state: not a green all-trace certification. The active frontier
+  remains the current red trace set after the merge, including ICZ frame 3752
+  main-player `x`, HCZ frame 9482 main-player `air`, CNZ complete-run frame 0
+  `y_speed`, MGZ complete-run frame 738 `rings`, MHZ complete-run frame 0
+  `tails_cpu_routine`, LBZ complete-run frame 0 `camera_y`, AIZ sidekick CPU
+  auto-jump/fallthrough checks, and CNZ/MGZ dedicated trace alignment or slot
+  ordering failures.
+
 ## 2026-06-12 - Performance-optimization final acceptance sweep (Task 13)
 
 - Scope: closing acceptance sweep for the performance-optimization plan
