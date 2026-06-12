@@ -1,5 +1,24 @@
 # Trace Frontier Log
 
+## 2026-06-12 - Trace replay baseline sweep for performance remediation
+
+- Scope: PERF-0 baseline capture before performance work. Trace data remained
+  comparison-only diagnostic input; no engine state was hydrated from trace
+  rows, and no behavior change was made.
+- Command:
+  - `mvn "-Dmse=off" "-Dtest=*TraceReplay" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" test`
+- Result:
+  - Build failed after the trace replay sweep with `Java heap space`.
+  - Surefire summary before the fork failure: 89 tests run, 57 failures, 1
+    error, 0 skipped.
+  - Full parsed trace-class table is recorded in
+    `docs/performance/2026-06-12-trace-baseline.md`.
+- Release state: this is a partial-but-useful performance baseline, not a clean
+  all-trace certification. The active S3K release frontiers remain HCZ frame
+  9482 main-player `air`, ICZ frame 3323 main-player `rings`, MGZ complete-run
+  frame 738 main-player `rings`, CNZ complete-run frame 0 `y_speed`, and MHZ
+  complete-run frame 0 `tails_cpu_routine`.
+
 ## 2026-06-12 - S3K ICZ complete-run progressed to second lost-ring frontier
 
 - Scope: follow-up to the ICZ frame-3273 lost-ring re-collection frontier.

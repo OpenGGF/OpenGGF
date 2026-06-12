@@ -54,6 +54,11 @@ Completed in `bugfix/ai-release-remediation`:
 - Palette fallback hardening: resolved underwater palette fallback lookups through feature-remapped zone/act keys so remapped zones use the same key for storage and reads.
 - S3K ICZ startup palette ownership hardening: added a post-registry-reset level-load palette override hook so ICZ1's lock-on mountain palette keeps owner `s3k.icz.startupPalette` after zone-scoped registries are cleared.
 - Display boundary hardening: guarded startup centering and post-resize integer-scale snapping when GLFW cannot report a monitor or video mode.
+- PERF-0 trace baseline: captured a clean-worktree `*TraceReplay` sweep for
+  performance remediation planning and recorded the parsed trace-class table in
+  `docs/performance/2026-06-12-trace-baseline.md`; the sweep generated useful
+  frontiers but ended with `Java heap space`, so it is a partial baseline rather
+  than clean all-trace certification.
 - Documentation/hook/architecture hygiene: removed stale S3K AIZ2 battleship and S2 latch discrepancy entries, corrected AGENTS/CLAUDE drift, added known-bug/changelog notes, fixed the PowerShell trailer parser no-space substring bug, replaced the two production raw construction-context set/clear call sites with scoped helpers, pruned stale object-service migration guard baselines, added `SessionManager` guard coverage, and removed stale mutation-routing allow-list entries.
 - HCZ miniboss trace diagnostics: added focused trace context for the current frame-9482 frontier, including miniboss hit count/defeat/invulnerability state, ground probes, accepted hit frame/source, and final-hit routine/wait/water-effect routine (`lastHit=9362/Sonic:ENEMY hr=16 hw=52 hwr=04`).
 - ICZ complete-run bootstrap progression: Sonic+Tails now follows the ROM `Player_mode < 2` ICZ1 snowboard-intro path, and CPU Tails is parked through the routine-`$0A` dormant marker (`object_control=$83`, `$7F00,0`). The ICZ complete-run trace moved from frame 0 `rolling expected=1 actual=0` to frame 29 main-player `y expected=0x00F2 actual=0x00F0`.
