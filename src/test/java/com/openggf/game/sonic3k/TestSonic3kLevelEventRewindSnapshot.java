@@ -1346,6 +1346,125 @@ class TestSonic3kLevelEventRewindSnapshot {
                 extra);
     }
 
+    private static LevelEventSnapshot snapshotWithIczPayload(LevelEventSnapshot source, byte[] iczPayload) {
+        return new LevelEventSnapshot(
+                source.currentZone(),
+                source.currentAct(),
+                source.eventRoutineFg(),
+                source.eventRoutineBg(),
+                source.frameCounter(),
+                source.timerFrames(),
+                source.bossActive(),
+                source.eventDataFg(),
+                source.eventDataBg(),
+                insertIczPayload(source.extra(), iczPayload));
+    }
+
+    private static LevelEventSnapshot snapshotWithCorruptIczLength(LevelEventSnapshot source, int length) {
+        byte[] extra = source.extra().clone();
+        int iczLengthOffset = 30 + 1 + 1 + 1 + 1 + 1 + 1;
+        assertEquals(0, extra[30], "test helper expects absent AIZ sidecar");
+        assertEquals(0, extra[31], "test helper expects absent HCZ sidecar");
+        assertEquals(0, extra[32], "test helper expects absent CNZ sidecar");
+        assertEquals(0, extra[33], "test helper expects absent MGZ sidecar");
+        assertEquals(0, extra[34], "test helper expects absent MHZ sidecar");
+        assertEquals(1, extra[35], "test helper expects present ICZ sidecar");
+        ByteBuffer.wrap(extra).putInt(iczLengthOffset, length);
+        return new LevelEventSnapshot(
+                source.currentZone(),
+                source.currentAct(),
+                source.eventRoutineFg(),
+                source.eventRoutineBg(),
+                source.frameCounter(),
+                source.timerFrames(),
+                source.bossActive(),
+                source.eventDataFg(),
+                source.eventDataBg(),
+                extra);
+    }
+
+    @Test
+    void lengthPrefixedIczSchemaPayloadRestoresIczAndFixedAirSidecars() throws Exception {
+        Sonic3kICZEvents iczPayloadSource = new Sonic3kICZEvents();
+        iczPayloadSource.setEventsFg5(true);
+        iczPayloadSource.setIndoorPaletteCyclingActive(false);
+        set(iczPayloadSource, "backgroundRoutine", 8);
+        set(iczPayloadSource, "bigSnowOffset", 0x1234);
+
+        Sonic3kLevelEventManager source = new Sonic3kLevelEventManager();
+        Object sourceFixed = fixedAirCountdownManager(source);
+        Object sourceP1 = fixedController(sourceFixed, "p1");
+        setFixedControllerState(sourceP1, true, 0x0A, 0x81, 0x1234, 0x02, 0x01, 0xFF, 0x8040, 0x0032, 0x0016);
+        LevelEventSnapshot sourceSnapshot = source.capture();
+        LevelEventSnapshot schemaIczSnapshot = snapshotWithIczPayload(
+                sourceSnapshot,
+                ZoneEventSchemaSidecar.capture(iczPayloadSource));
+
+        Sonic3kLevelEventManager target = new Sonic3kLevelEventManager();
+        Sonic3kLevelEventManager iczTargetOwner = new Sonic3kLevelEventManager();
+        iczTargetOwner.initLevel(Sonic3kZoneIds.ZONE_ICZ, 0);
+        set(target, "iczEvents", get(iczTargetOwner, "iczEvents"));
+        Sonic3kICZEvents iczTarget = (Sonic3kICZEvents) get(target, "iczEvents");
+        assertNotNull(iczTarget);
+        iczTarget.setEventsFg5(false);
+        set(iczTarget, "backgroundRoutine", 0);
+        Object targetFixed = fixedAirCountdownManager(target);
+        Object targetP1 = fixedController(targetFixed, "p1");
+        setFixedControllerState(targetP1, false, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+        target.restore(schemaIczSnapshot);
+
+        assertTrue(iczTarget.isEventsFg5(),
+                "length-prefixed ICZ schema sidecar must restore ICZ booleans");
+        assertEquals(8, iczTarget.getIcz1BackgroundRoutine(),
+                "length-prefixed ICZ schema sidecar must restore ICZ ints");
+        assertEquals(0x1234, iczTarget.getIcz1BigSnowOffset(),
+                "length-prefixed ICZ schema sidecar must restore ICZ snow state");
+        assertEquals("true,10,129,4660,2,1,255,32832,50,22", fixedControllerState(targetP1),
+                "fixed Breathing_bubbles sidecar must remain aligned after ICZ schema payload");
+    }
+
+    @Test
+    void malformedIczLengthPrefixDoesNotPartiallyRestoreManagerOrFixedAirSidecars() throws Exception {
+        Sonic3kICZEvents iczPayloadSource = new Sonic3kICZEvents();
+        iczPayloadSource.setEventsFg5(true);
+        set(iczPayloadSource, "backgroundRoutine", 8);
+
+        Sonic3kLevelEventManager source = new Sonic3kLevelEventManager();
+        source.requestCnzPostTransitionRelease(12);
+        Object sourceFixed = fixedAirCountdownManager(source);
+        Object sourceP1 = fixedController(sourceFixed, "p1");
+        setFixedControllerState(sourceP1, true, 0x0A, 0x81, 0x1234, 0x02, 0x01, 0xFF, 0x8040, 0x0032, 0x0016);
+        LevelEventSnapshot sourceSnapshot = snapshotWithIczPayload(
+                source.capture(),
+                ZoneEventSchemaSidecar.capture(iczPayloadSource));
+        LevelEventSnapshot malformedSnapshot = snapshotWithCorruptIczLength(
+                sourceSnapshot,
+                sourceSnapshot.extra().length);
+
+        Sonic3kLevelEventManager target = new Sonic3kLevelEventManager();
+        Sonic3kLevelEventManager iczTargetOwner = new Sonic3kLevelEventManager();
+        iczTargetOwner.initLevel(Sonic3kZoneIds.ZONE_ICZ, 0);
+        set(target, "iczEvents", get(iczTargetOwner, "iczEvents"));
+        Sonic3kICZEvents iczTarget = (Sonic3kICZEvents) get(target, "iczEvents");
+        assertNotNull(iczTarget);
+        Object targetFixed = fixedAirCountdownManager(target);
+        Object targetP1 = fixedController(targetFixed, "p1");
+        setFixedControllerState(targetP1, false, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+        assertDoesNotThrow(() -> target.restore(malformedSnapshot),
+                "framing-invalid ICZ sidecar should be rejected before any partial restore");
+
+        assertEquals(0, get(target, "cnzPendingPostTransitionReleaseFrames"),
+                "framing-invalid ICZ sidecar must not mutate manager-level fields");
+        assertFalse(iczTarget.isEventsFg5(),
+                "framing-invalid ICZ sidecar must not mutate ICZ fields");
+        assertEquals(0, iczTarget.getIcz1BackgroundRoutine(),
+                "framing-invalid ICZ sidecar must not mutate ICZ fields");
+        assertEquals("false,0,0,0,0,0,0,0,0,0", fixedControllerState(targetP1),
+                "framing-invalid ICZ sidecar must not apply later fixed-air sidecars with unknown offsets");
+    }
+
     @Test
     void roundTripFixedAirCountdownSidecarRam() throws Exception {
         Sonic3kLevelEventManager mgr = new Sonic3kLevelEventManager();
@@ -1527,6 +1646,37 @@ class TestSonic3kLevelEventRewindSnapshot {
         buf.put(mhzPayload);
         buf.put(iczExtra, prefixBytes + originalMhzAbsentFlagBytes,
                 iczExtra.length - prefixBytes - originalMhzAbsentFlagBytes);
+        return buf.array();
+    }
+
+    private static byte[] insertIczPayload(byte[] extra, byte[] iczPayload) {
+        int managerBytes = 30;
+        int originalAizAbsentFlagBytes = 1;
+        int originalHczAbsentFlagBytes = 1;
+        int originalCnzAbsentFlagBytes = 1;
+        int originalMgzAbsentFlagBytes = 1;
+        int originalMhzAbsentFlagBytes = 1;
+        int originalIczAbsentFlagBytes = 1;
+        int prefixBytes = managerBytes
+                + originalAizAbsentFlagBytes
+                + originalHczAbsentFlagBytes
+                + originalCnzAbsentFlagBytes
+                + originalMgzAbsentFlagBytes
+                + originalMhzAbsentFlagBytes;
+        assertEquals(0, extra[30], "test helper expects absent AIZ sidecar");
+        assertEquals(0, extra[31], "test helper expects absent HCZ sidecar");
+        assertEquals(0, extra[32], "test helper expects absent CNZ sidecar");
+        assertEquals(0, extra[33], "test helper expects absent MGZ sidecar");
+        assertEquals(0, extra[34], "test helper expects absent MHZ sidecar");
+        assertEquals(0, extra[35], "test helper expects absent ICZ sidecar");
+        ByteBuffer buf = ByteBuffer.allocate(prefixBytes + 1 + Integer.BYTES + iczPayload.length
+                + extra.length - prefixBytes - originalIczAbsentFlagBytes);
+        buf.put(extra, 0, prefixBytes);
+        buf.put((byte) 1);
+        buf.putInt(iczPayload.length);
+        buf.put(iczPayload);
+        buf.put(extra, prefixBytes + originalIczAbsentFlagBytes,
+                extra.length - prefixBytes - originalIczAbsentFlagBytes);
         return buf.array();
     }
 

@@ -173,46 +173,6 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         return act2TransitionRequested;
     }
 
-    /**
-     * Number of bytes that {@link #writeRewindState(java.nio.ByteBuffer)} produces.
-     * 5 booleans (5 bytes) + 5 ints (20 bytes) = 25 bytes.
-     */
-    public static int rewindStateBytes() {
-        return 5 + 5 * 4;
-    }
-
-    /**
-     * Serializes all gameplay-mutable ICZ state into the supplied buffer.
-     * Layout must match {@link #readRewindState(java.nio.ByteBuffer)} exactly
-     * and produce {@link #rewindStateBytes()} bytes.
-     */
-    public void writeRewindState(java.nio.ByteBuffer buf) {
-        buf.put((byte) (eventsFg5 ? 1 : 0));
-        buf.put((byte) (introSpawned ? 1 : 0));
-        buf.put((byte) (indoorPaletteCyclingActive ? 1 : 0));
-        buf.put((byte) (bigSnowPileSpawned ? 1 : 0));
-        buf.put((byte) (act2TransitionRequested ? 1 : 0));
-        buf.putInt(eventRoutine);
-        buf.putInt(backgroundRoutine);
-        buf.putInt(bigSnowOffset);
-        buf.putInt(bigSnowOffsetSubpixels);
-        buf.putInt(bigSnowVelocity);
-    }
-
-    /** Inverse of {@link #writeRewindState(java.nio.ByteBuffer)}. */
-    public void readRewindState(java.nio.ByteBuffer buf) {
-        eventsFg5 = buf.get() != 0;
-        introSpawned = buf.get() != 0;
-        indoorPaletteCyclingActive = buf.get() != 0;
-        bigSnowPileSpawned = buf.get() != 0;
-        act2TransitionRequested = buf.get() != 0;
-        eventRoutine = buf.getInt();
-        backgroundRoutine = buf.getInt();
-        bigSnowOffset = buf.getInt();
-        bigSnowOffsetSubpixels = buf.getInt();
-        bigSnowVelocity = buf.getInt();
-    }
-
     private void spawnSonicSnowboardIntro() {
         if (introSpawned) {
             return;

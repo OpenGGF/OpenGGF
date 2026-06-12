@@ -25,6 +25,10 @@ All notable changes to the OpenGGF project are documented in this file.
   including variable-length spike-array payload validation and malformed-payload
   rollback before ICZ/fixed-air sidecars.
 
+- S3K ICZ zone-event rewind state now uses the length-prefixed schema sidecar,
+  preserving fixed-air countdown alignment and malformed-payload framing
+  rejection after the final fixed zone-event conversion.
+
 - New debug flag `debug.rewind.determinismAudit`: re-simulates each completed
   rewind keyframe segment during live play and logs the first state divergence,
   pinpointing state that is missing from rewind capture. Disarms after the first

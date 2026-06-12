@@ -1290,21 +1290,22 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         //   4 bytes   mhz schema payload length, when present
         //   N bytes   mhz schema payload, when present
         //   1 byte    icz handler present flag
-        //   25 bytes  icz state (5 booleans + 5 ints; see Sonic3kICZEvents.rewindStateBytes())
+        //   4 bytes   icz schema payload length, when present
+        //   N bytes   icz schema payload, when present
         //   28 bytes  fixed Breathing_bubbles/Breathing_bubbles_P2 sidecars
         byte[] aizBytes = aizEvents != null ? ZoneEventSchemaSidecar.capture(aizEvents) : null;
         byte[] hczBytes = hczEvents != null ? ZoneEventSchemaSidecar.capture(hczEvents) : null;
         byte[] cnzBytes = cnzEvents != null ? ZoneEventSchemaSidecar.capture(cnzEvents) : null;
         byte[] mgzBytes = mgzEvents != null ? ZoneEventSchemaSidecar.capture(mgzEvents) : null;
         byte[] mhzBytes = mhzEvents != null ? ZoneEventSchemaSidecar.capture(mhzEvents) : null;
-        int iczSize = Sonic3kICZEvents.rewindStateBytes(); // 25
+        byte[] iczBytes = iczEvents != null ? ZoneEventSchemaSidecar.capture(iczEvents) : null;
         int size = EXTRA_MANAGER_BYTES;
         size += aizBytes != null ? 1 + Integer.BYTES + aizBytes.length : 1;
         size += hczBytes != null ? 1 + Integer.BYTES + hczBytes.length : 1;
         size += cnzBytes != null ? 1 + Integer.BYTES + cnzBytes.length : 1;
         size += mgzBytes != null ? 1 + Integer.BYTES + mgzBytes.length : 1;
         size += mhzBytes != null ? 1 + Integer.BYTES + mhzBytes.length : 1;
-        size += 1 + (iczEvents != null ? iczSize : 0);
+        size += iczBytes != null ? 1 + Integer.BYTES + iczBytes.length : 1;
         size += S3kFixedAirCountdownManager.REWIND_STATE_BYTES;
         java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(size);
         // Manager-level
@@ -1361,9 +1362,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             buf.put((byte) 0);
         }
         // ICZ
-        if (iczEvents != null) {
+        if (iczBytes != null) {
             buf.put((byte) 1);
-            writeIczState(buf, iczEvents);
+            buf.putInt(iczBytes.length);
+            buf.put(iczBytes);
         } else {
             buf.put((byte) 0);
         }
@@ -1397,8 +1399,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         cnzAct2MaxXAccumulator = buf.remaining() >= Integer.BYTES ? buf.getInt() : 0;
         cnzAct2MinYAccumulator = buf.remaining() >= Integer.BYTES ? buf.getInt() : 0;
         cnzAct2MaxYAccumulator = buf.remaining() >= Integer.BYTES ? buf.getInt() : 0;
-        // Size constants must match the write methods
-        final int iczBytes = Sonic3kICZEvents.rewindStateBytes(); // 25
         // AIZ
         if (buf.remaining() >= 1) {
             boolean aizPresent = buf.get() != 0;
@@ -1492,10 +1492,19 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // ICZ
         if (buf.remaining() >= 1) {
             boolean iczPresent = buf.get() != 0;
-            if (iczPresent && iczEvents != null && buf.remaining() >= iczBytes) {
-                readIczState(buf, iczEvents);
-            } else if (iczPresent && buf.remaining() >= iczBytes) {
-                buf.position(buf.position() + iczBytes);
+            if (iczPresent) {
+                if (buf.remaining() < Integer.BYTES) {
+                    return;
+                }
+                int iczLength = buf.getInt();
+                if (iczLength < 0 || buf.remaining() < iczLength) {
+                    return;
+                }
+                byte[] bytes = new byte[iczLength];
+                buf.get(bytes);
+                if (iczEvents != null) {
+                    restoreIczSidecar(bytes);
+                }
             }
         }
         if (buf.remaining() >= S3kFixedAirCountdownManager.REWIND_STATE_BYTES) {
@@ -1531,7 +1540,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (!skipVariableLengthSchemaSidecar(buf, Sonic3kMHZEvents.class)) {
             return false;
         }
-        if (!skipFixedSidecar(buf, Sonic3kICZEvents.rewindStateBytes())) {
+        if (!skipLengthPrefixedSidecar(buf,
+                () -> expectedSidecarBytes(iczEvents, Sonic3kLevelEventManager::newIczFramingProbe))) {
             return false;
         }
         return buf.remaining() == 0
@@ -1587,19 +1597,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         return probe;
     }
 
-    private static boolean skipFixedSidecar(java.nio.ByteBuffer buf, int bytes) {
-        if (buf.remaining() < 1) {
-            return true;
-        }
-        boolean present = buf.get() != 0;
-        if (!present) {
-            return true;
-        }
-        if (buf.remaining() < bytes) {
-            return false;
-        }
-        buf.position(buf.position() + bytes);
-        return true;
+    private static Object newIczFramingProbe() {
+        return new Sonic3kICZEvents();
     }
 
     private static boolean skipVariableLengthSchemaSidecar(
@@ -1695,13 +1694,17 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
     }
 
-    // --- ICZ write/read (25 bytes) ---
-
-    private static void writeIczState(java.nio.ByteBuffer buf, Sonic3kICZEvents icz) {
-        icz.writeRewindState(buf);
-    }
-
-    private static void readIczState(java.nio.ByteBuffer buf, Sonic3kICZEvents icz) {
-        icz.readRewindState(buf);
+    private void restoreIczSidecar(byte[] bytes) {
+        byte[] before = ZoneEventSchemaSidecar.capture(iczEvents);
+        try {
+            ZoneEventSchemaSidecar.restore(iczEvents, bytes);
+        } catch (RuntimeException e) {
+            try {
+                ZoneEventSchemaSidecar.restore(iczEvents, before);
+            } catch (RuntimeException rollbackFailure) {
+                e.addSuppressed(rollbackFailure);
+            }
+            LOG.warning("Skipping malformed ICZ zone-event rewind sidecar: " + e.getMessage());
+        }
     }
 }
