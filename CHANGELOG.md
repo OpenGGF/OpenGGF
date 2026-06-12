@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K ICZ ice-cube shatter preserves ROM `y_pos`:** ICZ ice-cube shatter
+  now keeps the player centre coordinate stable while applying the ROM roll
+  radii, animation, upward velocity, and object-release state. This moves the
+  ICZ complete-run trace from the frame-2472 ice-cube vertical mismatch to
+  frame 2600, a wall-slope `x_speed`/`g_speed` mismatch after the collapsing
+  bridge section.
+
 - **S3K Star Pointer touch timing now reaches the ICZ ice-cube frontier:** S3K
   Insta-Shield now models the temporary-invincible 48x48 hurt pass without
   clearing shield-reactive object collision flags, while real shields still run

@@ -88,11 +88,13 @@ class TestIczIceCubeObjectInstance {
         cube.setServices(services(objectManager));
         AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
         when(player.getAnimationId()).thenReturn(Sonic3kAnimationIds.ROLL.id());
+        when(player.getCentreY()).thenReturn((short) 0x064E);
 
         cube.onSolidContact(player, standingContact(), 12);
 
         assertTrue(cube.isDestroyed());
         verify(player).setRolling(true);
+        verify(player).setCentreYPreserveSubpixel((short) 0x064E);
         verify(player).setAnimationId(Sonic3kAnimationIds.ROLL);
         verify(player).setYSpeed((short) -0x300);
         verify(player).setAir(true);

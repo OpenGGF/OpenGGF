@@ -233,6 +233,7 @@ class TestObjectPlayerQuery {
         @Override public short getCentreX() { return centreX; }
         @Override public short getCentreY() { return centreY; }
         @Override public void setCentreX(short x) {}
+        @Override public void setCentreYPreserveSubpixel(short y) {}
         @Override public short getX() { return centreX; }
         @Override public short getY() { return centreY; }
         @Override public void setY(short y) {}

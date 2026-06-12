@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K ICZ complete-run progressed to wall-slope speed frontier
+
+- Scope: follow-up to the ICZ frame-2472 ice-cube/debris vertical frontier.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - `Obj_ICZIceCube` shatter now preserves the player's native centre `y_pos`
+    while applying the ROM roll/radius state, `anim=2`, `y_vel=-$300`,
+    in-air status, and object-release state. The engine's rolling dimensions
+    are top-left-backed, but the ROM writes `y_radius`/`x_radius` around
+    unchanged centre coordinates.
+  - `PlayableEntity` now exposes `setCentreYPreserveSubpixel(...)` so
+    object-local ROM `y_pos` writes can stay on the injected playable
+    abstraction instead of downcasting to the concrete sprite hierarchy.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestIczIceCubeObjectInstance" test`
+    -> GREEN. Surefire summary: `Tests run: 7, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2472 to frame 2600. New
+    first error: main-player `x_speed` `expected=-0x0524`, `actual=-0x0520`
+    and `g_speed` `expected=-0x0D91`, `actual=-0x0D85`; main `x`, `y`,
+    camera, rings, angle, air, rolling, ground mode, and native-P2/Tails fields
+    match at the first error.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  right-wall slope physics around frame 2600 after the collapsing bridge
+  section, not revisit ice-cube shatter or add a trace/frame exception.
+
 ## 2026-06-12 - S3K ICZ complete-run progressed to ice-cube debris vertical frontier
 
 - Scope: follow-up to the ICZ frame-2268 Star Pointer/native-P2 hurt-state
