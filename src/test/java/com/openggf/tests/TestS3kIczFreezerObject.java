@@ -128,6 +128,7 @@ class TestS3kIczFreezerObject {
         freezer.setServices(services);
 
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x0204, (short) 0x0134);
+        player.setSubpixelRaw(0x2200, 0x7400);
         player.setRingCount(10);
         IczFreezerObjectInstance.CaptureCloud cloud =
                 freezer.createCaptureCloudForTesting(0x0200, 0x0130, false);
@@ -143,6 +144,10 @@ class TestS3kIczFreezerObject {
         assertFalse(player.isObjectControlAllowsCpu(), "Freezer capture should not leave CPU movement enabled");
         assertEquals(0x0204, player.getCentreX(), "Capture must not shift x_pos while applying frozen animation");
         assertEquals(0x0134, player.getCentreY(), "Capture must not shift y_pos while applying frozen animation");
+        assertEquals(0x2200, player.getXSubpixelRaw(),
+                "Capture setup writes only x_pos while applying the frozen animation");
+        assertEquals(0x7400, player.getYSubpixelRaw(),
+                "Capture setup writes only y_pos while applying the frozen animation");
         assertEquals(0x0204, block.getX(), "Frozen block spawns at the ROM capture x_pos");
         assertEquals(0x0134, block.getY(), "Frozen block spawns at the ROM capture y_pos");
         assertEquals(0x1A, player.getAnimationId());
@@ -296,6 +301,28 @@ class TestS3kIczFreezerObject {
         assertEquals((short) -0x0400, tails.getYSpeed());
         assertEquals(42, tails.getRingCount(), "ROM Hurt_Sidekick does not spend the main player's rings");
         assertEquals(List.of(), services.lostRingSpawnFrames);
+    }
+
+    @Test
+    void frozenPlayerBlockSyncPreservesCapturedPlayerSubpixelsUntilBreak() {
+        installLevelGamestate();
+
+        RecordingServices services = new RecordingServices();
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x3FC4, (short) 0x0373);
+        tails.setCpuControlled(true);
+        tails.setSubpixelRaw(0x2200, 0x7400);
+        IczFreezerObjectInstance.FrozenPlayerBlock block =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(tails, 0x3FC4, 0x0373, 0x4060, false);
+        block.setServices(services);
+
+        block.update(32, tails);
+
+        assertEquals(0x2200, tails.getXSubpixelRaw(),
+                "ROM loc_8A84C writes only x_pos(a1), preserving the captured player's x_sub");
+        assertEquals(0x7400, tails.getYSubpixelRaw(),
+                "ROM loc_8A84C writes only y_pos(a1), preserving the captured player's y_sub");
+        assertEquals(0x3FC2, tails.getCentreX());
+        assertEquals(0x036F, tails.getCentreY());
     }
 
     @Test

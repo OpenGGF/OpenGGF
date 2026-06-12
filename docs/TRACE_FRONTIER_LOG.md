@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K ICZ complete-run progressed to path-platform x/camera frontier
+
+- Scope: follow-up to the ICZ frame-2967 native-Tails post-freezer vertical
+  drift frontier. Trace data remained comparison-only diagnostic input; no
+  trace state was written back into engine runtime.
+- Change:
+  - `IczFreezerObjectInstance` now preserves the captured player's `x_sub` and
+    `y_sub` when the capture cloud applies the frozen animation and when the
+    frozen-player block syncs the carried player. ROM `loc_8A7AE` and
+    `loc_8A84C` copy only `x_pos/y_pos` words between the player and freezer
+    block, so the low subpixel words survive until normal hurt movement resumes
+    (`docs/skdisasm/sonic3k.asm:188256-188274`,
+    `docs/skdisasm/sonic3k.asm:188360-188374`).
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIczFreezerObject" test`
+    -> GREEN, 18 tests.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2967 to frame 3102. New
+    first error is main-player `x` (`expected=0x4409`, `actual=0x440B`) with
+    `camera_x` one pixel high in the engine (`expected=0x4379`,
+    `actual=0x437A`) while Tails position, velocities, subpixels, and CPU
+    state match through the former freezer-release frontier.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-3102 ICZ path-follow platform / camera handoff around slot 7
+  `IczPathFollowPlatformObjectInstance`; the freezer release/subpixel path
+  should be treated as solved unless a later regression reopens it.
+
 ## 2026-06-12 - S3K ICZ complete-run progressed to post-freezer native-Tails vertical drift
 
 - Scope: follow-up to the ICZ frame-2964 native-Tails frozen-release
