@@ -446,6 +446,22 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
         return RenderPriority.clamp(PRIORITY_BUCKET);
     }
 
+    @Override
+    public String traceDebugDetails() {
+        return String.format(
+                "phase=%02X vel=(%04X,%04X) sub=(%04X,%04X) angle=%02X wait=%02X push=%02X stand=%s pushFlag=%s",
+                phase.routineByte & 0xFF,
+                xVel & 0xFFFF,
+                yVel & 0xFFFF,
+                xSub & 0xFFFF,
+                ySub & 0xFFFF,
+                angle & 0xFF,
+                waitTimer & 0xFF,
+                pushCounter & 0xFF,
+                standingThisFrame,
+                pushingThisFrame);
+    }
+
     public int getRoutineByteForTesting() {
         return phase.routineByte;
     }
