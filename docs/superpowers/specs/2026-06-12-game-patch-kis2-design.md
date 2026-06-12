@@ -55,8 +55,9 @@ title screen and level-select flow, special stages with Knuckles, Super Knuckles
 5. **ROM prerequisite is logical, not physical:** the patch needs "Sonic &
    Knuckles data available" in *any* form — a standalone 2MB S&K image or the
    combined "Sonic and Knuckles & Sonic 3" ROM (S&K occupies
-   `0x000000–0x1FFFFF`, so a windowed view over the first 2MB serves it and
-   S&K-cart-relative addresses equal combined-ROM addresses in that range).
+   `0x000000–0x1FFFFF`, so S&K-cart-relative addresses equal combined-ROM
+   addresses in that range and the combined reader serves logical S&K reads
+   directly, with a bounds guard).
 
 ## Architecture
 
@@ -98,26 +99,77 @@ the patched module from its base) is closed by a reflection guard test —
 
 #### `GamePatchRegistry`
 
-Patches are registered per base game at module-registration time. At session
-open, `SessionManager` asks the registry: *given this base game and launch
-request, is there an applicable patch whose ROM prerequisites are satisfied?*
-If yes, the `WorldSession` is built with `patch.apply(baseModule, ctx)` instead
-of the raw module. Nothing downstream changes — `GameModuleRegistry.getCurrent()`
-already resolves the module from the session, so every existing call site sees
-the patched module transparently.
+Patches are registered per base game at module-registration time. The registry
+answers two questions:
+
+- `availableCharacters(GameId)` — which extra main characters patches can back
+  for a base game (used by launch-profile availability, below).
+- `resolveModule(GameModule base, GameplayLaunchRequest request)` — if an
+  applicable patch exists for (base game, request) and its ROM prerequisites
+  are satisfied, return `patch.apply(base, ctx)`; otherwise return the base
+  module unchanged.
+
+`SessionManager` is **not** patch-aware and its signature does not change: it
+continues to receive an already-constructed `GameModule`. Patch resolution
+happens at the existing module-construction choke points *before*
+`openGameplaySession` is called — the master-title launch flow,
+`Engine.launchGameplayFromDataSelect()`, `TraceReplaySessionBootstrap`, and
+`HeadlessGameBoot` — each routing through `GamePatchRegistry.resolveModule()`.
+Because `GameModuleRegistry.getCurrent()` already resolves the module from the
+session, every downstream call site sees the patched module transparently.
+
+The patched module self-identifies: `DelegatingGameModule` exposes a
+`patchId()` accessor (framework marker interface), so `WorldSession`, save
+identity, and trace bootstrap code can interrogate whether and which patch is
+active without new session plumbing.
+
+#### Launch request and availability plumbing
+
+The current launch path would silently defeat patch activation:
+`LaunchProfile.mainCharacterValues()` only offers Knuckles for S2 when the
+cross-game donor is S3K, and `sanitizedFor()` strips any character not in that
+list. The framework therefore extends `LaunchProfile` availability:
+
+- The per-entry character value lists become the **union** of donor-provided
+  characters (existing behavior) and patch-provided characters from
+  `GamePatchRegistry.availableCharacters()` (present only when the patch's ROM
+  prerequisites are currently satisfied).
+- `sanitizedFor()` consults the same union, so a patch-backed Knuckles
+  selection survives sanitization with donation off.
+
+A small `GameplayLaunchRequest` record (game entry, main character, sidekick,
+cross-game source) is derived from the sanitized launch profile and passed to
+`resolveModule()` at the choke points above. Trace bootstrap constructs the
+same record explicitly so future KiS2 traces can activate the patch
+deterministically.
 
 #### Logical ROM resolver
 
-A small resolver maps a logical ROM identity (e.g. "S&K") to a byte source
-from whatever physical ROM images are present:
-
-- standalone S&K ROM → used directly;
-- combined S&K+S3 ROM → windowed `RomByteReader` view over `0x000000–0x1FFFFF`.
-
+A small resolver maps a logical ROM identity (a new `LogicalRom` enum, first
+member `SK`) to a byte source from whatever physical ROM images are present.
 `PatchContext` hands patches a reader for the *logical* ROM; the patch never
-knows which physical file backed it. The resolver owns all split/extract/window
-logic, reusing `RomManager` / `RomDetectionService` plumbing for identity
-detection. Future patches declare logical ROM needs the same way.
+knows which physical file backed it.
+
+Grounding in the current code (`RomManager.resolveRomForGame` knows only
+s1/s2/s3k; `RomByteReader` has no window/view abstraction):
+
+- **v1 backend — combined S3K ROM (required):** S&K occupies
+  `0x000000–0x1FFFFF` of the combined image, so S&K-cart-relative addresses
+  equal combined-ROM addresses in that range. The resolver returns the existing
+  `RomManager.getSecondaryRom("s3k")` reader directly — no window abstraction
+  is needed. The resolver enforces the invariant with a bounds guard: a logical
+  S&K read at an address `>= 0x200000` is a hard error (it would be reading the
+  S3 half).
+- **v1 backend — standalone S&K image (discrete, droppable step):** a new
+  config key for an optional standalone S&K ROM path (with the required
+  `ConfigCatalog` metadata, placed before the `debug.*` block), plus an S&K
+  `RomDetector` header check. When configured and detected, this backend is
+  preferred. If this step slips, the combined-ROM backend alone satisfies KiS2
+  since the combined ROM is already the repo-standard requirement.
+
+Future patches declare logical ROM needs the same way; split/extract/window
+logic, if ever needed for an identity that does not sit at offset 0, lives in
+the resolver — not in patches.
 
 ### Deliberate non-goals (YAGNI)
 
@@ -156,15 +208,32 @@ honored.
 
 ### Physics
 
+**Scoping model (precise):** `PhysicsFeatureSet` is and stays module-scoped —
+`PhysicsProvider.getFeatureSet()` takes no character parameter and is read
+module-wide (e.g. `LevelFrameContext`). That is correct here because the
+patched module *is* the game variant: the KiS2 provider returns one KiS2
+feature set for the whole session. Per-character differences — including a
+config-added sidekick — resolve through the existing per-character paths, the
+same way S3K already runs Knuckles alongside a Tails sidekick today:
+`getProfile(characterType)` for movement constants and `SecondaryAbility`
+(character_id branching: GLIDE for Knuckles, FLY for Tails) for abilities. No
+`PhysicsProvider` API change is required.
+
 - New `PhysicsProfile` for KiS2 Knuckles, constants transcribed from the diff
   catalogue (e.g. reduced jump velocity).
 - New KiS2 `PhysicsFeatureSet` derived from `SONIC_2` with glide/climb
-  capability flags enabled.
-- The patch overrides `getPhysicsProvider()` to return these for `KNUCKLES`.
+  capability flags enabled, returned by the patched module's provider for the
+  whole session.
+- The patch overrides `getPhysicsProvider()`; `getProfile("knuckles")` returns
+  the KiS2 profile, and sidekick character types fall through to stock S2
+  profiles.
 - Glide/climb behavior reuses the shared feature-flag-gated moveset code paths.
   Any KiS2-vs-S&K behavioral deviation found in the diff gets its own
   `PhysicsFeatureSet` flag — never a version/zone/game check, per the CLAUDE.md
   carve-out rules.
+- The KiS2 provider is stateless per call — it must not copy the
+  `lastCharacterType` stateful pattern currently in
+  `Sonic3kPhysicsProvider.getModifiers()`.
 
 ### Art
 
@@ -197,11 +266,13 @@ mechanism stock placement uses. No zone carve-outs in shared code.
 ## Launch flow
 
 - The launch-config screen offers Knuckles as an S2 main character whenever the
-  logical S&K ROM is resolvable (availability logic unifies with the existing
-  donor-ROM-presence checks rather than forking).
-- Selecting Knuckles sets the requested character on the launch profile;
-  session open resolves the KiS2 patch via `GamePatchRegistry`; gameplay runs
-  on the patched module.
+  logical S&K ROM is resolvable, via the patch-aware `LaunchProfile`
+  availability union described above (donation continues to contribute its own
+  candidates independently).
+- Selecting Knuckles sets the requested character on the launch profile; the
+  launch path derives a `GameplayLaunchRequest`, calls
+  `GamePatchRegistry.resolveModule()`, and opens the session with the patched
+  module; gameplay runs on it.
 
 ## Error handling
 
@@ -220,8 +291,12 @@ mechanism stock placement uses. No zone carve-outs in shared code.
 - `TestGamePatchRegistry` — activation resolution: correct patch chosen for
   (base game, launch request); no patch when prerequisites unmet; stock module
   untouched when no patch applies.
-- Logical-ROM resolver tests with synthetic byte arrays: standalone vs
-  windowed-combined resolution, identity detection.
+- `LaunchProfile` availability/sanitization tests: Knuckles offered for S2 when
+  the patch is available with donation off; a patch-backed Knuckles selection
+  survives `sanitizedFor()`; Knuckles stripped when no patch and no S3K donor.
+- Logical-ROM resolver tests with synthetic byte arrays: combined-ROM backend
+  with bounds guard (read `>= 0x200000` fails), standalone-backend preference
+  and identity detection.
 
 **KiS2 patch tests:**
 
@@ -243,7 +318,12 @@ All tests JUnit 5 / Jupiter only.
 1. **Diff catalogue** — `docs/kis2/BRANCH_DIFFS.md` from the s2disasm branch;
    everything downstream cites it.
 2. **Framework** — `GamePatch`, `PatchContext`, `DelegatingGameModule` + guard
-   test, `GamePatchRegistry`, logical-ROM resolver, `SessionManager` wiring.
+   test, `GamePatchRegistry`, logical-ROM resolver (combined-ROM backend +
+   bounds guard; standalone-S&K backend as a discrete droppable sub-step),
+   `GameplayLaunchRequest`, patch-aware `LaunchProfile` availability/
+   sanitization, and `resolveModule()` wiring at the module-construction choke
+   points (master title, `Engine.launchGameplayFromDataSelect()`,
+   `TraceReplaySessionBootstrap`, `HeadlessGameBoot`).
 3. **KiS2 physics** — profile + feature set + provider override.
 4. **Knuckles art** — S&K-data loaders + player sprite integration.
 5. **Behavior data** — monitor/life-icon overlays, faithful-default roster,
