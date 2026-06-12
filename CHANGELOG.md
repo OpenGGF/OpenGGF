@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K ICZ swinging platform uses separate ROM child solid slots:** the
+  lower/upper `Obj_ICZSwingingPlatform` solids now keep independent standing
+  latches and use their raw `SolidObjectFull` widths (`$2B`/`$0F`) for the top
+  branch, matching the ROM child SST layout. This moves the ICZ complete-run
+  trace from the frame-1708 post-launch vertical-position frontier to the
+  frame-1987 Tails segment-column frontier.
+
 - **S3K ICZ swinging platform waits one ROM frame before first swing move:**
   `Obj_ICZSwingingPlatform` now arms its parent swing from the child solid
   trigger without immediately applying circular movement, matching the ROM

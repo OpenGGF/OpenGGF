@@ -55,6 +55,18 @@ public interface MultiPieceSolidProvider extends SolidObjectProvider {
     }
 
     /**
+     * Whether each piece owns an independent ROM standing bit.
+     * <p>
+     * Most engine multi-piece providers are aggregate collision shapes and keep
+     * one latch for the logical object. Providers that compress separate ROM
+     * child slots into one instance can opt in so a standing bit set by one
+     * child does not suppress another child's fresh SolidObject contact path.
+     */
+    default boolean usesPieceScopedStandingBits() {
+        return false;
+    }
+
+    /**
      * Called when a piece makes contact with the player.
      * Allows the object to track which pieces are being touched.
      *

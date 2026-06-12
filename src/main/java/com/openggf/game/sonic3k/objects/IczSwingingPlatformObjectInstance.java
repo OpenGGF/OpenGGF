@@ -277,6 +277,19 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesPieceScopedStandingBits() {
+        return true;
+    }
+
+    @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // Obj_ICZSwingingPlatform child slots pass d1=$2B/$0F directly to
+        // SolidObjectFull, rather than the obActWid+$0B width used by many
+        // generic solid callers.
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity player) {
         return !isDestroyed() && phase != Phase.STOPPED;
     }

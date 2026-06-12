@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K ICZ complete-run progressed to Tails segment-column frontier
+
+- Scope: follow-up to the ICZ frame-1708 post-launch vertical-position
+  frontier. Trace data remained comparison-only diagnostic input; no engine
+  state was hydrated from trace rows, and no trace/route/frame exception was
+  added.
+- Fix:
+  - `Obj_ICZSwingingPlatform` upper/lower child solids now opt into
+    piece-scoped standing latches, matching the ROM's separate child SST
+    slots instead of sharing one aggregate Java-object standing bit.
+  - The ICZ swinging platform now marks its collision half-width as the raw
+    ROM `SolidObjectFull` `d1` width. Its child routines pass `$2B` and `$0F`
+    directly, so the generic `obActWid+$0B` landing-width narrowing must not
+    subtract `$0B` again at the top-branch width recheck.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIczSwingingPlatformObject" test`
+    -> GREEN. Surefire report: `Tests run: 8, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 1708 to frame 1987. New
+    first error: `tails_x` `expected=0x3EEE`, `actual=0x3EED` near the ICZ
+    segment-column/debris cluster; main-player position, camera, rings, status,
+    and velocities match at the first error. ICZ error count is 3359.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-1987 Tails CPU/ground-position publication around the segment
+  column and debris objects; do not add a trace/frame exception.
+
 ## 2026-06-12 - S3K ICZ complete-run progressed to post-launch vertical-position frontier
 
 - Scope: follow-up to the ICZ frame-1667 swinging-platform camera/player drift.

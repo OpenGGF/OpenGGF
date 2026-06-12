@@ -59,6 +59,7 @@ final class ObjectSolidContactController {
 
     // Per-player riding state (ROM: each player object has its own SST interact field $3E)
     private record RidingState(ObjectInstance object, int x, int y, int pieceIndex) {}
+    private record PieceStandingLatchKey(Object objectKey, int pieceIndex) {}
     private final Map<PlayableEntity, RidingState> ridingStates = new IdentityHashMap<>(2);
     private final Set<PlayableEntity> inlineSupportedPlayers =
             Collections.newSetFromMap(new IdentityHashMap<>());
@@ -117,11 +118,28 @@ final class ObjectSolidContactController {
         return spawn != null ? spawn : instance;
     }
 
+    private static Object airUnseatLatchKeyFor(ObjectInstance instance, int pieceIndex) {
+        Object key = airUnseatLatchKeyFor(instance);
+        if (key == null) {
+            return null;
+        }
+        if (pieceIndex >= 0
+                && instance instanceof MultiPieceSolidProvider multiPiece
+                && multiPiece.usesPieceScopedStandingBits()) {
+            return new PieceStandingLatchKey(key, pieceIndex);
+        }
+        return key;
+    }
+
     private void setObjectStandingBit(PlayableEntity player, ObjectInstance instance) {
+        setObjectStandingBit(player, instance, -1);
+    }
+
+    private void setObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex) {
         if (player == null) {
             return;
         }
-        Object key = airUnseatLatchKeyFor(instance);
+        Object key = airUnseatLatchKeyFor(instance, pieceIndex);
         if (key == null) {
             return;
         }
@@ -131,6 +149,10 @@ final class ObjectSolidContactController {
     }
 
     private boolean hasObjectStandingBit(PlayableEntity player, ObjectInstance instance) {
+        return hasObjectStandingBit(player, instance, -1);
+    }
+
+    private boolean hasObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex) {
         if (player == null) {
             return false;
         }
@@ -138,7 +160,7 @@ final class ObjectSolidContactController {
         if (set == null) {
             return false;
         }
-        Object key = airUnseatLatchKeyFor(instance);
+        Object key = airUnseatLatchKeyFor(instance, pieceIndex);
         return key != null && set.contains(key);
     }
 
@@ -178,6 +200,10 @@ final class ObjectSolidContactController {
     }
 
     private void clearObjectStandingBit(PlayableEntity player, ObjectInstance instance) {
+        clearObjectStandingBit(player, instance, -1);
+    }
+
+    private void clearObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex) {
         if (player == null) {
             return;
         }
@@ -185,17 +211,21 @@ final class ObjectSolidContactController {
         if (set == null) {
             return;
         }
-        Object key = airUnseatLatchKeyFor(instance);
+        Object key = airUnseatLatchKeyFor(instance, pieceIndex);
         if (key != null) {
             set.remove(key);
         }
     }
 
     private void snapshotObjectStandingBit(PlayableEntity player, ObjectInstance instance) {
+        snapshotObjectStandingBit(player, instance, -1);
+    }
+
+    private void snapshotObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex) {
         if (player == null) {
             return;
         }
-        Object key = airUnseatLatchKeyFor(instance);
+        Object key = airUnseatLatchKeyFor(instance, pieceIndex);
         if (key == null) {
             return;
         }
@@ -205,6 +235,10 @@ final class ObjectSolidContactController {
     }
 
     private boolean wasObjectStandingBitSetThisFrame(PlayableEntity player, ObjectInstance instance) {
+        return wasObjectStandingBitSetThisFrame(player, instance, -1);
+    }
+
+    private boolean wasObjectStandingBitSetThisFrame(PlayableEntity player, ObjectInstance instance, int pieceIndex) {
         if (player == null) {
             return false;
         }
@@ -212,7 +246,7 @@ final class ObjectSolidContactController {
         if (set == null) {
             return false;
         }
-        Object key = airUnseatLatchKeyFor(instance);
+        Object key = airUnseatLatchKeyFor(instance, pieceIndex);
         return key != null && set.contains(key);
     }
 
@@ -1031,7 +1065,7 @@ final class ObjectSolidContactController {
                 // (docs/skdisasm/sonic3k.asm:41006-41010), so the existing
                 // standing bit and Status_OnObj survive without a carry step.
                 ridingStates.put(player, new RidingState(instance, ridingX, ridingY, ridingPieceIndex));
-                setObjectStandingBit(player, instance);
+                setObjectStandingBit(player, instance, ridingPieceIndex);
                 inlineSupportedPlayers.add(player);
             }
             return null;
@@ -1108,7 +1142,7 @@ final class ObjectSolidContactController {
             if (result.standing()) {
                 ridingStates.put(player, new RidingState(
                         instance, result.ridingX(), result.ridingY(), result.pieceIndex()));
-                setObjectStandingBit(player, instance);
+                setObjectStandingBit(player, instance, result.pieceIndex());
                 clearGroundWallSuppressionForNormalSolidSupport(player, instance);
                 inlineSupportedPlayers.add(player);
             }
@@ -1243,7 +1277,7 @@ final class ObjectSolidContactController {
                     ? instance.getPreUpdateX()
                     : instance.getX();
             ridingStates.put(player, new RidingState(instance, newRideBaselineX, instance.getY(), -1));
-            setObjectStandingBit(player, instance);
+            setObjectStandingBit(player, instance, ridingPieceIndex);
             clearGroundWallSuppressionForNormalSolidSupport(player, instance);
             inlineSupportedPlayers.add(player);
         }
@@ -1307,7 +1341,7 @@ final class ObjectSolidContactController {
                 }
             }
             ridingStates.put(player, new RidingState(instance, currentX, currentY, ridingPieceIndex));
-            setObjectStandingBit(player, instance);
+            setObjectStandingBit(player, instance, ridingPieceIndex);
             clearGroundWallSuppressionForNormalSolidSupport(player, instance);
             player.setOnObject(true);
             player.setAir(false);
@@ -1329,7 +1363,7 @@ final class ObjectSolidContactController {
             // standing at last frame's y_pos.
             if (provider.suppressSlopeSampleThisFrame(player)) {
                 ridingStates.put(player, new RidingState(instance, currentX, currentY, ridingPieceIndex));
-                setObjectStandingBit(player, instance);
+                setObjectStandingBit(player, instance, ridingPieceIndex);
                 clearGroundWallSuppressionForNormalSolidSupport(player, instance);
                 inlineSupportedPlayers.add(player);
                 return SolidContact.STANDING;
@@ -1346,7 +1380,7 @@ final class ObjectSolidContactController {
             int newY = newCentreY - (player.getHeight() / 2);
             player.setY((short) newY);
             ridingStates.put(player, new RidingState(instance, currentX, currentY, ridingPieceIndex));
-            setObjectStandingBit(player, instance);
+            setObjectStandingBit(player, instance, ridingPieceIndex);
             clearGroundWallSuppressionForNormalSolidSupport(player, instance);
 
             if (solidProfile.dropOnFloor()) {
@@ -1822,7 +1856,7 @@ final class ObjectSolidContactController {
                     ridingY = currentY;
                     // Update state with new tracking position
                     ridingStates.put(player, new RidingState(ridingObject, ridingX, ridingY, ridingPieceIndex));
-                    setObjectStandingBit(player, ridingObject);
+                    setObjectStandingBit(player, ridingObject, ridingPieceIndex);
                     clearGroundWallSuppressionForNormalSolidSupport(player, ridingObject);
 
                     // ROM: DropOnFloor (s2.asm:35810) — after repositioning the player
@@ -2032,7 +2066,7 @@ final class ObjectSolidContactController {
 
         if (nextRidingObject != null) {
             ridingStates.put(player, new RidingState(nextRidingObject, nextRidingX, nextRidingY, nextRidingPieceIndex));
-            setObjectStandingBit(player, nextRidingObject);
+            setObjectStandingBit(player, nextRidingObject, nextRidingPieceIndex);
             clearGroundWallSuppressionForNormalSolidSupport(player, nextRidingObject);
         } else {
             ridingStates.remove(player);
@@ -2130,6 +2164,15 @@ final class ObjectSolidContactController {
             if (i < multiPieceEarlierPiecesResolvedUpTo) {
                 continue;
             }
+            if (multiPiece.usesPieceScopedStandingBits()
+                    && player.getAir()
+                    && hasObjectStandingBit(player, instance, i)) {
+                snapshotObjectStandingBit(player, instance, i);
+                clearObjectStandingBit(player, instance, i);
+                if (multiPiece.airborneStaleStandingBitReturnsNoContact(player)) {
+                    continue;
+                }
+            }
             SolidObjectParams params = multiPiece.getPieceParams(i);
             int pieceX = multiPiece.getPieceX(i);
             int pieceY = multiPiece.getPieceY(i);
@@ -2164,7 +2207,6 @@ final class ObjectSolidContactController {
                 contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
                         solidProfile, useStickyBuffer, instance, i, true);
             }
-
             if (contact == null) {
                 continue;
             }
@@ -2314,7 +2356,7 @@ final class ObjectSolidContactController {
         }
         return resolveContactInternal(player, relX, relY, halfWidth, maxTop, totalHeight,
                 playerCenterX, playerCenterY,
-                topSolidOnly, riding, apply, instance, true);
+                topSolidOnly, riding, apply, instance, true, pieceIndex);
     }
 
     private int getSolidTopYRadius(PlayableEntity player) {
@@ -2585,7 +2627,7 @@ final class ObjectSolidContactController {
         }
 
         SolidContact result = resolveContactInternal(player, relX, relY, halfWidth, maxTop, maxTop * 2,
-                playerCenterX, playerCenterY, topSolidOnly, riding, apply, instance, true);
+                playerCenterX, playerCenterY, topSolidOnly, riding, apply, instance, true, -1);
 
         // Continued riding uses SolidObjSloped2/SlopeObject2 to re-sample
         // the absolute surface after the generic standing check. New
@@ -2606,7 +2648,8 @@ final class ObjectSolidContactController {
 
     private SolidContact resolveContactInternal(PlayableEntity player, int relX, int relY, int halfWidth,
             int maxTop, int totalHeight, int playerCenterX, int playerCenterY, boolean topSolidOnly,
-            boolean sticky, boolean apply, ObjectInstance instance, boolean useTopLandingWidth) {
+            boolean sticky, boolean apply, ObjectInstance instance, boolean useTopLandingWidth,
+            int pieceIndex) {
         int distX;
         int absDistX;
         if (relX >= halfWidth) {
@@ -2956,8 +2999,8 @@ final class ObjectSolidContactController {
             // into objectStandingBitSnapshot so the gate below observes
             // ROM's "bit was set at routine entry" semantics.
             boolean objectStandingBitWasSet =
-                    wasObjectStandingBitSetThisFrame(player, instance)
-                            || hasObjectStandingBit(player, instance);
+                    wasObjectStandingBitSetThisFrame(player, instance, pieceIndex)
+                            || hasObjectStandingBit(player, instance, pieceIndex);
             boolean s3kAlwaysLifts =
                     !topSolidOnly
                             && topBranchAlwaysLiftsOnUpwardVelocity(player)
@@ -3061,7 +3104,7 @@ final class ObjectSolidContactController {
                 // air-unseat correctly routes through the no-lift
                 // path on the next frame.
                 if (instance != null) {
-                    setObjectStandingBit(player, instance);
+                    setObjectStandingBit(player, instance, pieceIndex);
                 }
             } else if (upwardVelocity) {
                 // apply=false geometry probe (collision sensor / debug):

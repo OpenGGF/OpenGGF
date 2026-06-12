@@ -69,6 +69,8 @@ class TestS3kIczSwingingPlatformObject {
         assertEquals(0x1200, platform.getX());
         assertEquals(0x0700, platform.getY());
         assertEquals(1, platform.getPriorityBucket());
+        assertTrue(platform.usesPieceScopedStandingBits());
+        assertTrue(platform.usesCollisionHalfWidthForTopLanding());
     }
 
     @Test
