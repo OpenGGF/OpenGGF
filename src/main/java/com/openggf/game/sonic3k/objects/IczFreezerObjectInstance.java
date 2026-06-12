@@ -22,6 +22,7 @@ import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.Direction;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -448,7 +449,7 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
             }
             syncCapturedPlayer();
 
-            if (breakTimer-- < 0) {
+            if (--breakTimer < 0) {
                 breakOpen(frameCounter);
             }
         }
@@ -498,14 +499,23 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         }
 
         private void applyBreakDamage(int frameCounter) {
-            boolean hadRings = capturedPlayer.getRingCount() > 0;
+            boolean sidekick = capturedPlayer.isCpuControlled();
+            boolean hadRings = !sidekick && capturedPlayer.getRingCount() > 0;
             if (hadRings && !capturedPlayer.hasShield() && !capturedPlayer.suppressesLostRingSpawnOnHurt()) {
                 ObjectServices services = tryServices();
                 if (services != null) {
                     services.spawnLostRings(capturedPlayer, frameCounter);
                 }
             }
-            capturedPlayer.applyHurtOrDeath(getX(), DamageCause.SPIKE, hadRings);
+            boolean hurt = sidekick
+                    ? capturedPlayer.applyHurt(getX(), DamageCause.SPIKE)
+                    : capturedPlayer.applyHurtOrDeath(getX(), DamageCause.SPIKE, hadRings);
+            if (hurt && capturedPlayer.getAnimationId() != 0x18) {
+                // ROM loc_8A88A calls HurtCharacter, then overwrites x_vel from
+                // render_flags bit 0 for freezer breaks.
+                int xVel = capturedPlayer.getDirection() == Direction.LEFT ? 0x0200 : -0x0200;
+                capturedPlayer.setXSpeed((short) xVel);
+            }
         }
 
         private void spawnDebris() {

@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K ICZ complete-run progressed to post-freezer native-Tails vertical drift
+
+- Scope: follow-up to the ICZ frame-2964 native-Tails frozen-release
+  rolling-state and ring-spend frontier. Trace data remained comparison-only
+  diagnostic input; no engine state was hydrated from trace rows, and no
+  trace/route/frame exception was added.
+- Fix:
+  - ICZ freezer frozen-player blocks now break on the ROM `loc_8A84C`
+    pre-decrement frame instead of keeping the block alive for one extra
+    update.
+  - Freezer break damage now applies the ROM `loc_8A88A` post-`HurtCharacter`
+    x-velocity override from the player's facing/render flag.
+  - CPU-controlled captured sidekicks use sidekick hurt semantics: no lost-ring
+    spawn and no shared ring-counter spend, while still receiving hurt
+    knockback, rolling clear, in-air state, and invulnerability.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIczFreezerObject" test`
+    -> GREEN. Surefire summary: `Tests run: 17, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2964 to frame 2967. New
+    first error: native Tails `y` `expected=0x0365`, `actual=0x0364`;
+    main-player fields, rings, Tails release velocities, Tails air/rolling
+    state, and Tails CPU routine/counters match through the former frontier.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-2967 native-Tails hurt/fall vertical integration immediately after
+  freezer release, including sidekick hurt movement timing and any Tails-specific
+  radius/position semantics, without adding a trace/frame carve-out.
+
 ## 2026-06-12 - S3K ICZ complete-run progressed to native-Tails frozen-release frontier
 
 - Scope: follow-up to the ICZ frame-2875 main-player ground-speed frontier

@@ -268,6 +268,37 @@ class TestS3kIczFreezerObject {
     }
 
     @Test
+    void frozenPlayerBlockBreaksOnRomPreDecrementFrameAndOverridesKnockbackDirection() {
+        installLevelGamestate();
+
+        RecordingServices services = new RecordingServices();
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x3FC4, (short) 0x0373);
+        tails.setCpuControlled(true);
+        tails.setRingCount(42);
+        tails.setRolling(true);
+        tails.setDirection(com.openggf.physics.Direction.RIGHT);
+        IczFreezerObjectInstance.FrozenPlayerBlock block =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(tails, 0x3FC4, 0x0373, 0x4060, false);
+        block.setServices(services);
+
+        for (int frame = 32; frame < 159; frame++) {
+            block.update(frame, tails);
+        }
+        assertFalse(block.isDestroyed(), "ROM $2E has not gone negative before the 128th loc_8A84C tick");
+
+        block.update(159, tails);
+
+        assertTrue(block.isDestroyed(), "ROM loc_8A84C pre-decrements $2E and breaks as soon as it is negative");
+        assertFalse(tails.isObjectControlled(), "loc_8A8BA clears object_control on the break frame");
+        assertFalse(tails.getRolling(), "HurtCharacter clears rolling before the break frame is compared");
+        assertEquals((short) -0x0200, tails.getXSpeed(),
+                "loc_8A88A overwrites freezer-break x_vel from render_flags bit 0, not source-X comparison");
+        assertEquals((short) -0x0400, tails.getYSpeed());
+        assertEquals(42, tails.getRingCount(), "ROM Hurt_Sidekick does not spend the main player's rings");
+        assertEquals(List.of(), services.lostRingSpawnFrames);
+    }
+
+    @Test
     void frozenPlayerBlockReleaseSpendsRingsThroughLostRingPathWhenShieldless() {
         installLevelGamestate();
 
@@ -295,7 +326,7 @@ class TestS3kIczFreezerObject {
         assertTrue(player.isHurt(), "Freeze break damage should put shieldless Sonic into hurt state");
         assertEquals(0, player.getRingCount(),
                 "Freeze break damage should spend rings like ordinary touch damage");
-        assertEquals(List.of(160), services.lostRingSpawnFrames,
+        assertEquals(List.of(159), services.lostRingSpawnFrames,
                 "Freeze break damage should spawn lost rings before applying hurt");
     }
 

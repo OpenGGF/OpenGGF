@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K ICZ freezer release preserves CPU sidekick ring ownership:** ICZ
+  frozen-player blocks now break on the ROM pre-decrement frame, apply the
+  freezer-specific `loc_8A88A` knockback direction override, and route
+  CPU-controlled sidekicks through `Hurt_Sidekick` semantics so Sonic's shared
+  ring counter is not spent when native Tails breaks out. This moves the ICZ
+  complete-run trace from frame 2964 to frame 2967, a one-pixel native Tails
+  vertical drift after freezer release.
+
 - **S3K ICZ directional slide terrain applies ROM inertia steps:** ICZ1
   directional slide terrain now moves `ground_vel` by `$40` toward the ROM
   signed high-byte table target during the late slide-terrain publish, while
