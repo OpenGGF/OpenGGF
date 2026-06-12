@@ -1244,7 +1244,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         private boolean isMatchingLiveShield(PowerUpObject candidate) {
                 return candidate != null
                                 && !candidate.isDestroyed()
-                                && candidate.matchesShieldType(shieldType);
+                                && candidate.isShieldFor(this, shieldType);
         }
 
         private boolean isObjectManagerLivePowerUp(ObjectManager objectManager, PowerUpObject candidate) {

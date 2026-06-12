@@ -28,6 +28,15 @@ public interface PowerUpObject {
     }
 
     /**
+     * Returns whether this power-up is the shield visual owned by the given
+     * player. Non-shield power-ups must leave the default false so rewind
+     * relinking cannot confuse invincibility stars for a basic shield.
+     */
+    default boolean isShieldFor(PlayableEntity player, ShieldType type) {
+        return false;
+    }
+
+    /**
      * Called after a rewind restore relinks or respawns this power-up visual.
      * Implementations with transient renderer/DPLC caches should invalidate
      * them so the next draw uploads art for the restored animation frame.
