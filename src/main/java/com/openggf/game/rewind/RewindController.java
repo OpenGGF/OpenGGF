@@ -10,8 +10,11 @@ import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.SectionProfiler;
 
 import java.util.Objects;
+import java.util.logging.Logger;
 
 public final class RewindController {
+
+    private static final Logger LOGGER = Logger.getLogger(RewindController.class.getName());
 
     private final RewindRegistry registry;
     private final KeyframeStore keyframes;
@@ -25,6 +28,7 @@ public final class RewindController {
 
     private int currentFrame;
     private boolean audioRestoreDeferred;
+    private RewindDeterminismAuditor determinismAuditor;
 
     public RewindController(
             RewindRegistry registry,
@@ -73,6 +77,10 @@ public final class RewindController {
     }
 
     public int currentFrame() { return currentFrame; }
+
+    public void setDeterminismAuditor(RewindDeterminismAuditor auditor) {
+        this.determinismAuditor = auditor;
+    }
 
     public int earliestAvailableFrame() {
         // v1: trace mode — earliest accessible frame is whatever the
@@ -151,8 +159,52 @@ public final class RewindController {
         if (currentFrame % keyframeInterval == 0) {
             keyframes.put(currentFrame, registry.capture());
             captureAudioKeyframe(currentFrame);
+            if (determinismAuditor != null) {
+                auditLastSegment();
+            }
         }
         return true;
+    }
+
+    private void auditLastSegment() {
+        try {
+            var prevOpt = keyframes.latestAtOrBefore(currentFrame - 1);
+            var liveOpt = keyframes.latestAtOrBefore(currentFrame);
+            if (prevOpt.isEmpty() || liveOpt.isEmpty() || liveOpt.get().frame() != currentFrame) {
+                return;
+            }
+
+            var prev = prevOpt.get();
+            CompositeSnapshot live = liveOpt.get().snapshot();
+            boolean diverged = false;
+            try (AudioReplayScope ignored = beginAudioReplay(
+                    currentFrame, currentFrame, AudioReplayReason.SEEK)) {
+                try {
+                    registry.restore(prev.snapshot());
+                    primeStepperAtFrame(prev.frame());
+                    int pos = prev.frame();
+                    while (pos < currentFrame) {
+                        engineStepper.step(inputs.read(pos + 1));
+                        pos++;
+                    }
+                    diverged = determinismAuditor.report(
+                            prev.frame(), currentFrame, live, registry.capture());
+                } finally {
+                    registry.restore(live);
+                    primeStepperAtFrame(currentFrame);
+                    restoreAudioLogicalState(currentFrame);
+                    beginAudioFrame(currentFrame);
+                    afterAudioRestore(AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE);
+                }
+            }
+            if (diverged) {
+                determinismAuditor = null;
+            }
+        } catch (RuntimeException e) {
+            LOGGER.warning("Live rewind determinism audit failed and will be disabled: "
+                    + e);
+            determinismAuditor = null;
+        }
     }
 
     /**

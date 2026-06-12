@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- New debug flag `debug.rewind.determinismAudit`: re-simulates each completed
+  rewind keyframe segment during live play and logs the first state divergence,
+  pinpointing state that is missing from rewind capture. Disarms after the first
+  divergence (replayed out-of-snapshot state cannot be rolled back).
+
 - Rewind now captures and restores live palette colors (normal + underwater
   surfaces), so palette mutations (e.g. AIZ intro fire sequence) rewind
   correctly instead of persisting through a rewind.

@@ -569,6 +569,7 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.CAPTURE_FPS, 60);
 		putDefault(SonicConfiguration.CAPTURE_CODEC, "ffv1");
 		putDefault(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+		putDefault(SonicConfiguration.LIVE_REWIND_DETERMINISM_AUDIT, false);
 		putDefaultKey(SonicConfiguration.LIVE_REWIND_KEY, GLFW_KEY_R);
 		putDefault(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED, false);
 		putDefault(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ACCELERATION, 0.25);

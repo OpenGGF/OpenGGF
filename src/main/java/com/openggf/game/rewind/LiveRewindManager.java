@@ -126,6 +126,10 @@ public final class LiveRewindManager {
                 new LiveRewindStepper(inputSource, config, () -> LevelFrameContext.from(gameplayMode)),
                 KEYFRAME_INTERVAL);
         rewindController = gameplayMode.getRewindController();
+        if (rewindController != null
+                && config.getBoolean(SonicConfiguration.LIVE_REWIND_DETERMINISM_AUDIT)) {
+            rewindController.setDeterminismAuditor(new RewindDeterminismAuditor());
+        }
         installedGameplayMode = gameplayMode;
         speedController = RewindSpeedController.fromConfig(config);
         rewinding = false;

@@ -207,6 +207,11 @@ public final class ConfigCatalog {
         put(TRACE_REWIND_KEY, of("debug.traceRewind", "key", KEY,
                 "Key held in Trace Test Mode to rewind deterministic engine state"));
 
+        // debug.rewind
+        put(LIVE_REWIND_DETERMINISM_AUDIT, of("debug.rewind", "determinismAudit", BOOL,
+                "Audit live-rewind determinism: re-simulate each completed keyframe segment "
+                + "and log the first state divergence (debug; ~2x frame cost)"));
+
         // debug.traceRender (Trace Test Mode + capture visibility)
         put(TRACE_SHOW_DESYNC_GHOSTS, of("debug.traceRender", "showDesyncGhosts", BOOL,
                 "Render the desync ghost(s) in Trace Test Mode and trace capture"));

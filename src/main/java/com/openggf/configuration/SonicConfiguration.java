@@ -293,6 +293,11 @@ public enum SonicConfiguration {
 	LIVE_REWIND_ENABLED,
 
 	/**
+	 * Whether live rewind audits completed keyframe segments for determinism.
+	 */
+	LIVE_REWIND_DETERMINISM_AUDIT,
+
+	/**
 	 * Key held during ordinary live level play to rewind deterministic gameplay state.
 	 */
 	LIVE_REWIND_KEY,
