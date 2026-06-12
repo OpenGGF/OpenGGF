@@ -5,6 +5,7 @@ import com.openggf.game.rewind.schema.RewindClassSchema;
 import com.openggf.game.rewind.schema.RewindSchemaRegistry;
 import com.openggf.game.rewind.schema.ZoneEventSchemaSidecar;
 import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
+import com.openggf.game.sonic3k.events.Sonic3kHCZEvents;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Modifier;
@@ -24,8 +25,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class TestZoneEventRewindSchemaGuard {
 
-    private static final List<Class<?>> CONVERTED_HANDLERS = List.of(Sonic3kAIZEvents.class);
+    private static final List<Class<?>> CONVERTED_HANDLERS = List.of(
+            Sonic3kAIZEvents.class,
+            Sonic3kHCZEvents.class);
     private static final Set<String> AIZ_ALLOWED_TRANSIENT_FIELDS = Set.of("bootstrap");
+    private static final Set<String> HCZ_ALLOWED_TRANSIENT_FIELDS = Set.of("wallObject");
 
     /**
      * FIELD names (not getter names) the legacy writeAizState byte layout serialized.
@@ -69,6 +73,28 @@ public class TestZoneEventRewindSchemaGuard {
             "fireSequencePhase"
     );
 
+    /**
+     * FIELD names (not getter names) the legacy writeHczState byte layout serialized.
+     */
+    private static final Set<String> HCZ_LEGACY_FIELDS = Set.of(
+            "eventsFg5",
+            "bossFlag",
+            "transitionRequested",
+            "wallMoving",
+            "wallStopped",
+            "wallChaseBgOverlayActive",
+            "cutsceneActive",
+            "fgRoutine",
+            "bgRoutine",
+            "act2BgRoutine",
+            "wallOffsetFixed",
+            "wallOffsetPixels",
+            "shakeTimer",
+            "cutsceneFrame",
+            "cutsceneCenterX",
+            "cutsceneCurrentY"
+    );
+
     @Test
     public void convertedHandlersHaveNoUnsupportedFields() {
         for (Class<?> handler : CONVERTED_HANDLERS) {
@@ -93,6 +119,19 @@ public class TestZoneEventRewindSchemaGuard {
     }
 
     @Test
+    public void hczSchemaCoversAllLegacySidecarFields() {
+        RewindClassSchema schema = RewindSchemaRegistry.schemaFor(Sonic3kHCZEvents.class);
+        Set<String> captured = schema.capturedFields().stream()
+                .map(plan -> plan.field().getName())
+                .collect(Collectors.toSet());
+        Set<String> missing = HCZ_LEGACY_FIELDS.stream()
+                .filter(name -> !captured.contains(name))
+                .collect(Collectors.toSet());
+        assertTrue(missing.isEmpty(),
+                "schema capture lost legacy HCZ sidecar fields: " + missing);
+    }
+
+    @Test
     public void aizTransientFieldInventoryIsExplicit() {
         Set<String> transientFields = Arrays.stream(Sonic3kAIZEvents.class.getDeclaredFields())
                 .filter(field -> !Modifier.isStatic(field.getModifiers()))
@@ -102,6 +141,18 @@ public class TestZoneEventRewindSchemaGuard {
                 .collect(Collectors.toSet());
         assertEquals(AIZ_ALLOWED_TRANSIENT_FIELDS, transientFields,
                 "AIZ transient field inventory changed; classify new fields as captured or structural");
+    }
+
+    @Test
+    public void hczTransientFieldInventoryIsExplicit() {
+        Set<String> transientFields = Arrays.stream(Sonic3kHCZEvents.class.getDeclaredFields())
+                .filter(field -> !Modifier.isStatic(field.getModifiers()))
+                .filter(field -> Modifier.isTransient(field.getModifiers())
+                        || field.isAnnotationPresent(RewindTransient.class))
+                .map(field -> field.getName())
+                .collect(Collectors.toSet());
+        assertEquals(HCZ_ALLOWED_TRANSIENT_FIELDS, transientFields,
+                "HCZ transient field inventory changed; classify new fields as captured or structural");
     }
 
     @Test

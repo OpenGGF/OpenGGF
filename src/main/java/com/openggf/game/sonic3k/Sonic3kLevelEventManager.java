@@ -1277,7 +1277,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         //   4 bytes   aiz schema payload length, when present
         //   N bytes   aiz schema payload, when present
         //   1 byte    hcz handler present flag
-        //   43 bytes  hcz state (7 booleans + 9 ints = 7+36 = 43)
+        //   4 bytes   hcz schema payload length, when present
+        //   N bytes   hcz schema payload, when present
         //   1 byte    cnz handler present flag
         //   82 bytes  cnz state (4 shorts + 10 booleans + 15 ints + 1 ordinal int = 8+10+60+4 = 82)
         //   1 byte    mgz handler present flag
@@ -1288,14 +1289,14 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         //   25 bytes  icz state (5 booleans + 5 ints; see Sonic3kICZEvents.rewindStateBytes())
         //   28 bytes  fixed Breathing_bubbles/Breathing_bubbles_P2 sidecars
         byte[] aizBytes = aizEvents != null ? ZoneEventSchemaSidecar.capture(aizEvents) : null;
-        int hczSize = 7 + 9 * 4; // 43
+        byte[] hczBytes = hczEvents != null ? ZoneEventSchemaSidecar.capture(hczEvents) : null;
         int cnzSize = 4 * 2 + 10 + 15 * 4 + 4; // 82
         int mgzSize = 16 + 23 * 4 + 3 * 10 * 4; // 228
         int mhzSize = Sonic3kMHZEvents.rewindStateBytes(); // 184
         int iczSize = Sonic3kICZEvents.rewindStateBytes(); // 25
         int size = 30;
         size += aizBytes != null ? 1 + Integer.BYTES + aizBytes.length : 1;
-        size += 1 + (hczEvents != null ? hczSize : 0);
+        size += hczBytes != null ? 1 + Integer.BYTES + hczBytes.length : 1;
         size += 1 + (cnzEvents != null ? cnzSize : 0);
         size += 1 + (mgzEvents != null ? mgzSize : 0);
         size += 1 + (mhzEvents != null ? mhzSize : 0);
@@ -1324,9 +1325,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             buf.put((byte) 0);
         }
         // HCZ
-        if (hczEvents != null) {
+        if (hczBytes != null) {
             buf.put((byte) 1);
-            writeHczState(buf, hczEvents);
+            buf.putInt(hczBytes.length);
+            buf.put(hczBytes);
         } else {
             buf.put((byte) 0);
         }
@@ -1385,7 +1387,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         cnzAct2MinYAccumulator = buf.remaining() >= Integer.BYTES ? buf.getInt() : 0;
         cnzAct2MaxYAccumulator = buf.remaining() >= Integer.BYTES ? buf.getInt() : 0;
         // Size constants must match the write methods
-        final int hczBytes = 7 + 9 * 4;        // 43
         final int cnzBytes = 4 * 2 + 10 + 15 * 4 + 4; // 82
         final int mgzBytes = 16 + 23 * 4 + 3 * 10 * 4; // 228
         final int mhzBytes = Sonic3kMHZEvents.rewindStateBytes(); // 184
@@ -1411,10 +1412,19 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // HCZ
         if (buf.remaining() >= 1) {
             boolean hczPresent = buf.get() != 0;
-            if (hczPresent && hczEvents != null && buf.remaining() >= hczBytes) {
-                readHczState(buf, hczEvents);
-            } else if (hczPresent && buf.remaining() >= hczBytes) {
-                buf.position(buf.position() + hczBytes);
+            if (hczPresent) {
+                if (buf.remaining() < Integer.BYTES) {
+                    return;
+                }
+                int hczLength = buf.getInt();
+                if (hczLength < 0 || buf.remaining() < hczLength) {
+                    return;
+                }
+                byte[] bytes = new byte[hczLength];
+                buf.get(bytes);
+                if (hczEvents != null) {
+                    restoreHczSidecar(bytes);
+                }
             }
         }
         // CNZ
@@ -1472,46 +1482,18 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
     }
 
-    // --- HCZ write/read (43 bytes: 7 booleans + 9 ints) ---
-
-    private static void writeHczState(java.nio.ByteBuffer buf, Sonic3kHCZEvents h) {
-        // 7 booleans = 7 bytes
-        buf.put((byte)(h.isEventsFg5()                ? 1 : 0));
-        buf.put((byte)(h.isBossFlag()                 ? 1 : 0));
-        buf.put((byte)(h.isTransitionRequested()      ? 1 : 0));
-        buf.put((byte)(h.isWallMoving()               ? 1 : 0));
-        buf.put((byte)(h.isWallStopped()              ? 1 : 0));
-        buf.put((byte)(h.isWallChaseBgOverlayActive() ? 1 : 0));
-        buf.put((byte)(h.isCutsceneActive()           ? 1 : 0));
-        // 9 ints = 36 bytes
-        buf.putInt(h.getDynamicResizeRoutine()); // fgRoutine
-        buf.putInt(h.getBgRoutine());
-        buf.putInt(h.getAct2BgRoutine());
-        buf.putInt(h.getWallOffsetFixed());
-        buf.putInt(h.getWallOffsetPixels());
-        buf.putInt(h.getShakeTimer());
-        buf.putInt(h.getCutsceneFrame());
-        buf.putInt(h.getCutsceneCenterX());
-        buf.putInt(h.getCutsceneCurrentY());
-    }
-
-    private static void readHczState(java.nio.ByteBuffer buf, Sonic3kHCZEvents h) {
-        h.setEventsFg5(buf.get() != 0);
-        h.setBossFlag(buf.get() != 0);
-        h.setTransitionRequested(buf.get() != 0);
-        h.setWallMoving(buf.get() != 0);
-        h.setWallStopped(buf.get() != 0);
-        h.setWallChaseBgOverlayActiveRaw(buf.get() != 0);
-        h.setCutsceneActive(buf.get() != 0);
-        h.setDynamicResizeRoutine(buf.getInt());
-        h.setBgRoutine(buf.getInt());
-        h.setAct2BgRoutine(buf.getInt());
-        h.setWallOffsetFixed(buf.getInt());
-        h.setWallOffsetPixels(buf.getInt());
-        h.setShakeTimer(buf.getInt());
-        h.setCutsceneFrame(buf.getInt());
-        h.setCutsceneCenterX(buf.getInt());
-        h.setCutsceneCurrentY(buf.getInt());
+    private void restoreHczSidecar(byte[] bytes) {
+        byte[] before = ZoneEventSchemaSidecar.capture(hczEvents);
+        try {
+            ZoneEventSchemaSidecar.restore(hczEvents, bytes);
+        } catch (RuntimeException e) {
+            try {
+                ZoneEventSchemaSidecar.restore(hczEvents, before);
+            } catch (RuntimeException rollbackFailure) {
+                e.addSuppressed(rollbackFailure);
+            }
+            LOG.warning("Skipping malformed HCZ zone-event rewind sidecar: " + e.getMessage());
+        }
     }
 
     // --- CNZ write/read (82 bytes) ---
