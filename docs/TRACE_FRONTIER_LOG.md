@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K ICZ complete-run progressed to post-Insta-Shield Tails speed frontier
+
+- Scope: follow-up to the ICZ frame-2263 main-player rolling/hurt frontier.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - The shared touch-response shield-deflect gate now mirrors S3K
+    `Touch_ChkHurt_NoPowerUp`: when `double_jump_flag=1` and no shield or
+    invincibility status is active, harmful objects with `shield_reaction` bit
+    3 deflect through the same projectile-bounce path as shield touch instead
+    of applying normal hurt.
+  - This fixes the ICZ Star Pointer point contact where Sonic's 48x48
+    Insta-Shield box overlaps a `$8B`/bit-3 shield-reactive point while the
+    normal player box would miss. The engine now clears the point collision
+    and preserves Sonic's rings/rolling state instead of scattering rings.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.level.objects.TestTouchResponseManager" test`
+    -> GREEN. Surefire summary: `Tests run: 42, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.badniks.TestStarPointerBadnikInstance" test`
+    -> GREEN. Surefire summary: `Tests run: 5, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2263 to frame 2268. New
+    first error: Tails `x_speed` `expected=0x0200`, `actual=-0x00C0`;
+    Sonic's rings now remain `42`, Sonic's status/position/camera match, and
+    the prior rolling/hurt/ring-loss cascade is gone. ICZ error count is 3842.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-2268 Tails CPU/follow steering divergence around the same
+  Star Pointer/segment-column cluster, not add a trace/frame exception.
+
 ## 2026-06-12 - S3K ICZ complete-run progressed to post-segment-column rolling frontier
 
 - Scope: follow-up to the ICZ frame-2061 `tails_cpu_interact` frontier.

@@ -451,10 +451,10 @@ final class ObjectTouchResponseController {
             int objX = usePreUpdateState ? instance.getPreUpdateX() : instance.getX();
             int objY = usePreUpdateState ? instance.getPreUpdateY() : instance.getY();
             boolean overlap = isOverlapping(playerX, playerY, playerHeight, objX, objY, width, height, playerWidth);
+            int slotIndex = instance instanceof AbstractObjectInstance aoi
+                    ? aoi.getSlotIndex()
+                    : -1;
             if (debugState.isEnabled()) {
-                int slotIndex = instance instanceof AbstractObjectInstance aoi
-                        ? aoi.getSlotIndex()
-                        : -1;
                 debugState.addHit(
                         new TouchResponseDebugHit(slotIndex, instance.getSpawn(), objX, objY, flags, sizeIndex,
                                 width, height, category, overlap,
@@ -607,7 +607,7 @@ final class ObjectTouchResponseController {
 
     private boolean tryShieldDeflect(PlayableEntity player, ObjectInstance instance,
             TouchResponseProvider provider, TouchResponseProfile profile, int objectWidth, int objectHeight) {
-        if (player == null || !player.hasShield()) {
+        if (player == null || !canDeflectShieldReactiveProjectile(player)) {
             return false;
         }
         if (profile.shieldDeflectCapability() != TouchShieldDeflectCapability.SHIELD_DEFLECT
@@ -623,6 +623,18 @@ final class ObjectTouchResponseController {
             return false;
         }
         return provider.onShieldDeflect(player);
+    }
+
+    private boolean canDeflectShieldReactiveProjectile(PlayableEntity player) {
+        if (player.hasShield()) {
+            return true;
+        }
+        PhysicsFeatureSet fs = player.getPhysicsFeatureSet();
+        return fs != null
+                && fs.instaShieldEnabled()
+                && player.getDoubleJumpFlag() == 1
+                && player.getShieldType() == null
+                && player.getInvincibleFrames() == 0;
     }
 
     /**

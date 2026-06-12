@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K Insta-Shield deflects shield-reactive harmful objects:** S3K
+  `Touch_ChkHurt_NoPowerUp` now treats `double_jump_flag=1` as a valid
+  projectile-deflect state for harmful objects with `shield_reaction` bit 3,
+  not only real shields. This moves the ICZ complete-run trace from the
+  frame-2263 Sonic rolling/hurt frontier to the frame-2268 Tails speed
+  frontier.
+
 - **S3K ICZ segment columns publish the ROM CPU interact word:** ICZ segment
   child objects now expose the `0x0008` routine-pointer high word used by S3K
   `Tails_CPU_interact`, so CPU Tails' interact diagnostic follows the live

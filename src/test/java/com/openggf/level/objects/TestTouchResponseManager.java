@@ -534,6 +534,24 @@ public class TestTouchResponseManager {
     }
 
     @Test
+    public void s3kInstaShieldDeflectsShieldReactiveHurtObject() {
+        when(player.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(player.getDoubleJumpFlag()).thenReturn(1);
+        when(player.getShieldType()).thenReturn(null);
+        when(player.hasShield()).thenReturn(false);
+
+        MockShieldTouchObject projectile = new MockShieldTouchObject(143, 112, 0x88, 0x08);
+        setupTableSize(8, 8, 8);
+        objectManager.addDynamicObject(projectile);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        assertTrue(projectile.wasShieldDeflected,
+                "S3K Touch_ChkHurt_NoPowerUp deflects bit-3 shield-reactive projectiles during Insta-Shield");
+        verify(player, never()).applyHurtOrDeath(anyInt(), any(DamageCause.class), anyBoolean());
+    }
+
+    @Test
     public void singleRegionTouchResultIncludesProfileShieldReactionFlags() {
         MockShieldTouchObject flame = new MockShieldTouchObject(160, 112, 0x88, 0x10);
         setupTableSize(8, 16, 16);
@@ -892,6 +910,7 @@ public class TestTouchResponseManager {
 
     private static final class MockShieldTouchObject extends MockTouchObject {
         private final int shieldReactionFlags;
+        private boolean wasShieldDeflected;
 
         private MockShieldTouchObject(int x, int y, int flags, int shieldReactionFlags) {
             super(x, y, flags);
@@ -901,6 +920,12 @@ public class TestTouchResponseManager {
         @Override
         public int getShieldReactionFlags() {
             return shieldReactionFlags;
+        }
+
+        @Override
+        public boolean onShieldDeflect(PlayableEntity player) {
+            wasShieldDeflected = true;
+            return true;
         }
     }
 
