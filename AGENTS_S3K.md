@@ -6,11 +6,13 @@ Referenced from [CLAUDE.md](CLAUDE.md) § "Sonic 3&K Bring-up Notes".
 ## Current Delivery Priority
 
 S3K work should be planned around playable vertical slices, not isolated checklist closure.
-The immediate route target is AIZ through HCZ, with CNZ, MGZ, and ICZ work feeding the
-same standard. A slice is not "done" because its level loads or an object exists; it needs
-coherent traversal, event/camera flow, scroll/parallax, animated tiles, palette/PLC state,
-boss or transition behavior, sidekick-sensitive interactions, rewind-relevant state capture,
-and trace or visual validation for known blockers.
+AIZ through HCZ remains the primary release slice, but CNZ, MGZ, ICZ, MHZ, and LBZ now
+have enough object/event/trace coverage that new work should be chosen from route blockers,
+complete-run trace frontiers, and release-readiness gaps rather than first-pass zone bring-up.
+A slice is not "done" because its level loads or an object exists; it needs coherent traversal,
+event/camera flow, scroll/parallax, animated tiles, palette/PLC state, boss or transition
+behavior, sidekick-sensitive interactions, rewind-relevant state capture, and trace or visual
+validation for known blockers.
 
 When implementing slice features, use the runtime-owned shared systems where they apply:
 `ZoneRuntimeRegistry`, `PaletteOwnershipRegistry`, `AnimatedTileChannelGraph`,
@@ -87,6 +89,10 @@ Each channel has:
 Zones with **no** palette animation (rts in dispatch): MGZ, MHZ, SOZ, SSZ, DEZ, DDZ, ALZ, DPZ.
 
 ### Implementation Priority
+
+This priority list is historical. Palette cycling is largely implemented for zones with ROM
+AnPal handlers; new palette work should be driven by route, trace, or visual discrepancies in the
+active release slices first (AIZ/HCZ, then CNZ/MGZ/ICZ/MHZ/LBZ), not by this old sequence alone.
 
 1. **AIZ** — Done. Fixes green fire in Act 2 (torch glow cycling) and waterfall shimmer.
 2. **HCZ, LBZ, LRZ** — Commonly played zones with visible palette effects.

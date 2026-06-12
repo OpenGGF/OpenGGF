@@ -10,15 +10,15 @@ OpenGGF is an open-source, Java-based game engine for research and preservation 
 
 ## Current Work Priorities
 
-The current delivery priority is **S3K playable vertical-slice parity**, not broad architecture migration for its own sake. Prefer work that closes an actual route through Sonic 3 & Knuckles: traversal objects, badniks, bosses, event/camera flow, scroll/parallax, animated tiles, palette/PLC state, sidekick behavior, trace blockers, rewind-relevant state, and visual validation.
+The current delivery priority is **S3K playable vertical-slice parity and release readiness**, not broad architecture migration for its own sake. AIZ -> HCZ remains the primary release slice, but CNZ/MGZ/ICZ/MHZ/LBZ are now active route-stabilization areas with complete-run trace frontiers. Prefer work that closes an actual route through Sonic 3 & Knuckles: traversal objects, badniks, bosses, event/camera flow, scroll/parallax, animated tiles, palette/PLC state, sidekick behavior, trace blockers, rewind-relevant state, and visual validation.
 
 Use the runtime-owned framework stack when the slice touches those systems: `ZoneRuntimeRegistry`, `PaletteOwnershipRegistry`, `AnimatedTileChannelGraph`, `ZoneLayoutMutationPipeline`, `ScrollEffectComposer`, `SpecialRenderEffectRegistry`, and `AdvancedRenderModeController`. Uplift S1/S2 or older S3K code opportunistically when it removes active duplication or risk, but do not let broad cleanup displace playable S3K progress.
 
 Default order of work:
-1. Close AIZ -> HCZ route blockers first.
-2. Feed CNZ, MGZ, and ICZ work into the same slice standard.
-3. Implement S3K objects by route impact: traversal blockers, terrain modifiers, hazards, bosses/miniboss support, then high-usage badniks.
-4. Treat data select, special stages, and broad S1/S2 framework uplift as follow-up polish unless they directly block the active slice.
+1. Keep AIZ -> HCZ stable as the primary release slice.
+2. Work CNZ, MGZ, ICZ, MHZ, and LBZ by current route blockers and complete-run trace frontiers.
+3. Implement S3K objects by route impact: traversal blockers, terrain modifiers, hazards, bosses/miniboss support, sidekick/object-lifetime mismatches, then high-usage badniks.
+4. Treat data select, special stages, and broad S1/S2 framework uplift as follow-up polish unless they directly block the active slice or release gate.
 
 ## Build & Run Commands
 

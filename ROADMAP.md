@@ -14,7 +14,9 @@ OpenGGF has crossed an important threshold:
 
 - Sonic 1 is broadly playable from start to finish.
 - Sonic 2 is the most complete game module and now includes ending/credits coverage.
-- Sonic 3 & Knuckles has meaningful early-game support, but is still the least mature module.
+- Sonic 3 & Knuckles has moved from early-game bring-up into near-complete vertical-slice
+  stabilization; AIZ, HCZ, CNZ, MGZ, ICZ, MHZ, and parts of LBZ have substantial coverage, while
+  FBZ and later zones remain the largest content frontier.
 - The engine now has stronger multi-game architecture, better tests, and a more credible release story than before `v0.4`.
 
 That changes the planning problem. The project no longer needs a catch-all "prove this can work" roadmap. It needs a focused roadmap that turns broad momentum into a smaller number of high-value outcomes.
@@ -76,78 +78,144 @@ and v0.7 gameplay gap work that was not originally planned for v0.5.
 
 ---
 
-## Proposed Priorities (Updated 2026-05-13)
+## Proposed Priorities (Updated 2026-06-12)
 
-## v0.6 Theme: S3K Playable Slice Parity
+## v0.6 Theme: S3K Playable Slice Parity and Release Readiness
 
-The v0.6 scope now prioritizes coherent Sonic 3 & Knuckles playable routes over broad zone
-breadth or architecture work for its own sake. The engine architecture is strong enough that the
-highest-value work is applying it to route closure: required objects, event flow, scroll/parallax,
-animated tiles, palette/PLC state, bosses, trace blockers, rewind-relevant state, and visual
-validation.
+The v0.6 scope has shifted from broad bring-up to release-grade stabilization of the playable
+route slices already opened. The May target of applying shared architecture to S3K route closure
+has produced more breadth than originally assumed: AIZ, HCZ, CNZ, MGZ, ICZ, MHZ, and parts of LBZ
+now have meaningful object/event/trace coverage, and the project has a segmented S3K complete-run
+trace suite. That suite is not green, but it gives the release line concrete frontiers instead of
+vague "zone parity" goals.
+
+The highest-value v0.6 work is now to keep the release surface honest: close or document known
+trace blockers, keep release/CI guardrails strict, preserve the shared runtime architecture, and
+avoid starting wide new zone work unless it directly advances a route slice or release blocker.
+
+### Progress Since the May Roadmap
+
+- S3K route work expanded beyond AIZ -> HCZ into CNZ, MGZ, ICZ, MHZ, and LBZ. Several route-critical
+  objects, badniks, events, bosses/minibosses, palette/PLC paths, and scroll handlers now have
+  focused tests.
+- S3K complete-run trace coverage exists as per-zone trace replay tests, using a single Sonic+Tails
+  AIZ -> Doomsday route segmented by zone. Current frontiers are explicit in
+  `docs/TRACE_FRONTIER_LOG.md` rather than hidden as informal blockers.
+- The release line gained substantial hardening: trace policy gates, ROM-asset policy checks,
+  editor/config/save recovery paths, native/shader packaging validation, branch-policy hooks, and
+  architecture ratchets.
+- The rewind framework became part of the active release surface rather than a side experiment:
+  broad manager/object/level/registry snapshots, live-play rewind, audio/held-rewind fixes, and
+  performance measurement now exist. Palette and determinism-audit work remains a near-term risk
+  area.
+- Data select/save is functionally in place for all three games through S3K-backed presentation and
+  cross-game donation; remaining work is visual and parity polish, not core save plumbing.
+- The editor is a real prototype with config-gated mode switching, tile editing, undo/redo,
+  persistence, and play-test round trips. It is not yet a polished user-facing editor.
+- Performance work has moved from generic cleanup to measured release work, including rewind/audio
+  and rendering hot-path reductions with trace-equivalence checks.
 
 ### Primary Goals
 
-- Make the AIZ -> HCZ route reliable enough to treat as the first S3K vertical slice.
-- Feed CNZ, MGZ, and ICZ work into the same slice standard, prioritizing route blockers over
-  checklist-only object coverage.
+- Make the opened S3K route slices reliable enough for a prerelease: AIZ/HCZ first, with CNZ, MGZ,
+  ICZ, MHZ, and LBZ work prioritized by trace frontier and route impact.
+- Treat complete-run trace frontiers as the main progress ledger for parity work. Move a frontier
+  only by modelling ROM state, never by trace, frame, route, or zone carve-outs.
+- Keep release-readiness guardrails green: trace policy, ROM-backed asset policy, architecture
+  boundaries, editor/config/save resilience, and package validation.
 - Use the runtime-owned framework stack where it directly supports the active slice:
   `ZoneRuntimeRegistry`, `PaletteOwnershipRegistry`, `AnimatedTileChannelGraph`,
   `ZoneLayoutMutationPipeline`, `ScrollEffectComposer`, `SpecialRenderEffectRegistry`, and
   `AdvancedRenderModeController`.
-- Keep the level editor moving as a prototype, but do not let editor polish outrank S3K route
-  blockers during this release line.
+- Keep the level editor and live rewind moving as prototypes, but do not let polish outrank S3K
+  route blockers, release gates, or trace determinism.
 
 ### Priority Areas
 
-#### 1. S3K Route Slice Closure
+#### 1. S3K Route Slice Stabilization
 
-- Close AIZ -> HCZ traversal, transition, boss/event, sidekick, visual, and trace blockers.
-- Treat HCZ as the first continuation slice rather than a partial zone bring-up.
+- Keep AIZ -> HCZ as the primary release slice and continue using HCZ as the first continuation
+  slice rather than a partial zone bring-up.
+- Stabilize CNZ, MGZ, ICZ, MHZ, and LBZ where current branches/tests already opened the route.
+- Defer broad FBZ/LRZ/SOZ/DEZ expansion unless it is needed for the release route, trace suite, or
+  a low-risk shared-system fix.
 - Use focused tests and stable-retro visual validation where practical.
 
-#### 2. S3K Route-Impact Object Work
+#### 2. Trace Frontier Closure
 
-- Prioritize traversal blockers, terrain modifiers, hazards, boss/miniboss support, and high-usage
-  badniks.
+- Use `docs/TRACE_FRONTIER_LOG.md` as the canonical parity ledger for complete-run and level-select
+  trace state.
+- Prioritize first-divergence owners that block the opened route slices: sidekick CPU handoff,
+  object slot/lifetime order, terrain/ring/hurt handoffs, boss/event transitions, and rewind-visible
+  state.
+- Keep trace fixes comparison-only. Do not hydrate gameplay state from trace rows in committed test
+  or engine code.
+
+#### 3. S3K Route-Impact Object Work
+
+- Prioritize traversal blockers, terrain modifiers, hazards, boss/miniboss support, route-critical
+  cutscenes, and high-usage badniks.
 - Defer decorative or isolated objects until the target slice is playable.
 - Use `S3K_OBJECT_CHECKLIST.md` as input to prioritization, not as the prioritization itself.
+- Current visible gaps include AIZ drawbridge, HCZ large fan/block variants, remaining MGZ launcher/
+  pulley/boss work, LBZ boss/late-route work, and the mostly unopened FBZ object set.
 
-#### 3. Data Select and Save System ✅ (in progress)
+#### 4. Data Select and Save System
 
 - S3K data select screen with ROM-accurate rendering, save slots, and team selection — **done**.
 - Cross-game donation: S1/S2 can use S3K data select while retaining their own saves — **done**.
 - Save persistence with JSON + SHA256 integrity hash — **done**.
-- Remaining: native selector mapping art, save-slot visual states, emerald display parity.
+- Runtime-generated S1/S2 zone previews and host emerald presentation — **done enough for v0.6**.
+- Remaining: native selector mapping art, save-slot visual-state polish, and final emerald display
+  parity.
 
-#### 4. Level Editor Prototype
+#### 5. Level Editor Prototype
 
-- Wire MutableLevel into an interactive editing mode with tile placement.
-- Implement enter/exit play-testing using the current `SessionManager` / `WorldSession` /
-  `GameplayModeContext` ownership model.
-- Basic undo/redo using MutableLevel's saveState/restoreState.
+- Config-gated editor/playtest loop with tile placement, world-grid navigation, undo/redo,
+  persistence, and gameplay round trips is in place.
+- Remaining: polish editing ergonomics, layer workflows, save UX, and S3K overlay compatibility.
+- Editor fixes are release-relevant when they protect teardown, saves, or mutable-level isolation;
+  broad editor UX should stay behind S3K route and release blockers.
 
-#### 5. S3K Runtime Resource Parity (continued)
+#### 6. Rewind and Determinism
 
-- PLC, dynamic art, animated tile, palette, scroll, and render-mode improvements for the active
-  route slice first.
-- Reduce resource-reference warnings when they affect route visuals or gameplay clarity.
+- Keep live rewind safe as an opt-in debug/user feature: bounded history, stable object identity,
+  audio correctness, and release-equivalent restore behavior.
+- Close known rewind state holes that affect active S3K slices, especially palette color mutation
+  and zone-event sidecar capture.
+- Add or use determinism auditing to identify state missing from the rewind snapshot set; fix by
+  modelling owned runtime state, not by replay special cases.
 
-#### 6. ROM/Disassembly Tooling
+#### 7. S3K Runtime Resource Parity (continued)
+
+- PLC, dynamic art, animated tile, palette, scroll, and render-mode improvements should follow the
+  active route slices first.
+- Reduce resource-reference warnings when they affect route visuals, gameplay clarity, trace
+  determinism, or release packaging.
+
+#### 8. ROM/Disassembly Tooling
 
 - Better authoring and inspection workflows around objects, level data, and PLC data.
+- Keep tooling focused on reducing ROM-address, object-table, trace-triage, and asset-intake
+  mistakes during active S3K work.
 
 ### Suggested Exit Criteria for v0.6
 
 - AIZ -> HCZ can be played as a coherent route slice with required traversal objects, event flow,
   scroll/parallax, animated tiles, palette/PLC state, transitions, and documented trace/visual
   validation status.
-- CNZ, MGZ, and ICZ have prioritized route blockers implemented or explicitly triaged.
+- CNZ, MGZ, ICZ, MHZ, and LBZ route blockers opened during v0.6 are either implemented or explicitly
+  triaged with trace/frontier evidence.
+- Complete-run trace replay status is documented for every included S3K segment, with no hidden
+  known failures in release gating.
 - The data select and save system is functional for all three games, with S3K as the primary presentation.
 - The level editor supports basic tile editing with undo/redo and play-test round-trips, as long as
   this does not displace the S3K route slice.
+- Live rewind is bounded, opt-in, and covered enough that it does not corrupt active gameplay,
+  audio, level geometry, palette ownership, or object identity when enabled.
 - S3K object coverage is broad enough in the active slices that zones feel playable, not just
   renderable.
+- Release-readiness guard suites pass or have explicit, documented, non-hidden deferrals.
 
 ## v0.7 Theme: Completion, Polish, and Parity Closure
 
@@ -190,6 +258,7 @@ These are all valid ideas, but they should not outrank the current roadmap theme
 ## Short Version
 
 `v0.5.20260411` establishes the S3K AIZ-to-HCZ baseline and shared architecture hardening.
-`v0.6` turns that baseline into playable S3K route slices, keeps data select/save and editor work
-moving without displacing route blockers, and uses shared runtime frameworks where they directly
-support parity. `v0.7` focuses on completion and parity closure.
+`v0.6` turns that baseline into release-hardened playable S3K route slices, with complete-run trace
+frontiers as the main parity ledger. Data select/save is functionally in place, the editor and live
+rewind are real prototypes, and the remaining work is to stabilize opened routes without hiding
+known failures. `v0.7` focuses on completion and parity closure.

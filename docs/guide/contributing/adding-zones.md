@@ -22,11 +22,13 @@ level data and collision, and incrementally improved from there.
 ## Current S3K Priority
 
 For Sonic 3 & Knuckles, prefer playable vertical slices over checklist-only zone work.
-The near-term target is to make the AIZ -> HCZ route reliable, then apply the same
-standard to adjacent CNZ, MGZ, and ICZ work. A slice should be judged by whether a
-player can traverse it with coherent events, camera bounds, scroll/parallax, animated
-tiles, palette/PLC state, required objects, bosses or transitions, and known trace or
-visual parity blockers addressed or documented.
+AIZ -> HCZ remains the primary release slice, but CNZ, MGZ, ICZ, MHZ, and LBZ now
+have enough coverage that new S3K work should be selected from route blockers,
+complete-run trace frontiers, and release-readiness gaps rather than first-pass zone
+bring-up. A slice should be judged by whether a player can traverse it with coherent
+events, camera bounds, scroll/parallax, animated tiles, palette/PLC state, required
+objects, bosses or transitions, and known trace or visual parity blockers addressed
+or documented.
 
 Use the runtime-owned framework stack when implementing the slice: typed zone state in
 `ZoneRuntimeRegistry`, palette writes through `PaletteOwnershipRegistry`, art uploads

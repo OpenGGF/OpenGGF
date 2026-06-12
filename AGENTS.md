@@ -21,7 +21,7 @@ A gameplay-scoped rewind framework exists for trace debugging (`RewindController
 - **Audio reference:** strive for hardware accuracy. Reference SMPSPlay (`docs/SMPS-rips/SMPSPlay/`) and libvgm chip cores rather than simplified versions.
 
 ### Delivery priority
-S3K playable vertical-slice parity. Close AIZ → HCZ route blockers first, then CNZ/MGZ/ICZ. Implement S3K objects by route impact (traversal blockers, terrain modifiers, hazards, bosses, then high-usage badniks). Uplift S1/S2 or older S3K code onto runtime-owned frameworks opportunistically when it removes active duplication; data select and special-stage polish are follow-up work.
+S3K playable vertical-slice parity and release readiness. AIZ → HCZ remains the primary release slice, but CNZ/MGZ/ICZ/MHZ/LBZ are now active route-stabilization areas with complete-run trace frontiers. Implement S3K work by route impact and trace ownership (traversal blockers, terrain modifiers, hazards, bosses/events, sidekick/object-lifetime mismatches, then high-usage badniks). Uplift S1/S2 or older S3K code onto runtime-owned frameworks opportunistically when it removes active duplication; data select and special-stage polish are follow-up work.
 
 ## Agent Directives
 1.  **Branching:** Always create pull requests from the same branch within a session. Use the following naming convention:

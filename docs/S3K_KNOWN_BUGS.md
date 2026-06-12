@@ -6,6 +6,12 @@ For **intentional** S3K deviations (architectural choices, feature extensions, d
 
 For general (cross-game) bugs, see [KNOWN_BUGS.md](KNOWN_BUGS.md).
 
+> **Audit note, 2026-06-12:** this file still contains many historical dedicated-trace entries
+> retained for diagnosis context. The canonical current S3K parity ledger is
+> `docs/TRACE_FRONTIER_LOG.md`, especially the S3K complete-run per-zone frontiers. Use this file
+> for durable bug explanations, but check the frontier log before treating an old AIZ/CNZ frame
+> entry as the next live blocker.
+
 Entries should include:
 - **Location** — the file(s) where the bug lives, if known
 - **Symptom** — what goes wrong and where you can observe it (test name, trace frame, manual repro)
