@@ -7,6 +7,7 @@ import com.openggf.game.rewind.schema.ZoneEventSchemaSidecar;
 import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kHCZEvents;
+import com.openggf.game.sonic3k.events.Sonic3kMGZEvents;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Modifier;
@@ -29,10 +30,15 @@ public class TestZoneEventRewindSchemaGuard {
     private static final List<Class<?>> CONVERTED_HANDLERS = List.of(
             Sonic3kAIZEvents.class,
             Sonic3kHCZEvents.class,
-            Sonic3kCNZEvents.class);
+            Sonic3kCNZEvents.class,
+            Sonic3kMGZEvents.class);
     private static final Set<String> AIZ_ALLOWED_TRANSIENT_FIELDS = Set.of("bootstrap");
     private static final Set<String> HCZ_ALLOWED_TRANSIENT_FIELDS = Set.of("wallObject");
     private static final Set<String> CNZ_ALLOWED_TRANSIENT_FIELDS = Set.of();
+    private static final Set<String> MGZ_ALLOWED_TRANSIENT_FIELDS = Set.of(
+            "activeRobotnik",
+            "cachedMgzQuakeChunkData",
+            "collapseSolids");
 
     /**
      * FIELD names (not getter names) the legacy writeAizState byte layout serialized.
@@ -134,6 +140,54 @@ public class TestZoneEventRewindSchemaGuard {
             "bossBackgroundMode"
     );
 
+    /**
+     * FIELD names (not getter names) the legacy writeMgzState byte layout serialized.
+     */
+    private static final Set<String> MGZ_LEGACY_FIELDS = Set.of(
+            "eventsFg5",
+            "transitionRequested",
+            "collapseRequested",
+            "collapseInitialized",
+            "collapseFinished",
+            "screenShakeActive",
+            "bossTransitionActive",
+            "bossTransitionDeathPlaneDisabled",
+            "bgRiseMotionStarted",
+            "bgRiseAccelLatched",
+            "bgRiseLoadStateInitialised",
+            "bossSpawned",
+            "appearance1Complete",
+            "appearance2Complete",
+            "appearance3Complete",
+            "postFleeUnlockDone",
+            "bgRoutine",
+            "quakeEventRoutine",
+            "chunkEventRoutine",
+            "chunkReplaceIndex",
+            "chunkEventDelay",
+            "screenEventRoutine",
+            "collapseMutationCount",
+            "collapseFrameCounter",
+            "collapseStartupShakeTimer",
+            "collapseRenderHoldFrames",
+            "bossBgScrollVelocity",
+            "bossBgScrollOffset",
+            "bossTransitionTimer",
+            "bossTransitionX",
+            "bossTransitionY",
+            "bossTransitionCameraX",
+            "bossTransitionCameraY",
+            "bgRiseRoutine",
+            "bgRiseOffset",
+            "bgRiseSubpixelAccum",
+            "bgRiseFinalShakeTimer",
+            "bossArenaRoutine",
+            "gradualUnlockDirection",
+            "collapseScrollVelocity",
+            "collapseScrollFixedPosition",
+            "collapseScrollPosition"
+    );
+
     @Test
     public void convertedHandlersHaveNoUnsupportedFields() {
         for (Class<?> handler : CONVERTED_HANDLERS) {
@@ -184,6 +238,19 @@ public class TestZoneEventRewindSchemaGuard {
     }
 
     @Test
+    public void mgzSchemaCoversAllLegacySidecarFields() {
+        RewindClassSchema schema = RewindSchemaRegistry.schemaFor(Sonic3kMGZEvents.class);
+        Set<String> captured = schema.capturedFields().stream()
+                .map(plan -> plan.field().getName())
+                .collect(Collectors.toSet());
+        Set<String> missing = MGZ_LEGACY_FIELDS.stream()
+                .filter(name -> !captured.contains(name))
+                .collect(Collectors.toSet());
+        assertTrue(missing.isEmpty(),
+                "schema capture lost legacy MGZ sidecar fields: " + missing);
+    }
+
+    @Test
     public void aizTransientFieldInventoryIsExplicit() {
         Set<String> transientFields = Arrays.stream(Sonic3kAIZEvents.class.getDeclaredFields())
                 .filter(field -> !Modifier.isStatic(field.getModifiers()))
@@ -217,6 +284,18 @@ public class TestZoneEventRewindSchemaGuard {
                 .collect(Collectors.toSet());
         assertEquals(CNZ_ALLOWED_TRANSIENT_FIELDS, transientFields,
                 "CNZ transient field inventory changed; classify new fields as captured or structural");
+    }
+
+    @Test
+    public void mgzTransientFieldInventoryIsExplicit() {
+        Set<String> transientFields = Arrays.stream(Sonic3kMGZEvents.class.getDeclaredFields())
+                .filter(field -> !Modifier.isStatic(field.getModifiers()))
+                .filter(field -> Modifier.isTransient(field.getModifiers())
+                        || field.isAnnotationPresent(RewindTransient.class))
+                .map(field -> field.getName())
+                .collect(Collectors.toSet());
+        assertEquals(MGZ_ALLOWED_TRANSIENT_FIELDS, transientFields,
+                "MGZ transient field inventory changed; classify new fields as captured or structural");
     }
 
     @Test

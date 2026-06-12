@@ -1284,7 +1284,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         //   4 bytes   cnz schema payload length, when present
         //   N bytes   cnz schema payload, when present
         //   1 byte    mgz handler present flag
-        //   228 bytes mgz state (16 booleans + 23 ints + 30 ints = 16+92+120 = 228)
+        //   4 bytes   mgz schema payload length, when present
+        //   N bytes   mgz schema payload, when present
         //   1 byte    mhz handler present flag
         //   184 bytes mhz state (see Sonic3kMHZEvents.rewindStateBytes())
         //   1 byte    icz handler present flag
@@ -1293,14 +1294,14 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         byte[] aizBytes = aizEvents != null ? ZoneEventSchemaSidecar.capture(aizEvents) : null;
         byte[] hczBytes = hczEvents != null ? ZoneEventSchemaSidecar.capture(hczEvents) : null;
         byte[] cnzBytes = cnzEvents != null ? ZoneEventSchemaSidecar.capture(cnzEvents) : null;
-        int mgzSize = 16 + 23 * 4 + 3 * 10 * 4; // 228
+        byte[] mgzBytes = mgzEvents != null ? ZoneEventSchemaSidecar.capture(mgzEvents) : null;
         int mhzSize = Sonic3kMHZEvents.rewindStateBytes(); // 184
         int iczSize = Sonic3kICZEvents.rewindStateBytes(); // 25
         int size = EXTRA_MANAGER_BYTES;
         size += aizBytes != null ? 1 + Integer.BYTES + aizBytes.length : 1;
         size += hczBytes != null ? 1 + Integer.BYTES + hczBytes.length : 1;
         size += cnzBytes != null ? 1 + Integer.BYTES + cnzBytes.length : 1;
-        size += 1 + (mgzEvents != null ? mgzSize : 0);
+        size += mgzBytes != null ? 1 + Integer.BYTES + mgzBytes.length : 1;
         size += 1 + (mhzEvents != null ? mhzSize : 0);
         size += 1 + (iczEvents != null ? iczSize : 0);
         size += S3kFixedAirCountdownManager.REWIND_STATE_BYTES;
@@ -1343,9 +1344,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             buf.put((byte) 0);
         }
         // MGZ
-        if (mgzEvents != null) {
+        if (mgzBytes != null) {
             buf.put((byte) 1);
-            writeMgzState(buf, mgzEvents);
+            buf.putInt(mgzBytes.length);
+            buf.put(mgzBytes);
         } else {
             buf.put((byte) 0);
         }
@@ -1394,7 +1396,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         cnzAct2MinYAccumulator = buf.remaining() >= Integer.BYTES ? buf.getInt() : 0;
         cnzAct2MaxYAccumulator = buf.remaining() >= Integer.BYTES ? buf.getInt() : 0;
         // Size constants must match the write methods
-        final int mgzBytes = 16 + 23 * 4 + 3 * 10 * 4; // 228
         final int mhzBytes = Sonic3kMHZEvents.rewindStateBytes(); // 184
         final int iczBytes = Sonic3kICZEvents.rewindStateBytes(); // 25
         // AIZ
@@ -1454,10 +1455,19 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // MGZ
         if (buf.remaining() >= 1) {
             boolean mgzPresent = buf.get() != 0;
-            if (mgzPresent && mgzEvents != null && buf.remaining() >= mgzBytes) {
-                readMgzState(buf, mgzEvents);
-            } else if (mgzPresent && buf.remaining() >= mgzBytes) {
-                buf.position(buf.position() + mgzBytes);
+            if (mgzPresent) {
+                if (buf.remaining() < Integer.BYTES) {
+                    return;
+                }
+                int mgzLength = buf.getInt();
+                if (mgzLength < 0 || buf.remaining() < mgzLength) {
+                    return;
+                }
+                byte[] bytes = new byte[mgzLength];
+                buf.get(bytes);
+                if (mgzEvents != null) {
+                    restoreMgzSidecar(bytes);
+                }
             }
         }
         // MHZ
@@ -1504,7 +1514,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 () -> expectedSidecarBytes(cnzEvents, Sonic3kLevelEventManager::newCnzFramingProbe))) {
             return false;
         }
-        if (!skipFixedSidecar(buf, 16 + 23 * 4 + 3 * 10 * 4)) {
+        if (!skipLengthPrefixedSidecar(buf,
+                () -> expectedSidecarBytes(mgzEvents, Sonic3kLevelEventManager::newMgzFramingProbe))) {
             return false;
         }
         if (!skipFixedSidecar(buf, Sonic3kMHZEvents.rewindStateBytes())) {
@@ -1557,6 +1568,12 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private static Object newCnzFramingProbe() {
         Sonic3kCNZEvents probe = new Sonic3kCNZEvents();
         probe.init(0);
+        return probe;
+    }
+
+    private static Object newMgzFramingProbe() {
+        Sonic3kMGZEvents probe = new Sonic3kMGZEvents();
+        probe.init(1);
         return probe;
     }
 
@@ -1617,109 +1634,18 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
     }
 
-    // --- MGZ write/read (232 bytes) ---
-
-    private static void writeMgzState(java.nio.ByteBuffer buf, Sonic3kMGZEvents m) {
-        // 16 booleans = 16
-        buf.put((byte)(m.isEventsFg5Raw()                  ? 1 : 0));
-        buf.put((byte)(m.isTransitionRequested()           ? 1 : 0));
-        buf.put((byte)(m.isCollapseRequested()             ? 1 : 0));
-        buf.put((byte)(m.isCollapseInitialized()           ? 1 : 0));
-        buf.put((byte)(m.isCollapseFinished()              ? 1 : 0));
-        buf.put((byte)(m.isScreenShakeActiveRaw()          ? 1 : 0));
-        buf.put((byte)(m.isBossTransitionActiveRaw()       ? 1 : 0));
-        buf.put((byte)(m.isBossTransitionDeathPlaneDisabled() ? 1 : 0));
-        buf.put((byte)(m.isBgRiseMotionStarted()           ? 1 : 0));
-        buf.put((byte)(m.isBgRiseAccelLatched()            ? 1 : 0));
-        buf.put((byte)(m.isBgRiseLoadStateInitialised()    ? 1 : 0));
-        buf.put((byte)(m.isBossSpawned()                   ? 1 : 0));
-        buf.put((byte)(m.isAppearance1Complete()           ? 1 : 0));
-        buf.put((byte)(m.isAppearance2Complete()           ? 1 : 0));
-        buf.put((byte)(m.isAppearance3Complete()           ? 1 : 0));
-        buf.put((byte)(m.isPostFleeUnlockDone()            ? 1 : 0));
-        // 23 ints = 92
-        buf.putInt(m.getBgRoutine());
-        buf.putInt(m.getQuakeEventRoutine());
-        buf.putInt(m.getChunkEventRoutine());
-        buf.putInt(m.getChunkReplaceIndex());
-        buf.putInt(m.getChunkEventDelay());
-        buf.putInt(m.getScreenEventRoutine());
-        buf.putInt(m.getCollapseMutationCount());
-        buf.putInt(m.getCollapseFrameCounter());
-        buf.putInt(m.getCollapseStartupShakeTimer());
-        buf.putInt(m.getCollapseRenderHoldFrames());
-        buf.putInt(m.getBossBgScrollVelocity());
-        buf.putInt(m.getBossBgScrollOffset());
-        buf.putInt(m.getBossTransitionTimer());
-        buf.putInt(m.getBossTransitionX());
-        buf.putInt(m.getBossTransitionY());
-        buf.putInt(m.getBossTransitionCameraX());
-        buf.putInt(m.getBossTransitionCameraY());
-        buf.putInt(m.getBgRiseRoutine());
-        buf.putInt(m.getBgRiseOffset());
-        buf.putInt(m.getBgRiseSubpixelAccum());
-        buf.putInt(m.getBgRiseFinalShakeTimerRaw());
-        buf.putInt(m.getBossArenaRoutine());
-        buf.putInt(m.getGradualUnlockDirection());
-        // 3 × 10 ints = 120
-        int[] sv = m.getCollapseScrollVelocityCopy();
-        int[] sf = m.getCollapseScrollFixedPositionCopy();
-        int[] sp = m.getCollapseScrollPositionCopy();
-        for (int i = 0; i < 10; i++) buf.putInt(sv[i]);
-        for (int i = 0; i < 10; i++) buf.putInt(sf[i]);
-        for (int i = 0; i < 10; i++) buf.putInt(sp[i]);
-        // Total: 16 + 92 + 120 = 228
-    }
-
-    private static void readMgzState(java.nio.ByteBuffer buf, Sonic3kMGZEvents m) {
-        m.setEventsFg5Raw(buf.get() != 0);
-        m.setTransitionRequestedRaw(buf.get() != 0);
-        m.setCollapseRequested(buf.get() != 0);
-        m.setCollapseInitialized(buf.get() != 0);
-        m.setCollapseFinished(buf.get() != 0);
-        m.setScreenShakeActiveRaw(buf.get() != 0);
-        m.setBossTransitionActiveRaw(buf.get() != 0);
-        m.setBossTransitionDeathPlaneDisabled(buf.get() != 0);
-        m.setBgRiseMotionStarted(buf.get() != 0);
-        m.setBgRiseAccelLatched(buf.get() != 0);
-        m.setBgRiseLoadStateInitialised(buf.get() != 0);
-        m.setBossSpawned(buf.get() != 0);
-        m.setAppearance1Complete(buf.get() != 0);
-        m.setAppearance2Complete(buf.get() != 0);
-        m.setAppearance3Complete(buf.get() != 0);
-        m.setPostFleeUnlockDone(buf.get() != 0);
-        m.setBgRoutine(buf.getInt());
-        m.setQuakeEventRoutine(buf.getInt());
-        m.setChunkEventRoutine(buf.getInt());
-        m.setChunkReplaceIndex(buf.getInt());
-        m.setChunkEventDelay(buf.getInt());
-        m.setScreenEventRoutine(buf.getInt());
-        m.setCollapseMutationCount(buf.getInt());
-        m.setCollapseFrameCounter(buf.getInt());
-        m.setCollapseStartupShakeTimer(buf.getInt());
-        m.setCollapseRenderHoldFrames(buf.getInt());
-        m.setBossBgScrollVelocity(buf.getInt());
-        m.setBossBgScrollOffset(buf.getInt());
-        m.setBossTransitionTimer(buf.getInt());
-        m.setBossTransitionX(buf.getInt());
-        m.setBossTransitionY(buf.getInt());
-        m.setBossTransitionCameraX(buf.getInt());
-        m.setBossTransitionCameraY(buf.getInt());
-        m.setBgRiseRoutine(buf.getInt());
-        m.setBgRiseOffset(buf.getInt());
-        m.setBgRiseSubpixelAccum(buf.getInt());
-        m.setBgRiseFinalShakeTimer(buf.getInt());
-        m.setBossArenaRoutine(buf.getInt());
-        m.setGradualUnlockDirection(buf.getInt());
-        int[] sv = new int[10];
-        int[] sf = new int[10];
-        int[] sp = new int[10];
-        for (int i = 0; i < 10; i++) sv[i] = buf.getInt();
-        for (int i = 0; i < 10; i++) sf[i] = buf.getInt();
-        for (int i = 0; i < 10; i++) sp[i] = buf.getInt();
-        m.setCollapseScrollVelocity(sv);
-        m.setCollapseScrollFixedPosition(sf);
-        m.setCollapseScrollPosition(sp);
+    private void restoreMgzSidecar(byte[] bytes) {
+        byte[] before = ZoneEventSchemaSidecar.capture(mgzEvents);
+        try {
+            ZoneEventSchemaSidecar.restore(mgzEvents, bytes);
+        } catch (RuntimeException e) {
+            try {
+                ZoneEventSchemaSidecar.restore(mgzEvents, before);
+            } catch (RuntimeException rollbackFailure) {
+                e.addSuppressed(rollbackFailure);
+            }
+            LOG.warning("Skipping malformed MGZ zone-event rewind sidecar: " + e.getMessage());
+        }
     }
 
     // --- ICZ write/read (25 bytes) ---
