@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K ICZ complete-run progressed to frozen-block vertical frontier
+
+- Scope: follow-up to the ICZ frame-2837 native-Tails frozen-block horizontal
+  movement frontier. Trace data remained comparison-only diagnostic input; no
+  engine state was hydrated from trace rows, and no trace/route/frame exception
+  was added.
+- Fix:
+  - ICZ freezer frozen-player blocks now model the ROM `loc_8A80C`
+    camera-side horizontal velocity clamp before `MoveSprite`: leftward blocks
+    stop when `Camera_X_pos+$20` has crossed `x_pos`, and rightward blocks use
+    the matching `Camera_X_pos+$128` side threshold.
+  - Focused freezer coverage asserts the former frame-2837 leftward capture
+    row keeps both the block and captured Tails at `x_pos=0x3FC4` while still
+    applying the first vertical movement step.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIczFreezerObject" test`
+    -> GREEN. Surefire summary: `Tests run: 15, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2837 to frame 2838. New
+    first error: native Tails `y` `expected=0x036B`, `actual=0x036F`; Tails
+    `x`, speeds, air, rolling, ground mode, CPU routine/counters, main Sonic
+    fields, camera, and rings match at the first error.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  frozen-block vertical movement/player sync after the camera-side x clamp,
+  especially ROM `loc_8A84C` captured-player synchronization and the
+  spawn/update timing of the frozen block.
+
 ## 2026-06-12 - S3K ICZ complete-run progressed to frozen-block motion frontier
 
 - Scope: follow-up to the ICZ frame-2836 native-Tails airborne-release frontier.

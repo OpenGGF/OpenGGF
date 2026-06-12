@@ -437,6 +437,7 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
             }
 
             if (!landedOnTerrain) {
+                applyCameraSideVelocityClamp();
                 SubpixelMotion.moveSprite(motion, GRAVITY);
                 snapToTerrainIfColliding();
             }
@@ -444,6 +445,19 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
 
             if (breakTimer-- < 0) {
                 breakOpen(frameCounter);
+            }
+        }
+
+        private void applyCameraSideVelocityClamp() {
+            ObjectServices services = tryServices();
+            if (services == null || services.camera() == null || motion.xVel == 0) {
+                return;
+            }
+            int cameraX = services.camera().getX() & 0xFFFF;
+            int threshold = (cameraX + (motion.xVel < 0 ? 0x20 : 0x128)) & 0xFFFF;
+            if (Integer.compareUnsigned(threshold, motion.x & 0xFFFF) >= 0) {
+                motion.xVel = 0;
+                motion.xSub = 0;
             }
         }
 

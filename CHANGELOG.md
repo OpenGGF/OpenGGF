@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K ICZ frozen-player blocks honor the ROM camera-side x clamp:** ICZ
+  freezer frozen blocks now clear horizontal velocity before `MoveSprite` when
+  the ROM `Camera_X_pos+$20/$128` side clamp has crossed the block, preventing
+  the first frozen Tails movement step from drifting two pixels left. This
+  moves the ICZ complete-run trace from frame 2837 to frame 2838, a vertical
+  frozen-block movement/sync mismatch.
+
 - **S3K ICZ freezer capture clouds survive parent unload:** ICZ freezer capture
   children now enter the ROM off-phase scanner after their parent unloads, and
   frozen-player blocks preserve the capture-frame `x_pos/y_pos` before their

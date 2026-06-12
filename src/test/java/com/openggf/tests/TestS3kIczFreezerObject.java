@@ -1,5 +1,6 @@
 package com.openggf.tests;
 
+import com.openggf.camera.Camera;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplaySessionFactory;
@@ -233,6 +234,27 @@ class TestS3kIczFreezerObject {
 
         assertTrue(cloud.isPersistent(),
                 "ROM capture child loc_8A7A2 scans/deletes by its own timer and does not tail-call Sprite_CheckDeleteTouch");
+    }
+
+    @Test
+    void frozenPlayerBlockClearsLeftwardVelocityAtCameraSideClampBeforeMoving() {
+        RecordingServices services = new RecordingServices();
+        Camera camera = mock(Camera.class);
+        when(camera.getX()).thenReturn((short) 0x40A9);
+        services.withCamera(camera);
+
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x3FC4, (short) 0x0373);
+        IczFreezerObjectInstance.FrozenPlayerBlock block =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(tails, 0x3FC4, 0x0373, 0x4060, false);
+        block.setServices(services);
+
+        block.update(2837, tails);
+
+        assertEquals(0x3FC4, block.getX(),
+                "ROM loc_8A80C clears negative x_vel when Camera_X_pos+$20 has crossed x_pos");
+        assertEquals(0x036F, block.getY());
+        assertEquals(0x3FC4, tails.getCentreX());
+        assertEquals(0x036F, tails.getCentreY());
     }
 
     @Test
@@ -502,9 +524,14 @@ class TestS3kIczFreezerObject {
     private static final class RecordingServices extends StubObjectServices {
         private final List<Integer> playedSfx = new ArrayList<>();
         private final List<Integer> lostRingSpawnFrames = new ArrayList<>();
+        private Camera camera;
 
         private RecordingServices() {
             withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
+        }
+
+        private void withCamera(Camera camera) {
+            this.camera = camera;
         }
 
         @Override
@@ -518,6 +545,11 @@ class TestS3kIczFreezerObject {
             if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
                 sprite.setRingCount(0);
             }
+        }
+
+        @Override
+        public Camera camera() {
+            return camera;
         }
     }
 
