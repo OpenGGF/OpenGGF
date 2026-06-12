@@ -513,7 +513,14 @@ public final class TraceReplayBootstrap {
             return false;
         }
         TraceFrame next = trace.getFrame(1);
-        return next == null || !current.stateEquals(next);
+        return (next == null || !current.stateEquals(next))
+                && !hasNativeInitialVelocity(current);
+    }
+
+    private static boolean hasNativeInitialVelocity(TraceFrame current) {
+        return current.xSpeed() != 0
+                || current.ySpeed() != 0
+                || current.gSpeed() != 0;
     }
 
     private static boolean isSonic3kTransitionModeFrozenRow(

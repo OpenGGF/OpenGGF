@@ -1,5 +1,38 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K airborne complete-run frame zero advances HCZ/MGZ startup frontiers
+
+- Scope: refined the S3K complete-run frame-zero phase policy without writing
+  trace-row state back into runtime. Complete-run frame 0 is still VBlank-only
+  for stationary handoff rows, but rows that already contain native primary
+  velocity now run as a full level frame. This keeps the policy structural
+  (`x_speed`/`y_speed`/`g_speed`), not zone- or route-special-cased.
+- Focused verification:
+  - `mvn -Dmse=off "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.TestTraceReplayStartPositionPolicy" test`
+  - Result: **Tests run: 18, Failures: 0, Errors: 0, Skipped: 0**.
+  - `mvn -Dmse=off "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay,com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+  - Result: still red, but `s3k_hcz1` advanced from frame 1 to frame 97
+    and `s3k_mgz1` advanced from frame 1 to frame 454.
+  - `mvn -Dmse=off "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzCompleteRunTraceReplay,com.openggf.tests.trace.s3k.TestS3kMhzCompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+  - Result: still red at existing post-startup frontiers:
+    `s3k_cnz1` frame 97 `rolling`, `s3k_mhz1` frame 71 `camera_y`.
+- Full sweep command:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test`
+- Full sweep result:
+  - **Tests run: 90, Failures: 64, Errors: 1, Skipped: 0** from
+    Maven/Surefire. This is not a green all-trace certification; CI remains
+    expected-red on the known trace frontier set.
+- Frontier movement:
+
+| Trace | Previous frontier | New frontier | Delta |
+|---|---:|---:|---:|
+| `s3k_hcz1` | f1 `y_speed` `0x0070 -> 0x0038` | f97 `status_byte` `0x0021 -> 0x0001` | +96 |
+| `s3k_mgz1` | f1 `tails_y_speed` `0x0070 -> 0x0038` | f454 `tails_status_byte` `0x0003 -> 0x0002` | +453 |
+
+- Interpretation: the false one-gravity-tick-late startup frontier is fixed
+  for airborne S3K complete-run starts. The next exposed owner is status-bit
+  timing / sidekick state, not initial gravity or frame-zero handoff policy.
+
 ## 2026-06-12 - S2 Obj1F parent-fragment slot reuse advances OOZ2 CPU interact frontier
 
 - Scope: fixed the first S2/Tails CPU root-cause representative exposed in

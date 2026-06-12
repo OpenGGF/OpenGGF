@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K airborne complete-run frame zero now drives native velocity rows:**
+  complete-run startup rows that already contain primary velocity now execute
+  as full level frames instead of being treated as VBlank-only handoff rows.
+  This advances HCZ1 from the false frame-1 gravity mismatch to frame 97
+  `status_byte`, and MGZ1 from frame 1 to frame 454 `tails_status_byte`.
+
 - **Develop CI guard suite now matches the runtime access contracts:** object
   construction, playable runtime access, architecture, rewind-field, and S3K
   spring handoff guards were brought back into sync with the current service

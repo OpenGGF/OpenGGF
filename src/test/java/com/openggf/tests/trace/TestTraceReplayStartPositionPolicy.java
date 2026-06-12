@@ -244,12 +244,34 @@ class TestTraceReplayStartPositionPolicy {
                     route + " complete-run segments must not receive the sidekick seed-row prelude.");
             TraceExecutionPhase frameZeroPhase =
                     TraceReplayBootstrap.phaseForReplay(trace, null, trace.getFrame(0));
-            TraceExecutionPhase expectedFrameZeroPhase = trace.getFrame(0).stateEquals(trace.getFrame(1))
-                    ? TraceExecutionPhase.FULL_LEVEL_FRAME
-                    : TraceExecutionPhase.VBLANK_ONLY;
+            TraceFrame frameZero = trace.getFrame(0);
+            boolean stationaryHandoffRow = !frameZero.stateEquals(trace.getFrame(1))
+                    && frameZero.xSpeed() == 0
+                    && frameZero.ySpeed() == 0
+                    && frameZero.gSpeed() == 0;
+            TraceExecutionPhase expectedFrameZeroPhase = stationaryHandoffRow
+                    ? TraceExecutionPhase.VBLANK_ONLY
+                    : TraceExecutionPhase.FULL_LEVEL_FRAME;
             assertEquals(expectedFrameZeroPhase, frameZeroPhase,
                     route + " frame 0 phase follows the structural handoff shape.");
         }
+    }
+
+    @Test
+    void s3kCompleteRunAirborneStartsDriveFrameZeroWhenVelocityAlreadyIntegrated() throws Exception {
+        TraceData hcz = TraceData.load(Path.of("src/test/resources/traces/s3k/hcz_completerun"));
+        TraceData mgz = TraceData.load(Path.of("src/test/resources/traces/s3k/mgz_completerun"));
+
+        assertEquals(0x0038, hcz.getFrame(0).ySpeed() & 0xFFFF,
+                "HCZ frame 0 already includes the first S3K gravity step.");
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+                TraceReplayBootstrap.phaseForReplay(hcz, null, hcz.getFrame(0)),
+                "HCZ frame 0 must be driven and compared, otherwise replay is one gravity tick late.");
+        assertEquals(0x0038, mgz.getFrame(0).ySpeed() & 0xFFFF,
+                "MGZ frame 0 already includes the first S3K gravity step.");
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+                TraceReplayBootstrap.phaseForReplay(mgz, null, mgz.getFrame(0)),
+                "MGZ frame 0 must be driven and compared, otherwise replay is one gravity tick late.");
     }
 
     @Test
