@@ -1228,139 +1228,6 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
         return camera().getFocusedSprite();
     }
 
-    public static int rewindStateBytes() {
-        return 184;
-    }
-
-    public void writeRewindState(java.nio.ByteBuffer buf) {
-        buf.put((byte) (bossFlag ? 1 : 0));
-        buf.put((byte) (actTransitionFlag ? 1 : 0));
-        buf.put((byte) (seasonFlag ? 1 : 0));
-        buf.put((byte) (autumnTriggerFlag ? 1 : 0));
-        buf.put((byte) (shipTransitionFlag ? 1 : 0));
-        buf.put((byte) (shipHIntActive ? 1 : 0));
-        buf.put((byte) (shipScrollLockSet ? 1 : 0));
-        buf.put((byte) (shipControllerSignalFlag ? 1 : 0));
-        buf.put((byte) (endBossCustomLayoutQueued ? 1 : 0));
-        buf.put((byte) (endBossArenaBackgroundActive ? 1 : 0));
-        buf.put((byte) (endBossPillarArtQueued ? 1 : 0));
-        buf.put((byte) (endBossArenaForegroundRefreshActive ? 1 : 0));
-        buf.put((byte) (endBossArenaHScrollCleared ? 1 : 0));
-        buf.put((byte) (endBossArenaSpikeDeletionFlag ? 1 : 0));
-        buf.put((byte) (endBossArenaRestoreRequested ? 1 : 0));
-        buf.put((byte) (leafBlowerCutsceneFlag ? 1 : 0));
-        buf.putInt(levelRepeatOffset);
-        buf.putInt(specialEventsRoutine);
-        buf.putInt(eventRoutine);
-        buf.putInt(shipRedrawPosition);
-        buf.putInt(shipRedrawRowCount);
-        buf.putInt(shipHIntCounter);
-        buf.putInt(shipSecondaryBgCameraXFixed);
-        buf.putInt(shipEffectiveBgY);
-        buf.putInt(endBossWalkoffPrepEventFlag);
-        buf.putInt(screenShakeFlag);
-        buf.putInt(screenShakeOffset);
-        buf.putInt(screenShakeLastOffset);
-        buf.putInt(shipHScrollCameraCopy);
-        buf.putInt(shipPrimaryHScroll);
-        buf.putInt(shipPlayerCarryBgY);
-        buf.putInt(shipPropellerOneX);
-        buf.putInt(shipPropellerTwoX);
-        buf.putInt(shipPropellerY);
-        buf.putInt(act2BackgroundRoutine);
-        buf.putInt(endBossArenaDrawPosition);
-        buf.putInt(endBossArenaDrawRowCount);
-        buf.putInt(endBossArenaScrollDataByte);
-        buf.putInt(endBossArenaScrollDataIndex);
-        buf.putInt(endBossArenaPillarControllerCount);
-        buf.putInt(endBossArenaTallSupportCount);
-        buf.putInt(seasonPaletteMode.ordinal());
-        int spikeLength = Math.min(endBossArenaSpikeTiers.length, ACT2_BG_END_BOSS_SPIKE_TIERS.length);
-        buf.putInt(spikeLength);
-        for (int i = 0; i < ACT2_BG_END_BOSS_SPIKE_TIERS.length; i++) {
-            buf.putInt(i < endBossArenaSpikeTiers.length ? endBossArenaSpikeTiers[i] : 0);
-        }
-        for (int i = 0; i < ACT2_BG_END_BOSS_SPIKE_TIERS.length; i++) {
-            buf.put((byte) (i < endBossArenaSpikeAlternateSides.length && endBossArenaSpikeAlternateSides[i] ? 1 : 0));
-        }
-        for (int i = 0; i < ACT2_BG_END_BOSS_SPIKE_TIERS.length; i++) {
-            buf.put((byte) (i < endBossArenaSpikeActive.length && endBossArenaSpikeActive[i] ? 1 : 0));
-        }
-        for (int i = 0; i < ACT2_BG_END_BOSS_SPIKE_TIERS.length; i++) {
-            buf.putInt(i < endBossArenaSpikeY.length ? endBossArenaSpikeY[i] : -1);
-        }
-    }
-
-    public void readRewindState(java.nio.ByteBuffer buf) {
-        bossFlag = buf.get() != 0;
-        actTransitionFlag = buf.get() != 0;
-        seasonFlag = buf.get() != 0;
-        autumnTriggerFlag = buf.get() != 0;
-        shipTransitionFlag = buf.get() != 0;
-        shipHIntActive = buf.get() != 0;
-        shipScrollLockSet = buf.get() != 0;
-        shipControllerSignalFlag = buf.get() != 0;
-        endBossCustomLayoutQueued = buf.get() != 0;
-        endBossArenaBackgroundActive = buf.get() != 0;
-        endBossPillarArtQueued = buf.get() != 0;
-        endBossArenaForegroundRefreshActive = buf.get() != 0;
-        endBossArenaHScrollCleared = buf.get() != 0;
-        endBossArenaSpikeDeletionFlag = buf.get() != 0;
-        endBossArenaRestoreRequested = buf.get() != 0;
-        leafBlowerCutsceneFlag = buf.get() != 0;
-        levelRepeatOffset = buf.getInt();
-        specialEventsRoutine = buf.getInt();
-        eventRoutine = buf.getInt();
-        shipRedrawPosition = buf.getInt();
-        shipRedrawRowCount = buf.getInt();
-        shipHIntCounter = buf.getInt();
-        shipSecondaryBgCameraXFixed = buf.getInt();
-        shipEffectiveBgY = buf.getInt();
-        endBossWalkoffPrepEventFlag = buf.getInt();
-        screenShakeFlag = buf.getInt();
-        screenShakeOffset = buf.getInt();
-        screenShakeLastOffset = buf.getInt();
-        shipHScrollCameraCopy = buf.getInt();
-        shipPrimaryHScroll = buf.getInt();
-        shipPlayerCarryBgY = buf.getInt();
-        shipPropellerOneX = buf.getInt();
-        shipPropellerTwoX = buf.getInt();
-        shipPropellerY = buf.getInt();
-        act2BackgroundRoutine = buf.getInt();
-        endBossArenaDrawPosition = buf.getInt();
-        endBossArenaDrawRowCount = buf.getInt();
-        endBossArenaScrollDataByte = buf.getInt();
-        endBossArenaScrollDataIndex = buf.getInt();
-        endBossArenaPillarControllerCount = buf.getInt();
-        endBossArenaTallSupportCount = buf.getInt();
-        int paletteOrdinal = buf.getInt();
-        SeasonPaletteMode[] modes = SeasonPaletteMode.values();
-        seasonPaletteMode = paletteOrdinal >= 0 && paletteOrdinal < modes.length
-                ? modes[paletteOrdinal]
-                : SeasonPaletteMode.GREEN;
-        int spikeLength = Math.max(0, Math.min(buf.getInt(), ACT2_BG_END_BOSS_SPIKE_TIERS.length));
-        int[] tiers = new int[ACT2_BG_END_BOSS_SPIKE_TIERS.length];
-        for (int i = 0; i < tiers.length; i++) {
-            tiers[i] = buf.getInt();
-        }
-        boolean[] alternateSides = new boolean[ACT2_BG_END_BOSS_SPIKE_TIERS.length];
-        for (int i = 0; i < alternateSides.length; i++) {
-            alternateSides[i] = buf.get() != 0;
-        }
-        boolean[] active = new boolean[ACT2_BG_END_BOSS_SPIKE_TIERS.length];
-        for (int i = 0; i < active.length; i++) {
-            active[i] = buf.get() != 0;
-        }
-        int[] spikeY = new int[ACT2_BG_END_BOSS_SPIKE_TIERS.length];
-        for (int i = 0; i < spikeY.length; i++) {
-            spikeY[i] = buf.getInt();
-        }
-        endBossArenaSpikeTiers = java.util.Arrays.copyOf(tiers, spikeLength);
-        endBossArenaSpikeAlternateSides = java.util.Arrays.copyOf(alternateSides, spikeLength);
-        endBossArenaSpikeActive = java.util.Arrays.copyOf(active, spikeLength);
-        endBossArenaSpikeY = java.util.Arrays.copyOf(spikeY, spikeLength);
-    }
-
     public boolean isBossFlag() {
         return bossFlag;
     }
@@ -1539,6 +1406,27 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
 
     public int getEndBossArenaSpikeHelperCount() {
         return endBossArenaSpikeTiers.length;
+    }
+
+    public void validateRewindSidecarState() {
+        if (endBossArenaSpikeTiers == null) {
+            throw new IllegalArgumentException("MHZ rewind sidecar restored null endBossArenaSpikeTiers");
+        }
+        if (endBossArenaSpikeAlternateSides == null) {
+            throw new IllegalArgumentException("MHZ rewind sidecar restored null endBossArenaSpikeAlternateSides");
+        }
+        if (endBossArenaSpikeActive == null) {
+            throw new IllegalArgumentException("MHZ rewind sidecar restored null endBossArenaSpikeActive");
+        }
+        if (endBossArenaSpikeY == null) {
+            throw new IllegalArgumentException("MHZ rewind sidecar restored null endBossArenaSpikeY");
+        }
+        int spikeCount = endBossArenaSpikeTiers.length;
+        if (endBossArenaSpikeAlternateSides.length != spikeCount
+                || endBossArenaSpikeActive.length != spikeCount
+                || endBossArenaSpikeY.length != spikeCount) {
+            throw new IllegalArgumentException("MHZ rewind sidecar restored mismatched end-boss spike array lengths");
+        }
     }
 
     public int[] getEndBossArenaSpikeTiersForTest() {

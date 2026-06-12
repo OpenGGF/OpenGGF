@@ -1287,7 +1287,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         //   4 bytes   mgz schema payload length, when present
         //   N bytes   mgz schema payload, when present
         //   1 byte    mhz handler present flag
-        //   184 bytes mhz state (see Sonic3kMHZEvents.rewindStateBytes())
+        //   4 bytes   mhz schema payload length, when present
+        //   N bytes   mhz schema payload, when present
         //   1 byte    icz handler present flag
         //   25 bytes  icz state (5 booleans + 5 ints; see Sonic3kICZEvents.rewindStateBytes())
         //   28 bytes  fixed Breathing_bubbles/Breathing_bubbles_P2 sidecars
@@ -1295,14 +1296,14 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         byte[] hczBytes = hczEvents != null ? ZoneEventSchemaSidecar.capture(hczEvents) : null;
         byte[] cnzBytes = cnzEvents != null ? ZoneEventSchemaSidecar.capture(cnzEvents) : null;
         byte[] mgzBytes = mgzEvents != null ? ZoneEventSchemaSidecar.capture(mgzEvents) : null;
-        int mhzSize = Sonic3kMHZEvents.rewindStateBytes(); // 184
+        byte[] mhzBytes = mhzEvents != null ? ZoneEventSchemaSidecar.capture(mhzEvents) : null;
         int iczSize = Sonic3kICZEvents.rewindStateBytes(); // 25
         int size = EXTRA_MANAGER_BYTES;
         size += aizBytes != null ? 1 + Integer.BYTES + aizBytes.length : 1;
         size += hczBytes != null ? 1 + Integer.BYTES + hczBytes.length : 1;
         size += cnzBytes != null ? 1 + Integer.BYTES + cnzBytes.length : 1;
         size += mgzBytes != null ? 1 + Integer.BYTES + mgzBytes.length : 1;
-        size += 1 + (mhzEvents != null ? mhzSize : 0);
+        size += mhzBytes != null ? 1 + Integer.BYTES + mhzBytes.length : 1;
         size += 1 + (iczEvents != null ? iczSize : 0);
         size += S3kFixedAirCountdownManager.REWIND_STATE_BYTES;
         java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(size);
@@ -1352,9 +1353,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             buf.put((byte) 0);
         }
         // MHZ
-        if (mhzEvents != null) {
+        if (mhzBytes != null) {
             buf.put((byte) 1);
-            mhzEvents.writeRewindState(buf);
+            buf.putInt(mhzBytes.length);
+            buf.put(mhzBytes);
         } else {
             buf.put((byte) 0);
         }
@@ -1396,7 +1398,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         cnzAct2MinYAccumulator = buf.remaining() >= Integer.BYTES ? buf.getInt() : 0;
         cnzAct2MaxYAccumulator = buf.remaining() >= Integer.BYTES ? buf.getInt() : 0;
         // Size constants must match the write methods
-        final int mhzBytes = Sonic3kMHZEvents.rewindStateBytes(); // 184
         final int iczBytes = Sonic3kICZEvents.rewindStateBytes(); // 25
         // AIZ
         if (buf.remaining() >= 1) {
@@ -1473,10 +1474,19 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // MHZ
         if (buf.remaining() >= 1) {
             boolean mhzPresent = buf.get() != 0;
-            if (mhzPresent && mhzEvents != null && buf.remaining() >= mhzBytes) {
-                mhzEvents.readRewindState(buf);
-            } else if (mhzPresent && buf.remaining() >= mhzBytes) {
-                buf.position(buf.position() + mhzBytes);
+            if (mhzPresent) {
+                if (buf.remaining() < Integer.BYTES) {
+                    return;
+                }
+                int mhzLength = buf.getInt();
+                if (mhzLength < 0 || buf.remaining() < mhzLength) {
+                    return;
+                }
+                byte[] bytes = new byte[mhzLength];
+                buf.get(bytes);
+                if (mhzEvents != null) {
+                    restoreMhzSidecar(bytes);
+                }
             }
         }
         // ICZ
@@ -1518,7 +1528,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 () -> expectedSidecarBytes(mgzEvents, Sonic3kLevelEventManager::newMgzFramingProbe))) {
             return false;
         }
-        if (!skipFixedSidecar(buf, Sonic3kMHZEvents.rewindStateBytes())) {
+        if (!skipVariableLengthSchemaSidecar(buf, Sonic3kMHZEvents.class)) {
             return false;
         }
         if (!skipFixedSidecar(buf, Sonic3kICZEvents.rewindStateBytes())) {
@@ -1592,6 +1602,28 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         return true;
     }
 
+    private static boolean skipVariableLengthSchemaSidecar(
+            java.nio.ByteBuffer buf,
+            Class<?> handlerType) {
+        if (buf.remaining() < 1) {
+            return true;
+        }
+        boolean present = buf.get() != 0;
+        if (!present) {
+            return true;
+        }
+        if (buf.remaining() < Integer.BYTES) {
+            return false;
+        }
+        int length = buf.getInt();
+        if (length < 0 || buf.remaining() < length) {
+            return false;
+        }
+        byte[] bytes = new byte[length];
+        buf.get(bytes);
+        return ZoneEventSchemaSidecar.hasValidVariableLengthPayload(handlerType, bytes);
+    }
+
     private void restoreAizSidecar(byte[] bytes) {
         byte[] before = ZoneEventSchemaSidecar.capture(aizEvents);
         try {
@@ -1645,6 +1677,21 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 e.addSuppressed(rollbackFailure);
             }
             LOG.warning("Skipping malformed MGZ zone-event rewind sidecar: " + e.getMessage());
+        }
+    }
+
+    private void restoreMhzSidecar(byte[] bytes) {
+        byte[] before = ZoneEventSchemaSidecar.capture(mhzEvents);
+        try {
+            ZoneEventSchemaSidecar.restoreVariableLength(mhzEvents, bytes);
+            mhzEvents.validateRewindSidecarState();
+        } catch (RuntimeException e) {
+            try {
+                ZoneEventSchemaSidecar.restoreVariableLength(mhzEvents, before);
+            } catch (RuntimeException rollbackFailure) {
+                e.addSuppressed(rollbackFailure);
+            }
+            LOG.warning("Skipping malformed MHZ zone-event rewind sidecar: " + e.getMessage());
         }
     }
 

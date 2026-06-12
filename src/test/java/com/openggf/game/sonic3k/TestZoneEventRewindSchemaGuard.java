@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kHCZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kMGZEvents;
+import com.openggf.game.sonic3k.events.Sonic3kMHZEvents;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Modifier;
@@ -31,7 +32,8 @@ public class TestZoneEventRewindSchemaGuard {
             Sonic3kAIZEvents.class,
             Sonic3kHCZEvents.class,
             Sonic3kCNZEvents.class,
-            Sonic3kMGZEvents.class);
+            Sonic3kMGZEvents.class,
+            Sonic3kMHZEvents.class);
     private static final Set<String> AIZ_ALLOWED_TRANSIENT_FIELDS = Set.of("bootstrap");
     private static final Set<String> HCZ_ALLOWED_TRANSIENT_FIELDS = Set.of("wallObject");
     private static final Set<String> CNZ_ALLOWED_TRANSIENT_FIELDS = Set.of();
@@ -39,6 +41,7 @@ public class TestZoneEventRewindSchemaGuard {
             "activeRobotnik",
             "cachedMgzQuakeChunkData",
             "collapseSolids");
+    private static final Set<String> MHZ_ALLOWED_TRANSIENT_FIELDS = Set.of();
 
     /**
      * FIELD names (not getter names) the legacy writeAizState byte layout serialized.
@@ -188,6 +191,58 @@ public class TestZoneEventRewindSchemaGuard {
             "collapseScrollPosition"
     );
 
+    /**
+     * FIELD names (not getter names) the legacy Sonic3kMHZEvents.writeRewindState byte layout serialized.
+     */
+    private static final Set<String> MHZ_LEGACY_FIELDS = Set.of(
+            "bossFlag",
+            "actTransitionFlag",
+            "seasonFlag",
+            "autumnTriggerFlag",
+            "shipTransitionFlag",
+            "shipHIntActive",
+            "shipScrollLockSet",
+            "shipControllerSignalFlag",
+            "endBossCustomLayoutQueued",
+            "endBossArenaBackgroundActive",
+            "endBossPillarArtQueued",
+            "endBossArenaForegroundRefreshActive",
+            "endBossArenaHScrollCleared",
+            "endBossArenaSpikeDeletionFlag",
+            "endBossArenaRestoreRequested",
+            "leafBlowerCutsceneFlag",
+            "levelRepeatOffset",
+            "specialEventsRoutine",
+            "eventRoutine",
+            "shipRedrawPosition",
+            "shipRedrawRowCount",
+            "shipHIntCounter",
+            "shipSecondaryBgCameraXFixed",
+            "shipEffectiveBgY",
+            "endBossWalkoffPrepEventFlag",
+            "screenShakeFlag",
+            "screenShakeOffset",
+            "screenShakeLastOffset",
+            "shipHScrollCameraCopy",
+            "shipPrimaryHScroll",
+            "shipPlayerCarryBgY",
+            "shipPropellerOneX",
+            "shipPropellerTwoX",
+            "shipPropellerY",
+            "act2BackgroundRoutine",
+            "endBossArenaDrawPosition",
+            "endBossArenaDrawRowCount",
+            "endBossArenaScrollDataByte",
+            "endBossArenaScrollDataIndex",
+            "endBossArenaPillarControllerCount",
+            "endBossArenaTallSupportCount",
+            "seasonPaletteMode",
+            "endBossArenaSpikeTiers",
+            "endBossArenaSpikeAlternateSides",
+            "endBossArenaSpikeActive",
+            "endBossArenaSpikeY"
+    );
+
     @Test
     public void convertedHandlersHaveNoUnsupportedFields() {
         for (Class<?> handler : CONVERTED_HANDLERS) {
@@ -251,6 +306,19 @@ public class TestZoneEventRewindSchemaGuard {
     }
 
     @Test
+    public void mhzSchemaCoversAllLegacySidecarFields() {
+        RewindClassSchema schema = RewindSchemaRegistry.schemaFor(Sonic3kMHZEvents.class);
+        Set<String> captured = schema.capturedFields().stream()
+                .map(plan -> plan.field().getName())
+                .collect(Collectors.toSet());
+        Set<String> missing = MHZ_LEGACY_FIELDS.stream()
+                .filter(name -> !captured.contains(name))
+                .collect(Collectors.toSet());
+        assertTrue(missing.isEmpty(),
+                "schema capture lost legacy MHZ sidecar fields: " + missing);
+    }
+
+    @Test
     public void aizTransientFieldInventoryIsExplicit() {
         Set<String> transientFields = Arrays.stream(Sonic3kAIZEvents.class.getDeclaredFields())
                 .filter(field -> !Modifier.isStatic(field.getModifiers()))
@@ -296,6 +364,18 @@ public class TestZoneEventRewindSchemaGuard {
                 .collect(Collectors.toSet());
         assertEquals(MGZ_ALLOWED_TRANSIENT_FIELDS, transientFields,
                 "MGZ transient field inventory changed; classify new fields as captured or structural");
+    }
+
+    @Test
+    public void mhzTransientFieldInventoryIsExplicit() {
+        Set<String> transientFields = Arrays.stream(Sonic3kMHZEvents.class.getDeclaredFields())
+                .filter(field -> !Modifier.isStatic(field.getModifiers()))
+                .filter(field -> Modifier.isTransient(field.getModifiers())
+                        || field.isAnnotationPresent(RewindTransient.class))
+                .map(field -> field.getName())
+                .collect(Collectors.toSet());
+        assertEquals(MHZ_ALLOWED_TRANSIENT_FIELDS, transientFields,
+                "MHZ transient field inventory changed; classify new fields as captured or structural");
     }
 
     @Test

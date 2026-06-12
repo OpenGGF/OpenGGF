@@ -144,6 +144,10 @@ public final class CompactFieldCapturer {
                 field.codec().restore(field.field(), target, scalarData, opaqueValues, opaqueIndex, context);
             }
         }
+        if (scalarData.remaining() != 0) {
+            throw new IllegalArgumentException("Rewind blob for " + schema.type().getName()
+                    + " left " + scalarData.remaining() + " unread scalar bytes.");
+        }
     }
 
     private static void validateSupported(RewindClassSchema schema) {
