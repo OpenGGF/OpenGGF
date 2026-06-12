@@ -37,6 +37,9 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
 import com.openggf.game.mode.BootScreenModeController;
+import com.openggf.game.launch.LaunchProfile;
+import com.openggf.game.launch.LaunchProfileApplier;
+import com.openggf.game.launch.LaunchProfileStore;
 import com.openggf.game.mode.MenuScreenModeController;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.rewind.LiveRewindManager;
@@ -127,6 +130,8 @@ public class GameLoop {
     private final BootScreenModeController bootScreenModeController = new BootScreenModeController();
     private final MenuScreenModeController menuScreenModeController = new MenuScreenModeController();
     private final PresenceManager presenceManager;
+    private LaunchProfileStore launchProfileStore;
+    private LaunchProfileApplier launchProfileApplier;
 
     // The active session-owned gameplay mode. Cached fields above are sourced from this context.
     private GameplayModeContext gameplayMode;
@@ -206,6 +211,7 @@ public class GameLoop {
     private Runnable pendingMasterTitleLaunchCallback;
     private Runnable afterStepMasterTitleLaunchCallback;
     private Runnable returnToMasterTitleHandler;
+    private Runnable masterTitleLaunchFailureHandler;
 
     public GameLoop() {
         this(EngineServices.current());
@@ -2543,12 +2549,18 @@ public class GameLoop {
         this.returnToMasterTitleHandler = returnToMasterTitleHandler;
     }
 
+    void setMasterTitleLaunchFailureHandler(Runnable masterTitleLaunchFailureHandler) {
+        this.masterTitleLaunchFailureHandler = masterTitleLaunchFailureHandler;
+    }
+
     /**
      * Tear down the current trace session and hand control back to the
      * Engine so it can recreate the master title screen and reset
      * gameplay state. Called by {@link TraceSessionLauncher#teardown()}.
      */
     void returnToMasterTitle() {
+        configService.clearSessionOverrides();
+        configService.resolveDisplayAspect();
         if (returnToMasterTitleHandler != null) {
             returnToMasterTitleHandler.run();
         }
@@ -2566,9 +2578,10 @@ public class GameLoop {
         }
 
         String selectedGameId = masterScreen.getSelectedGameId();
+        boolean programmaticSelection = masterScreen.isProgrammaticSelection();
 
         fadeManager.startFadeToBlack(() -> {
-            doExitMasterTitleScreen(selectedGameId);
+            doExitMasterTitleScreen(selectedGameId, programmaticSelection);
         });
 
         LOGGER.info("Starting fade-to-black for master title screen exit (game: " + selectedGameId + ")");
@@ -2577,9 +2590,28 @@ public class GameLoop {
     /**
      * Actually performs the master title screen exit after fade-to-black completes.
      */
-    private void doExitMasterTitleScreen(String selectedGameId) {
+    private void doExitMasterTitleScreen(String selectedGameId, boolean programmaticSelection) {
+        configService.clearSessionOverrides();
+        MasterTitleScreen.GameEntry entry = MasterTitleScreen.GameEntry.fromGameId(selectedGameId);
+        if (!programmaticSelection) {
+            LaunchProfile profile = launchProfileStore().load(entry);
+            launchProfileApplier().apply(profile);
+        }
+        configService.resolveDisplayAspect();
         if (masterTitleExitHandler != null) {
             masterTitleExitHandler.accept(selectedGameId);
+        }
+        if (currentGameMode == GameMode.MASTER_TITLE_SCREEN && !hasReadyGameplayRuntime()) {
+            configService.clearSessionOverrides();
+            configService.resolveDisplayAspect();
+            if (masterTitleLaunchFailureHandler != null) {
+                masterTitleLaunchFailureHandler.run();
+            }
+            pendingMasterTitleLaunchCallback = null;
+            afterStepMasterTitleLaunchCallback = null;
+            resolveFadeManager().startFadeFromBlack(null);
+            LOGGER.info("Master title screen exit failed; restored master title for game: " + selectedGameId);
+            return;
         }
         // Stage the programmatic launch callback (if any) to fire at the
         // end of the next step() rather than inline, so trace bootstrap
@@ -2600,6 +2632,28 @@ public class GameLoop {
         resolveFadeManager().startFadeFromBlack(null);
 
         LOGGER.info("Exited master title screen, now in mode: " + currentGameMode);
+    }
+
+    private boolean hasReadyGameplayRuntime() {
+        if (gameplayMode != null && gameplayMode.isGameplayRuntimeReady()) {
+            return true;
+        }
+        GameplayModeContext currentGameplayMode = SessionManager.getCurrentGameplayMode();
+        return currentGameplayMode != null && currentGameplayMode.isGameplayRuntimeReady();
+    }
+
+    private LaunchProfileStore launchProfileStore() {
+        if (launchProfileStore == null) {
+            launchProfileStore = new LaunchProfileStore(configService);
+        }
+        return launchProfileStore;
+    }
+
+    private LaunchProfileApplier launchProfileApplier() {
+        if (launchProfileApplier == null) {
+            launchProfileApplier = new LaunchProfileApplier(configService);
+        }
+        return launchProfileApplier;
     }
 
     private FadeManager resolveFadeManager() {

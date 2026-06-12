@@ -4,6 +4,8 @@ import com.openggf.TraceSessionLauncher;
 import com.openggf.control.InputHandler;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.launch.LaunchProfile;
+import com.openggf.game.launch.LaunchProfileStore;
 import com.openggf.graphics.PngTextureLoader;
 import com.openggf.graphics.PixelFont;
 import com.openggf.graphics.TexturedQuadRenderer;
@@ -24,6 +26,7 @@ import java.util.Random;
 import java.util.logging.Logger;
 
 import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_TAB;
 
 /**
  * Master title screen shown on startup for game selection.
@@ -76,6 +79,15 @@ public class MasterTitleScreen {
             this.gameId = gameId;
             this.romConfigKey = romConfigKey;
             this.expectedRomFilename = expectedRomFilename;
+        }
+
+        public static GameEntry fromGameId(String gameId) {
+            for (GameEntry entry : values()) {
+                if (entry.gameId.equalsIgnoreCase(gameId)) {
+                    return entry;
+                }
+            }
+            throw new IllegalArgumentException("Unknown game id: " + gameId);
         }
     }
 
@@ -147,6 +159,9 @@ public class MasterTitleScreen {
 
     private final List<CloudSprite> clouds = new ArrayList<>();
     private final SonicConfigurationService configService;
+    private final LaunchProfileStore launchProfileStore;
+    private LaunchConfigPanel launchConfigPanel;
+    private boolean programmaticSelection;
 
     /**
      * Projection width supplied by Engine each frame. Defaults to SCREEN_W (320)
@@ -163,7 +178,13 @@ public class MasterTitleScreen {
     }
 
     public MasterTitleScreen(SonicConfigurationService configService) {
+        this(configService, new LaunchProfileStore(configService));
+    }
+
+    public MasterTitleScreen(SonicConfigurationService configService,
+                             LaunchProfileStore launchProfileStore) {
         this.configService = Objects.requireNonNull(configService, "configService");
+        this.launchProfileStore = Objects.requireNonNull(launchProfileStore, "launchProfileStore");
     }
 
     public void initialize() {
@@ -309,10 +330,32 @@ public class MasterTitleScreen {
             return;
         }
 
+        if (launchConfigPanel != null) {
+            launchConfigPanel.update(inputHandler);
+            if (launchConfigPanel.consumeResult() == LaunchConfigPanel.Result.CLOSED) {
+                GameEntry entry = GameEntry.values()[selectedIndex];
+                launchProfileStore.save(entry, launchConfigPanel.currentProfile());
+                launchConfigPanel = null;
+            }
+            return;
+        }
+
         // Handle input
         int leftKey = configService.getInt(SonicConfiguration.LEFT);
         int rightKey = configService.getInt(SonicConfiguration.RIGHT);
         int jumpKey = configService.getInt(SonicConfiguration.JUMP);
+
+        if (inputHandler.isKeyPressed(GLFW_KEY_TAB) && romAvailable[selectedIndex]) {
+            GameEntry entry = GameEntry.values()[selectedIndex];
+            launchConfigPanel = new LaunchConfigPanel(
+                    entry,
+                    launchProfileStore.load(entry),
+                    launchProfileStore,
+                    configService,
+                    font,
+                    renderer);
+            return;
+        }
 
         if (inputHandler.isKeyPressed(leftKey)) {
             if (setSelectedIndex(selectedIndex - 1)) {
@@ -335,6 +378,7 @@ public class MasterTitleScreen {
             } else {
                 state = State.CONFIRMING;
                 playConfirmSound();
+                programmaticSelection = false;
                 gameSelected = true;
             }
         }
@@ -399,6 +443,7 @@ public class MasterTitleScreen {
 
         // 7. Missing-ROM prompt occupies the old emblem area when no ROM preview is available.
         drawSelectedMissingRomPrompt();
+        drawLaunchHoverLine();
 
         // 7. Game selection menu at bottom — centered on viewportWidth.
         drawGameMenu();
@@ -408,6 +453,13 @@ public class MasterTitleScreen {
             0.6f, 0.6f, 0.7f, 0.8f);
 
         font.endMegaBatch();
+
+        if (launchConfigPanel != null) {
+            renderer.drawTexture(solidWhiteTextureId, 0, 0, viewportWidth, SCREEN_H,
+                    0f, 0f, 0f, 0.5f);
+            launchConfigPanel.render(viewportWidth);
+            return;
+        }
 
         // 9. Error message overlay — semi-transparent overlay fills full width;
         //    error text is centered on viewportWidth.
@@ -561,6 +613,7 @@ public class MasterTitleScreen {
         }
         this.state = State.CONFIRMING;
         playConfirmSound();
+        this.programmaticSelection = true;
         this.gameSelected = true;
     }
 
@@ -650,6 +703,14 @@ public class MasterTitleScreen {
         return expectedRomFilename(entry);
     }
 
+    static String launchHoverLine(int enabledCount) {
+        if (enabledCount <= 0) {
+            return "Stock launch - Tab to configure";
+        }
+        String noun = enabledCount == 1 ? " option enabled" : " options enabled";
+        return enabledCount + noun + " - Tab to configure";
+    }
+
     static float[] menuTextColor(boolean available, boolean selected, int frameCounter) {
         if (!available) {
             if (selected) {
@@ -689,6 +750,29 @@ public class MasterTitleScreen {
         setSelectedIndex(newIndex);
     }
 
+    void setStateForTest(State state) {
+        this.state = state;
+    }
+
+    public boolean isLaunchConfigPanelOpenForTest() {
+        return launchConfigPanel != null;
+    }
+
+    LaunchProfile currentLaunchProfileForTest() {
+        if (launchConfigPanel != null) {
+            return launchConfigPanel.currentProfile();
+        }
+        return launchProfileStore.load(GameEntry.values()[selectedIndex]);
+    }
+
+    public void setRomAvailableForTest(GameEntry entry, boolean available) {
+        romAvailable[entry.ordinal()] = available;
+    }
+
+    void setTracePickerForTest(TestModeTracePicker tracePicker) {
+        this.tracePicker = tracePicker;
+    }
+
     private void resetRomPreviewTextureFrames() {
         java.util.Arrays.fill(romPreviewFrameTokens, Integer.MIN_VALUE);
     }
@@ -704,6 +788,25 @@ public class MasterTitleScreen {
      */
     public String getSelectedGameId() {
         return GameEntry.values()[selectedIndex].gameId;
+    }
+
+    public boolean isProgrammaticSelection() {
+        return programmaticSelection;
+    }
+
+    private void drawLaunchHoverLine() {
+        if (!romAvailable[selectedIndex]) {
+            return;
+        }
+        GameEntry entry = GameEntry.values()[selectedIndex];
+        int enabledCount = launchProfileStore.load(entry).enabledCount(entry);
+        if (enabledCount == 0) {
+            font.drawTextCentered(launchHoverLine(enabledCount), viewportWidth, 174,
+                    0.55f, 0.55f, 0.55f, 0.88f);
+        } else {
+            font.drawTextCentered(launchHoverLine(enabledCount), viewportWidth, 174,
+                    1f, 0.82f, 0.28f, 1f);
+        }
     }
 
     /**

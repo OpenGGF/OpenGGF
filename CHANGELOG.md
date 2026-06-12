@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Master title launches now have per-game profiles:** pressing `Tab` on an
+  available game opens a launch options panel for live rewind, cross-game donor,
+  debug tools, widescreen aspect, main character, and sidekick. Profiles persist
+  under `launch.s1` / `launch.s2` / `launch.s3k`, but gameplay applies them via
+  session-only overrides so trace launches, failed startups, and returns to the
+  master title clear back to the global configuration.
+
 - **S3K Obj37 floor probes now use shared ROM terrain search:** spilled-ring
   terrain bounces now consume `ObjectTerrainUtils.checkFloorDist`, including
   the shared FindFloor extension/regression behavior used by object terrain

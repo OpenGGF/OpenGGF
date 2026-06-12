@@ -35,6 +35,7 @@ public class SonicConfigurationService {
 	private boolean defaultInsertedSinceLastApply;
 	private final Path configDirectoryOverride;
 	private final ConfigFileReader yamlReader;
+	private final Map<String, Object> sessionOverrides = new HashMap<>();
 	// Derived (non-persisted) display values; read before `config`, never saved.
 	private final Map<String, Object> transientResolved = new HashMap<>();
 	private final Map<SonicConfiguration, Integer> intCache = new EnumMap<>(SonicConfiguration.class);
@@ -276,6 +277,9 @@ public class SonicConfigurationService {
 	}
 
 	public Object getConfigValue(SonicConfiguration sonicConfiguration) {
+		if (sessionOverrides.containsKey(sonicConfiguration.name())) {
+			return sessionOverrides.get(sonicConfiguration.name());
+		}
 		Object overlay = transientResolved.get(sonicConfiguration.name());
 		if (overlay != null) {
 			return overlay;
@@ -288,9 +292,9 @@ public class SonicConfigurationService {
 
 	/**
 	 * Returns the default value for a configuration key, or {@code null} if
-	 * no default is registered. Package-private for testing.
+	 * no default is registered.
 	 */
-	Object getDefaultValue(SonicConfiguration key) {
+	public Object getDefaultValue(SonicConfiguration key) {
 		return defaults.get(key.name());
 	}
 
@@ -369,6 +373,20 @@ public class SonicConfigurationService {
 		}
 		config.put(key.name(), value);
 		intCache.clear();
+	}
+
+	public void setSessionOverride(SonicConfiguration key, Object value) {
+		sessionOverrides.put(key.name(), value);
+		intCache.clear();
+	}
+
+	public void clearSessionOverrides() {
+		sessionOverrides.clear();
+		intCache.clear();
+	}
+
+	public boolean hasSessionOverride(SonicConfiguration key) {
+		return sessionOverrides.containsKey(key.name());
 	}
 
 	public void saveConfig() {
@@ -465,6 +483,7 @@ public class SonicConfigurationService {
 	public void resetToDefaults() {
 		config = new HashMap<>();
 		defaults = new HashMap<>();
+		sessionOverrides.clear();
 		intCache.clear();
 		applyDefaults();
 		// Re-derive SCREEN_WIDTH_PIXELS (and related) from the freshly-set
@@ -609,6 +628,24 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.CROSS_GAME_S2_DATA_SELECT_IMAGE_GEN_OVERRIDE, false);
 		putDefaultKey(SonicConfiguration.CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY, GLFW_KEY_APOSTROPHE);
 		putDefault(SonicConfiguration.CROSS_GAME_SOURCE, "s2");
+		putDefault(SonicConfiguration.LAUNCH_S1_REWIND, false);
+		putDefault(SonicConfiguration.LAUNCH_S1_CROSS_GAME_SOURCE, "off");
+		putDefault(SonicConfiguration.LAUNCH_S1_DEBUG_TOOLS, false);
+		putDefault(SonicConfiguration.LAUNCH_S1_ASPECT, "global");
+		putDefault(SonicConfiguration.LAUNCH_S1_MAIN_CHARACTER, "sonic");
+		putDefault(SonicConfiguration.LAUNCH_S1_SIDEKICK, "none");
+		putDefault(SonicConfiguration.LAUNCH_S2_REWIND, false);
+		putDefault(SonicConfiguration.LAUNCH_S2_CROSS_GAME_SOURCE, "off");
+		putDefault(SonicConfiguration.LAUNCH_S2_DEBUG_TOOLS, false);
+		putDefault(SonicConfiguration.LAUNCH_S2_ASPECT, "global");
+		putDefault(SonicConfiguration.LAUNCH_S2_MAIN_CHARACTER, "sonic");
+		putDefault(SonicConfiguration.LAUNCH_S2_SIDEKICK, "tails");
+		putDefault(SonicConfiguration.LAUNCH_S3K_REWIND, false);
+		putDefault(SonicConfiguration.LAUNCH_S3K_CROSS_GAME_SOURCE, "off");
+		putDefault(SonicConfiguration.LAUNCH_S3K_DEBUG_TOOLS, false);
+		putDefault(SonicConfiguration.LAUNCH_S3K_ASPECT, "global");
+		putDefault(SonicConfiguration.LAUNCH_S3K_MAIN_CHARACTER, "sonic");
+		putDefault(SonicConfiguration.LAUNCH_S3K_SIDEKICK, "tails");
 		putDefault(SonicConfiguration.TEST_MODE_ENABLED, false);
 		putDefault(SonicConfiguration.TRACE_CATALOG_DIR, "src/test/resources/traces");
 		putDefault(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED, false);

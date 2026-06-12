@@ -27,7 +27,7 @@ public class TilemapGpuRenderer {
     private final TilemapTexture foregroundTexture = new TilemapTexture();
     private final PatternLookupBuffer patternLookup = new PatternLookupBuffer();
     private final HScrollBuffer foregroundLineScrollBuffer = new HScrollBuffer(true);
-    private final VScrollBuffer columnVScrollBuffer;
+    private VScrollBuffer columnVScrollBuffer;
     private final QuadRenderer quadRenderer = new QuadRenderer();
 
     /**
@@ -51,7 +51,28 @@ public class TilemapGpuRenderer {
     }
 
     private static int columnCount(int width) {
-        return (width + 15) / 16;
+        return Math.max(1, (Math.max(1, width) + 15) / 16);
+    }
+
+    public void applyResolvedDisplayWidth(int screenWidth) {
+        int resolvedColumnCount = columnCount(screenWidth);
+        if (columnVScrollBuffer.getEntryCount() == resolvedColumnCount) {
+            return;
+        }
+
+        boolean rendererInitialized = shader != null;
+        if (rendererInitialized) {
+            columnVScrollBuffer.cleanup();
+        }
+        columnVScrollBuffer = new VScrollBuffer(resolvedColumnCount);
+        if (rendererInitialized) {
+            columnVScrollBuffer.init();
+        }
+        perColumnVScroll = false;
+    }
+
+    public int getVScrollColumnCapacity() {
+        return columnVScrollBuffer.getEntryCount();
     }
 
     // Dummy 1x1 textures used as fallback when no real texture is available.

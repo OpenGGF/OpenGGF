@@ -1,0 +1,207 @@
+package com.openggf.game;
+
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.control.InputHandler;
+import com.openggf.game.launch.LaunchProfile;
+import com.openggf.game.launch.LaunchProfileStore;
+import com.openggf.graphics.PixelFont;
+import com.openggf.graphics.TexturedQuadRenderer;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_TAB;
+
+/**
+ * Per-game launch options panel hosted by {@link MasterTitleScreen}.
+ */
+public final class LaunchConfigPanel {
+
+    private static final int SCREEN_H = 224;
+    private static final float TEXT_SCALE = 0.68f;
+
+    public enum Result { NONE, CLOSED }
+
+    record RowView(String label, String value, boolean stock, boolean nonStandard) {
+    }
+
+    record TextLineView(String text, int x, int y, float scale, int measuredWidth,
+                        float r, float g, float b, float a) {
+    }
+
+    private final MasterTitleScreen.GameEntry entry;
+    private final SonicConfigurationService configService;
+    private final PixelFont font;
+    @SuppressWarnings("unused")
+    private final TexturedQuadRenderer renderer;
+    private final LaunchProfile.Row[] rows = LaunchProfile.Row.values();
+
+    private LaunchProfile profile;
+    private int selectedRow;
+    private Result pendingResult = Result.NONE;
+    private boolean closed;
+
+    public LaunchConfigPanel(MasterTitleScreen.GameEntry entry,
+                             LaunchProfile currentProfile,
+                             LaunchProfileStore store,
+                             SonicConfigurationService configService,
+                             PixelFont font,
+                             TexturedQuadRenderer renderer) {
+        this.entry = Objects.requireNonNull(entry, "entry");
+        this.profile = Objects.requireNonNull(currentProfile, "currentProfile");
+        Objects.requireNonNull(store, "store");
+        this.configService = Objects.requireNonNull(configService, "configService");
+        this.font = font;
+        this.renderer = renderer;
+    }
+
+    public void update(InputHandler inputHandler) {
+        if (closed || inputHandler == null) {
+            return;
+        }
+        if (inputHandler.isKeyPressed(GLFW_KEY_TAB) || inputHandler.isKeyPressed(GLFW_KEY_ESCAPE)) {
+            close();
+            return;
+        }
+        if (inputHandler.isKeyPressed(GLFW_KEY_BACKSPACE)) {
+            profile = profile.withStock(entry);
+            return;
+        }
+        if (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.UP))) {
+            selectedRow = wrapRow(selectedRow - 1);
+        }
+        if (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.DOWN))) {
+            selectedRow = wrapRow(selectedRow + 1);
+        }
+        LaunchProfile.Row row = rows[selectedRow];
+        if (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.LEFT))) {
+            profile = profile.withPrevious(row, entry);
+        }
+        if (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.RIGHT))) {
+            profile = profile.withNext(row, entry);
+        }
+    }
+
+    public Result consumeResult() {
+        Result result = pendingResult;
+        pendingResult = Result.NONE;
+        return result;
+    }
+
+    public void render(int viewportWidth) {
+        if (font == null) {
+            return;
+        }
+        font.beginMegaBatch();
+        try {
+            for (TextLineView line : textLineViews(viewportWidth)) {
+                font.drawText(line.text(), line.x(), line.y(), line.scale(),
+                        line.r(), line.g(), line.b(), line.a());
+            }
+        } finally {
+            font.endMegaBatch();
+        }
+    }
+
+    List<RowView> rowViews() {
+        List<RowView> views = new ArrayList<>(rows.length);
+        for (LaunchProfile.Row row : rows) {
+            views.add(new RowView(
+                    LaunchProfile.rowLabel(row),
+                    rowValue(row),
+                    profile.isStock(row, entry),
+                    profile.isNonStandard(row, entry)));
+        }
+        return List.copyOf(views);
+    }
+
+    LaunchProfile.Row selectedRowForTest() {
+        return rows[selectedRow];
+    }
+
+    LaunchProfile currentProfileForTest() {
+        return profile;
+    }
+
+    LaunchProfile currentProfile() {
+        return profile;
+    }
+
+    List<TextLineView> textLineViews(int viewportWidth) {
+        List<TextLineView> lines = new ArrayList<>();
+        addCenteredLine(lines, entry.displayName + " Launch", viewportWidth, 28,
+                1.0f, 1f, 1f, 1f, 1f);
+        List<RowView> views = rowViews();
+        int y = 58;
+        for (int i = 0; i < views.size(); i++) {
+            RowView view = views.get(i);
+            boolean selected = i == selectedRow;
+            String marker = selected ? ">" : " ";
+            String suffix = view.nonStandard() ? "*" : (view.stock() ? " (stock)" : "");
+            float r = view.nonStandard() ? 1f : (selected ? 1f : 0.72f);
+            float g = view.nonStandard() ? 0.72f : (selected ? 1f : 0.72f);
+            float b = view.nonStandard() ? 0.25f : (selected ? 1f : 0.72f);
+            addCenteredLine(lines, marker + " " + view.label() + ": " + view.value() + suffix,
+                    viewportWidth, y, TEXT_SCALE, r, g, b, 1f);
+            y += 15;
+        }
+        addCenteredLine(lines, "* not possible in the original game", viewportWidth, SCREEN_H - 34,
+                0.55f, 1f, 0.72f, 0.25f, 1f);
+        addCenteredLine(lines, "Up/Down row  Left/Right value  Backspace stock  Tab/Esc close",
+                viewportWidth, SCREEN_H - 20, 0.48f, 0.7f, 0.7f, 0.7f, 1f);
+        return List.copyOf(lines);
+    }
+
+    private void close() {
+        if (closed) {
+            return;
+        }
+        closed = true;
+        pendingResult = Result.CLOSED;
+    }
+
+    private void addCenteredLine(List<TextLineView> lines, String text, int viewportWidth,
+                                 int y, float scale, float r, float g, float b, float a) {
+        int width = measureWidth(text, scale);
+        int x = Math.round((viewportWidth - width) / 2f);
+        lines.add(new TextLineView(text, x, y, scale, width, r, g, b, a));
+    }
+
+    private int measureWidth(String text, float scale) {
+        if (font != null) {
+            return font.measureWidth(text, scale);
+        }
+        return Math.round(text.length() * 6 * scale);
+    }
+
+    private int wrapRow(int index) {
+        if (index < 0) {
+            return rows.length - 1;
+        }
+        if (index >= rows.length) {
+            return 0;
+        }
+        return index;
+    }
+
+    private String rowValue(LaunchProfile.Row row) {
+        if (row == LaunchProfile.Row.WIDESCREEN && "global".equals(profile.aspect())) {
+            return "Global (" + aspectLabel(configService.getString(SonicConfiguration.DISPLAY_ASPECT)) + ")";
+        }
+        return profile.displayValue(row, entry);
+    }
+
+    private static String aspectLabel(String value) {
+        return switch (value) {
+            case "WIDE_16_10" -> "16:10";
+            case "WIDE_16_9" -> "16:9";
+            case "ULTRA_21_9" -> "21:9";
+            case "SUPER_32_9" -> "32:9";
+            default -> "4:3";
+        };
+    }
+}

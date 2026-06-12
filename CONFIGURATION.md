@@ -30,6 +30,7 @@ The `config.yaml` is organized into the following top-level sections:
 | `startup` | Title screen, master title, legal disclaimer flags |
 | `rewind` | Live rewind enable/key, tape-coast parameters, audio history settings |
 | `crossGame` | Cross-game feature donation enable and source |
+| `launch` | Per-game master-title launch profiles |
 | `discord` | Discord Rich Presence enable, show timer, show zone |
 
 **`debug:` block** (developer/debug tooling — safe to ignore for normal play):
@@ -110,6 +111,68 @@ Paths are relative to the working directory (where the JAR is launched).
 | Key | YAML path | Default | Key Name | Description |
 |-----|-----------|---------|----------|-------------|
 | `CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY` | `debug.crossGame.s1DataSelectImageCoordLogKey` | `39` | Apostrophe | While playing Sonic 1, log the current camera as a preview override point for donated Data Select screenshot tuning. |
+
+---
+
+## Launch Profiles
+
+The master title screen stores per-game launch defaults under `launch.s1`, `launch.s2`,
+and `launch.s3k`. Select a game on the master title screen and press `Tab` to open the
+launch profile panel; stock games show the hover line `Stock launch - Tab to configure`.
+The panel uses the configured `UP`/`DOWN` bindings to choose a row and the configured
+`LEFT`/`RIGHT` bindings to change that row. Hardcoded `Backspace` resets the profile
+to stock; hardcoded `Tab` or `Esc` closes and saves it.
+
+Profiles are persistent defaults for future manual launches, but applying a profile is
+session-only. A launch can temporarily override live rewind, cross-game donation, debug
+tools, display aspect, main character, and sidekick without writing those values into the
+global gameplay keys (`rewind.liveEnabled`, `crossGame.*`, `debug.flags.debugView`,
+`display.aspect`, or `characters.*`). Programmatic trace launches clear any stale launch
+profile overrides and skip profile application.
+
+`crossGameSource: "off"` disables donation for that game launch and restores the built-in
+`crossGame.source` default in the session overlay so the donor choice cannot leak from a
+previous launch. `aspect: "global"` inherits the normal `display.aspect` setting and does
+not resize the window; pinned aspect values such as `"WIDE_16_9"` apply only for that
+game session and resize back when returning to the master title.
+
+Stock defaults:
+
+| Game | `rewind` | `crossGameSource` | `debugTools` | `aspect` | `mainCharacter` | `sidekick` |
+|------|----------|-------------------|--------------|----------|-----------------|------------|
+| Sonic 1 | `false` | `"off"` | `false` | `"global"` | `"sonic"` | `"none"` |
+| Sonic 2 | `false` | `"off"` | `false` | `"global"` | `"sonic"` | `"tails"` |
+| Sonic 3&K | `false` | `"off"` | `false` | `"global"` | `"sonic"` | `"tails"` |
+
+| Key | YAML path | Type | Default | Description |
+|-----|-----------|------|---------|-------------|
+| `LAUNCH_S1_REWIND` | `launch.s1.rewind` | bool | `false` | Enable live rewind for manual Sonic 1 launches. |
+| `LAUNCH_S1_CROSS_GAME_SOURCE` | `launch.s1.crossGameSource` | enum | `"off"` | Cross-game donor for manual Sonic 1 launches: `"off"`, `"s2"`, or `"s3k"`. |
+| `LAUNCH_S1_DEBUG_TOOLS` | `launch.s1.debugTools` | bool | `false` | Enable debug tools for manual Sonic 1 launches. |
+| `LAUNCH_S1_ASPECT` | `launch.s1.aspect` | enum | `"global"` | Display aspect for manual Sonic 1 launches: `"global"` or a `display.aspect` preset. |
+| `LAUNCH_S1_MAIN_CHARACTER` | `launch.s1.mainCharacter` | enum | `"sonic"` | Main character for manual Sonic 1 launches. |
+| `LAUNCH_S1_SIDEKICK` | `launch.s1.sidekick` | enum | `"none"` | Sidekick for manual Sonic 1 launches; `"none"` disables sidekick spawning. |
+| `LAUNCH_S2_REWIND` | `launch.s2.rewind` | bool | `false` | Enable live rewind for manual Sonic 2 launches. |
+| `LAUNCH_S2_CROSS_GAME_SOURCE` | `launch.s2.crossGameSource` | enum | `"off"` | Cross-game donor for manual Sonic 2 launches: `"off"`, `"s1"`, or `"s3k"`. |
+| `LAUNCH_S2_DEBUG_TOOLS` | `launch.s2.debugTools` | bool | `false` | Enable debug tools for manual Sonic 2 launches. |
+| `LAUNCH_S2_ASPECT` | `launch.s2.aspect` | enum | `"global"` | Display aspect for manual Sonic 2 launches: `"global"` or a `display.aspect` preset. |
+| `LAUNCH_S2_MAIN_CHARACTER` | `launch.s2.mainCharacter` | enum | `"sonic"` | Main character for manual Sonic 2 launches. |
+| `LAUNCH_S2_SIDEKICK` | `launch.s2.sidekick` | enum | `"tails"` | Sidekick for manual Sonic 2 launches; `"none"` disables sidekick spawning. |
+| `LAUNCH_S3K_REWIND` | `launch.s3k.rewind` | bool | `false` | Enable live rewind for manual Sonic 3&K launches. |
+| `LAUNCH_S3K_CROSS_GAME_SOURCE` | `launch.s3k.crossGameSource` | enum | `"off"` | Cross-game donor for manual Sonic 3&K launches: `"off"`, `"s1"`, or `"s2"`. |
+| `LAUNCH_S3K_DEBUG_TOOLS` | `launch.s3k.debugTools` | bool | `false` | Enable debug tools for manual Sonic 3&K launches. |
+| `LAUNCH_S3K_ASPECT` | `launch.s3k.aspect` | enum | `"global"` | Display aspect for manual Sonic 3&K launches: `"global"` or a `display.aspect` preset. |
+| `LAUNCH_S3K_MAIN_CHARACTER` | `launch.s3k.mainCharacter` | enum | `"sonic"` | Main character for manual Sonic 3&K launches. |
+| `LAUNCH_S3K_SIDEKICK` | `launch.s3k.sidekick` | enum | `"tails"` | Sidekick for manual Sonic 3&K launches; `"none"` disables sidekick spawning. |
+
+Allowed launch profile enums:
+
+| Field | Values |
+|-------|--------|
+| `crossGameSource` | `"off"`, `"s1"`, `"s2"`, `"s3k"`; the launched game cannot donate to itself and is clamped to `"off"` when hand-edited. |
+| `aspect` | `"global"`, `"NATIVE_4_3"`, `"WIDE_16_10"`, `"WIDE_16_9"`, `"ULTRA_21_9"`, `"SUPER_32_9"` |
+| `mainCharacter` | `"sonic"`, `"tails"`, `"knuckles"` |
+| `sidekick` | `"none"`, `"sonic"`, `"tails"`, `"knuckles"` |
 
 ---
 
@@ -372,6 +435,31 @@ rewind:
 crossGame:
   enabled: false   # Enable cross-game feature donation (e.g. S2 sprites in S1)
   source: "s2"   # Donor game for cross-game features
+
+# ── Launch Profiles ──
+# Per-game launch defaults edited from the master title screen.
+launch:
+  s1:
+    rewind: false   # Default Sonic 1 launch profile: enable live rewind
+    crossGameSource: "off"   # Default Sonic 1 launch profile: cross-game donor
+    debugTools: false   # Default Sonic 1 launch profile: enable debug tools
+    aspect: "global"   # Default Sonic 1 launch profile: display aspect override
+    mainCharacter: "sonic"   # Default Sonic 1 launch profile: main character
+    sidekick: "none"   # Default Sonic 1 launch profile: sidekick character
+  s2:
+    rewind: false   # Default Sonic 2 launch profile: enable live rewind
+    crossGameSource: "off"   # Default Sonic 2 launch profile: cross-game donor
+    debugTools: false   # Default Sonic 2 launch profile: enable debug tools
+    aspect: "global"   # Default Sonic 2 launch profile: display aspect override
+    mainCharacter: "sonic"   # Default Sonic 2 launch profile: main character
+    sidekick: "tails"   # Default Sonic 2 launch profile: sidekick character
+  s3k:
+    rewind: false   # Default Sonic 3&K launch profile: enable live rewind
+    crossGameSource: "off"   # Default Sonic 3&K launch profile: cross-game donor
+    debugTools: false   # Default Sonic 3&K launch profile: enable debug tools
+    aspect: "global"   # Default Sonic 3&K launch profile: display aspect override
+    mainCharacter: "sonic"   # Default Sonic 3&K launch profile: main character
+    sidekick: "tails"   # Default Sonic 3&K launch profile: sidekick character
 
 # ── Discord Rich Presence ──
 discord:

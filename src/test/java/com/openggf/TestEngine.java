@@ -36,6 +36,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.sprites.playable.Knuckles;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.game.RomDetectionService;
+import com.openggf.graphics.TilemapGpuRenderer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.Test;
@@ -140,6 +141,139 @@ class TestEngine {
         assertNull(Engine.computeIntegerScaleUpperBound(0, 224, 1920, 1080));
         assertEquals(4, Engine.computeIntegerScaleUpperBound(320, 224, 1920, 1080));
         assertEquals(1, Engine.computeIntegerScaleUpperBound(320, 224, 160, 112));
+    }
+
+    @Test
+    void refreshLaunchSessionCachedConfig_updatesDebugViewCacheFromSessionOverride() throws Exception {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+        config.setConfigValue(SonicConfiguration.DEBUG_VIEW_ENABLED, false);
+        Engine engine = newTestEngine(config, new GraphicsManager());
+
+        assertFalse((boolean) getPrivateField(engine, "debugViewEnabled"));
+
+        config.setSessionOverride(SonicConfiguration.DEBUG_VIEW_ENABLED, true);
+        engine.refreshLaunchSessionCachedConfig();
+
+        assertTrue((boolean) getPrivateField(engine, "debugViewEnabled"));
+
+        config.clearSessionOverrides();
+        engine.refreshLaunchSessionCachedConfig();
+
+        assertFalse((boolean) getPrivateField(engine, "debugViewEnabled"));
+    }
+
+    @Test
+    void readResolvedDisplayDimensionsForLaunch_readsNativeGlobalDimensions() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+        config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+        config.resolveDisplayAspect();
+        Engine engine = newTestEngine(config, new GraphicsManager());
+
+        Engine.ResolvedDisplayDimensions resolved = engine.readResolvedDisplayDimensionsForLaunch();
+
+        assertEquals(320, resolved.pixelWidth());
+        assertEquals(224, resolved.pixelHeight());
+        assertEquals(640, resolved.windowWidth());
+        assertEquals(448, resolved.windowHeight());
+    }
+
+    @Test
+    void readResolvedDisplayDimensionsForLaunch_readsPinnedWide169SessionDimensions() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+        config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "WIDE_16_9");
+        config.resolveDisplayAspect();
+        Engine engine = newTestEngine(config, new GraphicsManager());
+
+        Engine.ResolvedDisplayDimensions resolved = engine.readResolvedDisplayDimensionsForLaunch();
+
+        assertEquals(400, resolved.pixelWidth());
+        assertEquals(224, resolved.pixelHeight());
+        assertEquals(800, resolved.windowWidth());
+        assertEquals(448, resolved.windowHeight());
+    }
+
+    @Test
+    void readResolvedDisplayDimensionsForLaunch_forcesPinnedUltra219ToNativeInTestMode() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+        config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, true);
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "ULTRA_21_9");
+        config.resolveDisplayAspect();
+        Engine engine = newTestEngine(config, new GraphicsManager());
+
+        Engine.ResolvedDisplayDimensions resolved = engine.readResolvedDisplayDimensionsForLaunch();
+
+        assertEquals(320, resolved.pixelWidth());
+    }
+
+    @Test
+    void applyResolvedDisplayDimensionsUsesResolvedWindowDimensionsInsteadOfStaleSnapScale() throws Exception {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+        GraphicsManager graphics = new GraphicsManager();
+        TilemapGpuRenderer tilemapRenderer = new TilemapGpuRenderer(320);
+        setPrivateField(graphics, "tilemapGpuRenderer", tilemapRenderer);
+        Engine engine = newTestEngine(config, graphics);
+        setPrivateField(engine, "windowWidth", 640);
+        setPrivateField(engine, "windowHeight", 448);
+
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "WIDE_16_9");
+        config.resolveDisplayAspect();
+        engine.applyResolvedDisplayDimensions();
+
+        assertEquals(400.0, (double) getPrivateField(engine, "realWidth"));
+        assertEquals(224.0, (double) getPrivateField(engine, "realHeight"));
+        assertEquals(400.0, (double) getPrivateField(engine, "projectionWidth"));
+        assertEquals(800, getPrivateField(engine, "windowWidth"));
+        assertEquals(448, getPrivateField(engine, "windowHeight"));
+        assertEquals(400, graphics.getProjectionWidth());
+        assertEquals(25, tilemapRenderer.getVScrollColumnCapacity());
+    }
+
+    @Test
+    void failedMasterTitleLaunchRollsBackHostLaunchCachesAfterSessionOverridesClear() throws Exception {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+        config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
+        config.setConfigValue(SonicConfiguration.DEBUG_VIEW_ENABLED, false);
+        config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+        config.setConfigValue(SonicConfiguration.SCREEN_WIDTH, 640);
+        config.setConfigValue(SonicConfiguration.SCREEN_HEIGHT, 448);
+        config.setConfigValue(SonicConfiguration.LAUNCH_S2_DEBUG_TOOLS, true);
+        config.setConfigValue(SonicConfiguration.LAUNCH_S2_ASPECT, "WIDE_16_9");
+        config.resolveDisplayAspect();
+
+        GraphicsManager graphics = new GraphicsManager();
+        TilemapGpuRenderer tilemapRenderer = new TilemapGpuRenderer(320);
+        setPrivateField(graphics, "tilemapGpuRenderer", tilemapRenderer);
+        RomManager romManager = mock(RomManager.class);
+        Rom rom = mock(Rom.class);
+        when(romManager.getRom()).thenReturn(rom);
+        RomDetectionService romDetection = mock(RomDetectionService.class);
+        when(romDetection.detectAndCreateModule(rom)).thenReturn(Optional.empty());
+        Engine engine = new Engine(new EngineContext(
+                config,
+                graphics,
+                mock(AudioManager.class),
+                romManager,
+                mock(PerformanceProfiler.class),
+                mock(DebugOverlayManager.class),
+                mock(PlaybackDebugManager.class),
+                romDetection,
+                mock(CrossGameFeatureProvider.class)));
+
+        invokePrivateMethod(engine.getGameLoop(), "doExitMasterTitleScreen",
+                new Class<?>[] {String.class, boolean.class}, "s2", false);
+
+        assertFalse(config.hasSessionOverride(SonicConfiguration.DEBUG_VIEW_ENABLED));
+        assertFalse(config.hasSessionOverride(SonicConfiguration.DISPLAY_ASPECT));
+        assertFalse((boolean) getPrivateField(engine, "debugViewEnabled"));
+        assertEquals(320, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+        assertEquals(320.0, (double) getPrivateField(engine, "realWidth"));
+        assertEquals(224.0, (double) getPrivateField(engine, "realHeight"));
+        assertEquals(320.0, (double) getPrivateField(engine, "projectionWidth"));
+        assertEquals(640, getPrivateField(engine, "windowWidth"));
+        assertEquals(448, getPrivateField(engine, "windowHeight"));
+        assertEquals(320, graphics.getProjectionWidth());
+        assertEquals(20, tilemapRenderer.getVScrollColumnCapacity());
     }
 
     @Test
@@ -543,6 +677,32 @@ class TestEngine {
         GraphicsManager previous = (GraphicsManager) field.get(null);
         field.set(null, replacement);
         return previous;
+    }
+
+    private static Engine newTestEngine(SonicConfigurationService config, GraphicsManager graphics) {
+        return new Engine(new EngineContext(
+                config,
+                graphics,
+                mock(AudioManager.class),
+                mock(RomManager.class),
+                mock(PerformanceProfiler.class),
+                mock(DebugOverlayManager.class),
+                mock(PlaybackDebugManager.class),
+                mock(RomDetectionService.class),
+                mock(CrossGameFeatureProvider.class)));
+    }
+
+    private static Object getPrivateField(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.get(target);
+    }
+
+    private static Object invokePrivateMethod(
+            Object target, String methodName, Class<?>[] parameterTypes, Object... args) throws Exception {
+        var method = target.getClass().getDeclaredMethod(methodName, parameterTypes);
+        method.setAccessible(true);
+        return method.invoke(target, args);
     }
 
     private static void setPrivateField(Object target, String fieldName, Object value) throws Exception {

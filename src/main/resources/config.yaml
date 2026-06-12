@@ -75,6 +75,31 @@ crossGame:
   enabled: false   # Enable cross-game feature donation (e.g. S2 sprites in S1)
   source: "s2"   # Donor game for cross-game features
 
+# ── Launch Profiles ──
+# Per-game launch defaults edited from the master title screen.
+launch:
+  s1:
+    rewind: false   # Default Sonic 1 launch profile: enable live rewind
+    crossGameSource: "off"   # Default Sonic 1 launch profile: cross-game donor
+    debugTools: false   # Default Sonic 1 launch profile: enable debug tools
+    aspect: "global"   # Default Sonic 1 launch profile: display aspect override
+    mainCharacter: "sonic"   # Default Sonic 1 launch profile: main character
+    sidekick: "none"   # Default Sonic 1 launch profile: sidekick character
+  s2:
+    rewind: false   # Default Sonic 2 launch profile: enable live rewind
+    crossGameSource: "off"   # Default Sonic 2 launch profile: cross-game donor
+    debugTools: false   # Default Sonic 2 launch profile: enable debug tools
+    aspect: "global"   # Default Sonic 2 launch profile: display aspect override
+    mainCharacter: "sonic"   # Default Sonic 2 launch profile: main character
+    sidekick: "tails"   # Default Sonic 2 launch profile: sidekick character
+  s3k:
+    rewind: false   # Default Sonic 3&K launch profile: enable live rewind
+    crossGameSource: "off"   # Default Sonic 3&K launch profile: cross-game donor
+    debugTools: false   # Default Sonic 3&K launch profile: enable debug tools
+    aspect: "global"   # Default Sonic 3&K launch profile: display aspect override
+    mainCharacter: "sonic"   # Default Sonic 3&K launch profile: main character
+    sidekick: "tails"   # Default Sonic 3&K launch profile: sidekick character
+
 # ── Discord Rich Presence ──
 discord:
   enabled: false   # Enable Discord Rich Presence updates

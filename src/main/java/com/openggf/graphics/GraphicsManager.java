@@ -1773,6 +1773,13 @@ public class GraphicsManager {
 		return tilemapGpuRenderer;
 	}
 
+	public void applyResolvedDisplayWidth(int pixelWidth) {
+		if (tilemapGpuRenderer == null) {
+			return;
+		}
+		tilemapGpuRenderer.applyResolvedDisplayWidth(pixelWidth);
+	}
+
 	public ShaderProgram getShadowShaderProgram() {
 		return shadowShaderProgram;
 	}

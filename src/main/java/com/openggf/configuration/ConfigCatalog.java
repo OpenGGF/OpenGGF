@@ -28,6 +28,11 @@ public final class ConfigCatalog {
     private static final List<SonicConfiguration> EMIT_ORDER;
     private static final Map<String, SonicConfiguration> BY_PATH = new LinkedHashMap<>();
     private static final Map<String, String> SECTION_TITLES = new LinkedHashMap<>();
+    private static final Set<String> LAUNCH_ASPECT_VALUES = Set.of(
+            "global", "NATIVE_4_3", "WIDE_16_10", "WIDE_16_9", "ULTRA_21_9", "SUPER_32_9");
+    private static final Set<String> LAUNCH_CROSS_GAME_VALUES = Set.of("off", "s1", "s2", "s3k");
+    private static final Set<String> LAUNCH_MAIN_CHARACTER_VALUES = Set.of("sonic", "tails", "knuckles");
+    private static final Set<String> LAUNCH_SIDEKICK_VALUES = Set.of("none", "sonic", "tails", "knuckles");
 
     private static void put(SonicConfiguration key, ConfigKeyMeta meta) {
         META.put(key, meta);
@@ -131,6 +136,46 @@ public final class ConfigCatalog {
                 "Enable cross-game feature donation (e.g. S2 sprites in S1)"));
         put(CROSS_GAME_SOURCE, ofEnum("crossGame", "source",
                 "Donor game for cross-game features", Set.of("s2", "s3k")));
+
+        // launch (per-game master-title profile defaults)
+        put(LAUNCH_S1_REWIND, of("launch.s1", "rewind", BOOL,
+                "Default Sonic 1 launch profile: enable live rewind"));
+        put(LAUNCH_S1_CROSS_GAME_SOURCE, ofEnum("launch.s1", "crossGameSource",
+                "Default Sonic 1 launch profile: cross-game donor", LAUNCH_CROSS_GAME_VALUES));
+        put(LAUNCH_S1_DEBUG_TOOLS, of("launch.s1", "debugTools", BOOL,
+                "Default Sonic 1 launch profile: enable debug tools"));
+        put(LAUNCH_S1_ASPECT, ofEnum("launch.s1", "aspect",
+                "Default Sonic 1 launch profile: display aspect override", LAUNCH_ASPECT_VALUES));
+        put(LAUNCH_S1_MAIN_CHARACTER, ofEnum("launch.s1", "mainCharacter",
+                "Default Sonic 1 launch profile: main character", LAUNCH_MAIN_CHARACTER_VALUES));
+        put(LAUNCH_S1_SIDEKICK, ofEnum("launch.s1", "sidekick",
+                "Default Sonic 1 launch profile: sidekick character", LAUNCH_SIDEKICK_VALUES));
+
+        put(LAUNCH_S2_REWIND, of("launch.s2", "rewind", BOOL,
+                "Default Sonic 2 launch profile: enable live rewind"));
+        put(LAUNCH_S2_CROSS_GAME_SOURCE, ofEnum("launch.s2", "crossGameSource",
+                "Default Sonic 2 launch profile: cross-game donor", LAUNCH_CROSS_GAME_VALUES));
+        put(LAUNCH_S2_DEBUG_TOOLS, of("launch.s2", "debugTools", BOOL,
+                "Default Sonic 2 launch profile: enable debug tools"));
+        put(LAUNCH_S2_ASPECT, ofEnum("launch.s2", "aspect",
+                "Default Sonic 2 launch profile: display aspect override", LAUNCH_ASPECT_VALUES));
+        put(LAUNCH_S2_MAIN_CHARACTER, ofEnum("launch.s2", "mainCharacter",
+                "Default Sonic 2 launch profile: main character", LAUNCH_MAIN_CHARACTER_VALUES));
+        put(LAUNCH_S2_SIDEKICK, ofEnum("launch.s2", "sidekick",
+                "Default Sonic 2 launch profile: sidekick character", LAUNCH_SIDEKICK_VALUES));
+
+        put(LAUNCH_S3K_REWIND, of("launch.s3k", "rewind", BOOL,
+                "Default Sonic 3&K launch profile: enable live rewind"));
+        put(LAUNCH_S3K_CROSS_GAME_SOURCE, ofEnum("launch.s3k", "crossGameSource",
+                "Default Sonic 3&K launch profile: cross-game donor", LAUNCH_CROSS_GAME_VALUES));
+        put(LAUNCH_S3K_DEBUG_TOOLS, of("launch.s3k", "debugTools", BOOL,
+                "Default Sonic 3&K launch profile: enable debug tools"));
+        put(LAUNCH_S3K_ASPECT, ofEnum("launch.s3k", "aspect",
+                "Default Sonic 3&K launch profile: display aspect override", LAUNCH_ASPECT_VALUES));
+        put(LAUNCH_S3K_MAIN_CHARACTER, ofEnum("launch.s3k", "mainCharacter",
+                "Default Sonic 3&K launch profile: main character", LAUNCH_MAIN_CHARACTER_VALUES));
+        put(LAUNCH_S3K_SIDEKICK, ofEnum("launch.s3k", "sidekick",
+                "Default Sonic 3&K launch profile: sidekick character", LAUNCH_SIDEKICK_VALUES));
 
         // discord
         put(DISCORD_RICH_PRESENCE_ENABLED, of("discord", "enabled", BOOL,
@@ -259,6 +304,7 @@ public final class ConfigCatalog {
         SECTION_TITLES.put("startup", "Startup");
         SECTION_TITLES.put("rewind", "Rewind (live)");
         SECTION_TITLES.put("crossGame", "Cross-Game");
+        SECTION_TITLES.put("launch", "Launch Profiles");
         SECTION_TITLES.put("discord", "Discord Rich Presence");
         SECTION_TITLES.put("capture", "Trace Capture");
     }
