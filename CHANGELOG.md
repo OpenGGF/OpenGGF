@@ -28,6 +28,12 @@ All notable changes to the OpenGGF project are documented in this file.
   This advances the OOZ2 trace frontier from frame 222 to frame 324, exposing
   the next CPU-interact lifetime mismatch on the second collapsing platform.
 
+- **S2 Obj1F vertically clipped parent slots now survive CPU refresh:**
+  falling collapsed-platform parents that are still horizontally visible now
+  remain alive across the ROM-visible refresh window before deletion, while
+  horizontal offscreen deletion stays immediate. This advances the OOZ2 trace
+  frontier again from frame 324 to frame 391.
+
 - **S3K CNZ/MHZ carry intro handoff now starts from ROM CPU state:** complete-run
   trace bootstrap now arms the native Tails carry routine after the title-card
   handoff for CNZ1 and MHZ1, including ROM placement, initial falling velocity,

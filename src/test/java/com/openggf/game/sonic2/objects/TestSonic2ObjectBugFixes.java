@@ -410,6 +410,7 @@ class TestSonic2ObjectBugFixes {
         platform.setServices(services);
         setBooleanField(platform, "collapsed", true);
         setIntField(platform, "parentY", 0x0700);
+        setIntField(platform, "verticalOnlyOffscreenTicks", 2);
 
         AbstractObjectInstance.updateCameraBounds(0x0200, 0x052C, 0x0340, 0x060C, 0);
 
@@ -456,6 +457,32 @@ class TestSonic2ObjectBugFixes {
 
         assertFalse(platform.isDestroyed(),
                 "Obj1F lacks render_flags.explicit_height, so BuildSprites keeps it through the 32px approximate Y band");
+    }
+
+    @Test
+    void collapsingPlatformFragmentFallKeepsVerticalOnlyOffscreenParentForCpuSlotRefresh() throws Exception {
+        StubObjectServices services = new StubObjectServices();
+        CollapsingPlatformObjectInstance platform = ObjectConstructionContext.construct(services,
+                () -> new CollapsingPlatformObjectInstance(
+                        new ObjectSpawn(0x0441, 0x05B0, Sonic2ObjectIds.COLLAPSING_PLATFORM, 0x00, 0, false, 0),
+                        "CollapsPform"));
+        platform.setServices(services);
+        setBooleanField(platform, "collapsed", true);
+        setIntField(platform, "parentY", 0x0606);
+
+        AbstractObjectInstance.updateCameraBounds(0x0428, 0x0506, 0x0568, 0x05E6, 0);
+
+        platform.update(324, new TestablePlayableSprite("sonic", (short) 0x04C0, (short) 0x0555));
+        assertFalse(platform.isDestroyed(),
+                "A vertically clipped but horizontally visible Obj1F parent must survive the first CPU refresh tick");
+
+        platform.update(325, new TestablePlayableSprite("sonic", (short) 0x04C0, (short) 0x0555));
+        assertFalse(platform.isDestroyed(),
+                "The second CPU refresh still observes the Obj1F id before the ROM slot clears");
+
+        platform.update(326, new TestablePlayableSprite("sonic", (short) 0x04C0, (short) 0x0555));
+        assertTrue(platform.isDestroyed(),
+                "Once the vertical-only grace expires, Obj1F_FragmentFall deletes the parent slot");
     }
 
     @Test

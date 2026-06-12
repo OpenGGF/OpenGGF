@@ -155,6 +155,7 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
     // its approximate Y culling band instead of y_radius(a0)
     // (docs/s2disasm/s2.asm:30584-30619).
     private static final int APPROX_RENDER_Y_MARGIN = 0x20;
+    private static final int VERTICAL_ONLY_OFFSCREEN_DELETE_TICKS = 2;
 
     private ZoneConfig config;
     private int delayCounter = INITIAL_DELAY;
@@ -168,6 +169,7 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
     private int parentVelY;
     private int parentY;
     private int parentYFrac;
+    private int verticalOnlyOffscreenTicks;
 
     // Orientation from spawn render_flags (inherited by fragments per disassembly)
     private final boolean hFlip;
@@ -215,7 +217,14 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
             y32 += ((int) (short) parentVelY) << 8;
             parentY = y32 >> 16;
             parentYFrac = y32 & 0xFFFF;
-            if (!isWithinRenderSpriteBounds(config.halfWidth(), APPROX_RENDER_Y_MARGIN)) {
+            if (isWithinRenderSpriteBounds(config.halfWidth(), APPROX_RENDER_Y_MARGIN)) {
+                verticalOnlyOffscreenTicks = 0;
+            } else if (isOnScreenX(config.halfWidth())
+                    && verticalOnlyOffscreenTicks < VERTICAL_ONLY_OFFSCREEN_DELETE_TICKS) {
+                // The ROM clears render_flags.on_screen in BuildSprites, after
+                // CPU follower code can still see horizontally visible Obj1F slots.
+                verticalOnlyOffscreenTicks++;
+            } else {
                 setDestroyed(true);
             }
             return;
@@ -235,6 +244,7 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
                 if (fragmentPhaseDelay <= 0) {
                     collapsed = true;
                     parentY = spawn.y();
+                    verticalOnlyOffscreenTicks = 0;
                     detachFragmentRiders(batch);
                 }
             }

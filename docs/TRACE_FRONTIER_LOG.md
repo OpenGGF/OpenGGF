@@ -1,5 +1,48 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S2 Obj1F vertical-only fall culling advances OOZ2 CPU interact frontier again
+
+- Scope: refined the S2 Obj1F collapsing-platform falling-parent lifecycle
+  without route carve-outs or trace-state hydration. When the detached parent
+  has moved outside the ROM approximate Y culling band but is still
+  horizontally visible, the engine now preserves the object slot for the two
+  CPU-visible refresh ticks before deletion. Horizontal offscreen deletion
+  remains immediate.
+- Disassembly basis:
+  - `Obj1F_FragmentFall` moves the detached parent, tests
+    `render_flags.on_screen`, then deletes only after that flag is clear
+    (`docs/s2disasm/s2.asm:23860-23864`).
+  - S2 `BuildSprites` owns the approximate Y visibility clear for objects
+    without `render_flags.explicit_height`, using the +/-32 px band
+    (`docs/s2disasm/s2.asm:30584-30619`).
+- Focused verification:
+  - `mvn -Dmse=off "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" test`
+  - Result: **Tests run: 27, Failures: 0, Errors: 0, Skipped: 0**.
+  - `mvn -Dmse=off "-Ds2.rom.path=s2.gen" "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  - Result: still red, but `s2_ooz2` advanced from frame 324 to frame 391.
+  - `mvn -Dmse=off "-Ds2.rom.path=s2.gen" "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2HtzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  - Result: adjacent S2 Tails CPU representatives stayed at their existing
+    frontiers while OOZ2 advanced.
+- Full sweep command:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test`
+- Full sweep result:
+  - **Tests run: 90, Failures: 63, Errors: 1, Skipped: 0** from
+    Maven/Surefire. This is not a green all-trace certification; CI remains
+    expected-red on the known trace frontier set.
+- CI guard verification for the develop push failure cluster:
+  - `mvn -Dmse=off "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.TestNoServicesInObjectConstructors,com.openggf.tests.TestBuildToolingGuard,com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.tests.TestArchUnitRules,com.openggf.sprites.playable.TestPlayableRuntimeAccessGuard,com.openggf.level.objects.TestObjectPhysicsStandardizationGuard,com.openggf.game.rewind.TestRewindFieldAudit,com.openggf.game.rewind.TestRewindTransientGuard,com.openggf.game.sonic3k.objects.TestSonic3kSpringObjectInstance" test`
+  - Result: **Tests run: 185, Failures: 0, Errors: 0, Skipped: 0**.
+- Frontier movement:
+
+| Trace | Previous frontier | New frontier | Delta |
+|---|---:|---:|---:|
+| `s2_ooz2` | f324 `tails_cpu_interact` `0x001F -> 0x0000` | f391 `tails_cpu_interact` `0x0019 -> 0x0000` | +67 |
+
+- Interpretation: the second OOZ2 Obj1F parent slot no longer clears too
+  early while vertically clipped but still horizontally visible. The next
+  exposed owner remains in the S2 Tails CPU/object-interact cluster, now
+  around the following object lifetime/interact refresh at frame 391.
+
 ## 2026-06-12 - S1/S2 roll-stop rule advances shared rolling/radius cluster
 
 - Scope: fixed the shared S1/S2 rolling frontier without route carve-outs or
