@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Develop CI guard suite now matches the runtime access contracts:** object
+  construction, playable runtime access, architecture, rewind-field, and S3K
+  spring handoff guards were brought back into sync with the current service
+  and native-position APIs after the develop push exposed those failures.
+
 - **S2 Obj1F collapsing-platform fragments now match parent-slot reuse:**
   collapsed platforms now keep the parent object as fragment 0, allocate only
   the remaining six fragments into free SST slots, and delete the detached

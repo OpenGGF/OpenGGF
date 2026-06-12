@@ -1,5 +1,6 @@
 package com.openggf.sprites;
 
+import com.openggf.game.PlayableEntity;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
@@ -14,6 +15,10 @@ public final class NativePositionOps {
     }
 
     public static void writeYPosPreserveSubpixel(AbstractPlayableSprite player, int y) {
+        player.setCentreYPreserveSubpixel((short) y);
+    }
+
+    public static void writeYPosPreserveSubpixel(PlayableEntity player, int y) {
         player.setCentreYPreserveSubpixel((short) y);
     }
 

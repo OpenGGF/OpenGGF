@@ -455,6 +455,8 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         if (landingHandoff) {
             player.setAir(false);
             player.setYSpeed((short) 0);
+            player.setAngle((byte) 0);
+            player.setGroundMode(GroundMode.GROUND);
         }
         proactiveTriggeredThisUpdate.add(player);
         applyHorizontalSpring(player);

@@ -59,7 +59,6 @@ public class ExplosionObjectInstance extends AbstractObjectInstance {
         this.pointsFactory = null;
         this.pointsValue = 0;
         this.pendingSfxId = sfxId;
-        playPendingSfxIfPossible();
     }
 
     public ExplosionObjectInstance(int id, int x, int y, ObjectRenderManager renderManager,
@@ -132,18 +131,12 @@ public class ExplosionObjectInstance extends AbstractObjectInstance {
         // S3K Obj_Explosion routine 0 allocates Obj_Animal before initializing
         // its animation/SFX (docs/skdisasm/sonic3k.asm:42157-42180).
         if (animalFactory != null) {
-            ObjectInstance animal = animalFactory.create(
-                    new ObjectSpawn(x, y, 0x28, 0, 0, false, 0), svc);
-            if (animal != null) {
-                objectManager.addDynamicObject(animal);
-            }
+            objectManager.createDynamicObject(() -> animalFactory.create(
+                    new ObjectSpawn(x, y, 0x28, 0, 0, false, 0), svc));
         }
         if (pointsFactory != null) {
-            ObjectInstance points = pointsFactory.create(
-                    new ObjectSpawn(x, y, 0x29, 0, 0, false, 0), svc, pointsValue);
-            if (points != null) {
-                objectManager.addDynamicObject(points);
-            }
+            objectManager.createDynamicObject(() -> pointsFactory.create(
+                    new ObjectSpawn(x, y, 0x29, 0, 0, false, 0), svc, pointsValue));
         }
     }
 

@@ -1,7 +1,6 @@
 package com.openggf.sprites.managers;
 
 import com.openggf.game.GameModule;
-import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.PhysicsFeatureSet;
@@ -237,7 +236,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private Camera camera() {
-		return GameServices.cameraOrNull();
+		try {
+			return sprite.currentCamera();
+		} catch (IllegalStateException e) {
+			return null;
+		}
 	}
 
 	private Camera playerCameraBiasController() {

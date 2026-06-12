@@ -3132,14 +3132,12 @@ public class LevelManager {
         if (level == null || gameModule == null) {
             return;
         }
-        if (gameModule.getGameId() == GameId.S3K) {
-            LOGGER.fine("Skipping persisted S3K editor edits until MutableLevel supports S3K runtime overlays");
+        if (editorSaveManager == null || !editorSaveManager.supportsRuntimeEditApply(gameModule.getGameId())) {
             return;
         }
         MutableLevel mutableLevel = level instanceof MutableLevel existing
                 ? existing
                 : MutableLevel.snapshot(level);
-        if (editorSaveManager == null) return;
         EditorSaveManager.ApplyResult result = editorSaveManager.tryApplyEdits(gameModule.getGameId(), currentZone, currentAct, mutableLevel);
         if (result == EditorSaveManager.ApplyResult.APPLIED && mutableLevel != level) {
             setLevel(mutableLevel);

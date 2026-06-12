@@ -19,6 +19,7 @@ import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.PlayableEntity;
 import com.openggf.physics.Direction;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.io.IOException;
@@ -233,7 +234,7 @@ public final class HCZWaterSkimHandler {
 
         // NOW pin player Y to water surface (only if still skimming)
         // ROM: move.w d0,y_pos(a1) / move.w #0,y_vel(a1) (sonic3k.asm:75442-75443)
-        player.setCentreYPreserveSubpixel((short) pinnedY);
+        NativePositionOps.writeYPosPreserveSubpixel(player, pinnedY);
         player.setYSpeed((short) 0);
         if (player.getAir()) {
             // Obj_HCZWaterSplash runs in object order after the player
