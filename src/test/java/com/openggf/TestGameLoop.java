@@ -34,6 +34,7 @@ import com.openggf.game.dataselect.DataSelectSessionController;
 import com.openggf.game.launch.LaunchProfile;
 import com.openggf.game.launch.LaunchProfileApplier;
 import com.openggf.game.launch.LaunchProfileStore;
+import com.openggf.game.launch.MasterTitleLaunchCoordinator;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic3k.dataselect.S3kDataSelectProfile;
 import com.openggf.game.sonic2.Sonic2GameModule;
@@ -71,6 +72,8 @@ public class TestGameLoop {
     @BeforeEach
     public void setUp() {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SonicConfigurationService.getInstance().clearSessionOverrides();
+        SonicConfigurationService.getInstance().resolveDisplayAspect();
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
         TestEnvironment.activeGameplayMode();
         mockInputHandler = mock(InputHandler.class);
@@ -79,6 +82,8 @@ public class TestGameLoop {
 
     @AfterEach
     public void tearDown() {
+        SonicConfigurationService.getInstance().clearSessionOverrides();
+        SonicConfigurationService.getInstance().resolveDisplayAspect();
         gameLoop = null;
         SessionManager.clear();
         SessionManager.clear();
@@ -276,14 +281,13 @@ public class TestGameLoop {
         config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "SUPER_32_9");
 
         TrackingLaunchProfileStore store = new TrackingLaunchProfileStore(config,
-                new LaunchProfile(true, "s1", true, "WIDE_16_9", "knuckles", "none"));
-        setPrivateField(gameLoop, "launchProfileStore", store);
-        setPrivateField(gameLoop, "launchProfileApplier", new LaunchProfileApplier(config));
+                new LaunchProfile(true, "s1", true, "WIDE_16_9", "sonic", "none"));
+        installLaunchCoordinator(config, store);
 
         AtomicReference<String> handled = new AtomicReference<>();
         gameLoop.setMasterTitleExitHandler(gameId -> {
             handled.set(gameId);
-            assertEquals("knuckles", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
+            assertEquals("sonic", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
             assertEquals("", config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
             assertEquals(true, config.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
             assertEquals("s1", config.getString(SonicConfiguration.CROSS_GAME_SOURCE));
@@ -314,8 +318,7 @@ public class TestGameLoop {
 
         TrackingLaunchProfileStore store = new TrackingLaunchProfileStore(config,
                 new LaunchProfile(true, "s3k", true, "WIDE_16_9", "knuckles", "none"));
-        setPrivateField(gameLoop, "launchProfileStore", store);
-        setPrivateField(gameLoop, "launchProfileApplier", new LaunchProfileApplier(config));
+        installLaunchCoordinator(config, store);
 
         gameLoop.setMasterTitleExitHandler(gameId -> {
             assertEquals("s3k", gameId);
@@ -340,13 +343,13 @@ public class TestGameLoop {
         config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
         config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
         TrackingLaunchProfileStore store = new TrackingLaunchProfileStore(config,
-                new LaunchProfile(true, "s1", true, "WIDE_16_9", "knuckles", "none"));
-        setPrivateField(gameLoop, "launchProfileStore", store);
-        setPrivateField(gameLoop, "launchProfileApplier", new LaunchProfileApplier(config));
+                new LaunchProfile(true, "s1", true, "WIDE_16_9", "sonic", "none"));
+        installLaunchCoordinator(config, store);
 
         invokePrivateMethod(gameLoop, "doExitMasterTitleScreen",
                 new Class<?>[] {String.class, boolean.class}, "s2", false);
-        assertEquals("knuckles", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertEquals("sonic", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertEquals("", config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
         assertEquals(400, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
 
         gameLoop.setMasterTitleExitHandler(gameId -> {
@@ -372,15 +375,14 @@ public class TestGameLoop {
 
         TrackingLaunchProfileStore store = new TrackingLaunchProfileStore(config,
                 new LaunchProfile(true, "s1", true, "WIDE_16_9", "knuckles", "none"));
-        setPrivateField(gameLoop, "launchProfileStore", store);
-        setPrivateField(gameLoop, "launchProfileApplier", new LaunchProfileApplier(config));
+        MasterTitleLaunchCoordinator coordinator = installLaunchCoordinator(config, store);
         SessionManager.clear();
         gameLoop.setGameplayMode(null);
         setPrivateField(gameLoop, "currentGameMode", GameMode.MASTER_TITLE_SCREEN);
         FadeManager fadeManager = mock(FadeManager.class);
         setPrivateField(gameLoop, "fadeManager", fadeManager);
         AtomicBoolean callbackRan = new AtomicBoolean(false);
-        setPrivateField(gameLoop, "pendingMasterTitleLaunchCallback", (Runnable) () -> callbackRan.set(true));
+        coordinator.setPendingLaunchCallback(() -> callbackRan.set(true));
 
         gameLoop.setMasterTitleExitHandler(gameId -> {
             assertEquals("s2", gameId);
@@ -399,8 +401,8 @@ public class TestGameLoop {
         assertFalse(config.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
         assertEquals(320, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
         assertFalse(callbackRan.get(), "failed startup must not run the staged trace launch callback");
-        assertNull(getPrivateField(gameLoop, "pendingMasterTitleLaunchCallback"));
-        assertNull(getPrivateField(gameLoop, "afterStepMasterTitleLaunchCallback"));
+        assertNull(getPrivateField(coordinator, "pendingLaunchCallback"));
+        assertNull(getPrivateField(coordinator, "afterStepLaunchCallback"));
         verify(fadeManager).startFadeFromBlack(isNull());
     }
 
@@ -415,14 +417,13 @@ public class TestGameLoop {
         config.resolveDisplayAspect();
 
         TrackingLaunchProfileStore store = new TrackingLaunchProfileStore(config,
-                new LaunchProfile(true, "s1", true, "WIDE_16_9", "knuckles", "none"));
-        setPrivateField(gameLoop, "launchProfileStore", store);
-        setPrivateField(gameLoop, "launchProfileApplier", new LaunchProfileApplier(config));
+                new LaunchProfile(true, "s1", true, "WIDE_16_9", "sonic", "none"));
+        MasterTitleLaunchCoordinator coordinator = installLaunchCoordinator(config, store);
         SessionManager.clear();
         gameLoop.setGameplayMode(null);
         setPrivateField(gameLoop, "currentGameMode", GameMode.MASTER_TITLE_SCREEN);
         AtomicBoolean callbackRan = new AtomicBoolean(false);
-        setPrivateField(gameLoop, "pendingMasterTitleLaunchCallback", (Runnable) () -> callbackRan.set(true));
+        coordinator.setPendingLaunchCallback(() -> callbackRan.set(true));
 
         gameLoop.setMasterTitleExitHandler(gameId -> {
             assertEquals("s2", gameId);
@@ -433,7 +434,7 @@ public class TestGameLoop {
                 new Class<?>[] {String.class, boolean.class}, "s2", false);
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
-        assertEquals("knuckles", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertEquals("sonic", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
         assertEquals("", config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
         assertEquals(true, config.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
         assertEquals("s1", config.getString(SonicConfiguration.CROSS_GAME_SOURCE));
@@ -443,8 +444,8 @@ public class TestGameLoop {
         invokePrivateMethod(gameLoop, "runAfterStepMasterTitleLaunchCallbackIfPresent");
 
         assertTrue(callbackRan.get(), "successful direct gameplay launch should keep callback staging");
-        assertNull(getPrivateField(gameLoop, "pendingMasterTitleLaunchCallback"));
-        assertNull(getPrivateField(gameLoop, "afterStepMasterTitleLaunchCallback"));
+        assertNull(getPrivateField(coordinator, "pendingLaunchCallback"));
+        assertNull(getPrivateField(coordinator, "afterStepLaunchCallback"));
     }
 
     @Test
@@ -1794,6 +1795,15 @@ public class TestGameLoop {
         verify(levelSelect).initializeFromTitleScreen();
         verify(levelSelect, never()).initialize();
         verify((FadeManager) getPrivateField(gameLoop, "fadeManager"), never()).startFadeToBlack(any());
+    }
+
+    private MasterTitleLaunchCoordinator installLaunchCoordinator(SonicConfigurationService config,
+                                                                  TrackingLaunchProfileStore store)
+            throws Exception {
+        MasterTitleLaunchCoordinator coordinator = new MasterTitleLaunchCoordinator(
+                config, store, new LaunchProfileApplier(config));
+        setPrivateField(gameLoop, "masterTitleLaunchCoordinator", coordinator);
+        return coordinator;
     }
 
     private static void invokePrivateMethod(Object target, String methodName) throws Exception {
