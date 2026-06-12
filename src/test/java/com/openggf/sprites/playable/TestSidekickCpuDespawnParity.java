@@ -1319,8 +1319,9 @@ class TestSidekickCpuDespawnParity {
         controller.hydrateFromRomCpuState(0x06, 0, 0, 0, false, 0, 0);
         controller.update(0x2342);
 
-        assertFalse(controller.getInputJumpPress(),
-                "Obj02_MdRoll skips Tails_Jump while pinball_mode is set");
+        assertTrue(controller.getInputJumpPress(),
+                "TailsCPU_Normal still writes Ctrl_2_Press_Logical; Obj02_MdRoll skips "
+                        + "Tails_Jump later while pinball_mode is set");
         assertEquals(AbstractPlayableSprite.INPUT_JUMP,
                 controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_JUMP,
                 "The movement guard must not rewrite the ROM-visible Ctrl_2_Logical byte");

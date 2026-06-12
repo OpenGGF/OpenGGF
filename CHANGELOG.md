@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 sidekick pinball rolls now preserve the CPU jump press latch:** the
+  Tails CPU layer no longer clears the ROM-visible delayed jump press while
+  grounded rolling in `pinball_mode`; the existing roll movement path remains
+  responsible for skipping `Tails_Jump`. This advances `s2_htz2` from frame 831
+  `tails_cpu_jumping` to frame 936 `tails_cpu_ctrl2_held`.
+
 - **S2 sidekick despawn now preserves the ROM interact latch:** Tails CPU
   marker/despawn transitions no longer refresh the cached stood-on object id
   from a replacement slot or clear it during the marker warp. This matches the
