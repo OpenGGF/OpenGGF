@@ -15,10 +15,14 @@ profile diverges from stock and how to open the panel.
 ## Scope decisions (from brainstorming)
 
 - **Per-game profiles**, not a single global option set.
-- **Stock wins for everyone:** profiles start stock; the existing global config
-  keys are *ignored* when launching through the master title screen. Direct
+- **Stock wins for everyone:** profiles start stock; the global config keys
+  for the *gameplay* options (rewind, cross-game, debug tools, characters)
+  are *ignored* when launching through the master title screen. Direct
   launches (master title disabled, trace sessions) keep today's global-key
-  behavior unchanged. No migration/seeding from globals.
+  behavior unchanged. No migration/seeding from globals. **Exception:** the
+  Widescreen row's stock value is Global — it inherits `display.aspect`
+  because aspect is a presentation preference, not a gameplay option (see
+  row semantics below).
 - **Fully functional:** UI + persistence + options genuinely applied at launch.
 - **Rows limited to finished features:** collision view and the level editor
   are excluded for now (unfinished). The debug row is named **Debug Tools**
@@ -33,7 +37,10 @@ profile diverges from stock and how to open the panel.
 When the selected game's ROM is present, a centered line renders above the game
 menu (~y 177, between the ROM preview matte and the menu row):
 
-- Stock profile: `Stock game · Tab to configure` (dim grey).
+- Stock profile: `Stock launch · Tab to configure` (dim grey). ("Launch",
+  not "game" — the widescreen row's stock inherits the global display
+  aspect, so "stock" describes the launch profile, not original-hardware
+  presentation.)
 - Diverged: `3 options enabled · Tab to configure` (gold tint).
 
 Missing-ROM games show no line and Tab is a no-op.
@@ -81,6 +88,8 @@ Non-standard rules:
 
 - Rewind On, Cross-Game Donation ≠ Off, Debug Tools On: always non-standard
   (engine features).
+- Widescreen: pinned widescreen presets (16:10, 16:9, 21:9, 32:9) are
+  non-standard; Global and pinned Native 4:3 are not.
 - Characters are validated **as a (main, sidekick) pair** against the game's
   authentic `Player_mode` combos:
   - S1: (sonic, none)
@@ -177,14 +186,20 @@ Stale overrides must never outlive the launch they belong to. The overlay is
 cleared:
 
 1. **At every master-title exit**, in `GameLoop.doExitMasterTitleScreen`,
-   *before* the apply/skip decision: user launches clear-then-apply; \
-   programmatic launches clear-then-skip. This protects
-   `TraceReplaySessionBootstrap.prepareConfiguration()`, which writes
-   trace-required main/sidekick/cross-game values via `setConfigValue` into
-   the base map — an uncleaned overlay would mask them.
-2. **On return to the master title** (`GameLoop.returnToMasterTitle` path),
+   *before* the apply/skip decision: user launches clear-then-apply;
+   programmatic launches clear-then-skip. This protects downstream game
+   init (team bootstrap, providers) from the previous launch's profile.
+2. **At the top of `TraceSessionLauncher.launch()`**, before
+   `TraceReplaySessionBootstrap.snapshotGameplayConfig()` and
+   `prepareConfiguration()` run — both execute *before* `launchGameByEntry`
+   reaches the doExit clear (`TraceSessionLauncher.java:129-139`). Without
+   this, the snapshot would capture overlay-masked values (and teardown
+   would then "restore" profile values into the base map), and the
+   trace-required main/sidekick/cross-game writes — which go into the base
+   map via `setConfigValue` — would stay masked by the overlay.
+3. **On return to the master title** (`GameLoop.returnToMasterTitle` path),
    so the title screen itself and the trace picker read persisted values.
-3. **In `SonicConfigurationService.resetToDefaults()`**, so test/headless
+4. **In `SonicConfigurationService.resetToDefaults()`**, so test/headless
    resets start overlay-free.
 
 ### Engine-lifetime cached readers
@@ -286,7 +301,7 @@ only when a profile is enabled".
   `InputHandler`, no GL.
 - Hover-line text: static pure function on `MasterTitleScreen` (existing
   `menuTextColor`-style test approach).
-- `TestConfigCatalog` green with the 15 new keys.
+- `TestConfigCatalog` green with the 18 new keys.
 
 ## Out of scope / follow-ups
 
