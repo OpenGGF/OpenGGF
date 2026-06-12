@@ -161,8 +161,9 @@ class TestTraceReplayStartPositionPolicy {
                 "src/test/java/com/openggf/tests/trace/AbstractTraceReplayTest.java"));
         String releaseIssues = Files.readString(Path.of("docs/release-architecture-review-issues.md"));
 
-        assertTrue(testBase.contains("SidekickCpuView and per-slot SST snapshots are left null/empty"),
-                "The trace test base must keep the missing frame-0 sidekick/SST views visible.");
+        assertTrue(testBase.contains("Sidekick CPU state is now captured")
+                        && testBase.contains("Per-slot SST snapshots are still left empty"),
+                "The trace test base must keep captured sidekick CPU state and missing frame-0 SST views visible.");
         assertTrue(releaseIssues.contains("not a full sidekick/SST parity proof"),
                 "Release notes must not claim warning-only bootstrap gaps prove strict parity.");
     }

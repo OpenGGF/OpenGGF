@@ -12,13 +12,15 @@
 
 ## Source Inputs
 
-- `SIDEKICK_CPU_AUDIT.tmp.md`: disassembly-complete audit of `SidekickCpuController`, `TailsRespawnStrategy`, playable history buffers, and signpost/end-of-act side effects.
-- `RELEASE_REVIEW_FINDINGS.tmp.md`: release architecture/code review findings, including entries already fixed, refuted entries, backlog entries, and confirmed release-facing defects.
+- `SIDEKICK_CPU_AUDIT.tmp.md` (now removed from the workspace): disassembly-complete audit of `SidekickCpuController`, `TailsRespawnStrategy`, playable history buffers, and signpost/end-of-act side effects.
+- `RELEASE_REVIEW_FINDINGS.tmp.md` (now removed from the workspace): release architecture/code review findings, including entries already fixed, refuted entries, backlog entries, and confirmed release-facing defects.
+- `docs/tmp-release-sweep-issues.md` and `docs/tmp-release-review-fix-issues.md` (folded here and removed): temporary release-sweep trackers whose open items are now either completed below, deferred in permanent release docs, or represented in the remaining outstanding list.
+- `docs/release-architecture-review-issues.md` and `docs/RELEASE_READINESS_ROADMAP.md`: permanent release-history/debt trackers still referenced by guard tests; this file is the active remediation plan, while those files remain evidence for release-policy and bootstrap-debt assertions.
 - `docs/superpowers/plans/2026-06-11-performance-optimization.md`: performance remediation plan for audio, rendering, rewind, object, and hot-loop overhead.
 - `docs/superpowers/specs/2026-06-11-performance-optimization-design.md`: source-backed performance problem statement and phase design.
 - Conversation remediation plan from 2026-06-11: prioritize release blockers, sidekick parity, medium-risk correctness, docs/release hygiene, and verification.
 
-These `.tmp.md` and performance scratch files must remain uncommitted or be removed after their contents are folded here. This plan is the durable replacement artifact and the single source of truth for the release-remediation goal.
+The removed `.tmp.md` files and tracked `docs/tmp-*` scratch trackers must not be reintroduced. This plan is the durable replacement artifact and the single source of truth for the active release-remediation goal; referenced permanent docs remain only as release-policy evidence and historical debt records.
 
 ## Implementation Status Snapshot
 
@@ -242,6 +244,14 @@ Completed in `bugfix/ai-release-remediation`:
   main-player `rings expected=42 actual=0` to frame 3273 main-player
   `rings expected=1 actual=0`; main-player position, speeds, camera, sidekick
   state, and Tails CPU state match through the former hidden-hurt frontier.
+- ICZ lost-ring display-timer progression: the shared player
+  `invulnerable_time` tick now runs in the ROM display phase before touch
+  response reads the spilled-ring collection threshold, while `tickStatus()`
+  guards against a second same-frame decrement. The ICZ complete-run trace
+  moved from frame 3273 main-player `rings expected=1 actual=0` to frame 3323
+  main-player `rings expected=2 actual=1`; main-player position, speeds, angle,
+  air/rolling state, camera, sidekick state, and Tails CPU fields match through
+  the former re-collection frontier.
 
 Still outstanding:
 
@@ -249,8 +259,8 @@ Still outstanding:
 - Rejected HCZ frame-9482 hypothesis: a local probe that preserved captured water-effect players and released them after the inherited `waitTimer=52` moved the first divergence backward to frame 9470 (`air expected=0`, `actual=1`). A prior hardcoded `(2*60)-1` defeat-release wait also failed to move the frontier. Do not commit a timer-only release fix; continue by modeling the ROM child/parent status handoff that makes `sub_6A960 -> loc_6A986` set player `Status_InAir` at the correct object-update phase.
 - Rejected HCZ frame-9482 hypothesis: the fixed S3K `Obj_AirCountdown` sidecar is not the missing writer. `AirCountdown_Countdown` only sets `Status_InAir` on the drowning-death path after `Player_TouchFloor`, not on every underwater countdown tick; a local broad `owner.setAir(true)` probe regressed HCZ from frame 9482 to frame 298 (`air expected=0`, `actual=1`). Treat the frame-9482 `airCnt` aux rows as timing/context diagnostics, not as the direct release writer.
 - Rejected HCZ frame-896 hypothesis: button-local `isSolidFor` counters/underwater-entry deferrals and a broad shared first-frame render-flag lifecycle change were tested. Neither moved the HCZ trace; the shared lifecycle attempt regressed a focused `TestSolidObjectManager` boundary case, so both directions were removed. The accepted direction was ROM `SolidObjectTop_1P` boundary rejection plus `Obj_Button` same-frame trigger publication.
-- Remaining SK-1 verification: S3K complete-run trace coverage for fresh sidekick spawn/init-only frame and dormant park semantics. HCZ frame-2894 sidekick follow-history jump-edge publication, frame-3318 conveyor release center preservation, frame-3355 conveyor coarse-back culling, frame-3850 native-P2 roll-stop, frame-4286 water-skim airborne gravity handoff, frame-4403 water-skim subpixel pin, frame-4872 AutoSpin wall-mode X preservation, and the frame-5726 through 9337 HCZ object/sidekick/miniboss slices are covered and advanced; HCZ now needs ROM-state triage of the frame-9482 post-vortex air-state frontier, while ICZ needs frame-3273 lost-ring re-collection triage and LBZ/MGZ complete-run coverage remains outstanding.
-- Remaining sidekick audit backlog: complete-run SK-1 trace verification for LBZ/MGZ, CNZ/MGZ input-alignment frontiers, and MGZ complete-run ring mismatch. The former HCZ frame-2894 sidekick input frontier and ICZ frame-0/frame-29/frame-117/frame-163/frame-171/frame-488/frame-505/frame-1112/frame-1314/frame-1646/frame-1667/frame-1708/frame-1987/frame-2061/frame-2263/frame-2268/frame-2600/frame-2644/frame-2836/frame-2837/frame-2838/frame-2875/frame-2964/frame-2967/frame-3102/frame-3174 snowboard startup/ground-speed/ring/jump-timing/slope-handoff/subpixel/dormant-Tails/pile-jump/horizontal-spring-angle/swinging-platform-order/child-solid/stale-rolling-push/segment-column-interact/Insta-Shield/Star-Pointer/slide-terrain timing/facing/freezer capture/side-clamp/frozen-block lifetime/directional-inertia/freezer sidekick-release/freezer subpixel/path-platform jitter/hidden-hurt ring-spend mismatches are now resolved.
+- Remaining SK-1 verification: S3K complete-run trace coverage for fresh sidekick spawn/init-only frame and dormant park semantics. HCZ frame-2894 sidekick follow-history jump-edge publication, frame-3318 conveyor release center preservation, frame-3355 conveyor coarse-back culling, frame-3850 native-P2 roll-stop, frame-4286 water-skim airborne gravity handoff, frame-4403 water-skim subpixel pin, frame-4872 AutoSpin wall-mode X preservation, and the frame-5726 through 9337 HCZ object/sidekick/miniboss slices are covered and advanced; HCZ now needs ROM-state triage of the frame-9482 post-vortex air-state frontier, while ICZ needs frame-3323 second lost-ring collection triage and LBZ/MGZ complete-run coverage remains outstanding.
+- Remaining sidekick audit backlog: complete-run SK-1 trace verification for LBZ/MGZ, CNZ/MGZ input-alignment frontiers, and MGZ complete-run ring mismatch. The former HCZ frame-2894 sidekick input frontier and ICZ frame-0/frame-29/frame-117/frame-163/frame-171/frame-488/frame-505/frame-1112/frame-1314/frame-1646/frame-1667/frame-1708/frame-1987/frame-2061/frame-2263/frame-2268/frame-2600/frame-2644/frame-2836/frame-2837/frame-2838/frame-2875/frame-2964/frame-2967/frame-3102/frame-3174/frame-3273 snowboard startup/ground-speed/ring/jump-timing/slope-handoff/subpixel/dormant-Tails/pile-jump/horizontal-spring-angle/swinging-platform-order/child-solid/stale-rolling-push/segment-column-interact/Insta-Shield/Star-Pointer/slide-terrain timing/facing/freezer capture/side-clamp/frozen-block lifetime/directional-inertia/freezer sidekick-release/freezer subpixel/path-platform jitter/hidden-hurt ring-spend/lost-ring display-timer mismatches are now resolved.
 - Performance remediation remains planned but not executed on this branch. Its work is intentionally sequenced after the active correctness/trace issues because several proposed optimizations cross audio, rendering, rewind, and object lifecycles and require baseline measurement plus trace sweeps before implementation.
 - Lower-priority release-review hygiene that was not part of the release-blocker fix set.
 
@@ -681,7 +691,7 @@ This file replaces the two untracked `.tmp.md` files as the durable planning art
 
 Run: `git status --short`
 
-Expected: `SIDEKICK_CPU_AUDIT.tmp.md` and `RELEASE_REVIEW_FINDINGS.tmp.md` are untracked unless intentionally ignored later.
+Expected: `SIDEKICK_CPU_AUDIT.tmp.md`, `RELEASE_REVIEW_FINDINGS.tmp.md`, and the folded `docs/tmp-*` scratch trackers are absent from the workspace unless intentionally recreated as untracked local notes.
 
 ### Task 2: Debug-Key and Art-Viewer Release Gating
 
