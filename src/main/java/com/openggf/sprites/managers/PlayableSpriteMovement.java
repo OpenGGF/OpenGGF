@@ -2035,6 +2035,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		short preRollCentreX = sprite.getCentreX();
 		sprite.setRolling(true);
+		if (fs != null && fs.animationChangeClearsPush()) {
+			// Tails_Roll/SonicKnux_Roll write anim=#2 on roll entry
+			// (sonic3k.asm:23259-23264,28494-28500). Animate_Tails/
+			// Animate_Sonic later clears Status_Push when anim != prev_anim
+			// (sonic3k.asm:29359-29364,29681-29686); the engine writes the
+			// roll animation inside setRolling(), so clear the same status bit
+			// at the movement transition.
+			sprite.setPushing(false);
+		}
 		// ROM roll entry writes y_radius/x_radius and y_pos only; x_pos is not
 		// modified in S1/S2/S3K (S1 01 Sonic.asm:1095-1099;
 		// S2 s2.asm:37003-37008; S3K SonicKnux_Roll sonic3k.asm:23259-23264,

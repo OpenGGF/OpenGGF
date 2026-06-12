@@ -1655,6 +1655,51 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void s3kRollingNonzeroGroundSpeedPushFallsThroughNearIczSegmentColumn() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x3EE5);
+        tails.setCentreY((short) 0x06F3);
+        tails.setDirection(Direction.RIGHT);
+        tails.setRolling(true);
+        tails.setPushing(true);
+        tails.captureOnObjectAtFrameStart();
+        tails.setGSpeed((short) 0x0800);
+        tails.setXSpeed((short) 0);
+        tails.setYSpeed((short) 0);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x3EED);
+        Arrays.fill(yHistory, (short) 0x06F2);
+        Arrays.fill(statusHistory, (byte) AbstractPlayableSprite.STATUS_ROLLING);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        sonic.setGSpeed((short) 0x07AD);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        controller.update(0x07C3);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("leader_fast", diagnostics.followBranch(),
+                        "ICZ F1987 has Tails rolling with nonzero ground_vel; S3K's "
+                                + "rolling wall-push tail zeroes ground_vel when it sets Status_Push, "
+                                + "so this stale engine push bit must not take loc_13DD0."),
+                () -> assertFalse(diagnostics.skipFollowSteering()),
+                () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                        "FollowRight applies ROM's +1 x_pos nudge before Tails_RollSpeed "
+                                + "projects the $0800 ground speed (sonic3k.asm:26734-26741)."));
+    }
+
+    @Test
     void s3kLocalPushGracePreservesFollowInputWithoutNudgingIntoAizIntroSpringWall() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");

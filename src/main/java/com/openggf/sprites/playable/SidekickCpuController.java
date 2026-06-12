@@ -1776,8 +1776,13 @@ public class SidekickCpuController {
                         | AbstractPlayableSprite.STATUS_PUSHING)) != 0;
         boolean currentStatusPush =
                 (diagnostics.preStatus() & AbstractPlayableSprite.STATUS_PUSHING) != 0;
+        boolean rollingNonzeroGroundSpeedStalePush =
+                !sidekick.getAir() && sidekick.getRolling() && sidekick.getGSpeed() != 0;
+        boolean romVisibleCurrentStatusPush =
+                currentStatusPush && !rollingNonzeroGroundSpeedStalePush;
         boolean frameStartStatusPush = sidekick.getPushingAtFrameStart();
         boolean frameStartPushBypass = frameStartStatusPush
+                && !rollingNonzeroGroundSpeedStalePush
                 && (recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && isCurrentPushBypassContext(delayedObjectOrPushContext, dy);
         PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
@@ -1792,7 +1797,12 @@ public class SidekickCpuController {
         // follow/accel residue is stale and must fall through FollowLeft.
         boolean restrictUnderwaterPushBypassToContactPulses =
                 fs != null && fs.sidekickPushBypassUsesGraceStatus();
-        boolean currentPushBypass = (currentStatusPush
+        // Tails_RollSpeed reaches the same wall-response tail as walking
+        // movement, and that tail zeroes ground_vel before setting
+        // Status_Push (sonic3k.asm:28013-28017 via 28231). A rolling sidekick
+        // that still has nonzero ground_vel is carrying an engine-stale push
+        // bit, not the ROM-visible status byte tested by loc_13DD0.
+        boolean currentPushBypass = (romVisibleCurrentStatusPush
                 && (recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && (!sidekick.isInWater()
                 || !restrictUnderwaterPushBypassToContactPulses

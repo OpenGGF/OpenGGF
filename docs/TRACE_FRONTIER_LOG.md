@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K ICZ complete-run progressed to segment-column interact frontier
+
+- Scope: follow-up to the ICZ frame-1987 Tails segment-column position
+  frontier. Trace data remained comparison-only diagnostic input; no engine
+  state was hydrated from trace rows, and no trace/route/frame exception was
+  added.
+- Fix:
+  - S2/S3K animation-change push clearing now includes roll entry instead of
+    skipping rolling sprites, matching the animation driver clearing
+    `Status_Push` when `anim != prev_anim`.
+  - S3K roll entry clears the stale engine push bit immediately after
+    `setRolling(true)` writes the roll animation, matching the ROM-visible
+    `Status_Push` lifecycle around `Tails_Roll` / `Animate_Tails`.
+  - Tails CPU live/frame-start push bypass now masks grounded rolling sidekick
+    push when `ground_vel` is nonzero. The S3K rolling wall-response tail zeroes
+    `ground_vel` before setting `Status_Push`, so this shape is stale engine
+    state and must fall through to the ROM follow-steering branch.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity,com.openggf.sprites.managers.TestPlayableSpriteAnimation,com.openggf.sprites.managers.TestPlayableSpriteMovement" test`
+    -> GREEN. Surefire summary: `Tests run: 181, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 1987 to frame 2061. New
+    first error: `tails_cpu_interact` `expected=0x0008`, `actual=0x0000`;
+    Sonic position, camera, rings, sidekick position, sidekick speeds, and
+    sidekick status match at the first error. ICZ error count is 3357.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  CPU Tails object-interact publication around the ICZ segment-column children
+  near `@3F10,06B2`, not add a trace/frame exception.
+
 ## 2026-06-12 - S3K ICZ complete-run progressed to Tails segment-column frontier
 
 - Scope: follow-up to the ICZ frame-1708 post-launch vertical-position

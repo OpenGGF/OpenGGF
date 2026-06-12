@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K CPU Tails ignores stale rolling push state near ICZ segment columns:**
+  roll-entry animation changes now clear `Status_Push`, and Tails CPU push
+  bypass masks grounded rolling nonzero-`ground_vel` stale push state. This
+  moves the ICZ complete-run trace from the frame-1987 `tails_x` mismatch to
+  the frame-2061 segment-column `tails_cpu_interact` frontier.
+
 - **S3K ICZ swinging platform uses separate ROM child solid slots:** the
   lower/upper `Obj_ICZSwingingPlatform` solids now keep independent standing
   latches and use their raw `SolidObjectFull` widths (`$2B`/`$0F`) for the top
