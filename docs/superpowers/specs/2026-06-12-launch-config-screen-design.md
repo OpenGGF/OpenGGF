@@ -37,11 +37,16 @@ profile diverges from stock and how to open the panel.
 When the selected game's ROM is present, a centered line renders above the game
 menu (~y 177, between the ROM preview matte and the menu row):
 
-- Stock profile: `Stock launch · Tab to configure` (dim grey). ("Launch",
+- Stock profile: `Stock launch - Tab to configure` (dim grey). ("Launch",
   not "game" — the widescreen row's stock inherits the global display
   aspect, so "stock" describes the launch profile, not original-hardware
   presentation.)
-- Diverged: `3 options enabled · Tab to configure` (gold tint).
+- Diverged: `3 options enabled - Tab to configure` (gold tint).
+
+The separator is a plain hyphen: the PixelFont atlas (`PixelFont.java:26-30`)
+covers ASCII letters/digits plus a small special set that does **not**
+include U+00B7 `·` — a middle dot would silently fail to render. All panel
+and hover strings must stick to atlas glyphs (`*`, `(`, `)` are available).
 
 Missing-ROM games show no line and Tab is a no-op.
 
