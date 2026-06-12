@@ -439,10 +439,6 @@ final class ObjectTouchResponseController {
             int width = table.getWidthRadius(sizeIndex);
             int height = table.getHeightRadius(sizeIndex);
             TouchCategory category = decodeCategory(flags, touchProfile);
-            if (category == TouchCategory.HURT
-                    && tryShieldDeflect(player, instance, provider, touchProfile, width, height)) {
-                continue;
-            }
 
             // ROM parity: ReactToItem runs in Sonic's slot (slot 0) BEFORE other
             // objects update. So touch collision sees objects at their pre-update
@@ -450,6 +446,10 @@ final class ObjectTouchResponseController {
             // position snapshot taken before the object update loop ran.
             int objX = usePreUpdateState ? instance.getPreUpdateX() : instance.getX();
             int objY = usePreUpdateState ? instance.getPreUpdateY() : instance.getY();
+            if (category == TouchCategory.HURT
+                    && tryShieldDeflect(player, provider, touchProfile, objX, objY, width, height)) {
+                continue;
+            }
             boolean overlap = isOverlapping(playerX, playerY, playerHeight, objX, objY, width, height, playerWidth);
             int slotIndex = instance instanceof AbstractObjectInstance aoi
                     ? aoi.getSlotIndex()
@@ -605,8 +605,9 @@ final class ObjectTouchResponseController {
                 || profile.actorContextPolicy() != TouchActorContextPolicy.MAIN_ONLY;
     }
 
-    private boolean tryShieldDeflect(PlayableEntity player, ObjectInstance instance,
-            TouchResponseProvider provider, TouchResponseProfile profile, int objectWidth, int objectHeight) {
+    private boolean tryShieldDeflect(PlayableEntity player,
+            TouchResponseProvider provider, TouchResponseProfile profile,
+            int objectX, int objectY, int objectWidth, int objectHeight) {
         if (player == null || !canDeflectShieldReactiveProjectile(player)) {
             return false;
         }
@@ -618,7 +619,7 @@ final class ObjectTouchResponseController {
         int shieldLeft = player.getCentreX() - SHIELD_TOUCH_HALF_SIZE;
         int shieldTop = player.getCentreY() - SHIELD_TOUCH_HALF_SIZE;
         boolean overlap = isRectOverlapping(shieldLeft, shieldTop, SHIELD_TOUCH_SIZE, SHIELD_TOUCH_SIZE,
-                instance.getX(), instance.getY(), objectWidth, objectHeight);
+                objectX, objectY, objectWidth, objectHeight);
         if (!overlap) {
             return false;
         }

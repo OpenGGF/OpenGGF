@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K shield deflect uses the touch-pass object snapshot:** Shield-reactive
+  hurt objects now run the Insta-Shield/elemental-shield deflect geometry
+  against the same current or pre-update object position used by the active
+  touch pass, avoiding mixed-snapshot projectile deflections. The ICZ
+  complete-run trace still fails at the frame-2268 Tails hurt-state frontier.
+
 - **S3K Star Pointer keeps active movement after offscreen wait:** ICZ Star
   Pointer now applies the ROM's `Obj_WaitOffscreen` gate only before installing
   the active movement routine, so post-init `loc_8BE74`/`loc_8BEA6` movement is
