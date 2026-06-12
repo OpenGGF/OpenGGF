@@ -10,7 +10,9 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.LevelManager;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.ParallaxManager;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -34,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -398,6 +401,89 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void collapsingPlatformFragmentFallDeletesUsingFallingParentY() throws Exception {
+        StubObjectServices services = new StubObjectServices();
+        CollapsingPlatformObjectInstance platform = ObjectConstructionContext.construct(services,
+                () -> new CollapsingPlatformObjectInstance(
+                        new ObjectSpawn(0x0240, 0x05D0, Sonic2ObjectIds.COLLAPSING_PLATFORM, 0x00, 0, false, 0),
+                        "CollapsPform"));
+        platform.setServices(services);
+        setBooleanField(platform, "collapsed", true);
+        setIntField(platform, "parentY", 0x0700);
+
+        AbstractObjectInstance.updateCameraBounds(0x0200, 0x052C, 0x0340, 0x060C, 0);
+
+        platform.update(222, new TestablePlayableSprite("sonic", (short) 0x0330, (short) 0x058C));
+
+        assertTrue(platform.isDestroyed(),
+                "Obj1F_FragmentFall must delete from the falling parent y_pos, not the original spawn y_pos");
+    }
+
+    @Test
+    void collapsingPlatformFragmentFallDeletesWhenRenderBoxLeavesScreenLeft() throws Exception {
+        StubObjectServices services = new StubObjectServices();
+        CollapsingPlatformObjectInstance platform = ObjectConstructionContext.construct(services,
+                () -> new CollapsingPlatformObjectInstance(
+                        new ObjectSpawn(0x0240, 0x05D0, Sonic2ObjectIds.COLLAPSING_PLATFORM, 0x00, 0, false, 0),
+                        "CollapsPform"));
+        platform.setServices(services);
+        setBooleanField(platform, "collapsed", true);
+        setIntField(platform, "parentY", 0x05ED);
+
+        AbstractObjectInstance.updateCameraBounds(0x0285, 0x052C, 0x03C5, 0x060C, 0);
+
+        platform.update(221, new TestablePlayableSprite("sonic", (short) 0x0330, (short) 0x058C));
+
+        assertTrue(platform.isDestroyed(),
+                "Obj1F_FragmentFall must observe DisplaySprite render_flags, not MarkObjGone's 0x80 unload margin");
+    }
+
+    @Test
+    void collapsingPlatformFragmentFallUsesApproximateRenderHeight() throws Exception {
+        StubObjectServices services = new StubObjectServices();
+        CollapsingPlatformObjectInstance platform = ObjectConstructionContext.construct(services,
+                () -> new CollapsingPlatformObjectInstance(
+                        new ObjectSpawn(0x0441, 0x05B0, Sonic2ObjectIds.COLLAPSING_PLATFORM, 0x00, 0, false, 0),
+                        "CollapsPform"));
+        platform.setServices(services);
+        AbstractObjectInstance.updateCameraBounds(0x0428, 0x0506, 0x0568, 0x05E6, 0);
+        platform.update(320, new TestablePlayableSprite("sonic", (short) 0x04C0, (short) 0x0555));
+
+        setBooleanField(platform, "collapsed", true);
+        setIntField(platform, "parentY", 0x05FA);
+
+        platform.update(321, new TestablePlayableSprite("sonic", (short) 0x04C0, (short) 0x0555));
+
+        assertFalse(platform.isDestroyed(),
+                "Obj1F lacks render_flags.explicit_height, so BuildSprites keeps it through the 32px approximate Y band");
+    }
+
+    @Test
+    void collapsingPlatformFragmentsReuseParentAsFragmentZero() throws Exception {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        StubObjectServices services = new StubObjectServices() {
+                    @Override
+                    public ObjectManager objectManager() {
+                        return objectManager;
+                    }
+                };
+        CollapsingPlatformObjectInstance platform = ObjectConstructionContext.construct(
+                services,
+                () -> new CollapsingPlatformObjectInstance(
+                        new ObjectSpawn(0x0441, 0x05B0, Sonic2ObjectIds.COLLAPSING_PLATFORM, 0x00, 0, false, 0),
+                        "CollapsPform"));
+        platform.setServices(services);
+
+        Method collapse = CollapsingPlatformObjectInstance.class.getDeclaredMethod("collapse");
+        collapse.setAccessible(true);
+        collapse.invoke(platform);
+
+        verify(objectManager, times(6)).addDynamicObject(
+                org.mockito.ArgumentMatchers.any(CollapsingPlatformObjectInstance.CollapsingPlatformFragmentInstance.class));
+        verify(objectManager).markRemembered(platform.getSpawn());
+    }
+
+    @Test
     void mtzCogRotationUsesRomVisibleLevelFrameCounter() {
         LevelManager levelManager = mock(LevelManager.class);
         CogObjectInstance cog = new CogObjectInstance(
@@ -437,6 +523,12 @@ class TestSonic2ObjectBugFixes {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.setInt(target, value);
+    }
+
+    private static void setBooleanField(Object target, String fieldName, boolean value) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.setBoolean(target, value);
     }
 
     private static final class ZoneActServices extends StubObjectServices {

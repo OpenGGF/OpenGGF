@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 Obj1F collapsing-platform fragments now match parent-slot reuse:**
+  collapsed platforms now keep the parent object as fragment 0, allocate only
+  the remaining six fragments into free SST slots, and delete the detached
+  parent through its falling `y_pos` and ROM approximate render-height culling.
+  This advances the OOZ2 trace frontier from frame 222 to frame 324, exposing
+  the next CPU-interact lifetime mismatch on the second collapsing platform.
+
 - **S3K CNZ/MHZ carry intro handoff now starts from ROM CPU state:** complete-run
   trace bootstrap now arms the native Tails carry routine after the title-card
   handoff for CNZ1 and MHZ1, including ROM placement, initial falling velocity,

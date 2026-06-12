@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S2 Obj1F parent-fragment slot reuse advances OOZ2 CPU interact frontier
+
+- Scope: fixed the first S2/Tails CPU root-cause representative exposed in
+  `s2_ooz2` without hydrating engine state from trace rows. Obj1F collapsing
+  platforms now match the ROM lifecycle where the parent object becomes
+  fragment 0, only the remaining fragments consume free SST slots, and the
+  detached parent falls/deletes from its live `y_pos` through the same
+  approximate render-height culling path used by S2 `BuildSprites`.
+- Focused verification:
+  - `mvn -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#collapsingPlatformFragmentFallDeletesUsingFallingParentY+collapsingPlatformFragmentFallDeletesWhenRenderBoxLeavesScreenLeft+collapsingPlatformFragmentFallUsesApproximateRenderHeight+collapsingPlatformFragmentsReuseParentAsFragmentZero" test`
+  - Result: **Tests run: 4, Failures: 0, Errors: 0, Skipped: 0**.
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay" test`
+  - Result: still red, but `s2_ooz2` advanced from frame 222 to frame 324.
+- Full sweep command:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test`
+- Full sweep result:
+  - **Tests run: 90, Failures: 65, Errors: 1, Skipped: 0** from
+    Maven/Surefire. This is not a green all-trace certification; CI remains
+    expected-red on the known trace frontier set.
+- Frontier movement:
+
+| Trace | Previous frontier | New frontier | Delta |
+|---|---:|---:|---:|
+| `s2_ooz2` | f222 `tails_cpu_interact` `0x0000 -> 0x001F` | f324 `tails_cpu_interact` `0x001F -> 0x0000` | +102 |
+
+- Interpretation: the first OOZ2 slot/parent-lifecycle mismatch is fixed and
+  the next exposed owner is the second Obj1F parent lifetime around slot 28,
+  where the CPU interact pointer now clears too early relative to the ROM.
+
 ## 2026-06-12 - S3K complete-run handoff rows advance frame-zero frontiers
 
 - Scope: fixed the highest-leverage S3K frame-zero setup cluster without

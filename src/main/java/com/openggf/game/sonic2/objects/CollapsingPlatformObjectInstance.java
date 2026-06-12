@@ -151,6 +151,10 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
 
     // Gravity from ObjectMoveAndFall (s2.asm line 29950)
     private static final int GRAVITY = 0x38;
+    // Obj1F never sets render_flags.explicit_height, so S2 BuildSprites uses
+    // its approximate Y culling band instead of y_radius(a0)
+    // (docs/s2disasm/s2.asm:30584-30619).
+    private static final int APPROX_RENDER_Y_MARGIN = 0x20;
 
     private ZoneConfig config;
     private int delayCounter = INITIAL_DELAY;
@@ -184,7 +188,12 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public int getY() {
-        return spawn.y();
+        // ROM Obj1F_FragmentFall moves the parent object itself with
+        // ObjectMoveAndFall before checking render_flags.on_screen and
+        // DeleteObject (docs/s2disasm/s2.asm:23860-23864). Once detached,
+        // expose that falling y_pos so slot/offscreen lifecycle observes the
+        // moving parent rather than the original placement y.
+        return collapsed ? parentY : spawn.y();
     }
 
     @Override
@@ -197,14 +206,16 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         SolidCheckpointBatch batch = services().solidExecution().resolveSolidNowAll();
         boolean isStanding = hasStandingContact(batch);
 
-        // ROM: Obj1F_FragmentFall — collapsed parent falls with gravity, delete when offscreen.
+        // ROM: Obj1F_FragmentFall - collapsed parent falls with gravity, then
+        // deletes when render_flags.on_screen is clear
+        // (docs/s2disasm/s2.asm:23860-23864).
         if (collapsed) {
             parentVelY += GRAVITY;
             int y32 = (parentY << 16) | (parentYFrac & 0xFFFF);
             y32 += ((int) (short) parentVelY) << 8;
             parentY = y32 >> 16;
             parentYFrac = y32 & 0xFFFF;
-            if (!isOnScreen(128)) {
+            if (!isWithinRenderSpriteBounds(config.halfWidth(), APPROX_RENDER_Y_MARGIN)) {
                 setDestroyed(true);
             }
             return;
@@ -399,9 +410,11 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
 
         int[] delayData = config.delayData();
 
-        // Fragments spawn at parent's exact position - sprite piece offsets handle visual displacement
-        // (This matches the disassembly where fragments inherit parent x_pos/y_pos and render_flags)
-        for (int i = 0; i < delayData.length; i++) {
+        // ROM Obj1F_CreateFragments turns the parent object into fragment 0;
+        // FindFreeObj is only used for the remaining fragments
+        // (docs/s2disasm/s2.asm:23752-23815). Allocating a child for index 0
+        // consumes an extra SST slot and shifts later objects by one.
+        for (int i = 1; i < delayData.length; i++) {
             int delay = delayData[i];
 
             final int pieceIndex = i;
