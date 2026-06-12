@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K ICZ complete-run progressed to native-Tails follow-position frontier
+
+- Scope: follow-up to the ICZ frame-2600 wall-slope speed frontier. Trace data
+  remained comparison-only diagnostic input; no engine state was hydrated from
+  trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - ICZ1 now publishes the ROM slide-terrain `status_secondary` bit-7 state
+    from the zone-event path after each playable physics slot, using the
+    `byte_7498` layout-byte table from `sub_714E -> sub_71E4`.
+  - Player movement now treats the slide bit as S3K `sub_108E6` does: manual
+    down-roll entry returns early while the bit is set, in addition to the
+    existing input/friction skip in ground movement.
+  - The late-frame ICZ slide publisher does not mutate the just-compared
+    `ground_vel`; it only makes the state visible to the next movement tick,
+    matching the trace timing around frames 2599-2600.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.events.TestSonic3kIczSlideTerrain,com.openggf.sprites.managers.TestPlayableSpriteMovement#slidingStatusSuppressesManualDownRoll" test`
+    -> GREEN. Surefire summary: `Tests run: 4, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2600 to frame 2644. New
+    first error: native Tails `x` `expected=0x40D8`, `actual=0x40D9` and
+    `y` `expected=0x010E`, `actual=0x010D`; main Sonic position, speeds,
+    ground speed, angle, camera, rings, and Tails CPU routine/counters match
+    at the first error.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  native Tails follow-history/slide-terrain steering around frame 2644 after
+  the collapsing bridge slope, not revisit main Sonic wall-slope friction or
+  add a trace/frame exception.
+
 ## 2026-06-12 - S3K ICZ complete-run progressed to wall-slope speed frontier
 
 - Scope: follow-up to the ICZ frame-2472 ice-cube/debris vertical frontier.

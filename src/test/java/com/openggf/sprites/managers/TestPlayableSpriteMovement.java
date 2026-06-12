@@ -1583,6 +1583,24 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void slidingStatusSuppressesManualDownRoll() throws Exception {
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setSliding(true);
+                mockSprite.setGSpeed((short) 0x0800);
+
+                setInputState(false, false, true, false, false);
+
+                Method rollMethod = PlayableSpriteMovement.class.getDeclaredMethod("doCheckStartRoll");
+                rollMethod.setAccessible(true);
+                rollMethod.invoke(manager);
+
+                assertFalse(mockSprite.getRolling(),
+                                "S3K sub_108E6 returns while status_secondary bit 7 is set");
+        }
+
+        @Test
         public void rollStartFromWallModePreservesRomXPos() throws Exception {
                 mockSprite.setAir(false);
                 mockSprite.setRolling(false);

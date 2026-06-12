@@ -303,6 +303,23 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
     }
 
     @Override
+    public void updateAfterPlayablePhysics(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
+        if (zoneIndex != Sonic3kZoneIds.ZONE_ICZ || player == null || player.getDead()) {
+            return;
+        }
+        var levelManager = GameServices.levelOrNull();
+        int act = levelManager != null ? levelManager.getFeatureActId() : 0;
+        if (GameServices.module().getLevelEventProvider()
+                instanceof Sonic3kLevelEventManager mgr) {
+            mgr.ensureZoneRuntimeStateInstalled();
+            var events = mgr.getIczEvents();
+            if (events != null) {
+                events.updateSlideTerrainAfterPlayablePhysics(act, player);
+            }
+        }
+    }
+
+    @Override
     public boolean shouldTreatZeroDistanceAirLandingAsGround(AbstractPlayableSprite player,
                                                              SensorResult support) {
         if (player == null || support == null || support.direction() != Direction.DOWN) {

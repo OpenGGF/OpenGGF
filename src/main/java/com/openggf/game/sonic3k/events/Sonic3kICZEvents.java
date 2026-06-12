@@ -6,13 +6,16 @@ import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.IczBigSnowPileInstance;
 import com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance;
 import com.openggf.level.Level;
+import com.openggf.level.LevelManager;
 import com.openggf.level.Palette;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.io.IOException;
@@ -53,6 +56,15 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     private static final int ICZ1_BIG_SNOW_FINAL_OFFSET = -0x012E;
     private static final int ICZ1_BIG_SNOW_ACCELERATION = 0x2400;
     private static final int ICZ1_BIG_SNOW_RUMBLE_MASK = 0x000F;
+    private static final int ICZ_SLIDE_EXIT_MOVE_LOCK = 5;
+    private static final int ICZ_SLIDE_FRICTION = 4;
+    private static final int ICZ_SLIDE_ANIMATION = 0x19;
+    private static final int[] ICZ1_SLIDE_BLOCKS = {
+            0x2E, 0xC6, 0x33, 0xC5, 0x24, 0x2A, 0x44, 0x1F, 0x27, 0x2B
+    };
+    private static final int[] ICZ1_SLIDE_SPEEDS = {
+            -8, -8, 8, 8, -12, -12, -12, 12, 12, 12
+    };
     private static final int ICZ2_INDOOR_X_MIN = 0x1000;
     private static final int ICZ2_INDOOR_X_MAX = 0x3600;
     private static final int ICZ2_INDOOR_Y = 0x0720;
@@ -216,6 +228,107 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
 
     public boolean shouldEnterIntroSidekickDormantMarker(AbstractPlayableSprite sidekick) {
         return sidekick != null && activeAct == 0 && hasSonicSnowboardIntroPlayerMode();
+    }
+
+    /**
+     * ROM: {@code sub_714E -> loc_71D2 -> sub_71E4}. ICZ1 slide terrain runs
+     * as a level event after the current player slot has moved. It sets
+     * {@code status_secondary} bit 7 for the next frame's {@code Sonic_Move},
+     * which skips input/friction but leaves the just-finished friction frame
+     * intact.
+     */
+    public void updateSlideTerrainAfterPlayablePhysics(int act, AbstractPlayableSprite player) {
+        if (act != 0 || player == null || player.getDead() || player.isDebugMode()) {
+            return;
+        }
+        LevelManager manager = levelManager();
+        int blockId = manager != null ? manager.getBlockIdAt(player.getCentreX(), player.getCentreY()) : -1;
+        applyIcz1SlideTerrainForBlock(player, blockId);
+    }
+
+    static void applyIcz1SlideTerrainForBlock(AbstractPlayableSprite player, int blockId) {
+        if (player == null) {
+            return;
+        }
+        if (player.getAir() || player.isOnObject()) {
+            exitIczSlide(player);
+            return;
+        }
+        int tableIndex = findIcz1SlideTableIndex(blockId);
+        if (tableIndex < 0) {
+            exitIczSlide(player);
+            return;
+        }
+
+        int targetSpeed = ICZ1_SLIDE_SPEEDS[tableIndex];
+        if (targetSpeed != 0) {
+            applyDirectionalIczSlide(player);
+        } else {
+            applyFrictionIczSlide(player);
+        }
+    }
+
+    static int findIcz1SlideTableIndex(int blockId) {
+        for (int i = 0; i < ICZ1_SLIDE_BLOCKS.length; i++) {
+            if (ICZ1_SLIDE_BLOCKS[i] == (blockId & 0xFF)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static void applyDirectionalIczSlide(AbstractPlayableSprite player) {
+        int inertia = player.getGSpeed();
+        int inertiaHigh = (byte) (inertia & 0xFF);
+        if (!player.isSliding()) {
+            player.setDirection(inertiaHigh < 0 ? Direction.LEFT : Direction.RIGHT);
+            player.setAnimationId(ICZ_SLIDE_ANIMATION);
+        }
+        player.setSliding(true);
+    }
+
+    private static void applyFrictionIczSlide(AbstractPlayableSprite player) {
+        int inertia = player.getGSpeed();
+        if ((player.getLogicalInputState() & AbstractPlayableSprite.INPUT_LEFT) != 0) {
+            player.setAnimationId(Sonic3kAnimationIds.WALK.id());
+            player.setDirection(Direction.LEFT);
+            inertia -= ICZ_SLIDE_FRICTION;
+            if (inertia < 0) {
+                inertia -= ICZ_SLIDE_FRICTION;
+            }
+        }
+        if ((player.getLogicalInputState() & AbstractPlayableSprite.INPUT_RIGHT) != 0) {
+            player.setAnimationId(Sonic3kAnimationIds.WALK.id());
+            player.setDirection(Direction.RIGHT);
+            inertia += ICZ_SLIDE_FRICTION;
+            if (inertia >= 0) {
+                inertia += ICZ_SLIDE_FRICTION;
+            }
+        }
+        if (inertia > 0) {
+            inertia -= ICZ_SLIDE_FRICTION;
+            if (inertia <= 0) {
+                inertia = 0;
+                player.setAnimationId(Sonic3kAnimationIds.WAIT.id());
+            }
+        } else if (inertia < 0) {
+            inertia += ICZ_SLIDE_FRICTION;
+            if (inertia >= 0) {
+                inertia = 0;
+                player.setAnimationId(Sonic3kAnimationIds.WAIT.id());
+            }
+        } else {
+            player.setAnimationId(Sonic3kAnimationIds.WAIT.id());
+        }
+        player.setGSpeed((short) inertia);
+        player.setSliding(true);
+    }
+
+    private static void exitIczSlide(AbstractPlayableSprite player) {
+        if (player.isSliding()) {
+            player.setMoveLockTimer(ICZ_SLIDE_EXIT_MOVE_LOCK);
+            player.setSliding(false);
+        }
     }
 
     public boolean hasSonicSnowboardIntroPlayerMode() {

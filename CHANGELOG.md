@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K ICZ slide terrain publishes ROM infinite-inertia state:** ICZ1 now
+  applies the `sub_714E -> sub_71E4` slide-terrain status bit after playable
+  physics so the next tick skips ground friction like the ROM. Manual down-roll
+  entry also returns while that bit is set. This moves the ICZ complete-run
+  trace from frame 2600 to frame 2644, a native Tails follow-position mismatch
+  after the collapsing bridge slope.
+
 - **S3K ICZ ice-cube shatter preserves ROM `y_pos`:** ICZ ice-cube shatter
   now keeps the player centre coordinate stable while applying the ROM roll
   radii, animation, upward velocity, and object-release state. This moves the

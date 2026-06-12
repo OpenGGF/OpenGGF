@@ -2016,6 +2016,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private void doCheckStartRoll() {
 		short gSpeed = sprite.getGSpeed();
 
+		// ROM S3K: sub_108E6 returns immediately when status_secondary bit 7
+		// is set, so slide terrain cannot enter the manual down-roll path.
+		if (sprite.isSliding()) return;
+
 		// S3K uses movingCrouchThreshold ($100) as the roll speed threshold;
 		// below that speed, down enters crouch (handled in updateCrouchState).
 		PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
