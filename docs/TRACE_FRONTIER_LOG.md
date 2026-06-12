@@ -11159,3 +11159,27 @@ Result:
   active owner is the sidekick landing / fixed air-countdown object handoff
   around nearby `0x0002CFA8` air-countdown slots and sidekick follow physics,
   not the conveyor release `y_pos` write.
+
+## 2026-06-12 — ICZ Obj37 lost-ring slot/probe cleanup
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `bugfix/ai-release-remediation`.
+Commands:
+`mvn "-Dmse=off" "-Dtest=com.openggf.level.rings.TestLostRingObjectInstance,com.openggf.level.objects.TestLostRingTouchOrdering,com.openggf.game.sonic3k.objects.TestSonic3kInvisibleHurtBlockHObjectInstance" test`
+`mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+
+Fix:
+- `ObjectSlotLayout.SONIC_3K` now models the first Obj37 owner slot allocated
+  by `HurtCharacter`, and `RingManager` uses that preallocated slot before
+  filling the rest of the spill with `AllocateObjectAfterCurrent`
+  (`docs/skdisasm/sonic3k.asm:21065-21088`,
+  `docs/skdisasm/sonic3k.asm:35490-35528`).
+- `LostRingObjectInstance` now skips `RingCheckFloorDist` while the ROM
+  render flag bit 7 would be clear, matching the Obj37 floor-probe gate for
+  off-screen spilled rings (`docs/skdisasm/sonic3k.asm:35668-35674`).
+
+Result:
+- Focused lost-ring and S3K invisible-hurt-block tests are green.
+- ICZ complete-run remains red with no frontier movement: first error is still
+  frame **3323** `rings` expected `2`, actual `1` with **3155** errors.
+  The retained patch improves Obj37 slot/probe parity but leaves the remaining
+  owner as the separate lost-ring collection/count mismatch at the same frame.

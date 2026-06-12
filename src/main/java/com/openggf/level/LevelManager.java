@@ -2703,15 +2703,20 @@ public class LevelManager {
     }
 
     public void spawnLostRingsAfterCurrentFrame(AbstractPlayableSprite player, int frameCounter) {
-        if (player == null) {
+        if (player == null || ringManager == null) {
             return;
         }
         int count = player.getRingCount();
         if (count <= 0) {
             return;
         }
+        int preallocatedFirstSlot = -1;
+        if (objectManager != null && objectManager.preallocatesLostRingOwnerSlot()) {
+            preallocatedFirstSlot = objectManager.allocateDynamicSlot();
+        }
         pendingLostRingSpawns.add(new PendingLostRingSpawn(
-                player, count, player.getCentreX(), player.getCentreY(), frameCounter));
+                player, count, player.getCentreX(), player.getCentreY(), frameCounter,
+                preallocatedFirstSlot));
     }
 
     private void processPendingLostRingSpawns() {
@@ -2727,14 +2732,17 @@ public class LevelManager {
             if (pending.player().getRingCount() > 0) {
                 ringManager.spawnLostRings(
                         pending.player(), pending.ringCount(), frameCounter,
-                        pending.x(), pending.y());
+                        pending.x(), pending.y(), pending.preallocatedFirstSlot());
+            } else if (pending.preallocatedFirstSlot() >= 0 && objectManager != null) {
+                objectManager.releaseDynamicSlot(pending.preallocatedFirstSlot());
             }
             iterator.remove();
         }
     }
 
     private record PendingLostRingSpawn(
-            AbstractPlayableSprite player, int ringCount, int x, int y, int frameCounter) {
+            AbstractPlayableSprite player, int ringCount, int x, int y, int frameCounter,
+            int preallocatedFirstSlot) {
     }
 
     // ── Post-load assembly methods ──────────────────────────────────────

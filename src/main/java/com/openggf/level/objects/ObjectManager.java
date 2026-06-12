@@ -1904,6 +1904,10 @@ public class ObjectManager {
         return slotLayout.lastDynamicSlotExclusive();
     }
 
+    public boolean preallocatesLostRingOwnerSlot() {
+        return slotLayout.preallocatesLostRingOwnerSlot();
+    }
+
     /**
      * Frees all reserved child slots for a given spawn, removing the tracking entry.
      * Called when the parent object is destroyed or unloaded.

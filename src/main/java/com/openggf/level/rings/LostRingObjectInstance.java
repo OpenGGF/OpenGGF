@@ -174,6 +174,9 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         if (((vblaCounter + phaseOffset) & floorCheckMask) != 0) {
             return;
         }
+        if (!hasRomRenderFlagForFloorProbe()) {
+            return;
+        }
 
         if (reverseGravity) {
             // S3K reverse gravity: probe the ceiling (top edge, y - y_radius) while rising
@@ -276,6 +279,16 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         ObjectServices services = servicesOrNull();
         return services != null && services.gameState() != null
                 && services.gameState().isReverseGravityActive();
+    }
+
+    /**
+     * ROM Obj37 only calls RingCheckFloorDist while render_flags bit 7 is set
+     * (sonic3k.asm:35668-35674). Off-screen spilled rings still move and apply
+     * gravity, but they do not bounce on terrain until the render pass has made
+     * them screen-visible.
+     */
+    protected boolean hasRomRenderFlagForFloorProbe() {
+        return isWithinSolidContactBounds();
     }
 
     /**

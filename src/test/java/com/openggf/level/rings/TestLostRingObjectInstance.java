@@ -87,6 +87,23 @@ class TestLostRingObjectInstance {
         assertEquals(0, ring.floorProbeCount, "S3K reverse gravity must NOT probe the floor");
     }
 
+    @Test
+    void offscreenLostRingSkipsTerrainProbeUntilRenderFlagSet() {
+        // ROM Obj37 checks render_flags bit 7 before RingCheckFloorDist
+        // (sonic3k.asm:35668-35674): off-screen rings keep moving, but do not
+        // bounce on terrain until the render pass has marked them visible.
+        ProbeRecordingRing ring = new ProbeRecordingRing(0x100, 0x100, 0, 0x0400,
+                /*mask*/com.openggf.game.PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S2,
+                /*reverseGravity*/false,
+                /*renderFlagForFloorProbe*/false);
+        ring.setVblaForTest(0);
+
+        ring.stepPhysicsForTest(0x18, true);
+
+        assertEquals(0, ring.floorProbeCount,
+                "cadence-hit Obj37 must still skip terrain while render_flags bit 7 is clear");
+    }
+
     /**
      * Captures which per-game probe path the object takes given an injected floor-check mask and
      * reverse-gravity flag — the feature-set-driven cadence decision is the unit under test, so the
@@ -95,16 +112,23 @@ class TestLostRingObjectInstance {
     private static final class ProbeRecordingRing extends LostRingObjectInstance {
         private final int mask;
         private final boolean reverseGravity;
+        private final boolean renderFlagForFloorProbe;
         private int vbla;
         int floorProbeCount;
         int ceilingProbeCount;
 
         private ProbeRecordingRing(int xPixel, int yPixel, int xVel, int yVel,
                                    int mask, boolean reverseGravity) {
+            this(xPixel, yPixel, xVel, yVel, mask, reverseGravity, true);
+        }
+
+        private ProbeRecordingRing(int xPixel, int yPixel, int xVel, int yVel,
+                                   int mask, boolean reverseGravity, boolean renderFlagForFloorProbe) {
             super(new ObjectSpawn(xPixel & 0xFFFF, yPixel & 0xFFFF, 0x37, 0, 0, false, 0));
             initFixedPointForTest(xPixel, yPixel, xVel, yVel, 0, 0xFF);
             this.mask = mask;
             this.reverseGravity = reverseGravity;
+            this.renderFlagForFloorProbe = renderFlagForFloorProbe;
         }
 
         void setVblaForTest(int vbla) {
@@ -119,6 +143,11 @@ class TestLostRingObjectInstance {
         @Override
         protected boolean isReverseGravityActive() {
             return reverseGravity;
+        }
+
+        @Override
+        protected boolean hasRomRenderFlagForFloorProbe() {
+            return renderFlagForFloorProbe;
         }
 
         @Override
@@ -293,6 +322,32 @@ class TestLostRingObjectInstance {
         assertEquals(ObjectSlotLayout.SONIC_3K.lastDynamicSlotExclusive() - 1 - ring.getSlotIndex(),
                 ring.getPhaseOffset(),
                 "S3K Obj37 cadence uses the smaller Object_RAM loop countdown, not 127 - slot");
+    }
+
+    @Test
+    void s3kSpawnUsesPreallocatedObj37OwnerSlot() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        ObjectManager objectManager = new ObjectManager(List.of(),
+                new NoOpObjectRegistry(ObjectSlotLayout.SONIC_3K), 0, null, null);
+        setField(levelManager, "objectManager", objectManager);
+
+        RingManager ringManager = buildRingManagerWithLevelManager(levelManager);
+        setField(levelManager, "ringManager", ringManager);
+
+        for (int slot = 4; slot <= 8; slot++) {
+            assertTrue(objectManager.reserveDynamicSlot(slot), "setup should reserve slot " + slot);
+        }
+        SpawnTestPlayableSprite player = new SpawnTestPlayableSprite((short) 0x100, (short) 0x100);
+
+        ringManager.spawnLostRings(player, 3, 0);
+
+        List<LostRingObjectInstance> rings =
+                objectManager.activeObjectsOfType(LostRingObjectInstance.class);
+        assertEquals(3, rings.size());
+        assertEquals(9, rings.get(0).getSlotIndex(),
+                "S3K HurtCharacter preallocates the first Obj37 owner slot before Obj37_Init");
+        assertTrue(rings.get(1).getSlotIndex() > rings.get(0).getSlotIndex(),
+                "subsequent S3K lost rings allocate after the owner slot");
     }
 
     @Test

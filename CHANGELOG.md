@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K lost-ring Obj37 slot and floor-probe state now match ROM structure:**
+  S3K ring spills now reserve the first Obj37 owner slot before filling the
+  remaining spill with `AllocateObjectAfterCurrent`, and off-screen spilled
+  rings skip terrain probes until the ROM render flag would be set. This is a
+  foundational Obj37 parity cleanup; the ICZ complete-run frontier remains at
+  frame 3323 pending the separate ring-count collection mismatch.
+
 - **Playable invulnerability timer now matches ROM touch-response order:**
   the post-hit invulnerability timer now ticks in the display phase before
   player touch responses read it, while still ticking only once per frame. This

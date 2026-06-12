@@ -401,11 +401,17 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     }
 
     public void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter) {
-        lostRings.spawnLostRings(player, ringCount, frameCounter, player.getCentreX(), player.getCentreY());
+        lostRings.spawnLostRings(player, ringCount, frameCounter,
+                player.getCentreX(), player.getCentreY(), -1);
     }
 
     public void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter, int x, int y) {
-        lostRings.spawnLostRings(player, ringCount, frameCounter, x, y);
+        lostRings.spawnLostRings(player, ringCount, frameCounter, x, y, -1);
+    }
+
+    public void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter,
+                               int x, int y, int preallocatedFirstSlot) {
+        lostRings.spawnLostRings(player, ringCount, frameCounter, x, y, preallocatedFirstSlot);
     }
 
     /** Shared spilled-ring spin owner feeding the LostRingObjectInstance object path. */
@@ -1207,7 +1213,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             activeRingCount = 0;
         }
 
-        private void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter, int x, int y) {
+        private void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter,
+                                    int x, int y, int preallocatedFirstSlot) {
             if (player == null || renderer == null) {
                 return;
             }
@@ -1227,12 +1234,16 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
             // Atomic stop-on-(-1) slot-allocation contract (ROM Obj37_Init s2.asm:25137-25138:
             // `bsr.w AllocateObject; bne.w +++` — a failed AllocateObject branches PAST the
-            // spill loop, truncating the spill). Allocate-then-construct in a single loop so a
-            // failed allocation never leaves a reserved-but-unused slot and slot order never
-            // diverges. Spilling runs outside the object exec cursor (player hurt handler), so the
-            // allocation predecessor is the fixed anchor 31 — slot $20 (32) is the first dynamic
-            // slot probed, matching today's trace-validated placement.
-            int previousSlot = 31;
+            // spill loop, truncating the spill). S1/S2 allocate every Obj37 from the loop. S3K
+            // HurtCharacter first allocates the Obj37 owner slot, then Obj37_Init uses that slot
+            // for ring 0 and AllocateObjectAfterCurrent for the rest (sonic3k.asm:21065-21088,
+            // 35490-35528).
+            boolean preallocateOwnerSlot = objectManager != null && objectManager.preallocatesLostRingOwnerSlot();
+            int firstReservedSlot = preallocatedFirstSlot;
+            if (preallocateOwnerSlot && firstReservedSlot < 0) {
+                firstReservedSlot = objectManager.allocateDynamicSlot();
+            }
+            int previousSlot = preallocateOwnerSlot ? firstReservedSlot : 31;
             int spawned = 0;
             for (int i = 0; i < toSpawn; i++) {
                 if (angle >= 0) {
@@ -1255,9 +1266,11 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     }
                 }
 
-                int slotIndex = objectManager != null
-                        ? objectManager.allocateSlotAfter(previousSlot)
-                        : -1;
+                int slotIndex = i == 0 && preallocateOwnerSlot
+                        ? firstReservedSlot
+                        : objectManager != null
+                                ? objectManager.allocateSlotAfter(previousSlot)
+                                : -1;
                 if (slotIndex < 0) {
                     // ROM: no free slot → stop spilling (truncate the remainder).
                     int truncated = toSpawn - spawned;
