@@ -41,6 +41,7 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance {
     private static final int[] TRACK_SPEEDS = {0x40, 0x60, 0x80, 0x100};
     private static final int RELEASE_X_RANGE = 0x80;
     private static final int CHILD_COUNT = 4;
+    private static final int WAIT_OFFSCREEN_HALF_SIZE = 0x20;
 
     private boolean initialized;
     private boolean releaseChildren;
@@ -61,7 +62,7 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance {
                 ? sprite : null;
 
         if (!initialized) {
-            if (!isOnScreenX()) {
+            if (!isWithinRenderSpriteBounds(WAIT_OFFSCREEN_HALF_SIZE, WAIT_OFFSCREEN_HALF_SIZE)) {
                 return;
             }
             initializeVelocity(player);
@@ -283,12 +284,14 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance {
         }
 
         private void updateOrbitPosition() {
-            int dx = (TrigLookupTable.sinHex(angle) * ORBIT_RADIUS) >> 8;
-            int dy = (TrigLookupTable.cosHex(angle) * ORBIT_RADIUS) >> 8;
-            currentX = parent.getX() + dx;
-            currentY = parent.getY() + dy;
-            xSubpixel = 0;
-            ySubpixel = 0;
+            int xFixed = ((parent.getX() << 8) | (parent.xSubpixel & 0xFF))
+                    + TrigLookupTable.sinHex(angle) * ORBIT_RADIUS;
+            int yFixed = ((parent.getY() << 8) | (parent.ySubpixel & 0xFF))
+                    + TrigLookupTable.cosHex(angle) * ORBIT_RADIUS;
+            currentX = xFixed >> 8;
+            currentY = yFixed >> 8;
+            xSubpixel = xFixed & 0xFF;
+            ySubpixel = yFixed & 0xFF;
         }
 
         private void moveWithVelocity() {

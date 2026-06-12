@@ -1,20 +1,60 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K ICZ complete-run progressed to ice-cube debris vertical frontier
+
+- Scope: follow-up to the ICZ frame-2268 Star Pointer/native-P2 hurt-state
+  frontier. Trace data remained comparison-only diagnostic input; no engine
+  state was hydrated from trace rows, and no trace/route/frame exception was
+  added.
+- Fix:
+  - Corrected the S3K Insta-Shield touch model after rechecking
+    `TouchResponse`: the ROM temporarily sets `Status_Invincible` for Sonic's
+    48x48 Insta-Shield hurt pass, so `Touch_ChkHurt` returns before
+    `Touch_ChkHurt_Bounce_Projectile` clears `collision_flags`. The engine now
+    suppresses the hurt for that expanded pass without treating Insta-Shield as
+    a real shield deflect. Real shields still deflect bit-3 shield-reactive
+    harmful objects through `ShieldTouchResponse`.
+  - `Obj_StarPointer` now waits for the ROM `$20` dummy-sprite
+    `Obj_WaitOffscreen` render bounds instead of a center-point X onscreen
+    check, matching the saved-routine wait gate before active movement.
+  - Star Pointer orbiting points now refresh from the parent's full fixed-point
+    longword position before applying `MoveSprite_CircularSimple` sine/cosine
+    offsets, preserving parent subpixels during orbit and launch timing.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.badniks.TestStarPointerBadnikInstance" test`
+    -> GREEN. Surefire summary: `Tests run: 10, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.level.objects.TestTouchResponseManager" test`
+    -> GREEN. Surefire summary: `Tests run: 44, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2268 to frame 2472. New
+    first error: main-player `y` `expected=0x064F`, `actual=0x064A`; main
+    `x`, speeds, ground speed, camera, rings, and native-P2/Tails fields match
+    at the first error. The ROM has an active ICZ ice-cube/debris object in
+    slot 7 (`obj=0001ABB6 @40C8,0673`) while the engine reports that slot empty
+    and nearby `ICZIceCubeDebris` instances slightly offset.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  ICZ ice-cube/debris slot lifetime, collision, and vertical bounce/contact
+  ordering around frame 2472, not revisit Star Pointer or add a trace/frame
+  exception.
+
 ## 2026-06-12 - S3K ICZ complete-run progressed to post-Insta-Shield Tails speed frontier
 
 - Scope: follow-up to the ICZ frame-2263 main-player rolling/hurt frontier.
   Trace data remained comparison-only diagnostic input; no engine state was
   hydrated from trace rows, and no trace/route/frame exception was added.
 - Fix:
-  - The shared touch-response shield-deflect gate now mirrors S3K
-    `Touch_ChkHurt_NoPowerUp`: when `double_jump_flag=1` and no shield or
-    invincibility status is active, harmful objects with `shield_reaction` bit
-    3 deflect through the same projectile-bounce path as shield touch instead
-    of applying normal hurt.
+  - Later disassembly review corrected the initial local framing here: S3K
+    `TouchResponse` does not treat `double_jump_flag=1` as a real shield
+    deflect. It temporarily sets `Status_Invincible` for Sonic's 48x48
+    Insta-Shield hurt pass, suppressing normal hurt before the projectile-bounce
+    branch can clear `collision_flags`.
   - This fixes the ICZ Star Pointer point contact where Sonic's 48x48
     Insta-Shield box overlaps a `$8B`/bit-3 shield-reactive point while the
-    normal player box would miss. The engine now clears the point collision
-    and preserves Sonic's rings/rolling state instead of scattering rings.
+    normal player box would miss. The engine now preserves Sonic's
+    rings/rolling state instead of scattering rings; the collision-flag clear is
+    reserved for real shield deflects.
 - Verification:
   - `mvn "-Dmse=off" "-Dtest=com.openggf.level.objects.TestTouchResponseManager" test`
     -> GREEN. Surefire summary: `Tests run: 42, Failures: 0, Errors: 0,

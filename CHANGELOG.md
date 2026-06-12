@@ -4,11 +4,21 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
-- **S3K shield deflect uses the touch-pass object snapshot:** Shield-reactive
-  hurt objects now run the Insta-Shield/elemental-shield deflect geometry
-  against the same current or pre-update object position used by the active
-  touch pass, avoiding mixed-snapshot projectile deflections. The ICZ
-  complete-run trace still fails at the frame-2268 Tails hurt-state frontier.
+- **S3K Star Pointer touch timing now reaches the ICZ ice-cube frontier:** S3K
+  Insta-Shield now models the temporary-invincible 48x48 hurt pass without
+  clearing shield-reactive object collision flags, while real shields still run
+  the projectile-deflect path. ICZ Star Pointer activation now uses the ROM
+  `$20` dummy-sprite `Obj_WaitOffscreen` bounds and orbiting points copy the
+  parent's full fixed-point position before adding the circular offset. This
+  moves the ICZ complete-run trace from the frame-2268 Tails hurt-state
+  frontier to frame 2472, a main-player `y` mismatch near ICZ ice-cube debris.
+
+- **S3K shield and Insta-Shield touch checks use the touch-pass object
+  snapshot:** Shield-reactive hurt objects now run real-shield deflects and
+  Insta-Shield hurt suppression against the same current or pre-update object
+  position used by the active touch pass, avoiding mixed-snapshot contact
+  decisions. The ICZ complete-run trace now fails at the frame-2472 ice-cube
+  debris frontier.
 
 - **S3K Star Pointer keeps active movement after offscreen wait:** ICZ Star
   Pointer now applies the ROM's `Obj_WaitOffscreen` gate only before installing
@@ -28,12 +38,13 @@ All notable changes to the OpenGGF project are documented in this file.
   matching the ROM `Find_SonicTails` call in `Obj_StarPointer` instead of
   looking only at the main player.
 
-- **S3K Insta-Shield deflects shield-reactive harmful objects:** S3K
-  `Touch_ChkHurt_NoPowerUp` now treats `double_jump_flag=1` as a valid
-  projectile-deflect state for harmful objects with `shield_reaction` bit 3,
-  not only real shields. This moves the ICZ complete-run trace from the
-  frame-2263 Sonic rolling/hurt frontier to the frame-2268 Tails speed
-  frontier.
+- **S3K Insta-Shield suppresses shield-reactive harmful-object hurt:** S3K
+  `TouchResponse` now treats `double_jump_flag=1` as the temporary-invincible
+  48x48 hurt pass used by the ROM, suppressing Sonic's hurt without clearing
+  bit-3 shield-reactive object collision flags. This moved the ICZ complete-run
+  trace from the frame-2263 Sonic rolling/hurt frontier to the frame-2268 Tails
+  speed frontier before the later Star Pointer timing cleanup advanced it
+  further.
 
 - **S3K ICZ segment columns publish the ROM CPU interact word:** ICZ segment
   child objects now expose the `0x0008` routine-pointer high word used by S3K

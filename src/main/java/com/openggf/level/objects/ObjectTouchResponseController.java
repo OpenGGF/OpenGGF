@@ -464,6 +464,15 @@ final class ObjectTouchResponseController {
                 continue;
             }
             buildingSet.add(instance);
+            if (category == TouchCategory.HURT) {
+                // S3K TouchResponse temporarily sets Status_Invincible during
+                // the Insta-Shield 48x48 pass, so Touch_ChkHurt returns before
+                // Touch_ChkHurt_Bounce_Projectile clears collision_flags
+                // (sonic3k.asm:20620-20640, 21003-21047).
+                if (instaShieldActive && player == currentPlayer) {
+                    break;
+                }
+            }
 
             // Type-keyed lost-ring collectible: ROM Touch_ChkValue ring branch
             // (docs/s2disasm/s2.asm:85196-85219). Evaluated EVERY frame on overlap
@@ -630,12 +639,7 @@ final class ObjectTouchResponseController {
         if (player.hasShield()) {
             return true;
         }
-        PhysicsFeatureSet fs = player.getPhysicsFeatureSet();
-        return fs != null
-                && fs.instaShieldEnabled()
-                && player.getDoubleJumpFlag() == 1
-                && player.getShieldType() == null
-                && player.getInvincibleFrames() == 0;
+        return false;
     }
 
     /**

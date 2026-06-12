@@ -105,6 +105,23 @@ class TestStarPointerBadnikInstance {
     }
 
     @Test
+    void waitOffscreenStartsWhenDummySpriteRenderBoundsOverlapViewport() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 447, 223, 0);
+        StarPointerBadnikInstance starPointer = new StarPointerBadnikInstance(
+                new ObjectSpawn(478, 100, Sonic3kObjectIds.STAR_POINTER, 0x06, 0, false, 0));
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short) 100);
+        when(player.getCentreY()).thenReturn((short) 100);
+        when(player.getDead()).thenReturn(false);
+
+        starPointer.update(0, player);
+        starPointer.update(1, player);
+
+        assertEquals(477, starPointer.getX(),
+                "Obj_WaitOffscreen uses a $20x$20 dummy sprite render flag, not a center-point X gate");
+    }
+
+    @Test
     void initSpawnsFourOrbitingPoints() {
         AbstractObjectInstance.updateCameraBounds(0, 0, 319, 223, 0);
         StarPointerBadnikInstance starPointer = new StarPointerBadnikInstance(
@@ -171,6 +188,28 @@ class TestStarPointerBadnikInstance {
                 "loc_8BEE6 falls through into MoveSprite_CircularSimple on the launch frame");
         assertEquals(starPointer.getY() + 16, point.getY(),
                 "angle 0 refreshes to the parent's lower orbit position before launch movement starts");
+    }
+
+    @Test
+    void orbitingPointPreservesParentSubpixelDuringCircularMove() throws Exception {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 319, 223, 0);
+        StarPointerBadnikInstance starPointer = new StarPointerBadnikInstance(
+                new ObjectSpawn(160, 100, Sonic3kObjectIds.STAR_POINTER, 0, 0, false, 0));
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short) 100);
+        when(player.getCentreY()).thenReturn((short) 100);
+        when(player.getDead()).thenReturn(false);
+        starPointer.update(0, player);
+        starPointer.update(1, player);
+
+        StarPointerBadnikInstance.OrbitingPointInstance point =
+                new StarPointerBadnikInstance.OrbitingPointInstance(starPointer.getSpawn(), starPointer, 0);
+        setIntField(point, "angle", 1);
+
+        point.update(1, player);
+
+        assertEquals(starPointer.getX() + 1, point.getX(),
+                "MoveSprite_CircularSimple adds the sine offset to the parent's full longword x_pos");
     }
 
     @Test

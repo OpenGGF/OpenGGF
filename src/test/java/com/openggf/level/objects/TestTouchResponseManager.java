@@ -534,7 +534,7 @@ public class TestTouchResponseManager {
     }
 
     @Test
-    public void s3kInstaShieldDeflectsShieldReactiveHurtObject() {
+    public void s3kInstaShieldSuppressesHurtWithoutDeflectingShieldReactiveHurtObject() {
         when(player.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
         when(player.getDoubleJumpFlag()).thenReturn(1);
         when(player.getShieldType()).thenReturn(null);
@@ -546,13 +546,30 @@ public class TestTouchResponseManager {
 
         objectManager.update(0, player, List.of(), 1);
 
-        assertTrue(projectile.wasShieldDeflected,
-                "S3K Touch_ChkHurt_NoPowerUp deflects bit-3 shield-reactive projectiles during Insta-Shield");
+        assertFalse(projectile.wasShieldDeflected,
+                "S3K Insta-Shield temporarily sets Status_Invincible and returns before the shield deflect branch");
         verify(player, never()).applyHurtOrDeath(anyInt(), any(DamageCause.class), anyBoolean());
     }
 
     @Test
-    public void s3kInstaShieldDeflectUsesPreUpdateObjectPositionDuringPostObjectTouchPass() {
+    public void realShieldDeflectsShieldReactiveHurtObject() {
+        when(player.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(player.getDoubleJumpFlag()).thenReturn(0);
+        when(player.hasShield()).thenReturn(true);
+
+        MockShieldTouchObject projectile = new MockShieldTouchObject(143, 112, 0x88, 0x08);
+        setupTableSize(8, 8, 8);
+        objectManager.addDynamicObject(projectile);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        assertTrue(projectile.wasShieldDeflected,
+                "S3K ShieldTouchResponse deflects bit-3 shield-reactive harmful objects for real shields");
+        verify(player, never()).applyHurtOrDeath(anyInt(), any(DamageCause.class), anyBoolean());
+    }
+
+    @Test
+    public void s3kInstaShieldSuppressionUsesPreUpdateObjectPositionDuringPostObjectTouchPass() {
         when(player.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
         when(player.getDoubleJumpFlag()).thenReturn(1);
         when(player.getShieldType()).thenReturn(null);
@@ -568,7 +585,7 @@ public class TestTouchResponseManager {
         objectManager.update(0, player, List.of(), 1);
 
         assertFalse(projectile.wasShieldDeflected,
-                "Post-object touch passes must use the same pre-update object position for shield deflect geometry");
+                "Post-object touch passes must use the same pre-update object position for Insta-Shield hurt suppression");
         verify(player, never()).applyHurtOrDeath(anyInt(), any(DamageCause.class), anyBoolean());
     }
 
