@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K ICZ complete-run progressed to native-Tails frozen-release frontier
+
+- Scope: follow-up to the ICZ frame-2875 main-player ground-speed frontier
+  around the post-freeze terrain/object cluster. Trace data remained
+  comparison-only diagnostic input; no engine state was hydrated from trace
+  rows, and no trace/route/frame exception was added.
+- Fix:
+  - ICZ1 directional slide terrain now applies the ROM `loc_723E`/`loc_7254`
+    `ground_vel` step: compare the signed high byte against the slide table
+    target and add or subtract `$40` when the current speed has not reached
+    that target.
+  - Facing/animation publication still uses the pre-adjustment high byte,
+    matching the ROM's `move.b ground_vel(a1),d1` before the facing refresh.
+  - Focused ICZ slide-terrain coverage now asserts negative-target,
+    positive-target, and no-overshoot cases for the directional path.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.events.TestSonic3kIczSlideTerrain" test`
+    -> GREEN. Surefire summary: `Tests run: 5, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2875 to frame 2964. New
+    first error: native Tails `rolling` `expected=0`, `actual=1`; main-player
+    position, speeds, ground speed, angle, air/rolling state, camera, rings,
+    and Tails CPU routine/counters match through the former frontier.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-2964 native-Tails frozen-release/object-control transition around
+  freezer frozen-block removal and the ROM slot-7 interaction object, without
+  adding a trace/frame carve-out.
+
 ## 2026-06-12 - S3K ICZ complete-run progressed to post-freeze terrain frontier
 
 - Scope: follow-up to the ICZ frame-2838 native-Tails frozen-block vertical

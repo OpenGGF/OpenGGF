@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K ICZ directional slide terrain applies ROM inertia steps:** ICZ1
+  directional slide terrain now moves `ground_vel` by `$40` toward the ROM
+  signed high-byte table target during the late slide-terrain publish, while
+  still using the pre-adjustment high byte for facing. This moves the ICZ
+  complete-run trace from frame 2875 to frame 2964, a native Tails
+  frozen-release rolling-state mismatch after main-player terrain parity holds
+  through the former frontier.
+
 - **S3K ICZ frozen-player blocks stay alive through offscreen carry:** ICZ
   freezer frozen blocks now opt out of generic dynamic-object coarse culling
   while they are carrying a captured player, matching the ROM

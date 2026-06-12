@@ -262,7 +262,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
 
         int targetSpeed = ICZ1_SLIDE_SPEEDS[tableIndex];
         if (targetSpeed != 0) {
-            applyDirectionalIczSlide(player);
+            applyDirectionalIczSlide(player, targetSpeed);
         } else {
             applyFrictionIczSlide(player);
         }
@@ -277,9 +277,19 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         return -1;
     }
 
-    private static void applyDirectionalIczSlide(AbstractPlayableSprite player) {
+    private static void applyDirectionalIczSlide(AbstractPlayableSprite player, int targetSpeedHighByte) {
         int inertia = player.getGSpeed();
         int inertiaHigh = (byte) (inertia >> 8);
+        // ROM loc_723E moves ground_vel by $40 toward the signed high-byte
+        // table target, then stores status_secondary bit 7 for next Sonic_Move.
+        if (targetSpeedHighByte < 0) {
+            if (inertiaHigh > targetSpeedHighByte) {
+                inertia -= 0x40;
+            }
+        } else if (inertiaHigh < targetSpeedHighByte) {
+            inertia += 0x40;
+        }
+        player.setGSpeed((short) inertia);
         player.setDirection(inertiaHigh < 0 ? Direction.LEFT : Direction.RIGHT);
         player.setAnimationId(ICZ_SLIDE_ANIMATION);
         player.setSliding(true);
