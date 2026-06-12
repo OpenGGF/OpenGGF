@@ -30,18 +30,20 @@ public class LaunchProfileStore {
                 configService.getBoolean(keys.debugTools()),
                 configService.getString(keys.aspect()),
                 configService.getString(keys.mainCharacter()),
-                configService.getString(keys.sidekick()));
+                configService.getString(keys.sidekick()))
+                .sanitizedFor(entry);
     }
 
     public void save(MasterTitleScreen.GameEntry entry, LaunchProfile profile) {
         Objects.requireNonNull(profile, "profile");
         Keys keys = keysFor(entry);
-        configService.setConfigValue(keys.rewind(), profile.rewind());
-        configService.setConfigValue(keys.crossGameSource(), profile.crossGameSource());
-        configService.setConfigValue(keys.debugTools(), profile.debugTools());
-        configService.setConfigValue(keys.aspect(), profile.aspect());
-        configService.setConfigValue(keys.mainCharacter(), profile.mainCharacter());
-        configService.setConfigValue(keys.sidekick(), profile.sidekick());
+        LaunchProfile sanitized = profile.sanitizedFor(entry);
+        configService.setConfigValue(keys.rewind(), sanitized.rewind());
+        configService.setConfigValue(keys.crossGameSource(), sanitized.crossGameSource());
+        configService.setConfigValue(keys.debugTools(), sanitized.debugTools());
+        configService.setConfigValue(keys.aspect(), sanitized.aspect());
+        configService.setConfigValue(keys.mainCharacter(), sanitized.mainCharacter());
+        configService.setConfigValue(keys.sidekick(), sanitized.sidekick());
         configService.saveConfig();
     }
 

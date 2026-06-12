@@ -76,6 +76,17 @@ class TestLaunchConfigPanel {
     }
 
     @Test
+    void constructorClampsCharacterRowsUnavailableFromCurrentDonor() {
+        SonicConfigurationService config = configuredWasd();
+        LaunchProfile invalid = new LaunchProfile(false, "s1", false, "global", "tails", "tails");
+
+        LaunchConfigPanel panel = panel(config, invalid, new TrackingStore(config));
+
+        assertEquals("sonic", panel.currentProfileForTest().mainCharacter());
+        assertEquals("none", panel.currentProfileForTest().sidekick());
+    }
+
+    @Test
     void tabAndEscapeCloseWithClosedResult() {
         SonicConfigurationService config = configuredWasd();
         LaunchConfigPanel tabPanel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));

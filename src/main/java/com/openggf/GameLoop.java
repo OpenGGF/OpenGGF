@@ -2595,7 +2595,7 @@ public class GameLoop {
         MasterTitleScreen.GameEntry entry = MasterTitleScreen.GameEntry.fromGameId(selectedGameId);
         if (!programmaticSelection) {
             LaunchProfile profile = launchProfileStore().load(entry);
-            launchProfileApplier().apply(profile);
+            launchProfileApplier().apply(profile, entry);
         }
         configService.resolveDisplayAspect();
         if (masterTitleExitHandler != null) {

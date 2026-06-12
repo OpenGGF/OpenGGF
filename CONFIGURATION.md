@@ -134,7 +134,10 @@ profile overrides and skip profile application.
 `crossGame.source` default in the session overlay so the donor choice cannot leak from a
 previous launch. When `crossGameSource` is `"s3k"`, the launch panel hides
 `mainCharacter` and `sidekick` because the donated S3K Data Select screen owns team
-selection. `aspect: "global"` inherits the normal `display.aspect` setting and does not
+selection. When character rows are shown, their options follow the active donor:
+Sonic is always available, Tails requires Sonic 2 or Sonic 3&K data, and Knuckles
+requires Sonic 3&K data; hand-edited saved values outside that donor set are clamped
+before launch. `aspect: "global"` inherits the normal `display.aspect` setting and does not
 resize the window; pinned aspect values such as `"WIDE_16_9"` apply only for that game
 session and resize back when returning to the master title.
 
@@ -173,8 +176,8 @@ Allowed launch profile enums:
 |-------|--------|
 | `crossGameSource` | `"off"`, `"s1"`, `"s2"`, `"s3k"`; the launched game cannot donate to itself and is clamped to `"off"` when hand-edited. |
 | `aspect` | `"global"`, `"NATIVE_4_3"`, `"WIDE_16_10"`, `"WIDE_16_9"`, `"ULTRA_21_9"`, `"SUPER_32_9"` |
-| `mainCharacter` | `"sonic"`, `"tails"`, `"knuckles"` |
-| `sidekick` | `"none"`, `"sonic"`, `"tails"`, `"knuckles"` |
+| `mainCharacter` | `"sonic"`, `"tails"`, `"knuckles"`; selectable values are donor-gated. |
+| `sidekick` | `"none"`, `"sonic"`, `"tails"`, `"knuckles"`; selectable values are donor-gated. |
 
 ---
 

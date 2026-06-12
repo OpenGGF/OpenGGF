@@ -384,8 +384,8 @@ public class TestGameLoop {
 
         gameLoop.setMasterTitleExitHandler(gameId -> {
             assertEquals("s2", gameId);
-            assertEquals("knuckles", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE),
-                    "profile is applied before the engine attempts startup");
+            assertEquals("sonic", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE),
+                    "profile is sanitized and applied before the engine attempts startup");
             gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
         });
 

@@ -31,8 +31,6 @@ public record LaunchProfile(
             "ULTRA_21_9",
             "SUPER_32_9"
     };
-    private static final String[] MAIN_CHARACTER_VALUES = {SONIC, TAILS, KNUCKLES};
-    private static final String[] SIDEKICK_CANDIDATES = {NONE, TAILS, SONIC, KNUCKLES};
 
     public LaunchProfile {
         crossGameSource = normalizeLower(crossGameSource, OFF);
@@ -85,6 +83,17 @@ public record LaunchProfile(
 
     public LaunchProfile withStock(MasterTitleScreen.GameEntry entry) {
         return stockFor(entry);
+    }
+
+    public LaunchProfile sanitizedFor(MasterTitleScreen.GameEntry entry) {
+        Objects.requireNonNull(entry, "entry");
+        String sanitizedMainCharacter = sanitize(mainCharacter, mainCharacterValues(entry), SONIC);
+        String sanitizedSidekick = sanitize(sidekick, sidekickValues(entry), stockFor(entry).sidekick());
+        if (mainCharacter.equals(sanitizedMainCharacter) && sidekick.equals(sanitizedSidekick)) {
+            return this;
+        }
+        return new LaunchProfile(rewind, crossGameSource, debugTools, aspect,
+                sanitizedMainCharacter, sanitizedSidekick);
     }
 
     public boolean isStock(Row row, MasterTitleScreen.GameEntry entry) {
@@ -149,12 +158,12 @@ public record LaunchProfile(
         return switch (row) {
             case REWIND -> new LaunchProfile(!rewind, crossGameSource, debugTools, aspect, mainCharacter, sidekick);
             case CROSS_GAME -> new LaunchProfile(rewind, cycle(crossGameValues(entry), crossGameSource, forward),
-                    debugTools, aspect, mainCharacter, sidekick);
+                    debugTools, aspect, mainCharacter, sidekick).sanitizedFor(entry);
             case DEBUG_TOOLS -> new LaunchProfile(rewind, crossGameSource, !debugTools, aspect, mainCharacter, sidekick);
             case WIDESCREEN -> new LaunchProfile(rewind, crossGameSource, debugTools,
                     cycle(List.of(ASPECT_VALUES), aspect, forward), mainCharacter, sidekick);
             case MAIN_CHARACTER -> new LaunchProfile(rewind, crossGameSource, debugTools, aspect,
-                    cycle(List.of(MAIN_CHARACTER_VALUES), mainCharacter, forward), sidekick);
+                    cycle(mainCharacterValues(entry), mainCharacter, forward), sidekick);
             case SIDEKICK -> new LaunchProfile(rewind, crossGameSource, debugTools, aspect, mainCharacter,
                     cycle(sidekickValues(entry), sidekick, forward));
         };
@@ -172,16 +181,62 @@ public record LaunchProfile(
         return values;
     }
 
-    private static List<String> sidekickValues(MasterTitleScreen.GameEntry entry) {
+    private List<String> mainCharacterValues(MasterTitleScreen.GameEntry entry) {
+        return switch (effectiveCharacterDonor(entry)) {
+            case "s2" -> List.of(SONIC, TAILS);
+            case "s3k" -> List.of(SONIC, TAILS, KNUCKLES);
+            default -> List.of(SONIC);
+        };
+    }
+
+    private List<String> sidekickValues(MasterTitleScreen.GameEntry entry) {
+        String donor = effectiveCharacterDonor(entry);
         String stock = stockFor(entry).sidekick();
         List<String> values = new ArrayList<>();
-        values.add(stock);
-        for (String candidate : SIDEKICK_CANDIDATES) {
+        if (isSidekickAllowedForDonor(stock, donor)) {
+            values.add(stock);
+        }
+        if (!values.contains(NONE)) {
+            values.add(NONE);
+        }
+        for (String candidate : sidekickCandidatesForDonor(donor)) {
             if (!values.contains(candidate)) {
                 values.add(candidate);
             }
         }
         return values;
+    }
+
+    private String effectiveCharacterDonor(MasterTitleScreen.GameEntry entry) {
+        if (OFF.equals(crossGameSource)) {
+            return gameId(entry);
+        }
+        return switch (crossGameSource) {
+            case "s1", "s2", "s3k" -> crossGameSource;
+            default -> gameId(entry);
+        };
+    }
+
+    private static List<String> sidekickCandidatesForDonor(String donor) {
+        return switch (donor) {
+            case "s2" -> List.of(TAILS, SONIC);
+            case "s3k" -> List.of(TAILS, SONIC, KNUCKLES);
+            default -> List.of(SONIC);
+        };
+    }
+
+    private static boolean isSidekickAllowedForDonor(String sidekick, String donor) {
+        return sidekickCandidatesForDonor(donor).contains(sidekick) || NONE.equals(sidekick);
+    }
+
+    private static String sanitize(String value, List<String> values, String fallback) {
+        if (values.contains(value)) {
+            return value;
+        }
+        if (values.contains(fallback)) {
+            return fallback;
+        }
+        return values.get(0);
     }
 
     private static String cycle(List<String> values, String current, boolean forward) {

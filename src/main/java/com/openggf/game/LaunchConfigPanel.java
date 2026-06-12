@@ -53,7 +53,7 @@ public final class LaunchConfigPanel {
                              PixelFont font,
                              TexturedQuadRenderer renderer) {
         this.entry = Objects.requireNonNull(entry, "entry");
-        this.profile = Objects.requireNonNull(currentProfile, "currentProfile");
+        this.profile = Objects.requireNonNull(currentProfile, "currentProfile").sanitizedFor(entry);
         Objects.requireNonNull(store, "store");
         this.configService = Objects.requireNonNull(configService, "configService");
         this.font = font;

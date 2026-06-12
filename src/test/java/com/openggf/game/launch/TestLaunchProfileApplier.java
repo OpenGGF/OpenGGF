@@ -7,6 +7,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
 
+import static com.openggf.game.MasterTitleScreen.GameEntry.SONIC_1;
+import static com.openggf.game.MasterTitleScreen.GameEntry.SONIC_2;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -22,16 +24,27 @@ class TestLaunchProfileApplier {
     @Test
     void applySetsAlwaysManagedSessionOverrides() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
-        LaunchProfile profile = new LaunchProfile(true, "s2", true, "global", "knuckles", "tails");
+        LaunchProfile profile = new LaunchProfile(true, "s2", true, "global", "tails", "sonic");
 
-        new LaunchProfileApplier(config).apply(profile);
+        new LaunchProfileApplier(config).apply(profile, SONIC_1);
 
         assertTrue(config.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED));
         assertTrue(config.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
         assertEquals("s2", config.getString(SonicConfiguration.CROSS_GAME_SOURCE));
         assertTrue(config.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED));
-        assertEquals("knuckles", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
-        assertEquals("tails", config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+        assertEquals("tails", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertEquals("sonic", config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+    }
+
+    @Test
+    void applyClampsCharactersUnavailableFromLaunchDonor() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+        LaunchProfile invalid = new LaunchProfile(false, "s2", false, "global", "knuckles", "knuckles");
+
+        new LaunchProfileApplier(config).apply(invalid, SONIC_1);
+
+        assertEquals("sonic", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertEquals("", config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
     }
 
     @Test
@@ -41,7 +54,7 @@ class TestLaunchProfileApplier {
         config.setConfigValue(SonicConfiguration.CROSS_GAME_SOURCE, "s3k");
 
         new LaunchProfileApplier(config).apply(
-                new LaunchProfile(false, "off", false, "global", "sonic", "none"));
+                new LaunchProfile(false, "off", false, "global", "sonic", "none"), SONIC_1);
 
         assertFalse(config.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
         assertEquals(config.getDefaultValue(SonicConfiguration.CROSS_GAME_SOURCE),
@@ -53,7 +66,7 @@ class TestLaunchProfileApplier {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
 
         new LaunchProfileApplier(config).apply(
-                new LaunchProfile(false, "off", false, "global", "sonic", "none"));
+                new LaunchProfile(false, "off", false, "global", "sonic", "none"), SONIC_1);
 
         assertEquals("", config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
     }
@@ -65,7 +78,7 @@ class TestLaunchProfileApplier {
         config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "knuckles");
 
         new LaunchProfileApplier(config).apply(
-                new LaunchProfile(false, "s3k", false, "global", "sonic", "none"));
+                new LaunchProfile(false, "s3k", false, "global", "sonic", "none"), SONIC_2);
 
         assertFalse(config.hasSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE));
         assertFalse(config.hasSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
@@ -78,7 +91,7 @@ class TestLaunchProfileApplier {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
 
         new LaunchProfileApplier(config).apply(
-                new LaunchProfile(false, "off", false, "global", "sonic", "tails"));
+                new LaunchProfile(false, "off", false, "global", "sonic", "tails"), SONIC_2);
 
         assertFalse(config.hasSessionOverride(SonicConfiguration.DISPLAY_ASPECT));
     }
@@ -90,7 +103,7 @@ class TestLaunchProfileApplier {
         config.resolveDisplayAspect();
 
         new LaunchProfileApplier(config).apply(
-                new LaunchProfile(false, "off", false, "WIDE_16_9", "sonic", "tails"));
+                new LaunchProfile(false, "off", false, "WIDE_16_9", "sonic", "tails"), SONIC_2);
 
         assertTrue(config.hasSessionOverride(SonicConfiguration.DISPLAY_ASPECT));
         assertEquals("WIDE_16_9", config.getString(SonicConfiguration.DISPLAY_ASPECT));
@@ -113,7 +126,7 @@ class TestLaunchProfileApplier {
         config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, true);
 
         new LaunchProfileApplier(config).apply(
-                new LaunchProfile(false, "off", false, "ULTRA_21_9", "sonic", "tails"));
+                new LaunchProfile(false, "off", false, "ULTRA_21_9", "sonic", "tails"), SONIC_2);
         config.resolveDisplayAspect();
 
         assertEquals(320, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
@@ -128,7 +141,7 @@ class TestLaunchProfileApplier {
         config.setSessionOverride(SonicConfiguration.FPS, 30);
 
         new LaunchProfileApplier(config).apply(
-                new LaunchProfile(true, "s3k", true, "WIDE_16_9", "knuckles", "none"));
+                new LaunchProfile(true, "s3k", true, "WIDE_16_9", "knuckles", "none"), SONIC_2);
 
         verify(config, never()).saveConfig();
         assertEquals(30, config.getInt(SonicConfiguration.FPS));

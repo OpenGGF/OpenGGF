@@ -42,14 +42,49 @@ class TestLaunchProfile {
         assertEquals("NATIVE_4_3", s1.withNext(WIDESCREEN, SONIC_1).aspect());
         assertEquals("SUPER_32_9", s1.withPrevious(WIDESCREEN, SONIC_1).aspect());
 
-        assertEquals("tails", s1.withNext(MAIN_CHARACTER, SONIC_1).mainCharacter());
-        assertEquals("knuckles", s1.withPrevious(MAIN_CHARACTER, SONIC_1).mainCharacter());
+        assertEquals("sonic", s1.withNext(MAIN_CHARACTER, SONIC_1).mainCharacter());
+        assertEquals("sonic", s1.withPrevious(MAIN_CHARACTER, SONIC_1).mainCharacter());
 
-        assertEquals("tails", s1.withNext(SIDEKICK, SONIC_1).sidekick());
-        assertEquals("knuckles", s1.withPrevious(SIDEKICK, SONIC_1).sidekick());
+        assertEquals("sonic", s1.withNext(SIDEKICK, SONIC_1).sidekick());
+        assertEquals("sonic", s1.withPrevious(SIDEKICK, SONIC_1).sidekick());
         LaunchProfile s2 = LaunchProfile.stockFor(SONIC_2);
         assertEquals("none", s2.withNext(SIDEKICK, SONIC_2).sidekick());
-        assertEquals("knuckles", s2.withPrevious(SIDEKICK, SONIC_2).sidekick());
+        assertEquals("sonic", s2.withPrevious(SIDEKICK, SONIC_2).sidekick());
+    }
+
+    @Test
+    void characterRowsOnlyOfferCharactersAvailableFromCurrentDonor() {
+        LaunchProfile s1UsingS2Donor = new LaunchProfile(false, "s2", false, "global", "sonic", "none");
+        assertEquals("tails", s1UsingS2Donor.withNext(MAIN_CHARACTER, SONIC_1).mainCharacter());
+        assertEquals("tails", s1UsingS2Donor.withPrevious(MAIN_CHARACTER, SONIC_1).mainCharacter());
+        assertEquals("tails", s1UsingS2Donor.withNext(SIDEKICK, SONIC_1).sidekick());
+        assertEquals("sonic", s1UsingS2Donor.withPrevious(SIDEKICK, SONIC_1).sidekick());
+
+        LaunchProfile s1S2DonorWithSonicSidekick =
+                new LaunchProfile(false, "s2", false, "global", "sonic", "sonic");
+        assertEquals("none", s1S2DonorWithSonicSidekick.withNext(SIDEKICK, SONIC_1).sidekick());
+        assertEquals("tails", s1S2DonorWithSonicSidekick.withPrevious(SIDEKICK, SONIC_1).sidekick());
+
+        LaunchProfile s2UsingS1Donor = new LaunchProfile(false, "s1", false, "global", "sonic", "none");
+        assertEquals("sonic", s2UsingS1Donor.withNext(MAIN_CHARACTER, SONIC_2).mainCharacter());
+        assertEquals("sonic", s2UsingS1Donor.withPrevious(MAIN_CHARACTER, SONIC_2).mainCharacter());
+        assertEquals("sonic", s2UsingS1Donor.withNext(SIDEKICK, SONIC_2).sidekick());
+    }
+
+    @Test
+    void crossGameCyclingClampsCharactersUnavailableFromNewDonor() {
+        LaunchProfile s1UsingS3kCharacters =
+                new LaunchProfile(false, "s3k", false, "global", "knuckles", "knuckles");
+
+        LaunchProfile s1StockDonor = s1UsingS3kCharacters.withNext(CROSS_GAME, SONIC_1);
+        assertEquals("off", s1StockDonor.crossGameSource());
+        assertEquals("sonic", s1StockDonor.mainCharacter());
+        assertEquals("none", s1StockDonor.sidekick());
+
+        LaunchProfile s1S2Donor = s1UsingS3kCharacters.withPrevious(CROSS_GAME, SONIC_1);
+        assertEquals("s2", s1S2Donor.crossGameSource());
+        assertEquals("sonic", s1S2Donor.mainCharacter());
+        assertEquals("none", s1S2Donor.sidekick());
     }
 
     @Test
