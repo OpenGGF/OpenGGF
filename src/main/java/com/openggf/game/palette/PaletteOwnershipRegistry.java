@@ -163,6 +163,8 @@ public final class PaletteOwnershipRegistry implements RewindSnapshottable<Palet
 
     @Override
     public void restore(PaletteOwnershipSnapshot snap) {
+        writes.clear();
+        resolvedThisFrame = false;
         byte[] ownerIds = snap.ownerIds();
         String[] ownerTable = snap.ownerTable();
         paletteRotationDisabled = snap.paletteRotationDisabled();

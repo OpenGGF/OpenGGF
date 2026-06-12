@@ -61,6 +61,7 @@ public class ExplosionObjectInstance extends AbstractObjectInstance {
         this.pointsValue = 0;
         this.pointsAllocatedBeforeAnimal = false;
         this.pendingSfxId = sfxId;
+        playPendingSfxIfPossible();
     }
 
     public ExplosionObjectInstance(int id, int x, int y, ObjectRenderManager renderManager,

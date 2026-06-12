@@ -1,6 +1,7 @@
 package com.openggf.game.palette;
 
 import com.openggf.game.rewind.snapshot.PaletteOwnershipSnapshot;
+import com.openggf.level.Palette;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -49,6 +50,25 @@ class TestPaletteOwnershipRewindSnapshot {
         reg.beginFrame();
         PaletteOwnershipSnapshot afterBegin = reg.capture();
         assertEquals("none", afterBegin.owners()[0]);
+    }
+
+    @Test
+    void restoreClearsTransientWritesFromLaterFrames() {
+        PaletteOwnershipRegistry reg = new PaletteOwnershipRegistry();
+        Palette[] palettes = new Palette[] {new Palette()};
+        reg.submit(PaletteWrite.normal("frame-a", 1, 0, 0, new byte[] {0x0E, 0x00}));
+        reg.resolveInto(palettes, null, null, null);
+        PaletteOwnershipSnapshot frameASnapshot = reg.capture();
+
+        reg.submit(PaletteWrite.normal("frame-b", 1, 0, 0, new byte[] {0x00, 0x0E}));
+        reg.restore(frameASnapshot);
+        reg.resolveInto(palettes, null, null, null);
+
+        assertEquals("frame-a", reg.ownerAt(PaletteSurface.NORMAL, 0, 0));
+        assertEquals((byte) 0x00, palettes[0].colors[0].r);
+        assertEquals((byte) 0xFF, palettes[0].colors[0].b);
+        assertFalse(reg.hasResolvedThisFrame(),
+                "restore must discard queued writes because snapshots are captured at frame boundaries");
     }
 
     @Test

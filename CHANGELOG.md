@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Develop full-test CI is back in sync with runtime contracts:** explosion
+  SFX construction-context playback, S2/S3K control-lock logical input latch
+  expectations, S3K monitor sidekick query tests, and Aquis rewind annotation
+  triage were aligned with the current architecture guards.
+- **Rewind palette restores now discard stale frame writes:** palette ownership
+  restore clears transient queued writes before replay, preventing S2 EHZ water
+  cycle colors from inheriting later-frame palette mutations after a seek.
+
 - **S2 sidekick ground-wall seams now stay clear at zero distance:** the
   shared CPU sidekick wall-response seam now uses a per-game physics flag, so
   S2 Tails no longer inherits S3K's deferred first-penetration handling while
