@@ -184,6 +184,9 @@ Validation:
 Goal: trace and physics exceptions must be either fixed or visible as release
 limitations.
 
+Detailed current trace problem statements, frontier table, clusters, and
+execution order live in `docs/TRACE_REMEDIATION_PLAN.md`.
+
 Work:
 
 - Release-blocking pre-level intro trace bootstrap.
