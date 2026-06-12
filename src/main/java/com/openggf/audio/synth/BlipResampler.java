@@ -111,6 +111,7 @@ public class BlipResampler {
         head = 0;
         inputIndex = 0;
         outputPos = 0.0;
+        cachedPhaseOutputPos = Double.NaN;
     }
 
     /**
@@ -122,17 +123,48 @@ public class BlipResampler {
         reset();
     }
 
+    /**
+     * Captures only the history tail that interpolation can still read after a
+     * restore. {@link #interpolate(int[])} reads taps in
+     * {@code [floor(outputPos) - (FILTER_TAPS/2 - 1), floor(outputPos) + FILTER_TAPS/2]},
+     * {@code sampleAt} zeroes anything older than {@code inputIndex - BUFFER_SIZE},
+     * and {@code outputPos} only ever advances — so samples older than
+     * {@code floor(outputPos) - (FILTER_TAPS/2 - 1)} can never be read again.
+     */
     Snapshot captureSnapshot() {
-        return new Snapshot(ratio, historyL, historyR, head, inputIndex, outputPos);
+        long center = (long) outputPos;
+        long minIdx = Math.max(inputIndex - BUFFER_SIZE, center - (FILTER_TAPS / 2 - 1));
+        minIdx = Math.max(minIdx, 0);
+        minIdx = Math.min(minIdx, inputIndex);
+        int tailLen = (int) (inputIndex - minIdx);
+        int[] tailL = new int[tailLen];
+        int[] tailR = new int[tailLen];
+        for (int i = 0; i < tailLen; i++) {
+            int pos = (head - tailLen + i) & BUFFER_MASK;
+            tailL[i] = historyL[pos];
+            tailR[i] = historyR[pos];
+        }
+        return new Snapshot(ratio, tailL, tailR, head, inputIndex, outputPos);
     }
 
     void restoreSnapshot(Snapshot snapshot) {
         ratio = snapshot.ratio();
-        System.arraycopy(snapshot.historyL(), 0, historyL, 0, historyL.length);
-        System.arraycopy(snapshot.historyR(), 0, historyR, 0, historyR.length);
+        // Zero first so ring positions outside the captured tail read exactly
+        // like a fresh resampler's untouched buffer (matters for the pre-wrap
+        // idx < 0 window and for reused chip instances).
+        Arrays.fill(historyL, 0);
+        Arrays.fill(historyR, 0);
         head = snapshot.head();
         inputIndex = snapshot.inputIndex();
         outputPos = snapshot.outputPos();
+        int[] tailL = snapshot.historyTailLRef();
+        int[] tailR = snapshot.historyTailRRef();
+        int tailLen = tailL.length;
+        for (int i = 0; i < tailLen; i++) {
+            int pos = (head - tailLen + i) & BUFFER_MASK;
+            historyL[pos] = tailL[i];
+            historyR[pos] = tailR[i];
+        }
     }
 
     /**
@@ -182,21 +214,43 @@ public class BlipResampler {
         return interpolate(historyR);
     }
 
+    // Phase index is a pure function of outputPos; cache it so the second channel of
+    // each output sample (L then R at the same outputPos) skips the recomputation.
+    private double cachedPhaseOutputPos = Double.NaN;
+    private int cachedPhase;
+
     private int interpolate(int[] history) {
+        final double pos = outputPos;
         // Direct cast is equivalent to Math.floor() for positive values (outputPos is always >= 0)
-        long center = (long) outputPos;
-        double frac = outputPos - center;
-        int phase = (int) (frac * PHASE_COUNT);
-        if (phase >= PHASE_COUNT) phase = PHASE_COUNT - 1;
-        double[] coeffs = SINC_TABLE[phase];
+        long center = (long) pos;
+        if (pos != cachedPhaseOutputPos) {
+            double frac = pos - center;
+            int phase = (int) (frac * PHASE_COUNT);
+            if (phase >= PHASE_COUNT) phase = PHASE_COUNT - 1;
+            cachedPhase = phase;
+            cachedPhaseOutputPos = pos;
+        }
+        double[] coeffs = SINC_TABLE[cachedPhase];
 
         long start = center - (FILTER_TAPS / 2) + 1;
 
         double sum = 0.0;
-        for (int tap = 0; tap < FILTER_TAPS; tap++) {
-            long idx = start + tap;
-            int sample = sampleAt(history, idx);
-            sum += sample * coeffs[tap];
+        if (start >= inputIndex - BUFFER_SIZE && center + (FILTER_TAPS / 2) < inputIndex) {
+            // Every tap lies inside the live ring window (callers gate on
+            // hasOutputSample(), so this holds in steady state): sampleAt's range
+            // check is dead here and the ring position can advance incrementally.
+            // Same samples, same coefficients, same accumulation order — bit-exact.
+            int pos0 = (head - (int) (inputIndex - start)) & BUFFER_MASK;
+            for (int tap = 0; tap < FILTER_TAPS; tap++) {
+                sum += history[pos0] * coeffs[tap];
+                pos0 = (pos0 + 1) & BUFFER_MASK;
+            }
+        } else {
+            for (int tap = 0; tap < FILTER_TAPS; tap++) {
+                long idx = start + tap;
+                int sample = sampleAt(history, idx);
+                sum += sample * coeffs[tap];
+            }
         }
 
         return (int) Math.round(sum);
@@ -211,22 +265,33 @@ public class BlipResampler {
         return history[pos];
     }
 
+    /**
+     * Tail-only history snapshot. {@code historyTailL}/{@code historyTailR}
+     * hold the newest samples, ordered oldest-to-newest, ending at input index
+     * {@code inputIndex - 1}.
+     */
     public record Snapshot(
             double ratio,
-            int[] historyL,
-            int[] historyR,
+            int[] historyTailL,
+            int[] historyTailR,
             int head,
             long inputIndex,
             double outputPos) {
         public Snapshot {
-            historyL = Arrays.copyOf(historyL, historyL.length);
-            historyR = Arrays.copyOf(historyR, historyR.length);
+            historyTailL = Arrays.copyOf(historyTailL, historyTailL.length);
+            historyTailR = Arrays.copyOf(historyTailR, historyTailR.length);
         }
 
         @Override
-        public int[] historyL() { return Arrays.copyOf(historyL, historyL.length); }
+        public int[] historyTailL() { return Arrays.copyOf(historyTailL, historyTailL.length); }
 
         @Override
-        public int[] historyR() { return Arrays.copyOf(historyR, historyR.length); }
+        public int[] historyTailR() { return Arrays.copyOf(historyTailR, historyTailR.length); }
+
+        /** Non-copying view for in-memory restore paths only. Do not mutate. */
+        int[] historyTailLRef() { return historyTailL; }
+
+        /** Non-copying view for in-memory restore paths only. Do not mutate. */
+        int[] historyTailRRef() { return historyTailR; }
     }
 }

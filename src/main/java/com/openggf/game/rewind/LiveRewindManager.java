@@ -149,6 +149,9 @@ public final class LiveRewindManager {
         if (rewindController == null) {
             return;
         }
+        // Land the single deferred logical restore at the committed frame
+        // before the presentation cleanup acts on backend logical state.
+        rewindController.commitDeferredAudioRestore();
         GameServices.audio().afterRewindRestore(rewindController.currentFrame(), policy);
     }
 

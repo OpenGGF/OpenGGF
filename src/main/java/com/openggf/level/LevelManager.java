@@ -92,6 +92,8 @@ public class LevelManager {
     // the world session in sync.
     Level level;
     int blockPixelSize = 128;  // cached from level
+    // Block-grid index math (pow2 fast path); recomputed in cacheLevelDimensions().
+    private BlockGridIndexer blockGrid = new BlockGridIndexer(128);
     private int chunksPerBlockSide = 8;
     // Cached level pixel dimensions (immutable once level loads).
     // Avoids repeated getLayerWidthBlocks()*blockPixelSize in hot-path collision lookups.
@@ -1839,8 +1841,8 @@ public class LevelManager {
                 && zoneFeatureProvider != null && zoneFeatureProvider.bgWrapsHorizontally()) {
             int newBase = Math.floorDiv(bgCameraX, 16) * 16;
             if (newBase != tilemapManager.getBgTilemapBaseX()) {
-                tilemapManager.setBgTilemapBaseX(newBase);
-                tilemapManager.setBackgroundTilemapDirty(true);
+                // Window-only change: eligible for the incremental one-column shift.
+                tilemapManager.requestBgWindowBaseX(newBase);
             }
         } else if (tilemapManager.getBgTilemapBaseX() != 0) {
             tilemapManager.setBgTilemapBaseX(0);
@@ -1919,6 +1921,7 @@ public class LevelManager {
             cachedBgContiguousWidthPx = blockPixelSize;
             cachedBgHeightPx = blockPixelSize;
         }
+        blockGrid = new BlockGridIndexer(blockPixelSize);
     }
 
     /**
@@ -2091,26 +2094,23 @@ public class LevelManager {
         }
 
         // Wrap X (always wraps)
-        int wrappedX = ((x % levelWidth) + levelWidth) % levelWidth;
+        int wrappedX = BlockGridIndexer.wrapCoordinate(x, levelWidth);
 
         // Wrap or clamp Y depending on layer
         int wrappedY = y;
-        if (layer == 1) {
-            // Background loops vertically
-            wrappedY = ((wrappedY % levelHeight) + levelHeight) % levelHeight;
-        } else if (verticalWrapEnabled) {
-            // ROM: LZ3/SBZ2 — FG also wraps vertically
-            wrappedY = ((wrappedY % levelHeight) + levelHeight) % levelHeight;
+        if (layer == 1 || verticalWrapEnabled) {
+            // Background loops vertically; ROM: LZ3/SBZ2 — FG also wraps vertically
+            wrappedY = BlockGridIndexer.wrapCoordinate(wrappedY, levelHeight);
         } else {
             // Foreground clamps
             if (wrappedY < 0 || wrappedY >= levelHeight)
                 return null;
         }
 
-        // Block lookup (inlined from getBlockAtPosition to reuse wrappedX/wrappedY)
+        // Block lookup (inlined from getBlockAtPosition to reuse wrappedX/wrappedY).
         Map map = level.getMap();
-        int mapX = wrappedX / blockPixelSize;
-        int mapY = wrappedY / blockPixelSize;
+        int mapX = blockGrid.blockIndex(wrappedX);
+        int mapY = blockGrid.blockIndex(wrappedY);
 
         byte value = map.getValue(layer, mapX, mapY);
         int blockIndex = value & 0xFF;
@@ -2125,8 +2125,8 @@ public class LevelManager {
         }
 
         // Intra-block position (reuses already-wrapped coordinates)
-        return block.getChunkDesc((wrappedX % blockPixelSize) / LevelConstants.CHUNK_WIDTH,
-                (wrappedY % blockPixelSize) / LevelConstants.CHUNK_HEIGHT);
+        return block.getChunkDesc(blockGrid.blockLocal(wrappedX) / LevelConstants.CHUNK_WIDTH,
+                blockGrid.blockLocal(wrappedY) / LevelConstants.CHUNK_HEIGHT);
     }
 
     /**
@@ -2154,17 +2154,17 @@ public class LevelManager {
         if (levelWidth <= 0 || levelHeight <= 0) {
             return null;
         }
-        int wrappedX = ((x % levelWidth) + levelWidth) % levelWidth;
+        int wrappedX = BlockGridIndexer.wrapCoordinate(x, levelWidth);
         int wrappedY = y;
         if (verticalWrapEnabled) {
-            wrappedY = ((wrappedY % levelHeight) + levelHeight) % levelHeight;
+            wrappedY = BlockGridIndexer.wrapCoordinate(wrappedY, levelHeight);
         } else if (wrappedY < 0 || wrappedY >= levelHeight) {
             return null;
         }
 
         Map map = level.getMap();
-        int mapX = wrappedX / blockPixelSize;
-        int mapY = wrappedY / blockPixelSize;
+        int mapX = blockGrid.blockIndex(wrappedX);
+        int mapY = blockGrid.blockIndex(wrappedY);
 
         int rawBlockIndex = map.getValue(0, mapX, mapY) & 0xFF;
         int resolvedIndex = level.resolveCollisionBlockIndex(rawBlockIndex, mapX, mapY);
@@ -2179,8 +2179,8 @@ public class LevelManager {
         }
 
         return block.getChunkDesc(
-                (wrappedX % blockPixelSize) / LevelConstants.CHUNK_WIDTH,
-                (wrappedY % blockPixelSize) / LevelConstants.CHUNK_HEIGHT);
+                blockGrid.blockLocal(wrappedX) / LevelConstants.CHUNK_WIDTH,
+                blockGrid.blockLocal(wrappedY) / LevelConstants.CHUNK_HEIGHT);
     }
 
     public SolidTile getSolidTileForChunkDesc(ChunkDesc chunkDesc, int solidityBitIndex) {

@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Objects;
 import java.util.TreeMap;
-import java.util.List;
 
 public final class AudioKeyframeStore {
     private final NavigableMap<Long, AudioLogicalSnapshot> keyframes = new TreeMap<>();
@@ -36,9 +35,16 @@ public final class AudioKeyframeStore {
                 Math.toIntExact(keyframe.getKey()),
                 Math.toIntExact(targetFrame),
                 reason)) {
-            List<AudioTimelineEntry> entries = audio.commandTimeline().entries();
-            for (int i = snapshot.commandEntryCount(); i < entries.size(); i++) {
-                AudioTimelineEntry entry = entries.get(i);
+            AudioCommandTimeline timeline = audio.commandTimeline();
+            // The firstRetainedEntryIndex clamp is unreachable while pruning
+            // stays in lockstep (the timeline is pruned to the EARLIEST
+            // retained keyframe's commandEntryCount, so every retained
+            // snapshot's count is >= it); it is a skip-don't-crash safety net
+            // should that coupling ever break.
+            int start = Math.max(snapshot.commandEntryCount(), timeline.firstRetainedEntryIndex());
+            int end = timeline.entryCount();
+            for (int i = start; i < end; i++) {
+                AudioTimelineEntry entry = timeline.entryAt(i);
                 if (entry.frame() <= targetFrame) {
                     audio.replayTimelineCommand(entry.command());
                     replayed++;
@@ -58,9 +64,13 @@ public final class AudioKeyframeStore {
         AudioLogicalSnapshot snapshot = keyframe.getValue();
         audio.restoreLogicalSnapshot(snapshot);
         int replayed = 0;
-        List<AudioTimelineEntry> entries = audio.commandTimeline().entries();
-        for (int i = snapshot.commandEntryCount(); i < entries.size(); i++) {
-            AudioTimelineEntry entry = entries.get(i);
+        AudioCommandTimeline timeline = audio.commandTimeline();
+        // Same skip-don't-crash safety net as replayTo: unreachable under
+        // lockstep pruning, diagnosable if the prune coupling breaks.
+        int start = Math.max(snapshot.commandEntryCount(), timeline.firstRetainedEntryIndex());
+        int end = timeline.entryCount();
+        for (int i = start; i < end; i++) {
+            AudioTimelineEntry entry = timeline.entryAt(i);
             if (entry.frame() <= targetFrame) {
                 audio.replayTimelineCommandLogically(entry.command());
                 replayed++;
@@ -71,6 +81,16 @@ public final class AudioKeyframeStore {
 
     public void discardAfter(long frame) {
         keyframes.tailMap(frame, false).clear();
+    }
+
+    public void discardBefore(long frame) {
+        keyframes.headMap(frame, false).clear();
+    }
+
+    /** Earliest retained keyframe snapshot, or {@code null} when empty. */
+    public AudioLogicalSnapshot earliestSnapshot() {
+        Map.Entry<Long, AudioLogicalSnapshot> first = keyframes.firstEntry();
+        return first != null ? first.getValue() : null;
     }
 
     public void clear() {

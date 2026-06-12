@@ -26,6 +26,9 @@ public interface KeyframeStore {
     /** Removes stored keyframes strictly after {@code frame}. */
     void discardAfter(int frame);
 
+    /** Removes stored keyframes strictly before {@code frame}. */
+    void discardBefore(int frame);
+
     /** Stored entry record. */
     record Entry(int frame, CompositeSnapshot snapshot) {}
 }

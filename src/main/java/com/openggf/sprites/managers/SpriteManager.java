@@ -79,6 +79,12 @@ public class SpriteManager {
 	private final List<Sprite> nonPlayableSprites = new ArrayList<>();
 	private boolean bucketsDirty = true;
 	private boolean lastSidekickSuppressed = false;
+	// Render-input snapshot from the last bucket rebuild, used by
+	// refreshRenderBucketsIfChanged() to detect priority/membership changes
+	// without rebuilding every frame.
+	private Sprite[] bucketSnapshotSprites = new Sprite[8];
+	private int[] bucketSnapshotKeys = new int[8];
+	private int bucketSnapshotCount;
 
 	private LevelManager levelManager;
 
@@ -101,6 +107,13 @@ public class SpriteManager {
 	private boolean inputSuppressed;
 	private boolean playbackInputSuppressed;
 	private final IdentityHashMap<AbstractPlayableSprite, Integer> playableUpdateOrder = new IdentityHashMap<>();
+	// Reused per-frame scratch for buildPlayableUpdateOrderInto(); valid only
+	// for the duration of one update()/updateWithoutInput() call.
+	private final List<AbstractPlayableSprite> playableOrderScratch = new ArrayList<>();
+	private final IdentityHashMap<AbstractPlayableSprite, Boolean> playableScheduledScratch =
+			new IdentityHashMap<>();
+	private final IdentityHashMap<AbstractPlayableSprite, Boolean> playableAvailableScratch =
+			new IdentityHashMap<>();
 	private final IdentityHashMap<AbstractPlayableSprite, List<Runnable>> deferredPostTickMutations =
 			new IdentityHashMap<>();
 	private AbstractPlayableSprite activePlayableUpdate;
@@ -261,6 +274,9 @@ public class SpriteManager {
 		lastSidekickSuppressed = false;
 		playableUpdateOrder.clear();
 		deferredPostTickMutations.clear();
+		playableOrderScratch.clear();
+		playableScheduledScratch.clear();
+		playableAvailableScratch.clear();
 		activePlayableUpdate = null;
 		playableFrameActive = false;
 	}
@@ -273,6 +289,76 @@ public class SpriteManager {
 	 */
 	public void invalidateRenderBuckets() {
 		bucketsDirty = true;
+	}
+
+	/**
+	 * Marks the cached render buckets dirty only when their inputs actually
+	 * changed since the last rebuild. Playable-sprite priority is mutated from
+	 * many gameplay paths (plane switchers, hurt/death, zone events, spin
+	 * tubes) without notifying this manager, so there is no central mutation
+	 * hook; this cheap once-per-frame scan replaces the previous unconditional
+	 * per-frame rebuild while staying immune to untracked priority changes.
+	 */
+	public void refreshRenderBucketsIfChanged() {
+		if (bucketsDirty) {
+			return;
+		}
+		if (renderBucketInputsChanged()) {
+			bucketsDirty = true;
+		}
+	}
+
+	private boolean renderBucketInputsChanged() {
+		// Early-out for the common membership-change case; the per-index
+		// identity comparison below would also catch it.
+		if (sprites.size() != bucketSnapshotCount) {
+			return true;
+		}
+		int position = 0;
+		for (Sprite sprite : getAllSprites()) {
+			if (position >= bucketSnapshotCount
+					|| bucketSnapshotSprites[position] != sprite
+					|| bucketSnapshotKeys[position] != renderBucketKey(sprite)) {
+				return true;
+			}
+			position++;
+		}
+		return position != bucketSnapshotCount;
+	}
+
+	private void captureRenderBucketSnapshot() {
+		int required = sprites.size();
+		if (bucketSnapshotSprites.length < required) {
+			int newLength = Math.max(required, bucketSnapshotSprites.length * 2);
+			bucketSnapshotSprites = new Sprite[newLength];
+			bucketSnapshotKeys = new int[newLength];
+		}
+		int position = 0;
+		for (Sprite sprite : getAllSprites()) {
+			bucketSnapshotSprites[position] = sprite;
+			bucketSnapshotKeys[position] = renderBucketKey(sprite);
+			position++;
+		}
+		// Release stale references beyond the live range so removed sprites
+		// are not retained by the snapshot.
+		for (int i = position; i < bucketSnapshotCount; i++) {
+			bucketSnapshotSprites[i] = null;
+		}
+		bucketSnapshotCount = position;
+	}
+
+	// Packed-key layout: bit 0 = highPriority, bit 1 = cpuControlled, bits 2+
+	// = bucket index. The bucket index is the top field, so it cannot bleed
+	// into another field; -1 is reserved as the non-playable sentinel (a real
+	// key is always non-negative because the bucket index is clamped >= 0).
+	private static int renderBucketKey(Sprite sprite) {
+		if (!(sprite instanceof AbstractPlayableSprite playable)) {
+			return -1;
+		}
+		int bucket = RenderPriority.clamp(playable.getPriorityBucket()) - RenderPriority.MIN;
+		return (bucket << 2)
+				| (playable.isHighPriority() ? 1 : 0)
+				| (playable.isCpuControlled() ? 2 : 0);
 	}
 
 	public Collection<Sprite> getAllSprites() {
@@ -355,8 +441,9 @@ public class SpriteManager {
 		// Note: bucketsDirty is already marked in addSprite()/removeSprite(),
 		// no need to unconditionally mark dirty every frame
 		Collection<Sprite> sprites = getAllSprites();
-		List<AbstractPlayableSprite> playables =
-				buildPlayableUpdateOrder(sprites, sidekicks, isCpuSidekickSuppressed());
+		List<AbstractPlayableSprite> playables = buildPlayableUpdateOrderInto(
+				sprites, sidekicks, isCpuSidekickSuppressed(),
+				playableOrderScratch, playableScheduledScratch, playableAvailableScratch);
 		beginPlayableFrame(playables);
 		boolean suppressInput = inputSuppressed || playbackInputSuppressed;
 		boolean up = !suppressInput && handler.isKeyDown(upKey);
@@ -552,8 +639,9 @@ public class SpriteManager {
 	public void updateWithoutInput() {
 		frameCounter++;
 		Collection<Sprite> sprites = getAllSprites();
-		List<AbstractPlayableSprite> playables =
-				buildPlayableUpdateOrder(sprites, sidekicks, isCpuSidekickSuppressed());
+		List<AbstractPlayableSprite> playables = buildPlayableUpdateOrderInto(
+				sprites, sidekicks, isCpuSidekickSuppressed(),
+				playableOrderScratch, playableScheduledScratch, playableAvailableScratch);
 		LevelManager levelManager = getLevelManager();
 		beginPlayableFrame(playables);
 		try {
@@ -1113,6 +1201,8 @@ public class SpriteManager {
 				nonPlayableSprites.add(sprite);
 			}
 		}
+
+		captureRenderBucketSnapshot();
 	}
 
 	private LevelManager getLevelManager() {
@@ -1390,9 +1480,26 @@ public class SpriteManager {
 	static List<AbstractPlayableSprite> buildPlayableUpdateOrder(Collection<Sprite> sprites,
 			List<AbstractPlayableSprite> sidekicks,
 			boolean suppressCpuSidekicks) {
-		List<AbstractPlayableSprite> ordered = new ArrayList<>();
-		IdentityHashMap<AbstractPlayableSprite, Boolean> scheduled = new IdentityHashMap<>();
-		IdentityHashMap<AbstractPlayableSprite, Boolean> available = new IdentityHashMap<>();
+		return buildPlayableUpdateOrderInto(sprites, sidekicks, suppressCpuSidekicks,
+				new ArrayList<>(), new IdentityHashMap<>(), new IdentityHashMap<>());
+	}
+
+	/**
+	 * Allocation-free variant of {@link #buildPlayableUpdateOrder}: fills the
+	 * caller-supplied collections (cleared first) and returns {@code ordered}.
+	 * The per-frame update paths pass reused scratch fields; the returned list
+	 * is only valid until the next call with the same scratch.
+	 */
+	private static List<AbstractPlayableSprite> buildPlayableUpdateOrderInto(
+			Collection<Sprite> sprites,
+			List<AbstractPlayableSprite> sidekicks,
+			boolean suppressCpuSidekicks,
+			List<AbstractPlayableSprite> ordered,
+			IdentityHashMap<AbstractPlayableSprite, Boolean> scheduled,
+			IdentityHashMap<AbstractPlayableSprite, Boolean> available) {
+		ordered.clear();
+		scheduled.clear();
+		available.clear();
 
 		for (Sprite sprite : sprites) {
 			if (sprite instanceof AbstractPlayableSprite playable) {

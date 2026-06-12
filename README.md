@@ -224,6 +224,18 @@ behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Engine performance optimization branch (2026-06-12).** Merged
+  `bugfix/ai-performance-optimization`, a 13-task measured pass over the
+  audio, rendering, and rewind hot paths: keyframe-spike max 71.7→27.9 ms,
+  dirty-rect pattern-atlas uploads (≈512× less data per DPLC change),
+  incremental background-window scrolling, SAT replay batching, in-place
+  object restore and deferred audio-driver restores during held rewind
+  (≈22× faster / ≈257× less allocation per backward step on the audio
+  share), evidence-gated SMPS/resampler math (fade fallback removal proven
+  PCM-identical), a disasm-cited Tails CalcAngle parity fix, and committed
+  ROM-gated measurement harnesses. Trace-replay results are byte-identical
+  to the pre-branch baseline throughout; full numbers in
+  `docs/performance/2026-06-11-performance-results-tally.md`.
 - **Develop sync and release-hardening integration (2026-06-11).** Merged the
   latest `origin/develop` release-prep work, carrying configuration/save
   resilience updates, data-select presentation fixes, sidekick and trace

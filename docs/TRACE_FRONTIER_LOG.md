@@ -1,5 +1,65 @@
 # Trace Frontier Log
 
+## 2026-06-12 - Performance-optimization final acceptance sweep (Task 13)
+
+- Scope: closing acceptance sweep for the performance-optimization plan
+  (`docs/superpowers/plans/2026-06-11-performance-optimization.md`), run at
+  the end of the branch after all 12 implementation tasks plus the final
+  guard fixes (LevelManager block-grid extraction, lifecycle-fixture test
+  setups). Compared against the 2026-06-11 pre-work baseline below.
+- Command: `mvn "-Dtest=*TraceReplay" test` in worktree
+  `sonic-engine-performance-optimization` (branch
+  `bugfix/ai-performance-optimization`, working tree at `e8e413cee` plus the
+  final guard fixes committed with this entry).
+- Result: **Tests run: 88, Failures: 52, Errors: 1, Skipped: 0 — failure set
+  identical to the pre-work baseline.** Per-class distribution matches
+  exactly: the same 13 classes pass (8 `TestS1Credits*`, `TestS1Ghz1`,
+  `TestS2Ehz1`, `TestS2Scz`/`TestS2Wfz` LevelSelect, `TestS3kAiz` 16/16), the
+  same 43 classes fail with 1 failure each, and `TestS3kCnzTraceReplay` stays
+  mixed at 9 failures + 1 NPE error. Spot-checked first-error frames/fields
+  are unchanged (e.g. Ghz1CompleteRun frame 1394 x_speed, ArzLevelSelect
+  frame 1285 tails_cpu_interact, MgzCompleteRun frame 738 rings,
+  MhzCompleteRun frame 0 tails_cpu_routine). No lwjgl/glfw or
+  `TestBundledConfigResource` environment noise.
+- Verdict: spec acceptance criterion 1 (no trace regression vs the pre-work
+  baseline) is MET. Final measurements live in
+  `docs/performance/2026-06-11-performance-baseline.md` (Task 13 section)
+  and `docs/performance/2026-06-11-performance-results-tally.md`.
+
+## 2026-06-11 - Performance-optimization pre-work full sweep baseline
+
+- Scope: Task 0 of the performance-optimization plan
+  (`docs/superpowers/plans/2026-06-11-performance-optimization.md`). Full
+  `*TraceReplay` sweep recorded as the pre-work frontier; no engine changes in
+  this pass. Later perf phases compare against this list — only a trace that
+  passes here and fails after a phase is a perf regression.
+- Command: `mvn "-Dtest=*TraceReplay" test` in worktree
+  `sonic-engine-performance-optimization` (branch
+  `bugfix/ai-performance-optimization`, based on `develop` @ `35b3cabad`).
+- Result: **Tests run: 88, Failures: 52, Errors: 1, Skipped: 0.** No
+  lwjgl/glfw or `TestBundledConfigResource` environment noise in this sweep.
+- Passing classes: all 8 `TestS1Credits*TraceReplay`, `TestS1Ghz1TraceReplay`,
+  `TestS2Ehz1TraceReplay`, `TestS2SczLevelSelectTraceReplay`,
+  `TestS2WfzLevelSelectTraceReplay`, `TestS3kAizTraceReplay` (16/16).
+- Failing classes (error count, first-error frame/field) — full per-class
+  table lives in `docs/performance/2026-06-11-performance-baseline.md`:
+  - S1: all 19 `CompleteRun` classes + `TestS1Mz1TraceReplay` fail (e.g.
+    Ghz1CompleteRun 292 errors, first frame 1394 x_speed; Lz1 2992 errors,
+    first frame 302 y_speed).
+  - S2: all LevelSelect classes except SCZ/WFZ fail (e.g. ArzLevelSelect 34
+    errors, first frame 1285 tails_cpu_interact; Mtz3 3259 errors, first
+    frame 461 tails_cpu_interact), plus `TestS2DezEndingLevelSelectTraceReplay`
+    (137 errors, first frame 1557 x_speed).
+  - S3K: all 6 `CompleteRun` classes fail (AIZ 5084 errors first frame 1095
+    x_speed; CNZ 4826 frame 0 y_speed; HCZ 4925 frame 125 tails_air; ICZ 4230
+    frame 0 tails_cpu_respawn_counter; MGZ 7021 frame 738 rings; MHZ 3523
+    frame 0 tails_cpu_routine). `TestS3kMgzTraceReplay` fails with an input
+    alignment error at trace frame 33271; `TestS3kCnzTraceReplay` is mixed
+    (7 pass / 9 fail / 1 NPE error incl. `replayMatchesTrace` input alignment
+    at frame 39672).
+- S3K green list at the same commit: PASS
+  (`MSE:OK modules=1 passed=51 failed=0 errors=0 skipped=0`).
+
 ## 2026-06-10 - S3K AIZ release trace green; S2/S3K sidekick baseline recorded
 
 - Scope: follow-up to the AIZ sidekick release blocker and the requested

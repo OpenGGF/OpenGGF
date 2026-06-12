@@ -300,18 +300,28 @@ public class HudRenderManager {
                 -1,
                 false,
                 false,
-                (patternId, hFlip, vFlip, paletteIndex, drawX, drawY) -> {
-                    int descIndex = patternId & 0x7FF;
-                    if (hFlip) {
-                        descIndex |= 0x800;
-                    }
-                    if (vFlip) {
-                        descIndex |= 0x1000;
-                    }
-                    descIndex |= (paletteIndex & 0x3) << 13;
-                    staticPieceDesc.set(descIndex);
-                    graphicsManager.renderPatternWithId(patternId, new PatternDesc(staticPieceDesc.get()), drawX, drawY);
-                });
+                staticPieceConsumer);
+    }
+
+    // Reused tile consumer (captures only `this`), hoisted so drawStaticFrame
+    // doesn't allocate a capturing lambda per piece batch per frame.
+    private final SpritePieceRenderer.TileConsumer staticPieceConsumer = this::renderStaticPiece;
+
+    private void renderStaticPiece(int patternId, boolean hFlip, boolean vFlip,
+            int paletteIndex, int drawX, int drawY) {
+        int descIndex = patternId & 0x7FF;
+        if (hFlip) {
+            descIndex |= 0x800;
+        }
+        if (vFlip) {
+            descIndex |= 0x1000;
+        }
+        descIndex |= (paletteIndex & 0x3) << 13;
+        staticPieceDesc.set(descIndex);
+        // renderPatternWithId consumes the desc immediately (batch copies
+        // floats; PatternRenderCommand.init copies fields), so the reusable
+        // desc can be passed without a copy.
+        graphicsManager.renderPatternWithId(patternId, staticPieceDesc, drawX, drawY);
     }
 
     private SpriteMappingFrame selectTimeFrame(boolean shouldFlashTimer, boolean flashCycle) {

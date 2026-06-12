@@ -246,6 +246,41 @@ class TestRewindController {
                 "externally advanced visual playback still needs periodic rewind keyframes");
     }
 
+    @Test
+    void pruneHistoryAlignsToEarlierKeyframeBoundary() {
+        RewindRegistry reg = new RewindRegistry();
+        InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
+        InputSource inputs = new FakeInputSource(200);
+
+        RewindController rc = new RewindController(reg, keyframes, inputs, in -> {}, 10);
+        for (int i = 0; i < 35; i++) {
+            rc.step();
+        }
+
+        int earliest = rc.pruneHistoryToRetainFrames(12);
+
+        assertEquals(20, earliest,
+                "retention must keep the keyframe at or before the requested horizon");
+        assertTrue(keyframes.latestAtOrBefore(19).isEmpty());
+        assertEquals(20, keyframes.latestAtOrBefore(20).orElseThrow().frame());
+        assertEquals(30, keyframes.latestAtOrBefore(99).orElseThrow().frame());
+    }
+
+    @Test
+    void pruneHistoryDoesNotDiscardWhenWithinRetentionWindow() {
+        RewindRegistry reg = new RewindRegistry();
+        InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
+        InputSource inputs = new FakeInputSource(20);
+
+        RewindController rc = new RewindController(reg, keyframes, inputs, in -> {}, 10);
+        for (int i = 0; i < 5; i++) {
+            rc.step();
+        }
+
+        assertEquals(0, rc.pruneHistoryToRetainFrames(60));
+        assertEquals(0, keyframes.earliestFrame());
+    }
+
     private static class FakeInputSource implements InputSource {
         private final int count;
 
