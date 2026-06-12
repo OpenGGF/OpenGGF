@@ -733,6 +733,7 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         }
         if (state.consumePadCollapseStartRequested()) {
             state.setPadCollapseActive(true);
+            state.setLaunchFallingAccelActive(true);
             state.setWaterDisabled(false);
             state.setDetachScroll(0);
         }
@@ -740,6 +741,8 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
             state.setFinalFallActive(true);
         }
         if (state.isFinalFallActive()) {
+            // ROM LBZ2BGE_Falling: Scroll_lock + camera.y -= 2; the launch
+            // motion/deform no longer runs once Events_fg_5 (3rd use) is set.
             camera().setFrozen(true);
             camera().setY((short) ((camera().getY() & 0xFFFF) + LBZ2_FINAL_FALL_CAMERA_DY));
             return;
@@ -748,8 +751,13 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
             return;
         }
         updateDeathEggRumble(state, frameCounter);
-        if (state.isPadCollapseActive()) {
-            updatePadCollapsePreDetach(state);
+        // ROM sub_545DA: LBZ2_EndFallingAccel runs every frame from the
+        // pad-collapse signal onward (through detach and beyond).
+        if (state.isLaunchFallingAccelActive()) {
+            updateLaunchFallingAccel(state);
+            if (!state.isWaterDisabled() && state.getBgLaunchSpeed() < 0) {
+                state.setWaterDisabled(true);
+            }
         }
         updateLaunchMotion(state);
         if (state.isPadCollapseActive()) {
@@ -763,7 +771,18 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         state.setPreLaunchDelay(LBZ2_LAUNCH_PRE_DELAY);
         state.setFgLaunchSpeed(LBZ2_LAUNCH_FG_SPEED);
         state.setBgLaunchSpeed(LBZ2_LAUNCH_BG_SPEED);
-        state.setWaterTargetY(camera().getY() & 0xFFFF);
+        // ROM loc_54A74: the per-frame deltas accumulate onto the existing
+        // Target_water_level, not the camera position.
+        int initialWaterTarget = 0;
+        try {
+            initialWaterTarget = waterSystem().getWaterLevelTarget(Sonic3kZoneIds.ZONE_LBZ, 1) & 0xFFFF;
+        } catch (RuntimeException ignored) {
+            // Unit-test contexts may not have an LBZ water configuration.
+        }
+        if (initialWaterTarget == 0) {
+            initialWaterTarget = camera().getY() & 0xFFFF;
+        }
+        state.setWaterTargetY(initialWaterTarget);
         gameState().setScreenShakeActive(true);
         Camera camera = camera();
         camera.setMaxX((short) LBZ2_LAUNCH_CAMERA_MAX_X);
@@ -813,8 +832,15 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         state.setBgAccum(bgAccum);
         int bgDelta = (bgAccum >> 16) - oldBgHigh;
 
-        if (camera.getFrozen() && fgDelta != 0) {
-            camera.setY((short) ((camera.getY() & 0xFFFF) + fgDelta));
+        if (camera.getFrozen()) {
+            // ROM loc_54A74 prelude: while Scroll_lock the FG delta moves the
+            // screen AND the registered rider object (the hang-ride ship).
+            if (fgDelta != 0) {
+                camera.setY((short) ((camera.getY() & 0xFFFF) + fgDelta));
+            }
+            state.setLaunchRiderDelta(fgDelta);
+        } else {
+            state.setLaunchRiderDelta(0);
         }
         int combinedDelta = fgDelta + bgDelta;
         int waterTarget = state.getWaterTargetY() + combinedDelta;
@@ -849,16 +875,6 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         requestScreenShakeOffset(frameCounter);
         if (((frameCounter - 1) & 0x0F) == 0) {
             audio().playSfx(Sonic3kSfx.DEATH_EGG_RISE_LOUD.id);
-        }
-    }
-
-    private static void updatePadCollapsePreDetach(LbzZoneRuntimeState state) {
-        if (state.isWaterDisabled()) {
-            return;
-        }
-        updateLaunchFallingAccel(state);
-        if (state.getBgLaunchSpeed() < 0) {
-            state.setWaterDisabled(true);
         }
     }
 

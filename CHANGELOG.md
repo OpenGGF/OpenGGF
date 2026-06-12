@@ -4,6 +4,30 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **LBZ2 end sequence corrected against the disassembly:** the
+  `Obj_LBZFinalBoss1` ship/turret boss now renders its body and every child
+  (turret segments, sweeping laser heads, charging muzzles with blink and beam
+  trails, orbiting pod on the ROM trig circle, animated gun pods, hit sparks,
+  detach debris with `word_736AA` velocities and `$38` gravity), detaches the
+  top segment at 5 HP, the mid segment at 1 HP, and the bottom segment at
+  defeat (with the `loc_730C0` close-up shift), leaves out-of-range doubled
+  hit velocities unchanged instead of clamping, runs the five-frame recoil
+  drop, and drives the finale from the real results-tally end-of-level flag
+  (boss flag, HUD-timer resume, fade-transition boss music, sidekick control
+  locks, P2 ending-pose watcher, `Map_LBZDeathEggSmall` launch explosions,
+  miniature render flips, smoke sub-puffs, and the corrected milestone-B
+  comparison). The hang-ride ship uses the ROM `Swing_UpAndDown` bob, keeps
+  drifting through the Knuckles pause, lands the thump only once `y_vel` turns
+  positive, clears the screen-shake flag at release, renders ship frame `$0A`,
+  and sinks with the launch FG delta like the ROM rider object. The Knuckles
+  cameo plays the full taunt/idle/alarmed raw animation scripts with correct
+  facing, and its swing chain implements the ROM pendulum (acceleration toward
+  the anchor, side-sign crossings, `word_62A9E` speed upgrade on the
+  `$39 == 3` crossing, fling on the sixth). The launch background event seeds
+  the water drain from the existing water target, keeps `LBZ2_EndFallingAccel`
+  running from the pad-collapse signal onward, and applies the detach scroll
+  to the foreground V-scroll.
+
 - **LBZ2 end boss (first Robotnik fight) reaches ROM parity:** the hit flash
   now restores the collision byte Touch_Enemy saved at hit time (so the raised
   launcher stays `$0F`-sized after a hit), defeat awards 1000 points, flashes

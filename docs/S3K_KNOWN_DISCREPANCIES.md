@@ -22,6 +22,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 9. [LBZ1 Miniboss Box Pieces: PLC VRAM Restore Skipped](#lbz1-miniboss-box-pieces-plc-vram-restore-skipped)
 10. [LBZ2 Launch Pad Collapse: Mutation Pipeline Offset](#lbz2-launch-pad-collapse-mutation-pipeline-offset)
 11. [LBZ2 End Boss Smoke Puffs: Immortal-Object Quirk Not Replicated](#lbz2-end-boss-smoke-puffs-immortal-object-quirk-not-replicated)
+12. [LBZ2 Finale Player Scripts: Engine Animation IDs Instead of Raw Mapping Frames](#lbz2-finale-player-scripts-engine-animation-ids-instead-of-raw-mapping-frames)
 
 ---
 
@@ -434,3 +435,41 @@ frame cadence, subtype-0 rise velocity) match the ROM.
 
 `TestLbzEndBossInstance` covers the spike-ball spray spawning the four delayed
 smoke puffs and the rolling-smoke speed gate.
+
+---
+
+## LBZ2 Finale Player Scripts: Engine Animation IDs Instead of Raw Mapping Frames
+
+**Location:** `LbzFinalBoss1Instance.java`, `Lbz2RobotnikShipInstance.java`
+
+**ROM Reference:** `sonic3k.asm` `loc_72C68`/`byte_7386A`/`byte_73874` (look-up
+scripts), `Obj_LBZ2RobotnikShip` `loc_8D2B6` (grab)
+
+### Original Implementation
+
+During the Death Egg launch look-up the ROM freezes both players with
+`object_control = $83` and drives raw player mapping frames through
+`Animate_ExternalPlayerSprite` (`$C4, $55, $59, $5A` for P1, a longer `$5A`
+hold for P2). The hang-ride grab is detected through the ship's touch response
+(`collision_flags = $CA` writing `collision_property`, ignoring value 2).
+
+### Our Implementation
+
+The look-up uses the engine's forced `LOOK_UP` player animation (with held Up
+input) for both players instead of raw external mapping-frame scripts. The ship
+grab uses a centre-distance box matching the ObjDat touch dimensions and only
+ever grabs the main player.
+
+### Rationale
+
+The engine's forced-animation path renders the same player pose for the same
+duration without porting the external-animator opcode stream; the grab box is
+behaviourally equivalent because only Player 1 can trigger the ROM touch path.
+The hang pin itself (frame `$BA`/`$AD`, `(x-4, y-$12)` every frame) matches the
+ROM exactly via the object mapping-frame control used elsewhere.
+
+### Verification
+
+`TestLbzFinalBoss1Instance` covers the milestone-A freeze/look-up and finale
+phases; `TestLbz2RideCameoInstances` covers the grab, pin frames, release
+velocities, and final-boss spawn coordinates.

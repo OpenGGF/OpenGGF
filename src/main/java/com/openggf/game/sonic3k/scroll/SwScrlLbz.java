@@ -129,6 +129,15 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
             composer.setVscrollFactorBG((short) (composer.getVscrollFactorBG() + screenShakeOffset));
             composer.setVscrollFactorFG((short) (cameraY + screenShakeOffset));
         }
+        // ROM LBZ2BGE_PlatformDetach: Events_bg+$16 is added to the FG
+        // V-scroll only, dropping the standing pad before the layout clear.
+        int detachScroll = runtimeState != null ? runtimeState.getDetachScroll() : 0;
+        if (detachScroll != 0) {
+            short base = composer.getVscrollFactorFG() != 0
+                    ? composer.getVscrollFactorFG()
+                    : (short) cameraY;
+            composer.setVscrollFactorFG((short) (base + detachScroll));
+        }
 
         composer.copyPackedScrollWordsTo(horizScrollBuf);
         currentBgPeriodWidth = computeBgPeriodWidth(horizScrollBuf);

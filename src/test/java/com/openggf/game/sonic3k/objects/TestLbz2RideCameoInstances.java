@@ -137,7 +137,8 @@ class TestLbz2RideCameoInstances {
         TestablePlayableSprite sonic = playerAt(0x3BDE, 0x0654, "sonic");
 
         boolean launchRequested = false;
-        for (int frame = 0; frame < 900 && !launchRequested; frame++) {
+        int frame = 0;
+        for (; frame < 1200 && !launchRequested; frame++) {
             ship.update(frame, sonic);
             knuckles.update(frame, sonic);
             launchRequested = fixture.runtime.consumeLaunchStartRequested();
@@ -147,6 +148,13 @@ class TestLbz2RideCameoInstances {
                 "ship thump/rumble phase must request the launch via LbzZoneRuntimeState");
         assertFalse(ship.didSetLegacyEventsFg5ForTest(),
                 "Task E must not write the legacy LBZ1 reload flag directly");
+        assertTrue(fixture.gameState.isScreenShakeActive(),
+                "loc_8D450 sets Screen_shake_flag with Events_fg_5");
+
+        // The cameo reads Screen_shake_flag on the frames after the ship sets it.
+        for (int extra = 0; extra < 4; extra++) {
+            knuckles.update(frame + extra, sonic);
+        }
         assertTrue(knuckles.isScreenShakeObservedForTest());
     }
 
@@ -229,43 +237,64 @@ class TestLbz2RideCameoInstances {
         CutsceneKnucklesLbz2Instance cameo = fixture.knuckles(0x3E28, 0x0608);
 
         assertEquals(4, cameo.swingChildrenForTest().size());
-        assertEquals(List.of(Sonic3kMusic.KNUCKLES.id), fixture.playedMusic);
+        assertEquals(List.of(Sonic3kMusic.KNUCKLES.id), cameo.musicFadeTargetsForTest(),
+                "loc_628E0 spawns Obj_Song_Fade_Transition -> mus_Knuckles");
 
         cameo.triggerFromShip();
         cameo.update(0, playerAt(0x3D00, 0x0608, "sonic"));
         assertTrue(cameo.isTriggeredForTest());
 
-        fixture.runtime.setLaunchActive(true);
-        cameo.update(1, playerAt(0x3D00, 0x0608, "sonic"));
+        // ROM: the taunt script (byte_666D2) plays out before the idle state
+        // that watches Screen_shake_flag.
+        fixture.gameState.setScreenShakeActive(true);
+        int frame = 1;
+        for (; frame < 200 && !cameo.isScreenShakeObservedForTest(); frame++) {
+            cameo.update(frame, playerAt(0x3D00, 0x0608, "sonic"));
+        }
         assertTrue(cameo.isScreenShakeObservedForTest());
 
         cameo.markFlungFromSwingForTest();
-        for (int frame = 2; frame < 80 && !cameo.hasSplashedForTest(); frame++) {
+        for (; frame < 400 && !cameo.hasSplashedForTest(); frame++) {
             cameo.update(frame, playerAt(0x3D00, 0x0608, "sonic"));
         }
 
         assertTrue(cameo.hasSplashedForTest());
         assertTrue(fixture.playedSfx.contains(Sonic3kSfx.SPLASH.id));
-        assertTrue(fixture.playedMusic.contains(Sonic3kMusic.LBZ2.id),
-                "flung cameo fades back to level music");
+        assertEquals(List.of(Sonic3kMusic.KNUCKLES.id, Sonic3kMusic.LBZ2.id),
+                cameo.musicFadeTargetsForTest(),
+                "flung cameo fades back to level music (loc_6297A)");
     }
 
     @Test
-    void swingSubtypeZeroCopiesXToParentAndSignalsFlingAfterSixReversals() {
+    void swingSubtypeZeroCopiesXToParentAndSignalsFlingAfterSixCrossings() {
         Fixture fixture = new Fixture(PlayerCharacter.SONIC_ALONE);
-        fixture.runtime.setLaunchActive(true);
+        fixture.gameState.setScreenShakeActive(true);
         CutsceneKnucklesLbz2Instance cameo = fixture.knuckles(0x3E28, 0x0608);
         CutsceneKnucklesLbz2Instance.SwingChild child = cameo.swingChildrenForTest().get(0);
 
-        child.forceNextCrossingForTest();
-        for (int frame = 0; frame < 80 && !cameo.isFlingRequestedForTest(); frame++) {
+        // First update arms the swing (loc_62A0A): x_vel = $100, $39 = 6.
+        child.update(0, playerAt(0x3D00, 0x0608, "sonic"));
+        assertTrue(child.isSwingingForTest());
+        assertEquals(0x100, child.getXVelForTest(), "loc_62A0A seeds x_vel from word_629FA");
+        assertEquals(6, child.getCrossingsRemainingForTest());
+
+        int frame = 1;
+        boolean upgraded = false;
+        for (; frame < 600 && !cameo.isFlingRequestedForTest(); frame++) {
             child.update(frame, playerAt(0x3D00, 0x0608, "sonic"));
+            if (child.getCrossingsRemainingForTest() == 2 && !upgraded) {
+                upgraded = true;
+                assertEquals(0x200, child.getXVelForTest(),
+                        "the crossing where $39 == 3 upgrades the pair from word_62A9E");
+            }
         }
 
         assertEquals(child.getCentreX(), cameo.getCentreX(),
                 "subtype 0 is the leader chain link that drags Knuckles horizontally");
+        assertTrue(upgraded, "the speed upgrade crossing must occur before the fling");
         assertTrue(cameo.isFlingRequestedForTest());
         assertTrue(child.isFreeFallingForTest());
+        assertTrue(frame > 60, "six pendulum half-periods take dozens of frames, not instant reversals");
     }
 
     private static TestablePlayableSprite playerAt(int x, int y, String code) {
@@ -276,6 +305,7 @@ class TestLbz2RideCameoInstances {
         final LbzZoneRuntimeState runtime;
         final ZoneRuntimeRegistry registry = new ZoneRuntimeRegistry();
         final RecordingServices services = new RecordingServices();
+        final com.openggf.game.GameStateManager gameState = new com.openggf.game.GameStateManager();
         final List<Integer> playedSfx = services.playedSfx;
         final List<Integer> playedMusic = services.playedMusic;
 
@@ -283,6 +313,7 @@ class TestLbz2RideCameoInstances {
             runtime = new LbzZoneRuntimeState(1, character);
             registry.install(runtime);
             services.withZoneRuntimeRegistry(registry);
+            services.withGameState(gameState);
             AbstractObjectInstance.updateCameraBounds(0x3800, 0x0500, 0x4600, 0x0800, 0);
         }
 

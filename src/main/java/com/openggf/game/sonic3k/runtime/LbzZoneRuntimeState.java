@@ -11,10 +11,12 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     private static final int LEGACY_CAPTURE_BYTES = 12;
     private static final int LAUNCH_EXTENSION_VERSION_1 = 1;
     private static final int LAUNCH_EXTENSION_VERSION_2 = 2;
-    private static final int LAUNCH_EXTENSION_VERSION = 3;
+    private static final int LAUNCH_EXTENSION_VERSION_3 = 3;
+    private static final int LAUNCH_EXTENSION_VERSION = 4;
     private static final int LAUNCH_EXTENSION_BYTES_V1 = 34;
     private static final int LAUNCH_EXTENSION_BYTES_V2 = 41;
-    private static final int LAUNCH_EXTENSION_BYTES = 49;
+    private static final int LAUNCH_EXTENSION_BYTES_V3 = 49;
+    private static final int LAUNCH_EXTENSION_BYTES = 53;
     private static final int LAUNCH_FLAG_ACTIVE = 1;
     private static final int LAUNCH_FLAG_DEATH_EGG_RUMBLE = 1 << 1;
     private static final int LAUNCH_FLAG_START_REQUESTED = 1 << 2;
@@ -28,6 +30,7 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     private static final int LAUNCH_FLAG_DEATH_EGG_TERRAIN_SWAP_APPLIED = 1 << 10;
     private static final int LAUNCH_FLAG_WATER_DISABLED = 1 << 11;
     private static final int LAUNCH_FLAG_FINALE_CUTSCENE_ANCHOR_REGISTERED = 1 << 12;
+    private static final int LAUNCH_FLAG_FALLING_ACCEL_ACTIVE = 1 << 13;
 
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
@@ -61,6 +64,8 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     private boolean deathEggTerrainSwapApplied;
     private boolean waterDisabled;
     private int launchRiderAnchorId;
+    private int launchRiderDelta;
+    private boolean launchFallingAccelActive;
     private int deathEggDeformWrapLatch;
     private boolean finaleCutsceneAnchorRegistered;
     private int finaleCutsceneAnchorId;
@@ -213,6 +218,30 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
 
     public void setLaunchYDelta(int launchYDelta) {
         this.launchYDelta = launchYDelta;
+    }
+
+    /**
+     * ROM LBZ2_DeathEggMoveScreen: while Scroll_lock the FG launch delta is
+     * added to the registered rider object's y_pos (the hang-ride ship).
+     * Published by the launch event each frame and consumed by the ship.
+     */
+    public void setLaunchRiderDelta(int launchRiderDelta) {
+        this.launchRiderDelta = launchRiderDelta;
+    }
+
+    public int consumeLaunchRiderDelta() {
+        int delta = launchRiderDelta;
+        launchRiderDelta = 0;
+        return delta;
+    }
+
+    /** ROM: LBZ2_EndFallingAccel runs every frame once Events_fg_5 (2nd use) fires. */
+    public boolean isLaunchFallingAccelActive() {
+        return launchFallingAccelActive;
+    }
+
+    public void setLaunchFallingAccelActive(boolean launchFallingAccelActive) {
+        this.launchFallingAccelActive = launchFallingAccelActive;
     }
 
     public int getPreLaunchDelay() {
@@ -391,6 +420,7 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         buffer.putInt(launchRiderAnchorId);
         buffer.putInt(deathEggDeformWrapLatch);
         buffer.putInt(finaleCutsceneAnchorId);
+        buffer.putInt(launchRiderDelta);
         return buffer.array();
     }
 
@@ -445,6 +475,13 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
             restoreLaunchInts(buffer, true, false);
             return;
         }
+        if (version == LAUNCH_EXTENSION_VERSION_3
+                && bytes.length >= LEGACY_CAPTURE_BYTES + LAUNCH_EXTENSION_BYTES_V3) {
+            restoreLaunchFlags(buffer.getInt());
+            restoreLaunchInts(buffer, true, true);
+            launchRiderDelta = 0;
+            return;
+        }
         if (version != LAUNCH_EXTENSION_VERSION || bytes.length < LEGACY_CAPTURE_BYTES + LAUNCH_EXTENSION_BYTES) {
             clearLaunchState();
             return;
@@ -452,6 +489,7 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         int flags = buffer.getInt();
         restoreLaunchFlags(flags);
         restoreLaunchInts(buffer, true, true);
+        launchRiderDelta = buffer.getInt();
     }
 
     private void restoreLaunchFlags(int flags) {
@@ -470,6 +508,7 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         waterDisabled = (flags & LAUNCH_FLAG_WATER_DISABLED) != 0;
         finaleCutsceneAnchorRegistered =
                 (flags & LAUNCH_FLAG_FINALE_CUTSCENE_ANCHOR_REGISTERED) != 0;
+        launchFallingAccelActive = (flags & LAUNCH_FLAG_FALLING_ACCEL_ACTIVE) != 0;
     }
 
     private void restoreLaunchInts(ByteBuffer buffer, boolean hasWaterTarget, boolean hasDeathEggDeformState) {
@@ -507,6 +546,8 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         deathEggTerrainSwapApplied = false;
         waterDisabled = false;
         deathEggDeformWrapLatch = 0;
+        launchRiderDelta = 0;
+        launchFallingAccelActive = false;
         clearLaunchRiderAnchor();
         clearFinaleCutsceneAnchor();
     }
@@ -551,6 +592,9 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         }
         if (finaleCutsceneAnchorRegistered) {
             flags |= LAUNCH_FLAG_FINALE_CUTSCENE_ANCHOR_REGISTERED;
+        }
+        if (launchFallingAccelActive) {
+            flags |= LAUNCH_FLAG_FALLING_ACCEL_ACTIVE;
         }
         return flags;
     }

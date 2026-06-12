@@ -13,6 +13,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
+import com.openggf.physics.SwingMotion;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -20,14 +21,30 @@ import com.openggf.sprites.playable.ObjectControlState;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * LBZ2 Robotnik hang-ride ship.
+ *
+ * <p>ROM: {@code Obj_LBZ2RobotnikShip} (sonic3k.asm 192827-193053). The ship
+ * waits for Player 1 contact, rises, carries the player right past the
+ * Knuckles cameo, thumps when taunted, starts the Death Egg launch
+ * ({@code Screen_shake_flag} + {@code Events_fg_5}), and finally throws the
+ * player into the arena before spawning {@code Obj_LBZFinalBoss1}.
+ */
 public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance {
     private static final int OBJ_LBZ_FINAL_BOSS_1 = 0xCA;
+    /** ROM sub_8D506: P1 centre = (ship.x - 4, ship.y - $12). */
     private static final int PLAYER_PIN_DX = -4;
     private static final int PLAYER_PIN_DY = -0x12;
     private static final int RELEASE_X = 0x4440;
     private static final int FINAL_BOSS_X = 0x44A0;
     private static final int FINAL_BOSS_Y = 0x0780;
-    private static final int LIGHT_GRAVITY = 0x18;
+    /** ROM MoveSprite_LightGravity: moveq #$20,d1. */
+    private static final int LIGHT_GRAVITY = 0x20;
+    /** ROM ObjDat_LBZ2RobotnikShip mapping frame. */
+    private static final int SHIP_FRAME = 0x0A;
+    /** ROM Swing_Setup1: y_vel = $C0, $3E = $C0, $40 = $10. */
+    private static final int SWING_MAX = 0xC0;
+    private static final int SWING_ACCEL = 0x10;
 
     private enum Phase {
         WAIT,
@@ -52,7 +69,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance {
     private int yVel;
     private int timer;
     private int hoverY;
-    private int swingAngle;
+    private boolean swingDirectionDown;
     private boolean carryingPlayer;
     private boolean finalBossSpawned;
     private boolean forcedOffscreen;
@@ -74,13 +91,15 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance {
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP);
         if (renderer != null) {
-            renderer.drawFrameIndex(0, x, y, true, false);
+            // ROM: bset #0,render_flags at init — ship faces right.
+            renderer.drawFrameIndex(SHIP_FRAME, x, y, true, false);
         }
     }
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         registerLaunchAnchor();
+        applyLaunchRiderDelta();
         AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite sprite ? sprite : carriedPlayer;
         switch (phase) {
             case WAIT -> updateWait(player, frameCounter);
@@ -88,7 +107,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance {
             case RIDE_INITIAL -> updateTimedRide(Phase.PAUSE_BEFORE_RESUME);
             case PAUSE_BEFORE_RESUME -> updatePause(Phase.RIDE_TO_KNUCKLES);
             case RIDE_TO_KNUCKLES -> updateRideToKnuckles();
-            case KNUCKLES_PAUSE -> updatePause(Phase.THUMP);
+            case KNUCKLES_PAUSE -> updateKnucklesPause();
             case THUMP -> updateThump();
             case POST_THUMP_PAUSE -> updatePause(Phase.LAUNCH_RUMBLE);
             case LAUNCH_RUMBLE -> updateLaunchRumble();
@@ -140,6 +159,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance {
         if (player == null || player.isObjectControlled() || !isPlayerTouching(player)) {
             return;
         }
+        // ROM loc_8D2B6 grab branch.
         grabPlayer(player);
         startRidePresentation();
         yVel = -0x0100;
@@ -148,10 +168,14 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance {
         services().playSfx(Sonic3kSfx.RISING.id);
     }
 
+    /** ROM loc_8D370 ($34 = loc_8D344): MoveSprite2 + pin + Obj_Wait (no swing). */
     private void updateRise() {
         move();
-        if (--timer <= 0) {
+        if (--timer < 0) {
+            // ROM loc_8D344: store hover y, x_vel $100, $1DF ride, Swing_Setup1.
             hoverY = y;
+            yVel = SWING_MAX;
+            swingDirectionDown = false;
             xVel = 0x0100;
             timer = 0x1DF;
             phase = Phase.RIDE_INITIAL;
@@ -159,80 +183,102 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance {
     }
 
     private void updateTimedRide(Phase next) {
-        move();
         swing();
-        if (--timer <= 0) {
+        move();
+        if (--timer < 0) {
+            // ROM loc_8D38A: clr x_vel, $3F wait.
             xVel = 0;
             timer = 0x3F;
             phase = next;
         }
     }
 
+    /** ROM loc_8D36A wait states: Swing + MoveSprite2 + Obj_Wait. */
     private void updatePause(Phase next) {
         swing();
-        if (--timer > 0) {
+        move();
+        if (--timer >= 0) {
             return;
         }
         if (next == Phase.RIDE_TO_KNUCKLES) {
+            // ROM loc_8D39E.
             xVel = 0x0100;
-        } else if (next == Phase.THUMP) {
-            xVel = -0x0200;
-            yVel = -0x0200;
-            services().playSfx(Sonic3kSfx.THUMP.id);
         } else if (next == Phase.LAUNCH_RUMBLE) {
+            // ROM loc_8D450: Screen_shake_flag + Events_fg_5 + $FF wait.
             requestLaunchStart();
-            xVel = 0;
             timer = 0xFF;
         }
         phase = next;
     }
 
+    /** ROM loc_8D3AC. */
     private void updateRideToKnuckles() {
-        move();
         swing();
+        move();
         CutsceneKnucklesLbz2Instance knuckles = findKnuckles();
         if (knuckles != null && ((knuckles.getCentreX() - x) & 0xFFFF) < 0x50) {
             knuckles.triggerFromShip();
-            xVel = 0;
+            // ROM: x_vel is NOT cleared — the ship keeps drifting during the
+            // $1F pause before the thump.
             timer = 0x1F;
             phase = Phase.KNUCKLES_PAUSE;
         }
     }
 
+    private void updateKnucklesPause() {
+        swing();
+        move();
+        if (--timer >= 0) {
+            return;
+        }
+        // ROM loc_8D3F2: thump start.
+        xVel = -0x0200;
+        yVel = -0x0200;
+        services().playSfx(Sonic3kSfx.THUMP.id);
+        phase = Phase.THUMP;
+    }
+
+    /** ROM loc_8D40E: MoveSprite_LightGravity until y_vel >= 0 and y >= hover y. */
     private void updateThump() {
         move();
         yVel += LIGHT_GRAVITY;
-        if (unsigned(y) >= unsigned(hoverY)) {
-            y = hoverY;
-            ySub = 0;
-            xVel = 0;
-            yVel = 0;
-            timer = 0x5F;
-            phase = Phase.POST_THUMP_PAUSE;
+        if (yVel < 0) {
+            return;
         }
+        if (unsigned(y) < unsigned(hoverY)) {
+            return;
+        }
+        xVel = 0;
+        yVel = SWING_MAX;
+        swingDirectionDown = false;
+        timer = 0x5F;
+        phase = Phase.POST_THUMP_PAUSE;
     }
 
+    /** ROM loc_8D36A with $34 = loc_8D46E. */
     private void updateLaunchRumble() {
-        runtimeState().ifPresent(state -> state.setLaunchActive(true));
         swing();
-        if (--timer <= 0) {
+        move();
+        if (--timer < 0) {
             xVel = 0x0100;
             phase = Phase.RIDE_TO_RELEASE;
         }
     }
 
+    /** ROM loc_8D47C. */
     private void updateRideToRelease(int frameCounter) {
-        move();
         swing();
+        move();
         if (unsigned(x) >= RELEASE_X) {
             releasePlayer(frameCounter);
             phase = Phase.FLY_AWAY;
         }
     }
 
+    /** ROM loc_8D4CC: keep swinging+flying until off-screen, then spawn the boss. */
     private void updateFlyAway() {
         if (!forcedOffscreen) {
-            xVel = 0x0100;
+            swing();
             move();
         }
         if ((forcedOffscreen || !isInRangeAt(x)) && !finalBossSpawned) {
@@ -287,6 +333,10 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance {
         AbstractPlayableSprite player = carriedPlayer;
         carryingPlayer = false;
         carriedPlayer = null;
+        // ROM loc_8D47C: clr.w (Screen_shake_flag).w on release.
+        if (services().gameState() != null) {
+            services().gameState().setScreenShakeActive(false);
+        }
         player.releaseFromObjectControl(frameCounter);
         player.setObjectMappingFrameControl(false);
         player.setAir(true);
@@ -306,6 +356,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance {
         return dx <= 0x20 && dy <= 0x20;
     }
 
+    /** ROM MoveSprite2: subpixel move by x_vel/y_vel, no gravity. */
     private void move() {
         int nextX = ((x << 8) | (xSub & 0xFF)) + xVel;
         int nextY = ((y << 8) | (ySub & 0xFF)) + yVel;
@@ -315,10 +366,11 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance {
         ySub = nextY & 0xFF;
     }
 
+    /** ROM Swing_UpAndDown: y_vel oscillates between ±$C0 with accel $10. */
     private void swing() {
-        swingAngle = (swingAngle + 4) & 0xFF;
-        int bob = (int) Math.round(Math.sin((swingAngle / 256.0) * Math.PI * 2.0) * 2.0);
-        y = (hoverY + bob) & 0xFFFF;
+        SwingMotion.Result result = SwingMotion.update(SWING_ACCEL, yVel, SWING_MAX, swingDirectionDown);
+        yVel = result.velocity();
+        swingDirectionDown = result.directionDown();
     }
 
     private void requestLaunchStart() {
@@ -326,6 +378,9 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance {
             state.requestLaunchStart();
             state.setLaunchActive(true);
         });
+        if (services().gameState() != null) {
+            services().gameState().setScreenShakeActive(true);
+        }
     }
 
     private void registerLaunchAnchor() {
@@ -334,6 +389,21 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance {
 
     private int anchorId() {
         return ((spawn.x() & 0xFFFF) << 16) | (spawn.y() & 0xFFFF);
+    }
+
+    /**
+     * ROM LBZ2_DeathEggMoveScreen: while Scroll_lock the launch adds the FG
+     * delta to the registered rider object's y_pos (the ship sinks with the
+     * camera toward the pad).
+     */
+    private void applyLaunchRiderDelta() {
+        int delta = runtimeState()
+                .map(LbzZoneRuntimeState::consumeLaunchRiderDelta)
+                .orElse(0);
+        if (delta != 0) {
+            y = (y + delta) & 0xFFFF;
+            hoverY = (hoverY + delta) & 0xFFFF;
+        }
     }
 
     private CutsceneKnucklesLbz2Instance findKnuckles() {

@@ -53,7 +53,10 @@ class TestLbzFinalBoss1Instance {
         assertEquals(2, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.LASER_HEAD).size());
         assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.ORBITING_POD).size());
         assertEquals(2, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.GUN_POD).size());
-        assertEquals(List.of(Sonic3kMusic.BOSS.id), services.musicIds);
+        // ROM: boss music arrives through Obj_Song_Fade_Transition, not a direct play.
+        assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.MUSIC_FADE).size());
+        assertTrue(services.musicIds.isEmpty(),
+                "loc_729DE spawns a fade-transition object instead of playing mus_EndBoss directly");
     }
 
     @Test
@@ -85,7 +88,8 @@ class TestLbzFinalBoss1Instance {
                 .findFirst()
                 .orElseThrow();
 
-        head.forceArcStepForTest(0);
+        // Step 8 -> 9: frame $04 with table bit7 clear, matching the unflipped boss.
+        head.forceArcStepForTest(8);
         head.forceStepTimerExpiredForTest();
         head.update(1, null);
 
@@ -93,9 +97,19 @@ class TestLbzFinalBoss1Instance {
         assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.MUZZLE_LASER).size(),
                 "matching direction at the firing notch creates loc_7321A muzzle child");
 
-        head.forceArcStepForTest(1);
+        // Step 0 -> 1: frame $04 with table bit7 set — notch strobes but the
+        // direction mismatch (sub_733FC d2 == 0) spawns no muzzle.
+        head.forceArcStepForTest(0);
         head.forceStepTimerExpiredForTest();
         head.update(2, null);
+
+        assertTrue(boss.isLaserFiringNotchSet(), "frame $04 always strobes $38 bit3");
+        assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.MUZZLE_LASER).size(),
+                "mismatched head direction must not spawn a second muzzle");
+
+        head.forceArcStepForTest(1);
+        head.forceStepTimerExpiredForTest();
+        head.update(3, null);
 
         assertFalse(boss.isLaserFiringNotchSet(), "non-notch arc steps clear $38 bit3");
     }
@@ -111,7 +125,7 @@ class TestLbzFinalBoss1Instance {
         boss.onPlayerAttack(null, null);
 
         assertEquals(5, boss.getCollisionProperty());
-        assertTrue(boss.isDetachFlagSetForTest(1), "HP 5 sets first detach flag bit");
+        assertTrue(boss.isDetachFlagSetForTest(0), "HP 5 sets $38 bit0 — the TOP segment detaches");
         assertEquals(8, boss.getRoutine(), "detach threshold enters routine $08 recoil wait");
         assertEquals(0x0F, boss.getRecoilTimer());
         assertEquals(2, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.HIT_SPARK).size());
@@ -121,35 +135,46 @@ class TestLbzFinalBoss1Instance {
         boss.onPlayerAttack(null, null);
 
         assertEquals(1, boss.getCollisionProperty());
-        assertTrue(boss.isDetachFlagSetForTest(2), "HP 1 sets second detach flag bit");
+        assertTrue(boss.isDetachFlagSetForTest(1), "HP 1 sets $38 bit1 — the MID segment detaches");
+        assertFalse(boss.isDetachFlagSetForTest(2), "the bottom segment only detaches at defeat");
         assertTrue(boss.isLaserFiringNotchSet(), "HP 1 also forces the aggressive reposition bit");
     }
 
     @Test
-    void hitSpeedQuirkClampsHighPositiveAndNegativeVelocity() {
+    void hitSpeedQuirkDoublesInRangeAndLeavesOutOfRangeVelocityUnchanged() {
         HarnessServices services = new HarnessServices(PlayerCharacter.SONIC_AND_TAILS);
         LbzFinalBoss1Instance boss = newBoss(services);
         boss.update(0, null);
         boss.activateForTest();
 
-        boss.forceYVelocityForTest(0x0600);
-        boss.forceHitCountForTest(6);
+        // In range: y_vel*2 within ±$800 is applied.
+        boss.forceYVelocityForTest(0x0300);
+        boss.forceHitCountForTest(7);
         boss.onPlayerAttack(null, null);
 
-        assertEquals(0x0800, boss.getYVelocity(),
-                "sub_734FA clamps y_vel*2 to +$800 instead of leaving the original speed");
+        assertEquals(0x0600, boss.getYVelocity(),
+                "sub_734FA doubles y_vel when the doubled value stays within ±$800");
+
+        // Out of range: the ROM skips the write — y_vel keeps its original value.
+        boss.finishHitFlashForTest();
+        boss.forceYVelocityForTest(0x0600);
+        boss.forceHitCountForTest(7);
+        boss.onPlayerAttack(null, null);
+
+        assertEquals(0x0600, boss.getYVelocity(),
+                "sub_734FA leaves y_vel unchanged when y_vel*2 exceeds +$800 (no clamping)");
 
         boss.finishHitFlashForTest();
         boss.forceYVelocityForTest(-0x0600);
-        boss.forceHitCountForTest(6);
+        boss.forceHitCountForTest(7);
         boss.onPlayerAttack(null, null);
 
-        assertEquals(-0x0800, boss.getYVelocity(),
-                "sub_734FA clamps y_vel*2 to -$800 instead of leaving the original speed");
+        assertEquals(-0x0600, boss.getYVelocity(),
+                "sub_734FA leaves y_vel unchanged when y_vel*2 exceeds -$800 (no clamping)");
     }
 
     @Test
-    void recoilWaitsFifteenFramesThenDropsForExactlyFourFramesBeforeHold() {
+    void recoilWaitsSixteenFramesThenDropsForExactlyFiveFramesBeforeHold() {
         HarnessServices services = new HarnessServices(PlayerCharacter.SONIC_AND_TAILS);
         LbzFinalBoss1Instance boss = newBoss(services);
         boss.update(0, null);
@@ -158,23 +183,29 @@ class TestLbzFinalBoss1Instance {
         boss.onPlayerAttack(null, null);
         int startY = boss.getCentreY();
 
+        // ROM loc_72AEE: $40 = $F decrements to -1 — sixteen wait frames.
         for (int frame = 0; frame < 0x0F; frame++) {
             boss.update(frame, null);
-            assertEquals(8, boss.getRoutine(), "routine $08 must consume exactly fifteen wait frames");
+            assertEquals(8, boss.getRoutine(), "routine $08 must consume sixteen wait frames");
             assertEquals(startY, boss.getCentreY(), "routine $08 wait frames must not drop the boss");
         }
+        boss.update(0x0F, null);
+        assertEquals(0x0A, boss.getRoutine(), "the sixteenth wait frame arms routine $0A");
+        assertEquals(startY, boss.getCentreY(), "the transition frame itself does not drop yet");
 
-        for (int frame = 0; frame < 4; frame++) {
+        // ROM loc_72B04: $40 = 4 — y += 8 on every drop frame including the
+        // one where the counter goes negative (five drops total).
+        for (int frame = 0; frame < 5; frame++) {
             boss.update(0x20 + frame, null);
             assertEquals(startY + ((frame + 1) * 8), boss.getCentreY(),
                     "routine $0A adds y+=8 once per drop frame");
-            if (frame < 3) {
-                assertEquals(0x0A, boss.getRoutine(), "routine $0A owns the first three visible drop frames");
+            if (frame < 4) {
+                assertEquals(0x0A, boss.getRoutine(), "routine $0A owns the first four visible drop frames");
             }
         }
 
-        assertEquals(6, boss.getRoutine(), "after four drop frames the boss returns to routine $06 hold");
-        assertEquals(startY + 0x20, boss.getCentreY());
+        assertEquals(6, boss.getRoutine(), "after five drop frames the boss returns to routine $06 hold");
+        assertEquals(startY + 0x28, boss.getCentreY());
     }
 
     @Test
@@ -187,9 +218,12 @@ class TestLbzFinalBoss1Instance {
         boss.forceHitCountForTest(1);
         boss.onPlayerAttack(null, null);
         boss.setCentreYForTest(services.cameraY() + 0x140);
-        boss.forceFinaleTimerForTest(0);
         boss.setPlayersReadyForResultsForTest(true);
+        // Sink bottom reached: loc_72B34 arms the $3F wait + Ctrl_2 lock.
         boss.update(10, null);
+        assertEquals(LbzFinalBoss1Instance.FinalePhase.WAIT_PLAYER_READY, boss.getFinalePhase());
+        boss.forceFinaleTimerForTest(0);
+        boss.update(11, null);
 
         assertEquals(LbzFinalBoss1Instance.FinalePhase.WAIT_RESULTS_COMPLETE, boss.getFinalePhase());
         assertTrue(boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.RESULTS_SCREEN).stream()
@@ -211,9 +245,10 @@ class TestLbzFinalBoss1Instance {
         boss.forceHitCountForTest(1);
         boss.onPlayerAttack(player, null);
         boss.setCentreYForTest(services.cameraY() + 0x140);
-        boss.forceFinaleTimerForTest(0);
 
         boss.update(10, player);
+        boss.forceFinaleTimerForTest(0);
+        boss.update(11, player);
 
         assertEquals(LbzFinalBoss1Instance.FinalePhase.WAIT_RESULTS_COMPLETE, boss.getFinalePhase());
         assertTrue(player.isObjectControlled(), "Set_PlayerEndingPose applies native object_control ownership");
@@ -360,6 +395,11 @@ class TestLbzFinalBoss1Instance {
             lbzState = new LbzZoneRuntimeState(1, character);
             camera.setX((short) 0x4400);
             camera.setY((short) 0x0600);
+        }
+
+        @Override
+        public com.openggf.level.objects.ObjectPlayerQuery playerQuery() {
+            return new com.openggf.level.objects.ObjectPlayerQuery(() -> null, List::of);
         }
 
         private int cameraY() {
