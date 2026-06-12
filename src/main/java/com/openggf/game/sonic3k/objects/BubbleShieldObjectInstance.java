@@ -4,7 +4,6 @@ import com.openggf.game.GameModule;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.ShieldType;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.level.objects.ShieldObjectInstance;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
@@ -26,7 +25,6 @@ public class BubbleShieldObjectInstance extends ShieldObjectInstance {
     private PlayerSpriteRenderer dplcRenderer;
     private SpriteAnimationSet animSet;
     private PlayerSpriteRenderer boundRenderer;
-    @RewindTransient(reason = "derived post-restore DPLC upload request")
     private boolean artRefreshPending;
     private int currentAnimId;
     private int frameIndex;

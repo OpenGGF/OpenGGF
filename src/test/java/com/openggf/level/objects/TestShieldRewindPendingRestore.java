@@ -3,9 +3,6 @@ package com.openggf.level.objects;
 import com.openggf.game.PowerUpObject;
 import com.openggf.game.ShieldType;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
-import com.openggf.game.session.SessionManager;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
@@ -22,14 +19,12 @@ class TestShieldRewindPendingRestore {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        SessionManager.clear();
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetAll();
     }
 
     @AfterEach
     void tearDown() {
-        SessionManager.clear();
+        TestEnvironment.resetAll();
     }
 
     @Test

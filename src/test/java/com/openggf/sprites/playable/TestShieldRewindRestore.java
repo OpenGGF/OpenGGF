@@ -6,9 +6,6 @@ import com.openggf.game.PowerUpObject;
 import com.openggf.game.PowerUpSpawner;
 import com.openggf.game.ShieldType;
 import com.openggf.game.GameServices;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
-import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -34,14 +31,12 @@ class TestShieldRewindRestore {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        SessionManager.clear();
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetAll();
     }
 
     @AfterEach
     void tearDown() {
-        SessionManager.clear();
+        TestEnvironment.resetAll();
     }
 
     @Test
