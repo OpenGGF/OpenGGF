@@ -203,9 +203,12 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
         currentX = motionState.x;
         currentY = motionState.y;
 
-        // ROM: Buzzer's Obj4B_Projectile ends with MarkObjGone_P1, so it stays
-        // alive until the normal object out_of_range window removes it.
-        boolean usesRomRangeUnload = type == ProjectileType.BUZZER_STINGER;
+        // ROM: Buzzer's Obj4B_Projectile ends with MarkObjGone_P1, and Aquis
+        // Obj50_Bullet ends with MarkObjGone (docs/s2disasm/s2.asm:60600-60603),
+        // so both stay alive until the normal object out_of_range X window
+        // removes them.
+        boolean usesRomRangeUnload = type == ProjectileType.BUZZER_STINGER
+                || type == ProjectileType.AQUIS_BULLET;
         if (!usesRomRangeUnload && !isOnScreen(32)) {
             setDestroyed(true);
         }

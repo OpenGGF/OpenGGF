@@ -160,6 +160,7 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
     private ZoneConfig config;
     private int delayCounter = INITIAL_DELAY;
     private boolean stoodOnFlag = false;
+    private boolean standingContactLastFrame = false;
     private boolean collapsed = false;
     private boolean inFragmentPhase = false;  // ROM: parent becomes fragment 0, stays solid during delay
     private int fragmentPhaseDelay = 0;       // ROM: delay_counter for the parent-as-fragment-0
@@ -206,7 +207,7 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         }
 
         SolidCheckpointBatch batch = services().solidExecution().resolveSolidNowAll();
-        boolean isStanding = hasStandingContact(batch);
+        boolean standingThisFrame = hasStandingContact(batch);
 
         // ROM: Obj1F_FragmentFall - collapsed parent falls with gravity, then
         // deletes when render_flags.on_screen is clear
@@ -260,10 +261,14 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
             delayCounter--;
         }
 
-        // ROM: check status standing_mask bits — set stood_on_flag when player is on platform
-        if (isStanding) {
+        // ROM Obj1F_Main reads status(a0) before PlatformObject writes the
+        // current frame's standing bits (docs/s2disasm/s2.asm:23815-23827).
+        // The manual checkpoint already knows the current contact, so consume
+        // the previous-frame contact here to keep the collapse timer aligned.
+        if (standingContactLastFrame) {
             stoodOnFlag = true;
         }
+        standingContactLastFrame = standingThisFrame;
     }
 
     @Override
@@ -376,11 +381,7 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         // The parent stays solid at its original position during the fragment delay.
         // Only fragment 0 (the parent) provides collision; other fragments are visual only.
         inFragmentPhase = true;
-        // ROM Obj1F_CreateFragments writes the delay byte, then the parent is
-        // seen as routine 4 before Obj1F_Fragment gets its first decrementing
-        // pass. The engine enters the fragment-phase branch immediately on the
-        // corresponding visible frame, so keep one pre-decrement tick here.
-        fragmentPhaseDelay = config.delayData()[0] + 1;  // Parent gets first delay value
+        fragmentPhaseDelay = config.delayData()[0];  // Parent gets first delay value
         mappingFrame = 1;  // Show collapsed appearance
 
         // Play collapse sound
@@ -518,9 +519,7 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         public CollapsingPlatformFragmentInstance(int parentX, int parentY, int delay, int fragmentIndex,
                                                    ZoneConfig config, ObjectRenderManager renderManager,
                                                    boolean hFlip, boolean vFlip) {
-            super(new ObjectSpawn(parentX + computeOffsetX(config, fragmentIndex, hFlip),
-                            parentY + computeOffsetY(config, fragmentIndex, vFlip),
-                            0x1F, 0, 0, false, 0),
+            super(new ObjectSpawn(parentX, parentY, 0x1F, 0, 0, false, 0),
                     "CollapsingPlatformFragment", delay, 4);
 
             this.pieceOffsetX = computeOffsetX(config, fragmentIndex, hFlip);
@@ -548,6 +547,16 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
                 offsetY = config.pieceOffsets()[fragmentIndex][1];
             }
             return vFlip ? -offsetY : offsetY;
+        }
+
+        @Override
+        protected boolean shouldDeleteAfterFall() {
+            // ROM Obj1F_CreateFragments copies the parent's x_pos/y_pos into
+            // child slots and advances the mappings pointer per fragment; the
+            // visual offset is in mappings data. Obj1F_FragmentFall then
+            // deletes when BuildSprites clears render_flags.on_screen
+            // (docs/s2disasm/s2.asm:23860-23864, 23880-23906).
+            return !isWithinRenderSpriteBounds(config.halfWidth(), APPROX_RENDER_Y_MARGIN);
         }
 
         @Override

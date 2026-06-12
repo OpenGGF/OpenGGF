@@ -53,13 +53,15 @@ public final class DestructionEffects {
      *                           if false, always uses {@code removeFromActiveSpawns}
      * @param pointsFactory      factory for the floating points popup, or {@code null} to skip
      * @param explosionFactory   factory for a custom replacement explosion object, or {@code null}
+     * @param pointsAllocatedBeforeAnimal if true, allocate the points popup before the animal object
      */
     public record DestructionConfig(
             int sfxId,
             AnimalFactory animalFactory,
             boolean useRespawnTracking,
             PointsFactory pointsFactory,
-            ExplosionFactory explosionFactory
+            ExplosionFactory explosionFactory,
+            boolean pointsAllocatedBeforeAnimal
     ) {
     }
 
@@ -121,7 +123,8 @@ public final class DestructionEffects {
                             renderManager,
                             config.animalFactory(),
                             config.pointsFactory(),
-                            pointsValue);
+                            pointsValue,
+                            config.pointsAllocatedBeforeAnimal());
             ObjectLifetimeOps.addReplacementAtTransferredSlot(objectManager, explosion, badnikSlot);
         }
 

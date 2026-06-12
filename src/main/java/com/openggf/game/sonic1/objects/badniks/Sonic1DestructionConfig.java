@@ -22,7 +22,8 @@ public final class Sonic1DestructionConfig {
             null,
             true,   // useRespawnTracking (S1 uses markRemembered)
             null,
-            Sonic1ExplosionItemObjectInstance::new
+            Sonic1ExplosionItemObjectInstance::new,
+            false
     );
 
     private Sonic1DestructionConfig() {

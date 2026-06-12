@@ -1886,6 +1886,44 @@ frontier f2047 -> f2638, no green/frontier regression.
 
 ---
 
+## P44 — Dynamic child slots may preserve parent `x_pos/y_pos` while mappings carry the visible offset
+
+**Pattern.** Some ROM helper routines allocate child SST slots with the
+parent's native `x_pos/y_pos`, then distinguish the children by routine,
+mappings pointer, child pointer, or render data. The child slot's native
+position is not always the visible piece's top-left or centre. `Obj1F`
+collapsing-platform fragments are the canonical case: the parent copies its
+`x_pos/y_pos` into every fragment, then advances the mappings pointer for each
+piece before `Obj1F_FragmentFall` moves/deletes by the render flag path.
+
+**Engine symptom.** Baking the piece offset into the child object's native
+position changes slot pressure and culling timing. Traces usually report a
+later unrelated Tails CPU/status mismatch because the wrong child slot survives
+or frees on a different frame. In OOZ2, correcting the Obj1F fragment position,
+delay, and render-bounds delete path advanced the frontier from f222
+`tails_cpu_interact` to f919 `tails_status_byte`.
+
+**What to check.** During object ports, separate native slot state from visible
+piece offset. If the ROM child creation loop copies `x_pos(a0)`/`y_pos(a0)` and
+changes mappings/subtype/routine fields, keep the engine child's centre at the
+copied native position and apply per-piece offsets only during rendering or
+collision. Also check whether a state bit is read before a shared helper writes
+current-frame standing bits; if so, latch previous-frame contact rather than
+consuming the engine's current contact result.
+
+**ROM citation.** `Obj1F_Main` standing-bit read before `PlatformObject`
+`docs/s2disasm/s2.asm:23815-23827`; `Obj1F_CreateFragments` and
+`Obj1F_FragmentFall` child slot/mappings/delete flow
+`docs/s2disasm/s2.asm:23860-23864,23880-23906`. Aquis wing slots are a related
+slot-pressure case through `JmpTo12_AllocateObject` in `Obj50_Movement`.
+
+**Originating commit.** `<pending>` S2 Obj1F/Aquis slot-pressure sweep:
+`CollapsingPlatformObjectInstance` previous-frame contact latch and fragment
+native-position/render-offset split; `AquisBadnikInstance` wing child slot and
+bullet offset/range-unload parity.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

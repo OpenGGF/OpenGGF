@@ -52,7 +52,8 @@ class TestDestructionEffects {
                 config.animalFactory(),
                 config.useRespawnTracking(),
                 null,
-                config.explosionFactory());
+                config.explosionFactory(),
+                config.pointsAllocatedBeforeAnimal());
 
         DestructionEffects.destroyBadnik(
                 0x0100,
@@ -91,7 +92,8 @@ class TestDestructionEffects {
                 (spawn, svc) -> new RecordingChildObject(spawn, "Animal"),
                 false,
                 (spawn, svc, pts) -> new RecordingChildObject(spawn, "Points-" + pts),
-                null);
+                null,
+                false);
 
         DestructionEffects.destroyBadnik(
                 0x0190,

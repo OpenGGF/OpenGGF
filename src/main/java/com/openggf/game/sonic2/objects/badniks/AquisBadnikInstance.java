@@ -4,7 +4,10 @@ import com.openggf.level.objects.AbstractBadnikInstance;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectAnimationState;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -62,9 +65,9 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
     private final SubpixelMotion.State motionState;
     private final ObjectAnimationState animationState;
 
-    // Wing child state
-    private final ObjectAnimationState wingAnimationState;
-    private boolean wingDestroyed;
+    @RewindTransient(reason = "ROM parent/wing pointer linkage is recreated through live object allocation")
+    private AquisWingChild wingChild;
+    private boolean wingSpawned;
 
     public AquisBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Aquis", Sonic2BadnikConfig.DESTRUCTION);
@@ -75,8 +78,8 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
         this.motionState = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
         this.facingLeft = (spawn.renderFlags() & 0x01) != 0;
         this.animationState = new ObjectAnimationState(ANIMATIONS, 0, 0);
-        this.wingAnimationState = new ObjectAnimationState(WING_ANIMATIONS, 0, 1);
-        this.wingDestroyed = false;
+        this.wingChild = null;
+        this.wingSpawned = false;
         // Bug 1 fix: ROM Obj50_Init writes move.w #-$100, x_vel(a0) immediately
         // after the standard init block (s2.asm:60100).
         this.xVelocity = -0x100;
@@ -84,6 +87,7 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
 
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+        spawnWingChildOnce();
         AbstractPlayableSprite player = closestPlayer(playerEntity);
         switch (state) {
             case WAIT_FOR_SCREEN -> updateWaitForScreen();
@@ -92,8 +96,7 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
             case ESCAPE -> updateEscape();
         }
 
-        // Update wing animation
-        wingAnimationState.update();
+        syncWingChild();
     }
 
     @Override
@@ -214,9 +217,36 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
         applyMovement();
 
         if (!isOnScreen(64)) {
-            setDestroyed(true);
-            setDestroyed(true);
-            wingDestroyed = true;
+            ObjectLifetimeOps.expireDynamic(this);
+            expireWingChild();
+        }
+    }
+
+    private void spawnWingChildOnce() {
+        if (wingSpawned) {
+            return;
+        }
+        wingSpawned = true;
+        if (tryServices() == null || services().objectManager() == null) {
+            return;
+        }
+        int wingX = currentX + WING_X_OFFSET;
+        int wingY = currentY + WING_Y_OFFSET;
+        wingChild = spawnFreeChild(() -> new AquisWingChild(
+                new ObjectSpawn(wingX, wingY, spawn.objectId(), 0, spawn.renderFlags(), false, spawn.rawYWord()),
+                this));
+        syncWingChild();
+    }
+
+    private void syncWingChild() {
+        if (wingChild != null && !wingChild.isDestroyed()) {
+            wingChild.syncToParent();
+        }
+    }
+
+    private void expireWingChild() {
+        if (wingChild != null && !wingChild.isDestroyed()) {
+            ObjectLifetimeOps.expireDynamic(wingChild);
         }
     }
 
@@ -227,7 +257,9 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
         }
 
         final int bulletX = facingLeft ? currentX - BULLET_X_OFFSET : currentX + BULLET_X_OFFSET;
-        final int bulletY = currentY + BULLET_Y_OFFSET;
+        // Obj50_ChkIfShoot subtracts the $0A Y offset before setting velocity
+        // (docs/s2disasm/s2.asm:60651,60659).
+        final int bulletY = currentY - BULLET_Y_OFFSET;
         final int bulletXVel = facingLeft ? -BULLET_X_VEL : BULLET_X_VEL;
         final boolean bulletHFlip = !facingLeft;
 
@@ -310,21 +342,68 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
 
         // Draw main body (priority 4)
         renderer.drawFrameIndex(animFrame, currentX, currentY, !facingLeft, false);
-
-        // Draw wing child (priority 3, slightly in front)
-        if (!wingDestroyed) {
-            int wingX = facingLeft ? currentX + WING_X_OFFSET : currentX - WING_X_OFFSET;
-            int wingY = currentY + WING_Y_OFFSET;
-            int wingFrame = wingAnimationState.getMappingFrame();
-            renderer.drawFrameIndex(wingFrame, wingX, wingY, !facingLeft, false);
-        }
     }
 
     @Override
     protected void destroyBadnik(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        wingDestroyed = true;
+        expireWingChild();
         super.destroyBadnik(player);
+    }
+
+    private static final class AquisWingChild extends AbstractObjectInstance {
+        @RewindTransient(reason = "ROM Obj50 wing keeps a parent SST pointer; object graph recreates it live")
+        private final AquisBadnikInstance parent;
+        private final ObjectAnimationState animationState;
+        private int wingX;
+        private int wingY;
+        private boolean wingFacingLeft;
+
+        private AquisWingChild(ObjectSpawn spawn, AquisBadnikInstance parent) {
+            super(spawn, "AquisWing");
+            this.parent = parent;
+            this.animationState = new ObjectAnimationState(WING_ANIMATIONS, 0, 1);
+            this.wingX = spawn.x();
+            this.wingY = spawn.y();
+            this.wingFacingLeft = parent != null && parent.facingLeft;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+            if (parent == null || parent.isDestroyed()) {
+                ObjectLifetimeOps.expireDynamic(this);
+                return;
+            }
+            animationState.update();
+            syncToParent();
+        }
+
+        private void syncToParent() {
+            if (parent == null) {
+                return;
+            }
+            wingFacingLeft = parent.facingLeft;
+            int offsetX = wingFacingLeft ? -WING_X_OFFSET : WING_X_OFFSET;
+            wingX = parent.currentX + offsetX;
+            wingY = parent.currentY + WING_Y_OFFSET;
+        }
+
+        @Override
+        public int getPriorityBucket() {
+            return RenderPriority.clamp(3);
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            if (isDestroyed()) {
+                return;
+            }
+            PatternSpriteRenderer renderer = getRenderer(Sonic2ObjectArtKeys.AQUIS);
+            if (renderer == null) {
+                return;
+            }
+            renderer.drawFrameIndex(animationState.getMappingFrame(), wingX, wingY, !wingFacingLeft, false);
+        }
     }
 
     /**
