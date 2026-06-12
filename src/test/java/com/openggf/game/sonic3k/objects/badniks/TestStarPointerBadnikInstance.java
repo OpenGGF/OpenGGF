@@ -7,8 +7,10 @@ import com.openggf.level.LevelData;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -19,6 +21,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tools.ObjectDiscoveryTool.LevelConfig;
 import com.openggf.tools.Sonic3kObjectProfile;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -99,6 +103,29 @@ class TestStarPointerBadnikInstance {
 
         verify(objectManager, times(4)).addDynamicObjectAfterCurrent(
                 org.mockito.ArgumentMatchers.any(StarPointerBadnikInstance.OrbitingPointInstance.class));
+    }
+
+    @Test
+    void releaseLatchUsesNearestNativeP2LikeFindSonicTails() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 319, 223, 0);
+        StarPointerBadnikInstance starPointer = new StarPointerBadnikInstance(
+                new ObjectSpawn(160, 100, Sonic3kObjectIds.STAR_POINTER, 0, 0, false, 0));
+        AbstractPlayableSprite sonic = mock(AbstractPlayableSprite.class);
+        when(sonic.getCentreX()).thenReturn((short) 20);
+        when(sonic.getCentreY()).thenReturn((short) 100);
+        when(sonic.getDead()).thenReturn(false);
+        AbstractPlayableSprite tails = mock(AbstractPlayableSprite.class);
+        when(tails.getCentreX()).thenReturn((short) 100);
+        when(tails.getCentreY()).thenReturn((short) 100);
+        when(tails.getDead()).thenReturn(false);
+        starPointer.setServices(new StubObjectServices().withPlayerQuery(
+                new ObjectPlayerQuery(() -> sonic, () -> List.of(tails))));
+
+        starPointer.update(0, sonic);
+        starPointer.update(1, sonic);
+
+        assertTrue(starPointer.shouldReleaseChildren(),
+                "ROM loc_8BE74 calls Find_SonicTails before latching child release");
     }
 
     @Test

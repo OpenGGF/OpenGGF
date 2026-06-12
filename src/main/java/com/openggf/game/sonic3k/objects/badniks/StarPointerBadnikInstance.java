@@ -114,11 +114,12 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance {
      * the nearest player is within $80 px and on the side the parent faces.
      */
     private void updateReleaseLatch(AbstractPlayableSprite player) {
-        if (releaseChildren || player == null || player.getDead()) {
+        PlayableEntity target = closestNativePlayerByHorizontalDistance(player);
+        if (releaseChildren || target == null || target.getDead()) {
             return;
         }
 
-        int dx = currentX - player.getCentreX();
+        int dx = currentX - target.getCentreX();
         if (Math.abs(dx) >= RELEASE_X_RANGE) {
             return;
         }

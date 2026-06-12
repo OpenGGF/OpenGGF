@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K Star Pointer release checks native P2:** ICZ Star Pointer now runs its
+  child-release side check against the nearest native Sonic/Tails participant,
+  matching the ROM `Find_SonicTails` call in `Obj_StarPointer` instead of
+  looking only at the main player.
+
 - **S3K Insta-Shield deflects shield-reactive harmful objects:** S3K
   `Touch_ChkHurt_NoPowerUp` now treats `double_jump_flag=1` as a valid
   projectile-deflect state for harmful objects with `shield_reaction` bit 3,
