@@ -202,10 +202,14 @@ class TestIczSnowboardArtLoader {
         }
         fixture.stepFrame(false, false, false, false, true);
 
+        assertFalse(fixture.sprite().getAir(),
+                "ROM loc_3984E queues the snowboard jump after Sonic's player slot has already run");
+        fixture.stepFrame(false, false, false, false, false);
+
         assertTrue(fixture.sprite().getAir(),
-                "Jump input should launch Sonic during the locked snowboard sequence");
-        assertTrue(fixture.sprite().getYSpeed() < 0,
-                "Snowboard jump should apply upward velocity");
+                "Queued jump input should launch Sonic on the next locked snowboard frame");
+        assertTrue(fixture.sprite().getRolling(),
+                "The queued snowboard jump should use the normal rolling jump transition");
     }
 
     @Test
@@ -218,7 +222,7 @@ class TestIczSnowboardArtLoader {
         while (!intro.isSonicSnowboardOverlayActiveForTest() || fixture.sprite().getAir()) {
             fixture.stepFrame(false, false, false, false, false);
         }
-        fixture.stepFrame(false, false, false, false, true);
+        queueAndConsumeSnowboardJump(fixture);
 
         assertEquals(6, intro.getCurrentMappingFrame(),
                 "Airborne snowboard animation should start on ROM mapping frame 6");
@@ -243,7 +247,7 @@ class TestIczSnowboardArtLoader {
         while (!intro.isSonicSnowboardOverlayActiveForTest() || fixture.sprite().getAir()) {
             fixture.stepFrame(false, false, false, false, false);
         }
-        fixture.stepFrame(false, false, false, false, true);
+        queueAndConsumeSnowboardJump(fixture);
         fixture.sprite().setCentreY((short) (fixture.sprite().getCentreY() - 0x80));
         fixture.sprite().setYSpeed((short) -0x0200);
         fixture.sprite().setAir(true);
@@ -328,6 +332,11 @@ class TestIczSnowboardArtLoader {
             fixture.sprite().setYSpeed((short) -0x0200);
             fixture.stepFrame(false, false, false, false, false);
         }
+    }
+
+    private void queueAndConsumeSnowboardJump(HeadlessTestFixture fixture) {
+        fixture.stepFrame(false, false, false, false, true);
+        fixture.stepFrame(false, false, false, false, false);
     }
 
     private void assertSamePattern(Pattern expected, Pattern actual, String message) {

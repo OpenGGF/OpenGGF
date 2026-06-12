@@ -786,10 +786,7 @@ class TestS3kIczEndBossObject {
         }
         assertTrue(activeTopSteam >= 0);
 
-        int puffX = invokeInt(instance, "getFrostPuffXForTesting", activeTopSteam);
-        int puffY = invokeInt(instance, "getFrostPuffYForTesting", activeTopSteam);
-        org.mockito.Mockito.when(player.getCentreX()).thenReturn((short) puffX);
-        org.mockito.Mockito.when(player.getCentreY()).thenReturn((short) puffY);
+        bindPlayerToFrostPuff(instance, player, activeTopSteam);
 
         instance.update(nextFrame, player);
 
@@ -827,8 +824,7 @@ class TestS3kIczEndBossObject {
         }
         assertTrue(normalPuff >= 0);
 
-        org.mockito.Mockito.when(player.getCentreX()).thenReturn((short) invokeInt(instance, "getFrostPuffXForTesting", normalPuff));
-        org.mockito.Mockito.when(player.getCentreY()).thenReturn((short) invokeInt(instance, "getFrostPuffYForTesting", normalPuff));
+        bindPlayerToFrostPuff(instance, player, normalPuff);
         instance.update(nextFrame++, player);
         long capturesBeforeDamagedTopSteam = frozenPlayerBlockCount(services);
         assertTrue(capturesBeforeDamagedTopSteam > 0);
@@ -855,8 +851,7 @@ class TestS3kIczEndBossObject {
         }
         assertTrue(activeTopSteam >= 0);
 
-        org.mockito.Mockito.when(player.getCentreX()).thenReturn((short) invokeInt(instance, "getFrostPuffXForTesting", activeTopSteam));
-        org.mockito.Mockito.when(player.getCentreY()).thenReturn((short) invokeInt(instance, "getFrostPuffYForTesting", activeTopSteam));
+        bindPlayerToFrostPuff(instance, player, activeTopSteam);
         instance.update(nextFrame, player);
 
         assertTrue(frozenPlayerBlockCount(services) > capturesBeforeDamagedTopSteam,
@@ -890,10 +885,7 @@ class TestS3kIczEndBossObject {
             }
         }
         assertTrue(activePuff >= 0);
-        int puffX = invokeInt(instance, "getFrostPuffXForTesting", activePuff);
-        int puffY = invokeInt(instance, "getFrostPuffYForTesting", activePuff);
-        org.mockito.Mockito.when(player.getCentreX()).thenReturn((short) puffX);
-        org.mockito.Mockito.when(player.getCentreY()).thenReturn((short) puffY);
+        bindPlayerToFrostPuff(instance, player, activePuff);
 
         instance.update(nextFrame, player);
 
@@ -1434,6 +1426,21 @@ class TestS3kIczEndBossObject {
         return (Integer) target.getClass().getMethod(method, types).invoke(target, args);
     }
 
+    private static void bindPlayerToFrostPuff(ObjectInstance instance, AbstractPlayableSprite player, int puffIndex) {
+        org.mockito.Mockito.when(player.getCentreX()).thenAnswer(invocation ->
+                frostPuffCoordinate(instance, "getFrostPuffXForTesting", puffIndex));
+        org.mockito.Mockito.when(player.getCentreY()).thenAnswer(invocation ->
+                frostPuffCoordinate(instance, "getFrostPuffYForTesting", puffIndex));
+    }
+
+    private static short frostPuffCoordinate(ObjectInstance instance, String method, int puffIndex) {
+        try {
+            return (short) invokeInt(instance, method, puffIndex);
+        } catch (Exception e) {
+            throw new AssertionError(e);
+        }
+    }
+
     private static boolean isTopSteamOffset(int topX, int topY, int puffX, int puffY) {
         int[][] offsets = {{0x18, -4}, {0x14, 0}, {0x10, -8}, {8, -4}};
         for (int[] offset : offsets) {
@@ -1572,7 +1579,9 @@ class TestS3kIczEndBossObject {
         private RecordingServices() {
             objectManager = mock(ObjectManager.class);
             doAnswer(this::recordSpawnedChild).when(objectManager).addDynamicObjectAfterCurrent(any());
+            doAnswer(this::recordSpawnedChild).when(objectManager).addDynamicObjectAfterCurrentNextFrame(any());
             doAnswer(this::recordSpawnedChild).when(objectManager).addDynamicObject(any());
+            doAnswer(this::recordSpawnedChild).when(objectManager).addDynamicObjectNextFrame(any());
         }
 
         private Object recordSpawnedChild(org.mockito.invocation.InvocationOnMock invocation) {

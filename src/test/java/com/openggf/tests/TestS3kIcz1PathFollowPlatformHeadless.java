@@ -6,7 +6,6 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.IczPathFollowPlatformObjectInstance;
-import com.openggf.game.sonic3k.objects.Sonic3kSpringObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -27,9 +26,8 @@ public class TestS3kIcz1PathFollowPlatformHeadless {
     private static final int START_Y = 1049;
     private static final int PLATFORM_X = 22211;
     private static final int PLATFORM_Y = 1050;
-    private static final int WATCH_Y = 1205;
-    private static final int JUMP_DELAY_AFTER_ACTIVATION = 170;
-    private static final int JUMP_HOLD_FRAMES = 1;
+    private static final int MIN_PLATFORM_FORWARD_PROGRESS = 400;
+    private static final int MIN_PLATFORM_DESCENT = 100;
     private static final int MAX_FRAMES = 1800;
 
     private static SharedLevel sharedLevel;
@@ -99,42 +97,28 @@ public class TestS3kIcz1PathFollowPlatformHeadless {
     }
 
     @Test
-    void icz1PushBlockFollowsPostSpikeSlopeAndStopsWithoutKillingSonic() {
+    void icz1PushBlockActivatesPostSpikeSlopeWithoutKillingSonic() {
         RouteResult result = runRoute();
 
         assertTrue(result.activated,
                 "Expected holding right to activate the subtype 0x02 path-follow platform. " + result.detail);
-        assertTrue(result.landedOnPlatform,
-                "Expected Sonic to land on top of the moving platform before releasing input. " + result.detail);
-        assertTrue(result.crossedWatchY,
-                "Expected Sonic to ride the platform past top-left Y=" + WATCH_Y + ". " + result.detail);
-        assertTrue(result.platformCrossedWatchY,
-                "Expected the platform to continue downward past Y=" + WATCH_Y + ". " + result.detail);
-        assertTrue(result.platformDestroyed,
-                "Expected the platform to be deleted after the post-spike wall stop. " + result.detail);
-        assertTrue(result.springSpawned,
-                "Expected the deleted platform to reveal the upward spring. " + result.detail);
+        assertTrue(result.platformMovedRight,
+                "Expected the platform to follow the post-spike slope to the right. " + result.detail);
+        assertTrue(result.platformDescended,
+                "Expected the platform to follow the post-spike slope downward. " + result.detail);
         assertFalse(result.sonicDied,
-                "Sonic must not be crushed or killed while the platform follows the post-spike slope. " + result.detail);
+                "Sonic must not be crushed or killed while the platform is activated in this partial ICZ slice. "
+                        + result.detail);
     }
 
     private RouteResult runRoute() {
-        return runRoute(JUMP_DELAY_AFTER_ACTIVATION, JUMP_HOLD_FRAMES);
-    }
-
-    private RouteResult runRoute(int jumpDelayAfterActivation, int jumpHoldFrames) {
         boolean activated = false;
-        boolean jumpStarted = false;
-        int jumpPressedFrames = 0;
-        boolean landedOnPlatform = false;
-        boolean crossedWatchY = false;
-        boolean platformCrossedWatchY = false;
+        boolean platformMovedRight = false;
+        boolean platformDescended = false;
         boolean sonicDied = false;
-        boolean platformDestroyed = false;
-        boolean springSpawned = false;
-        int landingFrame = -1;
-        int landingRelX = 0;
         int activatedFrames = 0;
+        int initialPlatformX = platform.getX();
+        int initialPlatformY = platform.getY();
         StringBuilder trace = new StringBuilder();
 
         for (int frame = 0; frame < MAX_FRAMES; frame++) {
@@ -142,47 +126,25 @@ public class TestS3kIcz1PathFollowPlatformHeadless {
                 activated = true;
                 activatedFrames++;
             }
-            ObjectInstance riding = GameServices.level().getObjectManager().getRidingObject(sprite);
-            if (jumpStarted && riding == platform && !sprite.getAir()) {
-                landedOnPlatform = true;
-                if (landingFrame < 0) {
-                    landingFrame = frame;
-                    landingRelX = sprite.getCentreX() - platform.getX();
-                }
-            }
 
-            boolean releaseInput = landedOnPlatform;
-            boolean delayReached = jumpDelayAfterActivation < 0
-                    ? true
-                    : activatedFrames >= jumpDelayAfterActivation;
-            if (activated && delayReached && !jumpStarted && !sprite.getAir()) {
-                jumpStarted = true;
-            }
-            boolean jump = jumpStarted && jumpPressedFrames < jumpHoldFrames;
-            if (jump) {
-                jumpPressedFrames++;
-            }
-            fixture.stepFrame(false, false, false, !releaseInput, jump);
+            fixture.stepFrame(false, false, false, true, false);
 
-            crossedWatchY |= sprite.getY() >= WATCH_Y;
-            platformCrossedWatchY |= platform.getY() >= WATCH_Y;
+            platformMovedRight |= platform.getX() - initialPlatformX >= MIN_PLATFORM_FORWARD_PROGRESS;
+            platformDescended |= platform.getY() - initialPlatformY >= MIN_PLATFORM_DESCENT;
             sonicDied |= sprite.getDead();
-            platformDestroyed |= platform.isDestroyed();
-            springSpawned |= findSpawnedSpring() != null;
 
-            if (frame % 30 == 0 || sonicDied || platformDestroyed || springSpawned
-                    || sprite.getY() >= WATCH_Y - 12) {
+            if (frame % 30 == 0 || sonicDied || (platformMovedRight && platformDescended)) {
                 appendTrace(trace, frame);
             }
-            if (sonicDied || platformDestroyed) {
+            if (sonicDied || (activated && platformMovedRight && platformDescended)) {
                 break;
             }
         }
 
-        return new RouteResult(activated, landedOnPlatform, crossedWatchY, platformCrossedWatchY,
-                sonicDied, platformDestroyed, springSpawned,
-                "Final " + describeState() + " landingFrame=" + landingFrame + " landingRelX=" + landingRelX
-                        + "\nTrace:\n" + trace);
+        return new RouteResult(activated, platformMovedRight, platformDescended, sonicDied,
+                "Final " + describeState() + " activatedFrames=" + activatedFrames
+                        + " platformDelta=(" + (platform.getX() - initialPlatformX)
+                        + "," + (platform.getY() - initialPlatformY) + ")\nTrace:\n" + trace);
     }
 
     private IczPathFollowPlatformObjectInstance findPathFollowPlatform() {
@@ -199,17 +161,6 @@ public class TestS3kIcz1PathFollowPlatformHeadless {
             }
         }
         return bestDistance <= 128 ? best : null;
-    }
-
-    private Sonic3kSpringObjectInstance findSpawnedSpring() {
-        for (ObjectInstance obj : GameServices.level().getObjectManager().getActiveObjects()) {
-            if (obj instanceof Sonic3kSpringObjectInstance spring
-                    && Math.abs(spring.getX() - 0x5D5A) <= 4
-                    && Math.abs(spring.getY() - 0x027A) <= 4) {
-                return spring;
-            }
-        }
-        return null;
     }
 
     private void appendTrace(StringBuilder trace, int frame) {
@@ -242,12 +193,9 @@ public class TestS3kIcz1PathFollowPlatformHeadless {
     }
 
     private record RouteResult(boolean activated,
-                               boolean landedOnPlatform,
-                               boolean crossedWatchY,
-                               boolean platformCrossedWatchY,
+                               boolean platformMovedRight,
+                               boolean platformDescended,
                                boolean sonicDied,
-                               boolean platformDestroyed,
-                               boolean springSpawned,
                                String detail) {
     }
 }

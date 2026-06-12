@@ -296,10 +296,12 @@ class TestS3kCnzTeleporterRouteHeadless {
 
         assertFalse(fixture.sprite().isHidden(),
                 "ICZ load should clear the neutral fade pose and own the new player state");
-        assertEquals(0, fixture.sprite().getXSpeed(),
-                "ICZ load must not inherit the CNZ cannon launch x velocity");
-        assertEquals(0, fixture.sprite().getYSpeed(),
-                "ICZ load must not inherit the CNZ cannon launch y velocity");
+        assertEquals(0x0800, fixture.sprite().getXSpeed(),
+                "ICZ load must replace the neutral fade pose with Obj_LevelIntroICZ1's snowboard startup x velocity");
+        assertEquals(0x0280, fixture.sprite().getYSpeed(),
+                "ICZ load must replace the neutral fade pose with Obj_LevelIntroICZ1's snowboard startup y velocity");
+        assertTrue(fixture.sprite().getAir(),
+                "ICZ load should hand off to the airborne snowboard intro state, not carry CNZ launcher state");
     }
 
     /**
