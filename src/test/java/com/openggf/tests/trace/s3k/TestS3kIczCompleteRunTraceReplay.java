@@ -22,11 +22,12 @@ public class TestS3kIczCompleteRunTraceReplay extends AbstractTraceReplayTest {
         if (om == null) {
             return "";
         }
+        StringBuilder sb = lowSlotDiagnostics(om);
         List<LostRingObjectInstance> rings = om.activeObjectsOfType(LostRingObjectInstance.class);
         if (rings.isEmpty()) {
-            return "eng-obj37 none";
+            return sb.append(" | eng-obj37 none").toString();
         }
-        StringBuilder sb = new StringBuilder("eng-obj37");
+        sb.append(" | eng-obj37");
         int shown = 0;
         for (LostRingObjectInstance ring : rings) {
             if (shown >= 12) {
@@ -51,5 +52,23 @@ public class TestS3kIczCompleteRunTraceReplay extends AbstractTraceReplayTest {
             shown++;
         }
         return sb.toString();
+    }
+
+    private static StringBuilder lowSlotDiagnostics(ObjectManager om) {
+        StringBuilder sb = new StringBuilder("eng-low-slots");
+        for (AbstractObjectInstance obj : om.activeObjectsOfType(AbstractObjectInstance.class)) {
+            int slot = obj.getSlotIndex();
+            if (slot < 4 || slot > 18) {
+                continue;
+            }
+            int objectId = obj.getSpawn() != null ? obj.getSpawn().objectId() & 0xFF : 0;
+            sb.append(String.format(" s%d:%02X@%04X,%04X/%s",
+                    slot,
+                    objectId,
+                    obj.getX() & 0xFFFF,
+                    obj.getY() & 0xFFFF,
+                    obj.getClass().getSimpleName()));
+        }
+        return sb;
     }
 }
