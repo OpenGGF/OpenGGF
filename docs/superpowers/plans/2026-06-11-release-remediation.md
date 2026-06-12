@@ -22,6 +22,52 @@
 
 The removed `.tmp.md` files and tracked `docs/tmp-*` scratch trackers must not be reintroduced. This plan is the durable replacement artifact and the single source of truth for the active release-remediation goal; referenced permanent docs remain only as release-policy evidence and historical debt records.
 
+## Consolidated Current Problem Statement
+
+This file is the single durable remediation artifact for the sidekick CPU
+audit, release review, performance audit, and post-merge trace frontier. The
+scratch `.tmp.md` source files are gone from the workspace; their confirmed
+entries have either been completed below, rejected with evidence, deferred in
+permanent discrepancy/release docs, or retained in the outstanding queue here.
+
+As of `develop` commit `ba071713a` after reconciling with `origin/develop`,
+the release blocker is no longer a broad configuration or review-hygiene
+failure. The remaining work is trace/parity correctness plus evidence-gated
+performance remediation:
+
+| Priority | Area | Current problem | Evidence/frontier | Required remediation |
+|---|---|---|---|---|
+| P0 | S3K complete-run trace parity | ICZ has advanced through the lost-ring Obj37 path and now diverges on a path-follow platform/player carry interaction. | `TestS3kIczCompleteRunTraceReplay`, first error frame 3752 main-player `x expected=0x464D actual=0x464E` plus coupled `camera_x`; path-platform diagnostics are exposed. | Model the ROM state that drives path-follow platform saved-carry/input/standing timing. No ICZ/route/frame carve-out. |
+| P0 | S3K complete-run trace parity | HCZ miniboss/vortex release still disagrees on the post-vortex player air bit. | `TestS3kHczCompleteRunTraceReplay`, first error frame 9482 main-player `air expected=1 actual=0`; local timer-only and AirCountdown hypotheses were rejected. | Continue ROM-side child/parent status handoff triage around `sub_6A960 -> loc_6A986`; fix the owning object/status transition. |
+| P0 | S3K complete-run trace parity | Several S3K full-run starts/frontiers remain red after the merged sweep. | CNZ frame 0 `y_speed`, MGZ frame 738 `rings`, MHZ frame 0 `tails_cpu_routine`, LBZ frame 0 `camera_y`, AIZ sidekick CPU auto-jump/fallthrough failures. | Triage each from first divergence, preferring route-blocking AIZ -> HCZ and ICZ/MGZ/CNZ issues per project delivery priority. |
+| P1 | S2/S3K sidekick audit leftovers | Sidekick interaction/input frontiers remain in S2 level-select traces and S3K CNZ/MGZ dedicated traces. | Post-merge `*TraceReplay` sweep: S2 tails CPU/interact/speed failures; CNZ/MGZ input-alignment failures. | Complete sidekick CPU ROM-state modeling and verify with focused cross-game traces; regenerate only for diagnostic insufficiency, not to mask behavior. |
+| P1 | S1/S2 complete-run parity | Many complete-run traces are still red, while shorter known-green traces remain green. | Post-merge sweep: S1 complete-run failures across zones; S2 level-select failures except known greens. | Fix first divergences with per-game disassembly checks and feature flags where behavior differs. |
+| P2 | Performance | Verified hot-path waste remains partially planned, with performance work needing clean correctness baselines and trace sweeps. | `docs/superpowers/specs/2026-06-11-performance-optimization-design.md`; performance branch acceptance sweep proved no trace regression for its completed subset. | Execute exact-equivalence quick wins first, then rendering/rewind work with measurement, trace sweeps, and audio/render equivalence evidence. |
+| P2 | Release hygiene/debt | Deferred/review debt must stay bounded and documented. | `docs/release-architecture-review-issues.md`, `docs/KNOWN_DISCREPANCIES.md`, `docs/S3K_KNOWN_DISCREPANCIES.md`, release hooks/guards. | Keep guard tests and discrepancy docs current as fixes land; do not reintroduce temp trackers. |
+
+## Ordered Remediation Queue
+
+1. Keep `docs/TRACE_FRONTIER_LOG.md` current for every trace frontier move or
+   full sweep, and use the post-merge full sweep as the current baseline:
+   Maven/Surefire reported `Tests run: 90, Failures: 58, Errors: 1,
+   Skipped: 0`; parsed trace-class reports showed 59 trace classes, 106 trace
+   tests, 58 failures, 1 error, 0 skipped.
+2. Work P0 S3K route blockers in order of expected delivery impact:
+   ICZ frame 3752 path-follow platform carry timing, HCZ frame 9482
+   post-vortex air-state handoff, then CNZ/MGZ/MHZ/LBZ/AIZ current first
+   frontiers.
+3. For each trace target, follow the trace replay workflow: run focused trace,
+   inspect `target/trace-reports`, read the relevant disassembly, implement the
+   ROM-state fix, run focused tests plus previously-green cross-game traces,
+   then update this file/frontier log as needed.
+4. After correctness frontiers stabilize, execute the performance plan in
+   evidence-gated phases. Exact-equivalence items may land independently only
+   with focused tests and a trace sweep proving no regression.
+5. Before claiming the goal complete, require a full `*TraceReplay` sweep with
+   no regressions relative to the latest intended frontier, all focused tests
+   for touched systems green, release/doc guards green, and all commit trailers
+   matching staged files.
+
 ## Implementation Status Snapshot
 
 Completed in `bugfix/ai-release-remediation`:
