@@ -234,12 +234,18 @@ launches only):
    `TEST_MODE_ENABLED` already forces `NATIVE_4_3` inside
    `resolveDisplayAspect`, preserving trace parity.
 3. A new `Engine` hook (`applyResolvedDisplayDimensions()`) re-reads
-   `SCREEN_WIDTH_PIXELS` into `realWidth`/`projectionWidth`, resizes the GLFW
-   window via the existing autosize/integer-snap logic
-   (`snapWindowToIntegerScale`), and re-runs `reshape` so viewport and
-   projection match. The implementation plan must audit Engine-lifetime
-   width-dependent resources (FBOs, render targets, `GraphicsManager`
-   viewport state) and recreate any that bake in the old width.
+   `SCREEN_WIDTH_PIXELS` into `realWidth`/`projectionWidth` **and** the
+   resolved `SCREEN_WIDTH`/`SCREEN_HEIGHT` (overlaid by
+   `resolveDisplayAspect()` when autosize derives a new window), applies the
+   resolved window size via `glfwSetWindowSize`, updates
+   `windowWidth`/`windowHeight`, and re-runs `reshape`. It must **not** rely
+   on `snapWindowToIntegerScale()` alone: that method computes scale from
+   the *current* `windowWidth`/`windowHeight` fields (`Engine.java:1165`),
+   so switching native 320 → pinned 400 with a stale 640×448 window would
+   snap to 400×224 instead of the intended autosized 800×448. The
+   implementation plan must audit Engine-lifetime width-dependent resources
+   (FBOs, render targets, `GraphicsManager` viewport state) and recreate any
+   that bake in the old width.
 
 **Symmetry on return to the master title:** clearing the overlay is followed
 by `resolveDisplayAspect()` + the same Engine hook, so the window returns to
