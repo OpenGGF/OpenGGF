@@ -452,6 +452,12 @@ applies to every patrolling-shooter badnik that uses the angle-based
 attack gate. ObjA4/Asteron, ObjA6/SpinyOnWall, and at least three S3K
 analogues share the same idiom.)
 
+**Additional example.** `<pending>`: MCZ Crawlton (`Obj9E`) used only
+MainCharacter for its `Obj_GetOrientationToPlayer` gate. Routing its detection
+through `ObjectPlayerQuery.nearestByRomX(NATIVE_P1_P2, ...)` matched the helper's
+native Sonic/Tails closest-X selection (`docs/s2disasm/s2.asm:75229-75243`,
+`docs/s2disasm/s2.asm:72755-72796`) and cleared `s2_mcz1`.
+
 ---
 
 ## P13 -- SlopedSolidProvider.getSlopeBaseline() returning halfHeight when ROM slope table encodes absolute offsets
