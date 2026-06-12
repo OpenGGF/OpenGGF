@@ -62,6 +62,13 @@ public record PhysicsFeatureSet(
          *  27997-28001,28013-28017). S1/S2: false; their corresponding wall
          *  response paths set Status_Push unconditionally. */
         boolean groundWallPushRequiresFacingIntoWall,
+        /** Whether a CPU-controlled sidekick's zero-distance horizontal
+         *  CalcRoomInFront seam is treated as the first penetrating pixel when
+         *  the CPU routine entered the frame with existing ground inertia.
+         *  S3K: true for the Tails ground-wall path exercised by HCZ1; S2:
+         *  false because Tails preserves the clear seam without setting
+         *  Status_Push in ARZ1. S1 has no CPU sidekick. */
+        boolean sidekickGroundWallZeroDistanceSeamPenetrates,
         /** Whether the character animation routine clears push status when anim
          *  differs from prev_anim.
          *  S2/S3K: true (s2.asm:38033-38038,40879-40884;
@@ -1041,6 +1048,7 @@ public record PhysicsFeatureSet(
                     source.movingCrouchThreshold(),
                     source.groundWallCollisionEnabled(),
                     source.groundWallPushRequiresFacingIntoWall(),
+                    source.sidekickGroundWallZeroDistanceSeamPenetrates(),
                     source.animationChangeClearsPush(),
                     source.airSuperspeedPreserved(),
                     source.slopeResistStartsFromRest(),
@@ -1113,7 +1121,9 @@ public record PhysicsFeatureSet(
     public static final PhysicsFeatureSet SONIC_1 = new PhysicsFeatureSet(
             false, null, CollisionModel.UNIFIED, true, LOOK_SCROLL_DELAY_NONE, true, true, false, false, false, false, false, false,
             RING_FLOOR_CHECK_MASK_S1, RING_COLLISION_SIZE_S1, RING_COLLISION_SIZE_S1, false,
-            null, (short) 0, true, false /* groundWallPushRequiresFacingIntoWall: S1 wall response sets push unconditionally (s1disasm/_incObj/01 Sonic.asm:551-568) */, false /* animationChangeClearsPush: S1 clear is FixBugs-only (s1disasm/_incObj/01 Sonic.asm:2055-2065) */, false,
+            null, (short) 0, true, false /* groundWallPushRequiresFacingIntoWall: S1 wall response sets push unconditionally (s1disasm/_incObj/01 Sonic.asm:551-568) */,
+            false /* sidekickGroundWallZeroDistanceSeamPenetrates: S1 has no CPU sidekick */,
+            false /* animationChangeClearsPush: S1 clear is FixBugs-only (s1disasm/_incObj/01 Sonic.asm:2055-2065) */, false,
             false /* slopeResistStartsFromRest: S1 Sonic_SlopeResist returns on zero inertia (s1disasm/_incObj/01 Sonic.asm:1043-1044) */,
             false, false, false, false, true, false, false, false, true, FAST_SCROLL_CAP_S2, false, true, false,
             SIDEKICK_FOLLOW_SNAP_S2, SIDEKICK_DESPAWN_X_S2, SIDEKICK_FOLLOW_LEAD_OFFSET_NONE,
@@ -1163,7 +1173,9 @@ public record PhysicsFeatureSet(
             0x0800, 0x0880, 0x0900, 0x0980, 0x0A00, 0x0A80, 0x0B00, 0x0B80, 0x0C00
     }, CollisionModel.DUAL_PATH, false, LOOK_SCROLL_DELAY_S2, false, false, false, false, false, true, true, false,
             RING_FLOOR_CHECK_MASK_S2, RING_COLLISION_SIZE_S2, RING_COLLISION_SIZE_S2, false,
-            null, (short) 0, true, false /* groundWallPushRequiresFacingIntoWall: S2 Sonic/Tails set push unconditionally in wall response (s2.asm:36536-36547,39506-39519) */, true /* animationChangeClearsPush: S2 Sonic/Tails animation clears pushing on anim change (s2.asm:38033-38038,40879-40884) */, false,
+            null, (short) 0, true, false /* groundWallPushRequiresFacingIntoWall: S2 Sonic/Tails set push unconditionally in wall response (s2.asm:36536-36547,39506-39519) */,
+            false /* sidekickGroundWallZeroDistanceSeamPenetrates: S2 ARZ1 preserves the zero-distance Tails seam without push */,
+            true /* animationChangeClearsPush: S2 Sonic/Tails animation clears pushing on anim change (s2.asm:38033-38038,40879-40884) */, false,
             false /* slopeResistStartsFromRest: S2 Sonic/Tails_SlopeResist returns on zero inertia (s2.asm:37369-37370,40224-40225) */,
             true, false,
             true /* pinballLandingPreservesRoll: S2 skips the Status_Roll clear while pinball_mode is set (s2.asm:37770-37771) */,
@@ -1222,7 +1234,9 @@ public record PhysicsFeatureSet(
             RING_FLOOR_CHECK_MASK_S2, RING_COLLISION_SIZE_S3K, RING_COLLISION_SIZE_S3K, true,
             new short[]{
             0x0B00, 0x0B80, 0x0C00, 0x0C80, 0x0D00, 0x0D80, 0x0E00, 0x0E80, 0x0F00
-    }, (short) 0x100, true, true /* groundWallPushRequiresFacingIntoWall: S3K wall response gates Status_Push on Status_Facing (sonic3k.asm:22752-22756,22768-22772,27997-28001,28013-28017) */, true /* animationChangeClearsPush: S3K Tails/Tails2P animation clears Status_Push on anim change (sonic3k.asm:29359-29364,29681-29686) */, true,
+    }, (short) 0x100, true, true /* groundWallPushRequiresFacingIntoWall: S3K wall response gates Status_Push on Status_Facing (sonic3k.asm:22752-22756,22768-22772,27997-28001,28013-28017) */,
+            true /* sidekickGroundWallZeroDistanceSeamPenetrates: HCZ1 Tails applies the deferred first-penetration response at the flat wall seam */,
+            true /* animationChangeClearsPush: S3K Tails/Tails2P animation clears Status_Push on anim change (sonic3k.asm:29359-29364,29681-29686) */, true,
             true /* slopeResistStartsFromRest: S3K Player_SlopeResist applies abs(slope effect) >= $0D even when ground_vel is zero (sonic3k.asm:23848-23856) */,
             false, true,
             true /* pinballLandingPreservesRoll: S3K Player_TouchFloor_Check_Spindash skips the roll-clear body while spin_dash_flag is set (sonic3k.asm:24325-24327) */,

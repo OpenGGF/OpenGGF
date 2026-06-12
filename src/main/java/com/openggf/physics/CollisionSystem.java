@@ -357,24 +357,27 @@ public class CollisionSystem {
 
     private static boolean shouldDeferGroundWallVelocityResponse(AbstractPlayableSprite sprite, int rawDistance, int mode) {
         return rawDistance == 0
-                && sprite.isCpuControlled()
-                && sprite.getPreCpuControlGSpeed() != 0
-                && (mode == 0x40 || mode == 0xC0);
+                && sidekickGroundWallZeroDistanceSeamPenetrates(sprite, mode);
     }
 
     private static int normaliseGroundWallDistance(AbstractPlayableSprite sprite, int distance, int mode) {
-        // S3K's CPU sidekick path can resolve the same horizontal seam as the
-        // first penetrating pixel, but only after the CPU routine entered the
-        // frame with existing inertia. The first follow-acceleration tick from
-        // rest still treats the seam as clear; the next tick, with nonzero
-        // pre-control ground speed, applies the wall response.
-        if (distance == 0
-                && sprite.isCpuControlled()
-                && sprite.getPreCpuControlGSpeed() != 0
-                && (mode == 0x40 || mode == 0xC0)) {
+        if (distance == 0 && sidekickGroundWallZeroDistanceSeamPenetrates(sprite, mode)) {
             return -1;
         }
         return distance;
+    }
+
+    private static boolean sidekickGroundWallZeroDistanceSeamPenetrates(AbstractPlayableSprite sprite, int mode) {
+        var featureSet = sprite.getPhysicsFeatureSet();
+        // S3K's CPU sidekick path can resolve the same horizontal seam as the
+        // first penetrating pixel, but only after the CPU routine entered the
+        // frame with existing inertia. S2 leaves the equivalent zero-distance
+        // seam clear, so the behavior is gated through PhysicsFeatureSet.
+        return featureSet != null
+                && featureSet.sidekickGroundWallZeroDistanceSeamPenetrates()
+                && sprite.isCpuControlled()
+                && sprite.getPreCpuControlGSpeed() != 0
+                && (mode == 0x40 || mode == 0xC0);
     }
 
     private static boolean shouldSetGroundWallPush(AbstractPlayableSprite sprite, int mode) {

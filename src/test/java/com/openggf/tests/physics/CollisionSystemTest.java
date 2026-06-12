@@ -6,6 +6,7 @@ import com.openggf.game.session.GameplayModeContext;
 import com.openggf.level.LevelManager;
 import com.openggf.game.GroundMode;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.physics.*;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRegistry;
@@ -628,6 +629,34 @@ public class CollisionSystemTest {
     }
 
     @Test
+    public void s2CpuSidekickZeroDistanceGroundWallProbeRemainsClear() {
+        FeatureSetCollisionTestSprite player = newCollisionTestSprite();
+        player.setFeatureSet(PhysicsFeatureSet.SONIC_2);
+        player.setCpuControlled(true);
+        player.setGSpeed((short) 0x000C);
+        player.capturePreCpuControlSnapshot();
+
+        assertEquals(0, invokeNormaliseGroundWallDistance(player, 0, 0x40),
+                "S2 Tails CalcRoomInFront must keep a zero-distance horizontal seam clear");
+        assertFalse(invokeShouldDeferGroundWallVelocityResponse(player, 0, 0x40),
+                "S2 Tails must not take the S3K deferred wall-response path at a clear seam");
+    }
+
+    @Test
+    public void s3kCpuSidekickZeroDistanceGroundWallProbeCanBecomePenetrationAfterExistingInertia() {
+        FeatureSetCollisionTestSprite player = newCollisionTestSprite();
+        player.setFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        player.setCpuControlled(true);
+        player.setGSpeed((short) 0x000C);
+        player.capturePreCpuControlSnapshot();
+
+        assertEquals(-1, invokeNormaliseGroundWallDistance(player, 0, 0x40),
+                "S3K Tails treats the zero-distance seam as first penetration after entering CPU control with inertia");
+        assertTrue(invokeShouldDeferGroundWallVelocityResponse(player, 0, 0x40),
+                "S3K keeps the wall response deferred until after the same-frame position step");
+    }
+
+    @Test
     public void oddRightWallAngleFallbackIsSensorDrivenNotCoordinateWindow() {
         AbstractPlayableSprite player = newCollisionTestSprite();
         player.setGroundMode(GroundMode.RIGHTWALL);
@@ -689,6 +718,30 @@ public class CollisionSystemTest {
         }
     }
 
+    private static int invokeNormaliseGroundWallDistance(AbstractPlayableSprite player, int distance, int mode) {
+        try {
+            Method method = CollisionSystem.class.getDeclaredMethod(
+                    "normaliseGroundWallDistance", AbstractPlayableSprite.class, int.class, int.class);
+            method.setAccessible(true);
+            return ((Number) method.invoke(null, player, distance, mode)).intValue();
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Failed to invoke normaliseGroundWallDistance", e);
+        }
+    }
+
+    private static boolean invokeShouldDeferGroundWallVelocityResponse(AbstractPlayableSprite player,
+                                                                       int rawDistance,
+                                                                       int mode) {
+        try {
+            Method method = CollisionSystem.class.getDeclaredMethod(
+                    "shouldDeferGroundWallVelocityResponse", AbstractPlayableSprite.class, int.class, int.class);
+            method.setAccessible(true);
+            return (Boolean) method.invoke(null, player, rawDistance, mode);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Failed to invoke shouldDeferGroundWallVelocityResponse", e);
+        }
+    }
+
     private SensorResult invokeSelectSensorWithAngle(AbstractPlayableSprite player,
                                                      SensorResult rightSensor,
                                                      SensorResult leftSensor) {
@@ -702,20 +755,8 @@ public class CollisionSystemTest {
         }
     }
 
-    private static AbstractPlayableSprite newCollisionTestSprite() {
-        return new AbstractPlayableSprite("collision-test", (short) 0, (short) 0) {
-            @Override
-            protected void defineSpeeds() {
-            }
-
-            @Override
-            protected void createSensorLines() {
-            }
-
-            @Override
-            public void draw() {
-            }
-        };
+    private static FeatureSetCollisionTestSprite newCollisionTestSprite() {
+        return new FeatureSetCollisionTestSprite();
     }
 
     private static Object[] describeCalcRoomOverHeadProbes(AbstractPlayableSprite player, int quadrant) {
@@ -764,6 +805,28 @@ public class CollisionSystemTest {
             return (Direction) method.invoke(probe);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Failed reading probe accessor " + accessor, e);
+        }
+    }
+
+    private static final class FeatureSetCollisionTestSprite extends AbstractPlayableSprite {
+        private FeatureSetCollisionTestSprite() {
+            super("collision-test", (short) 0, (short) 0);
+        }
+
+        private void setFeatureSet(PhysicsFeatureSet featureSet) {
+            setPhysicsFeatureSet(featureSet);
+        }
+
+        @Override
+        protected void defineSpeeds() {
+        }
+
+        @Override
+        protected void createSensorLines() {
+        }
+
+        @Override
+        public void draw() {
         }
     }
 

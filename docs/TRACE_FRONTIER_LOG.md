@@ -1,5 +1,98 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S2 sidekick ground-wall seams keep zero distance clear
+
+- Scope: gated CPU sidekick zero-distance ground-wall seam handling through
+  `PhysicsFeatureSet`. S2 now keeps the zero-distance seam clear for Tails'
+  `CalcRoomInFront` path, while S3K keeps the deferred first-penetration
+  behavior needed by the HCZ ground-wall probe. This is a game physics-profile
+  divergence, not a route carve-out, trace-state sync, or zone exception.
+- Disassembly basis:
+  - S2 wall-response paths set push state after the wall response actually
+    runs (`docs/s2disasm/s2.asm:36536-36547`,
+    `docs/s2disasm/s2.asm:39506-39519`). The focused ARZ1 frontier showed
+    Tails reaching a zero-distance ground-wall seam with nonzero pre-control
+    inertia where the ROM keeps `Status_Push` clear.
+  - S3K keeps the existing facing-gated push behavior and the HCZ probe still
+    needs the first contact to defer velocity response
+    (`docs/skdisasm/sonic3k.asm:22752-22756`,
+    `docs/skdisasm/sonic3k.asm:22768-22772`,
+    `docs/skdisasm/sonic3k.asm:27997-28001`,
+    `docs/skdisasm/sonic3k.asm:28013-28017`).
+- Focused verification:
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.physics.CollisionSystemTest#s2CpuSidekickZeroDistanceGroundWallProbeRemainsClear+s3kCpuSidekickZeroDistanceGroundWallProbeCanBecomePenetrationAfterExistingInertia,com.openggf.game.TestPhysicsProfile#testSidekickGroundWallZeroDistanceSeamPenetrates_PerGame" test`
+  - Result: **Tests run: 3, Failures: 0, Errors: 0, Skipped: 0**.
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.TestS3kHcz1GroundWallProbe" "-Ds3k.rom.path=s3k.gen" test`
+  - Result: **Tests run: 2, Failures: 0, Errors: 0, Skipped: 0**.
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay" "-Ds2.rom.path=s2.gen" "-DfailIfNoTests=false" test`
+  - Result: still red, but `s2_arz1` advanced from frame 1155
+    `tails_status_byte` expected `0x0001`, actual `0x0021`, to frame 1285
+    `tails_cpu_interact` expected `0x0008`, actual `0x0000`.
+- Full sweep command:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test`
+- Full sweep result:
+  - **Tests run: 90, Failures: 62, Errors: 1, Skipped: 0** from
+    Maven/Surefire. This remains an expected-red trace sweep; no frontier
+    regressions were observed in the compared baseline.
+- Frontier movement:
+
+| Trace | Previous frontier | New frontier | Delta |
+|---|---:|---:|---:|
+| `s2_arz1` | f1155 `tails_status_byte` `0x0001 -> 0x0021` | f1285 `tails_cpu_interact` `0x0008 -> 0x0000` | +130 |
+| `s2_cnz2` | f2467 `tails_g_speed` `0x0018 -> 0x0000` | f2919 `tails_status_byte` `0x0009 -> 0x0008` | +452 |
+| `s2_cpz1` | f724 `tails_status_byte` `0x0000 -> 0x0020` | f1157 `tails_x_speed` `0x0000 -> -0200` | +433 |
+| `s2_mcz2` | f1807 `tails_x_speed` `-0018 -> 0x00E8` | f2411 `tails_status_byte` `0x0008 -> 0x0009` | +604 |
+| `s2_ooz2` | f919 `tails_status_byte` `0x0000 -> 0x0020` | f1070 `air` `0 -> 1` | +151 |
+
+- Current full frontier table from the sweep:
+
+| Trace | Frontier | Field | Expected | Actual | Errors |
+|---|---:|---|---:|---:|---:|
+| s1_credits_01_mz2 | f262 | status_byte | 0x0021 | 0x0001 | 1 |
+| s1_credits_05_sbz1 | f413 | status_byte | 0x0029 | 0x0028 | 3 |
+| s1_ghz1 | f1394 | x_speed | 0x0000 | -0200 | 292 |
+| s1_ghz2 | f2370 | y | 0x0267 | 0x0266 | 231 |
+| s1_ghz3 | f370 | y_speed | -0220 | -0320 | 1108 |
+| s1_lz1 | f302 | y_speed | -0100 | 0x0000 | 2992 |
+| s1_lz2 | f1089 | y | 0x03A8 | 0x03AD | 2102 |
+| s1_lz3 | f466 | y | 0x0807 | 0x0007 | 3229 |
+| s1_lz4 | f1421 | camera_y | 0x038C | 0x0388 | 4686 |
+| s1_mz1 | f3224 | y_speed | 0x02C8 | 0x01C8 | 222 |
+| s1_mz2 | f2409 | y_speed | 0x0048 | -00B8 | 1074 |
+| s1_mz3 | f1702 | y | 0x048C | 0x048B | 1091 |
+| s1_sbz1 | f2268 | air | 0 | 1 | 805 |
+| s1_sbz2 | f576 | y | 0x0763 | 0x075C | 993 |
+| s1_sbz3 | f713 | y_speed | 0x0000 | -0700 | 155 |
+| s1_slz1 | f723 | x_speed | 0x0000 | -0200 | 661 |
+| s1_slz2 | f651 | g_speed | 0x1000 | 0x10AE | 270 |
+| s1_slz3 | f718 | y_speed | 0x0000 | 0x0610 | 1500 |
+| s1_syz1 | f250 | y_speed | -0610 | -0510 | 417 |
+| s1_syz2 | f1088 | x_speed | 0x02E8 | 0x02F4 | 336 |
+| s1_syz3 | f1392 | x_speed | -0200 | 0x0200 | 714 |
+| s2_arz1 | f1285 | tails_cpu_interact | 0x0008 | 0x0000 | 15 |
+| s2_arz2 | f899 | y_speed | -02D0 | -01D0 | 2043 |
+| s2_cnz1 | f202 | tails_x | 0x0265 | 0x0264 | 588 |
+| s2_cnz2 | f2919 | tails_status_byte | 0x0009 | 0x0008 | 864 |
+| s2_cpz1 | f1157 | tails_x_speed | 0x0000 | -0200 | 670 |
+| s2_cpz2 | f759 | tails_status_byte | 0x0020 | 0x0000 | 1087 |
+| s2_dez1 | f1557 | x_speed | 0x0000 | 0x003C | 137 |
+| s2_htz1 | f419 | tails_cpu_interact | 0x0000 | 0x0018 | 531 |
+| s2_htz2 | f936 | tails_cpu_ctrl2_held | 0x0002 | 0x0000 | 1295 |
+| s2_mcz1 | f398 | tails_routine | 0x0006 | 0x0002 | 298 |
+| s2_mcz2 | f2411 | tails_status_byte | 0x0008 | 0x0009 | 721 |
+| s2_mtz1 | f931 | tails_cpu_interact | 0x009F | 0x0006 | 1634 |
+| s2_mtz2 | f645 | tails_x_speed | 0x00C1 | -0200 | 2794 |
+| s2_mtz3 | f1381 | tails_cpu_jumping | 0x0001 | 0x0000 | 3313 |
+| s2_ooz1 | f395 | tails_status_byte | 0x000A | 0x0002 | 1145 |
+| s2_ooz2 | f1070 | air | 0 | 1 | 1113 |
+| s3k_aiz1 | f2590 | tails_status_byte | 0x000A | 0x0002 | 1868 |
+| s3k_cnz1 | f97 | rolling | 1 | 0 | 5992 |
+| s3k_hcz1 | f97 | status_byte | 0x0021 | 0x0001 | 2998 |
+| s3k_icz1 | f1986 | tails_status_byte | 0x0004 | 0x0024 | 3413 |
+| s3k_lbz1 | f410 | y_speed | 0x0000 | -0100 | 5254 |
+| s3k_mgz1 | f738 | rings | 17 | 18 | 9912 |
+| s3k_mhz1 | f79 | y | 0x051B | 0x0525 | 3571 |
+
 ## 2026-06-12 - S3K object landing uses live radius delta
 
 - Scope: fixed the highest-leverage S3K MHZ object-landing false frontier

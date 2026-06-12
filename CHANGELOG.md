@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 sidekick ground-wall seams now stay clear at zero distance:** the
+  shared CPU sidekick wall-response seam now uses a per-game physics flag, so
+  S2 Tails no longer inherits S3K's deferred first-penetration handling while
+  S3K HCZ keeps that behavior. This advances `s2_arz1` from frame 1155 to
+  1285 and also advances `s2_cnz2`, `s2_cpz1`, `s2_mcz2`, and `s2_ooz2`.
+
 - **S3K sidekick flight recovery now updates facing like the ROM:** Tails'
   routine-4 flight/catch-up steering now sets the facing bit when moving left
   toward the target and clears it on the transition back to NORMAL, matching
