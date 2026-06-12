@@ -257,6 +257,14 @@ Completed in `bugfix/ai-release-remediation`:
   main-player `rings expected=2 actual=1`; main-player position, speeds, angle,
   air/rolling state, camera, sidekick state, and Tails CPU fields match through
   the former re-collection frontier.
+- ICZ Obj37 delayed-materialization narrowing: pending S3K lost-ring spills now
+  apply the same first Obj37 movement/gravity step that ROM gets when
+  `Obj_Bouncing_Ring` allocates new slots during the player slot, and Obj37
+  touch response reads the live post-movement collision-list position. Focused
+  lost-ring tests are green, but the ICZ complete-run trace still first
+  diverges at frame 3323 main-player `rings expected=2 actual=1`; the remaining
+  mismatch is narrowed to the slot-44 Obj37 collection position/velocity path,
+  not the delayed materialization bridge.
 
 Still outstanding:
 

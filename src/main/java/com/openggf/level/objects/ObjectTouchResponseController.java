@@ -444,8 +444,9 @@ final class ObjectTouchResponseController {
             // objects update. So touch collision sees objects at their pre-update
             // positions. Use getPreUpdateX()/getPreUpdateY() which return the
             // position snapshot taken before the object update loop ran.
-            int objX = usePreUpdateState ? instance.getPreUpdateX() : instance.getX();
-            int objY = usePreUpdateState ? instance.getPreUpdateY() : instance.getY();
+            boolean useCurrentTouchState = usesCurrentTouchState(instance);
+            int objX = usePreUpdateState && !useCurrentTouchState ? instance.getPreUpdateX() : instance.getX();
+            int objY = usePreUpdateState && !useCurrentTouchState ? instance.getPreUpdateY() : instance.getY();
             if (category == TouchCategory.HURT
                     && tryShieldDeflect(player, provider, touchProfile, objX, objY, width, height)) {
                 continue;
@@ -541,6 +542,15 @@ final class ObjectTouchResponseController {
             // entire ReactToItem subroutine.
             break;
         }
+    }
+
+    private static boolean usesCurrentTouchState(ObjectInstance instance) {
+        // S3K Obj_Bouncing_Ring calls Add_SpriteToCollisionResponseList after
+        // Obj37_Main moves and applies gravity (docs/skdisasm/sonic3k.asm:
+        // 35616-35626). The collision-response list therefore contains the
+        // live post-movement Obj37 position, even on inline player-touch frames
+        // where generic object touch uses the frame-start snapshot.
+        return instance instanceof LostRingObjectInstance;
     }
 
     /**

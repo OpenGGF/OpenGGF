@@ -414,6 +414,21 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         lostRings.spawnLostRings(player, ringCount, frameCounter, x, y, preallocatedFirstSlot);
     }
 
+    /**
+     * S3K delayed-hurt bridge: the engine materializes pending Obj37 rings from
+     * the post-player frame phase, after the normal object loop has already run.
+     * ROM S3K allocates the Obj_Bouncing_Ring owner during the player slot and
+     * then reaches the new Obj37 slots later in the same ExecuteObjects pass
+     * (docs/skdisasm/sonic3k.asm:21065-21088, 35490-35616), so apply that first
+     * Obj37 movement step immediately when the delayed spawn is flushed.
+     */
+    public void spawnLostRingsWithInitialObjectStep(AbstractPlayableSprite player, int ringCount,
+                                                    int frameCounter, int x, int y,
+                                                    int preallocatedFirstSlot) {
+        lostRings.spawnLostRings(player, ringCount, frameCounter, x, y, preallocatedFirstSlot,
+                true);
+    }
+
     /** Shared spilled-ring spin owner feeding the LostRingObjectInstance object path. */
     public SpillAnimationState getSpillAnimationState() {
         return lostRings.spillAnimation;
@@ -1215,6 +1230,12 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
         private void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter,
                                     int x, int y, int preallocatedFirstSlot) {
+            spawnLostRings(player, ringCount, frameCounter, x, y, preallocatedFirstSlot, false);
+        }
+
+        private void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter,
+                                    int x, int y, int preallocatedFirstSlot,
+                                    boolean applyInitialObjectStep) {
             if (player == null || renderer == null) {
                 return;
             }
@@ -1292,6 +1313,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                             x, y, xVel, yVel,
                             phase, LIFETIME_FRAMES, spillAnimation);
                     objectManager.spawnLostRingObjectAtSlot(ringObject, slotIndex);
+                    if (applyInitialObjectStep) {
+                        ringObject.updateMovement();
+                    }
                 }
                 activeRingCount++;
                 previousSlot = slotIndex;

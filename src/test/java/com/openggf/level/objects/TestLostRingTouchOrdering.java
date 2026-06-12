@@ -186,6 +186,21 @@ public class TestLostRingTouchOrdering {
     }
 
     @Test
+    public void inlineObj37TouchUsesLiveCollisionListPosition() {
+        LostRingObjectInstance ring = LostRingObjectInstance.forTest(
+                140, 112, 20 << 8, 0, 0, 0xFF);
+        ring.setSlotIndex(20);
+        objectManager.addDynamicObject(ring);
+        ring.snapshotPreUpdatePosition();
+        ring.stepPhysicsForTest(0, false);
+
+        objectManager.runTouchResponsesForPlayer(player, 1, true);
+
+        assertTrue(ring.isCollected(),
+                "S3K Obj37 adds itself to Collision_response_list after MoveSprite2, so touch uses live position");
+    }
+
+    @Test
     public void placedRingObjectNotHandledByLostRingBranch() {
         // A SPECIAL object that shares the $47 byte shape but is NOT a LostRingObjectInstance
         // must go through its own listener path, not the lost-ring branch.

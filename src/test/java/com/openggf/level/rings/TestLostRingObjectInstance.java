@@ -351,6 +351,44 @@ class TestLostRingObjectInstance {
     }
 
     @Test
+    void delayedSpawnVariantAppliesInitialObj37MovementStep() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        ObjectManager objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);
+        setField(levelManager, "objectManager", objectManager);
+
+        RingManager ringManager = buildRingManagerWithLevelManager(levelManager);
+        setField(levelManager, "ringManager", ringManager);
+
+        SpawnTestPlayableSprite player = new SpawnTestPlayableSprite((short) 0x100, (short) 0x100);
+        ringManager.spawnLostRings(player, 1, 0);
+        LostRingObjectInstance baseline =
+                objectManager.activeObjectsOfType(LostRingObjectInstance.class).get(0);
+        int baselineXSub = baseline.getXSubpixelForTest();
+        int baselineYSub = baseline.getYSubpixelForTest();
+        int baselineXVel = baseline.getXVelForTest();
+        int baselineYVel = baseline.getYVelForTest();
+
+        LevelManager steppedLevelManager = GameServices.level();
+        ObjectManager steppedObjectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);
+        setField(steppedLevelManager, "objectManager", steppedObjectManager);
+
+        RingManager steppedRingManager = buildRingManagerWithLevelManager(steppedLevelManager);
+        setField(steppedLevelManager, "ringManager", steppedRingManager);
+
+        SpawnTestPlayableSprite steppedPlayer = new SpawnTestPlayableSprite((short) 0x100, (short) 0x100);
+        steppedRingManager.spawnLostRingsWithInitialObjectStep(
+                steppedPlayer, 1, 0, steppedPlayer.getCentreX(), steppedPlayer.getCentreY(), -1);
+        LostRingObjectInstance stepped =
+                steppedObjectManager.activeObjectsOfType(LostRingObjectInstance.class).get(0);
+
+        assertEquals(baselineXSub + baselineXVel, stepped.getXSubpixelForTest(),
+                "S3K delayed Obj37 materialization must compensate for the same-frame MoveSprite2 step");
+        assertEquals(baselineYSub + baselineYVel, stepped.getYSubpixelForTest());
+        assertEquals(baselineYVel + 0x18, stepped.getYVelForTest(),
+                "Obj37_Main applies gravity after the same-frame position update");
+    }
+
+    @Test
     void spawnStopsOnAllocationFailureAndCapsAt32() throws Exception {
         LevelManager levelManager = GameServices.level();
         ObjectManager objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);

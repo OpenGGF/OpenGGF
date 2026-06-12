@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K ICZ Obj37 delayed-materialization narrowed frame-3323 frontier
+
+- Scope: follow-up to the ICZ frame-3323 second lost-ring collection frontier.
+  Trace data remained comparison-only diagnostic input; no trace state was
+  written back into engine runtime.
+- Change:
+  - Pending S3K lost-ring spawns flushed after player touch now apply the same
+    first Obj37 movement/gravity step that ROM gets when `Obj_Bouncing_Ring`
+    allocates new Obj37 slots during the player slot and the object loop later
+    reaches those slots in the same `ExecuteObjects` pass
+    (`docs/skdisasm/sonic3k.asm:21065-21088`,
+    `docs/skdisasm/sonic3k.asm:35490-35616`).
+  - Obj37 touch response now uses the live post-movement collision-list
+    position even on inline player-touch frames, because `Obj37_Main` calls
+    `Add_SpriteToCollisionResponseList` after `MoveSprite2` and gravity
+    (`docs/skdisasm/sonic3k.asm:35616-35626`).
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.level.rings.TestLostRingObjectInstance,com.openggf.level.objects.TestLostRingTouchOrdering,com.openggf.game.sonic3k.objects.TestSonic3kInvisibleHurtBlockHObjectInstance" test`
+    -> GREEN, 30 tests.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" "-Ds3k.rom.path=s3k.gen" test`
+    -> RED, first ICZ error unchanged at frame 3323 main-player `rings`
+    (`expected=2`, `actual=1`).
+- Release state: ICZ complete-run remains red. The engine now materializes the
+  nearby Obj37 slots at frame 3323, but slot 44 is still two pixels right of
+  the ROM collection position (`engine @451A,07CA`, ROM `@4518,07C3`). The
+  next fix should investigate slot-44 x velocity/bounce/collection geometry,
+  without adding a zone, route, frame, or trace carve-out.
+
 ## 2026-06-12 - Trace replay baseline sweep for performance remediation
 
 - Scope: PERF-0 baseline capture before performance work. Trace data remained

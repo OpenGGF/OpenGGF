@@ -2730,7 +2730,7 @@ public class LevelManager {
                 continue;
             }
             if (pending.player().getRingCount() > 0) {
-                ringManager.spawnLostRings(
+                ringManager.spawnLostRingsWithInitialObjectStep(
                         pending.player(), pending.ringCount(), frameCounter,
                         pending.x(), pending.y(), pending.preallocatedFirstSlot());
             } else if (pending.preallocatedFirstSlot() >= 0 && objectManager != null) {

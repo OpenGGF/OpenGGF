@@ -4,6 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K delayed lost-ring Obj37 materialization now matches same-pass update order:**
+  pending S3K lost-ring spills flushed after the player touch phase now apply
+  the first Obj37 movement/gravity step immediately, and Obj37 touch response
+  reads the live post-movement collision-list position. This matches the ROM
+  path where `Obj_Bouncing_Ring` allocates new Obj37 slots during the player
+  slot and those slots are reached later in the same object pass. Focused
+  lost-ring tests are green; the ICZ complete-run frontier remains at frame
+  3323 pending the remaining slot-44 collection-position mismatch.
+
 - **S3K lost-ring Obj37 slot and floor-probe state now match ROM structure:**
   S3K ring spills now reserve the first Obj37 owner slot before filling the
   remaining spill with `AllocateObjectAfterCurrent`, and off-screen spilled
