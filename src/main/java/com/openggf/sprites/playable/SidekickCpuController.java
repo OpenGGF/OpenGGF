@@ -1492,8 +1492,14 @@ public class SidekickCpuController {
         controlCounter = 0;
         despawnCounter = 0;
         normalFrameCount = 0;
-        jumpingFlag = false;
+        // S2 TailsCPU_Respawn writes routine/target words without clearing Tails_CPU_jumping.
+        syncApproachTargetDiagnostics();
         suppressNextAirbornePushFollowSteering = false;
+    }
+
+    private void syncApproachTargetDiagnostics() {
+        catchUpTargetX = respawnStrategy.diagnosticTargetX(catchUpTargetX & 0xFFFF) & 0xFFFF;
+        catchUpTargetY = respawnStrategy.diagnosticTargetY(catchUpTargetY & 0xFFFF) & 0xFFFF;
     }
 
     void returnApproachToSpawningAfterFlyingTimeout() {
@@ -1515,7 +1521,9 @@ public class SidekickCpuController {
         if (effectiveLeader == null) {
             return;
         }
-        if (respawnStrategy.updateApproaching(sidekick, effectiveLeader, frameCounter)) {
+        boolean approachComplete = respawnStrategy.updateApproaching(sidekick, effectiveLeader, frameCounter);
+        syncApproachTargetDiagnostics();
+        if (approachComplete) {
             respawnStrategy.onApproachComplete(sidekick, effectiveLeader);
             sidekick.setForcedAnimationId(-1);
             sidekick.setControlLocked(false);
@@ -1563,7 +1571,7 @@ public class SidekickCpuController {
                 controlCounter = 0;
                 despawnCounter = 0;
                 normalFrameCount = 0;
-                jumpingFlag = false;
+                // Preserve Tails_CPU_jumping; S2's dead-leader flight branch does not clear it.
                 finishNormalStepDiagnostics(diagnostics, "leader_dead", -1, -1,
                         0, 0, 0, 0, 0, false, 0);
                 return;

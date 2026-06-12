@@ -201,6 +201,7 @@ class TestRespawnStrategies {
         main.setDead(true);
 
         SidekickCpuController ctrl = new SidekickCpuController(sk, main);
+        ctrl.hydrateFromRomCpuState(0x06, 0, 0, 0, true, 0, 0);
         ctrl.forceStateForTest(SidekickCpuController.State.NORMAL, 0);
         short preEntryX = sk.getCentreX();
         short preEntryY = sk.getCentreY();
@@ -221,6 +222,37 @@ class TestRespawnStrategies {
         assertFalse(sk.isInWater());
         assertEquals(com.openggf.physics.Direction.RIGHT, sk.getDirection());
         assertTrue(sk.isObjectControlSuppressesMovement());
+        assertEquals(1, ctrl.getDiagnosticJumpingFlag(),
+                "S2 TailsCPU_Normal's dead-Sonic branch writes routine 4 and flight state "
+                        + "without clearing Tails_CPU_jumping (s2.asm:39254-39264)");
+    }
+
+    @Test
+    void sonic2RespawnRoutinePreservesCpuJumpingFlagOnFlyingEntry() {
+        TestableSprite sk = new TestableSprite("tails_p2");
+        sk.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sk.setCpuControlled(true);
+
+        TestableSprite main = new TestableSprite("sonic");
+        main.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        main.setCentreX((short) 0x032C);
+        main.setCentreY((short) 0x032C);
+        main.setAir(false);
+        main.setRollingJump(false);
+        main.setInWater(false);
+        main.setPreventTailsRespawn(false);
+
+        SidekickCpuController ctrl = new SidekickCpuController(sk, main);
+        ctrl.hydrateFromRomCpuState(0x06, 0, 0, 0, true, 0, 0);
+        ctrl.forceStateForTest(SidekickCpuController.State.SPAWNING, 0);
+
+        ctrl.update(0);
+
+        assertEquals(SidekickCpuController.State.APPROACHING, ctrl.getState(),
+                "S2 TailsCPU_Respawn writes Tails_CPU_routine=4 when the respawn gate fires");
+        assertEquals(1, ctrl.getDiagnosticJumpingFlag(),
+                "S2 TailsCPU_Respawn does not clear Tails_CPU_jumping "
+                        + "(s2.asm:39116-39130); the normal filter clears it later only when grounded");
     }
 
     @Test

@@ -1,5 +1,97 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S2 flight entry preserves CPU jump and target latches
+
+- Scope: fixed the next S2 MTZ Tails CPU false frontier without route
+  carve-outs or trace-state hydration. S2 flight entry from both
+  `TailsCPU_Respawn` and the dead-leader branch now preserves the ROM-visible
+  `Tails_CPU_jumping` latch, and the flying approach path keeps the diagnostic
+  target words live after the handoff back to NORMAL.
+- Disassembly basis:
+  - S2 `TailsCPU_Respawn` writes `Tails_CPU_routine=$04` and initializes the
+    target words without clearing `Tails_CPU_jumping`
+    (`docs/s2disasm/s2.asm:39116-39130`).
+  - S2 `TailsCPU_Normal` dead-Sonic branch enters the same flight routine
+    without clearing `Tails_CPU_jumping` (`docs/s2disasm/s2.asm:39254-39264`).
+  - S2 `TailsCPU_Flying` keeps updating the target words through the flight
+    approach, so diagnostics must not drop them on the NORMAL transition.
+- Focused verification:
+  - `mvn -Dmse=off "-Dtest=com.openggf.sprites.playable.TestRespawnStrategies,com.openggf.sprites.playable.TestSidekickCpuDespawnParity,com.openggf.sprites.playable.TestSidekickCpuFollowParity" "-DfailIfNoTests=false" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test`
+  - Result: **Tests run: 129, Failures: 0, Errors: 0, Skipped: 0**.
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay" "-DfailIfNoTests=false" "-Ds2.rom.path=s2.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test`
+  - Result: still red, but `s2_mtz1` advanced from frame 447
+    `tails_cpu_jumping` expected `0x0001`, actual `0x0000`, through the
+    intermediate target-word frontier to frame 931 `tails_cpu_interact`
+    expected `0x009F`, actual `0x0006`.
+- Full sweep command:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test`
+- Full sweep result:
+  - **Tests run: 90, Failures: 63, Errors: 1, Skipped: 0** from
+    Maven/Surefire. This remains an expected-red trace sweep, not a green
+    release certification.
+- Frontier movement:
+
+| Trace | Previous frontier | New frontier | Delta |
+|---|---:|---:|---:|
+| `s2_mtz1` | f447 `tails_cpu_jumping` `0x0001 -> 0x0000` | f931 `tails_cpu_interact` `0x009F -> 0x0006` | +484 |
+| `s2_mtz3` | f639 `tails_cpu_jumping` `0x0001 -> 0x0000` | f1381 `tails_cpu_jumping` `0x0001 -> 0x0000` | +742 |
+
+- Current full frontier table from the sweep:
+
+| Trace | Frontier | Field | Expected | Actual | Errors |
+|---|---:|---|---:|---:|---:|
+| s1_credits_01_mz2 | f262 | status_byte | 0x0021 | 0x0001 | 1 |
+| s1_credits_05_sbz1 | f413 | status_byte | 0x0029 | 0x0028 | 3 |
+| s1_ghz1 | f1394 | x_speed | 0x0000 | -0200 | 292 |
+| s1_ghz2 | f2370 | y | 0x0267 | 0x0266 | 231 |
+| s1_ghz3 | f370 | y_speed | -0220 | -0320 | 1108 |
+| s1_lz1 | f302 | y_speed | -0100 | 0x0000 | 2992 |
+| s1_lz2 | f1089 | y | 0x03A8 | 0x03AD | 2102 |
+| s1_lz3 | f466 | y | 0x0807 | 0x0007 | 3229 |
+| s1_lz4 | f1421 | camera_y | 0x038C | 0x0388 | 4686 |
+| s1_mz1 | f3224 | y_speed | 0x02C8 | 0x01C8 | 222 |
+| s1_mz2 | f2409 | y_speed | 0x0048 | -00B8 | 1074 |
+| s1_mz3 | f1702 | y | 0x048C | 0x048B | 1091 |
+| s1_sbz1 | f2268 | air | 0 | 1 | 805 |
+| s1_sbz2 | f576 | y | 0x0763 | 0x075C | 993 |
+| s1_sbz3 | f713 | y_speed | 0x0000 | -0700 | 155 |
+| s1_slz1 | f723 | x_speed | 0x0000 | -0200 | 661 |
+| s1_slz2 | f651 | g_speed | 0x1000 | 0x10AE | 270 |
+| s1_slz3 | f718 | y_speed | 0x0000 | 0x0610 | 1500 |
+| s1_syz1 | f250 | y_speed | -0610 | -0510 | 417 |
+| s1_syz2 | f1088 | x_speed | 0x02E8 | 0x02F4 | 336 |
+| s1_syz3 | f1392 | x_speed | -0200 | 0x0200 | 714 |
+| s2_arz1 | f1155 | tails_status_byte | 0x0001 | 0x0021 | 974 |
+| s2_arz2 | f899 | y_speed | -02D0 | -01D0 | 2043 |
+| s2_cnz1 | f202 | tails_x | 0x0265 | 0x0264 | 588 |
+| s2_cnz2 | f2467 | tails_g_speed | 0x0018 | 0x0000 | 1094 |
+| s2_cpz1 | f724 | tails_status_byte | 0x0000 | 0x0020 | 856 |
+| s2_cpz2 | f759 | tails_status_byte | 0x0020 | 0x0000 | 1544 |
+| s2_dez1 | f1557 | x_speed | 0x0000 | 0x003C | 137 |
+| s2_ehz1 | f395 | tails_status_byte | 0x0008 | 0x0009 | 1 |
+| s2_htz1 | f419 | tails_cpu_interact | 0x0000 | 0x0018 | 556 |
+| s2_htz2 | f936 | tails_cpu_ctrl2_held | 0x0002 | 0x0000 | 1295 |
+| s2_mcz1 | f398 | tails_routine | 0x0006 | 0x0002 | 334 |
+| s2_mcz2 | f1807 | tails_x_speed | -0018 | 0x00E8 | 733 |
+| s2_mtz1 | f931 | tails_cpu_interact | 0x009F | 0x0006 | 1635 |
+| s2_mtz2 | f645 | tails_x_speed | 0x00C1 | -0200 | 2784 |
+| s2_mtz3 | f1381 | tails_cpu_jumping | 0x0001 | 0x0000 | 3164 |
+| s2_ooz1 | f395 | tails_status_byte | 0x000A | 0x0002 | 1280 |
+| s2_ooz2 | f919 | tails_status_byte | 0x0000 | 0x0020 | 1156 |
+| s2_scz1 | f6370 | y | 0x057D | 0x0578 | 60 |
+| s3k_aiz1 | f1058 | tails_status_byte | 0x0003 | 0x0002 | 1884 |
+| s3k_cnz1 | f97 | rolling | 1 | 0 | 5973 |
+| s3k_hcz1 | f97 | status_byte | 0x0021 | 0x0001 | 3007 |
+| s3k_icz1 | f1156 | tails_status_byte | 0x0003 | 0x0002 | 3418 |
+| s3k_lbz1 | f410 | y_speed | 0x0000 | -0100 | 5254 |
+| s3k_mgz1 | f454 | tails_status_byte | 0x0003 | 0x0002 | 9312 |
+| s3k_mhz1 | f71 | camera_y | 0x04C5 | 0x04BF | 4507 |
+
+- Interpretation: this removes false MTZ CPU-diagnostic frontiers in the
+  flight-entry path. MTZ1's next exposed owner is `tails_cpu_interact` at frame
+  931, still inside the broader S2 Tails CPU interact/lifetime cluster; MTZ3
+  now reaches a later `tails_cpu_jumping` frontier.
+
 ## 2026-06-12 - S2 pinball roll preserves CPU jump press latch
 
 - Scope: fixed the S2 HTZ2 `tails_cpu_jumping` frontier without route

@@ -235,6 +235,10 @@ class TestSidekickCpuDespawnParity {
         controller.update(15);
         assertEquals(SidekickCpuController.State.NORMAL, controller.getState(),
                 "The approach completion frame should carry the accumulated flying counter into NORMAL");
+        assertEquals(0x2908, controller.targetX(),
+                "S2 TailsCPU_Flying leaves the last Tails_CPU_target_x word live after returning to NORMAL");
+        assertEquals(0x0691, controller.targetY(),
+                "S2 TailsCPU_Flying leaves the last Tails_CPU_target_y word live after returning to NORMAL");
 
         for (int i = 16; i < 299; i++) {
             tails.setRenderFlagOnScreen(false);

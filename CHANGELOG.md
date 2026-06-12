@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 sidekick flight entry now preserves CPU flight latches:** Tails CPU
+  respawn and dead-leader flight entry no longer clear the ROM-visible
+  `Tails_CPU_jumping` latch, and flying approach diagnostics now keep the live
+  target words through the return to NORMAL. This advances `s2_mtz1` from frame
+  447 `tails_cpu_jumping` to frame 931 `tails_cpu_interact`, and `s2_mtz3`
+  from frame 639 to frame 1381.
+
 - **S2 sidekick pinball rolls now preserve the CPU jump press latch:** the
   Tails CPU layer no longer clears the ROM-visible delayed jump press while
   grounded rolling in `pinball_mode`; the existing roll movement path remains
