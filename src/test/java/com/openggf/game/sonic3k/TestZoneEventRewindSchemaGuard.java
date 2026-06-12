@@ -137,4 +137,18 @@ public class TestZoneEventRewindSchemaGuard {
         assertTrue(events.isIntroSpawned(),
                 "length rejection must happen before restore mutates AIZ fields");
     }
+
+    @Test
+    public void sidecarCaptureRejectsOpaqueValues() {
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> ZoneEventSchemaSidecar.capture(new OpaqueProbe()));
+
+        assertTrue(ex.getMessage().contains("opaque values"),
+                "opaque String fields must be rejected until the sidecar has an explicit policy");
+    }
+
+    private static final class OpaqueProbe {
+        @SuppressWarnings("unused")
+        private String label = "opaque";
+    }
 }

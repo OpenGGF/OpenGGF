@@ -42,5 +42,23 @@ public final class ZoneEventSchemaSidecar {
         RewindClassSchema schema = RewindSchemaRegistry.schemaFor(handler.getClass());
         CompactFieldCapturer.restore(handler,
                 new RewindObjectStateBlob(schema.schemaId(), handler.getClass(), bytes, new Object[0]));
+        validateNoNullEnumFields(handler, schema);
+    }
+
+    private static void validateNoNullEnumFields(Object handler, RewindClassSchema schema) {
+        for (RewindFieldPlan plan : schema.capturedFields()) {
+            if (!plan.field().getType().isEnum()) {
+                continue;
+            }
+            try {
+                if (plan.field().get(handler) == null) {
+                    throw new IllegalArgumentException("Zone-event sidecar for "
+                            + handler.getClass().getName()
+                            + " restored null enum field " + plan.field().getName());
+                }
+            } catch (IllegalAccessException e) {
+                throw new IllegalStateException("Cannot inspect rewind enum field " + plan.field(), e);
+            }
+        }
     }
 }

@@ -413,18 +413,9 @@ class TestSonic3kLevelEventRewindSnapshot {
 
         Sonic3kAIZEvents payloadSource = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         payloadSource.setIntroSpawned(false);
-        byte[] corruptPayload = corruptFireSequencePhaseOrdinal(ZoneEventSchemaSidecar.capture(payloadSource));
-        LevelEventSnapshot malformedSnapshot = new LevelEventSnapshot(
-                hczSnapshot.currentZone(),
-                hczSnapshot.currentAct(),
-                hczSnapshot.eventRoutineFg(),
-                hczSnapshot.eventRoutineBg(),
-                hczSnapshot.frameCounter(),
-                hczSnapshot.timerFrames(),
-                hczSnapshot.bossActive(),
-                hczSnapshot.eventDataFg(),
-                hczSnapshot.eventDataBg(),
-                insertAizPayload(hczSnapshot.extra(), corruptPayload));
+        byte[] corruptPayload = corruptFireSequencePhaseOrdinal(
+                ZoneEventSchemaSidecar.capture(payloadSource), Integer.MAX_VALUE);
+        LevelEventSnapshot malformedSnapshot = snapshotWithAizPayload(hczSnapshot, corruptPayload);
 
         assertDoesNotThrow(() -> target.restore(malformedSnapshot),
                 "same-length schema-corrupt AIZ sidecar should not abort later zone sidecars");
@@ -433,6 +424,62 @@ class TestSonic3kLevelEventRewindSnapshot {
         assertEquals(8, hczTarget.getBgRoutine());
         assertTrue(hczTarget.isWallMoving());
         assertEquals(12, hczTarget.getShakeTimer());
+    }
+
+    @Test
+    void negativeEnumOrdinalAizSchemaPayloadRollsBackAndDoesNotAbortLaterZoneRestore() throws Exception {
+        Sonic3kLevelEventManager hczSource = new Sonic3kLevelEventManager();
+        hczSource.initLevel(Sonic3kZoneIds.ZONE_HCZ, 1);
+        var hcz = hczSource.getHczEventsForTest();
+        assertNotNull(hcz);
+        hcz.setBgRoutine(8);
+        hcz.setWallMoving(true);
+        hcz.setShakeTimer(12);
+        LevelEventSnapshot hczSnapshot = hczSource.capture();
+
+        Sonic3kLevelEventManager target = new Sonic3kLevelEventManager();
+        target.initLevel(Sonic3kZoneIds.ZONE_AIZ, 1);
+        var aizTarget = target.getAizEventsForTest();
+        assertNotNull(aizTarget);
+        aizTarget.setIntroSpawned(true);
+
+        Sonic3kLevelEventManager hczTargetOwner = new Sonic3kLevelEventManager();
+        hczTargetOwner.initLevel(Sonic3kZoneIds.ZONE_HCZ, 1);
+        set(target, "hczEvents", hczTargetOwner.getHczEventsForTest());
+        var hczTarget = target.getHczEventsForTest();
+        assertNotNull(hczTarget);
+        hczTarget.setBgRoutine(0);
+        hczTarget.setWallMoving(false);
+        hczTarget.setShakeTimer(0);
+
+        Sonic3kAIZEvents payloadSource = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        payloadSource.setIntroSpawned(false);
+        byte[] corruptPayload = corruptFireSequencePhaseOrdinal(
+                ZoneEventSchemaSidecar.capture(payloadSource), -1);
+        LevelEventSnapshot malformedSnapshot = snapshotWithAizPayload(hczSnapshot, corruptPayload);
+
+        assertDoesNotThrow(() -> target.restore(malformedSnapshot),
+                "null-enum AIZ sidecar should not abort later zone sidecars");
+        assertTrue(aizTarget.isIntroSpawned(),
+                "null-enum AIZ sidecar must roll back partial AIZ field writes");
+        assertEquals(8, hczTarget.getBgRoutine());
+        assertTrue(hczTarget.isWallMoving());
+        assertEquals(12, hczTarget.getShakeTimer());
+    }
+
+    private static LevelEventSnapshot snapshotWithAizPayload(LevelEventSnapshot source, byte[] aizPayload) {
+        LevelEventSnapshot malformedSnapshot = new LevelEventSnapshot(
+                source.currentZone(),
+                source.currentAct(),
+                source.eventRoutineFg(),
+                source.eventRoutineBg(),
+                source.frameCounter(),
+                source.timerFrames(),
+                source.bossActive(),
+                source.eventDataFg(),
+                source.eventDataBg(),
+                insertAizPayload(source.extra(), aizPayload));
+        return malformedSnapshot;
     }
 
     @Test
@@ -542,7 +589,7 @@ class TestSonic3kLevelEventRewindSnapshot {
         return buf.array();
     }
 
-    private static byte[] corruptFireSequencePhaseOrdinal(byte[] payload) {
+    private static byte[] corruptFireSequencePhaseOrdinal(byte[] payload, int invalidOrdinal) {
         Sonic3kAIZEvents zero = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         zero.setFireSequencePhaseOrdinal(0);
         byte[] zeroPayload = ZoneEventSchemaSidecar.capture(zero);
@@ -563,7 +610,13 @@ class TestSonic3kLevelEventRewindSnapshot {
         assertTrue(changedByte >= 0, "fireSequencePhase ordinal offset must be discoverable");
 
         byte[] corrupt = payload.clone();
-        ByteBuffer.wrap(corrupt).putInt(changedByte & ~3, Integer.MAX_VALUE);
+        int ordinalOffset = changedByte;
+        assertTrue(ordinalOffset + Integer.BYTES <= corrupt.length,
+                "fireSequencePhase ordinal offset must be valid");
+        corrupt[ordinalOffset] = (byte) invalidOrdinal;
+        corrupt[ordinalOffset + 1] = (byte) (invalidOrdinal >>> 8);
+        corrupt[ordinalOffset + 2] = (byte) (invalidOrdinal >>> 16);
+        corrupt[ordinalOffset + 3] = (byte) (invalidOrdinal >>> 24);
         return corrupt;
     }
 
