@@ -320,12 +320,19 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         }
 
         private void scanForCapture(PlayableEntity playerEntity) {
-            AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite sprite ? sprite : null;
-            if (!canCapture(player)) {
-                return;
-            }
+            ObjectServices services = tryServices();
+            ObjectPlayerQuery serviceQuery = services != null ? services.playerQuery() : null;
+            ObjectPlayerQuery query = new ObjectPlayerQuery(
+                    () -> playerEntity,
+                    () -> serviceQuery != null ? serviceQuery.sidekicks() : List.of());
 
-            capture(player);
+            for (PlayableEntity participant : query.playersFor(PLAYER_PARTICIPATION)) {
+                AbstractPlayableSprite player = participant instanceof AbstractPlayableSprite sprite ? sprite : null;
+                if (canCapture(player)) {
+                    capture(player);
+                    return;
+                }
+            }
         }
 
         private boolean canCapture(AbstractPlayableSprite player) {

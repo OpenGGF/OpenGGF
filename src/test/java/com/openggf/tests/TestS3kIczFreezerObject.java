@@ -157,6 +157,40 @@ class TestS3kIczFreezerObject {
     }
 
     @Test
+    void captureCloudFreezesNativeSidekickParticipant() {
+        RecordingServices services = new RecordingServices();
+        IczFreezerObjectInstance freezer = createFreezer(services,
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.ICZ_FREEZER, 0, 0, false, 0));
+        freezer.setServices(services);
+
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0400, (short) 0x0134);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x0204, (short) 0x0134);
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setXSpeed((short) 0x0827);
+        tails.setYSpeed((short) 0);
+        tails.setGSpeed((short) 0x0827);
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> main, () -> List.of(tails)));
+
+        IczFreezerObjectInstance.CaptureCloud cloud =
+                freezer.createCaptureCloudForTesting(0x0200, 0x0130, false);
+        cloud.setServices(services);
+
+        for (int frame = 0; frame <= 32; frame++) {
+            cloud.update(frame, main);
+        }
+
+        IczFreezerObjectInstance.FrozenPlayerBlock block = cloud.frozenBlockForTesting();
+        assertFalse(main.isObjectControlled(), "Distant main player should not consume the sidekick capture");
+        assertTrue(tails.isObjectControlled(), "Capture cloud should scan native P2/Tails, not only update() player");
+        assertTrue(tails.getAir());
+        assertEquals(0, tails.getXSpeed());
+        assertEquals(0, tails.getYSpeed());
+        assertEquals(0, tails.getGSpeed());
+        assertSame(tails, block.capturedPlayerForTesting());
+    }
+
+    @Test
     void frozenPlayerBlockReleaseSpendsRingsThroughLostRingPathWhenShieldless() {
         installLevelGamestate();
 

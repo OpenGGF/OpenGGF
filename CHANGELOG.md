@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K ICZ freezer capture clouds scan native sidekicks:** ICZ freezer
+  capture children now use the same native P1/P2 participation policy as the
+  parent activation check, so Tails can be frozen by the ROM capture path
+  instead of only the main player being considered.
+
 - **S3K ICZ slide terrain refreshes ROM facing status:** ICZ1 directional
   slide terrain now reads the signed high byte of `ground_vel` and refreshes
   facing/animation every slide-terrain publish, matching `sub_71E4`. This
