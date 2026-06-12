@@ -6,12 +6,14 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCarryTrigger;
 
 /**
- * CNZ1 Tails-carry-Sonic trigger. Zone 3 (CNZ) + Act 0 + Player_mode 0
- * (SONIC_AND_TAILS) fires; everything else returns false.
+ * S3K Tails-carry-Sonic intro trigger. CNZ1 and MHZ1 both enter the same
+ * ROM carry routine ($0C -> $0E), with zone-specific pickup coordinates.
  *
  * <p>ROM trigger: {@code sonic3k.asm loc_13A32} reads
  * {@code (Current_zone_and_act).w}; on {@code 0x0300} it teleports Tails to
- * {@code (0x0018, 0x0600)} and sets {@code Tails_CPU_routine = 0x0C}.
+ * {@code (0x0018, 0x0600)} and sets {@code Tails_CPU_routine = 0x0C}. On
+ * {@code 0x0700}, {@code loc_13A8E} does the same at {@code (0x00D8, 0x0500)}
+ * unless the S&K-alone flag is set.
  *
  * <p>Player_mode gating here matches how the trace-recorded BK2 was captured.
  * The ROM's zone check itself is Player_mode-agnostic (see design spec §5.7).
@@ -20,6 +22,8 @@ public final class Sonic3kCnzCarryTrigger implements SidekickCarryTrigger {
 
     /** S3K canonical zone id for Carnival Night. */
     private static final int ZONE_CNZ = 3;
+    /** S3K canonical zone id for Mushroom Hill. */
+    private static final int ZONE_MHZ = 7;
 
     @Override
     public boolean shouldEnterCarry(int zoneId, int actId, PlayerCharacter playerMode) {
@@ -27,30 +31,58 @@ public final class Sonic3kCnzCarryTrigger implements SidekickCarryTrigger {
         // both Sonic+Tails (Player_mode 0) and solo Sonic (Player_mode 1). In the
         // solo case SpawnLevelMainSprites loc_68D8 spawns a throwaway Player_2 Tails
         // whose controller is flagged transient so it flies off after the drop.
-        return zoneId == ZONE_CNZ
+        return (zoneId == ZONE_CNZ || zoneId == ZONE_MHZ)
                 && actId == 0
-                && (playerMode == PlayerCharacter.SONIC_AND_TAILS
-                        || playerMode == PlayerCharacter.SONIC_ALONE);
+                && supportsCarryPlayerMode(playerMode);
+    }
+
+    private boolean supportsCarryPlayerMode(PlayerCharacter playerMode) {
+        return playerMode == PlayerCharacter.SONIC_AND_TAILS
+                || playerMode == PlayerCharacter.SONIC_ALONE;
+    }
+
+    private boolean isCnzIntroPosition(AbstractPlayableSprite leader) {
+        int dx = Math.abs(leader.getCentreX() - Sonic3kConstants.CARRY_INIT_TAILS_X);
+        int dy = Math.abs(leader.getCentreY() - Sonic3kConstants.CARRY_INIT_TAILS_Y);
+        return dx <= 0x200 && dy <= 0x80;
+    }
+
+    private boolean isMhzIntroPosition(AbstractPlayableSprite leader) {
+        int dx = Math.abs(leader.getCentreX() - Sonic3kConstants.CARRY_INIT_MHZ_TAILS_X);
+        int dy = Math.abs(leader.getCentreY() - Sonic3kConstants.CARRY_INIT_MHZ_TAILS_Y);
+        return dx <= 0x200 && dy <= 0x80;
+    }
+
+    private boolean isMhzPlacement(AbstractPlayableSprite cargo) {
+        return isMhzIntroPosition(cargo)
+                && !isCnzIntroPosition(cargo);
+    }
+
+    private int pickupX(AbstractPlayableSprite cargo) {
+        return isMhzPlacement(cargo)
+                ? Sonic3kConstants.CARRY_INIT_MHZ_TAILS_X
+                : Sonic3kConstants.CARRY_INIT_TAILS_X;
+    }
+
+    private int pickupY(AbstractPlayableSprite cargo) {
+        return isMhzPlacement(cargo)
+                ? Sonic3kConstants.CARRY_INIT_MHZ_TAILS_Y
+                : Sonic3kConstants.CARRY_INIT_TAILS_Y;
     }
 
     @Override
     public boolean isLeaderAtIntroPosition(AbstractPlayableSprite leader) {
-        // ROM CNZ1 intro parks Sonic near Tails' carry pickup X (0x18). If a
-        // test has teleported Sonic far away (e.g., onto a cannon/cylinder),
-        // skip the carry so the object under test keeps control of the leader.
-        // Matches the ROM intuition that the fly-carry cutscene is a one-shot
-        // tied to the level's spawn coordinates rather than mid-level state.
-        int dx = Math.abs(leader.getCentreX() - Sonic3kConstants.CARRY_INIT_TAILS_X);
-        return dx <= 0x200;
+        // ROM carry intros are one-shot level-start routines. If a focused test
+        // has teleported Sonic away from both pickup regions, leave control with
+        // the object under test.
+        return isCnzIntroPosition(leader) || isMhzIntroPosition(leader);
     }
 
     @Override
     public void applyInitialPlacement(AbstractPlayableSprite carrier,
                                       AbstractPlayableSprite cargo) {
-        // Teleport Tails (carrier) to the ROM's fixed pickup position.
-        // ROM sub_1459E then parents Sonic at carrier.y + 0x1C.
-        carrier.setCentreXPreserveSubpixel((short) Sonic3kConstants.CARRY_INIT_TAILS_X);
-        carrier.setCentreYPreserveSubpixel((short) Sonic3kConstants.CARRY_INIT_TAILS_Y);
+        carrier.setCentreXPreserveSubpixel((short) pickupX(cargo));
+        carrier.setCentreYPreserveSubpixel((short) pickupY(cargo));
     }
 
     @Override

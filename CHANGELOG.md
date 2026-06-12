@@ -11,6 +11,43 @@ All notable changes to the OpenGGF project are documented in this file.
   session-only overrides so trace launches, failed startups, and returns to the
   master title clear back to the global configuration.
 
+- **Classic roll-stop timing now matches each game:** S1 and S2 now keep
+  rolling until ground inertia reaches exactly zero, while S3K still clears
+  rolling when `abs(ground_vel) < $80`. This removes the shared S1/S2 false
+  rolling/radius frontier, clears the focused S1 GHZ1 trace, and advances S2
+  CNZ2 from frame 728 to the next Tails/object interaction at frame 2467.
+
+- **S3K airborne complete-run frame zero now drives native velocity rows:**
+  complete-run startup rows that already contain primary velocity now execute
+  as full level frames instead of being treated as VBlank-only handoff rows.
+  This advances HCZ1 from the false frame-1 gravity mismatch to frame 97
+  `status_byte`, and MGZ1 from frame 1 to frame 454 `tails_status_byte`.
+
+- **Develop CI guard suite now matches the runtime access contracts:** object
+  construction, playable runtime access, architecture, rewind-field, and S3K
+  spring handoff guards were brought back into sync with the current service
+  and native-position APIs after the develop push exposed those failures.
+
+- **S2 Obj1F collapsing-platform fragments now match parent-slot reuse:**
+  collapsed platforms now keep the parent object as fragment 0, allocate only
+  the remaining six fragments into free SST slots, and delete the detached
+  parent through its falling `y_pos` and ROM approximate render-height culling.
+  This advances the OOZ2 trace frontier from frame 222 to frame 324, exposing
+  the next CPU-interact lifetime mismatch on the second collapsing platform.
+
+- **S2 Obj1F vertically clipped parent slots now survive CPU refresh:**
+  falling collapsed-platform parents that are still horizontally visible now
+  remain alive across the ROM-visible refresh window before deletion, while
+  horizontal offscreen deletion stays immediate. This advances the OOZ2 trace
+  frontier again from frame 324 to frame 391.
+
+- **S3K CNZ/MHZ carry intro handoff now starts from ROM CPU state:** complete-run
+  trace bootstrap now arms the native Tails carry routine after the title-card
+  handoff for CNZ1 and MHZ1, including ROM placement, initial falling velocity,
+  carry cadence, released-carry routine retention, and roll-radius preservation
+  on jump release. This moves CNZ1 out of its frame-0 carry setup divergence to
+  frame 97 `rolling`, and MHZ1 to frame 71 `camera_y`.
+
 - **S3K Obj37 floor probes now use shared ROM terrain search:** spilled-ring
   terrain bounces now consume `ObjectTerrainUtils.checkFloorDist`, including
   the shared FindFloor extension/regression behavior used by object terrain

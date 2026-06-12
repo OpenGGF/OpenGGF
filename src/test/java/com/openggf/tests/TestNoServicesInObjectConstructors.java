@@ -638,11 +638,19 @@ public class TestNoServicesInObjectConstructors {
                 .matcher(lines[lineIndex]).find()) {
             return true;
         }
+        if (Pattern.compile("\\bObjectConstructionContext\\s*\\.\\s*construct\\s*\\(")
+                .matcher(lines[lineIndex]).find()) {
+            return true;
+        }
 
         int searchStart = Math.max(0, lineIndex - 20);
         int searchEnd = Math.min(lines.length, lineIndex + 20);
         for (int i = lineIndex - 1; i >= searchStart; i--) {
             if (Pattern.compile("\\b(?:spawnChild|spawnFreeChild|spawnObject|createDynamicObject)\\s*\\(")
+                    .matcher(lines[i]).find()) {
+                return true;
+            }
+            if (Pattern.compile("\\bObjectConstructionContext\\s*\\.\\s*construct\\s*\\(")
                     .matcher(lines[i]).find()) {
                 return true;
             }

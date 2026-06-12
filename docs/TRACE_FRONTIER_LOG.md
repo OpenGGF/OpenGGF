@@ -1,5 +1,188 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S2 Obj1F vertical-only fall culling advances OOZ2 CPU interact frontier again
+
+- Scope: refined the S2 Obj1F collapsing-platform falling-parent lifecycle
+  without route carve-outs or trace-state hydration. When the detached parent
+  has moved outside the ROM approximate Y culling band but is still
+  horizontally visible, the engine now preserves the object slot for the two
+  CPU-visible refresh ticks before deletion. Horizontal offscreen deletion
+  remains immediate.
+- Disassembly basis:
+  - `Obj1F_FragmentFall` moves the detached parent, tests
+    `render_flags.on_screen`, then deletes only after that flag is clear
+    (`docs/s2disasm/s2.asm:23860-23864`).
+  - S2 `BuildSprites` owns the approximate Y visibility clear for objects
+    without `render_flags.explicit_height`, using the +/-32 px band
+    (`docs/s2disasm/s2.asm:30584-30619`).
+- Focused verification:
+  - `mvn -Dmse=off "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" test`
+  - Result: **Tests run: 27, Failures: 0, Errors: 0, Skipped: 0**.
+  - `mvn -Dmse=off "-Ds2.rom.path=s2.gen" "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  - Result: still red, but `s2_ooz2` advanced from frame 324 to frame 391.
+  - `mvn -Dmse=off "-Ds2.rom.path=s2.gen" "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2HtzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  - Result: adjacent S2 Tails CPU representatives stayed at their existing
+    frontiers while OOZ2 advanced.
+- Full sweep command:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test`
+- Full sweep result:
+  - **Tests run: 90, Failures: 63, Errors: 1, Skipped: 0** from
+    Maven/Surefire. This is not a green all-trace certification; CI remains
+    expected-red on the known trace frontier set.
+- CI guard verification for the develop push failure cluster:
+  - `mvn -Dmse=off "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.TestNoServicesInObjectConstructors,com.openggf.tests.TestBuildToolingGuard,com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.tests.TestArchUnitRules,com.openggf.sprites.playable.TestPlayableRuntimeAccessGuard,com.openggf.level.objects.TestObjectPhysicsStandardizationGuard,com.openggf.game.rewind.TestRewindFieldAudit,com.openggf.game.rewind.TestRewindTransientGuard,com.openggf.game.sonic3k.objects.TestSonic3kSpringObjectInstance" test`
+  - Result: **Tests run: 185, Failures: 0, Errors: 0, Skipped: 0**.
+- Frontier movement:
+
+| Trace | Previous frontier | New frontier | Delta |
+|---|---:|---:|---:|
+| `s2_ooz2` | f324 `tails_cpu_interact` `0x001F -> 0x0000` | f391 `tails_cpu_interact` `0x0019 -> 0x0000` | +67 |
+
+- Interpretation: the second OOZ2 Obj1F parent slot no longer clears too
+  early while vertically clipped but still horizontally visible. The next
+  exposed owner remains in the S2 Tails CPU/object-interact cluster, now
+  around the following object lifetime/interact refresh at frame 391.
+
+## 2026-06-12 - S1/S2 roll-stop rule advances shared rolling/radius cluster
+
+- Scope: fixed the shared S1/S2 rolling frontier without route carve-outs or
+  trace-state hydration. `PhysicsFeatureSet` now models whether a game clears
+  rolling below `min_roll_speed` or only when ground inertia reaches zero:
+  S1/S2 use the zero-only rule, and S3K preserves the existing `$80`
+  threshold rule.
+- Disassembly basis:
+  - S1 `Sonic_RollSpeed` clears rolling only when `obInertia(a0)` is zero
+    (`docs/s1disasm/_incObj/01 Sonic.asm:760-768`).
+  - S2 Sonic and Tails `CheckRollStop` paths clear only when inertia is zero
+    (`docs/s2disasm/s2.asm:37046-37055,40072-40081`).
+  - S3K Sonic and Tails compare `abs(ground_vel)` against `#$80`
+    (`docs/skdisasm/sonic3k.asm:22971-22986,28216-28231`).
+- Focused verification:
+  - `mvn -Dmse=off "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.TestPlayableSpriteRollSpeed,com.openggf.sprites.managers.TestPlayableSpriteMovement,com.openggf.game.TestCrossGameFeatureProviderRefactor" test`
+  - Result: **Tests run: 107, Failures: 0, Errors: 0, Skipped: 0**.
+  - `mvn -Dmse=off "-Ds2.rom.path=s2.gen" "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  - Result: still red, but `s2_cnz2` advanced from frame 728 to frame 2467.
+  - `mvn -Dmse=off "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s1.TestS1Mz3CompleteRunTraceReplay,com.openggf.tests.trace.s1.TestS1Sbz1CompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+  - Result: `s1_ghz1` is now green; `s1_mz3` and `s1_sbz1` remain red at
+    later object/platform frontiers.
+- Full sweep command:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test`
+- Full sweep result:
+  - **Tests run: 90, Failures: 63, Errors: 1, Skipped: 0** from
+    Maven/Surefire. This is not a green all-trace certification; CI remains
+    expected-red on the known trace frontier set.
+- Frontier movement:
+
+| Trace | Previous frontier | New frontier | Delta |
+|---|---:|---:|---:|
+| `s1_ghz1` | f527 `rolling` `1 -> 0` | green | cleared |
+| `s1_mz3` | f996 `rolling` `1 -> 0` | f1702 `y` `0x048C -> 0x048B` | +706 |
+| `s1_sbz1` | f1367 `rolling` `1 -> 0` | f2268 `air` `0 -> 1` | +901 |
+| `s2_cnz2` | f728 `y` `0x0571 -> 0x056C` with rolling clear | f2467 `tails_g_speed` `0x0018 -> 0x0000` | +1739 |
+
+- Interpretation: the S1/S2 false rolling/radius frontier is resolved for
+  this cluster. The next exposed owners are not the roll threshold itself:
+  S1 moves into object/platform landing details, while S2 CNZ2 moves into a
+  Tails/ForcedSpin interaction with `tails_status_byte=0x20`.
+
+## 2026-06-12 - S3K airborne complete-run frame zero advances HCZ/MGZ startup frontiers
+
+- Scope: refined the S3K complete-run frame-zero phase policy without writing
+  trace-row state back into runtime. Complete-run frame 0 is still VBlank-only
+  for stationary handoff rows, but rows that already contain native primary
+  velocity now run as a full level frame. This keeps the policy structural
+  (`x_speed`/`y_speed`/`g_speed`), not zone- or route-special-cased.
+- Focused verification:
+  - `mvn -Dmse=off "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.TestTraceReplayStartPositionPolicy" test`
+  - Result: **Tests run: 18, Failures: 0, Errors: 0, Skipped: 0**.
+  - `mvn -Dmse=off "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay,com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+  - Result: still red, but `s3k_hcz1` advanced from frame 1 to frame 97
+    and `s3k_mgz1` advanced from frame 1 to frame 454.
+  - `mvn -Dmse=off "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzCompleteRunTraceReplay,com.openggf.tests.trace.s3k.TestS3kMhzCompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+  - Result: still red at existing post-startup frontiers:
+    `s3k_cnz1` frame 97 `rolling`, `s3k_mhz1` frame 71 `camera_y`.
+- Full sweep command:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test`
+- Full sweep result:
+  - **Tests run: 90, Failures: 64, Errors: 1, Skipped: 0** from
+    Maven/Surefire. This is not a green all-trace certification; CI remains
+    expected-red on the known trace frontier set.
+- Frontier movement:
+
+| Trace | Previous frontier | New frontier | Delta |
+|---|---:|---:|---:|
+| `s3k_hcz1` | f1 `y_speed` `0x0070 -> 0x0038` | f97 `status_byte` `0x0021 -> 0x0001` | +96 |
+| `s3k_mgz1` | f1 `tails_y_speed` `0x0070 -> 0x0038` | f454 `tails_status_byte` `0x0003 -> 0x0002` | +453 |
+
+- Interpretation: the false one-gravity-tick-late startup frontier is fixed
+  for airborne S3K complete-run starts. The next exposed owner is status-bit
+  timing / sidekick state, not initial gravity or frame-zero handoff policy.
+
+## 2026-06-12 - S2 Obj1F parent-fragment slot reuse advances OOZ2 CPU interact frontier
+
+- Scope: fixed the first S2/Tails CPU root-cause representative exposed in
+  `s2_ooz2` without hydrating engine state from trace rows. Obj1F collapsing
+  platforms now match the ROM lifecycle where the parent object becomes
+  fragment 0, only the remaining fragments consume free SST slots, and the
+  detached parent falls/deletes from its live `y_pos` through the same
+  approximate render-height culling path used by S2 `BuildSprites`.
+- Focused verification:
+  - `mvn -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#collapsingPlatformFragmentFallDeletesUsingFallingParentY+collapsingPlatformFragmentFallDeletesWhenRenderBoxLeavesScreenLeft+collapsingPlatformFragmentFallUsesApproximateRenderHeight+collapsingPlatformFragmentsReuseParentAsFragmentZero" test`
+  - Result: **Tests run: 4, Failures: 0, Errors: 0, Skipped: 0**.
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay" test`
+  - Result: still red, but `s2_ooz2` advanced from frame 222 to frame 324.
+- Full sweep command:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test`
+- Full sweep result:
+  - **Tests run: 90, Failures: 65, Errors: 1, Skipped: 0** from
+    Maven/Surefire. This is not a green all-trace certification; CI remains
+    expected-red on the known trace frontier set.
+- Frontier movement:
+
+| Trace | Previous frontier | New frontier | Delta |
+|---|---:|---:|---:|
+| `s2_ooz2` | f222 `tails_cpu_interact` `0x0000 -> 0x001F` | f324 `tails_cpu_interact` `0x001F -> 0x0000` | +102 |
+
+- Interpretation: the first OOZ2 slot/parent-lifecycle mismatch is fixed and
+  the next exposed owner is the second Obj1F parent lifetime around slot 28,
+  where the CPU interact pointer now clears too early relative to the ROM.
+
+## 2026-06-12 - S3K complete-run handoff rows advance frame-zero frontiers
+
+- Scope: fixed the highest-leverage S3K frame-zero setup cluster without
+  copying trace-row state into runtime. S3K complete-run metadata starts now
+  remain native handoff centers: replay skips the fresh-spawn ground snap,
+  applies the post-title-card zone-state hook, and treats frame 0 as
+  VBlank-only only when the next row immediately changes visible state.
+  Complete-run segments with repeated visible startup rows still tick full
+  hidden level state so launch-object countdowns can advance.
+- Focused verification:
+  - `mvn -Dmse=off "-Dsurefire.argLine=-Xshare:off -Xmx2g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.TestTraceReplayStartPositionPolicy" test`
+  - Result: **Tests run: 17, Failures: 0, Errors: 0, Skipped: 0**.
+  - `mvn -Dmse=off "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay" test`
+  - Result: still red, but `s3k_lbz1` advanced from frame 0 to frame 410.
+  - `mvn -Dmse=off "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzCompleteRunTraceReplay,com.openggf.tests.trace.s3k.TestS3kMhzCompleteRunTraceReplay" test`
+  - Result: still red, but `s3k_cnz1` and `s3k_mhz1` advanced from frame 0
+    to frame 1.
+- Full sweep command:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test`
+- Full sweep result:
+  - **Tests run: 90, Failures: 62, Errors: 1, Skipped: 0** from
+    Maven/Surefire. This is not a green all-trace certification; CI remains
+    expected-red on the known trace frontier set.
+- Frontier movement:
+
+| Trace | Previous frontier | New frontier | Delta |
+|---|---:|---:|---:|
+| `s3k_cnz1` | f0 `y_speed` `0x0000 -> 0x0038` | f1 `y` `0x061C -> 0x0600` | +1 |
+| `s3k_lbz1` | f0 `camera_y` `0x05F0 -> 0x05EC` | f410 `y_speed` `0x0000 -> -0100` | +410 |
+| `s3k_mhz1` | f0 `tails_cpu_routine` `0x000C -> 0x0006` | f1 `y` `0x051C -> 0x0500` | +1 |
+
+- Interpretation: the false frame-zero handoff/snap frontier is resolved. The
+  next clustered owner is S3K complete-run startup carry/native sidekick state:
+  CNZ and MHZ now expose frame-1 carry/start-position and `tails_cpu_routine`
+  expectations, while LBZ reaches a later path behavior mismatch.
+
 ## 2026-06-12 - S1 junction SolidObject right edge advances SBZ credits frontier
 
 - Scope: follow-up to the true-frontier comparator widening sweep. The first
@@ -11525,3 +11708,80 @@ Result:
   frame **3323** `rings` expected `2`, actual `1` with **3155** errors.
   The retained patch improves Obj37 slot/probe parity but leaves the remaining
   owner as the separate lost-ring collection/count mismatch at the same frame.
+
+## 2026-06-12 — S3K carry intro handoff sweep
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `develop`, with
+local uncommitted carry-intro investigation edits.
+Commands:
+`mvn -Dmse=off "-Dtest=com.openggf.sprites.playable.TestSidekickCpuControllerCarry" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test`
+`mvn -Dmse=off "-Dtest=com.openggf.game.sonic3k.sidekick.TestSonic3kCnzCarryTrigger,com.openggf.tests.trace.s3k.TestS3kCnzCompleteRunTraceReplay,com.openggf.tests.trace.s3k.TestS3kMhzCompleteRunTraceReplay" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test`
+`mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test`
+
+Fix:
+- S3K complete-run trace bootstrap now arms the ROM carry intro state after the
+  title-card handoff for CNZ1 and MHZ1: native Tails placement, initial
+  `y_vel=$0038`, carry routine `$0C/$0E` handoff, 32-frame carry input cadence,
+  released-carry routine retention, and jump-release roll-radius preservation.
+- The carry release path preserves `x_vel` when A/B/C are pressed without a
+  held left/right direction, matching `loc_14410/loc_1441C` in
+  `docs/skdisasm/sonic3k.asm`.
+
+Result:
+- `TestSidekickCpuControllerCarry` is green: **24 tests**, 0 failures.
+- Focused S3K carry traces remain red but advanced: CNZ1 is now frame **97**
+  `rolling` expected `1`, actual `0`; MHZ1 is now frame **71** `camera_y`
+  expected `0x04C5`, actual `0x04BF`.
+- Full `*TraceReplay` sweep remains red: **90 tests**, **65 failures**,
+  **1 error**, 0 skipped. The sweep was used to refresh the full frontier
+  table below; the next high-leverage cluster remains S2/Tails CPU and the
+  shared rolling/radius cluster.
+
+| Trace | Frontier | Field | Expected | Actual | Errors |
+|---|---:|---|---:|---:|---:|
+| s1_credits_01_mz2 | f262 | status_byte | 0x0021 | 0x0001 | 1 |
+| s1_credits_05_sbz1 | f413 | status_byte | 0x0029 | 0x0028 | 3 |
+| s1_ghz1 | f527 | rolling | 1 | 0 | 689 |
+| s1_ghz2 | f2370 | y | 0x0267 | 0x0266 | 237 |
+| s1_ghz3 | f370 | y_speed | -0220 | -0320 | 1096 |
+| s1_lz1 | f302 | y_speed | -0100 | 0x0000 | 3117 |
+| s1_lz2 | f1089 | y | 0x03A8 | 0x03AD | 2102 |
+| s1_lz3 | f466 | y | 0x0807 | 0x0007 | 3229 |
+| s1_lz4 | f1421 | camera_y | 0x038C | 0x0388 | 4686 |
+| s1_mz1 | f3224 | y_speed | 0x02C8 | 0x01C8 | 222 |
+| s1_mz2 | f1295 | y | 0x0451 | 0x044C | 1034 |
+| s1_mz3 | f996 | rolling | 1 | 0 | 1308 |
+| s1_sbz1 | f1367 | rolling | 1 | 0 | 960 |
+| s1_sbz2 | f576 | y | 0x0763 | 0x075C | 993 |
+| s1_sbz3 | f713 | y_speed | 0x0000 | -0700 | 155 |
+| s1_slz1 | f672 | y | 0x01D1 | 0x01CC | 788 |
+| s1_slz2 | f651 | g_speed | 0x1000 | 0x10AE | 270 |
+| s1_slz3 | f718 | y_speed | 0x0000 | 0x0610 | 1550 |
+| s1_syz1 | f250 | y_speed | -0610 | -0510 | 417 |
+| s1_syz2 | f1088 | x_speed | 0x02E8 | 0x02F4 | 336 |
+| s1_syz3 | f1392 | x_speed | -0200 | 0x0200 | 714 |
+| s2_arz1 | f990 | y | 0x03A3 | 0x039E | 677 |
+| s2_arz2 | f899 | y_speed | -02D0 | -01D0 | 1860 |
+| s2_cnz1 | f202 | tails_x | 0x0265 | 0x0264 | 592 |
+| s2_cnz2 | f728 | y | 0x0571 | 0x056C | 1521 |
+| s2_cpz1 | f724 | tails_status_byte | 0x0000 | 0x0020 | 856 |
+| s2_cpz2 | f759 | tails_status_byte | 0x0020 | 0x0000 | 1447 |
+| s2_dez1 | f1557 | x_speed | 0x0000 | 0x003C | 137 |
+| s2_ehz1 | f395 | tails_status_byte | 0x0008 | 0x0009 | 1 |
+| s2_htz1 | f419 | tails_cpu_interact | 0x0000 | 0x0018 | 1252 |
+| s2_htz2 | f831 | tails_cpu_jumping | 0x0001 | 0x0000 | 1147 |
+| s2_mcz1 | f398 | tails_routine | 0x0006 | 0x0002 | 334 |
+| s2_mcz2 | f1807 | tails_x_speed | -0018 | 0x00E8 | 1152 |
+| s2_mtz1 | f375 | tails_cpu_interact | 0x0001 | -0001 | 1610 |
+| s2_mtz2 | f645 | tails_x_speed | 0x00C1 | -0200 | 3597 |
+| s2_mtz3 | f461 | tails_cpu_interact | 0x006A | -0001 | 3161 |
+| s2_ooz1 | f395 | tails_status_byte | 0x000A | 0x0002 | 1291 |
+| s2_ooz2 | f222 | tails_cpu_interact | 0x0000 | 0x001F | 1158 |
+| s2_scz1 | f6370 | y | 0x057D | 0x0578 | 60 |
+| s3k_aiz1 | f1058 | tails_status_byte | 0x0003 | 0x0002 | 1884 |
+| s3k_cnz1 | f97 | rolling | 1 | 0 | 5973 |
+| s3k_hcz1 | f1 | y_speed | 0x0070 | 0x0038 | 4076 |
+| s3k_icz1 | f1156 | tails_status_byte | 0x0003 | 0x0002 | 3418 |
+| s3k_lbz1 | f410 | y_speed | 0x0000 | -0100 | 5254 |
+| s3k_mgz1 | f1 | tails_y_speed | 0x0070 | 0x0038 | 7495 |
+| s3k_mhz1 | f71 | camera_y | 0x04C5 | 0x04BF | 4507 |

@@ -7,6 +7,7 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.AizObjectEventBridge;
 import com.openggf.game.sonic3k.events.CnzObjectEventBridge;
@@ -54,6 +55,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
+import com.openggf.sprites.playable.SidekickCarryTrigger;
 import com.openggf.sprites.playable.SidekickCpuController;
 
 import java.util.ArrayList;
@@ -510,6 +512,36 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         applyZonePlayerState();
         if (currentZone == Sonic3kZoneIds.ZONE_LBZ && currentAct == 0) {
             spawnLbz1GroundLaunchIntro(true);
+        }
+    }
+
+    /**
+     * Complete-run trace handoffs begin after ROM has already run the first
+     * Tails CPU init tick for carry-intro zones (loc_13A32/loc_13A8E ->
+     * loc_13A5A), but before routine $0C's body runs. Pre-arm that native
+     * state so the next driven frame executes $0C and falls through to $0E.
+     */
+    public void armCarryIntroHandoffAfterTitleCard() {
+        AbstractPlayableSprite player = GameServices.camera().getFocusedSprite();
+        SidekickCarryTrigger carryTrigger = GameServices.module().getSidekickCarryTrigger();
+        if (player == null || carryTrigger == null) {
+            return;
+        }
+        PlayerCharacter character = getPlayerCharacter();
+        for (AbstractPlayableSprite sidekick : sidekickSpritesFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            SidekickCpuController controller = sidekick.getCpuController();
+            if (controller == null
+                    || !carryTrigger.shouldEnterCarry(currentZone, currentAct, character)
+                    || !carryTrigger.isLeaderAtIntroPosition(player)) {
+                continue;
+            }
+            carryTrigger.applyInitialPlacement(sidekick, player);
+            sidekick.setAir(true);
+            sidekick.setXSpeed((short) 0);
+            sidekick.setYSpeed(Sonic3kConstants.CARRY_INIT_PREROLLED_TAILS_Y_VEL);
+            sidekick.setGSpeed((short) 0);
+            controller.setCarryTrigger(carryTrigger);
+            controller.setInitialState(SidekickCpuController.State.CARRY_INIT);
         }
     }
 

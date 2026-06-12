@@ -223,23 +223,81 @@ class TestTraceReplayStartPositionPolicy {
     @Test
     void s3kCompleteRunSegmentsDoNotSeedFrameZeroTraceState() throws Exception {
         for (String route : java.util.List.of("aiz_completerun", "hcz_completerun",
-                "mgz_completerun", "cnz_completerun")) {
+                "mgz_completerun", "cnz_completerun", "icz_completerun",
+                "lbz_completerun", "mhz_completerun")) {
             TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k", route));
 
             assertTrue(TraceReplayBootstrap.isS3kCompleteRunSegment(trace),
                     route + " must be recognized as a complete-run segment.");
             assertTrue(TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace),
                     route + " still uses the metadata start centre as bounded frame-zero bootstrap debt.");
+            assertFalse(TraceReplayBootstrap.shouldGroundSnapMetadataStartForTraceReplay(trace),
+                    route + " metadata is an in-level handoff centre, not a fresh spawn needing snap.");
             assertFalse(TraceReplayBootstrap.shouldSeedFrameZeroForTraceReplay(trace),
                     route + " must not copy recorded frame-zero player state into the engine.");
             assertFalse(TraceReplayBootstrap.shouldSeedReplayStartStateForTraceReplay(trace, 0),
                     route + " must not copy recorded replay-start state into the engine.");
             assertEquals(TraceReplayBootstrap.ReplayStartState.DEFAULT,
                     TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, null),
-                    route + " drives and compares from trace frame 0 using native replay state.");
+                    route + " uses default native replay state; phase policy handles handoff rows.");
             assertEquals(0, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace),
                     route + " complete-run segments must not receive the sidekick seed-row prelude.");
+            TraceExecutionPhase frameZeroPhase =
+                    TraceReplayBootstrap.phaseForReplay(trace, null, trace.getFrame(0));
+            TraceFrame frameZero = trace.getFrame(0);
+            boolean stationaryHandoffRow = !frameZero.stateEquals(trace.getFrame(1))
+                    && frameZero.xSpeed() == 0
+                    && frameZero.ySpeed() == 0
+                    && frameZero.gSpeed() == 0;
+            TraceExecutionPhase expectedFrameZeroPhase = stationaryHandoffRow
+                    ? TraceExecutionPhase.VBLANK_ONLY
+                    : TraceExecutionPhase.FULL_LEVEL_FRAME;
+            assertEquals(expectedFrameZeroPhase, frameZeroPhase,
+                    route + " frame 0 phase follows the structural handoff shape.");
         }
+    }
+
+    @Test
+    void s3kCompleteRunAirborneStartsDriveFrameZeroWhenVelocityAlreadyIntegrated() throws Exception {
+        TraceData hcz = TraceData.load(Path.of("src/test/resources/traces/s3k/hcz_completerun"));
+        TraceData mgz = TraceData.load(Path.of("src/test/resources/traces/s3k/mgz_completerun"));
+
+        assertEquals(0x0038, hcz.getFrame(0).ySpeed() & 0xFFFF,
+                "HCZ frame 0 already includes the first S3K gravity step.");
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+                TraceReplayBootstrap.phaseForReplay(hcz, null, hcz.getFrame(0)),
+                "HCZ frame 0 must be driven and compared, otherwise replay is one gravity tick late.");
+        assertEquals(0x0038, mgz.getFrame(0).ySpeed() & 0xFFFF,
+                "MGZ frame 0 already includes the first S3K gravity step.");
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+                TraceReplayBootstrap.phaseForReplay(mgz, null, mgz.getFrame(0)),
+                "MGZ frame 0 must be driven and compared, otherwise replay is one gravity tick late.");
+    }
+
+    @Test
+    void s3kCompleteRunRepeatedRowsTickHiddenStartupState() throws Exception {
+        TraceData lbz = TraceData.load(Path.of("src/test/resources/traces/s3k/lbz_completerun"));
+        TraceData cnz = TraceData.load(Path.of("src/test/resources/traces/s3k/cnz_completerun"));
+        TraceData mhz = TraceData.load(Path.of("src/test/resources/traces/s3k/mhz_completerun"));
+
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+                TraceReplayBootstrap.phaseForReplay(lbz, null, lbz.getFrame(0)),
+                "LBZ starts with repeated visible player rows, but the launch object countdown must tick.");
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+                TraceReplayBootstrap.phaseForReplay(lbz, lbz.getFrame(0), lbz.getFrame(1)),
+                "Repeated LBZ rows still run hidden startup object state.");
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+                TraceReplayBootstrap.phaseForReplay(cnz, cnz.getFrame(0), cnz.getFrame(1)),
+                "CNZ row 1 advances state from the handoff row and should tick exactly once.");
+        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
+                TraceReplayBootstrap.phaseForReplay(cnz, null, cnz.getFrame(0)),
+                "CNZ frame 0 is the visible state before the first level tick.");
+        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
+                TraceReplayBootstrap.phaseForReplay(mhz, null, mhz.getFrame(0)),
+                "MHZ frame 0 is the visible state before the first level tick.");
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+                TraceReplayBootstrap.phaseForReplay(mhz, mhz.getFrame(0), mhz.getFrame(1)),
+                "MHZ row 1 advances state from the handoff row and should tick exactly once.");
     }
 
     @Test

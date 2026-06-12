@@ -637,13 +637,23 @@ public final class TraceReplaySessionBootstrap {
             // handler must run again to restore the falling-intro state.
             var levelEventProvider = GameServices.module().getLevelEventProvider();
             if (levelEventProvider instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager s3kLem) {
-                s3kLem.applyZonePlayerState();
+                if (TraceReplayBootstrap.isS3kCompleteRunSegment(trace)) {
+                    s3kLem.applyZonePlayerStateAfterTitleCard();
+                    s3kLem.armCarryIntroHandoffAfterTitleCard();
+                } else {
+                    s3kLem.applyZonePlayerState();
+                }
             }
             refreshSidekickCpuBoundsFromCamera();
         }
-        // Ground snap: 14 subpixel threshold matches the fixture.
+        // Ground snap: 14 subpixel threshold matches the fixture. S3K
+        // complete-run segments start from an in-level handoff row rather than
+        // a fresh title-card spawn; their metadata centre is already the
+        // recorded ROM handoff position and must not be adjusted again before
+        // the first state-changing row is driven.
         var collision = GameServices.collisionOrNull();
-        if (collision != null) {
+        if (collision != null
+                && TraceReplayBootstrap.shouldGroundSnapMetadataStartForTraceReplay(trace)) {
             collision.resolveGroundAttachment(
                     FrameCollisionPlan.terrainOnly(), sprite, 14, () -> false);
         }

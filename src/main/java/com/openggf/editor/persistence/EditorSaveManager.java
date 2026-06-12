@@ -6,7 +6,6 @@ import com.openggf.game.GameId;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.level.MutableLevel;
-import com.openggf.util.QuarantineFiles;
 
 import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -77,6 +76,10 @@ public final class EditorSaveManager {
         if (!Files.exists(file)) {
             return ApplyResult.NONE;
         }
+        if (!supportsRuntimeEditApply(gameId)) {
+            LOG.fine("Skipping persisted " + gameId + " editor edits until runtime overlays support MutableLevel");
+            return ApplyResult.UNSUPPORTED;
+        }
         try {
             EditorSaveEnvelope envelope = reader.read(file);
             if (envelope.version() != VERSION) {
@@ -111,6 +114,10 @@ public final class EditorSaveManager {
 
     public Path editPath(GameId gameId, int zone, int act) {
         return root.resolve(gameId.code()).resolve("edits").resolve("zone_" + zone + "_act_" + act + ".json");
+    }
+
+    public boolean supportsRuntimeEditApply(GameId gameId) {
+        return gameId != GameId.S3K;
     }
 
     private EditorSavePayload buildPayload(MutableLevel level) {
@@ -212,7 +219,21 @@ public final class EditorSaveManager {
 
     private void quarantine(Path file, String reason) throws IOException {
         LOG.warning("Quarantining corrupt editor save " + file + ": " + reason);
-        Files.move(file, QuarantineFiles.uniqueCorruptSibling(file));
+        Files.move(file, uniqueCorruptSibling(file));
+    }
+
+    private Path uniqueCorruptSibling(Path file) {
+        Path base = file.resolveSibling(file.getFileName() + ".corrupt");
+        if (!Files.exists(base)) {
+            return base;
+        }
+        for (int suffix = 1; suffix < Integer.MAX_VALUE; suffix++) {
+            Path candidate = file.resolveSibling(file.getFileName() + ".corrupt." + suffix);
+            if (!Files.exists(candidate)) {
+                return candidate;
+            }
+        }
+        throw new IllegalStateException("No available quarantine filename for " + file);
     }
 
     private static String sha256(String value) {
@@ -232,6 +253,7 @@ public final class EditorSaveManager {
         APPLIED,
         QUARANTINED,
         MISMATCH,
-        TRANSIENT_FAILURE
+        TRANSIENT_FAILURE,
+        UNSUPPORTED
     }
 }

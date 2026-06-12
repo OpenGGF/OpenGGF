@@ -25,6 +25,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -365,8 +366,8 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
             player.setYSpeed((short) 0);
             player.setGSpeed((short) 0);
             player.setAnimationId(0x1A);
-            player.setCentreXPreserveSubpixel((short) capturedX);
-            player.setCentreYPreserveSubpixel((short) capturedY);
+            NativePositionOps.writeXPosPreserveSubpixel(player, capturedX);
+            NativePositionOps.writeYPosPreserveSubpixel(player, capturedY);
 
             frozenBlock = spawnChild(() -> new FrozenPlayerBlock(player, capturedX, capturedY, parent.x, hFlip));
             setDestroyed(true);
@@ -481,8 +482,8 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
                 return;
             }
             ObjectControlState.nativeBit7FullControl().applyTo(capturedPlayer);
-            capturedPlayer.setCentreXPreserveSubpixel((short) motion.x);
-            capturedPlayer.setCentreYPreserveSubpixel((short) motion.y);
+            NativePositionOps.writeXPosPreserveSubpixel(capturedPlayer, motion.x);
+            NativePositionOps.writeYPosPreserveSubpixel(capturedPlayer, motion.y);
             capturedPlayer.setXSpeed((short) 0);
             capturedPlayer.setYSpeed((short) 0);
             capturedPlayer.setGSpeed((short) 0);

@@ -16,6 +16,7 @@ import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.ArrayList;
@@ -121,7 +122,7 @@ public class IczIceCubeObjectInstance extends AbstractObjectInstance
         player.setRolling(true);
         // ROM writes y_radius/x_radius around y_pos; engine rolling dimensions
         // are top-left-backed, so keep the native centre coordinate stable.
-        player.setCentreYPreserveSubpixel(centreY);
+        NativePositionOps.writeYPosPreserveSubpixel(player, centreY);
         player.setYSpeed((short) SHATTER_Y_SPEED);
         player.setAir(true);
         player.setOnObject(false);

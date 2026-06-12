@@ -659,7 +659,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     }
 
     private PlayableEntity inferSidekickMonitorStandingBitOnBreak() {
-        List<PlayableEntity> sidekicks = services().sidekicks();
+        List<PlayableEntity> sidekicks = services().playerQuery().sidekicks();
         if (sidekicks == null || sidekicks.isEmpty()) {
             return null;
         }

@@ -184,6 +184,9 @@ Validation:
 Goal: trace and physics exceptions must be either fixed or visible as release
 limitations.
 
+Detailed current trace problem statements, frontier table, clusters, and
+execution order live in `docs/TRACE_REMEDIATION_PLAN.md`.
+
 Work:
 
 - Release-blocking pre-level intro trace bootstrap.
@@ -214,10 +217,14 @@ Work:
   - `docs/KNOWN_DISCREPANCIES.md` documents the contract and the policy tests
     that keep non-Tornado S2 traces on the generic title-card prelude.
 - Current trace remediation clusters after the 2026-06-12 true-frontier
-  comparator sweep:
-  - **Frame-0 setup:** `s3k_cnz1` (`y_speed`), `s3k_lbz1` (`camera_y`),
-    `s3k_mhz1` (`tails_cpu_routine`). Treat as initial-state setup bugs
-    before stepping deep traces.
+  comparator sweep plus the S3K complete-run handoff-row fix:
+  - **S3K complete-run startup carry / native sidekick state:** the old
+    frame-0 setup signatures moved. `s3k_cnz1` now reaches frame 1
+    (`y 0x061C -> 0x0600`), `s3k_mhz1` now reaches frame 1
+    (`y 0x051C -> 0x0500` with `tails_cpu_routine` still expecting `0x000E`),
+    and `s3k_lbz1` now reaches frame 410 (`y_speed 0x0000 -> -0100`).
+    Treat these as startup carry/post-title-card sidekick state bugs before
+    stepping deep traces.
   - **S1 status-bit / push timing:** `s1_credits_01_mz2`,
     `s1_credits_04_slz3`, `s1_credits_05_sbz1`,
     `s1_credits_06_sbz2`, plus `s3k_hcz1`. `s1_credits_05_sbz1`
@@ -248,8 +255,9 @@ Work:
   - `s2_mtz2` frame 645 is currently masked by Tails being hurt by a
     Shellcracker claw where ROM Tails is rolling; suspect solid/touch
     ordering before changing sidekick CPU.
-  - `s3k_lbz1` frame 0 camera seed is off by 4 pixels, matching the smell of
-    the Tails +4 spawn offset influencing initial camera setup.
+  - `s3k_lbz1` no longer stops at the frame-0 camera seed; the frontier is now
+    frame 410 `y_speed`, after native startup/launch state ticks through the
+    initial handoff rows.
   - `s3k_aiz1` still has a monitor/push sidekick frontier and auto-jump
     cadence sub-test failures.
   - The dead-fall path still needs ROM ordering review around
@@ -267,8 +275,8 @@ Recommended order:
 
 1. Keep the comparator broad enough to report true frontiers; do not narrow or
    tolerate status/routine mismatches to regain green output.
-2. Fix frame-0 setup traces first, because their frontier is already at the
-   bootstrap boundary.
+2. Continue the S3K complete-run startup carry/native sidekick cluster exposed
+   after the frame-0 handoff-row fix.
 3. Continue the status-bit cluster exposed by the widened comparator, starting
    with the earliest single-frame `Status_Push` / facing / on-object handoff.
 4. Test the roll/radius hypothesis before treating the y-off-by-five traces as

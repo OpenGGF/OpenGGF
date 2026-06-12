@@ -908,18 +908,13 @@ class TestEditorToggleIntegration {
 
     @Test
     void levelManagerDoesNotApplyPersistedS3kEditorEditsUntilRuntimeOverlaysAreMutableLevelSafe() throws IOException {
-        String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelManager.java"));
+        String levelManager = Files.readString(Path.of("src/main/java/com/openggf/level/LevelManager.java"));
+        String saveManager = Files.readString(Path.of("src/main/java/com/openggf/editor/persistence/EditorSaveManager.java"));
 
-        int s3kGuard = source.indexOf("gameModule.getGameId() == GameId.S3K");
-        int mutableSnapshot = source.indexOf("MutableLevel.snapshot(level)");
-        int applyEdits = source.indexOf("editorSaveManager.tryApplyEdits(");
-
-        assertTrue(s3kGuard >= 0,
+        assertTrue(levelManager.contains("supportsRuntimeEditApply(gameModule.getGameId())"),
+                "LevelManager must ask the editor save manager before wrapping the loaded level in MutableLevel");
+        assertTrue(saveManager.contains("return gameId != GameId.S3K;"),
                 "S3K persisted editor saves must be gated while S3K events require Sonic3kLevel runtime overlay support");
-        assertTrue(s3kGuard < mutableSnapshot,
-                "S3K guard must run before wrapping the loaded Sonic3kLevel in MutableLevel");
-        assertTrue(s3kGuard < applyEdits,
-                "S3K guard must run before applying persisted editor payloads");
     }
 
     private GameplayModeContext createGameplayMode(Engine engine) {

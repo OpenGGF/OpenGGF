@@ -498,7 +498,7 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance {
         player.setRolling(true);
         // Engine setRolling(true) shrinks top-left-based sprite dimensions, but
         // ROM loc_312D4 only writes radii/status/anim and leaves y_pos unchanged.
-        player.setCentreYPreserveSubpixel((short) releaseCentreY);
+        NativePositionOps.writeYPosPreserveSubpixel(player, releaseCentreY);
 
         // ROM: bclr #Status_RollJump,status(a1) (sonic3k.asm:66455)
         player.setRollingJump(false);

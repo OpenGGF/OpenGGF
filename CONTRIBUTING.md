@@ -17,9 +17,10 @@ Good contributions include:
 - Trace replay, rewind, and debugging improvements that preserve the engine's native behavior.
 - Documentation that helps future contributors understand a real workflow or parity pitfall.
 
-Current project priority is playable Sonic 3 & Knuckles vertical-slice parity. Route blockers,
-terrain modifiers, hazards, bosses, and high-usage objects on the AIZ -> HCZ path generally matter
-more than broad checklist work. Check [`ROADMAP.md`](ROADMAP.md), [`CHANGELOG.md`](CHANGELOG.md),
+Current project priority is Sonic 3 & Knuckles vertical-slice parity and release readiness. AIZ
+through HCZ remains the primary release slice, but CNZ, MGZ, ICZ, MHZ, and LBZ now have enough
+coverage that route blockers, complete-run trace frontiers, and release gates should drive task
+selection more than broad checklist work. Check [`ROADMAP.md`](ROADMAP.md), [`CHANGELOG.md`](CHANGELOG.md),
 [`OBJECT_CHECKLIST.md`](OBJECT_CHECKLIST.md), [`S1_OBJECT_CHECKLIST.md`](S1_OBJECT_CHECKLIST.md),
 and [`S3K_OBJECT_CHECKLIST.md`](S3K_OBJECT_CHECKLIST.md) before choosing a larger task.
 

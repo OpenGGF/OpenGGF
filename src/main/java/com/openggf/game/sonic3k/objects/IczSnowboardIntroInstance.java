@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -382,7 +383,8 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
     }
 
     private void releaseDormantSidekicksForCrashHandoff() {
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
+        for (PlayableEntity sidekickEntity : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             if (sidekickEntity instanceof AbstractPlayableSprite sidekick
                     && sidekick.getCpuController() != null) {
                 sidekick.getCpuController().releaseDormantMarkerForLevelEvent();

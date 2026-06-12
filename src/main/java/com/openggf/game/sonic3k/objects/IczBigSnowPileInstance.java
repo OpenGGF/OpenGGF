@@ -16,6 +16,7 @@ import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -211,7 +212,7 @@ public final class IczBigSnowPileInstance extends AbstractObjectInstance
         player.applyRollingRadii(false);
         player.setRolling(true);
         // ROM writes y_radius/x_radius without changing y_pos.
-        player.setCentreYPreserveSubpixel((short) releaseY);
+        NativePositionOps.writeYPosPreserveSubpixel(player, releaseY);
         player.setRollingJump(false);
         player.setAnimationId(Sonic3kAnimationIds.ROLL);
         player.setOnObject(false);

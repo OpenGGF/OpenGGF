@@ -2,6 +2,10 @@
 
 Last updated: 2026-03-25
 
+> Historical note, 2026-06-12: this was a one-day AIZ-focused working list, not the current
+> S3K bug ledger. Use `docs/S3K_KNOWN_BUGS.md` for durable bug writeups and
+> `docs/TRACE_FRONTIER_LOG.md` for the current complete-run frontier state.
+
 ## Open Bugs
 
 - [ ] AIZ rope swing: jumping off the rope swing for the first time activates Quick Shield immediately.
@@ -17,5 +21,6 @@ Last updated: 2026-03-25
 
 ## Notes
 
-- This list is intended for today's S3K/AIZ parity work.
+- This list was intended for the 2026-03-25 S3K/AIZ parity session and is retained only as
+  historical context.
 - Items with uncertain expected behavior should be verified against `docs/skdisasm/` and the original ROM before tuning constants or timings.
