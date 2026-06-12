@@ -2152,9 +2152,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			gSpeed = applyFriction(gSpeed, naturalDecel);
 		}
 
-		// Stop rolling check. ROM compares abs(ground_vel) against min_roll_speed
-		// ($80 for Sonic/Tails/Knuckles), then unrolls below the threshold.
-		if (Math.abs(gSpeed) < minRollSpeed) {
+		// Stop rolling check. S1/S2 wait for inertia to reach zero; S3K compares
+		// abs(ground_vel) against min_roll_speed ($80) and unrolls below it.
+		// Refs: s1disasm/_incObj/01 Sonic.asm:760-768; s2.asm:37046-37055,
+		// 40072-40081; sonic3k.asm:22971-22986,28216-28231.
+		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+		boolean stopRolling = featureSet != null && featureSet.rollStopsBelowMinimumSpeed()
+				? Math.abs(gSpeed) < minRollSpeed
+				: gSpeed == 0;
+		if (stopRolling) {
 			if (sprite.getPinballMode()) {
 				gSpeed = (short) (sprite.getDirection() == Direction.LEFT ? -0x400 : 0x400);
 			} else if (objectPreservedRollStop) {

@@ -1,5 +1,47 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S1/S2 roll-stop rule advances shared rolling/radius cluster
+
+- Scope: fixed the shared S1/S2 rolling frontier without route carve-outs or
+  trace-state hydration. `PhysicsFeatureSet` now models whether a game clears
+  rolling below `min_roll_speed` or only when ground inertia reaches zero:
+  S1/S2 use the zero-only rule, and S3K preserves the existing `$80`
+  threshold rule.
+- Disassembly basis:
+  - S1 `Sonic_RollSpeed` clears rolling only when `obInertia(a0)` is zero
+    (`docs/s1disasm/_incObj/01 Sonic.asm:760-768`).
+  - S2 Sonic and Tails `CheckRollStop` paths clear only when inertia is zero
+    (`docs/s2disasm/s2.asm:37046-37055,40072-40081`).
+  - S3K Sonic and Tails compare `abs(ground_vel)` against `#$80`
+    (`docs/skdisasm/sonic3k.asm:22971-22986,28216-28231`).
+- Focused verification:
+  - `mvn -Dmse=off "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.TestPlayableSpriteRollSpeed,com.openggf.sprites.managers.TestPlayableSpriteMovement,com.openggf.game.TestCrossGameFeatureProviderRefactor" test`
+  - Result: **Tests run: 107, Failures: 0, Errors: 0, Skipped: 0**.
+  - `mvn -Dmse=off "-Ds2.rom.path=s2.gen" "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  - Result: still red, but `s2_cnz2` advanced from frame 728 to frame 2467.
+  - `mvn -Dmse=off "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s1.TestS1Mz3CompleteRunTraceReplay,com.openggf.tests.trace.s1.TestS1Sbz1CompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+  - Result: `s1_ghz1` is now green; `s1_mz3` and `s1_sbz1` remain red at
+    later object/platform frontiers.
+- Full sweep command:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test`
+- Full sweep result:
+  - **Tests run: 90, Failures: 63, Errors: 1, Skipped: 0** from
+    Maven/Surefire. This is not a green all-trace certification; CI remains
+    expected-red on the known trace frontier set.
+- Frontier movement:
+
+| Trace | Previous frontier | New frontier | Delta |
+|---|---:|---:|---:|
+| `s1_ghz1` | f527 `rolling` `1 -> 0` | green | cleared |
+| `s1_mz3` | f996 `rolling` `1 -> 0` | f1702 `y` `0x048C -> 0x048B` | +706 |
+| `s1_sbz1` | f1367 `rolling` `1 -> 0` | f2268 `air` `0 -> 1` | +901 |
+| `s2_cnz2` | f728 `y` `0x0571 -> 0x056C` with rolling clear | f2467 `tails_g_speed` `0x0018 -> 0x0000` | +1739 |
+
+- Interpretation: the S1/S2 false rolling/radius frontier is resolved for
+  this cluster. The next exposed owners are not the roll threshold itself:
+  S1 moves into object/platform landing details, while S2 CNZ2 moves into a
+  Tails/ForcedSpin interaction with `tails_status_byte=0x20`.
+
 ## 2026-06-12 - S3K airborne complete-run frame zero advances HCZ/MGZ startup frontiers
 
 - Scope: refined the S3K complete-run frame-zero phase policy without writing

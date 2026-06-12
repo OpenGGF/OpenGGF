@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Classic roll-stop timing now matches each game:** S1 and S2 now keep
+  rolling until ground inertia reaches exactly zero, while S3K still clears
+  rolling when `abs(ground_vel) < $80`. This removes the shared S1/S2 false
+  rolling/radius frontier, clears the focused S1 GHZ1 trace, and advances S2
+  CNZ2 from frame 728 to the next Tails/object interaction at frame 2467.
+
 - **S3K airborne complete-run frame zero now drives native velocity rows:**
   complete-run startup rows that already contain primary velocity now execute
   as full level frames instead of being treated as VBlank-only handoff rows.

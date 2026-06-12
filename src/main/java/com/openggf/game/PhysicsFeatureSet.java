@@ -492,6 +492,22 @@ public record PhysicsFeatureSet(
          */
         boolean landingRollClearUsesCurrentYRadiusDelta,
         /**
+         * Whether ground rolling stops when {@code abs(ground_vel)} falls below
+         * {@code min_roll_speed} instead of only when ground velocity reaches
+         * exactly zero.
+         *
+         * <p>S3K: {@code true}. {@code Sonic_RollSpeed} and
+         * {@code Tails_RollSpeed} compare {@code abs(ground_vel)} against
+         * {@code #$80} before clearing {@code Status_Roll}
+         * (sonic3k.asm:22971-22986, 28216-28231).
+         *
+         * <p>S1/S2: {@code false}. Their roll-speed routines store the
+         * post-friction inertia, then clear the roll flag only when that word is
+         * zero (s1disasm/_incObj/01 Sonic.asm:760-768; s2.asm:37046-37055,
+         * 40072-40081).
+         */
+        boolean rollStopsBelowMinimumSpeed,
+        /**
          * Whether the level-boundary right-side check uses the strict
          * "predicted &gt; right" comparison ({@code blo.s}) instead of the
          * "predicted &gt;= right" ({@code bls.s}) comparison.
@@ -1067,6 +1083,7 @@ public record PhysicsFeatureSet(
                     source.sidekickClearsStalePushVelocityBeforeGroundMove(),
                     source.sidekickCpuUsesLevelFrameCounter(),
                     source.landingRollClearUsesCurrentYRadiusDelta(),
+                    source.rollStopsBelowMinimumSpeed(),
                     source.levelBoundaryRightStrict(),
                     source.levelBoundaryUsesCentreY(),
                     source.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity(),
@@ -1118,6 +1135,7 @@ public record PhysicsFeatureSet(
             false /* sidekickClearsStalePushVelocityBeforeGroundMove: S1 has no Tails CPU */,
             false /* sidekickCpuUsesLevelFrameCounter: S1 has no Tails CPU */,
             false /* landingRollClearUsesCurrentYRadiusDelta: S1 Sonic_ResetOnFloor applies fixed subq.w #5, obY(a0) when clearing ball state */,
+            false /* rollStopsBelowMinimumSpeed: S1 Sonic_RollSlowdownDone only clears roll when obInertia == 0 (s1disasm/_incObj/01 Sonic.asm:760-768) */,
             false /* levelBoundaryRightStrict: S1 uses bls.s (non-strict, predicted >= right) at s1disasm/_incObj/01 Sonic.asm:998 */,
             true /* levelBoundaryUsesCentreY: S1 ROM compares obY(a0), i.e. centre-Y, at s1disasm/_incObj/01 Sonic.asm:1014 */,
             false /* solidObjectTopBranchAlwaysLiftsOnUpwardVelocity: S1 Solid_Landed (s1disasm/_incObj/sub SolidObject.asm:278-289) tests y_vel before any lift and returns Solid_Miss when upward */,
@@ -1172,6 +1190,7 @@ public record PhysicsFeatureSet(
             false /* sidekickClearsStalePushVelocityBeforeGroundMove: S2 TailsCPU_Normal writes Ctrl_2_Logical without clearing velocity (s2.asm:38943-39027) */,
             false /* sidekickCpuUsesLevelFrameCounter: preserve existing S2 trace cadence */,
             false /* landingRollClearUsesCurrentYRadiusDelta: S2 Sonic_ResetOnFloor applies fixed subq.w #5, y_pos(a0) when clearing rolling */,
+            false /* rollStopsBelowMinimumSpeed: S2 Sonic/Tails CheckRollStop only clears roll when inertia == 0 (s2.asm:37046-37055,40072-40081) */,
             false /* levelBoundaryRightStrict: S2 uses bls.s (non-strict, predicted >= right) at s2.asm:36933 */,
             true /* levelBoundaryUsesCentreY: S2 ROM compares y_pos(a0), i.e. centre-Y, at s2.asm:36950 */,
             false /* solidObjectTopBranchAlwaysLiftsOnUpwardVelocity: S2 SolidObject_Landed (s2.asm:35379-35380) tests y_vel before lift and branches to SolidObject_Miss when upward */,
@@ -1228,6 +1247,7 @@ public record PhysicsFeatureSet(
             true /* sidekickClearsStalePushVelocityBeforeGroundMove: only for S3K's AIZ object-order push-grace bridge; live Status_Push and MGZ grace continuation still run Tails_InputAcceleration_Path deceleration/projection before collision clears ground_vel (sonic3k.asm:26702-26705,26775-26785,27947-28017) */,
             true /* sidekickCpuUsesLevelFrameCounter: S3K Tails CPU gates read Level_frame_counter directly (sonic3k.asm:26474-26531; LevelLoop increments it before Process_Sprites at sonic3k.asm:7884-7894) */,
             true /* landingRollClearUsesCurrentYRadiusDelta: S3K Player_TouchFloor applies saved y_radius - default_y_radius to y_pos, so already-restored roll-jump radii produce no 5 px lift (sonic3k.asm:23335-23358,24341-24363). */,
+            true /* rollStopsBelowMinimumSpeed: S3K Sonic/Tails RollSpeed clears Status_Roll when abs(ground_vel) < #$80 (sonic3k.asm:22971-22986,28216-28231) */,
             true /* levelBoundaryRightStrict: S3K uses blo.s (strict, predicted > right) at sonic3k.asm:23186 -- see PhysicsFeatureSet javadoc for AIZ F4768 cite */,
             true /* levelBoundaryUsesCentreY: S3K Player_LevelBound (sonic3k.asm:23195) and Tails_Check_Screen_Boundaries (sonic3k.asm:28430-28431) both compare y_pos(a0) (centre-Y); engine getY() is top-left, off by 12 px for Tails / 20 px for Sonic. Required for AIZ trace F7171 sidekick boundary kill. */,
             true /* solidObjectTopBranchAlwaysLiftsOnUpwardVelocity: S3K loc_1E154 (sonic3k.asm:41606-41632) writes subq.w #1, y_pos(a1) and sub.w d3, y_pos(a1) BEFORE tst.w y_vel(a1) / bmi.s loc_1E198 — the lift is unconditional, only the standing/RideObject_SetRide is gated on y_vel >= 0. CNZ F7614 Tails_Jump (y_vel=-0x680) on Obj_Spring_Horizontal at 0x0E38,0x04D0 produces a +2 px lift the engine was missing. */,
