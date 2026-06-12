@@ -53,7 +53,7 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance {
 
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
-        if (isDestroyed() || !isOnScreenX()) {
+        if (isDestroyed()) {
             return;
         }
 
@@ -61,6 +61,9 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance {
                 ? sprite : null;
 
         if (!initialized) {
+            if (!isOnScreenX()) {
+                return;
+            }
             initializeVelocity(player);
             spawnOrbitingPoints();
             initialized = true;

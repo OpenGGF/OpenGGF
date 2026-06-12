@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K Star Pointer keeps active movement after offscreen wait:** ICZ Star
+  Pointer now applies the ROM's `Obj_WaitOffscreen` gate only before installing
+  the active movement routine, so post-init `loc_8BE74`/`loc_8BEA6` movement is
+  not skipped by a later camera-X bounds change. This is a routine-state parity
+  cleanup; the ICZ complete-run trace still fails at the frame-2268 Tails
+  hurt-state frontier.
+
 - **S3K Star Pointer preserves launch-frame orbit refresh:** ICZ Star Pointer
   points now continue through the ROM's circular parent-relative position
   refresh on the same frame they enter the launched routine. This is a

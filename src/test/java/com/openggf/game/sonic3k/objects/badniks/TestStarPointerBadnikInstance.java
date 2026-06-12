@@ -87,6 +87,24 @@ class TestStarPointerBadnikInstance {
     }
 
     @Test
+    void postInitMovementContinuesAfterLeavingCameraXBounds() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 319, 223, 0);
+        StarPointerBadnikInstance starPointer = new StarPointerBadnikInstance(
+                new ObjectSpawn(160, 100, Sonic3kObjectIds.STAR_POINTER, 0x06, 0, false, 0));
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short) 100);
+        when(player.getCentreY()).thenReturn((short) 100);
+        when(player.getDead()).thenReturn(false);
+
+        starPointer.update(0, player);
+        AbstractObjectInstance.updateCameraBounds(1000, 0, 1319, 223, 0);
+        starPointer.update(1, player);
+
+        assertEquals(159, starPointer.getX(),
+                "ROM loc_8BE74/loc_8BEA6 moves after Obj_WaitOffscreen installs the active routine");
+    }
+
+    @Test
     void initSpawnsFourOrbitingPoints() {
         AbstractObjectInstance.updateCameraBounds(0, 0, 319, 223, 0);
         StarPointerBadnikInstance starPointer = new StarPointerBadnikInstance(
