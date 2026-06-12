@@ -14,6 +14,9 @@ All notable changes to the OpenGGF project are documented in this file.
 - S3K HCZ zone-event rewind state now uses the length-prefixed schema sidecar,
   with legacy field coverage and malformed-payload rollback matching AIZ.
 
+- S3K CNZ zone-event rewind state now uses the length-prefixed schema sidecar,
+  with legacy field coverage and malformed-payload rollback matching AIZ/HCZ.
+
 - New debug flag `debug.rewind.determinismAudit`: re-simulates each completed
   rewind keyframe segment during live play and logs the first state divergence,
   pinpointing state that is missing from rewind capture. Disarms after the first

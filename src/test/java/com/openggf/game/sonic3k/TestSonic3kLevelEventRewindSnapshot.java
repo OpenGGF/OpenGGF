@@ -9,6 +9,7 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
+import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kHCZEvents;
 import com.openggf.game.sonic3k.features.HCZWaterSkimHandler;
 import com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceState;
@@ -561,6 +562,181 @@ class TestSonic3kLevelEventRewindSnapshot {
         assertEquals(0x700, cnzTarget.getWaterTargetY());
     }
 
+    @Test
+    void malformedHczLengthPrefixDoesNotPartiallyRestoreManagerOrLaterSidecars() throws Exception {
+        Sonic3kLevelEventManager cnzSource = new Sonic3kLevelEventManager();
+        cnzSource.initLevel(Sonic3kZoneIds.ZONE_CNZ, 0);
+        cnzSource.requestCnzPostTransitionRelease(12);
+        var cnz = cnzSource.getCnzEventsForTest();
+        assertNotNull(cnz);
+        cnz.setBossScrollState(120, -4);
+        cnz.setCameraClampsActive(true);
+        LevelEventSnapshot cnzSnapshot = cnzSource.capture();
+
+        Sonic3kHCZEvents hczPayloadSource = new Sonic3kHCZEvents();
+        hczPayloadSource.init(1);
+        hczPayloadSource.setWallMoving(true);
+        LevelEventSnapshot malformedSnapshot = snapshotWithCorruptHczLength(
+                snapshotWithHczPayload(cnzSnapshot, ZoneEventSchemaSidecar.capture(hczPayloadSource)),
+                -1);
+
+        Sonic3kLevelEventManager target = new Sonic3kLevelEventManager();
+        target.initLevel(Sonic3kZoneIds.ZONE_HCZ, 1);
+        Sonic3kLevelEventManager cnzTargetOwner = new Sonic3kLevelEventManager();
+        cnzTargetOwner.initLevel(Sonic3kZoneIds.ZONE_CNZ, 0);
+        set(target, "cnzEvents", cnzTargetOwner.getCnzEventsForTest());
+        var cnzTarget = target.getCnzEventsForTest();
+        assertNotNull(cnzTarget);
+
+        assertDoesNotThrow(() -> target.restore(malformedSnapshot),
+                "framing-invalid HCZ sidecar should be rejected before any partial restore");
+        assertEquals(0, get(target, "cnzPendingPostTransitionReleaseFrames"),
+                "framing-invalid HCZ sidecar must not mutate manager-level fields");
+        assertEquals(0, cnzTarget.getBossScrollOffsetY(),
+                "framing-invalid HCZ sidecar must not apply later sidecars with unknown offsets");
+        assertFalse(cnzTarget.isCameraClampsActive(),
+                "framing-invalid HCZ sidecar must not apply later sidecars with unknown offsets");
+    }
+
+    @Test
+    void corruptSameLengthCnzSchemaPayloadRollsBackAndDoesNotAbortLaterZoneRestore() throws Exception {
+        Sonic3kLevelEventManager mgzSource = new Sonic3kLevelEventManager();
+        mgzSource.initLevel(Sonic3kZoneIds.ZONE_MGZ, 1);
+        var mgz = mgzSource.getMgzEventsForTest();
+        assertNotNull(mgz);
+        mgz.setCollapseRequested(true);
+        mgz.setCollapseFrameCounter(42);
+        mgz.setBgRiseRoutine(8);
+        mgz.setBossSpawned(true);
+        LevelEventSnapshot mgzSnapshot = mgzSource.capture();
+
+        Sonic3kLevelEventManager target = new Sonic3kLevelEventManager();
+        target.initLevel(Sonic3kZoneIds.ZONE_CNZ, 0);
+        var cnzTarget = target.getCnzEventsForTest();
+        assertNotNull(cnzTarget);
+        cnzTarget.setAct2TransitionRequested(true);
+        cnzTarget.setArenaChunkWorldX(0x1234);
+        cnzTarget.setBackgroundRoutine(17);
+        cnzTarget.setBossBackgroundMode(Sonic3kCNZEvents.BossBackgroundMode.ACT1_POST_BOSS);
+
+        Sonic3kLevelEventManager mgzTargetOwner = new Sonic3kLevelEventManager();
+        mgzTargetOwner.initLevel(Sonic3kZoneIds.ZONE_MGZ, 1);
+        set(target, "mgzEvents", mgzTargetOwner.getMgzEventsForTest());
+        var mgzTarget = target.getMgzEventsForTest();
+        assertNotNull(mgzTarget);
+        mgzTarget.setCollapseRequested(false);
+        mgzTarget.setCollapseFrameCounter(0);
+        mgzTarget.setBgRiseRoutine(0);
+        mgzTarget.setBossSpawned(false);
+
+        Sonic3kCNZEvents payloadSource = new Sonic3kCNZEvents();
+        payloadSource.init(0);
+        payloadSource.setAct2TransitionRequested(false);
+        payloadSource.setArenaChunkWorldX(0x5678);
+        payloadSource.setBackgroundRoutine(3);
+        payloadSource.setBossBackgroundMode(Sonic3kCNZEvents.BossBackgroundMode.NORMAL);
+        byte[] corruptPayload = corruptCnzBossBackgroundModeOrdinal(
+                ZoneEventSchemaSidecar.capture(payloadSource), Integer.MAX_VALUE);
+        LevelEventSnapshot malformedSnapshot = snapshotWithCnzPayload(mgzSnapshot, corruptPayload);
+
+        assertDoesNotThrow(() -> target.restore(malformedSnapshot),
+                "schema-corrupt CNZ sidecar should not abort later zone sidecars");
+        assertTrue(cnzTarget.isAct2TransitionRequested(),
+                "schema-corrupt CNZ sidecar must roll back partial CNZ field writes");
+        assertEquals(0x1234, cnzTarget.getArenaChunkWorldX(),
+                "schema-corrupt CNZ sidecar must roll back partial CNZ field writes");
+        assertEquals(17, cnzTarget.getBackgroundRoutine(),
+                "schema-corrupt CNZ sidecar must roll back partial CNZ field writes");
+        assertEquals(Sonic3kCNZEvents.BossBackgroundMode.ACT1_POST_BOSS, cnzTarget.getBossBackgroundMode(),
+                "schema-corrupt CNZ sidecar must preserve existing enum state");
+        assertTrue(mgzTarget.isCollapseRequested());
+        assertEquals(42, mgzTarget.getCollapseFrameCounter());
+        assertEquals(8, mgzTarget.getBgRiseRoutine());
+        assertTrue(mgzTarget.isBossSpawned());
+    }
+
+    @Test
+    void malformedCnzSchemaPayloadDoesNotAbortLaterZoneRestore() throws Exception {
+        Sonic3kLevelEventManager mgzSource = new Sonic3kLevelEventManager();
+        mgzSource.initLevel(Sonic3kZoneIds.ZONE_MGZ, 1);
+        var mgz = mgzSource.getMgzEventsForTest();
+        assertNotNull(mgz);
+        mgz.setCollapseRequested(true);
+        mgz.setCollapseFrameCounter(42);
+        mgz.setBgRiseRoutine(8);
+        mgz.setBossSpawned(true);
+        LevelEventSnapshot mgzSnapshot = mgzSource.capture();
+
+        Sonic3kLevelEventManager target = new Sonic3kLevelEventManager();
+        target.initLevel(Sonic3kZoneIds.ZONE_CNZ, 0);
+        var cnzTarget = target.getCnzEventsForTest();
+        assertNotNull(cnzTarget);
+        cnzTarget.setAct2TransitionRequested(true);
+        cnzTarget.setArenaChunkWorldX(0x1234);
+        cnzTarget.setBackgroundRoutine(17);
+
+        Sonic3kLevelEventManager mgzTargetOwner = new Sonic3kLevelEventManager();
+        mgzTargetOwner.initLevel(Sonic3kZoneIds.ZONE_MGZ, 1);
+        set(target, "mgzEvents", mgzTargetOwner.getMgzEventsForTest());
+        var mgzTarget = target.getMgzEventsForTest();
+        assertNotNull(mgzTarget);
+        mgzTarget.setCollapseRequested(false);
+        mgzTarget.setCollapseFrameCounter(0);
+        mgzTarget.setBgRiseRoutine(0);
+        mgzTarget.setBossSpawned(false);
+
+        LevelEventSnapshot malformedSnapshot = snapshotWithCnzPayload(mgzSnapshot, new byte[] { 0 });
+
+        assertDoesNotThrow(() -> target.restore(malformedSnapshot),
+                "schema-invalid CNZ sidecar should not abort later zone sidecars");
+        assertTrue(cnzTarget.isAct2TransitionRequested(),
+                "schema-invalid CNZ sidecar must leave existing CNZ fields intact");
+        assertEquals(0x1234, cnzTarget.getArenaChunkWorldX(),
+                "schema-invalid CNZ sidecar must leave existing CNZ fields intact");
+        assertEquals(17, cnzTarget.getBackgroundRoutine(),
+                "schema-invalid CNZ sidecar must leave existing CNZ fields intact");
+        assertTrue(mgzTarget.isCollapseRequested());
+        assertEquals(42, mgzTarget.getCollapseFrameCounter());
+        assertEquals(8, mgzTarget.getBgRiseRoutine());
+        assertTrue(mgzTarget.isBossSpawned());
+    }
+
+    @Test
+    void malformedCnzLengthPrefixDoesNotPartiallyRestoreManagerOrLaterSidecars() throws Exception {
+        Sonic3kLevelEventManager mgzSource = new Sonic3kLevelEventManager();
+        mgzSource.initLevel(Sonic3kZoneIds.ZONE_MGZ, 1);
+        mgzSource.requestCnzPostTransitionRelease(12);
+        var mgz = mgzSource.getMgzEventsForTest();
+        assertNotNull(mgz);
+        mgz.setCollapseRequested(true);
+        mgz.setCollapseFrameCounter(42);
+        LevelEventSnapshot mgzSnapshot = mgzSource.capture();
+
+        Sonic3kCNZEvents cnzPayloadSource = new Sonic3kCNZEvents();
+        cnzPayloadSource.init(0);
+        cnzPayloadSource.setAct2TransitionRequested(true);
+        LevelEventSnapshot malformedSnapshot = snapshotWithCorruptCnzLength(
+                snapshotWithCnzPayload(mgzSnapshot, ZoneEventSchemaSidecar.capture(cnzPayloadSource)),
+                Integer.MAX_VALUE);
+
+        Sonic3kLevelEventManager target = new Sonic3kLevelEventManager();
+        target.initLevel(Sonic3kZoneIds.ZONE_CNZ, 0);
+        Sonic3kLevelEventManager mgzTargetOwner = new Sonic3kLevelEventManager();
+        mgzTargetOwner.initLevel(Sonic3kZoneIds.ZONE_MGZ, 1);
+        set(target, "mgzEvents", mgzTargetOwner.getMgzEventsForTest());
+        var mgzTarget = target.getMgzEventsForTest();
+        assertNotNull(mgzTarget);
+
+        assertDoesNotThrow(() -> target.restore(malformedSnapshot),
+                "framing-invalid CNZ sidecar should be rejected before any partial restore");
+        assertEquals(0, get(target, "cnzPendingPostTransitionReleaseFrames"),
+                "framing-invalid CNZ sidecar must not mutate manager-level fields");
+        assertFalse(mgzTarget.isCollapseRequested(),
+                "framing-invalid CNZ sidecar must not apply later sidecars with unknown offsets");
+        assertEquals(0, mgzTarget.getCollapseFrameCounter(),
+                "framing-invalid CNZ sidecar must not apply later sidecars with unknown offsets");
+    }
+
     private static LevelEventSnapshot snapshotWithAizPayload(LevelEventSnapshot source, byte[] aizPayload) {
         LevelEventSnapshot malformedSnapshot = new LevelEventSnapshot(
                 source.currentZone(),
@@ -588,6 +764,59 @@ class TestSonic3kLevelEventRewindSnapshot {
                 source.eventDataFg(),
                 source.eventDataBg(),
                 insertHczPayload(source.extra(), hczPayload));
+    }
+
+    private static LevelEventSnapshot snapshotWithCnzPayload(LevelEventSnapshot source, byte[] cnzPayload) {
+        return new LevelEventSnapshot(
+                source.currentZone(),
+                source.currentAct(),
+                source.eventRoutineFg(),
+                source.eventRoutineBg(),
+                source.frameCounter(),
+                source.timerFrames(),
+                source.bossActive(),
+                source.eventDataFg(),
+                source.eventDataBg(),
+                insertCnzPayload(source.extra(), cnzPayload));
+    }
+
+    private static LevelEventSnapshot snapshotWithCorruptHczLength(LevelEventSnapshot source, int length) {
+        byte[] extra = source.extra().clone();
+        int hczLengthOffset = 30 + 1 + 1;
+        assertEquals(0, extra[30], "test helper expects absent AIZ sidecar");
+        assertEquals(1, extra[31], "test helper expects present HCZ sidecar");
+        ByteBuffer.wrap(extra).putInt(hczLengthOffset, length);
+        return new LevelEventSnapshot(
+                source.currentZone(),
+                source.currentAct(),
+                source.eventRoutineFg(),
+                source.eventRoutineBg(),
+                source.frameCounter(),
+                source.timerFrames(),
+                source.bossActive(),
+                source.eventDataFg(),
+                source.eventDataBg(),
+                extra);
+    }
+
+    private static LevelEventSnapshot snapshotWithCorruptCnzLength(LevelEventSnapshot source, int length) {
+        byte[] extra = source.extra().clone();
+        int cnzLengthOffset = 30 + 1 + 1 + 1;
+        assertEquals(0, extra[30], "test helper expects absent AIZ sidecar");
+        assertEquals(0, extra[31], "test helper expects absent HCZ sidecar");
+        assertEquals(1, extra[32], "test helper expects present CNZ sidecar");
+        ByteBuffer.wrap(extra).putInt(cnzLengthOffset, length);
+        return new LevelEventSnapshot(
+                source.currentZone(),
+                source.currentAct(),
+                source.eventRoutineFg(),
+                source.eventRoutineBg(),
+                source.frameCounter(),
+                source.timerFrames(),
+                source.bossActive(),
+                source.eventDataFg(),
+                source.eventDataBg(),
+                extra);
     }
 
     @Test
@@ -713,6 +942,23 @@ class TestSonic3kLevelEventRewindSnapshot {
         return buf.array();
     }
 
+    private static byte[] insertCnzPayload(byte[] mgzExtra, byte[] cnzPayload) {
+        int managerBytes = 30;
+        int originalAizAbsentFlagBytes = 1;
+        int originalHczAbsentFlagBytes = 1;
+        int originalCnzAbsentFlagBytes = 1;
+        int prefixBytes = managerBytes + originalAizAbsentFlagBytes + originalHczAbsentFlagBytes;
+        ByteBuffer buf = ByteBuffer.allocate(prefixBytes + 1 + Integer.BYTES + cnzPayload.length
+                + mgzExtra.length - prefixBytes - originalCnzAbsentFlagBytes);
+        buf.put(mgzExtra, 0, prefixBytes);
+        buf.put((byte) 1);
+        buf.putInt(cnzPayload.length);
+        buf.put(cnzPayload);
+        buf.put(mgzExtra, prefixBytes + originalCnzAbsentFlagBytes,
+                mgzExtra.length - prefixBytes - originalCnzAbsentFlagBytes);
+        return buf.array();
+    }
+
     private static byte[] corruptFireSequencePhaseOrdinal(byte[] payload, int invalidOrdinal) {
         Sonic3kAIZEvents zero = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         zero.setFireSequencePhaseOrdinal(0);
@@ -770,6 +1016,39 @@ class TestSonic3kLevelEventRewindSnapshot {
         int ordinalOffset = changedByte;
         assertTrue(ordinalOffset + Integer.BYTES <= corrupt.length,
                 "probeMode ordinal offset must be valid");
+        corrupt[ordinalOffset] = (byte) invalidOrdinal;
+        corrupt[ordinalOffset + 1] = (byte) (invalidOrdinal >>> 8);
+        corrupt[ordinalOffset + 2] = (byte) (invalidOrdinal >>> 16);
+        corrupt[ordinalOffset + 3] = (byte) (invalidOrdinal >>> 24);
+        return corrupt;
+    }
+
+    private static byte[] corruptCnzBossBackgroundModeOrdinal(byte[] payload, int invalidOrdinal) {
+        Sonic3kCNZEvents zero = new Sonic3kCNZEvents();
+        zero.init(0);
+        zero.setBossBackgroundMode(Sonic3kCNZEvents.BossBackgroundMode.NORMAL);
+        byte[] zeroPayload = ZoneEventSchemaSidecar.capture(zero);
+
+        Sonic3kCNZEvents one = new Sonic3kCNZEvents();
+        one.init(0);
+        one.setBossBackgroundMode(Sonic3kCNZEvents.BossBackgroundMode.ACT1_MINIBOSS_PATH);
+        byte[] onePayload = ZoneEventSchemaSidecar.capture(one);
+
+        assertEquals(zeroPayload.length, payload.length);
+        int changedByte = -1;
+        for (int i = 0; i < zeroPayload.length; i++) {
+            if (zeroPayload[i] != onePayload[i]) {
+                assertEquals(-1, changedByte,
+                        "bossBackgroundMode ordinal should be the only byte changed by this probe");
+                changedByte = i;
+            }
+        }
+        assertTrue(changedByte >= 0, "bossBackgroundMode ordinal offset must be discoverable");
+
+        byte[] corrupt = payload.clone();
+        int ordinalOffset = changedByte;
+        assertTrue(ordinalOffset + Integer.BYTES <= corrupt.length,
+                "bossBackgroundMode ordinal offset must be valid");
         corrupt[ordinalOffset] = (byte) invalidOrdinal;
         corrupt[ordinalOffset + 1] = (byte) (invalidOrdinal >>> 8);
         corrupt[ordinalOffset + 2] = (byte) (invalidOrdinal >>> 16);

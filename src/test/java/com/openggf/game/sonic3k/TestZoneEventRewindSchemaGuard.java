@@ -5,6 +5,7 @@ import com.openggf.game.rewind.schema.RewindClassSchema;
 import com.openggf.game.rewind.schema.RewindSchemaRegistry;
 import com.openggf.game.rewind.schema.ZoneEventSchemaSidecar;
 import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
+import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kHCZEvents;
 import org.junit.jupiter.api.Test;
 
@@ -27,9 +28,11 @@ public class TestZoneEventRewindSchemaGuard {
 
     private static final List<Class<?>> CONVERTED_HANDLERS = List.of(
             Sonic3kAIZEvents.class,
-            Sonic3kHCZEvents.class);
+            Sonic3kHCZEvents.class,
+            Sonic3kCNZEvents.class);
     private static final Set<String> AIZ_ALLOWED_TRANSIENT_FIELDS = Set.of("bootstrap");
     private static final Set<String> HCZ_ALLOWED_TRANSIENT_FIELDS = Set.of("wallObject");
+    private static final Set<String> CNZ_ALLOWED_TRANSIENT_FIELDS = Set.of();
 
     /**
      * FIELD names (not getter names) the legacy writeAizState byte layout serialized.
@@ -95,6 +98,42 @@ public class TestZoneEventRewindSchemaGuard {
             "cutsceneCurrentY"
     );
 
+    /**
+     * FIELD names (not getter names) the legacy writeCnzState byte layout serialized.
+     */
+    private static final Set<String> CNZ_LEGACY_FIELDS = Set.of(
+            "cameraStoredMaxXPos",
+            "cameraStoredMinXPos",
+            "cameraStoredMinYPos",
+            "cameraStoredMaxYPos",
+            "cameraClampsActive",
+            "bossFlagPrev",
+            "eventsFg5",
+            "bossFlag",
+            "wallGrabSuppressed",
+            "waterButtonArmed",
+            "knucklesTeleporterRouteActive",
+            "teleporterBeamSpawned",
+            "act2TransitionRequested",
+            "arenaChunkDestructionQueued",
+            "fgRoutine",
+            "bgRoutine",
+            "deformPhaseBgX",
+            "publishedBgCameraX",
+            "bossScrollOffsetY",
+            "bossScrollVelocityY",
+            "waterTargetY",
+            "pendingZoneActWord",
+            "transitionWorldOffsetX",
+            "transitionWorldOffsetY",
+            "cameraMinXClamp",
+            "cameraMaxXClamp",
+            "arenaChunkWorldX",
+            "arenaChunkWorldY",
+            "destroyedArenaRows",
+            "bossBackgroundMode"
+    );
+
     @Test
     public void convertedHandlersHaveNoUnsupportedFields() {
         for (Class<?> handler : CONVERTED_HANDLERS) {
@@ -132,6 +171,19 @@ public class TestZoneEventRewindSchemaGuard {
     }
 
     @Test
+    public void cnzSchemaCoversAllLegacySidecarFields() {
+        RewindClassSchema schema = RewindSchemaRegistry.schemaFor(Sonic3kCNZEvents.class);
+        Set<String> captured = schema.capturedFields().stream()
+                .map(plan -> plan.field().getName())
+                .collect(Collectors.toSet());
+        Set<String> missing = CNZ_LEGACY_FIELDS.stream()
+                .filter(name -> !captured.contains(name))
+                .collect(Collectors.toSet());
+        assertTrue(missing.isEmpty(),
+                "schema capture lost legacy CNZ sidecar fields: " + missing);
+    }
+
+    @Test
     public void aizTransientFieldInventoryIsExplicit() {
         Set<String> transientFields = Arrays.stream(Sonic3kAIZEvents.class.getDeclaredFields())
                 .filter(field -> !Modifier.isStatic(field.getModifiers()))
@@ -153,6 +205,18 @@ public class TestZoneEventRewindSchemaGuard {
                 .collect(Collectors.toSet());
         assertEquals(HCZ_ALLOWED_TRANSIENT_FIELDS, transientFields,
                 "HCZ transient field inventory changed; classify new fields as captured or structural");
+    }
+
+    @Test
+    public void cnzTransientFieldInventoryIsExplicit() {
+        Set<String> transientFields = Arrays.stream(Sonic3kCNZEvents.class.getDeclaredFields())
+                .filter(field -> !Modifier.isStatic(field.getModifiers()))
+                .filter(field -> Modifier.isTransient(field.getModifiers())
+                        || field.isAnnotationPresent(RewindTransient.class))
+                .map(field -> field.getName())
+                .collect(Collectors.toSet());
+        assertEquals(CNZ_ALLOWED_TRANSIENT_FIELDS, transientFields,
+                "CNZ transient field inventory changed; classify new fields as captured or structural");
     }
 
     @Test
