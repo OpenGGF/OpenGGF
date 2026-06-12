@@ -639,6 +639,7 @@ public final class TraceReplaySessionBootstrap {
             if (levelEventProvider instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager s3kLem) {
                 if (TraceReplayBootstrap.isS3kCompleteRunSegment(trace)) {
                     s3kLem.applyZonePlayerStateAfterTitleCard();
+                    s3kLem.armCarryIntroHandoffAfterTitleCard();
                 } else {
                     s3kLem.applyZonePlayerState();
                 }

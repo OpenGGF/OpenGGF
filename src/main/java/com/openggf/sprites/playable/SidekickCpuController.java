@@ -325,16 +325,15 @@ public class SidekickCpuController {
             return;
         }
 
-        boolean mgzReleasedCarryCooldown =
+        boolean releasedCarryCooldown =
                 state == State.CARRYING
                         && carryTrigger != null
-                        && carryTrigger.usesMgzBossTransitionControl()
                         && !flyingCarryingFlag;
 
         // Decrement release cooldown every frame regardless of state (applies after carry).
-        // MGZ's released carry path decrements inside routine $18 and returns for
-        // that frame, matching loc_14534's byte 1(a2) cooldown gate.
-        if (releaseCooldown > 0 && !mgzReleasedCarryCooldown) {
+        // Released carry paths decrement inside their active routine and return
+        // for that frame, matching loc_14534's byte 1(a2) cooldown gate.
+        if (releaseCooldown > 0 && !releasedCarryCooldown) {
             releaseCooldown--;
         }
 
@@ -2499,6 +2498,16 @@ public class SidekickCpuController {
         diagnosticCtrl2PressedLatch = input & MANUAL_HELD_MASK;
     }
 
+    private void mirrorCarryDiagnosticInput() {
+        // Carry routines write the same word into the held and pressed halves of
+        // Ctrl_2_logical (for example loc_13FFA's Right pulse). The trace binder
+        // normalizes directional press bits away, but keeping the raw mirror here
+        // makes the comparison-only latch match the ROM global that drove flight.
+        int input = diagnosticGeneratedInput() & MANUAL_HELD_MASK;
+        diagnosticCtrl2HeldLatch = input;
+        diagnosticCtrl2PressedLatch = input;
+    }
+
     /** ROM routine 0x0C. Mirrors sub_1459E (pickup) then falls through to 0x20. */
     private void updateCarryInit() {
         // Tails's per-carry state
@@ -2543,13 +2552,12 @@ public class SidekickCpuController {
             return;
         }
 
-        // ROM routine $E with Flying_carrying_Sonic_flag clear: a throwaway solo
-        // carrier that dropped Sonic mid-air (jump-out / external velocity / hurt)
-        // stays in routine $E and runs the loc_14534 cooldown/regrab loop — Tails
-        // keeps flying and either re-grabs Sonic or, once Sonic lands, transitions
-        // to routine $10 (fly off). It never enters the NORMAL follow AI.
-        if (transientCarrySidekick && !flyingCarryingFlag) {
-            updateTransientReleasedCarry();
+        // ROM routine $E with Flying_carrying_Sonic_flag clear: after a mid-air
+        // jump-out / external-velocity / hurt release, Tails stays in routine $E
+        // and runs the loc_14534 cooldown/regrab loop. Persistent Tails returns to
+        // follow only when Sonic lands; throwaway intro carriers fly off instead.
+        if (!flyingCarryingFlag) {
+            updateReleasedCarry();
             return;
         }
 
@@ -2609,6 +2617,7 @@ public class SidekickCpuController {
 
         if (carryTrigger.usesMgzBossTransitionControl()) {
             updateMgzBossTransitionCarryInput();
+            mirrorCarryDiagnosticInput();
             carryParentagePending = true;
             return;
         }
@@ -2618,7 +2627,7 @@ public class SidekickCpuController {
         // already corresponds to the ROM-visible (Level_frame_counter+1) cadence
         // used by loc_13FFA. CNZ pulses Right every 32 frames; other carry
         // triggers may pulse A/B/C instead.
-        if ((frameCounter & carryTrigger.carryInputInjectMask()) == 0) {
+        if (((frameCounter + 1) & carryTrigger.carryInputInjectMask()) == 0) {
             if (carryTrigger.carryInjectsJump()) {
                 inputJump = true;
                 inputJumpPress = true;
@@ -2630,6 +2639,7 @@ public class SidekickCpuController {
         // ROM loc_13FC2 writes x_vel=$100 only when carry starts. The
         // loc_13FFA body only injects a right press every 32 frames, letting
         // normal Tails flight movement raise x_vel ($118/$130/$148...).
+        mirrorCarryDiagnosticInput();
         carryParentagePending = true;
     }
 
@@ -2713,21 +2723,34 @@ public class SidekickCpuController {
      * The throwaway carrier therefore never enters the NORMAL follow AI: its only
      * exits are a regrab (back to CARRYING) or, once Sonic lands, the fly-off.
      */
-    private void updateTransientReleasedCarry() {
+    private void updateReleasedCarry() {
         sidekick.setAir(true);
         sidekick.setDoubleJumpProperty((byte) 0xF0);
         sidekick.setForcedAnimationId(flyAnimId);
 
-        // ROM loc_14016: a landed Sonic ends the carry routine -> routine $10.
+        // ROM loc_14016: a landed Sonic ends the carry routine. Throwaway intro
+        // carriers enter routine $10; persistent Tails returns to normal follow.
         if (leader == null || !leader.getAir()) {
-            enterCarryFlyoff();
+            if (transientCarrySidekick) {
+                enterCarryFlyoff();
+            } else {
+                state = State.NORMAL;
+                normalFrameCount = 0;
+                releaseCooldown = 0;
+                sidekick.setXSpeed((short) 0);
+                sidekick.setYSpeed((short) 0);
+                sidekick.setGSpeed((short) 0);
+                sidekick.setControlLocked(false);
+                sidekick.setForcedAnimationId(-1);
+            }
             return;
         }
 
         // ROM loc_13FFA: pulse Right on the carry cadence so Tails keeps drifting.
-        if ((frameCounter & carryTrigger.carryInputInjectMask()) == 0) {
+        if (((frameCounter + 1) & carryTrigger.carryInputInjectMask()) == 0) {
             inputRight = true;
         }
+        mirrorCarryDiagnosticInput();
 
         // ROM loc_14534: while the cooldown byte is nonzero, decrement and wait.
         // It only falls through to the regrab test on the frame it reaches zero.
@@ -3206,15 +3229,24 @@ public class SidekickCpuController {
     }
 
     private void performJumpRelease() {
+        // ROM loc_14410/loc_1441C overwrites x_vel only when the high byte of
+        // Ctrl_1 carries left/right. A/B/C-only releases preserve the carried
+        // player's existing x_vel.
         short xMag = carryTrigger.carryReleaseJumpXVel();
-        short xVel = leader.getDirection() == Direction.LEFT
-                ? (short) -xMag
-                : xMag;
-        leader.setXSpeed(xVel);
+        if (leader.isLeftPressed()) {
+            leader.setXSpeed((short) -xMag);
+        } else if (leader.isRightPressed()) {
+            leader.setXSpeed(xMag);
+        }
         leader.setYSpeed(carryTrigger.carryReleaseJumpYVel());
         leader.setAir(true);
         leader.setJumping(true);
-        leader.setRolling(true);
+        // ROM loc_14428 writes y_radius=$0E/x_radius=7, anim=2, and sets
+        // Status_Roll without adjusting y_pos. setRolling(true) would also
+        // shrink the engine sprite box and move the centre by 5px, exposing the
+        // radius-cluster divergence on CNZ/MHZ intro jump-out frames.
+        leader.applyRollingRadii(false);
+        leader.setRollingFlagPreserveRadii(true);
         leader.setRollingJump(false);
         releaseCarry(carryTrigger.carryJumpReleaseCooldownFrames());
     }
@@ -3235,16 +3267,14 @@ public class SidekickCpuController {
             state = State.CARRYING;
             sidekick.setAir(true);
             sidekick.setDoubleJumpProperty((byte) 0xF0);
-        } else if (transientCarrySidekick) {
+        } else if (cooldownFrames > 0 || transientCarrySidekick) {
             // ROM Tails_Carry_Sonic jump-out / external-velocity / hurt release
-            // (loc_1445A/loc_14460/loc_14466) clears Flying_carrying_Sonic_flag and
-            // sets the cooldown byte but leaves Tails in routine $E. Tails keeps
-            // flying and runs the loc_14534 cooldown/regrab loop
-            // (updateTransientReleasedCarry) until Sonic lands -> routine $10
-            // fly-off, or returns to pickup range -> regrab. The throwaway carrier
-            // never enters the NORMAL follow AI. (The landing branch in
-            // updateCarrying overrides this with enterCarryFlyoff(), matching
-            // loc_14016's direct $10 transition when Sonic touches down.)
+            // (loc_14428/loc_1445A/loc_14460/loc_14466) clears
+            // Flying_carrying_Sonic_flag and sets the cooldown byte, but leaves
+            // Tails_CPU_routine at $0E. Tails keeps flying and runs loc_14534's
+            // cooldown/regrab loop until pickup succeeds or the landed-Sonic path
+            // transitions out. Only the ground-release path uses cooldown 0 and
+            // falls back to NORMAL for a persistent sidekick.
             flyingCarryingFlag = false;
             carryParentagePending = false;
             state = State.CARRYING;

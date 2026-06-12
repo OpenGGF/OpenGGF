@@ -16,6 +16,7 @@ class TestSonic3kCnzCarryTrigger {
     private static final int ZONE_HCZ = 1;
     private static final int ZONE_MGZ = 2;
     private static final int ZONE_CNZ = 3;
+    private static final int ZONE_MHZ = 7;
 
     @Test
     void cnzAct1SonicAndTailsFires() {
@@ -27,6 +28,18 @@ class TestSonic3kCnzCarryTrigger {
         // ROM SpawnLevelMainSprites loc_68D8 spawns a throwaway carry-in Tails for
         // solo Sonic (Player_mode==1) at CNZ1; the trigger fires for it too.
         assertTrue(trigger.shouldEnterCarry(ZONE_CNZ, 0, PlayerCharacter.SONIC_ALONE));
+    }
+
+    @Test
+    void mhzAct1SonicAndTailsFires() {
+        // ROM Tails CPU loc_13A8E sends MHZ1 Sonic+Tails into the same carry
+        // routine as CNZ1, but with the MHZ pickup coordinates.
+        assertTrue(trigger.shouldEnterCarry(ZONE_MHZ, 0, PlayerCharacter.SONIC_AND_TAILS));
+    }
+
+    @Test
+    void mhzAct1SonicAloneFires() {
+        assertTrue(trigger.shouldEnterCarry(ZONE_MHZ, 0, PlayerCharacter.SONIC_ALONE));
     }
 
     @Test
@@ -42,6 +55,11 @@ class TestSonic3kCnzCarryTrigger {
     @Test
     void cnzAct2DoesNotFire() {
         assertFalse(trigger.shouldEnterCarry(ZONE_CNZ, 1, PlayerCharacter.SONIC_AND_TAILS));
+    }
+
+    @Test
+    void mhzAct2DoesNotFire() {
+        assertFalse(trigger.shouldEnterCarry(ZONE_MHZ, 1, PlayerCharacter.SONIC_AND_TAILS));
     }
 
     @Test

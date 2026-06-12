@@ -3940,6 +3940,17 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.rolling = false;
         }
 
+        /**
+         * Writes only the status rolling bit for ROM paths that already updated
+         * radii/dimensions explicitly and must not apply the generic box change.
+         */
+        public void setRollingFlagPreserveRadii(boolean rolling) {
+                this.rolling = rolling;
+                if (rolling) {
+                        applyRollAnimationFromProfile();
+                }
+        }
+
         public boolean getRollingJump() {
                 return rollingJump;
         }

@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K CNZ/MHZ carry intro handoff now starts from ROM CPU state:** complete-run
+  trace bootstrap now arms the native Tails carry routine after the title-card
+  handoff for CNZ1 and MHZ1, including ROM placement, initial falling velocity,
+  carry cadence, released-carry routine retention, and roll-radius preservation
+  on jump release. This moves CNZ1 out of its frame-0 carry setup divergence to
+  frame 97 `rolling`, and MHZ1 to frame 71 `camera_y`.
+
 - **S3K Obj37 floor probes now use shared ROM terrain search:** spilled-ring
   terrain bounces now consume `ObjectTerrainUtils.checkFloorDist`, including
   the shared FindFloor extension/regression behavior used by object terrain
