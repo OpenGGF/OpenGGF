@@ -143,6 +143,21 @@ cross-game source) is derived from the sanitized launch profile and passed to
 same record explicitly so future KiS2 traces can activate the patch
 deterministically.
 
+**Save-context team sanitization.** The data-select path carries the requested
+team in `SaveSessionContext.selectedTeam()`, which
+`ActiveGameplayTeamResolver` prefers over config — so patch failure must not
+leave an unbackable team in the session. At every choke point that builds a
+session with a save context (notably `Engine.launchGameplayFromDataSelect()`),
+after `resolveModule()` returns, the launch path validates the requested team
+against the same availability union used by `LaunchProfile` (stock roster +
+donor-provided + patch-provided characters, as currently resolvable). If the
+team's main character is unavailable — e.g. a saved Knuckles slot when S&K
+data has disappeared and donation is off — the *session* team is sanitized to
+the stock main character (Sonic) and unavailable sidekicks are dropped, with a
+logged warning. The save slot on disk is never rewritten; only the
+session-owned `SaveSessionContext` team is replaced, so the slot launches as
+Knuckles again once the ROM returns.
+
 #### Logical ROM resolver
 
 A small resolver maps a logical ROM identity (a new `LogicalRom` enum, first
@@ -278,9 +293,13 @@ mechanism stock placement uses. No zone carve-outs in shared code.
 
 - S&K data unavailable → Knuckles is simply not offered for S2 (same pattern as
   donation options today).
-- A saved launch profile requests Knuckles but the ROM has since disappeared →
-  session open falls back to stock S2 + Sonic with a logged warning. Never a
-  crash; never a silent S3K-donation substitution for gameplay.
+- A saved launch profile or data-select slot team requests Knuckles but the ROM
+  has since disappeared → the launch path falls back to stock S2 + Sonic with a
+  logged warning, including sanitizing the session-owned
+  `SaveSessionContext.selectedTeam()` (see save-context team sanitization
+  above) so `ActiveGameplayTeamResolver` cannot resolve an unbackable Knuckles
+  team on the stock module. The save slot on disk is untouched. Never a crash;
+  never a silent S3K-donation substitution for gameplay.
 
 ## Testing
 
@@ -294,6 +313,11 @@ mechanism stock placement uses. No zone carve-outs in shared code.
 - `LaunchProfile` availability/sanitization tests: Knuckles offered for S2 when
   the patch is available with donation off; a patch-backed Knuckles selection
   survives `sanitizedFor()`; Knuckles stripped when no patch and no S3K donor.
+- Save-context team sanitization tests: a data-select load of a Knuckles-team
+  slot with S&K data absent (and donation off) opens the session with a
+  Sonic team in `SaveSessionContext` (verified via
+  `ActiveGameplayTeamResolver`) and leaves the slot file unmodified; the same
+  slot with S&K data present resolves the patched module with a Knuckles team.
 - Logical-ROM resolver tests with synthetic byte arrays: combined-ROM backend
   with bounds guard (read `>= 0x200000` fails), standalone-backend preference
   and identity detection.
