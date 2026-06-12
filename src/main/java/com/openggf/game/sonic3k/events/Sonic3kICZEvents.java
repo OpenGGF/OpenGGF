@@ -279,11 +279,9 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
 
     private static void applyDirectionalIczSlide(AbstractPlayableSprite player) {
         int inertia = player.getGSpeed();
-        int inertiaHigh = (byte) (inertia & 0xFF);
-        if (!player.isSliding()) {
-            player.setDirection(inertiaHigh < 0 ? Direction.LEFT : Direction.RIGHT);
-            player.setAnimationId(ICZ_SLIDE_ANIMATION);
-        }
+        int inertiaHigh = (byte) (inertia >> 8);
+        player.setDirection(inertiaHigh < 0 ? Direction.LEFT : Direction.RIGHT);
+        player.setAnimationId(ICZ_SLIDE_ANIMATION);
         player.setSliding(true);
     }
 

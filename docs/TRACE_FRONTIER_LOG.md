@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K ICZ complete-run progressed to Tails airborne-release frontier
+
+- Scope: follow-up to the ICZ frame-2644 native-Tails follow-position frontier.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - ICZ1 directional slide terrain now refreshes player facing and the raw
+    slide animation on every `sub_71E4` directional slide publish, not only on
+    first entry into the slide bit.
+  - The facing decision now uses the signed high byte of `ground_vel`, matching
+    the 68000 `move.b ground_vel(a1),d1` read before `bclr/bset
+    Status_Facing`. This fixes the `ground_vel=$F02C` case where the engine had
+    used the low byte and kept native Tails facing right, causing the ROM
+    follow nudge at `loc_13E0A` to be skipped.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.events.TestSonic3kIczSlideTerrain,com.openggf.sprites.managers.TestPlayableSpriteMovement#slidingStatusSuppressesManualDownRoll" test`
+    -> GREEN. Surefire summary: `Tests run: 5, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2644 to frame 2836. New
+    first error: native Tails `air` `expected=1`, `actual=0`; Tails `x`, `y`,
+    subpixel position, CPU routine/counters, interact word, and main Sonic
+    fields match at the first error.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  native Tails release/ground-state publication around the ICZ freezer/hurt
+  block cluster at frame 2836, not revisit slide-terrain facing or add a
+  trace/frame exception.
+
 ## 2026-06-12 - S3K ICZ complete-run progressed to native-Tails follow-position frontier
 
 - Scope: follow-up to the ICZ frame-2600 wall-slope speed frontier. Trace data

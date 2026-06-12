@@ -31,8 +31,27 @@ class TestSonic3kIczSlideTerrain {
         assertEquals((short) -0x0D73, player.getGSpeed(),
                 "late-frame ICZ slide publication must not mutate the just-compared player velocity");
         assertEquals(Direction.LEFT, player.getDirection(),
-                "ROM faces from the pre-adjustment low byte sign");
+                "ROM faces from the pre-adjustment ground_vel high byte sign");
         assertEquals(0x19, player.getAnimationId(), "ICZ overrides the shared slide animation to raw ID 0x19");
+    }
+
+    @Test
+    void matchingBlockRefreshesFacingForAlreadySlidingPlayer() {
+        AbstractPlayableSprite player = testPlayer();
+        player.setAir(false);
+        player.setOnObject(false);
+        player.setSliding(true);
+        player.setDirection(Direction.RIGHT);
+        player.setGSpeed((short) 0xF02C);
+
+        Sonic3kICZEvents.applyIcz1SlideTerrainForBlock(player, 0x2E);
+
+        assertTrue(player.isSliding(), "directional ICZ slide terrain keeps the slide bit set");
+        assertEquals((short) 0xF02C, player.getGSpeed(),
+                "directional ICZ slide publication must not mutate the just-compared player velocity");
+        assertEquals(Direction.LEFT, player.getDirection(),
+                "ROM refreshes Status_Facing from the current ground_vel high byte every directional slide frame");
+        assertEquals(0x19, player.getAnimationId(), "directional slide terrain refreshes the raw slide animation");
     }
 
     @Test

@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K ICZ slide terrain refreshes ROM facing status:** ICZ1 directional
+  slide terrain now reads the signed high byte of `ground_vel` and refreshes
+  facing/animation every slide-terrain publish, matching `sub_71E4`. This
+  clears the ICZ complete-run frame-2644 native Tails follow-position mismatch
+  and moves the trace to frame 2836, where Tails remains grounded while the ROM
+  has released him airborne.
+
 - **S3K ICZ slide terrain publishes ROM infinite-inertia state:** ICZ1 now
   applies the `sub_714E -> sub_71E4` slide-terrain status bit after playable
   physics so the next tick skips ground friction like the ROM. Manual down-roll
