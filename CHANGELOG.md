@@ -41,6 +41,45 @@ All notable changes to the OpenGGF project are documented in this file.
   on jump release. This moves CNZ1 out of its frame-0 carry setup divergence to
   frame 97 `rolling`, and MHZ1 to frame 71 `camera_y`.
 
+- Fixed S3K elemental shield graphics corrupting after a rewind: the post-restore refresh no longer discards the restored shield object's animation state, and shield DPLC art is force re-uploaded after restore.
+
+- Rewind schema guards now classify HCZ miniboss rocket touch children as
+  deferred structural children, and S3K elemental shield art refresh requests
+  are captured by the default scalar policy instead of object-local transient
+  annotations.
+
+- S3K AIZ zone-event rewind state is now schema-captured (auto-derived from
+  handler fields) instead of a hand-counted byte layout; a guard test fails
+  when a handler field is neither captured nor explicitly rewind-transient,
+  and malformed schema payloads are rejected without corrupting later sidecars.
+
+- S3K HCZ zone-event rewind state now uses the length-prefixed schema sidecar,
+  with legacy field coverage and malformed-payload rollback matching AIZ.
+
+- S3K CNZ zone-event rewind state now uses the length-prefixed schema sidecar,
+  with legacy field coverage and malformed-payload rollback matching AIZ/HCZ.
+
+- S3K MGZ zone-event rewind state now uses the length-prefixed schema sidecar,
+  with legacy collapse/event-field coverage and malformed-payload rollback
+  matching AIZ/HCZ/CNZ.
+
+- S3K MHZ zone-event rewind state now uses the length-prefixed schema sidecar,
+  including variable-length spike-array payload validation and malformed-payload
+  rollback before ICZ/fixed-air sidecars.
+
+- S3K ICZ zone-event rewind state now uses the length-prefixed schema sidecar,
+  preserving fixed-air countdown alignment and malformed-payload framing
+  rejection after the final fixed zone-event conversion.
+
+- New debug flag `debug.rewind.determinismAudit`: re-simulates each completed
+  rewind keyframe segment during live play and logs the first state divergence,
+  pinpointing state that is missing from rewind capture. Disarms after the first
+  divergence (replayed out-of-snapshot state cannot be rolled back).
+
+- Rewind now captures and restores live palette colors (normal + underwater
+  surfaces), so palette mutations (e.g. AIZ intro fire sequence) rewind
+  correctly instead of persisting through a rewind.
+
 - **S3K Obj37 floor probes now use shared ROM terrain search:** spilled-ring
   terrain bounces now consume `ObjectTerrainUtils.checkFloorDist`, including
   the shared FindFloor extension/regression behavior used by object terrain

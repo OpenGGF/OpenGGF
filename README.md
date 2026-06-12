@@ -224,6 +224,11 @@ straightforward to add new objects, zones, and game-specific behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Rewind palette capture and determinism audit branch (2026-06-12).** Merged
+  `bugfix/ai-rewind-palette-and-audit`, adding live palette-color rewind
+  snapshots, schema-driven S3K zone-event sidecars for AIZ/HCZ/CNZ/MGZ/MHZ/ICZ,
+  malformed-payload guards, S3K shield post-rewind art refresh recovery, and
+  the opt-in `debug.rewind.determinismAudit` segment re-simulation diagnostic.
 - **Engine performance optimization branch (2026-06-12).** Merged
   `bugfix/ai-performance-optimization`, a 13-task measured pass over the
   audio, rendering, and rewind hot paths: keyframe-spike max 71.7→27.9 ms,

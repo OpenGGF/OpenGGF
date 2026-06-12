@@ -21,9 +21,8 @@ import java.util.Objects;
  *
  * <p>Custom comparators for {@code level} and {@code object-manager} keys
  * skip restore-side cosmetic divergence (epoch counter, peak slot count, dirty
- * flags) that is independent of replay correctness. See {@link RewindBenchmark}
- * for the original implementation; this class hoists the helpers so torture
- * tests can reuse them.
+ * flags) that is independent of replay correctness. Originally extracted from
+ * the test-scope {@code RewindBenchmark} helpers so torture tests can reuse them.
  */
 public final class RewindSnapshotDiff {
 

@@ -153,8 +153,18 @@ public record ObjectManagerSnapshot(
             String className,
             ObjectSpawn spawn,
             int slotIndex,
-            PerObjectRewindSnapshot state
-    ) {}
+            PerObjectRewindSnapshot state,
+            PlayableEntity playerOwner
+    ) {
+        public DynamicObjectEntry(
+                String className,
+                ObjectSpawn spawn,
+                int slotIndex,
+                PerObjectRewindSnapshot state
+        ) {
+            this(className, spawn, slotIndex, state, null);
+        }
+    }
 
     public record SolidContactRidingEntry(
             PlayableEntity player,

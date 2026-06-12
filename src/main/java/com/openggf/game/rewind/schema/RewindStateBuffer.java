@@ -170,6 +170,10 @@ public final class RewindStateBuffer {
             return values;
         }
 
+        public int remaining() {
+            return data.length - position;
+        }
+
         private void requireAvailable(int bytes) {
             if (position + bytes <= data.length) {
                 return;

@@ -200,7 +200,11 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
     private com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry
             consumePendingRestoredEntry(ObjectInstance object) {
         if (object instanceof ShieldObjectInstance) {
-            return objectManager.consumePendingPlayerBoundEntry(ShieldObjectInstance.class);
+            ShieldObjectInstance shield = (ShieldObjectInstance) object;
+            return objectManager.consumePendingPlayerBoundEntry(
+                    ShieldObjectInstance.class,
+                    entry -> object.getClass().getName().equals(entry.className())
+                            && entry.playerOwner() == shield.getPlayer());
         }
         if (object instanceof InvincibilityStarsObjectInstance) {
             return objectManager.consumePendingPlayerBoundEntry(

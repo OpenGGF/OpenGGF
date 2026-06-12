@@ -5,6 +5,7 @@ import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LayoutMutationIntent;
 import com.openggf.game.mutation.LevelMutationSurface;
@@ -172,6 +173,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             0x0000, 0x0F00, 0x0000, 0x0F80, 0x0000, 0x1000, 0x0080, 0x0480,
     };
 
+    @RewindTransient(reason = "ROM-backed quake chunk cache; bytes are immutable and recomputed from the ROM on demand")
     private volatile byte[] cachedMgzQuakeChunkData;
 
     // ========================================================================
@@ -275,6 +277,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     private final int[] collapseScrollVelocity = new int[COLLAPSE_COLUMN_COUNT];
     private final int[] collapseScrollFixedPosition = new int[COLLAPSE_COLUMN_COUNT];
     private final int[] collapseScrollPosition = new int[COLLAPSE_COLUMN_COUNT];
+    @RewindTransient(reason = "live collapse-solid object references; object lifetime/state is captured by ObjectManager rewind")
     private final Mgz2LevelCollapseSolidInstance[] collapseSolids =
             new Mgz2LevelCollapseSolidInstance[COLLAPSE_SOLID_COUNT];
     /** ROM: Events_bg+$08 — MGZ2SE_MoveBG 16:16 velocity accumulator. */
@@ -316,6 +319,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
      * Active drilling-Robotnik instance for the current mini-event. Cleared
      * when the Robotnik object destroys itself at the end of its flee.
      */
+    @RewindTransient(reason = "live drilling-Robotnik reference skipped by the legacy sidecar; object state is captured separately")
     private MgzDrillingRobotnikInstance activeRobotnik;
     /** Set once activeRobotnik's destruction has been observed and bounds restored. */
     private boolean postFleeUnlockDone;

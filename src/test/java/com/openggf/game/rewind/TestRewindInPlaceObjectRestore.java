@@ -159,6 +159,8 @@ class TestRewindInPlaceObjectRestore {
             "com.openggf.level.PatternDesc",
             "com.openggf.level.objects.SubpixelMotion$State",
             // Stateless functional handles installed at construction.
+            "com.openggf.level.objects.DestructionEffects$AnimalFactory",
+            "com.openggf.level.objects.DestructionEffects$PointsFactory",
             "java.util.function.BooleanSupplier",
             "java.util.function.IntSupplier");
 

@@ -54,6 +54,7 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 
@@ -146,13 +147,14 @@ public class ObjectManager {
     // Rewind: captured DynamicObjectEntry payloads for player-bound dynamics
     // (Shield, Stars) that are NOT recreated by the codec on restore. The
     // post-restore callback in
-    // AbstractPlayableSprite#refreshPowerUpObjectsAfterRewindRestore re-spawns
-    // these via the power-up spawner; the spawner consumes the captured entry
-    // via {@link #consumePendingPlayerBoundEntry(Class)} so the new instance
-    // lands at the same slot the reference run had AND has the captured field
-    // surface restored on top of its fresh-construction state. Without that
-    // restore, animation cursors and similar non-construction-set scalars
-    // would reset to zero on every rewind.
+    // AbstractPlayableSprite#refreshPowerUpObjectsAfterRewindRestore relinks a
+    // live matching shield when one exists, otherwise re-spawns via the power-up
+    // spawner. The spawner consumes the captured entry via
+    // {@link #consumePendingPlayerBoundEntry(Class)} so the new instance lands
+    // at the same slot the reference run had AND has the captured field surface
+    // restored on top of its fresh-construction state. Without that restore,
+    // animation cursors and similar non-construction-set scalars would reset to
+    // zero on every rewind.
     private final Map<Class<?>, java.util.ArrayDeque<
             com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>>
             pendingPlayerBoundEntries = new java.util.HashMap<>();
@@ -3094,7 +3096,8 @@ public class ObjectManager {
                                         inst.getClass().getName(),
                                         inst.getSpawn(),
                                         aoi.getSlotIndex(),
-                                        captureObjectRewindState(aoi, rewindContext)));
+                                        captureObjectRewindState(aoi, rewindContext),
+                                        playerBoundOwner(inst)));
                     }
                 }
 
@@ -3525,10 +3528,41 @@ public class ObjectManager {
      */
     public com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry
             consumePendingPlayerBoundEntry(Class<?> baseType) {
+        return consumePendingPlayerBoundEntry(baseType, entry -> true);
+    }
+
+    /**
+     * Pops the first captured entry for the given player-bound base type that
+     * satisfies {@code matcher}. Shield restore uses this to match owner and
+     * concrete class instead of consuming another player's pending same-type
+     * shield from the FIFO queue.
+     */
+    public com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry
+            consumePendingPlayerBoundEntry(Class<?> baseType,
+                    Predicate<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry> matcher) {
         java.util.ArrayDeque<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>
                 queue = pendingPlayerBoundEntries.get(baseType);
         if (queue == null || queue.isEmpty()) return null;
-        return queue.poll();
+        Iterator<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry> iterator =
+                queue.iterator();
+        while (iterator.hasNext()) {
+            com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry = iterator.next();
+            if (matcher.test(entry)) {
+                iterator.remove();
+                if (queue.isEmpty()) {
+                    pendingPlayerBoundEntries.remove(baseType);
+                }
+                return entry;
+            }
+        }
+        return null;
+    }
+
+    private static PlayableEntity playerBoundOwner(ObjectInstance inst) {
+        if (inst instanceof ShieldObjectInstance shield) {
+            return shield.getPlayer();
+        }
+        return null;
     }
 
     static void registerRewindDynamicObjectCodecForTest(DynamicObjectRewindCodec codec) {
