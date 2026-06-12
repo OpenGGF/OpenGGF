@@ -258,6 +258,16 @@ class TestS3kIczFreezerObject {
     }
 
     @Test
+    void frozenPlayerBlockPersistsOutsideCameraRangeWhileCarryingPlayer() {
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x3FC4, (short) 0x0373);
+        IczFreezerObjectInstance.FrozenPlayerBlock block =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(tails, 0x3FC4, 0x0373, 0x4060, false);
+
+        assertTrue(block.isPersistent(),
+                "ROM loc_8A84C keeps the frozen-player block alive through Draw_Sprite/player sync, not MarkObjGone");
+    }
+
+    @Test
     void frozenPlayerBlockReleaseSpendsRingsThroughLostRingPathWhenShieldless() {
         installLevelGamestate();
 

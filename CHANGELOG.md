@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K ICZ frozen-player blocks stay alive through offscreen carry:** ICZ
+  freezer frozen blocks now opt out of generic dynamic-object coarse culling
+  while they are carrying a captured player, matching the ROM
+  `loc_8A84C` player-sync/draw loop instead of deleting the block once it is
+  far behind the camera. This moves the ICZ complete-run trace from frame 2838
+  to frame 2875, a main-player ground-speed mismatch near the post-freeze
+  terrain/object cluster.
+
 - **S3K ICZ frozen-player blocks honor the ROM camera-side x clamp:** ICZ
   freezer frozen blocks now clear horizontal velocity before `MoveSprite` when
   the ROM `Camera_X_pos+$20/$128` side clamp has crossed the block, preventing

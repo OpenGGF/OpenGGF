@@ -431,6 +431,11 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         }
 
         @Override
+        public boolean isPersistent() {
+            return true;
+        }
+
+        @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
             if (isDestroyed()) {
                 return;

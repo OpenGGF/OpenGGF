@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K ICZ complete-run progressed to post-freeze terrain frontier
+
+- Scope: follow-up to the ICZ frame-2838 native-Tails frozen-block vertical
+  movement/player-sync frontier. Trace data remained comparison-only
+  diagnostic input; no engine state was hydrated from trace rows, and no
+  trace/route/frame exception was added.
+- Fix:
+  - ICZ freezer frozen-player blocks are now persistent while carrying a
+    captured player, matching the ROM `loc_8A84C` player-sync/draw loop that
+    keeps the block alive instead of routing it through generic
+    `MarkObjGone`-style coarse culling.
+  - Focused freezer coverage asserts a frozen-player block can remain alive
+    outside the camera coarse range while it continues to own captured-player
+    synchronization.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIczFreezerObject" test`
+    -> GREEN. Surefire summary: `Tests run: 16, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2838 to frame 2875. New
+    first error: main-player `g_speed` `expected=0x03A9`, `actual=0x0369`;
+    native Tails position/control fields and the carried frozen block now
+    match through the former frontier.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-2875 main-player terrain/object interaction around the
+  post-freeze cluster, including the ROM object at code pointer `0x00018B3E`
+  near `x_pos=0x421F`, without adding a trace/frame carve-out.
+
 ## 2026-06-12 - S3K ICZ complete-run progressed to frozen-block vertical frontier
 
 - Scope: follow-up to the ICZ frame-2837 native-Tails frozen-block horizontal
