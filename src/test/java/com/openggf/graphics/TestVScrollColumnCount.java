@@ -1,10 +1,12 @@
 package com.openggf.graphics;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,6 +19,35 @@ class TestVScrollColumnCount {
         assertEquals(25, columns(400));
         assertEquals(33, columns(528));
         assertEquals(50, columns(800));
+    }
+
+    @Test
+    void tilemapRendererReconfiguresPerColumnVScrollCapacityForResolvedWidth() {
+        TilemapGpuRenderer renderer = new TilemapGpuRenderer(320);
+
+        assertEquals(20, renderer.getVScrollColumnCapacity());
+
+        renderer.applyResolvedDisplayWidth(400);
+
+        assertEquals(25, renderer.getVScrollColumnCapacity());
+    }
+
+    @Test
+    void graphicsManagerReconfiguresExistingTilemapRendererForResolvedDisplayWidthWithoutGl() throws Exception {
+        GraphicsManager graphics = new GraphicsManager();
+        TilemapGpuRenderer renderer = new TilemapGpuRenderer(320);
+        setPrivateField(graphics, "tilemapGpuRenderer", renderer);
+
+        graphics.applyResolvedDisplayWidth(400);
+
+        assertEquals(25, renderer.getVScrollColumnCapacity());
+    }
+
+    @Test
+    void graphicsManagerResolvedDisplayWidthHookIsSafeBeforeTilemapRendererExists() {
+        GraphicsManager graphics = new GraphicsManager();
+
+        assertDoesNotThrow(() -> graphics.applyResolvedDisplayWidth(400));
     }
 
     @Test
@@ -71,5 +102,11 @@ class TestVScrollColumnCount {
                 "BG per-column VScroll must still feed the parallax compositing pass");
         assertFalse(renderer.contains("pendingBgTilePassPerColumnVScroll"),
                 "BG tile FBO pass must not also consume per-column VScroll; doing both doubles AIZ fire-wave offsets");
+    }
+
+    private static void setPrivateField(Object target, String fieldName, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(target, value);
     }
 }

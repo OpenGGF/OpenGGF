@@ -232,6 +232,13 @@ This release should focus on reducing obvious gaps rather than introducing new s
 - Remaining high-value S3K gameplay gaps (additional zones, bosses, special stage polish).
 - Special stage polish where current support exists but parity is incomplete.
 - Final parity passes on transitions, boss sequences, and edge-case object behavior.
+- Native **Knuckles in Sonic 2** support without S3K donation. Treat Sonic & Knuckles
+  lock-on to Sonic 2 as an official patch target rather than a generic cross-game
+  character option: check out the s2disasm Knuckles-in-Sonic-2 branch, document the
+  branch-vs-stock Sonic 2 code/data differences, and implement Knuckles from those
+  differences so physics, objects, monitors/life icons, title/level-select flow, and
+  trace behavior are faithful to the lock-on game. Do not infer this behavior from
+  S3K donation alone.
 - Documentation cleanup around what is complete, partial, or intentionally deferred.
 
 ## 1.0 Criteria

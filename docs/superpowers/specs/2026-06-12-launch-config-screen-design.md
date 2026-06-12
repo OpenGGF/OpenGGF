@@ -83,18 +83,23 @@ hardcoded GLFW keys, matching the menu's hardcoded Enter.
 
 ### Row markers
 
-Two independent markers:
+Three independent markers:
 
 - **(stock)** — dim marker on rows currently at their stock value.
 - **`*` non-standard** — amber tint + asterisk on values impossible in the
   original game, with a footer legend `* not possible in the original game`.
+- **`!` experimental** — red tint + exclamation mark for launch choices that
+  are not just non-standard but still explicitly experimental, with a footer
+  legend `! experimental`.
 
 Non-standard rules:
 
 - Rewind On, Cross-Game Donation ≠ Off, Debug Tools On: always non-standard
   (engine features).
 - Widescreen: pinned widescreen presets (16:10, 16:9, 21:9, 32:9) are
-  non-standard; Global and pinned Native 4:3 are not.
+  non-standard; Global and pinned Native 4:3 are not. Ultrawide presets
+  (21:9 and 32:9) are additionally experimental and use the red `!` marker
+  instead of the amber `*`.
 - Characters are validated **as a (main, sidekick) pair** against the game's
   authentic `Player_mode` combos:
   - S1: (sonic, none)
