@@ -170,6 +170,10 @@ public final class Sonic3kObjectIds {
     public static final int CORKEY = 0xC1;
     // S3KL object table: Obj_LBZ1Robotnik.
     public static final int LBZ1_ROBOTNIK = 0xC3;
+    // S3KL object table: Obj_LBZMinibossBox (star-post restart staging box).
+    public static final int LBZ_MINIBOSS_BOX = 0xC4;
+    // S3KL object table: Obj_LBZMinibossBoxKnux (Knuckles dual-boss staging box).
+    public static final int LBZ_MINIBOSS_BOX_KNUX = 0xC5;
     public static final int LBZ_MINIBOSS = 0xC9;
     public static final int PACHINKO_TRIANGLE_BUMPER = 0xE6;
     public static final int PACHINKO_FLIPPER = 0xE7;

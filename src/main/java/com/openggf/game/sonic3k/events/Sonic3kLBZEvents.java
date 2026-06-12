@@ -1,15 +1,25 @@
 package com.openggf.game.sonic3k.events;
 
+import com.openggf.game.PlayerCharacter;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
+import com.openggf.game.save.SaveReason;
+import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.objects.LbzInvisibleBarrierInstance;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
+import com.openggf.camera.Camera;
+import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.level.Level;
 import com.openggf.level.Map;
+import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.BitSet;
 
@@ -49,10 +59,35 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
             2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
     };
 
+    /** ROM LBZ1_ScreenEvent Events_fg_4=$55: FG block ($7D, 2) becomes chunk $DA. */
+    private static final int BOX_OPENED_CHUNK_X = 0x7D;
+    private static final int BOX_OPENED_CHUNK_Y = 2;
+    private static final int BOX_OPENED_CHUNK_VALUE = 0xDA;
+    /** ROM loc_53F50 (Knuckles variant): copy FG ($78, 19) into ($78..$7A, 20). */
+    private static final int KNUX_BOX_OPENED_SRC_X = 0x78;
+    private static final int KNUX_BOX_OPENED_SRC_Y = 19;
+    private static final int KNUX_BOX_OPENED_DEST_Y = 20;
+    private static final int KNUX_BOX_OPENED_DEST_WIDTH = 3;
+    /** ROM LBZ1BGE_DoTransition: world shift applied to players/objects/camera. */
+    private static final int LBZ2_TRANSITION_OFFSET_X = -0x3A00;
+    /** ROM LBZ2SE_FromTransition: LBZ2_LayoutMod applies once Player_1 x >= $60A. */
+    private static final int LBZ2_ENTRY_CORRIDOR_GATE_X = 0x60A;
+    /** ROM LBZ1 screen init: restart past $3B60 re-applies the ending layout. */
+    private static final int RESTART_ENDING_LAYOUT_CAMERA_X = 0x3B60;
+    /** ROM Adjust_LBZ2Layout chunk-table rotation: chunk $DB shifted by 24 words. */
+    private static final int LBZ2_ADJUST_ROTATED_BLOCK = 0xDB;
+    private static final int LBZ2_ADJUST_ROTATE_BY = 24;
+    /** ROM LBZ2_LayoutMod: rows 0-5, six staging columns $94.. copied to columns 6.. */
+    private static final int LBZ2_CORRIDOR_SRC_X = 0x94;
+    private static final int LBZ2_CORRIDOR_DEST_X = 6;
+    private static final int LBZ2_CORRIDOR_SIZE = 6;
+
     private boolean endingCollapseActive;
     private boolean endingCollapseFinished;
     private int endingCollapseGlobalFixed;
     private int endingCollapsePhase;
+    private boolean eventsFg5;
+    private boolean restartInitChecked;
     private final int[] endingCollapseFixed = new int[ENDING_COLLAPSE_COLUMN_COUNT];
     private final int[] endingCollapseScroll = new int[ENDING_COLLAPSE_COLUMN_COUNT];
 
@@ -102,7 +137,15 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
 
     @Override
     public void update(int act, int frameCounter) {
-        if (act != 0 || !hasRuntime()) {
+        if (!hasRuntime()) {
+            return;
+        }
+        if (act != 0) {
+            updateAct2EntryLayout();
+            return;
+        }
+        applyRestartFromBossAreaInitIfNeeded();
+        if (handleSeamlessReloadStage()) {
             return;
         }
         updateEndingCollapse(frameCounter);
@@ -198,6 +241,10 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         endingCollapsePhase = 0;
         Arrays.fill(endingCollapseFixed, 0);
         Arrays.fill(endingCollapseScroll, 0);
+        // ROM LBZ1_EventVScroll: the first armed frame allocates
+        // Obj_LBZ1InvisibleBarrier so the player cannot run ahead of the
+        // collapsing building.
+        spawnInvisibleBarrier();
     }
 
     public boolean isEndingCollapseActive() {
@@ -273,6 +320,244 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         Arrays.fill(endingCollapseScroll, 0);
         applyEndingLayout();
         audio().playSfx(Sonic3kSfx.CRASH.id);
+    }
+
+    /**
+     * ROM: Obj_LevelResultsCreate sets Events_fg_5 for act-1 zones; the LBZ1
+     * background event consumes it to run the LBZ1 -> LBZ2 seamless reload.
+     */
+    public void setEventsFg5(boolean flag) {
+        eventsFg5 = flag;
+    }
+
+    /**
+     * ROM: LBZ1 screen init. When the player restarts from the lamppost past
+     * the collapsed building (Camera_X_pos >= $3B60, non-Knuckles), the init
+     * path allocates Obj_LBZ1InvisibleBarrier and applies LBZ1_ModEndingLayout.
+     */
+    private void applyRestartFromBossAreaInitIfNeeded() {
+        if (restartInitChecked) {
+            return;
+        }
+        restartInitChecked = true;
+        if (playerCharacter() == PlayerCharacter.KNUCKLES) {
+            return;
+        }
+        if ((camera().getX() & 0xFFFF) < RESTART_ENDING_LAYOUT_CAMERA_X) {
+            return;
+        }
+        endingCollapseFinished = true;
+        spawnInvisibleBarrier();
+        applyEndingLayout();
+    }
+
+    /**
+     * ROM: LBZ1_EventVScroll allocates Obj_LBZ1InvisibleBarrier when the
+     * collapse is armed (and the screen-init restart path mirrors it).
+     */
+    void spawnInvisibleBarrier() {
+        spawnObject(() -> new LbzInvisibleBarrierInstance(
+                new ObjectSpawn(0x3BC0, 0x0100, 0, 0, 0, false, 0)));
+    }
+
+    /**
+     * ROM: LBZ1_ScreenEvent Events_fg_4=$55 handling. The Sonic/Tails variant
+     * swaps the boss-area box chunk to $DA; the Knuckles variant (loc_53F50)
+     * copies the staging chunk across the three Knuckles boss-area columns.
+     */
+    public void applyMinibossBoxOpenedChunkSwap(boolean knuckles) {
+        if (!hasRuntime()) {
+            return;
+        }
+        Level level = levelManager().getCurrentLevel();
+        if (level == null || level.getMap() == null) {
+            return;
+        }
+        Map map = level.getMap();
+        LayoutMutationContext context = new LayoutMutationContext(
+                LevelMutationSurface.forLevel(level),
+                levelManager()::applyMutationEffects);
+        zoneLayoutMutationPipeline().applyImmediately(
+                mutationContext -> {
+                    LevelMutationSurface surface = mutationContext.surface();
+                    if (!knuckles) {
+                        return surface.setBlockInMap(
+                                FG_LAYER, BOX_OPENED_CHUNK_X, BOX_OPENED_CHUNK_Y, BOX_OPENED_CHUNK_VALUE);
+                    }
+                    int value = map.getValue(FG_LAYER, KNUX_BOX_OPENED_SRC_X, KNUX_BOX_OPENED_SRC_Y) & 0xFF;
+                    MutationEffects combined = MutationEffects.NONE;
+                    for (int i = 0; i < KNUX_BOX_OPENED_DEST_WIDTH; i++) {
+                        combined = mergeEffects(combined, surface.setBlockInMap(
+                                FG_LAYER, KNUX_BOX_OPENED_SRC_X + i, KNUX_BOX_OPENED_DEST_Y, value));
+                    }
+                    return combined;
+                },
+                context);
+    }
+
+    /**
+     * ROM: LBZ1BGE_Normal consumes Events_fg_5 (queues the LBZ2 secondary
+     * art/block/chunk data) and LBZ1BGE_DoTransition then reloads the level as
+     * $0601, shifting the world left by $3A00. The engine's level reload loads
+     * the full LBZ2 resource set, so both stages collapse into one here.
+     *
+     * @return true when the reload was performed this frame
+     */
+    private boolean handleSeamlessReloadStage() {
+        if (!eventsFg5) {
+            return false;
+        }
+        eventsFg5 = false;
+
+        Camera camera = camera();
+        int postTransitionMinX = offsetCameraBoundWord(camera.getMinX(), LBZ2_TRANSITION_OFFSET_X);
+        int postTransitionMaxX = offsetCameraBoundWord(camera.getMaxX(), LBZ2_TRANSITION_OFFSET_X);
+        // ROM LBZ1BGE_DoTransition only offsets the X bounds; the Y bounds keep
+        // their act-1 values until the results exit applies Change_Act2Sizes.
+        int postTransitionMinY = camera.getMinY() & 0xFFFF;
+        int postTransitionMaxY = camera.getMaxY() & 0xFFFF;
+        SeamlessLevelTransitionRequest request = SeamlessLevelTransitionRequest.builder(
+                        SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
+                .targetZoneAct(Sonic3kZoneIds.ZONE_LBZ, 1)
+                .deactivateLevelNow(false)
+                .preserveMusic(true)
+                .preserveLevelGamestate(true)
+                .showInLevelTitleCard(false)
+                .preserveOffsetCameraPosition(true)
+                .postTransitionMinX(postTransitionMinX)
+                .postTransitionMaxX(postTransitionMaxX)
+                .postTransitionMinY(postTransitionMinY)
+                .postTransitionMaxY(postTransitionMaxY)
+                .postTransitionMaxYTarget(postTransitionMaxY)
+                .playerOffset(LBZ2_TRANSITION_OFFSET_X, 0)
+                .cameraOffset(LBZ2_TRANSITION_OFFSET_X, 0)
+                .build();
+
+        SessionSaveRequests.requestCurrentSessionSave(SaveReason.PROGRESSION_SAVE);
+        if (levelManager().getCurrentLevel() == null) {
+            levelManager().requestSeamlessTransition(request);
+            return true;
+        }
+        try {
+            // ROM LBZ1BGE_DoTransition performs Load_Level and the coordinate
+            // offsets inside the BG event routine, not on the next frame.
+            levelManager().executeActTransition(request);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to apply LBZ act transition", e);
+        }
+        // ROM: Adjust_LBZ2Layout runs immediately after Load_Level; the entry
+        // corridor mod stays gated on Player_1 x >= $60A (LBZ2SE_FromTransition).
+        applyLbz2TransitionLayout();
+        LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(zoneRuntimeRegistry()).orElse(null);
+        if (state != null) {
+            state.setLbz2LayoutAdjustApplied(true);
+        }
+        return true;
+    }
+
+    /**
+     * LBZ2 entry layout state machine.
+     *
+     * <p>Direct act-2 starts mirror ROM {@code LBZ2_ScreenInit}: apply
+     * {@code Adjust_LBZ2Layout} and {@code LBZ2_LayoutMod} immediately. After a
+     * transition ({@code Adjust} already applied), the corridor mod waits for
+     * {@code Player_1 x >= $60A} — or applies immediately for Knuckles
+     * ({@code loc_543C2}).
+     */
+    private void updateAct2EntryLayout() {
+        LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(zoneRuntimeRegistry()).orElse(null);
+        if (state == null) {
+            return;
+        }
+        if (!state.isLbz2LayoutAdjustApplied()) {
+            applyLbz2TransitionLayout();
+            applyLbz2EntryCorridorMod();
+            state.setLbz2LayoutAdjustApplied(true);
+            state.setLbz2EntryCorridorApplied(true);
+            return;
+        }
+        if (state.isLbz2EntryCorridorApplied()) {
+            return;
+        }
+        AbstractPlayableSprite player = camera().getFocusedSprite();
+        boolean gateReached = playerCharacter() == PlayerCharacter.KNUCKLES
+                || (player != null && (player.getCentreX() & 0xFFFF) >= LBZ2_ENTRY_CORRIDOR_GATE_X);
+        if (gateReached) {
+            applyLbz2EntryCorridorMod();
+            state.setLbz2EntryCorridorApplied(true);
+        }
+    }
+
+    /**
+     * ROM: {@code Adjust_LBZ2Layout} — fixes up the LBZ2 layout around the
+     * act-transition seam: moves the chunk at FG (5,18) down a row and replaces
+     * it with chunk $DB, rotates chunk $DB's chunk-table definition by 24
+     * entries ({@code LBZ1_RotateChunks}), copies FG (4,19) across (4..6,20),
+     * and writes chunks $58/$55 at FG ($8A,7)/($8A,8).
+     */
+    public void applyLbz2TransitionLayout() {
+        if (!hasRuntime()) {
+            return;
+        }
+        Level level = levelManager().getCurrentLevel();
+        if (level == null || level.getMap() == null) {
+            return;
+        }
+        Map map = level.getMap();
+        LayoutMutationContext context = new LayoutMutationContext(
+                LevelMutationSurface.forLevel(level),
+                levelManager()::applyMutationEffects);
+        zoneLayoutMutationPipeline().applyImmediately(
+                mutationContext -> {
+                    LevelMutationSurface surface = mutationContext.surface();
+                    MutationEffects combined = MutationEffects.NONE;
+                    int seamChunk = map.getValue(FG_LAYER, 5, 18) & 0xFF;
+                    combined = mergeEffects(combined, surface.setBlockInMap(FG_LAYER, 5, 19, seamChunk));
+                    combined = mergeEffects(combined,
+                            surface.setBlockInMap(FG_LAYER, 5, 18, LBZ2_ADJUST_ROTATED_BLOCK));
+                    combined = mergeEffects(combined, rotateBlockDefinition(
+                            level, LBZ2_ADJUST_ROTATED_BLOCK, LBZ2_ADJUST_ROTATE_BY));
+                    int floorChunk = map.getValue(FG_LAYER, 4, 19) & 0xFF;
+                    for (int x = 4; x <= 6; x++) {
+                        combined = mergeEffects(combined,
+                                surface.setBlockInMap(FG_LAYER, x, 20, floorChunk));
+                    }
+                    combined = mergeEffects(combined, surface.setBlockInMap(FG_LAYER, 0x8A, 7, 0x58));
+                    combined = mergeEffects(combined, surface.setBlockInMap(FG_LAYER, 0x8A, 8, 0x55));
+                    return combined;
+                },
+                context);
+    }
+
+    /**
+     * ROM: {@code LBZ2_LayoutMod} — copies the 6x6 staging area at FG columns
+     * $94.. into columns 6.. for rows 0-5, opening the act-2 entry corridor.
+     */
+    public void applyLbz2EntryCorridorMod() {
+        if (!hasRuntime()) {
+            return;
+        }
+        applyLayoutCopy(new CopySpec(
+                LBZ2_CORRIDOR_SRC_X, 0, LBZ2_CORRIDOR_DEST_X, 0,
+                LBZ2_CORRIDOR_SIZE, LBZ2_CORRIDOR_SIZE));
+    }
+
+    /**
+     * ROM: {@code LBZ1_RotateChunks} rotates the 64-word chunk-table definition
+     * of chunk {@code $DB} right by 24 entries (the chunk graphics shift down
+     * three 16x16 rows). Routed through {@link Sonic3kLevel} so copy-on-write
+     * rewind isolation is preserved.
+     */
+    private static MutationEffects rotateBlockDefinition(Level level, int blockIndex, int rotateBy) {
+        if (!(level instanceof Sonic3kLevel sonic3kLevel)) {
+            return MutationEffects.NONE;
+        }
+        sonic3kLevel.rotateBlockChunkDescs(blockIndex, rotateBy);
+        return MutationEffects.redrawAllTilemaps();
+    }
+
+    private static int offsetCameraBoundWord(short value, int offset) {
+        return ((value & 0xFFFF) + offset) & 0xFFFF;
     }
 
     private void requestScreenShakeOffset(int frameCounter) {

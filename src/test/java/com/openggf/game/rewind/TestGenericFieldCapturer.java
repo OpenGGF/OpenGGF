@@ -1,6 +1,7 @@
 package com.openggf.game.rewind;
 
 import com.openggf.game.rewind.snapshot.GenericObjectSnapshot;
+import com.openggf.game.sonic3k.objects.LbzMinibossBoxRig;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -18,6 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -207,6 +209,15 @@ class TestGenericFieldCapturer {
         assertTrue(restored.flags.get(1));
         assertTrue(restored.flags.get(3));
         assertNotSame(w.flags, restored.flags);
+    }
+
+    @Test
+    void deepCopiesLbzMinibossBoxRigSnapshotState() {
+        LbzMinibossBoxRig rig = new LbzMinibossBoxRig(0x3EC0, 0x0160);
+        rig.release();
+        rig.update(LbzMinibossBoxRig.NO_CAMERA);
+
+        assertDoesNotThrow(() -> GenericFieldCapturer.deepCopySnapshotValue(rig.captureRewindStateValue()));
     }
 
     @Test

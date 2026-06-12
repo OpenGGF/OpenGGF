@@ -60,6 +60,19 @@ class TestRewindStateBuffer {
     }
 
     @Test
+    void sharedReaderDoesNotCopyInput() {
+        // Pins sharedReader's NO-copy ownership contract so it cannot be
+        // silently merged with the defensively copying reader(byte[]) factory.
+        byte[] source = new byte[]{10, 20};
+        RewindStateBuffer.Reader reader = RewindStateBuffer.sharedReader(source);
+
+        source[0] = 99;
+
+        assertEquals(99, reader.readByte());
+        assertEquals(20, reader.readByte());
+    }
+
+    @Test
     void readerFailsClearlyWhenReadingPastEnd() {
         RewindStateBuffer.Reader reader = RewindStateBuffer.reader(new byte[]{1, 2});
 

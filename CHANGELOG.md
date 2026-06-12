@@ -24,6 +24,25 @@ All notable changes to the OpenGGF project are documented in this file.
   from this session's played sources, keeps an in-flight restore pending, and
   clears the SFX-block latch when nothing could ever unblock it.
 
+- **Audio, rendering, and rewind hot-path overhead is reduced without changing
+  trace replay behavior:** held rewind now restores matching objects in place
+  and defers the audio-driver rebuild to a single restore on release, the
+  pattern atlas uploads only dirty tile regions instead of full 1 MB pages,
+  background scrolling shifts the tilemap window incrementally and SAT replay
+  draws batch into instanced commands, rewind capture reflection is memoized,
+  and per-frame object/render/ring/audio-runtime churn allocations are
+  removed. Fade-outs no longer degrade the SMPS driver to per-sample
+  rendering (proven byte-identical), and the audio command timeline is
+  bounded with frame-local `beginFrame` scans. Measurements and acceptance
+  verdicts are recorded in `docs/performance/2026-06-11-performance-baseline.md`
+  and `docs/performance/2026-06-11-performance-results-tally.md`.
+
+- **Tails' tail directional frames now use the ROM CalcAngle table:** the
+  tail-angle selection in `TailsTailsController` routes through the exact
+  `CalcAngle`/`GetArcTan` port in `TrigLookupTable` (s2.asm:4037-4081,
+  sonic3k.asm:3043) instead of `Math.atan2`, improving ROM parity; the full
+  trace sweep failure set is unchanged.
+
 - **Trace replay lag frames are classified consistently across all games:**
   S1/S2 use gameplay-frame counter advancement as the full-frame signal, S3K
   treats lag-counter-only rows as VBlank-only frames, and gameplay advancement
@@ -42,6 +61,21 @@ All notable changes to the OpenGGF project are documented in this file.
 - **Data Select launch errors are visible on the save screen:** stored launch
   failures are now carried through presentation state and rendered as clipped
   safe-glyph text instead of only being logged internally.
+
+- **LBZ1 miniboss and the LBZ1 → LBZ2 act transition reach ROM parity:** the
+  miniboss now rises 2px per hit-flash frame with the ROM palette flash, the
+  bit-2 arm ring detaches one panel per frame at three hits remaining, defeat
+  runs the ROM `$3F`-frame Wait_NewDelay before the end-sign handoff (including
+  the original game's AfterBoss_LBZ MHZ2 palette quirk), and the Knuckles
+  tracking offset matches `loc_724E2`. The Robotnik intro gains the
+  player-above rise trigger, the `Obj_LBZ1InvisibleBarrier` collapse wall, the
+  `Events_fg_4=$55` boss-area chunk swap, ROM-script box-piece release with
+  lingering drift panels, and off-screen ship removal. `Obj_LBZMinibossBox`
+  (star-post restarts) and `Obj_LBZMinibossBoxKnux` (Knuckles dual-boss fight
+  and end-of-act sequence) are newly implemented, and the results screen's
+  `Events_fg_5` now drives the `LBZ1BGE_DoTransition` seamless reload into
+  LBZ2 with the `-$3A00` world shift, `Adjust_LBZ2Layout` (including the
+  chunk-$DB rotation), and the gated `LBZ2_LayoutMod` entry corridor.
 
 - **S3K release-route crashes and dead ends are guarded:** completed-emerald
   big-ring touches no longer request the unregistered HPZ zone, and the CNZ2

@@ -859,6 +859,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (mhzEvents != null) {
             mhzEvents.setActTransitionFlag(true);
         }
+        if (lbzEvents != null) {
+            lbzEvents.setEventsFg5(true);
+        }
         // Other zones' event handlers will be added here as implemented.
     }
 

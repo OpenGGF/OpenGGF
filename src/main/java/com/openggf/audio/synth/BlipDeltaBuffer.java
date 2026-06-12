@@ -316,8 +316,9 @@ public class BlipDeltaBuffer {
             if (remain > 0) {
                 System.arraycopy(bufferL, count, bufferL, 0, remain);
                 System.arraycopy(bufferR, count, bufferR, 0, remain);
-                Arrays.fill(bufferL, remain, size, 0);
-                Arrays.fill(bufferR, remain, size, 0);
+                int clearTo = Math.min(size, remain + count);
+                Arrays.fill(bufferL, remain, clearTo, 0);
+                Arrays.fill(bufferR, remain, clearTo, 0);
             }
         }
 
@@ -333,11 +334,13 @@ public class BlipDeltaBuffer {
     }
 
     Snapshot captureSnapshot() {
+        // The compact constructor performs the single defensive copy (truncated
+        // to size); passing the live buffers avoids a second full copy here.
         return new Snapshot(
                 factorFp,
                 offsetFp,
-                Arrays.copyOf(bufferL, size),
-                Arrays.copyOf(bufferR, size),
+                bufferL,
+                bufferR,
                 size,
                 integL,
                 integR);
@@ -347,8 +350,14 @@ public class BlipDeltaBuffer {
         this.factorFp = snapshot.factorFp();
         this.offsetFp = snapshot.offsetFp();
         this.size = snapshot.size();
-        this.bufferL = Arrays.copyOf(snapshot.bufferL(), snapshot.size());
-        this.bufferR = Arrays.copyOf(snapshot.bufferR(), snapshot.size());
+        int[] srcL = snapshot.bufferLRef();
+        int[] srcR = snapshot.bufferRRef();
+        if (bufferL == null || bufferL.length != size) {
+            bufferL = new int[size];
+            bufferR = new int[size];
+        }
+        System.arraycopy(srcL, 0, bufferL, 0, size);
+        System.arraycopy(srcR, 0, bufferR, 0, size);
         this.integL = snapshot.integL();
         this.integR = snapshot.integR();
     }
@@ -362,8 +371,8 @@ public class BlipDeltaBuffer {
             int integL,
             int integR) {
         public Snapshot {
-            bufferL = Arrays.copyOf(bufferL, bufferL.length);
-            bufferR = Arrays.copyOf(bufferR, bufferR.length);
+            bufferL = Arrays.copyOf(bufferL, size);
+            bufferR = Arrays.copyOf(bufferR, size);
         }
 
         @Override
@@ -375,5 +384,11 @@ public class BlipDeltaBuffer {
         public int[] bufferR() {
             return Arrays.copyOf(bufferR, bufferR.length);
         }
+
+        /** Non-copying view for in-memory restore paths only. Do not mutate. */
+        int[] bufferLRef() { return bufferL; }
+
+        /** Non-copying view for in-memory restore paths only. Do not mutate. */
+        int[] bufferRRef() { return bufferR; }
     }
 }

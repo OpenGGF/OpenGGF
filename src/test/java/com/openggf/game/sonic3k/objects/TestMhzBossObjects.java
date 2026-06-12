@@ -4737,6 +4737,12 @@ class TestMhzBossObjects {
 
     @Test
     void mhzMinibossTreeChipUsesKnucklesRandomSlowBounceVelocity() {
+        // The slow-bounce chip probes terrain through ObjectTerrainUtils, which
+        // consults GameServices.levelOrNull(). Clear any level leaked by a
+        // fixture-based test class earlier in the same surefire fork (including
+        // the shared-level cache, which resetPerTest intentionally keeps) so
+        // the floor probe stays deterministic regardless of fork composition.
+        com.openggf.tests.TestEnvironment.resetAll();
         AbstractObjectInstance.updateCameraBounds(0x1700, 0x0300, 0x1900, 0x0500, 0);
         List<ObjectInstance> spawned = new ArrayList<>();
         MhzMinibossInstance miniboss = new MhzMinibossInstance(new ObjectSpawn(

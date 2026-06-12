@@ -32,7 +32,9 @@ import java.util.List;
  *
  * <p>ROM: {@code Obj_LBZMiniboss} at {@code sonic3k.asm:151366}. This object is
  * spawned by {@code Obj_LBZ1Robotnik}'s {@code ChildObjDat_8D264} handoff after
- * Robotnik drops the carried yellow box.
+ * Robotnik drops the carried yellow box, by {@code Obj_LBZMinibossBox} on a
+ * star-post restart, and twice (subtypes 0/2) by {@code Obj_LBZMinibossBoxKnux}
+ * on the Knuckles route.
  */
 public final class LbzMinibossInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseAttackable {
@@ -57,6 +59,16 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
     private static final int ARM_COLLISION_FLAGS = 0x98;
     private static final int BODY_PALETTE_LINE = 1;
     private static final int SIGNPOST_APPARENT_ACT = 0;
+    /** ROM: BossDefeated sets $2E=$3F before Wait_NewDelay hands off to loc_72562. */
+    private static final int DEFEAT_WAIT_FRAMES = 0x3F;
+    /** ROM: Obj_Song_Fade_ToLevelMusic waits 2*60 frames before Restore_LevelMusic. */
+    private static final int LEVEL_MUSIC_FADE_FRAMES = 2 * 60;
+    /** ROM: sub_72910 sets $2E=$80 (Obj_Wait -> Go_Delete_Sprite) on detached arms. */
+    private static final int DETACHED_PANEL_LIFETIME = 0x80;
+    /** ROM: BossFlash toggles Normal_palette_line_2+$2 between 0 and $EEE. */
+    private static final int FLASH_PALETTE_COLOR_INDEX = 1;
+    private static final int FLASH_WHITE = 0x0EEE;
+    private static final int FLASH_BLACK = 0x0000;
 
     private static final int[] BODY_RAW_FRAMES = {0, 1, 0, 2};
     private static final int[] PANEL_FRAMES = {7, 8, 7, 8, 7, 6};
@@ -68,8 +80,16 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
     private static final int[] PANEL_ROUTINE8_WAITS = {0x34, 0x14, 9, 9, 9, 3};
     private static final int[] PANEL_DETACH_X_VEL = {0x100, -0x200, 0x300, 0x200, -0x100, -0x80};
     private static final int[] PANEL_DETACH_Y_VEL = {-0x100, -0x200, -0x200, -0x100, -0x200, -0x100};
-    private static final int[] CENTER_RAW_FRAMES = {3, 4, 5, 5, 5, 5, 4, 3, 4};
-    private static final int[] CENTER_RAW_DELAYS = {7, 7, 7, 0x3F, 0x3F, 0x3F, 7, 7, 7};
+
+    /**
+     * ROM: byte_72988 raw-animation script for the centre child.
+     * Three rows: {7: 3,4,5} -> {3F: 5,5,5} -> {7: 5,4,3,4 loop}. The $F8 jump
+     * commands advance through the rows once, then the final row's $FC restarts
+     * itself, so the steady state is 5,4,3,4 at delay 7.
+     */
+    private static final int[][] CENTER_ANIM_ROW_FRAMES = {{3, 4, 5}, {5, 5, 5}, {5, 4, 3, 4}};
+    private static final int[] CENTER_ANIM_ROW_DELAYS = {7, 0x3F, 7};
+    private static final int[] CENTER_ANIM_ROW_NEXT = {1, 2, 2};
 
     private final SubpixelMotion.State motion;
     private final List<PanelState> panels = new ArrayList<>();
@@ -85,14 +105,19 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
     private int bodyFrame;
     private int bodyAnimIndex;
     private int bodyAnimTimer;
-    private int centerChildFrame = CENTER_RAW_FRAMES[0];
+    private int centerChildFrame = CENTER_ANIM_ROW_FRAMES[0][0];
+    private int centerChildAnimRow;
     private int centerChildAnimIndex;
-    private int centerChildAnimTimer = CENTER_RAW_DELAYS[0];
+    private int centerChildAnimTimer;
+    private boolean flashColorIsBlack;
     private boolean parentBit0;
     private boolean parentBit1;
     private boolean defeated;
+    private boolean bodyVisible = true;
+    private int defeatWaitTimer = -1;
     private boolean defeatFlowSpawned;
     private S3kBossExplosionController defeatExplosionController;
+    private LbzMinibossBoxKnuxInstance knucklesFightParent;
 
     private enum WaitCallback {
         NONE,
@@ -104,6 +129,14 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
     public LbzMinibossInstance(ObjectSpawn spawn) {
         super(spawn, "LBZMiniboss");
         this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
+    }
+
+    /**
+     * ROM: loc_8D082 copies the Knuckles box's parent3/subtype onto the spawned
+     * miniboss so loc_72584 can report the defeat back via $38 bit(subtype).
+     */
+    public void setKnucklesFightParent(LbzMinibossBoxKnuxInstance parent) {
+        this.knucklesFightParent = parent;
     }
 
     @Override
@@ -145,7 +178,7 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
             regions.add(new TouchRegion(getX(), getY(), bodyFlags));
         }
         for (PanelState panel : panels) {
-            if (!panel.center && !panel.detached) {
+            if (!panel.center && !panel.detached && !panel.deleted) {
                 regions.add(new TouchRegion(panel.x, panel.y, ARM_COLLISION_FLAGS));
             }
         }
@@ -165,9 +198,13 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         hitCount = Math.max(0, hitCount - 1);
         collisionFlags = 0;
         if (hitCount == 3) {
+            // ROM loc_7285A: bset #0,$38(a0) when collision_property reaches 3;
+            // the bit-2 (second-ring) arm chains detach from loc_728C8.
             parentBit0 = true;
         }
         if (hitCount == 0) {
+            // ROM Touch_Enemy: the final hit sets status bit 7 on the boss, and
+            // loc_7289A starts the defeat without playing sfx_BossHit again.
             startDefeat();
             return;
         }
@@ -183,11 +220,10 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
             return;
         }
         if (defeated) {
-            updateDefeat(frameCounter);
+            updateDefeat();
             updateDynamicSpawn(getX(), getY());
             return;
         }
-        updateHitReaction();
         switch (routine) {
             case ROUTINE_INIT -> initialize();
             case ROUTINE_INIT_WAIT -> tickWait();
@@ -203,12 +239,20 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
                 trackPlayer(playerEntity);
                 moveSprite2();
                 animateOpeningFrame();
-                updatePanels();
             }
-            case ROUTINE_ESCAPE -> updatePanels();
+            case ROUTINE_ESCAPE -> {
+                // ROM loc_72558: subq.w #2,y_pos(a0) every frame of the hit flash.
+                motion.y -= 2;
+            }
             default -> {
             }
         }
+        // ROM loc_72840 runs after the routine body each frame, so the final
+        // hit-flash frame still applies the loc_72558 rise before restoring.
+        updateHitReaction();
+        // ROM: the arm/centre children are independent objects updated every
+        // frame from creation, regardless of the parent's routine.
+        updatePanels();
         updateDynamicSpawn(getX(), getY());
     }
 
@@ -221,9 +265,13 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         if (bossRenderer == null) {
             return;
         }
-        bossRenderer.drawFrameIndex(bodyFrame, getX(), getY(), false, false, BODY_PALETTE_LINE);
+        if (bodyVisible) {
+            bossRenderer.drawFrameIndex(bodyFrame, getX(), getY(), false, false, BODY_PALETTE_LINE);
+        }
         for (PanelState panel : panels) {
-            bossRenderer.drawFrameIndex(panel.frame, panel.x, panel.y, false, false, BODY_PALETTE_LINE);
+            if (!panel.deleted) {
+                bossRenderer.drawFrameIndex(panel.frame, panel.x, panel.y, false, false, BODY_PALETTE_LINE);
+            }
         }
     }
 
@@ -249,6 +297,14 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
 
     public int getHitReactionTimerForTest() {
         return hitReactionTimer;
+    }
+
+    public boolean isDefeatedForTest() {
+        return defeated;
+    }
+
+    public boolean isDefeatFlowSpawnedForTest() {
+        return defeatFlowSpawned;
     }
 
     public void forceOpenForTest(int x, int y) {
@@ -324,7 +380,6 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         resetCenterChildAnimation();
         waitTimer = OPENING_WAIT;
         waitCallback = WaitCallback.OPENING_STEP;
-        updatePanels();
     }
 
     private void openingStep() {
@@ -345,11 +400,14 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
             return;
         }
 
-        int targetX = player.getCentreX() & 0xFFFF;
+        // ROM loc_724E2 adds the offset to the boss x before comparing, so the
+        // boss settles at player x MINUS $20 for subtype 0 (and plus for the
+        // second Knuckles boss).
+        int bossX = getX();
         if (isKnuckles()) {
-            targetX += spawn.subtype() == 0 ? KNUCKLES_TARGET_X_OFFSET : -KNUCKLES_TARGET_X_OFFSET;
+            bossX += spawn.subtype() == 0 ? KNUCKLES_TARGET_X_OFFSET : -KNUCKLES_TARGET_X_OFFSET;
         }
-        int dx = signedDelta(targetX, getX());
+        int dx = signedDelta(player.getCentreX() & 0xFFFF, bossX);
         motion.xVel = Math.abs(dx) <= TARGET_DEADBAND ? 0 : (dx < 0 ? -TRACK_VEL : TRACK_VEL);
 
         int targetY = (player.getCentreY() + PLAYER_TARGET_Y_OFFSET) & 0xFFFF;
@@ -385,9 +443,10 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
     }
 
     private void resetCenterChildAnimation() {
+        centerChildAnimRow = 0;
         centerChildAnimIndex = 0;
-        centerChildAnimTimer = CENTER_RAW_DELAYS[0];
-        centerChildFrame = CENTER_RAW_FRAMES[0];
+        centerChildAnimTimer = CENTER_ANIM_ROW_DELAYS[0];
+        centerChildFrame = CENTER_ANIM_ROW_FRAMES[0][0];
     }
 
     private void updateCenterChildAnimation() {
@@ -398,54 +457,142 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         if (centerChildAnimTimer >= 0) {
             return;
         }
-        centerChildAnimIndex = (centerChildAnimIndex + 1) % CENTER_RAW_FRAMES.length;
-        centerChildFrame = CENTER_RAW_FRAMES[centerChildAnimIndex];
-        centerChildAnimTimer = CENTER_RAW_DELAYS[centerChildAnimIndex];
+        centerChildAnimIndex++;
+        if (centerChildAnimIndex >= CENTER_ANIM_ROW_FRAMES[centerChildAnimRow].length) {
+            // ROM byte_72988 $F8/$FC commands: advance to the next row (or
+            // restart the final row) and show its first frame immediately.
+            centerChildAnimRow = CENTER_ANIM_ROW_NEXT[centerChildAnimRow];
+            centerChildAnimIndex = 0;
+        }
+        centerChildFrame = CENTER_ANIM_ROW_FRAMES[centerChildAnimRow][centerChildAnimIndex];
+        centerChildAnimTimer = CENTER_ANIM_ROW_DELAYS[centerChildAnimRow];
     }
 
     private void updateHitReaction() {
         if (hitReactionTimer <= 0) {
             return;
         }
+        // ROM loc_7287A: BossFlash every frame of the $20 window, then restore
+        // $EEE and the saved routine/collision when the counter expires.
+        applyBossFlashToggle();
         hitReactionTimer--;
         if (hitReactionTimer == 0) {
+            restoreBossFlashColor();
             routine = savedRoutine;
             collisionFlags = OPEN_COLLISION_FLAGS;
         }
     }
 
+    private void applyBossFlashToggle() {
+        flashColorIsBlack = !flashColorIsBlack;
+        writeFlashColor(flashColorIsBlack ? FLASH_BLACK : FLASH_WHITE);
+    }
+
+    private void restoreBossFlashColor() {
+        // ROM loc_72894 writes the literal $EEE back, not a saved colour.
+        flashColorIsBlack = false;
+        writeFlashColor(FLASH_WHITE);
+    }
+
+    private void writeFlashColor(int segaWord) {
+        S3kPaletteWriteSupport.applyColors(
+                services().paletteOwnershipRegistryOrNull(),
+                services().currentLevel(),
+                services().graphicsManager(),
+                S3kPaletteOwners.LBZ_MINIBOSS,
+                S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                BODY_PALETTE_LINE,
+                new int[] {FLASH_PALETTE_COLOR_INDEX},
+                new int[] {segaWord});
+    }
+
     private void startDefeat() {
         defeated = true;
         collisionFlags = 0;
-        parentBit0 = true;
-        services().playSfx(Sonic3kSfx.BOSS_HIT.id);
+        hitReactionTimer = 0;
+        restoreBossFlashColor();
         services().gameState().addScore(1000);
-        services().gameState().setCurrentBossId(Sonic3kObjectIds.LBZ_MINIBOSS);
+        if (!isKnuckles()) {
+            // ROM: BossDefeated_StopTimer clears Update_HUD_timer; the Knuckles
+            // route's loc_728C2 goes through plain BossDefeated instead.
+            if (services().levelGamestate() != null) {
+                services().levelGamestate().pauseTimer();
+            }
+        }
+        defeatWaitTimer = DEFEAT_WAIT_FRAMES;
         defeatExplosionController = new S3kBossExplosionController(getX(), getY(), 0, services().rng());
+        // ROM Touch_Enemy sets status bit 7 on the final hit; loc_728C8/loc_72902
+        // then unravel both arm chains one panel per frame.
         for (PanelState panel : panels) {
-            panel.detach();
+            if (!panel.center && panel.index == 0) {
+                panel.markedForDetach = true;
+            }
         }
     }
 
-    private void updateDefeat(int frameCounter) {
+    private void updateDefeat() {
         updatePanels();
-        if (defeatExplosionController != null && !defeatExplosionController.isFinished()) {
-            defeatExplosionController.tick();
-            for (S3kBossExplosionController.PendingExplosion explosion
-                    : defeatExplosionController.drainPendingExplosions()) {
-                if (explosion.playSfx()) {
-                    services().playSfx(Sonic3kSfx.EXPLODE.id);
-                }
-                spawnChild(() -> new S3kBossExplosionChild(explosion.x(), explosion.y()));
+        tickDefeatExplosions();
+        if (defeatWaitTimer >= 0) {
+            defeatWaitTimer--;
+            if (defeatWaitTimer < 0) {
+                // ROM Wait_NewDelay expiry -> loc_72562: the boss body stops
+                // being drawn and the end-of-act flow takes over.
+                bodyVisible = false;
+                spawnDefeatHandoff();
             }
-            return;
         }
-        if (!defeatFlowSpawned) {
-            defeatFlowSpawned = true;
-            spawnChild(() -> new S3kBossDefeatSignpostFlow(
-                    homeX, SIGNPOST_APPARENT_ACT, S3kBossDefeatSignpostFlow.CleanupAction.NONE));
+        boolean explosionsDone = defeatExplosionController == null || defeatExplosionController.isFinished();
+        if (defeatFlowSpawned && explosionsDone && allPanelsGone()) {
             setDestroyed(true);
         }
+    }
+
+    private void tickDefeatExplosions() {
+        if (defeatExplosionController == null || defeatExplosionController.isFinished()) {
+            return;
+        }
+        defeatExplosionController.tick();
+        for (S3kBossExplosionController.PendingExplosion explosion
+                : defeatExplosionController.drainPendingExplosions()) {
+            if (explosion.playSfx()) {
+                services().playSfx(Sonic3kSfx.EXPLODE.id);
+            }
+            spawnChild(() -> new S3kBossExplosionChild(explosion.x(), explosion.y()));
+        }
+    }
+
+    private void spawnDefeatHandoff() {
+        if (defeatFlowSpawned) {
+            return;
+        }
+        defeatFlowSpawned = true;
+        if (isKnuckles() && knucklesFightParent != null) {
+            // ROM loc_72584: report the kill back to Obj_LBZMinibossBoxKnux via
+            // $38 bit(subtype) and delete without the signpost flow.
+            knucklesFightParent.onKnucklesMinibossDefeated(spawn.subtype());
+            return;
+        }
+        int levelMusicId = services().getCurrentLevelMusicId();
+        if (levelMusicId > 0) {
+            // ROM loc_72562 allocates Obj_Song_Fade_ToLevelMusic.
+            spawnFreeChild(() -> new SongFadeTransitionInstance(LEVEL_MUSIC_FADE_FRAMES, levelMusicId));
+        }
+        // ROM loc_72562 restores x_pos from $3C before Obj_EndSignControl, so the
+        // signpost falls at the boss's home X. AfterBoss_LBZ shares AfterBoss_MHZ
+        // and loads Pal_MHZ2's first line during the results (original game bug).
+        spawnChild(() -> new S3kBossDefeatSignpostFlow(
+                homeX, SIGNPOST_APPARENT_ACT,
+                S3kBossDefeatSignpostFlow.CleanupAction.LOAD_MHZ2_OBJECT_PALETTE));
+    }
+
+    private boolean allPanelsGone() {
+        for (PanelState panel : panels) {
+            if (!panel.center && !panel.deleted) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void ensurePanelsCreated() {
@@ -515,6 +662,9 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         private PanelWaitCallback waitCallback = PanelWaitCallback.START_ROTATE_IF_ARMED;
         private boolean bit1;
         private boolean detached;
+        private boolean markedForDetach;
+        private boolean deleted;
+        private int detachedLifeTimer;
 
         private enum PanelWaitCallback {
             NONE,
@@ -527,7 +677,7 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
             this.center = center;
             this.index = index;
             this.secondRing = secondRing;
-            this.frame = center ? 7 : PANEL_FRAMES[index];
+            this.frame = center ? CENTER_ANIM_ROW_FRAMES[0][0] : PANEL_FRAMES[index];
             this.angle = center ? 0 : (secondRing ? PANEL_ANGLE_B[index] : PANEL_ANGLE_A[index]);
             this.bit1 = !center && index == 5;
             if (center) {
@@ -537,6 +687,9 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         }
 
         private void update() {
+            if (deleted) {
+                return;
+            }
             if (detached) {
                 SubpixelMotion.State state = new SubpixelMotion.State(x, y, xSub, ySub, xVel, yVel);
                 SubpixelMotion.moveSprite(state, SubpixelMotion.S3K_GRAVITY);
@@ -546,6 +699,10 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
                 ySub = state.ySub;
                 xVel = state.xVel;
                 yVel = state.yVel;
+                detachedLifeTimer--;
+                if (detachedLifeTimer < 0) {
+                    deleted = true;
+                }
                 return;
             }
             if (center) {
@@ -556,10 +713,19 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
                 }
                 return;
             }
-            updateLinkedArmRoutine();
-            if (parentBit0 && !secondRing) {
-                detach();
+            // ROM loc_728C8 (subtype 0) / loc_72902 (others): a marked panel
+            // detaches, marking the next link so the chain unravels one panel
+            // per frame.
+            if (index == 0 && !markedForDetach) {
+                if (defeated || (parentBit0 && secondRing)) {
+                    markedForDetach = true;
+                }
             }
+            if (markedForDetach) {
+                detachAndPropagate();
+                return;
+            }
+            updateLinkedArmRoutine();
         }
 
         private void updateLinkedArmRoutine() {
@@ -677,13 +843,19 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
             return panels.get(previousIndex);
         }
 
-        private void detach() {
+        private void detachAndPropagate() {
             if (detached || center) {
                 return;
             }
             detached = true;
+            detachedLifeTimer = DETACHED_PANEL_LIFETIME;
             xVel = PANEL_DETACH_X_VEL[index];
             yVel = PANEL_DETACH_Y_VEL[index];
+            // ROM loc_728EA: bset #7,status on the $44-linked (next) panel.
+            if (index + 1 < PANEL_FRAMES.length) {
+                int nextIndex = (secondRing ? 1 + PANEL_FRAMES.length : 1) + index + 1;
+                panels.get(nextIndex).markedForDetach = true;
+            }
         }
     }
 

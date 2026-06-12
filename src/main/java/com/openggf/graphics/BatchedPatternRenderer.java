@@ -89,12 +89,19 @@ public class BatchedPatternRenderer {
         this.paletteCoordData = new float[MAX_PATTERNS_PER_BATCH * 6];
     }
 
+    // Display height resolved once per batch in beginBatch()/beginShadowBatch()
+    // and reused by every addPattern call (thousands per frame). Safe because FBO
+    // projection state never changes between batch begin and end: call sites
+    // (e.g. special-stage background renderers) set up FBO projection BEFORE
+    // creating the batch and restore it after the batch is flushed.
+    private int batchDisplayHeight;
+
     /**
-     * Gets the current display height for Y coordinate calculations.
+     * Resolves the current display height for Y coordinate calculations.
      * When rendering to an FBO, this returns the FBO height.
      * Otherwise returns the normal screen height.
      */
-    private int getCurrentDisplayHeight() {
+    private int resolveDisplayHeight() {
         Engine engine = graphicsManager.getEngine();
         if (engine != null && engine.isFBOProjectionActive()) {
             return engine.getCurrentDisplayHeight();
@@ -110,6 +117,7 @@ public class BatchedPatternRenderer {
      */
     public void beginBatch() {
         patternCount = 0;
+        batchDisplayHeight = resolveDisplayHeight();
         batchActive = true;
     }
 
@@ -171,9 +179,8 @@ public class BatchedPatternRenderer {
         // Genesis Y refers to the TOP of the pattern, so we subtract the pattern height
         // (8)
         // to get the OpenGL Y coordinate for the bottom of the quad
-        // Use dynamic display height for FBO rendering support
-        int currentHeight = getCurrentDisplayHeight();
-        int screenY = currentHeight - y - 8;
+        // Display height resolved once per batch in beginBatch() (FBO-aware)
+        int screenY = batchDisplayHeight - y - 8;
 
         // Compute the 4 corners of the quad
         float x0 = x;
@@ -242,9 +249,8 @@ public class BatchedPatternRenderer {
         // For a 2-pixel strip at Genesis Y, the OpenGL bottom should be:
         // currentHeight - y - stripHeight
         // This ensures Genesis Y=0 maps to OpenGL Y at top of screen
-        // Use dynamic display height for FBO rendering support
-        int currentHeight = getCurrentDisplayHeight();
-        int screenY = currentHeight - y - 2;
+        // Display height resolved once per batch in beginBatch() (FBO-aware)
+        int screenY = batchDisplayHeight - y - 2;
 
         // Compute the 4 corners of the quad (8 wide × 2 high)
         float x0 = x;
@@ -368,6 +374,7 @@ public class BatchedPatternRenderer {
      */
     public void beginShadowBatch() {
         patternCount = 0;
+        batchDisplayHeight = resolveDisplayHeight();
         shadowBatchActive = true;
         batchActive = false; // Ensure normal batch is not active
     }
@@ -389,9 +396,8 @@ public class BatchedPatternRenderer {
         }
 
         // Convert Y to screen coordinates (flip Y axis)
-        // Use dynamic display height for FBO rendering support
-        int currentHeight = getCurrentDisplayHeight();
-        int screenY = currentHeight - y - 8;
+        // Display height resolved once per batch in beginShadowBatch() (FBO-aware)
+        int screenY = batchDisplayHeight - y - 8;
 
         // Compute the 4 corners of the quad
         float x0 = x;

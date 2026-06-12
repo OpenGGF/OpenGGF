@@ -2,7 +2,6 @@ package com.openggf.graphics;
 
 import com.openggf.Engine;
 import org.lwjgl.system.MemoryUtil;
-import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.GameServices;
 import com.openggf.level.PatternDesc;
 
@@ -440,7 +439,10 @@ public class PatternRenderCommand implements GLCommandable {
         if (engine != null && engine.isFBOProjectionActive()) {
             return engine.getCurrentDisplayHeight();
         }
-        return GameServices.configuration().getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
+        // Cached on the GraphicsManager (invalidated on reshape/resetState) instead
+        // of a config-service lookup per obtain() — this runs per tile per frame on
+        // the SAT replay path.
+        return graphicsManager.getConfiguredScreenHeightPx();
     }
 
     /**

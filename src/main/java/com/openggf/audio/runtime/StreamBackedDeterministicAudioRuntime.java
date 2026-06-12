@@ -103,13 +103,13 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
         Arrays.fill(sfxScratch, 0, samples, (short) 0);
 
         if (musicStream != null) {
-            musicStream.read(musicScratch);
+            musicStream.read(musicScratch, samples);
             if (musicStream.isComplete()) {
                 musicStream = null;
             }
         }
         if (sfxStream != null) {
-            sfxStream.read(sfxScratch);
+            sfxStream.read(sfxScratch, samples);
             if (sfxStream.isComplete()) {
                 sfxStream = null;
             }
@@ -198,6 +198,9 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
     }
 
     private void consumeCommands(long frame) {
+        if (pendingCommands.isEmpty()) {
+            return;
+        }
         List<AudioTimelineEntry> entries = pendingCommands.stream()
                 .filter(entry -> entry.frame() == frame)
                 .sorted(Comparator.comparingLong(AudioTimelineEntry::frame)
@@ -248,8 +251,15 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
         return (short) mixed;
     }
 
+    /**
+     * Grows the scratch buffers when needed without shrinking. Only the first
+     * {@code samples} elements of each buffer are valid for the current frame:
+     * {@link #advanceFrame} zero-fills, reads, mixes, and writes strictly within
+     * that bound, and the stream reads are length-bounded so a larger buffer
+     * never over-consumes stream state.
+     */
     private void ensureScratch(int samples) {
-        if (musicScratch.length != samples) {
+        if (musicScratch.length < samples) {
             musicScratch = new short[samples];
             sfxScratch = new short[samples];
         }

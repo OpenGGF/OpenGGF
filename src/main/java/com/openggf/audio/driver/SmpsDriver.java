@@ -514,14 +514,19 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
     @Override
     public int read(short[] buffer) {
-        if (readMode == ReadMode.HYBRID) {
-            return readHybrid(buffer);
-        }
-        return readSampleAccurate(buffer);
+        return read(buffer, buffer.length);
     }
 
-    private int readSampleAccurate(short[] buffer) {
-        int frames = buffer.length / 2;
+    @Override
+    public int read(short[] buffer, int length) {
+        if (readMode == ReadMode.HYBRID) {
+            return readHybrid(buffer, length);
+        }
+        return readSampleAccurate(buffer, length);
+    }
+
+    private int readSampleAccurate(short[] buffer, int length) {
+        int frames = length / 2;
 
         // Per-sample processing is required because sequencer state changes (note events,
         // instrument changes, etc.) must happen in lockstep with rendering. Batching
@@ -544,11 +549,11 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 buffer[i * 2 + 1] = scratchFrameBuf[1];
             }
         }
-        return buffer.length;
+        return length;
     }
 
-    private int readHybrid(short[] buffer) {
-        int frames = buffer.length / 2;
+    private int readHybrid(short[] buffer, int length) {
+        int frames = length / 2;
         hybridChunkCountForTesting = 0;
 
         synchronized (sequencersLock) {
@@ -572,7 +577,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 frameIndex += safeChunk;
             }
         }
-        return buffer.length;
+        return length;
     }
 
     private boolean requiresSampleAccurateFallback() {

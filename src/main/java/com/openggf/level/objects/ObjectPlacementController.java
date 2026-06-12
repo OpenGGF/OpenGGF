@@ -65,6 +65,8 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     private final BitSet destroyedInWindow = new BitSet();
     private final BitSet pendingCursorLoad = new BitSet();
     private final ArrayList<Integer> pendingCursorLoadOrder = new ArrayList<>();
+    /** Reused result buffer for {@link #drainPendingCursorLoadSpawns()}; see its contract. */
+    private final ArrayList<ObjectSpawn> drainedCursorLoadScratch = new ArrayList<>();
     private final BitSet deferredVerticalLoad = new BitSet();
     /**
      * ROM parity: tracks spawns whose instance was deleted via out_of_range
@@ -871,16 +873,25 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         pendingCursorLoadOrder.add(index);
     }
 
+    /**
+     * Drains the queued S3K X-cursor loads in queue order. Returns a reused
+     * scratch list valid only until the next call: the sole consumer
+     * ({@code ObjectManager.syncActiveSpawnsLoad}) iterates it synchronously
+     * and must not retain the reference. The pending queue itself is cleared
+     * before returning, so loads queued while the caller iterates land in the
+     * next drain, not in the returned list.
+     */
     List<ObjectSpawn> drainPendingCursorLoadSpawns() {
-        ArrayList<ObjectSpawn> result = new ArrayList<>(pendingCursorLoadOrder.size());
-        for (int index : pendingCursorLoadOrder) {
+        drainedCursorLoadScratch.clear();
+        for (int i = 0; i < pendingCursorLoadOrder.size(); i++) {
+            int index = pendingCursorLoadOrder.get(i);
             if (index >= 0 && index < spawns.size() && pendingCursorLoad.get(index)) {
-                result.add(spawns.get(index));
+                drainedCursorLoadScratch.add(spawns.get(index));
             }
         }
         pendingCursorLoad.clear();
         pendingCursorLoadOrder.clear();
-        return result;
+        return drainedCursorLoadScratch;
     }
 
     List<ObjectSpawn> getDeferredVerticalLoadSpawns() {

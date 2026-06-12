@@ -396,6 +396,33 @@ public class Sonic3kLevel extends AbstractLevel {
     }
 
     /**
+     * Rotates a 128x128 block definition's 16x16 descriptors right by the
+     * given number of grid entries (row-major), preserving rewind snapshots
+     * via copy-on-write.
+     *
+     * <p>ROM: {@code LBZ1_RotateChunks} rotates chunk {@code $DB}'s 64-word
+     * chunk-table definition by 24 words during {@code Adjust_LBZ2Layout},
+     * shifting the chunk graphics down three 16x16 rows.
+     */
+    public synchronized void rotateBlockChunkDescs(int blockIndex, int rotateBy) {
+        Block block = getBlock(blockIndex);
+        if (block == null) {
+            return;
+        }
+        block.cowEnsureWritable(currentEpoch());
+        int side = block.getGridSide();
+        int total = side * side;
+        ChunkDesc[] original = new ChunkDesc[total];
+        for (int i = 0; i < total; i++) {
+            original[i] = block.getChunkDesc(i % side, i / side);
+        }
+        for (int i = 0; i < total; i++) {
+            ChunkDesc source = original[((i - rotateBy) % total + total) % total];
+            block.setChunkDesc(i % side, i / side, source);
+        }
+    }
+
+    /**
      * Saves the state of all chunks as a 2D int array.
      * Used for snapshot/restore during pre-computation of transition tilemaps.
      */

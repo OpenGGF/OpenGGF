@@ -21,9 +21,16 @@ public final class SpriteSatMaskPostProcessor {
     private SpriteSatMaskPostProcessor() {
     }
 
+    /**
+     * When masking is enabled this returns a fresh list; when masking is off
+     * (or the input is empty) it returns the input list itself, avoiding a
+     * per-frame defensive copy in SAT zones with masking inactive. Callers that
+     * reuse the input buffer must finish consuming the result before clearing
+     * that buffer.
+     */
     public static List<SpriteSatEntry> process(List<SpriteSatEntry> entries, boolean spriteMaskEnabled) {
         if (!spriteMaskEnabled || entries == null || entries.isEmpty()) {
-            return entries == null ? List.of() : new ArrayList<>(entries);
+            return entries == null ? List.of() : entries;
         }
 
         List<VerticalBand> activeBands = new ArrayList<>();

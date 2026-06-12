@@ -33,6 +33,10 @@ import java.util.List;
  * <p>
  * ROM references: Obj_HCZWaterRush (sonic3k.asm:64743-64833).
  */
+@com.openggf.game.rewind.RewindRecreateOnRestore(
+        reason = "Constructor writes global zone state (HCZBreakableBarState.setState(3)) "
+                + "in addition to spawning a child; only the child spawn is observable by "
+                + "the restore-time construction side-effect latch.")
 public class HCZWaterRushObjectInstance extends AbstractObjectInstance {
 
     // ===== Phase constants =====

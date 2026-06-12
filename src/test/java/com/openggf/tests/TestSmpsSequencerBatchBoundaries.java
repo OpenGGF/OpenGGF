@@ -14,6 +14,7 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestSmpsSequencerBatchBoundaries {
@@ -80,11 +81,15 @@ public class TestSmpsSequencerBatchBoundaries {
     }
 
     @Test
-    public void requiresSampleAccurateFallbackForActiveFade() throws Exception {
+    public void activeFadeDoesNotForceSampleAccurateFallback() throws Exception {
+        // Fade volume steps only apply inside processTempoFrame(), and hybrid chunks
+        // never cross a tempo-frame boundary, so an active fade no longer degrades
+        // the driver to per-sample rendering. TestSmpsFadeHybridParity is the
+        // PCM-level proof that hybrid fade windows stay sample-identical.
         SmpsSequencer seq = newSequencer();
         setFadeState(seq, true, 1, 2);
 
-        assertTrue(seq.requiresSampleAccurateFallback());
+        assertFalse(seq.requiresSampleAccurateFallback());
     }
 
     @Test

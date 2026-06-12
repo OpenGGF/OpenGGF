@@ -836,6 +836,8 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(resolver, "resolver");
         synchronized (streamLock) {
+            SmpsDriver reusableMusicDriver = smpsDriver;
+            SmpsDriver reusableSfxDriver = sfxStream instanceof SmpsDriver previousSfx ? previousSfx : null;
             currentStream = null;
             currentSmps = null;
             smpsDriver = null;
@@ -850,16 +852,13 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             musicStack.clear();
 
             if (snapshot.musicDriver() != null) {
-                smpsDriver = newConfiguredSmpsDriver();
-                smpsDriver.restoreSnapshot(snapshot.musicDriver(), resolver);
+                smpsDriver = restoreDriverFromSnapshot(reusableMusicDriver, snapshot.musicDriver(), resolver);
                 currentStream = smpsDriver;
                 currentSmps = smpsDriver.firstMusicSequencer();
                 rebindFadeCompleteCallbackIfNeeded();
             }
             if (snapshot.standaloneSfxDriver() != null) {
-                SmpsDriver restoredSfxDriver = newConfiguredSmpsDriver();
-                restoredSfxDriver.restoreSnapshot(snapshot.standaloneSfxDriver(), resolver);
-                sfxStream = restoredSfxDriver;
+                sfxStream = restoreDriverFromSnapshot(reusableSfxDriver, snapshot.standaloneSfxDriver(), resolver);
             }
             rebuildMusicOverrideStack(snapshot.overrideStack());
             pendingRestore = snapshot.pendingRestore() && !musicStack.isEmpty();
@@ -942,6 +941,38 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         driver.addSequencer(seq, false);
         int musicId = descriptor.id() != null ? descriptor.id() : source.data().getId();
         return new MusicState(driver, seq, driver, musicId, descriptor);
+    }
+
+    /**
+     * Restores a driver snapshot into the previous same-role driver instance
+     * when possible, avoiding a full SmpsDriver/VirtualSynthesizer/Ym2612Chip/
+     * PsgChipGPGX/BlipResampler rebuild per restore (hot during held rewind).
+     *
+     * <p>Reuse boundary: {@code SmpsDriver.restoreSnapshot} clears and rebuilds
+     * every sequencer, lock, latch, and continuous-SFX field, and — when the
+     * snapshot carries a synth snapshot — {@code restoreSynthSnapshot} fully
+     * overwrites the YM2612, PSG, and blip-buffer state (including output
+     * rates, DAC interpolation, and noise-shift mode, so the
+     * {@code newConfiguredSmpsDriver()} config calls are subsumed). The only
+     * construction-time state not covered by the snapshot is the synth's DAC
+     * bank reference, which is nulled here to match a freshly constructed
+     * driver before the sequencer rebuild re-resolves it. Snapshots without a
+     * synth snapshot fall back to {@code silenceAll()}, whose result depends on
+     * pre-existing chip register state — those keep the recreate path.
+     */
+    private SmpsDriver restoreDriverFromSnapshot(
+            SmpsDriver reusable,
+            SmpsDriverSnapshot driverSnapshot,
+            SmpsDriverSnapshot.DependencyResolver resolver) {
+        SmpsDriver driver;
+        if (reusable != null && driverSnapshot.synthSnapshot() != null) {
+            driver = reusable;
+            driver.setDacData(null);
+        } else {
+            driver = newConfiguredSmpsDriver();
+        }
+        driver.restoreSnapshot(driverSnapshot, resolver);
+        return driver;
     }
 
     private SmpsDriver newConfiguredSmpsDriver() {

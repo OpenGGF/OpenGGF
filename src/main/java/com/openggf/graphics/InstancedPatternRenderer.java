@@ -32,6 +32,9 @@ public class InstancedPatternRenderer {
 
     private static final int MAX_PATTERNS_PER_BATCH = 4096;
     private static final int FLOATS_PER_INSTANCE = 10; // x,y,w,h,u0,v0,u1,v1,palette,highPriority
+    // Flushes per frame roughly track render-priority boundaries, so 8 pooled
+    // commands cover typical frames; pooled commands hold native FloatBuffers,
+    // hence the hard cap rather than an unbounded pool.
     private static final int COMMAND_POOL_LIMIT = 8;
     private static final String PRIORITY_FRAGMENT_SHADER_PATH = "shaders/shader_instanced_priority.glsl";
 
@@ -91,12 +94,19 @@ public class InstancedPatternRenderer {
         this.drainGlErrors = configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
     }
 
+    // Display height resolved once per batch in beginBatch() and reused by every
+    // addPattern/addStripPattern call (thousands per frame). Safe because FBO
+    // projection state never changes between beginBatch() and endBatch(): call
+    // sites (e.g. special-stage background renderers) set up FBO projection
+    // BEFORE creating the batch and restore it after the batch is flushed.
+    private int batchDisplayHeight;
+
     /**
-     * Gets the current display height for Y coordinate calculations.
+     * Resolves the current display height for Y coordinate calculations.
      * When rendering to an FBO, this returns the FBO height.
      * Otherwise returns the normal screen height.
      */
-    private int getCurrentDisplayHeight() {
+    private int resolveDisplayHeight() {
         Engine engine = graphicsManager.getEngine();
         if (engine != null && engine.isFBOProjectionActive()) {
             return engine.getCurrentDisplayHeight();
@@ -170,6 +180,7 @@ public class InstancedPatternRenderer {
 
     public void beginBatch() {
         instanceCount = 0;
+        batchDisplayHeight = resolveDisplayHeight();
         batchActive = true;
     }
 
@@ -181,9 +192,8 @@ public class InstancedPatternRenderer {
         if (!batchActive || instanceCount >= MAX_PATTERNS_PER_BATCH) {
             return false;
         }
-        // Use dynamic display height for FBO rendering support
-        int currentHeight = getCurrentDisplayHeight();
-        int screenY = currentHeight - y - 8;
+        // Display height resolved once per batch in beginBatch() (FBO-aware)
+        int screenY = batchDisplayHeight - y - 8;
         float u0 = entry.u0();
         float u1 = entry.u1();
         float v0 = entry.v0();
@@ -225,9 +235,8 @@ public class InstancedPatternRenderer {
         if (!batchActive || instanceCount >= MAX_PATTERNS_PER_BATCH) {
             return false;
         }
-        // Use dynamic display height for FBO rendering support
-        int currentHeight = getCurrentDisplayHeight();
-        int screenY = currentHeight - y - 2;
+        // Display height resolved once per batch in beginBatch() (FBO-aware)
+        int screenY = batchDisplayHeight - y - 2;
 
         int rowTop = stripIndex * 2;
         int rowBottom = stripIndex * 2 + 1;
@@ -330,7 +339,7 @@ public class InstancedPatternRenderer {
         priorityAttribs = null;
         initialized = false;
         supported = false;
-        commandPool.clear();
+        drainCommandPool();
     }
 
     /**
@@ -349,7 +358,15 @@ public class InstancedPatternRenderer {
         priorityAttribs = null;
         initialized = false;
         supported = false;
-        commandPool.clear();
+        drainCommandPool();
+    }
+
+    /** Frees each pooled command's native instance buffer before discarding it. */
+    private void drainCommandPool() {
+        InstancedBatchCommand command;
+        while ((command = commandPool.pollFirst()) != null) {
+            command.release();
+        }
     }
 
     private void initBuffers() {
@@ -515,6 +532,14 @@ public class InstancedPatternRenderer {
             instanceBuffer.clear();
             instanceBuffer.put(data, 0, floatCount);
             instanceBuffer.flip();
+        }
+
+        /** Frees the native instance buffer. Call only when discarding the command. */
+        private void release() {
+            if (instanceBuffer != null) {
+                MemoryUtil.memFree(instanceBuffer);
+                instanceBuffer = null;
+            }
         }
 
         @Override

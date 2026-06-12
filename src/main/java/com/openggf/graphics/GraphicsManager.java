@@ -42,6 +42,9 @@ public class GraphicsManager {
 	private static GraphicsManager graphicsManager;
 	List<GLCommandable> commands = new ArrayList<>();
 	private List<GLCommandable> commandCaptureTarget;
+	// Pool of reusable capture lists for executeCapturedCommands() (stack so
+	// nested captures don't share a list). Lists are cleared before pooling.
+	private final java.util.ArrayDeque<List<GLCommandable>> captureListPool = new java.util.ArrayDeque<>(2);
 	private final Queue<PendingRenderThreadTask<?>> pendingRenderThreadTasks = new ConcurrentLinkedQueue<>();
 
 	private final Map<String, Integer> paletteTextureMap = new HashMap<>(); // Map for palette textures
@@ -96,6 +99,8 @@ public class GraphicsManager {
 	// ArrayList and PatternDesc allocations on the SAT replay hot path.
 	private final ArrayList<PatternRenderCommand> reusableReplayCommands = new ArrayList<>();
 	private final PatternDesc reusableReplayDesc = new PatternDesc();
+	// True while replaySpriteSatEntriesBatched has an instanced batch open.
+	private boolean satReplayBatchOpen = false;
 	private String currentSpriteSatDebugSource = null;
 	private int currentSpriteSatBucket = RenderPriority.MIN;
 	// Background renderer for per-scanline parallax scrolling
@@ -164,6 +169,11 @@ public class GraphicsManager {
 	private int viewportWidth = 320;
 	private int viewportHeight = 224;
 
+	// Cached SCREEN_HEIGHT_PIXELS config value used by PatternRenderCommand's
+	// per-obtain() display-height resolution. Invalidated on reshape (setViewport)
+	// and resetState so config changes are picked up; <= 0 means "not cached".
+	private int cachedConfigScreenHeightPx = -1;
+
 	// Projection-space width: the coordinate-space width of the full viewport.
 	private int projectionWidth = 320;
 
@@ -184,22 +194,27 @@ public class GraphicsManager {
 
 	public void executeCapturedCommands(Runnable producer, int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
 		List<GLCommandable> previousCaptureTarget = commandCaptureTarget;
-		List<GLCommandable> capturedCommands = new ArrayList<>();
+		// Reuse capture lists via a small pool (a stack, so nested captures each
+		// get their own list); returned to the pool cleared in the finally block.
+		List<GLCommandable> capturedCommands = captureListPool.pollLast();
+		if (capturedCommands == null) {
+			capturedCommands = new ArrayList<>();
+		}
 		commandCaptureTarget = capturedCommands;
 		try {
 			producer.run();
 			if (headlessMode || capturedCommands.isEmpty() || !glInitialized) {
-				capturedCommands.clear();
 				return;
 			}
 			PatternRenderCommand.resetFrameState();
-			for (GLCommandable command : capturedCommands) {
-				command.execute(cameraX, cameraY, cameraWidth, cameraHeight);
+			for (int i = 0, n = capturedCommands.size(); i < n; i++) {
+				capturedCommands.get(i).execute(cameraX, cameraY, cameraWidth, cameraHeight);
 			}
 			PatternRenderCommand.cleanupFrameState(this);
 		} finally {
 			commandCaptureTarget = previousCaptureTarget;
 			capturedCommands.clear();
+			captureListPool.addLast(capturedCommands);
 		}
 	}
 
@@ -968,6 +983,23 @@ public class GraphicsManager {
 		this.viewportY = y;
 		this.viewportWidth = width;
 		this.viewportHeight = height;
+		// Reshape may follow a config change; re-resolve the configured screen height lazily.
+		this.cachedConfigScreenHeightPx = -1;
+	}
+
+	/**
+	 * Returns the configured logical screen height (SCREEN_HEIGHT_PIXELS), cached
+	 * to avoid a config-service lookup per rendered pattern. The cache is
+	 * invalidated by {@link #setViewport} (called from Engine.reshape()) and
+	 * {@link #resetState()}.
+	 */
+	public int getConfiguredScreenHeightPx() {
+		int cached = cachedConfigScreenHeightPx;
+		if (cached <= 0) {
+			cached = GameServices.configuration().getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
+			cachedConfigScreenHeightPx = cached;
+		}
+		return cached;
 	}
 
 	public int getViewportX() {
@@ -1294,12 +1326,14 @@ public class GraphicsManager {
 		currentSpriteHighPriority = false;
 		spriteSatCollectionActive = false;
 		spriteMaskRequested = false;
+		satReplayBatchOpen = false;
 		spriteSatEntries.clear();
 		currentSpriteSatDebugSource = null;
 		waterlineScreenY = 0;
 		windowHeight = 224;
 		screenHeight = 224;
 		waterEnabled = false;
+		cachedConfigScreenHeightPx = -1;
 		if (patternAtlas != null) {
 			if (headlessMode) {
 				patternAtlas.cleanupHeadless();
@@ -1475,35 +1509,139 @@ public class GraphicsManager {
 
 		boolean applyMask = spriteMaskRequested;
 
-		// SpriteSatMaskPostProcessor.process(...) is the only consumer of `spriteSatEntries`
-		// and either returns a fresh ArrayList or List.of(); it never retains the input
-		// reference. So we can pass the live list directly and clear it after, eliminating
-		// the per-frame defensive copy that the old implementation made into `collectedEntries`.
+		// SpriteSatMaskPostProcessor.process(...) never retains the input reference:
+		// with masking on it builds a fresh list; with masking off it returns
+		// `spriteSatEntries` itself (no defensive copy). The replay below consumes
+		// the processed list synchronously, so the live buffer is cleared in the
+		// finally block only after the replay finished with it.
 		List<SpriteSatEntry> processedEntries = SpriteSatMaskPostProcessor.process(spriteSatEntries, applyMask);
 
 		spriteSatCollectionActive = false;
 		spriteMaskRequested = false;
-		spriteSatEntries.clear();
 		currentSpriteSatDebugSource = null;
 		currentSpriteSatBucket = RenderPriority.MIN;
 
-		if (processedEntries.isEmpty()) {
+		try {
+			if (processedEntries.isEmpty()) {
+				return;
+			}
+
+			// The SAT replay must not re-enter renderPatternWithId(): that could merge the
+			// carefully ordered SAT sequence into a still-open batch owned by another layer,
+			// flattening or reordering it. Instead the replay owns its emission: a dedicated
+			// instanced batch (flushed before any direct command so order is preserved, with
+			// per-instance VDP priority carried in the instance data), or — when instanced
+			// batching is unavailable — the original direct per-tile commands.
+			flushPatternBatch();
+			setCurrentSpriteHighPriority(false);
+			if (canBatchSpriteSatReplay()) {
+				replaySpriteSatEntriesBatched(processedEntries);
+				return;
+			}
+			List<PatternRenderCommand> commands = buildSpriteSatReplayCommands(processedEntries);
+			// `commands` is a reused buffer (`reusableReplayCommands`); copy via index iteration
+			// without releasing the reference, then clear the buffer once registerCommand has
+			// consumed each entry.
+			for (int i = 0, n = commands.size(); i < n; i++) {
+				registerCommand(commands.get(i));
+			}
+			reusableReplayCommands.clear();
+		} finally {
+			spriteSatEntries.clear();
+		}
+	}
+
+	private boolean canBatchSpriteSatReplay() {
+		return batchingEnabled
+				&& instancedBatchingEnabled
+				&& instancedPatternRenderer != null
+				&& instancedPatternRenderer.isSupported()
+				&& !instancedBatchActive;
+	}
+
+	/**
+	 * Replays the processed SAT entries through dedicated instanced batches instead
+	 * of one PatternRenderCommand (3 glBufferData + 1 draw) per 8x8 tile. Tiles are
+	 * emitted in exactly the same bucket-major order as the direct path; within an
+	 * instanced draw, instances render in submission order, and any tile that cannot
+	 * join the batch (overflow atlas, batch full) flushes the open batch first so
+	 * the final draw order matches the direct path's command order.
+	 */
+	private void replaySpriteSatEntriesBatched(List<SpriteSatEntry> processedEntries) {
+		ensurePatternAtlas();
+		Integer paletteTextureId = resolveSpriteSatReplayPaletteTextureId();
+		if (paletteTextureId == null) {
 			return;
 		}
-
-		// Replay SAT entries as direct individual commands, not through renderPatternWithId().
-		// Re-entering the normal render path allows the replay to be re-batched, which can
-		// flatten or reorder the final SAT sequence again.
-		flushPatternBatch();
-		setCurrentSpriteHighPriority(false);
-		List<PatternRenderCommand> commands = buildSpriteSatReplayCommands(processedEntries);
-		// `commands` is a reused buffer (`reusableReplayCommands`); copy via index iteration
-		// without releasing the reference, then clear the buffer once registerCommand has
-		// consumed each entry.
-		for (int i = 0, n = commands.size(); i < n; i++) {
-			registerCommand(commands.get(i));
+		// Parity with the direct path: its PatternRenderCommands resolve the shader at
+		// flush time, when the sprite pass has already cleared useSpritePriorityShader,
+		// so the replay renders with the plain shader. endBatch() captures the flag at
+		// build time instead, so clear it for the duration of the replay batches.
+		boolean savedUseSpritePriorityShader = useSpritePriorityShader;
+		useSpritePriorityShader = false;
+		try {
+			satReplayBatchOpen = false;
+			int paletteTexId = paletteTextureId;
+			for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
+				for (int i = 0, n = processedEntries.size(); i < n; i++) {
+					SpriteSatEntry processedEntry = processedEntries.get(i);
+					if (processedEntry.priorityBucket() == bucket) {
+						appendBatchedReplayCommands(processedEntry, paletteTexId);
+					}
+				}
+			}
+			flushSatReplayBatch();
+		} finally {
+			useSpritePriorityShader = savedUseSpritePriorityShader;
+			// An exception mid-replay must not strand an open instanced batch.
+			satReplayBatchOpen = false;
 		}
-		reusableReplayCommands.clear();
+	}
+
+	private void appendBatchedReplayCommands(SpriteSatEntry entry, int paletteTextureId) {
+		SpritePieceRenderer.renderPreparedPiece(entry.toPreparedPiece(),
+				(patternIndex, pieceHFlip, pieceVFlip, paletteIndex, drawX, drawY) -> {
+					PatternAtlas.Entry atlasEntry = patternAtlas != null ? patternAtlas.getEntry(patternIndex) : null;
+					if (atlasEntry == null) {
+						return;
+					}
+					prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
+					if (atlasEntry.atlasIndex() == 0
+							&& addToSatReplayBatch(atlasEntry, paletteIndex, drawX, drawY)) {
+						return;
+					}
+					// Overflow-atlas tile (the instanced renderer only binds atlas 0):
+					// flush the open batch first so draw order is preserved, then draw direct.
+					flushSatReplayBatch();
+					registerCommand(PatternRenderCommand.obtain(atlasEntry, paletteTextureId,
+							reusableReplayDesc, drawX, drawY, this));
+				});
+	}
+
+	private boolean addToSatReplayBatch(PatternAtlas.Entry atlasEntry, int paletteIndex, int drawX, int drawY) {
+		if (!satReplayBatchOpen) {
+			instancedPatternRenderer.beginBatch();
+			satReplayBatchOpen = true;
+		}
+		if (instancedPatternRenderer.addPattern(atlasEntry, paletteIndex, reusableReplayDesc, drawX, drawY)) {
+			return true;
+		}
+		// Batch full: flush and retry once in a fresh batch.
+		flushSatReplayBatch();
+		instancedPatternRenderer.beginBatch();
+		satReplayBatchOpen = true;
+		return instancedPatternRenderer.addPattern(atlasEntry, paletteIndex, reusableReplayDesc, drawX, drawY);
+	}
+
+	private void flushSatReplayBatch() {
+		if (!satReplayBatchOpen) {
+			return;
+		}
+		GLCommandable batchCommand = instancedPatternRenderer.endBatch();
+		if (batchCommand != null) {
+			registerCommand(batchCommand);
+		}
+		satReplayBatchOpen = false;
 	}
 
 	List<PatternRenderCommand> buildSpriteSatReplayCommands(List<SpriteSatEntry> processedEntries) {
@@ -1552,25 +1690,34 @@ public class GraphicsManager {
 					if (atlasEntry == null) {
 						return;
 					}
-					int descIndex = patternIndex & 0x7FF;
-					if (entry.piecePriority() || entry.globalHighPriority()) {
-						descIndex |= 0x8000;
-					}
-					if (pieceHFlip) {
-						descIndex |= 0x800;
-					}
-					if (pieceVFlip) {
-						descIndex |= 0x1000;
-					}
-					descIndex |= (paletteIndex & 0x3) << 13;
-					// Reuse a single PatternDesc across the entire SAT replay batch.
-					// PatternRenderCommand.init() copies all needed fields out of the desc and
-					// does not retain a reference, so mutating it before the next obtain() is
-					// safe. PatternDesc.set() resets every derived field via updateFields().
-					reusableReplayDesc.set(descIndex);
-					reusableReplayDesc.setPaletteIndex(paletteIndex);
+					prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
 					replayCommands.add(PatternRenderCommand.obtain(atlasEntry, paletteTextureId, reusableReplayDesc, drawX, drawY, this));
 				});
+	}
+
+	/**
+	 * Loads the shared replay PatternDesc with the tile word for one replayed SAT
+	 * tile. Reuses a single PatternDesc across the entire SAT replay: both
+	 * PatternRenderCommand.init() and InstancedPatternRenderer.addPattern() copy
+	 * all needed fields out of the desc and do not retain a reference, so mutating
+	 * it before the next tile is safe. PatternDesc.set() resets every derived
+	 * field via updateFields().
+	 */
+	private void prepareReplayDesc(SpriteSatEntry entry, int patternIndex,
+			boolean pieceHFlip, boolean pieceVFlip, int paletteIndex) {
+		int descIndex = patternIndex & 0x7FF;
+		if (entry.piecePriority() || entry.globalHighPriority()) {
+			descIndex |= 0x8000;
+		}
+		if (pieceHFlip) {
+			descIndex |= 0x800;
+		}
+		if (pieceVFlip) {
+			descIndex |= 0x1000;
+		}
+		descIndex |= (paletteIndex & 0x3) << 13;
+		reusableReplayDesc.set(descIndex);
+		reusableReplayDesc.setPaletteIndex(paletteIndex);
 	}
 
 	public WaterShaderProgram getWaterShaderProgram() {

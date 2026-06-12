@@ -13,6 +13,7 @@ import com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1Instance;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1RangeHelper;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1ThrownBomb;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz1Instance;
+import com.openggf.game.sonic3k.objects.LbzMinibossBoxRig;
 import com.openggf.game.sonic3k.objects.LbzMinibossInstance;
 import com.openggf.game.sonic3k.objects.Lbz1RobotnikEventController;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
@@ -528,7 +529,7 @@ class TestS3kLbz1KnucklesSequenceHeadless {
     }
 
     @Test
-    void lbz1RobotnikDeletesMinibossBoxPiecesAfterFoldAwayScripts() {
+    void lbz1RobotnikFoldsAwayBurstPanelsAndKeepsDriftersUntilOffscreen() {
         ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
         PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
         PatternSpriteRenderer boxRenderer = mock(PatternSpriteRenderer.class);
@@ -537,23 +538,29 @@ class TestS3kLbz1KnucklesSequenceHeadless {
         when(renderer.isReady()).thenReturn(true);
         when(boxRenderer.isReady()).thenReturn(true);
 
-        Lbz1RobotnikEventController robotnik = new Lbz1RobotnikEventController(new ObjectSpawn(
-                0x3EC0, 0x012C, Sonic3kObjectIds.LBZ1_ROBOTNIK, 0, 0, false, 0));
-        robotnik.setServices(new TestObjectServices() {
-            @Override
-            public ObjectRenderManager renderManager() {
-                return renderManager;
-            }
-        }.withConfiguration(SonicConfigurationService.getInstance()));
-        robotnik.forceMinibossBoxReleaseForTest(0x3EC0, 0x0160);
+        LbzMinibossBoxRig rig = new LbzMinibossBoxRig(0x3EC0, 0x0160);
+        rig.release();
 
+        // ROM: the six burst panels run byte_8D280/byte_8D285 and Go_Delete;
+        // the four large panels drift ($5F frames at ±$40 subpixel), animate
+        // byte_8D28A/byte_8D28F, then keep drawing via loc_8CF1E.
         for (int frame = 0; frame < 0x100; frame++) {
-            robotnik.update(frame, null);
+            rig.update(0x3E80);
         }
+        rig.draw(boxRenderer, 2);
+        org.mockito.Mockito.verify(boxRenderer, org.mockito.Mockito.times(4)).drawFrameIndex(
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyBoolean(),
+                org.mockito.ArgumentMatchers.anyBoolean(),
+                org.mockito.ArgumentMatchers.anyInt());
+
+        // ROM loc_8CF1E: once the camera coarse position moves more than $280
+        // past the pieces, they delete.
+        rig.update(0x4480);
         org.mockito.Mockito.clearInvocations(boxRenderer);
-
-        robotnik.appendRenderCommands(new ArrayList<>());
-
+        rig.draw(boxRenderer, 2);
         org.mockito.Mockito.verify(boxRenderer, org.mockito.Mockito.never()).drawFrameIndex(
                 org.mockito.ArgumentMatchers.anyInt(),
                 org.mockito.ArgumentMatchers.anyInt(),
@@ -561,6 +568,8 @@ class TestS3kLbz1KnucklesSequenceHeadless {
                 org.mockito.ArgumentMatchers.anyBoolean(),
                 org.mockito.ArgumentMatchers.anyBoolean(),
                 org.mockito.ArgumentMatchers.anyInt());
+        assertFalse(rig.hasVisiblePieces(),
+                "All ten box pieces should be gone once the camera leaves the arena.");
     }
 
     @Test
