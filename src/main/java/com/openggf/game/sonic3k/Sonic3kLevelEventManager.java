@@ -1483,7 +1483,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
     }
 
-    private static boolean hasValidExtraFraming(byte[] extra) {
+    private boolean hasValidExtraFraming(byte[] extra) {
         if (extra.length < 5) {
             return false;
         }
@@ -1492,13 +1492,16 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         java.nio.ByteBuffer buf = java.nio.ByteBuffer.wrap(extra);
         buf.position(EXTRA_MANAGER_BYTES);
-        if (!skipLengthPrefixedSidecar(buf)) {
+        if (!skipLengthPrefixedSidecar(buf,
+                () -> expectedSidecarBytes(aizEvents, Sonic3kLevelEventManager::newAizFramingProbe))) {
             return false;
         }
-        if (!skipLengthPrefixedSidecar(buf)) {
+        if (!skipLengthPrefixedSidecar(buf,
+                () -> expectedSidecarBytes(hczEvents, Sonic3kLevelEventManager::newHczFramingProbe))) {
             return false;
         }
-        if (!skipLengthPrefixedSidecar(buf)) {
+        if (!skipLengthPrefixedSidecar(buf,
+                () -> expectedSidecarBytes(cnzEvents, Sonic3kLevelEventManager::newCnzFramingProbe))) {
             return false;
         }
         if (!skipFixedSidecar(buf, 16 + 23 * 4 + 3 * 10 * 4)) {
@@ -1514,7 +1517,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 || buf.remaining() >= S3kFixedAirCountdownManager.REWIND_STATE_BYTES;
     }
 
-    private static boolean skipLengthPrefixedSidecar(java.nio.ByteBuffer buf) {
+    private static boolean skipLengthPrefixedSidecar(
+            java.nio.ByteBuffer buf,
+            java.util.function.IntSupplier expectedLength) {
         if (buf.remaining() < 1) {
             return true;
         }
@@ -1526,11 +1531,33 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             return false;
         }
         int length = buf.getInt();
-        if (length < 0 || buf.remaining() < length) {
+        if (length != expectedLength.getAsInt() || buf.remaining() < length) {
             return false;
         }
         buf.position(buf.position() + length);
         return true;
+    }
+
+    private static int expectedSidecarBytes(
+            Object handler,
+            java.util.function.Supplier<Object> fallback) {
+        return ZoneEventSchemaSidecar.capture(handler != null ? handler : fallback.get()).length;
+    }
+
+    private static Object newAizFramingProbe() {
+        return new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+    }
+
+    private static Object newHczFramingProbe() {
+        Sonic3kHCZEvents probe = new Sonic3kHCZEvents();
+        probe.init(0);
+        return probe;
+    }
+
+    private static Object newCnzFramingProbe() {
+        Sonic3kCNZEvents probe = new Sonic3kCNZEvents();
+        probe.init(0);
+        return probe;
     }
 
     private static boolean skipFixedSidecar(java.nio.ByteBuffer buf, int bytes) {

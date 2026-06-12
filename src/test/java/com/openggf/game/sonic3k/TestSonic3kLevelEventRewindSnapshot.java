@@ -346,7 +346,7 @@ class TestSonic3kLevelEventRewindSnapshot {
     }
 
     @Test
-    void malformedAizSchemaPayloadDoesNotAbortLaterZoneRestore() throws Exception {
+    void shortAizSchemaPayloadDoesNotRestoreLaterZoneSidecars() throws Exception {
         Sonic3kLevelEventManager hczSource = new Sonic3kLevelEventManager();
         hczSource.initLevel(Sonic3kZoneIds.ZONE_HCZ, 1);
         var hcz = hczSource.getHczEventsForTest();
@@ -381,10 +381,13 @@ class TestSonic3kLevelEventRewindSnapshot {
                 malformedExtra);
 
         assertDoesNotThrow(() -> target.restore(malformedSnapshot),
-                "schema-invalid AIZ sidecar should not abort later zone sidecars");
-        assertEquals(8, hczTarget.getBgRoutine());
-        assertTrue(hczTarget.isWallMoving());
-        assertEquals(12, hczTarget.getShakeTimer());
+                "short AIZ sidecar payload should be rejected before later zone sidecars");
+        assertEquals(0, hczTarget.getBgRoutine(),
+                "short AIZ sidecar payload must not apply later sidecars with unknown offsets");
+        assertFalse(hczTarget.isWallMoving(),
+                "short AIZ sidecar payload must not apply later sidecars with unknown offsets");
+        assertEquals(0, hczTarget.getShakeTimer(),
+                "short AIZ sidecar payload must not apply later sidecars with unknown offsets");
     }
 
     @Test
@@ -522,7 +525,7 @@ class TestSonic3kLevelEventRewindSnapshot {
     }
 
     @Test
-    void malformedHczSchemaPayloadDoesNotAbortLaterZoneRestore() throws Exception {
+    void shortHczSchemaPayloadDoesNotRestoreLaterZoneSidecars() throws Exception {
         Sonic3kLevelEventManager cnzSource = new Sonic3kLevelEventManager();
         cnzSource.initLevel(Sonic3kZoneIds.ZONE_CNZ, 0);
         var cnz = cnzSource.getCnzEventsForTest();
@@ -551,15 +554,19 @@ class TestSonic3kLevelEventRewindSnapshot {
         LevelEventSnapshot malformedSnapshot = snapshotWithHczPayload(cnzSnapshot, new byte[] { 0 });
 
         assertDoesNotThrow(() -> target.restore(malformedSnapshot),
-                "schema-invalid HCZ sidecar should not abort later zone sidecars");
+                "short HCZ sidecar payload should be rejected before later zone sidecars");
         assertTrue(hczTarget.isWallMoving(),
-                "schema-invalid HCZ sidecar must leave existing HCZ fields intact");
+                "short HCZ sidecar payload must leave existing HCZ fields intact");
         assertEquals(99, hczTarget.getShakeTimer(),
-                "schema-invalid HCZ sidecar must leave existing HCZ fields intact");
-        assertEquals(120, cnzTarget.getBossScrollOffsetY());
-        assertEquals(-4, cnzTarget.getBossScrollVelocityY());
-        assertTrue(cnzTarget.isCameraClampsActive());
-        assertEquals(0x700, cnzTarget.getWaterTargetY());
+                "short HCZ sidecar payload must leave existing HCZ fields intact");
+        assertEquals(0, cnzTarget.getBossScrollOffsetY(),
+                "short HCZ sidecar payload must not apply later sidecars with unknown offsets");
+        assertEquals(0, cnzTarget.getBossScrollVelocityY(),
+                "short HCZ sidecar payload must not apply later sidecars with unknown offsets");
+        assertFalse(cnzTarget.isCameraClampsActive(),
+                "short HCZ sidecar payload must not apply later sidecars with unknown offsets");
+        assertEquals(0, cnzTarget.getWaterTargetY(),
+                "short HCZ sidecar payload must not apply later sidecars with unknown offsets");
     }
 
     @Test
@@ -596,6 +603,42 @@ class TestSonic3kLevelEventRewindSnapshot {
                 "framing-invalid HCZ sidecar must not apply later sidecars with unknown offsets");
         assertFalse(cnzTarget.isCameraClampsActive(),
                 "framing-invalid HCZ sidecar must not apply later sidecars with unknown offsets");
+    }
+
+    @Test
+    void underreportedHczLengthPrefixDoesNotPartiallyRestoreManagerOrLaterSidecars() throws Exception {
+        Sonic3kLevelEventManager cnzSource = new Sonic3kLevelEventManager();
+        cnzSource.initLevel(Sonic3kZoneIds.ZONE_CNZ, 0);
+        cnzSource.requestCnzPostTransitionRelease(12);
+        var cnz = cnzSource.getCnzEventsForTest();
+        assertNotNull(cnz);
+        cnz.setBossScrollState(120, -4);
+        cnz.setCameraClampsActive(true);
+        LevelEventSnapshot cnzSnapshot = cnzSource.capture();
+
+        Sonic3kHCZEvents hczPayloadSource = new Sonic3kHCZEvents();
+        hczPayloadSource.init(1);
+        hczPayloadSource.setWallMoving(true);
+        LevelEventSnapshot malformedSnapshot = snapshotWithCorruptHczLength(
+                snapshotWithHczPayload(cnzSnapshot, ZoneEventSchemaSidecar.capture(hczPayloadSource)),
+                0);
+
+        Sonic3kLevelEventManager target = new Sonic3kLevelEventManager();
+        target.initLevel(Sonic3kZoneIds.ZONE_HCZ, 1);
+        Sonic3kLevelEventManager cnzTargetOwner = new Sonic3kLevelEventManager();
+        cnzTargetOwner.initLevel(Sonic3kZoneIds.ZONE_CNZ, 0);
+        set(target, "cnzEvents", cnzTargetOwner.getCnzEventsForTest());
+        var cnzTarget = target.getCnzEventsForTest();
+        assertNotNull(cnzTarget);
+
+        assertDoesNotThrow(() -> target.restore(malformedSnapshot),
+                "short-but-bounded HCZ sidecar length should be rejected before any partial restore");
+        assertEquals(0, get(target, "cnzPendingPostTransitionReleaseFrames"),
+                "short-but-bounded HCZ sidecar length must not mutate manager-level fields");
+        assertEquals(0, cnzTarget.getBossScrollOffsetY(),
+                "short-but-bounded HCZ sidecar length must not apply later sidecars with unknown offsets");
+        assertFalse(cnzTarget.isCameraClampsActive(),
+                "short-but-bounded HCZ sidecar length must not apply later sidecars with unknown offsets");
     }
 
     @Test
@@ -656,7 +699,7 @@ class TestSonic3kLevelEventRewindSnapshot {
     }
 
     @Test
-    void malformedCnzSchemaPayloadDoesNotAbortLaterZoneRestore() throws Exception {
+    void shortCnzSchemaPayloadDoesNotRestoreLaterZoneSidecars() throws Exception {
         Sonic3kLevelEventManager mgzSource = new Sonic3kLevelEventManager();
         mgzSource.initLevel(Sonic3kZoneIds.ZONE_MGZ, 1);
         var mgz = mgzSource.getMgzEventsForTest();
@@ -688,17 +731,21 @@ class TestSonic3kLevelEventRewindSnapshot {
         LevelEventSnapshot malformedSnapshot = snapshotWithCnzPayload(mgzSnapshot, new byte[] { 0 });
 
         assertDoesNotThrow(() -> target.restore(malformedSnapshot),
-                "schema-invalid CNZ sidecar should not abort later zone sidecars");
+                "short CNZ sidecar payload should be rejected before later zone sidecars");
         assertTrue(cnzTarget.isAct2TransitionRequested(),
-                "schema-invalid CNZ sidecar must leave existing CNZ fields intact");
+                "short CNZ sidecar payload must leave existing CNZ fields intact");
         assertEquals(0x1234, cnzTarget.getArenaChunkWorldX(),
-                "schema-invalid CNZ sidecar must leave existing CNZ fields intact");
+                "short CNZ sidecar payload must leave existing CNZ fields intact");
         assertEquals(17, cnzTarget.getBackgroundRoutine(),
-                "schema-invalid CNZ sidecar must leave existing CNZ fields intact");
-        assertTrue(mgzTarget.isCollapseRequested());
-        assertEquals(42, mgzTarget.getCollapseFrameCounter());
-        assertEquals(8, mgzTarget.getBgRiseRoutine());
-        assertTrue(mgzTarget.isBossSpawned());
+                "short CNZ sidecar payload must leave existing CNZ fields intact");
+        assertFalse(mgzTarget.isCollapseRequested(),
+                "short CNZ sidecar payload must not apply later sidecars with unknown offsets");
+        assertEquals(0, mgzTarget.getCollapseFrameCounter(),
+                "short CNZ sidecar payload must not apply later sidecars with unknown offsets");
+        assertEquals(0, mgzTarget.getBgRiseRoutine(),
+                "short CNZ sidecar payload must not apply later sidecars with unknown offsets");
+        assertFalse(mgzTarget.isBossSpawned(),
+                "short CNZ sidecar payload must not apply later sidecars with unknown offsets");
     }
 
     @Test
@@ -735,6 +782,42 @@ class TestSonic3kLevelEventRewindSnapshot {
                 "framing-invalid CNZ sidecar must not apply later sidecars with unknown offsets");
         assertEquals(0, mgzTarget.getCollapseFrameCounter(),
                 "framing-invalid CNZ sidecar must not apply later sidecars with unknown offsets");
+    }
+
+    @Test
+    void underreportedCnzLengthPrefixDoesNotPartiallyRestoreManagerOrLaterSidecars() throws Exception {
+        Sonic3kLevelEventManager mgzSource = new Sonic3kLevelEventManager();
+        mgzSource.initLevel(Sonic3kZoneIds.ZONE_MGZ, 1);
+        mgzSource.requestCnzPostTransitionRelease(12);
+        var mgz = mgzSource.getMgzEventsForTest();
+        assertNotNull(mgz);
+        mgz.setCollapseRequested(true);
+        mgz.setCollapseFrameCounter(42);
+        LevelEventSnapshot mgzSnapshot = mgzSource.capture();
+
+        Sonic3kCNZEvents cnzPayloadSource = new Sonic3kCNZEvents();
+        cnzPayloadSource.init(0);
+        cnzPayloadSource.setAct2TransitionRequested(true);
+        LevelEventSnapshot malformedSnapshot = snapshotWithCorruptCnzLength(
+                snapshotWithCnzPayload(mgzSnapshot, ZoneEventSchemaSidecar.capture(cnzPayloadSource)),
+                0);
+
+        Sonic3kLevelEventManager target = new Sonic3kLevelEventManager();
+        target.initLevel(Sonic3kZoneIds.ZONE_CNZ, 0);
+        Sonic3kLevelEventManager mgzTargetOwner = new Sonic3kLevelEventManager();
+        mgzTargetOwner.initLevel(Sonic3kZoneIds.ZONE_MGZ, 1);
+        set(target, "mgzEvents", mgzTargetOwner.getMgzEventsForTest());
+        var mgzTarget = target.getMgzEventsForTest();
+        assertNotNull(mgzTarget);
+
+        assertDoesNotThrow(() -> target.restore(malformedSnapshot),
+                "short-but-bounded CNZ sidecar length should be rejected before any partial restore");
+        assertEquals(0, get(target, "cnzPendingPostTransitionReleaseFrames"),
+                "short-but-bounded CNZ sidecar length must not mutate manager-level fields");
+        assertFalse(mgzTarget.isCollapseRequested(),
+                "short-but-bounded CNZ sidecar length must not apply later sidecars with unknown offsets");
+        assertEquals(0, mgzTarget.getCollapseFrameCounter(),
+                "short-but-bounded CNZ sidecar length must not apply later sidecars with unknown offsets");
     }
 
     private static LevelEventSnapshot snapshotWithAizPayload(LevelEventSnapshot source, byte[] aizPayload) {
