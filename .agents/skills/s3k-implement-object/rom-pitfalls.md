@@ -760,6 +760,39 @@ test).
 
 ---
 
+## P19 -- HurtCharacter spill may be a next-object-tick effect
+
+**Symptom.** A trace enters hurt on the correct frame but the engine spends
+rings one frame earlier than the ROM, or spilled Obj37 rings appear as fully
+initialized ring objects on the hit frame instead of after the ROM owner object
+runs.
+
+**Root cause.** Some S3K solid hurt paths call `sub_24280`, which rewinds the
+player's 16:16 `y_pos` by `y_vel<<8`, swaps the hurt object/player registers,
+and calls `HurtCharacter`. `HurtCharacter` allocates an `Obj_Bouncing_Ring`
+owner but does not itself clear `Ring_count`; the owner object's init routine
+spawns the visible lost rings and zeroes the counter on its next execution.
+Directly calling the engine's eager `spawnLostRings(...)` from the hurt contact
+spends rings on the same comparison row.
+
+**What to check.** When porting S3K objects that hurt via `sub_24280` or
+`HurtCharacter`, confirm whether the ROM path allocates an owner object before
+the visible spill. Model both the pre-hurt Y rewind and the delayed ring-spend
+ordering; do not special-case the trace frame or zone.
+
+**ROM citation.** `Obj_InvisibleHurtBlockHorizontal` routes contact through
+`sub_1F58C` (`docs/skdisasm/sonic3k.asm:43268-43431`), which calls
+`sub_24280` (`docs/skdisasm/sonic3k.asm:49200-49220`) before
+`HurtCharacter` (`docs/skdisasm/sonic3k.asm:21065-21088`). The S3K
+`Obj_Bouncing_Ring` init path reads `Ring_count`, creates spilled rings, and
+clears the counter at `docs/skdisasm/sonic3k.asm:35490-35616`.
+
+**Originating commit.** `<pending>` (ICZ hidden hurt block moved the
+complete-run trace from f3174 same-frame ring spend to f3273 lost-ring
+re-collection after adding delayed spill ordering and the `sub_24280` Y rewind).
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

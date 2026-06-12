@@ -90,6 +90,10 @@ public interface ObjectServices {
     // Gameplay
     void spawnLostRings(PlayableEntity player, int frameCounter);
 
+    default void spawnLostRingsAfterCurrentFrame(PlayableEntity player, int frameCounter) {
+        spawnLostRings(player, frameCounter);
+    }
+
     /** Returns the runtime-owned ROM-accurate pseudo-random number generator. */
     GameRng rng();
 

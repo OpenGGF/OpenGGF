@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K invisible hurt blocks use ROM delayed ring-spill ordering:** S3K
+  horizontal invisible hurt blocks now apply the `sub_24280` Y-position rewind
+  before hurt and defer lost-ring spill until the next level tick, matching the
+  ROM `HurtCharacter` / `Obj_Bouncing_Ring` handoff. This moves the ICZ
+  complete-run trace from frame 3174 to frame 3273, a lost-ring re-collection
+  frontier after hidden-hurt ring-spend parity holds.
+
 - **S3K ICZ path-follow platforms use ROM V-int jitter phase:** ICZ
   path-follow platform routine `$04` now alternates its one-pixel shake from
   the ROM `V_int_run_count+3` low-bit phase instead of level-frame parity.

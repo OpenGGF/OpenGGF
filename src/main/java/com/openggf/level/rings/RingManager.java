@@ -401,7 +401,11 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     }
 
     public void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter) {
-        lostRings.spawnLostRings(player, ringCount, frameCounter);
+        lostRings.spawnLostRings(player, ringCount, frameCounter, player.getCentreX(), player.getCentreY());
+    }
+
+    public void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter, int x, int y) {
+        lostRings.spawnLostRings(player, ringCount, frameCounter, x, y);
     }
 
     /** Shared spilled-ring spin owner feeding the LostRingObjectInstance object path. */
@@ -1203,7 +1207,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             activeRingCount = 0;
         }
 
-        private void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter) {
+        private void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter, int x, int y) {
             if (player == null || renderer == null) {
                 return;
             }
@@ -1265,7 +1269,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 // phaseOffset matches the legacy computeSlotPhases mapping (127 - slot).
                 int phase = 127 - slotIndex;
                 LostRing ring = ringPool[activeRingCount];
-                ring.reset(phase, player.getCentreX(), player.getCentreY(),
+                ring.reset(phase, x, y,
                         xVel, yVel, LIFETIME_FRAMES);
                 ring.setSlotIndex(slotIndex);
                 // Parallel object path: register a LostRingObjectInstance twin onto the
@@ -1273,7 +1277,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 // the OWNER of collection/rewind during this stage; the object is exec-only.
                 if (objectManager != null) {
                     LostRingObjectInstance ringObject = LostRingObjectInstance.spawn(
-                            player.getCentreX(), player.getCentreY(), xVel, yVel,
+                            x, y, xVel, yVel,
                             phase, LIFETIME_FRAMES, spillAnimation);
                     objectManager.spawnLostRingObjectAtSlot(ringObject, slotIndex);
                 }

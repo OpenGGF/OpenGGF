@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K ICZ complete-run progressed to lost-ring re-collection frontier
+
+- Scope: follow-up to the ICZ frame-3174 hidden-hurt ring-spend frontier.
+  Trace data remained comparison-only diagnostic input; no trace state was
+  written back into engine runtime.
+- Change:
+  - `Sonic3kInvisibleHurtBlockHObjectInstance` now follows the ROM
+    `sub_1F58C -> sub_24280 -> HurtCharacter` ordering: it rewinds the
+    player's 16:16 `y_pos` by `y_vel<<8` before hurt, and requests delayed
+    lost-ring spill so the hit frame allocates the bouncing-ring owner while
+    the visible ring counter is spent on the next level tick
+    (`docs/skdisasm/sonic3k.asm:43422-43431`,
+    `docs/skdisasm/sonic3k.asm:49200-49220`,
+    `docs/skdisasm/sonic3k.asm:21065-21088`,
+    `docs/skdisasm/sonic3k.asm:35490-35616`).
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestSonic3kInvisibleHurtBlockHObjectInstance" test`
+    -> GREEN, 8 tests.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 3174 to frame 3273. New
+    first error is main-player `rings` (`expected=1`, `actual=0`) during
+    lost-ring re-collection; main-player position, speeds, camera, sidekick
+    state, and Tails CPU fields match through the former hidden-hurt
+    ring-spend frontier.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  frame-3273 lost-ring collection ordering/slot state around the Obj37 rings
+  spawned by the hidden hurt block, without adding a trace/frame carve-out.
+
 ## 2026-06-12 - S3K ICZ complete-run progressed to hidden-hurt ring-spend frontier
 
 - Scope: follow-up to the ICZ frame-3102 main-player path-follow

@@ -72,6 +72,7 @@ import com.openggf.sprites.render.PlayerSpriteRenderer;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -150,6 +151,7 @@ public class LevelManager {
     PerformanceProfiler profiler;
     private CrossGameFeatureProvider crossGameFeatures;
     final List<List<LevelData>> levels = new ArrayList<>();
+    private final List<PendingLostRingSpawn> pendingLostRingSpawns = new ArrayList<>();
     private final WorldSession worldSession;
     // Local mirror of zone/act state owned by WorldSession. Reads use these
     // fields directly for speed; writes go through writeCurrentZone /
@@ -1028,6 +1030,7 @@ public class LevelManager {
         // rather than in drawWithSpritePriority() so headless tests see the
         // counter advance even when rendering is disabled.
         frameCounter++;
+        processPendingLostRingSpawns();
 
         Sprite player = null;
         AbstractPlayableSprite playable = null;
@@ -2697,6 +2700,41 @@ public class LevelManager {
             return;
         }
         ringManager.spawnLostRings(player, count, frameCounter);
+    }
+
+    public void spawnLostRingsAfterCurrentFrame(AbstractPlayableSprite player, int frameCounter) {
+        if (player == null) {
+            return;
+        }
+        int count = player.getRingCount();
+        if (count <= 0) {
+            return;
+        }
+        pendingLostRingSpawns.add(new PendingLostRingSpawn(
+                player, count, player.getCentreX(), player.getCentreY(), frameCounter));
+    }
+
+    private void processPendingLostRingSpawns() {
+        if (pendingLostRingSpawns.isEmpty() || ringManager == null) {
+            return;
+        }
+        Iterator<PendingLostRingSpawn> iterator = pendingLostRingSpawns.iterator();
+        while (iterator.hasNext()) {
+            PendingLostRingSpawn pending = iterator.next();
+            if (frameCounter <= pending.frameCounter()) {
+                continue;
+            }
+            if (pending.player().getRingCount() > 0) {
+                ringManager.spawnLostRings(
+                        pending.player(), pending.ringCount(), frameCounter,
+                        pending.x(), pending.y());
+            }
+            iterator.remove();
+        }
+    }
+
+    private record PendingLostRingSpawn(
+            AbstractPlayableSprite player, int ringCount, int x, int y, int frameCounter) {
     }
 
     // ── Post-load assembly methods ──────────────────────────────────────
