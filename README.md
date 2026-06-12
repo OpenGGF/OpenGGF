@@ -212,10 +212,10 @@ implementations, research and boilerplate code a lot faster than would have been
 
 ### How can I contribute?
 
-The project is open source. Check the issue tracker, OBJECT_CHECKLIST.md for unimplemented game
-objects, and CHANGELOG.md for the current state of each game. The codebase uses a provider-based
-architecture that makes it relatively straightforward to add new objects, zones, and game-specific
-behaviour.
+The project is open source. Start with [`CONTRIBUTING.md`](CONTRIBUTING.md), then check the issue
+tracker, OBJECT_CHECKLIST.md for unimplemented game objects, and CHANGELOG.md for the current state
+of each game. The codebase uses a provider-based architecture that makes it relatively
+straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
