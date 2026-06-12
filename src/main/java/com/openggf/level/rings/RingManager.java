@@ -1332,7 +1332,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             // ROM Obj37 floor probe uses the Process_Sprites d7 countdown
             // (docs/skdisasm/sonic3k.asm:35662-35669,35965-35980).
             int lastSlotExclusive = objectManager != null
-                    ? objectManager.getLastDynamicSlotExclusive()
+                    ? objectManager.getLastProcessSlotExclusive()
                     : 128;
             return lastSlotExclusive - 1 - slotIndex;
         }

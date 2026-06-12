@@ -1904,6 +1904,10 @@ public class ObjectManager {
         return slotLayout.lastDynamicSlotExclusive();
     }
 
+    public int getLastProcessSlotExclusive() {
+        return slotLayout.lastProcessSlotExclusive();
+    }
+
     public boolean preallocatesLostRingOwnerSlot() {
         return slotLayout.preallocatesLostRingOwnerSlot();
     }

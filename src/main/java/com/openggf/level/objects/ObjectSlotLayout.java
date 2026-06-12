@@ -9,6 +9,7 @@ package com.openggf.level.objects;
 public record ObjectSlotLayout(
         int firstDynamicSlot,
         int dynamicSlotCount,
+        int processSlotCount,
         boolean twoAxisCursorPlacement,
         boolean preallocatesLostRingOwnerSlot) {
     public static final ObjectSlotLayout SONIC_1 = new ObjectSlotLayout(32, 96);
@@ -25,14 +26,26 @@ public record ObjectSlotLayout(
     // before older deferred-Y entries.
     // S3K HurtCharacter allocates the first Obj37 owner slot before Obj37_Init
     // fills the spill with AllocateObjectAfterCurrent from that owner.
-    public static final ObjectSlotLayout SONIC_3K = new ObjectSlotLayout(4, 89, true, true);
+    //
+    // S3K Process_Sprites still walks the full 110-slot Object_RAM table
+    // (docs/skdisasm/sonic3k.constants.asm:303-323;
+    // docs/skdisasm/sonic3k.asm:35965-35980), so frame-cadence code that
+    // reads d7 must use processSlotCount rather than the dynamic allocator end.
+    public static final ObjectSlotLayout SONIC_3K = new ObjectSlotLayout(4, 89, 110, true, true);
 
     public ObjectSlotLayout(int firstDynamicSlot, int dynamicSlotCount) {
-        this(firstDynamicSlot, dynamicSlotCount, false, false);
+        this(firstDynamicSlot, dynamicSlotCount, firstDynamicSlot + dynamicSlotCount, false, false);
     }
 
     public ObjectSlotLayout(int firstDynamicSlot, int dynamicSlotCount, boolean twoAxisCursorPlacement) {
-        this(firstDynamicSlot, dynamicSlotCount, twoAxisCursorPlacement, false);
+        this(firstDynamicSlot, dynamicSlotCount, firstDynamicSlot + dynamicSlotCount,
+                twoAxisCursorPlacement, false);
+    }
+
+    public ObjectSlotLayout(int firstDynamicSlot, int dynamicSlotCount,
+                            boolean twoAxisCursorPlacement, boolean preallocatesLostRingOwnerSlot) {
+        this(firstDynamicSlot, dynamicSlotCount, firstDynamicSlot + dynamicSlotCount,
+                twoAxisCursorPlacement, preallocatesLostRingOwnerSlot);
     }
 
     public ObjectSlotLayout {
@@ -42,10 +55,17 @@ public record ObjectSlotLayout(
         if (dynamicSlotCount < 0) {
             throw new IllegalArgumentException("dynamicSlotCount must be >= 0");
         }
+        if (processSlotCount < firstDynamicSlot + dynamicSlotCount) {
+            throw new IllegalArgumentException("processSlotCount must cover the dynamic slot window");
+        }
     }
 
     public int lastDynamicSlotExclusive() {
         return firstDynamicSlot + dynamicSlotCount;
+    }
+
+    public int lastProcessSlotExclusive() {
+        return processSlotCount;
     }
 
     public boolean isDynamicSlot(int slotIndex) {

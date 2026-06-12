@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K Obj37 floor-probe cadence now uses the full Process_Sprites slot count:**
+  S3K spilled-ring floor probes derive their `(V_int_run_count + d7) & 7`
+  phase from the ROM's 110-slot `Object_RAM` process loop, while dynamic
+  allocation still uses the smaller managed dynamic window. Focused Obj37
+  tests are green; the ICZ complete-run frontier remains at frame 3323 pending
+  the remaining lost-ring collection mismatch.
+
 - **S3K delayed lost-ring Obj37 materialization now matches same-pass update order:**
   pending S3K lost-ring spills flushed after the player touch phase now apply
   the first Obj37 movement/gravity step immediately, and Obj37 touch response

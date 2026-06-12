@@ -265,6 +265,13 @@ Completed in `bugfix/ai-release-remediation`:
   diverges at frame 3323 main-player `rings expected=2 actual=1`; the remaining
   mismatch is narrowed to the slot-44 Obj37 collection position/velocity path,
   not the delayed materialization bridge.
+- ICZ Obj37 process-slot cadence narrowing: `ObjectSlotLayout` now separates
+  dynamic allocation limits from the full object process-loop slot count, and
+  S3K Obj37 floor-probe phase uses the ROM 110-slot `Object_RAM`
+  `Process_Sprites` countdown. Focused lost-ring/touch tests are green; the ICZ
+  complete-run trace still first diverges at frame 3323 main-player
+  `rings expected=2 actual=1`, so the remaining work stays on the second
+  lost-ring collection path rather than slot-count cadence.
 
 Still outstanding:
 

@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K Obj37 process-slot cadence narrowed frame-3323 frontier
+
+- Scope: follow-up to the ICZ frame-3323 second lost-ring collection frontier.
+  Trace data remained comparison-only diagnostic input; no trace state was
+  written back into engine runtime.
+- Change:
+  - `ObjectSlotLayout` now separates the managed dynamic allocation window from
+    the full object process-loop slot count.
+  - S3K Obj37 spilled-ring floor probes now derive their phase from the ROM
+    `Process_Sprites` countdown across the full 110-slot `Object_RAM` table
+    (`docs/skdisasm/sonic3k.constants.asm:303-323`,
+    `docs/skdisasm/sonic3k.asm:35662-35669`,
+    `docs/skdisasm/sonic3k.asm:35965-35980`) instead of the S3K dynamic
+    allocator end.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.level.rings.TestLostRingObjectInstance,com.openggf.level.objects.TestLostRingTouchOrdering" test`
+    -> GREEN, 22 tests.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" "-Ds3k.rom.path=s3k.gen" test`
+    -> RED, first ICZ error unchanged at frame 3323 main-player `rings`
+    (`expected=2`, `actual=1`).
+- Release state: ICZ complete-run remains red. The remaining frame-3323 work is
+  still the second lost-ring collection mismatch, now after the Obj37 cadence
+  source is tied to the ROM process-loop slot count.
+
 ## 2026-06-12 - S3K ICZ Obj37 delayed-materialization narrowed frame-3323 frontier
 
 - Scope: follow-up to the ICZ frame-3323 second lost-ring collection frontier.
