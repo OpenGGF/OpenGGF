@@ -139,7 +139,6 @@ public final class LevelRenderer {
     private int pendingBgTilePassAlignedBgY;
     private float pendingBgTilePassBgTilemapWorldOffsetX;
     private boolean pendingBgTilePassPerLineScroll;
-    private short[] pendingBgTilePassPerColumnVScroll;
     private int[] pendingBgTilePassHScrollData;
     private float pendingBgTilePassVdpWrapWidth;
     private float pendingBgTilePassNametableBase;
@@ -414,9 +413,6 @@ public final class LevelRenderer {
                 tilemapRenderer.setUpperBandWrap(
                         pendingBgTilePassUpperBandWrapHeightPx,
                         pendingBgTilePassUpperBandWrapWidthTiles);
-                if (pendingBgTilePassPerColumnVScroll != null && pendingBgTilePassPerColumnVScroll.length > 0) {
-                    tilemapRenderer.enablePerColumnVScroll(pendingBgTilePassPerColumnVScroll);
-                }
                 tilemapRenderer.render(
                         TilemapGpuRenderer.Layer.BACKGROUND,
                         pendingBgTilePassRenderWidth,
@@ -506,7 +502,7 @@ public final class LevelRenderer {
             return;
         }
         Palette[] underwaterPalettes = lm.waterSystem != null
-                ? lm.waterSystem.getUnderwaterPalette(lm.level.getZoneIndex(), lm.currentAct)
+                ? lm.waterSystem.getUnderwaterPalette(lm.getFeatureZoneId(), lm.getFeatureActId())
                 : null;
         PaletteWriteSupport.resolvePendingFrameWrites(registry, lm.level, underwaterPalettes, lm.graphicsManager);
     }
@@ -887,7 +883,9 @@ public final class LevelRenderer {
         pendingBgTilePassAlignedBgY = alignedBgY;
         pendingBgTilePassBgTilemapWorldOffsetX = bgTilemapWorldOffsetX;
         pendingBgTilePassPerLineScroll = perLineScrollActive;
-        pendingBgTilePassPerColumnVScroll = vScrollColumnData;
+        // Per-column BG VScroll is screen-column VSRAM state, so the parallax
+        // compositing pass owns it. Applying it during the FBO tile pass as well
+        // doubles AIZ fire-wave offsets.
         pendingBgTilePassHScrollData = hScrollData;
         pendingBgTilePassVdpWrapWidth = vdpWrapWidthTiles;
         pendingBgTilePassNametableBase = nametableBaseTile;

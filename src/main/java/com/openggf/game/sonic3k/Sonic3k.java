@@ -11,6 +11,7 @@ import com.openggf.data.RomByteReader;
 import com.openggf.data.SpindashDustArtProvider;
 import com.openggf.game.DynamicStartPositionProvider;
 import com.openggf.game.GameServices;
+import com.openggf.game.LevelLoadPaletteOverrideProvider;
 import com.openggf.game.session.SessionManager;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
@@ -43,7 +44,8 @@ import java.util.logging.Logger;
  * shared runtime pipeline.
  */
 public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDustArtProvider,
-        DynamicStartPositionProvider, AnimatedPatternProvider, AnimatedPaletteProvider {
+        DynamicStartPositionProvider, AnimatedPatternProvider, AnimatedPaletteProvider,
+        LevelLoadPaletteOverrideProvider {
     private static final Logger LOG = Logger.getLogger(Sonic3k.class.getName());
     private static final int[] ICZ1_LOCK_ON_INTRO_PALETTE_LINE4_COLORS_1_TO_15 = {
             0x0EEE, 0x0EEC, 0x0EEA, 0x0ECA, 0x0EC8,
@@ -354,6 +356,13 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         }
 
         return level;
+    }
+
+    @Override
+    public void applyLevelLoadPaletteOverrides(Level level, int zone, int act) {
+        if (level instanceof Sonic3kLevel sonic3kLevel) {
+            applyLockOnStartupPalette(sonic3kLevel, zone, act);
+        }
     }
 
     private static void applyLockOnStartupPalette(Sonic3kLevel level, int zone, int act) {

@@ -327,6 +327,13 @@ public enum SonicConfiguration {
 	LIVE_REWIND_TAPE_COAST_MIN_STEPS,
 
 	/**
+	 * Seconds of live rewind keyframe and input history to retain. The actual
+	 * retained window may be up to one keyframe interval longer so replay always
+	 * has a complete keyframe-to-target input segment.
+	 */
+	REWIND_HISTORY_SECONDS,
+
+	/**
 	 * How the rewind audio PCM history ring is sized. Accepted values are
 	 * {@code "time"} (cap by seconds, see {@link #REWIND_AUDIO_HISTORY_SECONDS})
 	 * or {@code "size"} (cap by megabytes, see

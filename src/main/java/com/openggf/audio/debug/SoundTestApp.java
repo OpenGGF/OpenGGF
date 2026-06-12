@@ -45,6 +45,7 @@ import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
 import java.util.Locale;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import javax.swing.JPanel;
@@ -108,14 +109,26 @@ public final class SoundTestApp {
         AudioBackend backend = options.nullAudio ? new NullAudioBackend() : new LWJGLAudioBackend();
         backend.init();
         backend.setAudioProfile(profile);
-        Runtime.getRuntime().addShutdownHook(new Thread(backend::destroy));
+        // Abnormal-exit safety net only; removed on the normal path below so
+        // backend.destroy() runs exactly once.
+        Thread destroyOnExit = new Thread(backend::destroy);
+        Runtime.getRuntime().addShutdownHook(destroyOnExit);
 
         int startSongId = options.songId >= 0 ? options.songId : catalog.getDefaultSongId();
 
-        if (options.interactiveWindow) {
-            runInteractiveWindow(options, loader, dacData, backend, catalog, seqConfig, validSfx, startSongId);
-        } else {
-            runConsole(options, loader, dacData, backend, catalog, startSongId);
+        try {
+            if (options.interactiveWindow) {
+                runInteractiveWindow(options, loader, dacData, backend, catalog, seqConfig, validSfx, startSongId);
+            } else {
+                runConsole(options, loader, dacData, backend, catalog, startSongId);
+            }
+        } finally {
+            try {
+                Runtime.getRuntime().removeShutdownHook(destroyOnExit);
+            } catch (IllegalStateException ignored) {
+                // JVM already shutting down; the hook performs the destroy instead.
+            }
+            backend.destroy();
         }
     }
 
@@ -148,14 +161,22 @@ public final class SoundTestApp {
     private static void runInteractiveWindow(Options options, SmpsLoader loader, DacData dacData,
             AudioBackend backend, SoundTestCatalog catalog, SmpsSequencerConfig seqConfig,
             TreeSet<Integer> validSfx, int startSongId) throws Exception {
-        InteractiveState state = new InteractiveState(startSongId, loader, dacData, backend,
-                catalog, seqConfig, validSfx);
-        SwingUtilities.invokeAndWait(() -> state.show(options.nullAudio, options.romPath));
+        // All backend mutation is funneled onto this single thread: it drives
+        // the 16ms stream update and executes the Swing handlers' play/stop/
+        // mute commands, so the EDT never swaps the SMPS driver or touches
+        // OpenAL sources while update() is mid-stream.
         ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
+        InteractiveState state = new InteractiveState(startSongId, loader, dacData, backend,
+                catalog, seqConfig, validSfx, exec);
+        SwingUtilities.invokeAndWait(() -> state.show(options.nullAudio, options.romPath));
         exec.scheduleAtFixedRate(backend::update, 0, 16, TimeUnit.MILLISECONDS);
         state.awaitClose();
-        exec.shutdownNow();
-        backend.destroy();
+        // Orderly shutdown: queued commands (e.g. the close-time stopPlayback)
+        // still run, and no update() can be in flight when destroy() follows.
+        exec.shutdown();
+        if (!exec.awaitTermination(2, TimeUnit.SECONDS)) {
+            exec.shutdownNow();
+        }
     }
 
     private static void runConsole(Options options, SmpsLoader loader, DacData dacData, AudioBackend backend,
@@ -216,7 +237,6 @@ public final class SoundTestApp {
             backend.update();
             Thread.sleep(16L);
         }
-        backend.destroy();
         System.out.println("Sound test exited.");
     }
 
@@ -291,9 +311,12 @@ public final class SoundTestApp {
         private boolean speedShoes = false;
         private final TreeSet<Integer> validSfx;
         private final Map<Integer, String> sfxNames;
+        private final ScheduledExecutorService audioExec;
 
         InteractiveState(int songId, SmpsLoader loader, DacData dacData, AudioBackend backend,
-                SoundTestCatalog catalog, SmpsSequencerConfig seqConfig, TreeSet<Integer> validSfx) {
+                SoundTestCatalog catalog, SmpsSequencerConfig seqConfig, TreeSet<Integer> validSfx,
+                ScheduledExecutorService audioExec) {
+            this.audioExec = audioExec;
             this.songId = songId;
             this.loader = loader;
             this.dacData = dacData;
@@ -349,9 +372,9 @@ public final class SoundTestApp {
                     if (code >= KeyEvent.VK_F1 && code <= KeyEvent.VK_F5) {
                         int ch = code - KeyEvent.VK_F1;
                         if (shift)
-                            backend.toggleSolo(ChannelType.FM, ch);
+                            onAudioThread(() -> backend.toggleSolo(ChannelType.FM, ch));
                         else
-                            backend.toggleMute(ChannelType.FM, ch);
+                            onAudioThread(() -> backend.toggleMute(ChannelType.FM, ch));
                         return;
                     }
 
@@ -359,9 +382,9 @@ public final class SoundTestApp {
                     if (code >= KeyEvent.VK_1 && code <= KeyEvent.VK_4) {
                         int ch = code - KeyEvent.VK_1;
                         if (shift)
-                            backend.toggleSolo(ChannelType.PSG, ch);
+                            onAudioThread(() -> backend.toggleSolo(ChannelType.PSG, ch));
                         else
-                            backend.toggleMute(ChannelType.PSG, ch);
+                            onAudioThread(() -> backend.toggleMute(ChannelType.PSG, ch));
                         return;
                     }
 
@@ -390,14 +413,14 @@ public final class SoundTestApp {
                             if (sfxMode) {
                                 playCurrentSfx();
                             } else {
-                                backend.stopPlayback();
+                                onAudioThread(backend::stopPlayback);
                                 playing = false;
                                 playingSongId = null;
                                 playCurrent();
                             }
                             break;
                         case KeyEvent.VK_SPACE:
-                            backend.stopPlayback();
+                            onAudioThread(backend::stopPlayback);
                             playing = false;
                             playingSongId = null;
                             break;
@@ -407,13 +430,14 @@ public final class SoundTestApp {
                         case KeyEvent.VK_D:
                             // DAC (FM5 / Channel 5)
                             if (shift)
-                                backend.toggleSolo(ChannelType.DAC, 5);
+                                onAudioThread(() -> backend.toggleSolo(ChannelType.DAC, 5));
                             else
-                                backend.toggleMute(ChannelType.DAC, 5);
+                                onAudioThread(() -> backend.toggleMute(ChannelType.DAC, 5));
                             break;
                         case KeyEvent.VK_S:
                             speedShoes = !speedShoes;
-                            backend.setSpeedShoes(speedShoes);
+                            boolean speedShoesNow = speedShoes;
+                            onAudioThread(() -> backend.setSpeedShoes(speedShoesNow));
                             updateLabel();
                             break;
                         case KeyEvent.VK_E:
@@ -451,10 +475,23 @@ public final class SoundTestApp {
             }
         }
 
+        /**
+         * Runs a backend command on the audio executor that also drives
+         * {@code backend.update()}, keeping all sequencer/OpenAL mutation on
+         * one thread. Commands arriving after shutdown are moot and dropped.
+         */
+        private void onAudioThread(Runnable command) {
+            try {
+                audioExec.execute(command);
+            } catch (RejectedExecutionException ignored) {
+                // Executor already shut down during close.
+            }
+        }
+
         private void playCurrent() {
             AbstractSmpsData data = loader.loadMusic(songId);
             if (data != null) {
-                backend.playSmps(data, dacData);
+                onAudioThread(() -> backend.playSmps(data, dacData));
                 playing = true;
                 playingSongId = songId;
             }
@@ -467,7 +504,7 @@ public final class SoundTestApp {
                 System.out.println(String.format("Playing SFX %s (Size: %d) | FM: %d PSG: %d Tempo: %d Div: %d",
                         toHex(sfxId), data.getData().length,
                         data.getChannels(), data.getPsgChannels(), data.getTempo(), data.getDividingTiming()));
-                backend.playSfxSmps(data, dacData);
+                onAudioThread(() -> backend.playSfxSmps(data, dacData));
             } else {
                 System.out.println("Failed to load SFX " + toHex(sfxId));
             }
@@ -607,11 +644,13 @@ public final class SoundTestApp {
         }
 
         private void close() {
-            closed = true;
             if (refreshTimer != null) {
                 refreshTimer.stop();
             }
-            backend.stopPlayback();
+            // Queue the stop before raising the closed flag: awaitClose() then
+            // shuts the executor down with shutdown(), which still drains this.
+            onAudioThread(backend::stopPlayback);
+            closed = true;
             playing = false;
             playingSongId = null;
             if (frame != null) {

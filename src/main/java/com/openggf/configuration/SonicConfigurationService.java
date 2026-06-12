@@ -14,6 +14,7 @@ import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.OptionalInt;
@@ -36,6 +37,7 @@ public class SonicConfigurationService {
 	private final ConfigFileReader yamlReader;
 	// Derived (non-persisted) display values; read before `config`, never saved.
 	private final Map<String, Object> transientResolved = new HashMap<>();
+	private final Map<SonicConfiguration, Integer> intCache = new EnumMap<>(SonicConfiguration.class);
 
 	private SonicConfigurationService() {
 		this(null, null);
@@ -147,14 +149,34 @@ public class SonicConfigurationService {
 	}
 
 	public int getInt(SonicConfiguration sonicConfiguration) {
+		Integer cached = intCache.get(sonicConfiguration);
+		if (cached != null) {
+			return cached;
+		}
+		int resolved = resolveInt(sonicConfiguration);
+		intCache.put(sonicConfiguration, resolved);
+		return resolved;
+	}
+
+	private int resolveInt(SonicConfiguration sonicConfiguration) {
 		Object value = getConfigValue(sonicConfiguration);
 		if (value instanceof Integer) {
-			return ((Integer) value);
+			return sanitizeIntValue(sonicConfiguration, (Integer) value);
 		} else {
 			String str = getString(sonicConfiguration);
+
+			// KEY values such as "1" are GLFW key names first, not raw integer
+			// codes. Numeric raw codes remain supported when no key name matches.
+			if (ConfigCatalog.meta(sonicConfiguration).type() == ConfigType.KEY) {
+				OptionalInt resolved = GlfwKeyNameResolver.resolve(str);
+				if (resolved.isPresent()) {
+					return resolved.getAsInt();
+				}
+			}
+
 			// Step 1: try numeric parse
 			try {
-				return Integer.parseInt(str);
+				return sanitizeIntValue(sonicConfiguration, Integer.parseInt(str));
 			} catch (NumberFormatException ignored) {
 			}
 
@@ -179,6 +201,13 @@ public class SonicConfigurationService {
 			}
 			return -1;
 		}
+	}
+
+	private int sanitizeIntValue(SonicConfiguration sonicConfiguration, int value) {
+		if (sonicConfiguration == SonicConfiguration.FPS) {
+			return Math.max(1, value);
+		}
+		return value;
 	}
 
 	/**
@@ -315,6 +344,7 @@ public class SonicConfigurationService {
 						+ "x224 (window preserved).");
 			}
 		}
+		intCache.clear();
 	}
 
 	/** Reads an int from the persisted {@code config} map only, bypassing the transient overlay. */
@@ -338,6 +368,7 @@ public class SonicConfigurationService {
 			config = new HashMap<>();
 		}
 		config.put(key.name(), value);
+		intCache.clear();
 	}
 
 	public void saveConfig() {
@@ -434,6 +465,7 @@ public class SonicConfigurationService {
 	public void resetToDefaults() {
 		config = new HashMap<>();
 		defaults = new HashMap<>();
+		intCache.clear();
 		applyDefaults();
 		// Re-derive SCREEN_WIDTH_PIXELS (and related) from the freshly-set
 		// DISPLAY_ASPECT=NATIVE_4_3 default so any widescreen value left in
@@ -461,6 +493,7 @@ public class SonicConfigurationService {
 						+ "; allowed " + meta.allowedValues() + ". Defaulting to '" + fallback + "'.");
 				if (fallback != null) {
 					config.put(key.name(), fallback);
+					intCache.clear();
 				}
 			}
 		}
@@ -503,7 +536,7 @@ public class SonicConfigurationService {
 		putDefaultKey(SonicConfiguration.P2_LEFT, GLFW_KEY_J);
 		putDefaultKey(SonicConfiguration.P2_RIGHT, GLFW_KEY_L);
 		putDefaultKey(SonicConfiguration.P2_JUMP, GLFW_KEY_RIGHT_SHIFT);
-		putDefaultKey(SonicConfiguration.P2_START, GLFW_KEY_ENTER);
+		putDefaultKey(SonicConfiguration.P2_START, GLFW_KEY_RIGHT_CONTROL);
 		putDefaultKey(SonicConfiguration.TEST, GLFW_KEY_T);
 		putDefaultKey(SonicConfiguration.NEXT_ACT, GLFW_KEY_PAGE_UP);
 		putDefaultKey(SonicConfiguration.NEXT_ZONE, GLFW_KEY_PAGE_DOWN);
@@ -542,6 +575,7 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.LIVE_REWIND_TAPE_COAST_DECELERATION, 0.5);
 		putDefault(SonicConfiguration.LIVE_REWIND_TAPE_COAST_MAX_STEPS, 4.0);
 		putDefault(SonicConfiguration.LIVE_REWIND_TAPE_COAST_MIN_STEPS, 0.25);
+		putDefault(SonicConfiguration.REWIND_HISTORY_SECONDS, 60);
 		putDefault(SonicConfiguration.REWIND_AUDIO_HISTORY_LIMIT_TYPE, "time");
 		putDefault(SonicConfiguration.REWIND_AUDIO_HISTORY_SECONDS, 60);
 		putDefault(SonicConfiguration.REWIND_AUDIO_HISTORY_SIZE_MB, 10);

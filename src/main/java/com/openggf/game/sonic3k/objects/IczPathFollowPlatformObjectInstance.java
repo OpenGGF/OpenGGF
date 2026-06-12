@@ -160,8 +160,10 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
     }
 
     private void updateJitterWait(int frameCounter) {
-        // loc_89FD6: d0 alternates +/-1 from V_int_run_count bit 0, then Obj_Wait.
-        x += (frameCounter & 1) == 0 ? 1 : -1;
+        // loc_89FD6 reads V_int_run_count+3, not Level_frame_counter.
+        // Object updates receive the ROM-visible level frame, so the V-int low bit is one tick ahead here.
+        int vIntLowByte = frameCounter + 1;
+        x += (vIntLowByte & 1) == 0 ? 1 : -1;
         if (waitTimer-- <= 0) {
             phase = Phase.FALLING;
         }
@@ -442,6 +444,22 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
     @Override
     public int getPriorityBucket() {
         return RenderPriority.clamp(PRIORITY_BUCKET);
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format(
+                "phase=%02X vel=(%04X,%04X) sub=(%04X,%04X) angle=%02X wait=%02X push=%02X stand=%s pushFlag=%s",
+                phase.routineByte & 0xFF,
+                xVel & 0xFFFF,
+                yVel & 0xFFFF,
+                xSub & 0xFFFF,
+                ySub & 0xFFFF,
+                angle & 0xFF,
+                waitTimer & 0xFF,
+                pushCounter & 0xFF,
+                standingThisFrame,
+                pushingThisFrame);
     }
 
     public int getRoutineByteForTesting() {

@@ -90,6 +90,7 @@ class TestSpriteManagerDebugEmeraldGrant {
 
     @Test
     void giveEmeraldsDebugKeyPlaysEmeraldChimeWhenEmeraldsAreGranted() {
+        EngineServices.current().configuration().setConfigValue(SonicConfiguration.DEBUG_VIEW_ENABLED, true);
         InputHandler input = new InputHandler();
         int giveEmeraldsKey = EngineServices.current().configuration().getInt(SonicConfiguration.GIVE_EMERALDS_KEY);
         input.handleKeyEvent(giveEmeraldsKey, GLFW.GLFW_PRESS);
@@ -99,6 +100,20 @@ class TestSpriteManagerDebugEmeraldGrant {
         assertEquals(7, GameServices.gameState().getEmeraldCount());
         assertEquals(Sonic2Music.GOT_EMERALD.id, audioBackend.lastMusicId);
         assertEquals(1, audioBackend.musicPlayCount);
+    }
+
+    @Test
+    void giveEmeraldsDebugKeyIsIgnoredWhenDebugViewIsDisabled() {
+        EngineServices.current().configuration().setConfigValue(SonicConfiguration.DEBUG_VIEW_ENABLED, false);
+        InputHandler input = new InputHandler();
+        int giveEmeraldsKey = EngineServices.current().configuration().getInt(SonicConfiguration.GIVE_EMERALDS_KEY);
+        input.handleKeyEvent(giveEmeraldsKey, GLFW.GLFW_PRESS);
+
+        GameServices.sprites().update(input);
+
+        assertEquals(0, GameServices.gameState().getEmeraldCount());
+        assertEquals(-1, audioBackend.lastMusicId);
+        assertEquals(0, audioBackend.musicPlayCount);
     }
 
     private static final class RecordingAudioBackend implements AudioBackend {

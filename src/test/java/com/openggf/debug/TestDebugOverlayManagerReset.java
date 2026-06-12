@@ -1,8 +1,13 @@
 package com.openggf.debug;
 
+import com.openggf.control.InputHandler;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
 import org.junit.jupiter.api.Test;
+import org.lwjgl.glfw.GLFW;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -48,6 +53,28 @@ public class TestDebugOverlayManagerReset {
                 "updated shortcut text should also be reused until the next toggle change");
 
         manager.resetState();
+    }
+
+    @Test
+    public void updateInputIgnoresToggleKeysWhenDebugShortcutsAreDisabled() {
+        DebugOverlayManager manager = DebugOverlayManager.getInstance();
+        manager.resetState();
+        InputHandler input = new InputHandler();
+        input.handleKeyEvent(GLFW.GLFW_KEY_F12, GLFW.GLFW_PRESS);
+
+        manager.updateInput(input, false);
+
+        assertFalse(manager.isEnabled(DebugOverlayToggle.OBJECT_ART_VIEWER),
+                "F12 must not enable the art viewer when debug shortcuts are disabled");
+        manager.resetState();
+    }
+
+    @Test
+    public void ringBoundsToggleDoesNotShareTheLevelSelectShortcut() {
+        int levelSelectKey = SonicConfigurationService.getInstance().getInt(SonicConfiguration.LEVEL_SELECT_KEY);
+
+        assertFalse(DebugOverlayToggle.RING_BOUNDS.keyCode() == levelSelectKey,
+                "Ring-bounds overlay must not share the runtime level-select debug shortcut");
     }
 }
 

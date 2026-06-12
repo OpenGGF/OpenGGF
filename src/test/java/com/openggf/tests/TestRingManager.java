@@ -213,6 +213,22 @@ public class TestRingManager {
     }
 
     @Test
+    public void testNativeLowBitObjectControlAllowsStageRingCollection() {
+        RingSpawn spawn = new RingSpawn(100, 100);
+        RingManager ringManager = buildRingManager(List.of(spawn));
+        ringManager.reset(0);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 100, (short) 100);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(player);
+
+        ringManager.collectStageRings(player, 0);
+
+        assertTrue(ringManager.isCollected(spawn),
+                "ROM object_control bits 0-6 do not suppress Test_Ring_Collisions");
+        assertEquals(1, player.getRingCount());
+    }
+
+    @Test
     public void testLateRingManagerUpdateCanSkipStageRingCollection() {
         RingSpawn spawn = new RingSpawn(100, 100);
         RingManager ringManager = buildRingManager(List.of(spawn));

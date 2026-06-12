@@ -309,6 +309,7 @@ final class ObjectTouchResponseController {
 
         if (sidekick.isDebugMode()) {
             buffers.overlapping.clear();
+            debugState.clear();
             return;
         }
 
@@ -323,6 +324,7 @@ final class ObjectTouchResponseController {
         // collisions during catch-up flight.
         if (sidekick.isTouchResponseSuppressedByObjectControl()) {
             buffers.overlapping.clear();
+            debugState.clear();
             return;
         }
 
@@ -335,6 +337,8 @@ final class ObjectTouchResponseController {
             playerY += 12;
             playerHeight = 20;
         }
+        debugState.setPlayer(playerX, playerY, playerHeight, baseYRadius, crouching);
+        debugState.clear();
 
         buffers.building.clear();
 
@@ -348,8 +352,8 @@ final class ObjectTouchResponseController {
      * Shared collision loop for both main player and sidekick touch responses.
      * Iterates active objects, checks touch regions and overlap, dispatches to the
      * appropriate response handler. Behavioral differences are parameterized:
-     * - Main player: records debug hits
-     * - Sidekick: no debug recording and uses Hurt_Sidekick handling
+     * - Both actors record debug hits when the trace/debug overlay enables it
+     * - Sidekick: uses Hurt_Sidekick handling
      * - Both players exit after the first overlapping object; the ROM's handler
      *   returns from ReactToItem after processing one touch response.
      *
@@ -435,22 +439,23 @@ final class ObjectTouchResponseController {
             int width = table.getWidthRadius(sizeIndex);
             int height = table.getHeightRadius(sizeIndex);
             TouchCategory category = decodeCategory(flags, touchProfile);
-            if (category == TouchCategory.HURT
-                    && tryShieldDeflect(player, instance, provider, touchProfile, width, height)) {
-                continue;
-            }
 
             // ROM parity: ReactToItem runs in Sonic's slot (slot 0) BEFORE other
             // objects update. So touch collision sees objects at their pre-update
             // positions. Use getPreUpdateX()/getPreUpdateY() which return the
             // position snapshot taken before the object update loop ran.
-            int objX = usePreUpdateState ? instance.getPreUpdateX() : instance.getX();
-            int objY = usePreUpdateState ? instance.getPreUpdateY() : instance.getY();
+            boolean useCurrentTouchState = usesCurrentTouchState(instance);
+            int objX = usePreUpdateState && !useCurrentTouchState ? instance.getPreUpdateX() : instance.getX();
+            int objY = usePreUpdateState && !useCurrentTouchState ? instance.getPreUpdateY() : instance.getY();
+            if (category == TouchCategory.HURT
+                    && tryShieldDeflect(player, provider, touchProfile, objX, objY, width, height)) {
+                continue;
+            }
             boolean overlap = isOverlapping(playerX, playerY, playerHeight, objX, objY, width, height, playerWidth);
-            if (!isSidekick && debugState.isEnabled()) {
-                int slotIndex = instance instanceof AbstractObjectInstance aoi
-                        ? aoi.getSlotIndex()
-                        : -1;
+            int slotIndex = instance instanceof AbstractObjectInstance aoi
+                    ? aoi.getSlotIndex()
+                    : -1;
+            if (debugState.isEnabled()) {
                 debugState.addHit(
                         new TouchResponseDebugHit(slotIndex, instance.getSpawn(), objX, objY, flags, sizeIndex,
                                 width, height, category, overlap,
@@ -460,6 +465,15 @@ final class ObjectTouchResponseController {
                 continue;
             }
             buildingSet.add(instance);
+            if (category == TouchCategory.HURT) {
+                // S3K TouchResponse temporarily sets Status_Invincible during
+                // the Insta-Shield 48x48 pass, so Touch_ChkHurt returns before
+                // Touch_ChkHurt_Bounce_Projectile clears collision_flags
+                // (sonic3k.asm:20620-20640, 21003-21047).
+                if (instaShieldActive && player == currentPlayer) {
+                    break;
+                }
+            }
 
             // Type-keyed lost-ring collectible: ROM Touch_ChkValue ring branch
             // (docs/s2disasm/s2.asm:85196-85219). Evaluated EVERY frame on overlap
@@ -530,6 +544,15 @@ final class ObjectTouchResponseController {
         }
     }
 
+    private static boolean usesCurrentTouchState(ObjectInstance instance) {
+        // S3K Obj_Bouncing_Ring calls Add_SpriteToCollisionResponseList after
+        // Obj37_Main moves and applies gravity (docs/skdisasm/sonic3k.asm:
+        // 35616-35626). The collision-response list therefore contains the
+        // live post-movement Obj37 position, even on inline player-touch frames
+        // where generic object touch uses the frame-start snapshot.
+        return instance instanceof LostRingObjectInstance;
+    }
+
     /**
      * Unified multi-region touch check for both player and sidekick.
      * Each region is checked separately; if any overlaps, the object is treated as
@@ -557,6 +580,15 @@ final class ObjectTouchResponseController {
 
             boolean overlap = isOverlappingXY(playerX, playerY, playerHeight,
                     region.x(), region.y(), width, height, playerWidth);
+            if (debugState.isEnabled()) {
+                int slotIndex = instance instanceof AbstractObjectInstance aoi
+                        ? aoi.getSlotIndex()
+                        : -1;
+                debugState.addHit(
+                        new TouchResponseDebugHit(slotIndex, instance.getSpawn(), region.x(), region.y(),
+                                flags, sizeIndex, width, height, category, overlap,
+                                instance instanceof AbstractObjectInstance aoi ? aoi.traceDebugDetails() : ""));
+            }
             if (!overlap) {
                 continue;
             }
@@ -592,9 +624,10 @@ final class ObjectTouchResponseController {
                 || profile.actorContextPolicy() != TouchActorContextPolicy.MAIN_ONLY;
     }
 
-    private boolean tryShieldDeflect(PlayableEntity player, ObjectInstance instance,
-            TouchResponseProvider provider, TouchResponseProfile profile, int objectWidth, int objectHeight) {
-        if (player == null || !player.hasShield()) {
+    private boolean tryShieldDeflect(PlayableEntity player,
+            TouchResponseProvider provider, TouchResponseProfile profile,
+            int objectX, int objectY, int objectWidth, int objectHeight) {
+        if (player == null || !canDeflectShieldReactiveProjectile(player)) {
             return false;
         }
         if (profile.shieldDeflectCapability() != TouchShieldDeflectCapability.SHIELD_DEFLECT
@@ -605,11 +638,18 @@ final class ObjectTouchResponseController {
         int shieldLeft = player.getCentreX() - SHIELD_TOUCH_HALF_SIZE;
         int shieldTop = player.getCentreY() - SHIELD_TOUCH_HALF_SIZE;
         boolean overlap = isRectOverlapping(shieldLeft, shieldTop, SHIELD_TOUCH_SIZE, SHIELD_TOUCH_SIZE,
-                instance.getX(), instance.getY(), objectWidth, objectHeight);
+                objectX, objectY, objectWidth, objectHeight);
         if (!overlap) {
             return false;
         }
         return provider.onShieldDeflect(player);
+    }
+
+    private boolean canDeflectShieldReactiveProjectile(PlayableEntity player) {
+        if (player.hasShield()) {
+            return true;
+        }
+        return false;
     }
 
     /**

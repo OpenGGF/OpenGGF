@@ -90,11 +90,10 @@ class TestTraceReplayInvariantGuard {
     }
 
     @Test
-    void s2ControlLockLogicalLatchRemainsExplicitlyDeferred() {
-        assertFalse(PhysicsFeatureSet.SONIC_2.controlLockLatchesLogicalInput(),
-                "S2 control-lock logical-input latching is deferred until the remaining "
-                        + "Tails follow-history call sites can be validated without "
-                        + "regressing EHZ/MTZ trace frontiers.");
+    void s2ControlLockLogicalLatchIsEnabledWithForcedInputBypass() {
+        assertTrue(PhysicsFeatureSet.SONIC_2.controlLockLatchesLogicalInput(),
+                "S2 Obj01_Control latches Ctrl_1_Logical while Control_Locked; "
+                        + "forced-input writers bypass the latch for signpost/auto-walk scripts.");
         assertTrue(PhysicsFeatureSet.SONIC_3K.controlLockLatchesLogicalInput(),
                 "S3K keeps the ROM Ctrl_1_locked logical-input latch enabled.");
     }

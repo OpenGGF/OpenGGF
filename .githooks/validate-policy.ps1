@@ -119,7 +119,7 @@ function Get-TrailerValue([string]$Key, [string]$Message) {
     foreach ($line in ($Message -split "`r?`n")) {
         $text = [string]$line
         if ($text.StartsWith("${Key}:", [System.StringComparison]::Ordinal)) {
-            $value = $text.Substring($Key.Length + 2).Trim()
+            $value = $text.Substring($Key.Length + 1).Trim()
         }
     }
     return $value

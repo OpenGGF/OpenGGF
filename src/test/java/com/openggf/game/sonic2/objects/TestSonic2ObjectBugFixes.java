@@ -4,11 +4,13 @@ import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
+import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.LevelManager;
+import com.openggf.level.ParallaxManager;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -17,6 +19,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidRoutineKind;
 import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
@@ -222,6 +225,16 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void s2SpikesUseSolidObjectAirborneStaleStandingBitReturn() {
+        SpikeObjectInstance spikes = new SpikeObjectInstance(
+                new ObjectSpawn(0x0C40, 0x0650, Sonic2ObjectIds.SPIKES, 0x30, 2, false, 0x4650),
+                "Spikes");
+
+        assertTrue(spikes.airborneStaleStandingBitReturnsNoContact(null),
+                "Obj36 calls the shared SolidObject path; an airborne stale standing bit returns before new contact");
+    }
+
+    @Test
     void spikeTouchChkHurt2RewindsCurrentYVelocityBeforeHurt() {
         ObjectManager objectManager = mock(ObjectManager.class);
         when(objectManager.getPreContactYSpeed()).thenReturn((short) 0xFE30);
@@ -356,6 +369,35 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void skyChaseCloudKeepsSixteenBitSubpixelAccumulator() throws Exception {
+        Camera camera = mock(Camera.class);
+        when(camera.getX()).thenReturn((short) 0);
+        ParallaxManager parallaxManager = mock(ParallaxManager.class);
+        when(parallaxManager.getTornadoVelocityX()).thenReturn(0);
+        CloudObjectInstance cloud = new CloudObjectInstance(
+                new ObjectSpawn(0x0300, 0x0120, Sonic2ObjectIds.CLOUD, 0x60, 0, false, 0));
+        cloud.setServices(new StubObjectServices() {
+            @Override
+            public Camera camera() {
+                return camera;
+            }
+
+            @Override
+            public ParallaxManager parallaxManager() {
+                return parallaxManager;
+            }
+        });
+
+        cloud.update(0, new TestablePlayableSprite("sonic", (short) 0x0300, (short) 0x0120));
+
+        SubpixelMotion.State motionState = (SubpixelMotion.State) objectField(cloud, "motionState");
+        assertEquals(0x02FF, cloud.getX(),
+                "ObjB3 ObjectMove should apply the negative fractional carry on the first frame");
+        assertEquals(0xC000, motionState.xSub,
+                "ObjB3 must preserve the ROM 16.16 low word instead of truncating it to 8 bits");
+    }
+
+    @Test
     void mtzCogRotationUsesRomVisibleLevelFrameCounter() {
         LevelManager levelManager = mock(LevelManager.class);
         CogObjectInstance cog = new CogObjectInstance(
@@ -383,6 +425,12 @@ class TestSonic2ObjectBugFixes {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.getInt(target);
+    }
+
+    private static Object objectField(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.get(target);
     }
 
     private static void setIntField(Object target, String fieldName, int value) throws Exception {

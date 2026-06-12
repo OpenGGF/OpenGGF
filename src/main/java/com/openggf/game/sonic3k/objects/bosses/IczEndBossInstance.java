@@ -651,14 +651,19 @@ public final class IczEndBossInstance extends AbstractBossInstance implements Mu
     }
 
     private void frostCapture(AbstractPlayableSprite player) {
+        int capturedX = player.getCentreX();
+        int capturedY = player.getCentreY();
         ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setAir(true);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
         player.setAnimationId(0x1A);
+        player.setCentreX((short) capturedX);
+        player.setCentreY((short) capturedY);
         boolean flipped = (state.renderFlags & 1) != 0;
-        spawnChild(() -> new IczFreezerObjectInstance.FrozenPlayerBlock(player, state.x, flipped));
+        spawnChild(() -> new IczFreezerObjectInstance.FrozenPlayerBlock(player, capturedX, capturedY,
+                state.x, flipped));
     }
 
     private void updateRobotnikShip() {

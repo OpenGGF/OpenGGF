@@ -233,14 +233,11 @@ public final class HCZWaterTunnelHandler {
             }
 
             // Set per-sprite collision flags for PlayableSpriteMovement.
-            // Horizontal tunnels (influence=0): enable collision with forced
-            // floor checks so pipe walls constrain the player vertically.
-            // Vertical tunnels (influence!=0): suppress collision because the
-            // engine's collision data causes false ceiling contacts inside
-            // vertical pipes that the ROM's tile solidity avoids.
-            boolean horizontal = entry[INFLUENCE_FLAG] == 0;
-            player.setSuppressAirCollision(!horizontal);
-            player.setForceFloorCheck(horizontal);
+            // WindTunnel_flag makes airborne floor checks run even while the
+            // tunnel velocity points upward, keeping the player constrained
+            // against pipe surfaces for horizontal and vertical entries.
+            player.setSuppressAirCollision(false);
+            player.setForceFloorCheck(true);
 
             if (playerIndex == 0) {
                 activeTunnelInfluenceP1 = entry[INFLUENCE_FLAG];
@@ -256,13 +253,11 @@ public final class HCZWaterTunnelHandler {
             // to position as the second displacement step.
             player.setXSpeed(xVel);
             player.setYSpeed(yVel);
-            player.setGSpeed((short) 0);
 
             // ROM: ext.l d0 / lsl.l #8,d0 / add.l d0,x_pos(a1) — first
             // displacement step: add velocity<<8 to the 32-bit position.
             // player.move() does exactly this (adds speed<<8 to pixel:subpixel).
             player.move(xVel, yVel);
-
             // ROM: move.b #$F,anim(a1)
             player.setAnimationId(Sonic3kAnimationIds.FLOAT2);
             player.setForcedAnimationId(Sonic3kAnimationIds.FLOAT2);

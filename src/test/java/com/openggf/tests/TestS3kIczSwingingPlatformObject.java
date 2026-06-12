@@ -69,6 +69,8 @@ class TestS3kIczSwingingPlatformObject {
         assertEquals(0x1200, platform.getX());
         assertEquals(0x0700, platform.getY());
         assertEquals(1, platform.getPriorityBucket());
+        assertTrue(platform.usesPieceScopedStandingBits());
+        assertTrue(platform.usesCollisionHalfWidthForTopLanding());
     }
 
     @Test
@@ -89,6 +91,11 @@ class TestS3kIczSwingingPlatformObject {
 
         platform.onPieceContact(0, player, standingContact(), 0);
         platform.update(1, player);
+
+        assertEquals(0x1200, platform.getX(),
+                "ROM loc_8AD20 only arms the swing on the trigger frame; circular motion starts next update");
+        assertEquals(0x0700, platform.getY());
+        platform.update(2, player);
 
         assertTrue(platform.getX() > 0x1200);
         verify(player).setXSpeed((short) 0x0800);

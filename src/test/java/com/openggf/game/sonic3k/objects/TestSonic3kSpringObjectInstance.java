@@ -259,6 +259,32 @@ class TestSonic3kSpringObjectInstance {
     }
 
     @Test
+    void underwaterAirborneHorizontalSpringApproachDoesNotUseLandingHandoff() throws Exception {
+        Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
+                new ObjectSpawn(0x031A, 0x0610, Sonic3kObjectIds.SPRING, 0x10, 1, true, 0));
+        spring.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+        invoke(spring, "ensureInitialized");
+
+        TestableSprite player = new TestableSprite("tails_p2");
+        player.setCentreX((short) 0x02F2);
+        player.setCentreY((short) 0x0611);
+        player.setAir(true);
+        player.setInWater(true);
+        player.setXSpeed((short) 0x0300);
+        player.setYSpeed((short) 0x0390);
+        player.setGSpeed((short) 0xFFD0);
+
+        invoke(spring, "checkHorizontalApproach", new Class<?>[]{AbstractPlayableSprite.class}, player);
+
+        assertEquals(0x02F2, player.getCentreX() & 0xFFFF,
+                "HCZ F624: underwater airborne Tails must not receive the horizontal-spring x_pos nudge");
+        assertEquals(0x0300, player.getXSpeed() & 0xFFFF);
+        assertEquals(0x0390, player.getYSpeed() & 0xFFFF,
+                "Underwater airborne approach keeps fall velocity instead of clearing y_vel for a grounded handoff");
+        assertTrue(player.getAir());
+    }
+
+    @Test
     void horizontalApproachUsesNativeP2FromPlayerQueryWithoutPromotingExtraSidekicks() {
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.SPRING, 0x10, 0, false, 0));

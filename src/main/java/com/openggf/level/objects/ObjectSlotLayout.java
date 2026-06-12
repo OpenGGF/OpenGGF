@@ -6,7 +6,12 @@ package com.openggf.level.objects;
  * <p>Only the allocatable dynamic slot window is modeled here. Fixed player/UI/support
  * slots that live outside the manager remain owned by their respective systems.
  */
-public record ObjectSlotLayout(int firstDynamicSlot, int dynamicSlotCount, boolean twoAxisCursorPlacement) {
+public record ObjectSlotLayout(
+        int firstDynamicSlot,
+        int dynamicSlotCount,
+        int processSlotCount,
+        boolean twoAxisCursorPlacement,
+        boolean preallocatesLostRingOwnerSlot) {
     public static final ObjectSlotLayout SONIC_1 = new ObjectSlotLayout(32, 96);
     public static final ObjectSlotLayout SONIC_2 = new ObjectSlotLayout(16, 112);
     // S3K Object_RAM has Player_1, Player_2, and Reserved_object_3 before
@@ -19,10 +24,29 @@ public record ObjectSlotLayout(int firstDynamicSlot, int dynamicSlotCount, boole
     // then the Y pass allocates previously X-passed entries that enter the vertical band
     // (docs/skdisasm/sonic3k.asm:37723-37762). This can allocate newer X-pass entries
     // before older deferred-Y entries.
-    public static final ObjectSlotLayout SONIC_3K = new ObjectSlotLayout(4, 89, true);
+    // S3K HurtCharacter allocates the first Obj37 owner slot before Obj37_Init
+    // fills the spill with AllocateObjectAfterCurrent from that owner.
+    //
+    // S3K Process_Sprites still walks the full 110-slot Object_RAM table
+    // (docs/skdisasm/sonic3k.constants.asm:303-323;
+    // docs/skdisasm/sonic3k.asm:35965-35980). Most gameplay objects live in the
+    // managed dynamic window above; call sites choose the ROM countdown that
+    // matches the object path they are modeling.
+    public static final ObjectSlotLayout SONIC_3K = new ObjectSlotLayout(4, 89, 110, true, true);
 
     public ObjectSlotLayout(int firstDynamicSlot, int dynamicSlotCount) {
-        this(firstDynamicSlot, dynamicSlotCount, false);
+        this(firstDynamicSlot, dynamicSlotCount, firstDynamicSlot + dynamicSlotCount, false, false);
+    }
+
+    public ObjectSlotLayout(int firstDynamicSlot, int dynamicSlotCount, boolean twoAxisCursorPlacement) {
+        this(firstDynamicSlot, dynamicSlotCount, firstDynamicSlot + dynamicSlotCount,
+                twoAxisCursorPlacement, false);
+    }
+
+    public ObjectSlotLayout(int firstDynamicSlot, int dynamicSlotCount,
+                            boolean twoAxisCursorPlacement, boolean preallocatesLostRingOwnerSlot) {
+        this(firstDynamicSlot, dynamicSlotCount, firstDynamicSlot + dynamicSlotCount,
+                twoAxisCursorPlacement, preallocatesLostRingOwnerSlot);
     }
 
     public ObjectSlotLayout {
@@ -32,10 +56,17 @@ public record ObjectSlotLayout(int firstDynamicSlot, int dynamicSlotCount, boole
         if (dynamicSlotCount < 0) {
             throw new IllegalArgumentException("dynamicSlotCount must be >= 0");
         }
+        if (processSlotCount < firstDynamicSlot + dynamicSlotCount) {
+            throw new IllegalArgumentException("processSlotCount must cover the dynamic slot window");
+        }
     }
 
     public int lastDynamicSlotExclusive() {
         return firstDynamicSlot + dynamicSlotCount;
+    }
+
+    public int lastProcessSlotExclusive() {
+        return processSlotCount;
     }
 
     public boolean isDynamicSlot(int slotIndex) {

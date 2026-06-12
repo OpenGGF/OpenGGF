@@ -15,22 +15,32 @@ public final class EncoderSink implements FrameSink {
 
     private static final CapturedFrame POISON =
             new CapturedFrame(new byte[0], 0, 0, new short[0], 0, -1L);
+    private static final long DEFAULT_STOP_JOIN_TIMEOUT_MILLIS = 5_000L;
 
     private final CaptureEncoder encoder;
     private final BackpressurePolicy policy;
     private final BlockingQueue<CapturedFrame> queue;
+    private final long stopJoinTimeoutMillis;
     private final AtomicLong dropped = new AtomicLong();
     private Thread worker;
     private volatile CaptureException workerFailure;
     private volatile Path output;
 
     public EncoderSink(CaptureEncoder encoder, BackpressurePolicy policy, int capacity) {
+        this(encoder, policy, capacity, DEFAULT_STOP_JOIN_TIMEOUT_MILLIS);
+    }
+
+    EncoderSink(CaptureEncoder encoder, BackpressurePolicy policy, int capacity, long stopJoinTimeoutMillis) {
         if (capacity < 1) {
             throw new IllegalArgumentException("capacity must be >= 1");
+        }
+        if (stopJoinTimeoutMillis < 1) {
+            throw new IllegalArgumentException("stopJoinTimeoutMillis must be >= 1");
         }
         this.encoder = encoder;
         this.policy = policy;
         this.queue = new ArrayBlockingQueue<>(capacity);
+        this.stopJoinTimeoutMillis = stopJoinTimeoutMillis;
     }
 
     public void open(Path output, int width, int height, int fps, int sampleRate) throws CaptureException {
@@ -91,9 +101,16 @@ public final class EncoderSink implements FrameSink {
                     break;
                 }
             }
-            worker.join();
+            worker.join(stopJoinTimeoutMillis);
+            if (worker.isAlive()) {
+                encoder.abort();
+                worker.join(250);
+                throw new CaptureException("encoder thread did not stop within "
+                        + stopJoinTimeoutMillis + " ms");
+            }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            encoder.abort();
             throw new CaptureException("interrupted while stopping", e);
         }
         if (workerFailure != null) {

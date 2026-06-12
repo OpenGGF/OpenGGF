@@ -343,6 +343,7 @@ public record PerObjectRewindSnapshot(
             byte topSolidBit, byte lrbSolidBit,
             boolean prePhysicsAir, byte prePhysicsAngle,
             short prePhysicsGSpeed, short prePhysicsXSpeed, short prePhysicsYSpeed,
+            short prePhysicsCentreX, short prePhysicsCentreY,
             boolean air, boolean rolling, boolean jumping, boolean rollingJump,
             boolean pinballMode, boolean pinballSpeedLock,
             boolean preserveRollingOnNextLanding, boolean preserveRollingOnNextRollStop,
@@ -379,6 +380,7 @@ public record PerObjectRewindSnapshot(
             boolean objectControlled, boolean objectControlAllowsCpu, boolean objectControlSuppressesMovement,
             int objectControlReleasedFrame,
             boolean suppressAirCollision, boolean suppressGroundWallCollision, boolean forceFloorCheck,
+            int suppressedObjectMoveAndFallAxes,
             boolean hidden,
             boolean renderFlagOnScreen, boolean renderFlagOnScreenValid,
             // MGZ-specific

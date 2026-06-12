@@ -476,9 +476,10 @@ public class SpriteManager {
 		boolean testButton = !suppressInput && handler.isKeyDown(testKey);
 		boolean speedUp = isDebugSpeedUpModifierDown(handler);
 		boolean slowDown = isDebugSlowDownModifierDown(handler);
-		boolean debugModePressed = handler.isKeyPressed(debugModeKey);
-		boolean superSonicDebugPressed = handler.isKeyPressed(superSonicDebugKey);
-		boolean giveEmeraldsPressed = handler.isKeyPressed(giveEmeraldsKey);
+		boolean debugShortcutsEnabled = configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
+		boolean debugModePressed = debugShortcutsEnabled && handler.isKeyPressed(debugModeKey);
+		boolean superSonicDebugPressed = debugShortcutsEnabled && handler.isKeyPressed(superSonicDebugKey);
+		boolean giveEmeraldsPressed = debugShortcutsEnabled && handler.isKeyPressed(giveEmeraldsKey);
 
 		// Give all chaos emeralds (debug)
 		if (giveEmeraldsPressed) {
@@ -520,6 +521,7 @@ public class SpriteManager {
 						// CPU-controlled sprite: run AI to generate virtual input
 						var cpuController = playable.getCpuController();
 						cpuControllerForDiagnostics = cpuController;
+						playable.capturePreCpuControlSnapshot();
 						boolean isFirstSidekick = !sidekicks.isEmpty() && sidekicks.getFirst() == playable;
 						if (isFirstSidekick) {
 							cpuController.setController2Input(p2Held, p2Logical);
@@ -1404,6 +1406,12 @@ public class SpriteManager {
 			cpuController.finishCarryAfterCarrierMovement();
 		}
 		playable.recordFollowerHistoryForTick();
+		// ROM Obj01_Control runs Sonic_Display before Sonic_Animate and
+		// TouchResponse (S1 01 Sonic.asm:73-90, S2 s2.asm:36243-36258,
+		// S3K sonic3k.asm:21995-22022). Sonic_Display decrements
+		// invulnerable_time, and spilled-ring touch checks read that decremented
+		// value in the same object-interaction pass.
+		playable.tickInvulnerabilityDisplayTimerBeforeTouchResponse();
 		// ROM Obj01_Control: movement runs first, then Sonic_Animate, then
 		// TouchResponse. Special objects like monitors gate on anim(a0), so
 		// ReactToItem must observe the post-movement animation state from the

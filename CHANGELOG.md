@@ -4,15 +4,304 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K Obj37 floor probes now use shared ROM terrain search:** spilled-ring
+  terrain bounces now consume `ObjectTerrainUtils.checkFloorDist`, including
+  the shared FindFloor extension/regression behavior used by object terrain
+  probes. This fixes the ICZ slot-44 shallow bounce that missed the second
+  lost-ring pickup and moves the ICZ complete-run frontier from frame 3323 to
+  frame 3752, now a path-follow platform/player X mismatch.
+
+- **S3K Obj37 floor-probe cadence uses the managed dynamic slot countdown:**
+  spilled-ring floor probes now derive their `(V_int_run_count + d7) & 7`
+  phase from the engine-managed dynamic Obj37 window. This corrects the
+  earlier full-table countdown attempt, which made ICZ spilled rings bounce too
+  early and hundreds of pixels above the ROM trace. Focused Obj37 tests are
+  green; the ICZ complete-run frontier remains at frame 3323 pending the
+  remaining lost-ring collection mismatch.
+
+- **S3K delayed lost-ring Obj37 materialization now matches same-pass update order:**
+  pending S3K lost-ring spills flushed after the player touch phase now apply
+  the first Obj37 movement/gravity step immediately, and Obj37 touch response
+  reads the live post-movement collision-list position. This matches the ROM
+  path where `Obj_Bouncing_Ring` allocates new Obj37 slots during the player
+  slot and those slots are reached later in the same object pass. Focused
+  lost-ring tests are green; the ICZ complete-run frontier remains at frame
+  3323 pending the remaining slot-44 collection-position mismatch.
+
+- **S3K lost-ring Obj37 slot and floor-probe state now match ROM structure:**
+  S3K ring spills now reserve the first Obj37 owner slot before filling the
+  remaining spill with `AllocateObjectAfterCurrent`, and off-screen spilled
+  rings skip terrain probes until the ROM render flag would be set. This is a
+  foundational Obj37 parity cleanup; the ICZ complete-run frontier remains at
+  frame 3323 pending the separate ring-count collection mismatch.
+
+- **Playable invulnerability timer now matches ROM touch-response order:**
+  the post-hit invulnerability timer now ticks in the display phase before
+  player touch responses read it, while still ticking only once per frame. This
+  moves the ICZ complete-run trace from frame 3273 to frame 3323, a second
+  lost-ring collection frontier.
+
+- **Lost-ring floor-probe cadence follows the active object table:** spilled
+  rings now derive their `(V_int_run_count + d7) & mask` phase from the
+  current game's object loop layout instead of assuming the 128-slot S1/S2
+  table, preserving S1/S2 behavior while matching S3K's smaller Obj37 loop
+  countdown.
+
+- **S3K invisible hurt blocks use ROM delayed ring-spill ordering:** S3K
+  horizontal invisible hurt blocks now apply the `sub_24280` Y-position rewind
+  before hurt and defer lost-ring spill until the next level tick, matching the
+  ROM `HurtCharacter` / `Obj_Bouncing_Ring` handoff. This moves the ICZ
+  complete-run trace from frame 3174 to frame 3273, a lost-ring re-collection
+  frontier after hidden-hurt ring-spend parity holds.
+
+- **S3K ICZ path-follow platforms use ROM V-int jitter phase:** ICZ
+  path-follow platform routine `$04` now alternates its one-pixel shake from
+  the ROM `V_int_run_count+3` low-bit phase instead of level-frame parity.
+  This moves the ICZ complete-run trace from frame 3102 to frame 3174, a
+  main-player hidden-hurt/ring-spend frontier after path-platform X and camera
+  parity holds.
+
+- **S3K ICZ freezer capture preserves player subpixels:** ICZ freezer capture
+  clouds and frozen-player blocks now copy only the captured player's ROM
+  `x_pos/y_pos` words while preserving `x_sub/y_sub`, matching the freezer
+  child handoff and carried-player sync routines. This moves the ICZ
+  complete-run trace from frame 2967 to frame 3102, a main-player path-follow
+  platform `x` / camera-X frontier after Tails freezer-release parity holds.
+
+- **S3K ICZ freezer release preserves CPU sidekick ring ownership:** ICZ
+  frozen-player blocks now break on the ROM pre-decrement frame, apply the
+  freezer-specific `loc_8A88A` knockback direction override, and route
+  CPU-controlled sidekicks through `Hurt_Sidekick` semantics so Sonic's shared
+  ring counter is not spent when native Tails breaks out. This moves the ICZ
+  complete-run trace from frame 2964 to frame 2967, a one-pixel native Tails
+  vertical drift after freezer release.
+
+- **S3K ICZ directional slide terrain applies ROM inertia steps:** ICZ1
+  directional slide terrain now moves `ground_vel` by `$40` toward the ROM
+  signed high-byte table target during the late slide-terrain publish, while
+  still using the pre-adjustment high byte for facing. This moves the ICZ
+  complete-run trace from frame 2875 to frame 2964, a native Tails
+  frozen-release rolling-state mismatch after main-player terrain parity holds
+  through the former frontier.
+
+- **S3K ICZ frozen-player blocks stay alive through offscreen carry:** ICZ
+  freezer frozen blocks now opt out of generic dynamic-object coarse culling
+  while they are carrying a captured player, matching the ROM
+  `loc_8A84C` player-sync/draw loop instead of deleting the block once it is
+  far behind the camera. This moves the ICZ complete-run trace from frame 2838
+  to frame 2875, a main-player ground-speed mismatch near the post-freeze
+  terrain/object cluster.
+
+- **S3K ICZ frozen-player blocks honor the ROM camera-side x clamp:** ICZ
+  freezer frozen blocks now clear horizontal velocity before `MoveSprite` when
+  the ROM `Camera_X_pos+$20/$128` side clamp has crossed the block, preventing
+  the first frozen Tails movement step from drifting two pixels left. This
+  moves the ICZ complete-run trace from frame 2837 to frame 2838, a vertical
+  frozen-block movement/sync mismatch.
+
+- **S3K ICZ freezer capture clouds survive parent unload:** ICZ freezer capture
+  children now enter the ROM off-phase scanner after their parent unloads, and
+  frozen-player blocks preserve the capture-frame `x_pos/y_pos` before their
+  first movement step. This moves the ICZ complete-run trace from frame 2836 to
+  frame 2837, a frozen-block movement/anchoring mismatch.
+
+- **S3K ICZ freezer capture clouds scan native sidekicks:** ICZ freezer
+  capture children now use the same native P1/P2 participation policy as the
+  parent activation check, so Tails can be frozen by the ROM capture path
+  instead of only the main player being considered.
+
+- **S3K ICZ slide terrain refreshes ROM facing status:** ICZ1 directional
+  slide terrain now reads the signed high byte of `ground_vel` and refreshes
+  facing/animation every slide-terrain publish, matching `sub_71E4`. This
+  clears the ICZ complete-run frame-2644 native Tails follow-position mismatch
+  and moves the trace to frame 2836, where Tails remains grounded while the ROM
+  has released him airborne.
+
+- **S3K ICZ slide terrain publishes ROM infinite-inertia state:** ICZ1 now
+  applies the `sub_714E -> sub_71E4` slide-terrain status bit after playable
+  physics so the next tick skips ground friction like the ROM. Manual down-roll
+  entry also returns while that bit is set. This moves the ICZ complete-run
+  trace from frame 2600 to frame 2644, a native Tails follow-position mismatch
+  after the collapsing bridge slope.
+
+- **S3K ICZ ice-cube shatter preserves ROM `y_pos`:** ICZ ice-cube shatter
+  now keeps the player centre coordinate stable while applying the ROM roll
+  radii, animation, upward velocity, and object-release state. This moves the
+  ICZ complete-run trace from the frame-2472 ice-cube vertical mismatch to
+  frame 2600, a wall-slope `x_speed`/`g_speed` mismatch after the collapsing
+  bridge section.
+
+- **S3K Star Pointer touch timing now reaches the ICZ ice-cube frontier:** S3K
+  Insta-Shield now models the temporary-invincible 48x48 hurt pass without
+  clearing shield-reactive object collision flags, while real shields still run
+  the projectile-deflect path. ICZ Star Pointer activation now uses the ROM
+  `$20` dummy-sprite `Obj_WaitOffscreen` bounds and orbiting points copy the
+  parent's full fixed-point position before adding the circular offset. This
+  moves the ICZ complete-run trace from the frame-2268 Tails hurt-state
+  frontier to frame 2472, a main-player `y` mismatch near ICZ ice-cube debris.
+
+- **S3K shield and Insta-Shield touch checks use the touch-pass object
+  snapshot:** Shield-reactive hurt objects now run real-shield deflects and
+  Insta-Shield hurt suppression against the same current or pre-update object
+  position used by the active touch pass, avoiding mixed-snapshot contact
+  decisions. The ICZ complete-run trace now fails at the frame-2472 ice-cube
+  debris frontier.
+
+- **S3K Star Pointer keeps active movement after offscreen wait:** ICZ Star
+  Pointer now applies the ROM's `Obj_WaitOffscreen` gate only before installing
+  the active movement routine, so post-init `loc_8BE74`/`loc_8BEA6` movement is
+  not skipped by a later camera-X bounds change. This is a routine-state parity
+  cleanup; the ICZ complete-run trace still fails at the frame-2268 Tails
+  hurt-state frontier.
+
+- **S3K Star Pointer preserves launch-frame orbit refresh:** ICZ Star Pointer
+  points now continue through the ROM's circular parent-relative position
+  refresh on the same frame they enter the launched routine. This is a
+  routine-order parity cleanup; the ICZ complete-run trace still fails at the
+  frame-2268 Tails hurt-state frontier.
+
+- **S3K Star Pointer release checks native P2:** ICZ Star Pointer now runs its
+  child-release side check against the nearest native Sonic/Tails participant,
+  matching the ROM `Find_SonicTails` call in `Obj_StarPointer` instead of
+  looking only at the main player.
+
+- **S3K Insta-Shield suppresses shield-reactive harmful-object hurt:** S3K
+  `TouchResponse` now treats `double_jump_flag=1` as the temporary-invincible
+  48x48 hurt pass used by the ROM, suppressing Sonic's hurt without clearing
+  bit-3 shield-reactive object collision flags. This moved the ICZ complete-run
+  trace from the frame-2263 Sonic rolling/hurt frontier to the frame-2268 Tails
+  speed frontier before the later Star Pointer timing cleanup advanced it
+  further.
+
+- **S3K ICZ segment columns publish the ROM CPU interact word:** ICZ segment
+  child objects now expose the `0x0008` routine-pointer high word used by S3K
+  `Tails_CPU_interact`, so CPU Tails' interact diagnostic follows the live
+  segment-column child. This moves the ICZ complete-run trace from the
+  frame-2061 `tails_cpu_interact` frontier to the frame-2263 rolling/hurt
+  transition frontier.
+
+- **S3K CPU Tails ignores stale rolling push state near ICZ segment columns:**
+  roll-entry animation changes now clear `Status_Push`, and Tails CPU push
+  bypass masks grounded rolling nonzero-`ground_vel` stale push state. This
+  moves the ICZ complete-run trace from the frame-1987 `tails_x` mismatch to
+  the frame-2061 segment-column `tails_cpu_interact` frontier.
+
+- **S3K ICZ swinging platform uses separate ROM child solid slots:** the
+  lower/upper `Obj_ICZSwingingPlatform` solids now keep independent standing
+  latches and use their raw `SolidObjectFull` widths (`$2B`/`$0F`) for the top
+  branch, matching the ROM child SST layout. This moves the ICZ complete-run
+  trace from the frame-1708 post-launch vertical-position frontier to the
+  frame-1987 Tails segment-column frontier.
+
+- **S3K ICZ swinging platform waits one ROM frame before first swing move:**
+  `Obj_ICZSwingingPlatform` now arms its parent swing from the child solid
+  trigger without immediately applying circular movement, matching the ROM
+  `sub_8B0B0` -> `loc_8AD20` handoff. This moves the ICZ complete-run trace
+  from the frame-1667 swinging-platform camera frontier to the frame-1708
+  post-launch vertical-position frontier.
+
+- **S3K horizontal springs preserve grounded slope angle:** `Obj_Spring`
+  horizontal launch now keeps the current player angle when the ROM routine
+  updates `x_vel`, `ground_vel`, and move-lock state without writing
+  `angle(a1)`. This moves the ICZ complete-run trace from the frame-1646
+  post-pile terrain-angle frontier to the frame-1667 swinging-platform camera
+  frontier.
+
+- **S3K ICZ1 big snow pile jump preserves ROM `y_pos`:** the post-crash
+  `Obj_ICZ1BigSnowPile` jump escape now keeps Sonic's centre position stable
+  while changing roll radii and publishing `y_vel=-$600`, matching the ROM
+  radius writes that do not modify `y_pos`. This moves the ICZ complete-run
+  trace from the frame-1314 post-crash pile-jump Y-position frontier to the
+  frame-1646 post-pile terrain-angle frontier.
+
+- **S3K ICZ1 snowboard crash releases dormant Tails into ROM catch-up:** the
+  snowboard crash handoff now mirrors `Obj_LevelIntroICZ1` by changing parked
+  CPU Tails from routine `$0A` to routine `$02` while preserving the off-screen
+  marker position and `object_control=$83`. This moves the ICZ complete-run
+  trace from the frame-1112 dormant-Tails routine frontier to the frame-1314
+  post-crash pile-jump Y-position frontier.
+
+- **S3K ICZ1 snowboard slope tables preserve ROM subpixels:** the scripted
+  slope table now mirrors `move.w x_pos/y_pos` by changing Sonic's centre
+  pixels without clearing `x_sub`/`y_sub`, so the post-slope snowboard motion
+  keeps the ROM fixed-point accumulator. This moves the ICZ complete-run trace
+  from the frame-505 one-pixel/subpixel position frontier to the frame-1112
+  dormant-Tails CPU routine frontier after the snowboard crash.
+
+- **S3K ICZ1 snowboard slope handoff now publishes ROM object control on the
+  final table sample:** the scripted slope exit now applies the last
+  `loc_395FE` position row and immediately switches Sonic back to
+  movement-active `object_control=#2`, matching the ROM's same-routine handoff
+  into the normal snowboard overlay. This moves the ICZ complete-run trace from
+  the frame-488 speed mismatch to the frame-505 one-pixel/subpixel position
+  frontier.
+
+- **S3K ICZ1 snowboard jump timing now follows locked-controller ROM input
+  handoff:** the snowboard intro now keeps `Ctrl_1_locked`-equivalent state
+  queued across object ticks and publishes raw A/B/C/Start input as a normal
+  logical jump edge on the next player frame, while the headless BK2 harness no
+  longer injects synthetic logical action edges through control lock. This moves
+  the ICZ complete-run trace from the frame-171 air-state mismatch to the
+  frame-488 snowboard speed frontier.
+
+- **S3K ICZ1 snowboard object control no longer blocks route rings:** the
+  snowboard intro now models ROM `object_control=#3/#2` as low-bit object
+  ownership rather than bit-7 touch suppression, so Sonic can collect placed
+  rings while the active snowboard overlay owns the sprite. This moves the ICZ
+  complete-run trace from the frame-163 ring mismatch to the frame-171 air-state
+  frontier.
+
+- **S3K ICZ1 snowboard speed maintenance now waits for the ROM grounded
+  overlay routine:** the active snowboard overlay no longer applies the
+  `$1000` ground-speed floor while the ROM would still be in the airborne
+  follow routine (`loc_3943A`). This moves the ICZ complete-run trace from the
+  frame-117 ground-speed mismatch to the frame-163 ring frontier.
+
+- **S3K ICZ1 snowboard release follows the ROM same-frame motion order:** when
+  `Obj_LevelIntroICZ1` clears startup object control, the engine now performs
+  the same sampled-frame player SpeedToPos integration and gravity increment
+  that the ROM's player air path applies. This moves the ICZ complete-run trace
+  from the frame-29 snowboard release mismatch to the frame-117 snowboard
+  ground-speed frontier.
+
+- **S3K ICZ1 Sonic+Tails now enters the ROM snowboard bootstrap path:** the
+  ICZ level-event bootstrap now spawns `Obj_LevelIntroICZ1` for Sonic player
+  modes (`Player_mode < 2`) and parks CPU Tails in the routine-`$0A`
+  dormant marker with object control, moving the ICZ complete-run trace from
+  its frame-0 rolling mismatch to the next snowboard-motion frontier at frame
+  29.
+
+- **Release input/config blockers are tightened:** runtime debug and cheat keys
+  now honor `debug.flags.debugView`, the F12 art viewer cannot invisibly freeze
+  release gameplay, pause no longer collides with Player 2 Start or toggles menu
+  screens, zero-life gameplay remains pausable until Game Over / Continue flow
+  is implemented, digit key bindings round-trip correctly, and invalid
+  `display.fps` values clamp to a safe minimum.
+
 - **Boss hit-flash renders again in Sonic 1 and Sonic 2 SCZ/DEZ:** palette
   writes submitted through `PaletteOwnershipRegistry` are now resolved by a
   game-agnostic frame fallback in the render pipeline, so games and zones
-  without a registry-resolving palette cycler no longer silently drop them.
+  without a registry-resolving palette cycler no longer silently drop them. The
+  fallback also uses feature-remapped zone/act keys for underwater palette
+  lookup, matching the water-config storage path for remapped zones.
+
+- **S3K level-load palette ownership survives registry resets:** ICZ1's
+  lock-on startup mountain palette is reapplied through a post-reset
+  level-load hook, so the runtime palette owner remains
+  `s3k.icz.startupPalette` after zone-scoped registries are cleared.
 
 - **The AIZ fire-transition background renders correctly at standard aspect:**
   the tilemap shader now receives the per-column VScroll texture's actual
   entry count instead of deriving it from the background FBO width, finishing
   the widescreen vscroll fix that previously only covered the parallax shader.
+  BG per-column VScroll is now owned by the parallax compositing pass only, so
+  the fire-wave offset is no longer applied once during the tile FBO pass and
+  again during the scroll pass.
+
+- **Resize handling tolerates unavailable desktop video modes:** startup window
+  centering and post-resize integer-scale snapping now skip the operation when
+  GLFW cannot report a monitor or video mode, avoiding an uncaught desktop
+  boundary crash during display topology changes.
 
 - **S3K runtime terrain overlays no longer corrupt rewind keyframes:** the
   AIZ intro terrain swap and AIZ2 battleship chunk/block overlays now install
@@ -48,6 +337,165 @@ All notable changes to the OpenGGF project are documented in this file.
   treats lag-counter-only rows as VBlank-only frames, and gameplay advancement
   wins when both counters move.
 
+- **Sidekick PANIC facing matches the ROM equality case:** when the CPU
+  sidekick is horizontally aligned with the leader during PANIC, the routine now
+  faces left just like the S2/S3K `TailsCPU_Panic` subtract-and-carry branch.
+
+- **Badnik destruction child allocation follows the explosion routine:** the
+  shared S2/S3K destruction path now transfers the defeated badnik slot to
+  `Obj_Explosion` and lets the explosion's first update allocate animal/points
+  children, matching the S3K `Obj_Explosion` routine instead of spawning those
+  children directly from the destruction helper.
+
+- **Poindexter wait-offscreen uses ROM render bounds:** HCZ Poindexters now
+  restore their normal routine from Render_Sprites-style exclusive bounds with
+  the ROM `$20` offscreen band, fixing the complete-run Tails bounce cadence
+  and advancing the HCZ trace frontier past frame 5726.
+
+- **S3K monitor sidekick release composes with water gravity:** dry CPU
+  sidekicks released from a broken monitor still skip the same-frame gravity
+  tick needed for the early HCZ monitor cadence, while underwater releases now
+  let the normal movement gravity path run so water reduction is applied in
+  the ROM order. This advances the HCZ complete-run trace past frame 5995.
+
+- **HCZ fan lift preserves native Y subpixels:** `Obj_HCZCGZFan` now applies
+  its vertical lift through the native `add.w y_pos` path, preserving the low
+  16-bit subpixel fraction instead of resetting it. This advances the HCZ
+  complete-run trace past the fan-bubble frame-6912 drift.
+
+- **HCZ sliding fan pairs follow ROM ordering and unload anchors:** platform
+  mode now runs the sliding block's inline solid checkpoint before applying
+  the paired fan lift, using the platform-updated fan X just like the ROM child
+  slot. Both halves also unload from their stored origin instead of the current
+  sliding X. This advances the HCZ complete-run trace past frame 7341.
+
+- **HCZ miniboss rockets use ROM child touch timing:** the miniboss now exposes
+  rocket hurt boxes through child touch slots and applies rocket phase/timer
+  updates in the ROM `sub_6AB1A`/`Obj_Wait` order. This advances the HCZ
+  complete-run trace past frame 8451.
+
+- **HCZ miniboss rockets follow per-child ROM routines:** the four rocket
+  children now keep their own routine, timer, speed, and collision-arm state.
+  In particular, subtype 4/6 rockets honor the ROM's routine-6 no-motion wait
+  during wind-up, preventing the false Tails hurt at frame 8452 and advancing
+  the HCZ complete-run trace to the frame-8683 rolling-state frontier.
+
+- **HCZ miniboss rocket wind-up stays armed after phase reset:** the miniboss
+  fight now resets rocket phases before starting the ROM wind-up sequence, so
+  the first fight no longer parks every child back in routine 2 with collision
+  disabled after arming. This advances the HCZ complete-run trace to the
+  frame-8968 native-P2 vertical frontier.
+
+- **HCZ miniboss vortex pull waits for the ROM water-effect wind-up:** the
+  miniboss now keeps player suction disabled through the water-effect child's
+  routine-$06 `byte_6ADEC` wind-up, then applies the routine-$08 pull with
+  native subpixel movement. This advances the HCZ complete-run trace to the
+  frame-9045 native-P2 vertical-speed frontier.
+
+- **HCZ miniboss vortex first contact follows ROM capture order:** the
+  water-effect child now owns the routine-$06/routine-$08 pull gate directly,
+  and the first-contact path runs the ROM pull helper before setting
+  `Status_InAir`, object control, float animation, and clearing x/y/ground
+  speed. This advances the HCZ complete-run trace to the frame-9337
+  post-vortex release frontier.
+
+- **HCZ miniboss vortex release keeps the ROM final pull tick:** the
+  water-effect routine-$0A transition now gives captured players the final
+  `sub_6A9B8` pull tick before same-update release, matching the ROM cooldown
+  ordering and advancing the HCZ complete-run trace to the frame-9482
+  post-vortex air-state frontier.
+
+- **S3K sidekick fresh spawns honor the Obj_Tails init-only frame:** fresh
+  routine-0 sidekick spawns now reset kinematics and advance to the normal CPU
+  routine without running same-frame follow steering, while dormant sentinel
+  entries keep ROM `object_control=$83` movement suppression.
+
+- **HCZ conveyor belts now cull against the ROM coarse-back camera:** S3K
+  `Obj_HCZConveyorBelt` uses `Camera_X_pos_coarse_back`, so paired upper/lower
+  belts remain alive long enough to recapture native P2 on the frame the ROM
+  still processes them.
+
+- **Playable roll-stop uses the ROM minimum roll speed:** shared
+  `Sonic_RollSpeed` / `Tails_RollSpeed` handling now clears rolling when
+  `abs(ground_vel)` falls below the sprite's `min_roll_speed` instead of
+  waiting for zero speed. This restores Tails' standing radii and one-pixel
+  `y_pos` adjustment at the HCZ complete-run frame-3850 frontier and advances
+  the trace to the next main-player air-count handoff.
+
+- **HCZ water-skim airborne handoff respects ROM object order:** the S3K
+  water-skim handler now suppresses the same-frame generic gravity tick when
+  the splash object pins or speed-exits an airborne player, and preserves the
+  Y subpixel word when mirroring the ROM `move.w d0,y_pos(a1)` surface pin.
+  This matches `Obj_HCZWaterSplash` running after the player dispatcher and
+  advances the HCZ complete-run trace past the frame-4286 `y_speed` frontier
+  and the frame-4403 one-pixel vertical carry.
+
+- **AutoSpin forced roll preserves ROM x_pos on wall modes:** S3K
+  `Obj_AutoSpin` now restores centre X after the engine shrinks the wall-mode
+  roll width, matching the ROM routine that writes only radii and
+  `y_pos += 5`. This advances the HCZ complete-run trace past the frame-4872
+  PathSwap/AutoSpin horizontal frontier.
+
+- **S2 underwater sidekick push bypass follows the ROM branch:** live
+  `Status_Push` with delayed Sonic not pushing now skips follow steering even
+  underwater and at low x speed, instead of inheriting S3K's AIZ reload
+  pulse-filter heuristic.
+
+- **Sidekick delayed jump presses replay consecutive ROM press bytes:** the CPU
+  follow path now consumes the delayed `Ctrl_1_logical` press byte directly, so
+  back-to-back recorded A/B/C press bytes are not collapsed by an engine edge
+  reconstruction filter.
+
+- **Sidekick fly-in water clamps use the gameplay waterline:** Tails respawn
+  fly-in now clamps `target_y` against `Water_Level_1` semantics via
+  `WaterSystem.getGameplayWaterLevelY(...)`, preserving oscillated gameplay
+  water surfaces instead of using the non-oscillated base water register.
+
+- **S2 airborne push handoff falls through to follow steering:** the CPU
+  sidekick no longer suppresses FollowLeft/FollowRight merely because both live
+  Tails and delayed Sonic carry `Status_Push`; the ROM only bypasses steering
+  when delayed Sonic is not pushing.
+
+- **S2 sidekick PANIC ignores standalone pinball mode:** `TailsCPU_Panic` now
+  treats only `spindash_flag` as the Ctrl_2 down/jump gate for Sonic 2, while
+  S3K AutoSpin keeps the existing `pinballMode` bridge through a
+  `PhysicsFeatureSet` flag.
+
+- **S3K monitor breaks release edge-standing sidekicks with ROM cadence:**
+  monitor break handling now recovers the P2 standing bit from monitor-edge
+  geometry and defers the released sidekick's first gravity tick, moving the
+  HCZ complete-run trace past the early monitor release frontier.
+
+- **HCZ vertical water-wall timing matches the ROM KosM gate:** the S3K
+  vertical geyser now waits for the queued Kosinski module before entering the
+  rise routine and preserves the setup-to-rise fall-through, preventing an
+  early eruption handoff in the HCZ complete-run trace.
+
+- **HCZ conveyor release preserves ROM center position:** S3K conveyor-belt
+  jump/release now keeps `y_pos` stable while setting rolling status and radii,
+  matching `Obj_HCZConveyorBelt` and moving the HCZ complete-run trace to the
+  next sidekick landing frontier.
+
+- **HCZ water-rush tunnel entry follows ROM ordering:** S3K button contact now
+  publishes its level trigger from the standing solid callback, top-solid
+  button boundary rejection matches `SolidObjectTop_1P`, and HCZ water tunnels
+  run after player/object processing through the normal zone-feature phase.
+  The tunnel routine preserves `ground_vel` as the ROM does, moving the HCZ
+  complete-run trace through the button and tunnel-entry frontiers to the next
+  sidekick push-state mismatch.
+
+- **S3K HCZ trace parity advanced through object setup and spring handoff:**
+  Poindexter now waits for its ROM offscreen/setup cadence before moving or
+  exposing collision, S2/S3K spikes share the `SolidObjectFull` airborne
+  stale-standing-bit no-contact contract, and underwater airborne approaches to
+  S3K horizontal springs no longer synthesize a grounded proactive landing
+  handoff.
+
+- **S2 dead-Sonic Tails flight uses the ROM routine-4 path:** the CPU sidekick
+  now enters the normal Flying routine without a respawn teleport, clears the
+  same spindash/status bits as the ROM, and applies the fly-in landing Walk
+  animation, in-air status, priority, and solid-bit side effects.
+
 - **The S3K AIZ release trace gate is green again:** AIZ egg-capsule results
   timing now preserves the ROM-visible Tails ending-pose/control-lock ordering,
   and trace comparison accepts the recorder's decision-time sidekick input tap
@@ -76,6 +524,41 @@ All notable changes to the OpenGGF project are documented in this file.
   `Events_fg_5` now drives the `LBZ1BGE_DoTransition` seamless reload into
   LBZ2 with the `-$3A00` world shift, `Adjust_LBZ2Layout` (including the
   chunk-$DB rotation), and the gated `LBZ2_LayoutMod` entry corridor.
+
+- **Editor saves handle storage edge cases without losing edits:** transient
+  read failures now leave editor save files in place instead of quarantining
+  valid edits, filesystems without atomic moves fall back to a normal replace,
+  and incompatible block/chunk state lengths now quarantine before any partial
+  map edits are applied.
+
+- **Live rewind history is bounded:** opt-in live rewind now prunes gameplay
+  keyframes, audio logical keyframes, and recorded live inputs to the configured
+  `rewind.historySeconds` horizon, aligned to a retained keyframe so replay
+  remains deterministic without unbounded per-act growth.
+
+- **Live rewind no longer rebuilds level tilemaps on unchanged geometry:**
+  level rewind restores now skip full foreground/background tilemap
+  invalidation when the restored block, chunk, and map arrays are already the
+  live references, avoiding redundant GPU/cache rebuilds while holding rewind.
+
+- **Deferred GL command groups keep their own command-list snapshot:** fallback
+  line-render command groups no longer alias caller-owned reusable lists, so
+  later bucket draws cannot replace or duplicate earlier deferred line commands.
+
+- **Resolved integer config values are cached safely:** repeated per-frame key
+  binding reads now reuse parsed GLFW key codes until configuration changes,
+  avoiding steady string parsing and fallback exception allocation in gameplay
+  input paths.
+
+- **S3K persisted editor saves no longer disable runtime events:** automatic
+  editor-save application is temporarily skipped for S3K levels until
+  `MutableLevel` can execute S3K runtime terrain overlays directly, preserving
+  AIZ/CNZ/MGZ event handlers that still require `Sonic3kLevel`.
+
+- **Trace capture stop cannot hang forever on a stalled encoder:** the
+  background `EncoderSink` stop path now times out, aborts the encoder, and
+  reports a `CaptureException` instead of waiting indefinitely if ffmpeg stops
+  consuming frames.
 
 - **S3K release-route crashes and dead ends are guarded:** completed-emerald
   big-ring touches no longer request the unregistered HPZ zone, and the CNZ2

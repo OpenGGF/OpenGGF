@@ -28,6 +28,7 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance {
 
     private static final int PRIORITY = 4; // ROM: priority = $200
     private static final int FAN_FRAME_COUNT = 5;
+    private static final int KOS_MODULE_WAIT_FRAMES = 3;
     private static final int DROP_FRAMES = 8;
     private static final int DROP_SPEED = 8;
 
@@ -39,11 +40,13 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance {
     private static final int PLAYER_Y_TRIGGER_RANGE = 0x40;
 
     private static final int PHASE_WAITING = 0;
-    private static final int PHASE_ACTIVE = 1;
+    private static final int PHASE_LOADING_ART = 1;
+    private static final int PHASE_ACTIVE = 2;
 
     private final int x;
     private int y;
     private int phase;
+    private int artWaitFramesRemaining;
     private int dropFramesRemaining;
     private int mappingFrame;
     private int animFrameTimer;
@@ -63,6 +66,16 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance {
         if (phase == PHASE_WAITING) {
             HCZBreakableBarState.setState(3);
             if (!shouldActivate(player)) {
+                return;
+            }
+            phase = PHASE_LOADING_ART;
+            artWaitFramesRemaining = KOS_MODULE_WAIT_FRAMES;
+            return;
+        }
+
+        if (phase == PHASE_LOADING_ART) {
+            if (artWaitFramesRemaining > 0) {
+                artWaitFramesRemaining--;
                 return;
             }
             phase = PHASE_ACTIVE;

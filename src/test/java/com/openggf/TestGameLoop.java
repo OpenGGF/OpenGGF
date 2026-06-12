@@ -5,6 +5,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.control.InputHandler;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.DataSelectProvider;
 import com.openggf.game.dataselect.DataSelectAction;
 import com.openggf.game.dataselect.DataSelectActionType;
@@ -126,6 +128,34 @@ public class TestGameLoop {
     public void testStepWithoutInputHandlerThrows() {
         GameLoop loop = new GameLoop();
         assertThrows(IllegalStateException.class, loop::step);
+    }
+
+    @Test
+    public void pauseKeyDoesNotToggleUserPauseInDataSelectMode() {
+        InputHandler inputHandler = new InputHandler();
+        GameLoop loop = new GameLoop(inputHandler);
+        loop.setGameMode(GameMode.DATA_SELECT);
+
+        int pauseKey = SonicConfigurationService.getInstance().getInt(SonicConfiguration.PAUSE_KEY);
+        inputHandler.handleKeyEvent(pauseKey, GLFW_PRESS);
+        loop.step();
+
+        assertFalse(loop.isUserPaused(),
+                "Engine pause input should be ignored in menu modes so data-select cannot appear frozen");
+    }
+
+    @Test
+    public void userPauseIndicatorIsNotDebugViewGated() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/Engine.java"));
+        int userPaused = source.indexOf("gameLoop.isUserPaused()");
+        int needsOverlay = source.indexOf("debugViewEnabled || playbackHud || userPaused");
+        int render = source.indexOf("renderUserPauseIndicator();");
+
+        assertTrue(userPaused >= 0, "Engine display path must observe GameLoop user pause state");
+        assertTrue(needsOverlay > userPaused,
+                "The pause overlay should contribute to overlay setup independently of DEBUG_VIEW_ENABLED");
+        assertTrue(render > needsOverlay,
+                "The user-pause indicator should render from the release-visible overlay path");
     }
 
     @Test

@@ -174,6 +174,9 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         if (((vblaCounter + phaseOffset) & floorCheckMask) != 0) {
             return;
         }
+        if (!hasRomRenderFlagForFloorProbe()) {
+            return;
+        }
 
         if (reverseGravity) {
             // S3K reverse gravity: probe the ceiling (top edge, y - y_radius) while rising
@@ -279,6 +282,16 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     }
 
     /**
+     * ROM Obj37 only calls RingCheckFloorDist while render_flags bit 7 is set
+     * (sonic3k.asm:35668-35674). Off-screen spilled rings still move and apply
+     * gravity, but they do not bounce on terrain until the render pass has made
+     * them screen-visible.
+     */
+    protected boolean hasRomRenderFlagForFloorProbe() {
+        return isWithinSolidContactBounds();
+    }
+
+    /**
      * ROM {@code v_vbla_byte} cadence clock (kept aligned across lag frames by ObjectManager so the
      * scattered-ring floor-check cadence matches the trace).
      */
@@ -310,27 +323,12 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      * top-solidity sensor. Negative distance means penetration. Relocated from RingManager.java:1313.
      */
     protected int ringCheckFloorDist(int x, int y) {
-        LevelManager levelManager = levelManagerOrNull();
-        if (levelManager == null) {
+        com.openggf.physics.TerrainCheckResult result =
+                com.openggf.physics.ObjectTerrainUtils.checkFloorDist(x, y);
+        if (!result.foundSurface()) {
             return 0;
         }
-        ChunkDesc chunkDesc = levelManager.getChunkDescAt((byte) 0, x, y);
-        SolidTile tile = solidTile(levelManager, chunkDesc);
-        int metric = heightMetric(tile, chunkDesc, x);
-        if (metric == 0) {
-            return 0;
-        }
-        if (metric == 16) {
-            // ROM: sub.w a3,d2 with a3=$10 → check the tile above.
-            int prevY = y - 16;
-            ChunkDesc prevDesc = levelManager.getChunkDescAt((byte) 0, x, prevY);
-            int prevMetric = heightMetric(solidTile(levelManager, prevDesc), prevDesc, x);
-            if (prevMetric > 0 && prevMetric < 16) {
-                return distance(prevMetric, y, prevY);
-            }
-            return distance(metric, y, y);
-        }
-        return distance(metric, y, y);
+        return result.distance();
     }
 
     /**

@@ -71,11 +71,13 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     private int hitCount = HIT_COUNT;
     private int hitInvulnerabilityTimer;
     private boolean capsuleResultsComplete;
+    private boolean postCapsuleReleaseComplete;
     private boolean cannonSpawned;
     private boolean cannonArmed;
     private boolean cannonLaunched;
     private boolean transitionRequested;
     private int cannonLaunchTimer = -1;
+    private int postCapsuleReleaseCountForTest;
     private CnzCannonInstance endCannon;
 
     public CnzEndBossInstance(ObjectSpawn spawn) {
@@ -193,8 +195,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
             return;
         }
         if (capsuleResultsComplete && !cannonSpawned) {
-            restorePlayerControl();
-            restoreLevelMusic();
+            releasePostCapsuleStateOnce();
             if (player instanceof AbstractPlayableSprite sprite
                     && (sprite.getCentreX() & 0xFFFF) >= CANNON_TRIGGER_X) {
                 spawnEndCannon();
@@ -228,6 +229,10 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
 
     public void onCapsuleResultsComplete() {
         capsuleResultsComplete = true;
+    }
+
+    public int getPostCapsuleReleaseCountForTest() {
+        return postCapsuleReleaseCountForTest;
     }
 
     private void spawnEndCannon() {
@@ -283,6 +288,16 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         if (focused instanceof AbstractPlayableSprite focusedPlayer && !players.contains(focusedPlayer)) {
             releaseSprite(focusedPlayer);
         }
+    }
+
+    private void releasePostCapsuleStateOnce() {
+        if (postCapsuleReleaseComplete) {
+            return;
+        }
+        restorePlayerControl();
+        restoreLevelMusic();
+        postCapsuleReleaseComplete = true;
+        postCapsuleReleaseCountForTest++;
     }
 
     private void releaseSprite(AbstractPlayableSprite sprite) {

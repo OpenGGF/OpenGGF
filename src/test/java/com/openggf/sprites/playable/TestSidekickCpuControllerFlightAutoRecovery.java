@@ -242,6 +242,7 @@ class TestSidekickCpuControllerFlightAutoRecovery {
                 (short) AbstractPlayableSprite.INPUT_RIGHT, (byte) 0);
         sonic.setWallCling(true);
         TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x0F00);
         tails.setCentreY((short) 0x0400);
@@ -364,6 +365,7 @@ class TestSidekickCpuControllerFlightAutoRecovery {
         TestableSprite sonic = sonicAt(0x1000, 0x0400);
         sonic.setDead(true);
         TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x0F00);
         tails.setCentreY((short) 0x0400);

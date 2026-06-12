@@ -243,6 +243,20 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected short prePhysicsGSpeed = 0;
         protected short prePhysicsXSpeed = 0;
         protected short prePhysicsYSpeed = 0;
+        protected short prePhysicsCentreX = 0;
+        protected short prePhysicsCentreY = 0;
+
+        /**
+         * Snapshot of ground speed before the CPU sidekick controller mutates
+         * the sprite for the current frame. S3K's Tails CPU wall probe uses
+         * the pre-control inertia for zero-distance seam handling; the later
+         * pre-physics snapshot is already after CPU follow acceleration.
+         */
+        protected short preCpuControlGSpeed = 0;
+
+        protected boolean deferredGroundWallVelocityResponse = false;
+        protected int deferredGroundWallVelocityMode = 0;
+        protected int deferredGroundWallVelocityDistance = 0;
 
         /**
          * Whether this sprite is currently jumping (ROM: jumping(a0) status bit).
@@ -372,6 +386,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         protected int invulnerableFrames = 0;
         private boolean suppressNextInvulnerabilityDecrement = false;
+        private boolean invulnerabilityDisplayTimerTickedThisFrame = false;
 
         /**
          * Frames remaining for invincibility power-up.
@@ -542,6 +557,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected boolean forcedJumpPress = false;
         protected boolean suppressNextJumpPress = false;
         protected boolean deferredObjectControlRelease = false;
+        private boolean suppressNextGravityStep = false;
+        private int suppressedObjectMoveAndFallAxes = 0;
         /**
          * When true, user inputs are ignored (Control_Locked in ROM).
          */
@@ -820,6 +837,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.objectControlled = false;
                 this.objectControlAllowsCpu = false;
                 this.objectControlSuppressesMovement = false;
+                this.suppressedObjectMoveAndFallAxes = 0;
                 this.mgzTopPlatformCarrySolidContactObject = null;
                 this.hidden = false;
                 this.objectControlReleasedFrame = Integer.MIN_VALUE;
@@ -893,6 +911,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         topSolidBit, lrbSolidBit,
                         prePhysicsAir, prePhysicsAngle,
                         prePhysicsGSpeed, prePhysicsXSpeed, prePhysicsYSpeed,
+                        prePhysicsCentreX, prePhysicsCentreY,
                         air, rolling, jumping, rollingJump,
                         pinballMode, pinballSpeedLock, preserveRollingOnNextLanding,
                         preserveRollingOnNextRollStop, objectPreservedRollBoostFollowup,
@@ -921,6 +940,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         objectControlled, objectControlAllowsCpu, objectControlSuppressesMovement,
                         objectControlReleasedFrame,
                         suppressAirCollision, suppressGroundWallCollision, forceFloorCheck,
+                        suppressedObjectMoveAndFallAxes,
                         hidden,
                         renderFlagOnScreen, renderFlagOnScreenValid,
                         mgzTopPlatformSpringHandoffPending,
@@ -1010,6 +1030,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.prePhysicsGSpeed = extra.prePhysicsGSpeed();
                 this.prePhysicsXSpeed = extra.prePhysicsXSpeed();
                 this.prePhysicsYSpeed = extra.prePhysicsYSpeed();
+                this.prePhysicsCentreX = extra.prePhysicsCentreX();
+                this.prePhysicsCentreY = extra.prePhysicsCentreY();
                 this.air = extra.air();
                 this.rolling = extra.rolling();
                 this.jumping = extra.jumping();
@@ -1076,6 +1098,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.suppressAirCollision = extra.suppressAirCollision();
                 this.suppressGroundWallCollision = extra.suppressGroundWallCollision();
                 this.forceFloorCheck = extra.forceFloorCheck();
+                this.suppressedObjectMoveAndFallAxes = extra.suppressedObjectMoveAndFallAxes();
                 this.hidden = extra.hidden();
                 this.renderFlagOnScreen = extra.renderFlagOnScreen();
                 this.renderFlagOnScreenValid = extra.renderFlagOnScreenValid();
@@ -1866,6 +1889,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.prePhysicsGSpeed = this.gSpeed;
                 this.prePhysicsXSpeed = (short) this.xSpeed;
                 this.prePhysicsYSpeed = (short) this.ySpeed;
+                this.prePhysicsCentreX = getCentreX();
+                this.prePhysicsCentreY = getCentreY();
         }
 
         /** Pre-physics air state from {@link #capturePrePhysicsSnapshot()}. */
@@ -1891,6 +1916,50 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         /** Pre-physics Y velocity from {@link #capturePrePhysicsSnapshot()}. */
         public short getPrePhysicsYSpeed() {
                 return prePhysicsYSpeed;
+        }
+
+        /** Pre-physics centre X from {@link #capturePrePhysicsSnapshot()}. */
+        public short getPrePhysicsCentreX() {
+                return prePhysicsCentreX;
+        }
+
+        /** Pre-physics centre Y from {@link #capturePrePhysicsSnapshot()}. */
+        public short getPrePhysicsCentreY() {
+                return prePhysicsCentreY;
+        }
+
+        /** Captures CPU-sidekick state before {@code SidekickCpuController.update}. */
+        public void capturePreCpuControlSnapshot() {
+                this.preCpuControlGSpeed = this.gSpeed;
+        }
+
+        /** Ground speed captured before the CPU controller ran this frame. */
+        public short getPreCpuControlGSpeed() {
+                return preCpuControlGSpeed;
+        }
+
+        public void deferGroundWallVelocityResponse(int mode, int distance) {
+                this.deferredGroundWallVelocityResponse = true;
+                this.deferredGroundWallVelocityMode = mode;
+                this.deferredGroundWallVelocityDistance = distance;
+        }
+
+        public boolean hasDeferredGroundWallVelocityResponse() {
+                return deferredGroundWallVelocityResponse;
+        }
+
+        public int getDeferredGroundWallVelocityMode() {
+                return deferredGroundWallVelocityMode;
+        }
+
+        public int getDeferredGroundWallVelocityDistance() {
+                return deferredGroundWallVelocityDistance;
+        }
+
+        public void clearDeferredGroundWallVelocityResponse() {
+                this.deferredGroundWallVelocityResponse = false;
+                this.deferredGroundWallVelocityMode = 0;
+                this.deferredGroundWallVelocityDistance = 0;
         }
 
         public boolean isSliding() {
@@ -2129,6 +2198,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 invulnerableFrames = Math.max(0, frames);
                 if (invulnerableFrames == 0) {
                         suppressNextInvulnerabilityDecrement = false;
+                        invulnerabilityDisplayTimerTickedThisFrame = false;
                 }
         }
 
@@ -2227,8 +2297,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 springingFrames = frames;
         }
 
-        public void tickStatus() {
-                refreshRuntimeBoundStateIfNeeded();
+        public void tickInvulnerabilityDisplayTimerBeforeTouchResponse() {
+                tickInvulnerabilityDisplayTimer();
+        }
+
+        private void tickInvulnerabilityDisplayTimer() {
+                if (invulnerabilityDisplayTimerTickedThisFrame) {
+                        return;
+                }
+                invulnerabilityDisplayTimerTickedThisFrame = true;
                 // ROM: invulnerable_time only decrements in Sonic_Display (routine 2).
                 // During hurt routine (routine 4), DisplaySprite is called directly,
                 // so the timer stays frozen until Sonic lands.
@@ -2239,6 +2316,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 invulnerableFrames--;
                         }
                 }
+        }
+
+        public void tickStatus() {
+                refreshRuntimeBoundStateIfNeeded();
+                tickInvulnerabilityDisplayTimer();
                 if (invincibleFrames > 0) {
                         invincibleFrames--;
                         if (invincibleFrames == 0) {
@@ -2870,6 +2952,24 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         /**
+         * Suppresses the next generic {@code ObjectMoveAndFall} step after an external
+         * ROM routine has already applied its own position displacement.
+         */
+        public void suppressNextObjectMoveAndFall() {
+                this.suppressedObjectMoveAndFallAxes = 0x3;
+        }
+
+        public void suppressNextObjectMoveAndFallY() {
+                this.suppressedObjectMoveAndFallAxes |= 0x2;
+        }
+
+        public int consumeSuppressedObjectMoveAndFallAxes() {
+                int axes = suppressedObjectMoveAndFallAxes;
+                suppressedObjectMoveAndFallAxes = 0;
+                return axes;
+        }
+
+        /**
          * Defers object-control release until the end of the current frame.
          * This matches ROM object ordering where Sonic's routine has already
          * run before a later object clears {@code f_playerctrl}.
@@ -2884,6 +2984,16 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public void deferObjectControlRelease() {
                 this.deferredObjectControlRelease = true;
                 this.objectControlSuppressesMovement = false;
+        }
+
+        public void suppressNextGravityStep() {
+                this.suppressNextGravityStep = true;
+        }
+
+        public boolean consumeSuppressNextGravityStep() {
+                boolean suppress = suppressNextGravityStep;
+                suppressNextGravityStep = false;
+                return suppress;
         }
 
         /**
@@ -3536,6 +3646,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 latchedSolidObjectId = 0;
                 stickToConvex = false;      // Clear slope adhesion flag (set by slope-mode launches)
                 suppressGroundWallCollision = false;
+                suppressedObjectMoveAndFallAxes = 0;
         }
 
         /**
@@ -4468,8 +4579,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         mgzTopPlatformCarrySolidContactObject = null;
                         deferredObjectControlRelease = false;
                 }
+                suppressNextGravityStep = false;
                 recordFollowerHistoryForTick();
                 followerHistoryRecordedThisTick = false;
+                invulnerabilityDisplayTimerTickedThisFrame = false;
         }
 
         public short getRenderCentreX() {
@@ -4564,11 +4677,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         clearInitOverride();
                         resetSpeedConstantsToCanonical();
                         waterPhysicsActive = true;
+                        resetAirTimerForWaterTransition(true);
                 } else if (wasInWater && !nowInWater) {
                         currentWaterSystem().incrementWaterEnteredCounter();
                         clearInitOverride();
                         resetSpeedConstantsToCanonical();
                         waterPhysicsActive = false;
+                        resetAirTimerForWaterTransition(false);
                 }
                 inWater = nowInWater;
         }
@@ -4628,9 +4743,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         spawnSplash();
                 }
 
-                // Reset drowning manager for new underwater session
+                // Reset drowning manager for new underwater session. S3K's fixed
+                // Breathing_bubbles sidecar owns bubble/RNG cadence, but
+                // Sonic_Water/Tails_Water still call Player_ResetAirTimer on the
+                // transition itself.
                 if (controller.getDrowning() != null) {
-                        controller.getDrowning().reset();
+                        resetAirTimerForWaterTransition(true);
                 }
         }
 
@@ -4670,7 +4788,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (ySpeed == 0) {
                         // Notify drowning manager but skip splash effects
                         if (controller.getDrowning() != null) {
-                                controller.getDrowning().onExitWater();
+                                resetAirTimerForWaterTransition(false);
                         }
                         return;
                 }
@@ -4690,6 +4808,19 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
                 // Notify drowning manager of water exit (stops drowning music, resets state)
                 if (controller.getDrowning() != null) {
+                        resetAirTimerForWaterTransition(false);
+                }
+        }
+
+        private void resetAirTimerForWaterTransition(boolean enteringWater) {
+                if (controller.getDrowning() == null) {
+                        return;
+                }
+                if (fixedLevelObjectOwnsDrowningBubbleCadence()) {
+                        controller.getDrowning().replenishAir();
+                } else if (enteringWater) {
+                        controller.getDrowning().reset();
+                } else {
                         controller.getDrowning().onExitWater();
                 }
         }

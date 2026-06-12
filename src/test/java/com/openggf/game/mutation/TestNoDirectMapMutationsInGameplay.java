@@ -49,10 +49,6 @@ class TestNoDirectMapMutationsInGameplay {
      * Each entry is relative to src/main/java/ and includes a justifying comment.
      */
     private static final Set<String> ALLOWED = Set.of(
-            // Editor commands — not gameplay paths
-            "com/openggf/level/resources/commands/PlaceBlockCommand.java",
-            "com/openggf/level/resources/commands/DeriveChunkFromPatternsCommand.java",
-            "com/openggf/level/resources/commands/DeriveBlockFromChunksCommand.java",
             // Initial layout decoding from ROM (not a gameplay mutation)
             "com/openggf/game/sonic3k/Sonic3kLevel.java"
     );
@@ -135,6 +131,14 @@ class TestNoDirectMapMutationsInGameplay {
         for (String root : SCAN_ROOTS) {
             assertFalse(scannableJavaFiles(root).isEmpty(),
                     "scan root must exist and contain Java files: " + root);
+        }
+    }
+
+    @Test
+    void allowListEntriesStillExist() {
+        for (String allowed : ALLOWED) {
+            assertTrue(Files.isRegularFile(Paths.get("src/main/java").resolve(allowed)),
+                    "allow-list entry must point at a current source file: " + allowed);
         }
     }
 

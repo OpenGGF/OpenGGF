@@ -110,6 +110,24 @@ class TestDataSelectSessionController {
     }
 
     @Test
+    void unavailableSlot_isPreservedAndCannotStartNewGameOverFile() {
+        StubHostProfile hostProfile = new StubHostProfile();
+        DataSelectSessionController controller = new DataSelectSessionController(hostProfile);
+
+        controller.loadAvailableTeams(null);
+        controller.loadSlotSummaries(List.of(SaveSlotSummary.unavailable(1)));
+        controller.menuModel().setSelectedRow(1);
+
+        assertEquals(SaveSlotState.UNAVAILABLE, controller.slotSummaries().get(0).state());
+        assertEquals(List.of(), controller.currentClearRestartDestinations());
+
+        DataSelectAction action = controller.confirmSelection();
+
+        assertEquals(DataSelectActionType.NONE, action.type(),
+                "Transiently unreadable save slots must not be treated as fresh slots");
+    }
+
+    @Test
     void presentationProvider_injectsControllerIntoDelegate_andConsumePendingActionDelegatesToController() {
         StubHostProfile hostProfile = new StubHostProfile();
         DataSelectSessionController controller = new DataSelectSessionController(hostProfile);

@@ -23,6 +23,7 @@ import com.openggf.debug.PerformanceProfiler;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
 import com.openggf.game.render.AdvancedRenderModeController;
@@ -71,6 +72,7 @@ import com.openggf.sprites.render.PlayerSpriteRenderer;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -151,6 +153,7 @@ public class LevelManager {
     PerformanceProfiler profiler;
     private CrossGameFeatureProvider crossGameFeatures;
     final List<List<LevelData>> levels = new ArrayList<>();
+    private final List<PendingLostRingSpawn> pendingLostRingSpawns = new ArrayList<>();
     private final WorldSession worldSession;
     // Local mirror of zone/act state owned by WorldSession. Reads use these
     // fields directly for speed; writes go through writeCurrentZone /
@@ -663,14 +666,8 @@ public class LevelManager {
      */
     public void initZoneFeatures() throws IOException {
         zoneFeatureProvider = gameModule.getZoneFeatureProvider();
-        SpecialRenderEffectRegistry specialRenderEffectRegistry = GameServices.specialRenderEffectRegistryOrNull();
-        AdvancedRenderModeController advancedRenderModeController = GameServices.advancedRenderModeControllerOrNull();
-        if (specialRenderEffectRegistry != null) {
-            specialRenderEffectRegistry.clear();
-        }
-        if (advancedRenderModeController != null) {
-            advancedRenderModeController.clear();
-        }
+        resetZoneScopedRegistriesForLevelLoad();
+        applyLevelLoadPaletteOverrides();
         initializeZoneFeatureProvider(zoneFeatureProvider);
     }
 
@@ -678,15 +675,30 @@ public class LevelManager {
         if (zoneFeatureProvider == null) {
             zoneFeatureProvider = gameModule.getZoneFeatureProvider();
         }
+        resetZoneScopedRegistriesForLevelLoad();
+        applyLevelLoadPaletteOverrides();
+        initializeZoneFeatureProvider(zoneFeatureProvider);
+    }
+
+    void resetZoneScopedRegistriesForLevelLoad() {
+        PaletteOwnershipRegistry paletteOwnershipRegistry = GameServices.paletteOwnershipRegistryOrNull();
         SpecialRenderEffectRegistry specialRenderEffectRegistry = GameServices.specialRenderEffectRegistryOrNull();
         AdvancedRenderModeController advancedRenderModeController = GameServices.advancedRenderModeControllerOrNull();
+        if (paletteOwnershipRegistry != null) {
+            paletteOwnershipRegistry.clear();
+        }
         if (specialRenderEffectRegistry != null) {
             specialRenderEffectRegistry.clear();
         }
         if (advancedRenderModeController != null) {
             advancedRenderModeController.clear();
         }
-        initializeZoneFeatureProvider(zoneFeatureProvider);
+    }
+
+    private void applyLevelLoadPaletteOverrides() {
+        if (game instanceof LevelLoadPaletteOverrideProvider provider && level != null) {
+            provider.applyLevelLoadPaletteOverrides(level, currentZone, currentAct);
+        }
     }
 
     private void initializeZoneFeatureProvider(ZoneFeatureProvider zoneFeatureProvider) throws IOException {
@@ -1020,6 +1032,7 @@ public class LevelManager {
         // rather than in drawWithSpritePriority() so headless tests see the
         // counter advance even when rendering is disabled.
         frameCounter++;
+        processPendingLostRingSpawns();
 
         Sprite player = null;
         AbstractPlayableSprite playable = null;
@@ -2689,6 +2702,49 @@ public class LevelManager {
         ringManager.spawnLostRings(player, count, frameCounter);
     }
 
+    public void spawnLostRingsAfterCurrentFrame(AbstractPlayableSprite player, int frameCounter) {
+        if (player == null || ringManager == null) {
+            return;
+        }
+        int count = player.getRingCount();
+        if (count <= 0) {
+            return;
+        }
+        int preallocatedFirstSlot = -1;
+        if (objectManager != null && objectManager.preallocatesLostRingOwnerSlot()) {
+            preallocatedFirstSlot = objectManager.allocateDynamicSlot();
+        }
+        pendingLostRingSpawns.add(new PendingLostRingSpawn(
+                player, count, player.getCentreX(), player.getCentreY(), frameCounter,
+                preallocatedFirstSlot));
+    }
+
+    private void processPendingLostRingSpawns() {
+        if (pendingLostRingSpawns.isEmpty() || ringManager == null) {
+            return;
+        }
+        Iterator<PendingLostRingSpawn> iterator = pendingLostRingSpawns.iterator();
+        while (iterator.hasNext()) {
+            PendingLostRingSpawn pending = iterator.next();
+            if (frameCounter <= pending.frameCounter()) {
+                continue;
+            }
+            if (pending.player().getRingCount() > 0) {
+                ringManager.spawnLostRingsWithInitialObjectStep(
+                        pending.player(), pending.ringCount(), frameCounter,
+                        pending.x(), pending.y(), pending.preallocatedFirstSlot());
+            } else if (pending.preallocatedFirstSlot() >= 0 && objectManager != null) {
+                objectManager.releaseDynamicSlot(pending.preallocatedFirstSlot());
+            }
+            iterator.remove();
+        }
+    }
+
+    private record PendingLostRingSpawn(
+            AbstractPlayableSprite player, int ringCount, int x, int y, int frameCounter,
+            int preallocatedFirstSlot) {
+    }
+
     // ── Post-load assembly methods ──────────────────────────────────────
     // Extracted from loadCurrentLevel() so profile steps can delegate to them.
     // Each method corresponds to one post-load InitStep (steps 14-20).
@@ -3074,6 +3130,10 @@ public class LevelManager {
 
     private void applyPersistedEditorEdits() {
         if (level == null || gameModule == null) {
+            return;
+        }
+        if (gameModule.getGameId() == GameId.S3K) {
+            LOGGER.fine("Skipping persisted S3K editor edits until MutableLevel supports S3K runtime overlays");
             return;
         }
         MutableLevel mutableLevel = level instanceof MutableLevel existing

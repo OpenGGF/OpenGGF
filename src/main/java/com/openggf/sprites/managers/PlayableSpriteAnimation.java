@@ -464,8 +464,7 @@ public class PlayableSpriteAnimation {
                                              int frameCounter,
                                              int scriptCount) {
         if (!sprite.getPushing()
-                || sprite.getAir()
-                || sprite.getRolling()) {
+                || sprite.getAir()) {
             return;
         }
         if (sprite.getPhysicsFeatureSet() == null
@@ -488,8 +487,9 @@ public class PlayableSpriteAnimation {
         }
 
         // S2/S3K animation drivers clear Status_Push whenever anim differs
-        // from prev_anim (s2.asm:38033-38038,40879-40884;
-        // sonic3k.asm:29359-29364,29681-29686). S1 leaves this behind FixBugs.
+        // from prev_anim, including roll entry (s2.asm:38033-38038,
+        // 40879-40884; sonic3k.asm:29359-29364,29681-29686). S1 leaves
+        // this behind FixBugs.
         sprite.setPushing(false);
     }
 

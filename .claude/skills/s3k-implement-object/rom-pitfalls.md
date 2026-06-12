@@ -113,6 +113,53 @@ non-playable/object-local state.
 
 ---
 
+## P4b — Rolling status/radius writes without a ROM y_pos write
+
+**Symptom.** A player or sidekick shifts vertically by 1-5 px on an object
+release frame even though the ROM trace keeps `y_pos` unchanged. The frame
+often also flips `Status_Roll`, `Status_InAir`, or collision radii.
+
+**Root cause.** Engine `setRolling(true)` changes top-left-based sprite
+dimensions, which changes `getCentreY()` unless the object restores the
+pre-change center. ROM status/radius writes do not imply a `y_pos` write.
+
+**What to check.** If the ROM block writes `y_radius`, `x_radius`,
+`Status_Roll`, `jumping`, or `anim` but does not write `x_pos`/`y_pos`,
+capture the native center before the engine dimension change and restore it
+with `setCentreYPreserveSubpixel(...)` after `setRolling(...)`. Do not use
+`getRollHeightAdjustment()` unless the ROM explicitly adjusts `y_pos`.
+
+**ROM citation.** `Obj_HCZConveyorBelt` release `loc_312D4`
+(`docs/skdisasm/sonic3k.asm:66440-66457`) writes status/radii/animation but
+does not write `y_pos`.
+
+**Originating commit.** `fix: preserve HCZ conveyor release center y`.
+
+---
+
+## P4c — Camera culling uses ROM coarse-back camera registers
+
+**Symptom.** An object disappears one frame before the ROM would process it,
+often causing a missed same-frame sidekick/player interaction near the right
+edge of the object's cull window.
+
+**Root cause.** Engine code compares against `camera.getX() & $FF80`, while
+the S3K object routine reads `Camera_X_pos_coarse_back`, which `Load_Sprites`
+sets to `(Camera_X_pos - $80) & $FF80` before `Process_Sprites`.
+
+**What to check.** When an S3K object routine cites
+`Camera_X_pos_coarse_back`, compute the same `$80`-shifted coarse value before
+left/right cull comparisons. Do not substitute the current raw camera coarse
+unless the ROM routine actually reads `Camera_X_pos`.
+
+**ROM citation.** `Obj_HCZConveyorBelt` cull check
+(`docs/skdisasm/sonic3k.asm:66355-66364`) and `Load_Sprites`
+coarse-back setup (`docs/skdisasm/sonic3k.asm:37472-37478`).
+
+**Originating commit.** `fix: model HCZ conveyor coarse-back culling`.
+
+---
+
 ## P5 — SolidObject returns non-solid prematurely on state transition
 
 **Symptom.** Rider drops from a moving solid on the exact frame of an
@@ -710,6 +757,39 @@ every game implicitly.
 CNZ speed-shoes monitor reward timing advanced the S2 CNZ frontier from f976
 to f1146 after confirming S1, S2, and S3K all use the same pre-move velocity
 test).
+
+---
+
+## P19 -- HurtCharacter spill may be a next-object-tick effect
+
+**Symptom.** A trace enters hurt on the correct frame but the engine spends
+rings one frame earlier than the ROM, or spilled Obj37 rings appear as fully
+initialized ring objects on the hit frame instead of after the ROM owner object
+runs.
+
+**Root cause.** Some S3K solid hurt paths call `sub_24280`, which rewinds the
+player's 16:16 `y_pos` by `y_vel<<8`, swaps the hurt object/player registers,
+and calls `HurtCharacter`. `HurtCharacter` allocates an `Obj_Bouncing_Ring`
+owner but does not itself clear `Ring_count`; the owner object's init routine
+spawns the visible lost rings and zeroes the counter on its next execution.
+Directly calling the engine's eager `spawnLostRings(...)` from the hurt contact
+spends rings on the same comparison row.
+
+**What to check.** When porting S3K objects that hurt via `sub_24280` or
+`HurtCharacter`, confirm whether the ROM path allocates an owner object before
+the visible spill. Model both the pre-hurt Y rewind and the delayed ring-spend
+ordering; do not special-case the trace frame or zone.
+
+**ROM citation.** `Obj_InvisibleHurtBlockHorizontal` routes contact through
+`sub_1F58C` (`docs/skdisasm/sonic3k.asm:43268-43431`), which calls
+`sub_24280` (`docs/skdisasm/sonic3k.asm:49200-49220`) before
+`HurtCharacter` (`docs/skdisasm/sonic3k.asm:21065-21088`). The S3K
+`Obj_Bouncing_Ring` init path reads `Ring_count`, creates spilled rings, and
+clears the counter at `docs/skdisasm/sonic3k.asm:35490-35616`.
+
+**Originating commit.** `<pending>` (ICZ hidden hurt block moved the
+complete-run trace from f3174 same-frame ring spend to f3273 lost-ring
+re-collection after adding delayed spill ordering and the `sub_24280` Y rewind).
 
 ---
 

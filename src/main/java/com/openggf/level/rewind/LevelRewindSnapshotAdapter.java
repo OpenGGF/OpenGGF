@@ -53,13 +53,19 @@ public final class LevelRewindSnapshotAdapter implements RewindSnapshottable<Lev
     @Override
     public void restore(LevelSnapshot snapshot) {
         AbstractLevel level = currentAbstractLevel();
+        boolean geometryReferencesChanged =
+                level.blocksReference() != snapshot.blocks()
+                        || level.chunksReference() != snapshot.chunks()
+                        || level.getMap().getData() != snapshot.mapData();
 
         level.replaceBlocks(snapshot.blocks());
         level.replaceChunks(snapshot.chunks());
         level.getMap().restoreData(snapshot.mapData());
         level.bumpEpoch();
-        // Rewind restores prior tile arrays by reference; force manager-owned tilemap caches to rebuild.
-        manager.invalidateAllTilemaps();
+        if (geometryReferencesChanged) {
+            // Rewind can restore prior tile arrays by reference; rebuild manager-owned caches only on swaps.
+            manager.invalidateAllTilemaps();
+        }
         manager.setFrameCounter(snapshot.frameCounter());
         restoreLevelHudState(snapshot);
         manager.restoreRespawnRequestedForRewind(snapshot.respawnRequested());

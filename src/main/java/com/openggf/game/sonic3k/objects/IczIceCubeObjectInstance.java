@@ -117,7 +117,11 @@ public class IczIceCubeObjectInstance extends AbstractObjectInstance
     }
 
     private void launchPlayer(PlayableEntity player) {
+        short centreY = player.getCentreY();
         player.setRolling(true);
+        // ROM writes y_radius/x_radius around y_pos; engine rolling dimensions
+        // are top-left-backed, so keep the native centre coordinate stable.
+        player.setCentreYPreserveSubpixel(centreY);
         player.setYSpeed((short) SHATTER_Y_SPEED);
         player.setAir(true);
         player.setOnObject(false);

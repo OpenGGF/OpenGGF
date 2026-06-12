@@ -20,7 +20,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 7. [Sonic 1 Monitor Sidekick Guard](#sonic-1-monitor-sidekick-guard)
 8. [Bonus Stage Game Mode](#bonus-stage-game-mode)
 9. [HCZ Conveyor Belt Rolling State Clear](#hcz-conveyor-belt-rolling-state-clear)
-10. [S2 Logical-Input Latch Disabled During Control Lock](#s2-logical-input-latch-disabled-during-control-lock)
+10. [Right-Wall Odd-Sensor Fallback Heuristics](#right-wall-odd-sensor-fallback-heuristics)
 11. [S2 CPZ Visual Water Surface Oscillation](#s2-cpz-visual-water-surface-oscillation)
 12. [S2 Music Offsets Resolved from Hardcoded REV01 Table](#s2-music-offsets-resolved-from-hardcoded-rev01-table)
 13. [Right-Boundary Is Viewport-Independent (Level Edge)](#right-boundary-is-viewport-independent-level-edge)
@@ -488,54 +488,31 @@ With the fix, the player is vulnerable to enemy touch responses while on the con
 
 ---
 
-## S2 Logical-Input Latch Disabled During Control Lock
+## Right-Wall Odd-Sensor Fallback Heuristics
 
-**Location:** `PhysicsFeatureSet.controlLockLatchesLogicalInput`, `AbstractPlayableSprite.setLogicalInputState`
-**ROM Reference:** S2 `Obj01_Control` at `s2.asm:35933-35935`; S3K `Sonic_Control` at `sonic3k.asm:21541-21545 loc_10760`.
+**Location:** `CollisionSystem.pendingOddSensorFallbackAngles`, `AbstractPlayableSprite.rightWallPenetrationTimer`
+**ROM Reference:** `AnglePos`/right-wall sensor selection paths in the Sonic 1, Sonic 2, and Sonic 3K disassemblies.
 
-### What ROM Does
+### Original Implementation
 
-Both S2 and S3K's player control routines short-circuit the `Ctrl_1 → Ctrl_1_logical` copy when `Ctrl_1_locked = 1`:
+The ROM resolves the active wall sensor and floor angle from the current frame's sensor probes. Odd/flagged angle values are snapped from the same frame's result; there is no cross-frame map of prior alternate-sensor angles.
 
-```
-tst.b   (Ctrl_1_locked).w
-bne.s   loc_10760               ; skip move.w (Ctrl_1).w, (Ctrl_1_logical).w
-```
+### Our Implementation
 
-The result is that `Ctrl_1_logical` retains its previous frame's value while the lock is active. Sonic_RecordPos then writes the latched (non-zero) value into `Stat_table`, and downstream consumers (e.g. Tails CPU follow-steering) see the latched value rather than the live raw pad.
+The engine carries two narrow right-wall stability heuristics:
 
-### What We Do
+1. `CollisionSystem.pendingOddSensorFallbackAngles` can remember the alternate sensor angle from a previous RIGHTWALL frame and apply it when the selected sensor reports distance 0 with an odd angle.
+2. `AbstractPlayableSprite.rightWallPenetrationTimer` gives a short grace period while resolving right-wall penetration and is captured in playable-sprite rewind snapshots.
 
-The `PhysicsFeatureSet.controlLockLatchesLogicalInput` flag controls whether the engine mirrors this short-circuit. The flag is **`true` for SONIC_3K** (ROM-correct) but **`false` for SONIC_2 and SONIC_1**:
-
-```java
-// AbstractPlayableSprite.setLogicalInputState
-if (isControlLocked() && physicsFeatureSet != null
-        && physicsFeatureSet.controlLockLatchesLogicalInput()) {
-    return;  // S3K: latch the previous frame's logicalInputState
-}
-this.logicalInputState = input;  // S2/S1: continue writing through the lock
-```
+`CollisionSystem.resetState()` clears the pending-angle map so singleton reuse between tests or gameplay sessions cannot inherit stale fallback state.
 
 ### Rationale
 
-S2's `Obj01_Control` ROM cite confirms the latch behaviour matches S3K, but S2's existing `setControlLocked(true)` call sites in the engine (`FlipperObjectInstance`, `CPZSpinTubeObjectInstance`, `Sonic2DeathEggRobotInstance`, `SignpostObjectInstance`) were calibrated against the engine's prior **non-latching** behaviour:
-
-1. **Animation gating depends on post-lock zero state.** The S2 lock-using objects rely on `logicalInputState = 0` while the lock is active to drive their lock-period animations correctly. Enabling the latch reverses that — `logicalInputState` would retain pre-lock controller state — and breaks the animations.
-
-2. **S2 EHZ trace replay regression.** A universal latch (commit `f3347ea89`, reverted in `9793e4617`) regressed `TestS2Ehz1TraceReplay` from PASS to F5121 with 113 errors (`tails_x_speed -0x576` vs ROM `-0x4EA`).
-
-3. **No active S3K trace dependency yet.** The S3K AIZ F7381 blocker that motivated adding the latch turned out **not** to be a `Ctrl_1_locked` issue (verified against the v6.12-s3k recorder's `control_lock_state` events — `Ctrl_1_locked = 0` for the entire AIZ F7361-F7385 window). The S3K-side latch remains as foundation for future option-A work, but S2 has no current need for it.
-
-4. **Re-enabling requires audit.** Flipping `controlLockLatchesLogicalInput = true` for S2 (and S1) needs a full audit of every `setControlLocked(true)` call site in those games to confirm the post-lock animation paths still work with latched input, plus re-recording the S2/S1 trace fixtures against ROM.
+The heuristics prevent visible ground-mode oscillation at right-wall transitions in the Java collision model while the broader collision pipeline still differs structurally from the ROM's exact object RAM and terrain probe sequencing.
 
 ### Verification
 
-`TestS2Ehz1TraceReplay`, `TestS1Ghz1TraceReplay`, and `TestS1Mz1TraceReplay` remain green with the gated latch (commit `64a65de0e`). `TestLogicalInputControlLockLatch` covers all four cases: S3K-flag-true sprites latch and clear on unlock; S1/S2 flag-false sprites continue writing through the lock.
-
-### Removal Condition
-
-Remove this entry once the S2/S1 trace fixtures have been re-recorded against ROM-correct `Ctrl_1_logical` semantics, every existing `setControlLocked(true)` S2 call site has been audited to confirm post-lock animation correctness with the latch enabled, and the `controlLockLatchesLogicalInput` flag is flipped to `true` for `SONIC_2` and `SONIC_1`.
+`CollisionSystemTest.resetStateClearsPendingOddSensorFallbackAngles` guards the reset behavior. `TestAbstractPlayableSpriteRewindCapture` covers the captured `rightWallPenetrationTimer` field.
 
 ---
 

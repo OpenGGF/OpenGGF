@@ -179,6 +179,7 @@ Audio: headless capture installs `HeadlessSmpsAudioBackend`, a true no-device SM
 | `LIVE_REWIND_TAPE_COAST_ACCELERATION` | `rewind.tapeCoastAcceleration` | number | `0.25` | Optional tape-coast acceleration in rewind steps per held frame. Used only when tape coast is enabled. |
 | `LIVE_REWIND_TAPE_COAST_DECELERATION` | `rewind.tapeCoastDeceleration` | number | `0.5` | Optional tape-coast deceleration in rewind steps per released frame. Used only when tape coast is enabled. |
 | `LIVE_REWIND_TAPE_COAST_MAX_STEPS` | `rewind.tapeCoastMaxSteps` | number | `4.0` | Maximum rewind steps per visual frame for optional tape-coast rewind. Values below 1.0 cap the rewind in slow-motion. Used only when tape coast is enabled. |
+| `REWIND_HISTORY_SECONDS` | `rewind.historySeconds` | int | `60` | Seconds of live rewind keyframe and input history to retain. The effective retained window may be up to one keyframe interval longer so replay always has a complete keyframe-to-target input segment. |
 | `REWIND_AUDIO_HISTORY_LIMIT_TYPE` | `rewind.audioHistoryLimitType` | string | `"time"` | How the rewind audio PCM history ring is capped. `"time"` caps by `REWIND_AUDIO_HISTORY_SECONDS`; `"size"` caps by `REWIND_AUDIO_HISTORY_SIZE_MB`. Held rewind beyond the cap plays silence on develop (the audio-rewind feature branch engages the reverse resynthesizer instead). |
 | `REWIND_AUDIO_HISTORY_SECONDS` | `rewind.audioHistorySeconds` | int | `60` | Seconds of stereo PCM history kept for held-rewind playback when `REWIND_AUDIO_HISTORY_LIMIT_TYPE` is `"time"`. |
 | `REWIND_AUDIO_HISTORY_SIZE_MB` | `rewind.audioHistorySizeMb` | int | `10` | Megabytes of stereo PCM history kept for held-rewind playback when `REWIND_AUDIO_HISTORY_LIMIT_TYPE` is `"size"`. Stereo 16-bit at 48 kHz consumes ~192 KB/s, so 10 MB is roughly 54 s at that sample rate (~57 s at 44.1 kHz). |
@@ -362,6 +363,7 @@ rewind:
   tapeCoastDeceleration: 0.5   # Per-tick speed decrease after release
   tapeCoastMaxSteps: 4.0   # Maximum rewind steps per tick
   tapeCoastMinSteps: 0.25   # Minimum rewind steps per tick; below 1.0 gives slow-motion rewind
+  historySeconds: 60   # Seconds of live rewind keyframe and input history to retain
   audioHistoryLimitType: "time"   # How the rewind audio PCM history ring is sized
   audioHistorySeconds: 60   # Seconds of PCM history kept when audioHistoryLimitType=time
   audioHistorySizeMb: 10   # Megabytes of PCM history kept when audioHistoryLimitType=size

@@ -76,6 +76,8 @@ class TestAbstractPlayableSpriteRewindCapture {
         sonic.prePhysicsGSpeed = (short) 0x111;
         sonic.prePhysicsXSpeed = (short) 0x222;
         sonic.prePhysicsYSpeed = (short) 0x333;
+        sonic.prePhysicsCentreX = (short) 0x444;
+        sonic.prePhysicsCentreY = (short) 0x555;
         sonic.air = true;
         sonic.rolling = true;
         sonic.jumping = true;
@@ -132,6 +134,7 @@ class TestAbstractPlayableSpriteRewindCapture {
         sonic.suppressAirCollision = true;
         sonic.suppressGroundWallCollision = true;
         sonic.forceFloorCheck = true;
+        sonic.suppressNextObjectMoveAndFall();
         sonic.hidden = true;
         sonic.setRenderFlagOnScreen(false);
         sonic.mgzTopPlatformSpringHandoffPending = true;
@@ -184,6 +187,8 @@ class TestAbstractPlayableSpriteRewindCapture {
         assertEquals((short) 0x111, e1.prePhysicsGSpeed(), "prePhysicsGSpeed mismatch");
         assertEquals((short) 0x222, e1.prePhysicsXSpeed(), "prePhysicsXSpeed mismatch");
         assertEquals((short) 0x333, e1.prePhysicsYSpeed(), "prePhysicsYSpeed mismatch");
+        assertEquals((short) 0x444, e1.prePhysicsCentreX(), "prePhysicsCentreX mismatch");
+        assertEquals((short) 0x555, e1.prePhysicsCentreY(), "prePhysicsCentreY mismatch");
         assertTrue(e1.air(), "air mismatch");
         assertTrue(e1.rolling(), "rolling mismatch");
         assertTrue(e1.jumping(), "jumping mismatch");
@@ -240,6 +245,7 @@ class TestAbstractPlayableSpriteRewindCapture {
         assertTrue(e1.suppressAirCollision(), "suppressAirCollision mismatch");
         assertTrue(e1.suppressGroundWallCollision(), "suppressGroundWallCollision mismatch");
         assertTrue(e1.forceFloorCheck(), "forceFloorCheck mismatch");
+        assertEquals(0x3, e1.suppressedObjectMoveAndFallAxes(), "suppressedObjectMoveAndFallAxes mismatch");
         assertTrue(e1.hidden(), "hidden mismatch");
         assertFalse(e1.renderFlagOnScreen(), "renderFlagOnScreen mismatch");
         assertTrue(e1.renderFlagOnScreenValid(), "renderFlagOnScreenValid mismatch");
@@ -393,6 +399,8 @@ class TestAbstractPlayableSpriteRewindCapture {
         assertEquals(e1.prePhysicsGSpeed(), e2.prePhysicsGSpeed(), "prePhysicsGSpeed not restored");
         assertEquals(e1.prePhysicsXSpeed(), e2.prePhysicsXSpeed(), "prePhysicsXSpeed not restored");
         assertEquals(e1.prePhysicsYSpeed(), e2.prePhysicsYSpeed(), "prePhysicsYSpeed not restored");
+        assertEquals(e1.prePhysicsCentreX(), e2.prePhysicsCentreX(), "prePhysicsCentreX not restored");
+        assertEquals(e1.prePhysicsCentreY(), e2.prePhysicsCentreY(), "prePhysicsCentreY not restored");
         assertEquals(e1.air(), e2.air(), "air not restored");
         assertEquals(e1.rolling(), e2.rolling(), "rolling not restored");
         assertEquals(e1.jumping(), e2.jumping(), "jumping not restored");
@@ -456,6 +464,7 @@ class TestAbstractPlayableSpriteRewindCapture {
         assertEquals(e1.suppressAirCollision(), e2.suppressAirCollision(), "suppressAirCollision not restored");
         assertEquals(e1.suppressGroundWallCollision(), e2.suppressGroundWallCollision(), "suppressGroundWallCollision not restored");
         assertEquals(e1.forceFloorCheck(), e2.forceFloorCheck(), "forceFloorCheck not restored");
+        assertEquals(e1.suppressedObjectMoveAndFallAxes(), e2.suppressedObjectMoveAndFallAxes(), "suppressedObjectMoveAndFallAxes not restored");
         assertEquals(e1.hidden(), e2.hidden(), "hidden not restored");
         assertEquals(e1.renderFlagOnScreen(), e2.renderFlagOnScreen(), "renderFlagOnScreen not restored");
         assertEquals(e1.renderFlagOnScreenValid(), e2.renderFlagOnScreenValid(), "renderFlagOnScreenValid not restored");

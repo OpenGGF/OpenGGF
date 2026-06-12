@@ -150,17 +150,7 @@ public class Sonic3kButtonObjectInstance extends AbstractObjectInstance
             }
             // Toggle mode (bit 4 set): trigger stays set, skip clear
         } else {
-            // Player standing on button
-            // ROM: tst.b (a3) / bne.s + — play SFX only if entire trigger byte was zero
-            if (!Sonic3kLevelTriggerManager.testAny(triggerIndex)) {
-                services().playSfx(Sonic3kSfx.SWITCH.id);
-            }
-
-            // ROM: bset d3,(a3)
-            Sonic3kLevelTriggerManager.setBit(triggerIndex, triggerBit);
-
-            // ROM: move.b #1,mapping_frame(a0)
-            mappingFrame = FRAME_PRESSED;
+            pressButton();
         }
     }
 
@@ -188,6 +178,13 @@ public class Sonic3kButtonObjectInstance extends AbstractObjectInstance
         return topSolid;
     }
 
+    @Override
+    public boolean rejectsZeroDistanceTopSolidLanding(PlayableEntity player) {
+        // ROM SolidObjectTop_1P loc_1E45A accepts the negative overlap window
+        // only: d0 == 0 reaches cmpi.w #-$10,d0 / blo locret_1E4D4.
+        return topSolid;
+    }
+
     // ========================================================================================
     // SolidObjectListener
     // ========================================================================================
@@ -196,7 +193,22 @@ public class Sonic3kButtonObjectInstance extends AbstractObjectInstance
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         if (contact.standing()) {
             contactStanding = true;
+            pressButton();
         }
+    }
+
+    private void pressButton() {
+        // Player standing on button
+        // ROM: tst.b (a3) / bne.s + — play SFX only if entire trigger byte was zero
+        if (!Sonic3kLevelTriggerManager.testAny(triggerIndex)) {
+            services().playSfx(Sonic3kSfx.SWITCH.id);
+        }
+
+        // ROM: bset d3,(a3)
+        Sonic3kLevelTriggerManager.setBit(triggerIndex, triggerBit);
+
+        // ROM: move.b #1,mapping_frame(a0)
+        mappingFrame = FRAME_PRESSED;
     }
 
     // ========================================================================================

@@ -14,7 +14,62 @@ Entries should include:
 
 ## Table of Contents
 
-1. [Trace Replay Recorder Coverage (Schema v3 Rollout)](#trace-replay-recorder-coverage-schema-v3-rollout)
+1. [Game Over and Continue Flow Missing](#game-over-and-continue-flow-missing)
+2. [Persisted Editor Saves Disabled for S3K Gameplay Loads](#persisted-editor-saves-disabled-for-s3k-gameplay-loads)
+3. [Trace Replay Recorder Coverage (Schema v3 Rollout)](#trace-replay-recorder-coverage-schema-v3-rollout)
+
+---
+
+## Game Over and Continue Flow Missing
+
+**Location:** `src/main/java/com/openggf/sprites/managers/PlayableSpriteMovement.java`,
+`src/main/java/com/openggf/game/GameStateManager.java`, `src/main/java/com/openggf/GameLoop.java`
+
+### Symptom
+
+When the main player loses the last life, OpenGGF currently clamps the life count at zero and runs the normal
+respawn flow. The ROMs instead leave normal gameplay for a Game Over / Continue sequence.
+
+This affects Sonic 1, Sonic 2, and Sonic 3&K. Continues are tracked in `GameStateManager`, but no current gameplay
+flow consumes them.
+
+### Current State
+
+Until the Game Over / Continue state exists, zero-life gameplay remains pausable. This is a deliberate release
+compromise to avoid the previous broken hybrid state where the player could respawn forever at zero lives but could
+no longer pause.
+
+### Removal Condition
+
+Remove this entry once last-life death branches into a ROM-appropriate Game Over / Continue flow for each supported
+game, continues are consumed where applicable, and zero-life normal gameplay no longer persists after the death
+sequence.
+
+---
+
+## Persisted Editor Saves Disabled for S3K Gameplay Loads
+
+**Location:** `src/main/java/com/openggf/level/LevelManager.java`,
+`src/main/java/com/openggf/level/MutableLevel.java`,
+`src/main/java/com/openggf/game/sonic3k/events/*`
+
+### Symptom
+
+Sonic 3&K levels currently skip automatic persisted editor-save application during normal gameplay level loads.
+S1/S2 editor saves still apply normally. S3K editor sessions can still mutate the live editor/playtest level, but
+those persisted edits are not re-applied the next time the S3K level is loaded from disk.
+
+### Current State
+
+This is a release safety guard. Several S3K runtime event paths still require the concrete `Sonic3kLevel` overlay
+surface for PLC, pattern, chunk, and battleship/AIZ terrain swaps. Applying a persisted editor save wraps the loaded
+level in `MutableLevel`; until `MutableLevel` can execute those S3K runtime overlays directly, that wrapper can disable
+route-critical S3K event logic.
+
+### Removal Condition
+
+Remove this entry once S3K runtime overlay operations are expressed through a `MutableLevel`-safe capability or mutation
+surface, and persisted S3K editor saves can be applied without disabling AIZ/CNZ/MGZ event handlers or terrain swaps.
 
 ---
 

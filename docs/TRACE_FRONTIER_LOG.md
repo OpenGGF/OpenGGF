@@ -11,7 +11,7 @@
   `sonic-engine-performance-optimization` (branch
   `bugfix/ai-performance-optimization`, working tree at `e8e413cee` plus the
   final guard fixes committed with this entry).
-- Result: **Tests run: 88, Failures: 52, Errors: 1, Skipped: 0 — failure set
+- Result: **Tests run: 88, Failures: 52, Errors: 1, Skipped: 0 -- failure set
   identical to the pre-work baseline.** Per-class distribution matches
   exactly: the same 13 classes pass (8 `TestS1Credits*`, `TestS1Ghz1`,
   `TestS2Ehz1`, `TestS2Scz`/`TestS2Wfz` LevelSelect, `TestS3kAiz` 16/16), the
@@ -31,7 +31,7 @@
 - Scope: Task 0 of the performance-optimization plan
   (`docs/superpowers/plans/2026-06-11-performance-optimization.md`). Full
   `*TraceReplay` sweep recorded as the pre-work frontier; no engine changes in
-  this pass. Later perf phases compare against this list — only a trace that
+  this pass. Later perf phases compare against this list -- only a trace that
   passes here and fails after a phase is a perf regression.
 - Command: `mvn "-Dtest=*TraceReplay" test` in worktree
   `sonic-engine-performance-optimization` (branch
@@ -41,7 +41,7 @@
 - Passing classes: all 8 `TestS1Credits*TraceReplay`, `TestS1Ghz1TraceReplay`,
   `TestS2Ehz1TraceReplay`, `TestS2SczLevelSelectTraceReplay`,
   `TestS2WfzLevelSelectTraceReplay`, `TestS3kAizTraceReplay` (16/16).
-- Failing classes (error count, first-error frame/field) — full per-class
+- Failing classes (error count, first-error frame/field) -- full per-class
   table lives in `docs/performance/2026-06-11-performance-baseline.md`:
   - S1: all 19 `CompleteRun` classes + `TestS1Mz1TraceReplay` fail (e.g.
     Ghz1CompleteRun 292 errors, first frame 1394 x_speed; Lz1 2992 errors,
@@ -59,6 +59,1320 @@
     at frame 39672).
 - S3K green list at the same commit: PASS
   (`MSE:OK modules=1 passed=51 failed=0 errors=0 skipped=0`).
+
+## 2026-06-12 - Completed full trace regression sweep after ICZ diagnostics
+
+- Scope: full `*TraceReplay` regression sweep on the release-remediation branch
+  after the ICZ frame-3752 diagnostic slice. Trace data remained
+  comparison-only diagnostic input; no trace state was written back into engine
+  runtime.
+- Commands:
+  - `mvn "-Dmse=off" "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen" test`
+    -> aborted after report generation with a forked JVM `Java heap space`.
+  - `mvn "-Dmse=off" "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g" test`
+    -> completed as ordinary trace failures.
+- Result:
+  - Parsed trace-class summary: 59 classes, 106 tests, 58 failures, 1 error,
+    0 skipped.
+  - No new dump files were produced by the serial rerun; the remaining dump
+    files are from the earlier heap-aborted run.
+- Release state: this is not a green all-trace certification, but it is a
+  completed regression sweep. Active S3K release frontiers are HCZ frame 9482
+  main-player `air`, ICZ frame 3752 main-player `x` plus coupled camera/slot
+  ordering, CNZ complete-run frame 0 `y_speed`, MGZ complete-run frame 738
+  `rings`, MHZ complete-run frame 0 `tails_cpu_routine`, LBZ complete-run
+  frame 0 `camera_y`, AIZ complete-run frame 1095 `x_speed`, and CNZ/MGZ
+  dedicated trace input-alignment issues.
+
+## 2026-06-12 - S3K ICZ Obj37 floor-probe distance moved frontier to path platform
+
+- Scope: follow-up to the ICZ frame-3323 second lost-ring collection frontier.
+  Trace data remained comparison-only diagnostic input; no trace state was
+  written back into engine runtime.
+- Change:
+  - `LostRingObjectInstance` now routes normal-gravity Obj37 floor probes
+    through `ObjectTerrainUtils.checkFloorDist`, so spilled rings use the
+    shared ROM-style object `FindFloor` extension/regression behavior instead
+    of a local one-tile shortcut.
+  - This matches `RingCheckFloorDist -> Ring_FindFloor`
+    (`docs/skdisasm/sonic3k.asm:20098-20110`,
+    `docs/skdisasm/sonic3k.asm:35624-35643`) and fixes the ICZ slot-44
+    bounce from `@4514,07E8` / distance `-6` to the ROM-matching
+    `@4514,07D7` / distance `-23`.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" "-Ds3k.rom.path=s3k.gen" test`
+    -> RED, first ICZ error moved from frame 3323 main-player `rings` to
+    frame 3752 main-player `x` (`expected=0x464D`, `actual=0x464E`).
+- Release state: ICZ complete-run remains red. The next ICZ fix should
+  investigate the path-follow platform/player X mismatch around slot 9/13 and
+  the platform ride/camera ordering, without adding a zone, route, frame, or
+  trace carve-out.
+
+## 2026-06-12 - S3K Obj37 process-slot cadence narrowed frame-3323 frontier
+
+- Scope: follow-up to the ICZ frame-3323 second lost-ring collection frontier.
+  Trace data remained comparison-only diagnostic input; no trace state was
+  written back into engine runtime.
+- Change:
+  - `ObjectSlotLayout` now separates the managed dynamic allocation window from
+    the full object process-loop slot count.
+  - S3K Obj37 spilled-ring floor probes now derive their phase from the
+    managed dynamic Obj37 window rather than the broader S3K process table.
+    The full-table countdown made ICZ rings bounce far too early; the managed
+    dynamic countdown preserves the ROM route while still modeling the
+    `(V_int_run_count + d7) & 7` slot phase (`docs/skdisasm/sonic3k.asm:35662-35669`).
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.level.rings.TestLostRingObjectInstance,com.openggf.level.objects.TestLostRingTouchOrdering" test`
+    -> GREEN, 22 tests.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" "-Ds3k.rom.path=s3k.gen" test`
+    -> RED, first ICZ error unchanged at frame 3323 main-player `rings`
+    (`expected=2`, `actual=1`).
+- Release state: ICZ complete-run remains red. The remaining frame-3323 work is
+  still the second lost-ring collection mismatch, now after the Obj37 cadence
+  source is tied to the managed dynamic slot countdown.
+
+## 2026-06-12 - S3K ICZ Obj37 delayed-materialization narrowed frame-3323 frontier
+
+- Scope: follow-up to the ICZ frame-3323 second lost-ring collection frontier.
+  Trace data remained comparison-only diagnostic input; no trace state was
+  written back into engine runtime.
+- Change:
+  - Pending S3K lost-ring spawns flushed after player touch now apply the same
+    first Obj37 movement/gravity step that ROM gets when `Obj_Bouncing_Ring`
+    allocates new Obj37 slots during the player slot and the object loop later
+    reaches those slots in the same `ExecuteObjects` pass
+    (`docs/skdisasm/sonic3k.asm:21065-21088`,
+    `docs/skdisasm/sonic3k.asm:35490-35616`).
+  - Obj37 touch response now uses the live post-movement collision-list
+    position even on inline player-touch frames, because `Obj37_Main` calls
+    `Add_SpriteToCollisionResponseList` after `MoveSprite2` and gravity
+    (`docs/skdisasm/sonic3k.asm:35616-35626`).
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.level.rings.TestLostRingObjectInstance,com.openggf.level.objects.TestLostRingTouchOrdering,com.openggf.game.sonic3k.objects.TestSonic3kInvisibleHurtBlockHObjectInstance" test`
+    -> GREEN, 30 tests.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" "-Ds3k.rom.path=s3k.gen" test`
+    -> RED, first ICZ error unchanged at frame 3323 main-player `rings`
+    (`expected=2`, `actual=1`).
+- Release state: ICZ complete-run remains red. The engine now materializes the
+  nearby Obj37 slots at frame 3323, but slot 44 is still two pixels right of
+  the ROM collection position (`engine @451A,07CA`, ROM `@4518,07C3`). The
+  next fix should investigate slot-44 x velocity/bounce/collection geometry,
+  without adding a zone, route, frame, or trace carve-out.
+
+## 2026-06-12 - Trace replay baseline sweep for performance remediation
+
+- Scope: PERF-0 baseline capture before performance work. Trace data remained
+  comparison-only diagnostic input; no engine state was hydrated from trace
+  rows, and no behavior change was made.
+- Command:
+  - `mvn "-Dmse=off" "-Dtest=*TraceReplay" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" test`
+- Result:
+  - Build failed after the trace replay sweep with `Java heap space`.
+  - Surefire summary before the fork failure: 89 tests run, 57 failures, 1
+    error, 0 skipped.
+  - Full parsed trace-class table is recorded in
+    `docs/performance/2026-06-12-trace-baseline.md`.
+- Release state: this is a partial-but-useful performance baseline, not a clean
+  all-trace certification. The active S3K release frontiers remain HCZ frame
+  9482 main-player `air`, ICZ frame 3323 main-player `rings`, MGZ complete-run
+  frame 738 main-player `rings`, CNZ complete-run frame 0 `y_speed`, and MHZ
+  complete-run frame 0 `tails_cpu_routine`.
+
+## 2026-06-12 - S3K ICZ complete-run progressed to second lost-ring frontier
+
+- Scope: follow-up to the ICZ frame-3273 lost-ring re-collection frontier.
+  Trace data remained comparison-only diagnostic input; no trace state was
+  written back into engine runtime.
+- Change:
+  - `AbstractPlayableSprite` now exposes the ROM display-phase post-hit
+    invulnerability timer tick separately from the rest of end-of-tick status
+    work, and `SpriteManager.tickPlayablePhysics` runs that timer before
+    animation and touch response. This matches the normal-control order where
+    `Sonic_Display` decrements `invulnerable_time` before `TouchResponse` /
+    `ReactToItem` reads the lost-ring threshold (S1
+    `docs/s1disasm/_incObj/01 Sonic.asm:73-90`, S2
+    `docs/s2disasm/s2.asm:36243-36258`, S3K
+    `docs/skdisasm/sonic3k.asm:21995-22022`).
+  - `tickStatus()` keeps a one-frame guard so paths without touch response
+    still decrement the timer exactly once, while the normal player path does
+    not double-decrement after the pre-touch display tick.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.level.objects.TestLostRingTouchOrdering" test`
+    -> GREEN, 6 tests.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 3273 to frame 3323. New
+    first error is main-player `rings` (`expected=2`, `actual=1`) near the next
+    Obj37 lost ring; main-player position, speeds, angle, air/rolling state,
+    camera, sidekick state, and Tails CPU fields match through the former
+    re-collection frontier.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-3323 second lost-ring collection around slot 61/nearby Obj37 ring
+  state and collection gating, without adding a trace/frame carve-out.
+
+## 2026-06-12 - S3K ICZ complete-run progressed to lost-ring re-collection frontier
+
+- Scope: follow-up to the ICZ frame-3174 hidden-hurt ring-spend frontier.
+  Trace data remained comparison-only diagnostic input; no trace state was
+  written back into engine runtime.
+- Change:
+  - `Sonic3kInvisibleHurtBlockHObjectInstance` now follows the ROM
+    `sub_1F58C -> sub_24280 -> HurtCharacter` ordering: it rewinds the
+    player's 16:16 `y_pos` by `y_vel<<8` before hurt, and requests delayed
+    lost-ring spill so the hit frame allocates the bouncing-ring owner while
+    the visible ring counter is spent on the next level tick
+    (`docs/skdisasm/sonic3k.asm:43422-43431`,
+    `docs/skdisasm/sonic3k.asm:49200-49220`,
+    `docs/skdisasm/sonic3k.asm:21065-21088`,
+    `docs/skdisasm/sonic3k.asm:35490-35616`).
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestSonic3kInvisibleHurtBlockHObjectInstance" test`
+    -> GREEN, 8 tests.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 3174 to frame 3273. New
+    first error is main-player `rings` (`expected=1`, `actual=0`) during
+    lost-ring re-collection; main-player position, speeds, camera, sidekick
+    state, and Tails CPU fields match through the former hidden-hurt
+    ring-spend frontier.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  frame-3273 lost-ring collection ordering/slot state around the Obj37 rings
+  spawned by the hidden hurt block, without adding a trace/frame carve-out.
+
+## 2026-06-12 - S3K ICZ complete-run progressed to hidden-hurt ring-spend frontier
+
+- Scope: follow-up to the ICZ frame-3102 main-player path-follow
+  platform/camera frontier. Trace data remained comparison-only diagnostic
+  input; no trace state was written back into engine runtime.
+- Change:
+  - `IczPathFollowPlatformObjectInstance` now derives its routine-$04 jitter
+    direction from the ROM `V_int_run_count+3` low-bit phase instead of using
+    the level-frame parity directly. ROM `loc_89FD6` alternates `x_pos` by
+    `+1/-1` from `V_int_run_count+3` before tail-calling `Obj_Wait`
+    (`docs/skdisasm/sonic3k.asm:187421-187429`), while the engine object
+    update receives the ROM-visible level frame.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIczPathFollowPlatformObject" test`
+    -> GREEN, 17 tests.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 3102 to frame 3174. New
+    first error is main-player `rings` (`expected=42`, `actual=0`) after the
+    engine spawns lost rings near the ICZ hidden hurt block cluster; main-player
+    position, speed, camera, sidekick state, and Tails CPU fields match through
+    the former path-platform frontier.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-3174 hurt/ring-spend path around the hidden hurt blocks and
+  platform jump/handoff, without adding a trace/frame carve-out.
+
+## 2026-06-12 - S3K ICZ complete-run progressed to path-platform x/camera frontier
+
+- Scope: follow-up to the ICZ frame-2967 native-Tails post-freezer vertical
+  drift frontier. Trace data remained comparison-only diagnostic input; no
+  trace state was written back into engine runtime.
+- Change:
+  - `IczFreezerObjectInstance` now preserves the captured player's `x_sub` and
+    `y_sub` when the capture cloud applies the frozen animation and when the
+    frozen-player block syncs the carried player. ROM `loc_8A7AE` and
+    `loc_8A84C` copy only `x_pos/y_pos` words between the player and freezer
+    block, so the low subpixel words survive until normal hurt movement resumes
+    (`docs/skdisasm/sonic3k.asm:188256-188274`,
+    `docs/skdisasm/sonic3k.asm:188360-188374`).
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIczFreezerObject" test`
+    -> GREEN, 18 tests.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2967 to frame 3102. New
+    first error is main-player `x` (`expected=0x4409`, `actual=0x440B`) with
+    `camera_x` one pixel high in the engine (`expected=0x4379`,
+    `actual=0x437A`) while Tails position, velocities, subpixels, and CPU
+    state match through the former freezer-release frontier.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-3102 ICZ path-follow platform / camera handoff around slot 7
+  `IczPathFollowPlatformObjectInstance`; the freezer release/subpixel path
+  should be treated as solved unless a later regression reopens it.
+
+## 2026-06-12 - S3K ICZ complete-run progressed to post-freezer native-Tails vertical drift
+
+- Scope: follow-up to the ICZ frame-2964 native-Tails frozen-release
+  rolling-state and ring-spend frontier. Trace data remained comparison-only
+  diagnostic input; no engine state was hydrated from trace rows, and no
+  trace/route/frame exception was added.
+- Fix:
+  - ICZ freezer frozen-player blocks now break on the ROM `loc_8A84C`
+    pre-decrement frame instead of keeping the block alive for one extra
+    update.
+  - Freezer break damage now applies the ROM `loc_8A88A` post-`HurtCharacter`
+    x-velocity override from the player's facing/render flag.
+  - CPU-controlled captured sidekicks use sidekick hurt semantics: no lost-ring
+    spawn and no shared ring-counter spend, while still receiving hurt
+    knockback, rolling clear, in-air state, and invulnerability.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIczFreezerObject" test`
+    -> GREEN. Surefire summary: `Tests run: 17, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2964 to frame 2967. New
+    first error: native Tails `y` `expected=0x0365`, `actual=0x0364`;
+    main-player fields, rings, Tails release velocities, Tails air/rolling
+    state, and Tails CPU routine/counters match through the former frontier.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-2967 native-Tails hurt/fall vertical integration immediately after
+  freezer release, including sidekick hurt movement timing and any Tails-specific
+  radius/position semantics, without adding a trace/frame carve-out.
+
+## 2026-06-12 - S3K ICZ complete-run progressed to native-Tails frozen-release frontier
+
+- Scope: follow-up to the ICZ frame-2875 main-player ground-speed frontier
+  around the post-freeze terrain/object cluster. Trace data remained
+  comparison-only diagnostic input; no engine state was hydrated from trace
+  rows, and no trace/route/frame exception was added.
+- Fix:
+  - ICZ1 directional slide terrain now applies the ROM `loc_723E`/`loc_7254`
+    `ground_vel` step: compare the signed high byte against the slide table
+    target and add or subtract `$40` when the current speed has not reached
+    that target.
+  - Facing/animation publication still uses the pre-adjustment high byte,
+    matching the ROM's `move.b ground_vel(a1),d1` before the facing refresh.
+  - Focused ICZ slide-terrain coverage now asserts negative-target,
+    positive-target, and no-overshoot cases for the directional path.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.events.TestSonic3kIczSlideTerrain" test`
+    -> GREEN. Surefire summary: `Tests run: 5, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2875 to frame 2964. New
+    first error: native Tails `rolling` `expected=0`, `actual=1`; main-player
+    position, speeds, ground speed, angle, air/rolling state, camera, rings,
+    and Tails CPU routine/counters match through the former frontier.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-2964 native-Tails frozen-release/object-control transition around
+  freezer frozen-block removal and the ROM slot-7 interaction object, without
+  adding a trace/frame carve-out.
+
+## 2026-06-12 - S3K ICZ complete-run progressed to post-freeze terrain frontier
+
+- Scope: follow-up to the ICZ frame-2838 native-Tails frozen-block vertical
+  movement/player-sync frontier. Trace data remained comparison-only
+  diagnostic input; no engine state was hydrated from trace rows, and no
+  trace/route/frame exception was added.
+- Fix:
+  - ICZ freezer frozen-player blocks are now persistent while carrying a
+    captured player, matching the ROM `loc_8A84C` player-sync/draw loop that
+    keeps the block alive instead of routing it through generic
+    `MarkObjGone`-style coarse culling.
+  - Focused freezer coverage asserts a frozen-player block can remain alive
+    outside the camera coarse range while it continues to own captured-player
+    synchronization.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIczFreezerObject" test`
+    -> GREEN. Surefire summary: `Tests run: 16, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2838 to frame 2875. New
+    first error: main-player `g_speed` `expected=0x03A9`, `actual=0x0369`;
+    native Tails position/control fields and the carried frozen block now
+    match through the former frontier.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-2875 main-player terrain/object interaction around the
+  post-freeze cluster, including the ROM object at code pointer `0x00018B3E`
+  near `x_pos=0x421F`, without adding a trace/frame carve-out.
+
+## 2026-06-12 - S3K ICZ complete-run progressed to frozen-block vertical frontier
+
+- Scope: follow-up to the ICZ frame-2837 native-Tails frozen-block horizontal
+  movement frontier. Trace data remained comparison-only diagnostic input; no
+  engine state was hydrated from trace rows, and no trace/route/frame exception
+  was added.
+- Fix:
+  - ICZ freezer frozen-player blocks now model the ROM `loc_8A80C`
+    camera-side horizontal velocity clamp before `MoveSprite`: leftward blocks
+    stop when `Camera_X_pos+$20` has crossed `x_pos`, and rightward blocks use
+    the matching `Camera_X_pos+$128` side threshold.
+  - Focused freezer coverage asserts the former frame-2837 leftward capture
+    row keeps both the block and captured Tails at `x_pos=0x3FC4` while still
+    applying the first vertical movement step.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIczFreezerObject" test`
+    -> GREEN. Surefire summary: `Tests run: 15, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2837 to frame 2838. New
+    first error: native Tails `y` `expected=0x036B`, `actual=0x036F`; Tails
+    `x`, speeds, air, rolling, ground mode, CPU routine/counters, main Sonic
+    fields, camera, and rings match at the first error.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  frozen-block vertical movement/player sync after the camera-side x clamp,
+  especially ROM `loc_8A84C` captured-player synchronization and the
+  spawn/update timing of the frozen block.
+
+## 2026-06-12 - S3K ICZ complete-run progressed to frozen-block motion frontier
+
+- Scope: follow-up to the ICZ frame-2836 native-Tails airborne-release frontier.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - ICZ freezer capture clouds now survive parent offscreen unload and enter the
+    ROM off-phase capture scanner instead of staying tied to the unloaded
+    parent's stale freeze-jet bit.
+  - The freezer frozen-player block now snapshots the captured player's native
+    `x_pos/y_pos` before applying frozen animation/control and skips spawn-frame
+    motion, matching the ROM slot row where the new frozen block appears at the
+    capture position before its movement routine advances.
+  - The ICZ end-boss frost capture path uses the same captured-position
+    constructor contract.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIczFreezerObject" test`
+    -> GREEN. Surefire summary: `Tests run: 14, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2836 to frame 2837. New
+    first error: native Tails `x` `expected=0x3FC4`, `actual=0x3FC2`; Tails
+    `y`, speeds, air, rolling, ground mode, CPU routine/counters, main Sonic
+    fields, camera, and rings match at the first error.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frozen-player block's first movement step and/or ROM anchoring after
+  capture, not revisit freezer parent-unload capture scanning or add a
+  trace/frame exception.
+
+## 2026-06-12 - S3K ICZ complete-run progressed to Tails airborne-release frontier
+
+- Scope: follow-up to the ICZ frame-2644 native-Tails follow-position frontier.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - ICZ1 directional slide terrain now refreshes player facing and the raw
+    slide animation on every `sub_71E4` directional slide publish, not only on
+    first entry into the slide bit.
+  - The facing decision now uses the signed high byte of `ground_vel`, matching
+    the 68000 `move.b ground_vel(a1),d1` read before `bclr/bset
+    Status_Facing`. This fixes the `ground_vel=$F02C` case where the engine had
+    used the low byte and kept native Tails facing right, causing the ROM
+    follow nudge at `loc_13E0A` to be skipped.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.events.TestSonic3kIczSlideTerrain,com.openggf.sprites.managers.TestPlayableSpriteMovement#slidingStatusSuppressesManualDownRoll" test`
+    -> GREEN. Surefire summary: `Tests run: 5, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2644 to frame 2836. New
+    first error: native Tails `air` `expected=1`, `actual=0`; Tails `x`, `y`,
+    subpixel position, CPU routine/counters, interact word, and main Sonic
+    fields match at the first error.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  native Tails release/ground-state publication around the ICZ freezer/hurt
+  block cluster at frame 2836, not revisit slide-terrain facing or add a
+  trace/frame exception.
+
+## 2026-06-12 - S3K ICZ complete-run progressed to native-Tails follow-position frontier
+
+- Scope: follow-up to the ICZ frame-2600 wall-slope speed frontier. Trace data
+  remained comparison-only diagnostic input; no engine state was hydrated from
+  trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - ICZ1 now publishes the ROM slide-terrain `status_secondary` bit-7 state
+    from the zone-event path after each playable physics slot, using the
+    `byte_7498` layout-byte table from `sub_714E -> sub_71E4`.
+  - Player movement now treats the slide bit as S3K `sub_108E6` does: manual
+    down-roll entry returns early while the bit is set, in addition to the
+    existing input/friction skip in ground movement.
+  - The late-frame ICZ slide publisher does not mutate the just-compared
+    `ground_vel`; it only makes the state visible to the next movement tick,
+    matching the trace timing around frames 2599-2600.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.events.TestSonic3kIczSlideTerrain,com.openggf.sprites.managers.TestPlayableSpriteMovement#slidingStatusSuppressesManualDownRoll" test`
+    -> GREEN. Surefire summary: `Tests run: 4, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2600 to frame 2644. New
+    first error: native Tails `x` `expected=0x40D8`, `actual=0x40D9` and
+    `y` `expected=0x010E`, `actual=0x010D`; main Sonic position, speeds,
+    ground speed, angle, camera, rings, and Tails CPU routine/counters match
+    at the first error.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  native Tails follow-history/slide-terrain steering around frame 2644 after
+  the collapsing bridge slope, not revisit main Sonic wall-slope friction or
+  add a trace/frame exception.
+
+## 2026-06-12 - S3K ICZ complete-run progressed to wall-slope speed frontier
+
+- Scope: follow-up to the ICZ frame-2472 ice-cube/debris vertical frontier.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - `Obj_ICZIceCube` shatter now preserves the player's native centre `y_pos`
+    while applying the ROM roll/radius state, `anim=2`, `y_vel=-$300`,
+    in-air status, and object-release state. The engine's rolling dimensions
+    are top-left-backed, but the ROM writes `y_radius`/`x_radius` around
+    unchanged centre coordinates.
+  - `PlayableEntity` now exposes `setCentreYPreserveSubpixel(...)` so
+    object-local ROM `y_pos` writes can stay on the injected playable
+    abstraction instead of downcasting to the concrete sprite hierarchy.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestIczIceCubeObjectInstance" test`
+    -> GREEN. Surefire summary: `Tests run: 7, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2472 to frame 2600. New
+    first error: main-player `x_speed` `expected=-0x0524`, `actual=-0x0520`
+    and `g_speed` `expected=-0x0D91`, `actual=-0x0D85`; main `x`, `y`,
+    camera, rings, angle, air, rolling, ground mode, and native-P2/Tails fields
+    match at the first error.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  right-wall slope physics around frame 2600 after the collapsing bridge
+  section, not revisit ice-cube shatter or add a trace/frame exception.
+
+## 2026-06-12 - S3K ICZ complete-run progressed to ice-cube debris vertical frontier
+
+- Scope: follow-up to the ICZ frame-2268 Star Pointer/native-P2 hurt-state
+  frontier. Trace data remained comparison-only diagnostic input; no engine
+  state was hydrated from trace rows, and no trace/route/frame exception was
+  added.
+- Fix:
+  - Corrected the S3K Insta-Shield touch model after rechecking
+    `TouchResponse`: the ROM temporarily sets `Status_Invincible` for Sonic's
+    48x48 Insta-Shield hurt pass, so `Touch_ChkHurt` returns before
+    `Touch_ChkHurt_Bounce_Projectile` clears `collision_flags`. The engine now
+    suppresses the hurt for that expanded pass without treating Insta-Shield as
+    a real shield deflect. Real shields still deflect bit-3 shield-reactive
+    harmful objects through `ShieldTouchResponse`.
+  - `Obj_StarPointer` now waits for the ROM `$20` dummy-sprite
+    `Obj_WaitOffscreen` render bounds instead of a center-point X onscreen
+    check, matching the saved-routine wait gate before active movement.
+  - Star Pointer orbiting points now refresh from the parent's full fixed-point
+    longword position before applying `MoveSprite_CircularSimple` sine/cosine
+    offsets, preserving parent subpixels during orbit and launch timing.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.badniks.TestStarPointerBadnikInstance" test`
+    -> GREEN. Surefire summary: `Tests run: 10, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.level.objects.TestTouchResponseManager" test`
+    -> GREEN. Surefire summary: `Tests run: 44, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2268 to frame 2472. New
+    first error: main-player `y` `expected=0x064F`, `actual=0x064A`; main
+    `x`, speeds, ground speed, camera, rings, and native-P2/Tails fields match
+    at the first error. The ROM has an active ICZ ice-cube/debris object in
+    slot 7 (`obj=0001ABB6 @40C8,0673`) while the engine reports that slot empty
+    and nearby `ICZIceCubeDebris` instances slightly offset.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  ICZ ice-cube/debris slot lifetime, collision, and vertical bounce/contact
+  ordering around frame 2472, not revisit Star Pointer or add a trace/frame
+  exception.
+
+## 2026-06-12 - S3K ICZ complete-run progressed to post-Insta-Shield Tails speed frontier
+
+- Scope: follow-up to the ICZ frame-2263 main-player rolling/hurt frontier.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - Later disassembly review corrected the initial local framing here: S3K
+    `TouchResponse` does not treat `double_jump_flag=1` as a real shield
+    deflect. It temporarily sets `Status_Invincible` for Sonic's 48x48
+    Insta-Shield hurt pass, suppressing normal hurt before the projectile-bounce
+    branch can clear `collision_flags`.
+  - This fixes the ICZ Star Pointer point contact where Sonic's 48x48
+    Insta-Shield box overlaps a `$8B`/bit-3 shield-reactive point while the
+    normal player box would miss. The engine now preserves Sonic's
+    rings/rolling state instead of scattering rings; the collision-flag clear is
+    reserved for real shield deflects.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.level.objects.TestTouchResponseManager" test`
+    -> GREEN. Surefire summary: `Tests run: 42, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.badniks.TestStarPointerBadnikInstance" test`
+    -> GREEN. Surefire summary: `Tests run: 5, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2263 to frame 2268. New
+    first error: Tails `x_speed` `expected=0x0200`, `actual=-0x00C0`;
+    Sonic's rings now remain `42`, Sonic's status/position/camera match, and
+    the prior rolling/hurt/ring-loss cascade is gone. ICZ error count is 3842.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-2268 Tails CPU/follow steering divergence around the same
+  Star Pointer/segment-column cluster, not add a trace/frame exception.
+
+## 2026-06-12 - S3K ICZ complete-run progressed to post-segment-column rolling frontier
+
+- Scope: follow-up to the ICZ frame-2061 `tails_cpu_interact` frontier.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - `IczSegmentColumnObjectInstance.Segment` now exposes
+    `RomObjectCodePointerProvider`, returning the ROM word-0 code-pointer high
+    word `0x0008` for child segment routine `loc_8ABB0`.
+  - This lets the existing S3K sidekick CPU `Tails_CPU_interact` model refresh
+    from the live ridden segment-column child instead of reporting a cleared
+    interact word while the engine still has a valid ride/interact object.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestIczSegmentColumnObjectInstance,com.openggf.sprites.playable.TestSidekickCpuDespawnParity,com.openggf.sprites.playable.TestSidekickCpuFollowParity" test`
+    -> GREEN. Surefire summary: `Tests run: 124, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2061 to frame 2263. New
+    first error: main-player `rolling` `expected=1`, `actual=0`; the former
+    `tails_cpu_interact` field now matches `0x0008` through the old frontier
+    and the new window. ICZ error count remains 3357.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-2263 main-player hurt/rolling/ring-loss transition around ICZ
+  star-pointer/harmful-ice contacts near `@406C,0641`, not add a trace/frame
+  exception.
+
+## 2026-06-12 - S3K ICZ complete-run progressed to segment-column interact frontier
+
+- Scope: follow-up to the ICZ frame-1987 Tails segment-column position
+  frontier. Trace data remained comparison-only diagnostic input; no engine
+  state was hydrated from trace rows, and no trace/route/frame exception was
+  added.
+- Fix:
+  - S2/S3K animation-change push clearing now includes roll entry instead of
+    skipping rolling sprites, matching the animation driver clearing
+    `Status_Push` when `anim != prev_anim`.
+  - S3K roll entry clears the stale engine push bit immediately after
+    `setRolling(true)` writes the roll animation, matching the ROM-visible
+    `Status_Push` lifecycle around `Tails_Roll` / `Animate_Tails`.
+  - Tails CPU live/frame-start push bypass now masks grounded rolling sidekick
+    push when `ground_vel` is nonzero. The S3K rolling wall-response tail zeroes
+    `ground_vel` before setting `Status_Push`, so this shape is stale engine
+    state and must fall through to the ROM follow-steering branch.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity,com.openggf.sprites.managers.TestPlayableSpriteAnimation,com.openggf.sprites.managers.TestPlayableSpriteMovement" test`
+    -> GREEN. Surefire summary: `Tests run: 181, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 1987 to frame 2061. New
+    first error: `tails_cpu_interact` `expected=0x0008`, `actual=0x0000`;
+    Sonic position, camera, rings, sidekick position, sidekick speeds, and
+    sidekick status match at the first error. ICZ error count is 3357.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  CPU Tails object-interact publication around the ICZ segment-column children
+  near `@3F10,06B2`, not add a trace/frame exception.
+
+## 2026-06-12 - S3K ICZ complete-run progressed to Tails segment-column frontier
+
+- Scope: follow-up to the ICZ frame-1708 post-launch vertical-position
+  frontier. Trace data remained comparison-only diagnostic input; no engine
+  state was hydrated from trace rows, and no trace/route/frame exception was
+  added.
+- Fix:
+  - `Obj_ICZSwingingPlatform` upper/lower child solids now opt into
+    piece-scoped standing latches, matching the ROM's separate child SST
+    slots instead of sharing one aggregate Java-object standing bit.
+  - The ICZ swinging platform now marks its collision half-width as the raw
+    ROM `SolidObjectFull` `d1` width. Its child routines pass `$2B` and `$0F`
+    directly, so the generic `obActWid+$0B` landing-width narrowing must not
+    subtract `$0B` again at the top-branch width recheck.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIczSwingingPlatformObject" test`
+    -> GREEN. Surefire report: `Tests run: 8, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 1708 to frame 1987. New
+    first error: `tails_x` `expected=0x3EEE`, `actual=0x3EED` near the ICZ
+    segment-column/debris cluster; main-player position, camera, rings, status,
+    and velocities match at the first error. ICZ error count is 3359.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-1987 Tails CPU/ground-position publication around the segment
+  column and debris objects; do not add a trace/frame exception.
+
+## 2026-06-12 - S3K ICZ complete-run progressed to post-launch vertical-position frontier
+
+- Scope: follow-up to the ICZ frame-1667 swinging-platform camera/player drift.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - `IczSwingingPlatformObjectInstance` now mirrors ROM
+    `Obj_ICZSwingingPlatform`: child routine `sub_8B0B0` writes parent swing
+    velocity/flag and clamps player velocity immediately, then parent
+    `loc_8AD20` arms the swing routine without running the first
+    `MoveSprite_CircularSimple` motion until the next object update.
+  - Focused ICZ swinging-platform coverage now asserts the trigger frame keeps
+    the platform at spawn while preserving the immediate player
+    `x_vel`/`ground_vel` clamp.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIczSwingingPlatformObject" test`
+    -> GREEN. Surefire report: `Tests run: 8, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 1667 to frame 1708. New
+    first error: main-player `y` `expected=0x0674`, `actual=0x0673`; Sonic
+    `x`, subpixels, `x_speed`, `y_speed`, `g_speed`, angle, status, rings, and
+    Tails CPU state match at the first error. ICZ error count is 3363.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-1708 one-pixel vertical publication after the platform launch and
+  nearby ICZ harmful-ice/top-solid interaction; do not add a trace/frame
+  exception.
+
+## 2026-06-12 - S3K ICZ complete-run progressed to swinging-platform camera frontier
+
+- Scope: follow-up to the ICZ frame-1646 post-pile terrain-angle frontier.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - `Sonic3kSpringObjectInstance.applyHorizontalSpring()` now mirrors ROM
+    `Obj_Spring`/`sub_23190`: horizontal springs update `x_vel`,
+    `ground_vel`, direction, and move-lock state, but do not write
+    `angle(a1)`. Grounded launches therefore preserve the terrain angle that
+    player collision published before the spring contact.
+  - Focused S3K spring coverage now asserts grounded horizontal contacts remain
+    grounded and keep a shallow floor angle through the launch.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kSpringObjectInstance" test`
+    -> GREEN. Surefire report: `Tests run: 2, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 1646 to frame 1667. New
+    first error: `camera_x` `expected=0x3C2A`, `actual=0x3C33`; Sonic
+    `x_speed`, `y_speed`, `g_speed`, `angle`, status, rings, and Tails CPU
+    state match at the first error. ICZ error count is 3653.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-1667 player/camera drift around the ICZ swinging platform at
+  `$3CE0,$0784`; do not add a trace/frame exception.
+
+## 2026-06-12 - S3K ICZ complete-run progressed to post-pile terrain-angle frontier
+
+- Scope: follow-up to the ICZ frame-1314 post-crash pile-jump handoff. Trace
+  data remained comparison-only diagnostic input; no engine state was hydrated
+  from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - `IczBigSnowPileInstance.handleJumpEscape()` now mirrors ROM
+    `Obj_ICZ1BigSnowPile`: the jump escape writes `y_vel=-$600`, marks Sonic
+    airborne/jumping/rolling, and changes radii without moving the ROM
+    `y_pos`. The engine restores Sonic's centre Y after the roll-radius update
+    so the same visible sample stays at the pre-jump position.
+  - Focused ICZ headless coverage now drives the post-crash big snow pile to
+    jump escape and asserts the same-frame `y_vel=-$600` plus unchanged centre
+    Y publication.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIcz1SnowboardIntroHeadless#bigSnowPileFallsAfterCrashAndRequiresJumpEscape" test`
+    -> GREEN. Surefire report: `Tests run: 1, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 1314 to frame 1646. New
+    first error: main-player `angle` `expected=0x0004`, `actual=0x0000`; Sonic
+    `x`, `y`, velocities, status, rings, and camera all match at the first
+    error. ICZ error count is 3717.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  ROM terrain-angle publication around the post-pile route and nearby ICZ ice
+  objects/ground probes; do not add a trace/frame exception.
+
+## 2026-06-12 - S3K ICZ complete-run progressed to post-crash pile-jump frontier
+
+- Scope: follow-up to the ICZ frame-1112 dormant-Tails CPU routine handoff
+  after the snowboard crash. Trace data remained comparison-only diagnostic
+  input; no engine state was hydrated from trace rows, and no trace/route/frame
+  exception was added.
+- Fix:
+  - `IczSnowboardIntroInstance.crash()` now mirrors ROM `Obj_LevelIntroICZ1`
+    by releasing level-event dormant sidekicks from `Tails_CPU_routine=$0A` to
+    `$02` through `SidekickCpuController.releaseDormantMarkerForLevelEvent()`.
+    The transition preserves the off-screen marker position and
+    `object_control=$83` until routine `$02` performs its own catch-up warp.
+  - Focused ICZ headless coverage now advances Sonic+Tails through the
+    snowboard crash and asserts that Tails remains parked at `$7F00,0` while
+    the CPU controller publishes the ROM routine-`$02` catch-up state.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIcz1SnowboardIntroHeadless#sonicAndTailsStartsSnowboardIntroWithTailsDormantMarker" test`
+    -> GREEN. Surefire report: `Tests run: 1, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 1112 to frame 1314. New
+    first error: main-player `y` `expected=0x06EC`, `actual=0x06E7` on the
+    post-crash pile-jump handoff; Sonic `x`, subpixels, velocities, status,
+    rings, camera, and Tails CPU routine/counters match at the first error. ICZ
+    error count is 3787.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-1314 jump/pile handoff around `IczBigSnowPileInstance` or the
+  corresponding post-crash level-event object, where the engine starts Sonic's
+  upward motion five pixels earlier than the ROM-visible sample.
+
+## 2026-06-11 - S3K ICZ complete-run progressed to dormant-Tails routine frontier
+
+- Scope: follow-up to the ICZ frame-505 one-pixel/subpixel snowboard drift.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - `IczSnowboardIntroInstance.updateScriptedSlope()` now treats the slope
+    table's `x_pos`/`y_pos` writes like ROM `move.w` operations: centre pixels
+    change, but the low-word `x_sub`/`y_sub` accumulator is preserved.
+  - Focused ICZ headless coverage now asserts the former frame-488 post-slope
+    sample has ROM `x_sub=0x2B00` and `y_sub=0xE000`, proving the final
+    scripted table row carried the ROM accumulator into normal snowboard
+    movement.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIcz1SnowboardIntroHeadless#sonicAndTailsStartsSnowboardIntroWithTailsDormantMarker" test`
+    -> GREEN. Surefire report: `Tests run: 1, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 505 to frame 1112. New
+    first error: native-P2/Tails CPU routine `expected=0x0002`,
+    `actual=0x000A`; Sonic position, subpixels, crash velocities, camera, rings,
+    and dormant Tails position/status match at the first error. ICZ error count
+    is 3000.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-1112 dormant-Tails CPU routine handoff after the snowboard crash,
+  where ROM has left routine `$0A` for routine `$02` but the engine still keeps
+  the sidekick parked at the `$7F00,0` dormant marker.
+
+## 2026-06-11 - S3K ICZ complete-run progressed to one-pixel snowboard frontier
+
+- Scope: follow-up to the ICZ frame-488 snowboard speed/motion mismatch. Trace
+  data remained comparison-only diagnostic input; no engine state was hydrated
+  from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - `IczSnowboardIntroInstance.updateScriptedSlope()` now mirrors ROM
+    `Obj_LevelIntroICZ1` `loc_395FE`: after applying the final slope-table
+    sample, it immediately restores `top_solid_bit=$E`, `lrb_solid_bit=$F`,
+    and movement-active `object_control=#2`, then enters the normal snowboard
+    overlay state for the next object tick.
+  - Focused ICZ headless coverage now asserts the first normal snowboard
+    movement sample after the scripted slope exit, including the ROM
+    `x_vel=$120D` and `y_vel=$076B` values at the former frontier.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIcz1SnowboardIntroHeadless#sonicAndTailsStartsSnowboardIntroWithTailsDormantMarker" test`
+    -> GREEN. Surefire report: `Tests run: 1, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 488 to frame 505. New
+    first error: main-player `x` `expected=0x1487`, `actual=0x1486`; paired
+    `y`/camera fields are also one pixel behind, while `x_speed=0x120D`,
+    `y_speed=0x076B`, `g_speed=0x1395`, and `angle=0x10` match. ICZ error
+    count is 3351.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-505 one-pixel/subpixel snowboard drift after the slope handoff,
+  where ROM reports `sub=(0800,FB00)` and the engine reports
+  `sub=(EA00,8600)` with matching velocities.
+
+## 2026-06-11 - S3K ICZ complete-run progressed to snowboard speed frontier
+
+- Scope: follow-up to the ICZ frame-171 snowboard jump timing mismatch. Trace
+  data remained comparison-only diagnostic input; no engine state was hydrated
+  from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - `IczSnowboardIntroInstance` now holds the ICZ snowboard intro's
+    `Ctrl_1_locked`-equivalent state across the active overlay and mirrors ROM
+    `Obj_LevelIntroICZ1` `loc_3984E` by copying raw A/B/C/Start input into a
+    logical jump edge for the next player frame instead of jumping in the same
+    object update.
+  - `HeadlessTestRunner` no longer injects its BK2 synthetic logical action
+    edge while the focused sprite is control-locked; object scripts can still
+    consume raw frame input through the normal published input state.
+  - Focused coverage asserts both the control-lock harness gate and the ICZ
+    snowboard frame-171 grounded sample followed by the next-frame jump.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestHeadlessTestRunnerBk2Input,com.openggf.tests.TestS3kIcz1SnowboardIntroHeadless#sonicAndTailsStartsSnowboardIntroWithTailsDormantMarker" test`
+    -> GREEN. Surefire report: `Tests run: 3, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 171 to frame 488. New
+    first error: main-player `x_speed` `expected=0x120D`, `actual=0x126F`; ICZ
+    error count is 3204.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  snowboard speed maintenance/motion around frame 488, where the engine still
+  reports the pre-deceleration `x_speed=0x126F` while the ROM has decelerated to
+  `0x120D`.
+
+## 2026-06-11 - S3K ICZ complete-run progressed to air-state frontier
+
+- Scope: follow-up to the ICZ frame-163 snowboard-route ring-count mismatch.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - `IczSnowboardIntroInstance` now models the ICZ snowboard intro's ROM
+    `object_control` writes as low-bit object ownership instead of bit-7
+    touch-response suppression. Startup `object_control=#3` keeps scripted
+    movement suppressed, while the active snowboard overlay's `object_control=#2`
+    leaves movement active in the engine but still allows `Test_Ring_Collisions`.
+  - `RingManager` unit coverage now asserts that native low-bit object control
+    does not suppress placed-ring collection, while the ICZ headless bootstrap
+    test asserts the active snowboard overlay remains object-controlled without
+    suppressing touch responses and collects the first snowboard-route ring.
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.TestRingManager#testNativeBit7ObjectControlSuppressesStageRingCollection+testNativeLowBitObjectControlAllowsStageRingCollection" test`
+    -> GREEN. Surefire report: `Tests run: 2, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dtest=com.openggf.tests.TestS3kIcz1SnowboardIntroHeadless#sonicAndTailsStartsSnowboardIntroWithTailsDormantMarker" test`
+    -> GREEN. Surefire report: `Tests run: 1, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 163 to frame 171. New
+    first error: main-player `air` `expected=0`, `actual=1`; ICZ error count
+    is 3500.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the snowboard landing/air-state handoff around frame 171.
+
+## 2026-06-11 - S3K ICZ complete-run progressed to ring frontier
+
+- Scope: follow-up to the ICZ frame-117 snowboard ground-speed mismatch. Trace
+  data remained comparison-only diagnostic input; no engine state was hydrated
+  from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - `IczSnowboardIntroInstance` now keeps snowboard ground-speed maintenance
+    inactive until the ROM-equivalent Sonic snowboard overlay has already seen
+    Sonic grounded. This mirrors `loc_3943A` changing the overlay routine to
+    `loc_394A0` on the first grounded update without also running the
+    `loc_394A0` `$1000` ground-speed floor in that same object tick.
+  - The headless ICZ1 Sonic+Tails bootstrap test now asserts the frame-117
+    ROM-visible `g_speed=$0800` before the active overlay routine begins speed
+    maintenance.
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.TestS3kIcz1SnowboardIntroHeadless#sonicAndTailsStartsSnowboardIntroWithTailsDormantMarker" test`
+    -> GREEN. Surefire report: `Tests run: 1, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 117 to frame 163. New
+    first error: `rings` `expected=1`, `actual=0`; ICZ error count is 3483.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the ring-count divergence at frame 163 after the snowboard launch path.
+
+## 2026-06-11 - S3K ICZ complete-run progressed to snowboard ground-speed frontier
+
+- Scope: follow-up to the ICZ frame-29 snowboard startup release mismatch.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - `IczSnowboardIntroInstance` now compensates for the engine's object-after-
+    physics ordering at the ROM startup-release boundary. When
+    `Obj_LevelIntroICZ1` clears object control, the object applies the same
+    sampled-frame player air update the ROM has already run by trace capture:
+    SpeedToPos with the startup velocities, then `y_vel += gravity`.
+  - The headless ICZ1 Sonic+Tails bootstrap test now asserts the release-frame
+    ROM-visible `y`, `y_sub`, and `y_speed` values.
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.TestS3kIcz1SnowboardIntroHeadless#sonicAndTailsStartsSnowboardIntroWithTailsDormantMarker" test`
+    -> GREEN. Surefire report: `Tests run: 1, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 29 to frame 117. New first
+    error: main-player `g_speed` `expected=0x0800`, `actual=0x1000`; ICZ
+    error count is 3462.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the snowboard board-jump/ground-speed handoff around frame 117, where the ROM
+  still reports `ground_vel=$0800` while the engine has doubled it to `$1000`.
+
+## 2026-06-11 - S3K ICZ complete-run progressed to snowboard-motion frontier
+
+- Scope: follow-up to the ICZ complete-run frame-0 Sonic rolling mismatch and
+  CPU Tails dormant-marker bootstrap gap. Trace data remained comparison-only
+  diagnostic input; no engine state was hydrated from trace rows, and no
+  trace/route/frame exception was added.
+- Fix:
+  - `Sonic3kICZEvents` now treats Sonic+Tails and Sonic-alone as the ROM
+    `Player_mode < 2` snowboard-intro path from `SpawnLevelMainSprites`
+    (`loc_690A`), spawning `Obj_LevelIntroICZ1` for ICZ1 instead of limiting
+    the intro object to Sonic-alone mode.
+  - `Sonic3kLevelEventManager` now applies the ICZ1 bootstrap lock to the
+    focused player and parks registered sidekicks through the existing
+    level-event dormant marker path, matching `Tails_CPU_Control` `loc_13A74`
+    (`Tails_CPU_routine=$0A`, `object_control=$83`, parked at `$7F00,0`).
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.TestS3kIcz1SnowboardIntroHeadless#sonicAndTailsStartsSnowboardIntroWithTailsDormantMarker" test`
+    -> GREEN. Surefire report: `Tests run: 1, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 0 to frame 29. New first
+    error: main-player `y` `expected=0x00F2`, `actual=0x00F0`; ICZ error count
+    is 3453.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  startup snowboard motion/player physics while object-controlled, where the
+  ROM has integrated Sonic to `y=0x00F2` with `y_sub=0x8000` by frame 29 while
+  the engine remains at `y=0x00F0` with zero subpixel.
+
+## 2026-06-11 - S3K HCZ complete-run progressed to post-vortex air-state frontier
+
+- Scope: follow-up to the HCZ frame-9337 post-vortex release speed mismatch.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no zone/route/frame exception was added.
+- Fix:
+  - `HczMinibossInstance` now preserves the ROM's final water-effect routine
+    `$0A` transition ordering by running one last vortex pull tick from the
+    boss cooldown routine and then releasing captured players in that same
+    object update. This mirrors `loc_6A5D8` calling `sub_6A9B8` before the
+    water-effect child enters routine `$0A`, while still allowing normal
+    player physics on the next frame.
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first HCZ error moved from frame 9337 to frame 9482. New
+    first error: main-player `air` `expected=1`, `actual=0`; HCZ error count
+    is 2775.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the post-vortex landing/air-state handoff around frame 9482, where the engine
+  is grounded while the ROM still keeps the main player airborne.
+
+## 2026-06-11 - S3K HCZ complete-run progressed to post-vortex release frontier
+
+- Scope: follow-up to the HCZ frame-9045 vortex/air-countdown mismatch. Trace
+  data remained comparison-only diagnostic input; no engine state was hydrated
+  from trace rows, and no zone/route/frame exception was added.
+- Fix:
+  - `HczMinibossInstance` now drives the water-effect child with explicit
+    routine `$06`/`$08` raw-animation state instead of a fixed parent-side
+    wind-up counter. The pull gate opens only after the routine `$06`
+    `byte_6ADEC` `Animate_RawNoSSTMultiDelay` callback enters routine `$08`.
+  - Vortex first contact now follows the ROM `sub_6A9B8` order: run the
+    `sub_6AA30` horizontal/vertical pull helper first, then run the
+    `sub_6AA00` capture step that sets `Status_InAir`, object control, float
+    animation, and clears x/y/ground speed. This removes the one-frame
+    native-P2 `tails_air`/first-pull velocity split at the previous frontier.
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first HCZ error moved from frame 9045 to frame 9337. New
+    first error: main-player `x_speed` `expected=0x02C0`, `actual=0x0274`;
+    HCZ error count is 2875.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the post-vortex release/normal-physics handoff around frame 9337, where the
+  water-effect child has returned to routine `$0A`/idle and the main player is
+  under normal control with lower-than-ROM `x_speed`.
+
+## 2026-06-11 - S3K HCZ complete-run progressed to vortex routine-8 frontier
+
+- Scope: follow-up to the HCZ frame-8968 native-P2/Tails vertical mismatch
+  after the miniboss rocket phase-reset ordering fix. Trace data remained
+  comparison-only diagnostic input; no engine state was hydrated from trace
+  rows, and no zone/route/frame exception was added.
+- Fix:
+  - `HczMinibossInstance` now delays player vortex pull until the ROM
+    water-effect child has finished its routine `$06` `byte_6ADEC`
+    `Animate_RawNoSSTMultiDelay` wind-up. Player pull now begins with the
+    routine `$08` path that calls `sub_6A9B8`, instead of starting as soon as
+    the parent sets the vortex-active bit.
+  - The player pull applies the ROM longword/subpixel movement path: horizontal
+    pull adds the 16:8 velocity into native position state, and vertical pull
+    nudges by `$8000` subpixels toward the vortex centre.
+- Verification:
+  - `mvn "-Dtest=TestS3kHczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first HCZ error moved from frame 8968 to frame 9045. New
+    first error: native-P2/Tails `y_speed` `expected=-02A0`, `actual=0x0000`;
+    HCZ error count is 2063.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the frame-9045 native-P2/Tails vertical speed split while the ROM
+  water-effect child is in routine `$08`.
+
+## 2026-06-11 - S3K HCZ complete-run progressed to post-miniboss vertical frontier
+
+- Scope: follow-up to the HCZ frame-8683 native-P2/Tails rolling mismatch after
+  the miniboss rocket children were split into per-child ROM routines. Trace
+  data remained comparison-only diagnostic input; no engine state was hydrated
+  from trace rows, and no zone/route/frame exception was added.
+- Fix:
+  - `HczMinibossInstance.startFight()` now resets rocket phases before starting
+    the ROM wind-up sequence. The previous order called `beginRocketWindUp()`
+    and then immediately parked every rocket back in routine 2 with collision
+    disabled, so the first fight could not arm the child hurt boxes at the ROM
+    rocket-impact frame.
+- Verification:
+  - `mvn "-Dtest=TestS3kHczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first HCZ error moved from frame 8683 to frame 8968. New
+    first error: native-P2/Tails `y` `expected=0x06B6`, `actual=0x06B7`; HCZ
+    error count is 2915.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the frame-8968 one-pixel native-P2/Tails vertical mismatch after the miniboss
+  rocket impact/rolling-state window is cleared.
+
+## 2026-06-11 - S3K HCZ complete-run progressed to post-miniboss rolling frontier
+
+- Scope: follow-up to the HCZ frame-8452 native-P2/Tails false hurt around the
+  HCZ miniboss rocket children. Trace data remained comparison-only diagnostic
+  input; no engine state was hydrated from trace rows, and no zone/route/frame
+  exception was added.
+- Fix:
+  - `HczMinibossInstance` now tracks each rocket child's ROM routine, speed
+    byte, wait timer, callback, and collision-arm state independently instead
+    of using one parent-wide rocket speed/collision flag.
+  - The wind-up sequence now mirrors `Obj_HCZMiniboss_Rockets`: subtypes 0/2
+    enter routine 4 and advance during the first `$3F` wait, while subtypes
+    4/6 enter routine 6 and hold position before joining routine 8. The
+    wind-down sequence now lets each child run routine `$C` until its own
+    subtype target phase (`$80, $00, $C0, $40`) is reached before clearing
+    collision and entering the return-to-init wait chain
+    (`sonic3k.asm:139572-139707`, `140389-140461`).
+- Verification:
+  - `mvn "-Dtest=TestS3kHczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first error moved from frame 8452 to frame 8683. New first
+    error: native-P2/Tails `rolling` `expected=0`, `actual=1`; HCZ error count
+    is 3224.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the frame-8683 Tails rolling-state mismatch after the miniboss rocket false
+  hurt is no longer present.
+
+## 2026-06-11 - S3K HCZ complete-run progressed to miniboss rocket timing frontier
+
+- Scope: follow-up to the HCZ frame-8451 native-P2/Tails one-pixel `y`
+  mismatch around the HCZ miniboss/water cluster. Trace data remained
+  comparison-only diagnostic input; no engine state was hydrated from trace
+  rows, and no zone/route/frame exception was added.
+- Fix:
+  - `HczMinibossInstance` now models the miniboss rockets as separate touch
+    child slots instead of parent multi-regions, matching
+    `CreateChild1_Normal` allocating four `Obj_HCZMiniboss_Rockets` children
+    and each child adding itself to `Collision_response_list` through
+    `Child_DrawTouch_Sprite_FlickerMove`
+    (`sonic3k.asm:139562-139608`, `140645-140655`, `176919-176951`,
+    `178131-178139`).
+  - Rocket orbit reset now recomputes child positions without consuming a phase
+    step, and speed-timer callbacks run after the frame's orbit update, matching
+    the ROM order where `sub_6AB1A` advances `$3C/$3D` before `Obj_Wait`
+    dispatches the delayed routine callback
+    (`sonic3k.asm:139613-139707`, `140389-140461`).
+- Verification:
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first error moved from frame 8451 to frame 8452 and the
+    error count dropped from 3068 to 3023. New first error: native-P2/Tails
+    `y` `expected=0x06B4`, `actual=0x06B3`.
+- Release state: HCZ complete-run remains red. The next fix should continue
+  from the frame-8452 Tails/miniboss-water cluster with the rocket slot model
+  in place, rather than reverting to parent-composed rocket touch regions.
+
+## 2026-06-11 - S3K HCZ complete-run progressed to miniboss/Tails y frontier
+
+- Scope: follow-up to the HCZ dry fan/platform frame-7341 `y_speed`
+  mismatch. Trace data remained comparison-only diagnostic input; no engine
+  state was hydrated from trace rows, and no zone/route/frame exception was
+  added.
+- Fix:
+  - `HCZCGZFanObjectInstance` now uses the ROM's stored `$40(a0)` origin for
+    `Sprite_OnScreen_Test2` unload checks on both the fan and sliding platform
+    halves, so sliding fan/platform pairs remain active until their placement
+    origin leaves range.
+  - Platform-mode fans now run the platform half as the manual solid checkpoint
+    owner, then update the fan half after the platform writes the child fan's
+    current `x_pos`. This mirrors `loc_30850` setting `x_pos(a1)` before the
+    allocated fan child's `loc_3064E` routine applies lift
+    (`sonic3k.asm:65315-65336`, `65394-65520`, `65523-65580`).
+- Verification:
+  - `mvn "-Dtest=com.openggf.game.sonic3k.objects.TestHCZCGZFanObjectInstance" test`
+    -> PASS for the selected fan slice (`MSE:OK`; known relaxed aggregate
+    trace failures still reported).
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first error moved from frame 7341 to frame 8451:
+    native-P2/Tails `y` `expected=0x06B7`, `actual=0x06B6`.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the frame-8451 one-pixel Tails Y mismatch around the HCZ miniboss/water
+  cluster without reopening the solved dry fan/platform ordering unless it
+  regresses.
+
+## 2026-06-11 - S3K HCZ complete-run progressed to dry fan/platform frontier
+
+- Scope: follow-up to the HCZ frame-6912 one-pixel/subpixel vertical mismatch
+  near the underwater fan-bubble and fixed air-countdown cluster. Trace data
+  remained comparison-only diagnostic input; no engine state was hydrated from
+  trace rows, and no zone/route/frame exception was added.
+- Fix:
+  - `HCZCGZFanObjectInstance` now applies `Obj_HCZCGZFan` lift with
+    `NativePositionOps.addYPosPreserveSubpixel(...)`. The ROM uses
+    `add.w d1,y_pos(a1)` (`sonic3k.asm:65486-65500`), which changes only the
+    native position word and preserves the low subpixel word; the engine had
+    used `setCentreY(...)`, clearing subpixel state and causing the later
+    one-pixel carry drift.
+- Verification:
+  - `mvn "-Dtest=com.openggf.game.sonic3k.objects.TestHCZCGZFanObjectInstance" test`
+    -> PASS for the selected fan slice (`MSE:OK`; known relaxed aggregate
+    trace failures still reported).
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first error moved from frame 6912 to frame 7341:
+    main-player `y_speed` `expected=0x0000`, `actual=-0218`.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the dry HCZ fan/platform cluster around frames 7341+ where ROM zeros Sonic's
+  vertical speed while the engine preserves upward lift velocity.
+
+## 2026-06-11 - S3K HCZ complete-run progressed to post-monitor y frontier
+
+- Scope: follow-up to the HCZ frame-5995 native-P2/Tails `y_speed` mismatch
+  after the Poindexter wait-offscreen fix. Trace data remained comparison-only
+  diagnostic input; no engine state was hydrated from trace rows, and no
+  zone/route/frame exception was added.
+- Fix:
+  - `Sonic3kMonitorObjectInstance` now gates the CPU-sidekick same-frame
+    gravity suppression on the sidekick's water state when `Obj_MonitorBreak`
+    releases a rider from the monitor. Dry releases keep the existing skip,
+    matching the early HCZ monitor frame where ROM does not add gravity on the
+    release frame. Underwater releases no longer suppress the movement gravity
+    path, allowing the later water reduction to compose with `y_vel` in ROM
+    order instead of leaving Tails at `0x0358`.
+- Verification:
+  - `mvn "-Dtest=com.openggf.game.sonic3k.objects.TestSonic3kMonitorObjectInstance#drySidekickMonitorReleaseSuppressesNextGravityStep+underwaterSidekickMonitorReleaseDoesNotSuppressNextGravityStep,com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> focused monitor release tests PASS; HCZ replay remains RED, but the
+    first error moved from frame 5995 to frame 6912: main-player `y`
+    `expected=0x0709`, `actual=0x0708`.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the frame-6912 one-pixel/subpixel vertical drift around the HCZ fan/bubble
+  cluster without reopening the solved monitor-release gravity gate unless it
+  regresses.
+
+## 2026-06-11 - S3K HCZ complete-run progressed to monitor/Tails y-speed frontier
+
+- Scope: follow-up to the HCZ frame-5726 native-P2/Tails `y_speed` sign
+  mismatch around the Poindexter bounce. Trace data remained comparison-only
+  diagnostic input; no engine state was hydrated from trace rows, and no
+  zone/route/frame exception was added.
+- Fix:
+  - `PoindexterBadnikInstance` now uses Render_Sprites-style exclusive
+    right/bottom bounds with the ROM `$20` `Obj_WaitOffscreen` band. The
+    previous inclusive point-margin check restored setup one object tick too
+    early, so `Set_VelocityXTrackSonic` sampled Sonic at the equality case and
+    sent the badnik left instead of matching the ROM's rightward cadence.
+- Verification:
+  - `mvn "-Dtest=com.openggf.game.sonic3k.objects.badniks.TestPoindexterBadnikInstance,com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#hczPoindexterOccupiesRomSlotBeforeTailsBounce" test`
+    -> PASS for the focused unit/route guard slice (`MSE:OK`, known relaxed
+    trace failures still reported in the aggregate summary).
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first error moved from frame 5726 to frame 5995:
+    native-P2/Tails `y_speed` `expected=0x0390`, `actual=0x0358`.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the frame-5995 monitor / monitor-contents / Tails y-speed handoff without
+  reopening the solved Poindexter wait-offscreen cadence unless it regresses.
+
+## 2026-06-11 - S3K HCZ complete-run progressed to Tails y-speed sign frontier
+
+- Scope: follow-up to the HCZ frame-4872 main-player `x`/camera-X mismatch.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no zone/route/frame exception was added.
+- Fix:
+  - `AutoSpinObjectInstance.forceRoll(...)` now preserves centre X across
+    `setRolling(true)`. On wall modes, the engine's top-left sprite box changes
+    width when entering roll; ROM `Obj_AutoSpin` writes `y_radius`, `x_radius`,
+    `anim`, and `y_pos += 5`, but never writes `x_pos`
+    (`sonic3k.asm:42458-42469`).
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestAutoSpinObjectInstance" test`
+    -> PASS, 2 tests.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+    -> RED, but the first error moved from frame 4872 to frame 5726:
+    native-P2/Tails `y_speed` `expected=-0490`, `actual=0x0490`.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the frame-5726 Tails vertical-velocity sign mismatch around the
+  collapsing-bridge/monitor/air-count cluster without reopening the solved
+  frame-4872 AutoSpin wall-mode X preservation unless it regresses.
+
+## 2026-06-11 - S3K HCZ complete-run progressed to post-skim y/camera frontier
+
+- Scope: follow-up to the HCZ frame-4286 main-player `y_speed` mismatch.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no zone/route/frame exception was added.
+- Fix:
+  - `HCZWaterSkimHandler` now suppresses the immediate generic airborne
+    gravity step when `Obj_HCZWaterSplash` semantics pin an airborne skimming
+    player to the water surface or clear the splash active bit on speed/terrain
+    exit.
+  - This compensates for engine hook ordering: the engine runs the skim handler
+    before player physics, while the ROM splash object runs in object order
+    after the player dispatcher (`sonic3k.asm:75442-75443`, `75473-75476`).
+  - The sustained skim surface pin now uses `setCentreYPreserveSubpixel(...)`
+    instead of `setCentreY(...)`. ROM `move.w d0,y_pos(a1)` overwrites only the
+    high position word, so clearing the low `y_sub` word introduced a later
+    one-pixel carry even when velocity, angle, and ground mode already matched.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.features.TestHCZWaterSkimHandler" test`
+    -> PASS, 5 tests.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+    -> RED, but the first error moved from frame 4403 to frame 4872:
+    main-player `x` `expected=0x2AB3`, `actual=0x2AAE`; camera X also differs
+    by five pixels (`expected=0x2A23`, `actual=0x2A1E`).
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the frame-4872 PathSwap/AutoSpin/rolling-transition horizontal frontier
+  without reopening the solved HCZ water-skim frame-4286 `y_speed` handoff or
+  frame-4403 subpixel carry unless either regresses.
+
+## 2026-06-11 - S3K HCZ complete-run progressed to air-count y-speed frontier
+
+- Scope: follow-up to the HCZ frame-3850 native-P2 rolling-state mismatch.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no zone/route/frame exception was added.
+- Fix:
+  - Shared playable roll-stop now compares `abs(ground_vel)` against the
+    sprite's `min_roll_speed` (`$80` for Sonic/Tails/Knuckles), matching
+    `Tails_RollSpeed` / `Sonic_RollSpeed`, instead of waiting for ground speed
+    to decay all the way to zero.
+  - Roll-stop still preserves the post-deceleration `ground_vel` for velocity
+    conversion, while clearing `Status_Roll`, restoring standing radii, and
+    applying the ROM `y_radius-default_y_radius` center-Y adjustment.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestPlayableSpriteRollSpeed" test`
+    -> PASS, 1 test.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+    -> RED, but the first error moved from frame 3850 to frame 4286:
+    main-player `y_speed` `expected=0x0000`, `actual=0x0038`.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the frame-4286 main-player airborne/y-speed handoff around the HCZ air-count
+  fixed controllers and nearby conveyor/solid objects. The frame-3850
+  native-P2 Tails roll-stop is resolved.
+
+## 2026-06-11 - S3K HCZ complete-run progressed to post-conveyor Tails landing
+
+- Scope: follow-up to the HCZ frame-3355 conveyor capture mismatch. Trace data
+  remained comparison-only diagnostic input; no engine state was hydrated from
+  trace rows, and no zone/route/frame exception was added.
+- Fix:
+  - `Obj_HCZConveyorBelt` now culls against ROM `Camera_X_pos_coarse_back`
+    semantics, `((Camera_X_pos - $80) & $FF80)`, instead of raw
+    `cameraX & $FF80`. This keeps subtype-5 HCZ conveyor objects alive for the
+    frame-3355 native-P2 capture before they fall off the ROM cull window.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestHCZConveyorBeltObjectInstance" test`
+    -> PASS, 10 tests.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+    -> RED, but the first error moved from frame 3355 to frame 3850:
+    `tails_y` `expected=0x0470`, `actual=0x0471`; the same frame also shows
+    `tails_rolling` expected false while the engine remains rolling.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  the frame-3850 native-P2 landing/state handoff around nearby path-swap and
+  floating-platform objects without reopening the solved frame-3355 conveyor
+  cull/capture path unless it regresses.
+
+## 2026-06-11 - S3K HCZ complete-run progressed to button solid frontier
+
+- Scope: release-remediation follow-up after the frame-125 monitor/Tails
+  release fix. Trace data remained comparison-only diagnostic input; no engine
+  state was hydrated from trace rows, and no zone/route/frame exception was
+  added.
+- Fixes:
+  - Poindexter now models the ROM wait-offscreen/setup cadence before movement
+    and collision flags become active, moving HCZ past the frame-374
+    main-player `y_speed` mismatch.
+  - S3K spikes opt into the shared `SolidObjectFull` airborne stale-standing-bit
+    no-contact contract, matching the ROM helper path used by S2/S3K spikes.
+  - Underwater airborne approaches to S3K horizontal springs no longer synthesize
+    the grounded proactive landing handoff; ordinary side contact remains
+    available, moving HCZ past the frame-624 spring handoff mismatch.
+- Verification:
+  - `mvn "-Dtest=com.openggf.game.sonic3k.objects.badniks.TestPoindexterBadnikInstance" test`
+    -> PASS for the Poindexter unit slice.
+  - `mvn "-Dtest=com.openggf.game.sonic3k.objects.TestSonic3kSpikeObjectInstance,com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" test`
+    -> PASS for the shared spike stale-standing-bit slice.
+  - `mvn "-Dtest=com.openggf.game.sonic3k.objects.TestSonic3kSpringObjectInstance" test`
+    -> PASS for the underwater horizontal-spring approach guard.
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+    -> RED, but the first error moved to frame 896: main-player `y_speed`
+    `expected=0x0220`, `actual=0x0000`, with engine diagnostics showing riding
+    slot 19 / object `0x33` Button.
+- Release state: HCZ complete-run remains red. The next fix should investigate
+  shared solid/riding state around the frame-896 button contact and distinguish
+  active support from latched diagnostic state before changing button-specific
+  behavior further.
+
+## 2026-06-11 - S3K HCZ complete-run monitor release frontier moved
+
+- Scope: follow-up to the release-remediation SK-1 complete-run verification
+  pass. The fix keeps trace data comparison-only: the HCZ frame-125 trace
+  context was used to identify ROM monitor status/geometry ordering, not to
+  hydrate engine state or add a route/frame exception.
+- Fix:
+  - S3K monitor break handling now recovers the ROM P2 standing-bit case from
+    monitor-edge geometry when the engine's batched solid-contact pass has no
+    current ride record for the sidekick.
+  - CPU sidekicks released by a broken S3K monitor suppress the immediate
+    same-frame gravity tick, matching the ROM ordering where
+    `Monitor_ChkOverEdge`/`Obj_MonitorBreak` expose `Status_InAir` before the
+    next sidekick movement/gravity step.
+- Verification:
+  - `mvn "-Dtest=com.openggf.game.sonic3k.objects.TestSonic3kMonitorObjectInstance" test`
+    -> PASS for the S3K monitor unit slice. Maven Silent Extension still
+    reports the known cached S3K CNZ backlog in the aggregate summary.
+  - `mvn "-Dtest=com.openggf.tests.TestSonic3kMonitorObjectInstance" test`
+    -> PASS for the stale P2 standing-bit cleanup guard.
+  - `mvn "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+    -> RED, but the first error moved from frame 125 `tails_air` to frame 374
+    main-player `y_speed` (`expected=0x0060`, `actual=-0060`).
+- Release state: HCZ complete-run remains red, but the monitor/Tails release
+  blocker at frame 125 is resolved. Continue from frame 374; do not reopen the
+  solved frame-125 monitor release unless a regression reintroduces it.
 
 ## 2026-06-10 - S3K AIZ release trace green; S2/S3K sidekick baseline recorded
 
@@ -9817,3 +11131,233 @@ sidekick — never a zone id/route/frame. No per-frame writeback. Files: `TraceR
 Follow-up (out of scope here, requires sidekick-AI / object work, not a one-time seed): model S3K mid-run
 sidekick dormancy (HCZ/MGZ intro-fall straight-drop with no horizontal CPU follow; ICZ parked-Tails; LBZ
 spawn-offset hold) and the CNZ/MHZ inter-zone object-driven descent so these advance past f1.
+
+## 2026-06-11 — HCZ complete-run water-rush tunnel entry
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `bugfix/ai-release-remediation`.
+Command:
+`mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestSonic3kButtonObjectInstance,com.openggf.game.sonic3k.features.TestHCZWaterTunnelHandler,com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+
+Fixes:
+- `Sonic3kButtonObjectInstance` now sets `Level_trigger_array` from the standing solid-contact callback as well as the object update path. This mirrors `Obj_Button` calling `SolidObjectTop` and then immediately testing standing bits before setting the trigger.
+- `Sonic3kButtonObjectInstance` rejects exact top-solid surface-boundary contact for top-solid buttons, matching `SolidObjectTop_1P`'s unsigned lower-bound rejection at exact zero distance.
+- `HCZWaterTunnelHandler` no longer clears `ground_vel`; ROM `HCZ_WaterTunnels` writes only `x_vel` and `y_vel`.
+- HCZ water tunnels now run from the normal zone-feature update phase after player/object processing, matching `LevelLoop -> Process_Sprites -> ... -> Handle_Onscreen_Water_Height -> sub_6F4A`. The handler again respects `_unkF7C7` directly; `Obj_HCZWaterRush` clears that latch before the tunnel phase when the trigger takes effect.
+
+Result:
+- Button unit tests: green.
+- HCZ tunnel unit tests: green.
+- HCZ complete-run frontier advanced through the frame-896 button landing and frame-898 tunnel entry to frame **940**, first error `tails_g_speed` expected `0x0000`, actual `0x000C`.
+- New blocker: CPU Tails push/follow steering state after the water-rush tunnel sequence. Main player x/y/speeds/camera match through the new frontier; the remaining mismatch is sidekick `Status_Push`/ground-speed cadence.
+
+## 2026-06-11 — HCZ complete-run breakable-bar/sidekick follow slice
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `bugfix/ai-release-remediation`.
+Command:
+`mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestHCZBreakableBarObjectInstance,com.openggf.game.sonic3k.objects.TestSonic3kButtonObjectInstance,com.openggf.game.sonic3k.features.TestHCZWaterTunnelHandler,com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+
+Fixes:
+- HCZ breakable-bar capture now uses the ROM pre-physics position window for the post-physics engine object phase, preserves `ground_vel`, and preserves subpixels on native `x_pos`/`y_pos` writes.
+- CPU Tails ground-wall push handling now defers the wall velocity response until after the same-frame movement step, matching the ROM ordering through the HCZ water-rush side contact.
+- Tails CPU auto-jump carry now distinguishes the fresh low-byte press window from the following held-only airborne frame, clearing the repeated `Ctrl_2_Press_Logical` jump bit at the HCZ f974 shape without suppressing the earlier f973 press.
+
+Result:
+- HCZ breakable-bar unit tests: green.
+- Button and HCZ tunnel unit tests: green.
+- Sidekick follow/despawn parity slice: green (`112` tests).
+- HCZ complete-run frontier advanced through frames 940, 953, 957, 973, and 974 to frame **1020**, first error `x` expected `0x076C`, actual `0x0771`; ROM has already stopped Sonic at the breakable-bar/spike cluster while the engine keeps `x_speed=0x03F0`.
+- New blocker: investigate main-player object-control/stop timing around HCZ breakable bar/spike debris near `@0758,0590` / `@0796,05B2`. Continue from ROM-state/object-contact conditions, not a route or frame exception.
+
+## 2026-06-11 — HCZ complete-run breakable-bar capture timing
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `bugfix/ai-release-remediation`.
+Command:
+`mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestHCZBreakableBarObjectInstance,com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+
+Fix:
+- `HCZBreakableBarObjectInstance` capture checks now use the current post-physics ROM `x_pos`/`y_pos` for both vertical and horizontal bars. The f1020 blocker was a vertical subtype `0x15` bar at `@0758,0590`; ROM sees Sonic after player physics at `x=0x0771`, accepts the vertical capture window, writes `x_pos=bar_x+$14`, and clears `x_vel/y_vel` while preserving `ground_vel`. The previous engine pre-physics snapshot rejected `x=0x0769` and captured one frame late.
+- Focused unit coverage now asserts the post-physics capture ordering and right-edge clamp behavior.
+
+Result:
+- HCZ breakable-bar unit tests: green (`10` tests).
+- HCZ complete-run frontier advanced from frame **1020** to frame **1581**.
+- New blocker: frame **1581** rolling/status mismatch in an HCZ object-control water/conveyor cluster. ROM keeps Sonic rolling (`status=0x46`, rolling bit set) while the engine has `status=0x42`/rolling false under object control, with camera Y also 5 px low (`expected=0x06DA`, `actual=0x06DF`). Continue by modeling the object/control state that clears or preserves `Status_Roll`, not by route/frame exception.
+
+## 2026-06-11 — HCZ complete-run collapsing bridge release table
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `bugfix/ai-release-remediation`.
+Command:
+`mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+
+Fix:
+- `CollapsingBridgeObjectInstance` now exposes the S3K ROM code-pointer high word for sidekick interact checks, so CPU Tails can observe the bridge the way `TailsCPU_Normal` observes `object_control`/interact state.
+- Directional collapse selection now uses the ROM P1/P2 standing bits through `ObjectManager.hasObjectStandingBit(...)` instead of assuming the main-player standing state owns the collapse direction.
+- Wave-collapse support now seeds all current riders and releases each rider independently, matching the parent-platform wait path instead of dropping sidekicks when Sonic's release condition fires.
+- The directional fragment spawn path still selects the flipped `$34` delay table when ROM enters `loc_20AF6`, but player release checks now keep using the parent `$30` delay table. The disassembly passes `$34` only to `ObjPlatformCollapse_SmashObject`; `Obj_PlatformCollapseWaitHandlePlayer` reloads `$30` before `Check_CollapsePlayerRelease`.
+
+Result:
+- HCZ complete-run remains red, but the frontier advanced from frame **2501** to frame **2635**.
+- First error is now frame **2635** `tails_air` expected `0`, actual `1`. ROM keeps Tails grounded around `x=0x1322, y=0x0AB0` in the bubbler/air-countdown floor-contact cluster, while the engine has Tails airborne with no object ride. Continue by modeling the ROM object/contact state around the bubbler and air-countdown objects, not by route/frame exception.
+
+## 2026-06-11 — HCZ complete-run water reset and large fan load wait
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `bugfix/ai-release-remediation`.
+Commands:
+`mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestHczLargeFanCoordinateParity,com.openggf.game.sonic3k.objects.TestHczLargeFanRegistry" test`
+`mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+
+Fix:
+- S3K water entry/exit now replenishes the ROM air timer on both transitions for the fixed-level-object bubble cadence path. `Sonic_Water` and `Tails_Water` call `Player_ResetAirTimer` on underwater entry and out-water exit (`docs/skdisasm/sonic3k.asm:22221`, `docs/skdisasm/sonic3k.asm:22252`, `docs/skdisasm/sonic3k.asm:27436`, `docs/skdisasm/sonic3k.asm:27470`). This clears the frame-2635 premature Tails drowning/air-state divergence.
+- `HCZLargeFanObjectInstance` now models the ROM queued-art wait before the falling fan initializes. `Obj_HCZLargeFan` queues `ArtKosM_HCZLargeFan`, waits for `Kos_modules_left`, then initializes and falls through into the first drop tick (`docs/skdisasm/sonic3k.asm:65599-65627`). This clears the frame-2801 early fan-drop launch.
+
+Result:
+- Focused large-fan tests are green.
+- HCZ complete-run remains red, but the frontier advanced from frame **2635** to frame **2894**.
+- First error is now frame **2894** `tails_cpu_ctrl2_pressed` expected `0x0000`, actual `0x0010`. ROM and engine positions, velocities, camera, rings, and Tails kinematics still match at the first error; the new owner is sidekick follow-history jump-edge publication. ROM `tails_cpu_normal_step` has `delayed_input=0x1504` and `ctrl2_logical=0x0000`, while the engine still reports a synthesized abstract jump press for that delayed held-input shape.
+
+## 2026-06-11 — HCZ complete-run sidekick delayed jump-press edge
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `bugfix/ai-release-remediation`.
+Commands:
+`mvn "-Dmse=off" "-Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity,com.openggf.sprites.playable.TestSidekickCpuDespawnParity,com.openggf.tests.trace.TestTraceBinder" test`
+`mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+
+Fix:
+- `TraceBinder` now uses the recorder's generated `tails_cpu_normal_step.ctrl2_logical` as the normal-step alternate for sidekick Ctrl_2 comparisons, instead of treating the delayed held/press input word itself as generated Ctrl_2. This keeps delayed input diagnostic data from masking a real generated-press mismatch.
+- `PhysicsFeatureSet.sidekickDelayedJumpPressUsesHistoryEdge` gates S3K delayed sidekick jump-press reconstruction. S3K now treats repeated delayed jump-press history as a one-sample pulse while preserving the delayed held A/B/C bit; S2 keeps the existing repeated-press replay behavior.
+- Focused sidekick coverage now pins the HCZ f2894 shape: held jump remains visible, but the low-byte jump press clears on the adjacent delayed follower-history sample.
+
+Result:
+- Focused sidekick/binder tests are green (`141` tests).
+- HCZ complete-run remains red, but the frontier advanced from frame **2894** to frame **2976**.
+- First error is now frame **2976** `y` expected `0x0A4E`, actual `0x0A4B`, with matching player `x`, speeds, rings, sidekick kinematics, and sidekick Ctrl_2 fields. Camera Y is also 3 px high in the engine (`expected=0x0A10`, `actual=0x0A0D`). The new owner is the main-player vertical/camera path around the post-breakable-bar underwater debris/air-countdown cluster, not sidekick input publication.
+
+## 2026-06-11 — HCZ complete-run vertical water-tunnel second displacement
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `bugfix/ai-release-remediation`.
+Commands:
+`mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.features.TestHCZWaterTunnelHandler,com.openggf.sprites.playable.TestAbstractPlayableSpriteRewindCapture" test`
+`mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+
+Fix:
+- `HCZWaterTunnelHandler` no longer suppresses the generic `ObjectMoveAndFall`
+  Y displacement for vertical/influence-axis tunnel entries. ROM
+  `HCZ_WaterTunnels` writes `y_vel`, directly adds `y_vel<<8` to `y_pos`, and
+  then leaves the stored velocity visible to the normal player movement and
+  wind-tunnel floor-check path (`docs/skdisasm/sonic3k.asm:8877-8891`,
+  `docs/skdisasm/sonic3k.asm:24204-24233`).
+
+Result:
+- Focused HCZ tunnel and playable rewind tests are green.
+- HCZ complete-run remains red, but the frontier advanced from frame **2976**
+  to frame **3066**.
+- First error is now frame **3066** `y` expected `0x07B7`, actual `0x07BF`.
+  Player `x`, speeds, status, rings, and sidekick CPU fields match; the active
+  owner is the object-controlled HCZ water-wall / air-countdown cluster around
+  `Obj_HCZWaterWall` and the fixed air-countdown child, not the earlier tunnel
+  entry.
+
+## 2026-06-11 — HCZ complete-run vertical water-wall trigger fall-through
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `bugfix/ai-release-remediation`.
+Commands:
+`mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestHCZWaterWallObjectInstance" test`
+`mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+
+Fix:
+- `HCZWaterWallObjectInstance` now models the vertical geyser trigger
+  fall-through from `loc_30294` into `loc_302E6` in the same object tick.
+  ROM sets `object_control=$81`, stores the `loc_302E6` routine pointer, and
+  immediately executes the pending-art wait branch, pulling both players up by
+  8 px while `Kos_modules_left` is nonzero
+  (`docs/skdisasm/sonic3k.asm:65096-65123`).
+
+Result:
+- Focused HCZ water-wall tests are green.
+- HCZ complete-run remains red, but the frontier advanced from frame **3066**
+  to frame **3124**.
+- First error is now frame **3124** `y` expected `0x05E7`, actual `0x05E5`;
+  `camera_y` is also 2 px high in the engine (`expected=0x05A7`,
+  `actual=0x05A5`). Player `x`, speeds, status, rings, and sidekick CPU
+  fields match. The active owner is the vertical `Obj_HCZWaterWall`
+  rise/eruption handoff and spray/debris cluster, not the trigger-frame
+  capture.
+
+## 2026-06-11 — HCZ complete-run vertical water-wall KosM wait
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `bugfix/ai-release-remediation`.
+Commands:
+`mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestHCZWaterWallObjectInstance" test`
+`mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+
+Fix:
+- `HCZWaterWallObjectInstance` now keeps the vertical geyser in the
+  `loc_302E6` queued-art branch for the ROM-observed Kosinski module wait
+  before setup. While `Kos_modules_left` is nonzero the ROM only pulls both
+  players up by 8 px; when it clears, `loc_302FA` falls through into the first
+  `loc_30338` rise tick in the same object update
+  (`docs/skdisasm/sonic3k.asm:65116-65148`). The engine now models both the
+  pending-art wait and the setup-to-rise fall-through, preventing the eruption
+  branch from starting four frames early.
+
+Result:
+- Focused HCZ water-wall tests are green.
+- HCZ complete-run remains red, but the frontier advanced from frame **3124**
+  to frame **3318**.
+- First error is now frame **3318** `tails_y` expected `0x0349`, actual
+  `0x0348`. Player position, speeds, camera, rings, sidekick CPU routine,
+  sidekick CPU target/input fields, and `tails_y_speed` match. The next owner
+  is a sidekick post-water-wall/conveyor interaction parity issue around
+  `HCZConveyorBeltObjectInstance` and the sidekick follow/physics handoff, not
+  the vertical water-wall eruption handoff.
+
+## 2026-06-11 — HCZ complete-run conveyor release center preservation
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `bugfix/ai-release-remediation`.
+Commands:
+`mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestHCZConveyorBeltObjectInstance" test`
+`mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" test`
+
+Fix:
+- `HCZConveyorBeltObjectInstance` now preserves ROM `y_pos` when
+  `loc_312D4` releases a player from the belt. The ROM writes
+  `Status_InAir`, `jumping`, rolling radii, animation, and `Status_Roll`, but
+  never writes `y_pos` in the release block
+  (`docs/skdisasm/sonic3k.asm:66440-66457`). Engine `setRolling(true)`
+  changes top-left-based sprite dimensions, so the object now restores the
+  pre-release center Y after the rolling dimension change while preserving
+  subpixels.
+
+Result:
+- Focused HCZ conveyor tests are green.
+- HCZ complete-run remains red, but the frontier advanced from frame **3318**
+  to frame **3355**.
+- First error is now frame **3355** `tails_y_speed` expected `0x0000`, actual
+  `0x0318`; `tails_x_speed` and `tails_y` diverge on the same frame. The
+  active owner is the sidekick landing / fixed air-countdown object handoff
+  around nearby `0x0002CFA8` air-countdown slots and sidekick follow physics,
+  not the conveyor release `y_pos` write.
+
+## 2026-06-12 — ICZ Obj37 lost-ring slot/probe cleanup
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `bugfix/ai-release-remediation`.
+Commands:
+`mvn "-Dmse=off" "-Dtest=com.openggf.level.rings.TestLostRingObjectInstance,com.openggf.level.objects.TestLostRingTouchOrdering,com.openggf.game.sonic3k.objects.TestSonic3kInvisibleHurtBlockHObjectInstance" test`
+`mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+
+Fix:
+- `ObjectSlotLayout.SONIC_3K` now models the first Obj37 owner slot allocated
+  by `HurtCharacter`, and `RingManager` uses that preallocated slot before
+  filling the rest of the spill with `AllocateObjectAfterCurrent`
+  (`docs/skdisasm/sonic3k.asm:21065-21088`,
+  `docs/skdisasm/sonic3k.asm:35490-35528`).
+- `LostRingObjectInstance` now skips `RingCheckFloorDist` while the ROM
+  render flag bit 7 would be clear, matching the Obj37 floor-probe gate for
+  off-screen spilled rings (`docs/skdisasm/sonic3k.asm:35668-35674`).
+
+Result:
+- Focused lost-ring and S3K invisible-hurt-block tests are green.
+- ICZ complete-run remains red with no frontier movement: first error is still
+  frame **3323** `rings` expected `2`, actual `1` with **3155** errors.
+  The retained patch improves Obj37 slot/probe parity but leaves the remaining
+  owner as the separate lost-ring collection/count mismatch at the same frame.

@@ -91,7 +91,7 @@ public final class SaveManager {
         } catch (IOException ex) {
             LOG.warning("Transient I/O while reading save " + file + "; leaving it in place: "
                     + ex.getMessage());
-            return SaveSlotSummary.empty(slot);
+            return SaveSlotSummary.unavailable(slot);
         }
     }
 

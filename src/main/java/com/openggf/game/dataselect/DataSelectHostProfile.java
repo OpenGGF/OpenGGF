@@ -27,7 +27,9 @@ public interface DataSelectHostProfile {
 
     default boolean isSummaryValid(SaveSlotSummary summary) {
         return summary != null
-                && (summary.state() == SaveSlotState.EMPTY || isPayloadValid(summary.payload()));
+                && (summary.state() == SaveSlotState.EMPTY
+                || summary.state() == SaveSlotState.UNAVAILABLE
+                || isPayloadValid(summary.payload()));
     }
 
     default List<DataSelectDestination> clearRestartDestinations(Map<String, Object> payload) {

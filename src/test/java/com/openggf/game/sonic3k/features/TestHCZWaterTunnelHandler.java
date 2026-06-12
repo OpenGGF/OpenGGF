@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k.features;
 
+import com.openggf.game.sonic3k.Sonic3kLevelTriggerManager;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance.HCZBreakableBarState;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.AfterEach;
@@ -22,6 +24,8 @@ class TestHCZWaterTunnelHandler {
     @AfterEach
     void resetTunnelHandler() {
         HCZWaterTunnelHandler.reset();
+        HCZBreakableBarState.reset();
+        Sonic3kLevelTriggerManager.reset();
     }
 
     @Test
@@ -37,9 +41,11 @@ class TestHCZWaterTunnelHandler {
         assertTrue(HCZWaterTunnelHandler.isPlayerInTunnel(1));
         verify(nativeP2).setForcedAnimationId(Sonic3kAnimationIds.FLOAT2);
         verify(nativeP2).move(anyShort(), anyShort());
+        verify(nativeP2, never()).suppressNextObjectMoveAndFallY();
         verify(nativeP2).setAir(true);
         verify(extraSidekick, never()).setForcedAnimationId(Sonic3kAnimationIds.FLOAT2);
         verify(extraSidekick, never()).move(anyShort(), anyShort());
+        verify(extraSidekick, never()).suppressNextObjectMoveAndFallY();
         verify(extraSidekick, never()).setAir(anyBoolean());
     }
 
@@ -56,6 +62,19 @@ class TestHCZWaterTunnelHandler {
         assertFalse(HCZWaterTunnelHandler.isPlayerInTunnel(1));
         verify(extraSidekick, never()).setForcedAnimationId(Sonic3kAnimationIds.FLOAT2);
         verify(extraSidekick, never()).move(anyShort(), anyShort());
+        verify(extraSidekick, never()).suppressNextObjectMoveAndFallY();
+    }
+
+    @Test
+    void verticalInfluenceTunnelLeavesGenericYMoveForRomSecondDisplacementStep() {
+        AbstractPlayableSprite main = playerAt(0x1970, 0x0A50);
+
+        HCZWaterTunnelHandler.update(query(main), 0);
+
+        assertTrue(HCZWaterTunnelHandler.isPlayerInTunnel(0));
+        verify(main).move((short) 0x0300, (short) -0x0280);
+        verify(main).setForceFloorCheck(true);
+        verify(main, never()).suppressNextObjectMoveAndFallY();
     }
 
     @Test
@@ -86,6 +105,34 @@ class TestHCZWaterTunnelHandler {
         verify(nativeP2, never()).setForcedAnimationId(Sonic3kAnimationIds.HURT);
         assertFalse(HCZWaterTunnelHandler.isPlayerInTunnel(0));
         assertTrue(HCZWaterTunnelHandler.isPlayerInTunnel(1));
+    }
+
+    @Test
+    void unclearedBreakableBarStateBlocksTunnelCaptureBeforeWaterRushTrigger() {
+        AbstractPlayableSprite main = playerInsideFirstHcz1Tunnel();
+        HCZBreakableBarState.setState(1);
+
+        HCZWaterTunnelHandler.update(query(main), 0);
+
+        assertFalse(HCZWaterTunnelHandler.isPlayerInTunnel(0));
+        verify(main, never()).setForcedAnimationId(Sonic3kAnimationIds.FLOAT2);
+        verify(main, never()).move(anyShort(), anyShort());
+    }
+
+    @Test
+    void firedWaterRushTriggerDoesNotReleaseTunnelCaptureUntilWaterRushClearsBarState() {
+        AbstractPlayableSprite main = playerInsideFirstHcz1Tunnel();
+        HCZBreakableBarState.setState(1);
+        Sonic3kLevelTriggerManager.setBit(0, 0);
+
+        HCZWaterTunnelHandler.update(query(main), 0);
+
+        assertFalse(HCZWaterTunnelHandler.isPlayerInTunnel(0));
+        verify(main, never()).setXSpeed(anyShort());
+        verify(main, never()).setYSpeed(anyShort());
+        verify(main, never()).setGSpeed(anyShort());
+        verify(main, never()).setAir(true);
+        verify(main, never()).setForcedAnimationId(Sonic3kAnimationIds.FLOAT2);
     }
 
     private static ObjectPlayerQuery query(AbstractPlayableSprite main, AbstractPlayableSprite... sidekicks) {

@@ -1559,7 +1559,45 @@ public class TestPlayableSpriteMovement {
                 rollMethod.setAccessible(true);
                 rollMethod.invoke(manager);
 
-                assertTrue(mockSprite.getRolling(), "Rolling should work when not transitioning from crouch");
+        assertTrue(mockSprite.getRolling(), "Rolling should work when not transitioning from crouch");
+        }
+
+        @Test
+        public void s3kRollEntryClearsGroundPush() throws Exception {
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setCrouching(false);
+                mockSprite.setPushing(true);
+                mockSprite.setGSpeed((short) 0x0800);
+
+                setInputState(false, false, true, false, false);
+
+                Method rollMethod = PlayableSpriteMovement.class.getDeclaredMethod("doCheckStartRoll");
+                rollMethod.setAccessible(true);
+                rollMethod.invoke(manager);
+
+                assertTrue(mockSprite.getRolling(), "DOWN at roll speed should enter rolling");
+                assertFalse(mockSprite.getPushing(),
+                                "S3K Animate_Tails clears Status_Push after Tails_Roll writes anim=#2");
+        }
+
+        @Test
+        public void slidingStatusSuppressesManualDownRoll() throws Exception {
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setSliding(true);
+                mockSprite.setGSpeed((short) 0x0800);
+
+                setInputState(false, false, true, false, false);
+
+                Method rollMethod = PlayableSpriteMovement.class.getDeclaredMethod("doCheckStartRoll");
+                rollMethod.setAccessible(true);
+                rollMethod.invoke(manager);
+
+                assertFalse(mockSprite.getRolling(),
+                                "S3K sub_108E6 returns while status_secondary bit 7 is set");
         }
 
         @Test

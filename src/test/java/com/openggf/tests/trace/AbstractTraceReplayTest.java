@@ -46,6 +46,8 @@ import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import com.openggf.tests.trace.s3k.S3kRequiredCheckpointGuard;
 import com.openggf.tests.trace.s3k.S3kReplayCheckpointDetector;
+import com.openggf.physics.Sensor;
+import com.openggf.physics.SensorResult;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
@@ -779,6 +781,7 @@ public abstract class AbstractTraceReplayTest {
                 sprite.isJumpPressed(),
                 sprite.getLookDelayCounter() & 0xFFFF,
                 GameServices.camera() != null ? GameServices.camera().getYPosBias() & 0xFFFF : -1));
+        solidEvent = combineDiagnostics(solidEvent, summariseGroundProbeDiagnostics("eng-ground", sprite));
         if (om != null) {
             TouchResponseDebugState touchState = om.getTouchResponseDebugState();
             if (touchState != null) {
@@ -909,8 +912,9 @@ public abstract class AbstractTraceReplayTest {
         int interactSlot = sidekick.getInteractSlotIndex();
         String interactOccupant = summariseSlotOccupant(om, interactSlot);
         String renderFlagDiag = summariseSidekickRenderFlagDiagnostics(sidekick);
+        String groundProbeDiag = summariseGroundProbeDiagnostics("ground", sidekick);
         return String.format(
-                "eng-tails-state pos=(%04X,%04X) sub=(%04X,%04X) vel=(%04X,%04X) g=%04X dir=%s onObj=%s ride=s%d type=%02X interact=s%d[%s] st=%02X pin=%s lock=%s prs=%s boundsY=%04X/%04X/%04X cpuMax=%04X %s",
+                "eng-tails-state pos=(%04X,%04X) sub=(%04X,%04X) vel=(%04X,%04X) g=%04X dir=%s onObj=%s ride=s%d type=%02X interact=s%d[%s] st=%02X pin=%s lock=%s prs=%s boundsY=%04X/%04X/%04X cpuMax=%04X %s %s",
                 sidekick.getCentreX() & 0xFFFF,
                 sidekick.getCentreY() & 0xFFFF,
                 sidekick.getXSubpixelRaw() & 0xFFFF,
@@ -932,7 +936,43 @@ public abstract class AbstractTraceReplayTest {
                 camMaxY,
                 camMaxYTarget,
                 cpuMaxY,
-                renderFlagDiag);
+                renderFlagDiag,
+                groundProbeDiag);
+    }
+
+    private String summariseGroundProbeDiagnostics(String label, AbstractPlayableSprite sprite) {
+        Sensor[] sensors = sprite.getGroundSensors();
+        if (sensors == null || sensors.length < 2) {
+            return label + " none";
+        }
+        return String.format(
+                "%s gm=%s angle=%02X L=%s R=%s",
+                label,
+                sprite.getGroundMode(),
+                sprite.getAngle() & 0xFF,
+                formatGroundProbe(sensors[0]),
+                formatGroundProbe(sensors[1]));
+    }
+
+    private String formatGroundProbe(Sensor sensor) {
+        if (sensor == null) {
+            return "missing";
+        }
+        SensorResult result = sensor.getCurrentResult();
+        if (result == null) {
+            return String.format("off=(%d,%d) inactive=%s result=none",
+                    sensor.getX(),
+                    sensor.getY(),
+                    !sensor.isActive());
+        }
+        return String.format(
+                "off=(%d,%d) dist=%d ang=%02X tile=%04X dir=%s",
+                sensor.getX(),
+                sensor.getY(),
+                (int) result.distance(),
+                result.angle() & 0xFF,
+                result.tileId() & 0xFFFF,
+                result.direction());
     }
 
     private String summariseSidekickRenderFlagDiagnostics(AbstractPlayableSprite sidekick) {

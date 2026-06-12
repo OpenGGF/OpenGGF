@@ -1,6 +1,7 @@
 package com.openggf.sprites.managers;
 
 import com.openggf.game.GameModule;
+import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.PhysicsFeatureSet;
@@ -79,6 +80,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	// Cached speed constants (don't change with speed shoes)
 	private final short slopeRunning;
 	private final short minStartRollSpeed;
+	private final short minRollSpeed;
 	private final short maxRoll;
 	private final short slopeRollingUp;
 	private final short slopeRollingDown;
@@ -122,6 +124,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		this.bootstrapGameState = gameState;
 		slopeRunning = sprite.getSlopeRunning();
 		minStartRollSpeed = sprite.getMinStartRollSpeed();
+		minRollSpeed = sprite.getMinRollSpeed();
 		maxRoll = sprite.getMaxRoll();
 		slopeRollingUp = sprite.getSlopeRollingUp();
 		slopeRollingDown = sprite.getSlopeRollingDown();
@@ -234,7 +237,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private Camera camera() {
-		return sprite.currentCamera();
+		return GameServices.cameraOrNull();
 	}
 
 	private Camera playerCameraBiasController() {
@@ -347,6 +350,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// repopulates it before updateCrouchState consumes it (see field comment).
 		preFrictionGroundSpeed = NO_PRE_FRICTION_SNAPSHOT;
 		slopeResistAppliedThisFrame = false;
+		sprite.clearDeferredGroundWallVelocityResponse();
 
 		// Snapshot pre-physics state for per-object hooks running AFTER
 		// physics in the engine's frame order. ROM order runs cage/object
@@ -589,6 +593,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		doCheckStartRoll();
 		doLevelBoundary();
 		sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
+		collisionSystem().applyDeferredGroundWallVelocityResponse(sprite);
 		doAnglePosWithSensorUpdate(originalX, originalY);
 		applyMissedDetachSlopeResist();
 		doSlopeRepel();
@@ -612,6 +617,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		doRollSpeed();
 		doLevelBoundary();
 		sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
+		collisionSystem().applyDeferredGroundWallVelocityResponse(sprite);
 		doAnglePosWithSensorUpdate(originalX, originalY);
 		doSlopeRepel();
 	}
@@ -2010,6 +2016,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private void doCheckStartRoll() {
 		short gSpeed = sprite.getGSpeed();
 
+		// ROM S3K: sub_108E6 returns immediately when status_secondary bit 7
+		// is set, so slide terrain cannot enter the manual down-roll path.
+		if (sprite.isSliding()) return;
+
 		// S3K uses movingCrouchThreshold ($100) as the roll speed threshold;
 		// below that speed, down enters crouch (handled in updateCrouchState).
 		PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
@@ -2029,6 +2039,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		short preRollCentreX = sprite.getCentreX();
 		sprite.setRolling(true);
+		if (fs != null && fs.animationChangeClearsPush()) {
+			// Tails_Roll/SonicKnux_Roll write anim=#2 on roll entry
+			// (sonic3k.asm:23259-23264,28494-28500). Animate_Tails/
+			// Animate_Sonic later clears Status_Push when anim != prev_anim
+			// (sonic3k.asm:29359-29364,29681-29686); the engine writes the
+			// roll animation inside setRolling(), so clear the same status bit
+			// at the movement transition.
+			sprite.setPushing(false);
+		}
 		// ROM roll entry writes y_radius/x_radius and y_pos only; x_pos is not
 		// modified in S1/S2/S3K (S1 01 Sonic.asm:1095-1099;
 		// S2 s2.asm:37003-37008; S3K SonicKnux_Roll sonic3k.asm:23259-23264,
@@ -2130,8 +2149,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			gSpeed = applyFriction(gSpeed, naturalDecel);
 		}
 
-		// Stop rolling check
-		if (gSpeed == 0) {
+		// Stop rolling check. ROM compares abs(ground_vel) against min_roll_speed
+		// ($80 for Sonic/Tails/Knuckles), then unrolls below the threshold.
+		if (Math.abs(gSpeed) < minRollSpeed) {
 			if (sprite.getPinballMode()) {
 				gSpeed = (short) (sprite.getDirection() == Direction.LEFT ? -0x400 : 0x400);
 			} else if (objectPreservedRollStop) {
@@ -2270,6 +2290,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 *   add.l   d0,d3                  ; Position uses OLD y_vel (d0, before gravity)
 	 */
 	private void doObjectMoveAndFall() {
+		int suppressedAxes = sprite.consumeSuppressedObjectMoveAndFallAxes();
+		if (suppressedAxes == 0x3) {
+			return;
+		}
 		SidekickCpuController cpu = sprite.getCpuController();
 		if (cpu != null && cpu.usesFlyingCarryMovement()) {
 			// Tails_FlyingSwimming applies Tails_Move_FlySwim before
@@ -2291,7 +2315,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 		short oldYSpeed = sprite.getYSpeed();  // Save old y_vel before gravity
 		applyGravity();                         // Gated on isObjectControlled()
-		sprite.move(sprite.getXSpeed(), oldYSpeed);  // Move using OLD y_vel
+		short xMoveSpeed = (suppressedAxes & 0x1) != 0 ? 0 : sprite.getXSpeed();
+		short yMoveSpeed = (suppressedAxes & 0x2) != 0 ? 0 : oldYSpeed;
+		sprite.move(xMoveSpeed, yMoveSpeed);  // Move using OLD y_vel
 	}
 
 	/**
@@ -2315,6 +2341,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 */
 	private void applyGravity() {
 		if (sprite.isObjectControlSuppressesMovement()) {
+			return;
+		}
+		if (sprite.consumeSuppressNextGravityStep()) {
 			return;
 		}
 		SidekickCpuController cpu = sprite.getCpuController();

@@ -379,13 +379,19 @@ public class HeadlessTestRunner {
     }
 
     private void applyP1ActionPressEdge(int bk2Index) {
-        if (hasNewP1ActionPress(bk2Movie, bk2Index)) {
+        if (hasNewP1ActionPressForLogicalInput(bk2Movie, bk2Index, sprite.isControlLocked())) {
             // ROM Ctrl_1_Logical keeps separate A/B/C press bits. The engine's
             // normal input path collapses them into one jump key, so a fresh A
             // press while B/C is already held would otherwise disappear before
-            // Sonic_RecordPos writes follower history.
+            // Sonic_RecordPos writes follower history. Ctrl_1_locked blocks that
+            // normal logical update; object scripts that need raw action input
+            // read the raw held/press state from the frame instead.
             sprite.setForcedJumpPress(true);
         }
+    }
+
+    static boolean hasNewP1ActionPressForLogicalInput(Bk2Movie movie, int bk2Index, boolean controlLocked) {
+        return !controlLocked && hasNewP1ActionPress(movie, bk2Index);
     }
 
     static boolean hasNewP1ActionPress(Bk2Movie movie, int bk2Index) {

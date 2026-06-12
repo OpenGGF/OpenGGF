@@ -11,6 +11,10 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -81,6 +85,16 @@ class TestSonic1PaletteOwnershipFallbackResolution {
                 FLASH_OWNER, FLASH_PRIORITY, FLASH_LINE, FLASH_COLOR, 0x0000);
         PaletteWriteSupport.resolvePendingFrameWrites(registry, level, null, null);
         assertFalse(isWhite(level), "next frame's write must resolve after beginFrame reset the flag");
+    }
+
+    @Test
+    void sharedFallbackUsesFeatureRemappedWaterPaletteKey() throws IOException {
+        String renderer = Files.readString(Path.of("src/main/java/com/openggf/level/LevelRenderer.java"));
+
+        assertTrue(renderer.contains("lm.waterSystem.getUnderwaterPalette(lm.getFeatureZoneId(), lm.getFeatureActId())"),
+                "fallback underwater lookup must use the same feature-remapped key used when water configs are stored");
+        assertFalse(renderer.contains("lm.waterSystem.getUnderwaterPalette(lm.level.getZoneIndex(), lm.currentAct)"),
+                "loaded level ids diverge from feature ids for remapped zones such as S1 SBZ3");
     }
 
     private static void loadGhz() {

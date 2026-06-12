@@ -56,6 +56,7 @@ public class CollisionSystem {
     public void resetState() {
         terrainCollisionManager.resetState();
         objectManager = null;
+        pendingOddSensorFallbackAngles.clear();
         trace = NoOpCollisionTrace.INSTANCE;
     }
 
@@ -300,15 +301,38 @@ public class CollisionSystem {
         SensorResult result = scanCalcRoomInFront(sprite, probe, predictedDx, predictedDy);
 
 
-        if (result == null || result.distance() >= 0) {
+        if (result == null) {
             return;
         }
 
-        int velocityAdjustment = result.distance() << 8;
         int rotation = (gSpeed < 0) ? 0x40 : 0xC0;
         int rotatedAngle = (angle + rotation) & 0xFF;
         int mode = (rotatedAngle + 0x20) & 0xC0;
+        int distance = normaliseGroundWallDistance(sprite, result.distance(), mode);
+        if (distance >= 0) {
+            return;
+        }
 
+        if (shouldDeferGroundWallVelocityResponse(sprite, result.distance(), mode)) {
+            sprite.deferGroundWallVelocityResponse(mode, distance);
+            return;
+        }
+
+        applyGroundWallVelocityResponse(sprite, mode, distance);
+    }
+
+    public void applyDeferredGroundWallVelocityResponse(AbstractPlayableSprite sprite) {
+        if (sprite == null || !sprite.hasDeferredGroundWallVelocityResponse()) {
+            return;
+        }
+        int mode = sprite.getDeferredGroundWallVelocityMode();
+        int distance = sprite.getDeferredGroundWallVelocityDistance();
+        sprite.clearDeferredGroundWallVelocityResponse();
+        applyGroundWallVelocityResponse(sprite, mode, distance);
+    }
+
+    private static void applyGroundWallVelocityResponse(AbstractPlayableSprite sprite, int mode, int distance) {
+        int velocityAdjustment = distance << 8;
         switch (mode) {
             case 0x00 -> sprite.setYSpeed((short) (sprite.getYSpeed() + velocityAdjustment));
             case 0x40 -> {
@@ -329,6 +353,28 @@ public class CollisionSystem {
             default -> {
             }
         }
+    }
+
+    private static boolean shouldDeferGroundWallVelocityResponse(AbstractPlayableSprite sprite, int rawDistance, int mode) {
+        return rawDistance == 0
+                && sprite.isCpuControlled()
+                && sprite.getPreCpuControlGSpeed() != 0
+                && (mode == 0x40 || mode == 0xC0);
+    }
+
+    private static int normaliseGroundWallDistance(AbstractPlayableSprite sprite, int distance, int mode) {
+        // S3K's CPU sidekick path can resolve the same horizontal seam as the
+        // first penetrating pixel, but only after the CPU routine entered the
+        // frame with existing inertia. The first follow-acceleration tick from
+        // rest still treats the seam as clear; the next tick, with nonzero
+        // pre-control ground speed, applies the wall response.
+        if (distance == 0
+                && sprite.isCpuControlled()
+                && sprite.getPreCpuControlGSpeed() != 0
+                && (mode == 0x40 || mode == 0xC0)) {
+            return -1;
+        }
+        return distance;
     }
 
     private static boolean shouldSetGroundWallPush(AbstractPlayableSprite sprite, int mode) {

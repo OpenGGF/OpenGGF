@@ -98,6 +98,21 @@ class TestS3kIczPathFollowPlatformObject {
     }
 
     @Test
+    void subtypeZeroJitterUsesRomVintLowBitPhase() {
+        IczPathFollowPlatformObjectInstance platform = create(0);
+        PlayableEntity player = mock(PlayableEntity.class);
+
+        platform.onSolidContact(player, standingContact(), 0);
+        platform.update(0, player);
+
+        platform.update(1, player);
+        assertEquals(0x1201, platform.getX());
+
+        platform.update(2, player);
+        assertEquals(0x1200, platform.getX());
+    }
+
+    @Test
     void outOfRangeReferenceUsesLiveXLikeSpriteOnScreenTest() {
         IczPathFollowPlatformObjectInstance platform = create(0);
         PlayableEntity player = mock(PlayableEntity.class);

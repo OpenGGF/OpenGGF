@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.StubObjectServices;
 import org.junit.jupiter.api.BeforeEach;
@@ -89,6 +90,18 @@ public class TestIczSegmentColumnObjectInstance {
         assertEquals(0x10, params.groundHalfHeight());
         assertEquals(0x20, segment.getTopLandingHalfWidth(null, params.halfWidth()));
         assertEquals(5, segment.getPriorityBucket());
+    }
+
+    @Test
+    public void segmentExposesRomCodePointerWordForS3kTailsCpuInteract() {
+        IczSegmentColumnObjectInstance.Segment segment =
+                IczSegmentColumnObjectInstance.Segment.forTesting(0x1200, 0x0580, 0, null);
+
+        assertTrue(segment instanceof RomObjectCodePointerProvider);
+        assertEquals(0x0008, ((RomObjectCodePointerProvider) segment).romObjectCodePointerHighWord(),
+                "Obj_ICZSegmentColumn child segments install loc_8ABB0 in word 0; "
+                        + "S3K Tails_CPU_interact stores the pointer high word "
+                        + "(docs/skdisasm/sonic3k.asm:188708-188731,26816-26843)");
     }
 
     @Test

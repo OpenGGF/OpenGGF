@@ -54,6 +54,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -131,6 +132,14 @@ class TestEngine {
 
         assertEquals(0, runs.get());
         assertTrue(future.isCancelled());
+    }
+
+    @Test
+    void computeIntegerScaleUpperBound_ignoresUnavailableVideoMode() {
+        assertNull(Engine.computeIntegerScaleUpperBound(320, 224, null));
+        assertNull(Engine.computeIntegerScaleUpperBound(0, 224, 1920, 1080));
+        assertEquals(4, Engine.computeIntegerScaleUpperBound(320, 224, 1920, 1080));
+        assertEquals(1, Engine.computeIntegerScaleUpperBound(320, 224, 160, 112));
     }
 
     @Test
@@ -255,6 +264,41 @@ class TestEngine {
         assertEquals(List.of("tails"), context.selectedTeam().sidekicks());
         assertEquals(10, context.startZone());
         assertEquals(0, context.startAct());
+    }
+
+    @Test
+    void createDataSelectSaveContext_ignoresNonLoadableSavePayload() throws Exception {
+        Path saveRoot = Files.createTempDirectory("engine-dataselect-save-nonloadable");
+        SaveManager saveManager = new SaveManager(saveRoot);
+        saveManager.writeSlot("s3k", 1, Map.of(
+                "zone", 6,
+                "act", 1,
+                "mainCharacter", "knuckles",
+                "sidekicks", List.of("tails"),
+                "lives", 9,
+                "clear", true
+        ));
+        Path slot = saveRoot.resolve("s3k").resolve("slot1.json");
+        Files.writeString(slot, Files.readString(slot).replace("\"hash\":\"", "\"hash\":\"broken"));
+
+        GameModule module = mock(GameModule.class);
+        when(module.getGameId()).thenReturn(GameId.S3K);
+        DataSelectAction action = new DataSelectAction(
+                DataSelectActionType.LOAD_SLOT,
+                1,
+                0,
+                0,
+                new SelectedTeam("sonic", List.of()));
+
+        SaveSessionContext context = Engine.createDataSelectSaveContext(module, action, saveManager);
+
+        assertEquals(1, context.activeSlot().orElseThrow());
+        assertEquals("sonic", context.selectedTeam().mainCharacter(),
+                "non-loadable save payloads must not override the selected launch team");
+        assertEquals(0, context.startZone(),
+                "non-loadable save payloads must not override the action destination");
+        assertFalse(context.isClear(),
+                "non-loadable save payloads must not preserve clear-state metadata");
     }
 
     @Test

@@ -16,10 +16,12 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.ArrayList;
@@ -74,6 +76,10 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
     // ===== Timer durations (in frames) =====
     // ROM: move.w #2*60,$30(a0) — 120 frames when turning off
     private static final int IDLE_DURATION = 2 * 60;    // 120 frames
+    // The ROM stores #120 after the first negative countdown tick; because the
+    // engine's Java update observes the post-setup state in the same call, keep
+    // the terminal zero tick idle before the fan resumes player interaction.
+    private static final int ENGINE_IDLE_COUNTDOWN_RESET = IDLE_DURATION + 1;
     // ROM: move.w #3*60,$30(a0) — 180 frames when turning on
     private static final int ACTIVE_DURATION = 3 * 60;  // 180 frames
 
@@ -201,6 +207,16 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
             subtype |= BIT_ALWAYS_ON;
         }
 
+        // ROM platform mode makes the original slot the sliding platform and
+        // updates the fan child after the platform has written the fan x_pos.
+        if (platformChild != null) {
+            return;
+        }
+
+        updateFanRoutine(frameCounter, player);
+    }
+
+    private void updateFanRoutine(int frameCounter, AbstractPlayableSprite player) {
         // ROM: tst.b $42(a0) — latched-on flag (sonic3k.asm:65368-65370)
         if (latchedOn) {
             updateRampUp(frameCounter, player);
@@ -217,7 +233,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
         timer--;
         if (timer < 0) {
             speedRamp = 0;
-            timer = IDLE_DURATION;
+            timer = ENGINE_IDLE_COUNTDOWN_RESET;
             toggleFlag ^= 1;  // ROM: bchg #0,$32(a0)
             if (toggleFlag == 0) {
                 // Fan just turned on
@@ -359,8 +375,8 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
         force = (-force) & 0xFFFF;
         int push = ((short) force) >> 6;  // asr.w #6
 
-        // ROM: add.w d1,y_pos(a1) — directly adjust player Y
-        player.setCentreY((short) (player.getCentreY() + push));
+        // ROM: add.w d1,y_pos(a1) — directly adjust the native Y word.
+        NativePositionOps.addYPosPreserveSubpixel(player, push);
 
         // Player state changes (sonic3k.asm:65500-65510)
         // ROM: bset #Status_InAir,status(a1)
@@ -472,6 +488,13 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
     public ObjectSpawn getSpawn() {
         // Use originalX for on-screen test (ROM: move.w $40(a0),d0)
         return buildSpawnAt(originalX, y);
+    }
+
+    @Override
+    public int getOutOfRangeReferenceX() {
+        // ROM: loc_30774 feeds $40(a0), not the current sliding fan x_pos, to
+        // Sprite_OnScreen_Test2.
+        return originalX;
     }
 
     @Override
@@ -595,6 +618,9 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
             x = originalX + offset;
             // ROM: move.w d0,x_pos(a1) — set fan X too
             fanParent.setFanX(x);
+
+            checkpointAll();
+            fanParent.updateFanRoutine(frameCounter, player);
         }
 
         private void extendPlatform() {
@@ -627,6 +653,18 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
 
         @Override
         public int getPriorityBucket() { return RenderPriority.clamp(PLATFORM_PRIORITY); }
+
+        @Override
+        public SolidExecutionMode solidExecutionMode() {
+            return SolidExecutionMode.MANUAL_CHECKPOINT;
+        }
+
+        @Override
+        public int getOutOfRangeReferenceX() {
+            // ROM: loc_308B8 feeds $40(a0), not the current platform x_pos, to
+            // Sprite_OnScreen_Test2.
+            return originalX;
+        }
 
         @Override
         public void appendDebugRenderCommands(DebugRenderContext ctx) {
