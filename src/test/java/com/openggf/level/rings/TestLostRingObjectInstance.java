@@ -14,7 +14,9 @@ import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.Sensor;
+import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestEnvironment;
 
@@ -25,8 +27,10 @@ import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -102,6 +106,35 @@ class TestLostRingObjectInstance {
 
         assertEquals(0, ring.floorProbeCount,
                 "cadence-hit Obj37 must still skip terrain while render_flags bit 7 is clear");
+    }
+
+    @Test
+    void floorProbeUsesSharedFindFloorDistanceForBounce() {
+        // ROM RingCheckFloorDist branches through Ring_FindFloor, including
+        // extension/regression paths for slopes and negative height metrics. Obj37
+        // must consume that shared object terrain distance instead of a local
+        // one-tile shortcut, or shallow/sloped terrain bounces too low.
+        TerrainBackedRing ring = new TerrainBackedRing(
+                0x4512, 0x07E1, 0x0200, 0x0D1E,
+                com.openggf.game.PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S2,
+                false,
+                true);
+        ring.setVblaForTest(0);
+
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x4514, 0x07F6))
+                    .thenReturn(new TerrainCheckResult(-23, (byte) 0, 0x1F));
+
+            ring.stepPhysicsForTest(0x18, true);
+
+            terrain.verify(() -> ObjectTerrainUtils.checkFloorDist(0x4514, 0x07F6));
+        }
+
+        assertEquals(0x4514, ring.getX());
+        assertEquals(0x07D7, ring.getY(),
+                "Obj37 should apply the full Ring_FindFloor penetration distance");
+        assertEquals(0xFFFFF617, ring.getYVelForTest(),
+                "Obj37 bounce velocity follows y_vel -= y_vel>>2; neg.w y_vel");
     }
 
     /**
@@ -502,6 +535,46 @@ class TestLostRingObjectInstance {
         @Override
         public ObjectSlotLayout objectSlotLayout() {
             return slotLayout;
+        }
+    }
+
+    private static final class TerrainBackedRing extends LostRingObjectInstance {
+        private final int mask;
+        private final boolean reverseGravity;
+        private final boolean renderFlagForFloorProbe;
+        private int vbla;
+
+        private TerrainBackedRing(int xPixel, int yPixel, int xVel, int yVel,
+                                  int mask, boolean reverseGravity, boolean renderFlagForFloorProbe) {
+            super(new ObjectSpawn(xPixel & 0xFFFF, yPixel & 0xFFFF, 0x37, 0, 0, false, 0));
+            initFixedPointForTest(xPixel, yPixel, xVel, yVel, 0, 0xFF);
+            this.mask = mask;
+            this.reverseGravity = reverseGravity;
+            this.renderFlagForFloorProbe = renderFlagForFloorProbe;
+        }
+
+        void setVblaForTest(int vbla) {
+            this.vbla = vbla;
+        }
+
+        @Override
+        protected int resolveFloorCheckMask() {
+            return mask;
+        }
+
+        @Override
+        protected boolean isReverseGravityActive() {
+            return reverseGravity;
+        }
+
+        @Override
+        protected boolean hasRomRenderFlagForFloorProbe() {
+            return renderFlagForFloorProbe;
+        }
+
+        @Override
+        protected int resolveVblaCounter() {
+            return vbla;
         }
     }
 

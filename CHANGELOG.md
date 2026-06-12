@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K Obj37 floor probes now use shared ROM terrain search:** spilled-ring
+  terrain bounces now consume `ObjectTerrainUtils.checkFloorDist`, including
+  the shared FindFloor extension/regression behavior used by object terrain
+  probes. This fixes the ICZ slot-44 shallow bounce that missed the second
+  lost-ring pickup and moves the ICZ complete-run frontier from frame 3323 to
+  frame 3752, now a path-follow platform/player X mismatch.
+
 - **S3K Obj37 floor-probe cadence uses the managed dynamic slot countdown:**
   spilled-ring floor probes now derive their `(V_int_run_count + d7) & 7`
   phase from the engine-managed dynamic Obj37 window. This corrects the

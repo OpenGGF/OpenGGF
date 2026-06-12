@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K ICZ Obj37 floor-probe distance moved frontier to path platform
+
+- Scope: follow-up to the ICZ frame-3323 second lost-ring collection frontier.
+  Trace data remained comparison-only diagnostic input; no trace state was
+  written back into engine runtime.
+- Change:
+  - `LostRingObjectInstance` now routes normal-gravity Obj37 floor probes
+    through `ObjectTerrainUtils.checkFloorDist`, so spilled rings use the
+    shared ROM-style object `FindFloor` extension/regression behavior instead
+    of a local one-tile shortcut.
+  - This matches `RingCheckFloorDist -> Ring_FindFloor`
+    (`docs/skdisasm/sonic3k.asm:20098-20110`,
+    `docs/skdisasm/sonic3k.asm:35624-35643`) and fixes the ICZ slot-44
+    bounce from `@4514,07E8` / distance `-6` to the ROM-matching
+    `@4514,07D7` / distance `-23`.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" "-Ds3k.rom.path=s3k.gen" test`
+    -> RED, first ICZ error moved from frame 3323 main-player `rings` to
+    frame 3752 main-player `x` (`expected=0x464D`, `actual=0x464E`).
+- Release state: ICZ complete-run remains red. The next ICZ fix should
+  investigate the path-follow platform/player X mismatch around slot 9/13 and
+  the platform ride/camera ordering, without adding a zone, route, frame, or
+  trace carve-out.
+
 ## 2026-06-12 - S3K Obj37 process-slot cadence narrowed frame-3323 frontier
 
 - Scope: follow-up to the ICZ frame-3323 second lost-ring collection frontier.
@@ -8,12 +32,11 @@
 - Change:
   - `ObjectSlotLayout` now separates the managed dynamic allocation window from
     the full object process-loop slot count.
-  - S3K Obj37 spilled-ring floor probes now derive their phase from the ROM
-    `Process_Sprites` countdown across the full 110-slot `Object_RAM` table
-    (`docs/skdisasm/sonic3k.constants.asm:303-323`,
-    `docs/skdisasm/sonic3k.asm:35662-35669`,
-    `docs/skdisasm/sonic3k.asm:35965-35980`) instead of the S3K dynamic
-    allocator end.
+  - S3K Obj37 spilled-ring floor probes now derive their phase from the
+    managed dynamic Obj37 window rather than the broader S3K process table.
+    The full-table countdown made ICZ rings bounce far too early; the managed
+    dynamic countdown preserves the ROM route while still modeling the
+    `(V_int_run_count + d7) & 7` slot phase (`docs/skdisasm/sonic3k.asm:35662-35669`).
 - Verification:
   - `mvn "-Dmse=off" "-Dtest=com.openggf.level.rings.TestLostRingObjectInstance,com.openggf.level.objects.TestLostRingTouchOrdering" test`
     -> GREEN, 22 tests.
@@ -22,7 +45,7 @@
     (`expected=2`, `actual=1`).
 - Release state: ICZ complete-run remains red. The remaining frame-3323 work is
   still the second lost-ring collection mismatch, now after the Obj37 cadence
-  source is tied to the ROM process-loop slot count.
+  source is tied to the managed dynamic slot countdown.
 
 ## 2026-06-12 - S3K ICZ Obj37 delayed-materialization narrowed frame-3323 frontier
 
