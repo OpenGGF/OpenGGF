@@ -145,6 +145,9 @@ public class Engine {
 	private int windowWidth;
 	private int windowHeight;
 
+	record ResolvedDisplayDimensions(int pixelWidth, int pixelHeight, int windowWidth, int windowHeight) {
+	}
+
 	private boolean overlayStateReady = false;
 
 	// Input handler for keyboard input
@@ -213,6 +216,7 @@ public class Engine {
 		this.gameLoop.setLegalDisclaimerExitHandler(this::exitLegalDisclaimer);
 		this.gameLoop.setDataSelectActionHandler(this::launchGameplayFromDataSelect);
 		this.gameLoop.setReturnToMasterTitleHandler(this::returnToMasterTitleScreen);
+		this.gameLoop.setMasterTitleLaunchFailureHandler(this::rollbackLaunchSessionCachedConfig);
 		this.realWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
 		this.realHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
 		this.projectionWidth = realWidth;
@@ -446,6 +450,44 @@ public class Engine {
 		}
 	}
 
+	void refreshLaunchSessionCachedConfig() {
+		debugViewEnabled = configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
+	}
+
+	ResolvedDisplayDimensions readResolvedDisplayDimensionsForLaunch() {
+		return new ResolvedDisplayDimensions(
+				configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS),
+				configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS),
+				configService.getInt(SonicConfiguration.SCREEN_WIDTH),
+				configService.getInt(SonicConfiguration.SCREEN_HEIGHT));
+	}
+
+	void applyResolvedDisplayDimensions() {
+		ResolvedDisplayDimensions resolved = readResolvedDisplayDimensionsForLaunch();
+		realWidth = resolved.pixelWidth();
+		realHeight = resolved.pixelHeight();
+		projectionWidth = realWidth;
+		windowWidth = resolved.windowWidth();
+		windowHeight = resolved.windowHeight();
+		graphicsManager.setProjectionWidth((int) projectionWidth);
+		graphicsManager.applyResolvedDisplayWidth((int) projectionWidth);
+
+		if (glfwInitialized && window != 0L) {
+			isSnappingWindowSize = true;
+			try {
+				glfwSetWindowSize(window, resolved.windowWidth(), resolved.windowHeight());
+			} finally {
+				isSnappingWindowSize = false;
+			}
+			reshape(resolved.windowWidth(), resolved.windowHeight());
+		}
+	}
+
+	void rollbackLaunchSessionCachedConfig() {
+		refreshLaunchSessionCachedConfig();
+		applyResolvedDisplayDimensions();
+	}
+
 	/**
 	 * Phase 2 initialization: loads ROM, creates sprites, initializes audio, loads level.
 	 * Called either directly from init() (no master title screen) or from
@@ -514,6 +556,9 @@ public class Engine {
 	 * Performs the Phase 2 init for the selected game.
 	 */
 	public void exitMasterTitleScreen(String gameId) {
+		refreshLaunchSessionCachedConfig();
+		applyResolvedDisplayDimensions();
+
 		// Set the DEFAULT_ROM config to the selected game
 		configService.setConfigValue(SonicConfiguration.DEFAULT_ROM, gameId);
 
@@ -592,6 +637,8 @@ public class Engine {
 		if (masterTitleScreen != null) {
 			masterTitleScreen.cleanup();
 		}
+		refreshLaunchSessionCachedConfig();
+		applyResolvedDisplayDimensions();
 		masterTitleScreen = new MasterTitleScreen(configService);
 		masterTitleScreen.initialize();
 		gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);

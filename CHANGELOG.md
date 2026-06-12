@@ -11,6 +11,13 @@ All notable changes to the OpenGGF project are documented in this file.
   routine, advancing `s2_mtz1` from frame 375 to frame 447 and `s2_mtz3` from
   frame 461 to frame 639.
 
+- **Master title launches now have per-game profiles:** pressing `Tab` on an
+  available game opens a launch options panel for live rewind, cross-game donor,
+  debug tools, widescreen aspect, main character, and sidekick. Profiles persist
+  under `launch.s1` / `launch.s2` / `launch.s3k`, but gameplay applies them via
+  session-only overrides so trace launches, failed startups, and returns to the
+  master title clear back to the global configuration.
+
 - **Classic roll-stop timing now matches each game:** S1 and S2 now keep
   rolling until ground inertia reaches exactly zero, while S3K still clears
   rolling when `abs(ground_vel) < $80`. This removes the shared S1/S2 false

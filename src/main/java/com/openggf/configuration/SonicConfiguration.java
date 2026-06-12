@@ -472,6 +472,45 @@ public enum SonicConfiguration {
 	 */
 	CROSS_GAME_SOURCE,
 
+	/** Per-game launch profile for Sonic 1: launch.s1.rewind. */
+	LAUNCH_S1_REWIND,
+	/** Per-game launch profile for Sonic 1: launch.s1.crossGameSource. */
+	LAUNCH_S1_CROSS_GAME_SOURCE,
+	/** Per-game launch profile for Sonic 1: launch.s1.debugTools. */
+	LAUNCH_S1_DEBUG_TOOLS,
+	/** Per-game launch profile for Sonic 1: launch.s1.aspect. */
+	LAUNCH_S1_ASPECT,
+	/** Per-game launch profile for Sonic 1: launch.s1.mainCharacter. */
+	LAUNCH_S1_MAIN_CHARACTER,
+	/** Per-game launch profile for Sonic 1: launch.s1.sidekick. */
+	LAUNCH_S1_SIDEKICK,
+
+	/** Per-game launch profile for Sonic 2: launch.s2.rewind. */
+	LAUNCH_S2_REWIND,
+	/** Per-game launch profile for Sonic 2: launch.s2.crossGameSource. */
+	LAUNCH_S2_CROSS_GAME_SOURCE,
+	/** Per-game launch profile for Sonic 2: launch.s2.debugTools. */
+	LAUNCH_S2_DEBUG_TOOLS,
+	/** Per-game launch profile for Sonic 2: launch.s2.aspect. */
+	LAUNCH_S2_ASPECT,
+	/** Per-game launch profile for Sonic 2: launch.s2.mainCharacter. */
+	LAUNCH_S2_MAIN_CHARACTER,
+	/** Per-game launch profile for Sonic 2: launch.s2.sidekick. */
+	LAUNCH_S2_SIDEKICK,
+
+	/** Per-game launch profile for Sonic 3&K: launch.s3k.rewind. */
+	LAUNCH_S3K_REWIND,
+	/** Per-game launch profile for Sonic 3&K: launch.s3k.crossGameSource. */
+	LAUNCH_S3K_CROSS_GAME_SOURCE,
+	/** Per-game launch profile for Sonic 3&K: launch.s3k.debugTools. */
+	LAUNCH_S3K_DEBUG_TOOLS,
+	/** Per-game launch profile for Sonic 3&K: launch.s3k.aspect. */
+	LAUNCH_S3K_ASPECT,
+	/** Per-game launch profile for Sonic 3&K: launch.s3k.mainCharacter. */
+	LAUNCH_S3K_MAIN_CHARACTER,
+	/** Per-game launch profile for Sonic 3&K: launch.s3k.sidekick. */
+	LAUNCH_S3K_SIDEKICK,
+
 	/**
 	 * When true, the master title screen becomes the Trace Test Mode
 	 * picker (lists all traces under TRACE_CATALOG_DIR, plays the chosen

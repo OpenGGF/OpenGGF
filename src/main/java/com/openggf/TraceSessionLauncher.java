@@ -8,6 +8,7 @@ import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.control.InputHandler;
 import com.openggf.configuration.GlfwKeyNameResolver;
 import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
 import com.openggf.game.MasterTitleScreen;
 import com.openggf.game.session.GameplayModeContext;
@@ -126,6 +127,7 @@ public final class TraceSessionLauncher {
         // Snapshot the user's gameplay config BEFORE prepareConfiguration
         // mutates it, so teardown can restore the team / cross-game /
         // S3K_SKIP_INTROS preferences the user actually had.
+        clearLaunchSessionOverridesBeforeTraceSnapshot(GameServices.configuration());
         TraceReplaySessionBootstrap.ConfigSnapshot configSnapshot =
                 TraceReplaySessionBootstrap.snapshotGameplayConfig();
         boolean configMutated = false;
@@ -530,12 +532,12 @@ public final class TraceSessionLauncher {
     }
 
     private static MasterTitleScreen.GameEntry resolveGameEntry(String gameId) {
-        return switch (gameId) {
-            case "s1" -> MasterTitleScreen.GameEntry.SONIC_1;
-            case "s2" -> MasterTitleScreen.GameEntry.SONIC_2;
-            case "s3k" -> MasterTitleScreen.GameEntry.SONIC_3K;
-            default -> throw new IllegalArgumentException("Unknown game: " + gameId);
-        };
+        return MasterTitleScreen.GameEntry.fromGameId(gameId);
+    }
+
+    static void clearLaunchSessionOverridesBeforeTraceSnapshot(SonicConfigurationService config) {
+        config.clearSessionOverrides();
+        config.resolveDisplayAspect();
     }
 
     /** Thin live-engine implementation of {@link TraceReplayFixture}. */
