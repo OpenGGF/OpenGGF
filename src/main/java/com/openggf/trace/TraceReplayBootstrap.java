@@ -405,6 +405,10 @@ public final class TraceReplayBootstrap {
                 && !isS2TornadoRideStartMetadataCandidate(trace);
     }
 
+    public static boolean shouldGroundSnapMetadataStartForTraceReplay(TraceData trace) {
+        return !isS3kCompleteRunSegment(trace);
+    }
+
     public static List<String> releaseBlockersForTraceReplay(TraceData trace) {
         return List.of();
     }
@@ -455,6 +459,9 @@ public final class TraceReplayBootstrap {
     public static TraceExecutionPhase phaseForReplay(TraceData trace,
                                                      TraceFrame previous,
                                                      TraceFrame current) {
+        if (isS3kCompleteRunInitialHandoffRow(trace, previous, current)) {
+            return TraceExecutionPhase.VBLANK_ONLY;
+        }
         if (isPreLevelPrefixInputLatchRow(trace, previous, current)) {
             return TraceExecutionPhase.ADVANCE_ONLY;
         }
@@ -494,6 +501,19 @@ public final class TraceReplayBootstrap {
             return TraceExecutionPhase.VBLANK_ONLY;
         }
         return TraceExecutionModel.forGame(trace.metadata().game()).phaseFor(previous, current);
+    }
+
+    private static boolean isS3kCompleteRunInitialHandoffRow(TraceData trace,
+                                                            TraceFrame previous,
+                                                            TraceFrame current) {
+        if (!isS3kCompleteRunSegment(trace) || current == null) {
+            return false;
+        }
+        if (previous != null || current.frame() != 0) {
+            return false;
+        }
+        TraceFrame next = trace.getFrame(1);
+        return next == null || !current.stateEquals(next);
     }
 
     private static boolean isSonic3kTransitionModeFrozenRow(

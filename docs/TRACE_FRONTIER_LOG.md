@@ -1,5 +1,41 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K complete-run handoff rows advance frame-zero frontiers
+
+- Scope: fixed the highest-leverage S3K frame-zero setup cluster without
+  copying trace-row state into runtime. S3K complete-run metadata starts now
+  remain native handoff centers: replay skips the fresh-spawn ground snap,
+  applies the post-title-card zone-state hook, and treats frame 0 as
+  VBlank-only only when the next row immediately changes visible state.
+  Complete-run segments with repeated visible startup rows still tick full
+  hidden level state so launch-object countdowns can advance.
+- Focused verification:
+  - `mvn -Dmse=off "-Dsurefire.argLine=-Xshare:off -Xmx2g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.TestTraceReplayStartPositionPolicy" test`
+  - Result: **Tests run: 17, Failures: 0, Errors: 0, Skipped: 0**.
+  - `mvn -Dmse=off "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay" test`
+  - Result: still red, but `s3k_lbz1` advanced from frame 0 to frame 410.
+  - `mvn -Dmse=off "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzCompleteRunTraceReplay,com.openggf.tests.trace.s3k.TestS3kMhzCompleteRunTraceReplay" test`
+  - Result: still red, but `s3k_cnz1` and `s3k_mhz1` advanced from frame 0
+    to frame 1.
+- Full sweep command:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test`
+- Full sweep result:
+  - **Tests run: 90, Failures: 62, Errors: 1, Skipped: 0** from
+    Maven/Surefire. This is not a green all-trace certification; CI remains
+    expected-red on the known trace frontier set.
+- Frontier movement:
+
+| Trace | Previous frontier | New frontier | Delta |
+|---|---:|---:|---:|
+| `s3k_cnz1` | f0 `y_speed` `0x0000 -> 0x0038` | f1 `y` `0x061C -> 0x0600` | +1 |
+| `s3k_lbz1` | f0 `camera_y` `0x05F0 -> 0x05EC` | f410 `y_speed` `0x0000 -> -0100` | +410 |
+| `s3k_mhz1` | f0 `tails_cpu_routine` `0x000C -> 0x0006` | f1 `y` `0x051C -> 0x0500` | +1 |
+
+- Interpretation: the false frame-zero handoff/snap frontier is resolved. The
+  next clustered owner is S3K complete-run startup carry/native sidekick state:
+  CNZ and MHZ now expose frame-1 carry/start-position and `tails_cpu_routine`
+  expectations, while LBZ reaches a later path behavior mismatch.
+
 ## 2026-06-12 - S1 junction SolidObject right edge advances SBZ credits frontier
 
 - Scope: follow-up to the true-frontier comparator widening sweep. The first
