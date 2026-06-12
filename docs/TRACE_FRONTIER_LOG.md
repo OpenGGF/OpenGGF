@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K ICZ complete-run progressed to post-segment-column rolling frontier
+
+- Scope: follow-up to the ICZ frame-2061 `tails_cpu_interact` frontier.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - `IczSegmentColumnObjectInstance.Segment` now exposes
+    `RomObjectCodePointerProvider`, returning the ROM word-0 code-pointer high
+    word `0x0008` for child segment routine `loc_8ABB0`.
+  - This lets the existing S3K sidekick CPU `Tails_CPU_interact` model refresh
+    from the live ridden segment-column child instead of reporting a cleared
+    interact word while the engine still has a valid ride/interact object.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestIczSegmentColumnObjectInstance,com.openggf.sprites.playable.TestSidekickCpuDespawnParity,com.openggf.sprites.playable.TestSidekickCpuFollowParity" test`
+    -> GREEN. Surefire summary: `Tests run: 124, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2061 to frame 2263. New
+    first error: main-player `rolling` `expected=1`, `actual=0`; the former
+    `tails_cpu_interact` field now matches `0x0008` through the old frontier
+    and the new window. ICZ error count remains 3357.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-2263 main-player hurt/rolling/ring-loss transition around ICZ
+  star-pointer/harmful-ice contacts near `@406C,0641`, not add a trace/frame
+  exception.
+
 ## 2026-06-12 - S3K ICZ complete-run progressed to segment-column interact frontier
 
 - Scope: follow-up to the ICZ frame-1987 Tails segment-column position

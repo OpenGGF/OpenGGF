@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K ICZ segment columns publish the ROM CPU interact word:** ICZ segment
+  child objects now expose the `0x0008` routine-pointer high word used by S3K
+  `Tails_CPU_interact`, so CPU Tails' interact diagnostic follows the live
+  segment-column child. This moves the ICZ complete-run trace from the
+  frame-2061 `tails_cpu_interact` frontier to the frame-2263 rolling/hurt
+  transition frontier.
+
 - **S3K CPU Tails ignores stale rolling push state near ICZ segment columns:**
   roll-entry animation changes now clear `Status_Push`, and Tails CPU push
   bypass masks grounded rolling nonzero-`ground_vel` stale push state. This
