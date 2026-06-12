@@ -265,6 +265,81 @@
 | s3k_mgz1 | f454 | tails_status_byte | 0x0003 | 0x0002 | 9312 |
 | s3k_mhz1 | f71 | camera_y | 0x04C5 | 0x04BF | 4507 |
 
+## 2026-06-13 — Develop CI-fix commits plus full trace sweep
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `develop`,
+ahead of `origin/develop` by local commits `6b0de090a`, `67e55d9d9`, and
+`b4f4bd452`.
+
+Commands:
+`mvn -Dmse=off test -B`
+`mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+
+Result:
+- The full non-trace Maven suite is green locally: **7777 tests**, 0 failures,
+  0 errors, 9 skipped.
+- The full trace sweep remains red: **90 trace tests**, **62 failures**,
+  **1 error**, 0 skipped.
+- No trace code was changed in this sweep. The CI-fix commits remove the
+  architecture/rewind/object-constructor failures reported on `develop`, but
+  trace CI is not green and should not be pushed as a passing trace state.
+- `s2_ehz1`, `s2_scz1`, `s2_wfz1`, and the S1 credits GHZ/SYZ/LZ/SLZ/SBZ2
+  trace classes pass. The remaining failures still collapse into the same
+  high-leverage clusters: Tails CPU/status/object interaction, roll/status
+  handoff, launch/bounce constants, object slot pressure, and a few input
+  alignment/data issues.
+
+| Trace class | Frontier | Signature |
+|---|---:|---|
+| s1.TestS1Credits01Mz2TraceReplay | f262 | status_byte expected `0x0021`, actual `0x0001` |
+| s1.TestS1Credits05Sbz1TraceReplay | f413 | status_byte expected `0x0029`, actual `0x0028` |
+| s1.TestS1FzCompleteRunTraceReplay | f713 | y_speed expected `0x0000`, actual `-0700` |
+| s1.TestS1Ghz1CompleteRunTraceReplay | f1394 | x_speed expected `0x0000`, actual `-0200` |
+| s1.TestS1Ghz2CompleteRunTraceReplay | f2370 | y expected `0x0267`, actual `0x0266` |
+| s1.TestS1Ghz3CompleteRunTraceReplay | f370 | y_speed expected `-0220`, actual `-0320` |
+| s1.TestS1Lz1CompleteRunTraceReplay | f302 | y_speed expected `-0100`, actual `0x0000` |
+| s1.TestS1Lz2CompleteRunTraceReplay | f1089 | y expected `0x03A8`, actual `0x03AD` |
+| s1.TestS1Lz3CompleteRunTraceReplay | f466 | y expected `0x0807`, actual `0x0007` |
+| s1.TestS1Mz1CompleteRunTraceReplay | f1260 | rolling expected `0`, actual `1` |
+| s1.TestS1Mz1TraceReplay | f3224 | y_speed expected `0x02C8`, actual `0x01C8` |
+| s1.TestS1Mz2CompleteRunTraceReplay | f2409 | y_speed expected `0x0048`, actual `-00B8` |
+| s1.TestS1Mz3CompleteRunTraceReplay | f1702 | y expected `0x048C`, actual `0x048B` |
+| s1.TestS1Sbz1CompleteRunTraceReplay | f2268 | air expected `0`, actual `1` |
+| s1.TestS1Sbz2CompleteRunTraceReplay | f576 | y expected `0x0763`, actual `0x075C` |
+| s1.TestS1Sbz3CompleteRunTraceReplay | f1421 | camera_y expected `0x038C`, actual `0x0388` |
+| s1.TestS1Slz1CompleteRunTraceReplay | f723 | x_speed expected `0x0000`, actual `-0200` |
+| s1.TestS1Slz2CompleteRunTraceReplay | f651 | g_speed expected `0x1000`, actual `0x10AE` |
+| s1.TestS1Slz3CompleteRunTraceReplay | f718 | y_speed expected `0x0000`, actual `0x0610` |
+| s1.TestS1Syz1CompleteRunTraceReplay | f250 | y_speed expected `-0610`, actual `-0510` |
+| s1.TestS1Syz2CompleteRunTraceReplay | f1088 | x_speed expected `0x02E8`, actual `0x02F4` |
+| s1.TestS1Syz3CompleteRunTraceReplay | f1392 | x_speed expected `-0200`, actual `0x0200` |
+| s2.TestS2Arz2LevelSelectTraceReplay | f899 | y_speed expected `-02D0`, actual `-01D0` |
+| s2.TestS2ArzLevelSelectTraceReplay | f1285 | tails_cpu_interact expected `0x0008`, actual `0x0000` |
+| s2.TestS2Cnz2LevelSelectTraceReplay | f2919 | tails_status_byte expected `0x0009`, actual `0x0008` |
+| s2.TestS2CnzLevelSelectTraceReplay | f202 | tails_x expected `0x0265`, actual `0x0264` |
+| s2.TestS2Cpz2LevelSelectTraceReplay | f759 | tails_status_byte expected `0x0020`, actual `0x0000` |
+| s2.TestS2CpzLevelSelectTraceReplay | f1157 | tails_x_speed expected `0x0000`, actual `-0200` |
+| s2.TestS2DezEndingLevelSelectTraceReplay | f1557 | x_speed expected `0x0000`, actual `0x003C` |
+| s2.TestS2Htz2LevelSelectTraceReplay | f936 | tails_cpu_ctrl2_held expected `0x0002`, actual `0x0000` |
+| s2.TestS2HtzLevelSelectTraceReplay | f419 | tails_cpu_interact expected `0x0000`, actual `0x0018` |
+| s2.TestS2Mcz2LevelSelectTraceReplay | f2411 | tails_status_byte expected `0x0008`, actual `0x0009` |
+| s2.TestS2MczLevelSelectTraceReplay | f398 | tails_routine expected `0x0006`, actual `0x0002` |
+| s2.TestS2Mtz2LevelSelectTraceReplay | f645 | tails_x_speed expected `0x00C1`, actual `-0200` |
+| s2.TestS2Mtz3LevelSelectTraceReplay | f1381 | tails_cpu_jumping expected `0x0001`, actual `0x0000` |
+| s2.TestS2MtzLevelSelectTraceReplay | f931 | tails_cpu_interact expected `0x009F`, actual `0x0006` |
+| s2.TestS2Ooz2LevelSelectTraceReplay | f1070 | air expected `0`, actual `1` |
+| s2.TestS2OozLevelSelectTraceReplay | f395 | tails_status_byte expected `0x000A`, actual `0x0002` |
+| s3k.TestS3kAizCompleteRunTraceReplay | f1095 | x_speed expected `0x0000`, actual `0x000C` |
+| s3k.TestS3kAizTraceReplay | f2590 | replay frontier tails_status_byte expected `0x000A`, actual `0x0002`; sidekick cadence helper tests also fail |
+| s3k.TestS3kCnzCompleteRunTraceReplay | f97 | rolling expected `1`, actual `0` |
+| s3k.TestS3kCnzTraceReplay | f39672 | input alignment mismatch; additional CNZ slot-pressure/miniboss helper failures remain |
+| s3k.TestS3kHczCompleteRunTraceReplay | f97 | status_byte expected `0x0021`, actual `0x0001` |
+| s3k.TestS3kIczCompleteRunTraceReplay | f1986 | tails_status_byte expected `0x0004`, actual `0x0024` |
+| s3k.TestS3kLbzCompleteRunTraceReplay | f410 | y_speed expected `0x0000`, actual `-0100` |
+| s3k.TestS3kMgzCompleteRunTraceReplay | f738 | rings expected `17`, actual `18` |
+| s3k.TestS3kMgzTraceReplay | f33271 | input alignment mismatch |
+| s3k.TestS3kMhzCompleteRunTraceReplay | f79 | y expected `0x051B`, actual `0x0525` |
+
 ## 2026-06-12 — S3K sidekick flight-facing status cluster
 
 Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `develop`, with
