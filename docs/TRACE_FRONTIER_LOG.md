@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+## 2026-06-13 - Sidekick routine capture uses real dead-fall state
+
+- Scope: fixed a trace-harness false frontier for CPU sidekick object routine
+  capture. `TraceCharacterState.fromSprite(...)`, trace replay diagnostics, and
+  credits replay diagnostics now share one routine/status derivation path. A
+  CPU sidekick in the engine's `DEAD_FALLING` state captures ROM object routine
+  `0x06` instead of the previous hard-coded non-hurt routine `0x02`.
+- Disassembly basis:
+  - S2 `Obj02_Index` dispatches routine `0x06` to `Obj02_Dead`
+    (`docs/s2disasm/s2.asm:38884-38888`).
+  - `Tails_LevelBound` jumps to `KillCharacter` when Tails crosses
+    `Tails_Max_Y_pos + screen_height` (`docs/s2disasm/s2.asm:40253-40288`),
+    and `Obj02_Dead` subsequently runs dead-fall movement
+    (`docs/s2disasm/s2.asm:41125-41131`).
+- Focused verification:
+  - `mvn -Dmse=off "-Dtest=com.openggf.sprites.playable.TestTraceCharacterState" test -B`
+  - Result: **Tests run: 2, Failures: 0, Errors: 0, Skipped: 0**.
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2MczLevelSelectTraceReplay" "-DfailIfNoTests=false" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+  - Result: still red, but `s2_mcz1` advanced from frame 398
+    `tails_routine` expected `0x0006`, actual `0x0002`, to frame 4513
+    `y_speed` expected `0x03D0`, actual `0x04D0`.
+- Frontier movement:
+
+| Trace | Previous frontier | New frontier | Delta |
+|---|---:|---:|---:|
+| `s2_mcz1` | f398 `tails_routine` `0x0006 -> 0x0002` | f4513 `y_speed` `0x03D0 -> 0x04D0` | +4115 |
+
 ## 2026-06-12 - S2 sidekick ground-wall seams keep zero distance clear
 
 - Scope: gated CPU sidekick zero-distance ground-wall seam handling through

@@ -652,35 +652,7 @@ public abstract class AbstractTraceReplayTest {
     }
 
     private TraceCharacterState captureCharacterState(AbstractPlayableSprite sprite) {
-        ObjectManager om = GameServices.level() != null
-                ? GameServices.level().getObjectManager() : null;
-        int standOnSlot = -1;
-        if (om != null) {
-            ObjectInstance ridingObj = om.getRidingObject(sprite);
-            if (ridingObj instanceof AbstractObjectInstance aoi && aoi.getSlotIndex() >= 0) {
-                standOnSlot = aoi.getSlotIndex();
-            }
-        }
-
-        int statusByte = buildStatusByte(sprite);
-
-        int routine = sprite.isHurt() ? 0x04 : 0x02;
-
-        return new TraceCharacterState(true,
-                sprite.getCentreX(),
-                sprite.getCentreY(),
-                sprite.getXSpeed(),
-                sprite.getYSpeed(),
-                sprite.getGSpeed(),
-                sprite.getAngle(),
-                sprite.getAir(),
-                sprite.getRolling(),
-                sprite.getGroundMode().ordinal(),
-                sprite.getXSubpixelRaw(),
-                sprite.getYSubpixelRaw(),
-                routine,
-                statusByte,
-                standOnSlot);
+        return TraceCharacterState.fromSprite(sprite);
     }
 
     /**
@@ -691,7 +663,7 @@ public abstract class AbstractTraceReplayTest {
      */
     private EngineDiagnostics captureEngineDiagnostics(AbstractPlayableSprite sprite) {
         // Routine: S1 uses 0=init, 2=control, 4=hurt, 6=death
-        int routine = sprite.isHurt() ? 0x04 : 0x02;
+        int routine = TraceCharacterState.routineFromSprite(sprite);
 
         // Riding object: which SST slot is the player standing on?
         int standOnSlot = -1;
@@ -710,7 +682,7 @@ public abstract class AbstractTraceReplayTest {
         int rings = sprite.getRingCount();
 
         // Status byte (replicate ROM's status encoding)
-        int statusByte = buildStatusByte(sprite);
+        int statusByte = TraceCharacterState.statusByteFromSprite(sprite);
 
         // Camera X/Y for ROM-trace cross-reference and camera_x/camera_y
         // comparison in TraceBinder.
@@ -902,7 +874,7 @@ public abstract class AbstractTraceReplayTest {
         String renderFlagDiag = summariseSidekickRenderFlagDiagnostics(sidekick);
         String groundProbeDiag = summariseGroundProbeDiagnostics("ground", sidekick);
         return String.format(
-                "eng-tails-state pos=(%04X,%04X) sub=(%04X,%04X) vel=(%04X,%04X) g=%04X dir=%s onObj=%s ride=s%d type=%02X interact=s%d[%s] st=%02X pin=%s lock=%s prs=%s boundsY=%04X/%04X/%04X cpuMax=%04X %s %s",
+                "eng-tails-state pos=(%04X,%04X) sub=(%04X,%04X) vel=(%04X,%04X) g=%04X dir=%s onObj=%s ride=s%d type=%02X interact=s%d[%s] st=%02X rtn=%02X dead=%s pin=%s lock=%s prs=%s boundsY=%04X/%04X/%04X cpuMax=%04X wrap=%s %s %s",
                 sidekick.getCentreX() & 0xFFFF,
                 sidekick.getCentreY() & 0xFFFF,
                 sidekick.getXSubpixelRaw() & 0xFFFF,
@@ -916,7 +888,9 @@ public abstract class AbstractTraceReplayTest {
                 standOnType & 0xFF,
                 interactSlot,
                 interactOccupant,
-                buildStatusByte(sidekick),
+                TraceCharacterState.statusByteFromSprite(sidekick),
+                TraceCharacterState.routineFromSprite(sidekick),
+                sidekick.getDead(),
                 sidekick.getPinballMode(),
                 sidekick.getPinballSpeedLock(),
                 sidekick.shouldPreserveRollingOnNextRollStop(),
@@ -924,6 +898,7 @@ public abstract class AbstractTraceReplayTest {
                 camMaxY,
                 camMaxYTarget,
                 cpuMaxY,
+                cam != null && cam.isVerticalWrapEnabled(),
                 renderFlagDiag,
                 groundProbeDiag);
     }
@@ -1112,20 +1087,6 @@ public abstract class AbstractTraceReplayTest {
             return "eng-tails-cpu none controller=missing";
         }
         return sidekick.getCpuController().formatLatestNormalStepDiagnostics();
-    }
-
-    private int buildStatusByte(AbstractPlayableSprite sprite) {
-        int statusByte = 0;
-        if (sprite.getDirection() == com.openggf.physics.Direction.LEFT) {
-            statusByte |= 0x01;
-        }
-        if (sprite.getAir()) statusByte |= 0x02;
-        if (sprite.getRolling()) statusByte |= 0x04;
-        if (sprite.isOnObject()) statusByte |= 0x08;
-        if (sprite.getRollingJump()) statusByte |= 0x10;
-        if (sprite.getPushing()) statusByte |= 0x20;
-        if (sprite.isInWater()) statusByte |= 0x40;
-        return statusByte;
     }
 
     private void writeReport(DivergenceReport report, TraceMetadata meta) {

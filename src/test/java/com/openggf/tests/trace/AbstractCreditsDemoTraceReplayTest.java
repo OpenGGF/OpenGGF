@@ -309,7 +309,7 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
      */
     private EngineDiagnostics captureEngineDiagnostics(AbstractPlayableSprite sprite) {
         // Routine: S1 uses 0=init, 2=control, 4=hurt, 6=death
-        int routine = sprite.isHurt() ? 0x04 : 0x02;
+        int routine = TraceCharacterState.routineFromSprite(sprite);
 
         // Riding object: which SST slot is the player standing on?
         int standOnSlot = -1;
@@ -328,15 +328,7 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
         int rings = sprite.getRingCount();
 
         // Status byte (replicate ROM's status encoding)
-        int statusByte = 0;
-        if (sprite.getDirection() == com.openggf.physics.Direction.LEFT)
-            statusByte |= 0x01;
-        if (sprite.getAir()) statusByte |= 0x02;
-        if (sprite.getRolling()) statusByte |= 0x04;
-        if (sprite.isOnObject()) statusByte |= 0x08;
-        if (sprite.getRollingJump()) statusByte |= 0x10;
-        if (sprite.getPushing()) statusByte |= 0x20;
-        if (sprite.isInWater()) statusByte |= 0x40;
+        int statusByte = TraceCharacterState.statusByteFromSprite(sprite);
 
         // Camera X/Y for ROM-trace cross-reference and camera_x/camera_y
         // comparison in TraceBinder.
