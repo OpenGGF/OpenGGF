@@ -549,32 +549,9 @@ public final class LevelRenderer {
         cacheViewportForFrame();
 
         Camera camera = lm.camera;
-        int bgScrollY = (int) (camera.getY() * 0.1f);
-        if (lm.game != null) {
-            int levelIdx = lm.levels.get(lm.currentZone).get(lm.currentAct).getLevelIndex();
-            int[] scroll = lm.game.getBackgroundScroll(levelIdx, camera.getX(), camera.getY());
-            bgScrollY = scroll[1];
-        }
-
-        lm.parallaxManager.update(lm.currentZone, lm.currentAct, camera, lm.frameCounter, bgScrollY, lm.level);
-        // frameCounter is now incremented in update() — see comment there.
-        // Run animated tile/palette updates after parallax publishes runtime
-        // deform state; S3K CNZ/MHZ animated tile phases read that state.
-        if (lm.animatedPatternManager != null) {
-            lm.animatedPatternManager.update();
-        }
-        if (lm.animatedPaletteManager != null && lm.animatedPaletteManager != lm.animatedPatternManager) {
-            lm.animatedPaletteManager.update();
-        }
+        int bgScrollY = lm.frameRuntimeUpdater.computeBackgroundScrollY();
         resolvePendingPaletteOwnershipWrites();
         resolveAdvancedRenderFrameState(lm.frameCounter);
-
-        // Propagate shake offsets from parallax manager to camera.
-        // This allows sprite rendering (via GraphicsManager.flush()) to shake
-        // in sync with FG tiles.
-        camera.setShakeOffsets(
-                lm.parallaxManager.getShakeOffsetX(),
-                lm.parallaxManager.getShakeOffsetY());
 
         List<GLCommand> collisionCommands = lm.debugRenderer != null
                 ? lm.debugRenderer.getCollisionCommands() : new ArrayList<>();

@@ -87,6 +87,36 @@
 | s3k_mgz1 | f454 | tails_status_byte | 0x0003 | 0x0002 | 9312 |
 | s3k_mhz1 | f71 | camera_y | 0x04C5 | 0x04BF | 4507 |
 
+## 2026-06-12 — S3K MHZ headless animated tile logic sweep
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `develop`, with
+local level-frame animation tick edits extracted into `LevelFrameRuntimeUpdater`.
+
+Commands:
+`mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s3k.TestS3kMhzCompleteRunTraceReplay" "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test`
+`mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test`
+
+Fix:
+- `LevelManager.update()` now delegates to `LevelFrameRuntimeUpdater` to advance
+  parallax, animated pattern, and animated palette managers as part of the logic
+  frame instead of relying on `LevelRenderer.drawWithRenderOptions()`. This
+  models ROM-visible animation counter state for headless trace replay,
+  including MHZ mushroom cap position counters driven by `Anim_Counters+$F`.
+- `LevelRenderer` now consumes the already-updated parallax/camera shake state
+  for drawing without ticking gameplay-visible animation state a second time.
+
+Result:
+- Focused MHZ complete-run replay remains red but advances from frame **71**
+  `camera_y` expected `0x04C5`, actual `0x04BF`, **4507** errors to frame
+  **73** `y` expected `0x051A`, actual `0x0515`, **3895** errors.
+- Full `*TraceReplay` sweep remains red: **90 tests**, **62 failures**,
+  **1 error**, 0 skipped. No frontier regressions were observed; all reports
+  except `s3k_mhz1` matched the previous frontier table.
+
+| Trace | Frontier | Field | Expected | Actual | Errors |
+|---|---:|---|---:|---:|---:|
+| s3k_mhz1 | f73 | y | 0x051A | 0x0515 | 3895 |
+
 - Interpretation: this removes false MTZ CPU-diagnostic frontiers in the
   flight-entry path. MTZ1's next exposed owner is `tails_cpu_interact` at frame
   931, still inside the broader S2 Tails CPU interact/lifetime cluster; MTZ3

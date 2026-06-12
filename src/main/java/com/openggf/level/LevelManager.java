@@ -218,6 +218,7 @@ public class LevelManager {
 
     // Rendering pipeline (extracted from LevelManager — see LevelRenderer).
     private final LevelRenderer levelRenderer = new LevelRenderer(this);
+    final LevelFrameRuntimeUpdater frameRuntimeUpdater = new LevelFrameRuntimeUpdater(this);
     private EngineContext engineServices; private EditorSaveManager editorSaveManager;
 
     @Deprecated(forRemoval = true)
@@ -1072,6 +1073,8 @@ public class LevelManager {
             }
         }
 
+        frameRuntimeUpdater.updateParallaxAndAnimatedContent();
+
         // Legacy object-before-physics modules update playable water state here.
         // Inline-order modules run this immediately after the player slot in
         // LevelFrameStep, before ExecuteObjects, matching S3K's Sonic_Water /
@@ -1788,23 +1791,7 @@ public class LevelManager {
     }
 
     public void recomputeParallaxAfterRewindRestore() {
-        if (parallaxManager == null || camera == null) {
-            return;
-        }
-        int bgScrollY = (int) (camera.getY() * 0.1f);
-        if (game != null
-                && currentZone >= 0
-                && currentZone < levels.size()
-                && currentAct >= 0
-                && currentAct < levels.get(currentZone).size()) {
-            int levelIdx = levels.get(currentZone).get(currentAct).getLevelIndex();
-            int[] scroll = game.getBackgroundScroll(levelIdx, camera.getX(), camera.getY());
-            bgScrollY = scroll[1];
-        }
-        parallaxManager.update(currentZone, currentAct, camera, frameCounter, bgScrollY, level);
-        camera.setShakeOffsets(
-                parallaxManager.getShakeOffsetX(),
-                parallaxManager.getShakeOffsetY());
+        frameRuntimeUpdater.recomputeParallaxAfterRewindRestore();
     }
 
     /**

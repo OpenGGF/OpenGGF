@@ -43,15 +43,19 @@ class TestLevelRendererBackgroundViewport {
     }
 
     @Test
-    void parallaxPublishesRuntimeStateBeforeAnimatedTilesReadIt() throws Exception {
-        String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelRenderer.java"));
-        String method = methodBody(source.replace("\r\n", "\n"), "public void drawWithRenderOptions(");
+    void logicFrameParallaxPublishesRuntimeStateBeforeAnimatedTilesReadIt() throws Exception {
+        String levelManagerSource = Files.readString(Path.of("src/main/java/com/openggf/level/LevelManager.java"));
+        assertTrue(levelManagerSource.contains("frameRuntimeUpdater.updateParallaxAndAnimatedContent();"),
+                "LevelManager.update must advance parallax and animated content during logic frames.");
 
-        int parallaxUpdate = method.indexOf("lm.parallaxManager.update(");
-        int animatedPatternUpdate = method.indexOf("lm.animatedPatternManager.update();");
+        String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelFrameRuntimeUpdater.java"));
+        String method = methodBody(source.replace("\r\n", "\n"), "void updateParallaxAndAnimatedContent(");
 
-        assertTrue(parallaxUpdate >= 0, "drawWithRenderOptions must update parallax each frame.");
-        assertTrue(animatedPatternUpdate >= 0, "drawWithRenderOptions must update animated patterns each frame.");
+        int parallaxUpdate = method.indexOf("parallaxManager.update(");
+        int animatedPatternUpdate = method.indexOf("animatedPatternManager.update();");
+
+        assertTrue(parallaxUpdate >= 0, "Logic-frame runtime update must update parallax each frame.");
+        assertTrue(animatedPatternUpdate >= 0, "Logic-frame runtime update must update animated patterns each frame.");
         assertTrue(parallaxUpdate < animatedPatternUpdate,
                 "Parallax/deform runtime state must be published before S3K animated tiles read it.");
     }

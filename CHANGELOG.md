@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Level animation now advances during logic frames:** parallax, animated tile,
+  and animated palette updates now run from the level update path instead of the
+  render path, so headless trace replay observes the same ROM-visible animated
+  tile counters as rendered gameplay. This advances `s3k_mhz1` from the false
+  frame 71 `camera_y` frontier to frame 73 `y`.
+
 - **S2 sidekick object-edge balance now uses ROM object width and Tails facing:**
   Obj18 ARZ platforms and Obj16 HTZ lifts expose their ROM `width_pixels` to the
   player balance routine, and Tails' S2/S3K physics profile now uses the
