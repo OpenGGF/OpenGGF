@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K ICZ complete-run progressed to second lost-ring frontier
+
+- Scope: follow-up to the ICZ frame-3273 lost-ring re-collection frontier.
+  Trace data remained comparison-only diagnostic input; no trace state was
+  written back into engine runtime.
+- Change:
+  - `AbstractPlayableSprite` now exposes the ROM display-phase post-hit
+    invulnerability timer tick separately from the rest of end-of-tick status
+    work, and `SpriteManager.tickPlayablePhysics` runs that timer before
+    animation and touch response. This matches the normal-control order where
+    `Sonic_Display` decrements `invulnerable_time` before `TouchResponse` /
+    `ReactToItem` reads the lost-ring threshold (S1
+    `docs/s1disasm/_incObj/01 Sonic.asm:73-90`, S2
+    `docs/s2disasm/s2.asm:36243-36258`, S3K
+    `docs/skdisasm/sonic3k.asm:21995-22022`).
+  - `tickStatus()` keeps a one-frame guard so paths without touch response
+    still decrement the timer exactly once, while the normal player path does
+    not double-decrement after the pre-touch display tick.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.level.objects.TestLostRingTouchOrdering" test`
+    -> GREEN, 6 tests.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 3273 to frame 3323. New
+    first error is main-player `rings` (`expected=2`, `actual=1`) near the next
+    Obj37 lost ring; main-player position, speeds, angle, air/rolling state,
+    camera, sidekick state, and Tails CPU fields match through the former
+    re-collection frontier.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-3323 second lost-ring collection around slot 61/nearby Obj37 ring
+  state and collection gating, without adding a trace/frame carve-out.
+
 ## 2026-06-12 - S3K ICZ complete-run progressed to lost-ring re-collection frontier
 
 - Scope: follow-up to the ICZ frame-3174 hidden-hurt ring-spend frontier.

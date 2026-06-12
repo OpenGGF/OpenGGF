@@ -386,6 +386,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         protected int invulnerableFrames = 0;
         private boolean suppressNextInvulnerabilityDecrement = false;
+        private boolean invulnerabilityDisplayTimerTickedThisFrame = false;
 
         /**
          * Frames remaining for invincibility power-up.
@@ -2197,6 +2198,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 invulnerableFrames = Math.max(0, frames);
                 if (invulnerableFrames == 0) {
                         suppressNextInvulnerabilityDecrement = false;
+                        invulnerabilityDisplayTimerTickedThisFrame = false;
                 }
         }
 
@@ -2295,8 +2297,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 springingFrames = frames;
         }
 
-        public void tickStatus() {
-                refreshRuntimeBoundStateIfNeeded();
+        public void tickInvulnerabilityDisplayTimerBeforeTouchResponse() {
+                tickInvulnerabilityDisplayTimer();
+        }
+
+        private void tickInvulnerabilityDisplayTimer() {
+                if (invulnerabilityDisplayTimerTickedThisFrame) {
+                        return;
+                }
+                invulnerabilityDisplayTimerTickedThisFrame = true;
                 // ROM: invulnerable_time only decrements in Sonic_Display (routine 2).
                 // During hurt routine (routine 4), DisplaySprite is called directly,
                 // so the timer stays frozen until Sonic lands.
@@ -2307,6 +2316,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 invulnerableFrames--;
                         }
                 }
+        }
+
+        public void tickStatus() {
+                refreshRuntimeBoundStateIfNeeded();
+                tickInvulnerabilityDisplayTimer();
                 if (invincibleFrames > 0) {
                         invincibleFrames--;
                         if (invincibleFrames == 0) {
@@ -4568,6 +4582,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 suppressNextGravityStep = false;
                 recordFollowerHistoryForTick();
                 followerHistoryRecordedThisTick = false;
+                invulnerabilityDisplayTimerTickedThisFrame = false;
         }
 
         public short getRenderCentreX() {

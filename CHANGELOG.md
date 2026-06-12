@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Playable invulnerability timer now matches ROM touch-response order:**
+  the post-hit invulnerability timer now ticks in the display phase before
+  player touch responses read it, while still ticking only once per frame. This
+  moves the ICZ complete-run trace from frame 3273 to frame 3323, a second
+  lost-ring collection frontier.
+
 - **S3K invisible hurt blocks use ROM delayed ring-spill ordering:** S3K
   horizontal invisible hurt blocks now apply the `sub_24280` Y-position rewind
   before hurt and defer lost-ring spill until the next level tick, matching the

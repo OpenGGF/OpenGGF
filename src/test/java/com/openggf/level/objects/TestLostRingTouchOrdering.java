@@ -7,6 +7,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.rings.LostRingObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,6 +15,7 @@ import org.mockito.Mockito;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
@@ -162,6 +164,25 @@ public class TestLostRingTouchOrdering {
         objectManager.runTouchResponsesForPlayer(player, 2); // frame 2: must collect (every-frame eval)
         assertTrue(ring.isCollected(),
                 "Branch is every-frame, not edge-triggered: must collect once invuln drops");
+    }
+
+    @Test
+    public void displayTimerDropBeforeTouchCollectsAtThreshold() {
+        TestablePlayableSprite realPlayer = new TestablePlayableSprite("sonic", (short) 160, (short) 112);
+        realPlayer.setInvulnerableFrames(90);
+        LostRingObjectInstance ring = ringAtSlot(20);
+
+        realPlayer.tickInvulnerabilityDisplayTimerBeforeTouchResponse();
+        objectManager.runTouchResponsesForPlayer(realPlayer, 1);
+
+        assertTrue(ring.isCollected(),
+                "Sonic_Display decrements invulnerable_time before TouchResponse reads the lost-ring threshold");
+        assertEquals(89, realPlayer.getInvulnerableFrames());
+
+        realPlayer.tickStatus();
+
+        assertEquals(89, realPlayer.getInvulnerableFrames(),
+                "End-of-tick status must not double-decrement the display timer");
     }
 
     @Test

@@ -1316,6 +1316,12 @@ public class SpriteManager {
 			cpuController.finishCarryAfterCarrierMovement();
 		}
 		playable.recordFollowerHistoryForTick();
+		// ROM Obj01_Control runs Sonic_Display before Sonic_Animate and
+		// TouchResponse (S1 01 Sonic.asm:73-90, S2 s2.asm:36243-36258,
+		// S3K sonic3k.asm:21995-22022). Sonic_Display decrements
+		// invulnerable_time, and spilled-ring touch checks read that decremented
+		// value in the same object-interaction pass.
+		playable.tickInvulnerabilityDisplayTimerBeforeTouchResponse();
 		// ROM Obj01_Control: movement runs first, then Sonic_Animate, then
 		// TouchResponse. Special objects like monitors gate on anim(a0), so
 		// ReactToItem must observe the post-movement animation state from the
