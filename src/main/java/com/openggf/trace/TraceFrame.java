@@ -9,7 +9,9 @@ import java.util.Objects;
  *
  * <p>Supports v1 (11 columns), v2 (18 columns), v2.1 (19 columns), v2.2 (20 columns),
  * and v3 (22 columns) CSV formats. v2 adds diagnostic fields: x_sub, y_sub, routine,
- * camera_x, camera_y, rings, status_byte. v2.1 adds gameplay_frame_counter (ROM's
+ * camera_x, camera_y, rings, status_byte. Routine/status/camera/rings are also
+ * compared by {@link TraceBinder} when the engine-side snapshot carries them.
+ * v2.1 adds gameplay_frame_counter (ROM's
  * Level_MainLoop counter). v2.2 adds stand_on_obj (SST slot index of object Sonic is
  * riding on). v3 adds vblank_counter and lag_counter. v5 appends optional first-sidekick
  * state. v6 stores explicit named character blocks for both Sonic and Tails while
@@ -29,7 +31,7 @@ public record TraceFrame(
     boolean air,
     boolean rolling,
     int groundMode,
-    // v2 diagnostic fields (display-only, not compared by TraceBinder)
+    // v2 diagnostic fields; TraceBinder compares the subset with engine parity data.
     int xSub,
     int ySub,
     int routine,

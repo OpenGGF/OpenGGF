@@ -75,8 +75,8 @@ public class TraceBinder {
 
     /**
      * Compare a single frame with optional engine-side diagnostic context.
-     * The diagnostics are display-only (not compared for pass/fail) but appear
-     * in the context window alongside ROM trace diagnostics for cross-referencing.
+     * TraceBinder compares the diagnostic fields with stable engine parity data
+     * and leaves the rest in the context window for cross-referencing.
      */
     public FrameComparison compareFrame(
             TraceFrame expected,
@@ -197,6 +197,17 @@ public class TraceBinder {
         int derivedActualGroundMode = deriveGroundMode(actualAngle & 0xFF);
         fields.put("ground_mode", compareEnum("ground_mode",
             expectedGroundMode, derivedActualGroundMode));
+
+        if (engineDiag != null && expected.routine() >= 0 && engineDiag.routine() >= 0) {
+            fields.put("routine", compareNumeric("routine",
+                    expected.routine() & 0xFF, engineDiag.routine() & 0xFF,
+                    0, 1, false));
+        }
+        if (engineDiag != null && expected.statusByte() >= 0 && engineDiag.statusByte() >= 0) {
+            fields.put("status_byte", compareNumeric("status_byte",
+                    expected.statusByte() & 0xFF, engineDiag.statusByte() & 0xFF,
+                    0, 1, false));
+        }
 
         if (tolerances.ringCountMode() != ToleranceConfig.RingCountMode.DISABLED
                 && expected.rings() >= 0 && engineDiag != null && engineDiag.rings() >= 0) {
@@ -395,6 +406,16 @@ public class TraceBinder {
         fields.put(prefix + "ground_mode", compareEnum(prefix + "ground_mode",
             deriveGroundMode(expected.angle() & 0xFF),
             deriveGroundMode(actual.angle() & 0xFF)));
+        if (expected.routine() >= 0 && actual.routine() >= 0) {
+            fields.put(prefix + "routine", compareNumeric(prefix + "routine",
+                    expected.routine() & 0xFF, actual.routine() & 0xFF,
+                    0, 1, false));
+        }
+        if (expected.statusByte() >= 0 && actual.statusByte() >= 0) {
+            fields.put(prefix + "status_byte", compareNumeric(prefix + "status_byte",
+                    expected.statusByte() & 0xFF, actual.statusByte() & 0xFF,
+                    0, 1, false));
+        }
     }
 
     private void appendSidekickCpuComparisons(Map<String, FieldComparison> fields, String prefix,

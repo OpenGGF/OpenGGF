@@ -1,5 +1,110 @@
 # Trace Frontier Log
 
+## 2026-06-12 - True-frontier comparator widening sweep
+
+- Scope: Step 0 of the release remediation pass. Widened the trace comparator
+  to include ROM-visible routine and status bytes when both the ROM trace and
+  engine snapshot carry the values. Trace data remains comparison-only
+  diagnostic input; no trace value is written back into engine runtime. Object
+  `stand_on_obj` remains report context for now because ROM SST slot ownership
+  and engine object ids are not yet a stable one-to-one comparison surface.
+- Harness changes:
+  - `TraceBinder` now compares primary `routine` / `status_byte` and named
+    sidekick `routine` / `status_byte` when both sides provide them.
+  - Engine status-byte capture now includes ROM-visible `Status_RollJump`
+    (`0x10`) and `Status_Push` (`0x20`) in addition to direction, air,
+    rolling, on-object, and water bits.
+- Focused verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestTraceBinder" "-DfailIfNoTests=false" test`
+  - Result: **Tests run: 32, Failures: 0, Errors: 0, Skipped: 0**.
+- Full sweep command:
+  - `mvn "-Dmse=off" "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g" test`
+- Full sweep result:
+  - **Tests run: 90, Failures: 61, Errors: 1, Skipped: 0** from
+    Maven/Surefire.
+  - Parsed release-blocking trace report count changed from 43 to 48 because
+    previously hidden `status_byte` / `routine` divergences are now compared.
+    This is an intentional true-frontier exposure, not a green certification.
+- Frontier movement versus the pre-widening baseline:
+
+| Trace | Previous frontier | New frontier | Delta |
+|---|---:|---:|---:|
+| `s1_credits_01_mz2` | new pass-to-fail exposure | f262 `status_byte` `0x0021 -> 0x0001` | n/a |
+| `s1_credits_04_slz3` | new pass-to-fail exposure | f447 `status_byte` `0x0028 -> 0x0008` | n/a |
+| `s1_credits_05_sbz1` | new pass-to-fail exposure | f116 `status_byte` `0x0021 -> 0x0001` | n/a |
+| `s1_credits_06_sbz2` | new pass-to-fail exposure | f438 `status_byte` `0x0016 -> 0x0006` | n/a |
+| `s2_cpz1` | f724 `tails_x_speed` `0x003C -> -00C4` | f724 `tails_status_byte` `0x0000 -> 0x0020` | 0 |
+| `s2_cpz2` | f763 `tails_g_speed` `-0018 -> 0x0000` | f759 `tails_status_byte` `0x0020 -> 0x0000` | -4 |
+| `s2_ehz1` | new pass-to-fail exposure | f395 `tails_status_byte` `0x0008 -> 0x0009` | n/a |
+| `s2_mcz1` | f3005 `tails_x_speed` `0x02CD -> 0x01CD` | f398 `tails_routine` `0x0006 -> 0x0002` | -2607 |
+| `s2_ooz1` | f1645 `tails_x_speed` `0x0018 -> -00E8` | f395 `tails_status_byte` `0x000A -> 0x0002` | -1250 |
+| `s3k_aiz1` | f3135 `tails_g_speed` `0x039E -> 0x0000` | f1058 `tails_status_byte` `0x0003 -> 0x0002` | -2077 |
+| `s3k_hcz1` | f9482 `air` `1 -> 0` | f97 `status_byte` `0x0021 -> 0x0001` | -9385 |
+| `s3k_icz1` | f3752 `x` `0x464D -> 0x464E` | f1156 `tails_status_byte` `0x0003 -> 0x0002` | -2596 |
+| `s3k_mgz1` | f738 `rings` `17 -> 18` | f454 `tails_status_byte` `0x0003 -> 0x0002` | -284 |
+
+- Current parsed frontier table:
+
+| Trace | Frame | Field | Expected | Actual |
+|---|---:|---|---:|---:|
+| `s1_credits_01_mz2` | 262 | `status_byte` | `0x0021` | `0x0001` |
+| `s1_credits_04_slz3` | 447 | `status_byte` | `0x0028` | `0x0008` |
+| `s1_credits_05_sbz1` | 116 | `status_byte` | `0x0021` | `0x0001` |
+| `s1_credits_06_sbz2` | 438 | `status_byte` | `0x0016` | `0x0006` |
+| `s1_ghz1` | 527 | `rolling` | `1` | `0` |
+| `s1_ghz2` | 2370 | `y` | `0x0267` | `0x0266` |
+| `s1_ghz3` | 370 | `y_speed` | `-0220` | `-0320` |
+| `s1_lz1` | 302 | `y_speed` | `-0100` | `0x0000` |
+| `s1_lz2` | 1089 | `y` | `0x03A8` | `0x03AD` |
+| `s1_lz3` | 466 | `y` | `0x0807` | `0x0007` |
+| `s1_lz4` | 1421 | `camera_y` | `0x038C` | `0x0388` |
+| `s1_mz1` | 3224 | `y_speed` | `0x02C8` | `0x01C8` |
+| `s1_mz2` | 1295 | `y` | `0x0451` | `0x044C` |
+| `s1_mz3` | 996 | `rolling` | `1` | `0` |
+| `s1_sbz1` | 1367 | `rolling` | `1` | `0` |
+| `s1_sbz2` | 576 | `y` | `0x0763` | `0x075C` |
+| `s1_sbz3` | 713 | `y_speed` | `0x0000` | `-0700` |
+| `s1_slz1` | 672 | `y` | `0x01D1` | `0x01CC` |
+| `s1_slz2` | 651 | `g_speed` | `0x1000` | `0x10AE` |
+| `s1_slz3` | 718 | `y_speed` | `0x0000` | `0x0610` |
+| `s1_syz1` | 250 | `y_speed` | `-0610` | `-0510` |
+| `s1_syz2` | 1088 | `x_speed` | `0x02E8` | `0x02F4` |
+| `s1_syz3` | 1392 | `x_speed` | `-0200` | `0x0200` |
+| `s2_arz1` | 990 | `y` | `0x03A3` | `0x039E` |
+| `s2_arz2` | 899 | `y_speed` | `-02D0` | `-01D0` |
+| `s2_cnz1` | 202 | `tails_x` | `0x0265` | `0x0264` |
+| `s2_cnz2` | 728 | `y` | `0x0571` | `0x056C` |
+| `s2_cpz1` | 724 | `tails_status_byte` | `0x0000` | `0x0020` |
+| `s2_cpz2` | 759 | `tails_status_byte` | `0x0020` | `0x0000` |
+| `s2_dez1` | 1557 | `x_speed` | `0x0000` | `0x003C` |
+| `s2_ehz1` | 395 | `tails_status_byte` | `0x0008` | `0x0009` |
+| `s2_htz1` | 419 | `tails_cpu_interact` | `0x0000` | `0x0018` |
+| `s2_htz2` | 831 | `tails_cpu_jumping` | `0x0001` | `0x0000` |
+| `s2_mcz1` | 398 | `tails_routine` | `0x0006` | `0x0002` |
+| `s2_mcz2` | 1807 | `tails_x_speed` | `-0018` | `0x00E8` |
+| `s2_mtz1` | 375 | `tails_cpu_interact` | `0x0001` | `-0001` |
+| `s2_mtz2` | 645 | `tails_x_speed` | `0x00C1` | `-0200` |
+| `s2_mtz3` | 461 | `tails_cpu_interact` | `0x006A` | `-0001` |
+| `s2_ooz1` | 395 | `tails_status_byte` | `0x000A` | `0x0002` |
+| `s2_ooz2` | 222 | `tails_cpu_interact` | `0x0000` | `0x001F` |
+| `s2_scz1` | 6370 | `y` | `0x057D` | `0x0578` |
+| `s3k_aiz1` | 1058 | `tails_status_byte` | `0x0003` | `0x0002` |
+| `s3k_cnz1` | 0 | `y_speed` | `0x0000` | `0x0038` |
+| `s3k_hcz1` | 97 | `status_byte` | `0x0021` | `0x0001` |
+| `s3k_icz1` | 1156 | `tails_status_byte` | `0x0003` | `0x0002` |
+| `s3k_lbz1` | 0 | `camera_y` | `0x05F0` | `0x05EC` |
+| `s3k_mgz1` | 454 | `tails_status_byte` | `0x0003` | `0x0002` |
+| `s3k_mhz1` | 0 | `tails_cpu_routine` | `0x000C` | `0x0006` |
+
+- Remediation impact:
+  - The highest-leverage exposed cluster is now status-bit timing, especially
+    `Status_Push`, plus sidekick routine/CPU setup. It accounts for five newly
+    exposed reports and moves several S2/S3K sidekick traces thousands of frames
+    earlier than their previous speed/position symptoms.
+  - Next behavior fix should target the earliest status/routine cluster before
+    attempting the older y/radius or rolling frontiers; otherwise those older
+    frontiers are likely downstream symptoms in several traces.
+
 ## 2026-06-12 - Merged develop post-reconcile full trace sweep
 
 - Scope: full `*TraceReplay` regression sweep on `develop` after reconciling

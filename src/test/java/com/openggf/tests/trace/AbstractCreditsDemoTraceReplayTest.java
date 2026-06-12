@@ -334,6 +334,8 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
         if (sprite.getAir()) statusByte |= 0x02;
         if (sprite.getRolling()) statusByte |= 0x04;
         if (sprite.isOnObject()) statusByte |= 0x08;
+        if (sprite.getRollingJump()) statusByte |= 0x10;
+        if (sprite.getPushing()) statusByte |= 0x20;
         if (sprite.isInWater()) statusByte |= 0x40;
 
         // Camera X/Y for ROM-trace cross-reference and camera_x/camera_y

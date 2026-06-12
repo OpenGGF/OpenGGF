@@ -95,6 +95,46 @@ public class TestTraceBinder {
     }
 
     @Test
+    void testPrimaryRoutineMismatchIsErrorWhenDiagnosticsCarryRoutine() {
+        TraceFrame frame = new TraceFrame(0, 0x0000,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            0, 0, 0x02, -1, -1, -1, 0x00, -1, -1, -1, -1, null);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, new EngineDiagnostics(0x04, -1, -1, -1, 0x00, -1, -1,
+                -1, -1, -1, -1, "", -1, -1, -1, -1));
+
+        assertTrue(result.hasError());
+        assertEquals(Severity.ERROR, result.fields().get("routine").severity());
+    }
+
+    @Test
+    void testPrimaryStatusByteMismatchIsErrorWhenDiagnosticsCarryStatus() {
+        TraceFrame frame = new TraceFrame(0, 0x0000,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            0, 0, 0x02, -1, -1, -1, 0x04, -1, -1, -1, -1, null);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, new EngineDiagnostics(0x02, -1, -1, -1, 0x00, -1, -1,
+                -1, -1, -1, -1, "", -1, -1, -1, -1));
+
+        assertTrue(result.hasError());
+        assertEquals(Severity.ERROR, result.fields().get("status_byte").severity());
+    }
+
+    @Test
     public void testInputValidationMatch() {
         TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
         TraceFrame frame = TraceFrame.of(0, 0x0008,
@@ -139,6 +179,64 @@ public class TestTraceBinder {
 
         assertTrue(result.hasError());
         assertEquals(Severity.ERROR, result.fields().get("sidekick_x").severity());
+    }
+
+    @Test
+    void testSidekickStatusByteMismatchIsReported() {
+        TraceFrame frame = new TraceFrame(0, 0x0000,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            new TraceCharacterState(true,
+                (short) 0x0040, (short) 0x03A0,
+                (short) 0x0010, (short) 0x0000, (short) 0x0010,
+                (byte) 0x00, false, false, 0,
+                0, 0, 0x02, 0x04, 0x00));
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, null, "tails",
+            new TraceCharacterState(true,
+                (short) 0x0040, (short) 0x03A0,
+                (short) 0x0010, (short) 0x0000, (short) 0x0010,
+                (byte) 0x00, false, false, 0,
+                0, 0, 0x02, 0x00, 0x00));
+
+        assertTrue(result.hasError());
+        assertEquals(Severity.ERROR, result.fields().get("tails_status_byte").severity());
+    }
+
+    @Test
+    void testSidekickRoutineMismatchIsReported() {
+        TraceFrame frame = new TraceFrame(0, 0x0000,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            new TraceCharacterState(true,
+                (short) 0x0040, (short) 0x03A0,
+                (short) 0x0010, (short) 0x0000, (short) 0x0010,
+                (byte) 0x00, false, false, 0,
+                0, 0, 0x02, 0x00, 0x00));
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, null, "tails",
+            new TraceCharacterState(true,
+                (short) 0x0040, (short) 0x03A0,
+                (short) 0x0010, (short) 0x0000, (short) 0x0010,
+                (byte) 0x00, false, false, 0,
+                0, 0, 0x04, 0x00, 0x00));
+
+        assertTrue(result.hasError());
+        assertEquals(Severity.ERROR, result.fields().get("tails_routine").severity());
     }
 
     @Test

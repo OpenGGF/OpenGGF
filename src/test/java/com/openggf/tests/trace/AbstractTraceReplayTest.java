@@ -662,14 +662,7 @@ public abstract class AbstractTraceReplayTest {
             }
         }
 
-        int statusByte = 0;
-        if (sprite.getDirection() == com.openggf.physics.Direction.LEFT) {
-            statusByte |= 0x01;
-        }
-        if (sprite.getAir()) statusByte |= 0x02;
-        if (sprite.getRolling()) statusByte |= 0x04;
-        if (sprite.isOnObject()) statusByte |= 0x08;
-        if (sprite.isInWater()) statusByte |= 0x40;
+        int statusByte = buildStatusByte(sprite);
 
         int routine = sprite.isHurt() ? 0x04 : 0x02;
 
@@ -692,8 +685,9 @@ public abstract class AbstractTraceReplayTest {
 
     /**
      * Capture engine-side diagnostic state for the context window.
-     * These values are NOT compared for pass/fail â€” they appear alongside
-     * ROM trace diagnostics for human cross-referencing.
+     * Some fields are compared by TraceBinder when the ROM trace carries the
+     * matching state; the rest appear alongside ROM diagnostics for
+     * cross-referencing.
      */
     private EngineDiagnostics captureEngineDiagnostics(AbstractPlayableSprite sprite) {
         // Routine: S1 uses 0=init, 2=control, 4=hurt, 6=death
@@ -716,13 +710,7 @@ public abstract class AbstractTraceReplayTest {
         int rings = sprite.getRingCount();
 
         // Status byte (replicate ROM's status encoding)
-        int statusByte = 0;
-        if (sprite.getDirection() == com.openggf.physics.Direction.LEFT)
-            statusByte |= 0x01;
-        if (sprite.getAir()) statusByte |= 0x02;
-        if (sprite.getRolling()) statusByte |= 0x04;
-        if (sprite.isOnObject()) statusByte |= 0x08;
-        if (sprite.isInWater()) statusByte |= 0x40;
+        int statusByte = buildStatusByte(sprite);
 
         // Camera X/Y for ROM-trace cross-reference and camera_x/camera_y
         // comparison in TraceBinder.
@@ -1134,6 +1122,7 @@ public abstract class AbstractTraceReplayTest {
         if (sprite.getAir()) statusByte |= 0x02;
         if (sprite.getRolling()) statusByte |= 0x04;
         if (sprite.isOnObject()) statusByte |= 0x08;
+        if (sprite.getRollingJump()) statusByte |= 0x10;
         if (sprite.getPushing()) statusByte |= 0x20;
         if (sprite.isInWater()) statusByte |= 0x40;
         return statusByte;
