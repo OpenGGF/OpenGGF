@@ -1391,76 +1391,29 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return superSonic;
         }
 
-        public final Camera currentCamera() {
-                return GameServices.camera();
-        }
-
-        public final LevelManager currentLevelManager() {
-                return GameServices.level();
-        }
-
-        public final LevelManager currentLevelManagerIfAvailable() {
-                return GameServices.levelOrNull();
-        }
-
-        public final GameModule currentGameModule() {
-                return GameServices.currentOrBootstrapGameModule();
-        }
-
-        public final CrossGameFeatureProvider currentCrossGameFeatures() {
-                return GameServices.crossGameFeatures();
-        }
+        public final Camera currentCamera() { return PlayableSpriteRuntimeServices.camera(); }
+        public final LevelManager currentLevelManager() { return PlayableSpriteRuntimeServices.level(); }
+        public final LevelManager currentLevelManagerIfAvailable() { return PlayableSpriteRuntimeServices.levelOrNull(); }
+        public final GameModule currentGameModule() { return PlayableSpriteRuntimeServices.currentOrBootstrapGameModule(); }
+        public final CrossGameFeatureProvider currentCrossGameFeatures() { return PlayableSpriteRuntimeServices.crossGameFeatures(); }
 
         public final int resolveAnimationId(CanonicalAnimation animation) {
                 refreshRuntimeBoundStateIfNeeded();
-                GameModule module = currentGameModule();
-                return module != null ? module.resolveAnimationId(animation) : -1;
+                return PlayableSpriteRuntimeServices.resolveAnimationId(currentGameModule(), animation);
         }
 
-        public final LevelState currentLevelState() {
-                LevelManager levelManager = currentLevelManagerIfAvailable();
-                return levelManager != null ? levelManager.getLevelGamestate() : null;
-        }
+        public final LevelState currentLevelState() { return PlayableSpriteRuntimeServices.levelState(currentLevelManagerIfAvailable()); }
+        public final TimerManager currentTimerManager() { return PlayableSpriteRuntimeServices.timers(); }
+        public final GameStateManager currentGameState() { return PlayableSpriteRuntimeServices.gameState(); }
+        public final GameStateManager currentGameStateOrNull() { return PlayableSpriteRuntimeServices.gameStateOrNull(); }
+        public final CollisionSystem currentCollisionSystem() { return PlayableSpriteRuntimeServices.collision(); }
+        public final CollisionSystem currentCollisionSystemOrNull() { return PlayableSpriteRuntimeServices.collisionOrNull(); }
+        public final AudioManager currentAudioManager() { return PlayableSpriteRuntimeServices.audio(); }
+        public final com.openggf.game.GameRng currentRng() { return PlayableSpriteRuntimeServices.rng(); }
+        public final com.openggf.game.GameRng currentRngOrNull() { return PlayableSpriteRuntimeServices.rngOrNull(); }
 
-        public final TimerManager currentTimerManager() {
-                return GameServices.timers();
-        }
-
-        public final GameStateManager currentGameState() {
-                return GameServices.gameState();
-        }
-
-        public final GameStateManager currentGameStateOrNull() {
-                return GameServices.gameStateOrNull();
-        }
-
-        public final CollisionSystem currentCollisionSystem() {
-                return GameServices.collision();
-        }
-
-        public final CollisionSystem currentCollisionSystemOrNull() {
-                return GameServices.collisionOrNull();
-        }
-
-        public final AudioManager currentAudioManager() {
-                return GameServices.audio();
-        }
-
-        public final com.openggf.game.GameRng currentRng() {
-                return GameServices.rng();
-        }
-
-        public final com.openggf.game.GameRng currentRngOrNull() {
-                return GameServices.rngOrNull();
-        }
-
-        public final DrowningController getDrowningController() {
-                return controller != null ? controller.getDrowning() : null;
-        }
-
-        public final WaterSystem currentWaterSystem() {
-                return GameServices.water();
-        }
+        public final DrowningController getDrowningController() { return controller != null ? controller.getDrowning() : null; }
+        public final WaterSystem currentWaterSystem() { return PlayableSpriteRuntimeServices.water(); }
 
         /**
          * Returns this character's secondary (double-jump) ability.
