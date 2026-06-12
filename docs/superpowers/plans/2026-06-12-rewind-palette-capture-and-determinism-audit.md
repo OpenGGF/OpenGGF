@@ -14,7 +14,7 @@
 - Normal palettes live on `Level` (`level.getPalette(i)`, `level.getPaletteCount()`, typically 4 lines × 16 colors). Underwater palettes come from `WaterSystem.getUnderwaterPalette(level.getZoneIndex(), levelManager.getCurrentAct())` (see usage at `S3kPaletteWriteSupport.java:223`) and are mutated in place by `PaletteOwnershipRegistry.resolveInto`.
 - GPU palette textures are pushed via `GraphicsManager.cachePaletteTexture(palette, line)` and `cacheUnderwaterPaletteTexture(underwater, normalLine0)`, guarded by `graphics.isGlInitialized()` (see `PaletteOwnershipRegistry.resolveInto`).
 - `RewindSnapshotDiff` already exists at `src/test/java/com/openggf/game/rewind/RewindSnapshotDiff.java` (510 lines) — recursive path-based diff with object-manager slot-identity bucketing and cosmetic-divergence filtering. Promote, don't rewrite.
-- `RewindSchemaRegistry.schemaFor(Class)` is public and works for arbitrary classes; `CompactFieldCapturer.capture(Object)/restore(Object, blob)` are public and validate support before processing, throwing if the schema has UNSUPPORTED fields. `RewindObjectStateBlob(schemaId, type, byte[] scalarData, Object[] opaqueValues)`.
+- `RewindSchemaRegistry.schemaFor(Class)` is public and works for arbitrary classes; `CompactFieldCapturer.capture(Object)/restore(Object, blob)` are public; `CompactFieldCapturer.validateSupported` throws if the schema has UNSUPPORTED fields. `RewindObjectStateBlob(schemaId, type, byte[] scalarData, Object[] opaqueValues)`.
 - `Sonic3kLevelEventManager.captureExtra()` starts ~line 1269; `writeAizState`/`readAizState` ~line 1449; the AIZ block is 84 bytes (20 booleans + 15 ints + 1 enum ordinal) accessed via getters/setters on `Sonic3kAIZEvents`.
 - `Bk2FrameInput` has convenience constructor `(int frameIndex, int p1InputMask, int p1ActionMask, boolean p1StartPressed, String rawLine)`.
 - `CompositeSnapshot` exposes `entries()`, `get(key)`, `containsKey(key)`.
@@ -461,8 +461,8 @@ Expected: compile clean, tests PASS. If `RewindBenchmark` or torture tests decla
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/test/java/com/openggf/game/rewind/RewindSnapshotDiff.java \
-        src/main/java/com/openggf/game/rewind/RewindSnapshotDiff.java
+git add -A src/test/java/com/openggf/game/rewind/RewindSnapshotDiff.java \
+           src/main/java/com/openggf/game/rewind/RewindSnapshotDiff.java
 git commit -m "refactor: promote RewindSnapshotDiff to main for runtime audit use"
 ```
 Trailers: `Changelog: n/a` is fine (refactor prefix is not gated), others `n/a`.
@@ -1001,9 +1001,7 @@ ICZ note (from memory): ICZ registry tests flake under `forkCount=4` if a prior 
 
 **Files:**
 - Modify: `src/main/java/com/openggf/sprites/playable/AbstractPlayableSprite.java` (`refreshPowerUpObjectsAfterRewindRestore()`, lines 1190-1211)
-- Modify: `src/main/java/com/openggf/game/PowerUpObject.java` (add default rewind-art refresh hook)
 - Modify: `src/main/java/com/openggf/game/sonic3k/objects/FireShieldObjectInstance.java`, `LightningShieldObjectInstance.java`, `BubbleShieldObjectInstance.java` (shared art-refresh hook)
-- Modify: `src/main/java/com/openggf/level/objects/ObjectManager.java` (update the stale rewind comment if the restore path now preserves/relinks shields instead of always respawning)
 - Test: `src/test/java/com/openggf/sprites/playable/TestShieldRewindRestore.java`
 
 **Verified mechanism:** the post-restore callback `refreshPowerUpObjectsAfterRewindRestore()` unconditionally destroys the shield object — whose rewind state (animation frame/timers) was just restored by `ObjectManager` — and respawns a fresh one with constructor defaults. Separately, the shield DPLC renderer's `lastFrame` is rewind-transient (`RewindPolicyRegistry`) and `DynamicPatternBank`'s CPU-side `patterns[]` is never snapshotted, so after restore the bank can hold stale tiles for a frame index the DPLC won't re-upload (empty-request frames reuse "previous" tiles). Net effect: animation desync + garbage tiles.
@@ -1063,15 +1061,13 @@ if (shieldObject != null && !shieldObject.isDestroyed()
 ```
 …falling through to the existing destroy+respawn only when the object is missing, destroyed, or the wrong type — and call `refreshArtAfterRewindRestore()` on the respawned object too. Model (b): replace the retention check with an ObjectManager lookup for the restored shield instance of the matching class, relink `shieldObject`, destroy true duplicates only.
 
-(2) Add `refreshArtAfterRewindRestore()` as a default no-op on `PowerUpObject` (the declared type of `shieldObject`) and override it in the elemental shield instances. Each override must call `dplcRenderer.invalidateDplcCache()` and clear any "art loaded" latch so `ensureShieldArtLoaded()` re-binds, guaranteeing the next `drawFrame` runs the `forceInitialDplc()` path and re-uploads pattern bytes into the `DynamicPatternBank` instead of trusting stale tiles. Keep non-elemental power-ups as the default no-op.
-
-(3) Update the rewind comment in `ObjectManager` near the pending player-bound dynamic entry map so it describes the actual restore path after this change. If shields are preserved or relinked instead of blindly re-spawned, the comment must not keep saying `refreshPowerUpObjectsAfterRewindRestore()` re-spawns them.
+(2) Add `refreshArtAfterRewindRestore()` to the shield instances (via their common base/interface — check what type `shieldObject` is declared as): it must call `dplcRenderer.invalidateDplcCache()` and clear any "art loaded" latch so `ensureShieldArtLoaded()` re-binds, guaranteeing the next `drawFrame` runs the `forceInitialDplc()` path and re-uploads pattern bytes into the `DynamicPatternBank` instead of trusting stale tiles.
 
 - [ ] **Step 4: Run the test + the shield/object test surface**
 
 ```bash
 mvn -q "-Dtest=com.openggf.sprites.playable.TestShieldRewindRestore" test
-mvn -q "-Dtest=com.openggf.game.sonic3k.objects.TestS3kShieldPriorityParity,com.openggf.tests.TestSonic3kLightningShieldObjectInstance" test
+mvn -q "-Dtest=com.openggf.game.sonic3k.objects.*Shield*" test
 ```
 Expected: PASS.
 
@@ -1087,16 +1083,14 @@ Expected: PASS.
 
 ```bash
 git add src/main/java/com/openggf/sprites/playable/AbstractPlayableSprite.java \
-        src/main/java/com/openggf/game/PowerUpObject.java \
         src/main/java/com/openggf/game/sonic3k/objects/FireShieldObjectInstance.java \
         src/main/java/com/openggf/game/sonic3k/objects/LightningShieldObjectInstance.java \
         src/main/java/com/openggf/game/sonic3k/objects/BubbleShieldObjectInstance.java \
-        src/main/java/com/openggf/level/objects/ObjectManager.java \
         src/test/java/com/openggf/sprites/playable/TestShieldRewindRestore.java \
         CHANGELOG.md
 git commit -m "fix: preserve shield state and force art re-upload across rewind restore"
 ```
-Trailers: `Changelog: updated`, others `n/a`.
+(Stage the shared base/interface file too if Step 3 added the hook there.) Trailers: `Changelog: updated`, others `n/a`.
 
 ---
 
