@@ -878,6 +878,43 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void s2ObjectIdMismatchDespawnPreservesCachedInteractId() throws Exception {
+        installEmptyObjectManager();
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x02BC);
+        tails.setCentreY((short) 0x0250);
+        tails.setOnObject(true);
+        tails.setAir(false);
+        tails.setInteractSlotIndex(0x13);
+        tails.setRenderFlagOnScreen(false);
+
+        UnloadedRideObject steamSpring = new UnloadedRideObject(0x42);
+        GameServices.level().getObjectManager().addDynamicObjectAtSlot(steamSpring, 0x13);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(6, 0, 0, 0x01, true, 0, 0);
+        tails.setInteractSlotIndex(0x13);
+        tails.setOnObject(true);
+        tails.setRenderFlagOnScreen(false);
+
+        controller.update(375);
+
+        assertEquals(SidekickCpuController.State.SPAWNING, controller.getState(),
+                "S2 TailsCPU_CheckDespawn branches to TailsCPU_Despawn when "
+                        + "Tails_interact_ID 0x01 differs from id(interact slot) 0x42 "
+                        + "(docs/s2disasm/s2.asm:39403-39429)");
+        assertEquals((short) 0x4000, tails.getCentreX());
+        assertEquals((short) 0x0000, tails.getCentreY());
+        assertEquals(0x01, controller.getDiagnosticInteractId(),
+                "TailsCPU_Despawn writes counters/routine/object_control/status/position/anim "
+                        + "but does not clear Tails_interact_ID "
+                        + "(docs/s2disasm/s2.asm:39391-39400)");
+    }
+
+    @Test
     void renderFlagBottomMarginKeepsDespawnTimerReset() {
         TestableSprite sonic = new TestableSprite("sonic");
         sonic.setCentreX((short) 0x0610);

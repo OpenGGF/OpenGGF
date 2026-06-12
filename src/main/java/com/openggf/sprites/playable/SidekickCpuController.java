@@ -3500,7 +3500,6 @@ public class SidekickCpuController {
                 if ((sidekick.getLatchedSolidObjectId() & 0xFF) != 0
                         && ridingInstance != null
                         && isLatchedRideSlotFreed(ridingInstance)) {
-                    refreshInteractIdSnapshot(snapshotSeedId);
                     triggerDespawn(DespawnCause.OBJECT_ID_MISMATCH);
                     return true;
                 }
@@ -3520,7 +3519,6 @@ public class SidekickCpuController {
                 int romLiveSlotId = romEffectiveInteractSlotId(rawLiveSlotId);
                 if (lastInteractObjectId >= 0
                         && romLiveSlotId != lastInteractObjectId) {
-                    refreshInteractIdSnapshot(snapshotSeedId);
                     triggerDespawn(DespawnCause.OBJECT_ID_MISMATCH);
                     return true;
                 }
@@ -3530,7 +3528,6 @@ public class SidekickCpuController {
         // ROM TailsCPU_TickRespawnTimer.
         despawnCounter++;
         if (despawnCounter >= DESPAWN_TIMEOUT) {
-            refreshInteractIdSnapshot(snapshotSeedId);
             triggerDespawn(DespawnCause.OFF_SCREEN_TIMEOUT);
             return true;
         }
@@ -4067,10 +4064,10 @@ public class SidekickCpuController {
         // (beginLevelBoundaryKill) does its own zeroing earlier in the
         // Kill_Character (sonic3k.asm:21148-21151) phase, which runs
         // before this marker warp on Frame N+1.
-        lastInteractObjectId = -1; // ROM Tails_interact_ID unset until next UpdateObjInteract
-        // S3K sub_13ECA does not write Tails_CPU_interact; preserve the
-        // ROM-visible pointer word until sub_13EFC samples another stood-on
-        // object or active play RAM is explicitly reset.
+        // S2 TailsCPU_Despawn (docs/s2disasm/s2.asm:39391-39400) and S3K
+        // sub_13ECA (docs/skdisasm/sonic3k.asm:26800-26809) do not write the
+        // ROM-visible interact latch. Preserve it until the next active-play
+        // update samples another stood-on object or RAM is explicitly reset.
     }
 
     /**

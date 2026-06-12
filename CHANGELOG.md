@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 sidekick despawn now preserves the ROM interact latch:** Tails CPU
+  marker/despawn transitions no longer refresh the cached stood-on object id
+  from a replacement slot or clear it during the marker warp. This matches the
+  S2/S3K ordering where the mismatch branch happens before the interact update
+  routine, advancing `s2_mtz1` from frame 375 to frame 447 and `s2_mtz3` from
+  frame 461 to frame 639.
+
 - **Classic roll-stop timing now matches each game:** S1 and S2 now keep
   rolling until ground inertia reaches exactly zero, while S3K still clears
   rolling when `abs(ground_vel) < $80`. This removes the shared S1/S2 false
