@@ -11869,3 +11869,21 @@ Result:
 | s3k_lbz1 | f410 | y_speed | 0x0000 | -0100 | 5254 |
 | s3k_mgz1 | f454 | tails_status_byte | 0x0003 | 0x0002 | 9312 |
 | s3k_mhz1 | f71 | camera_y | 0x04C5 | 0x04BF | 4507 |
+
+## 2026-06-12 — Rebased develop trace and CI gate sweep
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `develop`,
+rebased on `origin/develop` at `acdebf1ba`, with local commits
+`1bf151202` and `a7659ba43`.
+Commands:
+`mvn -Dmse=off "-Dsurefire.argLine=-Xshare:off -Xmx3g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.TestNoServicesInObjectConstructors,com.openggf.tests.TestBuildToolingGuard,com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.tests.TestArchUnitRules,com.openggf.sprites.playable.TestPlayableRuntimeAccessGuard,com.openggf.level.objects.TestObjectPhysicsStandardizationGuard,com.openggf.game.rewind.TestRewindFieldAudit,com.openggf.game.rewind.TestRewindTransientGuard,com.openggf.game.sonic3k.objects.TestSonic3kSpringObjectInstance" test`
+`mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test`
+
+Result:
+- The user-named CI guard suite is green on the rebased branch: **185
+  tests**, 0 failures.
+- The full `*TraceReplay` sweep remains red: **90 tests**, **63 failures**,
+  **1 error**, 0 skipped.
+- Frontier rows are unchanged from the immediately preceding table after the
+  rebase and architectural guard extraction; `s2_ooz2` remains advanced to
+  frame **919** `tails_status_byte` expected `0x0000`, actual `0x0020`.
