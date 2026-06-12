@@ -13,6 +13,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -29,6 +30,11 @@ class TestHCZConveyorBeltObjectInstance {
     }
     private final Camera camera = GameServices.camera();
 
+    @BeforeEach
+    void setUp() {
+        HCZConveyorBeltObjectInstance.resetLoadArray();
+    }
+
     @AfterEach
     void tearDown() throws Exception {
         HCZConveyorBeltObjectInstance.resetLoadArray();
@@ -39,8 +45,8 @@ class TestHCZConveyorBeltObjectInstance {
     @Test
     void pairedTopAndBottomSubtypesDoNotDeduplicate() throws Exception {
         camera.setX((short) 0x0C00);
-        TestObjectServices services = new TestObjectServices().withCamera(camera);
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        TestObjectServices services = servicesFor(camera, player);
         player.setCentreX((short) 0x0800);
 
         HCZConveyorBeltObjectInstance top = buildBelt(services, 0x0B28, 0x0200, 0x00, 0);
@@ -56,8 +62,8 @@ class TestHCZConveyorBeltObjectInstance {
     @Test
     void duplicateRawSubtypeStillDeduplicates() throws Exception {
         camera.setX((short) 0x0C00);
-        TestObjectServices services = new TestObjectServices().withCamera(camera);
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        TestObjectServices services = servicesFor(camera, player);
         player.setCentreX((short) 0x0800);
 
         HCZConveyorBeltObjectInstance first = buildBelt(services, 0x0B28, 0x0200, 0x00, 0);
@@ -73,8 +79,8 @@ class TestHCZConveyorBeltObjectInstance {
     @Test
     void topReleaseCooldownDoesNotBlockBottomPartnerCapture() throws Exception {
         camera.setX((short) 0x0C00);
-        TestObjectServices services = new TestObjectServices().withCamera(camera);
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        TestObjectServices services = servicesFor(camera, player);
         player.setCentreX((short) 0x0C00);
         player.setCentreY((short) 0x0221);
         player.setYSpeed((short) 0);
@@ -156,8 +162,8 @@ class TestHCZConveyorBeltObjectInstance {
     @Test
     void capturePreservesStatusRollLikeRom() throws Exception {
         camera.setX((short) 0x0C00);
-        TestObjectServices services = new TestObjectServices().withCamera(camera);
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x0C00, (short) 0x0221);
+        TestObjectServices services = servicesFor(camera, player);
         player.setRolling(true);
         player.setCentreX((short) 0x0C00);
         player.setCentreY((short) 0x0221);
@@ -175,8 +181,8 @@ class TestHCZConveyorBeltObjectInstance {
     @Test
     void capturePreservesSubpixelsLikeRomYPosWrite() throws Exception {
         camera.setX((short) 0x0C00);
-        TestObjectServices services = new TestObjectServices().withCamera(camera);
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x0C00, (short) 0x0221);
+        TestObjectServices services = servicesFor(camera, player);
         player.setYSpeed((short) 0);
         player.setSubpixelRaw(0x4800, 0x3000);
         HCZConveyorBeltObjectInstance belt = buildBelt(services, 0x0B28, 0x0200, 0x00, 0);
@@ -192,8 +198,8 @@ class TestHCZConveyorBeltObjectInstance {
     @Test
     void activeMovementAndAnimationPreserveSubpixelsLikeRomWordWrites() throws Exception {
         camera.setX((short) 0x0C00);
-        TestObjectServices services = new TestObjectServices().withCamera(camera);
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x0C00, (short) 0x0221);
+        TestObjectServices services = servicesFor(camera, player);
         player.setYSpeed((short) 0);
         HCZConveyorBeltObjectInstance belt = buildBelt(services, 0x0B28, 0x0200, 0x00, 0);
 
@@ -259,6 +265,20 @@ class TestHCZConveyorBeltObjectInstance {
         } finally {
             context.remove();
         }
+    }
+
+    private static TestObjectServices servicesFor(Camera camera, PlayableEntity main) {
+        return new TestObjectServices() {
+            @Override
+            public Camera camera() {
+                return camera;
+            }
+
+            @Override
+            public ObjectPlayerQuery playerQuery() {
+                return new ObjectPlayerQuery(() -> main, List::of);
+            }
+        };
     }
 
     @SuppressWarnings("unchecked")
