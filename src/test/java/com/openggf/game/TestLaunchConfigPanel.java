@@ -174,6 +174,40 @@ class TestLaunchConfigPanel {
     }
 
     @Test
+    void textLineViewsRenderNormalWideAsAmberNonStandard() {
+        SonicConfigurationService config = configuredWasd();
+        LaunchProfile profile = new LaunchProfile(false, "off", false, "WIDE_16_9", "sonic", "tails");
+        LaunchConfigPanel panel = new LaunchConfigPanel(SONIC_3K, profile, new TrackingStore(config),
+                config, new MeasuringFont(), null);
+
+        LaunchConfigPanel.TextLineView widescreen = lineContaining(panel.textLineViews(400), "Widescreen:");
+
+        assertTrue(widescreen.text().contains("*"), widescreen.text());
+        assertFalse(widescreen.text().contains("!"), widescreen.text());
+        assertEquals(1f, widescreen.r());
+        assertEquals(0.72f, widescreen.g());
+        assertEquals(0.25f, widescreen.b());
+    }
+
+    @Test
+    void textLineViewsRenderUltrawideAsRedExperimental() {
+        SonicConfigurationService config = configuredWasd();
+        LaunchProfile profile = new LaunchProfile(false, "off", false, "ULTRA_21_9", "sonic", "tails");
+        LaunchConfigPanel panel = new LaunchConfigPanel(SONIC_3K, profile, new TrackingStore(config),
+                config, new MeasuringFont(), null);
+
+        List<LaunchConfigPanel.TextLineView> lines = panel.textLineViews(400);
+        LaunchConfigPanel.TextLineView widescreen = lineContaining(lines, "Widescreen:");
+
+        assertTrue(widescreen.text().contains("!"), widescreen.text());
+        assertFalse(widescreen.text().contains("*"), widescreen.text());
+        assertEquals(1f, widescreen.r());
+        assertEquals(0.25f, widescreen.g());
+        assertEquals(0.25f, widescreen.b());
+        assertTrue(lines.stream().anyMatch(line -> line.text().contains("! experimental")));
+    }
+
+    @Test
     void textLineViewsFitInsideNativeViewportWithRealGlyphMetrics() {
         SonicConfigurationService config = configuredWasd();
         LaunchProfile profile = new LaunchProfile(true, "s2", true, "SUPER_32_9", "knuckles", "tails");
@@ -193,6 +227,15 @@ class TestLaunchConfigPanel {
         config.setConfigValue(SonicConfiguration.LEFT, GLFW_KEY_A);
         config.setConfigValue(SonicConfiguration.RIGHT, GLFW_KEY_D);
         return config;
+    }
+
+    private static LaunchConfigPanel.TextLineView lineContaining(
+            List<LaunchConfigPanel.TextLineView> lines,
+            String text) {
+        return lines.stream()
+                .filter(line -> line.text().contains(text))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Missing line containing: " + text));
     }
 
     private static LaunchConfigPanel panel(SonicConfigurationService config,

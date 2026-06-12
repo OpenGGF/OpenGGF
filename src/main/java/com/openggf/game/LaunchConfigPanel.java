@@ -27,7 +27,7 @@ public final class LaunchConfigPanel {
 
     public enum Result { NONE, CLOSED }
 
-    record RowView(String label, String value, boolean stock, boolean nonStandard) {
+    record RowView(String label, String value, boolean stock, boolean nonStandard, boolean experimental) {
     }
 
     record TextLineView(String text, int x, int y, float scale, int measuredWidth,
@@ -118,7 +118,8 @@ public final class LaunchConfigPanel {
                     LaunchProfile.rowLabel(row),
                     rowValue(row),
                     profile.isStock(row, entry),
-                    profile.isNonStandard(row, entry)));
+                    profile.isNonStandard(row, entry),
+                    profile.isExperimental(row)));
         }
         return List.copyOf(views);
     }
@@ -146,19 +147,49 @@ public final class LaunchConfigPanel {
             RowView view = views.get(i);
             boolean selected = i == selectedRow;
             String marker = selected ? ">" : " ";
-            String suffix = view.nonStandard() ? "*" : (view.stock() ? " (stock)" : "");
-            float r = view.nonStandard() ? 1f : (selected ? 1f : 0.72f);
-            float g = view.nonStandard() ? 0.72f : (selected ? 1f : 0.72f);
-            float b = view.nonStandard() ? 0.25f : (selected ? 1f : 0.72f);
+            String suffix = rowSuffix(view);
+            float r = rowRed(view, selected);
+            float g = rowGreen(view, selected);
+            float b = rowBlue(view, selected);
             addCenteredLine(lines, marker + " " + view.label() + ": " + view.value() + suffix,
                     viewportWidth, y, TEXT_SCALE, r, g, b, 1f);
             y += 15;
         }
+        addCenteredLine(lines, "! experimental", viewportWidth, SCREEN_H - 48,
+                0.55f, 1f, 0.25f, 0.25f, 1f);
         addCenteredLine(lines, "* not possible in the original game", viewportWidth, SCREEN_H - 34,
                 0.55f, 1f, 0.72f, 0.25f, 1f);
         addCenteredLine(lines, "Up/Down row  Left/Right value  Backspace stock  Tab/Esc close",
                 viewportWidth, SCREEN_H - 20, 0.48f, 0.7f, 0.7f, 0.7f, 1f);
         return List.copyOf(lines);
+    }
+
+    private static String rowSuffix(RowView view) {
+        if (view.experimental()) {
+            return "!";
+        }
+        if (view.nonStandard()) {
+            return "*";
+        }
+        return view.stock() ? " (stock)" : "";
+    }
+
+    private static float rowRed(RowView view, boolean selected) {
+        return view.experimental() || view.nonStandard() || selected ? 1f : 0.72f;
+    }
+
+    private static float rowGreen(RowView view, boolean selected) {
+        if (view.experimental()) {
+            return 0.25f;
+        }
+        return view.nonStandard() ? 0.72f : (selected ? 1f : 0.72f);
+    }
+
+    private static float rowBlue(RowView view, boolean selected) {
+        if (view.experimental()) {
+            return 0.25f;
+        }
+        return view.nonStandard() ? 0.25f : (selected ? 1f : 0.72f);
     }
 
     private void close() {

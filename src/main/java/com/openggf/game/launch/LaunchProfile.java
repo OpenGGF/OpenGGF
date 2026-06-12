@@ -118,6 +118,10 @@ public record LaunchProfile(
         };
     }
 
+    public boolean isExperimental(Row row) {
+        return row == Row.WIDESCREEN && ("ULTRA_21_9".equals(aspect) || "SUPER_32_9".equals(aspect));
+    }
+
     public boolean isCharacterPairStandard(MasterTitleScreen.GameEntry entry) {
         Objects.requireNonNull(entry, "entry");
         return switch (entry) {

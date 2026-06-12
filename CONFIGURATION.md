@@ -139,7 +139,9 @@ Sonic is always available, Tails requires Sonic 2 or Sonic 3&K data, and Knuckle
 requires Sonic 3&K data; hand-edited saved values outside that donor set are clamped
 before launch. `aspect: "global"` inherits the normal `display.aspect` setting and does not
 resize the window; pinned aspect values such as `"WIDE_16_9"` apply only for that game
-session and resize back when returning to the master title.
+session and resize back when returning to the master title. In the launch panel, pinned
+16:10 and 16:9 aspects are amber non-standard choices, while 21:9 and 32:9 are red
+experimental choices.
 
 Stock defaults:
 
