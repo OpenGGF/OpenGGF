@@ -4,6 +4,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- Fixed S3K elemental shield graphics corrupting after a rewind: the post-restore refresh no longer discards the restored shield object's animation state, and shield DPLC art is force re-uploaded after restore.
+
 - S3K AIZ zone-event rewind state is now schema-captured (auto-derived from
   handler fields) instead of a hand-counted byte layout; a guard test fails
   when a handler field is neither captured nor explicitly rewind-transient,

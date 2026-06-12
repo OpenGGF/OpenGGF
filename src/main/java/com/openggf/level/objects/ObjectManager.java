@@ -146,13 +146,14 @@ public class ObjectManager {
     // Rewind: captured DynamicObjectEntry payloads for player-bound dynamics
     // (Shield, Stars) that are NOT recreated by the codec on restore. The
     // post-restore callback in
-    // AbstractPlayableSprite#refreshPowerUpObjectsAfterRewindRestore re-spawns
-    // these via the power-up spawner; the spawner consumes the captured entry
-    // via {@link #consumePendingPlayerBoundEntry(Class)} so the new instance
-    // lands at the same slot the reference run had AND has the captured field
-    // surface restored on top of its fresh-construction state. Without that
-    // restore, animation cursors and similar non-construction-set scalars
-    // would reset to zero on every rewind.
+    // AbstractPlayableSprite#refreshPowerUpObjectsAfterRewindRestore relinks a
+    // live matching shield when one exists, otherwise re-spawns via the power-up
+    // spawner. The spawner consumes the captured entry via
+    // {@link #consumePendingPlayerBoundEntry(Class)} so the new instance lands
+    // at the same slot the reference run had AND has the captured field surface
+    // restored on top of its fresh-construction state. Without that restore,
+    // animation cursors and similar non-construction-set scalars would reset to
+    // zero on every rewind.
     private final Map<Class<?>, java.util.ArrayDeque<
             com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>>
             pendingPlayerBoundEntries = new java.util.HashMap<>();

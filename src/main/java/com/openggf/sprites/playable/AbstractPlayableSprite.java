@@ -33,6 +33,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectControlledSolidContactController;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.PerObjectRewindSnapshot.PlayerRewindExtra;
 import com.openggf.level.objects.PerObjectRewindSnapshot.SidekickCpuRewindExtra;
@@ -1198,16 +1199,62 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         return;
                 }
 
-                if (shieldObject != null) {
-                        shieldObject.destroy();
-                        shieldObject = null;
+                PowerUpObject liveShield = resolveLiveShieldObjectAfterRewindRestore();
+                if (liveShield != null) {
+                        shieldObject = liveShield;
+                        if (invincibleFrames > 0) {
+                                shieldObject.setVisible(false);
+                        }
+                        shieldObject.refreshArtAfterRewindRestore();
+                        return;
                 }
+
+                if (shieldObject != null && !shieldObject.isDestroyed()) {
+                        shieldObject.destroy();
+                }
+                shieldObject = null;
                 if (powerUpSpawner != null) {
                         shieldObject = powerUpSpawner.spawnShield(this, shieldType);
                         if (shieldObject != null && invincibleFrames > 0) {
                                 shieldObject.setVisible(false);
                         }
+                        if (shieldObject != null) {
+                                shieldObject.refreshArtAfterRewindRestore();
+                        }
                 }
+        }
+
+        private PowerUpObject resolveLiveShieldObjectAfterRewindRestore() {
+                ObjectManager objectManager = currentObjectManagerIfAvailable();
+                if (isMatchingLiveShield(shieldObject)
+                                && (objectManager == null || isObjectManagerLivePowerUp(objectManager, shieldObject))) {
+                        return shieldObject;
+                }
+                if (objectManager == null) {
+                        return null;
+                }
+                for (ObjectInstance object : objectManager.getActiveObjects()) {
+                        if (object instanceof PowerUpObject candidate && isMatchingLiveShield(candidate)) {
+                                return candidate;
+                        }
+                }
+                return null;
+        }
+
+        private boolean isMatchingLiveShield(PowerUpObject candidate) {
+                return candidate != null
+                                && !candidate.isDestroyed()
+                                && candidate.matchesShieldType(shieldType);
+        }
+
+        private boolean isObjectManagerLivePowerUp(ObjectManager objectManager, PowerUpObject candidate) {
+                return candidate instanceof ObjectInstance object
+                                && objectManager.getActiveObjects().contains(object);
+        }
+
+        private ObjectManager currentObjectManagerIfAvailable() {
+                LevelManager levelManager = currentLevelManagerIfAvailable();
+                return levelManager != null ? levelManager.getObjectManager() : null;
         }
 
         public void giveShield() {
