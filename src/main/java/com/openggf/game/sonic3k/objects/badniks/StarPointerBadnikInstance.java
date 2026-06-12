@@ -204,9 +204,7 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance {
                 }
             }
 
-            if (!launched) {
-                updateOrbitPosition();
-            }
+            updateOrbitPosition();
         }
 
         @Override

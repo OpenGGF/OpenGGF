@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K Star Pointer preserves launch-frame orbit refresh:** ICZ Star Pointer
+  points now continue through the ROM's circular parent-relative position
+  refresh on the same frame they enter the launched routine. This is a
+  routine-order parity cleanup; the ICZ complete-run trace still fails at the
+  frame-2268 Tails hurt-state frontier.
+
 - **S3K Star Pointer release checks native P2:** ICZ Star Pointer now runs its
   child-release side check against the nearest native Sonic/Tails participant,
   matching the ROM `Find_SonicTails` call in `Obj_StarPointer` instead of

@@ -129,6 +129,33 @@ class TestStarPointerBadnikInstance {
     }
 
     @Test
+    void launchFrameStillRefreshesCircularPositionBeforeMovingNextFrame() throws Exception {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 319, 223, 0);
+        StarPointerBadnikInstance starPointer = new StarPointerBadnikInstance(
+                new ObjectSpawn(160, 100, Sonic3kObjectIds.STAR_POINTER, 0, 0, false, 0));
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short) 200);
+        when(player.getCentreY()).thenReturn((short) 100);
+        when(player.getDead()).thenReturn(false);
+        starPointer.update(0, player);
+        starPointer.update(1, player);
+        assertTrue(starPointer.shouldReleaseChildren(), "test setup should latch child release");
+
+        StarPointerBadnikInstance.OrbitingPointInstance point =
+                new StarPointerBadnikInstance.OrbitingPointInstance(starPointer.getSpawn(), starPointer, 0);
+        setIntField(point, "angle", 0xFF);
+        setIntField(point, "currentX", 0);
+        setIntField(point, "currentY", 0);
+
+        point.update(2, player);
+
+        assertEquals(starPointer.getX(), point.getX(),
+                "loc_8BEE6 falls through into MoveSprite_CircularSimple on the launch frame");
+        assertEquals(starPointer.getY() + 16, point.getY(),
+                "angle 0 refreshes to the parent's lower orbit position before launch movement starts");
+    }
+
+    @Test
     void orbitingPointDeclaresShieldDeflectTouchResponseProfile() {
         StarPointerBadnikInstance starPointer = new StarPointerBadnikInstance(
                 new ObjectSpawn(160, 100, Sonic3kObjectIds.STAR_POINTER, 0, 0, false, 0));
@@ -152,5 +179,11 @@ class TestStarPointerBadnikInstance {
                 .getDeclaredMethod("getTouchResponseProfile"));
         assertDoesNotThrow(() -> StarPointerBadnikInstance.OrbitingPointInstance.class
                 .getDeclaredMethod("getTouchResponseProfile", boolean.class));
+    }
+
+    private static void setIntField(Object target, String fieldName, int value) throws Exception {
+        var field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.setInt(target, value);
     }
 }
