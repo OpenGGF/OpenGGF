@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K ICZ freezer capture clouds survive parent unload:** ICZ freezer capture
+  children now enter the ROM off-phase scanner after their parent unloads, and
+  frozen-player blocks preserve the capture-frame `x_pos/y_pos` before their
+  first movement step. This moves the ICZ complete-run trace from frame 2836 to
+  frame 2837, a frozen-block movement/anchoring mismatch.
+
 - **S3K ICZ freezer capture clouds scan native sidekicks:** ICZ freezer
   capture children now use the same native P1/P2 participation policy as the
   parent activation check, so Tails can be frozen by the ROM capture path

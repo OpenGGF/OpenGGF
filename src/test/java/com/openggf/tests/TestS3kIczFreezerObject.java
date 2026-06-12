@@ -140,6 +140,10 @@ class TestS3kIczFreezerObject {
         assertTrue(player.isObjectControlled(), "Freezer child should take over player control");
         assertTrue(player.isObjectControlSuppressesMovement(), "Freezer capture should suppress player movement");
         assertFalse(player.isObjectControlAllowsCpu(), "Freezer capture should not leave CPU movement enabled");
+        assertEquals(0x0204, player.getCentreX(), "Capture must not shift x_pos while applying frozen animation");
+        assertEquals(0x0134, player.getCentreY(), "Capture must not shift y_pos while applying frozen animation");
+        assertEquals(0x0204, block.getX(), "Frozen block spawns at the ROM capture x_pos");
+        assertEquals(0x0134, block.getY(), "Frozen block spawns at the ROM capture y_pos");
         assertEquals(0x1A, player.getAnimationId());
         assertSame(player, block.capturedPlayerForTesting());
 
@@ -188,6 +192,47 @@ class TestS3kIczFreezerObject {
         assertEquals(0, tails.getYSpeed());
         assertEquals(0, tails.getGSpeed());
         assertSame(tails, block.capturedPlayerForTesting());
+    }
+
+    @Test
+    void parentUnloadLetsCaptureCloudEnterRomOffPhaseScanner() {
+        RecordingServices services = new RecordingServices();
+        IczFreezerObjectInstance freezer = createFreezer(services,
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.ICZ_FREEZER, 0, 0, false, 0));
+        freezer.setServices(services);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x0204, (short) 0x0134);
+        freezer.update(0, player);
+        for (int frame = 1; frame <= 65; frame++) {
+            freezer.update(frame, player);
+        }
+
+        IczFreezerObjectInstance.CaptureCloud cloud = freezer.lastCaptureCloudForTesting();
+        cloud.setServices(services);
+        assertTrue(freezer.isFreezeJetActiveForTesting(), "precondition: cloud is waiting on the active parent jet");
+        assertNull(cloud.frozenBlockForTesting(), "precondition: active-phase capture delay has not elapsed");
+
+        freezer.onUnload();
+        cloud.update(66, player);
+        assertNull(cloud.frozenBlockForTesting(),
+                "ROM off-phase init runs first after the parent slot is cleared");
+        cloud.update(67, player);
+
+        assertTrue(player.isObjectControlled(),
+                "A capture cloud whose parent was unloaded must keep scanning in its off-phase routine");
+        assertSame(player, cloud.frozenBlockForTesting().capturedPlayerForTesting());
+    }
+
+    @Test
+    void captureCloudLifetimeIsOwnedByOffPhaseTimerNotCameraRange() {
+        IczFreezerObjectInstance freezer = createFreezer(new RecordingServices(),
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.ICZ_FREEZER, 0, 0, false, 0));
+
+        IczFreezerObjectInstance.CaptureCloud cloud =
+                freezer.createCaptureCloudForTesting(0x0200, 0x0130, false);
+
+        assertTrue(cloud.isPersistent(),
+                "ROM capture child loc_8A7A2 scans/deletes by its own timer and does not tail-call Sprite_CheckDeleteTouch");
     }
 
     @Test

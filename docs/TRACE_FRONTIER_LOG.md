@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K ICZ complete-run progressed to frozen-block motion frontier
+
+- Scope: follow-up to the ICZ frame-2836 native-Tails airborne-release frontier.
+  Trace data remained comparison-only diagnostic input; no engine state was
+  hydrated from trace rows, and no trace/route/frame exception was added.
+- Fix:
+  - ICZ freezer capture clouds now survive parent offscreen unload and enter the
+    ROM off-phase capture scanner instead of staying tied to the unloaded
+    parent's stale freeze-jet bit.
+  - The freezer frozen-player block now snapshots the captured player's native
+    `x_pos/y_pos` before applying frozen animation/control and skips spawn-frame
+    motion, matching the ROM slot row where the new frozen block appears at the
+    capture position before its movement routine advances.
+  - The ICZ end-boss frost capture path uses the same captured-position
+    constructor contract.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIczFreezerObject" test`
+    -> GREEN. Surefire summary: `Tests run: 14, Failures: 0, Errors: 0,
+    Skipped: 0`.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 2836 to frame 2837. New
+    first error: native Tails `x` `expected=0x3FC4`, `actual=0x3FC2`; Tails
+    `y`, speeds, air, rolling, ground mode, CPU routine/counters, main Sonic
+    fields, camera, and rings match at the first error.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frozen-player block's first movement step and/or ROM anchoring after
+  capture, not revisit freezer parent-unload capture scanning or add a
+  trace/frame exception.
+
 ## 2026-06-12 - S3K ICZ complete-run progressed to Tails airborne-release frontier
 
 - Scope: follow-up to the ICZ frame-2644 native-Tails follow-position frontier.

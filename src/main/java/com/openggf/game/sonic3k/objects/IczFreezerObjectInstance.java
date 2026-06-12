@@ -234,6 +234,12 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         }
     }
 
+    @Override
+    public void onUnload() {
+        frostCycleActive = false;
+        freezeJetActive = false;
+    }
+
     public boolean isFrostCycleActiveForTesting() {
         return frostCycleActive;
     }
@@ -350,14 +356,18 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         }
 
         private void capture(AbstractPlayableSprite player) {
+            int capturedX = player.getCentreX();
+            int capturedY = player.getCentreY();
             ObjectControlState.nativeBit7FullControl().applyTo(player);
             player.setAir(true);
             player.setXSpeed((short) 0);
             player.setYSpeed((short) 0);
             player.setGSpeed((short) 0);
             player.setAnimationId(0x1A);
+            player.setCentreX((short) capturedX);
+            player.setCentreY((short) capturedY);
 
-            frozenBlock = spawnChild(() -> new FrozenPlayerBlock(player, parent.x, hFlip));
+            frozenBlock = spawnChild(() -> new FrozenPlayerBlock(player, capturedX, capturedY, parent.x, hFlip));
             setDestroyed(true);
         }
 
@@ -374,6 +384,11 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
             // The ROM capture child is an invisible range checker.
+        }
+
+        @Override
+        public boolean isPersistent() {
+            return true;
         }
 
         public FrozenPlayerBlock frozenBlockForTesting() {
@@ -401,13 +416,18 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         private int breakTimer = BREAK_TIMER;
         private boolean landedOnTerrain;
 
-        public FrozenPlayerBlock(AbstractPlayableSprite capturedPlayer, int parentX, boolean hFlip) {
-            super(new ObjectSpawn(capturedPlayer.getCentreX(), capturedPlayer.getCentreY(),
-                    OBJECT_ID, 0, hFlip ? 1 : 0, false, capturedPlayer.getCentreY()), "ICZFreezerFrozenPlayer");
+        public FrozenPlayerBlock(AbstractPlayableSprite capturedPlayer, int capturedX, int capturedY,
+                int parentX, boolean hFlip) {
+            super(new ObjectSpawn(capturedX, capturedY, OBJECT_ID, 0, hFlip ? 1 : 0, false, capturedY),
+                    "ICZFreezerFrozenPlayer");
             this.capturedPlayer = capturedPlayer;
-            int xSpeed = capturedPlayer.getCentreX() >= parentX ? INITIAL_X_SPEED : -INITIAL_X_SPEED;
-            this.motion = new SubpixelMotion.State(capturedPlayer.getCentreX(), capturedPlayer.getCentreY(),
-                    0, 0, xSpeed, INITIAL_Y_SPEED);
+            int xSpeed = capturedX >= parentX ? INITIAL_X_SPEED : -INITIAL_X_SPEED;
+            this.motion = new SubpixelMotion.State(capturedX, capturedY, 0, 0, xSpeed, INITIAL_Y_SPEED);
+        }
+
+        @Override
+        protected boolean skipsSameFrameUpdateAfterSpawn() {
+            return true;
         }
 
         @Override
