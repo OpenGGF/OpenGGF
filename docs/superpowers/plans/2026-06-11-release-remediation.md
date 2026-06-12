@@ -49,6 +49,7 @@ Completed in `bugfix/ai-release-remediation`:
 - MC-7: skipped full level tilemap invalidation during live rewind restore when block, chunk, and map arrays are already the live references.
 - MC-8: made deferred GL command groups snapshot caller command lists so reused fallback-render lists cannot alias across buckets.
 - MC-9: cached resolved integer/key configuration values with invalidation on config mutation and derived display-aspect refresh.
+- MC-10: serialized SoundTestApp interactive-mode backend access onto the audio executor with orderly single-destroy teardown.
 - DOC-5: corrected stale S1 SBZ/FZ and LZ water-slide source comments that described implemented behavior as TODO/stub work.
 - Save/data-select hardening: added `SaveSlotState.UNAVAILABLE` for transient read failures and preserved it through data select so unreadable saves cannot be overwritten as fresh slots.
 - Palette fallback hardening: resolved underwater palette fallback lookups through feature-remapped zone/act keys so remapped zones use the same key for storage and reads.
@@ -601,6 +602,17 @@ Required fix:
 
 Status:
 - Completed in `bugfix/ai-release-remediation`: `SonicConfigurationService` now caches `getInt()` results in an `EnumMap`, clears the cache at mutation/derived-overlay boundaries, and `TestConfigKeyNameResolution` verifies cache invalidation.
+
+### MC-10: SoundTestApp interactive mode races EDT against the audio executor
+
+In interactive mode, Swing EDT handlers called `playSmps`/`playSfxSmps`/`stopPlayback`/`toggleMute`/`toggleSolo`/`setSpeedShoes` directly while a `ScheduledExecutorService` thread ran `backend::update` every 16ms — unsynchronized SMPS driver swaps and OpenAL source operations from two threads. Shutdown used `shutdownNow()` followed immediately by `backend.destroy()` with no `awaitTermination`, so an in-flight `update()` could touch AL sources mid-deletion, and a redundant shutdown hook double-destroyed the backend on clean exit. Dev tooling only; the shipped game drives the backend single-threaded from the game loop.
+
+Required fix:
+- Marshal all EDT-originated backend mutation onto the executor thread that drives `update()`.
+- Shut down with `shutdown()` + `awaitTermination` before `destroy()`, and remove the shutdown hook on the normal exit path.
+
+Status:
+- Completed in `bugfix/ai-release-remediation`: `InteractiveState` routes backend commands through `onAudioThread(...)` onto the shared audio executor; teardown drains queued commands before a single `destroy()`; display-only reads (`getDebugState`/`isMuted`/`isSoloed`) remain EDT-polled.
 
 ---
 
