@@ -1,5 +1,40 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S1 junction SolidObject right edge advances SBZ credits frontier
+
+- Scope: follow-up to the true-frontier comparator widening sweep. The first
+  exposed `s1_credits_05_sbz1` mismatch was a one-frame `Status_Push` absence
+  while x/y/speeds still matched. Disassembly check:
+  `docs/s1disasm/_incObj/66 Rotating Junction.asm` calls `SolidObject` during
+  `Jun_Action`, and `docs/s1disasm/_incObj/sub SolidObject.asm` uses `bhi` on
+  the right-edge compare, so `relX == 2*width` remains a valid side contact.
+- Change: `Sonic1JunctionObjectInstance` now advertises an inclusive right
+  edge via `SolidRoutineProfile.fullSolid(false, true, false)`. Trace data
+  remained comparison-only diagnostic input; no trace state was written back
+  into runtime.
+- Focused verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic1.objects.TestSonic1JunctionObjectInstance" "-DfailIfNoTests=false" test`
+  - Result: **Tests run: 2, Failures: 0, Errors: 0, Skipped: 0**.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s1.TestS1Credits05Sbz1TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" test`
+  - Result: still red, but frontier advanced from frame 116 to frame 413.
+- Full sweep command:
+  - `mvn "-Dmse=off" "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g" test`
+- Full sweep result:
+  - **Tests run: 90, Failures: 61, Errors: 1, Skipped: 0** from
+    Maven/Surefire. This is not a green all-trace certification; CI remains
+    expected-red on the known trace frontier set.
+- Frontier movement:
+
+| Trace | Previous frontier | New frontier | Delta |
+|---|---:|---:|---:|
+| `s1_credits_05_sbz1` | f116 `status_byte` `0x0021 -> 0x0001` | f413 `status_byte` `0x0029 -> 0x0028` | +297 |
+
+- Interpretation: the frame-116 push-bit gap is fixed for Obj66/S1
+  `SolidObject` side contact. The newly exposed frame-413 mismatch is a facing
+  bit difference while `Status_OnObj` and `Status_Push` match; next owner is
+  the S1 girder/on-object direction handoff, not the junction right-edge
+  contact.
+
 ## 2026-06-12 - True-frontier comparator widening sweep
 
 - Scope: Step 0 of the release remediation pass. Widened the trace comparator
