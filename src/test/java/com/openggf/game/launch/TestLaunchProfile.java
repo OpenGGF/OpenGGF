@@ -66,6 +66,13 @@ class TestLaunchProfile {
     }
 
     @Test
+    void s3kDonationEnabledCountIgnoresDataSelectOwnedCharacterRows() {
+        LaunchProfile profile = new LaunchProfile(false, "s3k", false, "global", "knuckles", "none");
+
+        assertEquals(1, profile.enabledCount(SONIC_2));
+    }
+
+    @Test
     void nonStandardRowsFollowOriginalGamePossibilityRules() {
         assertTrue(new LaunchProfile(true, "off", false, "global", "sonic", "none")
                 .isNonStandard(REWIND, SONIC_1));

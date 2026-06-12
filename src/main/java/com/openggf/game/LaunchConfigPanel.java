@@ -23,6 +23,7 @@ public final class LaunchConfigPanel {
 
     private static final int SCREEN_H = 224;
     private static final float TEXT_SCALE = 0.68f;
+    private static final int TEXT_SIDE_PADDING = 4;
 
     public enum Result { NONE, CLOSED }
 
@@ -72,18 +73,20 @@ public final class LaunchConfigPanel {
             return;
         }
         if (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.UP))) {
-            selectedRow = wrapRow(selectedRow - 1);
+            selectedRow = wrapRow(selectedRow - 1, visibleRows().size());
         }
         if (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.DOWN))) {
-            selectedRow = wrapRow(selectedRow + 1);
+            selectedRow = wrapRow(selectedRow + 1, visibleRows().size());
         }
-        LaunchProfile.Row row = rows[selectedRow];
+        normalizeSelectedRow();
+        LaunchProfile.Row row = visibleRows().get(selectedRow);
         if (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.LEFT))) {
             profile = profile.withPrevious(row, entry);
         }
         if (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.RIGHT))) {
             profile = profile.withNext(row, entry);
         }
+        normalizeSelectedRow();
     }
 
     public Result consumeResult() {
@@ -108,8 +111,9 @@ public final class LaunchConfigPanel {
     }
 
     List<RowView> rowViews() {
-        List<RowView> views = new ArrayList<>(rows.length);
-        for (LaunchProfile.Row row : rows) {
+        List<LaunchProfile.Row> visibleRows = visibleRows();
+        List<RowView> views = new ArrayList<>(visibleRows.size());
+        for (LaunchProfile.Row row : visibleRows) {
             views.add(new RowView(
                     LaunchProfile.rowLabel(row),
                     rowValue(row),
@@ -120,7 +124,8 @@ public final class LaunchConfigPanel {
     }
 
     LaunchProfile.Row selectedRowForTest() {
-        return rows[selectedRow];
+        normalizeSelectedRow();
+        return visibleRows().get(selectedRow);
     }
 
     LaunchProfile currentProfileForTest() {
@@ -166,9 +171,19 @@ public final class LaunchConfigPanel {
 
     private void addCenteredLine(List<TextLineView> lines, String text, int viewportWidth,
                                  int y, float scale, float r, float g, float b, float a) {
+        scale = fittedScale(text, scale, viewportWidth);
         int width = measureWidth(text, scale);
         int x = Math.round((viewportWidth - width) / 2f);
         lines.add(new TextLineView(text, x, y, scale, width, r, g, b, a));
+    }
+
+    private float fittedScale(String text, float preferredScale, int viewportWidth) {
+        int width = measureWidth(text, preferredScale);
+        int maxWidth = Math.max(1, viewportWidth - TEXT_SIDE_PADDING * 2);
+        if (width <= maxWidth) {
+            return preferredScale;
+        }
+        return preferredScale * maxWidth / width;
     }
 
     private int measureWidth(String text, float scale) {
@@ -178,14 +193,34 @@ public final class LaunchConfigPanel {
         return Math.round(text.length() * 6 * scale);
     }
 
-    private int wrapRow(int index) {
-        if (index < 0) {
-            return rows.length - 1;
+    private int wrapRow(int index, int rowCount) {
+        if (rowCount <= 0) {
+            return 0;
         }
-        if (index >= rows.length) {
+        if (index < 0) {
+            return rowCount - 1;
+        }
+        if (index >= rowCount) {
             return 0;
         }
         return index;
+    }
+
+    private void normalizeSelectedRow() {
+        int rowCount = visibleRows().size();
+        if (selectedRow >= rowCount) {
+            selectedRow = Math.max(0, rowCount - 1);
+        }
+    }
+
+    private List<LaunchProfile.Row> visibleRows() {
+        List<LaunchProfile.Row> visible = new ArrayList<>(rows.length);
+        for (LaunchProfile.Row row : rows) {
+            if (profile.isVisibleInLaunchPanel(row)) {
+                visible.add(row);
+            }
+        }
+        return visible;
     }
 
     private String rowValue(LaunchProfile.Row row) {

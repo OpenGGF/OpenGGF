@@ -276,7 +276,7 @@ public class TestGameLoop {
         config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "SUPER_32_9");
 
         TrackingLaunchProfileStore store = new TrackingLaunchProfileStore(config,
-                new LaunchProfile(true, "s3k", true, "WIDE_16_9", "knuckles", "none"));
+                new LaunchProfile(true, "s1", true, "WIDE_16_9", "knuckles", "none"));
         setPrivateField(gameLoop, "launchProfileStore", store);
         setPrivateField(gameLoop, "launchProfileApplier", new LaunchProfileApplier(config));
 
@@ -286,7 +286,7 @@ public class TestGameLoop {
             assertEquals("knuckles", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
             assertEquals("", config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
             assertEquals(true, config.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
-            assertEquals("s3k", config.getString(SonicConfiguration.CROSS_GAME_SOURCE));
+            assertEquals("s1", config.getString(SonicConfiguration.CROSS_GAME_SOURCE));
             assertEquals(400, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
         });
 
@@ -340,7 +340,7 @@ public class TestGameLoop {
         config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
         config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
         TrackingLaunchProfileStore store = new TrackingLaunchProfileStore(config,
-                new LaunchProfile(true, "s3k", true, "WIDE_16_9", "knuckles", "none"));
+                new LaunchProfile(true, "s1", true, "WIDE_16_9", "knuckles", "none"));
         setPrivateField(gameLoop, "launchProfileStore", store);
         setPrivateField(gameLoop, "launchProfileApplier", new LaunchProfileApplier(config));
 
@@ -371,7 +371,7 @@ public class TestGameLoop {
         config.resolveDisplayAspect();
 
         TrackingLaunchProfileStore store = new TrackingLaunchProfileStore(config,
-                new LaunchProfile(true, "s3k", true, "WIDE_16_9", "knuckles", "none"));
+                new LaunchProfile(true, "s1", true, "WIDE_16_9", "knuckles", "none"));
         setPrivateField(gameLoop, "launchProfileStore", store);
         setPrivateField(gameLoop, "launchProfileApplier", new LaunchProfileApplier(config));
         SessionManager.clear();
@@ -415,7 +415,7 @@ public class TestGameLoop {
         config.resolveDisplayAspect();
 
         TrackingLaunchProfileStore store = new TrackingLaunchProfileStore(config,
-                new LaunchProfile(true, "s3k", true, "WIDE_16_9", "knuckles", "none"));
+                new LaunchProfile(true, "s1", true, "WIDE_16_9", "knuckles", "none"));
         setPrivateField(gameLoop, "launchProfileStore", store);
         setPrivateField(gameLoop, "launchProfileApplier", new LaunchProfileApplier(config));
         SessionManager.clear();
@@ -436,7 +436,7 @@ public class TestGameLoop {
         assertEquals("knuckles", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
         assertEquals("", config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
         assertEquals(true, config.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
-        assertEquals("s3k", config.getString(SonicConfiguration.CROSS_GAME_SOURCE));
+        assertEquals("s1", config.getString(SonicConfiguration.CROSS_GAME_SOURCE));
         assertEquals(400, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
         assertFalse(callbackRan.get(), "callback should be staged until the end-of-step hook runs");
 

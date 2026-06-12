@@ -24,9 +24,11 @@ public class LaunchProfileApplier {
             configService.setSessionOverride(SonicConfiguration.CROSS_GAME_SOURCE, profile.crossGameSource());
         }
         configService.setSessionOverride(SonicConfiguration.DEBUG_VIEW_ENABLED, profile.debugTools());
-        configService.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, profile.mainCharacter());
-        configService.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE,
-                "none".equals(profile.sidekick()) ? "" : profile.sidekick());
+        if (!profile.usesS3kDataSelectCharacters()) {
+            configService.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, profile.mainCharacter());
+            configService.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE,
+                    "none".equals(profile.sidekick()) ? "" : profile.sidekick());
+        }
         if (!"global".equals(profile.aspect())) {
             configService.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, profile.aspect());
         }

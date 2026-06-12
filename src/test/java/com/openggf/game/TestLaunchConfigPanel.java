@@ -18,6 +18,7 @@ import static com.openggf.game.launch.LaunchProfile.Row.MAIN_CHARACTER;
 import static com.openggf.game.launch.LaunchProfile.Row.REWIND;
 import static com.openggf.game.launch.LaunchProfile.Row.SIDEKICK;
 import static com.openggf.game.launch.LaunchProfile.Row.WIDESCREEN;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -132,6 +133,25 @@ class TestLaunchConfigPanel {
     }
 
     @Test
+    void s3kDonationHidesCharacterRowsAndNavigationSkipsThem() {
+        SonicConfigurationService config = configuredWasd();
+        LaunchProfile profile = new LaunchProfile(false, "s3k", false, "global", "knuckles", "tails");
+        LaunchConfigPanel panel = panel(config, profile, new TrackingStore(config));
+        InputHandler input = new InputHandler();
+
+        assertIterableEquals(List.of(
+                        "Rewind",
+                        "Cross-game",
+                        "Debug tools",
+                        "Widescreen"),
+                panel.rowViews().stream().map(LaunchConfigPanel.RowView::label).toList());
+
+        pressFrame(panel, input, GLFW_KEY_W);
+
+        assertEquals(WIDESCREEN, panel.selectedRowForTest());
+    }
+
+    @Test
     void textLineViewsCenterRowsAndFooterInViewport() {
         SonicConfigurationService config = configuredWasd();
         LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
@@ -139,6 +159,19 @@ class TestLaunchConfigPanel {
         for (LaunchConfigPanel.TextLineView line : panel.textLineViews(400)) {
             int expectedX = Math.round((400 - line.measuredWidth()) / 2f);
             assertEquals(expectedX, line.x(), "line should center on viewport: " + line.text());
+        }
+    }
+
+    @Test
+    void textLineViewsFitInsideNativeViewportWithRealGlyphMetrics() {
+        SonicConfigurationService config = configuredWasd();
+        LaunchProfile profile = new LaunchProfile(true, "s2", true, "SUPER_32_9", "knuckles", "tails");
+        LaunchConfigPanel panel = new LaunchConfigPanel(SONIC_3K, profile, new TrackingStore(config),
+                config, new MeasuringFont(), null);
+
+        for (LaunchConfigPanel.TextLineView line : panel.textLineViews(320)) {
+            assertTrue(line.x() >= 4, "line should not bleed left: " + line.text());
+            assertTrue(line.x() + line.measuredWidth() <= 316, "line should not bleed right: " + line.text());
         }
     }
 
@@ -178,5 +211,17 @@ class TestLaunchConfigPanel {
     }
 
     private record SavedProfile(MasterTitleScreen.GameEntry entry, LaunchProfile profile) {
+    }
+
+    private static final class MeasuringFont extends com.openggf.graphics.PixelFont {
+        @Override
+        public int measureWidth(String text) {
+            return measureWidth(text, 1.0f);
+        }
+
+        @Override
+        public int measureWidth(String text, float scale) {
+            return Math.round(text.length() * 9 * scale);
+        }
     }
 }

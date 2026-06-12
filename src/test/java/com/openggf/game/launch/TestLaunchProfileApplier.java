@@ -22,13 +22,13 @@ class TestLaunchProfileApplier {
     @Test
     void applySetsAlwaysManagedSessionOverrides() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
-        LaunchProfile profile = new LaunchProfile(true, "s3k", true, "global", "knuckles", "tails");
+        LaunchProfile profile = new LaunchProfile(true, "s2", true, "global", "knuckles", "tails");
 
         new LaunchProfileApplier(config).apply(profile);
 
         assertTrue(config.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED));
         assertTrue(config.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
-        assertEquals("s3k", config.getString(SonicConfiguration.CROSS_GAME_SOURCE));
+        assertEquals("s2", config.getString(SonicConfiguration.CROSS_GAME_SOURCE));
         assertTrue(config.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED));
         assertEquals("knuckles", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
         assertEquals("tails", config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
@@ -56,6 +56,21 @@ class TestLaunchProfileApplier {
                 new LaunchProfile(false, "off", false, "global", "sonic", "none"));
 
         assertEquals("", config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+    }
+
+    @Test
+    void s3kDonationLeavesCharacterSelectionToDataSelect() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+        config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
+        config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "knuckles");
+
+        new LaunchProfileApplier(config).apply(
+                new LaunchProfile(false, "s3k", false, "global", "sonic", "none"));
+
+        assertFalse(config.hasSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertFalse(config.hasSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+        assertEquals("tails", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertEquals("knuckles", config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
     }
 
     @Test

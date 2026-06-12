@@ -132,9 +132,11 @@ profile overrides and skip profile application.
 
 `crossGameSource: "off"` disables donation for that game launch and restores the built-in
 `crossGame.source` default in the session overlay so the donor choice cannot leak from a
-previous launch. `aspect: "global"` inherits the normal `display.aspect` setting and does
-not resize the window; pinned aspect values such as `"WIDE_16_9"` apply only for that
-game session and resize back when returning to the master title.
+previous launch. When `crossGameSource` is `"s3k"`, the launch panel hides
+`mainCharacter` and `sidekick` because the donated S3K Data Select screen owns team
+selection. `aspect: "global"` inherits the normal `display.aspect` setting and does not
+resize the window; pinned aspect values such as `"WIDE_16_9"` apply only for that game
+session and resize back when returning to the master title.
 
 Stock defaults:
 

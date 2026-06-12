@@ -59,11 +59,20 @@ public record LaunchProfile(
     public int enabledCount(MasterTitleScreen.GameEntry entry) {
         int count = 0;
         for (Row row : Row.values()) {
-            if (!isStock(row, entry)) {
+            if (isVisibleInLaunchPanel(row) && !isStock(row, entry)) {
                 count++;
             }
         }
         return count;
+    }
+
+    public boolean isVisibleInLaunchPanel(Row row) {
+        Objects.requireNonNull(row, "row");
+        return !usesS3kDataSelectCharacters() || (row != Row.MAIN_CHARACTER && row != Row.SIDEKICK);
+    }
+
+    public boolean usesS3kDataSelectCharacters() {
+        return "s3k".equals(crossGameSource);
     }
 
     public LaunchProfile withNext(Row row, MasterTitleScreen.GameEntry entry) {

@@ -4,6 +4,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.game.launch.LaunchProfile;
 import com.openggf.game.launch.LaunchProfileStore;
+import com.openggf.graphics.PixelFont;
 import com.openggf.testmode.TestModeTracePicker;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -207,9 +208,28 @@ class TestMasterTitleScreenLayout {
         MasterTitleScreen.PreviewLayout layout = MasterTitleScreen.bottomUiMatteLayout(400);
 
         assertEquals(400, layout.width());
-        assertEquals(48, layout.height());
+        assertEquals(56, layout.height());
         assertEquals(0f, layout.x(), 0f);
         assertEquals(0f, layout.y(), 0f);
+    }
+
+    @Test
+    void launchHoverLineFitsInsideNativeViewportAndBottomMatte() {
+        String line = MasterTitleScreen.launchHoverLine(5);
+        int width = Math.round(line.length() * PixelFont.glyphWidth() * MasterTitleScreen.LAUNCH_HOVER_SCALE);
+        int x = MasterTitleScreen.scaledCenteredTextX(line, 320, MasterTitleScreen.LAUNCH_HOVER_SCALE);
+
+        assertTrue(x >= 4, "hover line should not bleed left");
+        assertTrue(x + width <= 316, "hover line should not bleed right");
+
+        MasterTitleScreen.PreviewLayout matte = MasterTitleScreen.bottomUiMatteLayout(320);
+        assertTrue(MasterTitleScreen.LAUNCH_HOVER_Y >= 224 - matte.height() + 2,
+                "hover line should sit inside the bottom matte");
+    }
+
+    @Test
+    void launchConfigOverlayIsDarkEnoughForTextReadability() {
+        assertTrue(MasterTitleScreen.LAUNCH_PANEL_OVERLAY_ALPHA >= 0.7f);
     }
 
     @Test

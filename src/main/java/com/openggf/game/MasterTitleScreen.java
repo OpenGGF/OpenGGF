@@ -49,8 +49,12 @@ public class MasterTitleScreen {
     private static final int TITLE_LOGO_SCALE_NUMERATOR = 9;
     private static final int TITLE_LOGO_SCALE_DENOMINATOR = 10;
     private static final int TOP_UI_MATTE_HEIGHT = 0;
-    private static final int BOTTOM_UI_MATTE_HEIGHT = 48;
+    private static final int BOTTOM_UI_MATTE_HEIGHT = 56;
     private static final float BOTTOM_UI_MATTE_ALPHA = 0.68f;
+    static final int LAUNCH_HOVER_Y = 178;
+    static final float LAUNCH_HOVER_SCALE = 0.55f;
+    static final float LAUNCH_PANEL_OVERLAY_ALPHA = 0.72f;
+    private static final int FITTED_TEXT_SIDE_PADDING = 4;
 
     record PreviewLayout(int width, int height, float x, float y) {
     }
@@ -456,7 +460,7 @@ public class MasterTitleScreen {
 
         if (launchConfigPanel != null) {
             renderer.drawTexture(solidWhiteTextureId, 0, 0, viewportWidth, SCREEN_H,
-                    0f, 0f, 0f, 0.5f);
+                    0f, 0f, 0f, LAUNCH_PANEL_OVERLAY_ALPHA);
             launchConfigPanel.render(viewportWidth);
             return;
         }
@@ -711,6 +715,11 @@ public class MasterTitleScreen {
         return enabledCount + noun + " - Tab to configure";
     }
 
+    static int scaledCenteredTextX(String text, int screenWidth, float scale) {
+        int textWidth = Math.round(text.length() * PixelFont.glyphWidth() * scale);
+        return Math.round((screenWidth - textWidth) / 2f);
+    }
+
     static float[] menuTextColor(boolean available, boolean selected, int frameCounter) {
         if (!available) {
             if (selected) {
@@ -801,12 +810,29 @@ public class MasterTitleScreen {
         GameEntry entry = GameEntry.values()[selectedIndex];
         int enabledCount = launchProfileStore.load(entry).enabledCount(entry);
         if (enabledCount == 0) {
-            font.drawTextCentered(launchHoverLine(enabledCount), viewportWidth, 174,
+            drawScaledCenteredText(launchHoverLine(enabledCount), LAUNCH_HOVER_Y, LAUNCH_HOVER_SCALE,
                     0.55f, 0.55f, 0.55f, 0.88f);
         } else {
-            font.drawTextCentered(launchHoverLine(enabledCount), viewportWidth, 174,
+            drawScaledCenteredText(launchHoverLine(enabledCount), LAUNCH_HOVER_Y, LAUNCH_HOVER_SCALE,
                     1f, 0.82f, 0.28f, 1f);
         }
+    }
+
+    private void drawScaledCenteredText(String text, int y, float preferredScale,
+                                        float r, float g, float b, float a) {
+        float scale = fittedScale(text, preferredScale, viewportWidth);
+        int width = font.measureWidth(text, scale);
+        int x = Math.round((viewportWidth - width) / 2f);
+        font.drawText(text, x, y, scale, r, g, b, a);
+    }
+
+    private static float fittedScale(String text, float preferredScale, int viewportWidth) {
+        int preferredWidth = Math.round(text.length() * PixelFont.glyphWidth() * preferredScale);
+        int maxWidth = Math.max(1, viewportWidth - FITTED_TEXT_SIDE_PADDING * 2);
+        if (preferredWidth <= maxWidth) {
+            return preferredScale;
+        }
+        return preferredScale * maxWidth / preferredWidth;
     }
 
     /**
