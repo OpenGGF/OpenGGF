@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K object landings now use the live roll-radius delta:** solid-object
+  landing now follows `Player_TouchFloor`'s S3K live `y_radius` adjustment when
+  clearing roll state, and MHZ mushroom caps no longer horizontally carry riders
+  during their ROM `SolidObjectTop` pass. This advances `s3k_mhz1` from frame
+  73 `y` through frame 76 `x` to frame 79 `y`.
+
 - **Level animation now advances during logic frames:** parallax, animated tile,
   and animated palette updates now run from the level update path instead of the
   render path, so headless trace replay observes the same ROM-visible animated

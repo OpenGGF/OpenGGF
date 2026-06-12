@@ -204,6 +204,11 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+        return false;
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(artKey);
         if (renderer != null) {

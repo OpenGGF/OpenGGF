@@ -3440,8 +3440,17 @@ final class ObjectSolidContactController {
             return;
         }
         if (player.getRolling()) {
-            player.setRolling(false);
-            player.setY((short) (player.getY() - player.getRollHeightAdjustment()));
+            if (player instanceof AbstractPlayableSprite sprite
+                    && usesCurrentYRadiusDeltaOnLanding(sprite)) {
+                int oldYRadius = sprite.getYRadius();
+                int centreY = sprite.getCentreY();
+                sprite.setRolling(false);
+                int delta = oldYRadius - sprite.getStandYRadius();
+                NativePositionOps.writeYPosPreserveSubpixel(sprite, centreY + delta);
+            } else {
+                player.setRolling(false);
+                player.setY((short) (player.getY() - player.getRollHeightAdjustment()));
+            }
         } else if (player instanceof AbstractPlayableSprite sprite
                 && (sprite.getYRadius() != sprite.getStandYRadius()
                 || sprite.getXRadius() != sprite.getStandXRadius())) {
@@ -3453,11 +3462,15 @@ final class ObjectSolidContactController {
             // y_radius reset on Status_Roll being set; when not rolling it skips the
             // reset, preserving any stale y_radius value from the despawn path.
             // Gate this non-rolling radius reset to S3K (landingRollClearUsesCurrentYRadiusDelta).
-            PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-            if (featureSet != null && featureSet.landingRollClearUsesCurrentYRadiusDelta()) {
+            if (usesCurrentYRadiusDeltaOnLanding(sprite)) {
                 sprite.applyStandingRadii(false);
             }
         }
+    }
+
+    private boolean usesCurrentYRadiusDeltaOnLanding(AbstractPlayableSprite sprite) {
+        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+        return featureSet != null && featureSet.landingRollClearUsesCurrentYRadiusDelta();
     }
 
     private void applyObjectLandingState(PlayableEntity player) {
