@@ -1404,11 +1404,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 byte[] bytes = new byte[aizLength];
                 buf.get(bytes);
                 if (aizEvents != null) {
-                    try {
-                        ZoneEventSchemaSidecar.restore(aizEvents, bytes);
-                    } catch (IllegalArgumentException e) {
-                        LOG.warning("Skipping malformed AIZ zone-event rewind sidecar: " + e.getMessage());
-                    }
+                    restoreAizSidecar(bytes);
                 }
             }
         }
@@ -1459,6 +1455,20 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (buf.remaining() >= S3kFixedAirCountdownManager.REWIND_STATE_BYTES) {
             fixedAirCountdownManager.readRewindState(buf);
+        }
+    }
+
+    private void restoreAizSidecar(byte[] bytes) {
+        byte[] before = ZoneEventSchemaSidecar.capture(aizEvents);
+        try {
+            ZoneEventSchemaSidecar.restore(aizEvents, bytes);
+        } catch (RuntimeException e) {
+            try {
+                ZoneEventSchemaSidecar.restore(aizEvents, before);
+            } catch (RuntimeException rollbackFailure) {
+                e.addSuppressed(rollbackFailure);
+            }
+            LOG.warning("Skipping malformed AIZ zone-event rewind sidecar: " + e.getMessage());
         }
     }
 
