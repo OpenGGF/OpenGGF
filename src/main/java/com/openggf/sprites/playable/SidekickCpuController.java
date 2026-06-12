@@ -3076,6 +3076,7 @@ public class SidekickCpuController {
             int newX = (dx > 0)
                     ? (sidekick.getCentreX() & 0xFFFF) - step
                     : (sidekick.getCentreX() & 0xFFFF) + step;
+            sidekick.setDirection(dx > 0 ? Direction.LEFT : Direction.RIGHT);
             sidekick.setCentreXPreserveSubpixel((short) newX);
         }
 
@@ -3119,6 +3120,7 @@ public class SidekickCpuController {
             sidekick.setMoveLockTimer(0);
             sidekick.setForcedAnimationId(-1);
             sidekick.setAir(true);
+            sidekick.setDirection(Direction.RIGHT);
             // ROM loc_1384A (sonic3k.asm:26213): while object_control bit 0 is
             // set (FLIGHT_AUTO_RECOVERY keeps it high), double_jump_flag is
             // cleared every frame by the dispatcher. On the NORMAL transition

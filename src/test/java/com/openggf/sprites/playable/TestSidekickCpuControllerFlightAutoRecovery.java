@@ -3,6 +3,7 @@ package com.openggf.sprites.playable;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.session.SessionManager;
+import com.openggf.physics.Direction;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -83,6 +84,8 @@ class TestSidekickCpuControllerFlightAutoRecovery {
         // Tails is to the right of Sonic, so X decreases by 0xD.
         assertEquals(0x1EF3, tails.getCentreX() & 0xFFFF,
                 "X steps toward Sonic by (clamp(|dx|>>4, 0xC) + |Sonic.x_vel| + 1) = 0xD");
+        assertEquals(Direction.LEFT, tails.getDirection(),
+                "ROM loc_13C98 sets Status_Facing when routine 4 steers Tails left toward the target");
     }
 
     @Test
@@ -160,6 +163,7 @@ class TestSidekickCpuControllerFlightAutoRecovery {
         tails.setControlLocked(true);       // routine 4 carries object_control=$81 until NORMAL transition
         tails.setObjectControlAllowsCpu(true);
         tails.setObjectControlSuppressesMovement(true);
+        tails.setDirection(Direction.LEFT);
         // On-screen so the off-screen timer doesn't fire.
         tails.setRenderFlagOnScreen(true);
 
@@ -178,6 +182,8 @@ class TestSidekickCpuControllerFlightAutoRecovery {
                 "Transition clears the object-control movement suppression mirror");
         assertFalse(tails.isControlLocked(),
                 "Transition clears the engine control-lock mirror so NORMAL CPU input reaches movement");
+        assertEquals(Direction.RIGHT, tails.getDirection(),
+                "ROM loc_13CD2 masks status down to Status_InAir plus underwater, clearing Status_Facing");
         assertEquals(0, tails.getDoubleJumpFlag(),
                 "Transition clears Tails's double_jump_flag so NORMAL runs with normal air "
                         + "gravity (+0x38) instead of the FLY-gated flight gravity (+0x08). ROM "

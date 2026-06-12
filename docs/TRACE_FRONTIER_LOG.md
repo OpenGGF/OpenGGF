@@ -172,6 +172,92 @@
 | s3k_mgz1 | f454 | tails_status_byte | 0x0003 | 0x0002 | 9312 |
 | s3k_mhz1 | f71 | camera_y | 0x04C5 | 0x04BF | 4507 |
 
+## 2026-06-12 — S3K sidekick flight-facing status cluster
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `develop`, with
+local uncommitted S3K sidekick flight-facing edits.
+
+Commands:
+`mvn -Dmse=off "-Dtest=com.openggf.sprites.playable.TestSidekickCpuControllerFlightAutoRecovery" "-DfailIfNoTests=false" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx2g" test`
+`mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay" "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test`
+`mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay,com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay" "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test`
+`mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test`
+
+Fix:
+- S3K Tails routine-4 flight/catch-up steering now mirrors
+  `Tails_FlySwim_Unknown`: moving left toward the target sets
+  `Status_Facing`; moving right clears it.
+- The routine-4 close-enough handoff back to NORMAL now clears the facing bit,
+  matching `loc_13CD2` masking status down to `Status_InAir` plus underwater.
+  This is ROM state modelling only; no trace state is written back into the
+  engine and no zone/route/frame carve-outs were added.
+
+Result:
+- Focused `TestSidekickCpuControllerFlightAutoRecovery` is green: **13 tests**,
+  0 failures.
+- Focused `TestS3kMgzCompleteRunTraceReplay` remains red but advances from
+  frame **454** `tails_status_byte` expected `0x0003`, actual `0x0002`, to
+  frame **738** `rings` expected `17`, actual `18`.
+- Focused `TestS3kAizCompleteRunTraceReplay` remains red but advances from
+  frame **1058** `tails_status_byte` expected `0x0003`, actual `0x0002`, to
+  frame **1095** `x_speed` expected `0x0000`, actual `0x000C`.
+- Focused `TestS3kIczCompleteRunTraceReplay` remains red but advances from
+  frame **1156** `tails_status_byte` expected `0x0003`, actual `0x0002`, to
+  frame **1986** `tails_status_byte` expected `0x0004`, actual `0x0024`; the
+  new owner is the distinct normal-follow push-bit signature.
+- Full `*TraceReplay` sweep remains red: **90 tests**, **62 failures**,
+  **1 error**, 0 skipped. The final `s3k_aiz1_report.json` row is from
+  `TestS3kAizTraceReplay` because it runs after the complete-run class and
+  reuses the same report name; the focused complete-run frontier movement is
+  listed above.
+
+| Trace | Frontier | Field | Expected | Actual | Errors |
+|---|---:|---|---:|---:|---:|
+| s1_credits_01_mz2 | f262 | status_byte | 0x0021 | 0x0001 | 1 |
+| s1_credits_05_sbz1 | f413 | status_byte | 0x0029 | 0x0028 | 3 |
+| s1_ghz1 | f1394 | x_speed | 0x0000 | -0200 | 292 |
+| s1_ghz2 | f2370 | y | 0x0267 | 0x0266 | 231 |
+| s1_ghz3 | f370 | y_speed | -0220 | -0320 | 1108 |
+| s1_lz1 | f302 | y_speed | -0100 | 0x0000 | 2992 |
+| s1_lz2 | f1089 | y | 0x03A8 | 0x03AD | 2102 |
+| s1_lz3 | f466 | y | 0x0807 | 0x0007 | 3229 |
+| s1_lz4 | f1421 | camera_y | 0x038C | 0x0388 | 4686 |
+| s1_mz1 | f3224 | y_speed | 0x02C8 | 0x01C8 | 222 |
+| s1_mz2 | f2409 | y_speed | 0x0048 | -00B8 | 1074 |
+| s1_mz3 | f1702 | y | 0x048C | 0x048B | 1091 |
+| s1_sbz1 | f2268 | air | 0 | 1 | 805 |
+| s1_sbz2 | f576 | y | 0x0763 | 0x075C | 993 |
+| s1_sbz3 | f713 | y_speed | 0x0000 | -0700 | 155 |
+| s1_slz1 | f723 | x_speed | 0x0000 | -0200 | 661 |
+| s1_slz2 | f651 | g_speed | 0x1000 | 0x10AE | 270 |
+| s1_slz3 | f718 | y_speed | 0x0000 | 0x0610 | 1500 |
+| s1_syz1 | f250 | y_speed | -0610 | -0510 | 417 |
+| s1_syz2 | f1088 | x_speed | 0x02E8 | 0x02F4 | 336 |
+| s1_syz3 | f1392 | x_speed | -0200 | 0x0200 | 714 |
+| s2_arz1 | f1155 | tails_status_byte | 0x0001 | 0x0021 | 974 |
+| s2_arz2 | f899 | y_speed | -02D0 | -01D0 | 2043 |
+| s2_cnz1 | f202 | tails_x | 0x0265 | 0x0264 | 588 |
+| s2_cnz2 | f2467 | tails_g_speed | 0x0018 | 0x0000 | 1094 |
+| s2_cpz1 | f724 | tails_status_byte | 0x0000 | 0x0020 | 856 |
+| s2_cpz2 | f759 | tails_status_byte | 0x0020 | 0x0000 | 1544 |
+| s2_dez1 | f1557 | x_speed | 0x0000 | 0x003C | 137 |
+| s2_htz1 | f419 | tails_cpu_interact | 0x0000 | 0x0018 | 556 |
+| s2_htz2 | f936 | tails_cpu_ctrl2_held | 0x0002 | 0x0000 | 1295 |
+| s2_mcz1 | f398 | tails_routine | 0x0006 | 0x0002 | 334 |
+| s2_mcz2 | f1807 | tails_x_speed | -0018 | 0x00E8 | 734 |
+| s2_mtz1 | f931 | tails_cpu_interact | 0x009F | 0x0006 | 1635 |
+| s2_mtz2 | f645 | tails_x_speed | 0x00C1 | -0200 | 2784 |
+| s2_mtz3 | f1381 | tails_cpu_jumping | 0x0001 | 0x0000 | 3164 |
+| s2_ooz1 | f395 | tails_status_byte | 0x000A | 0x0002 | 1280 |
+| s2_ooz2 | f919 | tails_status_byte | 0x0000 | 0x0020 | 1156 |
+| s3k_aiz1 | f2590 | tails_status_byte | 0x000A | 0x0002 | 1868 |
+| s3k_cnz1 | f97 | rolling | 1 | 0 | 5992 |
+| s3k_hcz1 | f97 | status_byte | 0x0021 | 0x0001 | 2998 |
+| s3k_icz1 | f1986 | tails_status_byte | 0x0004 | 0x0024 | 3413 |
+| s3k_lbz1 | f410 | y_speed | 0x0000 | -0100 | 5254 |
+| s3k_mgz1 | f738 | rings | 17 | 18 | 9912 |
+| s3k_mhz1 | f79 | y | 0x051B | 0x0525 | 3571 |
+
 ## 2026-06-12 — S3K MHZ headless animated tile logic sweep
 
 Worktree `C:\Users\farre\IdeaProjects\sonic-engine`, branch `develop`, with

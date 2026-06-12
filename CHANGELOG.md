@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K sidekick flight recovery now updates facing like the ROM:** Tails'
+  routine-4 flight/catch-up steering now sets the facing bit when moving left
+  toward the target and clears it on the transition back to NORMAL, matching
+  `Tails_FlySwim_Unknown` / `loc_13CD2`. This advances the focused S3K
+  complete-run sidekick-status cluster: MGZ1 frame 454 now reaches frame 738,
+  AIZ1 frame 1058 now reaches frame 1095, and ICZ1 frame 1156 now reaches
+  frame 1986.
+
 - **S3K object landings now use the live roll-radius delta:** solid-object
   landing now follows `Player_TouchFloor`'s S3K live `y_radius` adjustment when
   clearing roll state, and MHZ mushroom caps no longer horizontally carry riders
