@@ -29,8 +29,9 @@ public record ObjectSlotLayout(
     //
     // S3K Process_Sprites still walks the full 110-slot Object_RAM table
     // (docs/skdisasm/sonic3k.constants.asm:303-323;
-    // docs/skdisasm/sonic3k.asm:35965-35980), so frame-cadence code that
-    // reads d7 must use processSlotCount rather than the dynamic allocator end.
+    // docs/skdisasm/sonic3k.asm:35965-35980). Most gameplay objects live in the
+    // managed dynamic window above; call sites choose the ROM countdown that
+    // matches the object path they are modeling.
     public static final ObjectSlotLayout SONIC_3K = new ObjectSlotLayout(4, 89, 110, true, true);
 
     public ObjectSlotLayout(int firstDynamicSlot, int dynamicSlotCount) {

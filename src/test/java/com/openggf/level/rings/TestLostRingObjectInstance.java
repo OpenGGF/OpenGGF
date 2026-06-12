@@ -319,9 +319,9 @@ class TestLostRingObjectInstance {
         ringManager.spawnLostRings(player, 1, 0);
 
         LostRingObjectInstance ring = objectManager.activeObjectsOfType(LostRingObjectInstance.class).get(0);
-        assertEquals(ObjectSlotLayout.SONIC_3K.lastProcessSlotExclusive() - 1 - ring.getSlotIndex(),
+        assertEquals(ObjectSlotLayout.SONIC_3K.lastDynamicSlotExclusive() - 1 - ring.getSlotIndex(),
                 ring.getPhaseOffset(),
-                "S3K Obj37 cadence uses the full Process_Sprites Object_RAM countdown");
+                "S3K Obj37 cadence uses the managed dynamic-object countdown for spilled rings");
     }
 
     @Test
