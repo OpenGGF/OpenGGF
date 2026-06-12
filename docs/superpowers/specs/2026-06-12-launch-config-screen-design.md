@@ -42,19 +42,32 @@ Missing-ROM games show no line and Tab is a no-op.
 
 Pressing **Tab** in the `ACTIVE` state opens the panel over a semi-transparent
 black matte (same style as the error overlay). Title: e.g.
-`Sonic 2 — Launch Options`. Five rows:
+`Sonic 2 — Launch Options`. Six rows:
 
 | Row | Values (stock first) | Notes |
 |---|---|---|
 | Rewind | Off / On | maps to `rewind.liveEnabled` |
 | Cross-Game Donation | Off / donor game | donor excludes the game itself; maps to `crossGame.enabled` + `crossGame.source` |
 | Debug Tools | Off / On | overlay + debug cheat keys; maps to `debug.flags.debugView` |
+| Widescreen | Global / Native 4:3 / 16:10 / 16:9 / 21:9 / 32:9 | maps to `display.aspect` (`WidescreenAspect` presets); see below |
 | Main Character | Sonic / Tails / Knuckles | maps to `characters.main` |
 | Sidekick | per-game stock / None / Tails / Sonic / Knuckles | S1 stock: None; S2/S3K stock: Tails; maps to `characters.sidekick` |
 
+**Widescreen row semantics — deliberate exception to stock-wins.** Display
+aspect is a presentation preference, not a gameplay option, so its stock
+value is **Global** — inherit `display.aspect` unchanged, apply no override,
+trigger no resize. The row label renders the resolved global preset for
+clarity, e.g. `Global (16:9)`. Explicit per-game values pin the aspect for
+that game and dynamically resize the window when the game is entered.
+Widescreen presets carry the non-standard asterisk; Native 4:3 (pinned) and
+Global do not.
+
 Controls: **Up/Down** select row, **Left/Right** cycle value, **Backspace**
 reset all rows to stock, **Tab/Esc** close. Closing persists immediately via
-`saveConfig()`. A footer line lists the controls.
+`saveConfig()`. A footer line lists the controls. Directional keys are the
+**configured** `SonicConfiguration.UP/DOWN/LEFT/RIGHT` bindings, matching how
+the master-title menu reads configured LEFT/RIGHT; Tab/Esc/Backspace are
+hardcoded GLFW keys, matching the menu's hardcoded Enter.
 
 ### Row markers
 
@@ -86,13 +99,14 @@ launch:
     rewind: false
     crossGameSource: "off"   # "off" or donor game id
     debugTools: false
+    aspect: "global"         # "global" or a WidescreenAspect preset name
     mainCharacter: "sonic"
     sidekick: "none"
   s2: …   # same shape; sidekick stock "tails"
   s3k: …  # same shape; sidekick stock "tails"
 ```
 
-5 options × 3 games = **15 new `SonicConfiguration` keys**, each with
+6 options × 3 games = **18 new `SonicConfiguration` keys**, each with
 `ConfigCatalog` metadata. The `launch` section is placed after `crossGame` and
 **before the `debug.*` block** (catalog ordering rule; `TestConfigCatalog`
 enforces). Cross-game enabled/source collapse into a single
@@ -100,7 +114,7 @@ enforces). Cross-game enabled/source collapse into a single
 
 New package `com.openggf.game.launch`:
 
-- **`LaunchProfile`** (record) — the 5 fields, plus:
+- **`LaunchProfile`** (record) — the 6 fields, plus:
   - `stockFor(MasterTitleScreen.GameEntry)` factory,
   - `enabledCount()` — rows differing from stock,
   - per-row cycling helpers (next/previous value given the game entry),
@@ -118,26 +132,37 @@ mid-game save would silently persist profile values into the user's global
 keys.
 
 **Mechanism:** `SonicConfigurationService` gains a **session-override
-overlay** — a separate map checked first by all getters, never written by
-`saveConfig()`, cleared with `clearSessionOverrides()`. (The trace picker's
-existing "disable test mode for this session" `setConfigValue` call has the
-same latent bug and can migrate to the overlay later — out of scope here.)
+overlay** — a sibling map to the existing `transientResolved` overlay (which
+already proves the pattern: read before `config`, never saved). Lookup order:
+session overrides → `transientResolved` → `config`. Written via
+`setSessionOverride(key, value)`, cleared as a unit with
+`clearSessionOverrides()`; `saveConfig()` never sees it. It is deliberately
+**not** merged into `transientResolved`, whose entries are managed
+selectively by `resolveDisplayAspect()`. (The trace picker's existing
+"disable test mode for this session" `setConfigValue` call has the same
+latent persistence bug and can migrate to the overlay later — out of scope
+here.)
 
 **`LaunchProfileApplier`** (in `com.openggf.game.launch`) maps a profile onto
-the **6 affected global keys** as session overrides:
+the affected global keys as session overrides:
 `rewind.liveEnabled`, `crossGame.enabled`, `crossGame.source`,
-`debug.flags.debugView`, `characters.main`, `characters.sidekick`.
+`debug.flags.debugView`, `characters.main`, `characters.sidekick`, and —
+only when the profile aspect is not `"global"` — `display.aspect`.
 Value mappings: profile `crossGameSource="off"` → `crossGame.enabled=false`
-(source left at its global value); profile `sidekick="none"` → empty string
-for `characters.sidekick` (the existing disable convention).
+**and** `crossGame.source` overridden to the built-in config default, so the
+first 6 keys are always deterministically overridden; profile
+`sidekick="none"` → empty string for `characters.sidekick` (the existing
+disable convention). The aspect key is intentionally asymmetric: `"global"`
+means *no override* (inherit the user's display preference); no leak is
+possible because every launch clears the overlay first (lifecycle below).
 
 Rules:
 
 - Runs in `GameLoop.doExitMasterTitleScreen`, before the master-title exit
-  handler, so every downstream reader (rewind controller construction,
-  cross-game providers, sprite setup) sees profile values with **zero changes**
-  to reader code.
-- Always sets **all** managed keys — stock values included — so returning to
+  handler, so downstream readers that resolve config **at or after launch**
+  (rewind controller construction, cross-game providers, sprite setup) see
+  profile values without reader-code changes.
+- Always sets **all 6** managed keys — stock values included — so returning to
   the master title and launching a different game cannot leak the previous
   profile.
 - **Skipped for programmatic selections:** `MasterTitleScreen.selectEntry`
@@ -145,6 +170,67 @@ Rules:
   `GameLoop` checks — trace determinism must not depend on user profiles.
 - Direct launches that bypass the master title never run the applier; global
   keys behave exactly as today.
+
+### Overlay lifecycle — `clearSessionOverrides()` call sites
+
+Stale overrides must never outlive the launch they belong to. The overlay is
+cleared:
+
+1. **At every master-title exit**, in `GameLoop.doExitMasterTitleScreen`,
+   *before* the apply/skip decision: user launches clear-then-apply; \
+   programmatic launches clear-then-skip. This protects
+   `TraceReplaySessionBootstrap.prepareConfiguration()`, which writes
+   trace-required main/sidekick/cross-game values via `setConfigValue` into
+   the base map — an uncleaned overlay would mask them.
+2. **On return to the master title** (`GameLoop.returnToMasterTitle` path),
+   so the title screen itself and the trace picker read persisted values.
+3. **In `SonicConfigurationService.resetToDefaults()`**, so test/headless
+   resets start overlay-free.
+
+### Engine-lifetime cached readers
+
+The "no reader changes" claim does **not** hold for state cached in objects
+that outlive a master-title launch. Known cases:
+
+- `Engine` caches `DEBUG_VIEW_ENABLED` into its `debugViewEnabled` field at
+  construction (`Engine.java:219`) and uses the field in render/profiler/HUD
+  paths (428, 1278, 1377, 1401, 1567).
+- `Engine` caches `SCREEN_WIDTH_PIXELS` into `realWidth`/`projectionWidth` at
+  construction (`Engine.java:216-218`) — handled by the resize hook below.
+
+The implementation must refresh these caches from `configService` at
+master-title exit (after the applier runs) and on return to the master title
+(after overrides clear). The plan must also audit the remaining managed keys
+for Engine-lifetime caches and add the same refresh where found; per-session
+objects (rebuilt by `SessionManager` after launch) need nothing.
+
+### Dynamic widescreen resize at launch
+
+When a profile pins an aspect, the window resizes to it on game entry; the
+resize happens inside the master-title fade-to-black so the geometry change
+is not visible mid-transition. Sequence in `doExitMasterTitleScreen` (user
+launches only):
+
+1. Applier sets the `display.aspect` session override (when pinned).
+2. `configService.resolveDisplayAspect()` re-derives `SCREEN_WIDTH_PIXELS`
+   (and autosized window dimensions) — the existing derivation reads
+   `display.aspect` through `getConfigValue`, which consults the session
+   overlay first, so it picks up the pin with no changes.
+   `TEST_MODE_ENABLED` already forces `NATIVE_4_3` inside
+   `resolveDisplayAspect`, preserving trace parity.
+3. A new `Engine` hook (`applyResolvedDisplayDimensions()`) re-reads
+   `SCREEN_WIDTH_PIXELS` into `realWidth`/`projectionWidth`, resizes the GLFW
+   window via the existing autosize/integer-snap logic
+   (`snapWindowToIntegerScale`), and re-runs `reshape` so viewport and
+   projection match. The implementation plan must audit Engine-lifetime
+   width-dependent resources (FBOs, render targets, `GraphicsManager`
+   viewport state) and recreate any that bake in the old width.
+
+**Symmetry on return to the master title:** clearing the overlay is followed
+by `resolveDisplayAspect()` + the same Engine hook, so the window returns to
+the user's global aspect. When the profile aspect is `"global"` (stock) both
+directions are no-ops — no override, no resize, matching "dynamic resize
+only when a profile is enabled".
 
 ## Panel implementation
 
@@ -178,12 +264,24 @@ Rules:
 
 - `LaunchProfile`: stock factories, `enabledCount`, cycling, standardness
   (pair rules per game) — pure unit tests.
-- `LaunchProfileStore`: round-trip + invalid-value clamping — `@TempDir` with
-  `user.dir` override (parallel-fork safety).
+- `LaunchProfileStore`: round-trip + invalid-value clamping — use
+  `SonicConfigurationService.createStandalone(Path tempDir)` (the existing
+  test seam; avoids the process-global `user.dir` override, which is not
+  parallel-fork safe).
 - Session overlay: getters honor overrides; `saveConfig()` output excludes
-  them; `clearSessionOverrides()` restores persisted values.
-- `LaunchProfileApplier`: sets all 6 keys; stock launch resets prior
-  overrides; programmatic selection skips application.
+  them; `clearSessionOverrides()` restores persisted values;
+  `resetToDefaults()` clears the overlay.
+- `LaunchProfileApplier`: sets the 6 always-managed keys (including
+  `crossGame.source` when donation is off); pins `display.aspect` only when
+  the profile aspect is not `"global"`; stock launch resets prior overrides;
+  programmatic selection clears stale overrides and skips application — a
+  simulated trace launch after a user launch must see base-map values, not
+  leftovers.
+- Widescreen pin: `resolveDisplayAspect()` with a pinned session
+  `display.aspect` derives the pinned `SCREEN_WIDTH_PIXELS`; clearing the
+  overlay and re-resolving restores the global derivation; pinning under
+  `TEST_MODE_ENABLED` still forces 320 (existing behavior, regression-guard
+  it).
 - `LaunchConfigPanel`: navigation, cycling, reset-all, close result — stubbed
   `InputHandler`, no GL.
 - Hover-line text: static pure function on `MasterTitleScreen` (existing
@@ -195,5 +293,6 @@ Rules:
 - Collision view and level editor rows (features unfinished).
 - Migrating the trace picker's session `setConfigValue` to the overlay.
 - Rewind tuning (history seconds, tape-coast) — config.yaml only.
-- Per-profile key bindings, audio, or display options.
+- Per-profile key bindings, audio, or display options beyond the widescreen
+  aspect row (e.g. color profile, fps stay global).
 - Data select / in-game surfacing of the active profile.
