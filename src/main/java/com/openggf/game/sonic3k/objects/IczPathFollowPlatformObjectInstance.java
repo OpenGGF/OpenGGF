@@ -160,8 +160,10 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
     }
 
     private void updateJitterWait(int frameCounter) {
-        // loc_89FD6: d0 alternates +/-1 from V_int_run_count bit 0, then Obj_Wait.
-        x += (frameCounter & 1) == 0 ? 1 : -1;
+        // loc_89FD6 reads V_int_run_count+3, not Level_frame_counter.
+        // Object updates receive the ROM-visible level frame, so the V-int low bit is one tick ahead here.
+        int vIntLowByte = frameCounter + 1;
+        x += (vIntLowByte & 1) == 0 ? 1 : -1;
         if (waitTimer-- <= 0) {
             phase = Phase.FALLING;
         }

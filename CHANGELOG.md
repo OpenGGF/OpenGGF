@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K ICZ path-follow platforms use ROM V-int jitter phase:** ICZ
+  path-follow platform routine `$04` now alternates its one-pixel shake from
+  the ROM `V_int_run_count+3` low-bit phase instead of level-frame parity.
+  This moves the ICZ complete-run trace from frame 3102 to frame 3174, a
+  main-player hidden-hurt/ring-spend frontier after path-platform X and camera
+  parity holds.
+
 - **S3K ICZ freezer capture preserves player subpixels:** ICZ freezer capture
   clouds and frozen-player blocks now copy only the captured player's ROM
   `x_pos/y_pos` words while preserving `x_sub/y_sub`, matching the freezer

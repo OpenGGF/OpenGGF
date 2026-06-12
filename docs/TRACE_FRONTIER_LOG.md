@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+## 2026-06-12 - S3K ICZ complete-run progressed to hidden-hurt ring-spend frontier
+
+- Scope: follow-up to the ICZ frame-3102 main-player path-follow
+  platform/camera frontier. Trace data remained comparison-only diagnostic
+  input; no trace state was written back into engine runtime.
+- Change:
+  - `IczPathFollowPlatformObjectInstance` now derives its routine-$04 jitter
+    direction from the ROM `V_int_run_count+3` low-bit phase instead of using
+    the level-frame parity directly. ROM `loc_89FD6` alternates `x_pos` by
+    `+1/-1` from `V_int_run_count+3` before tail-calling `Obj_Wait`
+    (`docs/skdisasm/sonic3k.asm:187421-187429`), while the engine object
+    update receives the ROM-visible level frame.
+- Verification:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kIczPathFollowPlatformObject" test`
+    -> GREEN, 17 tests.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test`
+    -> RED, but the first ICZ error moved from frame 3102 to frame 3174. New
+    first error is main-player `rings` (`expected=42`, `actual=0`) after the
+    engine spawns lost rings near the ICZ hidden hurt block cluster; main-player
+    position, speed, camera, sidekick state, and Tails CPU fields match through
+    the former path-platform frontier.
+- Release state: ICZ complete-run remains red. The next fix should investigate
+  the frame-3174 hurt/ring-spend path around the hidden hurt blocks and
+  platform jump/handoff, without adding a trace/frame carve-out.
+
 ## 2026-06-12 - S3K ICZ complete-run progressed to path-platform x/camera frontier
 
 - Scope: follow-up to the ICZ frame-2967 native-Tails post-freezer vertical
