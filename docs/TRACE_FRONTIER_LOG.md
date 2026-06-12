@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+## 2026-06-12 - Completed full trace regression sweep after ICZ diagnostics
+
+- Scope: full `*TraceReplay` regression sweep on the release-remediation branch
+  after the ICZ frame-3752 diagnostic slice. Trace data remained
+  comparison-only diagnostic input; no trace state was written back into engine
+  runtime.
+- Commands:
+  - `mvn "-Dmse=off" "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen" test`
+    -> aborted after report generation with a forked JVM `Java heap space`.
+  - `mvn "-Dmse=off" "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g" test`
+    -> completed as ordinary trace failures.
+- Result:
+  - Parsed trace-class summary: 59 classes, 106 tests, 58 failures, 1 error,
+    0 skipped.
+  - No new dump files were produced by the serial rerun; the remaining dump
+    files are from the earlier heap-aborted run.
+- Release state: this is not a green all-trace certification, but it is a
+  completed regression sweep. Active S3K release frontiers are HCZ frame 9482
+  main-player `air`, ICZ frame 3752 main-player `x` plus coupled camera/slot
+  ordering, CNZ complete-run frame 0 `y_speed`, MGZ complete-run frame 738
+  `rings`, MHZ complete-run frame 0 `tails_cpu_routine`, LBZ complete-run
+  frame 0 `camera_y`, AIZ complete-run frame 1095 `x_speed`, and CNZ/MGZ
+  dedicated trace input-alignment issues.
+
 ## 2026-06-12 - S3K ICZ Obj37 floor-probe distance moved frontier to path platform
 
 - Scope: follow-up to the ICZ frame-3323 second lost-ring collection frontier.

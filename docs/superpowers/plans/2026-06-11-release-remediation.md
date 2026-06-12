@@ -285,6 +285,13 @@ Completed in `bugfix/ai-release-remediation`:
   context for the current path-follow platform frontier. The focused platform
   unit tests are green; the trace still requires ROM-side saved-carry/input
   timing diagnostics before a safe behavior fix.
+- Full trace regression sweep after ICZ diagnostics: the default forked sweep
+  generated reports but hit `Java heap space`; the serial `-Xmx3g` rerun
+  completed as ordinary trace failures with 59 trace classes, 106 tests, 58
+  failures, 1 error, and 0 skipped. The current S3K frontiers remain HCZ frame
+  9482 `air`, ICZ frame 3752 `x`, CNZ frame 0 `y_speed`, MGZ frame 738
+  `rings`, MHZ frame 0 `tails_cpu_routine`, plus LBZ frame 0 `camera_y`, AIZ
+  frame 1095 `x_speed`, and CNZ/MGZ input-alignment issues.
 
 Still outstanding:
 
@@ -922,9 +929,9 @@ Prioritize MTZ/MCZ/OOZ routes with sidekick death windows.
 - [ ] **Step 1: Run focused tests after every task.**
 - [x] **Step 2: Run trace replay invariant guard before any trace-related completion claim.**
 - [x] **Step 3: Run S3K must-keep-green tests after S3K sidekick/object/event changes.**
-- [ ] **Step 4: Run broader trace sweep after sidekick fixes.**
+- [x] **Step 4: Run broader trace sweep after sidekick fixes.**
 - [ ] **Step 5: Run full Maven test suite before final completion.**
-- [ ] **Step 6: Update `docs/TRACE_FRONTIER_LOG.md` for every frontier movement/regression/sweep.**
+- [x] **Step 6: Update `docs/TRACE_FRONTIER_LOG.md` for every frontier movement/regression/sweep.**
 
 ### Task 11: Performance Baseline and Exact-Equivalence Phase
 
