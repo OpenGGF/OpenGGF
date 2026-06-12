@@ -1900,6 +1900,10 @@ public class ObjectManager {
         return slotAllocator.activeCount();
     }
 
+    public int getLastDynamicSlotExclusive() {
+        return slotLayout.lastDynamicSlotExclusive();
+    }
+
     /**
      * Frees all reserved child slots for a given spawn, removing the tracking entry.
      * Called when the parent object is destroyed or unloaded.

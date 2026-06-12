@@ -10,6 +10,12 @@ All notable changes to the OpenGGF project are documented in this file.
   moves the ICZ complete-run trace from frame 3273 to frame 3323, a second
   lost-ring collection frontier.
 
+- **Lost-ring floor-probe cadence follows the active object table:** spilled
+  rings now derive their `(V_int_run_count + d7) & mask` phase from the
+  current game's object loop layout instead of assuming the 128-slot S1/S2
+  table, preserving S1/S2 behavior while matching S3K's smaller Obj37 loop
+  countdown.
+
 - **S3K invisible hurt blocks use ROM delayed ring-spill ordering:** S3K
   horizontal invisible hurt blocks now apply the `sub_24280` Y-position rewind
   before hurt and defer lost-ring spill until the next level tick, matching the

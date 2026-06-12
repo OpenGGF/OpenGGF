@@ -1266,8 +1266,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     break;
                 }
 
-                // phaseOffset matches the legacy computeSlotPhases mapping (127 - slot).
-                int phase = 127 - slotIndex;
+                int phase = phaseOffsetForSlot(objectManager, slotIndex);
                 LostRing ring = ringPool[activeRingCount];
                 ring.reset(phase, x, y,
                         xVel, yVel, LIFETIME_FRAMES);
@@ -1290,6 +1289,15 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
             player.setRingCount(0);
             audioManager.playSfx(GameSound.RING_SPILL);
+        }
+
+        private static int phaseOffsetForSlot(ObjectManager objectManager, int slotIndex) {
+            // ROM Obj37 floor probe uses the Process_Sprites d7 countdown
+            // (docs/skdisasm/sonic3k.asm:35662-35669,35965-35980).
+            int lastSlotExclusive = objectManager != null
+                    ? objectManager.getLastDynamicSlotExclusive()
+                    : 128;
+            return lastSlotExclusive - 1 - slotIndex;
         }
 
         /**

@@ -11,6 +11,7 @@ import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRegistry;
+import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.physics.Sensor;
@@ -257,6 +258,44 @@ class TestLostRingObjectInstance {
     }
 
     @Test
+    void spawnPhaseUsesObjectLoopCountdownForS1S2Layout() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        ObjectManager objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);
+        setField(levelManager, "objectManager", objectManager);
+
+        RingManager ringManager = buildRingManagerWithLevelManager(levelManager);
+        setField(levelManager, "ringManager", ringManager);
+
+        SpawnTestPlayableSprite player = new SpawnTestPlayableSprite((short) 0x100, (short) 0x100);
+
+        ringManager.spawnLostRings(player, 1, 0);
+
+        LostRingObjectInstance ring = objectManager.activeObjectsOfType(LostRingObjectInstance.class).get(0);
+        assertEquals(127 - ring.getSlotIndex(), ring.getPhaseOffset(),
+                "S1/S2 128-slot object loops keep the legacy 127-slot countdown phase");
+    }
+
+    @Test
+    void spawnPhaseUsesS3kObjectLoopCountdown() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        ObjectManager objectManager = new ObjectManager(List.of(),
+                new NoOpObjectRegistry(ObjectSlotLayout.SONIC_3K), 0, null, null);
+        setField(levelManager, "objectManager", objectManager);
+
+        RingManager ringManager = buildRingManagerWithLevelManager(levelManager);
+        setField(levelManager, "ringManager", ringManager);
+
+        SpawnTestPlayableSprite player = new SpawnTestPlayableSprite((short) 0x100, (short) 0x100);
+
+        ringManager.spawnLostRings(player, 1, 0);
+
+        LostRingObjectInstance ring = objectManager.activeObjectsOfType(LostRingObjectInstance.class).get(0);
+        assertEquals(ObjectSlotLayout.SONIC_3K.lastDynamicSlotExclusive() - 1 - ring.getSlotIndex(),
+                ring.getPhaseOffset(),
+                "S3K Obj37 cadence uses the smaller Object_RAM loop countdown, not 127 - slot");
+    }
+
+    @Test
     void spawnStopsOnAllocationFailureAndCapsAt32() throws Exception {
         LevelManager levelManager = GameServices.level();
         ObjectManager objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);
@@ -343,6 +382,16 @@ class TestLostRingObjectInstance {
     }
 
     private static final class NoOpObjectRegistry implements ObjectRegistry {
+        private final ObjectSlotLayout slotLayout;
+
+        private NoOpObjectRegistry() {
+            this(ObjectSlotLayout.SONIC_1);
+        }
+
+        private NoOpObjectRegistry(ObjectSlotLayout slotLayout) {
+            this.slotLayout = slotLayout;
+        }
+
         @Override
         public ObjectInstance create(ObjectSpawn spawn) {
             return null;
@@ -355,6 +404,11 @@ class TestLostRingObjectInstance {
         @Override
         public String getPrimaryName(int objectId) {
             return "noop";
+        }
+
+        @Override
+        public ObjectSlotLayout objectSlotLayout() {
+            return slotLayout;
         }
     }
 
