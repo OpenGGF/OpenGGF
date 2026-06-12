@@ -4,6 +4,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- Rewind now captures and restores live palette colors (normal + underwater
+  surfaces), so palette mutations (e.g. AIZ intro fire sequence) rewind
+  correctly instead of persisting through a rewind.
+
 - **S3K Obj37 floor probes now use shared ROM terrain search:** spilled-ring
   terrain bounces now consume `ObjectTerrainUtils.checkFloorDist`, including
   the shared FindFloor extension/regression behavior used by object terrain
