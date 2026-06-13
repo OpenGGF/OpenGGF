@@ -2979,10 +2979,10 @@ public class SidekickCpuController {
     private void pickupLeaderForCarry() {
         // ROM sub_1459E (sonic3k.asm:27399): clear Sonic's velocities/angle,
         // parent him to Tails, then copy Tails's current x/y velocity into both
-        // Sonic and the latch globals used by Tails_Carry_Sonic.
+        // Sonic and the latch globals used by Tails_Carry_Sonic. It does not
+        // clear Status_Roll or restore radii; a regrabbed jump-off stays curled.
         ObjectControlState.nativeBit7FullControl().applyTo(leader);
         leader.setAir(true);
-        leader.setRolling(false);
         leader.setRollingJump(false);
         leader.setSpindash(false);
         leader.setSpindashCounter((short) 0);
@@ -3309,13 +3309,29 @@ public class SidekickCpuController {
         // calls resetOnFloor(), which early-returns when isObjectControlled() is
         // true, so it would not apply this carried landing state. The inline
         // handler mirrors the flat-floor result used by SonicKnux_DoLevelCollision:
-        // y_vel = 0, inertia = x_vel, then the Player_TouchFloor tail clears
-        // Status_InAir/Push/RollJump (sonic3k.asm:24366-24369).
+        // Player_TouchFloor first restores default radii and clears Status_Roll
+        // with a y_pos adjustment based on the previous y_radius
+        // (sonic3k.asm:24335-24363), then clears Status_InAir/Push/RollJump
+        // (sonic3k.asm:24366-24369).
         CollisionSystem collision = Objects.requireNonNull(
                 leader.currentCollisionSystem(),
                 "CollisionSystem must be available during CARRYING state "
                         + "(Tails-carry post-parentage probe, sonic3k.asm:27330)");
         collision.resolveAirCollision(FrameCollisionPlan.terrainOnly(), leader, sprite -> {
+            if (sprite.getRolling()) {
+                int oldCentreY = sprite.getCentreY();
+                int oldYRadius = sprite.getYRadius();
+                sprite.setRolling(false);
+                int radiusDelta = oldYRadius - sprite.getStandYRadius();
+                if (((sprite.getAngle() + 0x40) & 0x80) != 0) {
+                    radiusDelta = -radiusDelta;
+                }
+                sprite.setCentreYPreserveSubpixel((short) (oldCentreY + radiusDelta));
+            } else if (sprite.getXRadius() != sprite.getStandXRadius()
+                    || sprite.getYRadius() != sprite.getStandYRadius()) {
+                sprite.applyStandingRadii(false);
+            }
+
             // ROM Player_TouchFloor (sonic3k.asm:24366-24369):
             //   bclr #Status_InAir,status(a0)
             //   bclr #Status_Push,status(a0)

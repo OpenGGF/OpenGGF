@@ -1,5 +1,44 @@
 # Trace Frontier Log
 
+## 2026-06-13 - S3K CNZ carry regrab preserves roll state
+
+- Scope: fixed the S3K CNZ Tails-carry regrab and landing handoff by keeping
+  Sonic curled after the ROM regrab path and restoring standing radii only when
+  the carried landing reaches `Player_TouchFloor`. This is S3K carry-state
+  parity, not trace-state hydration or a route/frame carve-out.
+- Disassembly basis:
+  - S3K carry jump-off writes rolling radii, sets `Status_Roll`, and clears
+    `Status_RollJump` (`docs/skdisasm/sonic3k.asm:27256-27264`).
+  - S3K `sub_1459E` regrab clears Sonic's velocities/angle, parents Sonic to
+    Tails, sets `object_control=$03`, sets `Status_InAir`, clears
+    `Status_RollJump`, and copies carry velocities; it does not clear
+    `Status_Roll` or restore radii (`docs/skdisasm/sonic3k.asm:27382-27414`).
+  - S3K `Player_TouchFloor` restores default radii, clears `Status_Roll`, and
+    adjusts `y_pos` from the old `y_radius` before clearing air/push/roll-jump
+    state (`docs/skdisasm/sonic3k.asm:24335-24369`).
+- Focused verification:
+  - `mvn -Dmse=off "-Dtest=TestS3kCnzCarryHeadless#cnz1CarryRegrabPreservesRollingStatusAndRadii" "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+  - Result: **1 test**, 0 failures, 0 errors.
+  - `mvn -Dmse=off "-Dtest=TestS3kCnzCompleteRunTraceReplay" "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+  - Result: trace remains red, but `s3k_cnz1` advances to frame **180** `y`
+    expected `0x0685`, actual `0x0684`.
+- Full sweep command:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+- Full sweep result:
+  - **Tests run: 90, Failures: 61, Errors: 1, Skipped: 0** from Maven/Surefire
+    in 7:46. Expected-red sweep; the intended `s3k_cnz1` frontier advanced.
+- Frontier movement:
+
+| Trace | Previous frontier | New frontier | Delta |
+|---|---:|---:|---:|
+| `s3k_cnz1` | f97 `rolling` `1 -> 0` | f180 `y` `0x0685 -> 0x0684` | +83 |
+
+Current moved row from the full sweep:
+
+| Trace | Frontier | Field | Expected | Actual | Errors |
+|---|---:|---|---:|---:|---:|
+| s3k_cnz1 | f180 | y | 0x0685 | 0x0684 | 6334 |
+
 ## 2026-06-13 - S2 OOZ death preserves ROM on-object status
 
 - Scope: fixed the S2 OOZ Tails death frontier by preserving the ROM

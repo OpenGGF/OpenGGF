@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K CNZ Tails-carry regrab preserves ROM roll state:** Tails' S3K
+  `sub_1459E` carry regrab no longer clears `Status_Roll` or restores standing
+  radii after Sonic jumps out of the carry, and the carried landing path now
+  applies `Player_TouchFloor`'s radius restore before clearing roll state. This
+  advances `s3k_cnz1` from frame 97 to frame 180.
+
 - **S2 OOZ death-state parity now preserves and releases the ROM on-object bit:**
   KillCharacter-equivalent death paths preserve `Status_OnObj` on the death
   entry frame, and the S2 deferred sidekick corpse fall clears the stale support
