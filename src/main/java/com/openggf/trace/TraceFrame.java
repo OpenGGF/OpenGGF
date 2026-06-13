@@ -9,15 +9,14 @@ import java.util.Objects;
  *
  * <p>Supports v1 (11 columns), v2 (18 columns), v2.1 (19 columns), v2.2 (20 columns),
  * and v3 (22 columns) CSV formats. v2 adds diagnostic fields: x_sub, y_sub, routine,
- * camera_x, camera_y, rings, status_byte. Routine/status/camera/rings are also
+ * camera_x, camera_y, rings, status_byte. Subpixels/routine/status/camera/rings are
  * compared by {@link TraceBinder} when the engine-side snapshot carries them.
  * v2.1 adds gameplay_frame_counter (ROM's
  * Level_MainLoop counter). v2.2 adds stand_on_obj (SST slot index of object Sonic is
  * riding on). v3 adds vblank_counter and lag_counter. v5 appends optional first-sidekick
  * state. v6 stores explicit named character blocks for both Sonic and Tails while
- * retaining the same in-memory primary/sidekick representation. Diagnostic fields are
- * not compared by {@link TraceBinder} but appear in divergence report context windows
- * for debugging.
+ * retaining the same in-memory primary/sidekick representation. Non-compared diagnostic
+ * fields still appear in divergence report context windows for debugging.
  */
 public record TraceFrame(
     int frame,

@@ -4,6 +4,16 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Trace frontiers now include subpixel state:** `TraceBinder` compares Sonic
+  and Tails `x_sub`/`y_sub` diagnostics when engine snapshots are available,
+  preventing false frontiers that were masking earlier subpixel drift.
+
+- **S3K carried landing preserves ROM subpixel residue:** Tails' S3K carried
+  landing path no longer clears Sonic's vertical subpixel during
+  `Player_TouchFloor` handoff. This exposes the true `s3k_cnz1` frontier at
+  frame 319 in Tails CPU input after the earlier frame-108 subpixel divergence
+  is cleared.
+
 - **S3K CNZ Tails-carry regrab preserves ROM roll state:** Tails' S3K
   `sub_1459E` carry regrab no longer clears `Status_Roll` or restores standing
   radii after Sonic jumps out of the carry, and the carried landing path now

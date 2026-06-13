@@ -171,6 +171,15 @@ public class TraceBinder {
             tolerances.positionWarn(), tolerances.positionError(), false));
         fields.put("y", compareNumeric("y", expected.y(), actualY,
             tolerances.positionWarn(), tolerances.positionError(), false));
+        if (engineDiag != null && expected.hasExtendedData()
+                && engineDiag.xSub() >= 0 && engineDiag.ySub() >= 0) {
+            fields.put("x_sub", compareNumeric("x_sub",
+                    expected.xSub() & 0xFFFF, engineDiag.xSub() & 0xFFFF,
+                    0, 1, false));
+            fields.put("y_sub", compareNumeric("y_sub",
+                    expected.ySub() & 0xFFFF, engineDiag.ySub() & 0xFFFF,
+                    0, 1, false));
+        }
 
         // Speed comparisons
         fields.put("x_speed", compareNumeric("x_speed", expected.xSpeed(), actualXSpeed,
@@ -385,6 +394,12 @@ public class TraceBinder {
             tolerances.positionWarn(), tolerances.positionError(), false));
         fields.put(prefix + "y", compareNumeric(prefix + "y", expected.y(), actual.y(),
             tolerances.positionWarn(), tolerances.positionError(), false));
+        fields.put(prefix + "x_sub", compareNumeric(prefix + "x_sub",
+                expected.xSub() & 0xFFFF, actual.xSub() & 0xFFFF,
+                0, 1, false));
+        fields.put(prefix + "y_sub", compareNumeric(prefix + "y_sub",
+                expected.ySub() & 0xFFFF, actual.ySub() & 0xFFFF,
+                0, 1, false));
         fields.put(prefix + "x_speed",
             compareNumeric(prefix + "x_speed", expected.xSpeed(), actual.xSpeed(),
                 tolerances.speedWarn(), tolerances.speedError(),

@@ -204,9 +204,14 @@ class TestS3kCnzCarryHeadless {
     void cnz1CarryGroundsOnRomLandingFrame() {
         AbstractPlayableSprite sonic = fixture.sprite();
 
-        for (int i = 0; i < 107; i++) {
+        for (int i = 0; i < 106; i++) {
             fixture.stepFrame(false, false, false, false, false);
         }
+        assertTrue(sonic.getAir(),
+                "Precondition: frame 106 should still be airborne before the landing probe");
+        int preLandingYSub = sonic.getYSubpixelRaw();
+
+        fixture.stepFrame(false, false, false, false, false);
 
         assertFalse(sonic.getAir(),
                 () -> String.format(
@@ -219,8 +224,8 @@ class TestS3kCnzCarryHeadless {
                         sonic.getGSpeed() & 0xFFFF));
         assertEquals((short) 0x06CC, sonic.getCentreY(),
                 "Frame 107: carried Sonic should snap to the CNZ1 start-floor height");
-        assertEquals(0, sonic.getYSubpixelRaw(),
-                "Frame 107: carried landing should clear Sonic's vertical subpixel remainder");
+        assertEquals(preLandingYSub, sonic.getYSubpixelRaw(),
+                "Frame 107: Player_TouchFloor writes y_pos but preserves Sonic's y_sub");
         assertEquals((short) 0, sonic.getYSpeed(),
                 "Frame 107: landing probe should clear Sonic.y_speed");
         assertEquals(sonic.getXSpeed(), sonic.getGSpeed(),

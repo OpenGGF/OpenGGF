@@ -3337,7 +3337,6 @@ public class SidekickCpuController {
             //   bclr #Status_Push,status(a0)
             //   bclr #Status_RollJump,status(a0)
             //   move.b #0,jumping(a0)
-            sprite.setSubpixelRaw(sprite.getXSubpixelRaw(), 0);
             sprite.setYSpeed((short) 0);
             sprite.setGSpeed(sprite.getXSpeed());
             sprite.setAir(false);

@@ -1,5 +1,42 @@
 # Trace Frontier Log
 
+## 2026-06-13 - Trace subpixels define true frontiers
+
+- Scope: widened `TraceBinder` so primary and sidekick `x_sub`/`y_sub` are
+  strict comparison fields whenever the trace has extended data and
+  `EngineDiagnostics` carries matching engine subpixels. This is comparison
+  tooling only; trace rows remain read-only diagnostic input.
+- S3K carry landing fix: the carried landing handoff no longer clears Sonic's
+  `y_sub` after `Player_TouchFloor`. The S3K disassembly clears air/push/
+  roll-jump/jumping state there but does not clear `y_sub`
+  (`docs/skdisasm/sonic3k.asm:24366-24369`).
+- Focused verification:
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.TestS3kCnzCarryHeadless,com.openggf.trace.TestTraceBinderComparisonDedup" "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen" test -B`
+  - Result: **12 tests**, 0 failures, 0 errors.
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzCompleteRunTraceReplay" "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+  - Result: trace remains red, but `s3k_cnz1` advances to frame **319**
+    `tails_cpu_ctrl2_held` expected `0x0018`, actual `0x0008`.
+- Full sweep command:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+- Full sweep result:
+  - **Tests run: 90, Failures: 62, Errors: 1, Skipped: 0** from Maven/Surefire
+    in 8:08. Expected-red sweep; the intended `s3k_cnz1` frontier advanced.
+  - Current passing trace replay rows from this sweep: `s1_credits_00_ghz1`,
+    `s1_credits_02_syz3`, `s1_credits_04_slz3`, `s1_credits_06_sbz2`,
+    `s1_credits_07_ghz1b`, `s1_ghz1_fullrun`, `s2_ehz1`, `s2_mcz1`,
+    `s2_scz1`, `s2_wfz`.
+- Frontier movement:
+
+| Trace | Previous published frontier | True exposed frontier | New frontier | Delta |
+|---|---:|---:|---:|---:|
+| `s3k_cnz1` | f180 `y` `0x0685 -> 0x0684` | f108 `y_sub` `0x0800 -> 0x0000` | f319 `tails_cpu_ctrl2_held` `0x0018 -> 0x0008` | +139 from f180 |
+
+Current moved row from the full sweep:
+
+| Trace | Frontier | Field | Expected | Actual | Errors |
+|---|---:|---|---:|---:|---:|
+| s3k_cnz1 | f319 | tails_cpu_ctrl2_held | 0x0018 | 0x0008 | 6808 |
+
 ## 2026-06-13 - S3K CNZ carry regrab preserves roll state
 
 - Scope: fixed the S3K CNZ Tails-carry regrab and landing handoff by keeping
