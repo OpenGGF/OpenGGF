@@ -1450,6 +1450,13 @@ public class SidekickCpuController {
     }
 
     private void updateSpawning() {
+        // S2 TailsCPU_Spawning only tests the raw/manual Ctrl_2 logical button
+        // word and does not synthesize follow input (docs/s2disasm/s2.asm:
+        // 39103-39130). The generated Ctrl_2 trace view therefore returns to
+        // manual input on the first routine-2 frame after TailsCPU_Despawn.
+        diagnosticCtrl2HeldLatch = controller2Held & MANUAL_HELD_MASK;
+        diagnosticCtrl2PressedLatch = controller2Logical & MANUAL_HELD_MASK;
+
         // Use effective leader for respawn checks — if our direct leader is also
         // despawned, chain-heal to whoever IS available (allows parallel respawn
         // instead of sequential cascade).
@@ -3869,9 +3876,10 @@ public class SidekickCpuController {
         sidekick.setControlLocked(true);
         // NOT object_controlled - DEAD_FALLING is its own dispatch state
         // so updateDeadFalling fires on the next tick regardless.
-        lastInteractObjectId = -1; // ROM Tails_interact_ID unset until next UpdateObjInteract
-        // S3K Kill_Character does not write Tails_CPU_interact; preserve the
-        // ROM-visible pointer word until sub_13EFC samples another stood-on
+        // S2 Kill_Character / Obj02_Dead and TailsCPU_Despawn do not write
+        // Tails_interact_ID (docs/s2disasm/s2.asm:41136-41148,39391-39400).
+        // S3K Kill_Character likewise leaves Tails_CPU_interact alone. Preserve
+        // the ROM-visible latch until active play samples another stood-on
         // object or active play RAM is explicitly reset.
     }
 

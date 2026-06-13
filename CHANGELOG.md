@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 HTZ sidekick despawn preserves the ROM interact latch:** Tails CPU
+  boundary-kill/despawn no longer clears `Tails_interact_ID`, and routine-2
+  spawning diagnostics return to the raw Player 2 logical input word. This
+  advances `s2_htz1` from frame 470 to frame 1810, exposing the next
+  Tails/status-bit frontier.
+
 - **S2 HTZ object slot parity now follows ROM allocation paths:** Obj03 layer
   switchers now occupy an invisible SST slot, S2 initial spawn preload uses the
   same vertical-bypass rule as ROM streaming, and HTZ Obj16 now creates its
