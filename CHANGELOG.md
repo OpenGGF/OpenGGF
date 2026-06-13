@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 SBZ1 girders now use the ROM balance width:** Obj70 now exposes its
+  `$60` active width to Sonic's on-object balance/facing test while keeping the
+  generic S1 `SolidObject` right-edge and latch semantics, clearing the
+  `s1_credits_05_sbz1` frame-413 status-byte trace frontier. Obj71 invisible
+  barriers now also report their `SolidObject_NoRenderChk` profile for shared
+  solid-contact parity.
+
 - **S1 push blocks now keep exact right-edge side contact solid:** Obj33 now
   carries the ROM `Solid_ChkEnter` inclusive right-edge comparison through the
   shared solid profile, clearing the `s1_credits_01_mz2` frame-262

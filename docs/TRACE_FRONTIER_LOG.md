@@ -1,5 +1,46 @@
 # Trace Frontier Log
 
+## 2026-06-13 - S1 Obj70 girder clears SBZ1 credits status frontier
+
+- Scope: S1 Obj70 girders now expose the ROM `obActWid=$60` balance width to
+  Sonic's on-object edge test, keep the generic S1 `SolidObject` inclusive
+  right-edge profile, and preserve standing/pushing latch ownership on the live
+  girder instance. Obj71 invisible barriers also now expose their
+  `SolidObject_NoRenderChk` profile and trace debug geometry without temporary
+  contact diagnostics.
+- Disassembly basis: Obj70 `Gird_Main` initializes `obActWid` to `$60` before
+  `Gird_Action` calls the generic `SolidObject` helper
+  (`docs/s1disasm/_incObj/70 SBZ Girder Block.asm`). S1 `Sonic_Move` reads the
+  stood-on object's `obActWid(a1)` for the balance/facing edge test, while
+  `Solid_ChkEnter` rejects positions beyond the right edge with `bhi`, keeping
+  exact-edge contact inside the solid window
+  (`docs/s1disasm/_incObj/01 Sonic.asm`;
+  `docs/s1disasm/_incObj/sub SolidObject.asm`). Obj71 routes through
+  `SolidObject_NoRenderChk` after its own visibility check
+  (`docs/s1disasm/_incObj/71 Invisible Solid Barriers.asm`).
+- Focused verification:
+  - `mvn "-Dtest=TestSonic1GirderBlockObjectInstance,TestSonic1InvisibleBarrierObjectInstance" test`
+  - Result: **2 tests**, 0 failures, 0 errors.
+  - `mvn "-Dtest=com.openggf.tests.trace.s1.TestS1Credits05Sbz1TraceReplay" test`
+  - Result: **1 test**, 0 failures, 0 errors. The prior frame **413**
+    `status_byte` frontier expected `0x0029`, actual `0x0028`; the trace now
+    reports `All frames match trace. No divergences.`
+- CI guard verification:
+  - `mvn "-Dtest=TestNoServicesInObjectConstructors,TestBuildToolingGuard,TestArchitecturalSourceGuard,TestArchUnitRules,TestPlayableRuntimeAccessGuard,TestObjectPhysicsStandardizationGuard,TestRewindFieldAudit,TestRewindTransientGuard,TestSonic3kSpringObjectInstance" test`
+  - Result: **191 tests**, 0 failures, 0 errors across the named guard classes.
+- Full trace sweep:
+  - First attempt: `mvn "-Dtest=*TraceReplay" test`
+  - Result: infrastructure failure, stopped after `Java heap space` in the
+    default 4-fork/1g run.
+  - Stable rerun: `mvn "-Dtest=*TraceReplay" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -javaagent:C:\Users\farre\.m2\repository\org\mockito\mockito-core\5.14.2\mockito-core-5.14.2.jar -Xmx3g" test`
+  - Result: expected-red sweep; surefire TraceReplay XML summary is **123 test
+    methods**, **60 failures**, **1 error**, **0 skipped** across **61 trace XML
+    files**. `TestS1Credits05Sbz1TraceReplay` is no longer among the failures.
+- Remaining frontier: continue the status/contact/radius cluster with the next
+  earliest still-failing candidate. The broader expected-red sweep remains
+  dominated by the known S1 radius/rolling/spring clusters, S2/S3K Tails CPU
+  signatures, and S3K complete-run/object-slot frontiers.
+
 ## 2026-06-13 - S1 Obj33 push block clears MZ2 credits status frontier
 
 - Scope: S1 Obj33 push blocks now expose a shared solid routine profile with
