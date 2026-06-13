@@ -1,5 +1,40 @@
 # Trace Frontier Log
 
+## 2026-06-13 - S3K monitor right edge preserves side push
+
+- Scope: S3K monitor wrappers now expose `SolidObject_cont`'s inclusive
+  right-edge comparison through the shared solid profile. The exact right edge
+  remains in the side-contact range, so a zero-distance contact can still set
+  `Status_Push` when Sonic is pinned against a monitor. This models the object
+  routine semantics; it does not hydrate engine state from trace rows and does
+  not add a zone, route, or frame carve-out.
+- Disassembly basis: `SolidObject_Monitor_SonicKnux` and
+  `SolidObject_Monitor_Tails` branch into the shared `SolidObject_cont`
+  classifier (`docs/skdisasm/sonic3k.asm:40559-40590,41394-41632`), whose
+  right-edge rejection uses the compare/`bhi` path instead of rejecting equality.
+- Focused verification:
+  - `mvn -Dmse=off "-Dtest=com.openggf.game.sonic3k.objects.TestSonic3kMonitorObjectInstance" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+  - Result: **14 tests**, 0 failures, 0 errors.
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+  - Result: trace remains red, but `s3k_hcz1` advances to frame **407**
+    `tails_status_byte` expected `0x004A`, actual `0x0042`.
+- Full sweep command:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+- Full sweep result:
+  - **Tests run: 90, Failures: 62, Errors: 1, Skipped: 0** from Maven/Surefire
+    in 7:44. Expected-red sweep; the intended `s3k_hcz1` frontier advanced.
+- Frontier movement:
+
+| Trace | Previous frontier | New frontier | Delta |
+|---|---:|---:|---:|
+| `s3k_hcz1` | f97 `status_byte` `0x0021 -> 0x0001` | f407 `tails_status_byte` `0x004A -> 0x0042` | +310 |
+
+Current moved row from the full sweep:
+
+| Trace | Frontier | Field | Expected | Actual | Errors |
+|---|---:|---|---:|---:|---:|
+| s3k_hcz1 | f407 | tails_status_byte | 0x004A | 0x0042 | 3329 |
+
 ## 2026-06-13 - Trace subpixels define true frontiers
 
 - Scope: widened `TraceBinder` so primary and sidekick `x_sub`/`y_sub` are

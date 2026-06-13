@@ -543,13 +543,22 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // ROM SolidObject_cont rejects with bhi after comparing relX against
+        // width*2, so the exact right edge remains a zero-distance side contact.
+        // HCZ1 trace frame 97 depends on that contact setting Status_Push while
+        // Sonic is pinned against the monitor.
+        return true;
+    }
+
+    @Override
     public SolidRoutineProfile getSolidRoutineProfile() {
         // S3K monitor wrappers gate roll-animation hits, then branch into the
         // shared SolidObject_cont side/top classifier (docs/skdisasm/sonic3k.asm:
         // 40559-40590, 41394-41632). That normal classifier is required for
         // P2 side contact to win over top landing when horizontal penetration is
         // smaller, e.g. CNZ f11061 against the monitor at $1A50,$00D0.
-        return SolidRoutineProfile.fullSolid(false);
+        return SolidRoutineProfile.fullSolid(false, usesInclusiveRightEdge(), false);
     }
 
     @Override

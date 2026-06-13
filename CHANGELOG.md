@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K monitor side contacts now keep the ROM right-edge boundary:** S3K
+  monitor wrappers now carry `SolidObject_cont`'s inclusive right-edge
+  comparison through the shared solid profile, so exact-edge side contact sets
+  `Status_Push`. This advances `s3k_hcz1` from frame 97 to frame 407.
+
 - **Trace frontiers now include subpixel state:** `TraceBinder` compares Sonic
   and Tails `x_sub`/`y_sub` diagnostics when engine snapshots are available,
   preventing false frontiers that were masking earlier subpixel drift.

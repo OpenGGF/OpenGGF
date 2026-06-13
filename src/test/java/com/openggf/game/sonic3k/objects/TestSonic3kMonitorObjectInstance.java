@@ -325,6 +325,10 @@ class TestSonic3kMonitorObjectInstance {
         assertEquals(0, profile.monitorVerticalOffset(),
                 "S3K monitor wrappers branch into SolidObject_cont; the +4 normal-gravity overlap offset is applied by the shared full-solid path");
         assertFalse(profile.stickyContactBuffer());
+        assertTrue(monitor.usesInclusiveRightEdge(),
+                "S3K SolidObject_cont keeps the exact right edge inside the side-contact range");
+        assertTrue(profile.inclusiveRightEdge(),
+                "S3K monitor profiles must preserve the SolidObject_cont cmp/bhi right-edge comparison");
     }
 
     @Test
