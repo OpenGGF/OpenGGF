@@ -137,6 +137,15 @@ public class DrowningController {
      * @return true if the player should drown (air depleted)
      */
     public boolean update() {
+        // ROM order checks the one-second air timer before the pending
+        // mouth-bubble timer, so same-frame expirations use the fresh air-event
+        // burst state. See S1 Drown_Countdown, S2 Obj0A_Countdown, and S3K
+        // AirCountdown_Countdown.
+        frameTimer--;
+        if (frameTimer <= 0) {
+            return performAirEvent();
+        }
+
         // ROM Obj0A_MakeBubbleMaybe: while obj0a_flags is nonzero, the
         // mouth-bubble object decrements its per-bubble timer every frame and
         // allocates the next bubble when it underflows.
@@ -145,14 +154,6 @@ public class DrowningController {
             if (nextBubbleTimer < 0) {
                 spawnRomMouthBubble();
             }
-        }
-
-        // Decrement frame timer
-        frameTimer--;
-
-        if (frameTimer <= 0) {
-            // Air event occurs
-            return performAirEvent();
         }
 
         return false;

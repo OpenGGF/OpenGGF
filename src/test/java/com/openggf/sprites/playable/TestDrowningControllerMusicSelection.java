@@ -15,6 +15,7 @@ import com.openggf.audio.GameAudioProfile;
 import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
+import com.openggf.game.GameRng;
 import com.openggf.game.sonic1.audio.Sonic1AudioProfile;
 import com.openggf.game.sonic1.audio.Sonic1Music;
 import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
@@ -24,8 +25,10 @@ import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.level.LevelManager;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
+import java.lang.reflect.Field;
 import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestDrowningControllerMusicSelection {
@@ -95,6 +98,45 @@ class TestDrowningControllerMusicSelection {
                 "fixed Obj_AirCountdown should still trigger drowning music at air_left=12");
         assertEquals(Sonic3kMusic.DROWNING.id, backend.lastMusicId);
         assertTrue(controller.isDrowningMusicPlaying());
+    }
+
+    @Test
+    void genericCountdownProcessesAirEventBeforePendingBubbleTimer() throws Exception {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.activeGameplayMode();
+        GameServices.level().resetState();
+
+        long seed = 0x13579BDFL;
+        GameRng rng = GameServices.rng();
+        rng.setSeed(seed);
+
+        DrowningController controller = new DrowningController(new Sonic("test", (short) 0, (short) 0));
+        setPrivateInt(controller, "frameTimer", 1);
+        setPrivateInt(controller, "bubbleFlags", 1);
+        setPrivateInt(controller, "bubblesRemainingInBurst", 1);
+        setPrivateInt(controller, "nextBubbleTimer", 0);
+
+        boolean drowned = controller.update();
+
+        GameRng expected = new GameRng(rng.flavour(), seed);
+        expected.nextBits(1);      // Obj0A_Countdown: choose one- or two-bubble burst.
+        expected.nextBits(0x0F);   // Obj0A_MakeBubbleNow: seed the new mouth-bubble timer.
+        assertFalse(drowned);
+        assertEquals(29, getPrivateInt(controller, "remainingAir"));
+        assertEquals(expected.getSeed(), rng.getSeed(),
+                "same-frame air events must not consume the stale pending mouth-bubble RNG first");
+    }
+
+    private static void setPrivateInt(DrowningController controller, String fieldName, int value) throws Exception {
+        Field field = DrowningController.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.setInt(controller, value);
+    }
+
+    private static int getPrivateInt(DrowningController controller, String fieldName) throws Exception {
+        Field field = DrowningController.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getInt(controller);
     }
 
     private static final class CapturingBackend implements AudioBackend {

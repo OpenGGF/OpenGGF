@@ -1,5 +1,37 @@
 # Trace Frontier Log
 
+## 2026-06-13 - Drowning countdown same-frame RNG order corrected
+
+- Scope: `DrowningController.update()` now processes the generic one-second
+  air-loss event before any pending mouth-bubble timer underflow. Same-frame
+  expirations now consume RNG from the freshly reset countdown burst state,
+  matching the ROM object phase order instead of spawning an old pending bubble
+  first.
+- Disassembly basis: S1 `Drown_Countdown` decrements `drown_time`, resets
+  `objoff_36`, chooses `objoff_34`, reduces air, then branches through
+  `.gotomakenum` to `.makenum`; only the `.nochange` path decrements the
+  pending `objoff_3A` timer
+  (`docs/s1disasm/_incObj/0A LZ Drowning Countdown.asm`). S2
+  `Obj0A_Countdown` follows the same order, branching from `Obj0A_ReduceAir`
+  to `Obj0A_MakeBubbleNow` before the `Obj0A_MakeBubbleMaybe` pending-timer
+  path (`docs/s2disasm/s2.asm`). S3K `AirCountdown_Countdown` likewise reduces
+  air and branches to `AirCountdown_MakeItem`, with pending timer handling only
+  in `loc_18594` (`docs/skdisasm/sonic3k.asm`).
+- Focused verification:
+  - `mvn "-Dtest=com.openggf.sprites.playable.TestDrowningControllerMusicSelection" test`
+  - Result: the specific surefire XML reports **5 tests**, 0 failures, 0
+    errors, including the new same-frame RNG-order regression. Maven's relaxed
+    summary still listed the repository's expected-red trace set because the
+    local selector run emitted aggregate historical failures.
+  - `mvn "-Dtest=TestS1Sbz3CompleteRunTraceReplay" test`
+  - Result: expected-red trace; first error remains frame **1477** `rolling`
+    expected `0`, actual `1` with **4688 errors**, 0 warnings.
+- Remaining frontier: this corrected a shared ROM-order mismatch but did **not**
+  advance the current `s1_sbz3` radius/rolling frontier. Continue the
+  frame-1477 single-frame investigation at the Obj64/get-air collision edge
+  rather than treating the countdown-order hypothesis as the owner of this
+  frontier.
+
 ## 2026-06-13 - S1 Obj70 girder clears SBZ1 credits status frontier
 
 - Scope: S1 Obj70 girders now expose the ROM `obActWid=$60` balance width to

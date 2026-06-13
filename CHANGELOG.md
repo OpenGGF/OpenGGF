@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Generic drowning countdown now preserves ROM timer ordering:** S1/S2/S3K
+  air countdown processing now handles the one-second air-loss event before
+  pending mouth-bubble timer underflows, so same-frame expirations consume RNG
+  from the fresh ROM burst state instead of an old pending bubble.
+
 - **S1 SBZ1 girders now use the ROM balance width:** Obj70 now exposes its
   `$60` active width to Sonic's on-object balance/facing test while keeping the
   generic S1 `SolidObject` right-edge and latch semantics, clearing the
