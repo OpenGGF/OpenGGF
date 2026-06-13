@@ -89,6 +89,11 @@ class DebugS1Lz2BubblesOccupancyProbe {
                     : null;
             Assumptions.assumeTrue(objectManager != null,
                     "ObjectManager unavailable after bootstrap");
+            System.out.printf("[s1-lz2-obj64-count] policy objectPreludeFrames=%d startTraceIndex=%d%n",
+                    TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace),
+                    boot.replayStart().startingTraceIndex());
+            System.out.println("[s1-lz2-obj64-count] post-bootstrap engine Obj64: "
+                    + summarizeEngineObj64(objectManager));
 
             int startTraceIndex = boot.replayStart().startingTraceIndex();
             for (int i = startTraceIndex; i < trace.frameCount(); i++) {

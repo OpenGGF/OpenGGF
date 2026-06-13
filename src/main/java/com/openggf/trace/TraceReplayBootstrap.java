@@ -226,19 +226,30 @@ public final class TraceReplayBootstrap {
     }
 
     /**
-     * Sonic 2 runs level objects during the title-card sequence before
+     * Sonic 1 runs one native object pass after initial ObjPosLoad and before
+     * {@code Level_MainLoop} begins ticking {@code v_framecount}: see
+     * {@code docs/s1disasm/sonic.asm:2875-2876} and
+     * {@code docs/s1disasm/sonic.asm:2985-3003}. Headless replay starts at the
+     * first compared gameplay row, so S1 traces whose first row has gameplay
+     * counter 1 need that single native prelude object pass reproduced instead
+     * of copied from trace diagnostics.
+     *
+     * <p>Sonic 2 runs level objects during the title-card sequence before
      * {@code Level_started_flag} is set and before {@code Level_frame_counter}
      * begins ticking in {@code Level_MainLoop}: see s2.asm:5004-5008,
      * s2.asm:5060-5066, and s2.asm:5077-5092. Headless replay starts directly
      * at gameplay frame 1, so it must reproduce that native object prelude
      * without copying pre-trace SST snapshots back into the engine.
      *
-     * <p>Kept as a zero-valued metadata-only compatibility knob. S2 Tornado
-     * title-card object preludes depend on the live ObjB2 routine/subtype
-     * loaded for the route and are therefore selected by
+     * <p>S2 Tornado title-card object preludes depend on the live ObjB2
+     * routine/subtype loaded for the route and are therefore selected by
      * {@code TraceReplaySessionBootstrap}, not by trace zone metadata here.
      */
     public static int levelObjectTitleCardPreludeFramesForTraceReplay(TraceData trace) {
+        int s1PreludeFrames = resolveS1LevelStartObjectPreludeFrames(trace);
+        if (s1PreludeFrames > 0) {
+            return s1PreludeFrames;
+        }
         return 0;
     }
 
@@ -294,6 +305,24 @@ public final class TraceReplayBootstrap {
      * native title-card window contributes 26 leader-history writes.
      */
     private static final int S2_SIDEKICK_TITLE_CARD_PRELUDE_FRAMES = 26;
+
+    private static final int S1_LEVEL_START_OBJECT_PRELUDE_FRAMES = 1;
+
+    private static int resolveS1LevelStartObjectPreludeFrames(TraceData trace) {
+        if (trace == null || trace.frameCount() == 0) {
+            return 0;
+        }
+        TraceMetadata meta = trace.metadata();
+        if (meta == null
+                || !"s1".equals(meta.game())
+                || replaySeedTraceIndexForTraceReplay(trace) != 0) {
+            return 0;
+        }
+        TraceFrame firstFrame = trace.getFrame(0);
+        return firstFrame.gameplayFrameCounter() == 1
+                ? S1_LEVEL_START_OBJECT_PRELUDE_FRAMES
+                : 0;
+    }
 
     /**
      * Frame count of the S3K pre-LevelLoop sidekick prelude. Returns 1 only

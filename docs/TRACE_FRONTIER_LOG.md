@@ -1,5 +1,41 @@
 # Trace Frontier Log
 
+## 2026-06-13 - S1 LZ2 Obj64 bootstrap frontier advances to maker cadence
+
+- Scope: trace replay now models S1's one-frame level-start object prelude for
+  frame-1 seed traces, and S1 Obj64 bubbles preserve the ROM `obRender=$84`
+  first-tick render gate for makers and spawned bubbles. This is
+  replay/bootstrap and object-state parity only; trace rows remain
+  comparison-only diagnostic input and do not hydrate engine state.
+- Disassembly basis: S1 enters level gameplay by running `ObjPosLoad`,
+  `ExecuteObjects`, and `BuildSprites` before `Level_MainLoop` increments
+  `v_framecount` (`docs/s1disasm/sonic.asm:2875-2877`, `2985-3003`). Obj64
+  `Bub_Main` initializes `obRender=$84` before maker/child routines test the
+  render bit (`docs/s1disasm/_incObj/64 LZ Air Bubbles.asm`).
+- Focused verification:
+  - `mvn -Dmse=off "-Dtest=com.openggf.trace.TestPreludeFramesKnobsZero" test -B`
+  - Result: **11 tests**, 0 failures, 0 errors.
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s1.DebugS1Lz2BubblesOccupancyProbe" "-Dsonic1.rom.path=s1.gen" "-DfailIfNoTests=false" "-Dsurefire.argLine=-Xshare:off -Xmx2g" test -B`
+  - Result: **1 test**, 0 failures, 0 errors. Obj64 count frontier advanced
+    from frame **12** to frame **882**.
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s1.TestS1Lz2CompleteRunTraceReplay" "-Dsonic1.rom.path=s1.gen" "-DfailIfNoTests=false" "-Dsurefire.argLine=-Xshare:off -Xmx2g" test -B`
+  - Result: expected-red trace; complete-run frontier advanced from frame
+    **691** `obj_extra_s24_type` expected `absent`, actual `0x64` to frame
+    **921** `obj_extra_s27_type` expected `absent`, actual `0x64`
+    (**3184** errors).
+- Full trace sweep:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+  - Result: expected-red sweep; **Tests run: 90, Failures: 62, Errors: 1,
+    Skipped: 0** in 8:38. Aggregate count is unchanged from the prior
+    full-sweep baseline.
+- CI guard verification:
+  - `mvn -Dmse=off "-Dtest=TestNoServicesInObjectConstructors,TestBuildToolingGuard,TestArchitecturalSourceGuard,TestArchUnitRules,TestPlayableRuntimeAccessGuard,TestObjectPhysicsStandardizationGuard,TestRewindFieldAudit,TestRewindTransientGuard,TestSonic3kSpringObjectInstance" "-DfailIfNoTests=false" test -B`
+  - Result: **191 tests**, 0 failures, 0 errors.
+- Remaining frontier: LZ2 now exposes Obj64 maker cadence/order. At the probe
+  frontier the engine spawns an extra child from the maker at `@0240` while the
+  ROM maker's countdown has just reached `0x0000` and has not allocated the
+  child yet.
+
 ## 2026-06-13 - S1 LZ2 Obj64 maker diagnostics prove frame-12 frontier
 
 - Scope: the S1 BizHawk recorders now emit opt-in, read-only

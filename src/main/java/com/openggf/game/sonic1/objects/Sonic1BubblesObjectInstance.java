@@ -200,6 +200,12 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
     private int delayCounter;
     /** Current offset into BUBBLE_TYPE_TABLE. (objoff_3C) */
     private int typeTableOffset;
+    /**
+     * ROM Bub_Main writes obRender=$84 before falling through to the first
+     * bubble or maker update, so the first tick passes the render gate even
+     * before BuildSprites has established the live on-screen bit.
+     */
+    private boolean initialRenderGate;
 
     // ========================================================================
     // Constructor
@@ -225,6 +231,7 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
             spawnTime = freq;
             // move.b #6,obAnim(a0)
             animId = 6;
+            initialRenderGate = true;
 
             displayX = spawn.x();
             displayY = spawn.y();
@@ -259,6 +266,7 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
             regularBubbleNeedsInitialRandom = true;
 
             // Start in animate routine (init is done inline here)
+            initialRenderGate = true;
             routine = ROUTINE_ANIMATE;
         }
     }
@@ -272,7 +280,7 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (routine) {
             case ROUTINE_ANIMATE -> updateAnimate(player);
-            case ROUTINE_CHKWATER -> updateChkWater(player);
+            case ROUTINE_CHKWATER -> updateChkWater(player, consumeInitialRenderGate());
             case ROUTINE_DISPLAY -> updateDisplay();
             case ROUTINE_DELETE -> setDestroyed(true);
             case ROUTINE_MAKER -> updateBubbleMaker(player);
@@ -284,6 +292,7 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
     // ========================================================================
 
     private void updateAnimate(AbstractPlayableSprite player) {
+        boolean initialGate = consumeInitialRenderGate();
         if (regularBubbleNeedsInitialRandom) {
             // ROM: Bub_Main jsr (RandomNumber).l / move.b d0,obAngle(a0)
             regularBubbleNeedsInitialRandom = false;
@@ -301,14 +310,14 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
         }
 
         // Fall through to Bub_ChkWater
-        updateChkWater(player);
+        updateChkWater(player, initialGate);
     }
 
     // ========================================================================
     // Routine 4: Bub_ChkWater
     // ========================================================================
 
-    private void updateChkWater(AbstractPlayableSprite player) {
+    private void updateChkWater(AbstractPlayableSprite player, boolean initialGate) {
         int waterY = getWaterLevel();
 
         // cmp.w obY(a0),d0 ; is bubble at/above water?
@@ -347,7 +356,7 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
         displayY = posY16 >> 16;
 
         // tst.b obRender(a0) / bpl.s .delete
-        if (!isOnScreen(ACTIVE_WIDTH)) {
+        if (!initialGate && !isOnScreen(ACTIVE_WIDTH)) {
             setDestroyed(true);
             return;
         }
@@ -376,6 +385,7 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
     private void updateBubbleMaker(AbstractPlayableSprite player) {
         int waterY = getWaterLevel();
         var rng = services().rng();
+        boolean initialGate = consumeInitialRenderGate();
 
         if (productionFlags != 0) {
             // Already in production - continue spawn cycle
@@ -396,7 +406,7 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
             }
 
             // tst.b obRender(a0) / bpl.w .chkdel
-            if (!isOnScreen(ACTIVE_WIDTH)) {
+            if (!initialGate && !isOnScreen(ACTIVE_WIDTH)) {
                 checkMakerDeletion(waterY);
                 return;
             }
@@ -451,6 +461,12 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
 
         // Animate and display
         animateMaker(waterY);
+    }
+
+    private boolean consumeInitialRenderGate() {
+        boolean gate = initialRenderGate;
+        initialRenderGate = false;
+        return gate;
     }
 
     /**

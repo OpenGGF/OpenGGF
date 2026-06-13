@@ -131,8 +131,10 @@ class TestPreludeFramesKnobsZero {
     }
 
     @Test
-    void s1Ghz1AlwaysReturnsZero() {
-        // S1 was already returning 0 from both methods — confirm parity remains.
+    void s1FirstGameplayRowRunsOneLevelStartObjectPrelude() {
+        // S1 runs ObjPosLoad followed by ExecuteObjects once before
+        // Level_MainLoop starts incrementing v_framecount
+        // (docs/s1disasm/sonic.asm:2875-2876, 2985-3003).
         TraceFrame seed = buildFrame(0, /* gfc */ 1,
                 (short) 0, (short) 0, (short) 0, 0, 0);
         TraceFrame next = buildFrame(1, /* gfc */ 2,
@@ -140,6 +142,18 @@ class TestPreludeFramesKnobsZero {
         TraceData trace = TraceFixtures.trace(
                 metadata("s1", "ghz", 0, 0, List.of("sonic")),
                 List.of(seed, next));
+
+        assertEquals(0, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace));
+        assertEquals(1, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace));
+    }
+
+    @Test
+    void s1LaterGameplayRowReturnsZeroObjectPrelude() {
+        TraceFrame seed = buildFrame(0, /* gfc */ 5,
+                (short) 0, (short) 0, (short) 0, 0, 0);
+        TraceData trace = TraceFixtures.trace(
+                metadata("s1", "ghz", 0, 0, List.of("sonic")),
+                List.of(seed));
 
         assertEquals(0, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace));
         assertEquals(0, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace));
