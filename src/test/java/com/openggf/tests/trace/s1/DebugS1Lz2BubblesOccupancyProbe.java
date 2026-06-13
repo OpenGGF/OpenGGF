@@ -4,6 +4,9 @@ import com.openggf.game.GameServices;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSlotLayout;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.rings.RingManager;
+import com.openggf.level.rings.RingSpawn;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.SharedLevel;
 import com.openggf.tests.TestEnvironment;
@@ -23,8 +26,10 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * Local comparison-only probe for the S1 LZ2 Obj64 frontier. This class is not
@@ -96,6 +101,9 @@ class DebugS1Lz2BubblesOccupancyProbe {
                     + summarizeEngineObj64(objectManager));
 
             int startTraceIndex = boot.replayStart().startingTraceIndex();
+            boolean objectSlotDivergenceReported = false;
+            boolean slotDivergenceReported = false;
+            boolean makerStateDivergenceReported = false;
             for (int i = startTraceIndex; i < trace.frameCount(); i++) {
                 TraceFrame expected = trace.getFrame(i);
                 TraceFrame previous = i > 0 ? trace.getFrame(i - 1) : null;
@@ -108,6 +116,80 @@ class DebugS1Lz2BubblesOccupancyProbe {
                 }
                 if (!TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
                     continue;
+                }
+
+                if (!objectSlotDivergenceReported) {
+                    ObjectSlotDivergence objectSlotDivergence =
+                            firstObjectSlotDivergence(trace, objectManager, i);
+                    if (objectSlotDivergence != null) {
+                        objectSlotDivergenceReported = true;
+                        System.out.printf(
+                                "[s1-lz2-all-slots] first divergence frame=%d slot=%d expected=%s actual=%s%n",
+                                objectSlotDivergence.frame(),
+                                objectSlotDivergence.slot(),
+                                objectSlotDivergence.expected(),
+                                objectSlotDivergence.actual());
+                        int first = Math.max(FIRST_DYNAMIC_SLOT, objectSlotDivergence.slot() - 8);
+                        int last = objectSlotDivergence.slot() + 12;
+                        System.out.println("[s1-lz2-all-slots] expected: "
+                                + summarizeExpectedSlots(trace, objectSlotDivergence.frame(), first, last));
+                        System.out.println("[s1-lz2-all-slots] engine: "
+                                + summarizeEngineSlots(objectManager, first, last));
+                    }
+                }
+
+                if (!slotDivergenceReported) {
+                    Obj64SlotDivergence slotDivergence =
+                            firstObj64SlotDivergence(trace, objectManager, i);
+                    if (slotDivergence != null) {
+                        slotDivergenceReported = true;
+                        System.out.printf(
+                                "[s1-lz2-obj64-slots] first divergence frame=%d "
+                                        + "expected=%s actual=%s%n",
+                                slotDivergence.frame(),
+                                slotDivergence.expectedSlots(),
+                                slotDivergence.actualSlots());
+                        System.out.println("[s1-lz2-obj64-slots] expected 70-90: "
+                                + summarizeExpectedSlots(trace, slotDivergence.frame(), 70, 90));
+                        System.out.println("[s1-lz2-obj64-slots] engine 70-90: "
+                                + summarizeEngineSlots(objectManager, 70, 90));
+                        System.out.println("[s1-lz2-rings] suspects: "
+                                + summarizeRingState(GameServices.level().getRingManager(),
+                                List.of(
+                                        new RingSpawn(0x0278, 0x0468),
+                                        new RingSpawn(0x0290, 0x0468),
+                                        new RingSpawn(0x02A8, 0x0468),
+                                        new RingSpawn(0x0278, 0x0480),
+                                        new RingSpawn(0x0290, 0x0480),
+                                        new RingSpawn(0x02A8, 0x0480))));
+                        System.out.println("[s1-lz2-ring-spawns] "
+                                + summarizeRingObjectSpawns(objectManager));
+                        System.out.println("[s1-lz2-ring-live] "
+                                + summarizeLiveRingObjects(objectManager));
+                    }
+                }
+
+                if (!makerStateDivergenceReported) {
+                    MakerStateDivergence stateDivergence =
+                            firstMakerStateDivergence(trace, objectManager, i);
+                    if (stateDivergence != null) {
+                        makerStateDivergenceReported = true;
+                        System.out.printf(
+                                "[s1-lz2-obj64-state] first divergence frame=%d "
+                                        + "maker=@%04X,%04X field=%s expected=%s actual=%s%n",
+                                stateDivergence.frame(),
+                                stateDivergence.x() & 0xFFFF,
+                                stateDivergence.y() & 0xFFFF,
+                                stateDivergence.field(),
+                                stateDivergence.expected(),
+                                stateDivergence.actual());
+                        System.out.println("[s1-lz2-obj64-state] engine Obj64: "
+                                + summarizeEngineObj64(objectManager));
+                        System.out.println("[s1-lz2-obj64-state] ROM Obj64 prev: "
+                                + summarizeRomObj64(trace, stateDivergence.frame() - 1));
+                        System.out.println("[s1-lz2-obj64-state] ROM Obj64 curr: "
+                                + summarizeRomObj64(trace, stateDivergence.frame()));
+                    }
                 }
 
                 ObjectOccupancyOracle.CountDivergence divergence =
@@ -144,6 +226,272 @@ class DebugS1Lz2BubblesOccupancyProbe {
                 TestEnvironment.resetAll();
             }
         }
+    }
+
+    private record Obj64SlotDivergence(int frame, Set<Integer> expectedSlots,
+                                       Set<Integer> actualSlots) {
+    }
+
+    private record ObjectSlotDivergence(int frame, int slot, String expected, String actual) {
+    }
+
+    private record MakerStateDivergence(int frame, int x, int y, String field,
+                                        String expected, String actual) {
+    }
+
+    private record MakerState(int freq, int time, int prod, int type, int delay, int tableOffset) {
+        String fieldValue(String field) {
+            return switch (field) {
+                case "freq" -> Integer.toString(freq);
+                case "time" -> Integer.toString(time);
+                case "prod" -> String.format("%02X", prod & 0xFF);
+                case "type" -> Integer.toString(type);
+                case "delay" -> Integer.toString(delay);
+                case "tbl" -> String.format("%02X", tableOffset & 0xFF);
+                default -> "";
+            };
+        }
+    }
+
+    private static MakerStateDivergence firstMakerStateDivergence(TraceData trace,
+                                                                  ObjectManager objectManager,
+                                                                  int frame) {
+        if (!trace.metadata().hasPerFrameS1Obj64State()) {
+            return null;
+        }
+        for (TraceEvent.S1Obj64State state : trace.s1Obj64StatesForFrame(frame)) {
+            if ((state.routine() & 0xFF) != 0x0A) {
+                continue;
+            }
+            MakerState expected = romMakerState(state);
+            MakerState actual = engineMakerStateAt(objectManager, state.x(), state.y());
+            if (actual == null) {
+                return new MakerStateDivergence(frame, state.x(), state.y(),
+                        "present", expected.toString(), "absent");
+            }
+            for (String field : List.of("freq", "time", "prod", "type", "delay", "tbl")) {
+                String want = expected.fieldValue(field);
+                String got = actual.fieldValue(field);
+                if (!want.equals(got)) {
+                    return new MakerStateDivergence(frame, state.x(), state.y(),
+                            field, want, got);
+                }
+            }
+        }
+        return null;
+    }
+
+    private static Obj64SlotDivergence firstObj64SlotDivergence(TraceData trace,
+                                                                ObjectManager objectManager,
+                                                                int frame) {
+        Set<Integer> expected = new java.util.TreeSet<>();
+        for (Map.Entry<Integer, Integer> entry : ObjectOccupancyOracle
+                .expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT)
+                .entrySet()) {
+            if ((entry.getValue() & 0xFF) == OBJ_BUBBLES) {
+                expected.add(entry.getKey());
+            }
+        }
+
+        Set<Integer> actual = new java.util.TreeSet<>();
+        for (var instance : objectManager.getActiveObjects()) {
+            if (instance instanceof AbstractObjectInstance object
+                    && object.getSpawn() != null
+                    && (object.getSpawn().objectId() & 0xFF) == OBJ_BUBBLES) {
+                actual.add(object.getSlotIndex());
+            }
+        }
+
+        return expected.equals(actual)
+                ? null
+                : new Obj64SlotDivergence(frame, expected, actual);
+    }
+
+    private static ObjectSlotDivergence firstObjectSlotDivergence(TraceData trace,
+                                                                  ObjectManager objectManager,
+                                                                  int frame) {
+        Map<Integer, Integer> expected = new TreeMap<>(
+                ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT));
+        Map<Integer, Integer> actual = new TreeMap<>();
+        for (var instance : objectManager.getActiveObjects()) {
+            if (instance instanceof AbstractObjectInstance object
+                    && object.getSpawn() != null
+                    && object.getSlotIndex() >= FIRST_DYNAMIC_SLOT) {
+                actual.put(object.getSlotIndex(), object.getSpawn().objectId() & 0xFF);
+            }
+        }
+        int lastSlot = Math.max(
+                expected.isEmpty() ? FIRST_DYNAMIC_SLOT : expected.keySet().stream().mapToInt(Integer::intValue).max().orElse(FIRST_DYNAMIC_SLOT),
+                actual.isEmpty() ? FIRST_DYNAMIC_SLOT : actual.keySet().stream().mapToInt(Integer::intValue).max().orElse(FIRST_DYNAMIC_SLOT));
+        for (int slot = FIRST_DYNAMIC_SLOT; slot <= lastSlot; slot++) {
+            Integer want = expected.get(slot);
+            Integer got = actual.get(slot);
+            if (!java.util.Objects.equals(want, got)) {
+                return new ObjectSlotDivergence(
+                        frame,
+                        slot,
+                        want == null ? "--" : String.format("%02X", want & 0xFF),
+                        got == null ? "--" : String.format("%02X", got & 0xFF));
+            }
+        }
+        return null;
+    }
+
+    private static String summarizeExpectedSlots(TraceData trace, int frame,
+                                                 int firstSlot, int lastSlotInclusive) {
+        Map<Integer, Integer> expected = new TreeMap<>(
+                ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT));
+        List<String> parts = new ArrayList<>();
+        for (Map.Entry<Integer, Integer> entry : expected.entrySet()) {
+            int slot = entry.getKey();
+            if (slot >= firstSlot && slot <= lastSlotInclusive) {
+                parts.add(String.format("s%02d=%02X", slot, entry.getValue() & 0xFF));
+            }
+        }
+        return String.join(" ", parts);
+    }
+
+    private static String summarizeEngineSlots(ObjectManager objectManager,
+                                               int firstSlot, int lastSlotInclusive) {
+        Map<Integer, Integer> actual = new TreeMap<>();
+        for (var instance : objectManager.getActiveObjects()) {
+            if (instance instanceof AbstractObjectInstance object
+                    && object.getSpawn() != null
+                    && object.getSlotIndex() >= firstSlot
+                    && object.getSlotIndex() <= lastSlotInclusive) {
+                actual.put(object.getSlotIndex(), object.getSpawn().objectId() & 0xFF);
+            }
+        }
+        List<String> parts = new ArrayList<>();
+        for (int slot : actual.keySet()) {
+            AbstractObjectInstance object = objectAtSlot(objectManager, slot);
+            parts.add(String.format("s%02d=%02X@%04X,%04X",
+                    slot,
+                    actual.get(slot) & 0xFF,
+                    object != null ? object.getX() & 0xFFFF : 0,
+                    object != null ? object.getY() & 0xFFFF : 0));
+        }
+        return String.join(" ", parts);
+    }
+
+    private static String summarizeRingState(RingManager ringManager, List<RingSpawn> rings) {
+        if (ringManager == null) {
+            return "ringManager=null";
+        }
+        List<String> parts = new ArrayList<>();
+        for (RingSpawn ring : rings) {
+            parts.add(String.format("@%04X,%04X collected=%s sparkle=%d",
+                    ring.x() & 0xFFFF,
+                    ring.y() & 0xFFFF,
+                    ringManager.isCollected(ring),
+                    ringManager.getSparkleStartFrame(ring)));
+        }
+        return String.join(" ", parts);
+    }
+
+    private static String summarizeRingObjectSpawns(ObjectManager objectManager) {
+        Set<ObjectSpawn> activeSpawns = Set.copyOf(objectManager.getActiveSpawns());
+        List<String> parts = new ArrayList<>();
+        for (ObjectSpawn spawn : objectManager.getAllSpawns()) {
+            if ((spawn.objectId() & 0xFF) != 0x25
+                    || spawn.x() < 0x0260 || spawn.x() > 0x02B0
+                    || spawn.y() < 0x0450 || spawn.y() > 0x0490) {
+                continue;
+            }
+            var instance = objectManager.getActiveObjectForRewind(spawn);
+            int slot = instance instanceof AbstractObjectInstance object ? object.getSlotIndex() : -1;
+            parts.add(String.format("@%04X,%04X sub=%02X active=%s inst=%s slot=%d dorm=%s rem=%s ctr=%d",
+                    spawn.x() & 0xFFFF,
+                    spawn.y() & 0xFFFF,
+                    spawn.subtype() & 0xFF,
+                    activeSpawns.contains(spawn),
+                    instance != null,
+                    slot,
+                    objectManager.isDormant(spawn),
+                    objectManager.isRemembered(spawn),
+                    objectManager.getSpawnCounter(spawn)));
+        }
+        return String.join(" | ", parts);
+    }
+
+    private static String summarizeLiveRingObjects(ObjectManager objectManager) {
+        List<String> parts = new ArrayList<>();
+        for (var instance : objectManager.getActiveObjects()) {
+            if (!(instance instanceof AbstractObjectInstance object)
+                    || object.getSpawn() == null
+                    || (object.getSpawn().objectId() & 0xFF) != 0x25
+                    || object.getSpawn().x() < 0x0260 || object.getSpawn().x() > 0x02B0
+                    || object.getSpawn().y() < 0x0450 || object.getSpawn().y() > 0x0490) {
+                continue;
+            }
+            parts.add(String.format("s%02d @%04X,%04X spawn=@%04X,%04X %s",
+                    object.getSlotIndex(),
+                    object.getX() & 0xFFFF,
+                    object.getY() & 0xFFFF,
+                    object.getSpawn().x() & 0xFFFF,
+                    object.getSpawn().y() & 0xFFFF,
+                    object.traceDebugDetails()));
+        }
+        return String.join(" | ", parts);
+    }
+
+    private static AbstractObjectInstance objectAtSlot(ObjectManager objectManager, int slot) {
+        for (var instance : objectManager.getActiveObjects()) {
+            if (instance instanceof AbstractObjectInstance object && object.getSlotIndex() == slot) {
+                return object;
+            }
+        }
+        return null;
+    }
+
+    private static MakerState romMakerState(TraceEvent.S1Obj64State state) {
+        int obj34Byte = (state.objoff34() >>> 8) & 0xFF;
+        int type = obj34Byte >= 0x80 ? obj34Byte - 0x100 : obj34Byte;
+        int prodWord = state.objoff36() & 0xFFFF;
+        int prod = ((prodWord >>> 8) & 0xC0) | (prodWord & 0x3F);
+        int tableOffset = (int) ((state.objoff3c() & 0xFFFFFFFFL) - 0x00013020L);
+        return new MakerState(
+                state.objoff33() & 0xFF,
+                state.objoff32() & 0xFF,
+                prod,
+                type,
+                state.objoff38() & 0xFFFF,
+                tableOffset);
+    }
+
+    private static MakerState engineMakerStateAt(ObjectManager objectManager, int x, int y) {
+        for (var instance : objectManager.getActiveObjects()) {
+            if (!(instance instanceof AbstractObjectInstance object)
+                    || object.getSpawn() == null
+                    || (object.getSpawn().objectId() & 0xFF) != OBJ_BUBBLES
+                    || (object.getSpawn().x() & 0xFFFF) != (x & 0xFFFF)
+                    || (object.getSpawn().y() & 0xFFFF) != (y & 0xFFFF)) {
+                continue;
+            }
+            String details = object.traceDebugDetails();
+            if (details == null || !details.startsWith("r=0A ")) {
+                continue;
+            }
+            return new MakerState(
+                    parseDetailInt(details, "freq", false),
+                    parseDetailInt(details, "time", false),
+                    parseDetailInt(details, "prod", true),
+                    parseDetailInt(details, "type", false),
+                    parseDetailInt(details, "delay", false),
+                    parseDetailInt(details, "tbl", true));
+        }
+        return null;
+    }
+
+    private static int parseDetailInt(String details, String key, boolean hex) {
+        String prefix = key + "=";
+        for (String token : details.split(" ")) {
+            if (token.startsWith(prefix)) {
+                String value = token.substring(prefix.length());
+                return Integer.parseInt(value, hex ? 16 : 10);
+            }
+        }
+        throw new IllegalArgumentException("Missing " + key + " in " + details);
     }
 
     private static Path resolveBk2File(Path traceDir, TraceMetadata meta) throws Exception {

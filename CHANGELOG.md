@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 spiked-ball chains now allocate ROM-style child slots:** Obj57 link
+  elements now occupy dynamic child object slots instead of parent-local
+  render/touch regions, aligning LZ/SYZ slot pressure with the disassembly and
+  moving the widened LZ2 all-object audit from frame 0 slot 58 to the next
+  slot-pressure frontier. S1 ring placement lookups now also use equivalent
+  `ObjectSpawn` values instead of identity-only keys.
+
 - **S1 monitor top contacts now follow the ROM animation and landing gates:**
   monitor breaks now key off the native roll animation instead of the rolling
   status bit, monitor touch callbacks poll continuously like `ReactToItem`, and

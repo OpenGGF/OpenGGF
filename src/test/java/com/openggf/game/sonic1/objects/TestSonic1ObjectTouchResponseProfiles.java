@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class TestSonic1ObjectTouchResponseProfiles {
 
@@ -29,14 +30,14 @@ class TestSonic1ObjectTouchResponseProfiles {
     }
 
     @Test
-    void spikedBallChainDeclaresMultiRegionHurtProfile() throws NoSuchMethodException {
+    void spikedBallChainParentUsesSingleRegionProfile() throws NoSuchMethodException {
         Sonic1SpikedBallChainObjectInstance chain = new Sonic1SpikedBallChainObjectInstance(
                 new ObjectSpawn(0x1200, 0x0400, 0x57, 0x03, 0, false, 0),
                 Sonic1Constants.ZONE_SYZ);
 
-        assertNotNull(chain.getMultiTouchRegions());
-        assertEquals(multiRegionHurtProfile(), chain.getTouchResponseProfile());
-        assertEquals(multiRegionHurtProfile(), chain.getTouchResponseProfile(true));
+        assertNull(chain.getMultiTouchRegions());
+        assertEquals(singleRegionHurtProfile(), chain.getTouchResponseProfile());
+        assertEquals(singleRegionHurtProfile(), chain.getTouchResponseProfile(true));
         assertEquals(singleRegionHurtProfile(), chain.getTouchResponseProfile(false));
         Sonic1SpikedBallChainObjectInstance.class.getDeclaredMethod("getTouchResponseProfile");
         Sonic1SpikedBallChainObjectInstance.class.getDeclaredMethod("getTouchResponseProfile", boolean.class);

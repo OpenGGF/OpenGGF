@@ -1,5 +1,47 @@
 # Trace Frontier Log
 
+## 2026-06-13 - S1 Obj57 chain children expose true LZ2 slot frontier
+
+- Scope: S1 Obj57 spiked-ball chain links now allocate ROM-style child object
+  slots instead of living only as parent-local render/touch regions. S1 ring
+  placement also now uses value equality for equivalent `ObjectSpawn` lookups.
+  The LZ2 Obj64/ring diagnostics were widened to audit full object-slot
+  pressure; trace rows remain comparison-only diagnostic input and do not
+  hydrate engine state.
+- Disassembly basis: S1 `SBall_Main` allocates link children with
+  `FindFreeObj`, stores each child SST id in the parent, initializes the child
+  routine/id/frame/radius fields, and `SBall_Move` updates child `x_pos/y_pos`
+  every frame before the parent delete loop expires the children
+  (`docs/s1disasm/_incObj/57 SYZ, LZ Spiked Ball and Chain.asm`).
+- Focused verification:
+  - `mvn -Dmse=off "-Dtest=com.openggf.game.sonic1.TestSonic1RingPlacement" test -B`
+  - Result: **1 test**, 0 failures, 0 errors.
+  - `mvn -Dmse=off "-Dtest=com.openggf.game.sonic1.objects.TestSonic1ObjectTouchResponseProfiles" test -B`
+  - Result: **3 tests**, 0 failures, 0 errors.
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s1.DebugS1Lz2BubblesOccupancyProbe" "-Dsonic1.rom.path=s1.gen" "-DfailIfNoTests=false" "-Dsurefire.argLine=-Xshare:off -Xmx2g" test -B`
+  - Result: **1 test**, 0 failures, 0 errors. The widened all-object audit
+    moved from frame **0** slot **58** (`expected=57`, `actual=--`) to frame
+    **89** slot **35**. The Obj64 slot frontier moved from frame **192** to
+    frame **311**. Obj64 count remains frame **882** and maker-state delay
+    remains frame **560**.
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s1.TestS1Lz2CompleteRunTraceReplay" "-Dsonic1.rom.path=s1.gen" "-DfailIfNoTests=false" "-Dsurefire.argLine=-Xshare:off -Xmx2g" test -B`
+  - Result: expected-red trace; first replay report remains frame **921**
+    `obj_extra_s27_type` expected `absent`, actual `0x64`, matching the prior
+    clean LZ2 frontier.
+- CI guard verification:
+  - `mvn -Dmse=off "-Dtest=TestNoServicesInObjectConstructors,TestBuildToolingGuard,TestArchitecturalSourceGuard,TestArchUnitRules,TestPlayableRuntimeAccessGuard,TestObjectPhysicsStandardizationGuard,TestRewindFieldAudit,TestRewindTransientGuard,TestSonic3kSpringObjectInstance" "-DfailIfNoTests=false" test -B`
+  - Result: **191 tests**, 0 failures, 0 errors.
+- Full trace sweep:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-Dsonic1.rom.path=s1.gen" "-Dsonic2.rom.path=s2.gen" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-DfailIfNoTests=false" "-Dsurefire.argLine=-Xshare:off -Xmx2g" test -B`
+  - Result: expected-red sweep; **Tests run: 90, Failures: 62, Errors: 1,
+    Skipped: 0** in 4:33. Aggregate count is unchanged from the prior
+    full-sweep baseline.
+- Remaining frontier: Obj57 no longer masks the LZ2 slot audit at frame 0.
+  The focused replay still reports the Obj64 extra child at frame 921, while
+  the widened probe shows earlier slot pressure at frame 89 and Obj64 slot
+  pressure at frame 311. Continue auditing slot allocation/order before moving
+  back to player physics.
+
 ## 2026-06-13 - S1 LZ2 Obj64 bootstrap frontier advances to maker cadence
 
 - Scope: trace replay now models S1's one-frame level-start object prelude for

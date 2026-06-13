@@ -199,4 +199,14 @@ public class Sonic1RingInstance extends AbstractObjectInstance
     public boolean isHighPriority() {
         return false;
     }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("state=%s ring=@%04X,%04X children=%d anchor=%04X",
+                state,
+                ringSpawn.x() & 0xFFFF,
+                ringSpawn.y() & 0xFFFF,
+                childRingSpawns.size(),
+                outOfRangeAnchorX & 0xFFFF);
+    }
 }

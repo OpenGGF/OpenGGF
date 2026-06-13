@@ -682,8 +682,9 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
     public String traceDebugDetails() {
         StringBuilder sb = new StringBuilder();
         if (isMaker) {
-            return String.format("r=%02X anim=%d freq=%d time=%d prod=%02X type=%d delay=%d",
-                    routine, animId, spawnFreq, spawnTime, productionFlags & 0xFF, typeCounter, delayCounter);
+            return String.format("r=%02X anim=%d freq=%d time=%d prod=%02X type=%d delay=%d tbl=%02X",
+                    routine, animId, spawnFreq, spawnTime, productionFlags & 0xFF, typeCounter,
+                    delayCounter, typeTableOffset & 0xFF);
         }
         sb.append(String.format("r=%02X anim=%d frm=%d idx=%d t=%d inh=%s",
                 routine, animId, mappingFrame, animFrameIndex, animTimer, inhalable));
