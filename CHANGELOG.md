@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 SBZ2 complete-run trace now exposes the Obj5F slot frontier:** the SBZ2
+  replay now compares focused Bomb object-near diagnostics, moving the reported
+  frontier from the downstream frame-1697 rolling symptom to frame 1447's Bomb
+  body/fuse slot-pressure divergence.
+
 - **S1 SBZ3 complete-run trace now exposes Obj64 maker cadence:** the SBZ3
   fixture was regenerated with the v3.4 S1 recorder so it carries
   `metadata.rng_seed` and per-frame Obj64 aux diagnostics. The replay now

@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+## 2026-06-13 - S1 SBZ2 Obj5F diagnostics expose slot-pressure frontier
+
+- Scope: `src/test/resources/traces/s1/sbz2_completerun` now carries a
+  focused v3.4 aux diagnostic capture through the current frontier window. The
+  SBZ2 replay opts into Obj5F object-near comparison only, keeping the existing
+  physics trace as the comparison source while surfacing Bomb body/fuse/shrapnel
+  slot drift before the downstream player physics symptom.
+- Focused verification:
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s1.TestS1Sbz2CompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+  - Result: expected-red trace; first error advanced from frame **1697**
+    `rolling` expected `1`, actual `0` to frame **1447**
+    `obj_s69_type` expected `0x5F`, actual `missing`.
+- Diagnostic finding: frame 1697's rolling mismatch is caused by an
+  engine-only Obj5F shrapnel hurt. In the ROM aux rows, Obj5F is no longer near
+  Sonic at that point. The earlier frame-1447 slot audit shows ROM Bomb body
+  slots **72/75/77/81** spawning fuse children in slots **105-108**, while the
+  engine has the corresponding Bomb bodies in slots **74/77/79/83** and fuse
+  children in slots **103-106**. Player physics still matches at this frame, so
+  the true frontier is earlier object-slot pressure/lifetime state.
+- Disassembly basis: Obj5F Bomb uses `FindNextFreeObj` for the fuse child and
+  later shrapnel children, and shrapnel uses `obColType=$98` HURT collision
+  (`docs/s1disasm/_incObj/5F Badnik - Walking Bomb.asm`). The engine's later
+  shrapnel contact category is therefore plausible; the owner to fix is the
+  object inventory that leaves a different free-slot landscape before Obj5F
+  explodes.
+- Remaining frontier: investigate S1 dynamic slot allocation/object lifetime
+  before frame 1447. Do not special-case SBZ2, trace route, or frame number, and
+  do not hydrate engine state from the trace.
+
 ## 2026-06-13 - S1 SBZ3 Obj64 diagnostics expose maker-cadence frontier
 
 - Scope: `src/test/resources/traces/s1/sbz3_completerun` was regenerated from
