@@ -4,6 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K sidekick frame-counter gates read `Level_frame_counter` natively:**
+  removed the trace-profile-gated NORMAL auto-jump "handoff counter bridge" so no
+  shared sidekick code branches on trace identity. The replay harness now ticks
+  the engine frame counter once on the S3K complete-run handoff row (the ROM ran
+  a full LevelLoop there), and the Tails NORMAL/carry/MGZ/flight gates read the
+  ROM-visible post-increment counter directly. All S3K complete-run and
+  level-select trace frontiers are unchanged; this also corrects a latent
+  off-by-one in the carry/flight cadence during live play and level-select.
+
 - **S1 ring children no longer reserve slots after collection:** grouped S1
   ring objects now filter collected child rings before reserving dynamic SST
   slots, matching `Ring_Main`'s respawn-bit check before `FindFreeObj` and

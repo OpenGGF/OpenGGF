@@ -1,5 +1,48 @@
 # Trace Frontier Log
 
+## 2026-06-13 - Remove S3K complete-run NORMAL counter bridge (Level_frame_counter reconciliation)
+
+Isolated audit/fix worktree at the develop audit base; committed baseline
+measured at develop HEAD with the committed bridge code.
+
+Commands:
+`mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s3k.TestS3k{Aiz,Cnz,Hcz,Icz,Lbz,Mgz,Mhz}CompleteRunTraceReplay" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+`mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s3k.TestS3k{Aiz,Cnz,Mgz}TraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s2.TestS2Mcz1TraceReplay" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+`mvn -Dmse=off "-Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity,com.openggf.tests.trace.TestTraceReplayStartPositionPolicy,com.openggf.game.rewind.TestRewindFieldAudit,com.openggf.game.rewind.TestRewindTransientGuard,com.openggf.tests.TestObjectPhysicsStandardizationGuard,com.openggf.sprites.playable.TestPlayableRuntimeAccessGuard,com.openggf.tests.TestS3kAiz1SkipHeadless" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+
+Fix:
+- Removed the trace-profile-gated `normalAutoJumpUsesHandoffFrameCounterBridge`
+  flag (field/setter/rewind-snapshot component/bootstrap call) so no shared
+  sidekick code branches on trace identity. The S3K Tails NORMAL auto-jump gate
+  reads `frameCounter` directly. ROM `loc_13E9C` reads the post-increment
+  `(Level_frame_counter+1).b` low byte (`sonic3k.asm:26775`); `resolveCpuFrameCounter`
+  already yields that post-increment value for both the per-frame sprite cadence
+  and the bootstrap-preloaded stored copy.
+- The replay harness now ticks the engine frame counter once on the S3K
+  complete-run handoff row (`isS3kCompleteRunHandoffCounterTickRow`,
+  `AbstractTraceReplayTest.replayS3kTrace`), mirroring ROM's
+  `addq.w #1,(Level_frame_counter)` (LevelLoop before `Process_Sprites`,
+  `sonic3k.asm:7889-7894`). That row is `VBLANK_ONLY` (not driven/compared), but
+  ROM ran a full LevelLoop on it, so its single counter tick belongs in the
+  harness, not in a per-gate engine compensation.
+- Because the handoff tick makes the complete-run sprite cadence equal
+  `Level_frame_counter`, the previously hard-coded `+1`s in the carry Right pulse
+  (`loc_13FFA`, `sonic3k.asm:26918`), carry-flyoff Right pulse, MGZ carry
+  (`loc_14106`, `sonic3k.asm:26996`) and flying-carry flight-timer parity now read
+  the ROM-visible value via `romVisibleLevelFrameCounter()` instead of an
+  unconditional `+1`. This also corrects a latent off-by-one those gates had in
+  live play / level-select (where the cadence was never one-low), which no test
+  had exercised.
+
+Result (all frontiers unchanged vs committed baseline):
+- Complete-run: `s3k_aiz1` f1095 x_speed, `s3k_cnz1` f244 y_speed, `s3k_hcz1`
+  f407 tails_status_byte, `s3k_icz1` f1986 tails_status_byte, `s3k_lbz1` f410
+  y_speed, `s3k_mgz1` f738 rings, `s3k_mhz1` f175 tails_y.
+- Level-select `s3k_aiz1` f2590 tails_status_byte unchanged; `s3k_cnz1`,
+  `s3k_mgz1`, `s2_ehz1`, `s2_mcz1` emit no divergence report before and after.
+- `TestSidekickCpuFollowParity` 77/77, `TestTraceReplayStartPositionPolicy` 18/18,
+  rewind/runtime/physics guards and `TestS3kAiz1SkipHeadless` all green.
+
 ## 2026-06-13 - S1 ring child-slot reservation matches respawn bits
 
 - Scope: `Sonic1RingInstance` now filters collected child rings before

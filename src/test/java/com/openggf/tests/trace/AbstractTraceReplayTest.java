@@ -461,6 +461,21 @@ public abstract class AbstractTraceReplayTest {
                             ? fixture.stepFrameFromRecordingUsingPreviousInput()
                             : fixture.stepFrameFromRecording();
 
+            if (phase == TraceExecutionPhase.VBLANK_ONLY
+                    && driveTraceIndex == replayStart.startingTraceIndex()
+                    && TraceReplayBootstrap.isS3kCompleteRunHandoffCounterTickRow(trace)) {
+                // The handoff row is skipped for gameplay comparison, but ROM ran a
+                // full LevelLoop on it and incremented Level_frame_counter before
+                // Process_Sprites (sonic3k.asm:7889-7894). Mirror that single counter
+                // tick so the S3K Tails-CPU gates read the ROM-visible
+                // Level_frame_counter natively for the rest of the replay, with no
+                // trace-gated compensation inside the shared sidekick controller.
+                SpriteManager handoffSprites = GameServices.spritesOrNull();
+                if (handoffSprites != null) {
+                    handoffSprites.setFrameCounter(handoffSprites.getFrameCounter() + 1);
+                }
+            }
+
             if (!binder.validateInput(driveFrame, bk2Input)) {
                 fail(String.format(
                     "Input alignment error at trace frame %d: " +

@@ -247,7 +247,6 @@ public class SidekickCpuController {
      */
     private boolean enteredFromSeedCompareFrame0;
     private boolean cpuFrameCounterFromStoredLevelFrame;
-    private boolean normalAutoJumpUsesHandoffFrameCounterBridge;
     private int nextCpuFrameCounterOverride = -1;
     private int catchUpFrameCounterOverride = -1;
     private int lastNormalAutoJumpPressFrameCounter = -1;
@@ -415,6 +414,29 @@ public class SidekickCpuController {
             return levelManager.getObjectManager().getFrameCounter();
         }
         return fallbackFrameCount;
+    }
+
+    /**
+     * Returns the ROM-visible {@code Level_frame_counter} value that the S3K Tails
+     * CPU gates read. ROM increments {@code Level_frame_counter} before
+     * {@code Process_Sprites} (sonic3k.asm:7889-7894) and the sprite CPU gates read
+     * the already-incremented low byte directly: {@code loc_13E7C} reads
+     * {@code (Level_frame_counter).w & $FF} (sonic3k.asm:26760), {@code loc_13E9C}
+     * reads {@code (Level_frame_counter+1).b & $3F} (sonic3k.asm:26775), and
+     * {@code loc_13FFA} reads {@code (Level_frame_counter+1).b & $1F}
+     * (sonic3k.asm:26918) — the {@code +1} is the odd-byte address of the word's low
+     * byte, not a numeric increment.
+     *
+     * <p>{@link #resolveCpuFrameCounter} yields the already-incremented sprite
+     * cadence directly, but bootstrap/warm-up paths preload the stale pre-increment
+     * {@code LevelManager} copy ({@link #cpuFrameCounterFromStoredLevelFrame}); in
+     * that case the engine adds one to recover the post-increment value the ROM
+     * gate reads. This consumes the counter-source semantic only — never trace
+     * identity — so it is correct for live play, level-select replay, and
+     * complete-run replay alike.
+     */
+    private int romVisibleLevelFrameCounter() {
+        return cpuFrameCounterFromStoredLevelFrame ? frameCounter + 1 : frameCounter;
     }
 
     private int resolvePanicPhaseCounter() {
@@ -2166,9 +2188,15 @@ public class SidekickCpuController {
                     sidekick.getRolling() && sidekick.shouldPreserveRollingOnNextRollStop();
             boolean pushingBypass = (currentPushBypass || objectOrderGrace)
                     && !suppressObjectPreservedPushJump;
-            int autoJumpFrameCounter = normalAutoJumpUsesHandoffFrameCounterBridge
-                    ? frameCounter + 1
-                    : frameCounter;
+            // resolveCpuFrameCounter() already yields the ROM-visible
+            // Level_frame_counter: the per-frame sprite cadence is the
+            // post-increment value, and bootstrap paths preload LevelManager with
+            // the already-incremented counter (see resolveCpuFrameCounter). The
+            // complete-run handoff row's missing increment is restored by the
+            // replay harness, so the NORMAL gate reads frameCounter directly with
+            // no trace-profile-gated bridge (sonic3k.asm:26775 loc_13E9C reads the
+            // post-increment (Level_frame_counter+1).b low byte).
+            int autoJumpFrameCounter = frameCounter;
             boolean freshAutoJumpFrame = autoJumpFrameCounter != lastNormalAutoJumpPressFrameCounter;
             boolean passesDistanceGate = pushingBypass
                     || (autoJumpFrameCounter & 0xFF) == 0
@@ -2734,12 +2762,13 @@ public class SidekickCpuController {
             return;
         }
 
-        // Synthetic input injection. For S3K carry states, resolveCpuFrameCounter()
-        // reads the stored level counter after replay/bootstrap alignment, which
-        // already corresponds to the ROM-visible (Level_frame_counter+1) cadence
-        // used by loc_13FFA. CNZ pulses Right every 32 frames; other carry
-        // triggers may pulse A/B/C instead.
-        if (((frameCounter + 1) & carryTrigger.carryInputInjectMask()) == 0) {
+        // Synthetic input injection. ROM loc_13FFA reads the post-increment
+        // (Level_frame_counter+1).b & $1F low byte (sonic3k.asm:26918); the engine
+        // recovers that ROM-visible value via romVisibleLevelFrameCounter() rather
+        // than an unconditional +1, so the cadence matches whether the counter
+        // source is the post-increment sprite cadence or the stale stored copy.
+        // CNZ pulses Right every 32 frames; other carry triggers may pulse A/B/C.
+        if ((romVisibleLevelFrameCounter() & carryTrigger.carryInputInjectMask()) == 0) {
             if (carryTrigger.carryInjectsJump()) {
                 inputJump = true;
                 inputJumpPress = true;
@@ -2757,10 +2786,12 @@ public class SidekickCpuController {
 
     private void updateMgzBossTransitionCarryInput() {
         // ROM loc_14106 ($16): keep flight timer full and pulse A/B/C every
-        // eight frames until Tails reaches Camera_Y+$90.
+        // eight frames until Tails reaches Camera_Y+$90. loc_14106 reads the
+        // post-increment (Level_frame_counter+1).b & 7 low byte
+        // (sonic3k.asm:26996), recovered here via romVisibleLevelFrameCounter().
         sidekick.setDoubleJumpProperty((byte) 0xF0);
         if (mgzCarryIntroAscend) {
-            if (((frameCounter + 1) & 0x07) == 0) {
+            if ((romVisibleLevelFrameCounter() & 0x07) == 0) {
                 inputJump = true;
                 inputJumpPress = true;
             }
@@ -2859,7 +2890,9 @@ public class SidekickCpuController {
         }
 
         // ROM loc_13FFA: pulse Right on the carry cadence so Tails keeps drifting.
-        if (((frameCounter + 1) & carryTrigger.carryInputInjectMask()) == 0) {
+        // Reads the post-increment (Level_frame_counter+1).b low byte
+        // (sonic3k.asm:26918), recovered via romVisibleLevelFrameCounter().
+        if ((romVisibleLevelFrameCounter() & carryTrigger.carryInputInjectMask()) == 0) {
             inputRight = true;
         }
         mirrorCarryDiagnosticInput();
@@ -4523,10 +4556,6 @@ public class SidekickCpuController {
         }
     }
 
-    public void setNormalAutoJumpUsesHandoffFrameCounterBridge(boolean value) {
-        this.normalAutoJumpUsesHandoffFrameCounterBridge = value;
-    }
-
     public void setLevelBounds(Integer minX, Integer maxX, Integer maxY) {
         setLevelBounds(minX, maxX, null, maxY);
     }
@@ -4639,7 +4668,6 @@ public class SidekickCpuController {
                 deferredDespawnDeadFallContinuingThisFrame,
                 bootstrapPreludePlacementApplied,
                 cpuFrameCounterFromStoredLevelFrame,
-                normalAutoJumpUsesHandoffFrameCounterBridge,
                 nextCpuFrameCounterOverride,
                 catchUpFrameCounterOverride,
                 lastNormalAutoJumpPressFrameCounter,
@@ -4697,7 +4725,6 @@ public class SidekickCpuController {
         deferredDespawnDeadFallContinuingThisFrame = snapshot.deferredDespawnDeadFallContinuingThisFrame();
         bootstrapPreludePlacementApplied = snapshot.bootstrapPreludePlacementApplied();
         cpuFrameCounterFromStoredLevelFrame = snapshot.cpuFrameCounterFromStoredLevelFrame();
-        normalAutoJumpUsesHandoffFrameCounterBridge = snapshot.normalAutoJumpUsesHandoffFrameCounterBridge();
         nextCpuFrameCounterOverride = snapshot.nextCpuFrameCounterOverride();
         catchUpFrameCounterOverride = snapshot.catchUpFrameCounterOverride();
         lastNormalAutoJumpPressFrameCounter = snapshot.lastNormalAutoJumpPressFrameCounter();
@@ -4724,7 +4751,10 @@ public class SidekickCpuController {
         }
 
         int flightTimer = sidekick.getDoubleJumpProperty() & 0xFF;
-        if (((frameCounter + 1) & 1) != 0 && flightTimer != 0) {
+        // ROM flight-timer decrement keys on Level_frame_counter parity; recover
+        // the post-increment value via romVisibleLevelFrameCounter() so the cadence
+        // matches whether the counter source is the sprite cadence or stored copy.
+        if ((romVisibleLevelFrameCounter() & 1) != 0 && flightTimer != 0) {
             flightTimer = (flightTimer - 1) & 0xFF;
             sidekick.setDoubleJumpProperty((byte) flightTimer);
         }
@@ -4785,7 +4815,6 @@ public class SidekickCpuController {
         skipPhysicsThisFrame = false;
         deadOnObjectReenteredVisibleWindow = false;
         controller2SignedLocked = false;
-        normalAutoJumpUsesHandoffFrameCounterBridge = false;
         nextCpuFrameCounterOverride = -1;
         catchUpFrameCounterOverride = -1;
         // Note: leader is NOT cleared — it's a structural chain relationship set at

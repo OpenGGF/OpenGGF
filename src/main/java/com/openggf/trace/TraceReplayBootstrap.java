@@ -440,11 +440,15 @@ public final class TraceReplayBootstrap {
 
     /**
      * S3K complete-run CNZ/MHZ traces begin on a visible handoff row before the
-     * first native motion row. Replay intentionally does not drive carry physics
-     * on that row, but the following NORMAL Tails CPU auto-jump gate has already
-     * observed the ROM-visible counter edge.
+     * first native motion row. Replay routes that row as {@code VBLANK_ONLY} and
+     * does not drive or compare its gameplay, but ROM still ran a full LevelLoop
+     * iteration on it — incrementing {@code Level_frame_counter} before
+     * {@code Process_Sprites} (sonic3k.asm:7889-7894). The replay harness therefore
+     * ticks the engine's frame counter on this row so the S3K Tails-CPU gates
+     * observe the same {@code Level_frame_counter} edge the ROM did, without any
+     * trace-profile-gated behaviour in the shared sidekick code.
      */
-    public static boolean shouldBridgeS3kCompleteRunInitialNormalCounterForTraceReplay(TraceData trace) {
+    public static boolean isS3kCompleteRunHandoffCounterTickRow(TraceData trace) {
         if (trace == null || trace.frameCount() == 0) {
             return false;
         }
