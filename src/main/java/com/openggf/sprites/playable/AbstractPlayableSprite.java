@@ -2584,7 +2584,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 setRolling(false);
                 setCrouching(false);
                 setPushing(false);
-                setAir(true);
+                setAir(true); setOnObject(onObject || onObjectAtFrameStart);
                 setGSpeed((short) 0);
                 setXSpeed((short) 0);
                 setYSpeed((short) -0x700);

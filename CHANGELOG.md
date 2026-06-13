@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 OOZ death-state parity now preserves and releases the ROM on-object bit:**
+  KillCharacter-equivalent death paths preserve `Status_OnObj` on the death
+  entry frame, and the S2 deferred sidekick corpse fall clears the stale support
+  bit after it re-enters and leaves the active vertical screen window. This
+  advances `s2_ooz1` from the death/status frontier to frame 1251.
+
 - **S2 HTZ seesaw balance now uses the ROM width byte:** Obj14 exposes its
   `$30` `width_pixels` value to the shared object-edge balance routine, so
   Sonic and Tails no longer enter false balance while centered on the seesaw.

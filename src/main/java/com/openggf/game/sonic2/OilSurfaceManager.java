@@ -148,7 +148,7 @@ public class OilSurfaceManager {
         PlayerOilState state = stateFor(player);
 
         if (player.getDead() || player.isDebugMode()) {
-            clearOilSupport(player, state);
+            clearOilTrackingOnly(state);
             return;
         }
 
@@ -163,7 +163,7 @@ public class OilSurfaceManager {
             // ROM: Obj07_CheckKillChar1 (s2.asm:49695-49698)
             if (state.submersion <= 0) {
                 // Suffocate - instant death (ROM: JmpTo3_KillCharacter)
-                clearOilSupport(player, state);
+                clearOilTrackingOnly(state);
                 player.applyOilSuffocateDeath();
                 return;
             }
@@ -284,8 +284,12 @@ public class OilSurfaceManager {
     }
 
     private void clearOilSupport(AbstractPlayableSprite player, PlayerOilState state) {
-        state.standingOnOil = false;
+        clearOilTrackingOnly(state);
         player.setOnObject(false);
+    }
+
+    private void clearOilTrackingOnly(PlayerOilState state) {
+        state.standingOnOil = false;
     }
 
     // =========================================================================

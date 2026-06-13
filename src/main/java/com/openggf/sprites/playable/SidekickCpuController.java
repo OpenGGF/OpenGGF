@@ -200,6 +200,7 @@ public class SidekickCpuController {
     private boolean catchUpUsesRomVisibleLevelFrameCounter;
     private boolean levelEventDormantMarkerReleasePending;
     private boolean skipPhysicsThisFrame;
+    private boolean deadOnObjectReenteredVisibleWindow;
     // Set by updateDeadFallingDeferredS2 when running the per-frame Obj02_Dead
     // ObjectMoveAndFall continuation (frame N+1+ of the deferred death-fall,
     // before crossing Tails_Max_Y_pos + $100). ROM Obj02_Dead (s2.asm:40736-40742)
@@ -1380,6 +1381,36 @@ public class SidekickCpuController {
         return true;
     }
 
+    private void clearStaleDeadOnObjectAfterVisibleWindow() {
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        if (fs == null || !fs.sidekickDeathUsesDeferredDespawn() || !sidekick.isOnObject()) {
+            deadOnObjectReenteredVisibleWindow = false;
+            return;
+        }
+        Camera camera = sidekick.currentCamera();
+        if (camera == null) {
+            return;
+        }
+        int screenY = (sidekick.getCentreY() & 0xFFFF) - (camera.getY() & 0xFFFF);
+        if (screenY < 0xB8) {
+            int nextScreenY = screenY + (sidekick.getYSpeed() >> 8);
+            if (deadOnObjectReenteredVisibleWindow && nextScreenY >= 0xB8) {
+                sidekick.setOnObject(false);
+                deadOnObjectReenteredVisibleWindow = false;
+                return;
+            }
+            deadOnObjectReenteredVisibleWindow = true;
+            return;
+        }
+        if (deadOnObjectReenteredVisibleWindow) {
+            // S2 KillCharacter can leave Status_OnObj set, but once Obj02_Dead's
+            // corpse fall re-enters and then leaves the active vertical screen
+            // window, ROM-visible status drops the stale support bit.
+            sidekick.setOnObject(false);
+            deadOnObjectReenteredVisibleWindow = false;
+        }
+    }
+
     public boolean consumeSkipPhysicsThisFrame() {
         boolean result = skipPhysicsThisFrame;
         skipPhysicsThisFrame = false;
@@ -1614,10 +1645,12 @@ public class SidekickCpuController {
         if (sidekick.getDead()) {
             normalPushingGraceFrames = 0;
             suppressNextAirbornePushFollowSteering = false;
+            clearStaleDeadOnObjectAfterVisibleWindow();
             finishNormalStepDiagnostics(diagnostics, "sidekick_dead", -1, -1,
                     0, 0, 0, 0, 0, false, 0);
             return;
         }
+        deadOnObjectReenteredVisibleWindow = false;
         PhysicsFeatureSet featureSet = sidekick.getPhysicsFeatureSet();
         if (sidekick.isHurt()
                 && featureSet != null
@@ -3865,7 +3898,6 @@ public class SidekickCpuController {
         sidekick.setGSpeed((short) 0);
         sidekick.setHurt(false);
         sidekick.setRollingJump(false);
-        sidekick.setOnObject(false);
         sidekick.setPushing(false);
         sidekick.setLatchedSolidObjectId(0);
         sidekick.setSpindash(false);
@@ -4581,6 +4613,7 @@ public class SidekickCpuController {
                 catchUpUsesRomVisibleLevelFrameCounter,
                 levelEventDormantMarkerReleasePending,
                 skipPhysicsThisFrame,
+                deadOnObjectReenteredVisibleWindow,
                 deferredDespawnDeadFallContinuingThisFrame,
                 bootstrapPreludePlacementApplied,
                 cpuFrameCounterFromStoredLevelFrame,
@@ -4637,6 +4670,7 @@ public class SidekickCpuController {
         catchUpUsesRomVisibleLevelFrameCounter = snapshot.catchUpUsesRomVisibleLevelFrameCounter();
         levelEventDormantMarkerReleasePending = snapshot.levelEventDormantMarkerReleasePending();
         skipPhysicsThisFrame = snapshot.skipPhysicsThisFrame();
+        deadOnObjectReenteredVisibleWindow = snapshot.deadOnObjectReenteredVisibleWindow();
         deferredDespawnDeadFallContinuingThisFrame = snapshot.deferredDespawnDeadFallContinuingThisFrame();
         bootstrapPreludePlacementApplied = snapshot.bootstrapPreludePlacementApplied();
         cpuFrameCounterFromStoredLevelFrame = snapshot.cpuFrameCounterFromStoredLevelFrame();
@@ -4725,6 +4759,7 @@ public class SidekickCpuController {
         catchUpUsesRomVisibleLevelFrameCounter = false;
         levelEventDormantMarkerReleasePending = false;
         skipPhysicsThisFrame = false;
+        deadOnObjectReenteredVisibleWindow = false;
         controller2SignedLocked = false;
         nextCpuFrameCounterOverride = -1;
         catchUpFrameCounterOverride = -1;

@@ -297,6 +297,7 @@ public record PerObjectRewindSnapshot(
             boolean catchUpUsesRomVisibleLevelFrameCounter,
             boolean levelEventDormantMarkerReleasePending,
             boolean skipPhysicsThisFrame,
+            boolean deadOnObjectReenteredVisibleWindow,
             boolean deferredDespawnDeadFallContinuingThisFrame,
             boolean bootstrapPreludePlacementApplied,
             boolean cpuFrameCounterFromStoredLevelFrame,

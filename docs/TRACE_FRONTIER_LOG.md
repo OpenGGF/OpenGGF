@@ -1,5 +1,47 @@
 # Trace Frontier Log
 
+## 2026-06-13 - S2 OOZ death preserves ROM on-object status
+
+- Scope: fixed the S2 OOZ Tails death frontier by preserving the ROM
+  `Status_OnObj` bit through KillCharacter-equivalent death entry, including
+  oil suffocation and sidekick level-boundary kill paths, then releasing the
+  stale bit during S2's deferred corpse-fall window. This is ROM status parity,
+  not trace-state hydration or a route/frame carve-out.
+- Disassembly basis:
+  - S2 `KillCharacter` calls `Sonic_ResetOnFloor_Part2`, sets
+    `Status_InAir`, writes `y_vel=-$700`, and clears `x_vel`/`inertia`; it does
+    not clear `Status_OnObj` (`docs/s2disasm/s2.asm:85453-85462`).
+  - `Sonic_ResetOnFloor_Part2` / `Tails_ResetOnFloor_Part2` clear the in-air,
+    pushing, rolling-jump, and jumping state bits, but not the on-object bit
+    (`docs/s2disasm/s2.asm:38122-38147`, `41018-41043`).
+  - OOZ Obj07 clears its own standing bit before jumping to `KillCharacter`,
+    so oil-surface tracking is released while the character status bit remains
+    ROM-visible on the death frame (`docs/s2disasm/s2.asm:50086-50149`).
+- Focused verification:
+  - `mvn -Dmse=off "-Dtest=TestOilSurfaceManager,TestSidekickCpuControllerLevelStart" "-DfailIfNoTests=false" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+  - Result: **10 tests**, 0 failures, 0 errors.
+  - `mvn -Dmse=off "-Dtest=TestSidekickCpuControllerLevelStart,TestS2OozLevelSelectTraceReplay" "-DfailIfNoTests=false" "-Ds2.rom.path=s2.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+  - Result: unit tests pass; trace remains red, but `s2_ooz1` advances to
+    frame **1251** `tails_status_byte` expected `0x000B`, actual `0x0003`.
+- Full sweep command:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+- Full sweep result:
+  - **Tests run: 90, Failures: 61, Errors: 1, Skipped: 0** from Maven/Surefire
+    in 8:15. Expected-red sweep; the intended `s2_ooz1` frontier advanced and
+    no tracked rows regressed relative to the previous full frontier table.
+- Frontier movement:
+
+| Trace | Previous frontier | New frontier | Delta |
+|---|---:|---:|---:|
+| `s2_ooz1` | f395/f447 `tails_status_byte` / stale `Status_OnObj` death frontier | f1251 `tails_status_byte` `0x000B -> 0x0003` | +856 from f395 |
+
+Current full frontier table is unchanged from the prior sweep except for
+`s2_ooz1`, which is now:
+
+| Trace | Frontier | Field | Expected | Actual | Errors |
+|---|---:|---|---:|---:|---:|
+| s2_ooz1 | f1251 | tails_status_byte | 0x000B | 0x0003 | 1143 |
+
 ## 2026-06-13 - S2 HTZ seesaw balance uses Obj14 width_pixels
 
 - Scope: fixed false object-edge balance on the HTZ Obj14 seesaw by exposing

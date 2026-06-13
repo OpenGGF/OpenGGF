@@ -83,7 +83,8 @@ public class TestOilSurfaceManager {
 
         assertTrue(sprite.getDead(), "Should die when submersion reaches zero on standing frame");
         assertFalse(manager.isStandingOnOil());
-        assertFalse(sprite.isOnObject());
+        assertTrue(sprite.isOnObject(),
+                "OOZ suffocation jumps to KillCharacter, which preserves Status_OnObj while setting Status_InAir");
     }
 
     private void landOnOilSurface() {
