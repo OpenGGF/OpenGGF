@@ -252,8 +252,9 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
         int currentX = xFixed >> 8;
         int currentY = yFixed >> 8;
 
-        // Create a BridgeStake with subtype 6 at current position
-        // This uses the zipline mappings frame 3 (left stake) or 4 (right stake) for scenery
+        // ROM Obj16_Slide uses AllocateObjectAfterCurrent before creating Obj1C
+        // (docs/s2disasm/s2.asm:47827-47833), so the scenery must not steal the
+        // lowest free SST slot.
         ObjectSpawn scenerySpawn = new ObjectSpawn(
                 currentX,
                 currentY,
@@ -263,7 +264,7 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
                 false,
                 0);
 
-        spawnFreeChild(() -> new BridgeStakeObjectInstance(scenerySpawn, "BridgeStake"));
+        spawnChild(() -> new BridgeStakeObjectInstance(scenerySpawn, "BridgeStake"));
 
         LOGGER.fine(() -> String.format("HTZLift spawned scenery at (%d,%d)", currentX, currentY));
     }

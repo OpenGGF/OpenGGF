@@ -286,7 +286,7 @@ public class ObjectManager {
         // manual camera resets and headless probes from sitting on an empty
         // active window until a later ObjectPlacementController delta occurs. The load step is
         // idempotent, so the first gameplay update will not duplicate instances.
-        syncActiveSpawnsLoad(false);
+        syncActiveSpawnsLoad(skipVerticalSpawnLoadFilterForGame);
     }
 
     ObjectServices services() {
@@ -312,7 +312,7 @@ public class ObjectManager {
      * <p>Idempotent: objects that already exist are not re-created.
      */
     public void preloadInitialSpawnsForHydration() {
-        syncActiveSpawnsLoad(false);
+        syncActiveSpawnsLoad(skipVerticalSpawnLoadFilterForGame);
     }
 
     /**

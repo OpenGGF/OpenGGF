@@ -325,8 +325,11 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
     @Override
     protected void registerDefaultFactories() {
         namesById.putAll(Sonic2ObjectRegistryData.NAMES_BY_ID);
-        // LayerSwitcher (0x03) is handled by PlaneSwitcherManager, not as a rendered object
-        registerFactory(Sonic2ObjectIds.LAYER_SWITCHER, (spawn, registry) -> null);
+        // LayerSwitcher (0x03) behavior is handled by ObjectManager.PlaneSwitchers,
+        // but the ROM still allocates Obj03 into an SST slot before MarkObjGone3.
+        registerFactory(Sonic2ObjectIds.LAYER_SWITCHER,
+                (spawn, registry) -> new Sonic2LayerSwitcherObjectInstance(
+                        spawn, registry.getPrimaryName(spawn.objectId())));
 
         registerFactory(Sonic2ObjectIds.SPRING,
                 (spawn, registry) -> new SpringObjectInstance(spawn, registry.getPrimaryName(spawn.objectId())));

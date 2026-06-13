@@ -83,6 +83,24 @@ public class TestS2ObjectOccupancyOracle {
     private static final Set<Integer> TRANSIENT_SELF_DELETE_IDS = Set.of(0x27);
 
     @Test
+    public void measureHtz1OccupancyDivergence() throws Exception {
+        ObjectOccupancyOracle.Divergence first =
+                measureFirstDivergence("htz", Sonic2ZoneConstants.ZONE_HTZ, 0, null);
+        if (first == null) {
+            System.out.println(
+                    "[occupancy-oracle] HTZ1: no dynamic-slot occupancy divergence "
+                            + "across the trace.");
+        } else {
+            System.out.printf(
+                    "[occupancy-oracle] HTZ1 first divergence: frame=%d slot=%d "
+                            + "expectedId=0x%02X actualId=0x%02X%n",
+                    first.frame(), first.slot(),
+                    first.expectedId() & 0xFF, first.actualId() & 0xFF);
+        }
+        // Measurement only: HTZ1 is a trace frontier, not a green trace.
+    }
+
+    @Test
     public void measureMtz1OccupancyDivergence() throws Exception {
         ObjectOccupancyOracle.Divergence first =
                 measureFirstDivergence("mtz", Sonic2ZoneConstants.ZONE_MTZ, 0, null);

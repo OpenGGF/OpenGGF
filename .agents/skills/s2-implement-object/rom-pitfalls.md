@@ -1966,6 +1966,39 @@ balance convention at `docs/skdisasm/sonic3k.asm:27842-27859`.
 
 ---
 
+## P46 — Child spawns must preserve `AllocateObject` vs `AllocateObjectAfterCurrent`
+
+**Pattern.** S2 has two distinct object allocation helpers. `AllocateObject`
+finds the lowest free SST slot, while `AllocateObjectAfterCurrent` scans after
+the current object's slot. The choice is ROM-visible because Tails' interact
+slot, object phase offsets, and later object streaming all consume SST slot
+numbers directly.
+
+**Engine symptom.** A generated child appears correct visually but occupies an
+earlier slot than ROM. A later trace reports an unrelated sidekick CPU/interact
+divergence because the child steals a slot that the ROM reused for a streamed
+layout object. In HTZ1, Obj16 used `AllocateObjectAfterCurrent` to create Obj1C
+scenery, but the engine used lowest-free-slot semantics; the Obj1C child stole
+slot 16, delaying Obj92/Obj18 layout occupancy and keeping `s2_htz1` at frame
+419/453.
+
+**What to check.** For every child-spawning object, read the exact allocator
+called by the ROM routine. Use `spawnFreeChild` only for `AllocateObject` /
+lowest-free-slot calls. Use `spawnChild` for `AllocateObjectAfterCurrent` calls
+so the child is allocated after the parent slot and may execute later in the
+same slot pass when the ROM would reach it.
+
+**ROM citation.** S2 allocator definitions:
+`docs/s2disasm/s2.asm:33674-33711`. HTZ Obj16 scenery child:
+`docs/s2disasm/s2.asm:47827-47833`.
+
+**Originating commit.** `<pending>` S2 HTZ object slot parity:
+`Sonic2LayerSwitcherObjectInstance` invisible Obj03 slot occupant,
+S2 initial preload vertical-bypass parity, and
+`HTZLiftObjectInstance.spawnScenery()` using `spawnChild()`.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

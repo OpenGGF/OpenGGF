@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 HTZ object slot parity now follows ROM allocation paths:** Obj03 layer
+  switchers now occupy an invisible SST slot, S2 initial spawn preload uses the
+  same vertical-bypass rule as ROM streaming, and HTZ Obj16 now creates its
+  Obj1C scenery child with `AllocateObjectAfterCurrent` semantics. This advances
+  `s2_htz1` from frame 419 to frame 470, exposing the next Tails Obj18
+  ride/interact divergence.
+
 - **Sidekick push-release parity now survives rewind:** S2/S3K sidekick CPU
   handling now clears airborne stale underwater push bits, consumes one
   ROM-visible released-object push read, and records that latch in rewind
