@@ -192,9 +192,10 @@ class TestMhzMushroomCapObjectInstance {
         player.setOnObject(true);
         player.setSpindash(true);
 
+        listener.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
         for (int frame = 1; frame <= 6; frame++) {
-            listener.onSolidContact(player, new SolidContact(true, false, false, true, false), frame);
             cap.update(frame, player);
+            listener.onSolidContact(player, new SolidContact(true, false, false, true, false), frame);
         }
 
         assertEquals((short) -0x0780, player.getYSpeed(),
@@ -204,6 +205,39 @@ class TestMhzMushroomCapObjectInstance {
         assertFalse(player.getSpindash(), "bounce clears spin_dash_flag");
         assertEquals(Sonic3kAnimationIds.SPRING.id(), player.getAnimationId(),
                 "bounce sets anim to Spring ($10)");
+    }
+
+    @Test
+    void springFrameLaunchWaitsForCurrentSolidObjectTopSnap() {
+        MhzMushroomCapObjectInstance cap = new MhzMushroomCapObjectInstance(new ObjectSpawn(
+                0x0150, 0x0540, MHZ_MUSHROOM_CAP, 0, 0, false, 0));
+        SolidObjectListener listener = cap;
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x014E, (short) 0x0525);
+
+        player.setYSpeed((short) 0x0700);
+        cap.update(0, player);
+        player.setYSpeed((short) 0);
+        player.setAir(false);
+        player.setOnObject(true);
+
+        for (int frame = 1; frame <= 5; frame++) {
+            listener.onSolidContact(player, new SolidContact(true, false, false, true, false), frame);
+            cap.update(frame, player);
+        }
+
+        cap.update(6, player);
+        assertEquals((short) 0, player.getYSpeed(),
+                "Obj_MHZMushroomCap_BounceCharacter runs after the current SolidObjectTop call, not before it");
+
+        player.setCentreY((short) 0x051B);
+        listener.onSolidContact(player, new SolidContact(true, false, false, true, false), 6);
+
+        assertEquals((short) -0x0780, player.getYSpeed(),
+                "mapping frame 3 launches after SolidObjectTop has snapped the rider to the cap surface");
+        assertEquals(0x051B, player.getCentreY() & 0xFFFF,
+                "the launch must preserve SolidObjectTop's y_pos = cap_y - d3 - y_radius");
+        assertTrue(player.getAir());
+        assertFalse(player.isOnObject());
     }
 
     @Test
@@ -221,9 +255,10 @@ class TestMhzMushroomCapObjectInstance {
         tails.setAir(false);
         tails.setOnObject(true);
 
+        listener.onSolidContact(tails, new SolidContact(true, false, false, true, false), 0);
         for (int frame = 1; frame <= 6; frame++) {
-            listener.onSolidContact(tails, new SolidContact(true, false, false, true, false), frame);
             cap.update(frame, sonic);
+            listener.onSolidContact(tails, new SolidContact(true, false, false, true, false), frame);
         }
 
         assertEquals((short) -0x0780, tails.getYSpeed(),
@@ -244,9 +279,10 @@ class TestMhzMushroomCapObjectInstance {
         player.setOnObject(true);
         player.setHurt(true);
 
+        listener.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
         for (int frame = 1; frame <= 6; frame++) {
-            listener.onSolidContact(player, new SolidContact(true, false, false, true, false), frame);
             cap.update(frame, player);
+            listener.onSolidContact(player, new SolidContact(true, false, false, true, false), frame);
         }
 
         assertFalse(player.isHurt(),
@@ -268,8 +304,8 @@ class TestMhzMushroomCapObjectInstance {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x1200, (short) 0x04E0);
 
         for (int frame = 0; frame <= 23; frame++) {
-            listener.onSolidContact(player, new SolidContact(true, false, false, true, false), frame);
             cap.update(frame, player);
+            listener.onSolidContact(player, new SolidContact(true, false, false, true, false), frame);
         }
         cap.appendRenderCommands(new ArrayList<>());
 

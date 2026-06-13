@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **MHZ mushroom-cap launches now wait for the ROM top-solid snap:** S3K
+  `Obj_MHZMushroomCap` now applies its bounce after the current
+  `SolidObjectTop` contact has placed the rider on the cap surface. This
+  advances `s3k_mhz1` from frame 79 to frame 127.
+
 - **S3K monitor side contacts now keep the ROM right-edge boundary:** S3K
   monitor wrappers now carry `SolidObject_cont`'s inclusive right-edge
   comparison through the shared solid profile, so exact-edge side contact sets

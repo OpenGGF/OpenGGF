@@ -1,5 +1,41 @@
 # Trace Frontier Log
 
+## 2026-06-13 - MHZ mushroom cap bounce waits for SolidObjectTop snap
+
+- Scope: `Obj_MHZMushroomCap` now applies its bounce from the standing
+  callback after the current top-solid contact has snapped the rider onto the
+  cap surface. The object update still owns animation and position, but launch
+  no longer happens before shared solid resolution has the frame's contact
+  result. This models the object routine ordering; it does not hydrate engine
+  state from trace rows and does not add a zone, route, or frame carve-out.
+- Disassembly basis: `Obj_MHZMushroomCap_Main` animates and updates position,
+  calls `SolidObjectTop`, then calls `MHZMushroomCap_BounceCharacter` for
+  Player 1 and Player 2 (`docs/skdisasm/sonic3k.asm:82159-82186`). The bounce
+  routine checks the standing bit and writes launch velocity/status/animation
+  on mapping frame 3 (`docs/skdisasm/sonic3k.asm:82277-82312`).
+- Focused verification:
+  - `mvn -Dmse=off "-Dtest=com.openggf.game.sonic3k.objects.TestMhzMushroomCapObjectInstance" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+  - Result: **13 tests**, 0 failures, 0 errors.
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s3k.TestS3kMhzCompleteRunTraceReplay" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+  - Result: trace remains red, but `s3k_mhz1` advances to frame **127**
+    `tails_cpu_jumping` expected `0x0001`, actual `0x0000`.
+- Full sweep command:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+- Full sweep result:
+  - **Tests run: 90, Failures: 62, Errors: 1, Skipped: 0** from Maven/Surefire
+    in 8:04. Expected-red sweep; the intended `s3k_mhz1` frontier advanced.
+- Frontier movement:
+
+| Trace | Previous frontier | New frontier | Delta |
+|---|---:|---:|---:|
+| `s3k_mhz1` | f79 `y` `0x051B -> 0x0525` | f127 `tails_cpu_jumping` `0x0001 -> 0x0000` | +48 |
+
+Current moved row from the full sweep:
+
+| Trace | Frontier | Field | Expected | Actual | Errors |
+|---|---:|---|---:|---:|---:|
+| s3k_mhz1 | f127 | tails_cpu_jumping | 0x0001 | 0x0000 | 4364 |
+
 ## 2026-06-13 - S3K monitor right edge preserves side push
 
 - Scope: S3K monitor wrappers now expose `SolidObject_cont`'s inclusive

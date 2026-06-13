@@ -115,6 +115,7 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
     private final String artKey;
     private final ObjectAnimationState animationState;
     private final Map<AbstractPlayableSprite, Integer> previousYVelocities = new IdentityHashMap<>();
+    private final Map<AbstractPlayableSprite, Integer> lastLaunchFrames = new IdentityHashMap<>();
     private final Set<AbstractPlayableSprite> standingPlayers =
             Collections.newSetFromMap(new IdentityHashMap<>());
     private int x;
@@ -170,8 +171,6 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
         animationState.update();
         mappingFrame = animationState.getMappingFrame();
         updatePosition(frameCounter);
-        launchStandingPlayersOnSpringFrame();
-        standingPlayers.clear();
     }
 
     @Override
@@ -220,6 +219,9 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
     public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {
         if (contact.standing() && player instanceof AbstractPlayableSprite sprite) {
             standingPlayers.add(sprite);
+            // Obj_MHZMushroomCap calls SolidObjectTop before BounceCharacter
+            // (sonic3k.asm:82170-82186), so launch after the contact snap.
+            launchStandingPlayerOnSpringFrame(sprite, frameCounter);
         }
     }
 
@@ -256,29 +258,33 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void launchStandingPlayersOnSpringFrame() {
+    private void launchStandingPlayerOnSpringFrame(AbstractPlayableSprite player, int frameCounter) {
         if (mappingFrame != BOUNCE_MAPPING_FRAME) {
             return;
         }
-        for (AbstractPlayableSprite player : standingPlayers) {
-            int previousYVelocity = previousYVelocities.getOrDefault(player, (int) player.getYSpeed());
-            int magnitude;
-            if (previousYVelocity < LOW_BOUNCE_THRESHOLD) {
-                magnitude = LOW_BOUNCE_THRESHOLD;
-            } else if (previousYVelocity < MEDIUM_BOUNCE_THRESHOLD) {
-                magnitude = MEDIUM_BOUNCE_THRESHOLD;
-            } else {
-                magnitude = HIGH_BOUNCE_THRESHOLD;
-            }
-            player.setYSpeed((short) -(magnitude + BOUNCE_BONUS));
-            player.setAir(true);
-            player.setOnObject(false);
-            player.setJumping(false);
-            player.setSpindash(false);
-            player.setHurt(false);
-            player.setAnimationId(Sonic3kAnimationIds.SPRING);
-            playBounceSfx();
+        Integer lastFrame = lastLaunchFrames.get(player);
+        if (lastFrame != null && lastFrame == frameCounter) {
+            return;
         }
+        lastLaunchFrames.put(player, frameCounter);
+
+        int previousYVelocity = previousYVelocities.getOrDefault(player, (int) player.getYSpeed());
+        int magnitude;
+        if (previousYVelocity < LOW_BOUNCE_THRESHOLD) {
+            magnitude = LOW_BOUNCE_THRESHOLD;
+        } else if (previousYVelocity < MEDIUM_BOUNCE_THRESHOLD) {
+            magnitude = MEDIUM_BOUNCE_THRESHOLD;
+        } else {
+            magnitude = HIGH_BOUNCE_THRESHOLD;
+        }
+        player.setYSpeed((short) -(magnitude + BOUNCE_BONUS));
+        player.setAir(true);
+        player.setOnObject(false);
+        player.setJumping(false);
+        player.setSpindash(false);
+        player.setHurt(false);
+        player.setAnimationId(Sonic3kAnimationIds.SPRING);
+        playBounceSfx();
     }
 
     private void playBounceSfx() {
