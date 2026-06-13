@@ -3628,6 +3628,7 @@ public class GameLoop {
             camera.updatePosition();
             levelManager.postCameraObjectPlacementSync();
             levelManager.update();
+            levelManager.refreshObjectPostCameraRenderState();
         }
 
         // Check if returning to text phase

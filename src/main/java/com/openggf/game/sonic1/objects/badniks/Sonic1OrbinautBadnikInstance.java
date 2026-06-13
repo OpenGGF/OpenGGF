@@ -9,6 +9,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
@@ -216,8 +217,15 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance {
 
     private void destroySpikes() {
         if (spikes != null) {
+            ObjectServices svc = tryServices();
+            ObjectManager objectManager = svc != null ? svc.objectManager() : null;
             for (OrbSpikeObjectInstance spike : spikes) {
                 spike.setDestroyed(true);
+                if (objectManager != null) {
+                    // S1 Orb_ChkDel calls DeleteChild while the parent is
+                    // executing, so these SST slots are reusable immediately.
+                    objectManager.removeDynamicObject(spike);
+                }
             }
         }
     }
@@ -355,7 +363,20 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance {
 
         @Override
         public boolean isPersistent() {
-            return !isDestroyed() && isOnScreenX(256);
+            return !isDestroyed() && !launched;
+        }
+
+        @Override
+        public boolean usesCustomOutOfRangeCheck() {
+            return true;
+        }
+
+        @Override
+        public boolean isCustomOutOfRange(int cameraX) {
+            // S1 Orb_MoveOrb (routine 6) has no out_of_range call; it only
+            // deletes when the parent is gone. Routine 8 launches the spike
+            // and then deletes when it is no longer rendered.
+            return launched && !isOnScreen(256);
         }
     }
 }

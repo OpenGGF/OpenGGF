@@ -127,6 +127,15 @@ public interface ObjectInstance {
         return true;
     }
 
+    /**
+     * Refreshes any retained render_flags state after the frame's camera step,
+     * matching the ROM BuildSprites/Render_Sprites pass. Most objects query
+     * camera bounds directly and do not need retained state.
+     */
+    default void refreshPostCameraRenderState() {
+        // Default no-op.
+    }
+
     void update(int frameCounter, PlayableEntity player);
 
     void appendRenderCommands(List<GLCommand> commands);

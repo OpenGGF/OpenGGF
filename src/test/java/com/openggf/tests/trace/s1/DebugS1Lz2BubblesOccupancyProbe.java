@@ -111,6 +111,9 @@ class DebugS1Lz2BubblesOccupancyProbe {
             boolean objectSlotDivergenceReported = false;
             boolean slotDivergenceReported = false;
             boolean makerStateDivergenceReported = false;
+            boolean targetEngineAppearanceReported = false;
+            boolean targetRomAppearanceReported = false;
+            ObjectSpawn targetSpawn = HAS_TARGET ? findTargetSpawn(objectManager) : null;
             for (int i = startTraceIndex; i < trace.frameCount(); i++) {
                 TraceFrame expected = trace.getFrame(i);
                 TraceFrame previous = i > 0 ? trace.getFrame(i - 1) : null;
@@ -127,9 +130,46 @@ class DebugS1Lz2BubblesOccupancyProbe {
                 if (i < START_FRAME) {
                     continue;
                 }
+                if (i == START_FRAME) {
+                    int first = 86;
+                    int last = 106;
+                    System.out.println("[" + LABEL + "-snapshot] frame=" + i
+                            + " expected: " + summarizeExpectedSlots(trace, i, first, last));
+                    System.out.println("[" + LABEL + "-snapshot] frame=" + i
+                            + " engine: " + summarizeEngineSlots(objectManager, first, last));
+                }
                 if (i > STOP_FRAME) {
                     System.out.printf("[%s-obj64-count] stopped at frame %d%n", LABEL, STOP_FRAME);
                     return;
+                }
+
+                if (HAS_TARGET && !targetRomAppearanceReported
+                        && romTargetPresent(trace, i)) {
+                    targetRomAppearanceReported = true;
+                    System.out.printf(
+                            "[%s-target-rom] first present frame=%d traceCam=%04X traceChunk=%04X%n",
+                            LABEL,
+                            i,
+                            expected.cameraX() & 0xFFFF,
+                            expected.cameraX() & 0xFF80);
+                }
+
+                if (HAS_TARGET && !targetEngineAppearanceReported
+                        && targetSpawn != null
+                        && objectManager.getActiveObjectForRewind(targetSpawn) != null) {
+                    targetEngineAppearanceReported = true;
+                    int[] cursor = objectManager.getPlacementCursorState();
+                    System.out.printf(
+                            "[%s-target-engine] first present frame=%d engineCam=%04X "
+                                    + "engineChunk=%04X cursor=%s object=%s%n",
+                            LABEL,
+                            i,
+                            fixture.camera().getX() & 0xFFFF,
+                            fixture.camera().getX() & 0xFF80,
+                            cursor == null ? "n/a" : String.format(
+                                    "right=%d left=%d fwd=%d bwd=%d lastChunk=%04X",
+                                    cursor[0], cursor[1], cursor[2], cursor[3], cursor[4] & 0xFFFF),
+                            summarizeEngineTargetObj64(objectManager));
                 }
 
                 if (!HAS_TARGET && !objectSlotDivergenceReported) {
@@ -149,6 +189,10 @@ class DebugS1Lz2BubblesOccupancyProbe {
                                 + summarizeExpectedSlots(trace, objectSlotDivergence.frame(), first, last));
                         System.out.println("[" + LABEL + "-all-slots] engine: "
                                 + summarizeEngineSlots(objectManager, first, last));
+                        System.out.println("[" + LABEL + "-all-slots] reserved: "
+                                + summarizeReservedChildSlots(objectManager, first, last));
+                        System.out.println("[" + LABEL + "-all-slots] allocator-only: "
+                                + summarizeAllocatorOnlySlots(objectManager, first, last));
                     }
                 }
 
@@ -395,6 +439,68 @@ class DebugS1Lz2BubblesOccupancyProbe {
         return String.join(" ", parts);
     }
 
+    @SuppressWarnings("unchecked")
+    private static String summarizeReservedChildSlots(ObjectManager objectManager,
+                                                     int firstSlot,
+                                                     int lastSlotInclusive) {
+        try {
+            java.lang.reflect.Field field = ObjectManager.class.getDeclaredField("reservedChildSlots");
+            field.setAccessible(true);
+            Map<ObjectSpawn, int[]> reserved = (Map<ObjectSpawn, int[]>) field.get(objectManager);
+            List<String> parts = new ArrayList<>();
+            for (Map.Entry<ObjectSpawn, int[]> entry : reserved.entrySet()) {
+                ObjectSpawn spawn = entry.getKey();
+                int[] slots = entry.getValue();
+                if (spawn == null || slots == null) {
+                    continue;
+                }
+                boolean inRange = false;
+                for (int slot : slots) {
+                    if (slot >= firstSlot && slot <= lastSlotInclusive) {
+                        inRange = true;
+                        break;
+                    }
+                }
+                if (inRange) {
+                    parts.add(String.format("%02X@%04X,%04X:%s",
+                            spawn.objectId() & 0xFF,
+                            spawn.x() & 0xFFFF,
+                            spawn.y() & 0xFFFF,
+                            java.util.Arrays.toString(slots)));
+                }
+            }
+            return parts.isEmpty() ? "<none>" : String.join(" | ", parts);
+        } catch (ReflectiveOperationException e) {
+            return "<error " + e.getClass().getSimpleName() + ">";
+        }
+    }
+
+    private static String summarizeAllocatorOnlySlots(ObjectManager objectManager,
+                                                     int firstSlot,
+                                                     int lastSlotInclusive) {
+        List<String> parts = new ArrayList<>();
+        for (int slot = firstSlot; slot <= lastSlotInclusive; slot++) {
+            if (isDynamicSlotEmpty(objectManager, slot) || objectAtSlot(objectManager, slot) != null) {
+                continue;
+            }
+            parts.add("s" + slot);
+        }
+        return parts.isEmpty() ? "<none>" : String.join(" ", parts);
+    }
+
+    private static boolean isDynamicSlotEmpty(ObjectManager objectManager, int slot) {
+        try {
+            java.lang.reflect.Field field = ObjectManager.class.getDeclaredField("slotAllocator");
+            field.setAccessible(true);
+            Object allocator = field.get(objectManager);
+            java.lang.reflect.Method method = allocator.getClass().getDeclaredMethod("isEmpty", int.class);
+            method.setAccessible(true);
+            return (boolean) method.invoke(allocator, slot);
+        } catch (ReflectiveOperationException e) {
+            return false;
+        }
+    }
+
     private static String summarizeRingState(RingManager ringManager, List<RingSpawn> rings) {
         if (ringManager == null) {
             return "ringManager=null";
@@ -463,6 +569,51 @@ class DebugS1Lz2BubblesOccupancyProbe {
             }
         }
         return null;
+    }
+
+    private static ObjectSpawn findTargetSpawn(ObjectManager objectManager) {
+        for (ObjectSpawn spawn : objectManager.getAllSpawns()) {
+            if ((spawn.objectId() & 0xFF) == OBJ_BUBBLES
+                    && (spawn.x() & 0xFFFF) == (TARGET_X & 0xFFFF)
+                    && (spawn.y() & 0xFFFF) == (TARGET_Y & 0xFFFF)) {
+                return spawn;
+            }
+        }
+        return null;
+    }
+
+    private static boolean romTargetPresent(TraceData trace, int frame) {
+        if (!trace.metadata().hasPerFrameS1Obj64State()) {
+            return false;
+        }
+        for (TraceEvent.S1Obj64State state : trace.s1Obj64StatesForFrame(frame)) {
+            if ((state.x() & 0xFFFF) == (TARGET_X & 0xFFFF)
+                    && (state.y() & 0xFFFF) == (TARGET_Y & 0xFFFF)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String summarizeEngineTargetObj64(ObjectManager objectManager) {
+        List<String> parts = new ArrayList<>();
+        for (var instance : objectManager.getActiveObjects()) {
+            if (!(instance instanceof AbstractObjectInstance object)
+                    || object.getSpawn() == null
+                    || (object.getSpawn().objectId() & 0xFF) != OBJ_BUBBLES
+                    || (object.getSpawn().x() & 0xFFFF) != (TARGET_X & 0xFFFF)
+                    || (object.getSpawn().y() & 0xFFFF) != (TARGET_Y & 0xFFFF)) {
+                continue;
+            }
+            String details = object.traceDebugDetails();
+            parts.add(String.format(
+                    "s%02d @%04X,%04X %s",
+                    object.getSlotIndex(),
+                    object.getX() & 0xFFFF,
+                    object.getY() & 0xFFFF,
+                    details == null || details.isBlank() ? "" : details));
+        }
+        return String.join(" | ", parts);
     }
 
     private static MakerState romMakerState(TraceEvent.S1Obj64State state) {

@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 Orbinaut parent deletion now frees child slots immediately:** Obj60
+  now removes its satellite children through the object manager when the parent
+  unloads, matching the ROM `Orb_ChkDel` `DeleteChild` loop so later same-frame
+  `FindNextFreeObj` allocations see the freed SST slots.
+
 - **S3K sidekick frame-counter gates read `Level_frame_counter` natively:**
   removed the trace-profile-gated NORMAL auto-jump "handoff counter bridge" so no
   shared sidekick code branches on trace identity. The replay harness now ticks

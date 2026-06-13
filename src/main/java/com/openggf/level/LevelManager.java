@@ -991,6 +991,12 @@ public class LevelManager {
         }
     }
 
+    public void refreshObjectPostCameraRenderState() {
+        if (objectManager != null) {
+            objectManager.refreshPostCameraRenderState();
+        }
+    }
+
     /**
      * Advances zone scroll handlers that own foreground camera movement.
      *

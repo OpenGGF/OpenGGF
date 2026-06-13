@@ -1,5 +1,39 @@
 # Trace Frontier Log
 
+## 2026-06-13 - S1 SBZ3 Orbinaut child DeleteChild slot reuse
+
+- Scope: S1 Obj60 Orbinaut parent unload now removes satellite children through
+  `ObjectManager.removeDynamicObject`, and dynamic removal clears the live
+  exec-order entry plus the owned SST slot immediately. This matches
+  `Orb_ChkDel` calling `DeleteChild` for each child before `DeleteObject`
+  (`docs/s1disasm/s1disasm/_incObj/60 Badnik - Orbinaut.asm:115-143`), so
+  later same-frame `FindNextFreeObj` allocations see the slots the ROM has
+  already cleared. Orbiting satellites also no longer use the generic
+  S1 `out_of_range` check; `Orb_MoveOrb` deletes only when its parent is gone,
+  while launched routine 8 self-deletes after leaving render.
+- Focused diagnostic:
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s1.DebugS1Lz2BubblesOccupancyProbe#measureObj64CountFrontier" "-Dtrace.dir=src/test/resources/traces/s1/sbz3_completerun" "-Dtrace.zone=5" "-Dtrace.act=2" "-Dtrace.label=s1-sbz3" "-Dtrace.startFrame=142" "-Dtrace.stopFrame=160" "-DfailIfNoTests=false" test`
+  - Result: passed; the previous all-slot divergence at frame **143** is gone
+    through frame 160. Engine slots 94-97 are reusable in the same frame instead
+    of shifting the new Orbinaut satellites to slots 101-104.
+- Focused replay:
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s1.TestS1Sbz3CompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+  - Result: expected-red trace; first release-blocking error is now frame
+    **898** `obj_s22_type` expected `0x64`, actual `missing`.
+- Full trace sweep:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Dsurefire.forkCount=1" test`
+  - Result: expected-red suite; Maven reported **65** trace tests run with
+    **41** failures before the forked JVM also failed with `Java heap space`
+    during surefire stream flushing/reporting. No new SBZ3 frame-1477 rolling
+    frontier appeared; SBZ3 remains at frame **898** as above.
+- Remaining diagnostic evidence:
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s1.DebugS1Lz2BubblesOccupancyProbe#measureObj64CountFrontier" "-Dtrace.dir=src/test/resources/traces/s1/sbz3_completerun" "-Dtrace.zone=5" "-Dtrace.act=2" "-Dtrace.label=s1-sbz3" "-Dtrace.startFrame=160" "-Dtrace.stopFrame=850" "-DfailIfNoTests=false" test`
+  - Result: passed as a diagnostic probe. The earliest all-slot divergence is
+    frame **236** (`slot 66` expected Obj57, actual empty), and Obj64 maker
+    state first diverges at frame **833** (`@0980,03F8` delay expected `2`,
+    actual `3`). The frame-898 Obj64 slot mismatch remains downstream of older
+    object slot/cadence drift.
+
 ## 2026-06-13 - Remove S3K complete-run NORMAL counter bridge (Level_frame_counter reconciliation)
 
 Isolated audit/fix worktree at the develop audit base; committed baseline

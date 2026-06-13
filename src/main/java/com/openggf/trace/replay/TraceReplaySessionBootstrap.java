@@ -261,6 +261,12 @@ public final class TraceReplaySessionBootstrap {
             applyS2TornadoTitleCardScrollPrelude(trace, objectManager);
             var camera = GameServices.cameraOrNull();
             int cameraX = camera != null ? camera.getX() : 0;
+            // Replay fixtures may reuse an already-loaded SharedLevel after
+            // resetPerTest clears the transient managers. Rebuild the native
+            // ObjPosLoad window from the current camera before title-card
+            // object ticks, so prelude state comes from object code rather
+            // than recorded SST data.
+            objectManager.reset(cameraX);
             AbstractPlayableSprite player = fixture != null ? fixture.sprite() : null;
             List<AbstractPlayableSprite> sidekicks = gameplayMode.getSpriteManager() != null
                     ? gameplayMode.getSpriteManager().getSidekicks()

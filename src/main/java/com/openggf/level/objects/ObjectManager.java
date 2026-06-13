@@ -495,6 +495,16 @@ public class ObjectManager {
         }
     }
 
+    public void refreshPostCameraRenderState() {
+        updateCameraBounds();
+        for (ObjectInstance inst : activeObjects.values()) {
+            inst.refreshPostCameraRenderState();
+        }
+        for (ObjectInstance inst : dynamicObjects) {
+            inst.refreshPostCameraRenderState();
+        }
+    }
+
     public void update(int cameraX, PlayableEntity player, List<? extends PlayableEntity> sidekicks,
             int touchFrameCounter, boolean enableTouchResponses) {
         update(cameraX, player, sidekicks, touchFrameCounter, enableTouchResponses, false, false);
@@ -1525,8 +1535,13 @@ public class ObjectManager {
         deferredDynamicExecThisFrame.remove(object);
         if (object instanceof AbstractObjectInstance aoi) {
             int slot = aoi.getSlotIndex();
-            if (slot >= 0) {
+            if (isManagedDynamicSlot(slot)) {
                 releaseSlot(slot);
+                int execIdx = execIndexForSlot(slot);
+                if (execIdx >= 0 && execIdx < execOrder.length) {
+                    execOrder[execIdx] = null;
+                }
+                aoi.setSlotIndex(-1);
             }
         }
         object.onUnload();

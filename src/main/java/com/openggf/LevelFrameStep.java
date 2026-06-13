@@ -200,6 +200,7 @@ public final class LevelFrameStep {
         wrapper.wrap("level", levelManager::update);
 
         // 7. Cache BuildSprites on-screen results for next frame's logic.
+        levelManager.refreshObjectPostCameraRenderState();
         SpriteManager spriteManager = context.spriteManager();
         if (spriteManager != null) {
             spriteManager.refreshPlayableRenderFlags(camera);

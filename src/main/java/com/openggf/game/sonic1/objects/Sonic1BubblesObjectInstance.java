@@ -128,6 +128,8 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
 
     /** Active width for bubble render. From disassembly: move.b #$10,obActWid(a0) */
     private static final int ACTIVE_WIDTH = 0x10;
+    /** S1 BuildSprites .assumeHeight band when obRender bit 4 is clear. */
+    private static final int ASSUME_HEIGHT_RENDER_MARGIN = 0x20;
 
     /** Render priority. From disassembly: move.b #1,obPriority(a0) */
     private static final int PRIORITY = 1;
@@ -206,6 +208,12 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
      * before BuildSprites has established the live on-screen bit.
      */
     private boolean initialRenderGate;
+    /**
+     * Retained obRender bit 7 as last written by the sprite build path. Obj64
+     * maker/child routines read this previous render flag before the next
+     * DisplaySprite call can refresh it.
+     */
+    private boolean renderOnScreen;
 
     // ========================================================================
     // Constructor
@@ -239,8 +247,9 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
             posX16 = spawn.x() << 16;
             posY16 = spawn.y() << 16;
 
-            // Start in maker routine
-            routine = ROUTINE_MAKER;
+            // ObjPosLoad only writes the SST entry; Bub_Main promotes this
+            // to the maker routine on the object's first ExecuteObjects tick.
+            routine = ROUTINE_INIT;
         } else {
             // ---- Regular Bubble mode ----
             isMaker = false;
@@ -265,9 +274,10 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
             wobbleAngle = 0;
             regularBubbleNeedsInitialRandom = true;
 
-            // Start in animate routine (init is done inline here)
+            // ObjPosLoad/FindFreeObj children begin at Bub_Main and run the
+            // inline setup when ExecuteObjects reaches their slot.
             initialRenderGate = true;
-            routine = ROUTINE_ANIMATE;
+            routine = ROUTINE_INIT;
         }
     }
 
@@ -279,11 +289,36 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (routine) {
+            case ROUTINE_INIT -> updateInit(player);
             case ROUTINE_ANIMATE -> updateAnimate(player);
             case ROUTINE_CHKWATER -> updateChkWater(player, consumeInitialRenderGate());
             case ROUTINE_DISPLAY -> updateDisplay();
             case ROUTINE_DELETE -> setDestroyed(true);
             case ROUTINE_MAKER -> updateBubbleMaker(player);
+        }
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (isDestroyed()) {
+            return;
+        }
+        if (routine == ROUTINE_DISPLAY || getWaterLevel() < displayY) {
+            updateRenderOnScreenFlag();
+        }
+    }
+
+    private void updateInit(AbstractPlayableSprite player) {
+        if (isMaker) {
+            // docs/s1disasm/_incObj/64 LZ Air Bubbles.asm: Bub_Main sets
+            // obRoutine=$0A, obAnim=6, bub_time/freq, then branches directly
+            // to Bub_BblMaker on the same object tick.
+            routine = ROUTINE_MAKER;
+            updateBubbleMaker(player);
+        } else {
+            // Non-maker bubbles fall through from Bub_Main to Bub_Animate.
+            routine = ROUTINE_ANIMATE;
+            updateAnimate(player);
         }
     }
 
@@ -356,12 +391,13 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
         displayY = posY16 >> 16;
 
         // tst.b obRender(a0) / bpl.s .delete
-        if (!initialGate && !isOnScreen(ACTIVE_WIDTH)) {
+        if (!initialGate && !renderOnScreen) {
             setDestroyed(true);
             return;
         }
 
         // DisplaySprite (render will be handled by appendRenderCommands)
+        updateRenderOnScreenFlag();
     }
 
     // ========================================================================
@@ -373,9 +409,11 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
         animateSprite();
 
         // tst.b obRender(a0) / bpl.s .delete
-        if (!isOnScreen(ACTIVE_WIDTH)) {
+        if (!renderOnScreen) {
             setDestroyed(true);
+            return;
         }
+        updateRenderOnScreenFlag();
     }
 
     // ========================================================================
@@ -406,7 +444,7 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
             }
 
             // tst.b obRender(a0) / bpl.w .chkdel
-            if (!initialGate && !isOnScreen(ACTIVE_WIDTH)) {
+            if (!initialGate && !renderOnScreen) {
                 checkMakerDeletion(waterY);
                 return;
             }
@@ -568,6 +606,9 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
         // cmp.w obY(a0),d0 / blo.w DisplaySprite
         // Only display if maker is underwater
         // (if above water, just rts - don't render)
+        if (waterY < displayY) {
+            updateRenderOnScreenFlag();
+        }
     }
 
     /**
@@ -576,7 +617,16 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
     private void checkMakerDeletion(int waterY) {
         if (!isInRange()) {
             setDestroyed(true);
+            return;
         }
+        if (waterY < displayY) {
+            updateRenderOnScreenFlag();
+        }
+    }
+
+    private void updateRenderOnScreenFlag() {
+        renderOnScreen = isWithinRenderSpriteBounds(
+                ACTIVE_WIDTH, ASSUME_HEIGHT_RENDER_MARGIN);
     }
 
     // ========================================================================
@@ -682,9 +732,9 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
     public String traceDebugDetails() {
         StringBuilder sb = new StringBuilder();
         if (isMaker) {
-            return String.format("r=%02X anim=%d freq=%d time=%d prod=%02X type=%d delay=%d tbl=%02X",
+            return String.format("r=%02X anim=%d freq=%d time=%d prod=%02X type=%d delay=%d tbl=%02X render=%s",
                     routine, animId, spawnFreq, spawnTime, productionFlags & 0xFF, typeCounter,
-                    delayCounter, typeTableOffset & 0xFF);
+                    delayCounter, typeTableOffset & 0xFF, renderOnScreen);
         }
         sb.append(String.format("r=%02X anim=%d frm=%d idx=%d t=%d inh=%s",
                 routine, animId, mappingFrame, animFrameIndex, animTimer, inhalable));
