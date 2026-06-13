@@ -258,6 +258,142 @@ public class TraceBinder {
     }
 
     /**
+     * Merges read-only auxiliary object comparisons into an already-captured
+     * frame. This is used to surface true object/RNG frontiers before later
+     * player-state symptoms. It never feeds trace data back into the engine.
+     */
+    public void compareObjectNear(
+            int frame,
+            List<TraceEvent.ObjectNear> expectedObjects,
+            List<EngineNearbyObject> actualObjects) {
+        if (expectedObjects == null || expectedObjects.isEmpty()) {
+            return;
+        }
+        FrameComparison existing = comparisonsByFrame.get(frame);
+        if (existing == null) {
+            return;
+        }
+
+        Map<String, FieldComparison> fields = new LinkedHashMap<>(existing.fields());
+        List<EngineNearbyObject> actualList = actualObjects != null ? actualObjects : List.of();
+        List<Integer> matchedActualSlots = new ArrayList<>();
+        List<Integer> expectedTypes = new ArrayList<>();
+
+        for (TraceEvent.ObjectNear expected : expectedObjects) {
+            if (expected.character() != null && !expected.character().isBlank()
+                    && !"sonic".equalsIgnoreCase(expected.character())) {
+                continue;
+            }
+            int slot = expected.slot();
+            int expectedType = parseHexByte(expected.objectType());
+            if (!containsInt(expectedTypes, expectedType)) {
+                expectedTypes.add(expectedType);
+            }
+            EngineNearbyObject actual = findSemanticObjectMatch(expected, expectedType, actualList, matchedActualSlots);
+            if (actual != null) {
+                matchedActualSlots.add(actual.slot());
+            }
+            String prefix = String.format("obj_s%02X_", slot & 0xFF);
+            fields.put(prefix + "type", compareObjectField(
+                    prefix + "type",
+                    formatHexByte(expectedType),
+                    actual == null ? "missing" : formatHexByte(actual.objectId() & 0xFF)));
+            if (actual != null && expectedType == (actual.objectId() & 0xFF)) {
+                fields.put(prefix + "x", compareObjectField(
+                        prefix + "x",
+                        formatHex16(expected.x() & 0xFFFF),
+                        formatHex16(actual.currentX() & 0xFFFF)));
+                fields.put(prefix + "y", compareObjectField(
+                        prefix + "y",
+                        formatHex16(expected.y() & 0xFFFF),
+                        formatHex16(actual.currentY() & 0xFFFF)));
+            }
+        }
+
+        for (EngineNearbyObject actual : actualList) {
+            if (containsInt(matchedActualSlots, actual.slot())
+                    || !containsInt(expectedTypes, actual.objectId() & 0xFF)) {
+                continue;
+            }
+            String prefix = String.format("obj_extra_s%02X_", actual.slot() & 0xFF);
+            fields.put(prefix + "type", compareObjectField(
+                    prefix + "type",
+                    "absent",
+                    formatHexByte(actual.objectId() & 0xFF)));
+            fields.put(prefix + "x", compareObjectField(
+                    prefix + "x",
+                    "absent",
+                    formatHex16(actual.currentX() & 0xFFFF)));
+            fields.put(prefix + "y", compareObjectField(
+                    prefix + "y",
+                    "absent",
+                    formatHex16(actual.currentY() & 0xFFFF)));
+        }
+
+        comparisonsByFrame.put(frame, new FrameComparison(
+                existing.frame(), fields, existing.romDiagnostics(), existing.engineDiagnostics()));
+    }
+
+    private static EngineNearbyObject findSemanticObjectMatch(
+            TraceEvent.ObjectNear expected,
+            int expectedType,
+            List<EngineNearbyObject> actualObjects,
+            List<Integer> matchedActualSlots) {
+        int expectedX = expected.x() & 0xFFFF;
+        int expectedY = expected.y() & 0xFFFF;
+        for (EngineNearbyObject actual : actualObjects) {
+            if (containsInt(matchedActualSlots, actual.slot())) {
+                continue;
+            }
+            if ((actual.objectId() & 0xFF) == expectedType
+                    && (actual.currentX() & 0xFFFF) == expectedX
+                    && (actual.currentY() & 0xFFFF) == expectedY) {
+                return actual;
+            }
+        }
+        return null;
+    }
+
+    private static boolean containsInt(List<Integer> values, int target) {
+        for (int value : values) {
+            if (value == target) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static FieldComparison compareObjectField(String name, String expected, String actual) {
+        if (expected.equals(actual)) {
+            return new FieldComparison(name, expected, actual, Severity.MATCH, 0);
+        }
+        return new FieldComparison(name, expected, actual, Severity.ERROR, 1);
+    }
+
+    private static int parseHexByte(String value) {
+        if (value == null || value.isBlank()) {
+            return -1;
+        }
+        String normalized = value.trim();
+        if (normalized.startsWith("0x") || normalized.startsWith("0X")) {
+            normalized = normalized.substring(2);
+        }
+        try {
+            return Integer.parseInt(normalized, 16) & 0xFF;
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
+    private static String formatHexByte(int value) {
+        return value < 0 ? "missing" : String.format("0x%02X", value & 0xFF);
+    }
+
+    private static String formatHex16(int value) {
+        return String.format("0x%04X", value & 0xFFFF);
+    }
+
+    /**
      * Build a divergence report from all comparisons accumulated so far.
      * Includes any bootstrap (frame-0) divergences captured via
      * {@link #compareBootstrapFrame0(TraceData, EngineSnapshot)}.

@@ -105,6 +105,16 @@ public abstract class AbstractTraceReplayTest {
         return false;
     }
 
+    /** Override when a trace needs object-slot aux events to define the true frontier. */
+    protected boolean compareObjectNearEvents() {
+        return false;
+    }
+
+    /** Override with a diagnostic predicate when only a subset of object-near events is relevant. */
+    protected boolean shouldCompareObjectNearEvent(TraceEvent.ObjectNear near) {
+        return true;
+    }
+
     @Test
     public void replayMatchesTrace() throws Exception {
         // 0. Skip if trace directory or required files are missing
@@ -259,6 +269,12 @@ public abstract class AbstractTraceReplayTest {
                                 engineDiag.cameraX(), engineDiag.cameraY(), engineDiagText),
                         secondaryCharacterLabel, actualSidekick,
                         expectedSidekickCpu, actualSidekickCpu, expectedSidekickNormalStep);
+                    if (compareObjectNearEvents()) {
+                        binder.compareObjectNear(
+                                comparisonExpected.frame(),
+                                objectNearEventsForPrimary(trace, comparisonExpected.frame()),
+                                captureEngineNearbyObjects(sprite));
+                    }
 
                 }
             }
@@ -763,43 +779,7 @@ public abstract class AbstractTraceReplayTest {
                                 sprite.getCentreY()));
             }
 
-            List<EngineNearbyObject> nearbyObjects = new ArrayList<>();
-            for (ObjectInstance instance : om.getActiveObjects()) {
-                if (!(instance instanceof AbstractObjectInstance aoi)) {
-                    continue;
-                }
-                ObjectSpawn spawn = aoi.getSpawn();
-                if (spawn == null) {
-                    continue;
-                }
-                int currentX = aoi.getX();
-                int currentY = aoi.getY();
-                int dx = Math.abs(currentX - sprite.getCentreX());
-                int dy = Math.abs(currentY - sprite.getCentreY());
-                if (dx > 160 || dy > 160) {
-                    continue;
-                }
-                TouchResponseProvider provider =
-                        instance instanceof TouchResponseProvider trp ? trp : null;
-                nearbyObjects.add(new EngineNearbyObject(
-                        aoi.getSlotIndex(),
-                        spawn.objectId(),
-                        aoi.getName(),
-                        currentX,
-                        currentY,
-                        spawn.x(),
-                        spawn.y(),
-                        provider != null,
-                        provider != null ? provider.getCollisionFlags() : -1,
-                        provider != null ? aoi.getPreUpdateCollisionFlags() : -1,
-                        aoi.getPreUpdateX(),
-                        aoi.getPreUpdateY(),
-                        aoi.isSkipTouchThisFrame(),
-                        aoi.isSkipSolidContactThisFrame(),
-                        aoi.isOnScreenForTouch(),
-                        aoi.traceDebugDetails()));
-            }
-            nearbyObjects.sort(Comparator.comparingInt(EngineNearbyObject::slot));
+            List<EngineNearbyObject> nearbyObjects = captureEngineNearbyObjects(sprite);
             solidEvent = combineDiagnostics(solidEvent,
                     EngineNearbyObjectFormatter.summarise(nearbyObjects));
             solidEvent = combineDiagnostics(solidEvent,
@@ -815,6 +795,65 @@ public abstract class AbstractTraceReplayTest {
         return new EngineDiagnostics(routine, standOnSlot, standOnType, rings, statusByte,
                 camX, camY, cursorIdx, leftCursorIdx, fwdCtr, bwdCtr, solidEvent, xSub, ySub,
                 ridingObject, standingSnapshot);
+    }
+
+    private List<TraceEvent.ObjectNear> objectNearEventsForPrimary(TraceData trace, int frame) {
+        List<TraceEvent.ObjectNear> events = new ArrayList<>();
+        for (TraceEvent event : trace.getEventsForFrame(frame)) {
+            if (event instanceof TraceEvent.ObjectNear near
+                    && (near.character() == null || near.character().isBlank()
+                    || "sonic".equalsIgnoreCase(near.character()))
+                    && shouldCompareObjectNearEvent(near)) {
+                events.add(near);
+            }
+        }
+        return events;
+    }
+
+    private List<EngineNearbyObject> captureEngineNearbyObjects(AbstractPlayableSprite sprite) {
+        ObjectManager om = GameServices.level() != null
+                ? GameServices.level().getObjectManager() : null;
+        if (om == null || sprite == null) {
+            return List.of();
+        }
+        List<EngineNearbyObject> nearbyObjects = new ArrayList<>();
+        for (ObjectInstance instance : om.getActiveObjects()) {
+            if (!(instance instanceof AbstractObjectInstance aoi)) {
+                continue;
+            }
+            ObjectSpawn spawn = aoi.getSpawn();
+            if (spawn == null) {
+                continue;
+            }
+            int currentX = aoi.getX();
+            int currentY = aoi.getY();
+            int dx = Math.abs(currentX - sprite.getCentreX());
+            int dy = Math.abs(currentY - sprite.getCentreY());
+            if (dx > 160 || dy > 160) {
+                continue;
+            }
+            TouchResponseProvider provider =
+                    instance instanceof TouchResponseProvider trp ? trp : null;
+            nearbyObjects.add(new EngineNearbyObject(
+                    aoi.getSlotIndex(),
+                    spawn.objectId(),
+                    aoi.getName(),
+                    currentX,
+                    currentY,
+                    spawn.x(),
+                    spawn.y(),
+                    provider != null,
+                    provider != null ? provider.getCollisionFlags() : -1,
+                    provider != null ? aoi.getPreUpdateCollisionFlags() : -1,
+                    aoi.getPreUpdateX(),
+                    aoi.getPreUpdateY(),
+                    aoi.isSkipTouchThisFrame(),
+                    aoi.isSkipSolidContactThisFrame(),
+                    aoi.isOnScreenForTouch(),
+                    aoi.traceDebugDetails()));
+        }
+        nearbyObjects.sort(Comparator.comparingInt(EngineNearbyObject::slot));
+        return nearbyObjects;
     }
 
     private String summariseExpectedOnObjectSlot(ObjectManager om, TraceFrame expected, AbstractPlayableSprite sprite) {

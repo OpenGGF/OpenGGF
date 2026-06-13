@@ -1,5 +1,106 @@
 # Trace Frontier Log
 
+## 2026-06-13 - Object-near comparison exposes LZ2 Obj64 frontier
+
+- Scope: trace replay can now opt into read-only `object_near` comparison for
+  selected tests. The LZ2 complete-run replay enables it for S1 Obj64 bubbles
+  only, with semantic matching by object type plus current ROM position so
+  unrelated engine slot-number churn does not become the reported frontier.
+  Trace rows and aux events remain diagnostic input only; no engine state is
+  hydrated from the trace.
+- Recorder scope: the S1 complete-run BizHawk recorder now emits
+  `metadata.rng_seed`, and the regenerated LZ2 metadata records
+  `0xCF89035A` from a Lua script version `3.3`. The LZ2 aux-state gzip was
+  added so the Obj64 object frontier is reproducible from the checked-in trace
+  artifacts.
+- Focused verification:
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s1.TestS1Lz2CompleteRunTraceReplay" "-Ds1.rom.path=s1.gen" "-DfailIfNoTests=false" "-Dsurefire.argLine=-Xshare:off -Xmx2g" test -B`
+  - Result: expected-red trace; first frontier is now frame **691**
+    `obj_extra_s24_type` expected `absent`, actual `0x64`. This replaces the
+    later player-position symptom at frame 1089 `y`, and the intermediate
+    seeded-only player symptom at frame 1086 `x_speed`.
+- CI guard verification before commit:
+  - `mvn -Dmse=off "-Dtest=TestNoServicesInObjectConstructors,TestBuildToolingGuard,TestArchitecturalSourceGuard,TestArchUnitRules,TestPlayableRuntimeAccessGuard,TestObjectPhysicsStandardizationGuard,TestRewindFieldAudit,TestRewindTransientGuard,TestSonic3kSpringObjectInstance" "-DfailIfNoTests=false" test -B`
+  - Result: **191 tests**, 0 failures, 0 errors.
+- Full sweep command:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+- Full sweep result:
+  - **Tests run: 90, Failures: 62, Errors: 1, Skipped: 0** from Maven/Surefire
+    in 7:34. Expected-red sweep; this is the current remediation baseline.
+
+Current replay frontiers from Surefire:
+
+| Trace test | Frontier | Field | Expected | Actual | Errors |
+|---|---:|---|---:|---:|---:|
+| `S1Credits00Ghz1` | pass |  |  |  | 0 |
+| `S1Credits01Mz2` | f262 | status_byte | 0x0021 | 0x0001 | 1 |
+| `S1Credits02Syz3` | pass |  |  |  | 0 |
+| `S1Credits03Lz3` | f285 | x_sub | 0x6400 | 0x0000 | 2 |
+| `S1Credits04Slz3` | pass |  |  |  | 0 |
+| `S1Credits05Sbz1` | f413 | status_byte | 0x0029 | 0x0028 | 3 |
+| `S1Credits06Sbz2` | pass |  |  |  | 0 |
+| `S1Credits07Ghz1b` | pass |  |  |  | 0 |
+| `S1FzCompleteRun` | f713 | y_speed | 0x0000 | -0700 | 155 |
+| `S1Ghz1` | pass |  |  |  | 0 |
+| `S1Ghz1CompleteRun` | f1394 | x_speed | 0x0000 | -0200 | 292 |
+| `S1Ghz2CompleteRun` | f2370 | y | 0x0267 | 0x0266 | 231 |
+| `S1Ghz3CompleteRun` | f370 | y_speed | -0220 | -0320 | 1108 |
+| `S1Lz1CompleteRun` | f302 | y_speed | -0100 | 0x0000 | 2492 |
+| `S1Lz2CompleteRun` | f691 | obj_extra_s24_type | absent | 0x64 | 2387 |
+| `S1Lz3CompleteRun` | f466 | y | 0x0807 | 0x0007 | 3229 |
+| `S1Mz1` | f3224 | y_speed | 0x02C8 | 0x01C8 | 222 |
+| `S1Mz1CompleteRun` | f1260 | rolling | 0 | 1 | 450 |
+| `S1Mz2CompleteRun` | f2409 | y_speed | 0x0048 | -00B8 | 1074 |
+| `S1Mz3CompleteRun` | f1702 | y | 0x048C | 0x048B | 1091 |
+| `S1Sbz1CompleteRun` | f2268 | air | 0 | 1 | 805 |
+| `S1Sbz2CompleteRun` | f1697 | rolling | 1 | 0 | 926 |
+| `S1Sbz3CompleteRun` | f1477 | rolling | 0 | 1 | 4688 |
+| `S1Slz1CompleteRun` | f723 | x_speed | 0x0000 | -0200 | 661 |
+| `S1Slz2CompleteRun` | f651 | g_speed | 0x1000 | 0x10AE | 270 |
+| `S1Slz3CompleteRun` | f718 | y_speed | 0x0000 | 0x0610 | 1500 |
+| `S1Syz1CompleteRun` | f250 | y_speed | -0610 | -0510 | 417 |
+| `S1Syz2CompleteRun` | f1088 | x_speed | 0x02E8 | 0x02F4 | 336 |
+| `S1Syz3CompleteRun` | f1392 | x_speed | -0200 | 0x0200 | 714 |
+| `S2Arz2LevelSelect` | f899 | y_speed | -02D0 | -01D0 | 2236 |
+| `S2ArzLevelSelect` | f1285 | tails_cpu_interact | 0x0008 | 0x0000 | 15 |
+| `S2Cnz2LevelSelect` | f2919 | tails_status_byte | 0x0009 | 0x0008 | 910 |
+| `S2CnzLevelSelect` | f202 | tails_x | 0x0265 | 0x0264 | 594 |
+| `S2Cpz2LevelSelect` | f759 | tails_status_byte | 0x0020 | 0x0000 | 1191 |
+| `S2CpzLevelSelect` | f1157 | tails_x_speed | 0x0000 | -0200 | 698 |
+| `S2DezEndingLevelSelect` | f1557 | x_speed | 0x0000 | 0x003C | 137 |
+| `S2Ehz1` | pass |  |  |  | 0 |
+| `S2Htz2LevelSelect` | f936 | tails_cpu_ctrl2_held | 0x0002 | 0x0000 | 1352 |
+| `S2HtzLevelSelect` | f3733 | tails_cpu_interact | 0x002F | 0x0000 | 532 |
+| `S2Mcz2LevelSelect` | f2411 | tails_status_byte | 0x0008 | 0x0009 | 755 |
+| `S2MczLevelSelect` | pass |  |  |  | 0 |
+| `S2Mtz2LevelSelect` | f645 | tails_x_speed | 0x00C1 | -0200 | 3016 |
+| `S2Mtz3LevelSelect` | f1381 | tails_cpu_jumping | 0x0001 | 0x0000 | 3543 |
+| `S2MtzLevelSelect` | f931 | tails_cpu_interact | 0x009F | 0x0006 | 1667 |
+| `S2Ooz2LevelSelect` | f1070 | air | 0 | 1 | 1172 |
+| `S2OozLevelSelect` | f1251 | tails_status_byte | 0x000B | 0x0003 | 1173 |
+| `S2SczLevelSelect` | pass |  |  |  | 0 |
+| `S2WfzLevelSelect` | pass |  |  |  | 0 |
+| `S3kAiz` | f2590 | tails_status_byte | 0x000A | 0x0002 | 2159 |
+| `S3kAizCompleteRun` | f1095 | x_speed | 0x0000 | 0x000C | 4320 |
+| `S3kCnz` | input f39672 | bk2_input | 0x0000 | 0x0010 | pre-report |
+| `S3kCnzCompleteRun` | f244 | y_speed | -0700 | -0530 | 6742 |
+| `S3kHczCompleteRun` | f407 | tails_status_byte | 0x004A | 0x0042 | 3329 |
+| `S3kIczCompleteRun` | f1986 | tails_status_byte | 0x0004 | 0x0024 | 3746 |
+| `S3kLbzCompleteRun` | f410 | y_speed | 0x0000 | -0100 | 5794 |
+| `S3kMgz` | input f33271 | bk2_input | 0x0009 | 0x0001 | pre-report |
+| `S3kMgzCompleteRun` | f738 | rings | 17 | 18 | 10667 |
+| `S3kMhzCompleteRun` | f175 | tails_y | 0x053F | 0x053E | 4130 |
+
+Root-cause clusters from this baseline:
+
+| Cluster | Current rows | Next action |
+|---|---|---|
+| True-frontier tooling | `S1Lz2CompleteRun` f691 `obj_extra_s24_type` | Investigate S1 Obj64 child cadence/lifetime inside frame 691 before touching later LZ2 player drift. |
+| Radius/rolling | `S1Mz1CompleteRun`, `S1Sbz2CompleteRun`, `S1Sbz3CompleteRun`, plus nearby y deltas | Continue the standing/rolling radius hypothesis after Obj64 is understood. |
+| Exact speed deltas | `S1Ghz3CompleteRun`, `S1Mz1`, `S2Arz2LevelSelect`, several `x_speed` rows | Diff the divergent frame routine and isolate the missing/extra 0x100-like term. |
+| Tails CPU/state | Most S2 rows plus S3K sidekick rows | Defer until primary-player and object-lifetime false frontiers are reduced. |
+| S3K input alignment | `S3kCnz`, `S3kMgz` | Fix metadata/input offset separately; these fail before normal frontier comparison. |
+
 ## 2026-06-13 - WalkCeiling empty extension mirrors probe nibble
 
 - Scope: ground-attachment scans rotated to global ceiling now mirror the
