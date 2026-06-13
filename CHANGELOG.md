@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 ring children no longer reserve slots after collection:** grouped S1
+  ring objects now filter collected child rings before reserving dynamic SST
+  slots, matching `Ring_Main`'s respawn-bit check before `FindFreeObj` and
+  preventing phantom slot pressure in complete-run trace diagnostics.
+
 - **Trace object-near diagnostics now report slot drift:** semantic object
   matching now also compares the ROM SST slot with the matched engine slot,
   moving the SBZ2 complete-run Obj5F frontier from frame 1447's missing child

@@ -13,6 +13,7 @@ import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.rings.RingManager;
 import com.openggf.level.rings.RingSpawn;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -125,20 +126,27 @@ public class Sonic1RingInstance extends AbstractObjectInstance
         int baseX = spawn.x();
         int baseY = spawn.y();
 
-        ObjectManager om = services().objectManager();
-        if (om != null) {
-            // ROM parity: Ring_Main calls FindFreeObj during this object's own
-            // ExecuteObjects slot, after lower-numbered slots have already had a
-            // chance to delete themselves.
-            om.allocateChildSlots(spawn, childRingSpawns.size());
-        }
+        List<ChildRingSpawn> liveChildRings = new ArrayList<>(childRingSpawns.size());
         for (int i = 0; i < childRingSpawns.size(); i++) {
-            int childX = baseX + (i + 1) * dx;
-            int childY = baseY + (i + 1) * dy;
             RingSpawn childRing = childRingSpawns.get(i);
             if (ringManager != null && ringManager.isCollected(childRing)) {
                 continue;
             }
+            liveChildRings.add(new ChildRingSpawn(i, childRing));
+        }
+
+        ObjectManager om = services().objectManager();
+        if (om != null) {
+            // ROM parity: Ring_Main checks each respawn bit before FindFreeObj.
+            // Collected child rings skip Ring_SpawnRing and do not consume an SST slot.
+            om.allocateChildSlots(spawn, liveChildRings.size());
+        }
+        int reservedSlotIndex = 0;
+        for (ChildRingSpawn childRingSpawn : liveChildRings) {
+            int childIndex = childRingSpawn.index();
+            int childX = baseX + (childIndex + 1) * dx;
+            int childY = baseY + (childIndex + 1) * dy;
+            RingSpawn childRing = childRingSpawn.ring();
             if (om != null) {
                 // Use the slots allocated above from the live SST state of this
                 // exec sweep so child numbers match the ROM's FindFreeObj order.
@@ -147,7 +155,7 @@ public class Sonic1RingInstance extends AbstractObjectInstance
                 // CONSTRUCTION_CONTEXT. setServices() is called by addDynamicObjectToReservedSlot.
                 Sonic1RingInstance child = new Sonic1RingInstance(
                         buildSpawnAt(childX, childY), childRing, outOfRangeAnchorX);
-                om.addDynamicObjectToReservedSlot(child, spawn, i);
+                om.addDynamicObjectToReservedSlot(child, spawn, reservedSlotIndex++);
             } else {
                 spawnChild(() -> new Sonic1RingInstance(
                         buildSpawnAt(childX, childY), childRing, outOfRangeAnchorX));
@@ -208,5 +216,8 @@ public class Sonic1RingInstance extends AbstractObjectInstance
                 ringSpawn.y() & 0xFFFF,
                 childRingSpawns.size(),
                 outOfRangeAnchorX & 0xFFFF);
+    }
+
+    private record ChildRingSpawn(int index, RingSpawn ring) {
     }
 }

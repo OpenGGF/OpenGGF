@@ -38,10 +38,16 @@ import java.util.TreeMap;
  */
 @RequiresRom(SonicGame.SONIC_1)
 class DebugS1Lz2BubblesOccupancyProbe {
-    private static final Path TRACE_DIR =
-            Path.of("src/test/resources/traces/s1/lz2_completerun");
-    private static final int ZONE_LZ = 3;
-    private static final int ACT_2 = 1;
+    private static final Path TRACE_DIR = Path.of(System.getProperty(
+            "trace.dir", "src/test/resources/traces/s1/lz2_completerun"));
+    private static final int ZONE = Integer.getInteger("trace.zone", 3);
+    private static final int ACT = Integer.getInteger("trace.act", 1);
+    private static final String LABEL = System.getProperty("trace.label", "s1-lz2");
+    private static final int START_FRAME = Integer.getInteger("trace.startFrame", 0);
+    private static final int STOP_FRAME = Integer.getInteger("trace.stopFrame", Integer.MAX_VALUE);
+    private static final int TARGET_X = parseOptionalIntProperty("trace.targetX", -1);
+    private static final int TARGET_Y = parseOptionalIntProperty("trace.targetY", -1);
+    private static final boolean HAS_TARGET = TARGET_X >= 0 && TARGET_Y >= 0;
     private static final int OBJ_BUBBLES = 0x64;
     private static final int FIRST_DYNAMIC_SLOT =
             ObjectSlotLayout.SONIC_1.firstDynamicSlot();
@@ -68,7 +74,7 @@ class DebugS1Lz2BubblesOccupancyProbe {
 
         SharedLevel sharedLevel = requiresFreshLevelLoad
                 ? null
-                : SharedLevel.load(SonicGame.SONIC_1, ZONE_LZ, ACT_2);
+                : SharedLevel.load(SonicGame.SONIC_1, ZONE, ACT);
         try {
             HeadlessTestFixture.Builder fixtureBuilder = HeadlessTestFixture.builder()
                     .withRecording(bk2Path)
@@ -77,7 +83,7 @@ class DebugS1Lz2BubblesOccupancyProbe {
             if (sharedLevel != null) {
                 fixtureBuilder.withSharedLevel(sharedLevel);
             } else {
-                fixtureBuilder.withZoneAndAct(ZONE_LZ, ACT_2);
+                fixtureBuilder.withZoneAndAct(ZONE, ACT);
             }
             if (TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace)) {
                 fixtureBuilder
@@ -94,10 +100,11 @@ class DebugS1Lz2BubblesOccupancyProbe {
                     : null;
             Assumptions.assumeTrue(objectManager != null,
                     "ObjectManager unavailable after bootstrap");
-            System.out.printf("[s1-lz2-obj64-count] policy objectPreludeFrames=%d startTraceIndex=%d%n",
+            System.out.printf("[%s-obj64-count] policy objectPreludeFrames=%d startTraceIndex=%d%n",
+                    LABEL,
                     TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace),
                     boot.replayStart().startingTraceIndex());
-            System.out.println("[s1-lz2-obj64-count] post-bootstrap engine Obj64: "
+            System.out.println("[" + LABEL + "-obj64-count] post-bootstrap engine Obj64: "
                     + summarizeEngineObj64(objectManager));
 
             int startTraceIndex = boot.replayStart().startingTraceIndex();
@@ -117,43 +124,50 @@ class DebugS1Lz2BubblesOccupancyProbe {
                 if (!TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
                     continue;
                 }
+                if (i < START_FRAME) {
+                    continue;
+                }
+                if (i > STOP_FRAME) {
+                    System.out.printf("[%s-obj64-count] stopped at frame %d%n", LABEL, STOP_FRAME);
+                    return;
+                }
 
-                if (!objectSlotDivergenceReported) {
+                if (!HAS_TARGET && !objectSlotDivergenceReported) {
                     ObjectSlotDivergence objectSlotDivergence =
                             firstObjectSlotDivergence(trace, objectManager, i);
                     if (objectSlotDivergence != null) {
                         objectSlotDivergenceReported = true;
                         System.out.printf(
-                                "[s1-lz2-all-slots] first divergence frame=%d slot=%d expected=%s actual=%s%n",
+                                "[" + LABEL + "-all-slots] first divergence frame=%d slot=%d expected=%s actual=%s%n",
                                 objectSlotDivergence.frame(),
                                 objectSlotDivergence.slot(),
                                 objectSlotDivergence.expected(),
                                 objectSlotDivergence.actual());
                         int first = Math.max(FIRST_DYNAMIC_SLOT, objectSlotDivergence.slot() - 8);
                         int last = objectSlotDivergence.slot() + 12;
-                        System.out.println("[s1-lz2-all-slots] expected: "
+                        System.out.println("[" + LABEL + "-all-slots] expected: "
                                 + summarizeExpectedSlots(trace, objectSlotDivergence.frame(), first, last));
-                        System.out.println("[s1-lz2-all-slots] engine: "
+                        System.out.println("[" + LABEL + "-all-slots] engine: "
                                 + summarizeEngineSlots(objectManager, first, last));
                     }
                 }
 
-                if (!slotDivergenceReported) {
+                if (!HAS_TARGET && !slotDivergenceReported) {
                     Obj64SlotDivergence slotDivergence =
                             firstObj64SlotDivergence(trace, objectManager, i);
                     if (slotDivergence != null) {
                         slotDivergenceReported = true;
                         System.out.printf(
-                                "[s1-lz2-obj64-slots] first divergence frame=%d "
+                                "[" + LABEL + "-obj64-slots] first divergence frame=%d "
                                         + "expected=%s actual=%s%n",
                                 slotDivergence.frame(),
                                 slotDivergence.expectedSlots(),
                                 slotDivergence.actualSlots());
-                        System.out.println("[s1-lz2-obj64-slots] expected 70-90: "
+                        System.out.println("[" + LABEL + "-obj64-slots] expected 70-90: "
                                 + summarizeExpectedSlots(trace, slotDivergence.frame(), 70, 90));
-                        System.out.println("[s1-lz2-obj64-slots] engine 70-90: "
+                        System.out.println("[" + LABEL + "-obj64-slots] engine 70-90: "
                                 + summarizeEngineSlots(objectManager, 70, 90));
-                        System.out.println("[s1-lz2-rings] suspects: "
+                        System.out.println("[" + LABEL + "-rings] suspects: "
                                 + summarizeRingState(GameServices.level().getRingManager(),
                                 List.of(
                                         new RingSpawn(0x0278, 0x0468),
@@ -162,9 +176,9 @@ class DebugS1Lz2BubblesOccupancyProbe {
                                         new RingSpawn(0x0278, 0x0480),
                                         new RingSpawn(0x0290, 0x0480),
                                         new RingSpawn(0x02A8, 0x0480))));
-                        System.out.println("[s1-lz2-ring-spawns] "
+                        System.out.println("[" + LABEL + "-ring-spawns] "
                                 + summarizeRingObjectSpawns(objectManager));
-                        System.out.println("[s1-lz2-ring-live] "
+                        System.out.println("[" + LABEL + "-ring-live] "
                                 + summarizeLiveRingObjects(objectManager));
                     }
                 }
@@ -175,7 +189,7 @@ class DebugS1Lz2BubblesOccupancyProbe {
                     if (stateDivergence != null) {
                         makerStateDivergenceReported = true;
                         System.out.printf(
-                                "[s1-lz2-obj64-state] first divergence frame=%d "
+                                "[" + LABEL + "-obj64-state] first divergence frame=%d "
                                         + "maker=@%04X,%04X field=%s expected=%s actual=%s%n",
                                 stateDivergence.frame(),
                                 stateDivergence.x() & 0xFFFF,
@@ -183,42 +197,44 @@ class DebugS1Lz2BubblesOccupancyProbe {
                                 stateDivergence.field(),
                                 stateDivergence.expected(),
                                 stateDivergence.actual());
-                        System.out.println("[s1-lz2-obj64-state] engine Obj64: "
+                        System.out.println("[" + LABEL + "-obj64-state] engine Obj64: "
                                 + summarizeEngineObj64(objectManager));
-                        System.out.println("[s1-lz2-obj64-state] ROM Obj64 prev: "
+                        System.out.println("[" + LABEL + "-obj64-state] ROM Obj64 prev: "
                                 + summarizeRomObj64(trace, stateDivergence.frame() - 1));
-                        System.out.println("[s1-lz2-obj64-state] ROM Obj64 curr: "
+                        System.out.println("[" + LABEL + "-obj64-state] ROM Obj64 curr: "
                                 + summarizeRomObj64(trace, stateDivergence.frame()));
                     }
                 }
 
-                ObjectOccupancyOracle.CountDivergence divergence =
-                        ObjectOccupancyOracle.firstTransientCountDivergence(
-                                trace,
-                                objectManager,
-                                i,
-                                FIRST_DYNAMIC_SLOT,
-                                Set.of(OBJ_BUBBLES),
-                                false);
-                if (divergence != null) {
-                    System.out.printf(
-                            "[s1-lz2-obj64-count] first divergence frame=%d "
-                                    + "id=0x%02X romCount=%d engineCount=%d%n",
-                            divergence.frame(),
-                            divergence.id(),
-                            divergence.romCount(),
-                            divergence.engineCount());
-                    System.out.println("[s1-lz2-obj64-count] engine Obj64: "
-                            + summarizeEngineObj64(objectManager));
-                    System.out.println("[s1-lz2-obj64-count] ROM Obj64 prev: "
-                            + summarizeRomObj64(trace, divergence.frame() - 1));
-                    System.out.println("[s1-lz2-obj64-count] ROM Obj64 curr: "
-                            + summarizeRomObj64(trace, divergence.frame()));
-                    return;
+                if (!HAS_TARGET) {
+                    ObjectOccupancyOracle.CountDivergence divergence =
+                            ObjectOccupancyOracle.firstTransientCountDivergence(
+                                    trace,
+                                    objectManager,
+                                    i,
+                                    FIRST_DYNAMIC_SLOT,
+                                    Set.of(OBJ_BUBBLES),
+                                    false);
+                    if (divergence != null) {
+                        System.out.printf(
+                                "[" + LABEL + "-obj64-count] first divergence frame=%d "
+                                        + "id=0x%02X romCount=%d engineCount=%d%n",
+                                divergence.frame(),
+                                divergence.id(),
+                                divergence.romCount(),
+                                divergence.engineCount());
+                        System.out.println("[" + LABEL + "-obj64-count] engine Obj64: "
+                                + summarizeEngineObj64(objectManager));
+                        System.out.println("[" + LABEL + "-obj64-count] ROM Obj64 prev: "
+                                + summarizeRomObj64(trace, divergence.frame() - 1));
+                        System.out.println("[" + LABEL + "-obj64-count] ROM Obj64 curr: "
+                                + summarizeRomObj64(trace, divergence.frame()));
+                        return;
+                    }
                 }
             }
 
-            System.out.println("[s1-lz2-obj64-count] no Obj64 count divergence");
+            System.out.println("[" + LABEL + "-obj64-count] no Obj64 count divergence");
         } finally {
             if (sharedLevel != null) {
                 sharedLevel.dispose();
@@ -261,6 +277,11 @@ class DebugS1Lz2BubblesOccupancyProbe {
         }
         for (TraceEvent.S1Obj64State state : trace.s1Obj64StatesForFrame(frame)) {
             if ((state.routine() & 0xFF) != 0x0A) {
+                continue;
+            }
+            if (HAS_TARGET
+                    && (((state.x() & 0xFFFF) != (TARGET_X & 0xFFFF))
+                    || ((state.y() & 0xFFFF) != (TARGET_Y & 0xFFFF)))) {
                 continue;
             }
             MakerState expected = romMakerState(state);
@@ -492,6 +513,14 @@ class DebugS1Lz2BubblesOccupancyProbe {
             }
         }
         throw new IllegalArgumentException("Missing " + key + " in " + details);
+    }
+
+    private static int parseOptionalIntProperty(String key, int defaultValue) {
+        String value = System.getProperty(key);
+        if (value == null || value.isBlank()) {
+            return defaultValue;
+        }
+        return Integer.decode(value);
     }
 
     private static Path resolveBk2File(Path traceDir, TraceMetadata meta) throws Exception {

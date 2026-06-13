@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-06-13 - S1 ring child-slot reservation matches respawn bits
+
+- Scope: `Sonic1RingInstance` now filters collected child rings before
+  reserving dynamic SST slots. This matches S1 `Ring_Main`: each ring child
+  checks its respawn bit before calling `FindFreeObj`, so collected children do
+  not consume phantom slots.
+- Disassembly basis: `docs/s1disasm/s1disasm/_incObj/25, 37 Rings.asm` tests
+  the respawn bit for each grouped ring and branches past `Ring_SpawnRing`
+  before the `FindFreeObj` call when the child is already collected.
+- Focused verification:
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.TestSonic1RingInstance" "-DfailIfNoTests=false" test`
+  - Result: passed; 11 tests, 0 failures, 0 errors.
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s1.TestS1Sbz2CompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+  - Result: expected-red trace; first error remains frame **1395**
+    `obj_s48_slot` expected `0x48`, actual `0x4A`.
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s1.TestS1Sbz3CompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+  - Result: expected-red trace; first error remains frame **893**
+    `obj_extra_s22_type` expected `absent`, actual `0x64`.
+- Diagnostic finding: the parameterized Obj64 probe can now target SBZ3 maker
+  `@0820,0308`; it reports the first targeted maker-state divergence at frame
+  **236** (`objoff_36` production flag expected `0x01`, actual `0x00`), and by
+  frame **800** the engine maker delay is five ticks ahead (`0x5B` vs ROM
+  `0x60`). The later frame-893 extra bubble and frame-1477 get-air/rolling
+  mismatch are downstream of this earlier native object/RNG cadence drift.
+- Remaining frontier: continue investigating the S1 Obj64 maker/RNG cadence
+  owner without SBZ3/LZ4 special-cases and without copying trace object state
+  into engine state.
+
 ## 2026-06-13 - Object-near comparison exposes SBZ2 slot drift
 
 - Scope: `TraceBinder.compareObjectNear` now compares the ROM SST slot against
