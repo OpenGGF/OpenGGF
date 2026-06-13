@@ -19,6 +19,7 @@ import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -897,6 +898,13 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
         // d1 = obActWid + $B
         int halfWidth = activeWidth + 0x0B;
         return new SolidObjectParams(halfWidth, SOLID_AIR_HALF_HEIGHT, SOLID_GROUND_HALF_HEIGHT);
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        // Solid_ChkEnter rejects positions beyond the right edge with BHI, so
+        // equality remains a valid side contact for loc_C230's push-status path.
+        return SolidRoutineProfile.fullSolid(false, true, false);
     }
 
     @Override

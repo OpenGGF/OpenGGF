@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 push blocks now keep exact right-edge side contact solid:** Obj33 now
+  carries the ROM `Solid_ChkEnter` inclusive right-edge comparison through the
+  shared solid profile, clearing the `s1_credits_01_mz2` frame-262
+  push-status trace frontier.
+
 - **S1 spiked-ball chains now allocate ROM-style child slots:** Obj57 link
   elements now occupy dynamic child object slots instead of parent-local
   render/touch regions, aligning LZ/SYZ slot pressure with the disassembly and

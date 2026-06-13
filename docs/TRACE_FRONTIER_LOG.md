@@ -1,5 +1,38 @@
 # Trace Frontier Log
 
+## 2026-06-13 - S1 Obj33 push block clears MZ2 credits status frontier
+
+- Scope: S1 Obj33 push blocks now expose a shared solid routine profile with
+  an inclusive right edge. The frame-262 `s1_credits_01_mz2` mismatch was an
+  exact right-edge side contact where position and velocity already matched but
+  the engine missed the ROM `Status_Push` bit.
+- Disassembly basis: S1 `Solid_ChkEnter` rejects positions beyond the right
+  edge with `bhi`, so equality remains in range and falls through to
+  `SolidObject_Side`/`loc_C230` push-status handling
+  (`docs/s1disasm/_incObj/sub SolidObject.asm`; Obj33 entry point in
+  `docs/s1disasm/_incObj/33 MZ, LZ Pushable Blocks.asm`).
+- Focused verification:
+  - `mvn -Dmse=off "-Dtest=com.openggf.game.sonic1.objects.TestSonic1PushBlockObjectInstance" test -B`
+  - Result: **2 tests**, 0 failures, 0 errors.
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s1.TestS1Credits01Mz2TraceReplay" "-Dsonic1.rom.path=s1.gen" "-DfailIfNoTests=false" "-Dsurefire.argLine=-Xshare:off -Xmx2g" test -B`
+  - Result: **1 test**, 0 failures, 0 errors. The prior frame **262**
+    `status_byte` frontier expected `0x0021`, actual `0x0001`; the trace now
+    reports `All frames match trace. No divergences.`
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s1.TestS1Credits05Sbz1TraceReplay" "-Dsonic1.rom.path=s1.gen" "-DfailIfNoTests=false" "-Dsurefire.argLine=-Xshare:off -Xmx2g" test -B`
+  - Result: expected-red trace; frontier remains frame **413** `status_byte`
+    expected `0x0029`, actual `0x0028`, so the SBZ1 girder/on-object
+    signature is a separate contact case.
+- Full trace sweep:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-Dsonic1.rom.path=s1.gen" "-Dsonic2.rom.path=s2.gen" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-DfailIfNoTests=false" "-Dsurefire.argLine=-Xshare:off -Xmx2g" test -B`
+  - Result: expected-red sweep; **Tests run: 90, Failures: 61, Errors: 1,
+    Skipped: 0** in 4:46. This is one fewer failure than the prior baseline.
+    `target/surefire-reports` is the source of truth for the cleared trace;
+    `target/trace-reports/s1_credits_01_mz2_report.json` was stale after the
+    passing replay and still contained the pre-fix frame-262 mismatch.
+- Remaining frontier: continue the status/contact/radius cluster with the
+  earliest still-failing candidate. `s1_credits_05_sbz1` is unchanged at frame
+  413, while the wider complete-run radius/rolling traces remain expected-red.
+
 ## 2026-06-13 - S1 Obj57 chain children expose true LZ2 slot frontier
 
 - Scope: S1 Obj57 spiked-ball chain links now allocate ROM-style child object
