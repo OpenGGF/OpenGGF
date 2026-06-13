@@ -26,6 +26,18 @@ public sealed interface TraceEvent {
                       String routine, String status)
         implements TraceEvent {}
 
+    /**
+     * Per-frame Sonic 1 Obj64 (Labyrinth Zone air bubbles) SST snapshot emitted
+     * by the v3.4+ S1 recorder. Captures the maker scratch fields that gate
+     * bubble production timing. Diagnostic only: replay must never hydrate
+     * engine object state from these values.
+     */
+    record S1Obj64State(int frame, int slot, short x, short y,
+                        int routine, int status, int renderFlags, int subtype,
+                        int anim, int objoff32, int objoff33, int objoff34,
+                        int objoff36, int objoff38, long objoff3c)
+        implements TraceEvent {}
+
     record StateSnapshot(int frame, Map<String, Object> fields)
         implements TraceEvent {}
 
@@ -552,6 +564,23 @@ public sealed interface TraceEvent {
                     parseHexShort(node, "y"),
                     node.has("routine") ? node.get("routine").asText() : "",
                     node.has("status") ? node.get("status").asText() : ""
+                );
+                case "s1_obj64_state" -> new S1Obj64State(
+                    frame,
+                    node.has("slot") ? node.get("slot").asInt() : -1,
+                    parseHexShort(node, "x"),
+                    parseHexShort(node, "y"),
+                    parseHexInt(node, "routine"),
+                    parseHexInt(node, "status"),
+                    parseHexInt(node, "render_flags"),
+                    parseHexInt(node, "subtype"),
+                    parseHexInt(node, "anim"),
+                    parseHexInt(node, "objoff_32"),
+                    parseHexInt(node, "objoff_33"),
+                    parseHexInt(node, "objoff_34"),
+                    parseHexInt(node, "objoff_36"),
+                    parseHexInt(node, "objoff_38"),
+                    parseHexLong(node, "objoff_3c")
                 );
                 case "collision_event" -> new CollisionEvent(
                     frame,
@@ -1153,6 +1182,17 @@ public sealed interface TraceEvent {
             return defaultValue;
         }
         return parseHexInt(node, field);
+    }
+
+    private static long parseHexLong(JsonNode node, String field) {
+        if (!node.has(field)) {
+            return 0L;
+        }
+        String hex = stripHexPrefix(node.get(field).asText());
+        if (hex.isBlank()) {
+            return 0L;
+        }
+        return Long.parseUnsignedLong(hex, 16) & 0xFFFFFFFFL;
     }
 
     private static RngCall.ObjectContext parseRngObjectContext(JsonNode node, String prefix) {

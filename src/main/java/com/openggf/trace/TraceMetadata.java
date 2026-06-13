@@ -167,6 +167,15 @@ public record TraceMetadata(
     }
 
     /**
+     * Whether the trace emits Sonic 1 Obj64 air-bubble maker snapshots on every
+     * frame. Used to diagnose Labyrinth Zone bubble-production frontiers.
+     */
+    public boolean hasPerFrameS1Obj64State() {
+        return auxSchemaExtras != null
+                && auxSchemaExtras.contains("s1_obj64_state_per_frame");
+    }
+
+    /**
      * Whether the trace's aux_state.jsonl emits per-frame
      * {@code oscillation_state} events (the v6.1+ S3K recorder extension that
      * snapshots the full {@code Oscillating_table} bytes plus

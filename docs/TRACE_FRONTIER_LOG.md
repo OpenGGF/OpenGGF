@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-06-13 - S1 LZ2 Obj64 maker diagnostics prove frame-12 frontier
+
+- Scope: the S1 BizHawk recorders now emit opt-in, read-only
+  `s1_obj64_state` aux events for every active Obj64 bubble maker/child slot.
+  Java trace parsing exposes those events through `TraceEvent.S1Obj64State`,
+  `TraceMetadata.hasPerFrameS1Obj64State()`, and
+  `TraceData.s1Obj64StatesForFrame(...)`. The data is diagnostic-only and is
+  not used to hydrate replay state.
+- Fixture update: `src/test/resources/traces/s1/lz2_completerun` was
+  regenerated through frame 117120 from `s1-complete-run.bk2` with Lua script
+  version `3.4`, compressed back to `physics.csv.gz` and `aux_state.jsonl.gz`,
+  and kept on the shared complete-run BK2 via
+  `"source_bk2": "s1-complete-run.bk2"`.
+- Focused parser verification:
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.TestTraceDataParsing" test -B`
+  - Result: **42 tests**, 0 failures, 0 errors.
+- Focused frontier probe:
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s1.DebugS1Lz2BubblesOccupancyProbe" "-Dsonic1.rom.path=s1.gen" "-DfailIfNoTests=false" "-Dsurefire.argLine=-Xshare:off -Xmx2g" test -B`
+  - Result: **1 test**, 0 failures, 0 errors. First Obj64 count divergence is
+    frame **12**, with ROM count **4** and engine count **3**.
+- Diagnostic finding: ROM slot 36 starts the trace as an already-initialized
+  Obj64 maker. At frame 11 its `objoff_38` countdown is `0x0000`; at frame 12
+  it spawns child slot 52 at `@00DE,0477`, rewrites `objoff_34` from `0x0400`
+  to `0x0300`, and resets `objoff_38` to `0x001B`. The engine slot 36 still
+  has `prod=00 type=0 delay=0`, so the earlier object-near frontier is a
+  symptom of missing route-start/native-prelude Obj64 maker scratch state, not
+  a later player-physics divergence.
+
 ## 2026-06-13 - S1 MZ1 monitor frontier advances to camera follow
 
 - Scope: S1 monitor contact now matches the ROM distinction between

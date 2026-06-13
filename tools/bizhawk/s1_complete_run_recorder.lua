@@ -23,6 +23,8 @@
 -- vblank_counter plus lag_counter for counter-driven replay phase selection.
 -- v3.3 changes: add metadata.rng_seed for one-time replay bootstrap and
 -- RNG-frontier diagnostics. CSV schema is unchanged.
+-- v3.4 changes: add s1_obj64_state aux events for LZ air-bubble maker
+-- frontier diagnostics. CSV schema is unchanged.
 ------------------------------------------------------------------------------
 
 -----------------
@@ -73,6 +75,8 @@ local OFF_ANIM_ID          = 0x1C   -- byte
 local OFF_ANIM_TIMER       = 0x1E   -- byte
 local OFF_STATUS           = 0x22   -- byte: status flags
 local OFF_ROUTINE          = 0x24   -- byte: player movement routine
+local OFF_SUBTYPE          = 0x28   -- byte
+local OFF_RENDER_FLAGS     = 0x01   -- byte: obRender
 local OFF_ANGLE            = 0x26   -- byte: terrain angle
 local OFF_STICK_CONVEX     = 0x38   -- byte
 local OFF_STAND_ON_OBJ     = 0x3D   -- byte: standonobject — SST index Sonic stands on (0=none)
@@ -278,9 +282,10 @@ local function write_metadata()
     meta_file:write('  "start_y": "0x' .. hex(start_y) .. '",\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "3.3",\n')
+    meta_file:write('  "lua_script_version": "3.4",\n')
     meta_file:write('  "trace_schema": 3,\n')
     meta_file:write('  "csv_version": 4,\n')
+    meta_file:write('  "aux_schema_extras": ["s1_obj64_state_per_frame"],\n')
     meta_file:write('  "rom_checksum": "",\n')
     meta_file:write('  "notes": ""\n')
     meta_file:write("}\n")
@@ -312,6 +317,34 @@ local function build_slot_dump()
         end
     end
     return "[" .. table.concat(entries, ",") .. "]"
+end
+
+local function write_s1_obj64_state(slot, addr, vfc)
+    local obj_x = mainmemory.read_u16_be(addr + OFF_X_POS)
+    local obj_y = mainmemory.read_u16_be(addr + OFF_Y_POS)
+    write_aux(string.format(
+        '{"frame":%d,"vfc":%d,"event":"s1_obj64_state","slot":%d,'
+        .. '"x":"0x%04X","y":"0x%04X","routine":"0x%02X","status":"0x%02X",'
+        .. '"render_flags":"0x%02X","subtype":"0x%02X","anim":"0x%02X",'
+        .. '"objoff_32":"0x%02X","objoff_33":"0x%02X",'
+        .. '"objoff_34":"0x%04X","objoff_36":"0x%04X","objoff_38":"0x%04X",'
+        .. '"objoff_3c":"0x%08X"}',
+        trace_frame,
+        vfc,
+        slot,
+        obj_x,
+        obj_y,
+        mainmemory.read_u8(addr + OFF_ROUTINE),
+        mainmemory.read_u8(addr + OFF_STATUS),
+        mainmemory.read_u8(addr + OFF_RENDER_FLAGS),
+        mainmemory.read_u8(addr + OFF_SUBTYPE),
+        mainmemory.read_u8(addr + OFF_ANIM_ID),
+        mainmemory.read_u8(addr + 0x32),
+        mainmemory.read_u8(addr + 0x33),
+        mainmemory.read_u16_be(addr + 0x34),
+        mainmemory.read_u16_be(addr + 0x36),
+        mainmemory.read_u16_be(addr + 0x38),
+        mainmemory.read_u32_be(addr + 0x3C)))
 end
 
 -- Scan all object slots (1-127). Log appearances, disappearances, proximity,
@@ -347,6 +380,9 @@ local function scan_objects(player_x, player_y)
         -- This captures the exact position of objects involved in collisions
         -- without needing to add temporary diagnostic code to the engine.
         if obj_id ~= 0 then
+            if obj_id == 0x64 then
+                write_s1_obj64_state(slot, addr, vfc)
+            end
             local obj_x = mainmemory.read_u16_be(addr + OFF_X_POS)
             local obj_y = mainmemory.read_u16_be(addr + OFF_Y_POS)
             local dx = math.abs(obj_x - player_x)

@@ -183,6 +183,10 @@ public class TraceData {
                 && !hasEventOfType(TraceEvent.CpuState.class)) {
             missing.add("cpu_state_per_frame");
         }
+        if (metadata.hasPerFrameS1Obj64State()
+                && !hasEventOfType(TraceEvent.S1Obj64State.class)) {
+            missing.add("s1_obj64_state_per_frame");
+        }
         if (metadata.hasPerFrameTailsCpuNormalStep()
                 && !hasEventOfType(TraceEvent.TailsCpuNormalStep.class)) {
             missing.add("tails_cpu_normal_step_per_frame");
@@ -258,6 +262,20 @@ public class TraceData {
             }
         }
         return snapshots;
+    }
+
+    /**
+     * Returns Sonic 1 Obj64 air-bubble maker snapshots for the requested frame.
+     * Diagnostic-only; replay must not hydrate object state from these values.
+     */
+    public List<TraceEvent.S1Obj64State> s1Obj64StatesForFrame(int frame) {
+        List<TraceEvent.S1Obj64State> states = new ArrayList<>();
+        for (TraceEvent event : eventsByFrame.getOrDefault(frame, Collections.emptyList())) {
+            if (event instanceof TraceEvent.S1Obj64State state) {
+                states.add(state);
+            }
+        }
+        return states;
     }
 
     public TraceEvent.Checkpoint latestCheckpointAtOrBefore(int frame) {

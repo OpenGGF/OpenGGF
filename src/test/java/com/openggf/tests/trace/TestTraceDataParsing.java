@@ -712,6 +712,84 @@ public class TestTraceDataParsing {
     }
 
     @Test
+    void parsesS1Obj64StateDiagnostics() throws IOException {
+        Path dir = Files.createTempDirectory("s1-obj64-state-diag");
+        Files.writeString(dir.resolve("metadata.json"), """
+            {
+              "game": "s1",
+              "zone": "lz",
+              "zone_id": 1,
+              "act": 2,
+              "bk2_frame_offset": 0,
+              "trace_frame_count": 1,
+              "start_x": "0x0080",
+              "start_y": "0x03A0",
+              "recording_date": "2026-06-13",
+              "lua_script_version": "3.4",
+              "trace_schema": 3,
+              "csv_version": 4,
+              "aux_schema_extras": ["s1_obj64_state_per_frame"],
+              "rom_checksum": "test"
+            }
+            """);
+        Files.writeString(dir.resolve("physics.csv"), """
+            frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,gameplay_frame_counter,stand_on_obj,vblank_counter,lag_counter
+            0000,0000,0080,03A0,0000,0000,0000,00,0,0,0,0000,0000,02,0000,0000,0000,00,0001,00,0001,0000
+            """);
+        Files.writeString(dir.resolve("aux_state.jsonl"), """
+            {"frame":0,"vfc":1,"event":"s1_obj64_state","slot":36,"x":"0x00E0","y":"0x0478","routine":"0x0A","status":"0x00","render_flags":"0x84","subtype":"0x84","anim":"0x06","objoff_32":"0x01","objoff_33":"0x01","objoff_34":"0x0000","objoff_36":"0x0001","objoff_38":"0x000B","objoff_3c":"0x1234ABCD"}
+            """);
+
+        TraceData data = TraceData.load(dir);
+
+        assertTrue(data.metadata().hasPerFrameS1Obj64State());
+        assertTrue(data.missingAdvertisedAuxSchemas().isEmpty());
+        List<TraceEvent.S1Obj64State> states = data.s1Obj64StatesForFrame(0);
+        assertEquals(1, states.size());
+        TraceEvent.S1Obj64State state = states.getFirst();
+        assertEquals(36, state.slot());
+        assertEquals((short) 0x00E0, state.x());
+        assertEquals((short) 0x0478, state.y());
+        assertEquals(0x0A, state.routine());
+        assertEquals(0x84, state.renderFlags());
+        assertEquals(0x000B, state.objoff38());
+        assertEquals(0x1234ABCDL, state.objoff3c());
+    }
+
+    @Test
+    void reportsAdvertisedS1Obj64DiagnosticsMissingFromAuxStream() throws IOException {
+        Path dir = Files.createTempDirectory("s1-missing-obj64-state");
+        Files.writeString(dir.resolve("metadata.json"), """
+            {
+              "game": "s1",
+              "zone": "lz",
+              "zone_id": 1,
+              "act": 2,
+              "bk2_frame_offset": 0,
+              "trace_frame_count": 1,
+              "start_x": "0x0080",
+              "start_y": "0x03A0",
+              "recording_date": "2026-06-13",
+              "lua_script_version": "3.4",
+              "trace_schema": 3,
+              "csv_version": 4,
+              "aux_schema_extras": ["s1_obj64_state_per_frame"],
+              "rom_checksum": "test"
+            }
+            """);
+        Files.writeString(dir.resolve("physics.csv"), """
+            frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,gameplay_frame_counter,stand_on_obj,vblank_counter,lag_counter
+            0000,0000,0080,03A0,0000,0000,0000,00,0,0,0,0000,0000,02,0000,0000,0000,00,0001,00,0001,0000
+            """);
+        Files.writeString(dir.resolve("aux_state.jsonl"), "");
+
+        TraceData data = TraceData.load(dir);
+
+        assertEquals(List.of("s1_obj64_state_per_frame"),
+                data.missingAdvertisedAuxSchemas());
+    }
+
+    @Test
     void latestAuxStateLookupsDoNotRebuildFrameIndexPerCall() throws IOException {
         Path dir = Files.createTempDirectory("trace-latest-aux-index");
         int frameCount = 10_000;
