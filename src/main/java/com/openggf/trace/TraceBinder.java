@@ -294,6 +294,12 @@ public class TraceBinder {
                 matchedActualSlots.add(actual.slot());
             }
             String prefix = String.format("obj_s%02X_", slot & 0xFF);
+            if (actual != null) {
+                fields.put(prefix + "slot", compareObjectField(
+                        prefix + "slot",
+                        formatHexByte(slot & 0xFF),
+                        formatHexByte(actual.slot() & 0xFF)));
+            }
             fields.put(prefix + "type", compareObjectField(
                     prefix + "type",
                     formatHexByte(expectedType),

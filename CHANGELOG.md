@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Trace object-near diagnostics now report slot drift:** semantic object
+  matching now also compares the ROM SST slot with the matched engine slot,
+  moving the SBZ2 complete-run Obj5F frontier from frame 1447's missing child
+  slot to frame 1395's Bomb body slot mismatch.
+
 - **S1 SBZ2 complete-run trace now exposes the Obj5F slot frontier:** the SBZ2
   replay now compares focused Bomb object-near diagnostics, moving the reported
   frontier from the downstream frame-1697 rolling symptom to frame 1447's Bomb

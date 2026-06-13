@@ -746,6 +746,34 @@ public class TestTraceBinder {
     }
 
     @Test
+    void testObjectNearSemanticMatchStillReportsSlotMismatch() {
+        TraceFrame frame = TraceFrame.of(1217, 0xA0E0,
+            (short) 0x0935, (short) 0x044C,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        binder.compareFrame(frame,
+            (short) 0x0935, (short) 0x044C,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0);
+
+        binder.compareObjectNear(1217,
+            java.util.List.of(new TraceEvent.ObjectNear(
+                1217, "sonic", 72, "0x5F", (short) 0x0960, (short) 0x03D0, "0x02", "0x00")),
+            java.util.List.of(new EngineNearbyObject(
+                74, 0x5F, "Bomb", 0x0960, 0x03D0, 0x0960, 0x03D0, true,
+                0x9A, 0x9A, 0x0960, 0x03D0, false, false, true)));
+
+        DivergenceReport report = binder.buildReport();
+        assertFalse(report.errors().isEmpty(), "slot mismatch should be reported");
+        DivergenceGroup firstError = report.errors().getFirst();
+        assertEquals("obj_s48_slot", firstError.field());
+        assertEquals("0x48", firstError.expectedAtStart());
+        assertEquals("0x4A", firstError.actualAtStart());
+    }
+
+    @Test
     void testCameraComparisonHandlesU16WraparoundOnEngineSide() {
         // Capture sites mask Camera.getX() with & 0xFFFF so engine values are
         // always stored as unsigned 16-bit. TraceBinder additionally masks both

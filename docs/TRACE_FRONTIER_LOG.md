@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+## 2026-06-13 - Object-near comparison exposes SBZ2 slot drift
+
+- Scope: `TraceBinder.compareObjectNear` now compares the ROM SST slot against
+  the semantically matched engine object slot. Type/position matching still
+  identifies the equivalent object, but a different live slot now reports as
+  `obj_sXX_slot` instead of hiding the allocation drift until a later child or
+  player-state symptom.
+- Focused verification:
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.TestTraceBinder#testObjectNearSemanticMatchStillReportsSlotMismatch" "-DfailIfNoTests=false" test`
+  - Result: passed; the synthetic Obj5F semantic match reports slot `0x48`
+    expected, `0x4A` actual.
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s1.TestS1Sbz2CompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+  - Result: expected-red trace; first error moved from frame **1447**
+    `obj_s69_type` expected `0x5F`, actual `missing` to frame **1395**
+    `obj_s48_slot` expected `0x48`, actual `0x4A`.
+- Diagnostic finding: the SBZ2 Obj5F Bomb body at the same type/position is
+  present in the engine, but it occupies slot **74** where the ROM occupies
+  slot **72**. A local temporary slot probe, not committed, showed this slot
+  pressure is already visible when the frame-1217 Bomb/Obj6D wave appears:
+  engine ring objects occupy slots **72-73** while ROM leaves those slots for
+  Obj5F/Obj6D. The next owner is earlier ring/object lifecycle pressure, not
+  Obj5F body behavior.
+- Remaining frontier: investigate the earlier S1 slot inventory divergence
+  before Obj5F allocation. Do not special-case SBZ2, trace route, frame number,
+  or hydrate engine state from trace data.
+
 ## 2026-06-13 - S1 SBZ2 Obj5F diagnostics expose slot-pressure frontier
 
 - Scope: `src/test/resources/traces/s1/sbz2_completerun` now carries a
