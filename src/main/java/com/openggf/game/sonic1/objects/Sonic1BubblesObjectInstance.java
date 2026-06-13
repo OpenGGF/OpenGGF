@@ -183,6 +183,8 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
     private transient boolean lastCollisionPlayerInWater;
     private transient boolean lastCollisionHit;
     private boolean regularBubbleNeedsInitialRandom;
+    private final int spawnSubtype;
+    private final String spawnDebug;
 
     // ---- Bubble maker state ----
 
@@ -204,9 +206,15 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
     // ========================================================================
 
     public Sonic1BubblesObjectInstance(ObjectSpawn spawn) {
+        this(spawn, "");
+    }
+
+    private Sonic1BubblesObjectInstance(ObjectSpawn spawn, String spawnDebug) {
         super(spawn, "Bubbles");
 
         int subtype = spawn.subtype();
+        this.spawnSubtype = subtype;
+        this.spawnDebug = spawnDebug;
 
         if (subtype >= 0x80) {
             // ---- Bubble Maker mode ----
@@ -460,12 +468,14 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
 
         // Determine bubble subtype from type table
         int tableIndex = typeTableOffset + typeCounter;
+        int tableSubtype;
         int bubbleSubtype;
         if (tableIndex >= 0 && tableIndex < BUBBLE_TYPE_TABLE.length) {
-            bubbleSubtype = BUBBLE_TYPE_TABLE[tableIndex];
+            tableSubtype = BUBBLE_TYPE_TABLE[tableIndex];
         } else {
-            bubbleSubtype = 0;
+            tableSubtype = 0;
         }
+        bubbleSubtype = tableSubtype;
 
         // docs/s1disasm/_incObj/64 Bubbles.asm:166-177 consumes the spawn
         // delay random word, then the X-offset random word, before any
@@ -473,6 +483,9 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
         // the subtype-2 cadence stays aligned with the ROM.
         int xOffset = rng.nextBits(0x0F) - 8;
         int spawnX = origX + xOffset;
+        int productionFlagsBeforeOverride = productionFlags;
+        int overrideRoll = -1;
+        String overrideReason = "none";
 
         // Check for large bubble override
         // btst #7,objoff_36(a0) / beq.s .fail
@@ -481,10 +494,12 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
             // RandomNumber word with #3, so only the low two bits drive this
             // 25% large-bubble override. Consuming/testing three bits shifts
             // later Obj64 subtype cadence.
-            if (rng.nextBits(0x03) == 0) {
+            overrideRoll = rng.nextBits(0x03);
+            if (overrideRoll == 0) {
                 if ((productionFlags & 0x40) == 0) {
                     productionFlags |= 0x40;
                     bubbleSubtype = 2;
+                    overrideReason = "rng";
                 }
             }
 
@@ -494,6 +509,7 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
             if (typeCounter == 0 && (productionFlags & 0x40) == 0) {
                 productionFlags |= 0x40;
                 bubbleSubtype = 2;
+                overrideReason = "last";
             }
         }
 
@@ -502,7 +518,22 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
                 Sonic1ObjectIds.BUBBLES,
                 bubbleSubtype,
                 0, false, 0);
-        spawnFreeChild(() -> new Sonic1BubblesObjectInstance(childSpawn));
+        int typeCounterBeforeDecrement = typeCounter;
+        int productionFlagsAfterOverride = productionFlags;
+        String childDebug = String.format(
+                "maker=@%04X,%04X tblOff=%02X type=%d idx=%02X table=%d flags=%02X->%02X roll=%d override=%s xoff=%d",
+                origX & 0xFFFF,
+                spawn.y() & 0xFFFF,
+                typeTableOffset & 0xFF,
+                typeCounterBeforeDecrement,
+                tableIndex & 0xFF,
+                tableSubtype,
+                productionFlagsBeforeOverride & 0xFF,
+                productionFlagsAfterOverride & 0xFF,
+                overrideRoll,
+                overrideReason,
+                xOffset);
+        spawnFreeChild(() -> new Sonic1BubblesObjectInstance(childSpawn, childDebug));
     }
 
     /**
@@ -640,6 +671,10 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
         }
         sb.append(String.format("r=%02X anim=%d frm=%d idx=%d t=%d inh=%s",
                 routine, animId, mappingFrame, animFrameIndex, animTimer, inhalable));
+        sb.append(String.format(" sub=%d", spawnSubtype));
+        if (!spawnDebug.isBlank()) {
+            sb.append(" ").append(spawnDebug);
+        }
         if (lastCollisionPlayerX != Integer.MIN_VALUE) {
             sb.append(String.format(" col=%s p=@%04X,%04X water=%s",
                     lastCollisionHit ? "hit" : "miss",

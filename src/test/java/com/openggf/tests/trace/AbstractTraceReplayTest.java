@@ -230,7 +230,7 @@ public abstract class AbstractTraceReplayTest {
                     var sprite = fixture.sprite();
 
                     // Capture engine-side diagnostic state for context window
-                    EngineDiagnostics engineDiag = captureEngineDiagnostics(sprite);
+                    EngineDiagnostics engineDiag = captureEngineDiagnostics(sprite, comparisonExpected);
                     TraceCharacterState actualSidekick = captureFirstSidekickState();
                     String secondaryCharacterLabel = meta.recordedSidekicks().isEmpty()
                             ? "sidekick"
@@ -359,7 +359,7 @@ public abstract class AbstractTraceReplayTest {
             TraceReplayBootstrap.ReplayPrimaryState seededPrimary =
                     TraceReplayBootstrap.capturePrimaryReplayStateForComparison(
                             trace, seededFrame, fixture.sprite());
-            EngineDiagnostics engineDiag = captureEngineDiagnostics(fixture.sprite());
+            EngineDiagnostics engineDiag = captureEngineDiagnostics(fixture.sprite(), seededFrame);
             String romDiag = combineDiagnostics(
                     seededFrame.hasExtendedData() ? seededFrame.formatDiagnostics() : "",
                     TraceEventFormatter.summariseFrameEvents(
@@ -460,7 +460,7 @@ public abstract class AbstractTraceReplayTest {
                 TraceReplayBootstrap.ReplayPrimaryState actualPrimary =
                         TraceReplayBootstrap.capturePrimaryReplayStateForComparison(
                                 trace, driveFrame, fixture.sprite());
-                EngineDiagnostics engineDiag = captureEngineDiagnostics(fixture.sprite());
+                EngineDiagnostics engineDiag = captureEngineDiagnostics(fixture.sprite(), driveFrame);
                 String romDiag = combineDiagnostics(
                         driveFrame.hasExtendedData() ? driveFrame.formatDiagnostics() : "",
                         TraceEventFormatter.summariseFrameEvents(trace.getEventsForFrame(driveTraceIndex)));
@@ -661,7 +661,7 @@ public abstract class AbstractTraceReplayTest {
      * matching state; the rest appear alongside ROM diagnostics for
      * cross-referencing.
      */
-    private EngineDiagnostics captureEngineDiagnostics(AbstractPlayableSprite sprite) {
+    private EngineDiagnostics captureEngineDiagnostics(AbstractPlayableSprite sprite, TraceFrame expected) {
         // Routine: S1 uses 0=init, 2=control, 4=hurt, 6=death
         int routine = TraceCharacterState.routineFromSprite(sprite);
 
@@ -802,6 +802,8 @@ public abstract class AbstractTraceReplayTest {
             nearbyObjects.sort(Comparator.comparingInt(EngineNearbyObject::slot));
             solidEvent = combineDiagnostics(solidEvent,
                     EngineNearbyObjectFormatter.summarise(nearbyObjects));
+            solidEvent = combineDiagnostics(solidEvent,
+                    summariseExpectedOnObjectSlot(om, expected, sprite));
             solidEvent = combineDiagnostics(solidEvent, summariseS2SkyChaseBadnikDiagnostics(om));
             solidEvent = combineDiagnostics(solidEvent, summariseSidekickStateDiagnostics(om));
             solidEvent = combineDiagnostics(solidEvent, summariseSidekickNearbyObjects(om));
@@ -813,6 +815,33 @@ public abstract class AbstractTraceReplayTest {
         return new EngineDiagnostics(routine, standOnSlot, standOnType, rings, statusByte,
                 camX, camY, cursorIdx, leftCursorIdx, fwdCtr, bwdCtr, solidEvent, xSub, ySub,
                 ridingObject, standingSnapshot);
+    }
+
+    private String summariseExpectedOnObjectSlot(ObjectManager om, TraceFrame expected, AbstractPlayableSprite sprite) {
+        if (om == null || expected == null || expected.standOnObj() <= 0) {
+            return "";
+        }
+        int expectedSlot = expected.standOnObj();
+        for (ObjectInstance instance : om.getActiveObjects()) {
+            if (!(instance instanceof AbstractObjectInstance aoi) || aoi.getSlotIndex() != expectedSlot) {
+                continue;
+            }
+            ObjectSpawn spawn = aoi.getSpawn();
+            int objectId = spawn != null ? spawn.objectId() : -1;
+            int dx = aoi.getX() - sprite.getCentreX();
+            int dy = aoi.getY() - sprite.getCentreY();
+            String details = aoi.traceDebugDetails();
+            return String.format("eng-expected-onObj s%02X 0x%02X %s @%04X,%04X d=(%d,%d)%s",
+                    expectedSlot,
+                    objectId & 0xFF,
+                    aoi.getName(),
+                    aoi.getX() & 0xFFFF,
+                    aoi.getY() & 0xFFFF,
+                    dx,
+                    dy,
+                    details == null || details.isBlank() ? "" : " " + details);
+        }
+        return String.format("eng-expected-onObj s%02X missing", expectedSlot);
     }
 
     private String summariseS2SkyChaseBadnikDiagnostics(ObjectManager om) {

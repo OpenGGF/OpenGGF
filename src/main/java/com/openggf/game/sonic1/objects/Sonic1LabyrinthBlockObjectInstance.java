@@ -251,6 +251,23 @@ public class Sonic1LabyrinthBlockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public String traceDebugDetails() {
+        return String.format(
+                "type=%X hw=%d hh=%d stand=%s contact=%d untouched=%s sink=%02X time=%d yv=%04X orig=@%04X,%04X",
+                moveType,
+                halfWidth,
+                halfHeight,
+                playerStanding,
+                solidContactResult,
+                untouched,
+                sinkAngle & 0xFF,
+                delayTimer,
+                yVelocity & 0xFFFF,
+                origX & 0xFFFF,
+                origY & 0xFFFF);
+    }
+
+    @Override
     public void appendDebugRenderCommands(DebugRenderContext ctx) {
         // Draw solid collision box
         ctx.drawRect(x, y, halfWidth + 0x0B, halfHeight, 0.3f, 0.6f, 1.0f);
