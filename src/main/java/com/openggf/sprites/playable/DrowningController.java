@@ -3,6 +3,7 @@ package com.openggf.sprites.playable;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameAudioProfile;
 import com.openggf.audio.GameSound;
+import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.level.objects.BreathingBubbleInstance;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectArtKeys;
@@ -227,7 +228,13 @@ public class DrowningController {
 
     private void spawnRomMouthBubble() {
         com.openggf.game.GameRng rng = player.currentRng();
-        int timerBias = usesSonic1BubbleArt() ? 0 : 8;
+        // S2/S3K Obj0A_Animate biases the next mouth-bubble delay by +8
+        // (RandomNumber&$F)+8 (s2.asm:42201-42204); S1 LZ Obj64 air bubbles use a
+        // different bubble-maker structure with no such bias. Drive this from the
+        // per-game PhysicsFeatureSet constant rather than the loaded bubble art
+        // key; S2 (+8) is the fallback when the feature set is unset.
+        PhysicsFeatureSet fs = player.getPhysicsFeatureSet();
+        int timerBias = fs != null ? fs.mouthBubbleTimerBias() : 8;
         nextBubbleTimer = rng.nextBits(0x0F) + timerBias;
 
         int countdownNumber = -1;
@@ -289,16 +296,6 @@ public class DrowningController {
         );
 
         levelManager.getObjectManager().addDynamicObject(bubble);
-    }
-
-    private boolean usesSonic1BubbleArt() {
-        if (!bubbleConfigResolved) {
-            LevelManager levelManager = player.currentLevelManagerIfAvailable();
-            if (levelManager != null) {
-                resolveBubbleConfig(levelManager);
-            }
-        }
-        return ObjectArtKeys.LZ_BUBBLES.equals(bubbleArtKey);
     }
 
     /**

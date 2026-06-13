@@ -901,7 +901,15 @@ public record PhysicsFeatureSet(
          *  S3K: {@code 8} (byte timer decremented every 8th level frame; ROM
          *  Sonic_ChkShoes gates subq.b on (Level_frame_counter+1)&7==0,
          *  sonic3k.asm:22072-22078, init (20*60)/8 at sonic3k.asm:40818). */
-        int speedShoesTimerDecimation
+        int speedShoesTimerDecimation,
+        /** Constant bias added to the random Obj0A mouth-bubble respawn timer.
+         *  S2/S3K Obj0A_Animate computes the next mouth-bubble delay as
+         *  {@code (RandomNumber & $F) + 8} (s2.asm:42201-42204). S1 LZ air
+         *  bubbles (Obj64) use a different bubble-maker structure with no such
+         *  bias. Expressed as a per-game constant so shared drowning code does
+         *  not branch on the loaded bubble art key.
+         *  S2/S3K: {@code 8}. S1: {@code 0}. */
+        int mouthBubbleTimerBias
 ) {
     /** S1: no delay - camera pans immediately (s1.asm: Sonic_LookUp directly modifies v_lookshift). */
     public static final short LOOK_SCROLL_DELAY_NONE = 0;
@@ -1109,7 +1117,8 @@ public record PhysicsFeatureSet(
                     source.sidekickDeathUsesDeferredDespawn(),
                     source.rightWallDeepProbePreservesPenetration(),
                     source.solidObjectBarelyPokingResolvesAsSide(),
-                    source.speedShoesTimerDecimation()
+                    source.speedShoesTimerDecimation(),
+                    source.mouthBubbleTimerBias()
             );
         }
     }
@@ -1163,7 +1172,8 @@ public record PhysicsFeatureSet(
             false /* sidekickDeathUsesDeferredDespawn: S1 has no Tails CPU sidekick */,
             false /* rightWallDeepProbePreservesPenetration: preserve S1 baseline until right-wall traces are revalidated */,
             true /* solidObjectBarelyPokingResolvesAsSide: S1 Solid_cont sends d1<=4 to Solid_SideAir (s1disasm/_incObj/sub SolidObject.asm:181-184), which returns moveq #1,d4 = side contact (lines 211-214) */,
-            1 /* speedShoesTimerDecimation: S1 per-frame word timer */);
+            1 /* speedShoesTimerDecimation: S1 per-frame word timer */,
+            0 /* mouthBubbleTimerBias: S1 LZ Obj64 air bubbles use a distinct bubble-maker structure with no (RandomNumber&$F)+8 mouth-bubble delay */);
 
     /** Sonic 2: spindash with standard speed table (s2.asm:37294), dual collision paths, delayed look scroll,
      *  preserves high ground speed on input (s2.asm:36610-36616),
@@ -1220,7 +1230,8 @@ public record PhysicsFeatureSet(
             true /* sidekickDeathUsesDeferredDespawn: S2 Obj02_Dead (s2.asm:40736-40759) runs ObjectMoveAndFall each frame and only branches to TailsCPU_Despawn (s2.asm:39043-39052) once y_pos exceeds Tails_Max_Y_pos + $100. Required to unblock HTZ trace f471 and MCZ trace f399 where engine warped Tails to $4000 on Frame N+1 instead of letting the body fall first. */,
             false /* rightWallDeepProbePreservesPenetration: preserve S2 baseline until right-wall traces are revalidated */,
             true /* solidObjectBarelyPokingResolvesAsSide: S2 SolidObject_cont sends d1<=4 to SolidObject_SideAir (s2.asm:35404-35412), which returns moveq #1,d4 = side contact (s2.asm:35447-35453); lets MTZ Obj66 Spring Wall fire its in-air -$800,-$800 diagonal bounce (s2.asm:53221-53232,53283-53340) */,
-            1 /* speedShoesTimerDecimation: S2 per-frame word timer (s2.asm:36008-36025) */);
+            1 /* speedShoesTimerDecimation: S2 per-frame word timer (s2.asm:36008-36025) */,
+            8 /* mouthBubbleTimerBias: S2 Obj0A_Animate next mouth-bubble delay = (RandomNumber&$F)+8 (s2.asm:42201-42204) */);
 
     /** Sonic 3&K: spindash with same speed table as S2, dual collision paths, delayed look scroll,
      *  preserves high ground speed on input, elemental shields,
@@ -1279,7 +1290,8 @@ public record PhysicsFeatureSet(
             true /* sidekickDeathUsesDeferredDespawn: S3K dead-fall runs sub_123C2 before sub_13ECA; it waits until y_pos exceeds Camera_Y_pos+$100, then writes the $7F00 marker and returns to MoveSprite_TestGravity (sonic3k.asm:24538-24578,29284-29285,26800-26809). */,
             true /* rightWallDeepProbePreservesPenetration: Player_AnglePos keeps right-wall angle continuity through deep negative probes before later walk-off checks (sonic3k.asm:18782-18842). */,
             false /* solidObjectBarelyPokingResolvesAsSide: S3K SolidObject_cont sends d1<=4 to loc_1E0D4 (TOP/BOTTOM), not SideAir (sonic3k.asm:41463-41466; loc_1E0D4 at 41541-41546) — keep existing absDistY>4 gate */,
-            8 /* speedShoesTimerDecimation: S3K byte timer decremented every 8th level frame (sonic3k.asm:22072-22078; init 40818) */);
+            8 /* speedShoesTimerDecimation: S3K byte timer decremented every 8th level frame (sonic3k.asm:22072-22078; init 40818) */,
+            8 /* mouthBubbleTimerBias: S3K shares the S2 Obj0A mouth-bubble cadence (RandomNumber&$F)+8 */);
 
     /** Returns true when the game supports dual collision paths (primary/secondary). */
     public boolean hasDualCollisionPaths() {
