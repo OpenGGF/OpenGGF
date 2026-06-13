@@ -178,6 +178,11 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
     private int animTimer;
     /** Current mapping frame to render. (obFrame) */
     private int mappingFrame;
+    private transient int lastCollisionPlayerX = Integer.MIN_VALUE;
+    private transient int lastCollisionPlayerY = Integer.MIN_VALUE;
+    private transient boolean lastCollisionPlayerInWater;
+    private transient boolean lastCollisionHit;
+    private boolean regularBubbleNeedsInitialRandom;
 
     // ---- Bubble maker state ----
 
@@ -239,8 +244,11 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
             displayX = spawn.x();
             displayY = spawn.y();
 
-            // jsr (RandomNumber).l / move.b d0,obAngle(a0)
-            wobbleAngle = constructionContext().rng().nextByte();
+            // S1 Obj64 calls RandomNumber in Bub_Main, when the child slot
+            // actually executes. FindFreeObj can allocate a lower slot than the
+            // maker, so constructor-time RNG would run one object pass early.
+            wobbleAngle = 0;
+            regularBubbleNeedsInitialRandom = true;
 
             // Start in animate routine (init is done inline here)
             routine = ROUTINE_ANIMATE;
@@ -268,6 +276,12 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
     // ========================================================================
 
     private void updateAnimate(AbstractPlayableSprite player) {
+        if (regularBubbleNeedsInitialRandom) {
+            // ROM: Bub_Main jsr (RandomNumber).l / move.b d0,obAngle(a0)
+            regularBubbleNeedsInitialRandom = false;
+            wobbleAngle = services().rng().nextByte();
+        }
+
         // AnimateSprite with Ani_Bub
         animateSprite();
 
@@ -574,7 +588,12 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
         // tst.b (f_playerctrl).w / bmi.s .no_collision
         // (skip if player is in a controlled state - we approximate this)
 
-        if (!player.isInWater()) {
+        lastCollisionPlayerX = player.getCentreX(1);
+        lastCollisionPlayerY = player.getCentreY(1);
+        lastCollisionPlayerInWater = player.isInWater();
+        lastCollisionHit = false;
+
+        if (!lastCollisionPlayerInWater) {
             return false;
         }
 
@@ -585,8 +604,8 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
         // the sprite-history pre-current-movement centre for this standalone
         // object collision check instead of letting a post-movement edge contact
         // overwrite Sonic with id_GetAir/locktime=35.
-        int playerX = player.getCentreX(1);
-        int playerY = player.getCentreY(1);
+        int playerX = lastCollisionPlayerX;
+        int playerY = lastCollisionPlayerY;
 
         // X check: subi.w #$10,d1 / cmp.w d0,d1 / bhs.s .no
         //   bhs branches when bubbleLeft >= playerX → no collision
@@ -608,7 +627,27 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
             return false;
         }
 
+        lastCollisionHit = true;
         return true;
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        StringBuilder sb = new StringBuilder();
+        if (isMaker) {
+            return String.format("r=%02X anim=%d freq=%d time=%d prod=%02X type=%d delay=%d",
+                    routine, animId, spawnFreq, spawnTime, productionFlags & 0xFF, typeCounter, delayCounter);
+        }
+        sb.append(String.format("r=%02X anim=%d frm=%d idx=%d t=%d inh=%s",
+                routine, animId, mappingFrame, animFrameIndex, animTimer, inhalable));
+        if (lastCollisionPlayerX != Integer.MIN_VALUE) {
+            sb.append(String.format(" col=%s p=@%04X,%04X water=%s",
+                    lastCollisionHit ? "hit" : "miss",
+                    lastCollisionPlayerX & 0xFFFF,
+                    lastCollisionPlayerY & 0xFFFF,
+                    lastCollisionPlayerInWater));
+        }
+        return sb.toString();
     }
 
     // ========================================================================

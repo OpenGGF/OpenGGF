@@ -49,9 +49,6 @@ public class DrowningController {
     /** X offset for bubble spawn (from player center) */
     private static final int BUBBLE_X_OFFSET = 6;
 
-    /** Maximum delay before second bubble spawns */
-    private static final int SECOND_BUBBLE_MAX_DELAY = 16;
-
     /**
      * Sonic 2 countdown frame mapping: countdownNumber (0-5) -> art frame index.
      * S2 bubble art: frames 6-11 are countdown numbers (6="5", 7="4", ..., 11="0").
@@ -82,14 +79,20 @@ public class DrowningController {
     /** Whether the drowning music has started */
     private boolean drowningMusicStarted;
 
-    /** Delay counter for spawning the second bubble */
-    private int secondBubbleDelay;
+    /** ROM Obj0A objoff_36 / obj0a_flags: active bubble burst and number flags. */
+    private int bubbleFlags;
 
-    /** Whether we need to spawn a second bubble */
-    private boolean pendingSecondBubble;
+    /** ROM Obj0A objoff_34 / obj0a_total_bubbles_to_spawn. */
+    private int bubblesRemainingInBurst;
 
-    /** Countdown number for pending second bubble (-1 if regular bubble) */
-    private int pendingCountdownNumber;
+    /** ROM Obj0A objoff_3A / obj0a_next_bubble_timer. */
+    private int nextBubbleTimer;
+
+    /** ROM Obj0A objoff_32: seconds-between-number-bubbles timer. */
+    private int numberBubbleTimer;
+
+    /** ROM Obj0A objoff_33: seconds-between-number-bubbles frequency. */
+    private int numberBubbleFrequency;
 
     /** Resolved bubble art key (lazily determined from available renderers) */
     private String bubbleArtKey;
@@ -119,9 +122,11 @@ public class DrowningController {
         remainingAir = INITIAL_AIR;
         frameTimer = FRAMES_PER_SECOND;
         drowningMusicStarted = false;
-        secondBubbleDelay = 0;
-        pendingSecondBubble = false;
-        pendingCountdownNumber = -1;
+        bubbleFlags = 0;
+        bubblesRemainingInBurst = -1;
+        nextBubbleTimer = 0;
+        numberBubbleTimer = 0;
+        numberBubbleFrequency = 1;
         // Reset bubble config so it re-resolves for the current zone's art
         bubbleConfigResolved = false;
     }
@@ -132,13 +137,13 @@ public class DrowningController {
      * @return true if the player should drown (air depleted)
      */
     public boolean update() {
-        // Handle pending second bubble spawn
-        if (pendingSecondBubble) {
-            secondBubbleDelay--;
-            if (secondBubbleDelay <= 0) {
-                spawnBubble(pendingCountdownNumber);
-                pendingSecondBubble = false;
-                pendingCountdownNumber = -1;
+        // ROM Obj0A_MakeBubbleMaybe: while obj0a_flags is nonzero, the
+        // mouth-bubble object decrements its per-bubble timer every frame and
+        // allocates the next bubble when it underflows.
+        if (bubbleFlags != 0) {
+            nextBubbleTimer--;
+            if (nextBubbleTimer < 0) {
+                spawnRomMouthBubble();
             }
         }
 
@@ -183,14 +188,23 @@ public class DrowningController {
             }
         }
 
-        // Check for countdown bubble
-        int countdownNumber = getCountdownNumber(remainingAir);
+        // ROM randomly chooses whether this burst contains one or two bubbles.
+        bubbleFlags = 1;
+        bubblesRemainingInBurst = player.currentRng().nextBits(1);
 
         // 2. Decrease air
+        int airBefore = remainingAir;
+        if (airBefore <= DROWNING_MUSIC_LEVEL) {
+            numberBubbleTimer--;
+            if (numberBubbleTimer < 0) {
+                numberBubbleTimer = numberBubbleFrequency;
+                bubbleFlags |= 0x80;
+            }
+        }
         remainingAir--;
 
-        // 3. Spawn small breathing bubbles
-        spawnBreathingBubbles(countdownNumber);
+        // 3. Spawn the first small breathing bubble immediately.
+        spawnRomMouthBubble();
 
         return false;
     }
@@ -210,39 +224,31 @@ public class DrowningController {
         return -1;
     }
 
-    /**
-     * Spawns small breathing bubbles from the player's mouth.
-     *
-     * @param countdownNumber Countdown number to display (-1 for regular bubble)
-     */
-    private void spawnBreathingBubbles(int countdownNumber) {
+    private void spawnRomMouthBubble() {
         com.openggf.game.GameRng rng = player.currentRng();
-        // Determine number of bubbles (1 or 2, equal chance)
-        int bubbleCount = rng.nextBoolean() ? 1 : 2;
+        int timerBias = usesSonic1BubbleArt() ? 0 : 8;
+        nextBubbleTimer = rng.nextBits(0x0F) + timerBias;
 
-        if (countdownNumber >= 0) {
-            // Countdown bubble logic
-            if (bubbleCount == 1) {
-                // Only 1 bubble - it must be the countdown bubble
-                spawnBubble(countdownNumber);
-            } else {
-                // 2 bubbles - 25% chance first is countdown, otherwise second is countdown
-                boolean firstIsCountdown = rng.nextInt(4) == 0;
-
-                if (firstIsCountdown) {
-                    spawnBubble(countdownNumber);
-                    scheduleSecondBubble(-1); // Second is regular
-                } else {
-                    spawnBubble(-1); // First is regular
-                    scheduleSecondBubble(countdownNumber); // Second is countdown
+        int countdownNumber = -1;
+        if ((bubbleFlags & 0x80) != 0 && remainingAir < DROWNING_MUSIC_LEVEL) {
+            int candidateNumber = remainingAir >> 1;
+            if (rng.nextBits(3) == 0) {
+                if ((bubbleFlags & 0x40) == 0) {
+                    bubbleFlags |= 0x40;
+                    countdownNumber = candidateNumber;
                 }
             }
-        } else {
-            // No countdown - just spawn regular bubbles
-            spawnBubble(-1);
-            if (bubbleCount == 2) {
-                scheduleSecondBubble(-1);
+            if (bubblesRemainingInBurst == 0 && (bubbleFlags & 0x40) == 0) {
+                bubbleFlags |= 0x40;
+                countdownNumber = candidateNumber;
             }
+        }
+
+        spawnBubble(countdownNumber);
+
+        bubblesRemainingInBurst--;
+        if (bubblesRemainingInBurst < 0) {
+            bubbleFlags = 0;
         }
     }
 
@@ -284,6 +290,16 @@ public class DrowningController {
         levelManager.getObjectManager().addDynamicObject(bubble);
     }
 
+    private boolean usesSonic1BubbleArt() {
+        if (!bubbleConfigResolved) {
+            LevelManager levelManager = player.currentLevelManagerIfAvailable();
+            if (levelManager != null) {
+                resolveBubbleConfig(levelManager);
+            }
+        }
+        return ObjectArtKeys.LZ_BUBBLES.equals(bubbleArtKey);
+    }
+
     /**
      * Resolves the bubble art configuration by checking which renderer is available.
      * This allows breathing bubbles to work with both S1 (LZ_BUBBLES) and S2 (BUBBLES) art.
@@ -316,17 +332,6 @@ public class DrowningController {
         // No bubble art available
         LOGGER.fine("No bubble art renderer available for breathing bubbles");
         bubbleArtKey = null;
-    }
-
-    /**
-     * Schedules a second bubble to spawn after a random delay.
-     *
-     * @param countdownNumber Countdown number for the second bubble (-1 for regular)
-     */
-    private void scheduleSecondBubble(int countdownNumber) {
-        pendingSecondBubble = true;
-        pendingCountdownNumber = countdownNumber;
-        secondBubbleDelay = 1 + player.currentRng().nextInt(SECOND_BUBBLE_MAX_DELAY);
     }
 
     /**

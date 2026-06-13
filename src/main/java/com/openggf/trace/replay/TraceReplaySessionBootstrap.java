@@ -36,9 +36,10 @@ import java.util.logging.Logger;
  *       caller loads the level.</li>
  *   <li>{@link #applyBootstrap}: derive any allowed timing prelude from
  *       trace-visible execution timing, advance native timing-only state
- *       where policy allows, seed trace-start global timing counters, and
- *       choose the replay comparison cursor. It must not copy recorded
- *       object, player, sidekick, RNG, or camera state into the engine.</li>
+ *       where policy allows, apply trace-start global state that ROM had
+ *       already established before frame 0, seed trace-start global timing
+ *       counters, and choose the replay comparison cursor. It must not copy
+ *       recorded object, player, sidekick, or camera state into the engine.</li>
  * </ol>
  */
 public final class TraceReplaySessionBootstrap {
@@ -334,11 +335,31 @@ public final class TraceReplaySessionBootstrap {
             }
         }
         primeLeaderJumpEdgeFromBk2Prelude(fixture);
+        applyInitialRngSeedForReplay(trace.metadata());
         TraceReplayBootstrap.SnapshotReport snapshotReport =
                 TraceReplayBootstrap.reportPreTraceObjectSnapshots(trace);
         TraceReplayBootstrap.ReplayStartState replayStart =
                 TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, fixture);
         return new BootstrapResult(snapshotReport, replayStart);
+    }
+
+    /**
+     * Applies the ROM RNG seed captured at the first compared trace frame.
+     *
+     * <p>This is a frame-0 bootstrap value, equivalent to loading a save-state
+     * at the BK2 trace start. It is deliberately separate from per-frame trace
+     * rows and aux events; replay still advances RNG natively after this point.
+     * Legacy traces that did not record {@code metadata.rng_seed} keep the seed
+     * established by the normal fixture/live reset path.
+     */
+    public static void applyInitialRngSeedForReplay(TraceMetadata meta) {
+        if (meta == null || meta.initialRngSeed() == null || !GameServices.hasRuntime()) {
+            return;
+        }
+        GameRng rng = GameServices.rngOrNull();
+        if (rng != null) {
+            rng.setSeed(meta.initialRngSeed());
+        }
     }
 
     private static boolean shouldInterleaveS2TitleCardPrelude(TraceData trace,

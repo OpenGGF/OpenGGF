@@ -1,5 +1,88 @@
 # Trace Frontier Log
 
+## 2026-06-13 - Trace RNG and air-bubble checkpoint
+
+- Scope: trace replay now applies `metadata.rng_seed` once during frame-0
+  session bootstrap, after native preludes and before replay comparison starts.
+  S1 and S2 BizHawk recorders now emit the same metadata field that S3K traces
+  already carried. This is trace-start state only; replay rows and aux events
+  remain read-only diagnostics and RNG advances natively after frame 0.
+- Air-bubble scope: S1 Obj64 regular bubbles now consume their initial wobble
+  RNG when the child slot executes, bubble collection preserves
+  `Status_InAir` while clearing `jumping`, roll-radius restoration subtracts
+  the ROM radius delta from `y_pos`, and mouth-bubble spawning tracks ROM
+  Obj0A burst timers/countdown-number flags instead of an ad hoc pending
+  second-bubble latch.
+- Rationale: water/bubble traces can otherwise report a later player frontier
+  when the actual divergence is an earlier RNG-dependent object slot or bubble
+  sequence. Legacy S1/S2 traces without `rng_seed` are intentionally left on
+  the normal fixture/live reset seed until regenerated.
+- Focused verification:
+  - `mvn -Dmse=off "-Dtest=TraceReplaySessionBootstrapConfigTest,TestTraceDataParsing,TestBuildToolingGuard" "-DfailIfNoTests=false" test -B`
+  - Result: **85 tests**, 0 failures, 0 errors.
+  - `mvn -Dmse=off "-Dtest=TestNoServicesInObjectConstructors,TestBuildToolingGuard,TestArchitecturalSourceGuard,TestArchUnitRules,TestPlayableRuntimeAccessGuard,TestObjectPhysicsStandardizationGuard,TestRewindFieldAudit,TestRewindTransientGuard,TestSonic3kSpringObjectInstance" "-DfailIfNoTests=false" test -B`
+  - Result: **191 tests**, 0 failures, 0 errors.
+- Focused expected-red trace:
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s1.TestS1Lz2CompleteRunTraceReplay" "-Ds1.rom.path=s1.gen" "-DfailIfNoTests=false" "-Dsurefire.argLine=-Xshare:off -Xmx2g" test -B`
+  - Result: trace remains red at frame **1089** `y` expected `0x03A8`,
+    actual `0x03AD`; the air-bubble parity changes reduced error count to
+    1974 but did not advance the first frontier.
+- Full sweep command:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+- Full sweep result:
+  - **Tests run: 90, Failures: 62, Errors: 1, Skipped: 0** from Maven/Surefire
+    in 10:04. Expected-red sweep; current frontier table below is the baseline
+    for the next single-cluster fix.
+
+Current failing frontier rows from the full sweep:
+
+| Trace | Frontier | Field | Expected | Actual | Errors |
+|---|---:|---|---:|---:|---:|
+| s1_credits_01_mz2 | f262 | status_byte | 0x0021 | 0x0001 | 1 |
+| s1_credits_03_lz3 | f285 | x_sub | 0x6400 | 0x0000 | 2 |
+| s1_credits_05_sbz1 | f413 | status_byte | 0x0029 | 0x0028 | 3 |
+| s1_ghz1 | f1394 | x_speed | 0x0000 | -0200 | 292 |
+| s1_ghz2 | f2370 | y | 0x0267 | 0x0266 | 231 |
+| s1_ghz3 | f370 | y_speed | -0220 | -0320 | 1108 |
+| s1_lz1 | f302 | y_speed | -0100 | 0x0000 | 2492 |
+| s1_lz2 | f1089 | y | 0x03A8 | 0x03AD | 1974 |
+| s1_lz3 | f466 | y | 0x0807 | 0x0007 | 3229 |
+| s1_lz4 | f1477 | rolling | 0 | 1 | 4688 |
+| s1_mz1 | f3224 | y_speed | 0x02C8 | 0x01C8 | 222 |
+| s1_mz2 | f2409 | y_speed | 0x0048 | -00B8 | 1074 |
+| s1_mz3 | f1702 | y | 0x048C | 0x048B | 1091 |
+| s1_sbz1 | f2268 | air | 0 | 1 | 805 |
+| s1_sbz2 | f576 | y | 0x0763 | 0x075C | 993 |
+| s1_sbz3 | f713 | y_speed | 0x0000 | -0700 | 155 |
+| s1_slz1 | f723 | x_speed | 0x0000 | -0200 | 661 |
+| s1_slz2 | f651 | g_speed | 0x1000 | 0x10AE | 270 |
+| s1_slz3 | f718 | y_speed | 0x0000 | 0x0610 | 1500 |
+| s1_syz1 | f250 | y_speed | -0610 | -0510 | 417 |
+| s1_syz2 | f1088 | x_speed | 0x02E8 | 0x02F4 | 336 |
+| s1_syz3 | f1392 | x_speed | -0200 | 0x0200 | 714 |
+| s2_arz1 | f1285 | tails_cpu_interact | 0x0008 | 0x0000 | 15 |
+| s2_arz2 | f899 | y_speed | -02D0 | -01D0 | 2236 |
+| s2_cnz1 | f202 | tails_x | 0x0265 | 0x0264 | 594 |
+| s2_cnz2 | f2919 | tails_status_byte | 0x0009 | 0x0008 | 910 |
+| s2_cpz1 | f1157 | tails_x_speed | 0x0000 | -0200 | 698 |
+| s2_cpz2 | f759 | tails_status_byte | 0x0020 | 0x0000 | 1191 |
+| s2_dez1 | f1557 | x_speed | 0x0000 | 0x003C | 137 |
+| s2_htz1 | f3733 | tails_cpu_interact | 0x002F | 0x0000 | 532 |
+| s2_htz2 | f936 | tails_cpu_ctrl2_held | 0x0002 | 0x0000 | 1352 |
+| s2_mcz2 | f2411 | tails_status_byte | 0x0008 | 0x0009 | 755 |
+| s2_mtz1 | f931 | tails_cpu_interact | 0x009F | 0x0006 | 1667 |
+| s2_mtz2 | f645 | tails_x_speed | 0x00C1 | -0200 | 3016 |
+| s2_mtz3 | f1381 | tails_cpu_jumping | 0x0001 | 0x0000 | 3543 |
+| s2_ooz1 | f1251 | tails_status_byte | 0x000B | 0x0003 | 1173 |
+| s2_ooz2 | f1070 | air | 0 | 1 | 1172 |
+| s3k_aiz1 | f2590 | tails_status_byte | 0x000A | 0x0002 | 2159 |
+| s3k_cnz1 | f244 | y_speed | -0700 | -0530 | 6742 |
+| s3k_hcz1 | f407 | tails_status_byte | 0x004A | 0x0042 | 3329 |
+| s3k_icz1 | f1986 | tails_status_byte | 0x0004 | 0x0024 | 3746 |
+| s3k_lbz1 | f410 | y_speed | 0x0000 | -0100 | 5794 |
+| s3k_mgz1 | f738 | rings | 17 | 18 | 10667 |
+| s3k_mhz1 | f175 | tails_y | 0x053F | 0x053E | 4130 |
+
 ## 2026-06-13 - MHZ mushroom cap bounce waits for SolidObjectTop snap
 
 - Scope: `Obj_MHZMushroomCap` now applies its bounce from the standing

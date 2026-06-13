@@ -3,7 +3,10 @@ package com.openggf.trace.replay;
 import com.openggf.game.session.EngineServices;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.GameServices;
 import com.openggf.game.session.EngineContext;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.SonicGame;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.TraceMetadata;
@@ -121,6 +124,20 @@ class TraceReplaySessionBootstrapConfigTest {
         // Should not throw. Null snapshot = no-op.
         TraceReplaySessionBootstrap.restoreGameplayConfig(null);
         assertFalse(config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE) == null);
+    }
+
+    @Test
+    void applyInitialRngSeedUsesTraceStartMetadataWithoutClobberingLegacyTraces() {
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
+
+        GameServices.rng().setSeed(0x11111111L);
+        TraceReplaySessionBootstrap.applyInitialRngSeedForReplay(
+                TraceFixtures.metadataWithRngSeed("s3k", 4, 1, "0x89ABCDEF"));
+        assertEquals(0x89ABCDEFL, GameServices.rng().getSeed());
+
+        TraceReplaySessionBootstrap.applyInitialRngSeedForReplay(
+                TraceFixtures.metadata("s3k", 4, 1));
+        assertEquals(0x89ABCDEFL, GameServices.rng().getSeed());
     }
 
     @Test

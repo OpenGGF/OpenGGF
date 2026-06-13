@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Trace replay bootstrap now honors recorded RNG seeds:** S1 and S2 trace
+  recorders emit `metadata.rng_seed`, and replay applies it once at frame-0
+  bootstrap without hydrating per-frame trace state. Air-bubble pickup and
+  breathing-bubble paths also move closer to ROM ordering by preserving
+  `Status_InAir` on bubble collection, restoring roll-radius Y offsets, and
+  advancing Obj64/Obj0A bubble RNG from the native object update path.
+
 - **S3K complete-run sidekick bootstrap now bridges the NORMAL CPU counter edge:**
   CNZ/MHZ complete-run traces now mark the initial visible handoff row as a
   one-frame NORMAL Tails CPU counter bridge instead of globally shifting the

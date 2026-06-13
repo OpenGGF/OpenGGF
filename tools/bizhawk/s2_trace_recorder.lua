@@ -61,6 +61,8 @@
 -- v9.8-s2 changes: emit diagnostic per-frame Tails CPU state, including
 -- Ctrl_2_Logical and the delayed Sonic history word/status consumed by
 -- TailsCPU_Normal.
+-- v9.9-s2 changes: add metadata.rng_seed for one-time replay bootstrap and
+-- RNG-frontier diagnostics. CSV and aux schemas are unchanged.
 --
 -- v9.3-s2: traces from this recorder version onward are bootstrap-comparable
 -- against the post-universal-title-card engine (ADR-1, design spec 2026-05-15)
@@ -68,7 +70,7 @@
 -- (see v9.3-s2 change note above for context).
 -- The bootstrap-comparator eligibility is derived from this version string by
 -- TraceMetadata.nativePreludeMode() — no separate JSON flag is emitted.
-local LUA_SCRIPT_VERSION = "9.8-s2"
+local LUA_SCRIPT_VERSION = "9.9-s2"
 
 -- Output directory (relative to BizHawk working dir)
 local OUTPUT_DIR = "trace_output/"
@@ -98,6 +100,7 @@ local ADDR_CAMERA_X        = 0xEE00   -- long: Camera_X_pos
 local ADDR_CAMERA_Y        = 0xEE04   -- long: Camera_Y_pos
 local ADDR_ZONE            = 0xFE10   -- byte: Current_Zone
 local ADDR_ACT             = 0xFE11   -- byte: Current_Act
+local ADDR_RANDOM          = 0xF636   -- long: RNG_seed
 -- Player object base ($FFFFB000 = MainCharacter)
 local PLAYER_BASE          = 0xB000
 local OFF_X_POS            = 0x08   -- word: centre X
@@ -251,6 +254,7 @@ local trace_frame = 0
 local bk2_frame_offset = 0
 local start_x = 0
 local start_y = 0
+local start_rng_seed = 0
 local start_zone_id = 0
 local start_rom_zone_id = 0
 local start_zone_name = "unknown"
@@ -427,6 +431,7 @@ local function reset_recording_state()
     bk2_frame_offset = 0
     start_x = 0
     start_y = 0
+    start_rng_seed = 0
     start_zone_id = 0
     start_rom_zone_id = 0
     start_zone_name = "unknown"
@@ -482,6 +487,7 @@ local function write_metadata()
     meta_file:write('  "characters": ' .. characters_json .. ',\n')
     meta_file:write('  "main_character": "sonic",\n')
     meta_file:write('  "sidekicks": ' .. sidekicks_json .. ',\n')
+    meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
     meta_file:write('  "lua_script_version": "' .. LUA_SCRIPT_VERSION .. '",\n')
     meta_file:write('  "trace_schema": 8,\n')
@@ -1034,6 +1040,7 @@ local function on_frame_end()
             bk2_frame_offset = emu.framecount()
             start_x = mainmemory.read_u16_be(PLAYER_BASE + OFF_X_POS)
             start_y = mainmemory.read_u16_be(PLAYER_BASE + OFF_Y_POS)
+            start_rng_seed = mainmemory.read_u32_be(ADDR_RANDOM)
 
             -- Capture zone/act NOW at start, not at end when RAM may have advanced
             start_rom_zone_id = mainmemory.read_u8(ADDR_ZONE)

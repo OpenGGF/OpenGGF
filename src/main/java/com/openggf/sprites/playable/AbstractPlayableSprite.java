@@ -4878,12 +4878,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         /**
          * Replenishes air by collecting a large breathable bubble.
-         * Implements full ROM behavior from s2.asm lines 44966-44998:
+         * Implements full ROM behavior from S1 Obj64, S2 Obj24, and S3K
+         * Bubbler collection paths:
          * <ul>
          *   <li>Clears all velocity (x_vel, y_vel, inertia)</li>
          *   <li>Sets bubble-breathing animation</li>
          *   <li>Locks movement for 35 frames (0x23)</li>
-         *   <li>Clears jumping, pushing, and roll-jumping flags</li>
+         *   <li>Clears jumping, pushing, and roll-jumping flags while preserving in-air status</li>
          *   <li>Unrolls player if rolling (adjusts hitbox)</li>
          * </ul>
          */
@@ -4901,8 +4902,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // ROM: move.w #$23,move_lock(a1) (35 frames)
                 moveLockTimer = 0x23;
 
-                // ROM: move.b #0,jumping(a1) - we don't have a jumping flag, but air=false is similar
-                air = false;
+                // ROM clears jumping, not Status_InAir (S1 Obj64, S2 Obj24, S3K Bubbler).
+                jumping = false;
 
                 // ROM: bclr #status.player.pushing,status(a1)
                 pushing = false;
@@ -4911,14 +4912,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 rollingJump = false;
 
                 // ROM: btst #status.player.rolling,status(a1) / beq.w loc_1FBB8
-                // If rolling, unroll (setRolling handles hitbox adjustment and Y position)
                 if (rolling) {
-                        // ROM: bclr #status.player.rolling,status(a1)
-                        // setRolling(false) handles:
-                        // - Adjusting y_radius back to standing height
-                        // - Adjusting x_radius back to standing width
-                        // - Adjusting Y position (subq.w #5,y_pos for Sonic, subq.w #1 for Tails)
+                        // ROM restores standing radii, then subtracts the radius delta from y_pos.
                         setRolling(false);
+                        setY((short) (getY() - getRollHeightAdjustment()));
                 }
 
                 // Delegate to drowning manager for air timer reset and music handling
