@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+## 2026-06-13 - S1 SBZ3 Obj64 diagnostics expose maker-cadence frontier
+
+- Scope: `src/test/resources/traces/s1/sbz3_completerun` was regenerated from
+  the shared `s1-complete-run.bk2` with the v3.4 S1 complete-run recorder. The
+  fixture now carries `metadata.rng_seed=0x4FE82BCA` plus
+  `aux_state.jsonl.gz` with per-frame `s1_obj64_state` rows. The SBZ3 replay
+  now opts into Obj64 object-near comparison like LZ2, so the report surfaces
+  object cadence before downstream player physics.
+- Recorder tooling: `tools/bizhawk/s1_complete_run_recorder.lua` now applies
+  its optional stop-frame and movie-end finalisation only after a segment has
+  armed. Without that gate, short diagnostic captures could exit before the
+  first segment was written when BizHawk reported movie-frame state at launch.
+- Focused verification:
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s1.TestS1Sbz3CompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+  - Result: expected-red trace; first error advanced from frame **1477**
+    `rolling` expected `0`, actual `1` to frame **893**
+    `obj_extra_s22_type` expected `absent`, actual `0x64`.
+- Diagnostic finding: ROM Obj64 maker slot **59** at `@0820,0308` still has
+  `objoff_38=0x0004` and `objoff_36=0x0000` at frame 893, reaches zero at
+  frame 897, and spawns child slot **34** at frame 898. The engine has already
+  spawned the equivalent Obj64 child by frame 893, about five object ticks
+  early. The earlier frame-1477 get-air/rolling mismatch remains downstream of
+  this object-cadence divergence.
+- Remaining frontier: fix S1 Obj64 maker cadence/order using ROM-modeled
+  state. Do not special-case SBZ3/LZ4 or hydrate object state from the trace.
+
 ## 2026-06-13 - Drowning countdown same-frame RNG order corrected
 
 - Scope: `DrowningController.update()` now processes the generic one-second

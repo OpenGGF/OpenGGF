@@ -530,8 +530,9 @@ local function on_frame_end()
     -- MULTI-SEGMENT: stop the whole pass when the movie ends (or an optional
     -- S1_STOP_AT_FRAME test limit is reached). Finalise any open segment first.
     local stop_at = tonumber(os.getenv("S1_STOP_AT_FRAME") or "0")
-    local movie_done = movie.isloaded() and emu.framecount() >= movie.length()
-    if (stop_at > 0 and emu.framecount() >= stop_at) or movie_done then
+    local movie_done = started and movie.isloaded() and emu.framecount() >= movie.length()
+    local stop_reached = started and stop_at > 0 and emu.framecount() >= stop_at
+    if stop_reached or movie_done then
         if started then
             if physics_file then physics_file:flush() end
             write_metadata()

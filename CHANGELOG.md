@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 SBZ3 complete-run trace now exposes Obj64 maker cadence:** the SBZ3
+  fixture was regenerated with the v3.4 S1 recorder so it carries
+  `metadata.rng_seed` and per-frame Obj64 aux diagnostics. The replay now
+  reports the object-cadence frontier before the later get-air rolling symptom.
+
 - **Generic drowning countdown now preserves ROM timer ordering:** S1/S2/S3K
   air countdown processing now handles the one-second air-loss event before
   pending mouth-bubble timer underflows, so same-frame expirations consume RNG
