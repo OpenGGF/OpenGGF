@@ -1,5 +1,43 @@
 # Trace Frontier Log
 
+## 2026-06-13 - WalkCeiling empty extension mirrors probe nibble
+
+- Scope: ground-attachment scans rotated to global ceiling now mirror the
+  probe's low Y nibble only for the empty-extension default distance. Solid
+  tile lookup remains on the engine's existing unmirrored coordinate path, so
+  this fixes the false empty-tile snap without changing solid-tile parity. This
+  is ROM scan-state parity; replay rows remain read-only diagnostics and no
+  zone, route, or frame carve-out is involved.
+- Disassembly basis: S1, S2, and S3K `WalkCeiling` all apply `eori.w #$F,d2`
+  before the shared floor finder (`docs/s1disasm/_incObj/Sonic AnglePos.asm`,
+  `docs/s2disasm/s2.asm`, and `docs/skdisasm/sonic3k.asm`). The engine already
+  preserved the solid-tile scan path; the missing piece was the default distance
+  returned when the extension tile is empty.
+- Focused verification:
+  - `mvn -Dmse=off "-Dtest=com.openggf.physics.TestGroundSensor" "-DfailIfNoTests=false" test -B`
+  - Result: **19 tests**, 0 failures, 0 errors.
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s1.TestS1Sbz2CompleteRunTraceReplay" "-Ds1.rom.path=s1.gen" "-DfailIfNoTests=false" "-Dsurefire.argLine=-Xshare:off -Xmx2g" test -B`
+  - Result: trace remains red, but `s1_sbz2` advances from frame **576** `y`
+    expected `0x0763`, actual `0x075C` to frame **1697** `rolling` expected
+    `1`, actual `0`.
+- Full sweep command:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+- Full sweep result:
+  - **Tests run: 90, Failures: 62, Errors: 1, Skipped: 0** from Maven/Surefire
+    in 10:12. Expected-red sweep; the intended `s1_sbz2` frontier advanced and
+    no other frontier row changed from the previous baseline.
+- Frontier movement:
+
+| Trace | Previous frontier | New frontier | Delta |
+|---|---:|---:|---:|
+| `s1_sbz2` | f576 `y` `0x0763 -> 0x075C` | f1697 `rolling` `1 -> 0` | +1121 |
+
+Current moved row from the full sweep:
+
+| Trace | Frontier | Field | Expected | Actual | Errors |
+|---|---:|---|---:|---:|---:|
+| s1_sbz2 | f1697 | rolling | 1 | 0 | 926 |
+
 ## 2026-06-13 - Trace RNG and air-bubble checkpoint
 
 - Scope: trace replay now applies `metadata.rng_seed` once during frame-0

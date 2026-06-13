@@ -391,6 +391,23 @@ public class TestGroundSensor {
     }
 
     @Test
+    public void ceilingEmptyExtensionDistanceUsesMirroredLowNibble() {
+        // No ceiling tile is present. ROM WalkCeiling mirrors the probe low Y
+        // nibble before FindFloor returns its empty extension default.
+        // Center 100 with y_radius 19 gives probe Y 81 (low nibble 1);
+        // mirrored low nibble is 14, so distance is 31 - 14 = 17.
+        mockSprite.setGroundMode(GroundMode.CEILING);
+        mockSprite.setX((short) 100);
+        mockSprite.setY((short) 100);
+
+        GroundSensor sensor = new GroundSensor(mockSprite, Direction.DOWN, (byte) 0, (byte) 19, true);
+        SensorResult result = sensor.scan();
+
+        assertNotNull(result);
+        assertEquals(17, result.distance());
+    }
+
+    @Test
     public void testLeftWallSensorRotation() {
         // Mode: LEFTWALL.
         // Sensor: (x=5, y=10) [Relative to Sprite in GROUND mode].

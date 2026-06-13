@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Ceiling empty-extension scans now mirror the ROM probe nibble:** rotated
+  ground sensors now apply the `WalkCeiling` low-nibble mirror when computing
+  the empty-tile default distance, advancing the S1 SBZ2 complete-run trace
+  from frame 576 to frame 1697.
+
 - **Trace replay bootstrap now honors recorded RNG seeds:** S1 and S2 trace
   recorders emit `metadata.rng_seed`, and replay applies it once at frame-0
   bootstrap without hydrating per-frame trace state. Air-bubble pickup and

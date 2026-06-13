@@ -80,7 +80,8 @@ public class GroundSensor extends Sensor {
 
         SensorResult fgResult;
         if (config.vertical()) {
-            fgResult = scanVertical(levelManager, originalX, originalY, solidityBit, globalDirection);
+            boolean mirrorEmptyDefault = direction == Direction.DOWN && globalDirection == Direction.UP;
+            fgResult = scanVertical(levelManager, originalX, originalY, solidityBit, globalDirection, mirrorEmptyDefault);
         } else {
             fgResult = scanHorizontal(levelManager, originalX, originalY, solidityBit, globalDirection);
         }
@@ -120,7 +121,7 @@ public class GroundSensor extends Sensor {
         short originalX = (short) (sprite.getCentreX() + worldOffsetX + dx);
         short originalY = (short) (sprite.getCentreY() + worldOffsetY + dy);
         if (globalDirection == Direction.UP || globalDirection == Direction.DOWN) {
-            return scanVertical(levelManager, originalX, originalY, solidityBit, globalDirection);
+            return scanVertical(levelManager, originalX, originalY, solidityBit, globalDirection, false);
         }
         return scanHorizontal(levelManager, originalX, originalY, solidityBit, globalDirection);
     }
@@ -347,7 +348,8 @@ public class GroundSensor extends Sensor {
     // VERTICAL SCANNING (Floor/Ceiling)
     // ========================================
 
-    private SensorResult scanVertical(LevelManager lm, short x, short y, int solidityBit, Direction direction) {
+    private SensorResult scanVertical(LevelManager lm, short x, short y, int solidityBit, Direction direction,
+                                      boolean mirrorEmptyDefault) {
         // Check current tile (ROM: FindFloor - first pass)
         SensorResult result = scanTileVertical(lm, x, y, x, y, solidityBit, direction, false);
         if (result != null) {
@@ -362,7 +364,7 @@ public class GroundSensor extends Sensor {
         }
 
         // No collision found - return empty result with max distance
-        byte distance = calculateExtensionDefaultDistance(y);
+        byte distance = calculateExtensionDefaultDistance(y, mirrorEmptyDefault);
         return reusableResult.set(FLAGGED_ANGLE, distance, 0, direction);
     }
 
@@ -519,7 +521,7 @@ public class GroundSensor extends Sensor {
         }
     }
 
-    private byte calculateExtensionDefaultDistance(short origY) {
+    private byte calculateExtensionDefaultDistance(short origY, boolean mirrorLowNibble) {
         // ROM FindFloor first-pass miss:
         //   add.w a3,d2
         //   bsr.w FindFloor2
@@ -527,7 +529,15 @@ public class GroundSensor extends Sensor {
         //   addi.w #$10,d1
         // FindFloor2's default path is 15 - (d2 & $F). Since +/-16 preserves
         // the low nibble, the combined no-collision distance is 31 - yInTile.
-        return (byte) (0x1F - (origY & 0x0F));
+        // Ceiling attachment enters FindFloor with WalkCeiling's eori.w #$F
+        // already applied to d2 (S1 Sonic AnglePos.asm:289-306; S2 s2.asm:43175-43191;
+        // S3K sonic3k.asm:18977-18993), so the empty-tile default must mirror
+        // the probe low nibble even though the engine's tile lookup coordinate is
+        // kept unmirrored for existing solid-tile parity.
+        int yInTile = mirrorLowNibble
+                ? ((origY ^ 0x0F) & 0x0F)
+                : (origY & 0x0F);
+        return (byte) (0x1F - yInTile);
     }
 
     // ========================================
