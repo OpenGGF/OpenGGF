@@ -1944,7 +1944,10 @@ EHZ1, Obj18's subtype width was missing from balance bounds, so Tails was
 treated as beyond the left edge on frame 395 even though the ROM still had
 `status=$08`. A first-pass Tails facing fix exposed the same class in HTZ1:
 Obj16 writes `width_pixels=$20`, so the default 16-pixel balance width falsely
-placed Tails on the left edge around frame 192.
+placed Tails on the left edge around frame 192. The same pattern recurred for
+Obj14 seesaws: `Obj14_Init` writes `width_pixels=$30`, and falling back to the
+16-pixel default made HTZ1 frame 1810 falsely enter edge balance while both
+players were centered on the seesaw.
 
 **What to check.** When porting rideable platforms, lifts, and blocks, identify
 the object init value written to `width_pixels`. If the value varies by subtype
@@ -1956,13 +1959,16 @@ different data for `SolidObject` bounds versus player balance checks.
 `docs/s2disasm/s2.asm:36287-36296` and `docs/s2disasm/s2.asm:39361-39368`;
 Tails' single-facing balance edge branch is `docs/s2disasm/s2.asm:39733-39743`.
 Obj16 HTZ lift initializes `width_pixels=$20` at
-`docs/s2disasm/s2.asm:47763-47771`. S3K Tails uses the same single-facing
-balance convention at `docs/skdisasm/sonic3k.asm:27842-27859`.
+`docs/s2disasm/s2.asm:47763-47771`; Obj14 HTZ seesaw initializes
+`width_pixels=$30` at `docs/s2disasm/s2.asm:47402-47409`. S3K Tails uses the
+same single-facing balance convention at `docs/skdisasm/sonic3k.asm:27842-27859`.
 
 **Originating commit.** `<pending>` S2 Tails object-edge balance width sweep:
 `ARZPlatformObjectInstance.getBalanceWidthPixels()` returns subtype width,
 `HTZLiftObjectInstance.getBalanceWidthPixels()` returns `$20`, and
 `PhysicsProfile.singleFacingBalance()` gates Tails' single-facing balance path.
+Follow-up: `<pending>` `SeesawObjectInstance.getBalanceWidthPixels()` returns
+Obj14's `$30` width byte.
 
 ---
 

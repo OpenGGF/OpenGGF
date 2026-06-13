@@ -96,6 +96,14 @@ public class SeesawObjectInstance extends BoxObjectInstance
         }
     }
 
+    @Override
+    public int getBalanceWidthPixels() {
+        // Obj14_Init writes width_pixels=$30; Sonic_Move/Tails_Move read that
+        // SST byte directly for object-edge balance (docs/s2disasm/s2.asm:
+        // 47402-47409, 36586, 39707).
+        return COLLISION_HALF_WIDTH;
+    }
+
     /**
      * Spawn ball on first update if not already spawned.
      * This deferred spawning ensures ObjectManager is available.

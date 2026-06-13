@@ -1,6 +1,7 @@
 package com.openggf.tests.trace.s2;
 
 import com.openggf.game.sonic2.objects.HTZLiftObjectInstance;
+import com.openggf.game.sonic2.objects.SeesawObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
@@ -47,6 +48,19 @@ class TestS2HtzLiftPlatformSurfaceRegression {
         // that SST byte directly, so Tails at HTZ1 f192 is still inside the
         // platform instead of on its left balance edge.
         assertEquals(0x20, lift.getBalanceWidthPixels());
+    }
+
+    @Test
+    void seesawUsesObj14WidthPixelsForObjectEdgeBalance() {
+        SeesawObjectInstance seesaw = new SeesawObjectInstance(
+                new ObjectSpawn(0x0DC0, 0x0448, 0x14, 0x00, 0, false, 0),
+                "Seesaw");
+
+        // Obj14_Init writes width_pixels=$30 before the player balance routines
+        // read the standing object's SST byte. A 16px sprite default makes HTZ1
+        // f1810 falsely enter the object-edge balance branch while centered on
+        // the seesaw.
+        assertEquals(0x30, seesaw.getBalanceWidthPixels());
     }
 
     @Test

@@ -1,5 +1,87 @@
 # Trace Frontier Log
 
+## 2026-06-13 - S2 HTZ seesaw balance uses Obj14 width_pixels
+
+- Scope: fixed false object-edge balance on the HTZ Obj14 seesaw by exposing
+  the ROM `width_pixels=$30` value through `getBalanceWidthPixels()`. This is
+  object data parity, not trace-state hydration or a route carve-out.
+- Disassembly basis:
+  - S2 `Obj14_Init` writes `width_pixels=$30`
+    (`docs/s2disasm/s2.asm:47402-47409`).
+  - S2 Sonic/Tails object-edge balance reads the stood-on object's
+    `width_pixels(a1)` (`docs/s2disasm/s2.asm:36586`, `39707`).
+- Focused verification:
+  - `mvn -Dmse=off "-Dtest=TestS2HtzLiftPlatformSurfaceRegression" "-DfailIfNoTests=false" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+  - Result: **4 tests**, 0 failures, 0 errors.
+  - `mvn -Dmse=off "-Dtest=TestS2HtzLevelSelectTraceReplay" "-DfailIfNoTests=false" "-Ds2.rom.path=s2.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+  - Result: still red, but `s2_htz1` advanced from frame **1810**
+    `tails_status_byte` expected `0x0009`, actual `0x0008`, to frame
+    **3733** `tails_cpu_interact` expected `0x002F`, actual `0x0000`.
+- Full sweep command:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+- Full sweep result:
+  - **Tests run: 90, Failures: 61, Errors: 1, Skipped: 0** from Maven/Surefire
+    in 8:06. Expected-red sweep; the tracked frontier table shows the intended
+    `s2_htz1` advance and no tracked frontier regression. `s2_mcz1`,
+    `s2_scz1`, and `s2_wfz1` are green in current Surefire XML; stale JSON
+    reports for green traces are ignored.
+- Frontier movement:
+
+| Trace | Previous frontier | New frontier | Delta |
+|---|---:|---:|---:|
+| `s2_htz1` | f1810 `tails_status_byte` `0x0009 -> 0x0008` | f3733 `tails_cpu_interact` `0x002F -> 0x0000` | +1923 |
+
+- Current full frontier table from the sweep:
+
+| Trace | Frontier | Field | Expected | Actual | Errors |
+|---|---:|---|---:|---:|---:|
+| s1_credits_01_mz2 | f262 | status_byte | 0x0021 | 0x0001 | 1 |
+| s1_credits_05_sbz1 | f413 | status_byte | 0x0029 | 0x0028 | 3 |
+| s1_ghz1 | f1394 | x_speed | 0x0000 | -0200 | 292 |
+| s1_ghz2 | f2370 | y | 0x0267 | 0x0266 | 231 |
+| s1_ghz3 | f370 | y_speed | -0220 | -0320 | 1108 |
+| s1_lz1 | f302 | y_speed | -0100 | 0x0000 | 2992 |
+| s1_lz2 | f1089 | y | 0x03A8 | 0x03AD | 2102 |
+| s1_lz3 | f466 | y | 0x0807 | 0x0007 | 3229 |
+| s1_lz4 | f1421 | camera_y | 0x038C | 0x0388 | 4686 |
+| s1_mz1 | f3224 | y_speed | 0x02C8 | 0x01C8 | 222 |
+| s1_mz2 | f2409 | y_speed | 0x0048 | -00B8 | 1074 |
+| s1_mz3 | f1702 | y | 0x048C | 0x048B | 1091 |
+| s1_sbz1 | f2268 | air | 0 | 1 | 805 |
+| s1_sbz2 | f576 | y | 0x0763 | 0x075C | 993 |
+| s1_sbz3 | f713 | y_speed | 0x0000 | -0700 | 155 |
+| s1_slz1 | f723 | x_speed | 0x0000 | -0200 | 661 |
+| s1_slz2 | f651 | g_speed | 0x1000 | 0x10AE | 270 |
+| s1_slz3 | f718 | y_speed | 0x0000 | 0x0610 | 1500 |
+| s1_syz1 | f250 | y_speed | -0610 | -0510 | 417 |
+| s1_syz2 | f1088 | x_speed | 0x02E8 | 0x02F4 | 336 |
+| s1_syz3 | f1392 | x_speed | -0200 | 0x0200 | 714 |
+| s2_arz1 | f1285 | tails_cpu_interact | 0x0008 | 0x0000 | 15 |
+| s2_arz2 | f899 | y_speed | -02D0 | -01D0 | 2043 |
+| s2_cnz1 | f202 | tails_x | 0x0265 | 0x0264 | 588 |
+| s2_cnz2 | f2919 | tails_status_byte | 0x0009 | 0x0008 | 864 |
+| s2_cpz1 | f1157 | tails_x_speed | 0x0000 | -0200 | 671 |
+| s2_cpz2 | f759 | tails_status_byte | 0x0020 | 0x0000 | 1115 |
+| s2_dez1 | f1557 | x_speed | 0x0000 | 0x003C | 137 |
+| s2_htz1 | f3733 | tails_cpu_interact | 0x002F | 0x0000 | 524 |
+| s2_htz2 | f936 | tails_cpu_ctrl2_held | 0x0002 | 0x0000 | 1295 |
+| s2_mcz1 | green | - | - | - | 0 |
+| s2_mcz2 | f2411 | tails_status_byte | 0x0008 | 0x0009 | 722 |
+| s2_mtz1 | f931 | tails_cpu_interact | 0x009F | 0x0006 | 1634 |
+| s2_mtz2 | f645 | tails_x_speed | 0x00C1 | -0200 | 2794 |
+| s2_mtz3 | f1381 | tails_cpu_jumping | 0x0001 | 0x0000 | 3312 |
+| s2_ooz1 | f395 | tails_status_byte | 0x000A | 0x0002 | 1144 |
+| s2_ooz2 | f1070 | air | 0 | 1 | 1113 |
+| s2_scz1 | green | - | - | - | 0 |
+| s2_wfz1 | green | - | - | - | 0 |
+| s3k_aiz1 | f2590 | tails_status_byte | 0x000A | 0x0002 | 1904 |
+| s3k_cnz1 | f97 | rolling | 1 | 0 | 5992 |
+| s3k_hcz1 | f97 | status_byte | 0x0021 | 0x0001 | 3000 |
+| s3k_icz1 | f1986 | tails_status_byte | 0x0004 | 0x0024 | 3413 |
+| s3k_lbz1 | f410 | y_speed | 0x0000 | -0100 | 5252 |
+| s3k_mgz1 | f738 | rings | 17 | 18 | 9970 |
+| s3k_mhz1 | f79 | y | 0x051B | 0x0525 | 3571 |
+
 ## 2026-06-13 - S2 HTZ sidekick despawn preserves interact latch
 
 - Scope: fixed the S2 HTZ Tails CPU despawn frontier by preserving the

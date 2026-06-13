@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 HTZ seesaw balance now uses the ROM width byte:** Obj14 exposes its
+  `$30` `width_pixels` value to the shared object-edge balance routine, so
+  Sonic and Tails no longer enter false balance while centered on the seesaw.
+  This advances `s2_htz1` from frame 1810 to frame 3733, exposing the next
+  Obj2F CPU-interact frontier.
+
 - **S2 Asteron rendering now honors the ROM sprite priority bit:** Asteron and
   its spawned spikes render with the `make_art_tile(..., priority=1)` priority
   encoded in the ROM `subObjData` rows.
