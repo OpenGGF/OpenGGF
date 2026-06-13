@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K complete-run sidekick bootstrap now bridges the NORMAL CPU counter edge:**
+  CNZ/MHZ complete-run traces now mark the initial visible handoff row as a
+  one-frame NORMAL Tails CPU counter bridge instead of globally shifting the
+  sidekick frame counter. This advances `s3k_cnz1` from frame 319 to frame 355
+  and `s3k_mhz1` from frame 127 to frame 175.
+
 - **MHZ mushroom-cap launches now wait for the ROM top-solid snap:** S3K
   `Obj_MHZMushroomCap` now applies its bounce after the current
   `SolidObjectTop` contact has placed the rider on the cap surface. This

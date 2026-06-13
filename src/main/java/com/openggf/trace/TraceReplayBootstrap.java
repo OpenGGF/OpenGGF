@@ -409,6 +409,19 @@ public final class TraceReplayBootstrap {
         return !isS3kCompleteRunSegment(trace);
     }
 
+    /**
+     * S3K complete-run CNZ/MHZ traces begin on a visible handoff row before the
+     * first native motion row. Replay intentionally does not drive carry physics
+     * on that row, but the following NORMAL Tails CPU auto-jump gate has already
+     * observed the ROM-visible counter edge.
+     */
+    public static boolean shouldBridgeS3kCompleteRunInitialNormalCounterForTraceReplay(TraceData trace) {
+        if (trace == null || trace.frameCount() == 0) {
+            return false;
+        }
+        return isS3kCompleteRunInitialHandoffRow(trace, null, trace.getFrame(0));
+    }
+
     public static List<String> releaseBlockersForTraceReplay(TraceData trace) {
         return List.of();
     }

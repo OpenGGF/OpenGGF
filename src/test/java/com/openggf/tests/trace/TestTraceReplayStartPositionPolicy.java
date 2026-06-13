@@ -245,15 +245,18 @@ class TestTraceReplayStartPositionPolicy {
             TraceExecutionPhase frameZeroPhase =
                     TraceReplayBootstrap.phaseForReplay(trace, null, trace.getFrame(0));
             TraceFrame frameZero = trace.getFrame(0);
-            boolean stationaryHandoffRow = !frameZero.stateEquals(trace.getFrame(1))
+            boolean handoffBeforeNativeMotionRow = !frameZero.stateEquals(trace.getFrame(1))
                     && frameZero.xSpeed() == 0
                     && frameZero.ySpeed() == 0
                     && frameZero.gSpeed() == 0;
-            TraceExecutionPhase expectedFrameZeroPhase = stationaryHandoffRow
+            TraceExecutionPhase expectedFrameZeroPhase = handoffBeforeNativeMotionRow
                     ? TraceExecutionPhase.VBLANK_ONLY
                     : TraceExecutionPhase.FULL_LEVEL_FRAME;
             assertEquals(expectedFrameZeroPhase, frameZeroPhase,
                     route + " frame 0 phase follows the structural handoff shape.");
+            assertEquals(handoffBeforeNativeMotionRow,
+                    TraceReplayBootstrap.shouldBridgeS3kCompleteRunInitialNormalCounterForTraceReplay(trace),
+                    route + " only handoff-before-motion rows need the NORMAL Tails-CPU counter bridge.");
         }
     }
 
@@ -272,6 +275,10 @@ class TestTraceReplayStartPositionPolicy {
         assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
                 TraceReplayBootstrap.phaseForReplay(mgz, null, mgz.getFrame(0)),
                 "MGZ frame 0 must be driven and compared, otherwise replay is one gravity tick late.");
+        assertFalse(TraceReplayBootstrap.shouldBridgeS3kCompleteRunInitialNormalCounterForTraceReplay(hcz),
+                "HCZ already includes native velocity on frame 0, so no handoff-before-motion bridge applies.");
+        assertFalse(TraceReplayBootstrap.shouldBridgeS3kCompleteRunInitialNormalCounterForTraceReplay(mgz),
+                "MGZ already includes native velocity on frame 0, so no handoff-before-motion bridge applies.");
     }
 
     @Test
@@ -292,9 +299,13 @@ class TestTraceReplayStartPositionPolicy {
         assertEquals(TraceExecutionPhase.VBLANK_ONLY,
                 TraceReplayBootstrap.phaseForReplay(cnz, null, cnz.getFrame(0)),
                 "CNZ frame 0 is the visible state before the first level tick.");
+        assertTrue(TraceReplayBootstrap.shouldBridgeS3kCompleteRunInitialNormalCounterForTraceReplay(cnz),
+                "CNZ's handoff-before-motion row consumes the ROM counter edge without driving carry physics.");
         assertEquals(TraceExecutionPhase.VBLANK_ONLY,
                 TraceReplayBootstrap.phaseForReplay(mhz, null, mhz.getFrame(0)),
                 "MHZ frame 0 is the visible state before the first level tick.");
+        assertTrue(TraceReplayBootstrap.shouldBridgeS3kCompleteRunInitialNormalCounterForTraceReplay(mhz),
+                "MHZ's handoff-before-motion row consumes the ROM counter edge without driving carry physics.");
         assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
                 TraceReplayBootstrap.phaseForReplay(mhz, mhz.getFrame(0), mhz.getFrame(1)),
                 "MHZ row 1 advances state from the handoff row and should tick exactly once.");

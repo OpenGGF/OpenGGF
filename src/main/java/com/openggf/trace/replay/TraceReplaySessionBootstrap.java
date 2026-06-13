@@ -323,6 +323,16 @@ public final class TraceReplaySessionBootstrap {
                     gameplayMode.getLevelManager(),
                     fixture != null ? fixture.sprite() : null);
         }
+        if (TraceReplayBootstrap.shouldBridgeS3kCompleteRunInitialNormalCounterForTraceReplay(trace)
+                && gameplayMode != null
+                && gameplayMode.getSpriteManager() != null) {
+            for (AbstractPlayableSprite sidekick : gameplayMode.getSpriteManager().getRegisteredSidekicks()) {
+                SidekickCpuController cpu = sidekick.getCpuController();
+                if (cpu != null) {
+                    cpu.setNormalAutoJumpUsesHandoffFrameCounterBridge(true);
+                }
+            }
+        }
         primeLeaderJumpEdgeFromBk2Prelude(fixture);
         TraceReplayBootstrap.SnapshotReport snapshotReport =
                 TraceReplayBootstrap.reportPreTraceObjectSnapshots(trace);

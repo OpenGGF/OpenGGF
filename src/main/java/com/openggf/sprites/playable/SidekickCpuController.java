@@ -247,6 +247,7 @@ public class SidekickCpuController {
      */
     private boolean enteredFromSeedCompareFrame0;
     private boolean cpuFrameCounterFromStoredLevelFrame;
+    private boolean normalAutoJumpUsesHandoffFrameCounterBridge;
     private int nextCpuFrameCounterOverride = -1;
     private int catchUpFrameCounterOverride = -1;
     private int lastNormalAutoJumpPressFrameCounter = -1;
@@ -2165,7 +2166,9 @@ public class SidekickCpuController {
                     sidekick.getRolling() && sidekick.shouldPreserveRollingOnNextRollStop();
             boolean pushingBypass = (currentPushBypass || objectOrderGrace)
                     && !suppressObjectPreservedPushJump;
-            int autoJumpFrameCounter = frameCounter;
+            int autoJumpFrameCounter = normalAutoJumpUsesHandoffFrameCounterBridge
+                    ? frameCounter + 1
+                    : frameCounter;
             boolean freshAutoJumpFrame = autoJumpFrameCounter != lastNormalAutoJumpPressFrameCounter;
             boolean passesDistanceGate = pushingBypass
                     || (autoJumpFrameCounter & 0xFF) == 0
@@ -4520,6 +4523,10 @@ public class SidekickCpuController {
         }
     }
 
+    public void setNormalAutoJumpUsesHandoffFrameCounterBridge(boolean value) {
+        this.normalAutoJumpUsesHandoffFrameCounterBridge = value;
+    }
+
     public void setLevelBounds(Integer minX, Integer maxX, Integer maxY) {
         setLevelBounds(minX, maxX, null, maxY);
     }
@@ -4632,6 +4639,7 @@ public class SidekickCpuController {
                 deferredDespawnDeadFallContinuingThisFrame,
                 bootstrapPreludePlacementApplied,
                 cpuFrameCounterFromStoredLevelFrame,
+                normalAutoJumpUsesHandoffFrameCounterBridge,
                 nextCpuFrameCounterOverride,
                 catchUpFrameCounterOverride,
                 lastNormalAutoJumpPressFrameCounter,
@@ -4689,6 +4697,7 @@ public class SidekickCpuController {
         deferredDespawnDeadFallContinuingThisFrame = snapshot.deferredDespawnDeadFallContinuingThisFrame();
         bootstrapPreludePlacementApplied = snapshot.bootstrapPreludePlacementApplied();
         cpuFrameCounterFromStoredLevelFrame = snapshot.cpuFrameCounterFromStoredLevelFrame();
+        normalAutoJumpUsesHandoffFrameCounterBridge = snapshot.normalAutoJumpUsesHandoffFrameCounterBridge();
         nextCpuFrameCounterOverride = snapshot.nextCpuFrameCounterOverride();
         catchUpFrameCounterOverride = snapshot.catchUpFrameCounterOverride();
         lastNormalAutoJumpPressFrameCounter = snapshot.lastNormalAutoJumpPressFrameCounter();
@@ -4776,6 +4785,7 @@ public class SidekickCpuController {
         skipPhysicsThisFrame = false;
         deadOnObjectReenteredVisibleWindow = false;
         controller2SignedLocked = false;
+        normalAutoJumpUsesHandoffFrameCounterBridge = false;
         nextCpuFrameCounterOverride = -1;
         catchUpFrameCounterOverride = -1;
         // Note: leader is NOT cleared — it's a structural chain relationship set at
