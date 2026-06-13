@@ -1466,11 +1466,12 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
-    void s3kStaleCurrentPushFarBelowTargetFallsThroughToFollowLeftAfterAizReload() {
+    void s3kStaleCurrentPushFarBelowTargetFallsThroughToFollowLeftAfterAizReload() throws Exception {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
         tails.setAir(false);
+        tails.setInWater(true);
         tails.setObjectControlled(false);
         tails.setCentreX((short) 0x31CA);
         tails.setCentreY((short) 0x065E);
@@ -1493,6 +1494,7 @@ class TestSidekickCpuFollowParity {
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
         tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        setNormalPushingGraceFrames(controller, 16);
 
         controller.update(0x37DE);
 
@@ -1500,7 +1502,8 @@ class TestSidekickCpuFollowParity {
         Assertions.assertAll(
                 () -> assertEquals("follow_steering", diagnostics.followBranch(),
                         "AIZ2 F14302 has no ROM-visible current Status_Push at Tails_CPU_Control; "
-                                + "the stale engine push bit must not take loc_13DD0's bypass "
+                                + "the released-object push bit cleared before this CPU tick must not "
+                                + "take loc_13DD0's bypass "
                                 + "(sonic3k.asm:26702-26729)."),
                 () -> assertFalse(diagnostics.skipFollowSteering()),
                 () -> assertTrue(controller.getInputLeft(),
@@ -1609,6 +1612,125 @@ class TestSidekickCpuFollowParity {
                                 | AbstractPlayableSprite.INPUT_DOWN
                                 | AbstractPlayableSprite.INPUT_LEFT
                                 | AbstractPlayableSprite.INPUT_RIGHT)));
+    }
+
+    @Test
+    void s3kDestroyedLatchedObjectConsumesThenClearsUnderwaterZeroSpeedPushAfterAizReload()
+            throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setInWater(true);
+        tails.setObjectControlled(false);
+        tails.setCentreX((short) 0x31CA);
+        tails.setCentreY((short) 0x065E);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0);
+        tails.setXSpeed((short) 0xFEBE);
+        tails.setYSpeed((short) 0);
+        tails.setPushing(true);
+
+        LiveRideObject rideObject = new LiveRideObject(0x07);
+        rideObject.setSlotIndex(34);
+        rideObject.setDestroyed(true);
+        tails.setLatchedSolidObject(0x07, rideObject);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x316D);
+        Arrays.fill(yHistory, (short) 0x025C);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        setNormalPushingGraceFrames(controller, 16);
+
+        controller.update(0x37DE);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("current_push_bypass", diagnostics.followBranch(),
+                        "AIZ2 F14295 consumes one ROM-visible Status_Push read from the "
+                                + "released underwater object slot before the path clear."),
+                () -> assertTrue(diagnostics.skipFollowSteering()),
+                () -> assertFalse(tails.getPushing()),
+                () -> assertFalse(controller.getInputLeft()),
+                () -> assertTrue(controller.getInputRight()));
+    }
+
+    @Test
+    void s3kEmptyInteractSlotConsumesThenPreClearsUnderwaterZeroSpeedPushAfterAizReload()
+            throws Exception {
+        GameModule previous = GameModuleRegistry.getBootstrapDefault();
+        try {
+            installStandaloneGameModule(new Sonic3kGameModule());
+            installEmptyObjectManager();
+
+            TestableSprite sonic = new TestableSprite("sonic");
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setAir(false);
+            tails.setInWater(true);
+            tails.setObjectControlled(false);
+            tails.setCentreX((short) 0x31CA);
+            tails.setCentreY((short) 0x065E);
+            tails.setDirection(Direction.RIGHT);
+            tails.setGSpeed((short) 0);
+            tails.setXSpeed((short) 0xFEBE);
+            tails.setYSpeed((short) 0);
+            tails.setPushing(true);
+            tails.setLatchedSolidObjectId(0x07);
+            tails.setLatchedSolidObjectInstance(null);
+            tails.setInteractSlotIndex(34);
+
+            short[] xHistory = new short[64];
+            short[] yHistory = new short[64];
+            short[] inputHistory = new short[64];
+            byte[] statusHistory = new byte[64];
+            Arrays.fill(xHistory, (short) 0x316D);
+            Arrays.fill(yHistory, (short) 0x025C);
+            Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+            sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+            controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+            setNormalPushingGraceFrames(controller, 16);
+
+            controller.update(0x37D7);
+            SidekickCpuController.NormalStepDiagnostics consumed =
+                    controller.getLatestNormalStepDiagnostics();
+            assertEquals("current_push_bypass", consumed.followBranch(),
+                    "A deleted ROM interact slot still contributes one visible Status_Push read "
+                            + "before Tails_InputAcceleration_Path clears it.");
+            assertFalse(tails.getPushing());
+
+            tails.setPushing(false);
+            tails.setGSpeed((short) 0x0006);
+            controller.update(0x37D8);
+
+            tails.setPushing(true);
+            tails.setGSpeed((short) 0);
+            controller.update(0x37DE);
+
+            SidekickCpuController.NormalStepDiagnostics diagnostics =
+                    controller.getLatestNormalStepDiagnostics();
+            Assertions.assertAll(
+                    () -> assertEquals("follow_steering", diagnostics.followBranch(),
+                            "The same released empty slot must not keep taking loc_13DD0 after "
+                                    + "the zero-speed underwater path clear has consumed it "
+                                    + "(sonic3k.asm:26702-26729,27814-27837)."),
+                    () -> assertFalse(diagnostics.skipFollowSteering()),
+                    () -> assertTrue(controller.getInputLeft()),
+                    () -> assertFalse(controller.getInputRight()));
+        } finally {
+            installStandaloneGameModule(previous);
+        }
     }
 
     @Test

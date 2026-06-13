@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Sidekick push-release parity now survives rewind:** S2/S3K sidekick CPU
+  handling now clears airborne stale underwater push bits, consumes one
+  ROM-visible released-object push read, and records that latch in rewind
+  snapshots. S2/S3K animation changes also clear `Status_Push` while airborne,
+  matching the ROM animation drivers.
+
 - **Develop full-test CI is back in sync with runtime contracts:** explosion
   SFX construction-context playback, S2/S3K control-lock logical input latch
   expectations, S3K monitor sidekick query tests, and Aquis rewind annotation

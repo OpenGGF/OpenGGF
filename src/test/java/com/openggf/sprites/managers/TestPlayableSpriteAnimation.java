@@ -80,6 +80,40 @@ public class TestPlayableSpriteAnimation {
     }
 
     @Test
+    public void s3kAirborneRollAnimationChangeClearsPush() {
+        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
+        sprite.setAir(true);
+        sprite.setRolling(true);
+        sprite.setJumping(true);
+        sprite.setAnimationId(5);
+        sprite.setPushing(true);
+
+        sprite.getAnimationManager().update(0);
+
+        assertFalse(sprite.getPushing(),
+                "S3K Animate_Tails2P clears Status_Push on anim != prev_anim even while airborne/rolling");
+        assertEquals(2, sprite.getAnimationId(),
+                "Airborne rolling Tails should keep the roll animation after clearing push");
+    }
+
+    @Test
+    public void s2AirborneRollAnimationChangeClearsPush() {
+        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_2);
+        sprite.setAir(true);
+        sprite.setRolling(true);
+        sprite.setJumping(true);
+        sprite.setAnimationId(5);
+        sprite.setPushing(true);
+
+        sprite.getAnimationManager().update(0);
+
+        assertFalse(sprite.getPushing(),
+                "S2 Animate_Tails clears Status_Push on anim != prev_anim even while airborne/rolling");
+        assertEquals(2, sprite.getAnimationId(),
+                "Airborne rolling Tails should keep the roll animation after clearing push");
+    }
+
+    @Test
     public void s3kActivePushAnimationDoesNotClearEveryFrame() {
         TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
         sprite.setAnimationId(4);

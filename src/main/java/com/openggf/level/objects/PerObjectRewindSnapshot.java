@@ -288,6 +288,7 @@ public record PerObjectRewindSnapshot(
             int sidekickCount,
             int normalPushingGraceFrames,
             boolean suppressNextAirbornePushFollowSteering,
+            boolean releasedUnderwaterPushConsumed,
             boolean objectOrderGracePushBypassThisFrame,
             int pendingGroundedFollowNudge,
             int pendingGroundedFollowNudgeFrame,

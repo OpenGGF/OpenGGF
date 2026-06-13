@@ -191,6 +191,7 @@ public class SidekickCpuController {
     private int sidekickCount = 1;
     private int normalPushingGraceFrames;
     private boolean suppressNextAirbornePushFollowSteering;
+    private boolean releasedUnderwaterPushConsumed;
     private boolean objectOrderGracePushBypassThisFrame;
     private int pendingGroundedFollowNudge;
     private int pendingGroundedFollowNudgeFrame = -1;
@@ -1495,6 +1496,7 @@ public class SidekickCpuController {
         // S2 TailsCPU_Respawn writes routine/target words without clearing Tails_CPU_jumping.
         syncApproachTargetDiagnostics();
         suppressNextAirbornePushFollowSteering = false;
+        releasedUnderwaterPushConsumed = false;
     }
 
     private void syncApproachTargetDiagnostics() {
@@ -1508,6 +1510,7 @@ public class SidekickCpuController {
         normalFrameCount = 0;
         jumpingFlag = false;
         suppressNextAirbornePushFollowSteering = false;
+        releasedUnderwaterPushConsumed = false;
     }
 
     private void updateApproaching() {
@@ -1543,6 +1546,19 @@ public class SidekickCpuController {
     private void updateNormal() {
         normalFrameCount++;
         boolean currentPushing = sidekick.getPushing();
+        boolean releasedUnderwaterObjectSlot = isReleasedUnderwaterObjectSlotState();
+        boolean releasedUnderwaterZeroSpeedPush = isReleasedUnderwaterZeroSpeedPushState();
+        if (currentPushing
+                && releasedUnderwaterPushConsumed
+                && releasedUnderwaterZeroSpeedPush) {
+            sidekick.setPushing(false);
+            currentPushing = false;
+        } else if (!releasedUnderwaterObjectSlot) {
+            releasedUnderwaterPushConsumed = false;
+        }
+        if (currentPushing && clearStaleUnderwaterPushBeforeNormalCpu()) {
+            currentPushing = false;
+        }
         NormalStepDiagnostics diagnostics = beginNormalStepDiagnostics("entry");
 
         if (leader.getDead()) {
@@ -1759,24 +1775,15 @@ public class SidekickCpuController {
                         | (recordedJumpPress ? AbstractPlayableSprite.INPUT_JUMP : 0);
 
         byte pushBypassStatus = effectiveLeader.getStatusHistory(OBJECT_ORDER_INPUT_DELAY_FRAMES);
-        // ROM loc_13DD0 tests Tails' current Status_Push byte before loc_13E9C
-        // (sonic3k.asm:26702-26705), before the follow-left/right steering
-        // blocks that can write Ctrl_2 left/right or nudge x_pos
-        // (sonic3k.asm:26717-26741). AIZ giant-vine/collapsing-platform object
-        // order can leave the engine's transient push flag clear for an inline
-        // player tick even though ROM still treats Tails as pushing: the platform
-        // resolves solid/release before its collapse transition (sonic3k.asm:
-        // 44784-44883), and the vine handles P1 then P2 after capture has cleared
-        // velocities once but does not keep clearing them while held
-        // (sonic3k.asm:46481-46743,46749-46950). For follow steering, bridge the
-        // engine-side clear only while Tails is still in the same local object
-        // band as the delayed leader target. The AIZ collapsing-platform/vine
-        // bridge at F2709-F2720 has Tails object_control=$20/status=$20 and a
-        // small vertical delta; F3075 is far below the target, so ROM's normal
-        // height gate (sonic3k.asm:26768-26775) has already left this bridge
-        // context and the current Ctrl_2 RIGHT pulse remains live. Grounded
-        // Tails_InputAcceleration_Path converts that into +$000C ground_vel/x_vel
-        // (sonic3k.asm:27798-27805,28103-28122).
+        // ROM loads delayed Ctrl_1_Logical/status into d1/d4, then tests Tails'
+        // current Status_Push before loc_13E9C. If current push is set and the
+        // delayed status byte does not also have Status_Push, S2/S3K branch
+        // around FollowLeft/FollowRight; if delayed d4 still has Status_Push,
+        // they fall through to normal follow steering (s2.asm:39287-39294;
+        // sonic3k.asm:26698-26705). Engine-side object-order grace below is
+        // separate: it bridges cases where ROM would still read current
+        // Status_Push at the sidekick CPU slot after local collision code has
+        // already cleared the transient engine flag.
         boolean delayedObjectOrPushContext =
                 (pushBypassStatus
                         & (AbstractPlayableSprite.STATUS_ON_OBJECT
@@ -1816,6 +1823,9 @@ public class SidekickCpuController {
                 || delayedObjectOrPushContext
                 || isUnderwaterCurrentPushPulse()))
                 || frameStartPushBypass;
+        boolean clearReleasedUnderwaterPushAfterCpu = currentPushBypass
+                && releasedUnderwaterZeroSpeedPush
+                && !releasedUnderwaterPushConsumed;
         boolean pushBypassGraceEnabled = fs != null && fs.sidekickPushBypassUsesGraceStatus();
         boolean gracePushBypass = !sidekick.getAir()
                 && pushBypassGraceEnabled
@@ -2160,6 +2170,14 @@ public class SidekickCpuController {
             suppressNextLevelEventNormalMovement = false;
             skipPhysicsThisFrame = true;
         }
+        if (clearReleasedUnderwaterPushAfterCpu) {
+            // Released underwater object contact can still be visible to
+            // loc_13DD0 for this CPU read, then Tails_InputAcceleration_Path
+            // clears Status_Push when ground_vel is zero before idle/balance
+            // handling (sonic3k.asm:26702-26705,27814-27837).
+            sidekick.setPushing(false);
+            releasedUnderwaterPushConsumed = true;
+        }
         updateNormalPushingGrace(currentPushing);
         int reportedDelayFrames = (objectOrderGrace || currentPushObjectOrderInputSample)
                 ? bridgedInputDelayFrames
@@ -2338,6 +2356,62 @@ public class SidekickCpuController {
             return levelManager.getObjectManager().getRidingObject(sidekick);
         }
         return sidekick.getLatchedSolidObjectInstance();
+    }
+
+    private boolean clearStaleUnderwaterPushBeforeNormalCpu() {
+        ObjectInstance ridingObject = currentRidingObject();
+        if (!sidekick.isInWater()
+                || hasLiveRidingObject(ridingObject)
+                || !sidekick.getAir()) {
+            return false;
+        }
+        // S3K Tails_Spin_Freespace/Tails_InputAcceleration_Freespace does not
+        // set Status_Push while airborne (sonic3k.asm:27765-27784,
+        // 28330-28401). Object release
+        // paths also clear the bit when the standing/pushing owner is gone
+        // (sonic3k.asm:53580-53585). If the engine still has an underwater
+        // airborne stale push bit in that released state, clear it before
+        // Tails_CPU_Control reads status(a0) at loc_13DD0.
+        sidekick.setPushing(false);
+        return true;
+    }
+
+    private boolean hasReleasedLatchedSolidObject() {
+        ObjectInstance latched = sidekick.getLatchedSolidObjectInstance();
+        if (latched != null) {
+            return !hasLiveRidingObject(latched);
+        }
+        int slot = sidekick.getInteractSlotIndex();
+        if (slot < 0) {
+            return false;
+        }
+        LevelManager levelManager = sidekick.currentLevelManagerIfAvailable();
+        return levelManager != null
+                && levelManager.getObjectManager() != null
+                && levelManager.getObjectManager().objectIdInSlot(slot) < 0;
+    }
+
+    private boolean isReleasedUnderwaterObjectSlotState() {
+        return sidekick.isInWater()
+                && !hasLiveRidingObject(currentRidingObject())
+                && hasReleasedLatchedSolidObject();
+    }
+
+    private boolean isReleasedUnderwaterZeroSpeedPushState() {
+        return isReleasedUnderwaterObjectSlotState()
+                && !sidekick.getAir()
+                && sidekick.getGSpeed() == 0;
+    }
+
+    private boolean hasLiveRidingObject(ObjectInstance ridingObject) {
+        if (ridingObject == null || ridingObject.isDestroyed()) {
+            return false;
+        }
+        LevelManager levelManager = sidekick.currentLevelManager();
+        if (levelManager == null || levelManager.getObjectManager() == null) {
+            return true;
+        }
+        return levelManager.getObjectManager().isActiveObjectInstance(ridingObject);
     }
 
     private boolean usesSidekickRomVisibleCatchUpMarkerFrameCounterBridge() {
@@ -4190,6 +4264,7 @@ public class SidekickCpuController {
         normalFrameCount = state == State.NORMAL ? SETTLED_FRAME_THRESHOLD : 0;
         normalPushingGraceFrames = 0;
         suppressNextAirbornePushFollowSteering = false;
+        releasedUnderwaterPushConsumed = false;
         objectOrderGracePushBypassThisFrame = false;
         if (state != State.CARRYING && state != State.CARRY_INIT) {
             mgzCarryIntroAscend = false;
@@ -4222,6 +4297,7 @@ public class SidekickCpuController {
         this.normalFrameCount = state == State.NORMAL ? SETTLED_FRAME_THRESHOLD : 0;
         normalPushingGraceFrames = 0;
         suppressNextAirbornePushFollowSteering = false;
+        releasedUnderwaterPushConsumed = false;
         objectOrderGracePushBypassThisFrame = false;
         // ROM Tails_CPU_target_X / Tails_CPU_target_Y (sonic3k.asm $F70A/$F70C).
         // The engine stores them in the existing catch-up steering fields,
@@ -4244,6 +4320,7 @@ public class SidekickCpuController {
         lastNormalAutoJumpPressFrameCounter = -1;
         this.normalFrameCount = normalFrames;
         suppressNextAirbornePushFollowSteering = false;
+        releasedUnderwaterPushConsumed = false;
         objectOrderGracePushBypassThisFrame = false;
     }
 
@@ -4487,6 +4564,7 @@ public class SidekickCpuController {
                 sidekickCount,
                 normalPushingGraceFrames,
                 suppressNextAirbornePushFollowSteering,
+                releasedUnderwaterPushConsumed,
                 objectOrderGracePushBypassThisFrame,
                 pendingGroundedFollowNudge,
                 pendingGroundedFollowNudgeFrame,
@@ -4542,6 +4620,7 @@ public class SidekickCpuController {
         sidekickCount = snapshot.sidekickCount();
         normalPushingGraceFrames = snapshot.normalPushingGraceFrames();
         suppressNextAirbornePushFollowSteering = snapshot.suppressNextAirbornePushFollowSteering();
+        releasedUnderwaterPushConsumed = snapshot.releasedUnderwaterPushConsumed();
         objectOrderGracePushBypassThisFrame = snapshot.objectOrderGracePushBypassThisFrame();
         pendingGroundedFollowNudge = snapshot.pendingGroundedFollowNudge();
         pendingGroundedFollowNudgeFrame = snapshot.pendingGroundedFollowNudgeFrame();
@@ -4632,6 +4711,7 @@ public class SidekickCpuController {
         jumpingFlag = false;
         normalPushingGraceFrames = 0;
         suppressNextAirbornePushFollowSteering = false;
+        releasedUnderwaterPushConsumed = false;
         aizIntroDormantMarkerPrimed = false;
         suppressNextLevelEventNormalMovement = false;
         catchUpUsesRomVisibleLevelFrameCounter = false;
