@@ -5,12 +5,14 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -29,6 +31,9 @@ import java.util.List;
  */
 public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance {
     private static final int SUBTYPE_LBZ2 = 0x18;
+    private static final int SUPPORT_PILLAR_DX = -0xC8;
+    private static final int SUPPORT_PILLAR_DY = 0x14;
+    private static final int SUPPORT_PILLAR_RENDER_FLAGS = 0x02;
     /** ROM MoveSprite_LightGravity: moveq #$20,d1. */
     private static final int LIGHT_GRAVITY = 0x20;
 
@@ -54,6 +59,7 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance {
     }
 
     private final List<SwingChild> swingChildren = new ArrayList<>(4);
+    private final List<LbzKnuxPillarInstance> supportPillars = new ArrayList<>(1);
     private final List<Integer> musicFadeTargets = new ArrayList<>(2);
     private int x;
     private int y;
@@ -176,6 +182,10 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance {
         return List.copyOf(swingChildren);
     }
 
+    public List<LbzKnuxPillarInstance> supportPillarsForTest() {
+        return List.copyOf(supportPillars);
+    }
+
     public List<Integer> musicFadeTargetsForTest() {
         return List.copyOf(musicFadeTargets);
     }
@@ -200,11 +210,41 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance {
         mappingFrame = 0x20;
         spawnMusicFade(Sonic3kMusic.KNUCKLES.id);
         AizIntroArtLoader.applyKnucklesPalette(services());
+        ensureSupportPillar();
         for (int subtype = 0; subtype <= 6; subtype += 2) {
             int childSubtype = subtype;
             SwingChild child = spawnChild(() -> new SwingChild(this, childSubtype));
             swingChildren.add(child);
         }
+    }
+
+    private void ensureSupportPillar() {
+        int pillarX = (x + SUPPORT_PILLAR_DX) & 0xFFFF;
+        int pillarY = (y + SUPPORT_PILLAR_DY) & 0xFFFF;
+        LbzKnuxPillarInstance existing = findExistingSupportPillar(pillarX, pillarY);
+        if (existing != null) {
+            supportPillars.add(existing);
+            return;
+        }
+        LbzKnuxPillarInstance pillar = spawnFreeChild(() -> new LbzKnuxPillarInstance(
+                new ObjectSpawn(pillarX, pillarY, Sonic3kObjectIds.LBZ_KNUX_PILLAR,
+                        0, SUPPORT_PILLAR_RENDER_FLAGS, false, pillarY)));
+        supportPillars.add(pillar);
+    }
+
+    private LbzKnuxPillarInstance findExistingSupportPillar(int pillarX, int pillarY) {
+        ObjectManager manager = services().objectManager();
+        if (manager == null) {
+            return null;
+        }
+        for (LbzKnuxPillarInstance pillar : manager.activeObjectsOfType(LbzKnuxPillarInstance.class)) {
+            if (!pillar.isDestroyed()
+                    && (pillar.getCentreX() & 0xFFFF) == pillarX
+                    && (pillar.getCentreY() & 0xFFFF) == pillarY) {
+                return pillar;
+            }
+        }
+        return null;
     }
 
     /** ROM loc_6290E: wait for $38 bit 1 from the ship. */

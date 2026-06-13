@@ -143,6 +143,9 @@ public final class LbzEndBossInstance extends AbstractBossInstance {
 
     @Override
     protected void updateBossLogic(int frameCounter, PlayableEntity player) {
+        if (paletteRuntimeIntegrationPending) {
+            requestStartupAssets();
+        }
         updateHitFlash();
         if (defeatStarted) {
             updateDefeat();

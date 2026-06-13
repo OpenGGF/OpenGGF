@@ -3,8 +3,14 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.palette.PaletteSurface;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance;
+import com.openggf.data.Rom;
+import com.openggf.level.Level;
+import com.openggf.level.Palette;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
@@ -20,8 +26,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.when;
 
 class TestLbzEndBossInstance {
     private static final ObjectSpawn SPAWN = new ObjectSpawn(0x3B00, 0x05F8, 0xCB, 0, 0, false, 0x05F8);
@@ -42,6 +50,37 @@ class TestLbzEndBossInstance {
         assertTrue(boss.isLbzEndBossPaletteLine1RequestedForTests(), "routine 0 requests Pal_LBZEndBoss line 1");
         assertTrue(boss.isPaletteRuntimeIntegrationPendingForTests(),
                 "no ROM/level in this isolated fixture means palette application is deferred to integration");
+    }
+
+    @Test
+    void pendingPaletteLoadRetriesAfterServicesAttachForMovingPlatformBridge() throws Exception {
+        LbzEndBossInstance boss = constructBoss(new TestObjectServices());
+        PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
+        Palette[] palettes = {new Palette(), new Palette(), new Palette(), new Palette()};
+        Level level = mock(Level.class);
+        when(level.getPaletteCount()).thenReturn(palettes.length);
+        when(level.getPalette(anyInt())).thenAnswer(invocation -> palettes[invocation.getArgument(0)]);
+        byte[] line = new byte[32];
+        line[0x16] = 0x02;
+        line[0x17] = 0x22;
+        Rom rom = mock(Rom.class);
+        when(rom.readBytes(Sonic3kConstants.PAL_LBZ_END_BOSS_ADDR, 32)).thenReturn(line);
+        TestObjectServices readyServices = new TestObjectServices() {
+            @Override
+            public Level currentLevel() {
+                return level;
+            }
+        };
+        readyServices.withRom(rom).withPaletteOwnershipRegistry(registry);
+
+        boss.setServices(readyServices);
+        boss.update(0, null);
+        registry.resolveInto(palettes, null, null, null);
+
+        assertFalse(boss.isPaletteRuntimeIntegrationPendingForTests(),
+                "Obj_LBZEndBoss should retry Pal_LBZEndBoss once services are attached");
+        assertEquals("s3k.lbz.endBoss", registry.ownerAt(PaletteSurface.NORMAL, 1, 0x0B),
+                "the bobbing platform/bridge uses the LBZ end-boss sheet on palette line 1");
     }
 
     @Test

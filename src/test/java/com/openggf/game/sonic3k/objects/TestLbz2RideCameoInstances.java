@@ -85,6 +85,17 @@ class TestLbz2RideCameoInstances {
     }
 
     @Test
+    void rideShipCarriesRomPriorityInFrontOfLaunchBackgroundShip() {
+        Fixture fixture = new Fixture(PlayerCharacter.SONIC_ALONE);
+        Lbz2RobotnikShipInstance ship = fixture.ship(0x3BDE, 0x0654);
+
+        assertTrue(ship.isHighPriority(),
+                "ObjDat_LBZ2RobotnikShip uses make_art_tile(...,0,1), so the carried craft should keep art priority");
+        assertEquals(1, ship.getPriorityBucket(),
+                "ObjDat_LBZ2RobotnikShip priority is $80, matching the first object priority band");
+    }
+
+    @Test
     void exhaustFlameUsesSharedShipFlameFrameOffsetAndCadence() {
         Fixture fixture = new Fixture(PlayerCharacter.SONIC_ALONE);
         PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
@@ -104,17 +115,17 @@ class TestLbz2RideCameoInstances {
                 .findFirst()
                 .orElseThrow();
 
-        assertEquals((ship.getCentreX() + 0x1E) & 0xFFFF, flame.getCentreX());
+        assertEquals((ship.getCentreX() - 0x1E) & 0xFFFF, flame.getCentreX());
         assertEquals(ship.getCentreY() & 0xFFFF, flame.getCentreY());
 
         flame.update(0, sonic);
         flame.appendRenderCommands(new ArrayList<>());
-        verify(renderer).drawFrameIndex(6, flame.getCentreX(), flame.getCentreY(), false, false);
+        verify(renderer).drawFrameIndex(6, flame.getCentreX(), flame.getCentreY(), true, false);
 
         flame.update(1, sonic);
         flame.appendRenderCommands(new ArrayList<>());
-        verify(renderer, never()).drawFrameIndex(6, flame.getCentreX(), flame.getCentreY(), true, false);
-        verify(renderer, times(1)).drawFrameIndex(6, flame.getCentreX(), flame.getCentreY(), false, false);
+        verify(renderer, never()).drawFrameIndex(6, flame.getCentreX(), flame.getCentreY(), false, false);
+        verify(renderer, times(1)).drawFrameIndex(6, flame.getCentreX(), flame.getCentreY(), true, false);
     }
 
     @Test
@@ -213,6 +224,22 @@ class TestLbz2RideCameoInstances {
         assertEquals(0, lowPriorityPillar.getPriorityBucket());
         assertTrue(highPriorityPillar.isHighPriority());
         assertEquals(5, highPriorityPillar.getPriorityBucket());
+    }
+
+    @Test
+    void sonicCameoEnsuresRomSupportPillarLayoutObjectIsPresent() {
+        Fixture fixture = new Fixture(PlayerCharacter.SONIC_ALONE);
+        CutsceneKnucklesLbz2Instance cameo = fixture.knuckles(0x3E28, 0x0608);
+
+        List<LbzKnuxPillarInstance> supportPillars = cameo.supportPillarsForTest();
+
+        assertEquals(1, supportPillars.size(),
+                "The LBZ2 cameo stands on Obj_LBZKnuxPillar at the matching layout coordinate");
+        LbzKnuxPillarInstance pillar = supportPillars.getFirst();
+        assertEquals(0x3D60, pillar.getCentreX() & 0xFFFF);
+        assertEquals(0x061C, pillar.getCentreY() & 0xFFFF);
+        assertTrue(pillar.isHighPriority(),
+                "render_flags bit 1 on the ROM layout object sets art priority for the girder");
     }
 
     @Test

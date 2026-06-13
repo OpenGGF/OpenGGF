@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
@@ -94,6 +95,16 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance {
             // ROM: bset #0,render_flags at init — ship faces right.
             renderer.drawFrameIndex(SHIP_FRAME, x, y, true, false);
         }
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        return true;
+    }
+
+    @Override
+    public int getPriorityBucket() {
+        return RenderPriority.clamp(0x80 / 0x80);
     }
 
     @Override
@@ -436,7 +447,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance {
 
     public static final class ExhaustFlameChild extends AbstractObjectInstance {
         private static final int OBJ_LBZ2_ROBOTNIK_SHIP = 0xC6;
-        private static final int X_OFFSET = 0x1E;
+        private static final int X_OFFSET = -0x1E;
         private static final int Y_OFFSET = 0;
         private static final int FLAME_FRAME = 6;
         private static final int PRIORITY_BUCKET = 5;
@@ -469,7 +480,9 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance {
             }
             PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP);
             if (renderer != null) {
-                renderer.drawFrameIndex(FLAME_FRAME, getCentreX(), getCentreY(), false, false);
+                // ROM Refresh_ChildPositionAdjusted mirrors Child1_MakeRoboShipFlame
+                // through the parent render_flags bit 0 set in Obj_LBZ2RobotnikShip.
+                renderer.drawFrameIndex(FLAME_FRAME, getCentreX(), getCentreY(), true, false);
             }
         }
 

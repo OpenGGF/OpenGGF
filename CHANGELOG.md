@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **LBZ2 ending sequence render polish now matches the ROM path more closely:**
+  the end-boss platform palette retries once object services are available,
+  the hang-ride ship keeps its ROM priority and left-side flipped exhaust
+  flame, and the Knuckles cameo guarantees the matching `Obj_LBZKnuxPillar`
+  support girder is present without duplicating an already-spawned layout
+  object.
+
 - **LBZ2 end sequence corrected against the disassembly:** the
   `Obj_LBZFinalBoss1` ship/turret boss now renders its body and every child
   (turret segments, sweeping laser heads, charging muzzles with blink and beam
