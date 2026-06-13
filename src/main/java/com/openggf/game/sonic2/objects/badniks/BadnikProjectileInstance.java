@@ -52,6 +52,7 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
     private static final int GRAVITY_COCONUT = 0x20; // Obj98_CoconutFall
     private static final int GRAVITY_SPINY_SPIKE = 0x20; // From disassembly +$20 per frame
     private static final int GRAVITY_REXON_FIREBALL = 0x80; // From disassembly $80 per frame
+    private static final boolean ASTERON_HIGH_PRIORITY_SPRITE = true;
 
     private final ProjectileType type;
     private int currentX;
@@ -286,6 +287,7 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
         PatternSpriteRenderer renderer;
         int frame;
         int paletteOverride = -1; // -1 = use sprite sheet default
+        boolean forceHighPriority = false;
 
         switch (type) {
             case BUZZER_STINGER:
@@ -324,7 +326,9 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
             case ASTERON_SPIKE:
                 renderer = renderManager.getRenderer(Sonic2ObjectArtKeys.ASTERON);
                 // Each Asteron spike has a fixed frame set at creation (frames 2-4)
+                // ROM ObjA4_SubObjData2: make_art_tile(ArtTile_ArtNem_MtzSupernova,0,1).
                 frame = fixedFrame >= 0 ? fixedFrame : 2;
+                forceHighPriority = true;
                 break;
             case TURTLOID_SHOT:
                 renderer = renderManager.getRenderer(Sonic2ObjectArtKeys.TURTLOID);
@@ -352,7 +356,12 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
             return;
         }
 
-        renderer.drawFrameIndex(frame, currentX, currentY, hFlip, false, paletteOverride);
+        if (forceHighPriority) {
+            renderer.drawFrameIndexForcedPriority(
+                    frame, currentX, currentY, hFlip, false, paletteOverride, ASTERON_HIGH_PRIORITY_SPRITE);
+        } else {
+            renderer.drawFrameIndex(frame, currentX, currentY, hFlip, false, paletteOverride);
+        }
     }
 
     @Override

@@ -1999,6 +1999,36 @@ S2 initial preload vertical-bypass parity, and
 
 ---
 
+## P47 — `make_art_tile` priority bit must reach render commands
+
+**Pattern.** S2 object `subObjData` art words encode palette and priority via
+`make_art_tile(...)`. A priority argument of `1` is a ROM-visible sprite
+priority bit, not just metadata for art loading.
+
+**Engine symptom.** The object has the right mappings and frame but renders at
+the wrong priority relative to foreground level tiles or other sprites. This is
+easy to miss in headless object logic tests because position, collision, and
+routine state still match.
+
+**What to check.** When porting badniks, projectiles, monitors, and other
+object children, read the `subObjData` art word for every rendered variant. If
+the ROM uses `make_art_tile(..., palette, 1)`, route rendering through a
+priority-forcing renderer path rather than the default `drawFrameIndex` call.
+Check child/projectile `SubObjData2` rows separately; they may have different
+priority from the parent.
+
+**ROM citation.** Asteron parent `ObjA4_SubObjData` uses
+`make_art_tile(ArtTile_ArtNem_MtzSupernova,0,1)` at
+`docs/s2disasm/s2.asm:76325-76326`; Asteron spike/projectile
+`ObjA4_SubObjData2` uses the same priority bit at
+`docs/s2disasm/s2.asm:74656-74657`.
+
+**Originating commit.** `fix(s2/ui): restore ROM prompt and Asteron priority`
+restores high-priority render commands for `AsteronBadnikInstance` and
+`BadnikProjectileInstance.ProjectileType.ASTERON_SPIKE`.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

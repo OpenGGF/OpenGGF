@@ -4,6 +4,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 Asteron rendering now honors the ROM sprite priority bit:** Asteron and
+  its spawned spikes render with the `make_art_tile(..., priority=1)` priority
+  encoded in the ROM `subObjData` rows.
+
 - **S2 HTZ sidekick despawn preserves the ROM interact latch:** Tails CPU
   boundary-kill/despawn no longer clears `Tails_interact_ID`, and routine-2
   spawning diagnostics return to the raw Player 2 logical input word. This
