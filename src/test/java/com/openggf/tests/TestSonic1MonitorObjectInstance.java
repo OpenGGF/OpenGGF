@@ -1,9 +1,11 @@
 package com.openggf.tests;
 
 import com.openggf.game.session.SessionManager;
+import com.openggf.camera.Camera;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.session.EngineContext;
+import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.game.sonic1.objects.Sonic1MonitorObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1MonitorPowerUpObjectInstance;
 import com.openggf.graphics.GLCommand;
@@ -27,6 +29,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -72,6 +75,69 @@ class TestSonic1MonitorObjectInstance {
                 "Blocked sidekick touches should leave the player velocity unchanged");
         verify(objectManager, never()).markRemembered(monitor.getSpawn());
         verify(objectManager, never()).addDynamicObject(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void touchFromAboveRequiresRollAnimationNotJustRollingStatus() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        Sonic1MonitorObjectInstance monitor = new Sonic1MonitorObjectInstance(
+                new ObjectSpawn(0x100, 0x100, 0x26, 4, 0, false, 0));
+        monitor.setServices(servicesWithObjectManager(objectManager));
+
+        DummyPlayer player = new DummyPlayer();
+        player.setRolling(true);
+        player.setAnimationId(Sonic1AnimationIds.SPRING);
+        player.setYSpeed((short) 0x0120);
+
+        monitor.onTouchResponse(player, mock(TouchResponseResult.class), 1);
+
+        assertFalse(isBroken(monitor),
+                "S1 Touch_Monitor checks anim == id_Roll, not just the rolling status bit");
+        assertEquals(0x0120, player.getYSpeed() & 0xFFFF,
+                "Blocked monitor hits must leave the player's Y speed unchanged");
+        verify(objectManager, never()).markRemembered(monitor.getSpawn());
+    }
+
+    @Test
+    void touchProfileRechecksWhileOverlappingBecauseRollAnimationCanLag() {
+        Sonic1MonitorObjectInstance monitor = new Sonic1MonitorObjectInstance(
+                new ObjectSpawn(0x100, 0x100, 0x26, 4, 0, false, 0));
+
+        assertTrue(monitor.getTouchResponseProfile().continuousCallbacks(),
+                "S1 ReactToItem polls monitors every frame, so stale non-roll animation on first overlap "
+                        + "must not suppress a later break in the same overlap");
+    }
+
+    @Test
+    void monitorTopContactStillLandsWhenPlayerWasBouncedUpward() {
+        ObjectServices services = new StubObjectServices();
+        Camera camera = mock(Camera.class);
+        when(camera.getX()).thenReturn((short) 0x07B8);
+        when(camera.getY()).thenReturn((short) 0x0220);
+        when(camera.getWidth()).thenReturn((short) 320);
+        when(camera.getHeight()).thenReturn((short) 224);
+        when(camera.isVerticalWrapEnabled()).thenReturn(false);
+        ObjectManager objectManager = new ObjectManager(
+                List.of(), null, 0, null, null, null, camera, services);
+        Sonic1MonitorObjectInstance monitor = new Sonic1MonitorObjectInstance(
+                new ObjectSpawn(0x0850, 0x02D1, 0x26, 6, 0, false, 0));
+        objectManager.addDynamicObjectAtSlot(monitor, 0x26);
+        monitor.snapshotPreUpdatePosition();
+
+        DummyPlayer player = new DummyPlayer();
+        player.setRolling(true);
+        player.setAnimationId(Sonic1AnimationIds.ROLL);
+        player.setCentreX((short) 0x0848);
+        player.setCentreY((short) 0x02B6);
+        player.setAir(true);
+        player.setYSpeed((short) -0x01F8);
+
+        objectManager.updateSolidContacts(player);
+
+        assertFalse(player.getAir(),
+                "S1 Mon_Solid only uses upward velocity to block breaking; top contact still lands");
+        assertTrue(player.isOnObject(), "Top contact should set the monitor standing bit");
+        assertEquals(0, player.getYSpeed(), "Monitor landing must zero Y speed");
     }
 
     @Test
@@ -168,8 +234,8 @@ class TestSonic1MonitorObjectInstance {
             minStartRollSpeed = 0;
             minRollSpeed = 0;
             maxRoll = 0;
-            rollHeight = 0;
-            runHeight = 0;
+            rollHeight = 28;
+            runHeight = 38;
         }
 
         @Override

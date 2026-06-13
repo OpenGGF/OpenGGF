@@ -2,6 +2,7 @@ package com.openggf.game.sonic1.objects;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.ObjectArtProvider;
+import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -82,6 +83,7 @@ class TestSonic1MonitorObjectInstance {
 
         AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
         when(player.getRolling()).thenReturn(true);
+        when(player.getAnimationId()).thenReturn(Sonic1AnimationIds.ROLL.id());
         when(player.getYSpeed()).thenReturn((short) 0x0200);
         when(player.getCentreX()).thenReturn((short) 0x0248);
         when(player.getCentreY()).thenReturn((short) 0x0330);

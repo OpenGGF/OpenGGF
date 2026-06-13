@@ -1,5 +1,39 @@
 # Trace Frontier Log
 
+## 2026-06-13 - S1 MZ1 monitor frontier advances to camera follow
+
+- Scope: S1 monitor contact now matches the ROM distinction between
+  `Status_Roll` and `anim == id_Roll`. `Touch_Monitor`/`ReactToItem` uses the
+  roll animation to decide whether the monitor breaks, and the monitor remains
+  eligible for continuous touch callbacks so a one-frame animation lag does not
+  permanently suppress a break while overlapping.
+- Solid-contact fix: the shared monitor top contact path now mirrors the S1
+  `Mon_Solid` top-alignment behavior by allowing upward-moving top contact to
+  land and by removing the generic `SolidObject_Landed` +3 Y bias for monitor
+  surfaces.
+- Diagnostic trace data: the MZ1 `aux_state.jsonl.gz` trace artifact was
+  regenerated from the S1 complete-run BizHawk recorder so the monitor object
+  slots and ROM near-object context are available in failure reports. The aux
+  rows remain comparison-only diagnostic input; replay does not hydrate engine
+  state from the trace.
+- Focused verification:
+  - `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s1.TestS1Mz1CompleteRunTraceReplay" "-Ds1.rom.path=s1.gen" "-DfailIfNoTests=false" "-Dsurefire.argLine=-Xshare:off -Xmx2g" test -B`
+  - Result: expected-red trace; first frontier advanced from frame **1260**
+    `rolling` expected `0`, actual `1` to frame **2089** `camera_y` expected
+    `0x02BE`, actual `0x02C4`. Player position, speed, ground mode, roll
+    state, rings, and camera X match through the former monitor frontier.
+- CI guard verification:
+  - `mvn -Dmse=off "-Dtest=TestNoServicesInObjectConstructors,TestBuildToolingGuard,TestArchitecturalSourceGuard,TestArchUnitRules,TestPlayableRuntimeAccessGuard,TestObjectPhysicsStandardizationGuard,TestRewindFieldAudit,TestRewindTransientGuard,TestSonic3kSpringObjectInstance" "-DfailIfNoTests=false" test -B`
+  - Result: **191 tests**, 0 failures, 0 errors.
+- Full trace sweep:
+  - `mvn -Dmse=off "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsurefire.forkCount=1" "-Dsurefire.argLine=-Xshare:off -Xmx3g" test -B`
+  - Result: expected-red sweep; **Tests run: 90, Failures: 62, Errors: 1,
+    Skipped: 0** in 8:18. The failure/error count is unchanged from the prior
+    full-sweep baseline, while `S1Mz1CompleteRun` advances to the next
+    camera-follow frontier. The sweep also re-counted existing S1 downstream
+    errors (`S1Mz2CompleteRun` 1074 -> 1002, `S1Slz3CompleteRun` 1500 -> 1073)
+    without moving their first-error frames.
+
 ## 2026-06-13 - Object-near comparison exposes LZ2 Obj64 frontier
 
 - Scope: trace replay can now opt into read-only `object_near` comparison for
@@ -49,15 +83,15 @@ Current replay frontiers from Surefire:
 | `S1Lz2CompleteRun` | f691 | obj_extra_s24_type | absent | 0x64 | 2387 |
 | `S1Lz3CompleteRun` | f466 | y | 0x0807 | 0x0007 | 3229 |
 | `S1Mz1` | f3224 | y_speed | 0x02C8 | 0x01C8 | 222 |
-| `S1Mz1CompleteRun` | f1260 | rolling | 0 | 1 | 450 |
-| `S1Mz2CompleteRun` | f2409 | y_speed | 0x0048 | -00B8 | 1074 |
+| `S1Mz1CompleteRun` | f2089 | camera_y | 0x02BE | 0x02C4 | 185 |
+| `S1Mz2CompleteRun` | f2409 | y_speed | 0x0048 | -00B8 | 1002 |
 | `S1Mz3CompleteRun` | f1702 | y | 0x048C | 0x048B | 1091 |
 | `S1Sbz1CompleteRun` | f2268 | air | 0 | 1 | 805 |
 | `S1Sbz2CompleteRun` | f1697 | rolling | 1 | 0 | 926 |
 | `S1Sbz3CompleteRun` | f1477 | rolling | 0 | 1 | 4688 |
 | `S1Slz1CompleteRun` | f723 | x_speed | 0x0000 | -0200 | 661 |
 | `S1Slz2CompleteRun` | f651 | g_speed | 0x1000 | 0x10AE | 270 |
-| `S1Slz3CompleteRun` | f718 | y_speed | 0x0000 | 0x0610 | 1500 |
+| `S1Slz3CompleteRun` | f718 | y_speed | 0x0000 | 0x0610 | 1073 |
 | `S1Syz1CompleteRun` | f250 | y_speed | -0610 | -0510 | 417 |
 | `S1Syz2CompleteRun` | f1088 | x_speed | 0x02E8 | 0x02F4 | 336 |
 | `S1Syz3CompleteRun` | f1392 | x_speed | -0200 | 0x0200 | 714 |
@@ -96,7 +130,8 @@ Root-cause clusters from this baseline:
 | Cluster | Current rows | Next action |
 |---|---|---|
 | True-frontier tooling | `S1Lz2CompleteRun` f691 `obj_extra_s24_type` | Investigate S1 Obj64 child cadence/lifetime inside frame 691 before touching later LZ2 player drift. |
-| Radius/rolling | `S1Mz1CompleteRun`, `S1Sbz2CompleteRun`, `S1Sbz3CompleteRun`, plus nearby y deltas | Continue the standing/rolling radius hypothesis after Obj64 is understood. |
+| Radius/rolling | `S1Sbz2CompleteRun`, `S1Sbz3CompleteRun`, plus nearby y deltas | Continue the standing/rolling radius hypothesis after Obj64 is understood. |
+| Camera/object ride handoff | `S1Mz1CompleteRun` f2089 `camera_y` after the monitor fix | Compare frame 2088 -> 2089 camera-follow and on-object state around the large grassy platform; the old monitor `rolling` false frontier is cleared. |
 | Exact speed deltas | `S1Ghz3CompleteRun`, `S1Mz1`, `S2Arz2LevelSelect`, several `x_speed` rows | Diff the divergent frame routine and isolate the missing/extra 0x100-like term. |
 | Tails CPU/state | Most S2 rows plus S3K sidekick rows | Defer until primary-player and object-lifetime false frontiers are reduced. |
 | S3K input alignment | `S3kCnz`, `S3kMgz` | Fix metadata/input offset separately; these fail before normal frontier comparison. |

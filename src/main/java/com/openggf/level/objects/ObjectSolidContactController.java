@@ -29,6 +29,7 @@ import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.Sprite;
+import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.game.GroundMode;
 
@@ -2463,15 +2464,16 @@ final class ObjectSolidContactController {
     private SolidContact resolveMonitorContact(PlayableEntity player, int relX, int relY,
             int halfWidth, int maxTop, int playerCenterX, int playerCenterY, int anchorX,
             boolean sticky, boolean apply) {
-        // ROM: Mon_Solid / SolidObject_Monitor_Sonic — rolling check runs AFTER
+        // ROM: Mon_Solid / SolidObject_Monitor_Sonic — roll-animation check runs AFTER
         // Mon_SolidSides geometry detection, not as an external gate.
-        // When the player is rolling AND velY >= 0 (not moving upward), skip
-        // the solid response entirely so the touch system can break the monitor.
+        // When the player is in the native roll animation AND velY >= 0 (not
+        // moving upward), skip the solid response entirely so the touch system
+        // can break the monitor.
         // When velY < 0 (moving upward), always handle as solid (side push / landing)
         // regardless of rolling state — this is the S1 "always solid when moving up" rule.
         // When standing on the monitor (sticky), always handle as solid (ride mode,
         // ROM: ob2ndRout=2 bypasses Mon_SolidSides entirely).
-        if (!sticky && player.getRolling() && player.getYSpeed() >= 0) {
+        if (!sticky && isMonitorRollAnimation(player) && player.getYSpeed() >= 0) {
             return null;
         }
 
@@ -2506,13 +2508,11 @@ final class ObjectSolidContactController {
         boolean withinLandingX = Math.abs(xFromCenter) <= landingXMargin;
 
         if (canLand && withinLandingX) {
-            // Landing on top
-            if (player.getYSpeed() < 0) {
-                return null;
-            }
-
             if (apply) {
-                int newCenterY = playerCenterY - distY + 3;
+                // S1 Mon_SolidSides returns d3 as the vertical penetration and
+                // Mon_Solid aligns with `sub.w d3,obY(a1)`, unlike the generic
+                // SolidObject_Landed path that applies a +3 landing bias.
+                int newCenterY = playerCenterY - distY;
                 int newY = newCenterY - (player.getHeight() / 2);
                 player.setY((short) newY);
                 // ROM: Solid_ResetFloor unconditionally sets these.
@@ -2555,6 +2555,14 @@ final class ObjectSolidContactController {
             }
         }
         return pushing ? SolidContact.SIDE_PUSH : SolidContact.SIDE_NO_PUSH;
+    }
+
+    private static boolean isMonitorRollAnimation(PlayableEntity player) {
+        if (player instanceof AbstractPlayableSprite sprite
+                && sprite.getAnimationProfile() instanceof ScriptedVelocityAnimationProfile profile) {
+            return sprite.getAnimationId() == profile.getRollAnimId();
+        }
+        return player.getRolling();
     }
 
     private SolidContact resolveSlopedContact(PlayableEntity player, int anchorX, int anchorY, int halfWidth,

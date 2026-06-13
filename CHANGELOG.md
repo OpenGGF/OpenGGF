@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 monitor top contacts now follow the ROM animation and landing gates:**
+  monitor breaks now key off the native roll animation instead of the rolling
+  status bit, monitor touch callbacks poll continuously like `ReactToItem`, and
+  top-solid landing no longer applies the generic +3 bias. This advances the
+  MZ1 complete-run trace from frame 1260 `rolling` to frame 2089 `camera_y`.
+
 - **Ceiling empty-extension scans now mirror the ROM probe nibble:** rotated
   ground sensors now apply the `WalkCeiling` low-nibble mirror when computing
   the empty-tile default distance, advancing the S1 SBZ2 complete-run trace
