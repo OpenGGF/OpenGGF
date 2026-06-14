@@ -933,6 +933,46 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void s2RollingLivePushBypassesFollowNudgeBeforeRollSpeedClearsPush() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setAir(false);
+        tails.setRolling(true);
+        tails.setPushing(true);
+        tails.setCentreX((short) 0x0275);
+        tails.setCentreY((short) 0x0375);
+        tails.setDirection(Direction.LEFT);
+        tails.setGSpeed((short) 0xF000);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x0272);
+        Arrays.fill(yHistory, (short) 0x036C);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        controller.update(0x00CB);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals("current_push_bypass", diagnostics.followBranch(),
+                        "S2 TailsCPU_Normal tests live Status_Push before Tails_RollSpeed reaches "
+                                + "Obj02_CheckWallsOnGround; delayed Sonic Status_Push is clear, so "
+                                + "loc_1BD64 branches around FollowLeft (s2.asm:39291-39294,39633,40121)."),
+                () -> assertTrue(diagnostics.skipFollowSteering()),
+                () -> assertEquals(0, diagnostics.appliedFollowNudge(),
+                        "The FollowLeft subq.w #1,x_pos nudge at s2.asm:39309-39314 must not run "
+                                + "on the live-push branch."),
+                () -> assertEquals(0x0275, tails.getCentreX() & 0xFFFF));
+    }
+
+    @Test
     void normalPushGraceSuppressesGroundedFollowPulseInsideAizObjectBand() throws Exception {
         GameModule previous = GameModuleRegistry.getBootstrapDefault();
         try {

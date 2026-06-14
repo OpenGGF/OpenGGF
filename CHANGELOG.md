@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 CNZ1 trace advances through Tails CPU and Point Pokey frontiers:** S2
+  Tails now treats live `Status_Push` as ROM-visible before rolling movement
+  clears the side-contact bit, while CNZ Point Pokey capture now writes player
+  `obj_control` without asserting the global `Control_Locked` latch. The CNZ1
+  level-select trace advances from frame 202 through frame 1637 to frame 3675's
+  separate launcher-spring Tails input frontier.
+
 - **S2 ARZ2 trace advances through the Obj91 ChopChop early-hit frontier:**
   ChopChop detection now follows the ROM's exclusive `0xA0` horizontal upper
   bound after object movement, preventing an exact-boundary frame from entering

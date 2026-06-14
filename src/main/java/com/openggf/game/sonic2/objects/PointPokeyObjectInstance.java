@@ -183,10 +183,12 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
 
         maintainCapturedRideState(player);
 
-        // ROM: move.b #$81,obj_control(a1) - locks player control
-        // Bit 0 (0x01): controlLocked - blocks player input
-        // Bit 7 (0x80): objectControlled - disables all physics (gravity, movement)
-        player.setControlLocked(true);
+        // ROM: move.b #$81,obj_control(a1). This is player obj_control, not
+        // global Control_Locked; Obj01_Control still refreshes Ctrl_1_Logical
+        // before skipping movement on obj_control bit 0 (s2.asm:36227-36235,
+        // 59021).
+        // Bit 0 (0x01): suppresses movement/control
+        // Bit 7 (0x80): suppresses touch response and full physics
         ObjectControlState.nativeBit7FullControl().applyTo(player);
 
         // ROM writes only x_pos/y_pos here; x_sub/y_sub survive the capture
@@ -255,8 +257,8 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         player.setLatchedSolidObject(0, null);
         player.setAir(true);
 
-        // Release player control
-        player.setControlLocked(false);
+        // Release player obj_control; ObjD6 does not touch global Control_Locked
+        // (s2.asm:58746-58756).
         ObjectControlState.none().applyTo(player);
         player.setPinballMode(false);
 

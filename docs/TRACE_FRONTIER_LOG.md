@@ -1,5 +1,39 @@
 # Trace Frontier Log
 
+## 2026-06-14 - S2 CNZ1 Tails CPU and Point Pokey frontier advance
+
+- Scope: S2 CNZ1 level-select trace remediation advanced the focused replay
+  through two Tails CPU frontiers without hydrating engine state from trace rows
+  and without zone, route, or frame carve-outs. S2 Tails now honors the live
+  `Status_Push` branch before `Tails_RollSpeed` clears side-contact state,
+  while S3K keeps its grace-status stale-push suppression. CNZ Point Pokey now
+  models ObjD6's `$81` write as player `obj_control`, not the global
+  `Control_Locked` latch, so Sonic's logical input history keeps refreshing
+  while movement is object-suppressed.
+- Disassembly evidence:
+  - `docs/s2disasm/s2.asm:39291-39294` shows `TailsCPU_Normal` testing live
+    `Status_Push` before the follow-steering branch, with `Tails_RollSpeed`
+    reached later (`s2.asm:39633`) and `Obj02_CheckWallsOnGround` reached from
+    that movement tail (`s2.asm:40121`).
+  - `docs/s2disasm/s2.asm:59005-59021` shows ObjD6 rejecting already-controlled
+    players and then writing `#$81` to `obj_control(a1)` on capture.
+  - `docs/s2disasm/s2.asm:36227-36235` shows `Obj01_Control` refreshing
+    `Ctrl_1_Logical` unless global `Control_Locked` is set, then separately
+    skipping movement on `obj_control` bit 0 before `Sonic_RecordPos` stores
+    follower history (`s2.asm:36346`).
+- Regression tests:
+  - `cmd /c mvn "-Dmse=off" "-Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity#s2RollingLivePushBypassesFollowNudgeBeforeRollSpeedClearsPush+s3kRollingNonzeroGroundSpeedPushFallsThroughNearIczSegmentColumn" "-DfailIfNoTests=false" test`
+  - Result: passed, **2** tests.
+  - `cmd /c mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestPointPokeyObjectInstance#captureUsesObjectControlWithoutGlobalControlLockedLatch" "-DfailIfNoTests=false" test`
+  - Result: passed, **1** test.
+- Focused replay:
+  - `cmd /c mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-DreuseForks=true" "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  - Result: expected-red trace with **373** errors; the previous frame **202**
+    live-push/follow-nudge frontier and frame **1637** Point Pokey stale-logical
+    input frontier are fixed. The first release-blocking error is now frame
+    **3675**: `tails_cpu_ctrl2_held` expected `0x0010`, actual `0x0000`,
+    around a separate launcher-spring interaction.
+
 ## 2026-06-14 - S2 ARZ2 ChopChop boundary frontier advance
 
 - Scope: S2 ARZ2 level-select trace remediation advanced the focused replay

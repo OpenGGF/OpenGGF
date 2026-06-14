@@ -2035,6 +2035,47 @@ restores high-priority render commands for `AsteronBadnikInstance` and
 
 ---
 
+## P48 — Player `obj_control` is not global `Control_Locked`
+
+**Symptom.** After an object captures Sonic or Tails, the player's logical input
+stays stale for the whole capture window. Sidekick follow/control traces then
+show delayed input continuing for many frames after ROM has refreshed
+`Ctrl_1_Logical` / `Ctrl_2_Logical` to zero or to the current pad state.
+
+**Root cause.** ROM object code often writes `obj_control(a1)` on the player,
+for example `move.b #$81,obj_control(a1)`. That byte is player-local object
+control: bit 0 makes `Obj01_Control` skip normal movement, and bit 7 blocks
+touch/physics paths. It is not the global `Control_Locked` byte. ROM
+`Obj01_Control` checks global `Control_Locked` first, refreshes
+`Ctrl_1_Logical` from `Ctrl_1` when global control is unlocked, and only then
+tests `obj_control` bit 0 to skip movement. Mapping `obj_control` bit 0 to
+`player.setControlLocked(true)` wrongly freezes logical input.
+
+**What to check.** When porting capture / tube / launcher / conveyor object
+code:
+1. Treat writes to `obj_control(a1)` as `ObjectControlState` updates only.
+   Do not call `setControlLocked(true)` unless the ROM writes the global
+   `Control_Locked` variable.
+2. On release, clear the player object-control state if ROM clears
+   `obj_control(a1)`, but do not clear global control unless ROM writes
+   `Control_Locked`.
+3. Re-read the player control routine order before adding a latch. In S2,
+   logical input refresh and object-control movement suppression are separate
+   branches.
+
+**ROM citation.** `docs/s2disasm/s2.asm:36227-36235` (`Obj01_Control`:
+global `Control_Locked` gates logical input refresh, then `obj_control` bit 0
+suppresses movement separately); `docs/s2disasm/s2.asm:59005-59021` (ObjD6 /
+Point Pokey writes `#$81` to player `obj_control`); `docs/s2disasm/s2.asm:58746-58756`
+(ObjD6 release path clears object-control state without touching global
+`Control_Locked`).
+
+**Originating commit.** `<pending>` S2 CNZ1 Point Pokey capture no longer
+maps player `obj_control` to global control lock; CNZ1 frontier advances from
+frame 1637 to frame 3675 after the preceding Tails live-push fix.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

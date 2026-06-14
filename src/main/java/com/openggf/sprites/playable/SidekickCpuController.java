@@ -1853,8 +1853,13 @@ public class SidekickCpuController {
                         | AbstractPlayableSprite.STATUS_PUSHING)) != 0;
         boolean currentStatusPush =
                 (diagnostics.preStatus() & AbstractPlayableSprite.STATUS_PUSHING) != 0;
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
         boolean rollingNonzeroGroundSpeedStalePush =
-                !sidekick.getAir() && sidekick.getRolling() && sidekick.getGSpeed() != 0;
+                fs != null
+                        && fs.sidekickPushBypassUsesGraceStatus()
+                        && !sidekick.getAir()
+                        && sidekick.getRolling()
+                        && sidekick.getGSpeed() != 0;
         boolean romVisibleCurrentStatusPush =
                 currentStatusPush && !rollingNonzeroGroundSpeedStalePush;
         boolean frameStartStatusPush = sidekick.getPushingAtFrameStart();
@@ -1862,23 +1867,24 @@ public class SidekickCpuController {
                 && !rollingNonzeroGroundSpeedStalePush
                 && (recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && isCurrentPushBypassContext(delayedObjectOrPushContext, dy);
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        // Live Status_Push is the direct ROM loc_13DD0 branch (sonic3k.asm:
-        // 26702-26705) and can skip follow steering even with a large dy. The
-        // engine can still carry a stale push bit into offscreen underwater
-        // sidekick frames after the ROM has already cleared it (AIZ F14302:
-        // ROM status=$41, engine pre-status=$61). In the AIZ2 reload water
+        // Live Status_Push is the direct ROM branch in TailsCPU_Normal
+        // (S2 s2.asm:39291-39294, S3K sonic3k.asm:26702-26705) and can skip
+        // follow steering even with a large dy. S3K's grace-status path can
+        // still carry a stale push bit into offscreen underwater sidekick
+        // frames after the ROM has already cleared it (AIZ F14302: ROM
+        // status=$41, engine pre-status=$61). In the AIZ2 reload water
         // rebound, the ROM-visible Status_Push samples are the side-contact
         // pulses that zero inertia and leave a substantial horizontal rebound
         // before Tails_InputAcceleration_Path clears the bit again; tiny
         // follow/accel residue is stale and must fall through FollowLeft.
         boolean restrictUnderwaterPushBypassToContactPulses =
                 fs != null && fs.sidekickPushBypassUsesGraceStatus();
-        // Tails_RollSpeed reaches the same wall-response tail as walking
-        // movement, and that tail zeroes ground_vel before setting
-        // Status_Push (sonic3k.asm:28013-28017 via 28231). A rolling sidekick
-        // that still has nonzero ground_vel is carrying an engine-stale push
-        // bit, not the ROM-visible status byte tested by loc_13DD0.
+        // On the S3K grace-status path, Tails_RollSpeed reaches the same
+        // wall-response tail as walking movement, and that tail zeroes
+        // ground_vel before setting Status_Push (sonic3k.asm:28013-28017 via
+        // 28231). A rolling sidekick that still has nonzero ground_vel is
+        // carrying an engine-stale push bit, not the ROM-visible status byte
+        // tested by loc_13DD0.
         boolean currentPushBypass = (romVisibleCurrentStatusPush
                 && (recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && (!sidekick.isInWater()
