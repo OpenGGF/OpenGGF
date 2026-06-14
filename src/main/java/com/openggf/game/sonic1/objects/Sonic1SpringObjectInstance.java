@@ -57,11 +57,19 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
     private static final int ANIM_IDLE = 0;
     private static final int ANIM_TRIGGERED = 1;
 
+    // S1 Obj41 calls SolidObject only in active routines. After a trigger,
+    // animation/reset routines run without SolidObject before returning active:
+    // docs/s1disasm/s1disasm/_incObj/41 Springs.asm:77-110,115-167,172-218
+    // docs/s1disasm/s1disasm/_anim/Springs.asm:8-15
+    private static final int POST_TRIGGER_INACTIVE_FRAMES = 11;
+
     private final int springType;
     private final boolean yellow;
     private final int strength;
     private ObjectAnimationState animationState;
     private int mappingFrame;
+    private int postTriggerInactiveFrames;
+    private boolean contactEnabledThisFrame = true;
 
     public Sonic1SpringObjectInstance(ObjectSpawn spawn) {
         super(spawn, "Spring");
@@ -99,7 +107,10 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         ensureInitialized();
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        contactEnabledThisFrame = postTriggerInactiveFrames == 0;
+        if (postTriggerInactiveFrames > 0) {
+            postTriggerInactiveFrames--;
+        }
         animationState.update();
         mappingFrame = animationState.getMappingFrame();
     }
@@ -108,6 +119,9 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (player == null) {
+            return;
+        }
+        if (!contactEnabledThisFrame) {
             return;
         }
 
@@ -246,7 +260,11 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
     }
 
     private void triggerSpring() {
-        animationState.setAnimId(ANIM_TRIGGERED);
+        postTriggerInactiveFrames = POST_TRIGGER_INACTIVE_FRAMES;
+        contactEnabledThisFrame = false;
+        if (animationState != null) {
+            animationState.setAnimId(ANIM_TRIGGERED);
+        }
 
         try {
             services().playSfx(Sonic1Sfx.SPRING.id);
@@ -257,9 +275,7 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // Springs are always solid — collision resolution prevents re-triggering
-        return true;
+        return contactEnabledThisFrame;
     }
 
     @Override

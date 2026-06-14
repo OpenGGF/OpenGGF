@@ -450,7 +450,9 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         int windowEnd = cameraChunk + getLoadAhead();
         while (cursorIndex < spawns.size()
                 && spawns.get(cursorIndex).x() < windowEnd) {
-            spawnForwardEntry(cursorIndex);
+            if (!spawnForwardEntry(cursorIndex)) {
+                break;
+            }
             cursorIndex++;
         }
 
@@ -590,7 +592,9 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         int windowEnd = cameraChunk + getLoadAhead();
         while (cursorIndex < spawns.size()
                 && spawns.get(cursorIndex).x() < windowEnd) {
-            spawnForwardEntry(cursorIndex);
+            if (!spawnForwardEntry(cursorIndex)) {
+                break;
+            }
             cursorIndex++;
         }
 
@@ -967,7 +971,9 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         int windowEnd = oplChunk + getLoadAhead();
         while (cursorIndex < spawns.size()
                 && spawns.get(cursorIndex).x() < windowEnd) {
-            spawnForwardEntry(cursorIndex);
+            if (!spawnForwardEntry(cursorIndex)) {
+                break;
+            }
             cursorIndex++;
         }
     }
@@ -976,7 +982,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
      * Helper: process one entry during forward scan.
      * ROM: assigns d2 = fwdCounter, then fwdCounter++ for respawn-tracked.
      */
-    private void spawnForwardEntry(int index) {
+    private boolean spawnForwardEntry(int index) {
         // Clear dormant: the cursor is re-scanning this position, matching
         // ROM behavior where ObjPosLoad re-processes the spawn entry.
         dormant.clear(index);
@@ -987,17 +993,22 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             // (docs/s1disasm/s1disasm/_inc/ObjPosLoad.asm:195-203).
             int counter = fwdCounter & 0xFF;
             fwdCounter = (fwdCounter + 1) & 0xFF;
-            trySpawnCountered(index, counter);
+            return trySpawnCountered(index, counter);
         } else {
             // Non-tracked objects always spawn (ROM: loc_DA3C bpl → OPL_MakeItem)
             if (!(remembered.get(index) && !stayActive.get(index))
                     && !destroyedInWindow.get(index)) {
                 active.add(spawn);
                 if (inlineCallback != null) {
-                    inlineCallback.tryCreate(spawn, -1);
+                    boolean created = inlineCallback.tryCreate(spawn, -1);
+                    if (!created) {
+                        active.remove(spawn);
+                        return false;
+                    }
                 }
             }
         }
+        return true;
     }
 
     /**
@@ -1061,25 +1072,28 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             if (prev.respawnTracked()) {
                 bwdCounter = (bwdCounter - 1) & 0xFF;
                 int counter = bwdCounter & 0xFF;
-                boolean spawned = trySpawnCountered(leftCursorIndex, counter);
-                if (!spawned) {
-                    // ROM: loc_D9C6 — if bset blocked or FindFreeObj failed,
-                    // undo counter and cursor retreat, then stop.
-                    // (bset skip returns d0=0 → NOT treated as failure in ROM,
-                    // but FindFreeObj failure IS. We only stop on FindFreeObj
-                    // failure equivalent. bset skip continues the loop.)
-                    //
-                    // In the ROM, bset-skip returns d0=0 (success), so the
-                    // loop continues. Only FindFreeObj failure stops the loop.
-                    // The engine doesn't have FindFreeObj failure, so always
-                    // continue.
+                boolean canContinue = trySpawnCountered(leftCursorIndex, counter);
+                if (!canContinue) {
+                    // ROM: loc_D9C6 — FindFreeObj failure undoes the cursor
+                    // retreat and the counter decrement, then stops the scan.
+                    // A bset/remember skip returns success from OPL_SpawnObj
+                    // and continues; trySpawnCountered returns false only for
+                    // the FindFreeObj-equivalent callback failure.
+                    bwdCounter = (bwdCounter + 1) & 0xFF;
+                    leftCursorIndex++;
+                    break;
                 }
             } else {
                 if (!(remembered.get(leftCursorIndex) && !stayActive.get(leftCursorIndex))
                         && !destroyedInWindow.get(leftCursorIndex)) {
                     active.add(prev);
                     if (inlineCallback != null) {
-                        inlineCallback.tryCreate(prev, -1);
+                        boolean created = inlineCallback.tryCreate(prev, -1);
+                        if (!created) {
+                            active.remove(prev);
+                            leftCursorIndex++;
+                            break;
+                        }
                     }
                 }
             }
@@ -1148,16 +1162,16 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     private boolean trySpawnCountered(int index, int counter) {
         ObjectSpawn spawn = spawns.get(index);
         if (remembered.get(index) && !stayActive.get(index)) {
-            return false;
+            return true;
         }
         // ROM: bset #7,2(a2,d2.w) — test AND set bit 7
         boolean wasSet = (objState[counter & 0xFF] & 0x80) != 0;
         objState[counter & 0xFF] |= 0x80; // Side effect: always sets bit
         if (wasSet) {
-            return false; // Bit was already set → skip
+            return true; // Bit was already set → skip, but scan continues
         }
         if (destroyedInWindow.get(index)) {
-            return false;
+            return true;
         }
         spawnToCounter.put(spawn, counter & 0xFF);
         active.add(spawn);
@@ -1165,7 +1179,12 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         // This eliminates the 1-frame pipeline delay between cursor
         // advancement (placement.update) and instance creation (syncActiveSpawnsLoad).
         if (inlineCallback != null) {
-            return inlineCallback.tryCreate(spawn, counter & 0xFF);
+            boolean created = inlineCallback.tryCreate(spawn, counter & 0xFF);
+            if (!created) {
+                active.remove(spawn);
+                spawnToCounter.remove(spawn);
+                return false;
+            }
         }
         return true;
     }

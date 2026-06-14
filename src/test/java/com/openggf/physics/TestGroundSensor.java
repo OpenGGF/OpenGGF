@@ -408,6 +408,23 @@ public class TestGroundSensor {
     }
 
     @Test
+    public void upwardCeilingProbeAboveLevelTopReportsTopBoundaryCollision() {
+        // S1 Sonic_FindCeiling probes obY-obHeight. At the absolute level top,
+        // a negative probe Y is treated as penetration above Y=0 so the ceiling
+        // collision path pushes Sonic back down and clears upward velocity.
+        mockSprite.setGroundMode(GroundMode.GROUND);
+        mockSprite.setX((short) 100);
+        mockSprite.setY((short) 15);
+
+        GroundSensor sensor = new GroundSensor(mockSprite, Direction.UP, (byte) 0, (byte) -19, true);
+        SensorResult result = sensor.scan();
+
+        assertNotNull(result);
+        assertEquals(Direction.UP, result.direction());
+        assertEquals(-4, result.distance());
+    }
+
+    @Test
     public void testLeftWallSensorRotation() {
         // Mode: LEFTWALL.
         // Sensor: (x=5, y=10) [Relative to Sprite in GROUND mode].

@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-06-14 - S1 SBZ3 complete-run trace closed
+
+- Scope: S1 SBZ3 complete-run trace remediation now reaches the end of the
+  recording with no divergences. The closing fixes were ROM-modeled only:
+  ObjPosLoad forward/backward scans stop when the inline `FindFreeObj`
+  equivalent cannot allocate a slot, S1 Obj41 springs suppress solid contact
+  while the ROM animation/reset routines run without `SolidObject`, and upward
+  ceiling probes above the level `minY` report top-boundary penetration so the
+  ceiling response pushes Sonic back down and clears upward speed.
+- Disassembly evidence:
+  - `docs/s1disasm/s1disasm/_inc/ObjPosLoad.asm:191-214,260-307`
+    (`OPL_MovedRight` continues only when `OPL_SpawnObj` succeeds; `FindFreeObj`
+    failure stops the scanner).
+  - `docs/s1disasm/s1disasm/_incObj/41 Springs.asm:77-110,115-167,172-218`
+    and `docs/s1disasm/s1disasm/_anim/Springs.asm:8-15` (only active spring
+    routines call `SolidObject`; animation/reset routines do not).
+  - `docs/s1disasm/s1disasm/_incObj/Sonic Collision.asm:361-403` and
+    `docs/s1disasm/s1disasm/_incObj/01 Sonic.asm:295-309,980-985`
+    (`Sonic_FindCeiling` drives the collision response; `Sonic_LevelBound` does
+    not handle top-boundary snapping).
+- Regression tests:
+  - `mvn -Dmse=off -Dtest=com.openggf.level.objects.TestObjectPlacementControllerS1Counter -DfailIfNoTests=false test`
+  - `mvn -Dmse=off -Dtest=com.openggf.game.sonic1.objects.TestSonic1SpringObjectInstance -DfailIfNoTests=false test`
+  - `mvn -Dmse=off -Dtest=com.openggf.physics.TestGroundSensor -DfailIfNoTests=false test`
+- Focused replay:
+  - `mvn -Dmse=off -Dtest=com.openggf.tests.trace.s1.TestS1Sbz3CompleteRunTraceReplay -DfailIfNoTests=false test`
+  - Result: passed. `All frames match trace. No divergences.`
+
 ## 2026-06-14 - S1 ObjPosLoad remembered-spawn counter consumption
 
 - Scope: S1 counter-based placement now increments the forward respawn counter

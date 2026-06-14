@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 SBZ3 complete-run trace now matches end to end:** ObjPosLoad now stops
+  forward/backward scans on ROM-equivalent slot allocation failure, S1 Obj41
+  springs ignore solid contact during their animation/reset routines, and upward
+  ceiling probes above the level top now report ROM-style penetration. Together
+  these close the remaining SBZ3 complete-run frontiers with all frames matching.
+
 - **S1 ObjPosLoad remembered-spawn skips now consume the forward counter:**
   counter-based placement now increments the S1 forward respawn counter before
   skipping a remembered respawn-tracked object, matching ObjPosLoad's
