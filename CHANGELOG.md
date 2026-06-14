@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 Crabmeat first fire-cycle now follows the ROM `bchg` branch:** Obj1F
+  Crabmeat now branches on the old `crab_mode` bit after `bchg #1`, so the
+  first on-screen wait expiry starts walking instead of firing immediately.
+  This removes the SYZ1 complete-run frame-251 false Crabmeat bounce and
+  advances the trace to frame 502's separate floating-block/spring handoff
+  frontier.
+
 - **S1 SBZ3 complete-run trace now matches end to end:** ObjPosLoad now stops
   forward/backward scans on ROM-equivalent slot allocation failure, S1 Obj41
   springs ignore solid contact during their animation/reset routines, and upward

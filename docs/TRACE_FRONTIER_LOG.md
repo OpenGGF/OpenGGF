@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+## 2026-06-14 - S1 SYZ1 Crabmeat first fire-mode toggle
+
+- Scope: S1 Obj1F Crabmeat now branches on the old `crab_mode` bit when
+  executing `bchg #1,crab_mode(a0) / bne.s .fire`, so the first on-screen
+  wait-timer expiry toggles the bit and starts walking instead of firing
+  projectiles immediately. This is ROM-modeled object behavior; replay trace
+  rows remain comparison-only diagnostics and no zone, route, or frame carve-out
+  was added.
+- Disassembly evidence:
+  - `docs/s1disasm/s1disasm/_incObj/1F Badnik - Crabmeat.asm:61-63`
+    (`bchg #1,crab_mode(a0)` followed by `bne.s .fire`, so the branch observes
+    the bit value before the toggle).
+- Regression test:
+  - `mvn -Dmse=off -Dtest=com.openggf.tests.TestSonic1CrabmeatBadnikInstance -DfailIfNoTests=false test`
+  - Result: failed before the fix (`secondaryState` stayed at wait/fire) and
+    passed after the old-bit branch correction.
+- Focused replay:
+  - `mvn -Dmse=off -Dtest=com.openggf.tests.trace.s1.TestS1Syz1CompleteRunTraceReplay -DfailIfNoTests=false test`
+  - Result: expected-red trace; the previous first release-blocking error at
+    frame **251** (`y_speed` false Crabmeat bounce, expected `-05D8`, actual
+    `-04D8`) progressed to frame **502** with **484** errors. Current first
+    error: `camera_y` expected `0x034A`, actual `0x0340`, with the player on
+    the nearby Obj56 floating-block / Obj41 spring handoff path.
+- Remaining diagnostic evidence:
+  - Player position, speed, camera, and object context now match through the
+    old Crabmeat false-hit window. The new frame-502 frontier is a separate
+    platform/spring interaction: ROM launches horizontally from the expected
+    Obj56 support while the engine remains latched at zero speed.
+
 ## 2026-06-14 - S1 SBZ3 complete-run trace closed
 
 - Scope: S1 SBZ3 complete-run trace remediation now reaches the end of the

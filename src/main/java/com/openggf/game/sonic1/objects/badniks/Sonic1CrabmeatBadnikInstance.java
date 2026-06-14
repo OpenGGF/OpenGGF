@@ -181,15 +181,16 @@ public class Sonic1CrabmeatBadnikInstance extends AbstractBadnikInstance {
             return;
         }
 
-        // On-screen: toggle fire mode bit
-        // ROM: bchg #1,crab_mode(a0) / bne.s .fire
+        // On-screen: toggle fire mode bit.
+        // ROM: bchg #1,crab_mode(a0) / bne.s .fire branches on the old bit value.
+        boolean wasFireBitSet = (crabMode & MODE_BIT_FIRE) != 0;
         crabMode ^= MODE_BIT_FIRE;
 
-        if ((crabMode & MODE_BIT_FIRE) != 0) {
-            // Bit was clear, now set: fire
+        if (wasFireBitSet) {
+            // Bit was set, now clear: fire
             fireProjectiles();
         } else {
-            // Bit was set, now clear: start walking
+            // Bit was clear, now set: start walking
             startWalking();
         }
     }
