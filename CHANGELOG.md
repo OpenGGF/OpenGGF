@@ -4,6 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K LBZ complete-run trace advances through Orbinaut and rolling-drum
+  frontiers:** Orbinaut child touch-list publication now samples the child
+  after its circular movement, LBZ rolling drums expose the ROM code-pointer
+  high word used by S3K Tails CPU interaction state, and same-frame rolling-drum
+  transfers preserve the frame-start `Status_OnObj` semantics instead of
+  running a false `Player_TouchFloor`. The LBZ complete-run trace advances from
+  the frame-1541 Orbinaut hurt frontier through the frame-1675 and frame-1694
+  rolling-drum frontiers to frame 1950's stale status/on-object latch.
+
 - **S3K AIZ2 now enters HCZ1 through the full title-card transition:** the
   AIZ2 end sequence no longer uses the in-place seamless reload path for the
   cross-zone HCZ1 handoff, preventing Sonic from carrying AIZ camera/player

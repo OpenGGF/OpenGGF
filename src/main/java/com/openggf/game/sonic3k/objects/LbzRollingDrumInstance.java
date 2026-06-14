@@ -10,6 +10,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.NativePositionOps;
@@ -24,7 +25,8 @@ import java.util.List;
  * (sonic3k.asm:60585-60726). The subtype byte is the cylinder half-width;
  * {@code _unkF7B0+0/+1} store native P1/P2 angle bytes while riding.
  */
-public final class LbzRollingDrumInstance extends AbstractObjectInstance {
+public final class LbzRollingDrumInstance extends AbstractObjectInstance
+        implements RomObjectCodePointerProvider {
     private static final int TOP_BOTTOM_Y_BIAS = 0x53;
     private static final int VERTICAL_RANGE = 0xA6;
     private static final int LOWER_HALF_Y = 0x53;
@@ -42,6 +44,8 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance {
     private static final int TUMBLE_BASE = 0x31;
     private static final int TUMBLE_FROM_REST_BASE = 0x3D;
     private static final int ANIMATION_ROLLING_DRUM = Sonic3kAnimationIds.WALK.id();
+    // Obj_LBZRollingDrum installs loc_2C3CA in word 0 (sonic3k.asm:60585-60594).
+    private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0002;
 
     private final int leftBound;
     private final int rightBound;
@@ -80,6 +84,11 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance {
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         // Invisible controller; the cylinder art is level terrain.
+    }
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        return ROM_CODE_POINTER_HIGH_WORD;
     }
 
     public boolean isRidingForTest(AbstractPlayableSprite player) {
@@ -218,13 +227,17 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance {
 
     private void applyRideObjectSetRide(AbstractPlayableSprite player) {
         int savedDoubleJumpFlag = player.getDoubleJumpFlag();
-        boolean wasAir = player.getAir();
+        boolean sameFrameRideTransfer = player.getOnObjectAtFrameStart()
+                && !player.isJumping()
+                && !player.isHurt();
+        boolean shouldTouchFloor = player.getAir() && !sameFrameRideTransfer;
         player.setAngle((byte) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed(player.getXSpeed());
         player.setOnObject(true);
         player.setLatchedSolidObject(Sonic3kObjectIds.LBZ_ROLLING_DRUM, this);
-        if (wasAir) {
+        player.setAir(false);
+        if (shouldTouchFloor) {
             applyPlayerTouchFloor(player, savedDoubleJumpFlag);
         }
     }

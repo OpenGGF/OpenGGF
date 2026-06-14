@@ -6,7 +6,6 @@ import com.openggf.camera.Camera;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.game.CollisionModel;
-import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.ObjectSolidExecutionContext;
@@ -127,6 +126,7 @@ public class ObjectManager {
     private final List<ObjectInstance> cachedActiveObjects = new ArrayList<>();
     private final List<ObjectInstance> cachedSolidProviderObjects = new ArrayList<>();
     private final List<ObjectInstance> cachedTouchResponseObjects = new ArrayList<>();
+    private final ObjectCollisionResponseList collisionResponseList = new ObjectCollisionResponseList();
     private boolean activeObjectsCacheDirty = true;
     private final Set<ObjectInstance> deferredDynamicExecThisFrame =
             Collections.newSetFromMap(new IdentityHashMap<>());
@@ -445,13 +445,8 @@ public class ObjectManager {
     }
 
     /**
-     * Run touch responses for a single player outside the main update loop.
-     * ROM order: S1 executes Sonic's slot first, and Sonic_Control calls
-     * ReactToItem before later level-object slots run
-     * (docs/s1disasm/_inc/ExecuteObjects.asm:11-31,
-     * docs/s1disasm/_incObj/01 Sonic.asm:87-90). Inline-order modules
-     * therefore scan the frame-start object snapshot captured before player
-     * physics, not the same-frame post-object state.
+     * Runs the inline player-slot touch pass against the frame-start snapshot.
+     * ROM order: player slots scan before later level-object slots update.
      */
     public void runTouchResponsesForPlayer(PlayableEntity player, int touchFrameCounter,
                                            boolean usePreUpdateState) {
@@ -460,9 +455,7 @@ public class ObjectManager {
         }
         touchResponses.getDebugState().setEnabled(
                 objectServices.debugOverlay().isEnabled(DebugOverlayToggle.TOUCH_RESPONSE));
-        // ROM: CPU sidekick uses separate overlap tracking and Hurt_Sidekick handler
-        // (knockback only, no ring scatter or death). Must dispatch to updateSidekick
-        // to avoid routing through the main player's applyHurtOrDeath path.
+        // CPU sidekick uses separate overlap tracking and Hurt_Sidekick handling.
         if (player.isCpuControlled()) {
             touchResponses.updateSidekick(player, touchFrameCounter, usePreUpdateState);
         } else {
@@ -471,26 +464,25 @@ public class ObjectManager {
     }
 
     /**
-     * Refreshes the object-state snapshot used by inline-order touch checks.
-     * Called at frame start before player physics so ReactToItem sees the
-     * current frame's pre-object-update positions.
-     * <p>
-     * Also refreshes the cached camera bounds. ROM parity: BuildSprites runs
-     * at the end of frame N-1 (after DeformLayers), so the obRender bit 7
-     * gate read by ReactToItem at frame N reflects the camera position at
-     * START of frame N. Without this refresh, AbstractObjectInstance's
-     * static cameraBounds would still hold the camera-y from BEFORE frame
-     * N-1's camera step, producing a one-frame-stale gate that drops touch
-     * responses for objects sitting at the new viewport edge (e.g. SYZ3
-     * credits demo ring s74 at frame 233 lands one pixel inside the ROM
-     * viewport but one pixel outside the stale-bounds viewport).
+     * Refreshes frame-start object/camera state for inline-order touch checks.
+     * S3K can instead preserve the previous dynamic Collision_response_list
+     * snapshot because player slots run before that list is rebuilt.
      */
-    public void snapshotTouchResponseState() {
+    public void snapshotTouchResponseState() { snapshotTouchResponseState(false); }
+
+    public void snapshotTouchResponseState(boolean preservePreviousCollisionResponseList) {
         updateCameraBounds();
+        collisionResponseList.setUsePrevious(preservePreviousCollisionResponseList);
         for (ObjectInstance inst : activeObjects.values()) {
-            inst.snapshotTouchResponseState();
+            refreshTouchResponseSnapshot(inst);
         }
         for (ObjectInstance inst : dynamicObjects) {
+            refreshTouchResponseSnapshot(inst);
+        }
+    }
+
+    private void refreshTouchResponseSnapshot(ObjectInstance inst) {
+        if (collisionResponseList.shouldRefreshFrameStartSnapshot()) {
             inst.snapshotTouchResponseState();
         }
     }
@@ -569,31 +561,18 @@ public class ObjectManager {
             solidExecutionRegistry.finishFrame();
         }
 
-        // Note: solidContacts.update() is now called during SpriteManager.update(),
-        // after movement but before animation. This ensures pushing flag is set correctly
-        // for both terrain and solid objects before animation resolves.
+        // Solid contacts now resolve during SpriteManager.update(), before animation.
         if (enableTouchResponses && touchResponses != null) {
             touchResponses.getDebugState().setEnabled(
                     objectServices.debugOverlay().isEnabled(DebugOverlayToggle.TOUCH_RESPONSE));
             touchResponses.update(player, touchFrameCounter);
-            // ROM: Both players participate in touch responses.
-            // Each sidekick uses separate overlap tracking and special hurt handling.
             for (PlayableEntity sk : activeSidekicks) {
                 touchResponses.updateSidekick(sk, touchFrameCounter);
             }
         }
 
-        // Stream object ObjectPlacementController for the NEXT frame.
-        // ROM parity: S1's ObjPosLoad runs AFTER DeformLayers (camera update).
-        // Counter-based respawn depends on seeing the post-camera X to assign
-        // the same counter values as the ROM. Defer to postCameraPlacementUpdate().
-        //
-        // S2: this is the SINGLE per-frame load. ROM S2 RunObjects (s2.asm:5095)
-        // then exactly one ObjectsManager (s2.asm:5112) = exec -> one load. The
-        // pre-exec load in the execThenLoad branch above was removed so S2 no
-        // longer double-loads. The load consumes the same `cameraX` the exec loop
-        // saw (pre-DeformLayers), matching ROM ObjectsManager; the post-camera
-        // chunk-crossing catch-up is handled separately by postCameraPlacementUpdate().
+        // Stream objects for the next frame; counter-based S1 defers to the
+        // post-camera placement pass, while S2 keeps its single exec->load pass.
         if (!counterBased) {
             if (!execThenLoad || !slotLayout.twoAxisCursorPlacement()) {
                 placement.update(cameraX);
@@ -603,14 +582,9 @@ public class ObjectManager {
                 syncActiveSpawnsLoad(true);
             }
         }
+        captureCollisionResponseListForNextFrame(cameraX);
     }
 
-    /**
-     * Builds the per-frame active player list into a reused scratch list.
-     * The result is consumed synchronously by
-     * {@link SolidExecutionRegistry#beginFrame} (no implementation retains the
-     * reference); callers must not hold the returned list across frames.
-     */
     private List<PlayableEntity> collectActivePlayers(PlayableEntity player,
             List<? extends PlayableEntity> sidekicks) {
         List<? extends PlayableEntity> activeSidekicks = sidekicks != null ? sidekicks : List.of();
@@ -1421,7 +1395,14 @@ public class ObjectManager {
 
     List<ObjectInstance> getTouchResponseObjects() {
         rebuildActiveObjectCaches();
-        return cachedTouchResponseObjects;
+        return collisionResponseList.touchResponseObjects(cachedTouchResponseObjects);
+    }
+
+    boolean touchUsesPreviousCollisionResponseList() { return collisionResponseList.usesPrevious(); }
+
+    private void captureCollisionResponseListForNextFrame(int cameraX) {
+        rebuildActiveObjectCaches();
+        collisionResponseList.captureForNextFrame(cameraX, cachedTouchResponseObjects);
     }
 
     private void rebuildActiveObjectCaches() {
@@ -1429,10 +1410,7 @@ public class ObjectManager {
             cachedActiveObjects.clear();
             cachedActiveObjects.addAll(activeObjects.values());
             cachedActiveObjects.addAll(dynamicObjects);
-            // ROM parity: ReactToItem and SolidObject checks scan from lowest
-            // slot to highest (v_lvlobjspace → v_lvlobjend). Sort by slot index
-            // so the first overlapping object found matches the ROM's scan order.
-            // Objects without slots sort last.
+            // ReactToItem and SolidObject scan in SST slot order; slotless objects sort last.
             cachedActiveObjects.sort((a, b) -> {
                 int slotA = a instanceof AbstractObjectInstance aoiA ? aoiA.getSlotIndex() : Integer.MAX_VALUE;
                 int slotB = b instanceof AbstractObjectInstance aoiB ? aoiB.getSlotIndex() : Integer.MAX_VALUE;

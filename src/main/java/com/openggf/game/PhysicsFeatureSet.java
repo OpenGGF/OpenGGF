@@ -860,6 +860,22 @@ public record PhysicsFeatureSet(
          *  1659 with the universal Y check). */
         boolean touchResponseUsesRenderFlagYGate,
         /**
+         * Whether inline player touch checks consume the previous frame's populated
+         * collision-response list instead of refreshing touch positions at player-slot
+         * time.
+         *
+         * <p>S3K: {@code true}. {@code Process_Sprites} runs player slots first,
+         * then {@code Reserved_object_3} clears {@code Collision_response_list},
+         * then dynamic objects rebuild it with {@code Add_SpriteToCollisionResponseList}
+         * (docs/skdisasm/skdisasm/sonic3k.asm:8111-8113,8467-8468,
+         * 20656-20663,21200-21208,35965-35978). A player's
+         * {@code TouchResponse} pass therefore consumes the list built by the
+         * previous dynamic-object pass.
+         *
+         * <p>S1/S2: {@code false}. Their touch routines scan object slots directly
+         * during the player routine rather than consuming a prebuilt response list. */
+        boolean touchResponseUsesPreviousCollisionResponseList,
+        /**
          * Whether the sidekick CPU's post-kill flow defers the off-screen
          * despawn marker write until the sidekick's body has fallen below
          * {@code Tails_Max_Y_pos + 0x100}.
@@ -1143,6 +1159,7 @@ public record PhysicsFeatureSet(
                     source.shieldObjectFixedSlotIndex(),
                     source.invincibilityStarsFixedSlotIndex(),
                     source.touchResponseUsesRenderFlagYGate(),
+                    source.touchResponseUsesPreviousCollisionResponseList(),
                     source.sidekickDeathUsesDeferredDespawn(),
                     source.rightWallDeepProbePreservesPenetration(),
                     source.solidObjectBarelyPokingResolvesAsSide(),
@@ -1200,6 +1217,7 @@ public record PhysicsFeatureSet(
             6 /* shieldObjectFixedSlotIndex: S1 Variables.asm v_shieldobj = v_objspace + object_size*6 */,
             8 /* invincibilityStarsFixedSlotIndex: S1 Variables.asm v_starsobj1 = v_objspace + object_size*8 */,
             true /* touchResponseUsesRenderFlagYGate: S1 ReactToItem (s1disasm/_incObj/sub ReactToItem.asm:26-27) reads obRender bit 7, cleared by BuildSprites (s1disasm/_inc/BuildSprites.asm:71-78) on Y-out-of-band */,
+            false /* touchResponseUsesPreviousCollisionResponseList: S1 ReactToItem scans object slots directly, not a prebuilt response list */,
             false /* sidekickDeathUsesDeferredDespawn: S1 has no Tails CPU sidekick */,
             false /* rightWallDeepProbePreservesPenetration: preserve S1 baseline until right-wall traces are revalidated */,
             true /* solidObjectBarelyPokingResolvesAsSide: S1 Solid_cont sends d1<=4 to Solid_SideAir (s1disasm/_incObj/sub SolidObject.asm:181-184), which returns moveq #1,d4 = side contact (lines 211-214) */,
@@ -1260,6 +1278,7 @@ public record PhysicsFeatureSet(
             134 /* shieldObjectFixedSlotIndex: S2 Sonic_Shield follows the 112 dynamic slots at object slot 134 (s2.constants.asm:1139-1164; s2.asm:25786) */,
             136 /* invincibilityStarsFixedSlotIndex: S2 Sonic_InvincibilityStars starts at object slot 136 (s2.constants.asm:1166; s2.asm:25814) */,
             false /* touchResponseUsesRenderFlagYGate: S2 Touch_Loop (s2.asm ~84502-84551) walks active objects without consulting the render flag; preserve pre-Task-3 X-only baseline */,
+            false /* touchResponseUsesPreviousCollisionResponseList: S2 Touch_Loop walks object slots directly, not a prebuilt response list */,
             true /* sidekickDeathUsesDeferredDespawn: S2 Obj02_Dead (s2.asm:40736-40759) runs ObjectMoveAndFall each frame and only branches to TailsCPU_Despawn (s2.asm:39043-39052) once y_pos exceeds Tails_Max_Y_pos + $100. Required to unblock HTZ trace f471 and MCZ trace f399 where engine warped Tails to $4000 on Frame N+1 instead of letting the body fall first. */,
             false /* rightWallDeepProbePreservesPenetration: preserve S2 baseline until right-wall traces are revalidated */,
             true /* solidObjectBarelyPokingResolvesAsSide: S2 SolidObject_cont sends d1<=4 to SolidObject_SideAir (s2.asm:35404-35412), which returns moveq #1,d4 = side contact (s2.asm:35447-35453); lets MTZ Obj66 Spring Wall fire its in-air -$800,-$800 diagonal bounce (s2.asm:53221-53232,53283-53340) */,
@@ -1322,6 +1341,7 @@ public record PhysicsFeatureSet(
             100 /* shieldObjectFixedSlotIndex: S3K Shield is a Level_object_RAM slot, not Dynamic_object_RAM (sonic3k.constants.asm:307-321; sonic3k.asm:8300-8322,40859-40874) */,
             102 /* invincibilityStarsFixedSlotIndex: S3K Invincibility_stars starts at object slot 102 (sonic3k.constants.asm:320; sonic3k.asm:40899-40924) */,
             false /* touchResponseUsesRenderFlagYGate: S3K TouchResponse (sonic3k.asm:20655) consumes a pre-built Collision_response_list; render-flag gating happens upstream during list build, not at touch time. Adding a Y check inside the engine touch loop drops objects ROM had on the response list (MGZ trace replay first-fail moves from f2395 to f1659). */,
+            true /* touchResponseUsesPreviousCollisionResponseList: Process_Sprites clears/rebuilds Collision_response_list after player slots, so frame N TouchResponse consumes frame N-1 dynamic-object list (sonic3k.asm:8111-8113,8467-8468,20656-20663,21200-21208,35965-35978). */,
             true /* sidekickDeathUsesDeferredDespawn: S3K dead-fall runs sub_123C2 before sub_13ECA; it waits until y_pos exceeds Camera_Y_pos+$100, then writes the $7F00 marker and returns to MoveSprite_TestGravity (sonic3k.asm:24538-24578,29284-29285,26800-26809). */,
             true /* rightWallDeepProbePreservesPenetration: Player_AnglePos keeps right-wall angle continuity through deep negative probes before later walk-off checks (sonic3k.asm:18782-18842). */,
             false /* solidObjectBarelyPokingResolvesAsSide: S3K SolidObject_cont sends d1<=4 to loc_1E0D4 (TOP/BOTTOM), not SideAir (sonic3k.asm:41463-41466; loc_1E0D4 at 41541-41546) — keep existing absDistY>4 gate */,

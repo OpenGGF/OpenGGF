@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
@@ -37,6 +38,14 @@ class TestLbzRollingDrumInstance {
                 "S3KL slot $31 is Obj_LBZRollingDrum and must not remain a placeholder");
         assertInstanceOf(LbzRollingDrumInstance.class, drum);
         assertEquals("LBZRollingDrum", drum.getName());
+    }
+
+    @Test
+    void exposesRomCodePointerHighWordForS3kTailsCpuInteract() {
+        LbzRollingDrumInstance drum = drum(0x1800, 0x0600, 0x40);
+
+        assertEquals(0x0002, ((RomObjectCodePointerProvider) drum).romObjectCodePointerHighWord(),
+                "Obj_LBZRollingDrum stores loc_2C3CA in word 0, so Tails_CPU_interact samples high word $0002");
     }
 
     @Test
@@ -168,6 +177,31 @@ class TestLbzRollingDrumInstance {
         assertTrue(player.isOnObject());
         assertEquals(angleAfterFirstController, second.getRideAngleForTest(player),
                 "_unkF7B0 is LBZ runtime RAM shared by every Obj31 controller, so middle handoff must not reset angle");
+    }
+
+    @Test
+    void sameFrameDrumTransferPreservesRollingStatusFromFrameStartRide() {
+        LbzRollingDrumInstance outgoing = drum(0x0600, 0x0640, 0x80);
+        LbzRollingDrumInstance incoming = drum(0x0700, 0x0640, 0x80);
+        TestablePlayableSprite player = groundedPlayer(0x0600, 0x0640);
+        player.setRolling(true);
+        outgoing.update(0, player);
+        assertTrue(player.isOnObject());
+
+        player.captureOnObjectAtFrameStart();
+        player.setCentreXPreserveSubpixel((short) 0x0683);
+        player.setCentreY((short) 0x0645);
+        outgoing.update(1, player);
+        assertTrue(player.getAir(), "The outgoing controller releases first in the engine's slot order");
+
+        incoming.update(1, player);
+
+        assertTrue(player.isOnObject());
+        assertFalse(player.getAir());
+        assertTrue(player.getRolling(),
+                "ROM RideObject_SetRide skips Player_TouchFloor when Status_OnObj was already set before capture");
+        assertEquals(0x0645, player.getCentreY() & 0xFFFF,
+                "Same-frame drum transfer must not apply the rolling height adjustment from Player_TouchFloor");
     }
 
     @Test

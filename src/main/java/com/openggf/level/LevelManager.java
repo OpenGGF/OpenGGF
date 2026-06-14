@@ -900,9 +900,15 @@ public class LevelManager {
      * This keeps ReactToItem aligned to the current frame's pre-object-update state.
      */
     public void prepareTouchResponseSnapshots() {
-        if (objectManager != null) {
-            objectManager.snapshotTouchResponseState();
-        }
+        if (objectManager != null) objectManager.snapshotTouchResponseState(touchResponseUsesPreviousCollisionResponseList());
+    }
+
+    private boolean touchResponseUsesPreviousCollisionResponseList() {
+        GameModule activeModule = activeGameModule();
+        return activeModule != null
+                && activeModule.getPhysicsProvider() != null
+                && activeModule.getPhysicsProvider().getFeatureSet() != null
+                && activeModule.getPhysicsProvider().getFeatureSet().touchResponseUsesPreviousCollisionResponseList();
     }
 
     /**

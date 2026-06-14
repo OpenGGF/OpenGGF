@@ -1,5 +1,49 @@
 # Trace Frontier Log
 
+## 2026-06-14 - S3K LBZ Orbinaut and rolling-drum frontier advance
+
+- Scope: S3K LBZ complete-run remediation advanced the focused trace through
+  the frame-1541 Orbinaut child hurt frontier and the frame-1675/frame-1694
+  rolling-drum sidekick/ride frontiers without hydrating engine state from trace
+  rows and without zone, route, or frame carve-outs. Orbinaut children now opt
+  into current-position Collision_response_list publication after their circular
+  movement, LBZ rolling drums expose the ROM code-pointer high word consumed by
+  S3K Tails CPU interaction state, and same-frame drum transfers preserve the
+  frame-start `Status_OnObj` state so a released rider does not run a false
+  `Player_TouchFloor`.
+- Disassembly evidence:
+  - `docs/skdisasm/skdisasm/sonic3k.asm:191685-191688` shows the Orbinaut child
+    routine running `MoveSprite_CircularSimple` and then branching to
+    `Child_DrawTouch_Sprite`.
+  - `docs/skdisasm/skdisasm/sonic3k.asm:178048-178053` and
+    `docs/skdisasm/skdisasm/sonic3k.asm:21200-21207` show
+    `Child_DrawTouch_Sprite` adding the current object SST pointer to
+    `Collision_response_list` before drawing.
+  - `docs/skdisasm/skdisasm/sonic3k.asm:60585-60594` shows
+    `Obj_LBZRollingDrum` installing code pointer `loc_2C3CA`, whose high word
+    is `0x0002`.
+  - `docs/skdisasm/skdisasm/sonic3k.asm:60648-60653` shows the rolling drum
+    calling `RideObject_SetRide`.
+  - `docs/skdisasm/skdisasm/sonic3k.asm:42022-42040` shows
+    `RideObject_SetRide` clearing `Status_InAir` and calling
+    `Player_TouchFloor` only when the in-air bit was set on entry; a same-frame
+    transfer that started the frame on an object must therefore keep the rolling
+    floor state rather than forcing a new landing.
+- Regression tests:
+  - `cmd /c mvn "-Dmse=off" "-Dsurefire.argLine=-Xmx2g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.level.objects.TestTouchResponseManager#testS3kPreviousCollisionResponseListCapturesPostObjectUpdatePosition" "-DfailIfNoTests=false" test`
+  - Result: passed, **1** test.
+  - `cmd /c mvn "-Dmse=off" "-Dsurefire.argLine=-Xmx2g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.game.sonic3k.objects.TestLbzRollingDrumInstance#exposesRomCodePointerHighWordForS3kTailsCpuInteract,com.openggf.level.objects.TestTouchResponseManager#testS3kPreviousCollisionResponseListCapturesPostObjectUpdatePosition" "-DfailIfNoTests=false" test`
+  - Result: passed, **2** tests.
+  - `cmd /c mvn "-Dmse=off" "-Dsurefire.argLine=-Xmx2g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.game.sonic3k.objects.TestLbzRollingDrumInstance#sameFrameDrumTransferPreservesRollingStatusFromFrameStartRide+airborneRollingLandingRunsPlayerTouchFloorBeforeRide" "-DfailIfNoTests=false" test`
+  - Result: passed, **2** tests.
+- Focused replay:
+  - `cmd /c mvn "-Dmse=off" "-Dsurefire.argLine=-Xmx4g" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay" "-DfailIfNoTests=false" test`
+  - Result: expected-red trace; the previous frame **1541** Orbinaut hurt
+    frontier, frame **1675** `tails_cpu_interact` mismatch, and frame **1694**
+    rolling/status transfer mismatch are fixed. The first release-blocking
+    error is now frame **1950**: `status_byte` expected `0x0021`, actual
+    `0x0001`, with stale `onObj` / interact-slot state around slot 4.
+
 ## 2026-06-14 - S1 GHZ3 object-frontier advance
 
 - Scope: S1 GHZ3 complete-run remediation advanced the focused trace through

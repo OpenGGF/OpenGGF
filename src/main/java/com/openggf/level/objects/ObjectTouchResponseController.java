@@ -371,6 +371,8 @@ final class ObjectTouchResponseController {
             Set<ObjectInstance> buildingSet, Set<ObjectInstance> overlappingSet,
             boolean isSidekick, boolean usePreUpdateState) {
         Collection<ObjectInstance> touchObjects = objectManager.getTouchResponseObjects();
+        boolean usePreviousCollisionResponseList =
+                usePreUpdateState && objectManager.touchUsesPreviousCollisionResponseList();
 
         for (ObjectInstance instance : touchObjects) {
             TouchResponseProvider provider = (TouchResponseProvider) instance;
@@ -411,7 +413,8 @@ final class ObjectTouchResponseController {
             // future S2/S3K-specific object needs to skip the render-flag gate.
             // Use isOnScreenForTouch() as the engine's equivalent of obRender
             // bit 7.
-            if (touchProfile.requiresRenderFlagForTouch()
+            if (!usePreviousCollisionResponseList
+                    && touchProfile.requiresRenderFlagForTouch()
                     && instance instanceof AbstractObjectInstance aoi
                     && !aoi.isOnScreenForTouch()) {
                 continue;
@@ -426,7 +429,7 @@ final class ObjectTouchResponseController {
                 continue;
             }
             int flags;
-            if (usePreUpdateState) {
+            if (usePreUpdateState && !usePreviousCollisionResponseList) {
                 int preFlags = instance.getPreUpdateCollisionFlags();
                 flags = (preFlags >= 0) ? preFlags : provider.getCollisionFlags();
             } else {
@@ -440,10 +443,10 @@ final class ObjectTouchResponseController {
             int height = table.getHeightRadius(sizeIndex);
             TouchCategory category = decodeCategory(flags, touchProfile);
 
-            // ROM parity: ReactToItem runs in Sonic's slot (slot 0) BEFORE other
-            // objects update. So touch collision sees objects at their pre-update
-            // positions. Use getPreUpdateX()/getPreUpdateY() which return the
-            // position snapshot taken before the object update loop ran.
+            // ROM parity: ReactToItem/TouchResponse runs in the player slot
+            // before dynamic objects update. S3K's previous collision-response
+            // list stores object RAM pointers, but those pointers still hold
+            // frame-start x/y at this phase.
             boolean useCurrentTouchState = usesCurrentTouchState(instance);
             int objX = usePreUpdateState && !useCurrentTouchState ? instance.getPreUpdateX() : instance.getX();
             int objY = usePreUpdateState && !useCurrentTouchState ? instance.getPreUpdateY() : instance.getY();
@@ -550,7 +553,8 @@ final class ObjectTouchResponseController {
         // 35616-35626). The collision-response list therefore contains the
         // live post-movement Obj37 position, even on inline player-touch frames
         // where generic object touch uses the frame-start snapshot.
-        return instance instanceof LostRingObjectInstance;
+        return instance instanceof LostRingObjectInstance
+                || instance.usesCurrentTouchResponseState();
     }
 
     /**

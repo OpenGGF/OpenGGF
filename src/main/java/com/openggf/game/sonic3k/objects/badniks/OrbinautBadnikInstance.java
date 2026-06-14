@@ -159,6 +159,15 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance {
         }
 
         @Override
+        public boolean usesCurrentTouchResponseState() {
+            // Obj_Orbinaut's child routine updates its circular position, then
+            // calls Child_DrawTouch_Sprite, which adds the current SST pointer
+            // to Collision_response_list before drawing (sonic3k.asm:
+            // 191685-191688, 178048-178053, 21200-21207).
+            return true;
+        }
+
+        @Override
         public ObjectSpawn getSpawn() {
             return buildSpawnAt(currentX, currentY);
         }
