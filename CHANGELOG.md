@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 SBZ3 trace advances through Obj0A and Orbinaut slot frontiers:** numbered
+  drowning-countdown bubbles now keep their object slot through the ROM
+  appear/flash display window, and Obj60 Orbinaut parents enter the move/display
+  path immediately after the final satellite launch. The SBZ3 complete-run
+  frontier now reaches frame 3403's downstream Obj64 slot drift.
+
 - **S1 Orbinaut parent deletion now frees child slots immediately:** Obj60
   now removes its satellite children through the object manager when the parent
   unloads, matching the ROM `Orb_ChkDel` `DeleteChild` loop so later same-frame

@@ -8,6 +8,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -331,9 +332,14 @@ public class Sonic1SpikedBallChainObjectInstance extends AbstractObjectInstance
 
     @Override
     public void onUnload() {
+        ObjectManager objectManager = tryServices() != null ? tryServices().objectManager() : null;
         for (ChainChild child : children) {
             if (child != null) {
+                // Obj57 .delete loops sball_childs and calls DeleteChild, freeing each SST slot immediately.
                 ObjectLifetimeOps.expireDynamic(child);
+                if (objectManager != null) {
+                    objectManager.removeDynamicObject(child);
+                }
             }
         }
     }

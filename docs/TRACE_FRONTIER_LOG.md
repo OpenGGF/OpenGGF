@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+## 2026-06-14 - S1 SBZ3 Obj0A/Obj60 slot lifetime frontier advance
+
+- Scope: S1 SBZ3 complete-run trace remediation advanced the object-slot
+  frontier by modeling ROM-owned object lifetime/timing instead of trace
+  hydration. Obj0A numbered bubbles now keep their SST slot through the
+  `Ani_Drown` appear/flash display window before `Drown_Delete`, matching the
+  countdown-number lifetime observed around the f2762 bubble. Obj60 Orbinaut
+  now promotes the parent to the display/move routine before the next parent
+  `SpeedToPos`, matching the child-side `addq.b #2,obRoutine(a1)` when the last
+  satellite fires (`docs/s1disasm/s1disasm/_incObj/60 Badnik - Orbinaut.asm:
+  146-166`).
+- Focused verification:
+  - `cmd /c mvn -Dmse=off "-Dtest=com.openggf.level.objects.TestObjectManagerCounterBasedDynamicUnload#numberedBreathingBubbleSurvivesRomAppearAndFlashWindow" -DfailIfNoTests=false test`
+  - Result: passed; the numbered Obj0A bubble remains allocated through the ROM
+    appear/flash window and deletes on the next update.
+  - `cmd /c mvn -Dmse=off "-Dtest=com.openggf.game.sonic1.objects.TestSonic1LabyrinthObjectsBasic#orbinautParentMovesOnFirstFrameAfterLastSatelliteLaunches" -DfailIfNoTests=false test`
+  - Result: passed; Obj60 parent movement occurs on the first frame after the
+    last satellite launch.
+- Focused replay:
+  - `cmd /c mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s1.TestS1Sbz3CompleteRunTraceReplay" -DfailIfNoTests=false test`
+  - Result: expected-red trace; the previous slot frontier progressed past
+    frame **2840** and the Obj60 bounce frontier at frame **3072**. The current
+    first release-blocking error is frame **3403**:
+    `obj_s31_slot` expected `0x31`, actual `0x2E`.
+- Remaining diagnostic evidence:
+  - `cmd /c mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s1.DebugS1Lz2BubblesOccupancyProbe" "-Dtrace.dir=src/test/resources/traces/s1/sbz3_completerun" "-Dtrace.zone=5" "-Dtrace.act=2" "-Dtrace.label=s1-sbz3" "-Dtrace.startFrame=3300" "-Dtrace.stopFrame=3420" "-Dtrace.snapshotFirstSlot=40" "-Dtrace.snapshotLastSlot=55" "-Dtrace.watchEvery=5" -DfailIfNoTests=false test`
+  - Result: diagnostic passed. The next frontier is downstream of earlier
+    low-slot ring/object occupancy drift: ROM creates an Obj64 child at frame
+    **3339** in slot `$24`, while the engine has different low-slot ring/object
+    ownership before the frame-3403 Obj64 comparison.
+
 ## 2026-06-13 - S1 SBZ3 Orbinaut child DeleteChild slot reuse
 
 - Scope: S1 Obj60 Orbinaut parent unload now removes satellite children through

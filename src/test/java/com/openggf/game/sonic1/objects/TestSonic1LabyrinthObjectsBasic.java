@@ -128,10 +128,53 @@ public class TestSonic1LabyrinthObjectsBasic {
                 "Burro_Jump should add $18 to obVelY after moving");
     }
 
+    @Test
+    public void burrobotMoveUsesBchgOldBitForFirstAheadFloorProbe() throws Exception {
+        Sonic1BurrobotBadnikInstance burrobot = new Sonic1BurrobotBadnikInstance(
+                new ObjectSpawn(0x0951, 0x04EC, Sonic1ObjectIds.BURROBOT, 0, 0, false, 0));
+        burrobot.setServices(new TestObjectServices());
+
+        setPrivateInt(burrobot, "state", 1);
+        setPrivateInt(burrobot, "stateTimer", 255);
+        setPrivateInt(burrobot, "xVelocity", 0x80);
+        setPrivateBoolean(burrobot, "floorProbeToggle", false);
+
+        burrobot.update(0xC9FB, null);
+
+        assertEquals(2, getPrivateInt(burrobot, "state"),
+                "Burro_Move bchg #0,objoff_32 branches on the old bit; old 0 should run ObjFloorDist2 immediately");
+        assertEquals(-0x400, getPrivateInt(burrobot, "yVelocity"),
+                "With v_vblank_byte bit 2 clear, Burro_Move should enter Burro_Jump");
+    }
+
+    @Test
+    public void orbinautParentMovesOnFirstFrameAfterLastSatelliteLaunches() throws Exception {
+        Sonic1OrbinautBadnikInstance orbinaut = new Sonic1OrbinautBadnikInstance(
+                new ObjectSpawn(0x0C93, 0x05F8, Sonic1ObjectIds.ORBINAUT, 0, 0, false, 0));
+        orbinaut.setServices(new TestObjectServices());
+
+        setPrivateBoolean(orbinaut, "initialized", true);
+        setPrivateInt(orbinaut, "routine", 2);
+        setPrivateInt(orbinaut, "activeSpikes", 0);
+
+        orbinaut.update(1, null);
+
+        assertEquals(4, getPrivateInt(orbinaut, "routine"),
+                "Obj60 child launch promotes the parent to Orb_Display before its next execution");
+        assertEquals(0x0C92, orbinaut.getX(),
+                "Orb_Display should run SpeedToPos on the first parent frame after the final satellite fires");
+    }
+
     private static void setPrivateInt(Object target, String fieldName, int value) throws Exception {
         Field field = findField(target.getClass(), fieldName);
         field.setAccessible(true);
         field.setInt(target, value);
+    }
+
+    private static void setPrivateBoolean(Object target, String fieldName, boolean value) throws Exception {
+        Field field = findField(target.getClass(), fieldName);
+        field.setAccessible(true);
+        field.setBoolean(target, value);
     }
 
     private static int getPrivateInt(Object target, String fieldName) throws Exception {
