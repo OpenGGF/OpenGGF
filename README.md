@@ -224,6 +224,12 @@ straightforward to add new objects, zones, and game-specific behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Sonic 2 Death Egg ending trace closure (2026-06-14).** Merged
+  `bugfix/ai-death-egg-ending-cutscene`, restoring the DEZ escape ending path
+  by matching ObjC6 barrier solidity, ObjAF boss-id handoff, and ObjC7 Death
+  Egg Robot animation/sensor/defeat timing to the ROM. The
+  `S2DezEndingLevelSelect` replay now reaches the ending pictures and credits
+  path with no divergences.
 - **Launch configuration screen branch (2026-06-12).** Merged
   `feature/ai-launch-config-screen`, adding per-title launch profiles from the
   master title screen, transient session-only configuration overlays, donor-gated

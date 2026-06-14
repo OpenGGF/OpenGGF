@@ -23,6 +23,15 @@ All notable changes to the OpenGGF project are documented in this file.
   stop upward motion. This advances the SLZ2 complete-run trace from frame 323
   to frame 651 without regressing the closed SBZ3 complete-run trace.
 
+- **S2 Death Egg ending replay now reaches the credits path:** DEZ Eggman's
+  barrier wall keeps its ROM `SolidObject` checkpoint through the opening
+  animation, Mecha Sonic leaves `Current_Boss_ID` live for Death Egg Robot's
+  arena bounds, and ObjC7 now follows ROM timing for group-animation end
+  markers, targeting-sensor velocity FIFO/report order, subpixel-preserving
+  target/floor clamps, and the first beaten-routine dispatch. This closes the
+  `S2DezEndingLevelSelect` trace so Sonic's escape ending pictures and cutscene
+  path play again.
+
 - **Donated S3K insta-shield art now uses the donor palette context:** S1/S2
   cross-game insta-shield rendering now binds the S3K donor `RenderContext`,
   keeping the effect white instead of inheriting host Sonic palette colors.

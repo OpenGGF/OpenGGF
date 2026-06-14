@@ -3,12 +3,19 @@ package com.openggf.tests;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import com.openggf.camera.Camera;
+import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.ObjectRegistry;
+import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.TestObjectServices;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.List;
 
@@ -18,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for the DEZ Eggman transition object (ObjC6 State2).
@@ -292,6 +300,49 @@ public class TestDEZEggman {
         assertEquals(0x4FF, puff.getX(), "Deletion frame should not apply movement");
     }
 
+    @Test
+    public void openingBarrierWallStillStopsPlayerBeforeAnimationDeletesIt() {
+        ObjectInstance wall = newBarrierWall();
+        setIntField(wall, "wallState", 2); // WALL_STATE_OPENING
+        setIntField(wall, "openingFrameIndex", 3);
+        setIntField(wall, "openingAnimTimer", 0);
+
+        TestablePlayableSprite player =
+                new TestablePlayableSprite("sonic", (short) 0x03E5, (short) 0x0160);
+        player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        player.setWidth(20);
+        player.setHeight(38);
+        player.setAirForTest(false);
+        player.setXSpeed((short) 0x100);
+        player.setGSpeed((short) 0x100);
+
+        MutableObjectServices services = new MutableObjectServices();
+        Camera camera = mock(Camera.class);
+        when(camera.getX()).thenReturn((short) 0x0345);
+        when(camera.getY()).thenReturn((short) 0x00C8);
+        when(camera.getWidth()).thenReturn((short) 320);
+        when(camera.getHeight()).thenReturn((short) 224);
+        ObjectManager objectManager = new ObjectManager(
+                List.of(),
+                sonic2Registry(wall),
+                0,
+                null,
+                null,
+                null,
+                camera,
+                services);
+        services.objectManager = objectManager;
+        ((AbstractObjectInstance) wall).setServices(services);
+        objectManager.addDynamicObject(wall);
+
+        objectManager.update(0x0345, player, List.of(), 0, false, true, false);
+
+        assertEquals(0x03E5, player.getCentreX(),
+                "ObjC6_State3_State2 calls SolidObject before AnimateSprite advances to State3");
+        assertEquals(0, player.getXSpeed(), "The last opening-frame wall contact must still zero x_vel");
+        assertEquals(0, player.getGSpeed(), "The last opening-frame wall contact must still zero ground_vel");
+    }
+
     // ========================================================================
     // REFLECTION HELPERS
     // ========================================================================
@@ -330,6 +381,55 @@ public class TestDEZEggman {
         }
     }
 
+    private static ObjectInstance newBarrierWall() {
+        try {
+            Class<?> wallClass = Class.forName(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$BarrierWall");
+            Constructor<?> ctor = wallClass.getDeclaredConstructor(int.class, int.class);
+            ctor.setAccessible(true);
+            return (ObjectInstance) ctor.newInstance(0x03F8, 0x0160);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to construct DEZ barrier wall", e);
+        }
+    }
+
+    private static ObjectRegistry sonic2Registry(ObjectInstance instance) {
+        return new ObjectRegistry() {
+            @Override
+            public ObjectInstance create(com.openggf.level.objects.ObjectSpawn spawn) {
+                return instance;
+            }
+
+            @Override
+            public void reportCoverage(List<com.openggf.level.objects.ObjectSpawn> spawns) {
+                // No-op for this focused object-manager fixture.
+            }
+
+            @Override
+            public String getPrimaryName(int objectId) {
+                return "TEST";
+            }
+
+            @Override
+            public ObjectSlotLayout objectSlotLayout() {
+                return ObjectSlotLayout.SONIC_2;
+            }
+        };
+    }
+
+    private static final class MutableObjectServices extends TestObjectServices {
+        private ObjectManager objectManager;
+
+        private MutableObjectServices() {
+            withSolidExecutionRegistry(new DefaultSolidExecutionRegistry());
+        }
+
+        @Override
+        public ObjectManager objectManager() {
+            return objectManager;
+        }
+    }
+
     private static int getStaticIntField(String fieldName) throws Exception {
         Field field = Sonic2DEZEggmanInstance.class.getDeclaredField(fieldName);
         field.setAccessible(true);
@@ -342,5 +442,3 @@ public class TestDEZEggman {
         return (int[]) field.get(null);
     }
 }
-
-
