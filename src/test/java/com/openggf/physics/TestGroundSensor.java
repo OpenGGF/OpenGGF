@@ -21,10 +21,12 @@ import java.lang.reflect.Field;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyByte;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -408,12 +410,33 @@ public class TestGroundSensor {
     }
 
     @Test
-    public void upwardCeilingProbeAboveLevelTopReportsTopBoundaryCollision() {
-        // S1 Sonic_FindCeiling probes obY-obHeight. At the absolute level top,
-        // a negative probe Y is treated as penetration above Y=0 so the ceiling
-        // collision path pushes Sonic back down and clears upward velocity.
+    public void upwardCeilingProbeAboveLevelTopUsesBlankChunkDistance() {
+        // S1 Sonic_FindCeiling transforms obY-obHeight and calls FindFloor;
+        // FindNearestTile masks above-top lookups into the layout window. If
+        // that wrapped row is blank, the result is non-penetrating rather than
+        // a hard absolute-top ceiling collision.
         mockSprite.setGroundMode(GroundMode.GROUND);
         mockSprite.setX((short) 100);
+        mockSprite.setY((short) 15);
+
+        GroundSensor sensor = new GroundSensor(mockSprite, Direction.UP, (byte) 0, (byte) -19, true);
+        SensorResult result = sensor.scan();
+
+        assertNotNull(result);
+        assertEquals(Direction.UP, result.direction());
+        assertTrue(result.distance() > 0);
+    }
+
+    @Test
+    public void upwardCeilingProbeAboveLevelTopUsesRomWrappedLookupWhenSolid() {
+        // The same above-top probe can collide when the ROM's masked layout
+        // row contains solid terrain.
+        ChunkDesc wrappedSolid = new ChunkDesc(1 | (CollisionMode.ALL_SOLID.getValue() << 12));
+        when(mockLevelManager.getChunkDescAt(eq((byte) 0), anyInt(), eq(0x07F3), anyBoolean()))
+                .thenReturn(wrappedSolid);
+
+        mockSprite.setGroundMode(GroundMode.GROUND);
+        mockSprite.setX((short) 0x0E74);
         mockSprite.setY((short) 15);
 
         GroundSensor sensor = new GroundSensor(mockSprite, Direction.UP, (byte) 0, (byte) -19, true);

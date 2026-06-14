@@ -2,7 +2,6 @@ package com.openggf.physics;
 
 import com.openggf.game.GameServices;
 import com.openggf.level.ChunkDesc;
-import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.SolidTile;
@@ -351,16 +350,6 @@ public class GroundSensor extends Sensor {
 
     private SensorResult scanVertical(LevelManager lm, short x, short y, int solidityBit, Direction direction,
                                       boolean mirrorEmptyDefault) {
-        int levelTop = getLevelTopBoundary(lm);
-        if (direction == Direction.UP && y < levelTop) {
-            // S1 Sonic_FindCeiling probes obY-obHeight; above the absolute level
-            // top it reports penetration so the ceiling response pushes Sonic
-            // back down and clears upward velocity.
-            // docs/s1disasm/s1disasm/_incObj/Sonic Collision.asm:361-403
-            // docs/s1disasm/s1disasm/_incObj/01 Sonic.asm:295-309,980-985
-            return reusableResult.set(FLAGGED_ANGLE, clampSignedByte(y - levelTop), 0, direction);
-        }
-
         // Check current tile (ROM: FindFloor - first pass)
         SensorResult result = scanTileVertical(lm, x, y, x, y, solidityBit, direction, false);
         if (result != null) {
@@ -379,21 +368,6 @@ public class GroundSensor extends Sensor {
         return reusableResult.set(FLAGGED_ANGLE, distance, 0, direction);
     }
 
-    private static int getLevelTopBoundary(LevelManager lm) {
-        Level level = lm != null ? lm.getCurrentLevel() : null;
-        return level != null ? level.getMinY() : 0;
-    }
-
-    private static byte clampSignedByte(int value) {
-        if (value < Byte.MIN_VALUE) {
-            return Byte.MIN_VALUE;
-        }
-        if (value > Byte.MAX_VALUE) {
-            return Byte.MAX_VALUE;
-        }
-        return (byte) value;
-    }
-
     /**
      * @param isExtension true for second-pass (FindFloor2) behavior, false for first-pass (FindFloor).
      *                    ROM difference: FindFloor2's negfloor with adjusted < 0 returns ~yInTile
@@ -401,7 +375,8 @@ public class GroundSensor extends Sensor {
      */
     private SensorResult scanTileVertical(LevelManager lm, short origX, short origY, short checkX, short checkY,
                                           int solidityBit, Direction direction, boolean isExtension) {
-        ChunkDesc desc = lm.getChunkDescAt((byte) 0, checkX, checkY, sprite.isLoopLowPlane());
+        int lookupY = verticalTileLookupY(checkY, direction);
+        ChunkDesc desc = lm.getChunkDescAt((byte) 0, checkX, lookupY, sprite.isLoopLowPlane());
         SolidTile tile = getSolidTile(lm, desc, solidityBit);
 
         if (tile == null) {
@@ -514,6 +489,17 @@ public class GroundSensor extends Sensor {
         }
 
         return createVerticalResult(tile, desc, checkX, origY, checkY, direction);
+    }
+
+    private static int verticalTileLookupY(short y, Direction direction) {
+        if (direction != Direction.UP || y >= 0) {
+            return y;
+        }
+        // ROM FindCeiling transforms the top-edge probe with eori.w #$F before
+        // FindNearestTile masks it into the 8-row 256x256 layout window. This
+        // is not an absolute top-boundary clamp: wrapped rows can be solid in
+        // some layouts and blank in others.
+        return (y ^ 0x0F) & 0x07FF;
     }
 
     private SensorResult createVerticalResult(SolidTile tile, ChunkDesc desc,

@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 ceiling probes above the visible top now use ROM wrapped layout lookup:**
+  `Sonic_FindCeiling`-style upward probes no longer hard-clamp to `minY`.
+  Negative transformed Y values are masked into the ROM's 8-row layout lookup,
+  so blank wrapped rows remain non-solid while solid wrapped rows can still
+  stop upward motion. This advances the SLZ2 complete-run trace from frame 323
+  to frame 651 without regressing the closed SBZ3 complete-run trace.
+
 - **Donated S3K insta-shield art now uses the donor palette context:** S1/S2
   cross-game insta-shield rendering now binds the S3K donor `RenderContext`,
   keeping the effect white instead of inheriting host Sonic palette colors.
@@ -17,9 +24,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 - **S1 SBZ3 complete-run trace now matches end to end:** ObjPosLoad now stops
   forward/backward scans on ROM-equivalent slot allocation failure, S1 Obj41
-  springs ignore solid contact during their animation/reset routines, and upward
-  ceiling probes above the level top now report ROM-style penetration. Together
-  these close the remaining SBZ3 complete-run frontiers with all frames matching.
+  springs ignore solid contact during their animation/reset routines, and
+  above-top ceiling probes use the ROM masked layout lookup instead of a generic
+  absolute top boundary. Together these close the remaining SBZ3 complete-run
+  frontiers with all frames matching.
 
 - **S1 ObjPosLoad remembered-spawn skips now consume the forward counter:**
   counter-based placement now increments the S1 forward respawn counter before

@@ -1,5 +1,46 @@
 # Trace Frontier Log
 
+## 2026-06-14 - S1 above-top ceiling probes use ROM wrapped lookup
+
+- Scope: S1 ceiling probes above the visible level top no longer hard-clamp to
+  `minY` and no longer treat every negative probe as solid. `GroundSensor`
+  now models the ROM `Sonic_FindCeiling` / `FindNearestTile` lookup path:
+  the top-edge probe is transformed with `eori.w #$F`, then masked into the
+  eight-row 256x256 layout window. A wrapped row that is blank returns the
+  normal non-penetrating distance; a wrapped row that is solid can still report
+  penetration. This is ROM-modeled collision behavior only; replay rows remain
+  comparison diagnostics and no trace-state hydration or route/frame carve-out
+  was added.
+- Disassembly evidence:
+  - `docs/s1disasm/s1disasm/_incObj/Sonic Collision.asm:361-403`
+    (`Sonic_FindCeiling` subtracts `obHeight`, applies `eori.w #$F`, and calls
+    `FindFloor` for both ceiling sensors).
+  - `docs/s1disasm/s1disasm/_incObj/sub FindNearestTile & FindFloor & FindWall.asm:14-35,108-121`
+    (`FindNearestTile` masks the transformed Y with `lsr.w #1` /
+    `andi.w #$380`; `FindFloor` falls through to `FindFloor2` and returns the
+    blank default when the wrapped chunk is empty).
+  - `docs/s1disasm/s1disasm/_incObj/01 Sonic.asm:987-1067`
+    (`Sonic_LevelBound` handles side/bottom bounds and explicitly has no top
+    boundary snap).
+- Regression tests:
+  - `mvn -q -Dmse=relaxed -Dtest=com.openggf.physics.TestGroundSensor -DfailIfNoTests=false -Dsurefire.forkCount=1 test`
+  - Result: passed, **21 tests**, 0 failures. Added paired coverage for blank
+    wrapped rows and solid wrapped rows.
+- Focused replays:
+  - `mvn -q -Dmse=relaxed -Ds1.rom.path=s1.gen -Dtest=com.openggf.tests.trace.s1.TestS1Sbz3CompleteRunTraceReplay -DfailIfNoTests=false -Dsurefire.forkCount=1 test`
+  - Result: passed, **1 test**, 0 failures. The late SBZ3 spring/top-ceiling
+    path still matches.
+  - `mvn -q -Dmse=relaxed -Ds1.rom.path=s1.gen -Dtest=com.openggf.tests.trace.s1.TestS1Slz2CompleteRunTraceReplay -DfailIfNoTests=false -Dsurefire.forkCount=1 test`
+  - Result: expected-red trace; the old frame **323** false above-top ceiling
+    stop remains fixed and the first error is now frame **651**,
+    `g_speed` expected `0x1000`, actual `0x10AE`.
+- Remaining diagnostic evidence:
+  - The new SLZ2 frontier is a separate Obj53 collapsing-floor / Obj5D fan
+    handoff. Frames match through 650; at frame 651 the ROM has capped ground
+    speed while the engine still carries `0x10AE`, and the following frames
+    show an engine latch onto the nearby Obj53 instead of the ROM's expected
+    object handoff.
+
 ## 2026-06-14 - S1 SYZ1 Crabmeat first fire-mode toggle
 
 - Scope: S1 Obj1F Crabmeat now branches on the old `crab_mode` bit when
@@ -35,9 +76,9 @@
   recording with no divergences. The closing fixes were ROM-modeled only:
   ObjPosLoad forward/backward scans stop when the inline `FindFreeObj`
   equivalent cannot allocate a slot, S1 Obj41 springs suppress solid contact
-  while the ROM animation/reset routines run without `SolidObject`, and upward
-  ceiling probes above the level `minY` report top-boundary penetration so the
-  ceiling response pushes Sonic back down and clears upward speed.
+  while the ROM animation/reset routines run without `SolidObject`, and
+  above-top ceiling probes use the ROM `FindNearestTile` masked layout lookup
+  instead of a generic absolute-top boundary.
 - Disassembly evidence:
   - `docs/s1disasm/s1disasm/_inc/ObjPosLoad.asm:191-214,260-307`
     (`OPL_MovedRight` continues only when `OPL_SpawnObj` succeeds; `FindFreeObj`
@@ -45,10 +86,11 @@
   - `docs/s1disasm/s1disasm/_incObj/41 Springs.asm:77-110,115-167,172-218`
     and `docs/s1disasm/s1disasm/_anim/Springs.asm:8-15` (only active spring
     routines call `SolidObject`; animation/reset routines do not).
-  - `docs/s1disasm/s1disasm/_incObj/Sonic Collision.asm:361-403` and
-    `docs/s1disasm/s1disasm/_incObj/01 Sonic.asm:295-309,980-985`
-    (`Sonic_FindCeiling` drives the collision response; `Sonic_LevelBound` does
-    not handle top-boundary snapping).
+  - `docs/s1disasm/s1disasm/_incObj/Sonic Collision.asm:361-403`,
+    `docs/s1disasm/s1disasm/_incObj/sub FindNearestTile & FindFloor & FindWall.asm:14-35`,
+    and `docs/s1disasm/s1disasm/_incObj/01 Sonic.asm:987-1067`
+    (`Sonic_FindCeiling` drives the collision response through the masked
+    layout lookup; `Sonic_LevelBound` does not handle top-boundary snapping).
 - Regression tests:
   - `mvn -Dmse=off -Dtest=com.openggf.level.objects.TestObjectPlacementControllerS1Counter -DfailIfNoTests=false test`
   - `mvn -Dmse=off -Dtest=com.openggf.game.sonic1.objects.TestSonic1SpringObjectInstance -DfailIfNoTests=false test`
