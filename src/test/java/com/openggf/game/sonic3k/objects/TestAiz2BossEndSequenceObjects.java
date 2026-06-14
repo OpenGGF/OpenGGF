@@ -41,6 +41,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestAiz2BossEndSequenceObjects {
@@ -851,13 +852,12 @@ class TestAiz2BossEndSequenceObjects {
         player.setTestY((short) 0x01F0);
         controller.update(100, player);
 
-        assertEquals(SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL,
-                services.lastSeamlessRequest.type());
-        assertEquals(Sonic3kZoneIds.ZONE_HCZ, services.lastSeamlessRequest.targetZone());
-        assertEquals(0, services.lastSeamlessRequest.targetAct());
-        assertTrue(services.lastSeamlessRequest.deactivateLevelNow());
-        assertTrue(services.lastSeamlessRequest.preserveLevelGamestate());
-        assertTrue(services.lastSeamlessRequest.preserveOffsetCameraPosition());
+        assertEquals(Sonic3kZoneIds.ZONE_HCZ, services.requestedZone);
+        assertEquals(0, services.requestedAct);
+        assertTrue(services.requestedDeactivateLevelNow,
+                "AIZ2 -> HCZ1 is a full StartNewLevel-style zone transition; the level should freeze for fade/title card");
+        assertNull(services.lastSeamlessRequest,
+                "AIZ2 -> HCZ1 must not use the in-place seamless reload path, which preserves AIZ coordinates");
         assertEquals(SaveReason.PROGRESSION_SAVE, services.lastSaveReason);
     }
 
@@ -1000,8 +1000,9 @@ class TestAiz2BossEndSequenceObjects {
 
         controller.update(100, player);
 
-        assertEquals(Sonic3kZoneIds.ZONE_HCZ, services.lastSeamlessRequest.targetZone(),
+        assertEquals(Sonic3kZoneIds.ZONE_HCZ, services.requestedZone,
                 "ROM y_pos maps to centre Y; top-left/test Y must not delay the HCZ transition");
+        assertNull(services.lastSeamlessRequest);
     }
 
     @Test
@@ -1125,6 +1126,7 @@ class TestAiz2BossEndSequenceObjects {
     private static final class RecordingServices extends TestObjectServices {
         int requestedZone = -1;
         int requestedAct = -1;
+        boolean requestedDeactivateLevelNow;
         SaveReason lastSaveReason;
         SeamlessLevelTransitionRequest lastSeamlessRequest;
 
@@ -1132,6 +1134,13 @@ class TestAiz2BossEndSequenceObjects {
         public void requestZoneAndAct(int zone, int act) {
             requestedZone = zone;
             requestedAct = act;
+        }
+
+        @Override
+        public void requestZoneAndAct(int zone, int act, boolean deactivateLevelNow) {
+            requestedZone = zone;
+            requestedAct = act;
+            requestedDeactivateLevelNow = deactivateLevelNow;
         }
 
         @Override

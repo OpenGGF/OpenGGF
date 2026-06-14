@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K AIZ2 now enters HCZ1 through the full title-card transition:** the
+  AIZ2 end sequence no longer uses the in-place seamless reload path for the
+  cross-zone HCZ1 handoff, preventing Sonic from carrying AIZ camera/player
+  coordinates into Hydrocity.
+
 - **S1 GHZ3 complete-run trace advances through object frontiers:** Obj22
   Buzz Bomber near-Sonic firing now uses the ROM render-flag visibility gate,
   Obj1A collapsing ledges skip the transition-frame slope sample when
