@@ -981,16 +981,17 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         // ROM behavior where ObjPosLoad re-processes the spawn entry.
         dormant.clear(index);
         ObjectSpawn spawn = spawns.get(index);
-        if (remembered.get(index) && !stayActive.get(index)) {
-            return;
-        }
         if (spawn.respawnTracked()) {
+            // ROM: OPL_MovedRight increments the forward respawn counter
+            // before OPL_SpawnObj tests/skips the remembered object
+            // (docs/s1disasm/s1disasm/_inc/ObjPosLoad.asm:195-203).
             int counter = fwdCounter & 0xFF;
             fwdCounter = (fwdCounter + 1) & 0xFF;
             trySpawnCountered(index, counter);
         } else {
             // Non-tracked objects always spawn (ROM: loc_DA3C bpl → OPL_MakeItem)
-            if (!destroyedInWindow.get(index)) {
+            if (!(remembered.get(index) && !stayActive.get(index))
+                    && !destroyedInWindow.get(index)) {
                 active.add(spawn);
                 if (inlineCallback != null) {
                     inlineCallback.tryCreate(spawn, -1);

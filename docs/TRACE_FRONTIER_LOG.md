@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+## 2026-06-14 - S1 ObjPosLoad remembered-spawn counter consumption
+
+- Scope: S1 counter-based placement now increments the forward respawn counter
+  before testing/skipping a remembered respawn-tracked object. This matches
+  `OPL_MovedRight` loading `d2` from `(a2)` and `addq.b #1,(a2)` before
+  branching into `OPL_SpawnObj`, where `bset #7,2(a2,d2.w)` can skip object
+  creation (`docs/s1disasm/s1disasm/_inc/ObjPosLoad.asm:195-203`,
+  `:260-307`). The fix is ROM-modeled placement behavior, not trace-state
+  hydration.
+- Regression test:
+  - `mvn -Dmse=off -Dtest=com.openggf.level.objects.TestS1CounterPlacementRememberedParity -DfailIfNoTests=false test`
+  - Result: failed before the fix (`expected: <2> but was: <1>`) and passed
+    after the placement ordering change.
+- Focused diagnostic:
+  - `mvn -Dmse=off -Dtest=com.openggf.tests.trace.s1.DebugS1Lz2BubblesOccupancyProbe -Dtrace.dir=src/test/resources/traces/s1/sbz3_completerun -Dtrace.zone=5 -Dtrace.act=2 -Dtrace.label=s1-sbz3 -Dtrace.startFrame=7468 -Dtrace.stopFrame=7480 -Dtrace.snapshotFirstSlot=50 -Dtrace.snapshotLastSlot=105 -Dtrace.spawnMinX=0x0F60 -Dtrace.spawnMaxX=0x1020 -Dtrace.counterFirst=94 -Dtrace.counterLast=98 -Dtrace.watchSlot=101 -Dtrace.watchEvery=1 -DfailIfNoTests=false test`
+  - Result: passed. The frame-7480 Obj64 now occupies the ROM slot `$65`
+    (`0D9B,02F7`) instead of being shifted to engine slot `$61`.
+- Focused replay:
+  - `mvn -Dmse=off -Dtest=com.openggf.tests.trace.s1.TestS1Sbz3CompleteRunTraceReplay -DfailIfNoTests=false test`
+  - Result: expected-red trace; the previous first release-blocking error at
+    frame **7480** (`obj_s65_slot` expected `0x65`, actual `0x61`) progressed
+    to frame **8336** with **4** errors. Current first error: `y` expected
+    `0x00D9`, actual `0x00E4`.
+- Remaining diagnostic evidence:
+  - The frame-8336 failure is downstream of the fixed object-slot pressure. The
+    trace context shows a same-position Obj41 spring near `0E70,00F8` while the
+    engine reports no touch, so the next investigation should start from spring
+    contact/solid timing rather than the earlier Obj0A/Obj64 slot allocation.
+
 ## 2026-06-14 - S1 SBZ3 counter-latched DeleteObject placement skip
 
 - Scope: S1 counter-based placement now models the difference between

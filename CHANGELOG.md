@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 ObjPosLoad remembered-spawn skips now consume the forward counter:**
+  counter-based placement now increments the S1 forward respawn counter before
+  skipping a remembered respawn-tracked object, matching ObjPosLoad's
+  `OPL_MovedRight` ordering. This keeps later dynamic objects in their ROM SST
+  slots and advances the SBZ3 complete-run trace from frame 7480's Obj64 slot
+  mismatch to frame 8336's downstream spring/player mismatch.
+
 - **S1 SBZ3 remembered-object slot pressure now follows `DeleteObject`
   latches:** S1 counter-based object placement now distinguishes
   `RememberState` out-of-range unloads from direct `DeleteObject` tails that
