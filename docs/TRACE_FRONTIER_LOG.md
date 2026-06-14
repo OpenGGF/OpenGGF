@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+## 2026-06-14 - S2 DEZ ending trace closed
+
+- Scope: S2 DEZ ending replay now reaches the ending pictures / credits path
+  with no divergences. The fix set models ROM-owned ObjC6/ObjC7 timing rather
+  than trace-state hydration: Eggman's barrier wall keeps its SolidObject
+  checkpoint while opening, Death Egg Robot group animation reads the explicit
+  end marker before advancing, the Mecha Sonic handoff preserves
+  `Current_Boss_ID`, the targeting sensor follows the ROM velocity FIFO and
+  child-slot report timing, and ObjC7_Beaten defers the first defeat-fall
+  dispatch until the next object update.
+- Disassembly evidence:
+  - `docs/s2disasm/s2disasm/s2.asm` ObjC6 barrier state 1/2 SolidObject calls.
+  - `docs/s2disasm/s2disasm/s2.asm` ObjC7 group animation end markers,
+    targeting sensor FIFO/report routines, `ObjC7_CheckHit` / `ObjC7_Beaten`
+    stack skip, and `loc_3D8E6` high-word `y_pos` floor clamp.
+  - `docs/s2disasm/s2disasm/s2.asm` ObjAF defeat handoff leaves the DEZ boss id
+    live for ObjC7's arena boundary.
+- Regression tests:
+  - `mvn -q "-Dtest=com.openggf.tests.TestDEZEggman,com.openggf.tests.TestDEZMechaSonic,com.openggf.tests.TestDEZDeathEggRobot" test -DfailIfNoTests=false`
+  - Result: passed, **93** tests.
+- Focused replay:
+  - `mvn -q "-Dtest=com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: passed. `All frames match trace. No divergences.`
+
 ## 2026-06-14 - S1 SYZ1 Crabmeat first fire-mode toggle
 
 - Scope: S1 Obj1F Crabmeat now branches on the old `crab_mode` bit when
@@ -644,7 +668,7 @@ Current replay frontiers from Surefire:
 | `S2CnzLevelSelect` | f202 | tails_x | 0x0265 | 0x0264 | 594 |
 | `S2Cpz2LevelSelect` | f759 | tails_status_byte | 0x0020 | 0x0000 | 1191 |
 | `S2CpzLevelSelect` | f1157 | tails_x_speed | 0x0000 | -0200 | 698 |
-| `S2DezEndingLevelSelect` | f1557 | x_speed | 0x0000 | 0x003C | 137 |
+| `S2DezEndingLevelSelect` | pass |  |  |  | 0 |
 | `S2Ehz1` | pass |  |  |  | 0 |
 | `S2Htz2LevelSelect` | f936 | tails_cpu_ctrl2_held | 0x0002 | 0x0000 | 1352 |
 | `S2HtzLevelSelect` | f3733 | tails_cpu_interact | 0x002F | 0x0000 | 532 |
