@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+## 2026-06-14 - S2 ARZ2 ChopChop boundary frontier advance
+
+- Scope: S2 ARZ2 level-select trace remediation advanced the focused replay
+  through the frame-899 Obj91 ChopChop early-hit frontier without hydrating
+  engine state from trace rows and without zone, route, or frame carve-outs.
+  Obj91 player detection now treats the ROM maximum horizontal distance as
+  exclusive, so a ChopChop at exactly `0xA0` pixels from the player keeps
+  patrolling for that frame instead of entering the wait/charge sequence one
+  frame early. A focused touch-response regression also preserves the S2
+  inline player-slot scan's frame-start attackable-enemy positions, confirming
+  the f899 symptom was not caused by post-charge touch sampling.
+- Disassembly evidence:
+  - `docs/s2disasm/s2disasm/s2.asm:73733-73737` shows
+    `Obj91_TestHorizontalDist` rejecting distances below `0x20`, then using
+    `cmpi.w #$A0` / `blo.s Obj91_PlayerInRange`, making `0xA0` exclusive.
+  - `docs/s2disasm/s2disasm/s2.asm:73630-73647` shows `Obj91_Main` moving the
+    object before testing character position, so the boundary comparison uses
+    the post-`ObjectMove` position for that object frame.
+- Regression tests:
+  - `cmd /c mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.badniks.TestChopChopBadnikInstance,com.openggf.level.objects.TestTouchResponseManager" "-DfailIfNoTests=false" test`
+  - Result: passed, **50** tests.
+- Focused replay:
+  - `cmd /c mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay" "-DfailIfNoTests=false" test`
+  - Result: expected-red trace with **519** errors; the previous frame **899**
+    Obj91 `y_speed` mismatch is fixed. The first release-blocking error is now
+    frame **3214**: `y_speed` expected `-1000`, actual `-0980`, with matching
+    player position/subpixels and downstream camera divergence from the
+    vertical-speed delta.
+
 ## 2026-06-14 - S3K LBZ Orbinaut and rolling-drum frontier advance
 
 - Scope: S3K LBZ complete-run remediation advanced the focused trace through

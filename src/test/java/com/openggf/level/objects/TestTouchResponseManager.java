@@ -830,6 +830,32 @@ public class TestTouchResponseManager {
     }
 
     @Test
+    public void testS2InlineTouchUsesFrameStartObjectPositionForAttackableEnemies() {
+        when(player.getCentreX()).thenReturn((short) 168);
+        when(player.getCentreY()).thenReturn((short) 112);
+        when(player.getYRadius()).thenReturn((short) 20);
+        when(player.getAnimationId()).thenReturn(ObjectManager.ANIM_ROLL);
+
+        MockSnapshotAttackableEnemy enemy = new MockSnapshotAttackableEnemy(190, 112, 0x02);
+        setupTableSize(2, 0x0C, 0x14);
+        objectManager.addDynamicObject(enemy);
+
+        objectManager.snapshotTouchResponseState(false);
+        enemy.setPosition(188, 112);
+        objectManager.runTouchResponsesForPlayer(player, 899, true);
+
+        assertFalse(enemy.wasAttacked,
+                "S2 TouchResponse runs from the player slot before Obj91_Charge moves; "
+                        + "the frame-start position must miss even if the post-update position overlaps");
+
+        objectManager.snapshotTouchResponseState(false);
+        objectManager.runTouchResponsesForPlayer(player, 900, true);
+
+        assertTrue(enemy.wasAttacked,
+                "On the following player-slot scan, the same object position is now frame-start state and should hit");
+    }
+
+    @Test
     public void testRunTouchResponsesRefreshesPreUpdateSnapshotForCurrentFrame() {
         MockSnapshotTouchObject obj = new MockSnapshotTouchObject(300, 112, 0x48);
         setupTableSize(8, 16, 16);
@@ -1382,6 +1408,5 @@ public class TestTouchResponseManager {
         }
     }
 }
-
 
 

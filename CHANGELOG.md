@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 ARZ2 trace advances through the Obj91 ChopChop early-hit frontier:**
+  ChopChop detection now follows the ROM's exclusive `0xA0` horizontal upper
+  bound after object movement, preventing an exact-boundary frame from entering
+  the wait/charge sequence early. The ARZ2 level-select trace advances from
+  frame 899 to frame 3214's separate vertical-speed frontier.
+
 - **S3K LBZ complete-run trace advances through Orbinaut and rolling-drum
   frontiers:** Orbinaut child touch-list publication now samples the child
   after its circular movement, LBZ rolling drums expose the ROM code-pointer

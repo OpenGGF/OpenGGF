@@ -29,7 +29,7 @@ import java.util.List;
  *    ONCE at that transition, not recomputed per frame.
  *
  * Player detection (Obj91_TestCharacterPos, s2.asm:73716-73747):
- * - Horizontal range: 32-160 pixels (0x20-0xA0)
+ * - Horizontal range: 32 <= distance < 160 pixels (0x20-0xA0)
  * - Vertical range: -32 to +31 pixels (asymmetric, +-0x20 band)
  * - Only attacks if already moving toward the player
  */
@@ -242,7 +242,7 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance {
 
     /**
      * Player detection logic from disassembly (lines 73247-73280):
-     * - Player must be 32-160 pixels away horizontally
+     * - Player must be 32 <= distance < 160 pixels away horizontally
      * - Player must be within asymmetric vertical range (-32 to +31 pixels)
      * - ChopChop must be moving toward the player (check actual velocity)
      */
@@ -254,8 +254,9 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance {
         int dx = currentX - playerX;
         int absDx = Math.abs(dx);
 
-        // Check horizontal range: 32-160 pixels
-        if (absDx < DETECTION_RANGE_MIN || absDx > DETECTION_RANGE_MAX) {
+        // Check horizontal range: cmpi.w #$20/blo rejects below 0x20;
+        // cmpi.w #$A0/blo accepts only values below 0xA0.
+        if (absDx < DETECTION_RANGE_MIN || absDx >= DETECTION_RANGE_MAX) {
             return false;
         }
 
