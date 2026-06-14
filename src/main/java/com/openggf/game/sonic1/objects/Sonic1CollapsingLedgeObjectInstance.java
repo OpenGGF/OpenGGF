@@ -115,6 +115,10 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
     // Whether fragments have been spawned
     private boolean fragmented;
 
+    // ROM Ledge_OnPlatform branches directly to fragmentation when the timer is
+    // already zero, skipping Ledge_WalkOff/SlopeObject_AssumeStoodOn that frame.
+    private boolean transitionFrameSlopeSkip;
+
     public Sonic1CollapsingLedgeObjectInstance(ObjectSpawn spawn) {
         super(spawn, "CollapsingLedge");
         
@@ -140,6 +144,7 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
     }
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        transitionFrameSlopeSkip = false;
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (routine) {
             case 2 -> updateTouch(player);
@@ -278,6 +283,8 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
         fragmented = true;
         if (clearFlag) {
             collapseFlag = false;
+        } else {
+            transitionFrameSlopeSkip = true;
         }
 
         var objectManager = services().objectManager();
@@ -412,6 +419,15 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
         // Routine 6 remains collidable while ledge_collapse_flag is set
         // (Ledge_Display -> loc_82D0 runs Ledge_WalkOff/SlopeObject2).
         return routine == 6 && collapseFlag;
+    }
+
+    @Override
+    public boolean suppressSlopeSampleThisFrame(PlayableEntity player) {
+        // docs/s1disasm/.../1A, 53 Collapsing Ledges and Floors.asm:67-82
+        // Ledge_OnPlatform jumps to Fragmentate_GHZLedge_NoReset when the
+        // timer is zero, so the transition frame does not run Ledge_WalkOff or
+        // SlopeObject_AssumeStoodOn even though Sonic remains attached.
+        return transitionFrameSlopeSkip;
     }
 
     @Override

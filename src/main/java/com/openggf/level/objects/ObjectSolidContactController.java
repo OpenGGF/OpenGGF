@@ -2750,7 +2750,8 @@ final class ObjectSolidContactController {
                 return null;
             }
             if (apply) {
-                int newCenterY = playerCenterY - distY + 3;
+                int newCenterY = playerCenterY - distY + 3
+                        - getTopLandingSnapAdjustment(instance, player);
                 int newY = newCenterY - (player.getHeight() / 2);
                 player.setY((short) newY);
                 // ROM: Solid_ResetFloor / PlatformObject loc_74DC unconditionally

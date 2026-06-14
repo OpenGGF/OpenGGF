@@ -1,5 +1,44 @@
 # Trace Frontier Log
 
+## 2026-06-14 - S1 GHZ3 object-frontier advance
+
+- Scope: S1 GHZ3 complete-run remediation advanced the focused trace through
+  three independent ROM-modeled object frontiers without hydrating engine state
+  from trace rows and without zone, route, or frame carve-outs. Obj22 Buzz
+  Bomber now gates the near-Sonic firing branch on the prior render flag and
+  ROM `obActWid`, Obj1A collapsing ledges skip the transition-frame slope
+  sample when `Ledge_OnPlatform` branches directly to fragmentation, and Obj18
+  platforms now use the ROM `PlatformObject` landing window plus routine-4
+  post-move rider carry/bob cadence.
+- Disassembly evidence:
+  - `docs/s1disasm/s1disasm/_incObj/22, 23 Badnik - Buzz Bomber and Missile.asm:92-110`
+    (`.chknearsonic` runs `SpeedToPos`, checks `dx < $60`, then tests
+    `obRender` before switching to the stop/fire state).
+  - `docs/s1disasm/s1disasm/_inc/BuildSprites.asm:38-58,115-116` clears and
+    sets render bit 7 from the previous render pass using `obActWid`.
+  - `docs/s1disasm/s1disasm/_incObj/1A, 53 Collapsing Ledges and Floors.asm:67-82`
+    branches from `Ledge_OnPlatform` to `Fragmentate_GHZLedge_NoReset` when the
+    timer reaches zero, skipping `Ledge_WalkOff` and `SlopeObject_AssumeStoodOn`
+    for that frame.
+  - `docs/s1disasm/s1disasm/_incObj/18 Platforms.asm:54-87,101-108`,
+    `docs/s1disasm/s1disasm/_incObj/sub PlatformObject.asm:22-90`, and
+    `docs/s1disasm/s1disasm/_incObj/sub MvSonicOnPtfm.asm:18-39` show routine
+    2 landing before platform movement, routine 4 running `ExitPlatform` before
+    movement/nudge, then carrying the rider after both updates.
+- Focused replay:
+  - `mvn -Dmse=off -Dtest=com.openggf.tests.trace.s1.TestS1Ghz3CompleteRunTraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Dsurefire.forkCount=1 test`
+  - Result: expected-red trace with **539** errors; the previous frame **370**
+    Buzz-hit `y_speed` mismatch, frame **560** Obj1A ledge/camera mismatch, and
+    frame **1143-1145** Obj18 platform landing/carry mismatches are fixed. The
+    first release-blocking error is now frame **1246**: `y` expected `0x0219`,
+    actual `0x021A`.
+- Remaining diagnostic evidence:
+  - Frames now match through 1245. At frame 1246 Sonic jumps/releases from the
+    Obj18 platform with matching x position, speeds, status, rolling/jump flags,
+    camera, and subpixels; only world Y is one pixel low, so the next owner is
+    the platform jump-release / vertical radius handoff rather than the earlier
+    Buzz, ledge, or platform-ride entry frontiers.
+
 ## 2026-06-14 - S1 above-top ceiling probes use ROM wrapped lookup
 
 - Scope: S1 ceiling probes above the visible level top no longer hard-clamp to

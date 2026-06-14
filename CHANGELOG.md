@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 GHZ3 complete-run trace advances through object frontiers:** Obj22
+  Buzz Bomber near-Sonic firing now uses the ROM render-flag visibility gate,
+  Obj1A collapsing ledges skip the transition-frame slope sample when
+  fragmenting directly from `Ledge_OnPlatform`, and Obj18 platforms now follow
+  the ROM landing/carry/bob ordering. This advances the GHZ3 complete-run trace
+  from frame 370 to frame 1246's separate jump-release Y frontier.
+
 - **S1 ceiling probes above the visible top now use ROM wrapped layout lookup:**
   `Sonic_FindCeiling`-style upward probes no longer hard-clamp to `minY`.
   Negative transformed Y values are masked into the ROM's 8-row layout lookup,
