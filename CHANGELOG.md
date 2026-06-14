@@ -4,6 +4,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Donated S3K insta-shield art now uses the donor palette context:** S1/S2
+  cross-game insta-shield rendering now binds the S3K donor `RenderContext`,
+  keeping the effect white instead of inheriting host Sonic palette colors.
+
 - **S1 Crabmeat first fire-cycle now follows the ROM `bchg` branch:** Obj1F
   Crabmeat now branches on the old `crab_mode` bit after `bchg #1`, so the
   first on-screen wait expiry starts walking instead of firing immediately.
