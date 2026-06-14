@@ -224,6 +224,12 @@ straightforward to add new objects, zones, and game-specific behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **AIZ2 battleship wrap contract documentation (2026-06-15).** Merged
+  `bugfix/ai-aiz2-battleship-wrap-docs`, correcting stale documentation and test
+  wording so the AIZ2 post-bombing ship loop is described by its ROM
+  `Level_repeat_offset=$200` gameplay wrap instead of the obsolete `$80` visual
+  approximation, with the remaining seam work documented as display-only. No
+  engine behavior change.
 - **Sonic 2 Death Egg ending trace closure (2026-06-14).** Merged
   `bugfix/ai-death-egg-ending-cutscene`, restoring the DEZ escape ending path
   by matching ObjC6 barrier solidity, ObjAF boss-id handoff, and ObjC7 Death
