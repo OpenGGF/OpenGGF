@@ -123,7 +123,7 @@ class TestObjectPhysicsStandardizationGuard {
             "com/openggf/level/objects/ObjectManager.java"
     );
     private static final int OBJECT_LIFECYCLE_RATCHET_MINIMUM_SCANNED_FILES = 250;
-    private static final int RAW_SET_DESTROYED_TRUE_OBJECT_PACKAGE_BUDGET = 579;
+    private static final int RAW_SET_DESTROYED_TRUE_OBJECT_PACKAGE_BUDGET = 578;
     private static final int RAW_ADD_DYNAMIC_OBJECT_OBJECT_PACKAGE_BUDGET = 10;
 
     @Test

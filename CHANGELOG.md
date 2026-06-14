@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 SBZ3 remembered-object slot pressure now follows `DeleteObject`
+  latches:** S1 counter-based object placement now distinguishes
+  `RememberState` out-of-range unloads from direct `DeleteObject` tails that
+  leave `v_objstate` bit 7 set. This keeps Obj52-style stale placements from
+  materializing when ObjPosLoad later hits the ROM `bset` skip, advancing the
+  SBZ3 complete-run trace to frame 7480.
+
 - **S1 SBZ3 trace advances through Obj0A and Orbinaut slot frontiers:** numbered
   drowning-countdown bubbles now keep their object slot through the ROM
   appear/flash display window, and Obj60 Orbinaut parents enter the move/display

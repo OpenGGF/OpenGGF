@@ -1,6 +1,7 @@
 package com.openggf.level.rings;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.openggf.game.GameServices;
@@ -36,6 +37,19 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
 class TestLostRingObjectInstance {
+
+    @Test
+    void obj37DoesNotUseSharedXAxisOutOfRangeMacro() {
+        // S1 Obj37 RLoss_Bounce does not call the shared out_of_range macro; it deletes only when the
+        // shared spill animation timer expires or y_pos passes v_limitbtm2 + 224
+        // (docs/s1disasm/s1disasm/_incObj/25, 37 Rings.asm).
+        LostRingObjectInstance ring = LostRingObjectInstance.forTest(
+                0x067E, 0x0426, -0x0238, 0x09E8, 0x58, 0xFF);
+
+        assertTrue(ring.usesCustomOutOfRangeCheck());
+        assertFalse(ring.isCustomOutOfRange(0x0764),
+                "Obj37 must not be deleted by the standard X-only out_of_range macro");
+    }
 
     @Test
     void spillAnimationDeceleratesLikeRom() {
@@ -93,8 +107,8 @@ class TestLostRingObjectInstance {
 
     @Test
     void offscreenLostRingSkipsTerrainProbeUntilRenderFlagSet() {
-        // ROM Obj37 checks render_flags bit 7 before RingCheckFloorDist
-        // (sonic3k.asm:35668-35674): off-screen rings keep moving, but do not
+        // S2/S3K Obj37 checks render_flags bit 7 before RingCheckFloorDist
+        // (s2.asm:25215-25217): off-screen rings keep moving, but do not
         // bounce on terrain until the render pass has marked them visible.
         ProbeRecordingRing ring = new ProbeRecordingRing(0x100, 0x100, 0, 0x0400,
                 /*mask*/com.openggf.game.PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S2,
@@ -106,6 +120,23 @@ class TestLostRingObjectInstance {
 
         assertEquals(0, ring.floorProbeCount,
                 "cadence-hit Obj37 must still skip terrain while render_flags bit 7 is clear");
+    }
+
+    @Test
+    void s1OffscreenLostRingStillProbesTerrain() {
+        // S1 RLoss_Bounce calls ObjFloorDist directly after the vblank cadence gate; unlike S2/S3K,
+        // there is no render_flags bit-7 check before the floor probe.
+        ProbeRecordingRing ring = new ProbeRecordingRing(0x100, 0x100, 0, 0x0400,
+                /*mask*/com.openggf.game.PhysicsFeatureSet.RING_FLOOR_CHECK_MASK_S1,
+                /*reverseGravity*/false,
+                /*renderFlagForFloorProbe*/false,
+                /*requiresRenderFlagForFloorProbe*/false);
+        ring.setVblaForTest(0);
+
+        ring.stepPhysicsForTest(0x18, true);
+
+        assertEquals(1, ring.floorProbeCount,
+                "S1 Obj37 must probe terrain even when the render flag is clear");
     }
 
     @Test
@@ -146,6 +177,7 @@ class TestLostRingObjectInstance {
         private final int mask;
         private final boolean reverseGravity;
         private final boolean renderFlagForFloorProbe;
+        private final boolean requiresRenderFlagForFloorProbe;
         private int vbla;
         int floorProbeCount;
         int ceilingProbeCount;
@@ -157,11 +189,18 @@ class TestLostRingObjectInstance {
 
         private ProbeRecordingRing(int xPixel, int yPixel, int xVel, int yVel,
                                    int mask, boolean reverseGravity, boolean renderFlagForFloorProbe) {
+            this(xPixel, yPixel, xVel, yVel, mask, reverseGravity, renderFlagForFloorProbe, true);
+        }
+
+        private ProbeRecordingRing(int xPixel, int yPixel, int xVel, int yVel,
+                                   int mask, boolean reverseGravity, boolean renderFlagForFloorProbe,
+                                   boolean requiresRenderFlagForFloorProbe) {
             super(new ObjectSpawn(xPixel & 0xFFFF, yPixel & 0xFFFF, 0x37, 0, 0, false, 0));
             initFixedPointForTest(xPixel, yPixel, xVel, yVel, 0, 0xFF);
             this.mask = mask;
             this.reverseGravity = reverseGravity;
             this.renderFlagForFloorProbe = renderFlagForFloorProbe;
+            this.requiresRenderFlagForFloorProbe = requiresRenderFlagForFloorProbe;
         }
 
         void setVblaForTest(int vbla) {
@@ -181,6 +220,11 @@ class TestLostRingObjectInstance {
         @Override
         protected boolean hasRomRenderFlagForFloorProbe() {
             return renderFlagForFloorProbe;
+        }
+
+        @Override
+        protected boolean ringFloorProbeRequiresRenderFlag() {
+            return requiresRenderFlagForFloorProbe;
         }
 
         @Override

@@ -2113,6 +2113,18 @@ public class ObjectManager {
         return placement.getCounterForSpawn(spawn);
     }
 
+    public boolean isSpawnStateBitSet(ObjectSpawn spawn, int bit) {
+        return placement.isCounterStateBitSet(spawn, bit);
+    }
+
+    public void setSpawnStateBit(ObjectSpawn spawn, int bit) {
+        placement.setCounterStateBit(spawn, bit);
+    }
+
+    public void clearSpawnCounterActiveBit(ObjectSpawn spawn) {
+        placement.clearCounterForSpawn(spawn);
+    }
+
     public void markRemembered(ObjectSpawn spawn) {
         // Look up the instance to check if it should stay active.
         // activeObjects is an IdentityHashMap so try identity first.
@@ -2432,7 +2444,7 @@ public class ObjectManager {
     }
 
     /**
-     * Pure-function limit for the S1 {@code out_of_range} macro:
+     * Pure-function limit for the viewport-scaled {@code out_of_range} variant:
      * {@code 128 (behind-camera) + viewportWidth (screen) + 192 (ahead)}.
      * <p>
      * At native viewport width (320 px, {@code DISPLAY_ASPECT = NATIVE_4_3}) this
@@ -2442,9 +2454,11 @@ public class ObjectManager {
      * incorrectly despawned (declared divergence — see
      * docs/KNOWN_DISCREPANCIES.md "Object Despawn and Visibility Windows", entry #14).
      * <p>
-     * Used by {@link #isOutOfRangeS1} and mirrored in
-     * {@link AbstractObjectInstance#isInRange()}.
+     * Used by {@link #isOutOfRangeS1} for non-S1-counter placement and mirrored
+     * in {@link AbstractObjectInstance#isInRange()}.
      */
+    private static final int S1_NATIVE_OUT_OF_RANGE_LIMIT = 128 + 320 + 192;
+
     static int outOfRangeLimit(int viewportWidth) {
         return 128 + viewportWidth + 192;
     }
@@ -2459,11 +2473,10 @@ public class ObjectManager {
      *   distance = (d0 - d1) & 0xFFFF   (unsigned 16-bit)
      *   out_of_range when distance > limit  (bhi = unsigned greater)
      * </pre>
-     * The {@code limit} is {@link #outOfRangeLimit}{@code (camera.getWidth())}: at
-     * native viewport width (320 px) this equals the ROM constant 640
-     * ({@code 128 + 320 + 192}); at widescreen widths the limit widens with the
-     * configured viewport so objects near the visible right edge are not incorrectly
-     * despawned (declared divergence — see KNOWN_DISCREPANCIES.md entry #14
+     * S1 counter-based placement uses the ROM's fixed limit
+     * {@code 128 + 320 + 192}; other legacy paths keep the viewport-scaled
+     * declared divergence so objects near a wider visible right edge are not
+     * incorrectly despawned (see KNOWN_DISCREPANCIES.md entry #14
      * "Object Despawn and Visibility Windows").
      * Catches both left (negative wraps to large unsigned) and right out of range.
      */
@@ -2471,7 +2484,10 @@ public class ObjectManager {
         int objRounded = objX & 0xFF80;
         int screenRounded = (cameraX - 128) & 0xFF80;
         int distance = (objRounded - screenRounded) & 0xFFFF;
-        return distance > outOfRangeLimit(camera.getWidth());
+        int limit = placement.isCounterBasedRespawn()
+                ? S1_NATIVE_OUT_OF_RANGE_LIMIT
+                : outOfRangeLimit(camera.getWidth());
+        return distance > limit;
     }
 
     /**
@@ -2558,11 +2574,21 @@ public class ObjectManager {
         instance.onUnload();
         if (spawn != null) {
             freeAllReservedChildSlots(spawn);
-            placement.clearCounterForSpawn(spawn);
-            // ROM parity: mark dormant instead of removing from placement.active.
-            // The cursor system clears the dormant bit when it naturally re-processes
-            // the spawn position, preventing immediate same-window respawn.
-            placement.markDormant(spawn);
+            boolean clearsRespawnState = instance.clearsRespawnStateOnCounterBasedOutOfRange();
+            if (clearsRespawnState) {
+                placement.clearCounterForSpawn(spawn);
+                // ROM parity: RememberState clears bit 7 but the cursor may
+                // still be between this spawn's entry and the current window
+                // edge, so keep it dormant until ObjPosLoad reprocesses it.
+                placement.markDormant(spawn);
+            } else {
+                // ROM parity: direct DeleteObject tails skip RememberState,
+                // leaving ObjPosLoad's bset-tested counter bit latched. Remove
+                // the stale placement entry so the later bset-skip cannot be
+                // materialized by syncActiveSpawnsLoad.
+                placement.forgetCounterForSpawn(spawn);
+                placement.removeFromActivePreservingCounterState(spawn);
+            }
             removeActiveObject(spawn);
         } else {
             dynamicObjects.remove(instance);

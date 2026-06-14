@@ -53,6 +53,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     // Behind-window unload range is one chunk ($80) for forward movement.
     // At native width (320) EXTRA_AHEAD (0x140=320) + width (320) = 0x280 (640) = legacy window.
     private static final int EXTRA_AHEAD = 0x140; // 320; native -> 0x280 (640) window
+    private static final int S1_COUNTER_LOAD_AHEAD = 0x280;
     private static final int UNLOAD_BEHIND = 0x80;
     private static final int CHUNK_MASK = 0xFF80;
     /** ROM: OPL_Next advances v_opl_screen by one chunk (0x80) per frame. */
@@ -225,6 +226,17 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             return windowingStrategy.loadWindowForwardEdge(cameraX);
         }
         return super.getWindowEnd(cameraX);
+    }
+
+    @Override
+    protected int getLoadAhead() {
+        if (counterBasedRespawn) {
+            // S1 ObjPosLoad uses a fixed native right edge:
+            // d6 = (v_opl_screen & $FF80) + $280
+            // (docs/s1disasm/s1disasm/_inc/ObjPosLoad.asm, OPL_MovedRight).
+            return S1_COUNTER_LOAD_AHEAD;
+        }
+        return super.getLoadAhead();
     }
 
     @Override
@@ -705,6 +717,20 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     }
 
     /**
+     * Removes a counter-based S1 spawn after an object-side {@code DeleteObject}
+     * that deliberately leaves its respawn-table bit set.
+     * <p>
+     * ROM: ObjPosLoad's {@code OPL_SpawnObj} uses {@code bset #7,2(a2,d2.w)}
+     * to test-and-set the counter slot. Objects such as Obj52 that delete
+     * without {@code RememberState} leave that bit set, so later cursor scans
+     * skip the entry instead of materializing a stale placement.
+     */
+    void removeFromActivePreservingCounterState(ObjectSpawn spawn) {
+        active.remove(spawn);
+        clearCursorLoadState(spawn);
+    }
+
+    /**
      * Marks a spawn as dormant after its instance was deleted via out_of_range.
      * The spawn stays in {@code active} but syncActiveSpawnsLoad will skip it.
      * <p>
@@ -1147,11 +1173,38 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
      * Clears the objState bit for a normally-unloaded spawn.
      * ROM equivalent: RememberState's {@code bclr #7,2(a2,d0.w)}.
      * Called when an object leaves the camera window (not when destroyed).
+     * The spawn-to-counter association is deliberately preserved while the
+     * spawn remains between the placement cursors, so a same-window reload can
+     * still write the correct obRespawnNo value.
      */
     void clearCounterForSpawn(ObjectSpawn spawn) {
-        Integer counter = spawnToCounter.remove(spawn);
+        Integer counter = spawnToCounter.get(spawn);
         if (counter != null) {
             objState[counter] &= ~0x80;
+        }
+    }
+
+    /**
+     * Forgets the spawn-to-counter association without clearing bit 7.
+     * ROM equivalent: object tails that call {@code DeleteObject} directly
+     * instead of {@code RememberState}; their respawn-table bit remains set.
+     */
+    void forgetCounterForSpawn(ObjectSpawn spawn) {
+        spawnToCounter.remove(spawn);
+    }
+
+    boolean isCounterStateBitSet(ObjectSpawn spawn, int bit) {
+        Integer counter = spawnToCounter.get(spawn);
+        if (counter == null || bit < 0 || bit > 7) {
+            return false;
+        }
+        return (objState[counter] & (1 << bit)) != 0;
+    }
+
+    void setCounterStateBit(ObjectSpawn spawn, int bit) {
+        Integer counter = spawnToCounter.get(spawn);
+        if (counter != null && bit >= 0 && bit <= 7) {
+            objState[counter] |= 1 << bit;
         }
     }
 

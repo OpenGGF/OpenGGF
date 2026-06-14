@@ -33,6 +33,7 @@ public class Sonic1RingInstance extends AbstractObjectInstance
 
     /** S1 ring collision type: $47 = powerup category ($40) + size index 7. */
     public static final int RING_COLLISION_FLAGS = 0x47;
+    private static final int S1_OUT_OF_RANGE_LIMIT = 128 + 320 + 192;
 
     private enum State { INIT, ANIMATE, SPARKLE }
 
@@ -166,6 +167,26 @@ public class Sonic1RingInstance extends AbstractObjectInstance
     @Override
     public int getOutOfRangeReferenceX() {
         return outOfRangeAnchorX;
+    }
+
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        return true;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        if (state != State.ANIMATE) {
+            // docs/s1disasm/s1disasm/_incObj/25, 37 Rings.asm:
+            // Ring_Animate calls out_of_range after DisplaySprite, but
+            // Ring_Sparkle only runs AnimateSprite and DisplaySprite until
+            // Ring_Delete. Collected ring slots must survive camera drift.
+            return false;
+        }
+        int objRounded = outOfRangeAnchorX & 0xFF80;
+        int screenRounded = (cameraX - 128) & 0xFF80;
+        int distance = (objRounded - screenRounded) & 0xFFFF;
+        return distance > S1_OUT_OF_RANGE_LIMIT;
     }
 
     // ── TouchResponseProvider ─────────────────────────────────────────────

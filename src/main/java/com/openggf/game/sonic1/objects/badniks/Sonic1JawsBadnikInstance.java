@@ -157,8 +157,11 @@ public class Sonic1JawsBadnikInstance extends AbstractBadnikInstance {
 
     @Override
     public boolean isPersistent() {
-        // RememberState: persists while on screen
-        return !isDestroyed() && isOnScreenX(160);
+        // docs/s1disasm/s1disasm/_incObj/2C Badnik - Jaws.asm:
+        // Jaws_Turn ends with SpeedToPos then RememberState. The shared S1
+        // counter-based unload path performs that exact out_of_range check, so
+        // do not add a wider isOnScreenX margin here.
+        return false;
     }
 
     @Override

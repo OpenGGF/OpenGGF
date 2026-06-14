@@ -1,6 +1,7 @@
 package com.openggf.level.objects;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -53,6 +54,13 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
      */
     private static final int COUNTDOWN_NUMBER_VISIBLE_UPDATES = 91;
 
+    /**
+     * Drown_ChkWater does not delete a small bubble immediately at the water
+     * surface. It changes routine to Drown_Display, bumps the animation, and
+     * AnimateSprite advances to Drown_Delete on the following display tail.
+     */
+    private static final int SURFACE_POP_DISPLAY_UPDATES = 2;
+
     /** Current X position */
     private int currentX;
 
@@ -84,8 +92,11 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
     private int lockedScreenX;
     private int lockedScreenY;
 
-    /** Total lifetime in frames */
+    /** Frames since spawn, used only for diagnostics. */
     private int lifetime;
+
+    /** ROM Drown_Display tail after Drown_ChkWater detects the water surface. */
+    private int surfacePopUpdatesRemaining;
 
     /**
      * ROM {@code obRender} bit 7 as observed by Obj0A during execution. Drown_Main
@@ -142,6 +153,14 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
         boolean observedRomRenderOnScreen = romRenderOnScreen;
         lifetime++;
 
+        if (surfacePopUpdatesRemaining > 0) {
+            surfacePopUpdatesRemaining--;
+            if (surfacePopUpdatesRemaining == 0) {
+                setDestroyed(true);
+            }
+            return;
+        }
+
         // Check if we've exited water (bubble pops)
         // ROM: Bub_ChkWater compares against the gameplay waterline
         // (S1 v_waterpos1, docs/s1disasm/_incObj/64 Bubbles.asm:57-70).
@@ -155,8 +174,10 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
             if (waterSystem.hasWater(zoneId, actId)) {
                 int waterY = waterSystem.getGameplayWaterLevelY(zoneId, actId);
                 if (currentY <= waterY) {
-                    // Bubble has reached the water surface - destroy it
-                    setDestroyed(true);
+                    // docs/s1disasm/s1disasm/_incObj/0A LZ Drowning Countdown.asm:
+                    // Drown_ChkWater sets routine 6 and falls into Drown_Display;
+                    // Drown_Delete is reached after the display animation tail.
+                    surfacePopUpdatesRemaining = SURFACE_POP_DISPLAY_UPDATES;
                     return;
                 }
             }
@@ -195,6 +216,12 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
             currentY = camera.getY() + lockedScreenY;
         } else {
             // Normal bubble movement
+            ZoneFeatureProvider zoneFeatures = services().zoneFeatureProvider();
+            if (zoneFeatures != null && zoneFeatures.isWaterTunnelActive()) {
+                // docs/s1disasm/s1disasm/_incObj/0A LZ Drowning Countdown.asm:
+                // Drown_ChkWater tests f_wtunnelmode, then addq.w #4,drown_origX(a0).
+                baseX += 4;
+            }
             int wobbleIndex = wobbleAngle & 0x7F;
             wobbleAngle = (wobbleAngle + 1) & 0xFF;
             currentX = baseX + WOBBLE_DATA[wobbleIndex];
@@ -211,10 +238,10 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
             }
         }
 
-        // Destroy if bubble has been alive too long (failsafe)
-        if (lifetime > 600) { // 10 seconds max
-            setDestroyed(true);
-        }
+        // No lifetime cap: Obj0A live bubbles only delete via the water-surface
+        // display path or when Drown_ChkWater observes obRender bit 7 clear
+        // after SpeedToPos (docs/s1disasm/s1disasm/_incObj/
+        // 0A LZ Drowning Countdown.asm:55-92).
     }
 
     @Override

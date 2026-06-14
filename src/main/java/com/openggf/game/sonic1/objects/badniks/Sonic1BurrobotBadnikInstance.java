@@ -72,15 +72,6 @@ public class Sonic1BurrobotBadnikInstance extends AbstractBadnikInstance {
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (currentX >= 0x0340 && currentX <= 0x0390 && currentY >= 0x0080 && currentY <= 0x00C0
-                && frameCounter >= 260 && frameCounter <= 303) {
-            System.err.printf("BURRODBG f=%d state=%d pos=%04X,%04X vel=%04X,%04X player=%s%n",
-                    frameCounter, state, currentX & 0xFFFF, currentY & 0xFFFF,
-                    xVelocity & 0xFFFF, yVelocity & 0xFFFF,
-                    player == null ? "null" : String.format("%04X,%04X dbg=%s anim=%02X",
-                            player.getCentreX() & 0xFFFF, player.getCentreY() & 0xFFFF,
-                            player.isDebugMode(), player.getAnimationId()));
-        }
         switch (state) {
             case STATE_CHANGEDIR -> updateChangeDir();
             case STATE_MOVE -> updateMove(frameCounter);
@@ -114,10 +105,12 @@ public class Sonic1BurrobotBadnikInstance extends AbstractBadnikInstance {
 
         applySpeedToPos();
 
+        // Burro_Move uses bchg #0,objoff_32(a0); bne branches on the old bit state.
+        boolean oldFloorProbeToggle = floorProbeToggle;
         floorProbeToggle = !floorProbeToggle;
         int probeX = currentX + (facingLeft ? -0x0C : 0x0C);
 
-        if (!floorProbeToggle) {
+        if (!oldFloorProbeToggle) {
             TerrainCheckResult aheadFloor = ObjectTerrainUtils.checkFloorDist(probeX, currentY, Y_RADIUS);
             if (!aheadFloor.foundSurface() || aheadFloor.distance() >= 0x0C) {
                 enterMoveEndBranch(frameCounter);
@@ -265,7 +258,9 @@ public class Sonic1BurrobotBadnikInstance extends AbstractBadnikInstance {
 
     @Override
     public boolean isPersistent() {
-        return !isDestroyed() && isOnScreenX(192);
+        // Burro_Action ends with RememberState, which uses the S1 chunk-rounded
+        // out_of_range macro rather than a pixel-margin on-screen test.
+        return !isDestroyed() && isInRange();
     }
 
     @Override

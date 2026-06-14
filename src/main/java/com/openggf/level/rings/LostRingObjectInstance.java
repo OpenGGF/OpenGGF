@@ -174,7 +174,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         if (((vblaCounter + phaseOffset) & floorCheckMask) != 0) {
             return;
         }
-        if (!hasRomRenderFlagForFloorProbe()) {
+        if (ringFloorProbeRequiresRenderFlag() && !hasRomRenderFlagForFloorProbe()) {
             return;
         }
 
@@ -256,6 +256,18 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         }
     }
 
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        return true;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        // ROM Obj37 does not call the shared X-axis out_of_range macro. RLoss_Bounce deletes only
+        // when the shared spill animation timer expires or y_pos passes v_limitbtm2 + 224.
+        return false;
+    }
+
     private Camera cameraOrNull() {
         ObjectServices services = servicesOrNull();
         return services != null ? services.camera() : null;
@@ -282,13 +294,17 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM Obj37 only calls RingCheckFloorDist while render_flags bit 7 is set
-     * (sonic3k.asm:35668-35674). Off-screen spilled rings still move and apply
-     * gravity, but they do not bounce on terrain until the render pass has made
-     * them screen-visible.
+     * S2/S3K Obj37 only calls RingCheckFloorDist while render_flags bit 7 is set
+     * (s2.asm:25215-25217; sonic3k.asm Obj_Bouncing_Ring floor path). S1's
+     * RLoss_Bounce has no render-flag gate before ObjFloorDist.
      */
     protected boolean hasRomRenderFlagForFloorProbe() {
         return isWithinSolidContactBounds();
+    }
+
+    protected boolean ringFloorProbeRequiresRenderFlag() {
+        PhysicsFeatureSet featureSet = resolveFeatureSet();
+        return featureSet == null || featureSet.ringFloorProbeRequiresRenderFlag();
     }
 
     /**
@@ -431,6 +447,19 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
     public int getPhaseOffset() {
         return phaseOffset;
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("col=%s life=%d phase=%02X sub=(%04X,%04X) vel=(%04X,%04X) spark=%d",
+                collected,
+                lifetime,
+                phaseOffset & 0xFF,
+                xSubpixel & 0xFFFF,
+                ySubpixel & 0xFFFF,
+                xVel & 0xFFFF,
+                yVel & 0xFFFF,
+                sparkleStartFrame);
     }
 
     // ── Position (subpixel-backed; overrides spawn-derived defaults) ───────────

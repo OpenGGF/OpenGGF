@@ -34,6 +34,12 @@ public record PhysicsFeatureSet(
         /** Bitmask for scattered ring floor-check frequency.
          *  S1: 0x03 (every 4 frames, andi.b #3,d0). S2/S3K: 0x07 (every 8 frames, andi.b #7,d0). */
         int ringFloorCheckMask,
+        /** Whether Obj37 scattered-ring floor probes require render_flags bit 7.
+         *  S1: false; RLoss_Bounce calls ObjFloorDist directly after the vblank cadence gate
+         *  (s1disasm/_incObj/25, 37 Rings.asm:331-337). S2/S3K: true; Obj37_Main tests
+         *  render_flags.on_screen before RingCheckFloorDist (s2.asm:25215-25217,
+         *  sonic3k.asm Obj_Bouncing_Ring floor path). */
+        boolean ringFloorProbeRequiresRenderFlag,
         /** Ring touch collision half-width in pixels.
          *  S1/S2: 6 (obColType $47, size index $07). S3K normal placed rings:
          *  6 (sonic3k.asm:18473-18474 Test_Ring_Collisions d1=6, d6=$C). */
@@ -515,6 +521,21 @@ public record PhysicsFeatureSet(
          */
         boolean rollStopsBelowMinimumSpeed,
         /**
+         * Whether controlled roll deceleration comes from the current
+         * deceleration word divided by four instead of the later hardcoded
+         * {@code $20}.
+         *
+         * <p>S1: {@code true}. {@code Sonic_RollSpeed} loads
+         * {@code (v_sonspeeddec).w} and shifts it right twice, so underwater
+         * rolling uses {@code $40 >> 2 = $10}
+         * (s1disasm/_incObj/01 Sonic.asm:715-716, 827, 852).
+         *
+         * <p>S2/S3K: {@code false}. Their Sonic roll-speed routines use
+         * {@code move.w #$20,d4}, preserving the full controlled roll decel
+         * underwater (s2.asm:37009; sonic3k.asm:22936).
+         */
+        boolean rollControlledDecelUsesEffectiveDecelQuarter,
+        /**
          * Whether the level-boundary right-side check uses the strict
          * "predicted &gt; right" comparison ({@code blo.s}) instead of the
          * "predicted &gt;= right" ({@code bls.s}) comparison.
@@ -909,7 +930,13 @@ public record PhysicsFeatureSet(
          *  bias. Expressed as a per-game constant so shared drowning code does
          *  not branch on the loaded bubble art key.
          *  S2/S3K: {@code 8}. S1: {@code 0}. */
-        int mouthBubbleTimerBias
+        int mouthBubbleTimerBias,
+        /** Obj0A small mouth-bubble rise velocity, in ROM subpixels/frame.
+         *  S1/S2 set {@code y_vel=-$88} and call {@code SpeedToPos}
+         *  (s1 Drowning Countdown.asm:47,86; s2.asm:41899,41941-41942).
+         *  S3K sets {@code y_vel=-$100} and calls {@code MoveSprite2}
+         *  (sonic3k.asm:33312,33347). */
+        int mouthBubbleRiseVelocity
 ) {
     /** S1: no delay - camera pans immediately (s1.asm: Sonic_LookUp directly modifies v_lookshift). */
     public static final short LOOK_SCROLL_DELAY_NONE = 0;
@@ -1049,6 +1076,7 @@ public record PhysicsFeatureSet(
                     source.extendedEdgeBalance(),
                     source.singleFacingBalanceAnimationSet(),
                     source.ringFloorCheckMask(),
+                    source.ringFloorProbeRequiresRenderFlag(),
                     source.ringCollisionWidth(),
                     source.ringCollisionHeight(),
                     lightningShieldEnabled != null ? lightningShieldEnabled : source.lightningShieldEnabled(),
@@ -1100,6 +1128,7 @@ public record PhysicsFeatureSet(
                     source.sidekickCpuUsesLevelFrameCounter(),
                     source.landingRollClearUsesCurrentYRadiusDelta(),
                     source.rollStopsBelowMinimumSpeed(),
+                    source.rollControlledDecelUsesEffectiveDecelQuarter(),
                     source.levelBoundaryRightStrict(),
                     source.levelBoundaryUsesCentreY(),
                     source.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity(),
@@ -1118,7 +1147,8 @@ public record PhysicsFeatureSet(
                     source.rightWallDeepProbePreservesPenetration(),
                     source.solidObjectBarelyPokingResolvesAsSide(),
                     source.speedShoesTimerDecimation(),
-                    source.mouthBubbleTimerBias()
+                    source.mouthBubbleTimerBias(),
+                    source.mouthBubbleRiseVelocity()
             );
         }
     }
@@ -1129,7 +1159,7 @@ public record PhysicsFeatureSet(
      *  simple edge balance: single animation, always faces edge (s1disasm/_incObj/01 Sonic.asm:354-375). */
     public static final PhysicsFeatureSet SONIC_1 = new PhysicsFeatureSet(
             false, null, CollisionModel.UNIFIED, true, LOOK_SCROLL_DELAY_NONE, true, true, false, false, false, false, false, false,
-            RING_FLOOR_CHECK_MASK_S1, RING_COLLISION_SIZE_S1, RING_COLLISION_SIZE_S1, false,
+            RING_FLOOR_CHECK_MASK_S1, false, RING_COLLISION_SIZE_S1, RING_COLLISION_SIZE_S1, false,
             null, (short) 0, true, false /* groundWallPushRequiresFacingIntoWall: S1 wall response sets push unconditionally (s1disasm/_incObj/01 Sonic.asm:551-568) */,
             false /* sidekickGroundWallZeroDistanceSeamPenetrates: S1 has no CPU sidekick */,
             false /* animationChangeClearsPush: S1 clear is FixBugs-only (s1disasm/_incObj/01 Sonic.asm:2055-2065) */, false,
@@ -1155,6 +1185,7 @@ public record PhysicsFeatureSet(
             false /* sidekickCpuUsesLevelFrameCounter: S1 has no Tails CPU */,
             false /* landingRollClearUsesCurrentYRadiusDelta: S1 Sonic_ResetOnFloor applies fixed subq.w #5, obY(a0) when clearing ball state */,
             false /* rollStopsBelowMinimumSpeed: S1 Sonic_RollSlowdownDone only clears roll when obInertia == 0 (s1disasm/_incObj/01 Sonic.asm:760-768) */,
+            true /* rollControlledDecelUsesEffectiveDecelQuarter: S1 Sonic_RollSpeed uses (v_sonspeeddec >> 2), so underwater controlled roll decel is $10 */,
             false /* levelBoundaryRightStrict: S1 uses bls.s (non-strict, predicted >= right) at s1disasm/_incObj/01 Sonic.asm:998 */,
             true /* levelBoundaryUsesCentreY: S1 ROM compares obY(a0), i.e. centre-Y, at s1disasm/_incObj/01 Sonic.asm:1014 */,
             false /* solidObjectTopBranchAlwaysLiftsOnUpwardVelocity: S1 Solid_Landed (s1disasm/_incObj/sub SolidObject.asm:278-289) tests y_vel before any lift and returns Solid_Miss when upward */,
@@ -1173,7 +1204,8 @@ public record PhysicsFeatureSet(
             false /* rightWallDeepProbePreservesPenetration: preserve S1 baseline until right-wall traces are revalidated */,
             true /* solidObjectBarelyPokingResolvesAsSide: S1 Solid_cont sends d1<=4 to Solid_SideAir (s1disasm/_incObj/sub SolidObject.asm:181-184), which returns moveq #1,d4 = side contact (lines 211-214) */,
             1 /* speedShoesTimerDecimation: S1 per-frame word timer */,
-            0 /* mouthBubbleTimerBias: S1 LZ Obj64 air bubbles use a distinct bubble-maker structure with no (RandomNumber&$F)+8 mouth-bubble delay */);
+            0 /* mouthBubbleTimerBias: S1 LZ Obj64 air bubbles use a distinct bubble-maker structure with no (RandomNumber&$F)+8 mouth-bubble delay */,
+            -0x88 /* mouthBubbleRiseVelocity: S1 Obj0A small bubbles use y_vel=-$88 with SpeedToPos */);
 
     /** Sonic 2: spindash with standard speed table (s2.asm:37294), dual collision paths, delayed look scroll,
      *  preserves high ground speed on input (s2.asm:36610-36616),
@@ -1182,7 +1214,7 @@ public record PhysicsFeatureSet(
     public static final PhysicsFeatureSet SONIC_2 = new PhysicsFeatureSet(true, new short[]{
             0x0800, 0x0880, 0x0900, 0x0980, 0x0A00, 0x0A80, 0x0B00, 0x0B80, 0x0C00
     }, CollisionModel.DUAL_PATH, false, LOOK_SCROLL_DELAY_S2, false, false, false, false, false, true, true, false,
-            RING_FLOOR_CHECK_MASK_S2, RING_COLLISION_SIZE_S2, RING_COLLISION_SIZE_S2, false,
+            RING_FLOOR_CHECK_MASK_S2, true, RING_COLLISION_SIZE_S2, RING_COLLISION_SIZE_S2, false,
             null, (short) 0, true, false /* groundWallPushRequiresFacingIntoWall: S2 Sonic/Tails set push unconditionally in wall response (s2.asm:36536-36547,39506-39519) */,
             false /* sidekickGroundWallZeroDistanceSeamPenetrates: S2 ARZ1 preserves the zero-distance Tails seam without push */,
             true /* animationChangeClearsPush: S2 Sonic/Tails animation clears pushing on anim change (s2.asm:38033-38038,40879-40884) */, false,
@@ -1213,6 +1245,7 @@ public record PhysicsFeatureSet(
             false /* sidekickCpuUsesLevelFrameCounter: preserve existing S2 trace cadence */,
             false /* landingRollClearUsesCurrentYRadiusDelta: S2 Sonic_ResetOnFloor applies fixed subq.w #5, y_pos(a0) when clearing rolling */,
             false /* rollStopsBelowMinimumSpeed: S2 Sonic/Tails CheckRollStop only clears roll when inertia == 0 (s2.asm:37046-37055,40072-40081) */,
+            false /* rollControlledDecelUsesEffectiveDecelQuarter: S2 Sonic_RollSpeed hardcodes move.w #$20,d4 (s2.asm:37009) */,
             false /* levelBoundaryRightStrict: S2 uses bls.s (non-strict, predicted >= right) at s2.asm:36933 */,
             true /* levelBoundaryUsesCentreY: S2 ROM compares y_pos(a0), i.e. centre-Y, at s2.asm:36950 */,
             false /* solidObjectTopBranchAlwaysLiftsOnUpwardVelocity: S2 SolidObject_Landed (s2.asm:35379-35380) tests y_vel before lift and branches to SolidObject_Miss when upward */,
@@ -1231,7 +1264,8 @@ public record PhysicsFeatureSet(
             false /* rightWallDeepProbePreservesPenetration: preserve S2 baseline until right-wall traces are revalidated */,
             true /* solidObjectBarelyPokingResolvesAsSide: S2 SolidObject_cont sends d1<=4 to SolidObject_SideAir (s2.asm:35404-35412), which returns moveq #1,d4 = side contact (s2.asm:35447-35453); lets MTZ Obj66 Spring Wall fire its in-air -$800,-$800 diagonal bounce (s2.asm:53221-53232,53283-53340) */,
             1 /* speedShoesTimerDecimation: S2 per-frame word timer (s2.asm:36008-36025) */,
-            8 /* mouthBubbleTimerBias: S2 Obj0A_Animate next mouth-bubble delay = (RandomNumber&$F)+8 (s2.asm:42201-42204) */);
+            8 /* mouthBubbleTimerBias: S2 Obj0A_Animate next mouth-bubble delay = (RandomNumber&$F)+8 (s2.asm:42201-42204) */,
+            -0x88 /* mouthBubbleRiseVelocity: S2 Obj0A small bubbles use y_vel=-$88 with SpeedToPos (s2.asm:41899,41941-41942) */);
 
     /** Sonic 3&K: spindash with same speed table as S2, dual collision paths, delayed look scroll,
      *  preserves high ground speed on input, elemental shields,
@@ -1242,7 +1276,7 @@ public record PhysicsFeatureSet(
     public static final PhysicsFeatureSet SONIC_3K = new PhysicsFeatureSet(true, new short[]{
             0x0800, 0x0880, 0x0900, 0x0980, 0x0A00, 0x0A80, 0x0B00, 0x0B80, 0x0C00
     }, CollisionModel.DUAL_PATH, false, LOOK_SCROLL_DELAY_S2, false, false, true, true, true, true, true, true,
-            RING_FLOOR_CHECK_MASK_S2, RING_COLLISION_SIZE_S3K, RING_COLLISION_SIZE_S3K, true,
+            RING_FLOOR_CHECK_MASK_S2, true, RING_COLLISION_SIZE_S3K, RING_COLLISION_SIZE_S3K, true,
             new short[]{
             0x0B00, 0x0B80, 0x0C00, 0x0C80, 0x0D00, 0x0D80, 0x0E00, 0x0E80, 0x0F00
     }, (short) 0x100, true, true /* groundWallPushRequiresFacingIntoWall: S3K wall response gates Status_Push on Status_Facing (sonic3k.asm:22752-22756,22768-22772,27997-28001,28013-28017) */,
@@ -1273,6 +1307,7 @@ public record PhysicsFeatureSet(
             true /* sidekickCpuUsesLevelFrameCounter: S3K Tails CPU gates read Level_frame_counter directly (sonic3k.asm:26474-26531; LevelLoop increments it before Process_Sprites at sonic3k.asm:7884-7894) */,
             true /* landingRollClearUsesCurrentYRadiusDelta: S3K Player_TouchFloor applies saved y_radius - default_y_radius to y_pos, so already-restored roll-jump radii produce no 5 px lift (sonic3k.asm:23335-23358,24341-24363). */,
             true /* rollStopsBelowMinimumSpeed: S3K Sonic/Tails RollSpeed clears Status_Roll when abs(ground_vel) < #$80 (sonic3k.asm:22971-22986,28216-28231) */,
+            false /* rollControlledDecelUsesEffectiveDecelQuarter: S3K Sonic_RollSpeed hardcodes move.w #$20,d4 (sonic3k.asm:22936) */,
             true /* levelBoundaryRightStrict: S3K uses blo.s (strict, predicted > right) at sonic3k.asm:23186 -- see PhysicsFeatureSet javadoc for AIZ F4768 cite */,
             true /* levelBoundaryUsesCentreY: S3K Player_LevelBound (sonic3k.asm:23195) and Tails_Check_Screen_Boundaries (sonic3k.asm:28430-28431) both compare y_pos(a0) (centre-Y); engine getY() is top-left, off by 12 px for Tails / 20 px for Sonic. Required for AIZ trace F7171 sidekick boundary kill. */,
             true /* solidObjectTopBranchAlwaysLiftsOnUpwardVelocity: S3K loc_1E154 (sonic3k.asm:41606-41632) writes subq.w #1, y_pos(a1) and sub.w d3, y_pos(a1) BEFORE tst.w y_vel(a1) / bmi.s loc_1E198 — the lift is unconditional, only the standing/RideObject_SetRide is gated on y_vel >= 0. CNZ F7614 Tails_Jump (y_vel=-0x680) on Obj_Spring_Horizontal at 0x0E38,0x04D0 produces a +2 px lift the engine was missing. */,
@@ -1291,7 +1326,8 @@ public record PhysicsFeatureSet(
             true /* rightWallDeepProbePreservesPenetration: Player_AnglePos keeps right-wall angle continuity through deep negative probes before later walk-off checks (sonic3k.asm:18782-18842). */,
             false /* solidObjectBarelyPokingResolvesAsSide: S3K SolidObject_cont sends d1<=4 to loc_1E0D4 (TOP/BOTTOM), not SideAir (sonic3k.asm:41463-41466; loc_1E0D4 at 41541-41546) — keep existing absDistY>4 gate */,
             8 /* speedShoesTimerDecimation: S3K byte timer decremented every 8th level frame (sonic3k.asm:22072-22078; init 40818) */,
-            8 /* mouthBubbleTimerBias: S3K shares the S2 Obj0A mouth-bubble cadence (RandomNumber&$F)+8 */);
+            8 /* mouthBubbleTimerBias: S3K shares the S2 Obj0A mouth-bubble cadence (RandomNumber&$F)+8 */,
+            -0x100 /* mouthBubbleRiseVelocity: S3K AirCountdown uses y_vel=-$100 with MoveSprite2 (sonic3k.asm:33312,33347) */);
 
     /** Returns true when the game supports dual collision paths (primary/secondary). */
     public boolean hasDualCollisionPaths() {

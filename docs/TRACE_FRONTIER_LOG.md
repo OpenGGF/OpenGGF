@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-06-14 - S1 SBZ3 counter-latched DeleteObject placement skip
+
+- Scope: S1 counter-based placement now models the difference between
+  `RememberState` out-of-range unloads and object tails that call `DeleteObject`
+  directly. Direct-delete objects preserve ObjPosLoad's `bset #7,2(a2,d2.w)`
+  latch (`docs/s1disasm/s1disasm/_inc/ObjPosLoad.asm`, `OPL_SpawnObj`), so the
+  engine now removes the stale active placement instead of letting
+  `syncActiveSpawnsLoad` materialize it when the cursor later reprocesses the
+  spawn. This matches Obj52 `MBlock_ChkDel`, which branches to `DeleteObject`
+  without calling `RememberState`
+  (`docs/s1disasm/s1disasm/_incObj/52 Moving Blocks.asm`).
+- Focused diagnostic:
+  - `mvn -Dmse=off -Dtest=com.openggf.tests.trace.s1.DebugS1Lz2BubblesOccupancyProbe -Dtrace.dir=src/test/resources/traces/s1/sbz3_completerun -Dtrace.zone=5 -Dtrace.act=2 -Dtrace.label=s1-sbz3-obj52-reload-afterfix -Dtrace.startFrame=220 -Dtrace.stopFrame=2505 -Dtrace.snapshotFirstSlot=52 -Dtrace.snapshotLastSlot=60 -Dtrace.spawnMinX=0x0BE0 -Dtrace.spawnMaxX=0x0C40 -Dtrace.counterFirst=68 -Dtrace.counterLast=78 -Dtrace.watchSlot=56 -Dtrace.watchEvery=25 -DfailIfNoTests=false test`
+  - Result: passed. The earlier stale Obj52 reload at slot 56 is gone; slot 56
+    is empty at frame **2325**, carries Obj0A at frame **2350**, and matches the
+    ROM Obj2D at frame **2425**.
+- Focused replay:
+  - `mvn -Dmse=off -Dtest=com.openggf.tests.trace.s1.TestS1Sbz3CompleteRunTraceReplay -DfailIfNoTests=false test`
+  - Result: expected-red trace; the previous first release-blocking error at
+    frame **2596** (`obj_s67_slot` expected `0x67`, actual `0x68`) progressed
+    to frame **7480** with **6** errors. Current first error:
+    `obj_s65_slot` expected `0x65`, actual `0x61`.
+- Remaining diagnostic evidence:
+  - Player physics, camera, ring count, and the tracked Obj64 positions still
+    match at the new frame-7480 frontier. The remaining mismatch is slot
+    pressure around the later Obj64/Obj57 cluster: ROM reports the matched Obj64
+    at slot `$65`, while the engine's semantic match is in slot `$61`.
+
 ## 2026-06-14 - S1 SBZ3 Obj0A/Obj60 slot lifetime frontier advance
 
 - Scope: S1 SBZ3 complete-run trace remediation advanced the object-slot

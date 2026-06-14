@@ -2126,9 +2126,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.clearObjectPreservedRollVelocityCarry();
 		}
 
-		// Controlled roll deceleration: hardcoded $20 regardless of water state
-		// ROM ref: s2.asm:36671 — move.w #$20,d4
+		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
 		short rollDecel = (short) 0x20;
+		if (featureSet != null && featureSet.rollControlledDecelUsesEffectiveDecelQuarter()) {
+			// S1 Sonic_RollSpeed derives d4 from v_sonspeeddec >> 2, so the
+			// underwater value is $40 >> 2 = $10. S2/S3K hardcode $20.
+			rollDecel = (short) (sprite.getRunDecel() >> 2);
+		}
 		if (inputAllowed && inputLeft) {
 			if (gSpeed > 0) {
 				gSpeed -= rollDecel;
@@ -2156,7 +2160,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// abs(ground_vel) against min_roll_speed ($80) and unrolls below it.
 		// Refs: s1disasm/_incObj/01 Sonic.asm:760-768; s2.asm:37046-37055,
 		// 40072-40081; sonic3k.asm:22971-22986,28216-28231.
-		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
 		boolean stopRolling = featureSet != null && featureSet.rollStopsBelowMinimumSpeed()
 				? Math.abs(gSpeed) < minRollSpeed
 				: gSpeed == 0;

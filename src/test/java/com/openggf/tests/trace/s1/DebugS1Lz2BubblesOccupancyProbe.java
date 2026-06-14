@@ -1,10 +1,12 @@
 package com.openggf.tests.trace.s1;
 
+import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.game.GameServices;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchResponseDebugState;
 import com.openggf.level.rings.RingManager;
 import com.openggf.level.rings.RingSpawn;
 import com.openggf.tests.HeadlessTestFixture;
@@ -18,6 +20,7 @@ import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceMetadata;
+import com.openggf.trace.TouchResponseDebugHitFormatter;
 import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import org.junit.jupiter.api.Assumptions;
@@ -48,6 +51,8 @@ class DebugS1Lz2BubblesOccupancyProbe {
     private static final int TARGET_X = parseOptionalIntProperty("trace.targetX", -1);
     private static final int TARGET_Y = parseOptionalIntProperty("trace.targetY", -1);
     private static final boolean HAS_TARGET = TARGET_X >= 0 && TARGET_Y >= 0;
+    private static final int WATCH_SLOT = Integer.getInteger("trace.watchSlot", -1);
+    private static final int WATCH_EVERY = Math.max(1, Integer.getInteger("trace.watchEvery", 30));
     private static final int OBJ_BUBBLES = 0x64;
     private static final int FIRST_DYNAMIC_SLOT =
             ObjectSlotLayout.SONIC_1.firstDynamicSlot();
@@ -91,6 +96,7 @@ class DebugS1Lz2BubblesOccupancyProbe {
                         .startPositionIsCentre();
             }
             HeadlessTestFixture fixture = fixtureBuilder.build();
+            GameServices.debugOverlay().setEnabled(DebugOverlayToggle.TOUCH_RESPONSE, true);
             TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(trace, fixture);
             TraceReplaySessionBootstrap.BootstrapResult boot =
                     TraceReplaySessionBootstrap.applyBootstrap(trace, fixture, -1);
@@ -113,6 +119,8 @@ class DebugS1Lz2BubblesOccupancyProbe {
             boolean makerStateDivergenceReported = false;
             boolean targetEngineAppearanceReported = false;
             boolean targetRomAppearanceReported = false;
+            boolean ringCountDivergenceReported = false;
+            int lastEngineRingCount = fixture.sprite().getRingCount();
             ObjectSpawn targetSpawn = HAS_TARGET ? findTargetSpawn(objectManager) : null;
             for (int i = startTraceIndex; i < trace.frameCount(); i++) {
                 TraceFrame expected = trace.getFrame(i);
@@ -131,16 +139,87 @@ class DebugS1Lz2BubblesOccupancyProbe {
                     continue;
                 }
                 if (i == START_FRAME) {
-                    int first = 86;
-                    int last = 106;
+                    int first = Integer.getInteger("trace.snapshotFirstSlot", 32);
+                    int last = Integer.getInteger("trace.snapshotLastSlot", 55);
                     System.out.println("[" + LABEL + "-snapshot] frame=" + i
                             + " expected: " + summarizeExpectedSlots(trace, i, first, last));
                     System.out.println("[" + LABEL + "-snapshot] frame=" + i
                             + " engine: " + summarizeEngineSlots(objectManager, first, last));
+                    int spawnMinX = Integer.getInteger("trace.spawnMinX", 0x0B80);
+                    int spawnMaxX = Integer.getInteger("trace.spawnMaxX", 0x0CC0);
+                    System.out.println("[" + LABEL + "-snapshot] spawns: "
+                            + summarizeObjectSpawns(objectManager, spawnMinX, spawnMaxX));
+                    int counterFirst = Integer.getInteger("trace.counterFirst", -1);
+                    int counterLast = Integer.getInteger("trace.counterLast", -1);
+                    if (counterFirst >= 0 && counterLast >= counterFirst) {
+                        System.out.println("[" + LABEL + "-snapshot] objstate: "
+                                + summarizeObjState(objectManager, counterFirst, counterLast));
+                    }
+                }
+                if (WATCH_SLOT >= FIRST_DYNAMIC_SLOT
+                        && (i == START_FRAME || i % WATCH_EVERY == 0 || i == STOP_FRAME)) {
+                    AbstractObjectInstance watched = objectAtSlot(objectManager, WATCH_SLOT);
+                    System.out.printf("[%s-watch] frame=%d slot=%d engine=%s expected=%s cam=%04X sonic=%04X,%04X%n",
+                            LABEL,
+                            i,
+                            WATCH_SLOT,
+                            watched == null
+                                    ? "--"
+                                    : String.format("%s@%04X,%04X{%s}",
+                                    watched.getSpawn() == null
+                                            ? "??"
+                                            : String.format("%02X", watched.getSpawn().objectId() & 0xFF),
+                                    watched.getX() & 0xFFFF,
+                                    watched.getY() & 0xFFFF,
+                                    watched.traceDebugDetails()),
+                            summarizeExpectedSlots(trace, i, WATCH_SLOT, WATCH_SLOT),
+                            fixture.camera().getX() & 0xFFFF,
+                            fixture.sprite().getCentreX() & 0xFFFF,
+                            fixture.sprite().getCentreY() & 0xFFFF);
                 }
                 if (i > STOP_FRAME) {
                     System.out.printf("[%s-obj64-count] stopped at frame %d%n", LABEL, STOP_FRAME);
                     return;
+                }
+
+                if (fixture.sprite().getRingCount() != lastEngineRingCount) {
+                    System.out.printf(
+                            "[%s-ring-change] frame=%d previous=%d actual=%d expected=%d "
+                                    + "sonic=@%04X,%04X cam=%04X touch=%s%n",
+                            LABEL,
+                            i,
+                            lastEngineRingCount,
+                            fixture.sprite().getRingCount(),
+                            expected.rings(),
+                            fixture.sprite().getCentreX() & 0xFFFF,
+                            fixture.sprite().getCentreY() & 0xFFFF,
+                            fixture.camera().getX() & 0xFFFF,
+                            summarizeTouchState(objectManager, fixture.sprite().getCentreX(),
+                                    fixture.sprite().getCentreY()));
+                    lastEngineRingCount = fixture.sprite().getRingCount();
+                }
+
+                if (!ringCountDivergenceReported
+                        && expected.rings() >= 0
+                        && fixture.sprite().getRingCount() != expected.rings()) {
+                    ringCountDivergenceReported = true;
+                    System.out.printf(
+                            "[%s-ring-count] first divergence frame=%d expected=%d actual=%d "
+                                    + "sonic=@%04X,%04X cam=%04X%n",
+                            LABEL,
+                            i,
+                            expected.rings(),
+                            fixture.sprite().getRingCount(),
+                            fixture.sprite().getCentreX() & 0xFFFF,
+                            fixture.sprite().getCentreY() & 0xFFFF,
+                            fixture.camera().getX() & 0xFFFF);
+                    System.out.println("[" + LABEL + "-ring-count] active ring objects: "
+                            + summarizeLiveRingObjects(objectManager));
+                    System.out.println("[" + LABEL + "-ring-count] ring spawns: "
+                            + summarizeRingObjectSpawns(objectManager));
+                    System.out.println("[" + LABEL + "-ring-count] touch: "
+                            + summarizeTouchState(objectManager, fixture.sprite().getCentreX(),
+                            fixture.sprite().getCentreY()));
                 }
 
                 if (HAS_TARGET && !targetRomAppearanceReported
@@ -177,22 +256,44 @@ class DebugS1Lz2BubblesOccupancyProbe {
                             firstObjectSlotDivergence(trace, objectManager, i);
                     if (objectSlotDivergence != null) {
                         objectSlotDivergenceReported = true;
+                        int levelMaxY = GameServices.level() != null
+                                && GameServices.level().getCurrentLevel() != null
+                                ? GameServices.level().getCurrentLevel().getMaxY()
+                                : -1;
                         System.out.printf(
-                                "[" + LABEL + "-all-slots] first divergence frame=%d slot=%d expected=%s actual=%s%n",
+                                "[" + LABEL + "-all-slots] first divergence frame=%d slot=%d expected=%s actual=%s traceCam=%04X traceChunk=%04X engineCam=%04X engineChunk=%04X camY=%04X camMaxY=%04X camMaxYTarget=%04X camH=%04X levelMaxY=%04X%n",
                                 objectSlotDivergence.frame(),
                                 objectSlotDivergence.slot(),
                                 objectSlotDivergence.expected(),
-                                objectSlotDivergence.actual());
+                                objectSlotDivergence.actual(),
+                                expected.cameraX() & 0xFFFF,
+                                expected.cameraX() & 0xFF80,
+                                fixture.camera().getX() & 0xFFFF,
+                                fixture.camera().getX() & 0xFF80,
+                                fixture.camera().getY() & 0xFFFF,
+                                fixture.camera().getMaxY() & 0xFFFF,
+                                fixture.camera().getMaxYTarget() & 0xFFFF,
+                                fixture.camera().getHeight() & 0xFFFF,
+                                levelMaxY & 0xFFFF);
                         int first = Math.max(FIRST_DYNAMIC_SLOT, objectSlotDivergence.slot() - 8);
                         int last = objectSlotDivergence.slot() + 12;
                         System.out.println("[" + LABEL + "-all-slots] expected: "
                                 + summarizeExpectedSlots(trace, objectSlotDivergence.frame(), first, last));
                         System.out.println("[" + LABEL + "-all-slots] engine: "
                                 + summarizeEngineSlots(objectManager, first, last));
+                        System.out.println("[" + LABEL + "-all-slots] slot-events: "
+                                + summarizeSlotEvents(trace, objectSlotDivergence.slot(),
+                                Math.max(0, objectSlotDivergence.frame() - 120),
+                                objectSlotDivergence.frame() + 40));
                         System.out.println("[" + LABEL + "-all-slots] reserved: "
                                 + summarizeReservedChildSlots(objectManager, first, last));
                         System.out.println("[" + LABEL + "-all-slots] allocator-only: "
                                 + summarizeAllocatorOnlySlots(objectManager, first, last));
+                        int[] cursor = objectManager.getPlacementCursorState();
+                        System.out.println("[" + LABEL + "-all-slots] cursor: "
+                                + (cursor == null ? "n/a" : String.format(
+                                "right=%d left=%d fwd=%d bwd=%d lastChunk=%04X",
+                                cursor[0], cursor[1], cursor[2], cursor[3], cursor[4] & 0xFFFF)));
                     }
                 }
 
@@ -406,14 +507,59 @@ class DebugS1Lz2BubblesOccupancyProbe {
                                                  int firstSlot, int lastSlotInclusive) {
         Map<Integer, Integer> expected = new TreeMap<>(
                 ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT));
+        Map<Integer, TraceEvent.ObjectAppeared> appearances =
+                latestObjectAppearances(trace, frame, FIRST_DYNAMIC_SLOT);
         List<String> parts = new ArrayList<>();
         for (Map.Entry<Integer, Integer> entry : expected.entrySet()) {
             int slot = entry.getKey();
             if (slot >= firstSlot && slot <= lastSlotInclusive) {
-                parts.add(String.format("s%02d=%02X", slot, entry.getValue() & 0xFF));
+                TraceEvent.ObjectAppeared appeared = appearances.get(slot);
+                String details = appeared == null
+                        ? ""
+                        : String.format("@%04X,%04X/f%d",
+                        appeared.x() & 0xFFFF,
+                        appeared.y() & 0xFFFF,
+                        appeared.frame());
+                parts.add(String.format("s%02d=%02X%s",
+                        slot, entry.getValue() & 0xFF, details));
             }
         }
         return String.join(" ", parts);
+    }
+
+    private static Map<Integer, TraceEvent.ObjectAppeared> latestObjectAppearances(
+            TraceData trace, int frame, int firstSlot) {
+        Map<Integer, TraceEvent.ObjectAppeared> appearances = new TreeMap<>();
+        for (TraceEvent event : trace.getEventsInRange(-1, frame)) {
+            if (event instanceof TraceEvent.ObjectRemoved removed) {
+                if (removed.slot() >= firstSlot) {
+                    appearances.remove(removed.slot());
+                }
+            } else if (event instanceof TraceEvent.ObjectAppeared appeared) {
+                if (appeared.slot() >= firstSlot) {
+                    appearances.put(appeared.slot(), appeared);
+                }
+            }
+        }
+        return appearances;
+    }
+
+    private static String summarizeSlotEvents(TraceData trace, int slot, int firstFrame, int lastFrame) {
+        List<String> parts = new ArrayList<>();
+        for (TraceEvent event : trace.getEventsInRange(firstFrame, lastFrame)) {
+            if (event instanceof TraceEvent.ObjectAppeared appeared && appeared.slot() == slot) {
+                parts.add(String.format("f%d appear %s@%04X,%04X",
+                        appeared.frame(),
+                        appeared.objectType(),
+                        appeared.x() & 0xFFFF,
+                        appeared.y() & 0xFFFF));
+            } else if (event instanceof TraceEvent.ObjectRemoved removed && removed.slot() == slot) {
+                parts.add(String.format("f%d remove %s",
+                        removed.frame(),
+                        removed.objectType()));
+            }
+        }
+        return parts.isEmpty() ? "<none>" : String.join(" | ", parts);
     }
 
     private static String summarizeEngineSlots(ObjectManager objectManager,
@@ -430,13 +576,91 @@ class DebugS1Lz2BubblesOccupancyProbe {
         List<String> parts = new ArrayList<>();
         for (int slot : actual.keySet()) {
             AbstractObjectInstance object = objectAtSlot(objectManager, slot);
-            parts.add(String.format("s%02d=%02X@%04X,%04X",
+            parts.add(String.format("s%02d=%02X@%04X,%04X{%s}",
                     slot,
                     actual.get(slot) & 0xFF,
                     object != null ? object.getX() & 0xFFFF : 0,
-                    object != null ? object.getY() & 0xFFFF : 0));
+                    object != null ? object.getY() & 0xFFFF : 0,
+                    object != null ? object.traceDebugDetails() : ""));
         }
         return String.join(" ", parts);
+    }
+
+    private static String summarizeObjectSpawns(ObjectManager objectManager, int minX, int maxX) {
+        Set<ObjectSpawn> activeSpawns = Set.copyOf(objectManager.getActiveSpawns());
+        List<String> parts = new ArrayList<>();
+        for (ObjectSpawn spawn : objectManager.getAllSpawns()) {
+            if (spawn.x() < minX || spawn.x() > maxX) {
+                continue;
+            }
+            var instance = objectManager.getActiveObjectForRewind(spawn);
+            int guessedCounter = guessedS1Counter(objectManager, spawn);
+            parts.add(String.format(
+                    "i%03d %02X@%04X,%04X raw=%04X sub=%02X tracked=%s remembered=%s dormant=%s ctr=%d guess=%d rawB7=%s b7=%s b0=%s active=%s live=%s slot=%d",
+                    spawn.layoutIndex(),
+                    spawn.objectId() & 0xFF,
+                    spawn.x() & 0xFFFF,
+                    spawn.y() & 0xFFFF,
+                    spawn.rawYWord() & 0xFFFF,
+                    spawn.subtype() & 0xFF,
+                    spawn.respawnTracked(),
+                    objectManager.isRemembered(spawn),
+                    objectManager.isDormant(spawn),
+                    objectManager.getSpawnCounter(spawn),
+                    guessedCounter,
+                    guessedCounter >= 0 && rawObjStateBit(objectManager, guessedCounter, 7),
+                    objectManager.isSpawnStateBitSet(spawn, 7),
+                    objectManager.isSpawnStateBitSet(spawn, 0),
+                    activeSpawns.contains(spawn),
+                    instance != null,
+                    instance instanceof AbstractObjectInstance object ? object.getSlotIndex() : -1));
+        }
+        return parts.isEmpty() ? "<none>" : String.join(" | ", parts);
+    }
+
+    private static int guessedS1Counter(ObjectManager objectManager, ObjectSpawn target) {
+        int counter = 1;
+        for (ObjectSpawn spawn : objectManager.getAllSpawns()) {
+            if (spawn == target) {
+                return spawn.respawnTracked() ? counter & 0xFF : -1;
+            }
+            if (spawn.respawnTracked()) {
+                counter = (counter + 1) & 0xFF;
+            }
+        }
+        return -1;
+    }
+
+    private static boolean rawObjStateBit(ObjectManager objectManager, int counter, int bit) {
+        try {
+            java.lang.reflect.Field placementField = ObjectManager.class.getDeclaredField("placement");
+            placementField.setAccessible(true);
+            Object placement = placementField.get(objectManager);
+            java.lang.reflect.Field stateField = placement.getClass().getDeclaredField("objState");
+            stateField.setAccessible(true);
+            int[] state = (int[]) stateField.get(placement);
+            return (state[counter & 0xFF] & (1 << bit)) != 0;
+        } catch (ReflectiveOperationException e) {
+            return false;
+        }
+    }
+
+    private static String summarizeObjState(ObjectManager objectManager, int first, int last) {
+        try {
+            java.lang.reflect.Field placementField = ObjectManager.class.getDeclaredField("placement");
+            placementField.setAccessible(true);
+            Object placement = placementField.get(objectManager);
+            java.lang.reflect.Field stateField = placement.getClass().getDeclaredField("objState");
+            stateField.setAccessible(true);
+            int[] state = (int[]) stateField.get(placement);
+            List<String> parts = new ArrayList<>();
+            for (int counter = first; counter <= last; counter++) {
+                parts.add(String.format("%02X=%02X", counter & 0xFF, state[counter & 0xFF] & 0xFF));
+            }
+            return String.join(" ", parts);
+        } catch (ReflectiveOperationException e) {
+            return "<unavailable>";
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -520,9 +744,7 @@ class DebugS1Lz2BubblesOccupancyProbe {
         Set<ObjectSpawn> activeSpawns = Set.copyOf(objectManager.getActiveSpawns());
         List<String> parts = new ArrayList<>();
         for (ObjectSpawn spawn : objectManager.getAllSpawns()) {
-            if ((spawn.objectId() & 0xFF) != 0x25
-                    || spawn.x() < 0x0260 || spawn.x() > 0x02B0
-                    || spawn.y() < 0x0450 || spawn.y() > 0x0490) {
+            if ((spawn.objectId() & 0xFF) != 0x25) {
                 continue;
             }
             var instance = objectManager.getActiveObjectForRewind(spawn);
@@ -546,9 +768,7 @@ class DebugS1Lz2BubblesOccupancyProbe {
         for (var instance : objectManager.getActiveObjects()) {
             if (!(instance instanceof AbstractObjectInstance object)
                     || object.getSpawn() == null
-                    || (object.getSpawn().objectId() & 0xFF) != 0x25
-                    || object.getSpawn().x() < 0x0260 || object.getSpawn().x() > 0x02B0
-                    || object.getSpawn().y() < 0x0450 || object.getSpawn().y() > 0x0490) {
+                    || (object.getSpawn().objectId() & 0xFF) != 0x25) {
                 continue;
             }
             parts.add(String.format("s%02d @%04X,%04X spawn=@%04X,%04X %s",
@@ -560,6 +780,23 @@ class DebugS1Lz2BubblesOccupancyProbe {
                     object.traceDebugDetails()));
         }
         return String.join(" | ", parts);
+    }
+
+    private static String summarizeTouchState(ObjectManager objectManager, int centreX, int centreY) {
+        TouchResponseDebugState touchState = objectManager.getTouchResponseDebugState();
+        if (touchState == null) {
+            return "<no touch state>";
+        }
+        String box = String.format("box=@%04X,%04X h=%d yr=%d crouch=%s",
+                touchState.getPlayerX() & 0xFFFF,
+                touchState.getPlayerY() & 0xFFFF,
+                touchState.getPlayerHeight(),
+                touchState.getPlayerYRadius(),
+                touchState.isCrouching());
+        String overlaps = TouchResponseDebugHitFormatter.summariseOverlaps(touchState.getHits());
+        String scans = TouchResponseDebugHitFormatter.summariseNearbyScans(
+                touchState.getHits(), centreX, centreY);
+        return box + " overlaps=[" + overlaps + "] scans=[" + scans + "]";
     }
 
     private static AbstractObjectInstance objectAtSlot(ObjectManager objectManager, int slot) {

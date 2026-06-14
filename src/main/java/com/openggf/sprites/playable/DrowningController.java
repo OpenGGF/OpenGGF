@@ -286,16 +286,25 @@ public class DrowningController {
         int bubbleX = player.getCentreX() + xOffset;
         int bubbleY = player.getCentreY(); // Player's centre Y (ROM uses centre coordinates for obY)
 
-        // Determine if sine wave should start moving away from player
-        boolean startMovingLeft = player.getDirection() == Direction.RIGHT;
+        PhysicsFeatureSet fs = player.getPhysicsFeatureSet();
+        int riseVelocity = fs != null ? fs.mouthBubbleRiseVelocity() : -0x88;
+        boolean startsFacingLeft = player.getDirection() == Direction.LEFT;
 
         // Create bubble with game-specific art configuration
         BreathingBubbleInstance bubble = new BreathingBubbleInstance(
-            bubbleX, bubbleY, startMovingLeft, countdownNumber,
-            bubbleArtKey, bubbleCountdownFrames, bubbleMaxFrame
+            bubbleX, bubbleY, startsFacingLeft, countdownNumber,
+            bubbleArtKey, bubbleCountdownFrames, bubbleMaxFrame, riseVelocity
         );
 
         levelManager.getObjectManager().addDynamicObject(bubble);
+    }
+
+    /**
+     * Fixed object-RAM countdown sidecars own their own timers and RNG cadence,
+     * but their visible child bubble is the same Obj0A dynamic object.
+     */
+    public void spawnFixedCountdownBubble(int countdownNumber) {
+        spawnBubble(countdownNumber);
     }
 
     /**

@@ -243,6 +243,19 @@ public interface ObjectInstance {
     }
 
     /**
+     * Returns true when the S1 counter-based out-of-range unload should clear
+     * bit 7 of the object's respawn-table entry.
+     * <p>
+     * Most S1 remember-state objects route through {@code RememberState}, which
+     * clears the bit before deleting. A few objects use a direct
+     * {@code out_of_range.w DeleteObject,...} tail instead; those keep bit 7 set
+     * and must not respawn when the cursor sees the same placement entry again.
+     */
+    default boolean clearsRespawnStateOnCounterBasedOutOfRange() {
+        return true;
+    }
+
+    /**
      * Returns true if this object should stay in the active spawn set even after being
      * marked as remembered. Used by objects like monitors and capsules that need to
      * complete their destruction/animation sequence before being removed.

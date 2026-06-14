@@ -263,6 +263,47 @@ public class TestObjectManagerCounterBasedDynamicUnload {
     }
 
     @Test
+    public void counterBasedDirectDeleteWithoutRememberStateDoesNotReloadLatchedSpawn() {
+        ObjectSpawn spawn = new ObjectSpawn(0x0100, 0x0100, 0x52, 0, 0, true, 0);
+        DirectDeleteRegistry registry = new DirectDeleteRegistry();
+        objectManager = new ObjectManager(List.of(spawn), registry, 0, null, null,
+                null, GameServices.camera(), new StubObjectServices() {
+                    @Override
+                    public com.openggf.camera.Camera camera() {
+                        return GameServices.camera();
+                    }
+                });
+        objectManager.enableCounterBasedRespawn();
+        objectManager.reset(0);
+
+        DirectDeleteObjectInstance first = registry.instance;
+        assertNotNull(first, "Reset should preload the remembered spawn");
+        assertEquals(1, registry.createCount, "Initial preload should create one object");
+        assertTrue(objectManager.isSpawnStateBitSet(spawn, 7),
+                "S1 ObjPosLoad bset should latch bit 7 when the object is loaded");
+
+        for (int cameraX = 0x0080; cameraX <= 0x0400; cameraX += 0x0080) {
+            objectManager.update(cameraX, null, List.of(), cameraX / 0x80);
+        }
+
+        assertFalse(objectManager.getActiveObjects().contains(first),
+                "The direct-delete object should unload once the S1 out_of_range macro fails");
+        assertFalse(objectManager.getActiveSpawns().contains(spawn),
+                "Objects that skip RememberState must not leave a stale active placement behind");
+        assertEquals(1, registry.createCount,
+                "Deleting without RememberState keeps bit 7 set and must not allocate a replacement");
+
+        for (int cameraX = 0x0380; cameraX >= 0; cameraX -= 0x0080) {
+            objectManager.update(cameraX, null, List.of(), 20 + cameraX / 0x80);
+        }
+
+        assertFalse(objectManager.getActiveSpawns().contains(spawn),
+                "A later cursor re-scan should hit the ROM bset skip instead of reactivating the spawn");
+        assertEquals(1, registry.createCount,
+                "Latched direct-delete spawns should not materialize through syncActiveSpawnsLoad");
+    }
+
+    @Test
     public void counterBasedPostCameraPlacementCatchesUpAfterLargeCameraJump() {
         ObjectSpawn farSpawn = new ObjectSpawn(0x1000, 0x0100, 0x31, 0, 0, false, 0);
         TrackingRegistry registry = new TrackingRegistry();
@@ -360,6 +401,42 @@ public class TestObjectManagerCounterBasedDynamicUnload {
         @Override
         public void update(int frameCounter, PlayableEntity player) {
             updateCount++;
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+        }
+    }
+
+    private static final class DirectDeleteRegistry implements ObjectRegistry {
+        private DirectDeleteObjectInstance instance;
+        private int createCount;
+
+        @Override
+        public ObjectInstance create(ObjectSpawn spawn) {
+            createCount++;
+            instance = new DirectDeleteObjectInstance(spawn);
+            return instance;
+        }
+
+        @Override
+        public void reportCoverage(List<ObjectSpawn> spawns) {
+        }
+
+        @Override
+        public String getPrimaryName(int objectId) {
+            return "DirectDelete";
+        }
+    }
+
+    private static final class DirectDeleteObjectInstance extends AbstractObjectInstance {
+        private DirectDeleteObjectInstance(ObjectSpawn spawn) {
+            super(spawn, "DirectDeleteObject");
+        }
+
+        @Override
+        public boolean clearsRespawnStateOnCounterBasedOutOfRange() {
+            return false;
         }
 
         @Override

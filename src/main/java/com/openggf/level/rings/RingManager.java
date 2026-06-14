@@ -41,6 +41,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     private static final int ATTRACT_BOX_HALF = 0x40;
     // ROM: ring collision half-width (d1=6 in Test_Ring_Collisions)
     private static final int RING_COLLISION_HALF = 6;
+    // ROM: ReactToItem/Test_Ring_Collisions skip ring pickup while flashtime >= 90.
+    private static final int RING_INVULNERABLE_BLOCK_THRESHOLD = 90;
     // ROM: Obj_Attracted_Ring collision_flags $47 -> Touch_Sizes index 7 = 6x6.
     private static final int ATTRACT_TOUCH_RADIUS = 6;
 
@@ -175,7 +177,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         if (cannotCollectRings(player)) {
             return;
         }
-        if (!stageRingsUseObjectTouchCollection && player.getInvulnerableFrames() >= 90) {
+        if (!stageRingsUseObjectTouchCollection
+                && player.getInvulnerableFrames() >= RING_INVULNERABLE_BLOCK_THRESHOLD) {
             return;
         }
         int activeCount = placement.activeIndexCount();
@@ -223,11 +226,18 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         if (ring == null || cannotCollectRings(player)) {
             return false;
         }
+        if (player.getInvulnerableFrames() >= RING_INVULNERABLE_BLOCK_THRESHOLD) {
+            return false;
+        }
         int index = placement.getSpawnIndex(ring);
         if (index < 0 || placement.isCollected(index)) {
             return false;
         }
-        collectPlacedRingAtIndex(index, player, frameCounter);
+        // S1 Obj25 collection is triggered from Sonic's ReactToItem slot, after
+        // this engine has already run the ring object's update for the frame.
+        // Start the Obj25 Ring_Sparkle/DeleteObject cadence on the next object
+        // execution, matching the ROM routine that owns the slot lifetime.
+        collectPlacedRingAtIndex(index, player, frameCounter + 1);
         return true;
     }
 
@@ -315,7 +325,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             }
             int sparkleFrameOffset = elapsed / renderer.getSparkleFrameDelay();
             if (sparkleFrameOffset >= renderer.getSparkleFrameCount()) {
-                placement.clearSparkle(index);
+                if (isCollectedAndSparkleDone(index, frameCounter)) {
+                    placement.clearSparkle(index);
+                }
                 continue;
             }
             int sparkleFrameIndex = renderer.getSparkleStartIndex() + sparkleFrameOffset;
@@ -465,7 +477,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         }
         int sparkleFrameOffset = elapsed / renderer.getSparkleFrameDelay();
         if (sparkleFrameOffset >= renderer.getSparkleFrameCount()) {
-            placement.clearSparkle(index);
+            if (isCollectedAndSparkleDone(index, frameCounter)) {
+                placement.clearSparkle(index);
+            }
             return false;
         }
         return true;

@@ -47,6 +47,7 @@ public class Sonic1LamppostTwirlInstance extends AbstractObjectInstance {
     private int angle;
     private int currentX;
     private int currentY;
+    private boolean finished;
 
     public Sonic1LamppostTwirlInstance(Sonic1LamppostObjectInstance parent) {
         super(createDummySpawn(parent), "LamppostTwirl");
@@ -66,12 +67,18 @@ public class Sonic1LamppostTwirlInstance extends AbstractObjectInstance {
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        if (finished) {
+            return;
+        }
+
         lifetime--;
         if (lifetime < 0) {
+            // docs/s1disasm/s1disasm/_incObj/79 Lamppost.asm:116-134:
+            // Lamp_Twirl switches the child to Lamp_Finish, then still runs
+            // the final CalcSine position update. Lamp_Finish only returns;
+            // the child is not deleted here and keeps occupying its object slot.
+            finished = true;
             parent.onTwirlComplete();
-            setDestroyed(true);
-            return;
         }
 
         // From disassembly:
@@ -113,5 +120,10 @@ public class Sonic1LamppostTwirlInstance extends AbstractObjectInstance {
     public int getPriorityBucket() {
         // From disassembly: move.b #4,obPriority(a1)
         return RenderPriority.clamp(4);
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("twirl time=%d angle=%02X finished=%s", lifetime, angle & 0xFF, finished);
     }
 }
