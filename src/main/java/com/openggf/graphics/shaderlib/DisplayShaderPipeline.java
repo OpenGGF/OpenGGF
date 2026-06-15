@@ -140,6 +140,8 @@ public class DisplayShaderPipeline {
             return;
         }
 
+        GlStateSnapshot state = GlStateSnapshot.capture();
+        boolean disableAfterRestore = false;
         try {
             if (vpW != viewportWidth || vpH != viewportHeight) {
                 resize(sourceWidth, sourceHeight, vpW, vpH);
@@ -149,12 +151,11 @@ public class DisplayShaderPipeline {
             }
 
             clearGlErrors();
-            int[] savedViewport = FboHelper.saveViewport();
             captureViewport(vpX, vpY, vpW, vpH);
 
             int inputTexture = captureFbo.textureId();
-            int inputWidth = viewportWidth;
-            int inputHeight = viewportHeight;
+            int inputWidth = sourceWidth;
+            int inputHeight = sourceHeight;
             int lastFilter = GL_NEAREST;
             for (int i = 0; i < passes.size(); i++) {
                 CompiledPass pass = passes.get(i);
@@ -167,15 +168,15 @@ public class DisplayShaderPipeline {
             }
 
             blitToDefaultViewport(passTargets.get(passTargets.size() - 1), vpX, vpY, vpW, vpH, lastFilter);
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            glBindTexture(GL_TEXTURE_2D, 0);
-            glUseProgram(0);
-            glBindVertexArray(0);
-            FboHelper.restoreViewport(savedViewport);
             checkGlError("display shader apply");
         } catch (Exception e) {
             LOG.log(Level.SEVERE, "Display shader apply failed; disabling pipeline", e);
-            dispose();
+            disableAfterRestore = true;
+        } finally {
+            state.restore();
+            if (disableAfterRestore) {
+                dispose();
+            }
         }
     }
 
@@ -220,7 +221,8 @@ public class DisplayShaderPipeline {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, inputTexture);
         configureSampler(pass);
-        setUniforms(pass.programId(), inputWidth, inputHeight, target.width(), target.height(), frameCount);
+        setUniforms(pass.programId(), sourceWidth, sourceHeight,
+                inputWidth, inputHeight, target.width(), target.height(), frameCount);
 
         if (pass.shape() == GlslShape.FRAGMENT_ONLY) {
             glBindVertexArray(fragmentOnlyVao);
@@ -239,13 +241,13 @@ public class DisplayShaderPipeline {
                 GL_COLOR_BUFFER_BIT, filter);
     }
 
-    private void setUniforms(int programId, int inputWidth, int inputHeight,
+    private void setUniforms(int programId, int videoWidth, int videoHeight, int inputWidth, int inputHeight,
                              int outputWidth, int outputHeight, int frameCount) {
         setSampler(programId, "s_p");
         setSampler(programId, "SceneTexture");
         setSampler(programId, "Texture");
 
-        setVec2(programId, "IN.video_size", inputWidth, inputHeight);
+        setVec2(programId, "IN.video_size", videoWidth, videoHeight);
         setVec2(programId, "IN.texture_size", inputWidth, inputHeight);
         setVec2(programId, "IN.output_size", outputWidth, outputHeight);
         setVec2(programId, "InputSize", inputWidth, inputHeight);
@@ -401,23 +403,38 @@ public class DisplayShaderPipeline {
     }
 
     private CombinedQuadResources createCombinedQuadResources() {
-        int vaoId = glGenVertexArrays();
-        int vboId = glGenBuffers();
-        glBindVertexArray(vaoId);
-        glBindBuffer(GL_ARRAY_BUFFER, vboId);
-        glBufferData(GL_ARRAY_BUFFER, combinedQuadVertices(), GL_STATIC_DRAW);
+        int previousVao = glGetInteger(GL_VERTEX_ARRAY_BINDING);
+        int previousArrayBuffer = glGetInteger(GL_ARRAY_BUFFER_BINDING);
+        int vaoId = 0;
+        int vboId = 0;
+        try {
+            vaoId = glGenVertexArrays();
+            vboId = glGenBuffers();
+            glBindVertexArray(vaoId);
+            glBindBuffer(GL_ARRAY_BUFFER, vboId);
+            glBufferData(GL_ARRAY_BUFFER, combinedQuadVertices(), GL_STATIC_DRAW);
 
-        int stride = 12 * Float.BYTES;
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 4, GL_FLOAT, false, stride, 0);
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 4, GL_FLOAT, false, stride, 4L * Float.BYTES);
-        glEnableVertexAttribArray(2);
-        glVertexAttribPointer(2, 4, GL_FLOAT, false, stride, 8L * Float.BYTES);
+            int stride = 12 * Float.BYTES;
+            glEnableVertexAttribArray(0);
+            glVertexAttribPointer(0, 4, GL_FLOAT, false, stride, 0);
+            glEnableVertexAttribArray(1);
+            glVertexAttribPointer(1, 4, GL_FLOAT, false, stride, 4L * Float.BYTES);
+            glEnableVertexAttribArray(2);
+            glVertexAttribPointer(2, 4, GL_FLOAT, false, stride, 8L * Float.BYTES);
 
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindVertexArray(0);
-        return new CombinedQuadResources(vaoId, vboId);
+            return new CombinedQuadResources(vaoId, vboId);
+        } catch (RuntimeException | Error e) {
+            if (vaoId != 0) {
+                glDeleteVertexArrays(vaoId);
+            }
+            if (vboId != 0) {
+                glDeleteBuffers(vboId);
+            }
+            throw e;
+        } finally {
+            glBindBuffer(GL_ARRAY_BUFFER, previousArrayBuffer);
+            glBindVertexArray(previousVao);
+        }
     }
 
     private static float[] combinedQuadVertices() {
@@ -507,5 +524,66 @@ public class DisplayShaderPipeline {
     }
 
     private record CombinedQuadResources(int vaoId, int vboId) {
+    }
+
+    private record GlStateSnapshot(
+            int[] viewport,
+            int readFramebuffer,
+            int drawFramebuffer,
+            int program,
+            int vertexArray,
+            int activeTexture,
+            int activeTextureBinding,
+            int texture0Binding,
+            boolean blendEnabled,
+            boolean depthEnabled) {
+
+        private static GlStateSnapshot capture() {
+            int activeTexture = glGetInteger(GL_ACTIVE_TEXTURE);
+            int activeTextureBinding = glGetInteger(GL_TEXTURE_BINDING_2D);
+            glActiveTexture(GL_TEXTURE0);
+            int texture0Binding = glGetInteger(GL_TEXTURE_BINDING_2D);
+            glActiveTexture(activeTexture);
+
+            return new GlStateSnapshot(
+                    FboHelper.saveViewport(),
+                    glGetInteger(GL_READ_FRAMEBUFFER_BINDING),
+                    glGetInteger(GL_DRAW_FRAMEBUFFER_BINDING),
+                    glGetInteger(GL_CURRENT_PROGRAM),
+                    glGetInteger(GL_VERTEX_ARRAY_BINDING),
+                    activeTexture,
+                    activeTextureBinding,
+                    texture0Binding,
+                    glIsEnabled(GL_BLEND),
+                    glIsEnabled(GL_DEPTH_TEST));
+        }
+
+        private void restore() {
+            FboHelper.restoreViewport(viewport);
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, readFramebuffer);
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, drawFramebuffer);
+            glUseProgram(program);
+            glBindVertexArray(vertexArray);
+
+            int previousActiveTexture = glGetInteger(GL_ACTIVE_TEXTURE);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, texture0Binding);
+            glActiveTexture(activeTexture);
+            glBindTexture(GL_TEXTURE_2D, activeTextureBinding);
+            if (previousActiveTexture != activeTexture) {
+                glActiveTexture(activeTexture);
+            }
+
+            setCapability(GL_BLEND, blendEnabled);
+            setCapability(GL_DEPTH_TEST, depthEnabled);
+        }
+
+        private static void setCapability(int capability, boolean enabled) {
+            if (enabled) {
+                glEnable(capability);
+            } else {
+                glDisable(capability);
+            }
+        }
     }
 }

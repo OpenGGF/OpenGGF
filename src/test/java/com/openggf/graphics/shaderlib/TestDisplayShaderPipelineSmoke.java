@@ -4,12 +4,17 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.lwjgl.opengl.GL;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL13.*;
+import static org.lwjgl.opengl.GL20.*;
+import static org.lwjgl.opengl.GL30.*;
 
 public class TestDisplayShaderPipelineSmoke {
 
@@ -105,6 +110,156 @@ public class TestDisplayShaderPipelineSmoke {
             assertTrue(pipeline.isActive());
             pipeline.dispose();
         }
+    }
+
+    @Test
+    public void applyRestoresCallerGlStateAfterSuccess() {
+        try (GlContext ignored = GlContext.open()) {
+            DisplayShaderPipeline pipeline = new DisplayShaderPipeline();
+            pipeline.resize(32, 32, 32, 32);
+            assertTrue(pipeline.activate(passthroughPreset()));
+
+            int sentinelFbo = glGenFramebuffers();
+            int sentinelTexture = glGenTextures();
+            glBindTexture(GL_TEXTURE_2D, sentinelTexture);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 4, 4, 0, GL_RGBA, GL_UNSIGNED_BYTE, (ByteBuffer) null);
+            glBindFramebuffer(GL_FRAMEBUFFER, sentinelFbo);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, sentinelTexture, 0);
+            assertEquals(GL_FRAMEBUFFER_COMPLETE, glCheckFramebufferStatus(GL_FRAMEBUFFER));
+
+            int sentinelProgram = createSentinelProgram();
+            int sentinelVao = glGenVertexArrays();
+            int boundTexture = glGenTextures();
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, boundTexture);
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, sentinelFbo);
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, sentinelFbo);
+            glUseProgram(sentinelProgram);
+            glBindVertexArray(sentinelVao);
+            glViewport(3, 5, 17, 19);
+            glEnable(GL_BLEND);
+            glEnable(GL_DEPTH_TEST);
+
+            pipeline.apply(0, 0, 32, 32, 3);
+
+            int[] viewport = new int[4];
+            glGetIntegerv(GL_VIEWPORT, viewport);
+            assertEquals(3, viewport[0]);
+            assertEquals(5, viewport[1]);
+            assertEquals(17, viewport[2]);
+            assertEquals(19, viewport[3]);
+            assertEquals(sentinelFbo, glGetInteger(GL_READ_FRAMEBUFFER_BINDING));
+            assertEquals(sentinelFbo, glGetInteger(GL_DRAW_FRAMEBUFFER_BINDING));
+            assertEquals(sentinelProgram, glGetInteger(GL_CURRENT_PROGRAM));
+            assertEquals(sentinelVao, glGetInteger(GL_VERTEX_ARRAY_BINDING));
+            assertEquals(GL_TEXTURE1, glGetInteger(GL_ACTIVE_TEXTURE));
+            assertEquals(boundTexture, glGetInteger(GL_TEXTURE_BINDING_2D));
+            assertTrue(glIsEnabled(GL_BLEND));
+            assertTrue(glIsEnabled(GL_DEPTH_TEST));
+
+            pipeline.dispose();
+            glDeleteVertexArrays(sentinelVao);
+            glDeleteProgram(sentinelProgram);
+            glDeleteTextures(boundTexture);
+            glDeleteFramebuffers(sentinelFbo);
+            glDeleteTextures(sentinelTexture);
+        }
+    }
+
+    @Test
+    public void firstPassUsesLogicalSourceSizeUniformsWhenViewportDiffers() {
+        try (GlContext ignored = GlContext.open()) {
+            DisplayShaderPipeline pipeline = new DisplayShaderPipeline();
+            pipeline.resize(16, 8, 32, 32);
+
+            DisplayShaderPreset preset = new DisplayShaderPreset("uniform-check", ShaderPhase.FINAL, List.of(
+                    new DisplayShaderPass(null, """
+                            uniform sampler2D Texture;
+                            uniform vec2 InputSize;
+                            uniform vec2 TextureSize;
+                            uniform vec2 OutputSize;
+                            uniform int FrameCount;
+                            uniform int FrameDirection;
+                            uniform mat4 MVPMatrix;
+                            struct InputBlock {
+                                vec2 video_size;
+                                vec2 texture_size;
+                                vec2 output_size;
+                            };
+                            uniform InputBlock IN;
+                            void main() {
+                                bool ok = InputSize == vec2(16.0, 8.0)
+                                    && TextureSize == vec2(16.0, 8.0)
+                                    && OutputSize == vec2(32.0, 16.0)
+                                    && IN.video_size == vec2(16.0, 8.0)
+                                    && IN.texture_size == vec2(16.0, 8.0)
+                                    && IN.output_size == vec2(32.0, 16.0)
+                                    && FrameCount == 11
+                                    && FrameDirection == 1
+                                    && MVPMatrix[0][0] == 1.0;
+                                gl_FragColor = ok ? vec4(0.0, 1.0, 0.0, 1.0) : vec4(1.0, 0.0, 0.0, 1.0);
+                            }
+                            """, GlslShape.FRAGMENT_ONLY, 2, ScaleType.SOURCE, false, WrapMode.CLAMP_TO_EDGE)));
+
+            assertTrue(pipeline.activate(preset));
+            glViewport(0, 0, 32, 32);
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+            pipeline.apply(0, 0, 32, 32, 11);
+
+            ByteBuffer pixel = ByteBuffer.allocateDirect(4);
+            glReadPixels(16, 16, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+            int red = Byte.toUnsignedInt(pixel.get(0));
+            int green = Byte.toUnsignedInt(pixel.get(1));
+            assertTrue(green > 200, "expected green success pixel, red=" + red + " green=" + green);
+            assertTrue(red < 50, "expected low red success pixel, red=" + red + " green=" + green);
+            pipeline.dispose();
+        }
+    }
+
+    private static DisplayShaderPreset passthroughPreset() {
+        return new DisplayShaderPreset("passthrough", ShaderPhase.FINAL, List.of(
+                new DisplayShaderPass(null, """
+                        uniform sampler2D Texture;
+                        uniform vec2 OutputSize;
+                        void main() {
+                            gl_FragColor = texture2D(Texture, gl_FragCoord.xy / OutputSize);
+                        }
+                        """, GlslShape.FRAGMENT_ONLY, 1, ScaleType.SOURCE, false, WrapMode.CLAMP_TO_EDGE)));
+    }
+
+    private static int createSentinelProgram() {
+        int vertex = compileSentinelShader(GL_VERTEX_SHADER, """
+                #version 410 core
+                void main() {
+                    gl_Position = vec4(0.0);
+                }
+                """);
+        int fragment = compileSentinelShader(GL_FRAGMENT_SHADER, """
+                #version 410 core
+                out vec4 FragColor;
+                void main() {
+                    FragColor = vec4(1.0);
+                }
+                """);
+        int program = glCreateProgram();
+        glAttachShader(program, vertex);
+        glAttachShader(program, fragment);
+        glLinkProgram(program);
+        assertEquals(GL_TRUE, glGetProgrami(program, GL_LINK_STATUS), glGetProgramInfoLog(program));
+        glDetachShader(program, vertex);
+        glDetachShader(program, fragment);
+        glDeleteShader(vertex);
+        glDeleteShader(fragment);
+        return program;
+    }
+
+    private static int compileSentinelShader(int type, String source) {
+        int shader = glCreateShader(type);
+        glShaderSource(shader, source);
+        glCompileShader(shader);
+        assertEquals(GL_TRUE, glGetShaderi(shader, GL_COMPILE_STATUS), glGetShaderInfoLog(shader));
+        return shader;
     }
 
     private static final class GlContext implements AutoCloseable {
