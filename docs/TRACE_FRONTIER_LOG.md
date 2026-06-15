@@ -14288,3 +14288,55 @@ Result (measured baseline develop `a0c6dfb9f` vs with-fix, both via full S3K swe
 - Note: the summary table earlier in this file predates develop `a0c6dfb9f` and
   is stale (it lists `s3k_aiz1` at f1058); the values above are the current
   measured baselines.
+
+## 2026-06-15 — S3K AIZ f3135 sidekick wall frontier: ROM-execution root cause (BizHawk)
+
+Worktree `.worktrees/aiz-trace-green`, branch `bugfix/ai-aiz-trace-green`, off
+develop `a0c6dfb9f`; built on the f2590->f3135 fix (commit `ed6f59012`).
+
+Built a BizHawk lua diagnostic (`tools/bizhawk/diag_tails_wallprobe.lua`) that
+hooks PC 0x14BB4 — the instruction after `bsr.w sub_F61C` in
+`Tails_InputAcceleration_Path` (loc_14BA8) — and logs the ROM-computed signed
+wall distance `d1` (+ Tails state) per frame. Ran it on the AIZ movie
+(`s3-aiz1-2-sonictails.bk2`) and the complete-run movie (zone 1 = HCZ).
+
+ROM ground truth (resolves the prior static-analysis contradiction):
+- AIZ f3135 (emu 3645): Tails x_pos=0x1FB1 x_sub=0xF700 x_vel=0x039E ->
+  ROM `sub_F61C` d1 = **0** -> NO push (matches trace g_speed staying 0x039E).
+  Predicted probe X = 0x1FB5+0xA = 0x1FBF (flush at empty-cell edge).
+- HCZ f940 (emu 28110): Tails x_pos=0x0316 x_sub=0x1500 x_vel=0x000C ->
+  ROM d1 = **-1** -> PUSH (matches trace tails_status gaining Status_Push 0x60).
+  Predicted probe X = 0x0316+0xA = 0x0320 (1px inside the solid cell).
+
+Findings:
+- The engine's predicted-position wall scan is CORRECT: fed the true ROM x_pos,
+  it reproduces ROM exactly (0 at AIZ 0x1FBF; -1 at HCZ 0x320). The terrain /
+  per-cell penetration (`ObjectTerrainUtils.checkRightWallDist`, FindWall
+  `not.w d1`, sonic3k.asm:19666-19672) is faithful.
+- The real bug is a cumulative ~1-frame x_pos PHASE LAG in the CPU sidekick:
+  at the pre-move InputAcceleration wall check ROM's Tails is at x_pos 0x0316
+  while the engine's Tails is at 0x0315 (probe 0x031F -> dist 0 -> no push).
+  ROM's Tails oscillates 0x0315<->0x0316 at the wall; the engine trails by ~1
+  frame. The `Tails_Stand_Path` post-move CheckRightWallDist correction
+  (sonic3k.asm:27535-27544, loc_147A6) is gated on `Background_collision_flag`,
+  which is CLEAR at HCZ f940, so it is not the push source — the push is the
+  pre-move InputAcceleration check operating on the (phase-lagged) x_pos.
+- The override `sidekickGroundWallZeroDistanceSeamPenetrates`
+  (`CollisionSystem.normaliseGroundWallDistance`) blanket-converts wall
+  distance 0->-1 for the S3K CPU sidekick. It MASKS the phase lag at HCZ f940
+  (pushing at the engine's 0x0315) but WRONGLY fires at AIZ f3135 (a genuine
+  ROM no-push frame). The override that holds HCZ f1402 is exactly what blocks
+  AIZ f3135 — they are coupled.
+
+Measured A/B oracle (override removed, then reverted):
+- AIZ `TestS3kAizTraceReplay`: f3135 -> **f3317** (errors 2099 -> 1557; the 3
+  sibling sidekick auto-jump tests pass).
+- HCZ `TestS3kHczCompleteRunTraceReplay`: regresses f1402 -> **f940**.
+So a clean fix must first align the CPU-sidekick x_pos phase (so HCZ pushes via
+correct physics at 0x0316), THEN remove the override; the scan itself needs no
+change. The phase lag is cumulative and localizing it needs a frame-by-frame
+Tails x_pos diff vs ROM across the HCZ approach (CPU-sidekick movement chain;
+`Tails_Stand_Path` sonic3k.asm:27511-27550).
+
+No engine change committed in this entry (investigation only). The diagnostic
+lua is committed for reuse. AIZ frontier remains f3135; HCZ remains f1402.
