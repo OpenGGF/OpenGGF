@@ -122,6 +122,73 @@ public class TestDisplayShaderPresetLoader {
     }
 
     @Test
+    public void glslpRejectsShaderPathEscapingLibraryRoot() throws Exception {
+        Path root = tempDir.resolve("display-shaders");
+        Path preset = root.resolve("RetroArch/shaders_glsl/crt/escape.glslp");
+        write(preset, """
+                shaders = 1
+                shader0 = ../../../../outside.glsl
+                """);
+        write(tempDir.resolve("outside.glsl"), "void main() {}\n");
+
+        DisplayShaderLoadException error = assertThrows(DisplayShaderLoadException.class,
+                () -> new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.GLSLP),
+                        ShaderPhase.PRESENTATION));
+
+        assertTrue(error.getMessage().contains("../../../../outside.glsl"));
+    }
+
+    @Test
+    public void cgpRejectsCgFallbackPathEscapingLibraryRoot() throws Exception {
+        Path root = tempDir.resolve("display-shaders");
+        Path preset = root.resolve("BizHawk/nested/escape.cgp");
+        write(preset, """
+                shaders = 1
+                shader0 = ../../../outside.cg
+                """);
+        write(tempDir.resolve("outside.glsl"), "void main() {}\n");
+
+        DisplayShaderLoadException error = assertThrows(DisplayShaderLoadException.class,
+                () -> new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.CGP),
+                        ShaderPhase.PRESENTATION));
+
+        assertTrue(error.getMessage().contains("../../../outside.cg"));
+    }
+
+    @Test
+    public void manualPresetRefFallsBackToPresetDirectoryContainment() throws Exception {
+        Path preset = tempDir.resolve("manual/manual.glslp");
+        write(preset, """
+                shaders = 1
+                shader0 = ../outside.glsl
+                """);
+        write(tempDir.resolve("outside.glsl"), "void main() {}\n");
+        DisplayShaderPresetRef manualRef = new DisplayShaderPresetRef(DisplayShaderPresetRef.Kind.GLSLP,
+                "display/name.glslp", preset);
+
+        DisplayShaderLoadException error = assertThrows(DisplayShaderLoadException.class,
+                () -> new DisplayShaderPresetLoader().load(manualRef, ShaderPhase.PRESENTATION));
+
+        assertTrue(error.getMessage().contains("../outside.glsl"));
+    }
+
+    @Test
+    public void invalidShaderPathFailsAsLoadException() throws Exception {
+        Path root = tempDir.resolve("display-shaders");
+        Path preset = root.resolve("RetroArch/shaders_glsl/crt/invalid.glslp");
+        write(preset, """
+                shaders = 1
+                shader0 = bad\0path.glsl
+                """);
+
+        DisplayShaderLoadException error = assertThrows(DisplayShaderLoadException.class,
+                () -> new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.GLSLP),
+                        ShaderPhase.PRESENTATION));
+
+        assertTrue(error.getMessage().contains("bad"));
+    }
+
+    @Test
     public void glslpRejectsUnsupportedSlangReference() throws Exception {
         Path root = tempDir.resolve("display-shaders");
         Path preset = root.resolve("RetroArch/shaders_slang/crt/crt.glslp");

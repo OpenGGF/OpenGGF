@@ -2,6 +2,7 @@ package com.openggf.graphics.shaderlib;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -66,6 +67,7 @@ public class DisplayShaderPresetLoader {
         Map<String, String> fields = parseFields(presetText);
         int passCount = parseRequiredPassCount(fields, ref);
         Path parent = ref.absolutePath().getParent();
+        Path shaderRoot = deriveShaderRoot(ref);
         List<DisplayShaderPass> passes = new ArrayList<>(passCount);
 
         for (int i = 0; i < passCount; i++) {
@@ -73,7 +75,7 @@ public class DisplayShaderPresetLoader {
             if (shaderRef == null || shaderRef.isBlank()) {
                 throw new DisplayShaderLoadException("Preset is missing shader" + i + ": " + ref.label());
             }
-            Path shaderPath = resolveShaderPath(parent, shaderRef, format);
+            Path shaderPath = resolveShaderPath(parent, shaderRoot, shaderRef, format);
             String source = readGlslSource(shaderPath);
             if (format == PresetFormat.GLSLP) {
                 rejectUnsupportedGlslpPassSourceFeatures(source, shaderPath);
@@ -167,10 +169,9 @@ public class DisplayShaderPresetLoader {
         };
     }
 
-    private static Path resolveShaderPath(Path parent, String rawShaderRef, PresetFormat format)
+    private static Path resolveShaderPath(Path parent, Path shaderRoot, String rawShaderRef, PresetFormat format)
             throws DisplayShaderLoadException {
-        String normalizedRef = rawShaderRef.replace('\\', '/');
-        Path relative = Path.of(normalizedRef);
+        Path relative = parseShaderReferencePath(rawShaderRef);
         if (relative.isAbsolute()) {
             throw new DisplayShaderLoadException("Absolute shader paths are not supported: " + rawShaderRef);
         }
@@ -179,7 +180,7 @@ public class DisplayShaderPresetLoader {
             if (!".glsl".equals(extension(relative))) {
                 throw new DisplayShaderLoadException("GLSLP pass source must reference a .glsl file: " + rawShaderRef);
             }
-            Path exact = parent.resolve(relative).normalize();
+            Path exact = resolveWithinShaderRoot(parent, shaderRoot, relative, rawShaderRef);
             if (!Files.isRegularFile(exact)) {
                 throw new DisplayShaderLoadException("Missing GLSL shader source: " + rawShaderRef);
             }
@@ -187,17 +188,66 @@ public class DisplayShaderPresetLoader {
         }
 
         if (".glsl".equals(extension(relative))) {
-            Path exact = parent.resolve(relative).normalize();
+            Path exact = resolveWithinShaderRoot(parent, shaderRoot, relative, rawShaderRef);
             if (Files.isRegularFile(exact)) {
                 return exact;
             }
         }
 
-        Path sibling = parent.resolve(replaceExtension(relative, ".glsl")).normalize();
+        Path sibling = resolveWithinShaderRoot(parent, shaderRoot, replaceExtension(relative, ".glsl"), rawShaderRef);
         if (Files.isRegularFile(sibling)) {
             return sibling;
         }
         throw new DisplayShaderLoadException("CGP preset has no loadable GLSL source for " + rawShaderRef);
+    }
+
+    private static Path parseShaderReferencePath(String rawShaderRef) throws DisplayShaderLoadException {
+        try {
+            return Path.of(rawShaderRef.replace('\\', '/'));
+        } catch (InvalidPathException e) {
+            throw new DisplayShaderLoadException("Invalid shader path reference: " + rawShaderRef, e);
+        }
+    }
+
+    private static Path resolveWithinShaderRoot(Path parent, Path shaderRoot, Path relative, String rawShaderRef)
+            throws DisplayShaderLoadException {
+        Path resolved = parent.resolve(relative).toAbsolutePath().normalize();
+        Path normalizedRoot = shaderRoot.toAbsolutePath().normalize();
+        if (!resolved.startsWith(normalizedRoot)) {
+            throw new DisplayShaderLoadException("Shader path escapes shader library root: " + rawShaderRef);
+        }
+        return resolved;
+    }
+
+    private static Path deriveShaderRoot(DisplayShaderPresetRef ref) {
+        Path presetPath = ref.absolutePath().toAbsolutePath().normalize();
+        Path fallback = presetPath.getParent();
+        String relativePath = ref.relativePath();
+        if (relativePath == null || relativePath.isBlank()) {
+            return fallbackShaderRoot(presetPath, fallback);
+        }
+
+        try {
+            Path relative = Path.of(relativePath.replace('\\', '/'));
+            if (relative.isAbsolute()) {
+                return fallbackShaderRoot(presetPath, fallback);
+            }
+            Path root = presetPath;
+            for (int i = 0; i < relative.getNameCount(); i++) {
+                root = root.getParent();
+                if (root == null) {
+                    return fallbackShaderRoot(presetPath, fallback);
+                }
+            }
+            Path reconstructedPreset = root.resolve(relative).toAbsolutePath().normalize();
+            return reconstructedPreset.equals(presetPath) ? root : fallbackShaderRoot(presetPath, fallback);
+        } catch (InvalidPathException e) {
+            return fallbackShaderRoot(presetPath, fallback);
+        }
+    }
+
+    private static Path fallbackShaderRoot(Path presetPath, Path fallback) {
+        return fallback == null ? presetPath : fallback;
     }
 
     private static DisplayShaderPass passForSource(String source, int scale, ScaleType scaleType,
