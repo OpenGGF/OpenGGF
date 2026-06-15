@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **LBZ2 Knuckles launch cameo support art now uses the ROM tile slot:** the
+  Death Egg terrain swap queues `ArtKosM_LBZ2DeathEgg2_8x8` into the
+  `ArtTile_Explosion` slot used by `Map_LBZKnuxPillar`, and refreshes the
+  Knuckles pillar renderer so the swing/platform support appears under
+  Knuckles during the lander cutscene.
+
 - **LBZ2 ending sequence render polish now matches the ROM path more closely:**
   the end-boss platform palette retries once object services are available,
   the hang-ride ship keeps its ROM priority and left-side flipped exhaust

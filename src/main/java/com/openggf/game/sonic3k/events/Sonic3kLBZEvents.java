@@ -6,6 +6,9 @@ import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
+import com.openggf.game.sonic3k.Sonic3kObjectArt;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -25,6 +28,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.resources.LoadOp;
 import com.openggf.level.resources.ResourceLoader;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.data.RomByteReader;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -626,7 +630,27 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
                 mutationContext -> applyDeathEggTerrainResources(
                         mutationContext, blocks16x16, chunks128x128, terrainArt, deathEgg2Art),
                 context);
+        refreshLbzKnuxPillarSheet(level);
         state.setDeathEggTerrainSwapApplied(true);
+    }
+
+    private void refreshLbzKnuxPillarSheet(Level level) {
+        if (levelManager() == null
+                || levelManager().getObjectRenderManager() == null
+                || !(levelManager().getObjectRenderManager().getArtProvider()
+                        instanceof Sonic3kObjectArtProvider provider)) {
+            return;
+        }
+        try {
+            Sonic3kObjectArt art = new Sonic3kObjectArt(level, RomByteReader.fromRom(rom()));
+            var freshSheet = art.buildLevelArtSheetFromRom(
+                    Sonic3kConstants.MAP_LBZ_KNUX_PILLAR_ADDR,
+                    Sonic3kConstants.ART_TILE_LBZ_KNUX_PILLAR,
+                    2);
+            provider.refreshSheetPatterns(Sonic3kObjectArtKeys.LBZ_KNUX_PILLAR, freshSheet);
+        } catch (IOException ex) {
+            throw new IllegalStateException("Unable to refresh LBZ Knuckles pillar art from S3K ROM", ex);
+        }
     }
 
     private MutationEffects applyDeathEggTerrainResources(LayoutMutationContext context,
@@ -639,8 +663,11 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         effects = mergeEffects(effects, copyDeathEgg128x128Chunks(context, chunks128x128));
         effects = mergeEffects(effects, copyArtToPatternTile(
                 context, terrainArt, Sonic3kConstants.LBZ2_8X8_DEATH_EGG_DEST_TILE));
+        // ROM LBZ2_DeathEgg_Launch_PLC: Queue_Kos_Module ArtKosM_LBZ2DeathEgg2_8x8
+        // to ArtTile_Explosion. ObjDat3_6641A/ObjDat_LBZKnuxPillar then render
+        // Map_LBZKnuxPillar from that slot for Knuckles' swing/platform support.
         effects = mergeEffects(effects, copyArtToPatternTile(
-                context, deathEgg2Art, Sonic3kConstants.ART_TILE_LBZ2_DEATH_EGG_2));
+                context, deathEgg2Art, Sonic3kConstants.ART_TILE_LBZ_KNUX_PILLAR));
         return mergeEffects(effects, MutationEffects.redrawAllTilemaps());
     }
 
