@@ -1,5 +1,39 @@
 # Trace Frontier Log
 
+## 2026-06-15 - S1 credits LZ3 Obj0B pole subpixel preservation (f285 -> green)
+
+- Scope: S1 credits demo replay `TestS1Credits03Lz3TraceReplay` advanced past
+  the frame-285 `x_sub` divergence and is now green. No trace data is written
+  into engine state; the fix models ROM Obj0B word writes to the player's native
+  position fields.
+- Selection context: after commit `53344d851` on worktree
+  `.worktrees/aiz-frontier-2`, a broad `*TraceReplay` sweep with
+  `cmd /c "mvn -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`
+  stopped after 65 tests with `Java heap space: failed reallocation of scalar
+  replaced objects`, but the completed reports identified the earliest current
+  completed frontier as `s1_credits_03_lz3` frame 285 `x_sub` ROM=0x6400,
+  engine=0x0000. The user-specified SBZ3 focused replay was separately
+  reconfirmed green on this branch.
+- Root cause: the engine's `Sonic1PoleThatBreaksObjectInstance` used
+  `setCentreX`/`setCentreY` for player position writes, which zero the sprite's
+  subpixel fields. ROM Obj0B uses word-only writes: `.grab` does
+  `move.w d0,obX(a1)` after adding `$14` to the pole X, while `.moveup` and
+  `.movedown` use `subq.w`/`addq.w` and clamp with `move.w d0,obY(a1)`
+  (`docs/s1disasm/_incObj/0B LZ Pole that Breaks.asm`). Those writes update the
+  pixel word only and preserve `x_sub`/`y_sub`.
+- Fix: Obj0B now calls `setCentreXPreserveSubpixel` on grab and
+  `setCentreYPreserveSubpixel` while climbing. Added a focused unit guard that
+  seeds `x_sub=0x6400,y_sub=0x9000` and asserts both survive the grab/climb
+  path.
+- Focused verification:
+  - `cmd /c "mvn -Dmse=off -Dtest=com.openggf.game.sonic1.objects.TestSonic1PoleThatBreaksObjectInstance -DfailIfNoTests=false test"`:
+    passed, 10 tests.
+  - `cmd /c "mvn -Dmse=off -Dtest=com.openggf.tests.trace.s1.TestS1Credits03Lz3TraceReplay -DfailIfNoTests=false test"`:
+    passed, credits LZ3 now reports "All frames match trace. No divergences."
+  - `cmd /c "mvn -Dmse=off -Dtest=com.openggf.tests.trace.s1.TestS1Lz3CompleteRunTraceReplay,com.openggf.tests.trace.s1.TestS1Sbz3CompleteRunTraceReplay -DfailIfNoTests=false test"`:
+    SBZ3 passed; LZ3 complete-run remains expected-red at frame 466 `y`
+    ROM=0x0807 engine=0x0007, a separate Y-wrap/position frontier.
+
 ## 2026-06-15 - S3K AIZ1 vertical-spring inclusive right edge / CPU-Tails Status_Push (f4234 -> f5705)
 
 - Scope: S3K AIZ Act 1 focused replay `TestS3kAizTraceReplay` advanced past the

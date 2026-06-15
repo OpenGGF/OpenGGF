@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 LZ breakable pole preserves native subpixels while grabbing and
+  climbing:** Obj0B now mirrors the ROM's word-only `obX`/`obY` writes when it
+  snaps Sonic onto the pole and moves him up/down, so the low subpixel word is
+  not zeroed by engine centre setters. This clears the credits LZ3 replay's
+  frame-285 `x_sub` divergence while leaving the separate LZ3 complete-run
+  frame-466 Y-wrap frontier unchanged.
+
 - **S3K springs keep ROM inclusive side contact on every variant:** all S3K
   spring variants now expose `SolidObject_cont`'s inclusive right edge, not just
   horizontal springs. This preserves `Status_Push` when CPU Tails is exactly on
