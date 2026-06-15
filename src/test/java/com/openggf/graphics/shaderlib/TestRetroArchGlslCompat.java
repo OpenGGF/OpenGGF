@@ -71,4 +71,22 @@ public class TestRetroArchGlslCompat {
         assertFalse(staged.contains("out vec4 FragColor;"));
         assertFalse(staged.contains("#define gl_FragColor FragColor"));
     }
+
+    @Test
+    public void preservesRetroArchCompatMacrosInBody() throws Exception {
+        String source = """
+                #define COMPAT_TEXTURE texture
+                #ifdef COMPAT_FRAGMENT
+                COMPAT_TEXTURE(Texture, vTexCoord);
+                #endif
+                """;
+
+        String staged = RetroArchGlslCompat.stageSource(source, "FRAGMENT");
+        String body = staged.substring("#version 410 core\n#define FRAGMENT\n".length());
+
+        assertTrue(staged.startsWith("#version 410 core\n#define FRAGMENT\n"));
+        assertTrue(body.contains("#define COMPAT_TEXTURE texture"));
+        assertTrue(body.contains("#ifdef COMPAT_FRAGMENT"));
+        assertTrue(body.contains("COMPAT_TEXTURE(Texture, vTexCoord);"));
+    }
 }
