@@ -195,6 +195,28 @@ public class TestRetroArchGlslCompat {
     }
 
     @Test
+    public void existingFragmentOutputAliasesLegacyFragColorWrites() throws Exception {
+        String source = """
+                #if defined(FRAGMENT)
+                #if __VERSION__ >= 130
+                out vec4 FragColor;
+                #else
+                #define FragColor gl_FragColor
+                #endif
+                void main() {
+                    gl_FragColor = vec4(0.0);
+                    FragColor = vec4(1.0);
+                }
+                #endif
+                """;
+
+        String staged = RetroArchGlslCompat.stageSource(source, "FRAGMENT");
+
+        assertEquals(1, countOccurrences(staged, "out vec4 FragColor;"));
+        assertTrue(staged.contains("#define gl_FragColor FragColor\n"));
+    }
+
+    @Test
     public void precisionQualifiedFragColorOutputPreventsDuplicateInjection() throws Exception {
         String source = """
                 #if defined(VERTEX)

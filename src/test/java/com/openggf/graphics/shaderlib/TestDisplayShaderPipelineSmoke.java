@@ -107,6 +107,49 @@ public class TestDisplayShaderPipelineSmoke {
     }
 
     @Test
+    public void existingFragmentOutputWithLegacyFragColorWriteLinks() {
+        try (GlContext ignored = GlContext.open()) {
+            DisplayShaderPipeline pipeline = new DisplayShaderPipeline();
+            pipeline.resize(32, 32, 32, 32);
+
+            String source = """
+                    #if defined(VERTEX)
+                    attribute vec4 VertexCoord;
+                    attribute vec2 TexCoord;
+                    varying vec2 TEX0;
+                    uniform mat4 MVPMatrix;
+                    void main() {
+                        gl_Position = MVPMatrix * VertexCoord;
+                        TEX0 = TexCoord;
+                    }
+                    #elif defined(FRAGMENT)
+                    #if __VERSION__ >= 130
+                    out vec4 FragColor;
+                    #else
+                    #define FragColor gl_FragColor
+                    #endif
+                    varying vec2 TEX0;
+                    void main() {
+                        if (TEX0.x < 0.0) {
+                            gl_FragColor = vec4(0.0);
+                            return;
+                        }
+                        FragColor = vec4(1.0);
+                    }
+                    #endif
+                    """;
+
+            DisplayShaderPreset preset = new DisplayShaderPreset("existing-output-legacy-write", ShaderPhase.FINAL,
+                    List.of(new DisplayShaderPass(source, source, GlslShape.COMBINED, 1, ScaleType.SOURCE,
+                            false, WrapMode.CLAMP_TO_EDGE)));
+
+            assertTrue(pipeline.activate(preset), pipeline.lastActivationFailure());
+            assertTrue(pipeline.isActive());
+            pipeline.dispose();
+        }
+    }
+
+    @Test
     public void combinedTextureCoordinatesPreserveXAxisAndYAxis() {
         try (GlContext ignored = GlContext.open()) {
             DisplayShaderPipeline pipeline = new DisplayShaderPipeline();

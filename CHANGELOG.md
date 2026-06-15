@@ -16,7 +16,8 @@ All notable changes to the OpenGGF project are documented in this file.
   Presets with unsupported external texture state are filtered from the
   picker, and RetroArch whole-number decimal scales plus fractional scales,
   per-axis scale settings, preset parameter uniforms, precision-qualified
-  `FragColor` outputs, and legacy single-byte encoded shader comments are
+  `FragColor` outputs, legacy `gl_FragColor` writes inside shaders that already
+  declare a fragment output, and legacy single-byte encoded shader comments are
   accepted by the loader. Final preset passes without explicit scale options now
   render at viewport resolution, and source-relative pass targets cascade from
   the previous pass output as RetroArch presets expect.

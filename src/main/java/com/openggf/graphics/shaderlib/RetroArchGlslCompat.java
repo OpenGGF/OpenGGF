@@ -14,6 +14,7 @@ public final class RetroArchGlslCompat {
     private static final Pattern VARYING_TOKEN = Pattern.compile("\\bvarying\\b");
     private static final Pattern FRAGMENT_OUTPUT = Pattern.compile(
             "(?m)^\\s*(?:layout\\s*\\([^\\r\\n]*\\)\\s*)?out\\s+(?:\\w+\\s+)*\\w+\\s+\\w+\\s*(?:\\[[^\\]]+\\])?\\s*;");
+    private static final Pattern OUTPUT_NAME = Pattern.compile("\\b([A-Za-z_]\\w*)\\s*(?:\\[[^\\]]+\\])?\\s*;$");
 
     private RetroArchGlslCompat() {
     }
@@ -38,8 +39,14 @@ public final class RetroArchGlslCompat {
         if (enableParameterUniforms) {
             appendDefineIfMissing(staged, body, "PARAMETER_UNIFORM");
         }
-        boolean needsFragColorOutput = needsFragColorOutput(body, normalizedStage);
-        appendLegacyPrelude(staged, body, normalizedStage, needsFragColorOutput);
+        String stageRelevantBody = stageRelevantBody(body, normalizedStage);
+        FragmentOutputInfo fragmentOutputs = fragmentOutputs(stageRelevantBody);
+        boolean hasLegacyFragColor = "FRAGMENT".equals(normalizedStage)
+                && stageRelevantBody.contains("gl_FragColor");
+        boolean needsFragColorOutput = hasLegacyFragColor && fragmentOutputs.count() == 0;
+        String fragColorAliasTarget = fragColorAliasTarget(hasLegacyFragColor, needsFragColorOutput,
+                fragmentOutputs);
+        appendLegacyPrelude(staged, body, normalizedStage, fragColorAliasTarget);
         appendBody(staged, body, needsFragColorOutput);
 
         return staged.toString();
@@ -90,7 +97,7 @@ public final class RetroArchGlslCompat {
     }
 
     private static void appendLegacyPrelude(StringBuilder staged, String body, String stage,
-                                            boolean needsFragColorOutput) {
+                                            String fragColorAliasTarget) {
         if (TEXTURE2D_CALL.matcher(body).find()) {
             staged.append("#define texture2D texture\n");
         }
@@ -108,16 +115,29 @@ public final class RetroArchGlslCompat {
         if (VARYING_TOKEN.matcher(body).find()) {
             staged.append("#define varying in\n");
         }
-        if (needsFragColorOutput) {
-            staged.append("#define gl_FragColor FragColor\n");
+        if (fragColorAliasTarget != null) {
+            staged.append("#define gl_FragColor ").append(fragColorAliasTarget).append('\n');
         }
     }
 
-    private static boolean needsFragColorOutput(String body, String stage) {
-        String declarationScanBody = stageRelevantBody(body, stage);
-        return "FRAGMENT".equals(stage)
-                && declarationScanBody.contains("gl_FragColor")
-                && !FRAGMENT_OUTPUT.matcher(declarationScanBody).find();
+    private static String fragColorAliasTarget(boolean hasLegacyFragColor, boolean needsFragColorOutput,
+                                               FragmentOutputInfo fragmentOutputs)
+            throws DisplayShaderLoadException {
+        if (!hasLegacyFragColor) {
+            return null;
+        }
+        if (needsFragColorOutput) {
+            return "FragColor";
+        }
+        if (fragmentOutputs.count() == 1) {
+            if (fragmentOutputs.name() == null) {
+                throw new UnsupportedShaderException(
+                        "Shader uses gl_FragColor with an unrecognized fragment output declaration");
+            }
+            return fragmentOutputs.name();
+        }
+        throw new UnsupportedShaderException(
+                "Shader uses gl_FragColor with multiple fragment outputs, which is unsupported");
     }
 
     private static String stageRelevantBody(String body, String stage) {
@@ -192,6 +212,30 @@ public final class RetroArchGlslCompat {
             this.matchedStage = matchedStage;
             this.stageConditional = stageConditional;
         }
+    }
+
+    private static FragmentOutputInfo fragmentOutputs(String body) {
+        Matcher matcher = FRAGMENT_OUTPUT.matcher(body);
+        int count = 0;
+        String name = null;
+        while (matcher.find()) {
+            count++;
+            if (name == null) {
+                name = outputName(matcher.group());
+            }
+        }
+        return new FragmentOutputInfo(count, name);
+    }
+
+    private static String outputName(String declaration) {
+        Matcher matcher = OUTPUT_NAME.matcher(declaration);
+        if (!matcher.find()) {
+            return null;
+        }
+        return matcher.group(1);
+    }
+
+    private record FragmentOutputInfo(int count, String name) {
     }
 
     private static void appendBody(StringBuilder staged, String body, boolean needsFragColorOutput) {
