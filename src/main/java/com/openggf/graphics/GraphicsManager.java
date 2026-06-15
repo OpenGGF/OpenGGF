@@ -8,6 +8,7 @@ import com.openggf.game.GameServices;
 import com.openggf.graphics.color.DisplayColorConverter;
 import com.openggf.graphics.color.DisplayColorProfile;
 import com.openggf.graphics.pipeline.UiRenderPipeline;
+import com.openggf.graphics.shaderlib.DisplayShaderPipeline;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.PatternDesc;
@@ -114,6 +115,7 @@ public class GraphicsManager {
 
 	// Unified UI render pipeline for overlay + fade ordering
 	private UiRenderPipeline uiRenderPipeline;
+	private DisplayShaderPipeline displayShaderPipeline;
 
 	// Batched rendering support
 	private boolean batchingEnabled = true;
@@ -295,6 +297,7 @@ public class GraphicsManager {
 		// Initialize unified UI render pipeline
 		this.uiRenderPipeline = new UiRenderPipeline(this);
 		this.uiRenderPipeline.setFadeManager(this.fadeManager);
+		this.displayShaderPipeline = new DisplayShaderPipeline();
 
 		// Initialize sprite priority rendering system
 		this.spritePriorityShaderProgram = new SpritePriorityShaderProgram(SPRITE_PRIORITY_SHADER_PATH);
@@ -1284,6 +1287,10 @@ public class GraphicsManager {
 			fadeManager.cancel();
 			fadeManager = null;
 		}
+		if (displayShaderPipeline != null) {
+			displayShaderPipeline.dispose();
+			displayShaderPipeline = null;
+		}
 		// Release renderers, palette textures, native buffers
 		releasePerLevelResources();
 		glInitialized = false;
@@ -1321,6 +1328,10 @@ public class GraphicsManager {
 		bootstrapCamera = null;
 		fadeManager = null;
 		bootstrapFadeManager = null;
+		if (displayShaderPipeline != null) {
+			displayShaderPipeline.dispose();
+			displayShaderPipeline = null;
+		}
 		useUnderwaterPaletteForBackground = false;
 		useSpritePriorityShader = false;
 		currentSpriteHighPriority = false;
@@ -1877,6 +1888,10 @@ public class GraphicsManager {
 	public UiRenderPipeline getUiRenderPipeline() {
 		ensureRuntimeManagedReferences();
 		return uiRenderPipeline;
+	}
+
+	public DisplayShaderPipeline getDisplayShaderPipeline() {
+		return displayShaderPipeline;
 	}
 
 	// ==================== Sprite Priority Rendering ====================

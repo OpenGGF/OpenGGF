@@ -225,6 +225,13 @@ straightforward to add new objects, zones, and game-specific behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Runtime display shader library branch (2026-06-15).** Merged
+  `feature/ai-display-shader-library-spec-no-trace`, adding a user-supplied
+  root `shaders/` library, runtime shader cycling, a searchable/folder-based
+  shader picker, RetroArch/BizHawk GLSL preset loading, in-app libretro GLSL
+  shader-pack download/update support, shader activation toasts, and a
+  post-processing pipeline that can apply scene, presentation, or final display
+  shader phases without committing third-party shader assets.
 - **S3K AIZ collapsing-platform on-object trace frontier (2026-06-15).** Merged
   `bugfix/ai-aiz-frontier-f3317`, advancing the S3K AIZ1 trace from frame 3317
   to 4234 by deferring the airborne-rider unseat by one frame on the collapsing

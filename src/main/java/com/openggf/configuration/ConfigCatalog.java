@@ -51,6 +51,19 @@ public final class ConfigCatalog {
                 Set.of("NATIVE_4_3", "WIDE_16_10", "WIDE_16_9", "ULTRA_21_9", "SUPER_32_9")));
         put(DISPLAY_WINDOW_AUTOSIZE, of("display", "windowAutosize", BOOL,
                 "Derive the window size from the aspect preset at the 2x baseline"));
+        put(DISPLAY_SHADER_LIBRARY_ROOT, of("display", "shaderLibraryRoot", STRING,
+                "Root directory scanned for user display shaders"));
+        put(DISPLAY_SHADER_SELECTION, of("display", "shaderSelection", STRING,
+                "Last selected display shader: OFF or a root-relative forward-slash path"));
+        put(DISPLAY_SHADER_NEXT_KEY, of("display", "shaderNextKey", KEY,
+                "Runtime key to advance to the next display shader"));
+        put(DISPLAY_SHADER_PREVIOUS_KEY, of("display", "shaderPreviousKey", KEY,
+                "Runtime key to move to the previous display shader"));
+        put(DISPLAY_SHADER_PICKER_KEY, of("display", "shaderPickerKey", KEY,
+                "Runtime key to open the searchable display shader picker"));
+        put(DISPLAY_SHADER_DEFAULT_PHASE, ofEnum("display", "shaderDefaultPhase",
+                "Fallback render phase for standalone display shaders",
+                Set.of("SCENE", "PRESENTATION", "FINAL")));
         put(WIDESCREEN_DEADZONE_MODE, ofEnum("display", "deadzoneMode",
                 "Camera horizontal deadzone behaviour on wide screens",
                 Set.of("CENTER_SCALED", "PROPORTIONAL")));

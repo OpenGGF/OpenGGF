@@ -4,6 +4,51 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **RetroArch GLSL shader pack install/update is available in-app:** the
+  display shader picker can trigger the libretro GLSL zip download, report
+  progress, install into `shaders/libretro-glsl`, and rescan the shader library
+  when the update completes. The picker now dims the full widescreen
+  presentation area, shows the F5 install hint, browses shader folders with
+  `..` parent navigation, and strips folder prefixes from menu rows and
+  selection toasts. Backspace now moves up one shader-browser folder when the
+  search query is empty. It tolerates malformed upstream preset references
+  during discovery so one bad `.glslp` entry does not hide the downloaded pack.
+  Presets with unsupported external texture state are filtered from the
+  picker, and RetroArch whole-number decimal scales plus fractional scales,
+  per-axis scale settings, preset parameter uniforms, precision-qualified
+  `FragColor` outputs, legacy `gl_FragColor` writes inside shaders that already
+  declare a fragment output, and legacy single-byte encoded shader comments are
+  accepted by the loader. Final preset passes without explicit scale options now
+  render at viewport resolution, and source-relative pass targets cascade from
+  the previous pass output as RetroArch presets expect.
+  Shader activation failures now log the shader label at warning level instead
+  of being hidden behind fine-grained logging, and an opt-in shader-pack
+  diagnostic test can write a compatibility failure report for local shader
+  roots. RetroArch pass-history samplers such as `PassPrev4Texture` now bind
+  the intended earlier pass output, fixing glow resolve chains that sample both
+  the CRT pass and a blurred bloom pass.
+
+- **Display shader notifications now stack with display color toasts:**
+  shader selection/failure notifications render above the existing color-profile
+  toast and are recorded in the post-fade diagnostic overlay order.
+
+- **Display shader pipeline wired into the engine:** `GraphicsManager` now owns
+  the runtime display shader pipeline, Engine applies shader phases at scene,
+  presentation, and final render points, and configured quick-cycle keys plus a
+  searchable picker overlay can activate and persist display shader selections.
+
+- **Display shader GL pipeline added:** `DisplayShaderPipeline` now compiles
+  loaded GLSL passes from source strings, owns capture/per-pass FBOs, supports
+  fragment-only and combined RetroArch-style vertex paths, and composites only
+  the active game viewport rectangle back to the default framebuffer.
+
+- **Display shader configuration foundation added:** `config.yaml` now reserves
+  display shader library settings for a future runtime shader picker, including
+  the shader root, last selection, next/previous/picker keys, and default render
+  phase. BK2 playback debug keys are now unbound by default so the new shader
+  cycle defaults can use the bracket/backslash keys without playback shortcut
+  collisions.
+
 - **S1 LZ breakable pole preserves native subpixels while grabbing and
   climbing:** Obj0B now mirrors the ROM's word-only `obX`/`obY` writes when it
   snaps Sonic onto the pole and moves him up/down, so the low subpixel word is

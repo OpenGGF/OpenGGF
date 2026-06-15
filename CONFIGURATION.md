@@ -21,7 +21,7 @@ The `config.yaml` is organized into the following top-level sections:
 
 | Section | Contents |
 |---------|----------|
-| `display` | Aspect preset, window autosize, deadzone mode, color profile, FPS |
+| `display` | Aspect preset, window autosize, display shader library, deadzone mode, color profile, FPS |
 | `input` | `player1` / `player2` key bindings, `pause` key |
 | `audio` | Enabled flag, region, DAC, FM6, PSG settings |
 | `characters` | Main character, sidekick, data select combos |
@@ -40,7 +40,7 @@ The `config.yaml` is organized into the following top-level sections:
 | `debug.flags` | Debug subsystem, editor enable, collision view overlay |
 | `debug.keys` | All debug/developer keyboard shortcuts |
 | `debug.startup` | Level select on startup, S3K skip intros |
-| `debug.playback` | BK2 movie path and playback control keys |
+| `debug.playback` | BK2 movie path and playback control keys (unbound by default) |
 | `debug.traceRewind` | Key held during Trace Test Mode to rewind engine state |
 | `debug.traceRender` | Trace Test Mode / capture visibility flags |
 | `debug.testMode` | Test mode enable flag and trace catalog directory |
@@ -68,7 +68,70 @@ The `config.yaml` is organized into the following top-level sections:
 | `DISPLAY_COLOR_PROFILE_TOGGLE_KEY` | `display.colorProfileToggleKey` | key | `V` | Runtime key used to cycle display color profiles. The selected profile is saved to `config.yaml` and shown briefly in the bottom-left corner. |
 | `DISPLAY_ASPECT` | `display.aspect` | string | `"NATIVE_4_3"` | Display aspect preset. Controls the native pixel width used by the renderer. Accepted values: `"NATIVE_4_3"` (320 px, default), `"WIDE_16_10"` (352 px), `"WIDE_16_9"` (400 px), `"ULTRA_21_9"` (528 px), `"SUPER_32_9"` (800 px). **EXPERIMENTAL / INCOMPLETE** — widescreen rendering (UI pillarbox, parallax column extension) is not finished; only `"NATIVE_4_3"` is fully supported. |
 | `DISPLAY_WINDOW_AUTOSIZE` | `display.windowAutosize` | bool | `true` | When `true` and a widescreen preset is active, the OS window is derived from the preset at 2x baseline (e.g. `WIDE_16_9` → 800×448). When `false`, `SCREEN_WIDTH`/`SCREEN_HEIGHT` are used verbatim so a custom window size is preserved. Has no effect when `DISPLAY_ASPECT` is `"NATIVE_4_3"`. |
+| `DISPLAY_SHADER_LIBRARY_ROOT` | `display.shaderLibraryRoot` | string | `"shaders"` | Root directory scanned for user display shaders, resolved relative to the working directory. |
+| `DISPLAY_SHADER_SELECTION` | `display.shaderSelection` | string | `"OFF"` | Last selected display shader. Use `"OFF"` or a root-relative forward-slash path under `DISPLAY_SHADER_LIBRARY_ROOT`. |
+| `DISPLAY_SHADER_NEXT_KEY` | `display.shaderNextKey` | key | `RIGHT_BRACKET` | Runtime key used to advance to the next display shader. |
+| `DISPLAY_SHADER_PREVIOUS_KEY` | `display.shaderPreviousKey` | key | `LEFT_BRACKET` | Runtime key used to move to the previous display shader. |
+| `DISPLAY_SHADER_PICKER_KEY` | `display.shaderPickerKey` | key | `BACKSLASH` | Runtime key used to open the searchable display shader picker. |
+| `DISPLAY_SHADER_DEFAULT_PHASE` | `display.shaderDefaultPhase` | enum | `"PRESENTATION"` | Fallback render phase for standalone display shaders. Accepted values: `"SCENE"`, `"PRESENTATION"`, `"FINAL"`. |
 | `WIDESCREEN_DEADZONE_MODE` | `display.deadzoneMode` | string | `"PROPORTIONAL"` | Camera horizontal deadzone behaviour on wide screens: `"CENTER_SCALED"` keeps the native 16px deadzone band; `"PROPORTIONAL"` scales the band width with the screen width. **EXPERIMENTAL** — takes effect only when a widescreen preset is active. |
+
+### Display shader library
+
+Display shaders are user-supplied post-processing shaders loaded from the root-level
+`shaders/` directory. This is separate from `src/main/resources/shaders`, which contains
+engine-owned shaders required for normal rendering. The root `shaders/` directory is
+gitignored so local shader packs and third-party shader licenses stay outside the repo
+unless they are reviewed separately.
+
+Recommended layout:
+
+```text
+shaders/
+  Custom/
+    warm-crt.glsl
+  BizHawk/
+    BizScanlines.cgp
+    BizScanlines.glsl
+  libretro-glsl/
+    crt/
+    scanlines/
+    ...
+    .openggf-libretro-glsl.properties
+```
+
+The engine scans `.glsl`, `.cgp`, and `.glslp` files at runtime and always includes
+`Off`. Use `]` and `[` to cycle quickly, or press `BACKSLASH` to open the searchable
+picker for large libraries. The picker filters by root-relative path and inferred
+category, so typing `crt` narrows entries such as `libretro-glsl/crt/...`.
+
+The optional libretro GLSL pack installer is available from the shader picker: open the
+picker with `BACKSLASH`, then press `F5` to install or update the pack. The app downloads
+the upstream zip archive from GitHub, extracts it into `shaders/libretro-glsl/`, strips the
+archive's top-level folder, stores update metadata in
+`shaders/libretro-glsl/.openggf-libretro-glsl.properties`, and rescans the shader library
+when the install/update finishes. That folder is owned by the installer; put personal
+shaders in a sibling folder such as `shaders/Custom/`.
+
+Compatibility is intentionally bounded. Fragment-only shaders can sample the current
+scene through declared samplers named `s_p`, `SceneTexture`, or `Texture`. RetroArch and
+BizHawk-style uniforms are populated by location when declared: `IN.video_size`,
+`IN.texture_size`, `IN.output_size`, `InputSize`, `TextureSize`, `OutputSize`,
+`FrameCount`, `FrameDirection`, and `MVPMatrix`. Combined shaders may declare
+`VertexCoord`, `TexCoord`, and `COLOR` attributes; the engine binds them to fixed quad
+locations. The engine does not inject uniform declarations.
+
+HLSL/Cg-only presets can be discovered but fail on selection unless a loadable GLSL
+sibling exists. Unsupported preset inheritance, external LUT textures, previous-frame
+history, and malformed shaders fail safely: the selection is rejected, the shader is
+remembered as failed for the current process, rendering continues, and the user can return
+to `Off`.
+
+Display shaders affect presentation only. F12 screenshots are captured after the display
+shader composite, so screenshots include the selected shader. Trace replay/capture uses a
+separate render path that stops before display shader application, so trace artifacts stay
+shader-free; if trace capture is ever refactored to call the main `Engine.display()` path,
+display shader application must be gated off for trace capture.
 
 ---
 
@@ -238,6 +301,9 @@ Audio: headless capture installs `HeadlessSmpsAudioBackend`, a true no-device SM
 
 ## Debug
 
+BK2 playback controls are unbound by default and must be rebound in `debug.playback`
+before BK2 playback can be controlled from the keyboard.
+
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
 | `DEBUG_VIEW_ENABLED` | `debug.flags.debugView` | bool | `false` | Eagerly initialise the debug overlay subsystem. Required for any runtime debug keys to function. Does not show anything on-screen until debug mode is activated. |
@@ -254,6 +320,17 @@ Audio: headless capture installs `HeadlessSmpsAudioBackend`, a true no-device SM
 | `REWIND_AUDIO_HISTORY_LIMIT_TYPE` | `rewind.audioHistoryLimitType` | string | `"time"` | How the rewind audio PCM history ring is capped. `"time"` caps by `REWIND_AUDIO_HISTORY_SECONDS`; `"size"` caps by `REWIND_AUDIO_HISTORY_SIZE_MB`. Held rewind beyond the cap plays silence on develop (the audio-rewind feature branch engages the reverse resynthesizer instead). |
 | `REWIND_AUDIO_HISTORY_SECONDS` | `rewind.audioHistorySeconds` | int | `60` | Seconds of stereo PCM history kept for held-rewind playback when `REWIND_AUDIO_HISTORY_LIMIT_TYPE` is `"time"`. |
 | `REWIND_AUDIO_HISTORY_SIZE_MB` | `rewind.audioHistorySizeMb` | int | `10` | Megabytes of stereo PCM history kept for held-rewind playback when `REWIND_AUDIO_HISTORY_LIMIT_TYPE` is `"size"`. Stereo 16-bit at 48 kHz consumes ~192 KB/s, so 10 MB is roughly 54 s at that sample rate (~57 s at 44.1 kHz). |
+| `PLAYBACK_MOVIE_PATH` | `debug.playback.moviePath` | string | `""` | Path to a BizHawk BK2 movie for playback debugging. |
+| `PLAYBACK_TOGGLE_KEY` | `debug.playback.toggleKey` | key | `""` / unbound | Toggle playback mode. |
+| `PLAYBACK_LOAD_KEY` | `debug.playback.loadKey` | key | `""` / unbound | Load/reload the BK2 movie. |
+| `PLAYBACK_PLAY_PAUSE_KEY` | `debug.playback.playPauseKey` | key | `""` / unbound | Toggle playback play/pause. |
+| `PLAYBACK_STEP_BACK_KEY` | `debug.playback.stepBackKey` | key | `""` / unbound | Step the BK2 cursor backward by one frame. |
+| `PLAYBACK_STEP_FORWARD_KEY` | `debug.playback.stepForwardKey` | key | `""` / unbound | Step the BK2 cursor forward by one frame. |
+| `PLAYBACK_JUMP_BACK_KEY` | `debug.playback.jumpBackKey` | key | `""` / unbound | Jump the BK2 cursor backward by a larger interval. |
+| `PLAYBACK_JUMP_FORWARD_KEY` | `debug.playback.jumpForwardKey` | key | `""` / unbound | Jump the BK2 cursor forward by a larger interval. |
+| `PLAYBACK_FAST_RATE_KEY` | `debug.playback.fastRateKey` | key | `""` / unbound | Cycle playback rate (1x/2x/4x/8x). |
+| `PLAYBACK_RESET_TO_START_KEY` | `debug.playback.resetToStartKey` | key | `""` / unbound | Reset the BK2 cursor to `PLAYBACK_START_OFFSET_FRAME`. |
+| `PLAYBACK_START_OFFSET_FRAME` | `debug.playback.startOffsetFrame` | int | `0` | Starting frame offset for BK2 playback. |
 | `TEST_MODE_ENABLED` | `debug.testMode.enabled` | bool | `false` | Replace the master-title game-select with the Trace Test Mode picker that lists every trace in `debug.testMode.catalogDir` and plays the chosen trace back in the live engine. Dev-only. **When `true`, `DISPLAY_ASPECT` is always forced to `NATIVE_4_3` (320×224) regardless of its configured value** — trace replay and test-mode runs are parity-critical and must always run at 320×224. |
 | `TRACE_CATALOG_DIR` | `debug.testMode.catalogDir` | string | `"src/test/resources/traces"` | Directory scanned by `TraceCatalog` when `TEST_MODE_ENABLED` is true. Resolved against `user.dir`. |
 | `TRACE_SHOW_DESYNC_GHOSTS` | `debug.traceRender.showDesyncGhosts` | bool | `true` | In Trace Test Mode and trace capture, render the desync ghost(s). |
@@ -375,6 +452,12 @@ The following is the bundled default `src/main/resources/config.yaml`:
 display:
   aspect: "NATIVE_4_3"   # Display aspect preset; resolves screen pixel width, height stays 224
   windowAutosize: true   # Derive the window size from the aspect preset at the 2x baseline
+  shaderLibraryRoot: shaders   # Root directory scanned for user display shaders
+  shaderSelection: "OFF"   # Last selected display shader: OFF or a root-relative forward-slash path
+  shaderNextKey: RIGHT_BRACKET   # Runtime key to advance to the next display shader
+  shaderPreviousKey: LEFT_BRACKET   # Runtime key to move to the previous display shader
+  shaderPickerKey: BACKSLASH   # Runtime key to open the searchable display shader picker
+  shaderDefaultPhase: PRESENTATION   # Fallback render phase for standalone display shaders
   deadzoneMode: "PROPORTIONAL"   # Camera horizontal deadzone behaviour on wide screens
   colorProfile: "RAW_RGB"   # Display-only color profile for Mega Drive palette presentation
   colorProfileToggleKey: V   # Runtime key to cycle the display color profile
@@ -503,15 +586,15 @@ debug:
     s3kSkipIntros: false   # Skip S3K zone intro sequences (AIZ biplane, etc.)
   playback:
     moviePath: ""   # Path to a BizHawk BK2 movie for playback debugging
-    toggleKey: B   # Toggle playback mode
-    loadKey: N   # Load/reload the BK2 movie
-    playPauseKey: M   # Toggle playback play/pause
-    stepBackKey: COMMA   # Step the cursor back one frame
-    stepForwardKey: PERIOD   # Step the cursor forward one frame
-    jumpBackKey: LEFT_BRACKET   # Jump the cursor back by a larger interval
-    jumpForwardKey: RIGHT_BRACKET   # Jump the cursor forward by a larger interval
-    fastRateKey: SLASH   # Cycle playback rate (1x/2x/4x/8x)
-    resetToStartKey: BACKSLASH   # Reset the cursor to the start offset
+    toggleKey: ""   # Toggle playback mode
+    loadKey: ""   # Load/reload the BK2 movie
+    playPauseKey: ""   # Toggle playback play/pause
+    stepBackKey: ""   # Step the cursor back one frame
+    stepForwardKey: ""   # Step the cursor forward one frame
+    jumpBackKey: ""   # Jump the cursor back by a larger interval
+    jumpForwardKey: ""   # Jump the cursor forward by a larger interval
+    fastRateKey: ""   # Cycle playback rate (1x/2x/4x/8x)
+    resetToStartKey: ""   # Reset the cursor to the start offset
     startOffsetFrame: 0   # Starting frame offset for BK2 playback
   traceRewind:
     key: R   # Key held in Trace Test Mode to rewind deterministic engine state

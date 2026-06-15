@@ -140,6 +140,18 @@ public enum SonicConfiguration {
 	WIDESCREEN_DEADZONE_MODE,
 	/** When true, the display window is derived from DISPLAY_ASPECT at the 2x baseline; when false, SCREEN_WIDTH/SCREEN_HEIGHT are used verbatim. */
 	DISPLAY_WINDOW_AUTOSIZE,
+	/** Root directory scanned for user display shaders (relative to working dir). */
+	DISPLAY_SHADER_LIBRARY_ROOT,
+	/** Last selected display shader: "OFF" or a root-relative forward-slash path. */
+	DISPLAY_SHADER_SELECTION,
+	/** Runtime key to advance to the next display shader. */
+	DISPLAY_SHADER_NEXT_KEY,
+	/** Runtime key to move to the previous display shader. */
+	DISPLAY_SHADER_PREVIOUS_KEY,
+	/** Runtime key to open the searchable display shader picker. */
+	DISPLAY_SHADER_PICKER_KEY,
+	/** Fallback render phase for standalone display shaders (SCENE/PRESENTATION/FINAL). */
+	DISPLAY_SHADER_DEFAULT_PHASE,
 
 	/**
 	 * Region (NTSC/PAL) for audio timing.

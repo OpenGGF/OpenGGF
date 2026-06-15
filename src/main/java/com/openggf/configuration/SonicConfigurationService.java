@@ -126,6 +126,9 @@ public class SonicConfigurationService {
 		if (migrationService.migrateDeprecatedDisplayColorProfileToggleKey(config)) {
 			configChanged = true;
 		}
+		if (normalizeDisplayShaderSelection(config)) {
+			configChanged = true;
+		}
 
 		boolean defaultsInserted = applyDefaults();
 		validateEnumeratedValues();
@@ -518,6 +521,22 @@ public class SonicConfigurationService {
 		}
 	}
 
+	private boolean normalizeDisplayShaderSelection(Map<String, Object> config) {
+		if (config == null) {
+			return false;
+		}
+		String key = SonicConfiguration.DISPLAY_SHADER_SELECTION.name();
+		Object value = config.get(key);
+		boolean parsedFromUnquotedOff = Boolean.FALSE.equals(value)
+				|| (value instanceof String str && "false".equalsIgnoreCase(str.trim()));
+		if (!parsedFromUnquotedOff) {
+			return false;
+		}
+		config.put(key, "OFF");
+		intCache.clear();
+		return true;
+	}
+
 	private boolean applyDefaults() {
 		if (config == null) {
 			config = new HashMap<>();
@@ -538,6 +557,12 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
 		putDefault(SonicConfiguration.WIDESCREEN_DEADZONE_MODE, "PROPORTIONAL");
 		putDefault(SonicConfiguration.DISPLAY_WINDOW_AUTOSIZE, true);
+		putDefault(SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT, "shaders");
+		putDefault(SonicConfiguration.DISPLAY_SHADER_SELECTION, "OFF");
+		putDefaultKey(SonicConfiguration.DISPLAY_SHADER_NEXT_KEY, GLFW_KEY_RIGHT_BRACKET);
+		putDefaultKey(SonicConfiguration.DISPLAY_SHADER_PREVIOUS_KEY, GLFW_KEY_LEFT_BRACKET);
+		putDefaultKey(SonicConfiguration.DISPLAY_SHADER_PICKER_KEY, GLFW_KEY_BACKSLASH);
+		putDefault(SonicConfiguration.DISPLAY_SHADER_DEFAULT_PHASE, "PRESENTATION");
 		putDefault(SonicConfiguration.DAC_INTERPOLATE, true);
 		putDefault(SonicConfiguration.FM6_DAC_OFF, true); // Default true for Sonic 2 parity
 		putDefault(SonicConfiguration.AUDIO_ENABLED, true);
@@ -569,15 +594,15 @@ public class SonicConfigurationService {
 		putDefaultKey(SonicConfiguration.PAUSE_KEY, GLFW_KEY_ENTER);
 		putDefaultKey(SonicConfiguration.FRAME_STEP_KEY, GLFW_KEY_Q);
 		putDefault(SonicConfiguration.PLAYBACK_MOVIE_PATH, "");
-		putDefaultKey(SonicConfiguration.PLAYBACK_TOGGLE_KEY, GLFW_KEY_B);
-		putDefaultKey(SonicConfiguration.PLAYBACK_LOAD_KEY, GLFW_KEY_N);
-		putDefaultKey(SonicConfiguration.PLAYBACK_PLAY_PAUSE_KEY, GLFW_KEY_M);
-		putDefaultKey(SonicConfiguration.PLAYBACK_STEP_BACK_KEY, GLFW_KEY_COMMA);
-		putDefaultKey(SonicConfiguration.PLAYBACK_STEP_FORWARD_KEY, GLFW_KEY_PERIOD);
-		putDefaultKey(SonicConfiguration.PLAYBACK_JUMP_BACK_KEY, GLFW_KEY_LEFT_BRACKET);
-		putDefaultKey(SonicConfiguration.PLAYBACK_JUMP_FORWARD_KEY, GLFW_KEY_RIGHT_BRACKET);
-		putDefaultKey(SonicConfiguration.PLAYBACK_FAST_RATE_KEY, GLFW_KEY_SLASH);
-		putDefaultKey(SonicConfiguration.PLAYBACK_RESET_TO_START_KEY, GLFW_KEY_BACKSLASH);
+		putDefault(SonicConfiguration.PLAYBACK_TOGGLE_KEY, "");
+		putDefault(SonicConfiguration.PLAYBACK_LOAD_KEY, "");
+		putDefault(SonicConfiguration.PLAYBACK_PLAY_PAUSE_KEY, "");
+		putDefault(SonicConfiguration.PLAYBACK_STEP_BACK_KEY, "");
+		putDefault(SonicConfiguration.PLAYBACK_STEP_FORWARD_KEY, "");
+		putDefault(SonicConfiguration.PLAYBACK_JUMP_BACK_KEY, "");
+		putDefault(SonicConfiguration.PLAYBACK_JUMP_FORWARD_KEY, "");
+		putDefault(SonicConfiguration.PLAYBACK_FAST_RATE_KEY, "");
+		putDefault(SonicConfiguration.PLAYBACK_RESET_TO_START_KEY, "");
 		putDefault(SonicConfiguration.PLAYBACK_START_OFFSET_FRAME, 0);
 		putDefaultKey(SonicConfiguration.TRACE_REWIND_KEY, GLFW_KEY_R);
 		putDefault(SonicConfiguration.TRACE_SHOW_DESYNC_GHOSTS, true);
