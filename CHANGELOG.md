@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 MZ2 complete-run trace advances through object-slot lifetime
+  frontiers:** Obj23 Buzz Bomber missiles now keep their ROM slot until the
+  bottom-boundary delete, Obj4E lava wall trails follow the parent routine-8
+  lifetime, and Obj78 Caterkiller now defers `Cat_ChkGone` deletion to the next
+  object pass. This advances the MZ2 complete-run trace from the frame-2408
+  Batbrain/player-contact frontier to frame 2578's separate lava-geyser /
+  monitor interaction.
+
 - **S2 CNZ1 trace advances through Tails CPU and Point Pokey frontiers:** S2
   Tails now treats live `Status_Push` as ROM-visible before rolling movement
   clears the side-contact bit, while CNZ Point Pokey capture now writes player

@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+## 2026-06-15 - S1 MZ2 object lifetime frontier advance
+
+- Scope: S1 MZ2 complete-run trace remediation advanced the focused replay
+  through the frame-2408 Batbrain/player-contact frontier without hydrating
+  engine state from trace rows and without zone, route, or frame carve-outs.
+  The fix models ROM object lifetime details for Obj23 Buzz Bomber missiles,
+  Obj4E lava wall pieces, and Obj78 Caterkiller deletion timing so dynamic
+  slots line up with the ROM before the later Batbrain interaction.
+- Disassembly evidence:
+  - `docs/s1disasm/_incObj/22, 23 Badnik - Buzz Bomber and Missile.asm:195-242`
+    shows missile cancellation checking the old parent slot for Obj27 and the
+    active missile deleting only below `v_limitbtm2+$E0`.
+  - `docs/s1disasm/_incObj/4E MZ Wall of Lava.asm:100-137` shows the main
+    wall setting routine 8 in its own out-of-range tail while the trail only
+    follows until the parent reaches routine 8.
+  - `docs/s1disasm/_incObj/78 Badnik - Caterkiller.asm:126-140,398-412`
+    shows `Cat_ChkGone` setting routine `$A` for next-pass deletion, while
+    fragments use the retained `obRender` bit before `DisplaySprite`.
+- Diagnostics:
+  - `cmd /c "mvn -Dmse=off ""-Dtest=com.openggf.tests.trace.s1.DebugS1Mz2BatbrainProbe"" ""-DfailIfNoTests=false"" test > target\mz2_probe_after_cater_pending_delete.out 2>&1"`
+  - Result: passed. The known slot split is fixed: engine slot35 remains Obj78
+    at frame **1065**, releases at frame **1066**, layout35 loads into slot35
+    at frame **1185**, and layout34 Batbrain remains in slot45.
+- Focused replay:
+  - `cmd /c "mvn -Dmse=off ""-Dtest=com.openggf.tests.trace.s1.TestS1Mz2CompleteRunTraceReplay"" ""-DfailIfNoTests=false"" test > target\mz2_replay_after_object_lifetime_fixes.out 2>&1"`
+  - Result: expected-red trace with **1010** errors; the previous frame
+    **2408** Batbrain/player-contact frontier is fixed. The first
+    release-blocking error is now frame **2578**: `y_speed` expected `-0568`,
+    actual `0x0568`, around a separate lava-geyser / monitor interaction.
+
 ## 2026-06-14 - S2 CNZ1 Tails CPU and Point Pokey frontier advance
 
 - Scope: S2 CNZ1 level-select trace remediation advanced the focused replay

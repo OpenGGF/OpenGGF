@@ -399,7 +399,6 @@ public class Sonic1LavaWallObjectInstance extends AbstractObjectInstance
      */
     private void handleOutOfRange() {
         routine = 8;
-        setDestroyed(true);
     }
 
     /**
@@ -507,11 +506,16 @@ public class Sonic1LavaWallObjectInstance extends AbstractObjectInstance
         if (isDestroyed()) {
             return false;
         }
-        // When moving (moveFlag set), always persistent (ROM: tst.b lwall_flag / bne.s .moving)
-        if (moveFlag || (role == Role.TRAIL && mainWall != null && mainWall.moveFlag)) {
-            return true;
+        if (role == Role.TRAIL) {
+            // docs/s1disasm/_incObj/4E MZ Wall of Lava.asm:127-133:
+            // LWall_Move only follows the parent and displays; it does not run
+            // out_of_range independently. It deletes only when parent routine 8
+            // is observed.
+            return mainWall != null && !mainWall.isDestroyed() && mainWall.routine != 8;
         }
-        return isInRangeAt(currentX);
+        // LWall_Solid owns the out_of_range tail itself (lines 100-123) so the
+        // main slot can set routine 8 before the trail observes it.
+        return true;
     }
 
     // ========================================================================

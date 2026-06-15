@@ -55,8 +55,9 @@ public class Sonic1CaterkillerBodyInstance extends AbstractObjectInstance
     // Collision size index from disassembly (obColType low bits = $0B).
     private static final int COLLISION_SIZE_INDEX = 0x0B;
 
-    // Fragment velocities from Cat_FragSpeed: dc.w -$200, -$180, $180, $200
-    // Indexed by (obRoutine - 2): routine 4 → -$200, 6 → -$180, 8 → $180
+    // Fragment velocities from Cat_FragSpeed: dc.w -$200, -$180, $180, $200.
+    // ROM indexes with Cat_FragSpeed-2 + obRoutine, so body routines 4/6/8
+    // select entries 1/2/3. The head routine 2 selects entry 0 in the head class.
     private static final int[] FRAG_X_SPEEDS = { -0x200, -0x180, 0x180, 0x200 };
 
     // Frag Y velocity: move.w #-$400,obVelY(a0)
@@ -68,6 +69,11 @@ public class Sonic1CaterkillerBodyInstance extends AbstractObjectInstance
     // Ring buffer marker for direction change
     private static final int DIRECTION_CHANGE_MARKER = 0x80;
 
+    // Cat_Main gives body segments obActWid = 8 and copies obRender without bit 4,
+    // so BuildSprites uses an 8 px X half-width and the default 32 px Y band.
+    private static final int RENDER_HALF_WIDTH = 8;
+    private static final int ASSUMED_RENDER_HALF_HEIGHT = 32;
+
     int currentX;
     int currentY;
     /** Subpixel accumulators (xSub / ySub) for ROM-accurate 16:8 fixed-point integration. */
@@ -76,6 +82,7 @@ public class Sonic1CaterkillerBodyInstance extends AbstractObjectInstance
     private boolean deleting;
     private boolean destroyed;
     private boolean fragmenting;
+    private boolean renderOnScreen;
     private int deleteFrame = -1;
 
     // Body segment type: true if this is a BodySeg2 (has independent animation)
@@ -136,6 +143,7 @@ public class Sonic1CaterkillerBodyInstance extends AbstractObjectInstance
         this.deleting = false;
         this.destroyed = false;
         this.fragmenting = false;
+        this.renderOnScreen = true;
         this.xVelocity = 0;
         this.yVelocity = 0;
         this.inertia = 0;
@@ -143,9 +151,8 @@ public class Sonic1CaterkillerBodyInstance extends AbstractObjectInstance
         this.secondaryState = 0;
         this.animControl = 0;
 
-        // Fragment speed index: segments alternate routine 4/6/4 → frag indices 0/1/2
-        // (routine 4 → index 0, routine 6 → index 1, routine 8 → index 2)
-        this.fragSpeedIndex = segmentIndex;
+        // Body routines are 4/6/8, which map to Cat_FragSpeed entries 1/2/3.
+        this.fragSpeedIndex = segmentIndex + 1;
     }
 
     @Override
@@ -339,11 +346,12 @@ public class Sonic1CaterkillerBodyInstance extends AbstractObjectInstance
             }
         }
 
-        // loc_16CE0: tst.b obRender(a0) / bpl.w Cat_ChkGone
-        // ROM checks both X and Y via obRender on-screen flag.
-        if (!isOnScreen(160)) {
+        // loc_16CE0: tst.b obRender(a0) / bpl.w Cat_ChkGone.
+        if (!renderOnScreen) {
             markDestroyed();
+            return;
         }
+        updateCaterkillerRenderFlag();
     }
 
     /**
@@ -427,12 +435,14 @@ public class Sonic1CaterkillerBodyInstance extends AbstractObjectInstance
             return true;
         }
         if (fragmenting) {
-            // tst.b obRender(a0) / bpl.w Cat_ChkGone
-            // ROM checks both X and Y via obRender on-screen flag.
-            return isOnScreen(160);
+            return renderOnScreen;
         }
         // Body segments persist as long as head exists
         return !head.isDestroyed() && !head.isDeleting();
+    }
+
+    private void updateCaterkillerRenderFlag() {
+        renderOnScreen = isWithinRenderSpriteBounds(RENDER_HALF_WIDTH, ASSUMED_RENDER_HALF_HEIGHT);
     }
 
     @Override

@@ -188,9 +188,10 @@ public class Sonic1BuzzBomberBadnikInstance extends AbstractBadnikInstance {
         final int fMissileX = missileX;
         final int fMissileY = missileY;
         final int fMissileXVel = missileXVel;
+        final int fParentSlot = getSlotIndex();
         spawnFreeChild(() -> new Sonic1BuzzBomberMissileInstance(
                 fMissileX, fMissileY, fMissileXVel, MISSILE_Y_VEL,
-                facingLeft, this));
+                facingLeft, fParentSlot));
 
         // Prevent refiring: set buzzStatus = 1
         buzzStatus = STATUS_FIRED;
