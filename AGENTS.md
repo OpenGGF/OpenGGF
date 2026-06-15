@@ -21,7 +21,7 @@ A gameplay-scoped rewind framework exists for trace debugging (`RewindController
 - **Audio reference:** strive for hardware accuracy. Reference SMPSPlay (`docs/SMPS-rips/SMPSPlay/`) and libvgm chip cores rather than simplified versions.
 
 ### Delivery priority
-S3K playable vertical-slice parity. Close AIZ → HCZ route blockers first, then CNZ/MGZ/ICZ. Implement S3K objects by route impact (traversal blockers, terrain modifiers, hazards, bosses, then high-usage badniks). Uplift S1/S2 or older S3K code onto runtime-owned frameworks opportunistically when it removes active duplication; data select and special-stage polish are follow-up work.
+S3K playable vertical-slice parity and release readiness. AIZ → HCZ remains the primary release slice, but CNZ/MGZ/ICZ/MHZ/LBZ are now active route-stabilization areas with complete-run trace frontiers. Implement S3K work by route impact and trace ownership (traversal blockers, terrain modifiers, hazards, bosses/events, sidekick/object-lifetime mismatches, then high-usage badniks). Uplift S1/S2 or older S3K code onto runtime-owned frameworks opportunistically when it removes active duplication; data select and special-stage polish are follow-up work.
 
 ## Agent Directives
 1.  **Branching:** Always create pull requests from the same branch within a session. Use the following naming convention:
@@ -118,7 +118,7 @@ See `TestHeadlessWallCollision.java` for a complete example.
 
 ### Tier 1: `GameServices` (Static Facade)
 
-Non-object code (managers, event handlers, controllers) accesses core managers through `GameServices` instead of direct `getInstance()` calls. Exposes gameplay-scoped accessors (`camera()`, `level()`, `gameState()`, `timers()`, `sprites()`, `fade()`, `collision()`, `parallax()`, `water()`, `debugOverlay()`, ...) requiring an active `GameplayModeContext`, plus engine globals (`rom()`, `audio()`, `graphics()`, `configuration()`, `module()`, ...) resolved via `EngineServices`, plus `*OrNull()` variants. See `GameServices.java` for the full surface.
+Non-object code (managers, event handlers, controllers) accesses core managers through `GameServices` instead of direct `getInstance()` calls. Exposes gameplay-scoped accessors (`camera()`, `level()`, `gameState()`, `timers()`, `sprites()`, `fade()`, `collision()`, `parallax()`, `water()`, ...) requiring an active `GameplayModeContext`, plus engine globals (`rom()`, `audio()`, `graphics()`, `configuration()`, `module()`, `debugOverlay()`, ...) resolved via `EngineServices`, plus `*OrNull()` variants. See `GameServices.java` for the full surface.
 
 ### Tier 2: `ObjectServices` (Per-Object Injection)
 
@@ -372,7 +372,7 @@ Five `com.openggf.tools` CLIs reduce context loss when implementing objects/zone
     *   **Chunk:** A 16x16 pixel tile, composed of Patterns.
     *   **Block:** A 128x128 pixel area, composed of Chunks.
 *   **Dependencies:** Running the engine requires LWJGL (OpenGL, OpenAL, GLFW bindings) and JOML (math library), already declared as dependencies in `pom.xml`.
-*   **Debug:** `debug.flags.debugView` (true by default) overlays sensor and collision info during gameplay.
+*   **Debug:** `debug.flags.debugView` (false by default) enables runtime debug shortcuts and overlay rendering; when enabled, debug mode overlays sensor and collision info during gameplay.
 *   **Level Loading:** Performed by `LevelManager`, which reads from the ROM through classes in `com.openggf.data`.
 *   **Conditional Tests**: `TestCollisionLogic` uses `Assume.assumeTrue` to skip when a ROM file is not present. This is a known and accepted conditional skip, not a hard `@Ignore`.
 *   **File Endings**: Ensure all source code files end with a newline character.

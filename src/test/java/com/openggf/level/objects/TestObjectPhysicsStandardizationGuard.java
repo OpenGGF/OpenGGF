@@ -85,6 +85,9 @@ class TestObjectPhysicsStandardizationGuard {
     private static final Set<String> LEGACY_RAW_NATIVE_POSITION_WRITE_FILES = Set.of(
             "com/openggf/game/sonic1/events/Sonic1LZWaterEvents.java",
             "com/openggf/game/sonic1/objects/Sonic1JunctionObjectInstance.java",
+            // Obj0B Pole .grab/.moveup/.movedown use word-only obX/obY writes;
+            // see TestSonic1PoleThatBreaksObjectInstance subpixel guard.
+            "com/openggf/game/sonic1/objects/Sonic1PoleThatBreaksObjectInstance.java",
             "com/openggf/game/sonic2/OilSurfaceManager.java",
             "com/openggf/game/sonic2/objects/BreakableBlockObjectInstance.java",
             "com/openggf/game/sonic2/objects/FlipperObjectInstance.java",
@@ -123,7 +126,7 @@ class TestObjectPhysicsStandardizationGuard {
             "com/openggf/level/objects/ObjectManager.java"
     );
     private static final int OBJECT_LIFECYCLE_RATCHET_MINIMUM_SCANNED_FILES = 250;
-    private static final int RAW_SET_DESTROYED_TRUE_OBJECT_PACKAGE_BUDGET = 581;
+    private static final int RAW_SET_DESTROYED_TRUE_OBJECT_PACKAGE_BUDGET = 578;
     private static final int RAW_ADD_DYNAMIC_OBJECT_OBJECT_PACKAGE_BUDGET = 10;
 
     @Test

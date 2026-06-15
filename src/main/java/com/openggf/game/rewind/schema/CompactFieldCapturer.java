@@ -61,9 +61,15 @@ public final class CompactFieldCapturer {
         scratch.reset();
         try {
             for (RewindFieldPlan field : schema.capturedFields()) {
-                field.codec().capture(field.field(), target, scratch.scalarData, scratch.opaqueValues, context);
+                if (field.hasPrimitiveFastPath()) {
+                    field.capturePrimitive(target, scratch.scalarData);
+                } else {
+                    field.codec().capture(field.field(), target, scratch.scalarData, scratch.opaqueValues, context);
+                }
             }
-            return new RewindObjectStateBlob(
+            // toByteArray()/toArray() hand back fresh arrays, so ownership
+            // transfers to the blob without the constructor's defensive copy.
+            return RewindObjectStateBlob.owned(
                     schema.schemaId(), schema.type(),
                     scratch.scalarData.toByteArray(), scratch.opaqueValues.toArray());
         } finally {
@@ -128,11 +134,19 @@ public final class CompactFieldCapturer {
             RewindCaptureContext context,
             RewindClassSchema schema) {
 
-        RewindStateBuffer.Reader scalarData = RewindStateBuffer.reader(blob.scalarData());
-        Object[] opaqueValues = blob.opaqueValues();
+        RewindStateBuffer.Reader scalarData = blob.scalarReader();
+        Object[] opaqueValues = blob.opaqueValuesShared();
         RewindCodec.OpaqueIndex opaqueIndex = new RewindCodec.OpaqueIndex();
         for (RewindFieldPlan field : schema.capturedFields()) {
-            field.codec().restore(field.field(), target, scalarData, opaqueValues, opaqueIndex, context);
+            if (field.hasPrimitiveFastPath()) {
+                field.restorePrimitive(target, scalarData);
+            } else {
+                field.codec().restore(field.field(), target, scalarData, opaqueValues, opaqueIndex, context);
+            }
+        }
+        if (scalarData.remaining() != 0) {
+            throw new IllegalArgumentException("Rewind blob for " + schema.type().getName()
+                    + " left " + scalarData.remaining() + " unread scalar bytes.");
         }
     }
 

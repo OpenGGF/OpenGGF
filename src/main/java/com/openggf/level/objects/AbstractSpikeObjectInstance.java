@@ -65,6 +65,15 @@ public abstract class AbstractSpikeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+        // S2 Obj36 and S3K Obj_Spikes call SolidObjectFull. If this object's
+        // standing bit is still set while the player is already airborne, the
+        // helper clears Status_OnObj / the object bit and returns before
+        // SolidObject_cont can create a fresh contact.
+        return true;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {
         if (player == null) {
             return;

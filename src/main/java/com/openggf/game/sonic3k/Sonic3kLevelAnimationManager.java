@@ -50,6 +50,15 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
         paletteCycler.update();
     }
 
+    /**
+     * Replay bootstrap for native {@code Animate_Tiles} calls that happened
+     * before the first compared row. This deliberately excludes
+     * {@code Animate_Palette}; the ROM setup pass calls only the tile animator.
+     */
+    public void updatePatternsOnlyForReplayBootstrap() {
+        patternAnimator.update();
+    }
+
     @Override
     public String key() {
         return patternAnimator.key();

@@ -130,6 +130,14 @@ class TestS3kSignpostInstance {
     }
 
     @Test
+    void afterRangeUsesRomCoarseBackCameraWord() {
+        assertTrue(S3kSignpostInstance.isWithinRomAfterRange(0x3140, 0x0400, 0x31C0, 0x0400),
+                "Obj_EndSignAfter subtracts Camera_X_pos_coarse_back, which is "
+                        + "(Camera_X_pos-$80)&$FF80, so the signpost remains alive at "
+                        + "the ROM back edge (docs/skdisasm/sonic3k.asm:176262-176266,37550-37553)");
+    }
+
+    @Test
     void afterStateKeepsSignpostAliveOutsideRomRangeWhileResultsAreActive() throws Exception {
         Camera camera = new Camera();
         camera.setX((short) 0x3600);

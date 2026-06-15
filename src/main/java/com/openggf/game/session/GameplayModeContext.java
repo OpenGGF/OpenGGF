@@ -4,12 +4,14 @@ import com.openggf.camera.Camera;
 import com.openggf.audio.AudioManager;
 import com.openggf.debug.PerformanceProfiler;
 import com.openggf.game.BonusStageProvider;
+import com.openggf.game.GameServices;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.NoOpBonusStageProvider;
 import com.openggf.game.animation.AnimatedTileChannelGraph;
 import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
+import com.openggf.game.palette.PaletteColorStateAdapter;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.render.AdvancedRenderModeController;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
@@ -26,7 +28,9 @@ import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.graphics.FadeManager;
+import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
+import com.openggf.level.Palette;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectManager;
@@ -225,12 +229,17 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.deregister("parallax");
             rewindRegistry.deregister("water");
             rewindRegistry.deregister("sprites");
+            rewindRegistry.deregister("palette-colors");
             rewindRegistry.deregisterPostRestoreCallback("parallax-derived-state");
             rewindRegistry.deregisterPostRestoreCallback("sprite-powerup-derived-state");
             rewindRegistry.deregisterPostRestoreCallback("sprite-latched-solid-derived-state");
             rewindRegistry.register(parallaxManager);
             rewindRegistry.register(waterSystem);
             rewindRegistry.register(spriteManager.rewindSnapshottable());
+            rewindRegistry.register(new PaletteColorStateAdapter(
+                    () -> levelPalettesOrNull(levelManager),
+                    () -> underwaterPalettesOrNull(waterSystem, levelManager),
+                    GameServices::graphics));
             rewindRegistry.registerPostRestoreCallback(
                     "parallax-derived-state",
                     levelManager::recomputeParallaxAfterRewindRestore);
@@ -242,6 +251,26 @@ public final class GameplayModeContext implements ModeContext {
                     () -> spriteManager.refreshLatchedSolidObjectsAfterRewindRestore(
                             levelManager.getObjectManager()));
         }
+    }
+
+    private static Palette[] levelPalettesOrNull(LevelManager levelManager) {
+        Level level = levelManager.getCurrentLevel();
+        if (level == null) {
+            return null;
+        }
+        Palette[] palettes = new Palette[level.getPaletteCount()];
+        for (int i = 0; i < palettes.length; i++) {
+            palettes[i] = level.getPalette(i);
+        }
+        return palettes;
+    }
+
+    private static Palette[] underwaterPalettesOrNull(WaterSystem waterSystem, LevelManager levelManager) {
+        Level level = levelManager.getCurrentLevel();
+        if (level == null) {
+            return null;
+        }
+        return waterSystem.getUnderwaterPalette(level.getZoneIndex(), levelManager.getCurrentAct());
     }
 
     /**

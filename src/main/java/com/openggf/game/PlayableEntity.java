@@ -17,6 +17,7 @@ public interface PlayableEntity {
     short getCentreX();
     short getCentreY();
     void setCentreX(short x);
+    void setCentreYPreserveSubpixel(short y);
     short getX();
     short getY();
     void setY(short y);

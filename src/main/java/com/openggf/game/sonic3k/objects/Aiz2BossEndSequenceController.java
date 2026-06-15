@@ -7,7 +7,6 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.graphics.GLCommand;
-import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -166,15 +165,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance {
             if ((player.getCentreY() & 0xFFFF) >= transitionY) {
                 transitionRequested = true;
                 services().requestSessionSave(SaveReason.PROGRESSION_SAVE);
-                services().requestSeamlessTransition(
-                        SeamlessLevelTransitionRequest.builder(
-                                SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
-                                .targetZoneAct(Sonic3kZoneIds.ZONE_HCZ, 0)
-                                .deactivateLevelNow(true)
-                                .preserveMusic(false)
-                                .preserveLevelGamestate(true)
-                                .preserveOffsetCameraPosition(true)
-                                .build());
+                services().requestZoneAndAct(Sonic3kZoneIds.ZONE_HCZ, 0, true);
             }
         }
     }

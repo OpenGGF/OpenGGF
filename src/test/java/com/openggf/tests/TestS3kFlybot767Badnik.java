@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -35,6 +36,7 @@ class TestS3kFlybot767Badnik {
         AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 1024, 0);
         AbstractObjectInstance flybot = createFlybot();
         AbstractPlayableSprite player = playerAt(0x0230, 0x0140);
+        setBoolean(flybot, "waitingForOnscreen", false);
 
         flybot.update(0, player);
         flybot.update(1, player);
@@ -55,6 +57,7 @@ class TestS3kFlybot767Badnik {
         setInt(flybot, "originY", 0x0120);
         setInt(flybot, "yVelocity", -0x200);
         setInt(flybot, "currentY", 0x0120);
+        setBoolean(flybot, "waitingForOnscreen", false);
 
         flybot.update(0, player);
 
@@ -62,6 +65,38 @@ class TestS3kFlybot767Badnik {
         assertEquals(0, readInt(flybot, "xVelocity"));
         assertEquals(0, readInt(flybot, "yVelocity"));
         assertEquals(0x1F, readInt(flybot, "waitTimer"));
+    }
+
+    @Test
+    void traceFrame410KeepsFlybotOnePixelColumnBeforeTouchOverlap() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 1024, 0);
+        AbstractObjectInstance flybot = createFlybotAt(0x0406, 0x05CC);
+        AbstractPlayableSprite player = playerAt(0x0346, 0x062C);
+
+        for (int frame = 308; frame <= 410; frame++) {
+            flybot.update(frame, player);
+        }
+
+        assertEquals("DIVE", readEnumName(flybot, "state"),
+                "ROM Obj_Flybot767 is in routine $06 at LBZ1 trace frame 410.");
+        assertEquals(0x035B, flybot.getX(),
+                "Obj_WaitOffscreen plus Animate_Raw byte_8CB36/byte_8CB3F keep x_pos at the ROM frame-410 value.");
+        assertEquals(0x0617, flybot.getY(),
+                "Animate_Raw skips the first script entry after clr.b anim_frame, so y_pos must match ROM frame 410.");
+    }
+
+    @Test
+    void firstOnscreenWaitPassDoesNotPublishTouchResponseListEntry() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 1024, 0);
+        AbstractObjectInstance flybot = createFlybot();
+        AbstractPlayableSprite player = playerAt(0x0200, 0x0140);
+
+        flybot.update(0, player);
+
+        assertEquals("INIT", readEnumName(flybot, "state"),
+                "Obj_WaitOffscreen returns before Obj_Flybot767 dispatches its routine.");
+        assertFalse(flybot.publishesTouchResponseListEntryThisFrame(),
+                "The wait helper returns before Sprite_CheckDeleteTouchSlotted can add Flybot to the S3K touch list.");
     }
 
     @Test
@@ -81,8 +116,12 @@ class TestS3kFlybot767Badnik {
     }
 
     private static AbstractObjectInstance createFlybot() {
+        return createFlybotAt(0x0200, 0x0100);
+    }
+
+    private static AbstractObjectInstance createFlybotAt(int x, int y) {
         ObjectInstance instance = new Sonic3kObjectRegistry().create(
-                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.FLYBOT_767, 0, 0, false, 0));
+                new ObjectSpawn(x, y, Sonic3kObjectIds.FLYBOT_767, 0, 0, false, 0));
         assertTrue(instance instanceof AbstractObjectInstance,
                 "Flybot767 registry entry should create an object instance");
         return (AbstractObjectInstance) instance;
@@ -112,6 +151,16 @@ class TestS3kFlybot767Badnik {
         try {
             field.setAccessible(true);
             field.setInt(target, value);
+        } catch (IllegalAccessException e) {
+            throw new AssertionError("Failed to write " + fieldName, e);
+        }
+    }
+
+    private static void setBoolean(Object target, String fieldName, boolean value) {
+        Field field = findField(target, fieldName);
+        try {
+            field.setAccessible(true);
+            field.setBoolean(target, value);
         } catch (IllegalAccessException e) {
             throw new AssertionError("Failed to write " + fieldName, e);
         }

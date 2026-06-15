@@ -9,6 +9,7 @@ import com.openggf.game.render.SpecialRenderEffectStage;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
@@ -103,6 +104,112 @@ public class TestS3kIcz1SnowboardIntroHeadless {
     }
 
     @Test
+    public void sonicAndTailsStartsSnowboardIntroWithTailsDormantMarker() {
+        SonicConfigurationService.getInstance()
+                .setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(ZONE_ICZ, ACT_1)
+                .build();
+        AbstractPlayableSprite sonic = fixture.sprite();
+        List<AbstractPlayableSprite> sidekicks = GameServices.sprites().getRegisteredSidekicks();
+
+        assertTrue(hasSnowboardIntroObject(),
+                "ROM SpawnLevelMainSprites loc_690A spawns Obj_LevelIntroICZ1 for Player_mode < 2");
+        assertEquals(0x0800, sonic.getXSpeed() & 0xFFFF);
+        assertEquals(0x0280, sonic.getYSpeed() & 0xFFFF);
+        assertEquals(0x0800, sonic.getGSpeed() & 0xFFFF);
+        assertTrue(sonic.getAir(), "ICZ1 snowboard startup begins airborne");
+        assertTrue(sonic.getRolling(), "ICZ1 snowboard startup begins in rolling posture");
+        assertFalse(sidekicks.isEmpty(), "Sonic+Tails ICZ1 should keep Player_2 registered");
+        AbstractPlayableSprite tails = sidekicks.getFirst();
+        assertEquals(0x7F00, tails.getCentreX() & 0xFFFF,
+                "ROM loc_13A74 calls sub_13ECA to park CPU Tails off-screen");
+        assertEquals(0x0000, tails.getCentreY() & 0xFFFF);
+        assertEquals(SidekickCpuController.State.DORMANT_MARKER, tails.getCpuController().getState());
+        assertTrue(tails.isObjectControlled(),
+                "ROM loc_13A74 writes object_control=$83 for the dormant marker");
+
+        for (int frame = 0; frame < 30; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+        }
+        assertEquals(0x00F2, sonic.getCentreY() & 0xFFFF,
+                "ROM Obj_LevelIntroICZ1 clears object_control before the frame-29 SpeedToPos sample");
+        assertEquals(0x8000, sonic.getYSubpixelRaw());
+        assertEquals(0x02B8, sonic.getYSpeed() & 0xFFFF);
+
+        for (int frame = 30; frame < 118; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+        }
+        assertEquals(0x0800, sonic.getGSpeed() & 0xFFFF,
+                "ROM loc_3943A follows the airborne snowboard overlay without the loc_394A0 ground-speed floor");
+
+        for (int frame = 118; frame < 164; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+        }
+        assertTrue(sonic.isObjectControlled(),
+                "ROM loc_397FA keeps Sonic under object_control=#2 during the snowboard overlay");
+        assertFalse(sonic.isTouchResponseSuppressedByObjectControl(),
+                "ICZ snowboard object_control=#2 must not suppress Test_Ring_Collisions");
+        assertEquals(1, sonic.getRingCount(),
+                "Sonic should collect the first ICZ1 snowboard-route ring while object_control=#2 is active");
+
+        for (int frame = 164; frame < 171; frame++) {
+            fixture.stepFrame(false, false, false, true, false);
+        }
+        fixture.stepFrame(false, false, false, true, true);
+
+        assertFalse(sonic.getAir(),
+                "ROM loc_3984E queues A/B/C input after Sonic's frame, so the snowboard jump cannot happen early");
+        assertFalse(sonic.getRolling(),
+                "Frame-171 ICZ snowboard trace remains grounded and unrolled until the queued logical jump is consumed");
+        assertEquals(5, sonic.getRingCount(),
+                "The low-bit ICZ snowboard object_control state should keep collecting route rings before jump handoff");
+
+        fixture.stepFrame(false, false, false, true, false);
+
+        assertTrue(sonic.getAir(),
+                "The queued snowboard jump press should be consumed by normal player physics on the next frame");
+        assertTrue(sonic.getRolling(),
+                "The queued snowboard jump should use the normal rolling jump transition");
+
+        for (int frame = 173; frame <= 488; frame++) {
+            fixture.stepFrame(false, false, false, true, false);
+        }
+
+        assertEquals(0x1354, sonic.getCentreX(),
+                "ROM loc_395FE should publish object_control=#2 on the final slope-table sample");
+        assertEquals(0x0411, sonic.getCentreY(),
+                "Frame-488 ICZ snowboard trace should include the first normal movement sample after slope exit");
+        assertEquals(0x2B00, sonic.getXSubpixelRaw(),
+                "ROM move.w x_pos table writes preserve the existing x_sub accumulator through slope exit");
+        assertEquals(0xE000, sonic.getYSubpixelRaw(),
+                "ROM move.w y_pos table writes preserve the existing y_sub accumulator through slope exit");
+        assertEquals(0x120D, sonic.getXSpeed() & 0xFFFF,
+                "Sonic's frame-488 x_vel should reflect the ROM post-slope snowboard speed sample");
+        assertEquals(0x076B, sonic.getYSpeed() & 0xFFFF,
+                "Sonic's frame-488 y_vel should reflect the ROM post-slope snowboard speed sample");
+
+        boolean sawCrashHandoff = false;
+        for (int frame = 489; frame <= 1120; frame++) {
+            fixture.stepFrame(false, false, false, true, false);
+            if (!hasSnowboardIntroObject()) {
+                sawCrashHandoff = true;
+                break;
+            }
+        }
+
+        assertTrue(sawCrashHandoff, "Sonic+Tails ICZ1 should reach the snowboard crash handoff");
+        assertEquals(0x7F00, tails.getCentreX() & 0xFFFF,
+                "ROM keeps dormant Tails parked until routine 2 performs its own catch-up warp");
+        assertEquals(0x0000, tails.getCentreY() & 0xFFFF);
+        assertTrue(tails.isObjectControlled(),
+                "ROM leaves object_control=$83 intact when Obj_LevelIntroICZ1 writes Tails_CPU_routine=2");
+        assertEquals(SidekickCpuController.State.CATCH_UP_FLIGHT, tails.getCpuController().getState(),
+                "ROM Obj_LevelIntroICZ1 crash release writes Tails_CPU_routine=2");
+    }
+
+    @Test
     public void introRecoversIfSonicLandsBeforeReachingSnowboard() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(ZONE_ICZ, ACT_1)
@@ -187,11 +294,15 @@ public class TestS3kIcz1SnowboardIntroHeadless {
         assertTrue(sawBigSnowPile, "ICZ1 background event should spawn Obj_ICZ1BigSnowPile");
         assertTrue(sawLockedOnLandedPile, "Sonic should remain locked while standing under the fallen pile");
 
+        int pileEscapeY = sonic.getCentreY();
         fixture.stepFrame(false, false, false, false, true);
 
         assertFalse(sonic.isControlLocked(), "Jumping out of the pile should unlock Sonic");
         assertTrue(sonic.getAir(), "Jumping out of the pile should force Sonic airborne");
-        assertTrue(sonic.getYSpeed() < 0, "Jumping out of the pile should apply upward velocity");
+        assertEquals(0xFA00, sonic.getYSpeed() & 0xFFFF,
+                "ROM Obj_ICZ1BigSnowPile writes y_vel=-$600 on the jump release");
+        assertEquals(pileEscapeY, sonic.getCentreY(),
+                "ROM publishes the pile jump state before the first airborne movement sample");
 
         for (int frame = 0; frame < 12; frame++) {
             fixture.stepFrame(false, false, false, false, false);

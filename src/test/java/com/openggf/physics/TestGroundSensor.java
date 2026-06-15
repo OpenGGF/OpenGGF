@@ -21,10 +21,12 @@ import java.lang.reflect.Field;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyByte;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -391,6 +393,61 @@ public class TestGroundSensor {
     }
 
     @Test
+    public void ceilingEmptyExtensionDistanceUsesMirroredLowNibble() {
+        // No ceiling tile is present. ROM WalkCeiling mirrors the probe low Y
+        // nibble before FindFloor returns its empty extension default.
+        // Center 100 with y_radius 19 gives probe Y 81 (low nibble 1);
+        // mirrored low nibble is 14, so distance is 31 - 14 = 17.
+        mockSprite.setGroundMode(GroundMode.CEILING);
+        mockSprite.setX((short) 100);
+        mockSprite.setY((short) 100);
+
+        GroundSensor sensor = new GroundSensor(mockSprite, Direction.DOWN, (byte) 0, (byte) 19, true);
+        SensorResult result = sensor.scan();
+
+        assertNotNull(result);
+        assertEquals(17, result.distance());
+    }
+
+    @Test
+    public void upwardCeilingProbeAboveLevelTopUsesBlankChunkDistance() {
+        // S1 Sonic_FindCeiling transforms obY-obHeight and calls FindFloor;
+        // FindNearestTile masks above-top lookups into the layout window. If
+        // that wrapped row is blank, the result is non-penetrating rather than
+        // a hard absolute-top ceiling collision.
+        mockSprite.setGroundMode(GroundMode.GROUND);
+        mockSprite.setX((short) 100);
+        mockSprite.setY((short) 15);
+
+        GroundSensor sensor = new GroundSensor(mockSprite, Direction.UP, (byte) 0, (byte) -19, true);
+        SensorResult result = sensor.scan();
+
+        assertNotNull(result);
+        assertEquals(Direction.UP, result.direction());
+        assertTrue(result.distance() > 0);
+    }
+
+    @Test
+    public void upwardCeilingProbeAboveLevelTopUsesRomWrappedLookupWhenSolid() {
+        // The same above-top probe can collide when the ROM's masked layout
+        // row contains solid terrain.
+        ChunkDesc wrappedSolid = new ChunkDesc(1 | (CollisionMode.ALL_SOLID.getValue() << 12));
+        when(mockLevelManager.getChunkDescAt(eq((byte) 0), anyInt(), eq(0x07F3), anyBoolean()))
+                .thenReturn(wrappedSolid);
+
+        mockSprite.setGroundMode(GroundMode.GROUND);
+        mockSprite.setX((short) 0x0E74);
+        mockSprite.setY((short) 15);
+
+        GroundSensor sensor = new GroundSensor(mockSprite, Direction.UP, (byte) 0, (byte) -19, true);
+        SensorResult result = sensor.scan();
+
+        assertNotNull(result);
+        assertEquals(Direction.UP, result.direction());
+        assertEquals(-4, result.distance());
+    }
+
+    @Test
     public void testLeftWallSensorRotation() {
         // Mode: LEFTWALL.
         // Sensor: (x=5, y=10) [Relative to Sprite in GROUND mode].
@@ -632,9 +689,10 @@ public class TestGroundSensor {
                                               Direction direction,
                                               boolean vertical) throws Exception {
         var method = GroundSensor.class.getDeclaredMethod(
-                "scanBackgroundCollision", short.class, short.class, int.class, Direction.class, boolean.class);
+                "scanBackgroundCollision",
+                LevelManager.class, short.class, short.class, int.class, Direction.class, boolean.class);
         method.setAccessible(true);
-        return (SensorResult) method.invoke(sensor, fgX, fgY, solidityBit, direction, vertical);
+        return (SensorResult) method.invoke(sensor, mockLevelManager, fgX, fgY, solidityBit, direction, vertical);
     }
 
     private record TestZoneScrollHandler(int bgCameraX, short bgVscroll) implements ZoneScrollHandler {

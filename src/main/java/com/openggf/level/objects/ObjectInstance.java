@@ -101,6 +101,16 @@ public interface ObjectInstance {
     }
 
     /**
+     * Returns true when this object's just-finished routine published itself to
+     * S3K's {@code Collision_response_list}. Most touch-capable objects tail-call
+     * {@code Sprite_CheckDeleteTouch*}; routines that return before that tail
+     * should override this for previous-list touch timing.
+     */
+    default boolean publishesTouchResponseListEntryThisFrame() {
+        return true;
+    }
+
+    /**
      * Returns true if this object should skip SolidObject checks this frame.
      * ROM parity: on the first frame of an object's existence, obRender bit 7
      * is not yet set (DisplaySprite hasn't run), so the object's update skips
@@ -125,6 +135,15 @@ public interface ObjectInstance {
      */
     default boolean isWithinSolidContactBounds() {
         return true;
+    }
+
+    /**
+     * Refreshes any retained render_flags state after the frame's camera step,
+     * matching the ROM BuildSprites/Render_Sprites pass. Most objects query
+     * camera bounds directly and do not need retained state.
+     */
+    default void refreshPostCameraRenderState() {
+        // Default no-op.
     }
 
     void update(int frameCounter, PlayableEntity player);
@@ -234,6 +253,19 @@ public interface ObjectInstance {
     }
 
     /**
+     * Returns true when the S1 counter-based out-of-range unload should clear
+     * bit 7 of the object's respawn-table entry.
+     * <p>
+     * Most S1 remember-state objects route through {@code RememberState}, which
+     * clears the bit before deleting. A few objects use a direct
+     * {@code out_of_range.w DeleteObject,...} tail instead; those keep bit 7 set
+     * and must not respawn when the cursor sees the same placement entry again.
+     */
+    default boolean clearsRespawnStateOnCounterBasedOutOfRange() {
+        return true;
+    }
+
+    /**
      * Returns true if this object should stay in the active spawn set even after being
      * marked as remembered. Used by objects like monitors and capsules that need to
      * complete their destruction/animation sequence before being removed.
@@ -280,6 +312,16 @@ public interface ObjectInstance {
      * @return {@code false} by default (self-allocating objects keep current behavior)
      */
     default boolean needsPreAllocatedChildSlots() {
+        return false;
+    }
+
+    /**
+     * Returns true when the object's ROM touch-list helper runs after its
+     * routine has already moved the object's touch coordinates. Most inline
+     * player-slot touch checks use the pre-update snapshot; this opt-in models
+     * routines whose Collision_response_list entry represents current x/y.
+     */
+    default boolean usesCurrentTouchResponseState() {
         return false;
     }
 

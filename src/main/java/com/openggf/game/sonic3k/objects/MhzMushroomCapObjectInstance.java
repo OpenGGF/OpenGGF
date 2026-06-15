@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -35,7 +36,7 @@ import java.util.Set;
  * animation-frame gated bounce response.
  */
 public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider {
     private static final int ANIM_IDLE = 0;
     private static final int ANIM_BOUNCE = 1;
     private static final int BOUNCE_MAPPING_FRAME = 3;
@@ -46,6 +47,7 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
     private static final int MEDIUM_BOUNCE_THRESHOLD = 0x0760;
     private static final int HIGH_BOUNCE_THRESHOLD = 0x0860;
     private static final int BOUNCE_BONUS = 0x20;
+    private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0003;
     private static final int[] MAPPING_GROUND_HALF_HEIGHTS = {
             0x12, 0x08, 0x12, 0x12
     };
@@ -115,6 +117,7 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
     private final String artKey;
     private final ObjectAnimationState animationState;
     private final Map<AbstractPlayableSprite, Integer> previousYVelocities = new IdentityHashMap<>();
+    private final Map<AbstractPlayableSprite, Integer> lastLaunchFrames = new IdentityHashMap<>();
     private final Set<AbstractPlayableSprite> standingPlayers =
             Collections.newSetFromMap(new IdentityHashMap<>());
     private int x;
@@ -152,6 +155,13 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int romObjectCodePointerHighWord() {
+        // Obj_MHZMushroomCap lives at 0x0003E080; S3K Tails_CPU_interact stores word 0
+        // of the stood-on object SST (docs/skdisasm/sonic3k.asm:26816-26843, 82129).
+        return ROM_CODE_POINTER_HIGH_WORD;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity player) {
         recordPreviousYVelocity(player);
         ObjectServices services = tryServices();
@@ -170,8 +180,6 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
         animationState.update();
         mappingFrame = animationState.getMappingFrame();
         updatePosition(frameCounter);
-        launchStandingPlayersOnSpringFrame();
-        standingPlayers.clear();
     }
 
     @Override
@@ -204,6 +212,11 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+        return false;
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(artKey);
         if (renderer != null) {
@@ -215,6 +228,9 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
     public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {
         if (contact.standing() && player instanceof AbstractPlayableSprite sprite) {
             standingPlayers.add(sprite);
+            // Obj_MHZMushroomCap calls SolidObjectTop before BounceCharacter
+            // (sonic3k.asm:82170-82186), so launch after the contact snap.
+            launchStandingPlayerOnSpringFrame(sprite, frameCounter);
         }
     }
 
@@ -251,29 +267,33 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void launchStandingPlayersOnSpringFrame() {
+    private void launchStandingPlayerOnSpringFrame(AbstractPlayableSprite player, int frameCounter) {
         if (mappingFrame != BOUNCE_MAPPING_FRAME) {
             return;
         }
-        for (AbstractPlayableSprite player : standingPlayers) {
-            int previousYVelocity = previousYVelocities.getOrDefault(player, (int) player.getYSpeed());
-            int magnitude;
-            if (previousYVelocity < LOW_BOUNCE_THRESHOLD) {
-                magnitude = LOW_BOUNCE_THRESHOLD;
-            } else if (previousYVelocity < MEDIUM_BOUNCE_THRESHOLD) {
-                magnitude = MEDIUM_BOUNCE_THRESHOLD;
-            } else {
-                magnitude = HIGH_BOUNCE_THRESHOLD;
-            }
-            player.setYSpeed((short) -(magnitude + BOUNCE_BONUS));
-            player.setAir(true);
-            player.setOnObject(false);
-            player.setJumping(false);
-            player.setSpindash(false);
-            player.setHurt(false);
-            player.setAnimationId(Sonic3kAnimationIds.SPRING);
-            playBounceSfx();
+        Integer lastFrame = lastLaunchFrames.get(player);
+        if (lastFrame != null && lastFrame == frameCounter) {
+            return;
         }
+        lastLaunchFrames.put(player, frameCounter);
+
+        int previousYVelocity = previousYVelocities.getOrDefault(player, (int) player.getYSpeed());
+        int magnitude;
+        if (previousYVelocity < LOW_BOUNCE_THRESHOLD) {
+            magnitude = LOW_BOUNCE_THRESHOLD;
+        } else if (previousYVelocity < MEDIUM_BOUNCE_THRESHOLD) {
+            magnitude = MEDIUM_BOUNCE_THRESHOLD;
+        } else {
+            magnitude = HIGH_BOUNCE_THRESHOLD;
+        }
+        player.setYSpeed((short) -(magnitude + BOUNCE_BONUS));
+        player.setAir(true);
+        player.setOnObject(false);
+        player.setJumping(false);
+        player.setSpindash(false);
+        player.setHurt(false);
+        player.setAnimationId(Sonic3kAnimationIds.SPRING);
+        playBounceSfx();
     }
 
     private void playBounceSfx() {

@@ -114,17 +114,30 @@ public final class ConfigYamlWriter {
 
     /** Renders a KEY value as its GLFW key name (handles legacy integer codes). */
     private static String formatKey(Object v) {
+        String keyName;
         if (v instanceof Number n) {
-            return GlfwKeyNameResolver.nameOf(n.intValue());
+            keyName = GlfwKeyNameResolver.nameOf(n.intValue());
+        } else {
+            String s = String.valueOf(v).trim();
+            OptionalInt resolved = GlfwKeyNameResolver.resolve(s);
+            if (resolved.isPresent()) {
+                keyName = GlfwKeyNameResolver.nameOf(resolved.getAsInt());
+            } else {
+                try {
+                    keyName = GlfwKeyNameResolver.nameOf(Integer.parseInt(s));
+                } catch (NumberFormatException ignored) {
+                    keyName = s;
+                }
+            }
         }
-        String s = String.valueOf(v).trim();
-        try {
-            return GlfwKeyNameResolver.nameOf(Integer.parseInt(s));
-        } catch (NumberFormatException ignored) {
-            // already a key name (or empty)
+        return needsKeyQuote(keyName) ? quote(keyName) : keyName;
+    }
+
+    private static boolean needsKeyQuote(String keyName) {
+        if (keyName == null || keyName.isEmpty()) {
+            return true;
         }
-        OptionalInt resolved = GlfwKeyNameResolver.resolve(s);
-        return resolved.isPresent() ? GlfwKeyNameResolver.nameOf(resolved.getAsInt()) : s;
+        return keyName.matches("[0-9]+");
     }
 
     /** Always double-quote string/enum scalars so special characters (spaces, [], !, :) are safe. */

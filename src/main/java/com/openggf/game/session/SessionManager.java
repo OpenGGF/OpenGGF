@@ -8,9 +8,9 @@ import java.util.Objects;
 
 @CompositionRoot
 public final class SessionManager {
-    private static WorldSession currentWorldSession;
-    private static GameplayModeContext currentGameplayMode;
-    private static EditorModeContext currentEditorMode;
+    private static volatile WorldSession currentWorldSession;
+    private static volatile GameplayModeContext currentGameplayMode;
+    private static volatile EditorModeContext currentEditorMode;
     private static final EditorSessionFactory EDITOR_SESSION_FACTORY = new EditorSessionFactory();
 
     private SessionManager() {
@@ -105,15 +105,15 @@ public final class SessionManager {
         }
     }
 
-    public static synchronized WorldSession getCurrentWorldSession() {
+    public static WorldSession getCurrentWorldSession() {
         return currentWorldSession;
     }
 
-    public static synchronized GameplayModeContext getCurrentGameplayMode() {
+    public static GameplayModeContext getCurrentGameplayMode() {
         return currentGameplayMode;
     }
 
-    public static synchronized EditorModeContext getCurrentEditorMode() {
+    public static EditorModeContext getCurrentEditorMode() {
         return currentEditorMode;
     }
 

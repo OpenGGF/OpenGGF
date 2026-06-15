@@ -68,11 +68,22 @@ public final class RewindStateBuffer {
     }
 
     public Reader reader() {
-        return new Reader(toByteArray());
+        // toByteArray() already yields a fresh array; skip the Reader's
+        // defensive copy.
+        return new Reader(toByteArray(), true);
     }
 
     public static Reader reader(byte[] data) {
         return new Reader(data);
+    }
+
+    /**
+     * Reader over {@code data} with NO defensive copy. Restore-path callers
+     * own immutable snapshot bytes and must not mutate {@code data} while the
+     * reader is in use.
+     */
+    public static Reader sharedReader(byte[] data) {
+        return new Reader(Objects.requireNonNull(data, "data"), true);
     }
 
     private void ensureCapacity(int bytesToWrite) {
@@ -94,6 +105,10 @@ public final class RewindStateBuffer {
 
         private Reader(byte[] data) {
             this.data = Arrays.copyOf(Objects.requireNonNull(data, "data"), data.length);
+        }
+
+        private Reader(byte[] data, boolean transferOwnership) {
+            this.data = data;
         }
 
         public byte readByte() {
@@ -153,6 +168,10 @@ public final class RewindStateBuffer {
             byte[] values = Arrays.copyOfRange(data, position, position + length);
             position += length;
             return values;
+        }
+
+        public int remaining() {
+            return data.length - position;
         }
 
         private void requireAvailable(int bytes) {

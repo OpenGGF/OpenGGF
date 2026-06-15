@@ -36,6 +36,23 @@ class TestHeadlessTestRunnerBk2Input {
                 "Releasing B while keeping A held is not a new action press");
     }
 
+    @Test
+    void suppressesSyntheticLogicalActionEdgeWhileControlLocked() {
+        Bk2Movie movie = new Bk2Movie(
+                Path.of("synthetic.bk2"),
+                "logkey",
+                Map.of(),
+                List.of(
+                        frame(0, 0x00),
+                        frame(1, 0x02)),
+                1);
+
+        assertTrue(HeadlessTestRunner.hasNewP1ActionPressForLogicalInput(movie, 1, false),
+                "Unlocked movement should still receive the synthetic logical action edge");
+        assertFalse(HeadlessTestRunner.hasNewP1ActionPressForLogicalInput(movie, 1, true),
+                "Ctrl_1_locked blocks the normal logical action update; objects can still read raw input");
+    }
+
     private static Bk2FrameInput frame(int index, int actionMask) {
         return new Bk2FrameInput(index, 0, actionMask, false, "");
     }

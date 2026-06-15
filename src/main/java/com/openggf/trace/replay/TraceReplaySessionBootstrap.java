@@ -8,6 +8,7 @@ import com.openggf.game.InitStep;
 import com.openggf.game.LevelInitProfile;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.session.GameplayTeamBootstrap;
+import com.openggf.game.sonic3k.Sonic3kLevelAnimationManager;
 import com.openggf.game.sonic2.objects.TornadoObjectInstance;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.game.sonic2.trace.Sonic2TornadoRidePrelude;
@@ -36,9 +37,10 @@ import java.util.logging.Logger;
  *       caller loads the level.</li>
  *   <li>{@link #applyBootstrap}: derive any allowed timing prelude from
  *       trace-visible execution timing, advance native timing-only state
- *       where policy allows, seed trace-start global timing counters, and
- *       choose the replay comparison cursor. It must not copy recorded
- *       object, player, sidekick, RNG, or camera state into the engine.</li>
+ *       where policy allows, apply trace-start global state that ROM had
+ *       already established before frame 0, seed trace-start global timing
+ *       counters, and choose the replay comparison cursor. It must not copy
+ *       recorded object, player, sidekick, or camera state into the engine.</li>
  * </ol>
  */
 public final class TraceReplaySessionBootstrap {
@@ -208,6 +210,7 @@ public final class TraceReplaySessionBootstrap {
         }
         OscillationManager.suppressNextFrames(
                 TraceReplayBootstrap.initialOscillationSuppressionFramesForTraceReplay(trace));
+        advanceAnimatedTilePreludeForTraceReplay(trace);
         int sidekickPreludeFrames =
                 TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace);
         int objectPreludeFrames = 0;
@@ -219,6 +222,10 @@ public final class TraceReplaySessionBootstrap {
                 && gameplayMode.getLevelManager().getObjectManager() != null) {
             ObjectManager objectManager = gameplayMode.getLevelManager().getObjectManager();
             objectPreludeFrames = s2TornadoObjectPreludeFrames(trace, objectManager);
+            if (objectPreludeFrames == 0) {
+                objectPreludeFrames = TraceReplayBootstrap
+                        .levelObjectTitleCardPreludeFramesForTraceReplay(trace);
+            }
             if (objectPreludeFrames == 0) {
                 // Non-Tornado S2 native-prelude traces need the generic
                 // title-card object prelude: ROM ticks Level_MainLoop during
@@ -256,6 +263,12 @@ public final class TraceReplaySessionBootstrap {
             applyS2TornadoTitleCardScrollPrelude(trace, objectManager);
             var camera = GameServices.cameraOrNull();
             int cameraX = camera != null ? camera.getX() : 0;
+            // Replay fixtures may reuse an already-loaded SharedLevel after
+            // resetPerTest clears the transient managers. Rebuild the native
+            // ObjPosLoad window from the current camera before title-card
+            // object ticks, so prelude state comes from object code rather
+            // than recorded SST data.
+            objectManager.reset(cameraX);
             AbstractPlayableSprite player = fixture != null ? fixture.sprite() : null;
             List<AbstractPlayableSprite> sidekicks = gameplayMode.getSpriteManager() != null
                     ? gameplayMode.getSpriteManager().getSidekicks()
@@ -324,11 +337,31 @@ public final class TraceReplaySessionBootstrap {
                     fixture != null ? fixture.sprite() : null);
         }
         primeLeaderJumpEdgeFromBk2Prelude(fixture);
+        applyInitialRngSeedForReplay(trace.metadata());
         TraceReplayBootstrap.SnapshotReport snapshotReport =
                 TraceReplayBootstrap.reportPreTraceObjectSnapshots(trace);
         TraceReplayBootstrap.ReplayStartState replayStart =
                 TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, fixture);
         return new BootstrapResult(snapshotReport, replayStart);
+    }
+
+    /**
+     * Applies the ROM RNG seed captured at the first compared trace frame.
+     *
+     * <p>This is a frame-0 bootstrap value, equivalent to loading a save-state
+     * at the BK2 trace start. It is deliberately separate from per-frame trace
+     * rows and aux events; replay still advances RNG natively after this point.
+     * Legacy traces that did not record {@code metadata.rng_seed} keep the seed
+     * established by the normal fixture/live reset path.
+     */
+    public static void applyInitialRngSeedForReplay(TraceMetadata meta) {
+        if (meta == null || meta.initialRngSeed() == null || !GameServices.hasRuntime()) {
+            return;
+        }
+        GameRng rng = GameServices.rngOrNull();
+        if (rng != null) {
+            rng.setSeed(meta.initialRngSeed());
+        }
     }
 
     private static boolean shouldInterleaveS2TitleCardPrelude(TraceData trace,
@@ -548,9 +581,25 @@ public final class TraceReplaySessionBootstrap {
         for (int i = 0; i < preTraceOsc; i++) {
             OscillationManager.update(-(preTraceOsc - i));
         }
+        advanceAnimatedTilePreludeForTraceReplay(trace);
         TraceReplayBootstrap.SnapshotReport snapshotReport =
                 TraceReplayBootstrap.reportPreTraceObjectSnapshots(trace);
         return new BootstrapResult(snapshotReport, TraceReplayBootstrap.ReplayStartState.DEFAULT);
+    }
+
+    private static void advanceAnimatedTilePreludeForTraceReplay(TraceData trace) {
+        int frames = TraceReplayBootstrap.s3kCompleteRunAnimatedTilePreludeFramesForTraceReplay(trace);
+        if (frames <= 0 || GameServices.levelOrNull() == null) {
+            return;
+        }
+        var animatedPatternManager = GameServices.levelOrNull().getAnimatedPatternManager();
+        for (int i = 0; i < frames; i++) {
+            if (animatedPatternManager instanceof Sonic3kLevelAnimationManager s3kAnimationManager) {
+                s3kAnimationManager.updatePatternsOnlyForReplayBootstrap();
+            } else if (animatedPatternManager != null) {
+                animatedPatternManager.update();
+            }
+        }
     }
 
     /**
@@ -637,13 +686,23 @@ public final class TraceReplaySessionBootstrap {
             // handler must run again to restore the falling-intro state.
             var levelEventProvider = GameServices.module().getLevelEventProvider();
             if (levelEventProvider instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager s3kLem) {
-                s3kLem.applyZonePlayerState();
+                if (TraceReplayBootstrap.isS3kCompleteRunSegment(trace)) {
+                    s3kLem.applyZonePlayerStateAfterTitleCard();
+                    s3kLem.armCarryIntroHandoffAfterTitleCard();
+                } else {
+                    s3kLem.applyZonePlayerState();
+                }
             }
             refreshSidekickCpuBoundsFromCamera();
         }
-        // Ground snap: 14 subpixel threshold matches the fixture.
+        // Ground snap: 14 subpixel threshold matches the fixture. S3K
+        // complete-run segments start from an in-level handoff row rather than
+        // a fresh title-card spawn; their metadata centre is already the
+        // recorded ROM handoff position and must not be adjusted again before
+        // the first state-changing row is driven.
         var collision = GameServices.collisionOrNull();
-        if (collision != null) {
+        if (collision != null
+                && TraceReplayBootstrap.shouldGroundSnapMetadataStartForTraceReplay(trace)) {
             collision.resolveGroundAttachment(
                     FrameCollisionPlan.terrainOnly(), sprite, 14, () -> false);
         }

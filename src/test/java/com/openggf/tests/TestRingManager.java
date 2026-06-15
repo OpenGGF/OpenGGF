@@ -61,7 +61,9 @@ public class TestRingManager {
         assertTrue(ringManager.isRenderable(spawn, 1));
 
         assertFalse(ringManager.isRenderable(spawn, 2));
-        assertEquals(-1, ringManager.getSparkleStartFrame(spawn));
+        assertFalse(ringManager.isCollectedAndSparkleDone(spawn, 2),
+                "Ani_Ring's afRoutine has not reached Ring_Delete until the next object update");
+        assertTrue(ringManager.isCollectedAndSparkleDone(spawn, 3));
     }
 
     @Test
@@ -173,6 +175,35 @@ public class TestRingManager {
     }
 
     @Test
+    public void testS1ObjectTouchPlacedRingSkipsDuringHighPostHitInvulnerability() {
+        RingSpawn spawn = new RingSpawn(100, 100);
+        RingManager ringManager = buildRingManager(List.of(spawn));
+        ringManager.reset(0);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 100, (short) 100);
+        player.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_1);
+        player.setInvulnerableFrames(90);
+
+        assertFalse(ringManager.collectPlacedRing(spawn, player, 0),
+                "S1 ReactToItem .preventRingCollect returns while flashtime >= 90");
+        assertFalse(ringManager.isCollected(spawn));
+        assertEquals(0, player.getRingCount());
+
+        player.setInvulnerableFrames(89);
+
+        assertTrue(ringManager.collectPlacedRing(spawn, player, 1),
+                "S1 Obj25 should collect once flashtime drops below 90");
+        assertTrue(ringManager.isCollected(spawn));
+        assertEquals(1, player.getRingCount());
+        assertEquals(2, ringManager.getSparkleStartFrame(spawn),
+                "S1 Obj25 Ring_Sparkle starts on the next object execution after ReactToItem collection");
+        assertFalse(ringManager.isCollectedAndSparkleDone(spawn, 4),
+                "Ring_Delete has not run while the deferred Obj25 sparkle cadence is still one frame short");
+        assertTrue(ringManager.isCollectedAndSparkleDone(spawn, 5),
+                "Ring_Delete frees the Obj25 slot after Ani_Ring's afRoutine frame has displayed");
+    }
+
+    @Test
     public void testCpuSidekickObjectControlledRecoveryCannotCollectStageRings() {
         RingSpawn spawn = new RingSpawn(100, 100);
         RingManager ringManager = buildRingManager(List.of(spawn));
@@ -209,6 +240,22 @@ public class TestRingManager {
         ringManager.collectStageRings(player, 1);
 
         assertTrue(ringManager.isCollected(spawn));
+        assertEquals(1, player.getRingCount());
+    }
+
+    @Test
+    public void testNativeLowBitObjectControlAllowsStageRingCollection() {
+        RingSpawn spawn = new RingSpawn(100, 100);
+        RingManager ringManager = buildRingManager(List.of(spawn));
+        ringManager.reset(0);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 100, (short) 100);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(player);
+
+        ringManager.collectStageRings(player, 0);
+
+        assertTrue(ringManager.isCollected(spawn),
+                "ROM object_control bits 0-6 do not suppress Test_Ring_Collisions");
         assertEquals(1, player.getRingCount());
     }
 

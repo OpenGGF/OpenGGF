@@ -452,6 +452,12 @@ applies to every patrolling-shooter badnik that uses the angle-based
 attack gate. ObjA4/Asteron, ObjA6/SpinyOnWall, and at least three S3K
 analogues share the same idiom.)
 
+**Additional example.** `<pending>`: MCZ Crawlton (`Obj9E`) used only
+MainCharacter for its `Obj_GetOrientationToPlayer` gate. Routing its detection
+through `ObjectPlayerQuery.nearestByRomX(NATIVE_P1_P2, ...)` matched the helper's
+native Sonic/Tails closest-X selection (`docs/s2disasm/s2.asm:75229-75243`,
+`docs/s2disasm/s2.asm:72755-72796`) and cleared `s2_mcz1`.
+
 ---
 
 ## P13 -- SlopedSolidProvider.getSlopeBaseline() returning halfHeight when ROM slope table encodes absolute offsets
@@ -1883,6 +1889,190 @@ shared helper via `JmpTo16_SolidObject` (s2.asm:55132). S3K analogue:
 **Originating commit.** `<pending>` MTZ3 giant-cog ride-release:
 `CogObjectInstance.airborneStaleStandingBitReturnsNoContact()` = true; MTZ3
 frontier f2047 -> f2638, no green/frontier regression.
+
+---
+
+## P44 — Dynamic child slots may preserve parent `x_pos/y_pos` while mappings carry the visible offset
+
+**Pattern.** Some ROM helper routines allocate child SST slots with the
+parent's native `x_pos/y_pos`, then distinguish the children by routine,
+mappings pointer, child pointer, or render data. The child slot's native
+position is not always the visible piece's top-left or centre. `Obj1F`
+collapsing-platform fragments are the canonical case: the parent copies its
+`x_pos/y_pos` into every fragment, then advances the mappings pointer for each
+piece before `Obj1F_FragmentFall` moves/deletes by the render flag path.
+
+**Engine symptom.** Baking the piece offset into the child object's native
+position changes slot pressure and culling timing. Traces usually report a
+later unrelated Tails CPU/status mismatch because the wrong child slot survives
+or frees on a different frame. In OOZ2, correcting the Obj1F fragment position,
+delay, and render-bounds delete path advanced the frontier from f222
+`tails_cpu_interact` to f919 `tails_status_byte`.
+
+**What to check.** During object ports, separate native slot state from visible
+piece offset. If the ROM child creation loop copies `x_pos(a0)`/`y_pos(a0)` and
+changes mappings/subtype/routine fields, keep the engine child's centre at the
+copied native position and apply per-piece offsets only during rendering or
+collision. Also check whether a state bit is read before a shared helper writes
+current-frame standing bits; if so, latch previous-frame contact rather than
+consuming the engine's current contact result.
+
+**ROM citation.** `Obj1F_Main` standing-bit read before `PlatformObject`
+`docs/s2disasm/s2.asm:23815-23827`; `Obj1F_CreateFragments` and
+`Obj1F_FragmentFall` child slot/mappings/delete flow
+`docs/s2disasm/s2.asm:23860-23864,23880-23906`. Aquis wing slots are a related
+slot-pressure case through `JmpTo12_AllocateObject` in `Obj50_Movement`.
+
+**Originating commit.** `<pending>` S2 Obj1F/Aquis slot-pressure sweep:
+`CollapsingPlatformObjectInstance` previous-frame contact latch and fragment
+native-position/render-offset split; `AquisBadnikInstance` wing child slot and
+bullet offset/range-unload parity.
+
+---
+
+## P45 — Rideable object balance bounds must expose ROM `width_pixels`
+
+**Pattern.** S2/S3K player balance-on-object routines read `width_pixels(a1)`
+from the stood-on object's SST, not the object's visible mapping width and not a
+shared engine default. Objects whose init routine writes a non-default
+`width_pixels` must expose that value through `getBalanceWidthPixels()` or
+edge-balance will trigger on the wrong frame.
+
+**Engine symptom.** Tails can flip facing or set/clear the object-standing status
+bit one frame too early/late while standing near a rideable object's edge. In
+EHZ1, Obj18's subtype width was missing from balance bounds, so Tails was
+treated as beyond the left edge on frame 395 even though the ROM still had
+`status=$08`. A first-pass Tails facing fix exposed the same class in HTZ1:
+Obj16 writes `width_pixels=$20`, so the default 16-pixel balance width falsely
+placed Tails on the left edge around frame 192. The same pattern recurred for
+Obj14 seesaws: `Obj14_Init` writes `width_pixels=$30`, and falling back to the
+16-pixel default made HTZ1 frame 1810 falsely enter edge balance while both
+players were centered on the seesaw.
+
+**What to check.** When porting rideable platforms, lifts, and blocks, identify
+the object init value written to `width_pixels`. If the value varies by subtype
+or differs from the shared default, override `getBalanceWidthPixels()` using the
+ROM value. Keep this separate from collision half-widths when the object uses
+different data for `SolidObject` bounds versus player balance checks.
+
+**ROM citation.** S2 Sonic/Tails balance reads `width_pixels(a1)` in
+`docs/s2disasm/s2.asm:36287-36296` and `docs/s2disasm/s2.asm:39361-39368`;
+Tails' single-facing balance edge branch is `docs/s2disasm/s2.asm:39733-39743`.
+Obj16 HTZ lift initializes `width_pixels=$20` at
+`docs/s2disasm/s2.asm:47763-47771`; Obj14 HTZ seesaw initializes
+`width_pixels=$30` at `docs/s2disasm/s2.asm:47402-47409`. S3K Tails uses the
+same single-facing balance convention at `docs/skdisasm/sonic3k.asm:27842-27859`.
+
+**Originating commit.** `<pending>` S2 Tails object-edge balance width sweep:
+`ARZPlatformObjectInstance.getBalanceWidthPixels()` returns subtype width,
+`HTZLiftObjectInstance.getBalanceWidthPixels()` returns `$20`, and
+`PhysicsProfile.singleFacingBalance()` gates Tails' single-facing balance path.
+Follow-up: `<pending>` `SeesawObjectInstance.getBalanceWidthPixels()` returns
+Obj14's `$30` width byte.
+
+---
+
+## P46 — Child spawns must preserve `AllocateObject` vs `AllocateObjectAfterCurrent`
+
+**Pattern.** S2 has two distinct object allocation helpers. `AllocateObject`
+finds the lowest free SST slot, while `AllocateObjectAfterCurrent` scans after
+the current object's slot. The choice is ROM-visible because Tails' interact
+slot, object phase offsets, and later object streaming all consume SST slot
+numbers directly.
+
+**Engine symptom.** A generated child appears correct visually but occupies an
+earlier slot than ROM. A later trace reports an unrelated sidekick CPU/interact
+divergence because the child steals a slot that the ROM reused for a streamed
+layout object. In HTZ1, Obj16 used `AllocateObjectAfterCurrent` to create Obj1C
+scenery, but the engine used lowest-free-slot semantics; the Obj1C child stole
+slot 16, delaying Obj92/Obj18 layout occupancy and keeping `s2_htz1` at frame
+419/453.
+
+**What to check.** For every child-spawning object, read the exact allocator
+called by the ROM routine. Use `spawnFreeChild` only for `AllocateObject` /
+lowest-free-slot calls. Use `spawnChild` for `AllocateObjectAfterCurrent` calls
+so the child is allocated after the parent slot and may execute later in the
+same slot pass when the ROM would reach it.
+
+**ROM citation.** S2 allocator definitions:
+`docs/s2disasm/s2.asm:33674-33711`. HTZ Obj16 scenery child:
+`docs/s2disasm/s2.asm:47827-47833`.
+
+**Originating commit.** `<pending>` S2 HTZ object slot parity:
+`Sonic2LayerSwitcherObjectInstance` invisible Obj03 slot occupant,
+S2 initial preload vertical-bypass parity, and
+`HTZLiftObjectInstance.spawnScenery()` using `spawnChild()`.
+
+---
+
+## P47 — `make_art_tile` priority bit must reach render commands
+
+**Pattern.** S2 object `subObjData` art words encode palette and priority via
+`make_art_tile(...)`. A priority argument of `1` is a ROM-visible sprite
+priority bit, not just metadata for art loading.
+
+**Engine symptom.** The object has the right mappings and frame but renders at
+the wrong priority relative to foreground level tiles or other sprites. This is
+easy to miss in headless object logic tests because position, collision, and
+routine state still match.
+
+**What to check.** When porting badniks, projectiles, monitors, and other
+object children, read the `subObjData` art word for every rendered variant. If
+the ROM uses `make_art_tile(..., palette, 1)`, route rendering through a
+priority-forcing renderer path rather than the default `drawFrameIndex` call.
+Check child/projectile `SubObjData2` rows separately; they may have different
+priority from the parent.
+
+**ROM citation.** Asteron parent `ObjA4_SubObjData` uses
+`make_art_tile(ArtTile_ArtNem_MtzSupernova,0,1)` at
+`docs/s2disasm/s2.asm:76325-76326`; Asteron spike/projectile
+`ObjA4_SubObjData2` uses the same priority bit at
+`docs/s2disasm/s2.asm:74656-74657`.
+
+**Originating commit.** `fix(s2/ui): restore ROM prompt and Asteron priority`
+restores high-priority render commands for `AsteronBadnikInstance` and
+`BadnikProjectileInstance.ProjectileType.ASTERON_SPIKE`.
+
+---
+
+## P48 — Player `obj_control` is not global `Control_Locked`
+
+**Symptom.** After an object captures Sonic or Tails, the player's logical input
+stays stale for the whole capture window. Sidekick follow/control traces then
+show delayed input continuing for many frames after ROM has refreshed
+`Ctrl_1_Logical` / `Ctrl_2_Logical` to zero or to the current pad state.
+
+**Root cause.** ROM object code often writes `obj_control(a1)` on the player,
+for example `move.b #$81,obj_control(a1)`. That byte is player-local object
+control: bit 0 makes `Obj01_Control` skip normal movement, and bit 7 blocks
+touch/physics paths. It is not the global `Control_Locked` byte. ROM
+`Obj01_Control` checks global `Control_Locked` first, refreshes
+`Ctrl_1_Logical` from `Ctrl_1` when global control is unlocked, and only then
+tests `obj_control` bit 0 to skip movement. Mapping `obj_control` bit 0 to
+`player.setControlLocked(true)` wrongly freezes logical input.
+
+**What to check.** When porting capture / tube / launcher / conveyor object
+code:
+1. Treat writes to `obj_control(a1)` as `ObjectControlState` updates only.
+   Do not call `setControlLocked(true)` unless the ROM writes the global
+   `Control_Locked` variable.
+2. On release, clear the player object-control state if ROM clears
+   `obj_control(a1)`, but do not clear global control unless ROM writes
+   `Control_Locked`.
+3. Re-read the player control routine order before adding a latch. In S2,
+   logical input refresh and object-control movement suppression are separate
+   branches.
+
+**ROM citation.** `docs/s2disasm/s2.asm:36227-36235` (`Obj01_Control`:
+global `Control_Locked` gates logical input refresh, then `obj_control` bit 0
+suppresses movement separately); `docs/s2disasm/s2.asm:59005-59021` (ObjD6 /
+Point Pokey writes `#$81` to player `obj_control`); `docs/s2disasm/s2.asm:58746-58756`
+(ObjD6 release path clears object-control state without touching global
+`Control_Locked`).
+
+**Originating commit.** `<pending>` S2 CNZ1 Point Pokey capture no longer
+maps player `obj_control` to global control lock; CNZ1 frontier advances from
+frame 1637 to frame 3675 after the preceding Tails live-push fix.
 
 ---
 

@@ -306,6 +306,17 @@ public class AudioManager {
         deterministicAudioRuntime.discardSubmittedCommandsAfter(frame);
     }
 
+    /**
+     * Drops command-timeline history below the given absolute entry index.
+     * Keyed off the earliest retained audio keyframe's
+     * {@code commandEntryCount} when rewind history is pruned, so every
+     * retained keyframe keeps a valid replay range while the timeline stays
+     * bounded.
+     */
+    public void pruneAudioCommandsBefore(int entryIndex) {
+        commandTimeline.pruneBefore(entryIndex);
+    }
+
     public AudioLogicalSnapshot captureLogicalSnapshot() {
         Set<String> donorGameIds = new LinkedHashSet<>();
         donorGameIds.addAll(donorLoaders.keySet());
@@ -323,7 +334,7 @@ public class AudioManager {
                 ringLeft,
                 commandTimeline.currentFrame(),
                 commandTimeline.nextOrder(),
-                commandTimeline.entries().size(),
+                commandTimeline.entryCount(),
                 backend != null ? backend.captureLogicalSnapshot() : AudioBackendLogicalSnapshot.empty(),
                 donorGameIds,
                 donorBindings);
@@ -686,6 +697,10 @@ public class AudioManager {
         if (backend != null) {
             backend.beginReversePresentation();
         }
+    }
+
+    public boolean isReverseAudioPresentationActive() {
+        return reverseAudioPresentationActive;
     }
 
     public void endReverseAudioPresentation() {

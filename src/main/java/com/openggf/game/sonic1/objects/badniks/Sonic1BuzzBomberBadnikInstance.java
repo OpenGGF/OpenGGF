@@ -43,6 +43,7 @@ public class Sonic1BuzzBomberBadnikInstance extends AbstractBadnikInstance {
 
     // Proximity detection: bhi.s .notsonic (distance >= $60)
     private static final int SONIC_PROXIMITY = 0x60;     // 96 pixels horizontal distance
+    private static final int ON_SCREEN_HALF_WIDTH = 24;  // Buzz_Main: move.b #48/2,obActWid(a0)
 
     // Missile spawn offsets from disassembly .fire routine
     private static final int MISSILE_Y_OFFSET = 0x1C;    // 28 pixels below Buzz Bomber
@@ -138,7 +139,12 @@ public class Sonic1BuzzBomberBadnikInstance extends AbstractBadnikInstance {
             // Do NOT add getXSpeed()>>8 again — that would double-count the velocity.
             int playerX = player.getCentreX();
             int dx = Math.abs(playerX - currentX);
-            if (dx < SONIC_PROXIMITY && isOnScreenX()) {
+            // Buzz .chknearsonic gates this branch with "tst.b obRender(a0)":
+            // docs/s1disasm/.../22, 23 Badnik - Buzz Bomber and Missile.asm:104-109.
+            // BuildSprites sets bit 7 from the prior render pass using obActWid
+            // (BuildSprites.asm:38-58, 115-116), so use the engine's render-flag
+            // equivalent instead of an X-only point check.
+            if (dx < SONIC_PROXIMITY && isOnScreenForTouch()) {
                 // Near Sonic: stop and prepare to fire
                 buzzStatus = STATUS_NEAR_SONIC;
                 timeDelay = NEAR_SONIC_DELAY;
@@ -182,9 +188,10 @@ public class Sonic1BuzzBomberBadnikInstance extends AbstractBadnikInstance {
         final int fMissileX = missileX;
         final int fMissileY = missileY;
         final int fMissileXVel = missileXVel;
+        final int fParentSlot = getSlotIndex();
         spawnFreeChild(() -> new Sonic1BuzzBomberMissileInstance(
                 fMissileX, fMissileY, fMissileXVel, MISSILE_Y_VEL,
-                facingLeft, this));
+                facingLeft, fParentSlot));
 
         // Prevent refiring: set buzzStatus = 1
         buzzStatus = STATUS_FIRED;
@@ -234,6 +241,11 @@ public class Sonic1BuzzBomberBadnikInstance extends AbstractBadnikInstance {
         // ROM MarkObjGone: ~128px left margin, ~64px right margin.
         // We use 160px for a symmetric, generous margin.
         return !isDestroyed() && isOnScreenX(160);
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        return ON_SCREEN_HALF_WIDTH;
     }
 
     @Override

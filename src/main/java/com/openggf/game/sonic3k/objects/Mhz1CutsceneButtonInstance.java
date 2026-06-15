@@ -12,6 +12,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -107,7 +108,9 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
             if (cutscenePressedFrames > 0) {
                 cutscenePressedFrames--;
             }
-            return;
+            if (timer >= 0) {
+                return;
+            }
         }
         knuckles.signalButtonCallback();
     }
@@ -130,7 +133,9 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
     }
 
     private void updateNormalSwitchPath() {
-        boolean standing = contactStanding;
+        // ROM loc_62F0A/loc_62F4C call sub_65DEC (SolidObjectFull) before
+        // testing status(a0)&standing_mask.
+        boolean standing = hasStandingContact(checkpointAll()) || contactStanding;
         contactStanding = false;
 
         if (!normalPressed) {
@@ -181,7 +186,10 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
         doorSwitchActive = true;
         doorLowered = true;
         cutsceneDoorLatched = true;
-        timer = CALLBACK_WAIT;
+        // ROM loc_62ED0 installs Wait_Draw with $2E=$5F, and Obj_Wait
+        // branches to loc_62EFC on the same tick that the counter underflows
+        // (docs/skdisasm/sonic3k.asm:130101-130117,177944-177952).
+        timer = CALLBACK_WAIT - 1;
         services().playSfx(Sonic3kSfx.SWITCH.id);
     }
 
@@ -228,6 +236,18 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         return SOLID_PARAMS;
+    }
+
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // sub_65DEC branches into SolidObject_cont; its right-edge X gate uses
+        // cmp/bhi, so relX == width*2 is still a zero-distance side contact.
+        return true;
     }
 
     @Override

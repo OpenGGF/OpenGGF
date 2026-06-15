@@ -32,6 +32,7 @@ import com.openggf.trace.EngineSnapshot;
 import com.openggf.trace.EngineSidekickCpuState;
 import com.openggf.trace.EngineNearbyObject;
 import com.openggf.trace.EngineNearbyObjectFormatter;
+import com.openggf.trace.FrameComparison;
 import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.TouchResponseDebugHitFormatter;
 import com.openggf.trace.TraceBinder;
@@ -46,6 +47,8 @@ import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import com.openggf.tests.trace.s3k.S3kRequiredCheckpointGuard;
 import com.openggf.tests.trace.s3k.S3kReplayCheckpointDetector;
+import com.openggf.physics.Sensor;
+import com.openggf.physics.SensorResult;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
@@ -101,6 +104,16 @@ public abstract class AbstractTraceReplayTest {
     /** Override only when warning-only reports are deliberately diagnostic debt. */
     protected boolean allowDiagnosticOnlyWarnings() {
         return false;
+    }
+
+    /** Override when a trace needs object-slot aux events to define the true frontier. */
+    protected boolean compareObjectNearEvents() {
+        return false;
+    }
+
+    /** Override with a diagnostic predicate when only a subset of object-near events is relevant. */
+    protected boolean shouldCompareObjectNearEvent(TraceEvent.ObjectNear near) {
+        return true;
     }
 
     @Test
@@ -189,8 +202,9 @@ public abstract class AbstractTraceReplayTest {
             EngineSnapshot frameZero = captureEngineSnapshot(fixture);
             binder.compareBootstrapFrame0(trace, frameZero);
 
+            FrontierReplayStopper frontierStopper = FrontierReplayStopper.fromSystemProperties();
             if ("s3k".equals(meta.game())) {
-                replayS3kTrace(trace, meta, fixture, binder, replayStart);
+                replayS3kTrace(trace, meta, fixture, binder, replayStart, frontierStopper);
             } else {
                 int startTraceIndex = replayStart.startingTraceIndex();
                 for (int i = startTraceIndex; i < trace.frameCount(); i++) {
@@ -228,7 +242,7 @@ public abstract class AbstractTraceReplayTest {
                     var sprite = fixture.sprite();
 
                     // Capture engine-side diagnostic state for context window
-                    EngineDiagnostics engineDiag = captureEngineDiagnostics(sprite);
+                    EngineDiagnostics engineDiag = captureEngineDiagnostics(sprite, comparisonExpected);
                     TraceCharacterState actualSidekick = captureFirstSidekickState();
                     String secondaryCharacterLabel = meta.recordedSidekicks().isEmpty()
                             ? "sidekick"
@@ -257,6 +271,16 @@ public abstract class AbstractTraceReplayTest {
                                 engineDiag.cameraX(), engineDiag.cameraY(), engineDiagText),
                         secondaryCharacterLabel, actualSidekick,
                         expectedSidekickCpu, actualSidekickCpu, expectedSidekickNormalStep);
+                    if (compareObjectNearEvents()) {
+                        binder.compareObjectNear(
+                                comparisonExpected.frame(),
+                                objectNearEventsForPrimary(trace, comparisonExpected.frame()),
+                                captureEngineNearbyObjects(sprite));
+                    }
+                    if (observeFrontierAndShouldStop(
+                            frontierStopper, binder, comparisonExpected.frame())) {
+                        break;
+                    }
 
                 }
             }
@@ -272,10 +296,10 @@ public abstract class AbstractTraceReplayTest {
             }
 
             // 8. Log summary
-            System.out.println(report.toSummary());
+            System.out.println(report.toCompactSummary());
 
             // 9. Assert no errors
-            if (report.hasErrors()) {
+            if (report.hasErrors() && Boolean.getBoolean("trace.print.context")) {
                 System.err.println("\n=== Context window around first error ===");
                 System.err.println(report.getContextWindow(firstReportErrorFrame(report), 10));
             }
@@ -291,11 +315,11 @@ public abstract class AbstractTraceReplayTest {
 
     protected void assertReportHasNoReleaseBlockingDivergences(DivergenceReport report) {
         if (report.hasErrors()) {
-            fail(report.toSummary());
+            fail(report.toCompactSummary());
         }
         if (report.hasWarnings() && !allowDiagnosticOnlyWarnings()) {
             fail("Trace replay warning report is release-blocking by default: "
-                    + report.toSummary());
+                    + report.toCompactSummary());
         }
     }
 
@@ -344,7 +368,8 @@ public abstract class AbstractTraceReplayTest {
 
     private void replayS3kTrace(TraceData trace, TraceMetadata meta,
                                 HeadlessTestFixture fixture, TraceBinder binder,
-                                TraceReplayBootstrap.ReplayStartState replayStart) {
+                                TraceReplayBootstrap.ReplayStartState replayStart,
+                                FrontierReplayStopper frontierStopper) {
         int driveTraceIndex = replayStart.startingTraceIndex();
         TraceFrame previousDriveFrame = replayStart.hasSeededTraceState()
                 ? trace.getFrame(replayStart.seededTraceIndex())
@@ -357,7 +382,7 @@ public abstract class AbstractTraceReplayTest {
             TraceReplayBootstrap.ReplayPrimaryState seededPrimary =
                     TraceReplayBootstrap.capturePrimaryReplayStateForComparison(
                             trace, seededFrame, fixture.sprite());
-            EngineDiagnostics engineDiag = captureEngineDiagnostics(fixture.sprite());
+            EngineDiagnostics engineDiag = captureEngineDiagnostics(fixture.sprite(), seededFrame);
             String romDiag = combineDiagnostics(
                     seededFrame.hasExtendedData() ? seededFrame.formatDiagnostics() : "",
                     TraceEventFormatter.summariseFrameEvents(
@@ -384,6 +409,7 @@ public abstract class AbstractTraceReplayTest {
                     expectedSidekickCpu,
                     actualSidekickCpu,
                     expectedSidekickNormalStep);
+            observeFrontierAndShouldStop(frontierStopper, binder, seededFrame.frame());
 
             for (int frame = 0; frame <= replayStart.seededTraceIndex(); frame++) {
                 for (TraceEvent event : trace.getEventsForFrame(frame)) {
@@ -443,6 +469,21 @@ public abstract class AbstractTraceReplayTest {
                             ? fixture.stepFrameFromRecordingUsingPreviousInput()
                             : fixture.stepFrameFromRecording();
 
+            if (phase == TraceExecutionPhase.VBLANK_ONLY
+                    && driveTraceIndex == replayStart.startingTraceIndex()
+                    && TraceReplayBootstrap.isS3kCompleteRunHandoffCounterTickRow(trace)) {
+                // The handoff row is skipped for gameplay comparison, but ROM ran a
+                // full LevelLoop on it and incremented Level_frame_counter before
+                // Process_Sprites (sonic3k.asm:7889-7894). Mirror that single counter
+                // tick so the S3K Tails-CPU gates read the ROM-visible
+                // Level_frame_counter natively for the rest of the replay, with no
+                // trace-gated compensation inside the shared sidekick controller.
+                SpriteManager handoffSprites = GameServices.spritesOrNull();
+                if (handoffSprites != null) {
+                    handoffSprites.setFrameCounter(handoffSprites.getFrameCounter() + 1);
+                }
+            }
+
             if (!binder.validateInput(driveFrame, bk2Input)) {
                 fail(String.format(
                     "Input alignment error at trace frame %d: " +
@@ -458,7 +499,7 @@ public abstract class AbstractTraceReplayTest {
                 TraceReplayBootstrap.ReplayPrimaryState actualPrimary =
                         TraceReplayBootstrap.capturePrimaryReplayStateForComparison(
                                 trace, driveFrame, fixture.sprite());
-                EngineDiagnostics engineDiag = captureEngineDiagnostics(fixture.sprite());
+                EngineDiagnostics engineDiag = captureEngineDiagnostics(fixture.sprite(), driveFrame);
                 String romDiag = combineDiagnostics(
                         driveFrame.hasExtendedData() ? driveFrame.formatDiagnostics() : "",
                         TraceEventFormatter.summariseFrameEvents(trace.getEventsForFrame(driveTraceIndex)));
@@ -483,6 +524,9 @@ public abstract class AbstractTraceReplayTest {
                         expectedSidekickCpu,
                         actualSidekickCpu,
                         expectedSidekickNormalStep);
+                if (observeFrontierAndShouldStop(frontierStopper, binder, driveFrame.frame())) {
+                    break;
+                }
             }
 
             TraceEvent.Checkpoint traceCheckpoint = trace.latestCheckpointAtOrBefore(driveTraceIndex);
@@ -497,6 +541,15 @@ public abstract class AbstractTraceReplayTest {
             driveTraceIndex++;
             previousDriveFrame = driveFrame;
         }
+    }
+
+    private boolean observeFrontierAndShouldStop(
+            FrontierReplayStopper frontierStopper,
+            TraceBinder binder,
+            int frame) {
+        FrameComparison comparison = binder.comparisonForFrame(frame);
+        frontierStopper.observe(comparison);
+        return frontierStopper.shouldStopAfterFrame(frame);
     }
 
     private S3kCheckpointProbe captureS3kProbe(int replayFrame, AbstractPlayableSprite sprite) {
@@ -650,52 +703,18 @@ public abstract class AbstractTraceReplayTest {
     }
 
     private TraceCharacterState captureCharacterState(AbstractPlayableSprite sprite) {
-        ObjectManager om = GameServices.level() != null
-                ? GameServices.level().getObjectManager() : null;
-        int standOnSlot = -1;
-        if (om != null) {
-            ObjectInstance ridingObj = om.getRidingObject(sprite);
-            if (ridingObj instanceof AbstractObjectInstance aoi && aoi.getSlotIndex() >= 0) {
-                standOnSlot = aoi.getSlotIndex();
-            }
-        }
-
-        int statusByte = 0;
-        if (sprite.getDirection() == com.openggf.physics.Direction.LEFT) {
-            statusByte |= 0x01;
-        }
-        if (sprite.getAir()) statusByte |= 0x02;
-        if (sprite.getRolling()) statusByte |= 0x04;
-        if (sprite.isOnObject()) statusByte |= 0x08;
-        if (sprite.isInWater()) statusByte |= 0x40;
-
-        int routine = sprite.isHurt() ? 0x04 : 0x02;
-
-        return new TraceCharacterState(true,
-                sprite.getCentreX(),
-                sprite.getCentreY(),
-                sprite.getXSpeed(),
-                sprite.getYSpeed(),
-                sprite.getGSpeed(),
-                sprite.getAngle(),
-                sprite.getAir(),
-                sprite.getRolling(),
-                sprite.getGroundMode().ordinal(),
-                sprite.getXSubpixelRaw(),
-                sprite.getYSubpixelRaw(),
-                routine,
-                statusByte,
-                standOnSlot);
+        return TraceCharacterState.fromSprite(sprite);
     }
 
     /**
      * Capture engine-side diagnostic state for the context window.
-     * These values are NOT compared for pass/fail â€” they appear alongside
-     * ROM trace diagnostics for human cross-referencing.
+     * Some fields are compared by TraceBinder when the ROM trace carries the
+     * matching state; the rest appear alongside ROM diagnostics for
+     * cross-referencing.
      */
-    private EngineDiagnostics captureEngineDiagnostics(AbstractPlayableSprite sprite) {
+    private EngineDiagnostics captureEngineDiagnostics(AbstractPlayableSprite sprite, TraceFrame expected) {
         // Routine: S1 uses 0=init, 2=control, 4=hurt, 6=death
-        int routine = sprite.isHurt() ? 0x04 : 0x02;
+        int routine = TraceCharacterState.routineFromSprite(sprite);
 
         // Riding object: which SST slot is the player standing on?
         int standOnSlot = -1;
@@ -714,13 +733,7 @@ public abstract class AbstractTraceReplayTest {
         int rings = sprite.getRingCount();
 
         // Status byte (replicate ROM's status encoding)
-        int statusByte = 0;
-        if (sprite.getDirection() == com.openggf.physics.Direction.LEFT)
-            statusByte |= 0x01;
-        if (sprite.getAir()) statusByte |= 0x02;
-        if (sprite.getRolling()) statusByte |= 0x04;
-        if (sprite.isOnObject()) statusByte |= 0x08;
-        if (sprite.isInWater()) statusByte |= 0x40;
+        int statusByte = TraceCharacterState.statusByteFromSprite(sprite);
 
         // Camera X/Y for ROM-trace cross-reference and camera_x/camera_y
         // comparison in TraceBinder.
@@ -758,7 +771,10 @@ public abstract class AbstractTraceReplayTest {
 
         String solidEvent = "";
         solidEvent = combineDiagnostics(solidEvent, String.format(
-                "eng-player vel=(%04X,%04X) g=%04X dir=%s bal=%d rj=%s jump=%s shoes=%s accel=%04X max=%04X lock=%s moveLock=%d objCtrl=%s objSup=%s in=(%s,%s,%s,%s) look=%04X bias=%04X",
+                "eng-player anim=%02X frame=%02X tick=%02X vel=(%04X,%04X) g=%04X dir=%s bal=%d rj=%s jump=%s shoes=%s accel=%04X max=%04X lock=%s moveLock=%d objCtrl=%s objSup=%s in=(%s,%s,%s,%s) look=%04X bias=%04X",
+                sprite.getAnimationId() & 0xFF,
+                sprite.getMappingFrame() & 0xFF,
+                sprite.getAnimationTick() & 0xFF,
                 sprite.getXSpeed() & 0xFFFF,
                 sprite.getYSpeed() & 0xFFFF,
                 sprite.getGSpeed() & 0xFFFF,
@@ -779,6 +795,7 @@ public abstract class AbstractTraceReplayTest {
                 sprite.isJumpPressed(),
                 sprite.getLookDelayCounter() & 0xFFFF,
                 GameServices.camera() != null ? GameServices.camera().getYPosBias() & 0xFFFF : -1));
+        solidEvent = combineDiagnostics(solidEvent, summariseGroundProbeDiagnostics("eng-ground", sprite));
         if (om != null) {
             TouchResponseDebugState touchState = om.getTouchResponseDebugState();
             if (touchState != null) {
@@ -800,45 +817,11 @@ public abstract class AbstractTraceReplayTest {
                                 sprite.getCentreY()));
             }
 
-            List<EngineNearbyObject> nearbyObjects = new ArrayList<>();
-            for (ObjectInstance instance : om.getActiveObjects()) {
-                if (!(instance instanceof AbstractObjectInstance aoi)) {
-                    continue;
-                }
-                ObjectSpawn spawn = aoi.getSpawn();
-                if (spawn == null) {
-                    continue;
-                }
-                int currentX = aoi.getX();
-                int currentY = aoi.getY();
-                int dx = Math.abs(currentX - sprite.getCentreX());
-                int dy = Math.abs(currentY - sprite.getCentreY());
-                if (dx > 160 || dy > 160) {
-                    continue;
-                }
-                TouchResponseProvider provider =
-                        instance instanceof TouchResponseProvider trp ? trp : null;
-                nearbyObjects.add(new EngineNearbyObject(
-                        aoi.getSlotIndex(),
-                        spawn.objectId(),
-                        aoi.getName(),
-                        currentX,
-                        currentY,
-                        spawn.x(),
-                        spawn.y(),
-                        provider != null,
-                        provider != null ? provider.getCollisionFlags() : -1,
-                        provider != null ? aoi.getPreUpdateCollisionFlags() : -1,
-                        aoi.getPreUpdateX(),
-                        aoi.getPreUpdateY(),
-                        aoi.isSkipTouchThisFrame(),
-                        aoi.isSkipSolidContactThisFrame(),
-                        aoi.isOnScreenForTouch(),
-                        aoi.traceDebugDetails()));
-            }
-            nearbyObjects.sort(Comparator.comparingInt(EngineNearbyObject::slot));
+            List<EngineNearbyObject> nearbyObjects = captureEngineNearbyObjects(sprite);
             solidEvent = combineDiagnostics(solidEvent,
                     EngineNearbyObjectFormatter.summarise(nearbyObjects));
+            solidEvent = combineDiagnostics(solidEvent,
+                    summariseExpectedOnObjectSlot(om, expected, sprite));
             solidEvent = combineDiagnostics(solidEvent, summariseS2SkyChaseBadnikDiagnostics(om));
             solidEvent = combineDiagnostics(solidEvent, summariseSidekickStateDiagnostics(om));
             solidEvent = combineDiagnostics(solidEvent, summariseSidekickNearbyObjects(om));
@@ -850,6 +833,92 @@ public abstract class AbstractTraceReplayTest {
         return new EngineDiagnostics(routine, standOnSlot, standOnType, rings, statusByte,
                 camX, camY, cursorIdx, leftCursorIdx, fwdCtr, bwdCtr, solidEvent, xSub, ySub,
                 ridingObject, standingSnapshot);
+    }
+
+    private List<TraceEvent.ObjectNear> objectNearEventsForPrimary(TraceData trace, int frame) {
+        List<TraceEvent.ObjectNear> events = new ArrayList<>();
+        for (TraceEvent event : trace.getEventsForFrame(frame)) {
+            if (event instanceof TraceEvent.ObjectNear near
+                    && (near.character() == null || near.character().isBlank()
+                    || "sonic".equalsIgnoreCase(near.character()))
+                    && shouldCompareObjectNearEvent(near)) {
+                events.add(near);
+            }
+        }
+        return events;
+    }
+
+    private List<EngineNearbyObject> captureEngineNearbyObjects(AbstractPlayableSprite sprite) {
+        ObjectManager om = GameServices.level() != null
+                ? GameServices.level().getObjectManager() : null;
+        if (om == null || sprite == null) {
+            return List.of();
+        }
+        List<EngineNearbyObject> nearbyObjects = new ArrayList<>();
+        for (ObjectInstance instance : om.getActiveObjects()) {
+            if (!(instance instanceof AbstractObjectInstance aoi)) {
+                continue;
+            }
+            ObjectSpawn spawn = aoi.getSpawn();
+            if (spawn == null) {
+                continue;
+            }
+            int currentX = aoi.getX();
+            int currentY = aoi.getY();
+            int dx = Math.abs(currentX - sprite.getCentreX());
+            int dy = Math.abs(currentY - sprite.getCentreY());
+            if (dx > 160 || dy > 160) {
+                continue;
+            }
+            TouchResponseProvider provider =
+                    instance instanceof TouchResponseProvider trp ? trp : null;
+            nearbyObjects.add(new EngineNearbyObject(
+                    aoi.getSlotIndex(),
+                    spawn.objectId(),
+                    aoi.getName(),
+                    currentX,
+                    currentY,
+                    spawn.x(),
+                    spawn.y(),
+                    provider != null,
+                    provider != null ? provider.getCollisionFlags() : -1,
+                    provider != null ? aoi.getPreUpdateCollisionFlags() : -1,
+                    aoi.getPreUpdateX(),
+                    aoi.getPreUpdateY(),
+                    aoi.isSkipTouchThisFrame(),
+                    aoi.isSkipSolidContactThisFrame(),
+                    aoi.isOnScreenForTouch(),
+                    aoi.traceDebugDetails()));
+        }
+        nearbyObjects.sort(Comparator.comparingInt(EngineNearbyObject::slot));
+        return nearbyObjects;
+    }
+
+    private String summariseExpectedOnObjectSlot(ObjectManager om, TraceFrame expected, AbstractPlayableSprite sprite) {
+        if (om == null || expected == null || expected.standOnObj() <= 0) {
+            return "";
+        }
+        int expectedSlot = expected.standOnObj();
+        for (ObjectInstance instance : om.getActiveObjects()) {
+            if (!(instance instanceof AbstractObjectInstance aoi) || aoi.getSlotIndex() != expectedSlot) {
+                continue;
+            }
+            ObjectSpawn spawn = aoi.getSpawn();
+            int objectId = spawn != null ? spawn.objectId() : -1;
+            int dx = aoi.getX() - sprite.getCentreX();
+            int dy = aoi.getY() - sprite.getCentreY();
+            String details = aoi.traceDebugDetails();
+            return String.format("eng-expected-onObj s%02X 0x%02X %s @%04X,%04X d=(%d,%d)%s",
+                    expectedSlot,
+                    objectId & 0xFF,
+                    aoi.getName(),
+                    aoi.getX() & 0xFFFF,
+                    aoi.getY() & 0xFFFF,
+                    dx,
+                    dy,
+                    details == null || details.isBlank() ? "" : " " + details);
+        }
+        return String.format("eng-expected-onObj s%02X missing", expectedSlot);
     }
 
     private String summariseS2SkyChaseBadnikDiagnostics(ObjectManager om) {
@@ -909,8 +978,9 @@ public abstract class AbstractTraceReplayTest {
         int interactSlot = sidekick.getInteractSlotIndex();
         String interactOccupant = summariseSlotOccupant(om, interactSlot);
         String renderFlagDiag = summariseSidekickRenderFlagDiagnostics(sidekick);
+        String groundProbeDiag = summariseGroundProbeDiagnostics("ground", sidekick);
         return String.format(
-                "eng-tails-state pos=(%04X,%04X) sub=(%04X,%04X) vel=(%04X,%04X) g=%04X dir=%s onObj=%s ride=s%d type=%02X interact=s%d[%s] st=%02X pin=%s lock=%s prs=%s boundsY=%04X/%04X/%04X cpuMax=%04X %s",
+                "eng-tails-state pos=(%04X,%04X) sub=(%04X,%04X) vel=(%04X,%04X) g=%04X dir=%s onObj=%s ride=s%d type=%02X interact=s%d[%s] st=%02X rtn=%02X dead=%s pin=%s lock=%s prs=%s boundsY=%04X/%04X/%04X cpuMax=%04X wrap=%s %s %s",
                 sidekick.getCentreX() & 0xFFFF,
                 sidekick.getCentreY() & 0xFFFF,
                 sidekick.getXSubpixelRaw() & 0xFFFF,
@@ -924,7 +994,9 @@ public abstract class AbstractTraceReplayTest {
                 standOnType & 0xFF,
                 interactSlot,
                 interactOccupant,
-                buildStatusByte(sidekick),
+                TraceCharacterState.statusByteFromSprite(sidekick),
+                TraceCharacterState.routineFromSprite(sidekick),
+                sidekick.getDead(),
                 sidekick.getPinballMode(),
                 sidekick.getPinballSpeedLock(),
                 sidekick.shouldPreserveRollingOnNextRollStop(),
@@ -932,7 +1004,44 @@ public abstract class AbstractTraceReplayTest {
                 camMaxY,
                 camMaxYTarget,
                 cpuMaxY,
-                renderFlagDiag);
+                cam != null && cam.isVerticalWrapEnabled(),
+                renderFlagDiag,
+                groundProbeDiag);
+    }
+
+    private String summariseGroundProbeDiagnostics(String label, AbstractPlayableSprite sprite) {
+        Sensor[] sensors = sprite.getGroundSensors();
+        if (sensors == null || sensors.length < 2) {
+            return label + " none";
+        }
+        return String.format(
+                "%s gm=%s angle=%02X L=%s R=%s",
+                label,
+                sprite.getGroundMode(),
+                sprite.getAngle() & 0xFF,
+                formatGroundProbe(sensors[0]),
+                formatGroundProbe(sensors[1]));
+    }
+
+    private String formatGroundProbe(Sensor sensor) {
+        if (sensor == null) {
+            return "missing";
+        }
+        SensorResult result = sensor.getCurrentResult();
+        if (result == null) {
+            return String.format("off=(%d,%d) inactive=%s result=none",
+                    sensor.getX(),
+                    sensor.getY(),
+                    !sensor.isActive());
+        }
+        return String.format(
+                "off=(%d,%d) dist=%d ang=%02X tile=%04X dir=%s",
+                sensor.getX(),
+                sensor.getY(),
+                (int) result.distance(),
+                result.angle() & 0xFF,
+                result.tileId() & 0xFFFF,
+                result.direction());
     }
 
     private String summariseSidekickRenderFlagDiagnostics(AbstractPlayableSprite sidekick) {
@@ -1084,19 +1193,6 @@ public abstract class AbstractTraceReplayTest {
             return "eng-tails-cpu none controller=missing";
         }
         return sidekick.getCpuController().formatLatestNormalStepDiagnostics();
-    }
-
-    private int buildStatusByte(AbstractPlayableSprite sprite) {
-        int statusByte = 0;
-        if (sprite.getDirection() == com.openggf.physics.Direction.LEFT) {
-            statusByte |= 0x01;
-        }
-        if (sprite.getAir()) statusByte |= 0x02;
-        if (sprite.getRolling()) statusByte |= 0x04;
-        if (sprite.isOnObject()) statusByte |= 0x08;
-        if (sprite.getPushing()) statusByte |= 0x20;
-        if (sprite.isInWater()) statusByte |= 0x40;
-        return statusByte;
     }
 
     private void writeReport(DivergenceReport report, TraceMetadata meta) {

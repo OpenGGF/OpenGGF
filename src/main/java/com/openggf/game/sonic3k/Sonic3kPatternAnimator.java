@@ -187,6 +187,19 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     private final byte[] pachinkoLowSource;
     private final byte[] pachinkoHighSource;
 
+    // Reused per-call scratch for raw tile decode/compose. The animator is
+    // per-zone-lifetime, so these survive across delta-gated update bursts and
+    // remove the per-tile Pattern/byte[] allocations from the dynamic-art path.
+    // The compose buffers are fully overwritten before use on every call.
+    // Note: scratch retains last-frame data between delta-gated updates —
+    // harmless, since every consuming site overwrites before reading.
+    // Note: beginPatternAtlasBatch is not re-entrant; do not call the apply*
+    // methods from within an already-active atlas batch (no such path today).
+    private final Pattern rawTileScratchPattern = new Pattern();
+    private final byte[] rawTileScratchBytes = new byte[Pattern.PATTERN_SIZE_IN_ROM];
+    private final byte[] hcz1StripComposeScratch = new byte[0x300];
+    private final byte[] lbz2WaterlineComposeScratch = new byte[0x200];
+
     private int lastHcz1WaterlineDelta = Integer.MIN_VALUE;
     private int lastHcz2SmallBgLineValue = Integer.MIN_VALUE;
     private int lastHcz2Art2Value = Integer.MIN_VALUE;
@@ -987,7 +1000,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             return;
         }
 
-        byte[] composed = new byte[0x300];
+        byte[] composed = hcz1StripComposeScratch;
         for (int i = 0; i < 0x60; i++) {
             int lookupIndex = tableOffset + i;
             if (lookupIndex < 0 || lookupIndex >= hczWaterlineScrollData.length) {
@@ -1008,20 +1021,45 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     }
 
     private void applyRawPatternBytesToLevel(byte[] data, int destTile) {
-        if ((data.length % Pattern.PATTERN_SIZE_IN_ROM) != 0) {
+        applyRawPatternBytesToLevel(data, 0, data.length, destTile);
+    }
+
+    /**
+     * Decodes {@code length} bytes of Sega-format tile data starting at
+     * {@code offset} directly into the level patterns, batching the atlas
+     * uploads (dirty-slot path: one texture bind for the whole burst) and
+     * reusing the per-instance scratch pattern/byte buffers instead of
+     * allocating per tile.
+     */
+    private void applyRawPatternBytesToLevel(byte[] data, int offset, int length, int destTile) {
+        if (length <= 0 || (length % Pattern.PATTERN_SIZE_IN_ROM) != 0
+                || offset < 0 || offset + length > data.length) {
             return;
         }
 
-        Pattern[] patterns = new Pattern[data.length / Pattern.PATTERN_SIZE_IN_ROM];
-        for (int i = 0; i < patterns.length; i++) {
-            Pattern pattern = new Pattern();
-            byte[] tileData = new byte[Pattern.PATTERN_SIZE_IN_ROM];
-            System.arraycopy(data, i * Pattern.PATTERN_SIZE_IN_ROM, tileData, 0,
-                    Pattern.PATTERN_SIZE_IN_ROM);
-            pattern.fromSegaFormat(tileData);
-            patterns[i] = pattern;
+        int tileCount = length / Pattern.PATTERN_SIZE_IN_ROM;
+        int maxPatterns = level.getPatternCount();
+        GraphicsManager graphicsManager = GameServices.graphics();
+        boolean canUpdateTextures = graphicsManager.isGlInitialized();
+        graphicsManager.beginPatternAtlasBatch();
+        try {
+            for (int i = 0; i < tileCount; i++) {
+                int destIndex = destTile + i;
+                if (destIndex >= maxPatterns) {
+                    break;
+                }
+                System.arraycopy(data, offset + i * Pattern.PATTERN_SIZE_IN_ROM,
+                        rawTileScratchBytes, 0, Pattern.PATTERN_SIZE_IN_ROM);
+                rawTileScratchPattern.fromSegaFormat(rawTileScratchBytes);
+                Pattern dest = level.getPattern(destIndex);
+                dest.copyFrom(rawTileScratchPattern);
+                if (canUpdateTextures) {
+                    graphicsManager.updatePatternTexture(dest, destIndex);
+                }
+            }
+        } finally {
+            graphicsManager.endPatternAtlasBatch();
         }
-        applyPatternsToLevel(patterns, destTile);
     }
 
     private void applyPatternSliceToLevel(Pattern[] sourcePatterns, int sourceByteOffset,
@@ -1039,17 +1077,22 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         int maxPatterns = level.getPatternCount();
         GraphicsManager graphicsManager = GameServices.graphics();
         boolean canUpdateTextures = graphicsManager.isGlInitialized();
-        for (int i = 0; i < tileCount; i++) {
-            int sourceIndex = sourceTileOffset + i;
-            int destIndex = destTile + i;
-            if (sourceIndex >= sourcePatterns.length || destIndex >= maxPatterns) {
-                break;
+        graphicsManager.beginPatternAtlasBatch();
+        try {
+            for (int i = 0; i < tileCount; i++) {
+                int sourceIndex = sourceTileOffset + i;
+                int destIndex = destTile + i;
+                if (sourceIndex >= sourcePatterns.length || destIndex >= maxPatterns) {
+                    break;
+                }
+                Pattern dest = level.getPattern(destIndex);
+                dest.copyFrom(sourcePatterns[sourceIndex]);
+                if (canUpdateTextures) {
+                    graphicsManager.updatePatternTexture(dest, destIndex);
+                }
             }
-            Pattern dest = level.getPattern(destIndex);
-            dest.copyFrom(sourcePatterns[sourceIndex]);
-            if (canUpdateTextures) {
-                graphicsManager.updatePatternTexture(dest, destIndex);
-            }
+        } finally {
+            graphicsManager.endPatternAtlasBatch();
         }
     }
 
@@ -1058,16 +1101,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         if (sourceData == null || byteLength <= 0) {
             return;
         }
-        if ((sourceByteOffset % Pattern.PATTERN_SIZE_IN_ROM) != 0
-                || (byteLength % Pattern.PATTERN_SIZE_IN_ROM) != 0
-                || sourceByteOffset < 0
-                || sourceByteOffset + byteLength > sourceData.length) {
+        if ((sourceByteOffset % Pattern.PATTERN_SIZE_IN_ROM) != 0) {
             return;
         }
-
-        byte[] slice = new byte[byteLength];
-        System.arraycopy(sourceData, sourceByteOffset, slice, 0, byteLength);
-        applyRawPatternBytesToLevel(slice, destTile);
+        applyRawPatternBytesToLevel(sourceData, sourceByteOffset, byteLength, destTile);
     }
 
     private void applyRawPatternSliceAllowingRowOffset(byte[] sourceData, int sourceByteOffset,
@@ -1075,15 +1112,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         if (sourceData == null || byteLength <= 0) {
             return;
         }
-        if ((byteLength % Pattern.PATTERN_SIZE_IN_ROM) != 0
-                || sourceByteOffset < 0
-                || sourceByteOffset + byteLength > sourceData.length) {
-            return;
-        }
-
-        byte[] slice = new byte[byteLength];
-        System.arraycopy(sourceData, sourceByteOffset, slice, 0, byteLength);
-        applyRawPatternBytesToLevel(slice, destTile);
+        applyRawPatternBytesToLevel(sourceData, sourceByteOffset, byteLength, destTile);
     }
 
     private void applyPatternsToLevel(Pattern[] sourcePatterns, int destTile) {
@@ -1094,16 +1123,21 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         int maxPatterns = level.getPatternCount();
         GraphicsManager graphicsManager = GameServices.graphics();
         boolean canUpdateTextures = graphicsManager.isGlInitialized();
-        for (int i = 0; i < sourcePatterns.length; i++) {
-            int destIndex = destTile + i;
-            if (destIndex >= maxPatterns) {
-                break;
+        graphicsManager.beginPatternAtlasBatch();
+        try {
+            for (int i = 0; i < sourcePatterns.length; i++) {
+                int destIndex = destTile + i;
+                if (destIndex >= maxPatterns) {
+                    break;
+                }
+                Pattern dest = level.getPattern(destIndex);
+                dest.copyFrom(sourcePatterns[i]);
+                if (canUpdateTextures) {
+                    graphicsManager.updatePatternTexture(dest, destIndex);
+                }
             }
-            Pattern dest = level.getPattern(destIndex);
-            dest.copyFrom(sourcePatterns[i]);
-            if (canUpdateTextures) {
-                graphicsManager.updatePatternTexture(dest, destIndex);
-            }
+        } finally {
+            graphicsManager.endPatternAtlasBatch();
         }
     }
 
@@ -1430,7 +1464,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             return;
         }
 
-        byte[] composed = new byte[0x200];
+        byte[] composed = lbz2WaterlineComposeScratch;
         for (int i = 0; i < 0x40; i++) {
             int sourceByteOffset = (lbzWaterlineScrollData[tableOffset + i] & 0xFF) << 2;
             int sourceIndexA = sourceByteOffset;

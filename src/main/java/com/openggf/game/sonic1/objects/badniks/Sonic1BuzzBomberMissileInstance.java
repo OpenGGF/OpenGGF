@@ -4,6 +4,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -62,7 +63,7 @@ public class Sonic1BuzzBomberMissileInstance extends AbstractObjectInstance
     private final int yVelocity;
     private final SubpixelMotion.State motionState;
     private final boolean facingLeft;
-    private final Sonic1BuzzBomberBadnikInstance parent;
+    private final int parentSlotIndex;
 
     private Phase phase;
     private int flareTimer;
@@ -79,11 +80,11 @@ public class Sonic1BuzzBomberMissileInstance extends AbstractObjectInstance
      * @param xVel      X velocity in subpixels ($200 or -$200)
      * @param yVel      Y velocity in subpixels ($200, always downward)
      * @param facingLeft Direction the parent was facing
-     * @param parent    Reference to parent Buzz Bomber (for cancellation tracking)
+     * @param parentSlotIndex The parent's object slot at missile spawn time.
      * @param levelManager Level manager reference
      */
     public Sonic1BuzzBomberMissileInstance(int x, int y, int xVel, int yVel,
-            boolean facingLeft, Sonic1BuzzBomberBadnikInstance parent) {
+            boolean facingLeft, int parentSlotIndex) {
         super(new ObjectSpawn(x, y, 0x23, 0, 0, false, 0), "BuzzBomberMissile");
         this.currentX = x;
         this.currentY = y;
@@ -91,7 +92,7 @@ public class Sonic1BuzzBomberMissileInstance extends AbstractObjectInstance
         this.yVelocity = yVel;
         this.motionState = new SubpixelMotion.State(x, y, 0, 0, xVel, yVel);
         this.facingLeft = facingLeft;
-        this.parent = parent;
+        this.parentSlotIndex = parentSlotIndex;
         
         this.phase = Phase.FLARE_COUNTDOWN;
         this.flareTimer = FLARE_COUNTDOWN;
@@ -103,8 +104,9 @@ public class Sonic1BuzzBomberMissileInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        // Msl_ChkCancel: if parent Buzz Bomber was destroyed, delete missile
-        if (parent != null && parent.isDestroyed()) {
+        // Msl_ChkCancel compares the current obID in the parent's old slot with
+        // ExplosionItem (0x27); a cleared or reused slot does not cancel.
+        if (isParentSlotExplosionItem()) {
             setDestroyed(true);
             return;
         }
@@ -165,8 +167,10 @@ public class Sonic1BuzzBomberMissileInstance extends AbstractObjectInstance
         currentX = motionState.x;
         currentY = motionState.y;
 
-        // Check if below level bottom boundary + $E0
-        if (!isOnScreen(BOTTOM_MARGIN)) {
+        // Msl_FromBuzz deletes only after y_pos passes v_limitbtm2 + $E0.
+        // It does not despawn for X/offscreen visibility, so missiles can keep
+        // occupying their FindFreeObj slot while travelling left of the camera.
+        if (currentY > getBottomBoundary() + BOTTOM_MARGIN) {
             setDestroyed(true);
             return;
         }
@@ -207,6 +211,33 @@ public class Sonic1BuzzBomberMissileInstance extends AbstractObjectInstance
     @Override
     public int getY() {
         return currentY;
+    }
+
+    @Override
+    public boolean isPersistent() {
+        // Msl_FromBuzz deletes through Msl_Delete only after the bottom-boundary
+        // check; it calls DisplaySprite directly rather than RememberState.
+        return !isDestroyed();
+    }
+
+    private int getBottomBoundary() {
+        var camera = services().camera();
+        return camera != null ? camera.getMaxY() & 0xFFFF : 0x700;
+    }
+
+    private boolean isParentSlotExplosionItem() {
+        if (parentSlotIndex < 0 || services().objectManager() == null) {
+            return false;
+        }
+        for (ObjectInstance instance : services().objectManager().getActiveObjects()) {
+            if (!(instance instanceof AbstractObjectInstance object)
+                    || object.getSlotIndex() != parentSlotIndex) {
+                continue;
+            }
+            ObjectSpawn slotSpawn = instance.getSpawn();
+            return slotSpawn != null && (slotSpawn.objectId() & 0xFF) == 0x27;
+        }
+        return false;
     }
 
     @Override

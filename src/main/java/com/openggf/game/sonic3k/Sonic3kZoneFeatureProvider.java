@@ -239,6 +239,11 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
                 events.releaseBattleshipScrollLockCamera();
             }
         }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_HCZ && player != null && !player.getDead()) {
+            var levelManager = GameServices.levelOrNull();
+            int act = levelManager != null ? levelManager.getFeatureActId() : 0;
+            HCZWaterTunnelHandler.update(act);
+        }
         for (PlayableEntity participant :
                 playerQuery.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             if (participant instanceof AbstractPlayableSprite playable) {
@@ -257,11 +262,6 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
                 () -> sidekicks);
     }
 
-    /**
-     * Pre-physics update for HCZ water tunnels.
-     * ROM: {@code sub_6F4A} runs before {@code ExecuteObjects}, so the tunnel
-     * velocity and position overrides are applied before player physics.
-     */
     @Override
     public void updatePrePhysics(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
         var levelManager = GameServices.levelOrNull();
@@ -278,9 +278,6 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         }
         if (zoneIndex == Sonic3kZoneIds.ZONE_HCZ && player != null && !player.getDead()) {
             int act = levelManager != null ? levelManager.getFeatureActId() : 0;
-            HCZWaterTunnelHandler.update(act);
-            // Water skim runs after tunnels (ROM: Obj_HCZWaterSplash runs in ExecuteObjects
-            // which is after sub_6F4A/water tunnels)
             HCZWaterSkimHandler.update();
             if (GameServices.module().getLevelEventProvider()
                     instanceof Sonic3kLevelEventManager mgr) {
@@ -301,6 +298,23 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
                 if (events != null) {
                     events.updatePrePhysics(act);
                 }
+            }
+        }
+    }
+
+    @Override
+    public void updateAfterPlayablePhysics(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
+        if (zoneIndex != Sonic3kZoneIds.ZONE_ICZ || player == null || player.getDead()) {
+            return;
+        }
+        var levelManager = GameServices.levelOrNull();
+        int act = levelManager != null ? levelManager.getFeatureActId() : 0;
+        if (GameServices.module().getLevelEventProvider()
+                instanceof Sonic3kLevelEventManager mgr) {
+            mgr.ensureZoneRuntimeStateInstalled();
+            var events = mgr.getIczEvents();
+            if (events != null) {
+                events.updateSlideTerrainAfterPlayablePhysics(act, player);
             }
         }
     }

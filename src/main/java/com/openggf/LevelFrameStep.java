@@ -138,10 +138,20 @@ public final class LevelFrameStep {
             //    the player-slot-first ROM ordering.
             wrapper.wrap("physics", spriteUpdate);
 
+            LevelEventProvider fixedSlotEvents = context.levelEventProvider();
+            if (fixedSlotEvents != null) {
+                wrapper.wrap("fixed-objects-pre", fixedSlotEvents::updateFixedInLevelObjectsBeforeDynamicObjects);
+            }
+
             // 3. Object execution after player physics, with inline solid checkpoints
             //    so later objects see earlier contact adjustments.
             wrapper.wrap("objects", levelManager::updateObjectPositionsPostPhysicsWithoutTouches);
         } else {
+            LevelEventProvider fixedSlotEvents = context.levelEventProvider();
+            if (fixedSlotEvents != null) {
+                wrapper.wrap("fixed-objects-pre", fixedSlotEvents::updateFixedInLevelObjectsBeforeDynamicObjects);
+            }
+
             // 2. Legacy compatibility path keeps objects before physics. Touch
             //    responses are still deferred to tickPlayablePhysics after movement.
             wrapper.wrap("objects", levelManager::updateObjectPositionsWithoutTouches);
@@ -200,6 +210,7 @@ public final class LevelFrameStep {
         wrapper.wrap("level", levelManager::update);
 
         // 7. Cache BuildSprites on-screen results for next frame's logic.
+        levelManager.refreshObjectPostCameraRenderState();
         SpriteManager spriteManager = context.spriteManager();
         if (spriteManager != null) {
             spriteManager.refreshPlayableRenderFlags(camera);

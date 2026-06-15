@@ -112,14 +112,23 @@ public record ObjectManagerSnapshot(
      * @param slotIndex slot index in the Object Status Table (0-based, game-specific range)
      * @param spawn     the {@link ObjectSpawn} that produced this instance; live ref, stable
      *                  in-memory across rewind (v1 in-memory KeyframeStore only)
+     * @param className concrete class name of the captured instance; used by the in-place
+     *                  restore path to verify the live instance matches before reusing it.
+     *                  May be {@code null} for legacy snapshot constructions, in which case
+     *                  restore always falls back to recreate.
      * @param state     captured per-instance state from
      *                  {@link com.openggf.level.objects.AbstractObjectInstance#captureRewindState()}
      */
     public record PerSlotEntry(
             int slotIndex,
             ObjectSpawn spawn,
+            String className,
             PerObjectRewindSnapshot state
-    ) {}
+    ) {
+        public PerSlotEntry(int slotIndex, ObjectSpawn spawn, PerObjectRewindSnapshot state) {
+            this(slotIndex, spawn, null, state);
+        }
+    }
 
     /**
      * One entry in the reserved-child-slot mapping.
@@ -144,8 +153,18 @@ public record ObjectManagerSnapshot(
             String className,
             ObjectSpawn spawn,
             int slotIndex,
-            PerObjectRewindSnapshot state
-    ) {}
+            PerObjectRewindSnapshot state,
+            PlayableEntity playerOwner
+    ) {
+        public DynamicObjectEntry(
+                String className,
+                ObjectSpawn spawn,
+                int slotIndex,
+                PerObjectRewindSnapshot state
+        ) {
+            this(className, spawn, slotIndex, state, null);
+        }
+    }
 
     public record SolidContactRidingEntry(
             PlayableEntity player,

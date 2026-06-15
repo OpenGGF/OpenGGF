@@ -56,6 +56,7 @@ public class CollisionSystem {
     public void resetState() {
         terrainCollisionManager.resetState();
         objectManager = null;
+        pendingOddSensorFallbackAngles.clear();
         trace = NoOpCollisionTrace.INSTANCE;
     }
 
@@ -299,16 +300,43 @@ public class CollisionSystem {
         CalcRoomInFrontProbe probe = describeCalcRoomInFrontProbe(angle, gSpeed);
         SensorResult result = scanCalcRoomInFront(sprite, probe, predictedDx, predictedDy);
 
-
-        if (result == null || result.distance() >= 0) {
+        if (result == null) {
             return;
         }
 
-        int velocityAdjustment = result.distance() << 8;
         int rotation = (gSpeed < 0) ? 0x40 : 0xC0;
         int rotatedAngle = (angle + rotation) & 0xFF;
         int mode = (rotatedAngle + 0x20) & 0xC0;
+        // ROM CalcRoomInFront (sub_F61C, sonic3k.asm:19679-19743) pushes only when
+        // the predicted-position wall distance is negative (the caller's tst.w d1 /
+        // bpl, e.g. Tails_InputAcceleration_Path loc_14BA8..loc_14C00,
+        // sonic3k.asm:27974-28018). The engine's predicted-position scan already
+        // reproduces FindWall's per-cell penetration (sub_F584 loc_F60C not.w d1,
+        // sonic3k.asm:19666-19672): a flush empty-cell edge yields distance 0 (no
+        // push) and a predicted pixel inside a solid cell yields a negative
+        // distance (push). The S3K CPU sidekick reaches the penetrating pixel via
+        // the per-frame follow nudge (loc_13E34 addq.w #1,x_pos,
+        // sonic3k.asm:26734-26741), so no zero-distance seam override is required.
+        int distance = result.distance();
+        if (distance >= 0) {
+            return;
+        }
 
+        applyGroundWallVelocityResponse(sprite, mode, distance);
+    }
+
+    public void applyDeferredGroundWallVelocityResponse(AbstractPlayableSprite sprite) {
+        if (sprite == null || !sprite.hasDeferredGroundWallVelocityResponse()) {
+            return;
+        }
+        int mode = sprite.getDeferredGroundWallVelocityMode();
+        int distance = sprite.getDeferredGroundWallVelocityDistance();
+        sprite.clearDeferredGroundWallVelocityResponse();
+        applyGroundWallVelocityResponse(sprite, mode, distance);
+    }
+
+    private static void applyGroundWallVelocityResponse(AbstractPlayableSprite sprite, int mode, int distance) {
+        int velocityAdjustment = distance << 8;
         switch (mode) {
             case 0x00 -> sprite.setYSpeed((short) (sprite.getYSpeed() + velocityAdjustment));
             case 0x40 -> {

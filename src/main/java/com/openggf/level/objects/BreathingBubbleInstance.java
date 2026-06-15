@@ -1,6 +1,7 @@
 package com.openggf.level.objects;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -24,28 +25,44 @@ import java.util.List;
  * with both Sonic 1 (LZ_BUBBLES) and Sonic 2 (BUBBLES) bubble art sheets.
  */
 public class BreathingBubbleInstance extends AbstractObjectInstance {
-    /** Upward velocity in pixels per frame */
-    private static final int RISE_SPEED = 1;
-
-    /** Amplitude of horizontal sine wave oscillation in pixels */
-    private static final int SINE_AMPLITUDE = 2;
-
-    /** Period of sine wave in frames */
-    private static final int SINE_PERIOD = 32;
+    /**
+     * ROM Obj0A/AirCountdown wobble table. S1/S2 use this as
+     * Drown_WobbleData/Obj0A_WobbleData; S3K AirCountdown uses the same
+     * 7-bit index pattern before MoveSprite2.
+     */
+    private static final int[] WOBBLE_DATA = {
+        0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
+        2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+        3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2,
+        2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
+        0, -1, -1, -1, -1, -1, -2, -2, -2, -2, -2, -3, -3, -3, -3, -3,
+        -3, -3, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4,
+        -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -3,
+        -3, -3, -3, -3, -3, -3, -2, -2, -2, -2, -2, -1, -1, -1, -1, -1
+    };
 
     /** Frame delay per animation sub-frame for countdown bubbles */
     private static final int COUNTDOWN_FRAME_DELAY = 5;
 
-    /** Number of times the formed number appears before animation ends */
-    private static final int COUNTDOWN_NUMBER_REPEATS = 4;
-
-    /** Total frames for countdown bubble animation before number forms.
-     *  Original S1 uses drown_time=$1C (28 frames) with rise speed -$88 subpix/frame (~15px rise).
-     *  At 1px/frame rise speed, 3 frames * 5 delay = 15 frames ≈ 15px rise, matching the original. */
+    /** Total frames for countdown bubble animation before number forms. */
     private static final int COUNTDOWN_BUBBLE_FRAMES = 3;
 
-    /** Current X position (float for smooth movement) */
-    private float currentX;
+    /**
+     * S1 Obj0A numbered bubbles stay allocated across the Ani_Drown appear
+     * script and subsequent flash/display window before Drown_Delete. This
+     * keeps the slot occupied while later FindFreeObj scans run.
+     */
+    private static final int COUNTDOWN_NUMBER_VISIBLE_UPDATES = 91;
+
+    /**
+     * Drown_ChkWater does not delete a small bubble immediately at the water
+     * surface. It changes routine to Drown_Display, bumps the animation, and
+     * AnimateSprite advances to Drown_Delete on the following display tail.
+     */
+    private static final int SURFACE_POP_DISPLAY_UPDATES = 2;
+
+    /** Current X position */
+    private int currentX;
 
     /** Current Y position */
     private int currentY;
@@ -53,11 +70,14 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
     /** Base X position for sine calculation */
     private int baseX;
 
-    /** Frame counter for sine oscillation */
-    private int sineFrame;
+    /** 16.16 Y position used by ROM SpeedToPos-style integration. */
+    private int yPos16;
 
-    /** Whether sine wave starts moving left (away from player facing right) */
-    private boolean startMovingLeft;
+    /** ROM signed y_vel word, where 0x100 is one pixel/frame. */
+    private final int riseVelocity;
+
+    /** ROM angle byte used to index the 7-bit wobble table. */
+    private int wobbleAngle;
 
     /** Countdown number to display (-1 for regular bubble) */
     private int countdownNumber;
@@ -72,8 +92,18 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
     private int lockedScreenX;
     private int lockedScreenY;
 
-    /** Total lifetime in frames */
+    /** Frames since spawn, used only for diagnostics. */
     private int lifetime;
+
+    /** ROM Drown_Display tail after Drown_ChkWater detects the water surface. */
+    private int surfacePopUpdatesRemaining;
+
+    /**
+     * ROM {@code obRender} bit 7 as observed by Obj0A during execution. Drown_Main
+     * initializes {@code obRender=$84}, so a newly allocated bubble survives its
+     * first same-frame update; later frames observe the prior BuildSprites pass.
+     */
+    private boolean romRenderOnScreen = true;
 
     /** Art key for the bubble renderer (game-specific) */
     private final String artKey;
@@ -92,20 +122,23 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
      *
      * @param x                 World X coordinate (player's mouth position)
      * @param y                 World Y coordinate (player's Y position)
-     * @param startMovingLeft   True if sine wave should start moving left
+     * @param startsFacingLeft  True if the source player was facing left
      * @param countdownNumber   Countdown number to display (-1 for regular bubble)
      * @param artKey            Art renderer key for this game's bubble sprites
      * @param countdownFrameMap Maps countdown number (0-5) to art frame index, or null
      * @param maxBubbleFrame    Maximum frame index for regular bubble growth
+     * @param riseVelocity      ROM y_vel word for this game's Obj0A child
      */
-    public BreathingBubbleInstance(int x, int y, boolean startMovingLeft, int countdownNumber,
-                                   String artKey, int[] countdownFrameMap, int maxBubbleFrame) {
+    public BreathingBubbleInstance(int x, int y, boolean startsFacingLeft, int countdownNumber,
+                                   String artKey, int[] countdownFrameMap, int maxBubbleFrame,
+                                   int riseVelocity) {
         super(new ObjectSpawn(x, y, 0x0A, 0, 0, false, 0), "BreathingBubble");
         this.currentX = x;
         this.currentY = y;
         this.baseX = x;
-        this.sineFrame = 0;
-        this.startMovingLeft = startMovingLeft;
+        this.yPos16 = y << 16;
+        this.riseVelocity = riseVelocity;
+        this.wobbleAngle = startsFacingLeft ? 0x40 : 0;
         this.countdownNumber = countdownNumber;
         this.countdownFrame = 0;
         this.numberFormed = false;
@@ -117,7 +150,16 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
+        boolean observedRomRenderOnScreen = romRenderOnScreen;
         lifetime++;
+
+        if (surfacePopUpdatesRemaining > 0) {
+            surfacePopUpdatesRemaining--;
+            if (surfacePopUpdatesRemaining == 0) {
+                setDestroyed(true);
+            }
+            return;
+        }
 
         // Check if we've exited water (bubble pops)
         // ROM: Bub_ChkWater compares against the gameplay waterline
@@ -132,8 +174,10 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
             if (waterSystem.hasWater(zoneId, actId)) {
                 int waterY = waterSystem.getGameplayWaterLevelY(zoneId, actId);
                 if (currentY <= waterY) {
-                    // Bubble has reached the water surface - destroy it
-                    setDestroyed(true);
+                    // docs/s1disasm/s1disasm/_incObj/0A LZ Drowning Countdown.asm:
+                    // Drown_ChkWater sets routine 6 and falls into Drown_Display;
+                    // Drown_Delete is reached after the display animation tail.
+                    surfacePopUpdatesRemaining = SURFACE_POP_DISPLAY_UPDATES;
                     return;
                 }
             }
@@ -141,6 +185,10 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
 
         // Handle countdown bubble animation
         if (countdownNumber >= 0) {
+            if (numberFormed && !observedRomRenderOnScreen) {
+                setDestroyed(true);
+                return;
+            }
             countdownFrame++;
 
             // Check if number is about to form (one frame before)
@@ -153,9 +201,8 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
                 numberFormed = true;
             }
 
-            // Check if animation is complete
-            int totalAnimFrames = formFrame + (COUNTDOWN_NUMBER_REPEATS * COUNTDOWN_FRAME_DELAY);
-            if (countdownFrame >= totalAnimFrames) {
+            // Check if animation is complete.
+            if (countdownFrame > COUNTDOWN_NUMBER_VISIBLE_UPDATES) {
                 setDestroyed(true);
                 return;
             }
@@ -169,27 +216,32 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
             currentY = camera.getY() + lockedScreenY;
         } else {
             // Normal bubble movement
-            // Move upward
-            currentY -= RISE_SPEED;
+            ZoneFeatureProvider zoneFeatures = services().zoneFeatureProvider();
+            if (zoneFeatures != null && zoneFeatures.isWaterTunnelActive()) {
+                // docs/s1disasm/s1disasm/_incObj/0A LZ Drowning Countdown.asm:
+                // Drown_ChkWater tests f_wtunnelmode, then addq.w #4,drown_origX(a0).
+                baseX += 4;
+            }
+            int wobbleIndex = wobbleAngle & 0x7F;
+            wobbleAngle = (wobbleAngle + 1) & 0xFF;
+            currentX = baseX + WOBBLE_DATA[wobbleIndex];
 
-            // Apply sine wave horizontal oscillation
-            sineFrame++;
-            double angle = (2.0 * Math.PI * sineFrame) / SINE_PERIOD;
+            yPos16 += riseVelocity << 8;
+            currentY = yPos16 >> 16;
 
-            // Adjust starting direction based on player facing
-            if (startMovingLeft) {
-                // Start moving left (negative direction)
-                currentX = baseX - (float) (SINE_AMPLITUDE * Math.sin(angle));
-            } else {
-                // Start moving right (positive direction)
-                currentX = baseX + (float) (SINE_AMPLITUDE * Math.sin(angle));
+            // ROM Obj0A Drown_ChkWater deletes live mouth bubbles when
+            // BuildSprites cleared obRender bit 7 on the previous frame
+            // (docs/s1disasm/s1disasm/_incObj/0A LZ Drowning Countdown.asm:75-78).
+            if (!observedRomRenderOnScreen) {
+                setDestroyed(true);
+                return;
             }
         }
 
-        // Destroy if bubble has been alive too long (failsafe)
-        if (lifetime > 600) { // 10 seconds max
-            setDestroyed(true);
-        }
+        // No lifetime cap: Obj0A live bubbles only delete via the water-surface
+        // display path or when Drown_ChkWater observes obRender bit 7 clear
+        // after SpeedToPos (docs/s1disasm/s1disasm/_incObj/
+        // 0A LZ Drowning Countdown.asm:55-92).
     }
 
     @Override
@@ -199,7 +251,7 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
         }
 
         Camera camera = services().camera();
-        int screenX = (int) currentX - camera.getX();
+        int screenX = currentX - camera.getX();
         int screenY = currentY - camera.getY();
 
         // Only render if on screen
@@ -232,7 +284,24 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
         }
 
         // Render the sprite
-        renderer.drawFrameIndex(frameIndex, (int) currentX, currentY, false, false);
+        renderer.drawFrameIndex(frameIndex, currentX, currentY, false, false);
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        romRenderOnScreen = isWithinS1BuildSpritesBounds();
+    }
+
+    private boolean isWithinS1BuildSpritesBounds() {
+        Camera camera = services().camera();
+        int screenX = currentX - camera.getX();
+        int screenY = currentY - camera.getY();
+        // Drown_Main sets obRender=$84 and obActWid=16, with bit 4 clear, so
+        // BuildSprites uses the 32px assumed-height branch for Y.
+        return screenX + 16 >= 0
+                && screenX - 16 < camera.getWidth()
+                && screenY >= -32
+                && screenY < 224 + 32;
     }
 
     /**
@@ -240,7 +309,7 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
      */
     @Override
     public int getX() {
-        return (int) currentX;
+        return currentX;
     }
 
     /**
@@ -262,5 +331,11 @@ public class BreathingBubbleInstance extends AbstractObjectInstance {
      */
     public int getCountdownNumber() {
         return countdownNumber;
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("life=%d ysub=%04X angle=%02X vel=%04X num=%d",
+            lifetime, yPos16 & 0xFFFF, wobbleAngle & 0xFF, riseVelocity & 0xFFFF, countdownNumber);
     }
 }

@@ -174,6 +174,9 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         if (((vblaCounter + phaseOffset) & floorCheckMask) != 0) {
             return;
         }
+        if (ringFloorProbeRequiresRenderFlag() && !hasRomRenderFlagForFloorProbe()) {
+            return;
+        }
 
         if (reverseGravity) {
             // S3K reverse gravity: probe the ceiling (top edge, y - y_radius) while rising
@@ -253,6 +256,18 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         }
     }
 
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        return true;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        // ROM Obj37 does not call the shared X-axis out_of_range macro. RLoss_Bounce deletes only
+        // when the shared spill animation timer expires or y_pos passes v_limitbtm2 + 224.
+        return false;
+    }
+
     private Camera cameraOrNull() {
         ObjectServices services = servicesOrNull();
         return services != null ? services.camera() : null;
@@ -276,6 +291,20 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         ObjectServices services = servicesOrNull();
         return services != null && services.gameState() != null
                 && services.gameState().isReverseGravityActive();
+    }
+
+    /**
+     * S2/S3K Obj37 only calls RingCheckFloorDist while render_flags bit 7 is set
+     * (s2.asm:25215-25217; sonic3k.asm Obj_Bouncing_Ring floor path). S1's
+     * RLoss_Bounce has no render-flag gate before ObjFloorDist.
+     */
+    protected boolean hasRomRenderFlagForFloorProbe() {
+        return isWithinSolidContactBounds();
+    }
+
+    protected boolean ringFloorProbeRequiresRenderFlag() {
+        PhysicsFeatureSet featureSet = resolveFeatureSet();
+        return featureSet == null || featureSet.ringFloorProbeRequiresRenderFlag();
     }
 
     /**
@@ -310,27 +339,12 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      * top-solidity sensor. Negative distance means penetration. Relocated from RingManager.java:1313.
      */
     protected int ringCheckFloorDist(int x, int y) {
-        LevelManager levelManager = levelManagerOrNull();
-        if (levelManager == null) {
+        com.openggf.physics.TerrainCheckResult result =
+                com.openggf.physics.ObjectTerrainUtils.checkFloorDist(x, y);
+        if (!result.foundSurface()) {
             return 0;
         }
-        ChunkDesc chunkDesc = levelManager.getChunkDescAt((byte) 0, x, y);
-        SolidTile tile = solidTile(levelManager, chunkDesc);
-        int metric = heightMetric(tile, chunkDesc, x);
-        if (metric == 0) {
-            return 0;
-        }
-        if (metric == 16) {
-            // ROM: sub.w a3,d2 with a3=$10 → check the tile above.
-            int prevY = y - 16;
-            ChunkDesc prevDesc = levelManager.getChunkDescAt((byte) 0, x, prevY);
-            int prevMetric = heightMetric(solidTile(levelManager, prevDesc), prevDesc, x);
-            if (prevMetric > 0 && prevMetric < 16) {
-                return distance(prevMetric, y, prevY);
-            }
-            return distance(metric, y, y);
-        }
-        return distance(metric, y, y);
+        return result.distance();
     }
 
     /**
@@ -433,6 +447,19 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
     public int getPhaseOffset() {
         return phaseOffset;
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("col=%s life=%d phase=%02X sub=(%04X,%04X) vel=(%04X,%04X) spark=%d",
+                collected,
+                lifetime,
+                phaseOffset & 0xFF,
+                xSubpixel & 0xFFFF,
+                ySubpixel & 0xFFFF,
+                xVel & 0xFFFF,
+                yVel & 0xFFFF,
+                sparkleStartFrame);
     }
 
     // ── Position (subpixel-backed; overrides spawn-derived defaults) ───────────

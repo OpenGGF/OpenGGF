@@ -23,6 +23,7 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class TestPowerUpGraphicsRegression {
@@ -59,6 +60,22 @@ class TestPowerUpGraphicsRegression {
                 "Sonic should have a persistent insta-shield object after cross-game S2 level load");
         assertNotNull(readField(instaShield, "dplcRenderer"),
                 "Persistent insta-shield object should have donor art renderer ready");
+    }
+
+    @Test
+    void crossGameInstaShieldRendererUsesDonorPaletteContext() throws Exception {
+        Sonic player = loadSonic2Player(true);
+
+        Object instaShield = player.getInstaShieldObject();
+        assertNotNull(instaShield,
+                "Sonic should have a persistent insta-shield object after cross-game S2 level load");
+        Object renderer = readField(instaShield, "dplcRenderer");
+        assertNotNull(renderer,
+                "Persistent insta-shield object should have donor art renderer ready");
+
+        assertSame(CrossGameFeatureProvider.getInstance().getDonorRenderContext(),
+                readField(renderer, "renderContext"),
+                "Donated insta-shield art must render against the S3K donor palette block");
     }
 
     @Test

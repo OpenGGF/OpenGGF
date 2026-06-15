@@ -27,12 +27,8 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
  *   move.w  (Ctrl_1).w,(Ctrl_1_logical).w
  * </pre>
  *
- * <p>The latch is currently active for S3K only ({@code SONIC_3K} sets
- * {@code controlLockLatchesLogicalInput=true}). S1/S2 keep the latch off
- * to preserve their existing trace baselines and {@code setControlLocked}
- * call-site semantics; the previous universal-latch attempt
- * (commit f3347ea89, REVERTED in 9793e4617) regressed S2 EHZ trace replay
- * from PASS to F5121.
+ * <p>The latch is active for S2 and S3K. S1 keeps the latch off because its
+ * object-control call sites still publish the filtered zero state directly.
  */
 class TestLogicalInputControlLockLatch {
 
@@ -102,7 +98,7 @@ class TestLogicalInputControlLockLatch {
     }
 
     @Test
-    void s2FlagClearedDoesNotLatchLogicalInput() {
+    void s2FlagSetLatchesLogicalInput() {
         TestablePlayableSprite sprite = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         sprite.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
 
@@ -112,17 +108,14 @@ class TestLogicalInputControlLockLatch {
         sprite.endOfTick();
         assertEquals(AbstractPlayableSprite.INPUT_RIGHT, sprite.getInputHistory(0));
 
-        // Frame N: lock engages, zero inputs pushed; S2 must NOT latch.
-        // The post-lock zero state is what existing S2 setControlLocked sites
-        // (FlipperObjectInstance, CPZSpinTubeObjectInstance,
-        // Sonic2DeathEggRobotInstance, SignpostObjectInstance) expect for
-        // animation gating. The previous universal-latch attempt regressed
-        // S2 EHZ trace replay from PASS to F5121.
+        // Frame N: lock engages, zero inputs pushed. S2 Obj01_Control skips
+        // the Ctrl_1 -> Ctrl_1_Logical copy while Control_Locked, so the
+        // follower history must keep the previous logical word.
         sprite.setControlLocked(true);
         sprite.setLogicalInputState(false, false, false, false, false);
         sprite.endOfTick();
-        assertEquals((short) 0, sprite.getInputHistory(0),
-                "S2 frame N: latch flag is false, lock must zero logicalInputState");
+        assertEquals(AbstractPlayableSprite.INPUT_RIGHT, sprite.getInputHistory(0),
+                "S2 frame N: while controlLocked + latch flag, logicalInputState must persist");
     }
 
     @Test

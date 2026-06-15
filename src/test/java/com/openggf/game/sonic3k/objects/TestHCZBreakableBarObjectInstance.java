@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -70,6 +71,121 @@ class TestHCZBreakableBarObjectInstance {
     }
 
     @Test
+    void verticalCaptureRejectsExactLowerXBoundary() {
+        TestablePlayableSprite player = positionedPlayer("sonic");
+        player.setCentreX((short) 0x0214);
+        player.capturePrePhysicsSnapshot();
+        HCZBreakableBarObjectInstance bar = verticalBar(0x40);
+        bar.setServices(new TestObjectServices());
+
+        bar.update(0, player);
+
+        assertNoObjectControl(player);
+
+        player.setCentreX((short) 0x0215);
+        player.capturePrePhysicsSnapshot();
+        bar.update(1, player);
+
+        assertNativeBitZeroControl(player);
+    }
+
+    @Test
+    void verticalCaptureUsesCurrentPostPhysicsPositionForObjectPhase() {
+        TestablePlayableSprite player = positionedPlayer("sonic");
+        player.setCentreX((short) 0x020E);
+        player.setCentreY((short) 0x0200);
+        player.capturePrePhysicsSnapshot();
+        player.setCentreX((short) 0x0216);
+
+        HCZBreakableBarObjectInstance bar = verticalBar(0x40);
+        bar.setServices(new TestObjectServices());
+
+        bar.update(0, player);
+
+        assertNativeBitZeroControl(player);
+    }
+
+    @Test
+    void capturePreservesGroundSpeedLikeRom() {
+        TestablePlayableSprite player = positionedPlayer("sonic");
+        player.setGSpeed((short) 0x0056);
+        player.setSubpixelRaw(0xF900, 0x3C00);
+        HCZBreakableBarObjectInstance bar = verticalBar(0x40);
+        bar.setServices(new TestObjectServices());
+
+        bar.update(0, player);
+        bar.update(1, player);
+
+        assertNativeBitZeroControl(player);
+        assertEquals((short) 0x0056, player.getGSpeed());
+        assertEquals(0xF900, player.getXSubpixelRaw());
+        assertEquals(0x3C00, player.getYSubpixelRaw());
+    }
+
+    @Test
+    void horizontalCaptureUsesRomCrossAxisBand() {
+        TestablePlayableSprite player = positionedPlayer("sonic");
+        player.setCentreX((short) 0x0200);
+        player.setCentreY((short) 0x01EC);
+        player.capturePrePhysicsSnapshot();
+        HCZBreakableBarObjectInstance bar = horizontalBar(0xC0);
+        bar.setServices(new TestObjectServices());
+
+        bar.update(0, player);
+
+        assertNoObjectControl(player);
+
+        player.setCentreY((short) 0x01ED);
+        player.capturePrePhysicsSnapshot();
+        bar.update(1, player);
+
+        assertNativeBitZeroControl(player);
+    }
+
+    @Test
+    void horizontalCapturePreservesSubpixelsLikeRom() {
+        TestablePlayableSprite player = positionedPlayer("sonic");
+        player.setCentreX((short) 0x0200);
+        player.setCentreY((short) 0x01ED);
+        player.capturePrePhysicsSnapshot();
+        player.setSubpixelRaw(0x1200, 0xE900);
+        HCZBreakableBarObjectInstance bar = horizontalBar(0xC0);
+        bar.setServices(new TestObjectServices());
+
+        bar.update(0, player);
+        player.setDirectionalInputPressed(false, false, false, true);
+        bar.update(1, player);
+
+        assertNativeBitZeroControl(player);
+        assertEquals(0x1200, player.getXSubpixelRaw());
+        assertEquals(0xE900, player.getYSubpixelRaw());
+    }
+
+    @Test
+    void horizontalCaptureClampsRightEdgeFromCurrentPosition() {
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setCentreX((short) 0x0769);
+        player.setCentreY((short) 0x057D);
+        player.setXSpeed((short) 0x03F0);
+        player.setYSpeed((short) 0xFFF0);
+        player.setGSpeed((short) 0x0056);
+        player.capturePrePhysicsSnapshot();
+        player.setCentreX((short) 0x0771);
+
+        HCZBreakableBarObjectInstance bar = horizontalBarAt(0x0758, 0x0590, 0x80);
+        bar.setServices(new TestObjectServices());
+
+        bar.update(1020, player);
+
+        assertNativeBitZeroControl(player);
+        assertEquals((short) 0x076C, player.getCentreX());
+        assertEquals((short) 0x057C, player.getCentreY());
+        assertEquals((short) 0, player.getXSpeed());
+        assertEquals((short) 0, player.getYSpeed());
+        assertEquals((short) 0x0056, player.getGSpeed());
+    }
+
+    @Test
     void extraSidekickDoesNotShareNativeP2CaptureSlot() {
         TestablePlayableSprite main = positionedAwayFromBar("sonic");
         TestablePlayableSprite nativeP2 = positionedAwayFromBar("tails");
@@ -88,10 +204,21 @@ class TestHCZBreakableBarObjectInstance {
                 new ObjectSpawn(0x0200, 0x0200, 0x36, subtype, 0, false, 0));
     }
 
+    private static HCZBreakableBarObjectInstance horizontalBar(int subtype) {
+        return new HCZBreakableBarObjectInstance(
+                new ObjectSpawn(0x0200, 0x0200, 0x36, subtype, 0, false, 0));
+    }
+
+    private static HCZBreakableBarObjectInstance horizontalBarAt(int x, int y, int subtype) {
+        return new HCZBreakableBarObjectInstance(
+                new ObjectSpawn(x, y, 0x36, subtype, 0, false, 0));
+    }
+
     private static TestablePlayableSprite positionedPlayer(String character) {
         TestablePlayableSprite player = new TestablePlayableSprite(character, (short) 0, (short) 0);
-        player.setCentreX((short) 0x0214);
+        player.setCentreX((short) 0x0215);
         player.setCentreY((short) 0x0200);
+        player.capturePrePhysicsSnapshot();
         return player;
     }
 
@@ -99,6 +226,7 @@ class TestHCZBreakableBarObjectInstance {
         TestablePlayableSprite player = new TestablePlayableSprite(character, (short) 0, (short) 0);
         player.setCentreX((short) 0x0100);
         player.setCentreY((short) 0x0100);
+        player.capturePrePhysicsSnapshot();
         return player;
     }
 

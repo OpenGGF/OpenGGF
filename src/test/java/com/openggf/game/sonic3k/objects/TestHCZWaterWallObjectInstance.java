@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Method;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -21,13 +22,17 @@ class TestHCZWaterWallObjectInstance {
         HCZWaterWallObjectInstance waterWall = new HCZWaterWallObjectInstance(
                 new ObjectSpawn(0x0200, 0x0200, 0x3B, 1, 0, false, 0));
         waterWall.setServices(new TestObjectServices().withSidekicks(List.of(sidekick)));
+        int playerInitialY = player.getY();
+        int sidekickInitialY = sidekick.getY();
 
         waterWall.update(0, player);
 
         assertFullControl(player);
         assertTrue(player.isControlLocked());
+        assertEquals(playerInitialY - 8, player.getY());
         assertFullControl(sidekick);
         assertTrue(sidekick.isControlLocked());
+        assertEquals(sidekickInitialY - 8, sidekick.getY());
 
         invokeReleasePlayers(waterWall, player);
 
@@ -52,6 +57,31 @@ class TestHCZWaterWallObjectInstance {
         assertTrue(firstSidekick.isControlLocked());
         assertFullControl(extraSidekick);
         assertTrue(extraSidekick.isControlLocked());
+    }
+
+    @Test
+    void verticalGeyserWaitsForKosModuleBeforeRiseThenFallsThrough() {
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x0200, (short) 0x01C8);
+        HCZWaterWallObjectInstance waterWall = new HCZWaterWallObjectInstance(
+                new ObjectSpawn(0x0200, 0x0200, 0x3B, 1, 0, false, 0));
+        waterWall.setServices(new TestObjectServices());
+        int playerInitialY = player.getY();
+        int wallInitialY = waterWall.getY();
+
+        for (int frame = 0; frame < 6; frame++) {
+            waterWall.update(frame, player);
+            assertEquals(playerInitialY - ((frame + 1) * 8), player.getY(),
+                    "loc_302E6 should pull the player while Kos_modules_left is nonzero");
+            assertEquals(wallInitialY, waterWall.getY(),
+                    "vertical geyser must not enter loc_30338 while queued art is pending");
+        }
+
+        waterWall.update(6, player);
+
+        assertEquals(playerInitialY - 56, player.getY(),
+                "loc_302FA falls through into the first loc_30338 rise tick when the queue clears");
+        assertEquals(wallInitialY - 8, waterWall.getY(),
+                "the first rise tick should happen in the same update that finishes queued-art setup");
     }
 
     private static void assertFullControl(TestablePlayableSprite player) {

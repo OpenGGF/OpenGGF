@@ -183,11 +183,16 @@ public class Sonic1PlatformObjectInstance extends AbstractObjectInstance
     public void update(int frameCounter, PlayableEntity playerEntity) {
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        var objectManager = services().objectManager();
+        boolean wasPlayerRiding = objectManager != null && objectManager.isAnyPlayerRiding(this);
         playerStanding = hasStandingContact(checkpointAll());
 
         if (!inFallingRoutine) {
             // Routine 2/4: update bob angle (frozen in routine 8 / Plat_Action)
-            bobHelper.update(playerStanding);
+            // Plat_Solid (routine 2) only subtracts from objoff_38 before
+            // PlatformObject can create a new ride. The +4 nudge ramp starts
+            // on the next frame in Plat_Action2 (routine 4).
+            bobHelper.update(wasPlayerRiding && playerStanding);
         }
 
         // Apply movement
@@ -195,6 +200,14 @@ public class Sonic1PlatformObjectInstance extends AbstractObjectInstance
 
         // Apply nudge (sine-based vertical offset)
         applyNudge();
+
+        if (wasPlayerRiding && playerStanding) {
+            // Plat_Action2 runs ExitPlatform before Plat_Move/Plat_Nudge, then
+            // MvSonicOnPtfm2 after both position updates (docs/s1disasm/.../18
+            // Platforms.asm:74-87). The first checkpoint above models the
+            // ExitPlatform test; this post-move checkpoint models the carry.
+            checkpointAll();
+        }
 
         updateDynamicSpawn(x, y);
     }
@@ -238,16 +251,6 @@ public class Sonic1PlatformObjectInstance extends AbstractObjectInstance
         // Continued riding still observes the post-move/post-nudge surface
         // through routine 4's ExitPlatform -> Plat_Move -> Plat_Nudge ->
         // MvSonicOnPtfm2 order (same file:74-87).
-        return true;
-    }
-
-    @Override
-    public boolean gatesNewTopSolidLandingWithPreviousPosition() {
-        // PlatformObject samples a narrow top-entry window before Obj18's own
-        // movement/nudge body runs (docs/s1disasm/_incObj/sub PlatformObject.asm:5-42;
-        // docs/s1disasm/_incObj/18 Platforms.asm:54-67). The engine player has
-        // already advanced for this object pass, so require the previous sampled
-        // position to be inside the same entry window before creating a new ride.
         return true;
     }
 

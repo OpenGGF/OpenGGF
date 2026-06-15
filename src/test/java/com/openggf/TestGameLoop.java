@@ -5,6 +5,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.control.InputHandler;
+import com.openggf.audio.AudioManager;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.DataSelectProvider;
 import com.openggf.game.dataselect.DataSelectAction;
 import com.openggf.game.dataselect.DataSelectActionType;
@@ -29,6 +32,10 @@ import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameRng;
 import com.openggf.game.dataselect.DataSelectPresentationProvider;
 import com.openggf.game.dataselect.DataSelectSessionController;
+import com.openggf.game.launch.LaunchProfile;
+import com.openggf.game.launch.LaunchProfileApplier;
+import com.openggf.game.launch.LaunchProfileStore;
+import com.openggf.game.launch.MasterTitleLaunchCoordinator;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic3k.dataselect.S3kDataSelectProfile;
 import com.openggf.game.sonic2.Sonic2GameModule;
@@ -46,6 +53,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -65,6 +73,8 @@ public class TestGameLoop {
     @BeforeEach
     public void setUp() {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SonicConfigurationService.getInstance().clearSessionOverrides();
+        SonicConfigurationService.getInstance().resolveDisplayAspect();
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
         TestEnvironment.activeGameplayMode();
         mockInputHandler = mock(InputHandler.class);
@@ -73,6 +83,8 @@ public class TestGameLoop {
 
     @AfterEach
     public void tearDown() {
+        SonicConfigurationService.getInstance().clearSessionOverrides();
+        SonicConfigurationService.getInstance().resolveDisplayAspect();
         gameLoop = null;
         SessionManager.clear();
         SessionManager.clear();
@@ -126,6 +138,34 @@ public class TestGameLoop {
     public void testStepWithoutInputHandlerThrows() {
         GameLoop loop = new GameLoop();
         assertThrows(IllegalStateException.class, loop::step);
+    }
+
+    @Test
+    public void pauseKeyDoesNotToggleUserPauseInDataSelectMode() {
+        InputHandler inputHandler = new InputHandler();
+        GameLoop loop = new GameLoop(inputHandler);
+        loop.setGameMode(GameMode.DATA_SELECT);
+
+        int pauseKey = SonicConfigurationService.getInstance().getInt(SonicConfiguration.PAUSE_KEY);
+        inputHandler.handleKeyEvent(pauseKey, GLFW_PRESS);
+        loop.step();
+
+        assertFalse(loop.isUserPaused(),
+                "Engine pause input should be ignored in menu modes so data-select cannot appear frozen");
+    }
+
+    @Test
+    public void userPauseIndicatorIsNotDebugViewGated() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/Engine.java"));
+        int userPaused = source.indexOf("gameLoop.isUserPaused()");
+        int needsOverlay = source.indexOf("debugViewEnabled || playbackHud || userPaused");
+        int render = source.indexOf("renderUserPauseIndicator();");
+
+        assertTrue(userPaused >= 0, "Engine display path must observe GameLoop user pause state");
+        assertTrue(needsOverlay > userPaused,
+                "The pause overlay should contribute to overlay setup independently of DEBUG_VIEW_ENABLED");
+        assertTrue(render > needsOverlay,
+                "The user-pause indicator should render from the release-visible overlay path");
     }
 
     @Test
@@ -227,6 +267,301 @@ public class TestGameLoop {
 
         assertDoesNotThrow(loop::step);
         assertTrue(fadeManager.isActive(), "Bootstrap fade should start while no gameplay mode exists");
+    }
+
+    @Test
+    void escapeHoldFadesAudioAndScreenBeforeReturningToMasterTitle() throws Exception {
+        InputHandler input = new InputHandler();
+        GameLoop loop = new GameLoop(input);
+        AudioManager audioManager = mock(AudioManager.class);
+        FadeManager fadeManager = mock(FadeManager.class);
+        AtomicReference<Runnable> fadeCallback = new AtomicReference<>();
+        AtomicBoolean returnedToMasterTitle = new AtomicBoolean(false);
+
+        when(fadeManager.isActive()).thenReturn(false);
+        doAnswer(invocation -> {
+            fadeCallback.set(invocation.getArgument(0));
+            return null;
+        }).when(fadeManager).startFadeToBlack(any());
+        setPrivateField(loop, "audioManager", audioManager);
+        setPrivateField(loop, "fadeManager", fadeManager);
+        loop.setReturnToMasterTitleHandler(() -> returnedToMasterTitle.set(true));
+
+        input.handleKeyEvent(GLFW_KEY_ESCAPE, GLFW_PRESS);
+        for (int frame = 0; frame < EscapeToMasterTitleController.HOLD_FRAMES; frame++) {
+            loop.getEscapeToMasterTitleController().update(GameMode.LEVEL, input);
+            input.update();
+        }
+
+        verify(audioManager).fadeOutMusic();
+        verify(fadeManager).startFadeToBlack(any());
+        assertFalse(returnedToMasterTitle.get(), "return should wait for fade-to-black callback");
+
+        assertNotNull(fadeCallback.get());
+        fadeCallback.get().run();
+        assertTrue(returnedToMasterTitle.get());
+    }
+
+    @Test
+    void escapeHoldOnMasterTitleFadesAudioAndScreenBeforeExitingApplication() throws Exception {
+        SessionManager.clear();
+        SessionManager.clear();
+
+        AudioManager audioManager = mock(AudioManager.class);
+        FadeManager fadeManager = mock(FadeManager.class);
+        com.openggf.graphics.GraphicsManager graphicsManager = mock(com.openggf.graphics.GraphicsManager.class);
+        EngineContext engineContext = new EngineContext(
+                SonicConfigurationService.getInstance(),
+                graphicsManager,
+                audioManager,
+                com.openggf.data.RomManager.getInstance(),
+                com.openggf.debug.PerformanceProfiler.getInstance(),
+                com.openggf.debug.DebugOverlayManager.getInstance(),
+                com.openggf.debug.playback.PlaybackDebugManager.getInstance(),
+                com.openggf.game.RomDetectionService.getInstance(),
+                com.openggf.game.CrossGameFeatureProvider.getInstance());
+        InputHandler input = new InputHandler();
+        GameLoop loop = new GameLoop(engineContext, input);
+        MasterTitleScreen masterTitleScreen = mock(MasterTitleScreen.class);
+        AtomicReference<Runnable> fadeCallback = new AtomicReference<>();
+        AtomicBoolean exitedApplication = new AtomicBoolean(false);
+
+        when(fadeManager.isActive()).thenReturn(false);
+        when(graphicsManager.getFadeManager()).thenReturn(fadeManager);
+        doAnswer(invocation -> {
+            fadeCallback.set(invocation.getArgument(0));
+            return null;
+        }).when(fadeManager).startFadeToBlack(any());
+        loop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
+        loop.setMasterTitleScreenSupplier(() -> masterTitleScreen);
+        loop.setApplicationExitHandler(() -> exitedApplication.set(true));
+
+        input.handleKeyEvent(GLFW_KEY_ESCAPE, GLFW_PRESS);
+        for (int frame = 0; frame < EscapeToMasterTitleController.HOLD_FRAMES; frame++) {
+            loop.step();
+        }
+
+        verify(audioManager).fadeOutMusic();
+        verify(fadeManager).startFadeToBlack(any());
+        assertFalse(exitedApplication.get(), "application exit should wait for fade-to-black callback");
+
+        assertNotNull(fadeCallback.get());
+        fadeCallback.get().run();
+        assertTrue(exitedApplication.get());
+    }
+
+    @Test
+    void escapePromptProgressRendersWithRectanglesInsteadOfTextBar() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/Engine.java"));
+        int promptRenderer = source.indexOf("private void renderEscapeToMasterTitlePrompt");
+        int progressRenderer = source.indexOf("private void renderEscapeProgressBar");
+        int nextMethod = source.indexOf("private boolean updateDisplayShaderInput()");
+
+        assertTrue(promptRenderer >= 0, "Engine must render the Escape prompt overlay");
+        assertTrue(progressRenderer > promptRenderer, "Escape progress must have a rectangle renderer");
+        assertTrue(nextMethod > progressRenderer, "Escape progress renderer must stay in the overlay section");
+        String escapeOverlaySource = source.substring(promptRenderer, nextMethod);
+        assertTrue(escapeOverlaySource.contains("GLCommand.CommandType.RECTI"),
+                "Escape progress should render with rectangle commands");
+        assertFalse(escapeOverlaySource.contains("buildEscapeProgressBar"),
+                "Escape progress should not render as an ASCII text bar");
+    }
+
+    @Test
+    public void userMasterTitleExitClearsStaleOverridesAppliesProfileAndResolvesBeforeHandler() throws Exception {
+        SonicConfigurationService config = EngineServices.current().configuration();
+        config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
+        config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+        config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+        config.resolveDisplayAspect();
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "SUPER_32_9");
+
+        TrackingLaunchProfileStore store = new TrackingLaunchProfileStore(config,
+                new LaunchProfile(true, "s1", true, "WIDE_16_9", "sonic", "none"));
+        installLaunchCoordinator(config, store);
+
+        AtomicReference<String> handled = new AtomicReference<>();
+        gameLoop.setMasterTitleExitHandler(gameId -> {
+            handled.set(gameId);
+            assertEquals("sonic", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
+            assertEquals("", config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+            assertEquals(true, config.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
+            assertEquals("s1", config.getString(SonicConfiguration.CROSS_GAME_SOURCE));
+            assertEquals(400, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+        });
+
+        invokePrivateMethod(gameLoop, "doExitMasterTitleScreen",
+                new Class<?>[] {String.class, boolean.class}, "s2", false);
+
+        assertEquals("s2", handled.get());
+        assertEquals(MasterTitleScreen.GameEntry.SONIC_2, store.loadedEntry);
+    }
+
+    @Test
+    public void programmaticMasterTitleExitClearsOverridesSkipsProfileAndResolvesBeforeHandler() throws Exception {
+        SonicConfigurationService config = EngineServices.current().configuration();
+        config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
+        config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+        config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+        config.resolveDisplayAspect();
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+        config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, true);
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "WIDE_16_9");
+        config.resolveDisplayAspect();
+
+        TrackingLaunchProfileStore store = new TrackingLaunchProfileStore(config,
+                new LaunchProfile(true, "s3k", true, "WIDE_16_9", "knuckles", "none"));
+        installLaunchCoordinator(config, store);
+
+        gameLoop.setMasterTitleExitHandler(gameId -> {
+            assertEquals("s3k", gameId);
+            assertEquals("sonic", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
+            assertEquals("tails", config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+            assertFalse(config.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
+            assertEquals(320, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+        });
+
+        invokePrivateMethod(gameLoop, "doExitMasterTitleScreen",
+                new Class<?>[] {String.class, boolean.class}, "s3k", true);
+
+        assertNull(store.loadedEntry, "programmatic launch must not load/apply a launch profile");
+    }
+
+    @Test
+    public void programmaticLaunchAfterUserLaunchSeesBaseMapValuesNotPreviousSessionProfile() throws Exception {
+        SonicConfigurationService config = EngineServices.current().configuration();
+        config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
+        config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+        config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+        TrackingLaunchProfileStore store = new TrackingLaunchProfileStore(config,
+                new LaunchProfile(true, "s1", true, "WIDE_16_9", "sonic", "none"));
+        installLaunchCoordinator(config, store);
+
+        invokePrivateMethod(gameLoop, "doExitMasterTitleScreen",
+                new Class<?>[] {String.class, boolean.class}, "s2", false);
+        assertEquals("sonic", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertEquals("", config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+        assertEquals(400, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+
+        gameLoop.setMasterTitleExitHandler(gameId -> {
+            assertEquals("sonic", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
+            assertEquals("tails", config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+            assertFalse(config.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
+            assertEquals(320, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+        });
+
+        invokePrivateMethod(gameLoop, "doExitMasterTitleScreen",
+                new Class<?>[] {String.class, boolean.class}, "s1", true);
+    }
+
+    @Test
+    public void failedMasterTitleExitRestoresMasterTitleAndClearsLaunchProfileState() throws Exception {
+        SonicConfigurationService config = EngineServices.current().configuration();
+        config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
+        config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+        config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+        config.resolveDisplayAspect();
+
+        TrackingLaunchProfileStore store = new TrackingLaunchProfileStore(config,
+                new LaunchProfile(true, "s1", true, "WIDE_16_9", "knuckles", "none"));
+        MasterTitleLaunchCoordinator coordinator = installLaunchCoordinator(config, store);
+        SessionManager.clear();
+        gameLoop.setGameplayMode(null);
+        setPrivateField(gameLoop, "currentGameMode", GameMode.MASTER_TITLE_SCREEN);
+        FadeManager fadeManager = mock(FadeManager.class);
+        setPrivateField(gameLoop, "fadeManager", fadeManager);
+        AtomicBoolean callbackRan = new AtomicBoolean(false);
+        coordinator.setPendingLaunchCallback(() -> callbackRan.set(true));
+
+        gameLoop.setMasterTitleExitHandler(gameId -> {
+            assertEquals("s2", gameId);
+            assertEquals("sonic", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE),
+                    "profile is sanitized and applied before the engine attempts startup");
+            gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
+        });
+
+        invokePrivateMethod(gameLoop, "doExitMasterTitleScreen",
+                new Class<?>[] {String.class, boolean.class}, "s2", false);
+        invokePrivateMethod(gameLoop, "runAfterStepMasterTitleLaunchCallbackIfPresent");
+
+        assertEquals(GameMode.MASTER_TITLE_SCREEN, gameLoop.getCurrentGameMode());
+        assertEquals("sonic", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertEquals("tails", config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+        assertFalse(config.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
+        assertEquals(320, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+        assertFalse(callbackRan.get(), "failed startup must not run the staged trace launch callback");
+        assertNull(getPrivateField(coordinator, "pendingLaunchCallback"));
+        assertNull(getPrivateField(coordinator, "afterStepLaunchCallback"));
+        verify(fadeManager).startFadeFromBlack(isNull());
+    }
+
+    @Test
+    public void successfulDirectGameplayExitCanFallbackFromMasterTitleToLevel() throws Exception {
+        SonicConfigurationService config = EngineServices.current().configuration();
+        config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
+        config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+        config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+        config.resolveDisplayAspect();
+
+        TrackingLaunchProfileStore store = new TrackingLaunchProfileStore(config,
+                new LaunchProfile(true, "s1", true, "WIDE_16_9", "sonic", "none"));
+        MasterTitleLaunchCoordinator coordinator = installLaunchCoordinator(config, store);
+        SessionManager.clear();
+        gameLoop.setGameplayMode(null);
+        setPrivateField(gameLoop, "currentGameMode", GameMode.MASTER_TITLE_SCREEN);
+        AtomicBoolean callbackRan = new AtomicBoolean(false);
+        coordinator.setPendingLaunchCallback(() -> callbackRan.set(true));
+
+        gameLoop.setMasterTitleExitHandler(gameId -> {
+            assertEquals("s2", gameId);
+            gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
+        });
+
+        invokePrivateMethod(gameLoop, "doExitMasterTitleScreen",
+                new Class<?>[] {String.class, boolean.class}, "s2", false);
+
+        assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
+        assertEquals("sonic", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertEquals("", config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+        assertEquals(true, config.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
+        assertEquals("s1", config.getString(SonicConfiguration.CROSS_GAME_SOURCE));
+        assertEquals(400, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+        assertFalse(callbackRan.get(), "callback should be staged until the end-of-step hook runs");
+
+        invokePrivateMethod(gameLoop, "runAfterStepMasterTitleLaunchCallbackIfPresent");
+
+        assertTrue(callbackRan.get(), "successful direct gameplay launch should keep callback staging");
+        assertNull(getPrivateField(coordinator, "pendingLaunchCallback"));
+        assertNull(getPrivateField(coordinator, "afterStepLaunchCallback"));
+    }
+
+    @Test
+    public void returnToMasterTitleClearsSessionOverridesAndResolvesBeforeHandler() {
+        SonicConfigurationService config = EngineServices.current().configuration();
+        config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
+        config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "WIDE_16_9");
+        config.resolveDisplayAspect();
+
+        gameLoop.setReturnToMasterTitleHandler(() -> {
+            assertFalse(config.hasSessionOverride(SonicConfiguration.DISPLAY_ASPECT));
+            assertEquals("NATIVE_4_3", config.getString(SonicConfiguration.DISPLAY_ASPECT));
+            assertEquals(320, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+        });
+
+        gameLoop.returnToMasterTitle();
     }
 
     @Test
@@ -1561,10 +1896,26 @@ public class TestGameLoop {
         verify((FadeManager) getPrivateField(gameLoop, "fadeManager"), never()).startFadeToBlack(any());
     }
 
+    private MasterTitleLaunchCoordinator installLaunchCoordinator(SonicConfigurationService config,
+                                                                  TrackingLaunchProfileStore store)
+            throws Exception {
+        MasterTitleLaunchCoordinator coordinator = new MasterTitleLaunchCoordinator(
+                config, store, new LaunchProfileApplier(config));
+        setPrivateField(gameLoop, "masterTitleLaunchCoordinator", coordinator);
+        return coordinator;
+    }
+
     private static void invokePrivateMethod(Object target, String methodName) throws Exception {
         Method method = target.getClass().getDeclaredMethod(methodName);
         method.setAccessible(true);
         method.invoke(target);
+    }
+
+    private static void invokePrivateMethod(Object target, String methodName, Class<?>[] parameterTypes, Object... args)
+            throws Exception {
+        Method method = target.getClass().getDeclaredMethod(methodName, parameterTypes);
+        method.setAccessible(true);
+        method.invoke(target, args);
     }
 
     private static void setPrivateField(Object target, String fieldName, Object value) throws Exception {
@@ -1817,5 +2168,20 @@ public class TestGameLoop {
             return state != State.INACTIVE;
         }
     }
-}
 
+    private static final class TrackingLaunchProfileStore extends LaunchProfileStore {
+        private final LaunchProfile profile;
+        private MasterTitleScreen.GameEntry loadedEntry;
+
+        private TrackingLaunchProfileStore(SonicConfigurationService configService, LaunchProfile profile) {
+            super(configService);
+            this.profile = profile;
+        }
+
+        @Override
+        public LaunchProfile load(MasterTitleScreen.GameEntry entry) {
+            loadedEntry = entry;
+            return profile;
+        }
+    }
+}

@@ -240,6 +240,9 @@ public class SimpleDataSelectManager extends AbstractDataSelectProvider {
         if (summary.state() == SaveSlotState.EMPTY) {
             return "EMPTY";
         }
+        if (summary.state() == SaveSlotState.UNAVAILABLE) {
+            return "UNAVAILABLE";
+        }
 
         Map<String, Object> payload = summary.payload();
         StringBuilder builder = new StringBuilder();

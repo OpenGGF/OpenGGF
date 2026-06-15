@@ -53,6 +53,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     // Behind-window unload range is one chunk ($80) for forward movement.
     // At native width (320) EXTRA_AHEAD (0x140=320) + width (320) = 0x280 (640) = legacy window.
     private static final int EXTRA_AHEAD = 0x140; // 320; native -> 0x280 (640) window
+    private static final int S1_COUNTER_LOAD_AHEAD = 0x280;
     private static final int UNLOAD_BEHIND = 0x80;
     private static final int CHUNK_MASK = 0xFF80;
     /** ROM: OPL_Next advances v_opl_screen by one chunk (0x80) per frame. */
@@ -65,6 +66,8 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     private final BitSet destroyedInWindow = new BitSet();
     private final BitSet pendingCursorLoad = new BitSet();
     private final ArrayList<Integer> pendingCursorLoadOrder = new ArrayList<>();
+    /** Reused result buffer for {@link #drainPendingCursorLoadSpawns()}; see its contract. */
+    private final ArrayList<ObjectSpawn> drainedCursorLoadScratch = new ArrayList<>();
     private final BitSet deferredVerticalLoad = new BitSet();
     /**
      * ROM parity: tracks spawns whose instance was deleted via out_of_range
@@ -223,6 +226,17 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             return windowingStrategy.loadWindowForwardEdge(cameraX);
         }
         return super.getWindowEnd(cameraX);
+    }
+
+    @Override
+    protected int getLoadAhead() {
+        if (counterBasedRespawn) {
+            // S1 ObjPosLoad uses a fixed native right edge:
+            // d6 = (v_opl_screen & $FF80) + $280
+            // (docs/s1disasm/s1disasm/_inc/ObjPosLoad.asm, OPL_MovedRight).
+            return S1_COUNTER_LOAD_AHEAD;
+        }
+        return super.getLoadAhead();
     }
 
     @Override
@@ -436,7 +450,9 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         int windowEnd = cameraChunk + getLoadAhead();
         while (cursorIndex < spawns.size()
                 && spawns.get(cursorIndex).x() < windowEnd) {
-            spawnForwardEntry(cursorIndex);
+            if (!spawnForwardEntry(cursorIndex)) {
+                break;
+            }
             cursorIndex++;
         }
 
@@ -576,7 +592,9 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         int windowEnd = cameraChunk + getLoadAhead();
         while (cursorIndex < spawns.size()
                 && spawns.get(cursorIndex).x() < windowEnd) {
-            spawnForwardEntry(cursorIndex);
+            if (!spawnForwardEntry(cursorIndex)) {
+                break;
+            }
             cursorIndex++;
         }
 
@@ -698,6 +716,20 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
      * future placement scans can re-create it.
      */
     void removeFromActiveForUnload(ObjectSpawn spawn) {
+        active.remove(spawn);
+        clearCursorLoadState(spawn);
+    }
+
+    /**
+     * Removes a counter-based S1 spawn after an object-side {@code DeleteObject}
+     * that deliberately leaves its respawn-table bit set.
+     * <p>
+     * ROM: ObjPosLoad's {@code OPL_SpawnObj} uses {@code bset #7,2(a2,d2.w)}
+     * to test-and-set the counter slot. Objects such as Obj52 that delete
+     * without {@code RememberState} leave that bit set, so later cursor scans
+     * skip the entry instead of materializing a stale placement.
+     */
+    void removeFromActivePreservingCounterState(ObjectSpawn spawn) {
         active.remove(spawn);
         clearCursorLoadState(spawn);
     }
@@ -871,16 +903,25 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         pendingCursorLoadOrder.add(index);
     }
 
+    /**
+     * Drains the queued S3K X-cursor loads in queue order. Returns a reused
+     * scratch list valid only until the next call: the sole consumer
+     * ({@code ObjectManager.syncActiveSpawnsLoad}) iterates it synchronously
+     * and must not retain the reference. The pending queue itself is cleared
+     * before returning, so loads queued while the caller iterates land in the
+     * next drain, not in the returned list.
+     */
     List<ObjectSpawn> drainPendingCursorLoadSpawns() {
-        ArrayList<ObjectSpawn> result = new ArrayList<>(pendingCursorLoadOrder.size());
-        for (int index : pendingCursorLoadOrder) {
+        drainedCursorLoadScratch.clear();
+        for (int i = 0; i < pendingCursorLoadOrder.size(); i++) {
+            int index = pendingCursorLoadOrder.get(i);
             if (index >= 0 && index < spawns.size() && pendingCursorLoad.get(index)) {
-                result.add(spawns.get(index));
+                drainedCursorLoadScratch.add(spawns.get(index));
             }
         }
         pendingCursorLoad.clear();
         pendingCursorLoadOrder.clear();
-        return result;
+        return drainedCursorLoadScratch;
     }
 
     List<ObjectSpawn> getDeferredVerticalLoadSpawns() {
@@ -930,7 +971,9 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         int windowEnd = oplChunk + getLoadAhead();
         while (cursorIndex < spawns.size()
                 && spawns.get(cursorIndex).x() < windowEnd) {
-            spawnForwardEntry(cursorIndex);
+            if (!spawnForwardEntry(cursorIndex)) {
+                break;
+            }
             cursorIndex++;
         }
     }
@@ -939,27 +982,33 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
      * Helper: process one entry during forward scan.
      * ROM: assigns d2 = fwdCounter, then fwdCounter++ for respawn-tracked.
      */
-    private void spawnForwardEntry(int index) {
+    private boolean spawnForwardEntry(int index) {
         // Clear dormant: the cursor is re-scanning this position, matching
         // ROM behavior where ObjPosLoad re-processes the spawn entry.
         dormant.clear(index);
         ObjectSpawn spawn = spawns.get(index);
-        if (remembered.get(index) && !stayActive.get(index)) {
-            return;
-        }
         if (spawn.respawnTracked()) {
+            // ROM: OPL_MovedRight increments the forward respawn counter
+            // before OPL_SpawnObj tests/skips the remembered object
+            // (docs/s1disasm/s1disasm/_inc/ObjPosLoad.asm:195-203).
             int counter = fwdCounter & 0xFF;
             fwdCounter = (fwdCounter + 1) & 0xFF;
-            trySpawnCountered(index, counter);
+            return trySpawnCountered(index, counter);
         } else {
             // Non-tracked objects always spawn (ROM: loc_DA3C bpl → OPL_MakeItem)
-            if (!destroyedInWindow.get(index)) {
+            if (!(remembered.get(index) && !stayActive.get(index))
+                    && !destroyedInWindow.get(index)) {
                 active.add(spawn);
                 if (inlineCallback != null) {
-                    inlineCallback.tryCreate(spawn, -1);
+                    boolean created = inlineCallback.tryCreate(spawn, -1);
+                    if (!created) {
+                        active.remove(spawn);
+                        return false;
+                    }
                 }
             }
         }
+        return true;
     }
 
     /**
@@ -1023,25 +1072,28 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             if (prev.respawnTracked()) {
                 bwdCounter = (bwdCounter - 1) & 0xFF;
                 int counter = bwdCounter & 0xFF;
-                boolean spawned = trySpawnCountered(leftCursorIndex, counter);
-                if (!spawned) {
-                    // ROM: loc_D9C6 — if bset blocked or FindFreeObj failed,
-                    // undo counter and cursor retreat, then stop.
-                    // (bset skip returns d0=0 → NOT treated as failure in ROM,
-                    // but FindFreeObj failure IS. We only stop on FindFreeObj
-                    // failure equivalent. bset skip continues the loop.)
-                    //
-                    // In the ROM, bset-skip returns d0=0 (success), so the
-                    // loop continues. Only FindFreeObj failure stops the loop.
-                    // The engine doesn't have FindFreeObj failure, so always
-                    // continue.
+                boolean canContinue = trySpawnCountered(leftCursorIndex, counter);
+                if (!canContinue) {
+                    // ROM: loc_D9C6 — FindFreeObj failure undoes the cursor
+                    // retreat and the counter decrement, then stops the scan.
+                    // A bset/remember skip returns success from OPL_SpawnObj
+                    // and continues; trySpawnCountered returns false only for
+                    // the FindFreeObj-equivalent callback failure.
+                    bwdCounter = (bwdCounter + 1) & 0xFF;
+                    leftCursorIndex++;
+                    break;
                 }
             } else {
                 if (!(remembered.get(leftCursorIndex) && !stayActive.get(leftCursorIndex))
                         && !destroyedInWindow.get(leftCursorIndex)) {
                     active.add(prev);
                     if (inlineCallback != null) {
-                        inlineCallback.tryCreate(prev, -1);
+                        boolean created = inlineCallback.tryCreate(prev, -1);
+                        if (!created) {
+                            active.remove(prev);
+                            leftCursorIndex++;
+                            break;
+                        }
                     }
                 }
             }
@@ -1110,16 +1162,16 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     private boolean trySpawnCountered(int index, int counter) {
         ObjectSpawn spawn = spawns.get(index);
         if (remembered.get(index) && !stayActive.get(index)) {
-            return false;
+            return true;
         }
         // ROM: bset #7,2(a2,d2.w) — test AND set bit 7
         boolean wasSet = (objState[counter & 0xFF] & 0x80) != 0;
         objState[counter & 0xFF] |= 0x80; // Side effect: always sets bit
         if (wasSet) {
-            return false; // Bit was already set → skip
+            return true; // Bit was already set → skip, but scan continues
         }
         if (destroyedInWindow.get(index)) {
-            return false;
+            return true;
         }
         spawnToCounter.put(spawn, counter & 0xFF);
         active.add(spawn);
@@ -1127,7 +1179,12 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         // This eliminates the 1-frame pipeline delay between cursor
         // advancement (placement.update) and instance creation (syncActiveSpawnsLoad).
         if (inlineCallback != null) {
-            return inlineCallback.tryCreate(spawn, counter & 0xFF);
+            boolean created = inlineCallback.tryCreate(spawn, counter & 0xFF);
+            if (!created) {
+                active.remove(spawn);
+                spawnToCounter.remove(spawn);
+                return false;
+            }
         }
         return true;
     }
@@ -1136,11 +1193,38 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
      * Clears the objState bit for a normally-unloaded spawn.
      * ROM equivalent: RememberState's {@code bclr #7,2(a2,d0.w)}.
      * Called when an object leaves the camera window (not when destroyed).
+     * The spawn-to-counter association is deliberately preserved while the
+     * spawn remains between the placement cursors, so a same-window reload can
+     * still write the correct obRespawnNo value.
      */
     void clearCounterForSpawn(ObjectSpawn spawn) {
-        Integer counter = spawnToCounter.remove(spawn);
+        Integer counter = spawnToCounter.get(spawn);
         if (counter != null) {
             objState[counter] &= ~0x80;
+        }
+    }
+
+    /**
+     * Forgets the spawn-to-counter association without clearing bit 7.
+     * ROM equivalent: object tails that call {@code DeleteObject} directly
+     * instead of {@code RememberState}; their respawn-table bit remains set.
+     */
+    void forgetCounterForSpawn(ObjectSpawn spawn) {
+        spawnToCounter.remove(spawn);
+    }
+
+    boolean isCounterStateBitSet(ObjectSpawn spawn, int bit) {
+        Integer counter = spawnToCounter.get(spawn);
+        if (counter == null || bit < 0 || bit > 7) {
+            return false;
+        }
+        return (objState[counter] & (1 << bit)) != 0;
+    }
+
+    void setCounterStateBit(ObjectSpawn spawn, int bit) {
+        Integer counter = spawnToCounter.get(spawn);
+        if (counter != null && bit >= 0 && bit <= 7) {
+            objState[counter] |= 1 << bit;
         }
     }
 

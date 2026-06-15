@@ -8,6 +8,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -568,21 +569,32 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance {
         }
 
         @Override
+        public SolidExecutionMode solidExecutionMode() {
+            return SolidExecutionMode.MANUAL_CHECKPOINT;
+        }
+
+        @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             if (isDestroyed()) return;
 
             switch (wallState) {
                 case WALL_STATE_SOLID -> {
-                    // Wait for Eggman's running signal
                     if (eggmanRunning) {
                         wallState = WALL_STATE_OPENING;
                         openingFrameIndex = 0;
                         openingAnimTimer = OPENING_ANIM_SPEED;
+                    } else {
+                        // ROM ObjC6_State3_State1 calls SolidObject only while
+                        // Eggman's misc flag is clear; once set it advances to
+                        // the opening animation and only displays this frame.
+                        services().solidExecutionRegistry().currentObject().resolveSolidNowAll();
                     }
                 }
                 case WALL_STATE_OPENING -> {
-                    // Play opening animation
+                    // ROM ObjC6_State3_State2 calls SolidObject before
+                    // AnimateSprite, so the final opening tick still blocks.
+                    services().solidExecutionRegistry().currentObject().resolveSolidNowAll();
                     openingAnimTimer--;
                     if (openingAnimTimer < 0) {
                         openingAnimTimer = OPENING_ANIM_SPEED;

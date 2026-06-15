@@ -151,10 +151,16 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
 
     // Gravity from ObjectMoveAndFall (s2.asm line 29950)
     private static final int GRAVITY = 0x38;
+    // Obj1F never sets render_flags.explicit_height, so S2 BuildSprites uses
+    // its approximate Y culling band instead of y_radius(a0)
+    // (docs/s2disasm/s2.asm:30584-30619).
+    private static final int APPROX_RENDER_Y_MARGIN = 0x20;
+    private static final int VERTICAL_ONLY_OFFSCREEN_DELETE_TICKS = 2;
 
     private ZoneConfig config;
     private int delayCounter = INITIAL_DELAY;
     private boolean stoodOnFlag = false;
+    private boolean standingContactLastFrame = false;
     private boolean collapsed = false;
     private boolean inFragmentPhase = false;  // ROM: parent becomes fragment 0, stays solid during delay
     private int fragmentPhaseDelay = 0;       // ROM: delay_counter for the parent-as-fragment-0
@@ -164,6 +170,7 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
     private int parentVelY;
     private int parentY;
     private int parentYFrac;
+    private int verticalOnlyOffscreenTicks;
 
     // Orientation from spawn render_flags (inherited by fragments per disassembly)
     private final boolean hFlip;
@@ -184,7 +191,12 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public int getY() {
-        return spawn.y();
+        // ROM Obj1F_FragmentFall moves the parent object itself with
+        // ObjectMoveAndFall before checking render_flags.on_screen and
+        // DeleteObject (docs/s2disasm/s2.asm:23860-23864). Once detached,
+        // expose that falling y_pos so slot/offscreen lifecycle observes the
+        // moving parent rather than the original placement y.
+        return collapsed ? parentY : spawn.y();
     }
 
     @Override
@@ -195,16 +207,25 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         }
 
         SolidCheckpointBatch batch = services().solidExecution().resolveSolidNowAll();
-        boolean isStanding = hasStandingContact(batch);
+        boolean standingThisFrame = hasStandingContact(batch);
 
-        // ROM: Obj1F_FragmentFall — collapsed parent falls with gravity, delete when offscreen.
+        // ROM: Obj1F_FragmentFall - collapsed parent falls with gravity, then
+        // deletes when render_flags.on_screen is clear
+        // (docs/s2disasm/s2.asm:23860-23864).
         if (collapsed) {
             parentVelY += GRAVITY;
             int y32 = (parentY << 16) | (parentYFrac & 0xFFFF);
             y32 += ((int) (short) parentVelY) << 8;
             parentY = y32 >> 16;
             parentYFrac = y32 & 0xFFFF;
-            if (!isOnScreen(128)) {
+            if (isWithinRenderSpriteBounds(config.halfWidth(), APPROX_RENDER_Y_MARGIN)) {
+                verticalOnlyOffscreenTicks = 0;
+            } else if (isOnScreenX(config.halfWidth())
+                    && verticalOnlyOffscreenTicks < VERTICAL_ONLY_OFFSCREEN_DELETE_TICKS) {
+                // The ROM clears render_flags.on_screen in BuildSprites, after
+                // CPU follower code can still see horizontally visible Obj1F slots.
+                verticalOnlyOffscreenTicks++;
+            } else {
                 setDestroyed(true);
             }
             return;
@@ -224,6 +245,7 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
                 if (fragmentPhaseDelay <= 0) {
                     collapsed = true;
                     parentY = spawn.y();
+                    verticalOnlyOffscreenTicks = 0;
                     detachFragmentRiders(batch);
                 }
             }
@@ -239,10 +261,14 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
             delayCounter--;
         }
 
-        // ROM: check status standing_mask bits — set stood_on_flag when player is on platform
-        if (isStanding) {
+        // ROM Obj1F_Main reads status(a0) before PlatformObject writes the
+        // current frame's standing bits (docs/s2disasm/s2.asm:23815-23827).
+        // The manual checkpoint already knows the current contact, so consume
+        // the previous-frame contact here to keep the collapse timer aligned.
+        if (standingContactLastFrame) {
             stoodOnFlag = true;
         }
+        standingContactLastFrame = standingThisFrame;
     }
 
     @Override
@@ -355,11 +381,7 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         // The parent stays solid at its original position during the fragment delay.
         // Only fragment 0 (the parent) provides collision; other fragments are visual only.
         inFragmentPhase = true;
-        // ROM Obj1F_CreateFragments writes the delay byte, then the parent is
-        // seen as routine 4 before Obj1F_Fragment gets its first decrementing
-        // pass. The engine enters the fragment-phase branch immediately on the
-        // corresponding visible frame, so keep one pre-decrement tick here.
-        fragmentPhaseDelay = config.delayData()[0] + 1;  // Parent gets first delay value
+        fragmentPhaseDelay = config.delayData()[0];  // Parent gets first delay value
         mappingFrame = 1;  // Show collapsed appearance
 
         // Play collapse sound
@@ -399,9 +421,11 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
 
         int[] delayData = config.delayData();
 
-        // Fragments spawn at parent's exact position - sprite piece offsets handle visual displacement
-        // (This matches the disassembly where fragments inherit parent x_pos/y_pos and render_flags)
-        for (int i = 0; i < delayData.length; i++) {
+        // ROM Obj1F_CreateFragments turns the parent object into fragment 0;
+        // FindFreeObj is only used for the remaining fragments
+        // (docs/s2disasm/s2.asm:23752-23815). Allocating a child for index 0
+        // consumes an extra SST slot and shifts later objects by one.
+        for (int i = 1; i < delayData.length; i++) {
             int delay = delayData[i];
 
             final int pieceIndex = i;
@@ -495,9 +519,7 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         public CollapsingPlatformFragmentInstance(int parentX, int parentY, int delay, int fragmentIndex,
                                                    ZoneConfig config, ObjectRenderManager renderManager,
                                                    boolean hFlip, boolean vFlip) {
-            super(new ObjectSpawn(parentX + computeOffsetX(config, fragmentIndex, hFlip),
-                            parentY + computeOffsetY(config, fragmentIndex, vFlip),
-                            0x1F, 0, 0, false, 0),
+            super(new ObjectSpawn(parentX, parentY, 0x1F, 0, 0, false, 0),
                     "CollapsingPlatformFragment", delay, 4);
 
             this.pieceOffsetX = computeOffsetX(config, fragmentIndex, hFlip);
@@ -525,6 +547,16 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
                 offsetY = config.pieceOffsets()[fragmentIndex][1];
             }
             return vFlip ? -offsetY : offsetY;
+        }
+
+        @Override
+        protected boolean shouldDeleteAfterFall() {
+            // ROM Obj1F_CreateFragments copies the parent's x_pos/y_pos into
+            // child slots and advances the mappings pointer per fragment; the
+            // visual offset is in mappings data. Obj1F_FragmentFall then
+            // deletes when BuildSprites clears render_flags.on_screen
+            // (docs/s2disasm/s2.asm:23860-23864, 23880-23906).
+            return !isWithinRenderSpriteBounds(config.halfWidth(), APPROX_RENDER_Y_MARGIN);
         }
 
         @Override

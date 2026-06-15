@@ -29,6 +29,7 @@ import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.Sprite;
+import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.game.GroundMode;
 
@@ -57,9 +58,45 @@ final class ObjectSolidContactController {
     private final ObjectManager objectManager;
     private int frameCounter;
 
-    // Per-player riding state (ROM: each player object has its own SST interact field $3E)
-    private record RidingState(ObjectInstance object, int x, int y, int pieceIndex) {}
+    // Per-player riding state (ROM: each player object has its own SST interact field $3E).
+    // Mutable holder reused in place via putRidingState() so the steady "standing on an
+    // object" path doesn't allocate every frame. References never escape this class:
+    // rewind capture copies the primitive fields into SolidContactRidingEntry records.
+    //
+    // MUTATION DISCIPLINE: set() mutates the holder in place, so a RidingState
+    // obtained from ridingStates.get(...) is NOT a snapshot. Read every needed
+    // field into locals BEFORE any putRidingState() call for the same player;
+    // never hold a RidingState across a put and expect the pre-put values.
+    private static final class RidingState {
+        ObjectInstance object;
+        int x;
+        int y;
+        int pieceIndex;
+
+        RidingState(ObjectInstance object, int x, int y, int pieceIndex) {
+            set(object, x, y, pieceIndex);
+        }
+
+        void set(ObjectInstance object, int x, int y, int pieceIndex) {
+            this.object = object;
+            this.x = x;
+            this.y = y;
+            this.pieceIndex = pieceIndex;
+        }
+    }
+    private record PieceStandingLatchKey(Object objectKey, int pieceIndex) {}
     private final Map<PlayableEntity, RidingState> ridingStates = new IdentityHashMap<>(2);
+
+    /** Inserts or in-place-updates the player's riding state (allocation-free when present). */
+    private void putRidingState(PlayableEntity player, ObjectInstance object,
+            int x, int y, int pieceIndex) {
+        RidingState state = ridingStates.get(player);
+        if (state != null) {
+            state.set(object, x, y, pieceIndex);
+        } else {
+            ridingStates.put(player, new RidingState(object, x, y, pieceIndex));
+        }
+    }
     private final Set<PlayableEntity> inlineSupportedPlayers =
             Collections.newSetFromMap(new IdentityHashMap<>());
     private final Set<PlayableEntity> forceAirOnStaleSupportLoss =
@@ -102,6 +139,22 @@ final class ObjectSolidContactController {
     // (beginInlineFrame).
     private final Map<PlayableEntity, Set<Object>> objectStandingBitSnapshot =
             new IdentityHashMap<>(2);
+    // Per-frame set of solid object latch keys whose standing bit was first
+    // ESTABLISHED THIS FRAME by a fresh landing (RideObject_SetRide-equivalent
+    // STANDING contact). ROM evaluates each object's SolidObjectFull once per
+    // frame, so the airborne-rider unseat (loc_1DC98 / loc_1DCF0) that clears
+    // Status_OnObj can never observe "standing bit set AND Status_InAir set" on
+    // the same frame the bit was just set; it fires only on a SUBSEQUENT frame.
+    // The engine's inline post-physics solid pass can otherwise observe the
+    // post-jump airborne state in the same engine tick that established the
+    // ride and unseat it one frame early. When
+    // PhysicsFeatureSet.solidObjectKeepsOnObjWhenJumpedOffSameFrame() is true,
+    // this latch suppresses the same-frame unseat. Cleared per-frame
+    // (beginInlineFrame). ROM: sonic3k.asm:41016-41035 (loc_1DC98),
+    // 41066-41084 (loc_1DCF0), 42033-42034 (RideObject_SetRide sets the bit),
+    // 28553-28554 (Tails_Jump leaves Status_OnObj set).
+    private final Map<PlayableEntity, Set<Object>> standingBitEstablishedThisFrame =
+            new IdentityHashMap<>(2);
 
     private static Object airUnseatLatchKeyFor(ObjectInstance instance) {
         if (instance == null) {
@@ -117,11 +170,28 @@ final class ObjectSolidContactController {
         return spawn != null ? spawn : instance;
     }
 
+    private static Object airUnseatLatchKeyFor(ObjectInstance instance, int pieceIndex) {
+        Object key = airUnseatLatchKeyFor(instance);
+        if (key == null) {
+            return null;
+        }
+        if (pieceIndex >= 0
+                && instance instanceof MultiPieceSolidProvider multiPiece
+                && multiPiece.usesPieceScopedStandingBits()) {
+            return new PieceStandingLatchKey(key, pieceIndex);
+        }
+        return key;
+    }
+
     private void setObjectStandingBit(PlayableEntity player, ObjectInstance instance) {
+        setObjectStandingBit(player, instance, -1);
+    }
+
+    private void setObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex) {
         if (player == null) {
             return;
         }
-        Object key = airUnseatLatchKeyFor(instance);
+        Object key = airUnseatLatchKeyFor(instance, pieceIndex);
         if (key == null) {
             return;
         }
@@ -131,6 +201,10 @@ final class ObjectSolidContactController {
     }
 
     private boolean hasObjectStandingBit(PlayableEntity player, ObjectInstance instance) {
+        return hasObjectStandingBit(player, instance, -1);
+    }
+
+    private boolean hasObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex) {
         if (player == null) {
             return false;
         }
@@ -138,8 +212,68 @@ final class ObjectSolidContactController {
         if (set == null) {
             return false;
         }
-        Object key = airUnseatLatchKeyFor(instance);
+        Object key = airUnseatLatchKeyFor(instance, pieceIndex);
         return key != null && set.contains(key);
+    }
+
+    boolean hasStandingLatch(PlayableEntity player, ObjectInstance instance) {
+        return hasObjectStandingBit(player, instance);
+    }
+
+    /**
+     * Mark this instance's standing bit as established (by a fresh landing) on
+     * the current frame, so the same-frame airborne-rider unseat is suppressed
+     * for games that gate on
+     * {@link PhysicsFeatureSet#solidObjectKeepsOnObjWhenJumpedOffSameFrame()}.
+     * Mirrors ROM's once-per-frame SolidObjectFull evaluation: the unseat
+     * (loc_1DC98 / loc_1DCF0) only observes a bit set on a prior frame.
+     */
+    private void markStandingBitEstablishedThisFrame(PlayableEntity player, ObjectInstance instance,
+            int pieceIndex) {
+        if (player == null || !keepsOnObjWhenJumpedOffSameFrame(player)) {
+            return;
+        }
+        Object key = airUnseatLatchKeyFor(instance, pieceIndex);
+        if (key == null) {
+            return;
+        }
+        standingBitEstablishedThisFrame
+                .computeIfAbsent(player, p -> new HashSet<>())
+                .add(key);
+    }
+
+    private boolean wasStandingBitEstablishedThisFrame(PlayableEntity player, ObjectInstance instance,
+            int pieceIndex) {
+        if (player == null) {
+            return false;
+        }
+        Set<Object> set = standingBitEstablishedThisFrame.get(player);
+        if (set == null) {
+            return false;
+        }
+        Object key = airUnseatLatchKeyFor(instance, pieceIndex);
+        return key != null && set.contains(key);
+    }
+
+    private static boolean keepsOnObjWhenJumpedOffSameFrame(PlayableEntity player) {
+        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
+        return featureSet != null && featureSet.solidObjectKeepsOnObjWhenJumpedOffSameFrame();
+    }
+
+    /**
+     * True when the given solid object signals that its ROM solid routine does
+     * not execute at all on this frame ({@link SolidObjectProvider#suppressSlopeSampleThisFrame}).
+     * On such a frame the object performs no rider state change -- no sloped
+     * y_pos write and no airborne-rider unseat -- exactly as ROM's
+     * {@code ObjPlatformCollapse_CreateFragments} (sonic3k.asm:45394) jmps to
+     * {@code Play_SFX} without falling through to {@code sub_205B6}
+     * (SolidObjectTopSloped2). Used to defer the generic air-unseat paths by
+     * one frame so a player who jumps on the collapse-transition frame keeps
+     * Status_OnObj, matching the aiz1 trace (f3317 status 0x0E -> f3318 0x06).
+     */
+    private static boolean suppressesSolidPassThisFrame(ObjectInstance instance, PlayableEntity player) {
+        return instance instanceof SolidObjectProvider provider
+                && provider.defersAirborneRiderUnseatThisFrame(player);
     }
 
     private void setObjectPushingBit(PlayableEntity player, ObjectInstance instance) {
@@ -174,6 +308,10 @@ final class ObjectSolidContactController {
     }
 
     private void clearObjectStandingBit(PlayableEntity player, ObjectInstance instance) {
+        clearObjectStandingBit(player, instance, -1);
+    }
+
+    private void clearObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex) {
         if (player == null) {
             return;
         }
@@ -181,17 +319,21 @@ final class ObjectSolidContactController {
         if (set == null) {
             return;
         }
-        Object key = airUnseatLatchKeyFor(instance);
+        Object key = airUnseatLatchKeyFor(instance, pieceIndex);
         if (key != null) {
             set.remove(key);
         }
     }
 
     private void snapshotObjectStandingBit(PlayableEntity player, ObjectInstance instance) {
+        snapshotObjectStandingBit(player, instance, -1);
+    }
+
+    private void snapshotObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex) {
         if (player == null) {
             return;
         }
-        Object key = airUnseatLatchKeyFor(instance);
+        Object key = airUnseatLatchKeyFor(instance, pieceIndex);
         if (key == null) {
             return;
         }
@@ -201,6 +343,10 @@ final class ObjectSolidContactController {
     }
 
     private boolean wasObjectStandingBitSetThisFrame(PlayableEntity player, ObjectInstance instance) {
+        return wasObjectStandingBitSetThisFrame(player, instance, -1);
+    }
+
+    private boolean wasObjectStandingBitSetThisFrame(PlayableEntity player, ObjectInstance instance, int pieceIndex) {
         if (player == null) {
             return false;
         }
@@ -208,7 +354,7 @@ final class ObjectSolidContactController {
         if (set == null) {
             return false;
         }
-        Object key = airUnseatLatchKeyFor(instance);
+        Object key = airUnseatLatchKeyFor(instance, pieceIndex);
         return key != null && set.contains(key);
     }
 
@@ -308,6 +454,7 @@ final class ObjectSolidContactController {
         objectStandingBitSet.clear();
         objectPushingBitSet.clear();
         objectStandingBitSnapshot.clear();
+        standingBitEstablishedThisFrame.clear();
     }
 
     ObjectManagerSnapshot.SolidContactState captureRewindState() {
@@ -504,11 +651,7 @@ final class ObjectSolidContactController {
             ObjectInstance object = objectManager.findRestoredRidingObject(
                     entry.objectSpawn(), entry.objectSlotIndex());
             if (player != null && object != null) {
-                ridingStates.put(player, new RidingState(
-                        object,
-                        entry.x(),
-                        entry.y(),
-                        entry.pieceIndex()));
+                putRidingState(player, object, entry.x(), entry.y(), entry.pieceIndex());
             }
         }
     }
@@ -623,7 +766,7 @@ final class ObjectSolidContactController {
         if (player == null || instance == null) {
             return;
         }
-        ridingStates.put(player, new RidingState(instance, instance.getX(), instance.getY(), -1));
+        putRidingState(player, instance, instance.getX(), instance.getY(), -1);
         latestStandingSnapshots.put(player, new PlayerStandingState(ContactKind.TOP, true, false));
         inlineSupportedPlayers.add(player);
         player.setOnObject(true);
@@ -676,7 +819,7 @@ final class ObjectSolidContactController {
         for (var entry : ridingStates.entrySet()) {
             RidingState state = entry.getValue();
             if (state != null && state.object == object) {
-                entry.setValue(new RidingState(object, object.getX(), object.getY(), state.pieceIndex));
+                state.set(object, object.getX(), object.getY(), state.pieceIndex);
             }
         }
     }
@@ -767,6 +910,10 @@ final class ObjectSolidContactController {
         // objectStandingBitSnapshot IS cleared per-frame: it caches the
         // pre-clear value of the bit for the lift gate to read.
         objectStandingBitSnapshot.clear();
+        // standingBitEstablishedThisFrame IS cleared per-frame: it only
+        // protects a ride newly established on the CURRENT frame from a
+        // same-frame unseat (ROM evaluates each SolidObjectFull once/frame).
+        standingBitEstablishedThisFrame.clear();
     }
 
     void finishInlineFrame(PlayableEntity player, List<? extends PlayableEntity> sidekicks) {
@@ -946,7 +1093,24 @@ final class ObjectSolidContactController {
         // (docs/skdisasm/sonic3k.asm:41006-41010 before 41021-41034).
         if (ridingObject != null && player.getAir()
                 && !carriesAirborneRiderAfterExitPlatform(ridingObject)
-                && !shouldSkipRidingAirUnseatForOffscreenSidekick(player, ridingObject)) {
+                && !shouldSkipRidingAirUnseatForOffscreenSidekick(player, ridingObject)
+                // ROM evaluates each object's SolidObjectFull once per frame:
+                // the loc_1DCF0 air-unseat cannot fire on the same frame the
+                // ride was established by RideObject_SetRide. Skip the
+                // same-frame unseat when this ride was just established this
+                // frame (gated by
+                // PhysicsFeatureSet.solidObjectKeepsOnObjWhenJumpedOffSameFrame;
+                // sonic3k.asm:41066-41084, 42033-42034, 28553-28554).
+                && !(keepsOnObjWhenJumpedOffSameFrame(player)
+                        && wasStandingBitEstablishedThisFrame(player, ridingObject, ridingPieceIndex))
+                // ROM: on the S3K Obj_CollapsingPlatform collapse-transition
+                // frame, ObjPlatformCollapse_CreateFragments jmps to Play_SFX
+                // WITHOUT running sub_205B6 (SolidObjectTopSloped2), so the
+                // platform performs no air-unseat that frame. The rider keeps
+                // Status_OnObj (aiz1 trace f3317 status 0x0E); the unseat fires
+                // the next frame when loc_205DE re-runs sub_205B6 (f3318 0x06).
+                // sonic3k.asm:44818, 45394.
+                && !suppressesSolidPassThisFrame(ridingObject, player)) {
             // ROM SolidObjectFull2_1P air-unseat path (sonic3k.asm:41070-41084
             // loc_1DCF0): when the object's a0.d6 standing-bit is still
             // set and Status_InAir is set on the player, the helper
@@ -974,7 +1138,21 @@ final class ObjectSolidContactController {
         // consult it after the bit-clear has propagated.
         if (instance != null && player.getAir()
                 && hasObjectStandingBit(player, instance)
-                && !shouldSkipRidingAirUnseatForOffscreenSidekick(player, instance)) {
+                && !shouldSkipRidingAirUnseatForOffscreenSidekick(player, instance)
+                // Same-frame unseat suppression: ROM's loc_1DC98 stale-rider
+                // clear (sonic3k.asm:41017-41035) only observes the standing
+                // bit on a frame AFTER RideObject_SetRide set it. Skip when the
+                // bit was just established this frame so a same-frame jump-off
+                // keeps Status_OnObj (gated by
+                // PhysicsFeatureSet.solidObjectKeepsOnObjWhenJumpedOffSameFrame).
+                && !(keepsOnObjWhenJumpedOffSameFrame(player)
+                        && wasStandingBitEstablishedThisFrame(player, instance, -1))
+                // Same collapse-transition-frame skip as the loc_1DCF0 block
+                // above: the platform's SolidObjectTopSloped2 does not run on
+                // ObjPlatformCollapse_CreateFragments's transition frame, so its
+                // standing-bit / Status_OnObj clear is deferred one frame
+                // (sonic3k.asm:44818, 45394; aiz1 trace f3317->f3318).
+                && !suppressesSolidPassThisFrame(instance, player)) {
             snapshotObjectStandingBit(player, instance);
             clearObjectStandingBit(player, instance);
             if (instance instanceof SolidObjectProvider staleStandingProvider
@@ -1026,8 +1204,8 @@ final class ObjectSolidContactController {
                 // ROM returns before SolidObjectFull_1P for offscreen Player_2
                 // (docs/skdisasm/sonic3k.asm:41006-41010), so the existing
                 // standing bit and Status_OnObj survive without a carry step.
-                ridingStates.put(player, new RidingState(instance, ridingX, ridingY, ridingPieceIndex));
-                setObjectStandingBit(player, instance);
+                putRidingState(player, instance, ridingX, ridingY, ridingPieceIndex);
+                setObjectStandingBit(player, instance, ridingPieceIndex);
                 inlineSupportedPlayers.add(player);
             }
             return null;
@@ -1102,9 +1280,12 @@ final class ObjectSolidContactController {
                 provider.setPlayerPushing(player, false);
             }
             if (result.standing()) {
-                ridingStates.put(player, new RidingState(
-                        instance, result.ridingX(), result.ridingY(), result.pieceIndex()));
-                setObjectStandingBit(player, instance);
+                putRidingState(player, instance, result.ridingX(), result.ridingY(), result.pieceIndex());
+                setObjectStandingBit(player, instance, result.pieceIndex());
+                // Fresh multi-piece landing: latch so the same-frame
+                // airborne-rider unseat is suppressed (see
+                // markStandingBitEstablishedThisFrame).
+                markStandingBitEstablishedThisFrame(player, instance, result.pieceIndex());
                 clearGroundWallSuppressionForNormalSolidSupport(player, instance);
                 inlineSupportedPlayers.add(player);
             }
@@ -1238,8 +1419,12 @@ final class ObjectSolidContactController {
             int newRideBaselineX = provider.seedsNewRideCarryFromPreUpdateX()
                     ? instance.getPreUpdateX()
                     : instance.getX();
-            ridingStates.put(player, new RidingState(instance, newRideBaselineX, instance.getY(), -1));
+            putRidingState(player, instance, newRideBaselineX, instance.getY(), -1);
             setObjectStandingBit(player, instance);
+            // Fresh new-contact landing: latch so the same-frame airborne-rider
+            // unseat is suppressed (ROM evaluates SolidObjectFull once/frame;
+            // see markStandingBitEstablishedThisFrame).
+            markStandingBitEstablishedThisFrame(player, instance, -1);
             clearGroundWallSuppressionForNormalSolidSupport(player, instance);
             inlineSupportedPlayers.add(player);
         }
@@ -1261,6 +1446,31 @@ final class ObjectSolidContactController {
             currentX = instance.getX();
             currentY = instance.getY();
             params = provider.getSolidParams();
+        }
+
+        // ROM: S3K Obj_CollapsingPlatform state-1 -> state-2 transition frame.
+        // When $38 hits 0, loc_20594 branches to ObjPlatformCollapse_CreateFragments
+        // (sonic3k.asm:44818 -> 45394) which jmps to Play_SFX WITHOUT falling
+        // through to sub_205B6 -- so the platform's SolidObjectTopSloped2 does
+        // NOT run on the transition frame at all. The solid routine therefore
+        // makes no change to the rider's status this frame: it neither writes
+        // the sloped y_pos nor runs the airborne-rider unseat (loc_1E338 bclr
+        // Status_OnObj). BizHawk ground truth (aiz1 trace f3317/f3318): on the
+        // jump frame the player keeps Status_OnObj (status 0x0E = Roll|InAir|OnObj);
+        // the unseat fires the NEXT frame when loc_205DE re-runs sub_205B6
+        // (status 0x06). This check MUST precede the player.getAir() unseat
+        // branch below so a player who jumps on the transition frame is not
+        // unseated one frame early. The provider signals the one-frame skip via
+        // suppressSlopeSampleThisFrame(); ride state and the object standing
+        // bit are preserved so next frame's normal solid pass performs the
+        // airborne unseat. Player on-object / air status is left untouched,
+        // mirroring the skipped sub_205B6.
+        if (provider.suppressSlopeSampleThisFrame(player)) {
+            putRidingState(player, instance, currentX, currentY, ridingPieceIndex);
+            setObjectStandingBit(player, instance, ridingPieceIndex);
+            clearGroundWallSuppressionForNormalSolidSupport(player, instance);
+            inlineSupportedPlayers.add(player);
+            return SolidContact.STANDING;
         }
 
         if (player.getAir()) {
@@ -1302,8 +1512,8 @@ final class ObjectSolidContactController {
                     player.setY((short) newY);
                 }
             }
-            ridingStates.put(player, new RidingState(instance, currentX, currentY, ridingPieceIndex));
-            setObjectStandingBit(player, instance);
+            putRidingState(player, instance, currentX, currentY, ridingPieceIndex);
+            setObjectStandingBit(player, instance, ridingPieceIndex);
             clearGroundWallSuppressionForNormalSolidSupport(player, instance);
             player.setOnObject(true);
             player.setAir(false);
@@ -1316,20 +1526,12 @@ final class ObjectSolidContactController {
             if (deltaX != 0 && provider.carriesRiderOnHorizontalMove(player)) {
                 player.shiftX(deltaX);
             }
-            // ROM: S3K Obj_CollapsingPlatform state-1 -> state-2 transition
-            // (sonic3k.asm:44814 loc_20594 -> sonic3k.asm:45394
-            // ObjPlatformCollapse_CreateFragments) skips its sub_205B6
-            // slope-sample / y-write on the transition frame. The provider
-            // signals that one-frame skip via suppressSlopeSampleThisFrame().
-            // Player riding state is preserved unchanged so Sonic continues
-            // standing at last frame's y_pos.
-            if (provider.suppressSlopeSampleThisFrame(player)) {
-                ridingStates.put(player, new RidingState(instance, currentX, currentY, ridingPieceIndex));
-                setObjectStandingBit(player, instance);
-                clearGroundWallSuppressionForNormalSolidSupport(player, instance);
-                inlineSupportedPlayers.add(player);
-                return SolidContact.STANDING;
-            }
+            // NOTE: the S3K Obj_CollapsingPlatform transition-frame skip
+            // (suppressSlopeSampleThisFrame) is handled at the top of this
+            // method, before the player.getAir() unseat branch, so a player
+            // who jumps on the transition frame keeps Status_OnObj for that
+            // one frame (matching ROM ObjPlatformCollapse_CreateFragments
+            // skipping sub_205B6 entirely; sonic3k.asm:44818, 45394).
             int surfaceOffset;
             if (instance instanceof SlopedSolidProvider sloped) {
                 int slopeAnchorX = currentX + params.offsetX();
@@ -1341,8 +1543,8 @@ final class ObjectSolidContactController {
             int newCentreY = currentY + params.offsetY() - surfaceOffset - player.getYRadius();
             int newY = newCentreY - (player.getHeight() / 2);
             player.setY((short) newY);
-            ridingStates.put(player, new RidingState(instance, currentX, currentY, ridingPieceIndex));
-            setObjectStandingBit(player, instance);
+            putRidingState(player, instance, currentX, currentY, ridingPieceIndex);
+            setObjectStandingBit(player, instance, ridingPieceIndex);
             clearGroundWallSuppressionForNormalSolidSupport(player, instance);
 
             if (solidProfile.dropOnFloor()) {
@@ -1700,6 +1902,7 @@ final class ObjectSolidContactController {
         // objectStandingBitSet intentionally not cleared per-frame: see
         // beginInlineFrame note. ROM a0.d6 persists across frames.
         objectStandingBitSnapshot.clear();
+        standingBitEstablishedThisFrame.clear();
         if (player == null || objectManager == null || player.getDead()) {
             if (player != null) ridingStates.remove(player);
             return;
@@ -1817,8 +2020,8 @@ final class ObjectSolidContactController {
                     ridingX = currentX;
                     ridingY = currentY;
                     // Update state with new tracking position
-                    ridingStates.put(player, new RidingState(ridingObject, ridingX, ridingY, ridingPieceIndex));
-                    setObjectStandingBit(player, ridingObject);
+                    putRidingState(player, ridingObject, ridingX, ridingY, ridingPieceIndex);
+                    setObjectStandingBit(player, ridingObject, ridingPieceIndex);
                     clearGroundWallSuppressionForNormalSolidSupport(player, ridingObject);
 
                     // ROM: DropOnFloor (s2.asm:35810) — after repositioning the player
@@ -2027,8 +2230,8 @@ final class ObjectSolidContactController {
         }
 
         if (nextRidingObject != null) {
-            ridingStates.put(player, new RidingState(nextRidingObject, nextRidingX, nextRidingY, nextRidingPieceIndex));
-            setObjectStandingBit(player, nextRidingObject);
+            putRidingState(player, nextRidingObject, nextRidingX, nextRidingY, nextRidingPieceIndex);
+            setObjectStandingBit(player, nextRidingObject, nextRidingPieceIndex);
             clearGroundWallSuppressionForNormalSolidSupport(player, nextRidingObject);
         } else {
             ridingStates.remove(player);
@@ -2126,6 +2329,19 @@ final class ObjectSolidContactController {
             if (i < multiPieceEarlierPiecesResolvedUpTo) {
                 continue;
             }
+            if (multiPiece.usesPieceScopedStandingBits()
+                    && player.getAir()
+                    && hasObjectStandingBit(player, instance, i)
+                    // Same-frame unseat suppression (ROM once-per-frame
+                    // SolidObjectFull): keep a piece ride established this frame.
+                    && !(keepsOnObjWhenJumpedOffSameFrame(player)
+                            && wasStandingBitEstablishedThisFrame(player, instance, i))) {
+                snapshotObjectStandingBit(player, instance, i);
+                clearObjectStandingBit(player, instance, i);
+                if (multiPiece.airborneStaleStandingBitReturnsNoContact(player)) {
+                    continue;
+                }
+            }
             SolidObjectParams params = multiPiece.getPieceParams(i);
             int pieceX = multiPiece.getPieceX(i);
             int pieceY = multiPiece.getPieceY(i);
@@ -2160,7 +2376,6 @@ final class ObjectSolidContactController {
                 contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
                         solidProfile, useStickyBuffer, instance, i, true);
             }
-
             if (contact == null) {
                 continue;
             }
@@ -2310,7 +2525,7 @@ final class ObjectSolidContactController {
         }
         return resolveContactInternal(player, relX, relY, halfWidth, maxTop, totalHeight,
                 playerCenterX, playerCenterY,
-                topSolidOnly, riding, apply, instance, true);
+                topSolidOnly, riding, apply, instance, true, pieceIndex);
     }
 
     private int getSolidTopYRadius(PlayableEntity player) {
@@ -2387,15 +2602,16 @@ final class ObjectSolidContactController {
     private SolidContact resolveMonitorContact(PlayableEntity player, int relX, int relY,
             int halfWidth, int maxTop, int playerCenterX, int playerCenterY, int anchorX,
             boolean sticky, boolean apply) {
-        // ROM: Mon_Solid / SolidObject_Monitor_Sonic — rolling check runs AFTER
+        // ROM: Mon_Solid / SolidObject_Monitor_Sonic — roll-animation check runs AFTER
         // Mon_SolidSides geometry detection, not as an external gate.
-        // When the player is rolling AND velY >= 0 (not moving upward), skip
-        // the solid response entirely so the touch system can break the monitor.
+        // When the player is in the native roll animation AND velY >= 0 (not
+        // moving upward), skip the solid response entirely so the touch system
+        // can break the monitor.
         // When velY < 0 (moving upward), always handle as solid (side push / landing)
         // regardless of rolling state — this is the S1 "always solid when moving up" rule.
         // When standing on the monitor (sticky), always handle as solid (ride mode,
         // ROM: ob2ndRout=2 bypasses Mon_SolidSides entirely).
-        if (!sticky && player.getRolling() && player.getYSpeed() >= 0) {
+        if (!sticky && isMonitorRollAnimation(player) && player.getYSpeed() >= 0) {
             return null;
         }
 
@@ -2430,13 +2646,11 @@ final class ObjectSolidContactController {
         boolean withinLandingX = Math.abs(xFromCenter) <= landingXMargin;
 
         if (canLand && withinLandingX) {
-            // Landing on top
-            if (player.getYSpeed() < 0) {
-                return null;
-            }
-
             if (apply) {
-                int newCenterY = playerCenterY - distY + 3;
+                // S1 Mon_SolidSides returns d3 as the vertical penetration and
+                // Mon_Solid aligns with `sub.w d3,obY(a1)`, unlike the generic
+                // SolidObject_Landed path that applies a +3 landing bias.
+                int newCenterY = playerCenterY - distY;
                 int newY = newCenterY - (player.getHeight() / 2);
                 player.setY((short) newY);
                 // ROM: Solid_ResetFloor unconditionally sets these.
@@ -2479,6 +2693,14 @@ final class ObjectSolidContactController {
             }
         }
         return pushing ? SolidContact.SIDE_PUSH : SolidContact.SIDE_NO_PUSH;
+    }
+
+    private static boolean isMonitorRollAnimation(PlayableEntity player) {
+        if (player instanceof AbstractPlayableSprite sprite
+                && sprite.getAnimationProfile() instanceof ScriptedVelocityAnimationProfile profile) {
+            return sprite.getAnimationId() == profile.getRollAnimId();
+        }
+        return player.getRolling();
     }
 
     private SolidContact resolveSlopedContact(PlayableEntity player, int anchorX, int anchorY, int halfWidth,
@@ -2581,7 +2803,7 @@ final class ObjectSolidContactController {
         }
 
         SolidContact result = resolveContactInternal(player, relX, relY, halfWidth, maxTop, maxTop * 2,
-                playerCenterX, playerCenterY, topSolidOnly, riding, apply, instance, true);
+                playerCenterX, playerCenterY, topSolidOnly, riding, apply, instance, true, -1);
 
         // Continued riding uses SolidObjSloped2/SlopeObject2 to re-sample
         // the absolute surface after the generic standing check. New
@@ -2602,7 +2824,8 @@ final class ObjectSolidContactController {
 
     private SolidContact resolveContactInternal(PlayableEntity player, int relX, int relY, int halfWidth,
             int maxTop, int totalHeight, int playerCenterX, int playerCenterY, boolean topSolidOnly,
-            boolean sticky, boolean apply, ObjectInstance instance, boolean useTopLandingWidth) {
+            boolean sticky, boolean apply, ObjectInstance instance, boolean useTopLandingWidth,
+            int pieceIndex) {
         int distX;
         int absDistX;
         if (relX >= halfWidth) {
@@ -2665,7 +2888,8 @@ final class ObjectSolidContactController {
                 return null;
             }
             if (apply) {
-                int newCenterY = playerCenterY - distY + 3;
+                int newCenterY = playerCenterY - distY + 3
+                        - getTopLandingSnapAdjustment(instance, player);
                 int newY = newCenterY - (player.getHeight() / 2);
                 player.setY((short) newY);
                 // ROM: Solid_ResetFloor / PlatformObject loc_74DC unconditionally
@@ -2952,8 +3176,8 @@ final class ObjectSolidContactController {
             // into objectStandingBitSnapshot so the gate below observes
             // ROM's "bit was set at routine entry" semantics.
             boolean objectStandingBitWasSet =
-                    wasObjectStandingBitSetThisFrame(player, instance)
-                            || hasObjectStandingBit(player, instance);
+                    wasObjectStandingBitSetThisFrame(player, instance, pieceIndex)
+                            || hasObjectStandingBit(player, instance, pieceIndex);
             boolean s3kAlwaysLifts =
                     !topSolidOnly
                             && topBranchAlwaysLiftsOnUpwardVelocity(player)
@@ -3057,7 +3281,15 @@ final class ObjectSolidContactController {
                 // air-unseat correctly routes through the no-lift
                 // path on the next frame.
                 if (instance != null) {
-                    setObjectStandingBit(player, instance);
+                    setObjectStandingBit(player, instance, pieceIndex);
+                    // ROM SolidObjectFull evaluates each object once per frame:
+                    // the air-unseat (loc_1DC98 / loc_1DCF0) that clears
+                    // Status_OnObj can only observe the bit on a SUBSEQUENT
+                    // frame, never on this RideObject_SetRide frame. Latch the
+                    // fresh landing so a same-frame jump-off (Tails_Jump sets
+                    // Status_InAir without clearing Status_OnObj,
+                    // sonic3k.asm:28553-28554) does not get unseated this frame.
+                    markStandingBitEstablishedThisFrame(player, instance, pieceIndex);
                 }
             } else if (upwardVelocity) {
                 // apply=false geometry probe (collision sensor / debug):
@@ -3363,8 +3595,17 @@ final class ObjectSolidContactController {
             return;
         }
         if (player.getRolling()) {
-            player.setRolling(false);
-            player.setY((short) (player.getY() - player.getRollHeightAdjustment()));
+            if (player instanceof AbstractPlayableSprite sprite
+                    && usesCurrentYRadiusDeltaOnLanding(sprite)) {
+                int oldYRadius = sprite.getYRadius();
+                int centreY = sprite.getCentreY();
+                sprite.setRolling(false);
+                int delta = oldYRadius - sprite.getStandYRadius();
+                NativePositionOps.writeYPosPreserveSubpixel(sprite, centreY + delta);
+            } else {
+                player.setRolling(false);
+                player.setY((short) (player.getY() - player.getRollHeightAdjustment()));
+            }
         } else if (player instanceof AbstractPlayableSprite sprite
                 && (sprite.getYRadius() != sprite.getStandYRadius()
                 || sprite.getXRadius() != sprite.getStandXRadius())) {
@@ -3376,11 +3617,15 @@ final class ObjectSolidContactController {
             // y_radius reset on Status_Roll being set; when not rolling it skips the
             // reset, preserving any stale y_radius value from the despawn path.
             // Gate this non-rolling radius reset to S3K (landingRollClearUsesCurrentYRadiusDelta).
-            PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
-            if (featureSet != null && featureSet.landingRollClearUsesCurrentYRadiusDelta()) {
+            if (usesCurrentYRadiusDeltaOnLanding(sprite)) {
                 sprite.applyStandingRadii(false);
             }
         }
+    }
+
+    private boolean usesCurrentYRadiusDeltaOnLanding(AbstractPlayableSprite sprite) {
+        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+        return featureSet != null && featureSet.landingRollClearUsesCurrentYRadiusDelta();
     }
 
     private void applyObjectLandingState(PlayableEntity player) {

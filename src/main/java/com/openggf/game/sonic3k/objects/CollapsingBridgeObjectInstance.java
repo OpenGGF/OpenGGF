@@ -13,8 +13,10 @@ import com.openggf.level.objects.AbstractFallingFragment;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -24,6 +26,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -61,7 +64,7 @@ import java.util.logging.Logger;
  * Check_CollapsePlayerRelease (sonic3k.asm:45349).
  */
 public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider {
 
     private static final Logger LOG = Logger.getLogger(CollapsingBridgeObjectInstance.class.getName());
 
@@ -72,6 +75,9 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
 
     // MGZ stomp priority: $80 = bucket 1 (ROM: move.w #$80,priority(a0))
     private static final int MGZ_STOMP_PRIORITY = 1;
+
+    // Obj_CollapsingBridge routines live at $00020AF6/$00020B8C; S3K CPU interact stores the high word.
+    private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0002;
 
     // Collision height for SolidObjectTop: d3 = $10 (ROM: move.w #$10,d3)
     private static final int SOLID_HEIGHT = 0x10;
@@ -91,6 +97,11 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
         TRIGGER,
         /** MGZ ground-pound: shatters with velocity vectors when player rolls. */
         MGZ_STOMP
+    }
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        return ROM_CODE_POINTER_HIGH_WORD;
     }
 
     // ===================================================================
@@ -310,7 +321,8 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
 
     // Wave collapse phase tracking (state 2)
     private int parentTimer;           // Counts down from activeDelays[0]
-    private int[] activeDelays;        // Selected delay array (normal or flip)
+    private int[] activeDelays;        // Selected fragment delay array (normal or flip)
+    private int[] releaseDelays;       // Parent release always uses ROM $30.
     private boolean flippedForCollapse; // Sprite flipped during directional determination
     private int fragmentFrameIndex;    // Mapping frame used for fragment pieces
     private final Set<PlayableEntity> collapseWaveRiders =
@@ -686,19 +698,18 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        collapseWaveRiders.clear();
-        if (player != null && shouldTrackCollapseRider(player)) {
-            collapseWaveRiders.add(player);
-        }
+        seedCollapseWaveRiders(player);
 
         // Select delay array and determine direction
         activeDelays = delays;
+        releaseDelays = delays;
         flippedForCollapse = false;
 
-        if (directional && player != null) {
+        AbstractPlayableSprite directionalPlayer = selectedDirectionalCollapsePlayer(player);
+        if (directional && directionalPlayer != null) {
             // ROM: btst #7,subtype(a0) → directional collapse
             // Check which side the player is on
-            int playerX = player.getCentreX();
+            int playerX = directionalPlayer.getCentreX();
             if (playerX < x) {
                 // Player on left: use flip array, flip sprite, advance frame
                 // ROM: load $34 array, eori.b #1,status(a0), addq.b #1,mapping_frame(a0)
@@ -718,7 +729,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
         // Enter wave-collapse state
         state = 2;
         fragmented = true;
-        parentTimer = activeDelays.length > 0 ? activeDelays[0] : 0;
+        parentTimer = releaseDelays.length > 0 ? releaseDelays[0] : 0;
     }
 
     /**
@@ -767,53 +778,19 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
     private void updateWaveCollapse(AbstractPlayableSprite player) {
         parentTimer--;
 
-        if (player != null && collapseWaveRiders.contains(player)) {
-            // ROM: Check_CollapsePlayerRelease
-            // Calculate player position relative to bridge left edge
-            int playerX = player.getCentreX();
-            int relX = playerX - x + halfWidth;
-
-            boolean release = false;
-
-            if (player.getAir()) {
-                // Player jumped off
-                release = true;
-            } else if (relX < 0 || relX >= halfWidth * 2) {
-                // Player walked off the edge
-                release = true;
-            } else {
-                // Mirror position based on current flip state (post-toggle).
-                // ROM: btst #0,status(a0) → neg.w d0, add.w d2,d0
-                int adjustedRelX = hFlip ? (halfWidth * 2 - relX) : relX;
-
-                // Convert to 16px chunk index
-                // ROM: lsr.w #4,d0
-                int chunkIndex = adjustedRelX >> 4;
-                if (chunkIndex >= activeDelays.length) {
-                    chunkIndex = activeDelays.length - 1;
-                }
-                if (chunkIndex < 0) {
-                    chunkIndex = 0;
-                }
-
-                // ROM: d2 = array[0] - array[chunkIndex]
-                // Release when parentTimer <= d2
-                int threshold = activeDelays[0] - activeDelays[chunkIndex];
-                if (parentTimer <= threshold) {
-                    release = true;
-                }
-            }
-
-            if (release) {
-                releaseCollapseRider(player);
+        for (PlayableEntity rider : new ArrayList<>(collapseWaveRiders)) {
+            if (rider instanceof AbstractPlayableSprite playable && shouldReleaseCollapseRider(playable)) {
+                releaseCollapseRider(playable);
             }
         }
 
         // When parent timer fully expires, release any remaining players and fall
         if (parentTimer <= 0) {
             state = 3;
-            if (player != null && collapseWaveRiders.contains(player)) {
-                releaseCollapseRider(player);
+            for (PlayableEntity rider : new ArrayList<>(collapseWaveRiders)) {
+                if (rider instanceof AbstractPlayableSprite playable) {
+                    releaseCollapseRider(playable);
+                }
             }
             collapseWaveRiders.clear();
         }
@@ -886,6 +863,84 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
         } catch (Exception e) {
             return false;
         }
+    }
+
+    private void seedCollapseWaveRiders(AbstractPlayableSprite fallbackPlayer) {
+        collapseWaveRiders.clear();
+        for (PlayableEntity participant : collapseParticipants(fallbackPlayer)) {
+            if (participant instanceof AbstractPlayableSprite playable
+                    && shouldTrackCollapseRider(playable)) {
+                collapseWaveRiders.add(playable);
+            }
+        }
+    }
+
+    private List<PlayableEntity> collapseParticipants(AbstractPlayableSprite fallbackPlayer) {
+        ArrayList<PlayableEntity> participants = new ArrayList<>();
+        try {
+            participants.addAll(services().playerQuery()
+                    .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS));
+        } catch (Exception e) {
+            // Reflection-level tests may instantiate the object without full services.
+        }
+        if (fallbackPlayer != null && participants.stream().noneMatch(p -> p == fallbackPlayer)) {
+            participants.add(fallbackPlayer);
+        }
+        return participants;
+    }
+
+    private AbstractPlayableSprite selectedDirectionalCollapsePlayer(AbstractPlayableSprite fallbackPlayer) {
+        if (!directional) {
+            return null;
+        }
+        try {
+            List<PlayableEntity> nativePlayers = services().playerQuery()
+                    .playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
+            for (PlayableEntity participant : nativePlayers) {
+                if (participant instanceof AbstractPlayableSprite playable
+                        && services().objectManager() != null
+                        && services().objectManager().hasObjectStandingBit(playable, this)) {
+                    return playable;
+                }
+            }
+        } catch (Exception e) {
+            // Fall back below when services are unavailable.
+        }
+        return fallbackPlayer;
+    }
+
+    private boolean shouldReleaseCollapseRider(AbstractPlayableSprite player) {
+        // ROM: Check_CollapsePlayerRelease
+        int playerX = player.getCentreX();
+        int relX = playerX - x + halfWidth;
+
+        if (player.getAir()) {
+            // Player jumped off
+            return true;
+        }
+        if (relX < 0 || relX >= halfWidth * 2) {
+            // Player walked off the edge
+            return true;
+        }
+
+        // Mirror position based on current flip state (post-toggle).
+        // ROM: btst #0,status(a0) -> neg.w d0, add.w d2,d0
+        int adjustedRelX = hFlip ? (halfWidth * 2 - relX) : relX;
+
+        // Convert to 16px chunk index.
+        // ROM: lsr.w #4,d0
+        int chunkIndex = adjustedRelX >> 4;
+        if (chunkIndex >= releaseDelays.length) {
+            chunkIndex = releaseDelays.length - 1;
+        }
+        if (chunkIndex < 0) {
+            chunkIndex = 0;
+        }
+
+        // ROM: d2 = array[0] - array[chunkIndex]
+        // Release when parentTimer <= d2
+        int threshold = releaseDelays[0] - releaseDelays[chunkIndex];
+        return parentTimer <= threshold;
     }
 
     private void releaseCollapseRider(AbstractPlayableSprite player) {

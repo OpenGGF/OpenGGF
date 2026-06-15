@@ -324,7 +324,8 @@ class TestSonic2TriggerParticipation {
         SlidingSpikesObjectInstance spikes = new SlidingSpikesObjectInstance(
                 new ObjectSpawn(0x1000, 0x1000, 0x76, 0, 0, false, 0),
                 "SlidingSpikes");
-        spikes.setServices(new QueryOnlyPlayerServices(main, List.of(tails)));
+        spikes.setServices(new QueryOnlyPlayerServices(main, List.of(tails))
+                .withCamera(cameraAt(main, 0x0F80, 0x1000)));
 
         spikes.update(0, main);
         spikes.update(1, main);
@@ -811,6 +812,13 @@ class TestSonic2TriggerParticipation {
     private static Camera focusedCamera(TestablePlayableSprite player) {
         Camera camera = mock(Camera.class);
         when(camera.getFocusedSprite()).thenReturn(player);
+        return camera;
+    }
+
+    private static Camera cameraAt(TestablePlayableSprite player, int x, int y) {
+        Camera camera = focusedCamera(player);
+        when(camera.getX()).thenReturn((short) x);
+        when(camera.getY()).thenReturn((short) y);
         return camera;
     }
 

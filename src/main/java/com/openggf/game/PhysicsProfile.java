@@ -26,6 +26,11 @@ public record PhysicsProfile(
         short standYRadius,
         short rollXRadius,
         short rollYRadius,
+        // Tails' S2/S3K balance routine has only one facing-edge balance state:
+        // object and terrain edge branches immediately face toward the edge
+        // (s2.asm:39733-39743; sonic3k.asm:27842-27859). Sonic/Knuckles keep
+        // the four-state facing-away balance handling.
+        boolean singleFacingBalance,
         // On-object balance edge threshold used by S2/S3K extended-balance mode.
         // ROM: s2.asm:36287-36296 (Sonic, #2), s2.asm:39361-39368 (Tails, #4),
         // sonic3k.asm:22465 (Sonic, #2), sonic3k.asm:27825 (Tails, #4),
@@ -54,6 +59,7 @@ public record PhysicsProfile(
             (short) 19,    // standYRadius (0x13)
             (short) 7,     // rollXRadius
             (short) 14,    // rollYRadius
+            false,          // singleFacingBalance
             (short) 2      // onObjectBalanceShift (s2.asm:36287, sonic3k.asm:22465)
     );
 
@@ -78,6 +84,7 @@ public record PhysicsProfile(
             (short) 15,    // standYRadius (0x0F, shorter than Sonic)
             (short) 7,     // rollXRadius
             (short) 14,    // rollYRadius
+            true,           // singleFacingBalance (s2.asm:39733-39743)
             (short) 4      // onObjectBalanceShift (s2.asm:39361, sonic3k.asm:27825)
     );
 
@@ -103,6 +110,7 @@ public record PhysicsProfile(
             (short) 19,    // standYRadius (0x13)
             (short) 7,     // rollXRadius
             (short) 14,    // rollYRadius
+            false,          // singleFacingBalance
             (short) 2      // onObjectBalanceShift (sonic3k.asm:31810)
     );
 
@@ -126,6 +134,7 @@ public record PhysicsProfile(
             (short) 19,    // standYRadius
             (short) 7,     // rollXRadius
             (short) 14,    // rollYRadius
+            false,          // singleFacingBalance
             (short) 2      // onObjectBalanceShift (SuperSonic_Balance shares Sonic shift)
     );
 
@@ -151,6 +160,7 @@ public record PhysicsProfile(
             (short) 19,    // standYRadius
             (short) 7,     // rollXRadius
             (short) 14,    // rollYRadius
+            false,          // singleFacingBalance
             (short) 2      // onObjectBalanceShift
     );
 
@@ -175,6 +185,7 @@ public record PhysicsProfile(
             (short) 15,    // standYRadius (0x0F, shorter than Sonic)
             (short) 7,     // rollXRadius
             (short) 14,    // rollYRadius
+            true,           // singleFacingBalance (sonic3k.asm:27842-27859)
             (short) 4      // onObjectBalanceShift
     );
 
@@ -198,6 +209,7 @@ public record PhysicsProfile(
             (short) 15,    // standYRadius (Tails)
             (short) 7,     // rollXRadius
             (short) 14,    // rollYRadius
+            true,           // singleFacingBalance (Tails routine)
             (short) 4      // onObjectBalanceShift
     );
 
@@ -222,6 +234,7 @@ public record PhysicsProfile(
             (short) 19,    // standYRadius
             (short) 7,     // rollXRadius
             (short) 14,    // rollYRadius
+            false,          // singleFacingBalance
             (short) 2      // onObjectBalanceShift (SuperSonic_Balance shares Sonic shift)
     );
 }

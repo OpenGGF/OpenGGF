@@ -2180,8 +2180,8 @@ public class Sonic3kConstants {
     public static final int ART_NEM_VERTICAL_SPRING_ADDR = 0x35C988;
 
     // =====================================================================
-    // Tails-carry-Sonic intro (CNZ1 and future zones)
-    // ROM refs: sonic3k.asm loc_13A32 (CNZ trigger), loc_13FC2/loc_13FFA
+    // Tails-carry-Sonic intro (CNZ1/MHZ1)
+    // ROM refs: sonic3k.asm loc_13A32 (CNZ/MHZ triggers), loc_13FC2/loc_13FFA
     // (carry init + body), sub_1459E (Sonic pickup), Tails_Carry_Sonic
     // (per-frame parentage). All addresses < 0x200000 (S&K-side only).
     // =====================================================================
@@ -2189,11 +2189,23 @@ public class Sonic3kConstants {
     /** Zone-and-act word value that triggers the CNZ1 Tails-carry intro. */
     public static final int CARRY_TRIGGER_ZONE_ACT_WORD = 0x0300;
 
+    /** Zone-and-act word value that triggers the MHZ1 Tails-carry intro. */
+    public static final int CARRY_TRIGGER_MHZ_ZONE_ACT_WORD = 0x0700;
+
     /** Tails's spawn X after the CNZ1 trigger. ROM: loc_13A32. */
     public static final int CARRY_INIT_TAILS_X = 0x0018;
 
     /** Tails's spawn Y after the CNZ1 trigger. ROM: loc_13A32. */
     public static final int CARRY_INIT_TAILS_Y = 0x0600;
+
+    /** Tails's spawn X after the MHZ1 trigger. ROM: loc_13A8E. */
+    public static final int CARRY_INIT_MHZ_TAILS_X = 0x00D8;
+
+    /** Tails's spawn Y after the MHZ1 trigger. ROM: loc_13A8E. */
+    public static final int CARRY_INIT_MHZ_TAILS_Y = 0x0500;
+
+    /** ROM first INIT tick leaves Tails airborne with standard ObjectMoveAndFall gravity. */
+    public static final short CARRY_INIT_PREROLLED_TAILS_Y_VEL = (short) 0x0038;
 
     /** Constant horizontal flight velocity while carrying. ROM: loc_13FC2 x_vel write. */
     public static final short CARRY_INIT_TAILS_X_VEL = (short) 0x0100;

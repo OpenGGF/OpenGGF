@@ -73,7 +73,7 @@ public abstract class AbstractFallingFragment extends AbstractObjectInstance {
 
         SubpixelMotion.objectFall(motion, GRAVITY);
 
-        if (!isOnScreen(OFF_SCREEN_MARGIN)) {
+        if (shouldDeleteAfterFall()) {
             ObjectLifetimeOps.expireDynamic(this);
         }
     }
@@ -86,5 +86,9 @@ public abstract class AbstractFallingFragment extends AbstractObjectInstance {
     @Override
     public boolean isPersistent() {
         return !isDestroyed();
+    }
+
+    protected boolean shouldDeleteAfterFall() {
+        return !isOnScreen(OFF_SCREEN_MARGIN);
     }
 }

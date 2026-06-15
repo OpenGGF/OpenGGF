@@ -62,6 +62,8 @@ link_file "config.yaml"
 # --- Disassemblies (submodule gitlinks without .gitmodules) ---
 link_dir "docs/s1disasm"
 link_dir "docs/s2disasm"
+link_dir "docs/kis2disasm"
+link_dir "docs/scddisasm"
 link_dir "docs/skdisasm"
 
 echo "[post-checkout] Done"

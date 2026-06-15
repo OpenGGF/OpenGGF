@@ -19,6 +19,7 @@ import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.PlayableEntity;
 import com.openggf.physics.Direction;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.io.IOException;
@@ -233,8 +234,14 @@ public final class HCZWaterSkimHandler {
 
         // NOW pin player Y to water surface (only if still skimming)
         // ROM: move.w d0,y_pos(a1) / move.w #0,y_vel(a1) (sonic3k.asm:75442-75443)
-        player.setCentreY((short) pinnedY);
+        NativePositionOps.writeYPosPreserveSubpixel(player, pinnedY);
         player.setYSpeed((short) 0);
+        if (player.getAir()) {
+            // Obj_HCZWaterSplash runs in object order after the player
+            // dispatcher; the engine hook runs pre-physics. Suppress the
+            // generic airborne gravity tick that the ROM has already passed.
+            player.suppressNextGravityStep();
+        }
 
         // Apply friction when airborne and no directional input
         // ROM: btst #Status_InAir,status(a1) / andi.w #(left|right)<<8,d5
@@ -313,6 +320,12 @@ public final class HCZWaterSkimHandler {
             splashAnimFrameP2 = SPLASH_EXIT_FRAME;
         }
 
+        if (player.getAir()) {
+            // loc_38646 clears the splash object's active bit after the player
+            // routine for the frame (sonic3k.asm:75473-75476), so an airborne
+            // speed/terrain exit must not receive a same-frame gravity step.
+            player.suppressNextGravityStep();
+        }
         player.setWaterSkimActive(false);
         return false;
     }

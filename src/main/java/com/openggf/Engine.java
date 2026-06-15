@@ -52,13 +52,23 @@ import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.data.Rom;
 import com.openggf.physics.Direction;
 import com.openggf.graphics.color.DisplayColorProfileController;
+import com.openggf.graphics.shaderlib.DisplayShaderController;
+import com.openggf.graphics.shaderlib.DisplayShaderLibrary;
+import com.openggf.graphics.shaderlib.DisplayShaderPickerController;
+import com.openggf.graphics.shaderlib.DisplayShaderPipeline;
+import com.openggf.graphics.shaderlib.DisplayShaderPresetLoader;
+import com.openggf.graphics.shaderlib.DisplayShaderPresetRef;
+import com.openggf.graphics.shaderlib.DisplayShaderSelectionModel;
+import com.openggf.graphics.shaderlib.ShaderPhase;
 import com.openggf.render.EngineRenderDispatcher;
+import com.openggf.util.RetroArchGlslShaderPackDownloader;
 
 import java.io.IOException;
 import java.nio.IntBuffer;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -108,7 +118,15 @@ public class Engine {
 	// Match the rest of the debug overlay — no drop shadow.
 	private final PixelFontTextRenderer traceHudTextRenderer =
 		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
+	private final PixelFontTextRenderer pauseTextRenderer =
+		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
 	private DisplayColorProfileController displayColorProfileController;
+	private DisplayShaderController displayShaderController;
+	private DisplayShaderPickerController displayShaderPickerController;
+	private int displayShaderFrameCounter;
+	private volatile boolean displayShaderPackDownloadInProgress;
+	private volatile boolean displayShaderPackRescanRequested;
+	private volatile String displayShaderPackStatus;
 
 	private static volatile DebugState debugState = DebugState.NONE;
 	private static volatile DebugOption debugOption = DebugOption.A;
@@ -142,6 +160,9 @@ public class Engine {
 	// Window dimensions
 	private int windowWidth;
 	private int windowHeight;
+
+	record ResolvedDisplayDimensions(int pixelWidth, int pixelHeight, int windowWidth, int windowHeight) {
+	}
 
 	private boolean overlayStateReady = false;
 
@@ -211,6 +232,8 @@ public class Engine {
 		this.gameLoop.setLegalDisclaimerExitHandler(this::exitLegalDisclaimer);
 		this.gameLoop.setDataSelectActionHandler(this::launchGameplayFromDataSelect);
 		this.gameLoop.setReturnToMasterTitleHandler(this::returnToMasterTitleScreen);
+		this.gameLoop.setMasterTitleLaunchFailureHandler(this::rollbackLaunchSessionCachedConfig);
+		this.gameLoop.setApplicationExitHandler(this::requestApplicationExit);
 		this.realWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
 		this.realHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
 		this.projectionWidth = realWidth;
@@ -347,15 +370,16 @@ public class Engine {
 			// Get the window size passed to glfwCreateWindow
 			glfwGetWindowSize(window, pWidth, pHeight);
 
-			// Get the resolution of the primary monitor
-			GLFWVidMode vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-
-			// Center the window
-			glfwSetWindowPos(
-					window,
-					(vidmode.width() - pWidth.get(0)) / 2,
-					(vidmode.height() - pHeight.get(0)) / 2
-			);
+			// Center the window when the desktop video mode is available.
+			long primaryMonitor = glfwGetPrimaryMonitor();
+			GLFWVidMode vidmode = primaryMonitor != NULL ? glfwGetVideoMode(primaryMonitor) : null;
+			if (vidmode != null) {
+				glfwSetWindowPos(
+						window,
+						(vidmode.width() - pWidth.get(0)) / 2,
+						(vidmode.height() - pHeight.get(0)) / 2
+				);
+			}
 		}
 
 		// Make the OpenGL context current
@@ -372,12 +396,7 @@ public class Engine {
 		GL.createCapabilities();
 
 		try {
-			graphicsManager.init(RESOURCES_SHADERS_PIXEL_SHADER_GLSL);
-			graphicsManager.setEngine(this);
-			displayColorProfileController = DisplayColorProfileController.fromConfig(
-					configService,
-					graphicsManager,
-					this::refreshDisplayPalettes);
+			initializePresentationGraphics();
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
@@ -441,6 +460,193 @@ public class Engine {
 		if (activeLevelManager != null) {
 			activeLevelManager.reloadLevelPalettes();
 		}
+	}
+
+	private void initializePresentationGraphics() throws IOException {
+		graphicsManager.init(RESOURCES_SHADERS_PIXEL_SHADER_GLSL);
+		graphicsManager.setEngine(this);
+		displayColorProfileController = DisplayColorProfileController.fromConfig(
+				configService,
+				graphicsManager,
+				this::refreshDisplayPalettes);
+		initializeDisplayShaders();
+	}
+
+	private void initializeDisplayShaders() {
+		DisplayShaderLibrary library = scanDisplayShaderLibrary();
+		DisplayShaderSelectionModel selectionModel = new DisplayShaderSelectionModel(library);
+		DisplayShaderPresetLoader loader = new DisplayShaderPresetLoader();
+		ShaderPhase defaultPhase = parseDisplayShaderDefaultPhase();
+		displayShaderPickerController = new DisplayShaderPickerController(
+				selectionModel,
+				configService.getInt(SonicConfiguration.DISPLAY_SHADER_PICKER_KEY));
+		displayShaderController = new DisplayShaderController(
+				library,
+				configService.getString(SonicConfiguration.DISPLAY_SHADER_SELECTION),
+				configService.getInt(SonicConfiguration.DISPLAY_SHADER_NEXT_KEY),
+				configService.getInt(SonicConfiguration.DISPLAY_SHADER_PREVIOUS_KEY),
+				this::persistDisplayShaderSelection,
+				ref -> activateDisplayShader(ref, loader, defaultPhase));
+		displayShaderController.applySavedSelectionSilently();
+	}
+
+	private void reloadDisplayShaderLibrary() {
+		DisplayShaderLibrary library = scanDisplayShaderLibrary();
+		DisplayShaderSelectionModel selectionModel = new DisplayShaderSelectionModel(library);
+		String savedSelection = configService.getString(SonicConfiguration.DISPLAY_SHADER_SELECTION);
+		if (displayShaderController != null) {
+			displayShaderController.replaceLibrary(library, savedSelection);
+		}
+		if (displayShaderPickerController != null) {
+			DisplayShaderPresetRef currentRef = displayShaderController != null
+					? displayShaderController.currentRef()
+					: DisplayShaderPresetRef.OFF;
+			displayShaderPickerController.replaceSelectionModel(selectionModel, currentRef);
+		}
+	}
+
+	private DisplayShaderLibrary scanDisplayShaderLibrary() {
+		String root = configService.getString(SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT);
+		try {
+			return DisplayShaderLibrary.scan(Path.of(root));
+		} catch (RuntimeException e) {
+			LOGGER.warning("Display shader library root is invalid: " + root);
+			return DisplayShaderLibrary.scan(null);
+		}
+	}
+
+	private ShaderPhase parseDisplayShaderDefaultPhase() {
+		String raw = configService.getString(SonicConfiguration.DISPLAY_SHADER_DEFAULT_PHASE);
+		try {
+			return ShaderPhase.valueOf(raw.trim().toUpperCase(Locale.ROOT));
+		} catch (RuntimeException e) {
+			LOGGER.warning("Invalid display shader default phase '" + raw + "', using PRESENTATION");
+			return ShaderPhase.PRESENTATION;
+		}
+	}
+
+	private boolean activateDisplayShader(
+			DisplayShaderPresetRef ref,
+			DisplayShaderPresetLoader loader,
+			ShaderPhase defaultPhase) {
+		DisplayShaderPipeline pipeline = graphicsManager.getDisplayShaderPipeline();
+		if (pipeline == null) {
+			return ref != null && ref.kind() == DisplayShaderPresetRef.Kind.OFF;
+		}
+		if (ref == null || ref.kind() == DisplayShaderPresetRef.Kind.OFF) {
+			return pipeline.activate(null);
+		}
+		try {
+			return pipeline.activate(loader.load(ref, defaultPhase));
+		} catch (Exception e) {
+			LOGGER.log(java.util.logging.Level.WARNING, "Display shader failed to load: " + ref.label(), e);
+			return false;
+		}
+	}
+
+	private void persistDisplayShaderSelection(String selection) {
+		configService.setConfigValue(SonicConfiguration.DISPLAY_SHADER_SELECTION, selection);
+		configService.saveConfig();
+	}
+
+	private void startDisplayShaderPackDownload() {
+		if (displayShaderPackDownloadInProgress) {
+			displayShaderPackStatus = "Libretro GLSL: already downloading";
+			return;
+		}
+
+		final Path shaderRoot;
+		try {
+			shaderRoot = Path.of(configService.getString(SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT));
+		} catch (RuntimeException e) {
+			displayShaderPackStatus = "Libretro GLSL failed: invalid shader root";
+			return;
+		}
+
+		displayShaderPackDownloadInProgress = true;
+		displayShaderPackStatus = "Libretro GLSL: checking";
+		Thread downloaderThread = new Thread(() -> {
+			try {
+				RetroArchGlslShaderPackDownloader.InstallResult result =
+						new RetroArchGlslShaderPackDownloader().downloadIfNewer(
+								shaderRoot,
+								this::updateDisplayShaderPackProgress);
+				displayShaderPackStatus = result.downloaded()
+						? "Libretro GLSL: installed"
+						: "Libretro GLSL: up to date";
+				displayShaderPackRescanRequested = true;
+			} catch (RetroArchGlslShaderPackDownloader.ShaderPackDownloadException e) {
+				displayShaderPackStatus = "Libretro GLSL failed: " + e.reason();
+				LOGGER.log(java.util.logging.Level.WARNING, "Libretro GLSL shader pack download failed", e);
+			} finally {
+				displayShaderPackDownloadInProgress = false;
+			}
+		}, "OpenGGF-libretro-glsl-download");
+		downloaderThread.setDaemon(true);
+		downloaderThread.start();
+	}
+
+	private void updateDisplayShaderPackProgress(
+			RetroArchGlslShaderPackDownloader.Stage stage,
+			long completed,
+			long total,
+			String detail) {
+		displayShaderPackStatus = switch (stage) {
+			case CHECKING -> "Libretro GLSL: checking";
+			case DOWNLOADING -> total > 0
+					? "Libretro GLSL: downloading " + Math.min(100, (completed * 100 / total)) + "%"
+					: "Libretro GLSL: downloading";
+			case EXTRACTING -> "Libretro GLSL: extracting " + completed;
+			case COMPLETE -> detail == null || detail.isBlank()
+					? "Libretro GLSL: complete"
+					: "Libretro GLSL: " + detail;
+		};
+	}
+
+	private void processDisplayShaderPackRescan() {
+		if (!displayShaderPackRescanRequested || displayShaderPackDownloadInProgress) {
+			return;
+		}
+		displayShaderPackRescanRequested = false;
+		reloadDisplayShaderLibrary();
+	}
+
+	void refreshLaunchSessionCachedConfig() {
+		debugViewEnabled = configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
+	}
+
+	ResolvedDisplayDimensions readResolvedDisplayDimensionsForLaunch() {
+		return new ResolvedDisplayDimensions(
+				configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS),
+				configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS),
+				configService.getInt(SonicConfiguration.SCREEN_WIDTH),
+				configService.getInt(SonicConfiguration.SCREEN_HEIGHT));
+	}
+
+	void applyResolvedDisplayDimensions() {
+		ResolvedDisplayDimensions resolved = readResolvedDisplayDimensionsForLaunch();
+		realWidth = resolved.pixelWidth();
+		realHeight = resolved.pixelHeight();
+		projectionWidth = realWidth;
+		windowWidth = resolved.windowWidth();
+		windowHeight = resolved.windowHeight();
+		graphicsManager.setProjectionWidth((int) projectionWidth);
+		graphicsManager.applyResolvedDisplayWidth((int) projectionWidth);
+
+		if (glfwInitialized && window != 0L) {
+			isSnappingWindowSize = true;
+			try {
+				glfwSetWindowSize(window, resolved.windowWidth(), resolved.windowHeight());
+			} finally {
+				isSnappingWindowSize = false;
+			}
+			reshape(resolved.windowWidth(), resolved.windowHeight());
+		}
+	}
+
+	void rollbackLaunchSessionCachedConfig() {
+		refreshLaunchSessionCachedConfig();
+		applyResolvedDisplayDimensions();
 	}
 
 	/**
@@ -511,6 +717,9 @@ public class Engine {
 	 * Performs the Phase 2 init for the selected game.
 	 */
 	public void exitMasterTitleScreen(String gameId) {
+		refreshLaunchSessionCachedConfig();
+		applyResolvedDisplayDimensions();
+
 		// Set the DEFAULT_ROM config to the selected game
 		configService.setConfigValue(SonicConfiguration.DEFAULT_ROM, gameId);
 
@@ -527,6 +736,12 @@ public class Engine {
 
 		// Phase 2: load ROM, sprites, audio, level
 		initializeGame();
+	}
+
+	private void requestApplicationExit() {
+		if (window != NULL) {
+			glfwSetWindowShouldClose(window, true);
+		}
 	}
 
 	/**
@@ -589,6 +804,8 @@ public class Engine {
 		if (masterTitleScreen != null) {
 			masterTitleScreen.cleanup();
 		}
+		refreshLaunchSessionCachedConfig();
+		applyResolvedDisplayDimensions();
 		masterTitleScreen = new MasterTitleScreen(configService);
 		masterTitleScreen.initialize();
 		gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
@@ -836,7 +1053,7 @@ public class Engine {
 						case S3K -> "s3k";
 					};
 					SaveSlotSummary summary = saveManager.readSlotSummary(gameCode, action.slot());
-					yield summary.state() == com.openggf.game.save.SaveSlotState.EMPTY ? null : summary.payload();
+					yield summary.isLoadable() ? summary.payload() : null;
 				} catch (IOException e) {
 					throw new RuntimeException("Failed to read save slot " + action.slot() + " for data select launch", e);
 				}
@@ -1150,8 +1367,14 @@ public class Engine {
 		if (monitor == NULL) {
 			monitor = glfwGetPrimaryMonitor();
 		}
+		if (monitor == NULL) {
+			return;
+		}
 		GLFWVidMode vidmode = glfwGetVideoMode(monitor);
-		int maxScale = Math.min(vidmode.width() / nativeW, vidmode.height() / nativeH);
+		Integer maxScale = computeIntegerScaleUpperBound(nativeW, nativeH, vidmode);
+		if (maxScale == null) {
+			return;
+		}
 
 		double currentScale = Math.min((double) windowWidth / nativeW, (double) windowHeight / nativeH);
 
@@ -1173,6 +1396,20 @@ public class Engine {
 			glfwSetWindowSize(window, targetW, targetH);
 			isSnappingWindowSize = false;
 		}
+	}
+
+	static Integer computeIntegerScaleUpperBound(int nativeW, int nativeH, GLFWVidMode vidmode) {
+		if (vidmode == null) {
+			return null;
+		}
+		return computeIntegerScaleUpperBound(nativeW, nativeH, vidmode.width(), vidmode.height());
+	}
+
+	static Integer computeIntegerScaleUpperBound(int nativeW, int nativeH, int modeW, int modeH) {
+		if (nativeW <= 0 || nativeH <= 0 || modeW <= 0 || modeH <= 0) {
+			return null;
+		}
+		return Math.max(1, Math.min(modeW / nativeW, modeH / nativeH));
 	}
 
 	private void loop() {
@@ -1286,22 +1523,34 @@ public class Engine {
 		}
 
 		profiler.beginSection("update");
-		if (displayColorProfileController != null) {
+		processDisplayShaderPackRescan();
+		boolean displayShaderPickerHandledInput = updateDisplayShaderInput();
+		if (displayColorProfileController != null && !displayShaderPickerHandledInput) {
 			displayColorProfileController.update(inputHandler);
 		}
-		update();
+		if (displayShaderController != null && !displayShaderPickerHandledInput) {
+			displayShaderController.update(inputHandler);
+		}
+		if (!displayShaderPickerHandledInput) {
+			update();
+		} else if (inputHandler != null) {
+			// Modal picker frames skip GameLoop.step(), so advance key edges here.
+			inputHandler.update();
+		}
 		profiler.endSection("update");
 
 		profiler.beginSection("render");
 		graphicsManager.runPendingRenderThreadTasks();
 		draw();
 		graphicsManager.flush();
+		applyDisplayShaderPhase(ShaderPhase.SCENE);
 		profiler.endSection("render");
 
 		// Render screen fade overlay via unified UI render pipeline
 		if (uiPipeline != null) {
 			uiPipeline.renderFadePass();
 		}
+		applyDisplayShaderPhase(ShaderPhase.PRESENTATION);
 		RenderOrderRecorder postFadeRecorder = uiPipeline != null ? uiPipeline.getRenderOrderRecorder() : null;
 
 		// Post-fade diagnostic overlays: intentionally outside UiRenderPipeline so
@@ -1312,6 +1561,10 @@ public class Engine {
 			postFadeRecorder.recordPostFadeDiagnostic("DisplayColorProfileNotification");
 		}
 		renderDisplayColorProfileNotification();
+		if (postFadeRecorder != null) {
+			postFadeRecorder.recordPostFadeDiagnostic("DisplayShaderNotification");
+		}
+		renderDisplayShaderNotification();
 
 		// Trace Test Mode HUD and live rewind HUD: drawn after the fade pass so
 		// counters and TRACE COMPLETE remain readable during fade-to-black teardown.
@@ -1329,6 +1582,7 @@ public class Engine {
 			}
 			gameLoop.renderLiveRewindHud(traceHudTextRenderer);
 		}
+		renderEscapeToMasterTitlePrompt(postFadeRecorder);
 		if (getCurrentGameMode() == GameMode.CREDITS_DEMO) {
 			EndingProvider provider = gameLoop.getEndingProvider();
 			if (provider != null && provider.shouldRenderDemoSpritesOverFade()) {
@@ -1349,11 +1603,16 @@ public class Engine {
 		}
 
 		boolean playbackHud = playbackDebugManager.isHudVisible();
+		boolean userPaused = gameLoop != null && gameLoop.isUserPaused();
 		boolean needsOverlay = (getCurrentGameMode() == GameMode.SPECIAL_STAGE) ||
-				((debugViewEnabled || playbackHud) && getCurrentGameMode() != GameMode.SPECIAL_STAGE);
+				((debugViewEnabled || playbackHud || userPaused) && getCurrentGameMode() != GameMode.SPECIAL_STAGE);
 
 		if (needsOverlay) {
 			prepareOverlayState();
+		}
+
+		if (userPaused) {
+			renderUserPauseIndicator();
 		}
 
 		profiler.beginSection("debug");
@@ -1383,6 +1642,9 @@ public class Engine {
 			glUseProgram(0);
 		}
 		profiler.endSection("debug");
+
+		renderDisplayShaderPickerOverlay();
+		applyDisplayShaderPhase(ShaderPhase.FINAL);
 
 		// F12 screenshot capture (after all rendering is complete)
 		if (inputHandler != null && inputHandler.isKeyPressed(GLFW_KEY_F12)) {
@@ -1450,6 +1712,13 @@ public class Engine {
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	}
 
+	private void renderUserPauseIndicator() {
+		pauseTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+		String text = "PAUSED";
+		int x = Math.max(0, (viewportWidth - pauseTextRenderer.measureWidth(text)) / 2);
+		pauseTextRenderer.drawShadowedText(text, x, 32, DebugColor.WHITE);
+	}
+
 	private void applyLevelClearColor() {
 		levelManager.setClearColor();
 	}
@@ -1496,6 +1765,212 @@ public class Engine {
 		int y = 224 - traceHudTextRenderer.lineHeight(scale) - 4;
 		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
 		traceHudTextRenderer.drawShadowedText(text, 4, y, DebugColor.YELLOW, scale);
+	}
+
+	private void renderDisplayShaderNotification() {
+		if (displayShaderController == null) {
+			return;
+		}
+		String text = displayShaderController.notificationText();
+		if (text == null) {
+			return;
+		}
+		float scale = 1.0f;
+		int y = 224 - traceHudTextRenderer.lineHeight(scale) * 2 - 4;
+		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+		traceHudTextRenderer.drawShadowedText(text, 4, y, DebugColor.YELLOW, scale);
+	}
+
+	private void renderEscapeToMasterTitlePrompt(RenderOrderRecorder postFadeRecorder) {
+		if (gameLoop == null) {
+			return;
+		}
+		EscapeToMasterTitleController controller = gameLoop.getEscapeToMasterTitleController();
+		if (controller == null || !controller.visible()) {
+			return;
+		}
+		if (postFadeRecorder != null) {
+			postFadeRecorder.recordPostFadeDiagnostic("EscapeToMasterTitlePrompt");
+		}
+		float scale = 1.0f;
+		int x = 4;
+		int y = 4;
+		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+		traceHudTextRenderer.drawShadowedText(controller.message(), x, y, DebugColor.WHITE, scale);
+		renderEscapeProgressBar(x, y + traceHudTextRenderer.lineHeight(scale) + 2, controller.progress());
+	}
+
+	private void renderEscapeProgressBar(int x, int y, double progress) {
+		final int width = 144;
+		final int height = 6;
+		int fillWidth = (int) Math.round(Math.max(0.0, Math.min(1.0, progress)) * (width - 2));
+
+		drawEscapeProgressRect(x, y, x + width, y + height,
+				0.0f, 0.0f, 0.0f, 0.65f, GLCommand.BlendType.ONE_MINUS_SRC_ALPHA);
+		drawEscapeProgressRect(x, y, x + width, y + 1,
+				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID);
+		drawEscapeProgressRect(x, y + height - 1, x + width, y + height,
+				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID);
+		drawEscapeProgressRect(x, y, x + 1, y + height,
+				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID);
+		drawEscapeProgressRect(x + width - 1, y, x + width, y + height,
+				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID);
+		if (fillWidth > 0) {
+			drawEscapeProgressRect(x + 1, y + 1, x + 1 + fillWidth, y + height - 1,
+					1.0f, 1.0f, 0.0f, 1.0f, GLCommand.BlendType.SOLID);
+		}
+	}
+
+	private void drawEscapeProgressRect(
+			int x1,
+			int y1,
+			int x2,
+			int y2,
+			float red,
+			float green,
+			float blue,
+			float alpha,
+			GLCommand.BlendType blendType) {
+		new GLCommand(
+				GLCommand.CommandType.RECTI,
+				GL_TRIANGLE_FAN,
+				blendType,
+				red,
+				green,
+				blue,
+				alpha,
+				x1,
+				y1,
+				x2,
+				y2).execute(0, 0, 0, 0);
+	}
+
+	private boolean updateDisplayShaderInput() {
+		if (displayShaderPickerController == null) {
+			return false;
+		}
+		boolean wasOpen = displayShaderPickerController.isOpen();
+		DisplayShaderPresetRef currentRef = displayShaderController != null
+				? displayShaderController.currentRef()
+				: DisplayShaderPresetRef.OFF;
+		DisplayShaderPickerController.Action action =
+				displayShaderPickerController.update(inputHandler, currentRef);
+		if (action.type() == DisplayShaderPickerController.ActionType.ACTIVATE && displayShaderController != null) {
+			displayShaderController.select(action.ref());
+		} else if (action.type() == DisplayShaderPickerController.ActionType.DOWNLOAD_LIBRETRO_GLSL) {
+			startDisplayShaderPackDownload();
+		}
+		return wasOpen || displayShaderPickerController.isOpen()
+				|| action.type() != DisplayShaderPickerController.ActionType.NONE;
+	}
+
+	private void applyDisplayShaderPhase(ShaderPhase phase) {
+		DisplayShaderPipeline pipeline = graphicsManager.getDisplayShaderPipeline();
+		if (pipeline == null || !pipeline.isActive() || pipeline.phase() != phase) {
+			return;
+		}
+		int sourceWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
+		int sourceHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
+		pipeline.resize(sourceWidth, sourceHeight, viewportWidth, viewportHeight);
+		pipeline.apply(viewportX, viewportY, viewportWidth, viewportHeight, displayShaderFrameCounter++);
+	}
+
+	private void renderDisplayShaderPickerOverlay() {
+		if (displayShaderPickerController == null || !displayShaderPickerController.isOpen()) {
+			return;
+		}
+		renderDisplayShaderPickerBackdrop();
+		float scale = 1.0f;
+		int x = 4;
+		int y = 8;
+		int lineHeight = traceHudTextRenderer.lineHeight(scale);
+		int maxWidth = Math.max(48, (int) projectionWidth - x - 4);
+		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+		traceHudTextRenderer.drawShadowedText(
+				fitDisplayShaderPickerText(displayShaderPickerCurrentFolderText(), maxWidth, scale),
+				x,
+				y,
+				DebugColor.CYAN,
+				scale);
+		y += lineHeight;
+		traceHudTextRenderer.drawShadowedText(
+				fitDisplayShaderPickerText(displayShaderPickerController.query(), maxWidth, scale),
+				x,
+				y,
+				DebugColor.WHITE,
+				scale);
+		y += lineHeight;
+		traceHudTextRenderer.drawShadowedText(
+				fitDisplayShaderPickerText(DisplayShaderPickerController.downloadHintText(), maxWidth, scale),
+				x,
+				y,
+				DebugColor.LIGHT_GRAY,
+				scale);
+		y += lineHeight;
+		if (displayShaderPackStatus != null && !displayShaderPackStatus.isBlank()) {
+			traceHudTextRenderer.drawShadowedText(
+					fitDisplayShaderPickerText(displayShaderPackStatus, maxWidth, scale),
+					x,
+					y,
+					displayShaderPackDownloadInProgress ? DebugColor.CYAN : DebugColor.LIGHT_GRAY,
+					scale);
+			y += lineHeight;
+		}
+
+		List<DisplayShaderSelectionModel.SelectionItem> items = displayShaderPickerController.visibleItems();
+		int selectedIndex = items.indexOf(displayShaderPickerController.selectedItem());
+		int maxEntries = Math.max(1, (224 - y - 4) / Math.max(1, lineHeight));
+		int start = Math.max(0, Math.min(selectedIndex - maxEntries / 2, items.size() - maxEntries));
+		int end = Math.min(items.size(), start + maxEntries);
+		for (int i = start; i < end; i++) {
+			DisplayShaderSelectionModel.SelectionItem item = items.get(i);
+			boolean selected = i == selectedIndex;
+			String text = (selected ? "> " : "  ") + item.displayPath();
+			traceHudTextRenderer.drawShadowedText(
+					fitDisplayShaderPickerText(text, maxWidth, scale),
+					x,
+					y,
+					selected ? DebugColor.YELLOW : DebugColor.LIGHT_GRAY,
+					scale);
+			y += lineHeight;
+		}
+	}
+
+	private String displayShaderPickerCurrentFolderText() {
+		String root = configService.getString(SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT);
+		String normalizedRoot = root == null || root.isBlank() ? "shaders" : root.trim().replace('\\', '/');
+		while (normalizedRoot.endsWith("/")) {
+			normalizedRoot = normalizedRoot.substring(0, normalizedRoot.length() - 1);
+		}
+		String folder = displayShaderPickerController.currentFolder();
+		return folder == null || folder.isBlank() ? normalizedRoot : normalizedRoot + "/" + folder;
+	}
+
+	private void renderDisplayShaderPickerBackdrop() {
+		new GLCommand(
+				GLCommand.CommandType.RECTI,
+				GL_TRIANGLE_FAN,
+				GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
+				0.0f,
+				0.0f,
+				0.0f,
+				0.58f,
+				0,
+				0,
+				(int) projectionWidth,
+				(int) realHeight).execute(0, 0, 0, 0);
+	}
+
+	private String fitDisplayShaderPickerText(String text, int maxWidth, float scale) {
+		if (text == null || traceHudTextRenderer.measureWidth(text, scale) <= maxWidth) {
+			return text == null ? "" : text;
+		}
+		String suffix = "...";
+		int end = text.length();
+		while (end > 0 && traceHudTextRenderer.measureWidth(text.substring(0, end) + suffix, scale) > maxWidth) {
+			end--;
+		}
+		return text.substring(0, end) + suffix;
 	}
 
 	/**
@@ -1747,6 +2222,7 @@ public class Engine {
 			}
 		});
 		cleanupStep("trace HUD renderer", traceHudTextRenderer::cleanup);
+		cleanupStep("pause text renderer", pauseTextRenderer::cleanup);
 		cleanupStep("graphics manager", graphicsManager::cleanup);
 		cleanupStep("presence", gameLoop::closePresence);
 		cleanupStep("audio manager", audioManager::destroy);

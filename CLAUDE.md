@@ -10,15 +10,15 @@ OpenGGF is an open-source, Java-based game engine for research and preservation 
 
 ## Current Work Priorities
 
-The current delivery priority is **S3K playable vertical-slice parity**, not broad architecture migration for its own sake. Prefer work that closes an actual route through Sonic 3 & Knuckles: traversal objects, badniks, bosses, event/camera flow, scroll/parallax, animated tiles, palette/PLC state, sidekick behavior, trace blockers, rewind-relevant state, and visual validation.
+The current delivery priority is **S3K playable vertical-slice parity and release readiness**, not broad architecture migration for its own sake. AIZ -> HCZ remains the primary release slice, but CNZ/MGZ/ICZ/MHZ/LBZ are now active route-stabilization areas with complete-run trace frontiers. Prefer work that closes an actual route through Sonic 3 & Knuckles: traversal objects, badniks, bosses, event/camera flow, scroll/parallax, animated tiles, palette/PLC state, sidekick behavior, trace blockers, rewind-relevant state, and visual validation.
 
 Use the runtime-owned framework stack when the slice touches those systems: `ZoneRuntimeRegistry`, `PaletteOwnershipRegistry`, `AnimatedTileChannelGraph`, `ZoneLayoutMutationPipeline`, `ScrollEffectComposer`, `SpecialRenderEffectRegistry`, and `AdvancedRenderModeController`. Uplift S1/S2 or older S3K code opportunistically when it removes active duplication or risk, but do not let broad cleanup displace playable S3K progress.
 
 Default order of work:
-1. Close AIZ -> HCZ route blockers first.
-2. Feed CNZ, MGZ, and ICZ work into the same slice standard.
-3. Implement S3K objects by route impact: traversal blockers, terrain modifiers, hazards, bosses/miniboss support, then high-usage badniks.
-4. Treat data select, special stages, and broad S1/S2 framework uplift as follow-up polish unless they directly block the active slice.
+1. Keep AIZ -> HCZ stable as the primary release slice.
+2. Work CNZ, MGZ, ICZ, MHZ, and LBZ by current route blockers and complete-run trace frontiers.
+3. Implement S3K objects by route impact: traversal blockers, terrain modifiers, hazards, bosses/miniboss support, sidekick/object-lifetime mismatches, then high-usage badniks.
+4. Treat data select, special stages, and broad S1/S2 framework uplift as follow-up polish unless they directly block the active slice or release gate.
 
 ## Build & Run Commands
 
@@ -88,7 +88,7 @@ Five `com.openggf.tools` CLIs reduce context loss when implementing objects/zone
 
 The engine uses a **two-tier service model** that separates global access from per-object context:
 
-**Tier 1: `GameServices` (static facade)** — Global access for managers, event handlers, and other non-object code. Exposes gameplay-scoped accessors (`camera()`, `level()`, `parallax()`, `water()`, `gameState()`, `timers()`, `sprites()`, `fade()`, `collision()`, `debugOverlay()`, ...) which require an active `GameplayModeContext`, plus engine globals (`rom()`, `audio()`, `graphics()`, `configuration()`, `module()`, ...) resolved via `EngineServices`, plus `*OrNull()` variants. See `GameServices.java` for the full surface.
+**Tier 1: `GameServices` (static facade)** — Global access for managers, event handlers, and other non-object code. Exposes gameplay-scoped accessors (`camera()`, `level()`, `parallax()`, `water()`, `gameState()`, `timers()`, `sprites()`, `fade()`, `collision()`, ...) which require an active `GameplayModeContext`, plus engine globals (`rom()`, `audio()`, `graphics()`, `configuration()`, `module()`, `debugOverlay()`, ...) resolved via `EngineServices`, plus `*OrNull()` variants. See `GameServices.java` for the full surface.
 
 **Tier 2: `ObjectServices` (injected per-object)** — Context-specific services for game objects. The interface lives at `com.openggf.level.objects.ObjectServices`; `DefaultObjectServices` is the production implementation, backed by `GameplayModeContext` and `EngineContext`. Inside an `AbstractObjectInstance` subclass, call `services()` to reach managers (`objectManager`, `renderManager`, `audioManager`, `camera`, `gameState`, `zoneFeatureProvider`, ...) plus audio shortcuts, level-transition requests, world session, RNG, ROM, config. See `ObjectServices.java` for the full surface.
 
@@ -230,7 +230,7 @@ Level events (boss arena setup, dynamic boundaries, zone transitions) are manage
 - **`AbstractLevelEventManager`** (`game/`) - Shared state machine mechanics: dual routine counters (`eventRoutineFg` and `eventRoutineBg`; S1/S2 only use Fg, S3K uses both), zone/act tracking, `initLevel()`/`update()` lifecycle, boss spawn coordination.
 - **`Sonic1LevelEventManager`** (`game/sonic1/events/`) - S1 zone event handlers. Per-zone handler classes.
 - **`Sonic2LevelEventManager`** (`game/sonic2/`) - S2 zone event handlers (HTZ earthquake, boss arenas, EHZ/CPZ/ARZ/CNZ events).
-- **`Sonic3kLevelEventManager`** (`game/sonic3k/`) - S3K zone event handlers. Per-zone handler classes (in `game/sonic3k/events/`): `Sonic3kAIZEvents`, `Sonic3kCNZEvents`, `Sonic3kHCZEvents`, `Sonic3kICZEvents`, `Sonic3kMGZEvents`. Other zones not yet covered.
+- **`Sonic3kLevelEventManager`** (`game/sonic3k/`) - S3K zone event handlers. Per-zone handler classes (in `game/sonic3k/events/`): `Sonic3kAIZEvents`, `Sonic3kCNZEvents`, `Sonic3kHCZEvents`, `Sonic3kICZEvents`, `Sonic3kLBZEvents`, `Sonic3kMGZEvents`, `Sonic3kMHZEvents`. Other zones use default/no-op behavior until implemented.
 - **`PlayerCharacter`** enum (`game/`) - Character identity enum (`SONIC_AND_TAILS`, `SONIC_ALONE`, `TAILS_ALONE`, `KNUCKLES`) matching ROM's `Player_mode` variable for character-specific branching in event logic.
 
 Each `GameModule` returns its game-specific subclass via `LevelEventProvider`. Call sites use `AbstractLevelEventManager` for polymorphic access.
@@ -421,7 +421,7 @@ Full data select (save/load) screen with cross-game donation. `DataSelectProvide
 
 ## Intentional Divergences
 
-Documented in **[docs/KNOWN_DISCREPANCIES.md](docs/KNOWN_DISCREPANCIES.md)**: Gloop sound toggle, spindash release transpose fix, pattern ID ranges, HTZ cloud scroll fix, MCZ child cleanup, multi-sidekick system.
+Documented in **[docs/KNOWN_DISCREPANCIES.md](docs/KNOWN_DISCREPANCIES.md)**: intentional cross-game and S1/S2 divergences including audio toggles, physics fixes, virtual pattern ID ranges, object lifecycle differences, multi-sidekick support, trace bootstrap contracts, and runtime data ratchets.
 
 ## Special Stage Implementation
 

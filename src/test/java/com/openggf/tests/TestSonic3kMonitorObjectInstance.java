@@ -6,6 +6,7 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.StubObjectServices;
@@ -36,13 +37,6 @@ class TestSonic3kMonitorObjectInstance {
     void noContactClearsStaleSidekickStandingBeforeMonitorBreakRelease() {
         Sonic3kMonitorObjectInstance monitor = new Sonic3kMonitorObjectInstance(
                 new ObjectSpawn(0x840, 0x6E9, 0x01, 6, 0, false, 0));
-        monitor.setServices(new StubObjectServices() {
-            @Override
-            public ObjectManager objectManager() {
-                return mock(ObjectManager.class);
-            }
-        });
-
         AbstractPlayableSprite sonic = new Tails("sonic", (short) 0x100, (short) 0x100);
         sonic.setAnimationId(Sonic3kAnimationIds.ROLL.id());
         sonic.setYSpeed((short) 0x300);
@@ -50,6 +44,18 @@ class TestSonic3kMonitorObjectInstance {
         tails.setCpuControlled(true);
         tails.setAir(false);
         tails.setOnObject(false);
+
+        monitor.setServices(new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return mock(ObjectManager.class);
+            }
+
+            @Override
+            public ObjectPlayerQuery playerQuery() {
+                return new ObjectPlayerQuery(() -> sonic, () -> java.util.List.of(tails));
+            }
+        });
 
         monitor.onSolidContact(tails, new SolidContact(true, false, false, false, false), 341);
         monitor.onSolidContactCleared(tails, 342);

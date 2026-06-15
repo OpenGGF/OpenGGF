@@ -9,8 +9,13 @@ import java.util.logging.Logger;
 public class ExplosionObjectInstance extends AbstractObjectInstance {
     private static final Logger LOGGER = Logger.getLogger(ExplosionObjectInstance.class.getName());
     private final ObjectRenderManager renderManager;
+    private final DestructionEffects.AnimalFactory animalFactory;
+    private final DestructionEffects.PointsFactory pointsFactory;
+    private final int pointsValue;
+    private final boolean pointsAllocatedBeforeAnimal;
     private int pendingSfxId = -1;
     private int animFrame = 0;
+    private boolean spawnedDestructionChildren;
 
     /**
      * ROM-faithful animation timing for Obj27 (badnik-death explosion).
@@ -51,8 +56,25 @@ public class ExplosionObjectInstance extends AbstractObjectInstance {
     public ExplosionObjectInstance(int id, int x, int y, ObjectRenderManager renderManager, int sfxId) {
         super(new ObjectSpawn(x, y, id, 0, 0, false, 0), "Explosion");
         this.renderManager = renderManager;
+        this.animalFactory = null;
+        this.pointsFactory = null;
+        this.pointsValue = 0;
+        this.pointsAllocatedBeforeAnimal = false;
         this.pendingSfxId = sfxId;
         playPendingSfxIfPossible();
+    }
+
+    public ExplosionObjectInstance(int id, int x, int y, ObjectRenderManager renderManager,
+            DestructionEffects.AnimalFactory animalFactory,
+            DestructionEffects.PointsFactory pointsFactory,
+            int pointsValue,
+            boolean pointsAllocatedBeforeAnimal) {
+        super(new ObjectSpawn(x, y, id, 0, 0, false, 0), "Explosion");
+        this.renderManager = renderManager;
+        this.animalFactory = animalFactory;
+        this.pointsFactory = pointsFactory;
+        this.pointsValue = pointsValue;
+        this.pointsAllocatedBeforeAnimal = pointsAllocatedBeforeAnimal;
     }
 
     @Override
@@ -78,6 +100,7 @@ public class ExplosionObjectInstance extends AbstractObjectInstance {
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
+        spawnDestructionChildrenOnce();
         if (animFrameDuration < 0) {
             animFrameDuration = resolveInitialAnimDuration();
         }
@@ -91,6 +114,38 @@ public class ExplosionObjectInstance extends AbstractObjectInstance {
         animFrame++;
         if (animFrame >= FINAL_MAPPING_FRAME) {
             ObjectLifetimeOps.expireDynamic(this);
+        }
+    }
+
+    private void spawnDestructionChildrenOnce() {
+        if (spawnedDestructionChildren || (animalFactory == null && pointsFactory == null)) {
+            return;
+        }
+        spawnedDestructionChildren = true;
+        ObjectServices svc = tryServices();
+        if (svc == null) {
+            return;
+        }
+        ObjectManager objectManager = svc.objectManager();
+        if (objectManager == null) {
+            return;
+        }
+
+        int x = spawn.x();
+        int y = spawn.y();
+        if (pointsAllocatedBeforeAnimal && pointsFactory != null) {
+            objectManager.createDynamicObject(() -> pointsFactory.create(
+                    new ObjectSpawn(x, y, 0x29, 0, 0, false, 0), svc, pointsValue));
+        }
+        // S3K Obj_Explosion routine 0 allocates Obj_Animal before initializing
+        // its animation/SFX (docs/skdisasm/sonic3k.asm:42157-42180).
+        if (animalFactory != null) {
+            objectManager.createDynamicObject(() -> animalFactory.create(
+                    new ObjectSpawn(x, y, 0x28, 0, 0, false, 0), svc));
+        }
+        if (!pointsAllocatedBeforeAnimal && pointsFactory != null) {
+            objectManager.createDynamicObject(() -> pointsFactory.create(
+                    new ObjectSpawn(x, y, 0x29, 0, 0, false, 0), svc, pointsValue));
         }
     }
 

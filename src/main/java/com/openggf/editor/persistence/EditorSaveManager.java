@@ -1,5 +1,6 @@
 package com.openggf.editor.persistence;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.game.GameId;
 import com.openggf.level.Block;
@@ -7,6 +8,7 @@ import com.openggf.level.Chunk;
 import com.openggf.level.MutableLevel;
 
 import java.io.IOException;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,9 +29,16 @@ public final class EditorSaveManager {
 
     private final Path root;
     private final ObjectMapper mapper = new ObjectMapper();
+    private final EditorSaveReader reader;
 
     public EditorSaveManager(Path root) {
         this.root = root;
+        this.reader = file -> mapper.readValue(file.toFile(), EditorSaveEnvelope.class);
+    }
+
+    EditorSaveManager(Path root, EditorSaveReader reader) {
+        this.root = root;
+        this.reader = reader;
     }
 
     public SaveResult save(GameId gameId, int zone, int act, MutableLevel level) throws IOException {
@@ -49,7 +58,11 @@ public final class EditorSaveManager {
         Path tmp = file.resolveSibling(file.getFileName() + ".tmp");
         try {
             mapper.writeValue(tmp.toFile(), envelope);
-            Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            try {
+                Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException ex) {
+                Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
+            }
         } catch (IOException ex) {
             Files.deleteIfExists(tmp);
             throw ex;
@@ -63,8 +76,12 @@ public final class EditorSaveManager {
         if (!Files.exists(file)) {
             return ApplyResult.NONE;
         }
+        if (!supportsRuntimeEditApply(gameId)) {
+            LOG.fine("Skipping persisted " + gameId + " editor edits until runtime overlays support MutableLevel");
+            return ApplyResult.UNSUPPORTED;
+        }
         try {
-            EditorSaveEnvelope envelope = mapper.readValue(file.toFile(), EditorSaveEnvelope.class);
+            EditorSaveEnvelope envelope = reader.read(file);
             if (envelope.version() != VERSION) {
                 quarantine(file, "unsupported editor save version " + envelope.version());
                 return ApplyResult.QUARANTINED;
@@ -81,18 +98,26 @@ public final class EditorSaveManager {
             applyPayload(payload, level);
             level.markSaved();
             return ApplyResult.APPLIED;
-        } catch (Exception ex) {
+        } catch (JsonProcessingException | RuntimeException ex) {
             try {
                 quarantine(file, ex.getMessage());
             } catch (IOException quarantineError) {
                 LOG.warning("Failed to quarantine editor save " + file + ": " + quarantineError.getMessage());
             }
             return ApplyResult.QUARANTINED;
+        } catch (IOException ex) {
+            LOG.warning("Transient I/O while reading editor save " + file + "; leaving it in place: "
+                    + ex.getMessage());
+            return ApplyResult.TRANSIENT_FAILURE;
         }
     }
 
     public Path editPath(GameId gameId, int zone, int act) {
         return root.resolve(gameId.code()).resolve("edits").resolve("zone_" + zone + "_act_" + act + ".json");
+    }
+
+    public boolean supportsRuntimeEditApply(GameId gameId) {
+        return gameId != GameId.S3K;
     }
 
     private EditorSavePayload buildPayload(MutableLevel level) {
@@ -131,17 +156,13 @@ public final class EditorSaveManager {
         }
         validatePayload(payload, level);
         for (EditorSavePayload.ChunkState chunkState : payload.chunks()) {
-            if (chunkState.index() >= 0 && chunkState.index() < level.getChunkCount()
-                    && chunkState.state().length == new Chunk().saveState().length) {
+            if (chunkState.index() >= 0 && chunkState.index() < level.getChunkCount()) {
                 level.restoreChunkState(chunkState.index(), chunkState.state());
             }
         }
         for (EditorSavePayload.BlockState blockState : payload.blocks()) {
             if (blockState.index() >= 0 && blockState.index() < level.getBlockCount()) {
-                Block block = level.getBlock(blockState.index());
-                if (blockState.state().length == block.saveState().length) {
-                    level.restoreBlockState(blockState.index(), blockState.state());
-                }
+                level.restoreBlockState(blockState.index(), blockState.state());
             }
         }
         for (EditorSavePayload.MapCell mapCell : payload.mapCells()) {
@@ -164,10 +185,22 @@ public final class EditorSaveManager {
             if (chunkState.state() == null) {
                 throw new IllegalArgumentException("Missing editor chunk state at index " + chunkState.index());
             }
+            if (chunkState.index() >= 0 && chunkState.index() < level.getChunkCount()
+                    && chunkState.state().length != new Chunk().saveState().length) {
+                throw new IllegalArgumentException("Invalid editor chunk state length "
+                        + chunkState.state().length + " at index " + chunkState.index());
+            }
         }
         for (EditorSavePayload.BlockState blockState : payload.blocks()) {
             if (blockState.state() == null) {
                 throw new IllegalArgumentException("Missing editor block state at index " + blockState.index());
+            }
+            if (blockState.index() >= 0 && blockState.index() < level.getBlockCount()) {
+                Block block = level.getBlock(blockState.index());
+                if (blockState.state().length != block.saveState().length) {
+                    throw new IllegalArgumentException("Invalid editor block state length "
+                            + blockState.state().length + " at index " + blockState.index());
+                }
             }
         }
         for (EditorSavePayload.MapCell mapCell : payload.mapCells()) {
@@ -189,7 +222,7 @@ public final class EditorSaveManager {
         Files.move(file, uniqueCorruptSibling(file));
     }
 
-    private static Path uniqueCorruptSibling(Path file) {
+    private Path uniqueCorruptSibling(Path file) {
         Path base = file.resolveSibling(file.getFileName() + ".corrupt");
         if (!Files.exists(base)) {
             return base;
@@ -219,6 +252,8 @@ public final class EditorSaveManager {
         NONE,
         APPLIED,
         QUARANTINED,
-        MISMATCH
+        MISMATCH,
+        TRANSIENT_FAILURE,
+        UNSUPPORTED
     }
 }

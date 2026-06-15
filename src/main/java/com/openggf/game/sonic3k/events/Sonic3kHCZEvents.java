@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.events;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
@@ -184,6 +185,8 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     private int shakeTimer;
 
     /** Reference to the spawned wall collision object. */
+    @RewindTransient(reason = "cached live object reference; object lifetime and state "
+            + "are owned by ObjectManager rewind")
     private HCZ2WallObjectInstance wallObject;
 
     /** Prevents Act 2 BG logic from double-advancing when pre-physics already ran it. */

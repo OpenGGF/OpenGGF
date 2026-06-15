@@ -281,6 +281,14 @@ public class Sonic1MovingBlockObjectInstance extends AbstractObjectInstance
         return origX;
     }
 
+    @Override
+    public boolean clearsRespawnStateOnCounterBasedOutOfRange() {
+        // docs/s1disasm/s1disasm/_incObj/52 Moving Blocks.asm:
+        // MBlock_ChkDel uses `out_of_range.w DeleteObject,mblock_origX(a0)`.
+        // It does not call RememberState, so bit 7 in v_objstate remains set.
+        return false;
+    }
+
     // ========================================
     // Movement dispatch (MBlock_Move)
     // ========================================

@@ -11,6 +11,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -131,10 +132,11 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance {
     }
 
     public static final class Segment extends AbstractObjectInstance
-            implements SolidObjectProvider, SolidObjectListener {
+            implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider {
 
         private static final String ART_KEY = Sonic3kObjectArtKeys.ICZ_WALL_AND_COLUMN;
         private static final int PRIORITY = 5; // ROM: priority $280
+        private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0008;
         private static final int SOLID_HALF_WIDTH = 0x2B;
         private static final int SOLID_HALF_HEIGHT = 0x10;
         private static final int TOP_LANDING_HALF_WIDTH = 0x20;
@@ -335,6 +337,14 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance {
         @Override
         public int getPriorityBucket() {
             return RenderPriority.clamp(PRIORITY);
+        }
+
+        @Override
+        public int romObjectCodePointerHighWord() {
+            // Obj_ICZSegmentColumn child segments install loc_8ABB0 in word 0
+            // (docs/skdisasm/sonic3k.asm:188708-188731); S3K Tails CPU
+            // stores that high word in Tails_CPU_interact.
+            return ROM_CODE_POINTER_HIGH_WORD;
         }
     }
 

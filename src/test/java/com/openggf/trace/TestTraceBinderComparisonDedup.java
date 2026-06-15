@@ -91,4 +91,64 @@ class TestTraceBinderComparisonDedup {
         assertEquals(true, report.hasErrors(),
                 "Second comparison's ERROR must override the first comparison's MATCH");
     }
+
+    @Test
+    void primarySubpixelDiagnosticsAreComparedWhenPresent() {
+        TraceBinder binder = new TraceBinder(TOLERANCES);
+        TraceFrame expected = new TraceFrame(
+                9, 0, (short) 0x1000, (short) 0x0200,
+                (short) 0, (short) 0, (short) 0,
+                (byte) 0, false, false, 0,
+                0xFA00, 0x8000, 0x02,
+                -1, -1, -1, 0x00,
+                -1, -1, -1, -1);
+        EngineDiagnostics engineDiag = new EngineDiagnostics(
+                0x02, -1, -1, -1, 0x00, -1, -1,
+                -1, -1, -1, -1, "",
+                0xFA00, 0x7800, -1, -1);
+
+        FrameComparison comparison = binder.compareFrame(expected,
+                expected.x(), expected.y(),
+                expected.xSpeed(), expected.ySpeed(), expected.gSpeed(),
+                expected.angle(), expected.air(), expected.rolling(),
+                expected.groundMode(), engineDiag);
+
+        assertEquals(true, comparison.hasErrorInField("y_sub"),
+                "Subpixel mismatches must define the true frontier before whole-pixel drift");
+    }
+
+    @Test
+    void sidekickSubpixelDiagnosticsAreComparedWhenPresent() {
+        TraceBinder binder = new TraceBinder(TOLERANCES);
+        TraceCharacterState expectedTails = new TraceCharacterState(true,
+                (short) 0x0265, (short) 0x0500,
+                (short) 0, (short) 0, (short) 0,
+                (byte) 0, false, false, 0,
+                0x4000, 0x2000, 0x02, 0x00, -1);
+        TraceCharacterState actualTails = new TraceCharacterState(true,
+                expectedTails.x(), expectedTails.y(),
+                expectedTails.xSpeed(), expectedTails.ySpeed(), expectedTails.gSpeed(),
+                expectedTails.angle(), expectedTails.air(), expectedTails.rolling(),
+                expectedTails.groundMode(),
+                0x3800, expectedTails.ySub(),
+                expectedTails.routine(), expectedTails.statusByte(), expectedTails.standOnObj());
+        TraceFrame expected = new TraceFrame(
+                10, 0, (short) 0x1000, (short) 0x0200,
+                (short) 0, (short) 0, (short) 0,
+                (byte) 0, false, false, 0,
+                0, 0, 0x02,
+                -1, -1, -1, 0x00,
+                -1, -1, -1, -1,
+                expectedTails);
+
+        FrameComparison comparison = binder.compareFrame(expected,
+                expected.x(), expected.y(),
+                expected.xSpeed(), expected.ySpeed(), expected.gSpeed(),
+                expected.angle(), expected.air(), expected.rolling(),
+                expected.groundMode(),
+                null, EngineDiagnostics.EMPTY, "tails", actualTails);
+
+        assertEquals(true, comparison.hasErrorInField("tails_x_sub"),
+                "Sidekick subpixel mismatches must be reported before cascaded Tails movement drift");
+    }
 }

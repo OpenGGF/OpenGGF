@@ -28,20 +28,21 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance {
     private static final int ATTACK_Y_SPEED = 0x200;      // loc_8CA46.
     private static final int DIVE_MIN_TIMER = 0x20;       // loc_8CA46 objoff_2E.
     private static final int RETURN_WAIT = 0x1F;          // loc_8CAAC objoff_2E.
+    private static final int WAIT_OFFSCREEN_MARGIN = 0x20; // Obj_WaitOffscreen width/height.
 
     private static final int[] IDLE_FRAMES = {
             0, 1, 2, 3, 4, 5, 6, 7, 8, 9
     }; // byte_8CB2A, delay 4, loop.
     private static final int[] WINDUP_FRAMES = {
-            0x0A, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F
-    }; // byte_8CB36, delay 2, custom callback.
+            0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F
+    }; // byte_8CB36 after Animate_Raw's initial pre-increment, delay 2, custom callback.
     private static final int[] DIVE_FRAMES = {
-            0x10, 0x10, 0x11, 0x12, 0x13
-    }; // byte_8CB3F first sequence before jump to frame $13 loop.
+            0x10, 0x11, 0x12, 0x13
+    }; // byte_8CB3F after Animate_Raw's initial pre-increment before jump to frame $13 loop.
     private static final int[] DIVE_LOOP_FRAMES = {0x13, 0x13};
     private static final int[] REBOUND_FRAMES = {
-            0x0A, 0x0A, 0x14
-    }; // byte_8CB4B first sequence before jump to frame $14 loop.
+            0x0A, 0x14
+    }; // byte_8CB4B after Animate_Raw's initial pre-increment before jump to frame $14 loop.
     private static final int[] REBOUND_LOOP_FRAMES = {0x14, 0x14};
 
     private enum State {
@@ -59,6 +60,8 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance {
     private int animIndex;
     private int animTimer;
     private boolean inLoop;
+    private boolean waitingForOnscreen = true;
+    private boolean publishedTouchResponseListEntryThisFrame;
 
     public Flybot767BadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Flybot767",
@@ -67,7 +70,17 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance {
 
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+        publishedTouchResponseListEntryThisFrame = false;
         if (isDestroyed() || !isOnScreenX(0x20)) {
+            return;
+        }
+        if (waitingForOnscreen) {
+            if (!isOnScreenX(WAIT_OFFSCREEN_MARGIN)) {
+                return;
+            }
+            // Obj_WaitOffscreen restores the saved operation pointer and
+            // returns; Obj_Flybot767 routine dispatch resumes next pass.
+            waitingForOnscreen = false;
             return;
         }
 
@@ -81,6 +94,7 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance {
             case WAIT_RETURN -> updateChase(player1, true);
         }
         updateDynamicSpawn(currentX, currentY);
+        publishedTouchResponseListEntryThisFrame = true;
     }
 
     private void initialize() {
@@ -302,6 +316,16 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance {
     @Override
     public int getCollisionFlags() {
         return state == State.INIT ? 0 : super.getCollisionFlags();
+    }
+
+    @Override
+    public boolean publishesTouchResponseListEntryThisFrame() {
+        // Obj_Flybot767 first calls Obj_WaitOffscreen; when it becomes visible,
+        // that helper restores the saved operation pointer and returns before
+        // the Sprite_CheckDeleteTouchSlotted tail can call
+        // Add_SpriteToCollisionResponseList (sonic3k.asm:179081-179090,
+        // 191981-191989). The routine publishes on later passes only.
+        return publishedTouchResponseListEntryThisFrame;
     }
 
     @Override

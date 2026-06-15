@@ -634,8 +634,10 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      * {@code docs/s2disasm/s2.asm:1585-1633}; S3K {@code Pause_Game}
      * {@code docs/skdisasm/s3.asm:1690-1761}):
      * <ul>
-     *   <li>The pause is gated on {@code Life_count != 0} (a Game Over screen
-     *       cannot be paused) — {@code tst.b (Life_count).w / beq Unpause}.</li>
+     *   <li>The ROM gates pause on {@code Life_count != 0} because a zero-life
+     *       death enters the Game Over flow. OpenGGF does not yet implement
+     *       that flow, so zero-life gameplay keeps the normal pause semantics
+     *       until the missing Game Over / Continue state is added.</li>
      *   <li>{@code Pause_Game} sits at the very top of {@code LevelLoop}
      *       ({@code docs/skdisasm/sonic3k.asm:7884-7894}). On the press frame it
      *       enters {@code Pause_Loop}, which runs only the V-int until Start is
@@ -655,11 +657,6 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      *         paused), false if it should run normally.
      */
     public boolean applyPauseToggle(boolean startEdgePressed) {
-        if (lives <= 0) {
-            // ROM: a paused state cannot persist once lives hit zero; clear it.
-            gamePaused = false;
-            return false;
-        }
         if (startEdgePressed) {
             gamePaused = !gamePaused;
         }

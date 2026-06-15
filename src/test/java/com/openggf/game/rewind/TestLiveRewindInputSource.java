@@ -138,4 +138,38 @@ class TestLiveRewindInputSource {
         assertEquals(3, source.frameCount());
         assertEquals(AbstractPlayableSprite.INPUT_RIGHT, source.read(2).p1InputMask());
     }
+
+    @Test
+    void discardBeforeKeepsAbsoluteFrameNumbersForRetainedHistory() {
+        InputHandler input = new InputHandler();
+        LiveRewindInputSource source = new LiveRewindInputSource();
+
+        for (int i = 0; i < 5; i++) {
+            source.appendFrame(input, config);
+        }
+
+        source.discardBefore(3);
+
+        assertEquals(3, source.earliestFrame());
+        assertEquals(6, source.frameCount());
+        assertEquals(3, source.read(3).frameIndex());
+        assertEquals(5, source.read(5).frameIndex());
+    }
+
+    @Test
+    void appendAfterDiscardBeforeUsesNextAbsoluteFrame() {
+        InputHandler input = new InputHandler();
+        LiveRewindInputSource source = new LiveRewindInputSource();
+
+        for (int i = 0; i < 5; i++) {
+            source.appendFrame(input, config);
+        }
+        source.discardBefore(3);
+        input.handleKeyEvent(config.getInt(SonicConfiguration.RIGHT), GLFW_PRESS);
+        source.appendFrame(input, config);
+
+        assertEquals(7, source.frameCount());
+        assertEquals(6, source.read(6).frameIndex());
+        assertEquals(AbstractPlayableSprite.INPUT_RIGHT, source.read(6).p1InputMask());
+    }
 }

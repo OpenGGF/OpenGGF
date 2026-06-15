@@ -19,6 +19,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.Direction;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -117,7 +118,11 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance {
         if (playerEntity == null || (playerEntity.getCentreX() & 0xFFFF) < SONIC_CLAMP_X) {
             return;
         }
-        playerEntity.setCentreX((short) SONIC_CLAMP_X);
+        if (playerEntity instanceof AbstractPlayableSprite playable) {
+            NativePositionOps.writeXPosPreserveSubpixel(playable, SONIC_CLAMP_X);
+        } else {
+            playerEntity.setCentreX((short) SONIC_CLAMP_X);
+        }
         playerEntity.setXSpeed((short) 0);
         playerEntity.setGSpeed((short) 0);
         if (playerEntity instanceof AbstractPlayableSprite playable) {
@@ -136,6 +141,9 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance {
         }
         workspaceRoutine = ROUTINE_WAIT_BEFORE_SCROLL;
         timer = WAIT_BEFORE_SCROLL;
+        // ROM loc_62D2C falls through to loc_62D42 after writing $2E=$20,
+        // so the wait counter is decremented once on the landing frame.
+        routineWaitBeforeScroll(playerEntity);
     }
 
     private void routineWaitBeforeScroll(PlayableEntity playerEntity) {
@@ -351,12 +359,24 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance {
         private static void lockSidekick(AbstractPlayableSprite sidekick) {
             sidekick.setControlLocked(true);
             sidekick.clearLogicalInputState();
+            if (sidekick.getCpuController() != null) {
+                // loc_62DC4: st (Ctrl_2_locked).w / clr.w (Ctrl_2_logical).w
+                // before Stop_Object (docs/skdisasm/sonic3k.asm:130013-130018).
+                sidekick.getCpuController().setController2SignedLocked(true);
+                sidekick.getCpuController().clearController2LogicalLatch();
+            }
             stopSidekick(sidekick);
         }
 
         private static void releaseSidekick(AbstractPlayableSprite sidekick) {
             sidekick.setControlLocked(false);
             sidekick.clearLogicalInputState();
+            if (sidekick.getCpuController() != null) {
+                // loc_62E04/loc_62E1A clear Ctrl_2_locked and Ctrl_2_logical
+                // when this helper releases/deletes (docs/skdisasm/sonic3k.asm:130033-130047).
+                sidekick.getCpuController().setController2SignedLocked(false);
+                sidekick.getCpuController().clearController2LogicalLatch();
+            }
         }
 
         private static void stopSidekick(AbstractPlayableSprite sidekick) {

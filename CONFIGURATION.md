@@ -21,7 +21,7 @@ The `config.yaml` is organized into the following top-level sections:
 
 | Section | Contents |
 |---------|----------|
-| `display` | Aspect preset, window autosize, deadzone mode, color profile, FPS |
+| `display` | Aspect preset, window autosize, display shader library, deadzone mode, color profile, FPS |
 | `input` | `player1` / `player2` key bindings, `pause` key |
 | `audio` | Enabled flag, region, DAC, FM6, PSG settings |
 | `characters` | Main character, sidekick, data select combos |
@@ -30,6 +30,7 @@ The `config.yaml` is organized into the following top-level sections:
 | `startup` | Title screen, master title, legal disclaimer flags |
 | `rewind` | Live rewind enable/key, tape-coast parameters, audio history settings |
 | `crossGame` | Cross-game feature donation enable and source |
+| `launch` | Per-game master-title launch profiles |
 | `discord` | Discord Rich Presence enable, show timer, show zone |
 
 **`debug:` block** (developer/debug tooling — safe to ignore for normal play):
@@ -39,7 +40,7 @@ The `config.yaml` is organized into the following top-level sections:
 | `debug.flags` | Debug subsystem, editor enable, collision view overlay |
 | `debug.keys` | All debug/developer keyboard shortcuts |
 | `debug.startup` | Level select on startup, S3K skip intros |
-| `debug.playback` | BK2 movie path and playback control keys |
+| `debug.playback` | BK2 movie path and playback control keys (unbound by default) |
 | `debug.traceRewind` | Key held during Trace Test Mode to rewind engine state |
 | `debug.traceRender` | Trace Test Mode / capture visibility flags |
 | `debug.testMode` | Test mode enable flag and trace catalog directory |
@@ -67,7 +68,70 @@ The `config.yaml` is organized into the following top-level sections:
 | `DISPLAY_COLOR_PROFILE_TOGGLE_KEY` | `display.colorProfileToggleKey` | key | `V` | Runtime key used to cycle display color profiles. The selected profile is saved to `config.yaml` and shown briefly in the bottom-left corner. |
 | `DISPLAY_ASPECT` | `display.aspect` | string | `"NATIVE_4_3"` | Display aspect preset. Controls the native pixel width used by the renderer. Accepted values: `"NATIVE_4_3"` (320 px, default), `"WIDE_16_10"` (352 px), `"WIDE_16_9"` (400 px), `"ULTRA_21_9"` (528 px), `"SUPER_32_9"` (800 px). **EXPERIMENTAL / INCOMPLETE** — widescreen rendering (UI pillarbox, parallax column extension) is not finished; only `"NATIVE_4_3"` is fully supported. |
 | `DISPLAY_WINDOW_AUTOSIZE` | `display.windowAutosize` | bool | `true` | When `true` and a widescreen preset is active, the OS window is derived from the preset at 2x baseline (e.g. `WIDE_16_9` → 800×448). When `false`, `SCREEN_WIDTH`/`SCREEN_HEIGHT` are used verbatim so a custom window size is preserved. Has no effect when `DISPLAY_ASPECT` is `"NATIVE_4_3"`. |
+| `DISPLAY_SHADER_LIBRARY_ROOT` | `display.shaderLibraryRoot` | string | `"shaders"` | Root directory scanned for user display shaders, resolved relative to the working directory. |
+| `DISPLAY_SHADER_SELECTION` | `display.shaderSelection` | string | `"OFF"` | Last selected display shader. Use `"OFF"` or a root-relative forward-slash path under `DISPLAY_SHADER_LIBRARY_ROOT`. |
+| `DISPLAY_SHADER_NEXT_KEY` | `display.shaderNextKey` | key | `RIGHT_BRACKET` | Runtime key used to advance to the next display shader. |
+| `DISPLAY_SHADER_PREVIOUS_KEY` | `display.shaderPreviousKey` | key | `LEFT_BRACKET` | Runtime key used to move to the previous display shader. |
+| `DISPLAY_SHADER_PICKER_KEY` | `display.shaderPickerKey` | key | `BACKSLASH` | Runtime key used to open the searchable display shader picker. |
+| `DISPLAY_SHADER_DEFAULT_PHASE` | `display.shaderDefaultPhase` | enum | `"PRESENTATION"` | Fallback render phase for standalone display shaders. Accepted values: `"SCENE"`, `"PRESENTATION"`, `"FINAL"`. |
 | `WIDESCREEN_DEADZONE_MODE` | `display.deadzoneMode` | string | `"PROPORTIONAL"` | Camera horizontal deadzone behaviour on wide screens: `"CENTER_SCALED"` keeps the native 16px deadzone band; `"PROPORTIONAL"` scales the band width with the screen width. **EXPERIMENTAL** — takes effect only when a widescreen preset is active. |
+
+### Display shader library
+
+Display shaders are user-supplied post-processing shaders loaded from the root-level
+`shaders/` directory. This is separate from `src/main/resources/shaders`, which contains
+engine-owned shaders required for normal rendering. The root `shaders/` directory is
+gitignored so local shader packs and third-party shader licenses stay outside the repo
+unless they are reviewed separately.
+
+Recommended layout:
+
+```text
+shaders/
+  Custom/
+    warm-crt.glsl
+  BizHawk/
+    BizScanlines.cgp
+    BizScanlines.glsl
+  libretro-glsl/
+    crt/
+    scanlines/
+    ...
+    .openggf-libretro-glsl.properties
+```
+
+The engine scans `.glsl`, `.cgp`, and `.glslp` files at runtime and always includes
+`Off`. Use `]` and `[` to cycle quickly, or press `BACKSLASH` to open the searchable
+picker for large libraries. The picker filters by root-relative path and inferred
+category, so typing `crt` narrows entries such as `libretro-glsl/crt/...`.
+
+The optional libretro GLSL pack installer is available from the shader picker: open the
+picker with `BACKSLASH`, then press `F5` to install or update the pack. The app downloads
+the upstream zip archive from GitHub, extracts it into `shaders/libretro-glsl/`, strips the
+archive's top-level folder, stores update metadata in
+`shaders/libretro-glsl/.openggf-libretro-glsl.properties`, and rescans the shader library
+when the install/update finishes. That folder is owned by the installer; put personal
+shaders in a sibling folder such as `shaders/Custom/`.
+
+Compatibility is intentionally bounded. Fragment-only shaders can sample the current
+scene through declared samplers named `s_p`, `SceneTexture`, or `Texture`. RetroArch and
+BizHawk-style uniforms are populated by location when declared: `IN.video_size`,
+`IN.texture_size`, `IN.output_size`, `InputSize`, `TextureSize`, `OutputSize`,
+`FrameCount`, `FrameDirection`, and `MVPMatrix`. Combined shaders may declare
+`VertexCoord`, `TexCoord`, and `COLOR` attributes; the engine binds them to fixed quad
+locations. The engine does not inject uniform declarations.
+
+HLSL/Cg-only presets can be discovered but fail on selection unless a loadable GLSL
+sibling exists. Unsupported preset inheritance, external LUT textures, previous-frame
+history, and malformed shaders fail safely: the selection is rejected, the shader is
+remembered as failed for the current process, rendering continues, and the user can return
+to `Off`.
+
+Display shaders affect presentation only. F12 screenshots are captured after the display
+shader composite, so screenshots include the selected shader. Trace replay/capture uses a
+separate render path that stops before display shader application, so trace artifacts stay
+shader-free; if trace capture is ever refactored to call the main `Engine.display()` path,
+display shader application must be gated off for trace capture.
 
 ---
 
@@ -110,6 +174,75 @@ Paths are relative to the working directory (where the JAR is launched).
 | Key | YAML path | Default | Key Name | Description |
 |-----|-----------|---------|----------|-------------|
 | `CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY` | `debug.crossGame.s1DataSelectImageCoordLogKey` | `39` | Apostrophe | While playing Sonic 1, log the current camera as a preview override point for donated Data Select screenshot tuning. |
+
+---
+
+## Launch Profiles
+
+The master title screen stores per-game launch defaults under `launch.s1`, `launch.s2`,
+and `launch.s3k`. Select a game on the master title screen and press `Tab` to open the
+launch profile panel; stock games show the hover line `Stock launch - Tab to configure`.
+The panel uses the configured `UP`/`DOWN` bindings to choose a row and the configured
+`LEFT`/`RIGHT` bindings to change that row. Hardcoded `Backspace` resets the profile
+to stock; hardcoded `Tab` or `Esc` closes and saves it.
+
+Profiles are persistent defaults for future manual launches, but applying a profile is
+session-only. A launch can temporarily override live rewind, cross-game donation, debug
+tools, display aspect, main character, and sidekick without writing those values into the
+global gameplay keys (`rewind.liveEnabled`, `crossGame.*`, `debug.flags.debugView`,
+`display.aspect`, or `characters.*`). Programmatic trace launches clear any stale launch
+profile overrides and skip profile application.
+
+`crossGameSource: "off"` disables donation for that game launch and restores the built-in
+`crossGame.source` default in the session overlay so the donor choice cannot leak from a
+previous launch. When `crossGameSource` is `"s3k"`, the launch panel hides
+`mainCharacter` and `sidekick` because the donated S3K Data Select screen owns team
+selection. When character rows are shown, their options follow the active donor:
+Sonic is always available, Tails requires Sonic 2 or Sonic 3&K data, and Knuckles
+requires Sonic 3&K data; hand-edited saved values outside that donor set are clamped
+before launch. `aspect: "global"` inherits the normal `display.aspect` setting and does not
+resize the window; pinned aspect values such as `"WIDE_16_9"` apply only for that game
+session and resize back when returning to the master title. In the launch panel, pinned
+16:10 and 16:9 aspects are amber non-standard choices, while 21:9 and 32:9 are red
+experimental choices.
+
+Stock defaults:
+
+| Game | `rewind` | `crossGameSource` | `debugTools` | `aspect` | `mainCharacter` | `sidekick` |
+|------|----------|-------------------|--------------|----------|-----------------|------------|
+| Sonic 1 | `false` | `"off"` | `false` | `"global"` | `"sonic"` | `"none"` |
+| Sonic 2 | `false` | `"off"` | `false` | `"global"` | `"sonic"` | `"tails"` |
+| Sonic 3&K | `false` | `"off"` | `false` | `"global"` | `"sonic"` | `"tails"` |
+
+| Key | YAML path | Type | Default | Description |
+|-----|-----------|------|---------|-------------|
+| `LAUNCH_S1_REWIND` | `launch.s1.rewind` | bool | `false` | Enable live rewind for manual Sonic 1 launches. |
+| `LAUNCH_S1_CROSS_GAME_SOURCE` | `launch.s1.crossGameSource` | enum | `"off"` | Cross-game donor for manual Sonic 1 launches: `"off"`, `"s2"`, or `"s3k"`. |
+| `LAUNCH_S1_DEBUG_TOOLS` | `launch.s1.debugTools` | bool | `false` | Enable debug tools for manual Sonic 1 launches. |
+| `LAUNCH_S1_ASPECT` | `launch.s1.aspect` | enum | `"global"` | Display aspect for manual Sonic 1 launches: `"global"` or a `display.aspect` preset. |
+| `LAUNCH_S1_MAIN_CHARACTER` | `launch.s1.mainCharacter` | enum | `"sonic"` | Main character for manual Sonic 1 launches. |
+| `LAUNCH_S1_SIDEKICK` | `launch.s1.sidekick` | enum | `"none"` | Sidekick for manual Sonic 1 launches; `"none"` disables sidekick spawning. |
+| `LAUNCH_S2_REWIND` | `launch.s2.rewind` | bool | `false` | Enable live rewind for manual Sonic 2 launches. |
+| `LAUNCH_S2_CROSS_GAME_SOURCE` | `launch.s2.crossGameSource` | enum | `"off"` | Cross-game donor for manual Sonic 2 launches: `"off"`, `"s1"`, or `"s3k"`. |
+| `LAUNCH_S2_DEBUG_TOOLS` | `launch.s2.debugTools` | bool | `false` | Enable debug tools for manual Sonic 2 launches. |
+| `LAUNCH_S2_ASPECT` | `launch.s2.aspect` | enum | `"global"` | Display aspect for manual Sonic 2 launches: `"global"` or a `display.aspect` preset. |
+| `LAUNCH_S2_MAIN_CHARACTER` | `launch.s2.mainCharacter` | enum | `"sonic"` | Main character for manual Sonic 2 launches. |
+| `LAUNCH_S2_SIDEKICK` | `launch.s2.sidekick` | enum | `"tails"` | Sidekick for manual Sonic 2 launches; `"none"` disables sidekick spawning. |
+| `LAUNCH_S3K_REWIND` | `launch.s3k.rewind` | bool | `false` | Enable live rewind for manual Sonic 3&K launches. |
+| `LAUNCH_S3K_CROSS_GAME_SOURCE` | `launch.s3k.crossGameSource` | enum | `"off"` | Cross-game donor for manual Sonic 3&K launches: `"off"`, `"s1"`, or `"s2"`. |
+| `LAUNCH_S3K_DEBUG_TOOLS` | `launch.s3k.debugTools` | bool | `false` | Enable debug tools for manual Sonic 3&K launches. |
+| `LAUNCH_S3K_ASPECT` | `launch.s3k.aspect` | enum | `"global"` | Display aspect for manual Sonic 3&K launches: `"global"` or a `display.aspect` preset. |
+| `LAUNCH_S3K_MAIN_CHARACTER` | `launch.s3k.mainCharacter` | enum | `"sonic"` | Main character for manual Sonic 3&K launches. |
+| `LAUNCH_S3K_SIDEKICK` | `launch.s3k.sidekick` | enum | `"tails"` | Sidekick for manual Sonic 3&K launches; `"none"` disables sidekick spawning. |
+
+Allowed launch profile enums:
+
+| Field | Values |
+|-------|--------|
+| `crossGameSource` | `"off"`, `"s1"`, `"s2"`, `"s3k"`; the launched game cannot donate to itself and is clamped to `"off"` when hand-edited. |
+| `aspect` | `"global"`, `"NATIVE_4_3"`, `"WIDE_16_10"`, `"WIDE_16_9"`, `"ULTRA_21_9"`, `"SUPER_32_9"` |
+| `mainCharacter` | `"sonic"`, `"tails"`, `"knuckles"`; selectable values are donor-gated. |
+| `sidekick` | `"none"`, `"sonic"`, `"tails"`, `"knuckles"`; selectable values are donor-gated. |
 
 ---
 
@@ -168,20 +301,36 @@ Audio: headless capture installs `HeadlessSmpsAudioBackend`, a true no-device SM
 
 ## Debug
 
+BK2 playback controls are unbound by default and must be rebound in `debug.playback`
+before BK2 playback can be controlled from the keyboard.
+
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
 | `DEBUG_VIEW_ENABLED` | `debug.flags.debugView` | bool | `false` | Eagerly initialise the debug overlay subsystem. Required for any runtime debug keys to function. Does not show anything on-screen until debug mode is activated. |
 | `EDITOR_ENABLED` | `debug.flags.editor` | bool | `false` | Allow the experimental in-engine editor overlay to be entered from gameplay with `Shift+Tab`. |
 | `DEBUG_COLLISION_VIEW_ENABLED` | `debug.flags.collisionView` | bool | `false` | Draw collision sensor rays and solid object outlines over the scene at all times. |
 | `LIVE_REWIND_ENABLED` | `rewind.liveEnabled` | bool | `false` | Enable held-key rewind during ordinary live level play. Uses gameplay rewind snapshots, records live input while enabled, and presents reverse audio/fade state while held. |
+| `LIVE_REWIND_DETERMINISM_AUDIT` | `debug.rewind.determinismAudit` | bool | `false` | Audit live-rewind determinism: re-simulates each completed rewind keyframe segment during live play and logs the first state divergence, pinpointing state that is missing from rewind capture. Disarms after the first divergence because replayed out-of-snapshot state cannot be rolled back. |
 | `LIVE_REWIND_TAPE_COAST_ENABLED` | `rewind.tapeCoastEnabled` | bool | `false` | Enable experimental live-rewind coast after releasing the rewind key. Disabled by default, so held rewind remains one step per visual frame. When enabled, reverse audio playback is resampled to match the current rewind speed (>1.0 pitches up, <1.0 plays slow-motion). |
 | `LIVE_REWIND_TAPE_COAST_MIN_STEPS` | `rewind.tapeCoastMinSteps` | number | `0.25` | Initial rewind speed (in steps per visual frame) when the rewind key is first pressed. Values below 1.0 produce a slow-motion start: the speed controller's fractional accumulator spreads each physics step across multiple visual frames. Speed then accelerates toward `LIVE_REWIND_TAPE_COAST_MAX_STEPS`. Used only when tape coast is enabled. |
 | `LIVE_REWIND_TAPE_COAST_ACCELERATION` | `rewind.tapeCoastAcceleration` | number | `0.25` | Optional tape-coast acceleration in rewind steps per held frame. Used only when tape coast is enabled. |
 | `LIVE_REWIND_TAPE_COAST_DECELERATION` | `rewind.tapeCoastDeceleration` | number | `0.5` | Optional tape-coast deceleration in rewind steps per released frame. Used only when tape coast is enabled. |
 | `LIVE_REWIND_TAPE_COAST_MAX_STEPS` | `rewind.tapeCoastMaxSteps` | number | `4.0` | Maximum rewind steps per visual frame for optional tape-coast rewind. Values below 1.0 cap the rewind in slow-motion. Used only when tape coast is enabled. |
+| `REWIND_HISTORY_SECONDS` | `rewind.historySeconds` | int | `60` | Seconds of live rewind keyframe and input history to retain. The effective retained window may be up to one keyframe interval longer so replay always has a complete keyframe-to-target input segment. |
 | `REWIND_AUDIO_HISTORY_LIMIT_TYPE` | `rewind.audioHistoryLimitType` | string | `"time"` | How the rewind audio PCM history ring is capped. `"time"` caps by `REWIND_AUDIO_HISTORY_SECONDS`; `"size"` caps by `REWIND_AUDIO_HISTORY_SIZE_MB`. Held rewind beyond the cap plays silence on develop (the audio-rewind feature branch engages the reverse resynthesizer instead). |
 | `REWIND_AUDIO_HISTORY_SECONDS` | `rewind.audioHistorySeconds` | int | `60` | Seconds of stereo PCM history kept for held-rewind playback when `REWIND_AUDIO_HISTORY_LIMIT_TYPE` is `"time"`. |
 | `REWIND_AUDIO_HISTORY_SIZE_MB` | `rewind.audioHistorySizeMb` | int | `10` | Megabytes of stereo PCM history kept for held-rewind playback when `REWIND_AUDIO_HISTORY_LIMIT_TYPE` is `"size"`. Stereo 16-bit at 48 kHz consumes ~192 KB/s, so 10 MB is roughly 54 s at that sample rate (~57 s at 44.1 kHz). |
+| `PLAYBACK_MOVIE_PATH` | `debug.playback.moviePath` | string | `""` | Path to a BizHawk BK2 movie for playback debugging. |
+| `PLAYBACK_TOGGLE_KEY` | `debug.playback.toggleKey` | key | `""` / unbound | Toggle playback mode. |
+| `PLAYBACK_LOAD_KEY` | `debug.playback.loadKey` | key | `""` / unbound | Load/reload the BK2 movie. |
+| `PLAYBACK_PLAY_PAUSE_KEY` | `debug.playback.playPauseKey` | key | `""` / unbound | Toggle playback play/pause. |
+| `PLAYBACK_STEP_BACK_KEY` | `debug.playback.stepBackKey` | key | `""` / unbound | Step the BK2 cursor backward by one frame. |
+| `PLAYBACK_STEP_FORWARD_KEY` | `debug.playback.stepForwardKey` | key | `""` / unbound | Step the BK2 cursor forward by one frame. |
+| `PLAYBACK_JUMP_BACK_KEY` | `debug.playback.jumpBackKey` | key | `""` / unbound | Jump the BK2 cursor backward by a larger interval. |
+| `PLAYBACK_JUMP_FORWARD_KEY` | `debug.playback.jumpForwardKey` | key | `""` / unbound | Jump the BK2 cursor forward by a larger interval. |
+| `PLAYBACK_FAST_RATE_KEY` | `debug.playback.fastRateKey` | key | `""` / unbound | Cycle playback rate (1x/2x/4x/8x). |
+| `PLAYBACK_RESET_TO_START_KEY` | `debug.playback.resetToStartKey` | key | `""` / unbound | Reset the BK2 cursor to `PLAYBACK_START_OFFSET_FRAME`. |
+| `PLAYBACK_START_OFFSET_FRAME` | `debug.playback.startOffsetFrame` | int | `0` | Starting frame offset for BK2 playback. |
 | `TEST_MODE_ENABLED` | `debug.testMode.enabled` | bool | `false` | Replace the master-title game-select with the Trace Test Mode picker that lists every trace in `debug.testMode.catalogDir` and plays the chosen trace back in the live engine. Dev-only. **When `true`, `DISPLAY_ASPECT` is always forced to `NATIVE_4_3` (320×224) regardless of its configured value** — trace replay and test-mode runs are parity-critical and must always run at 320×224. |
 | `TRACE_CATALOG_DIR` | `debug.testMode.catalogDir` | string | `"src/test/resources/traces"` | Directory scanned by `TraceCatalog` when `TEST_MODE_ENABLED` is true. Resolved against `user.dir`. |
 | `TRACE_SHOW_DESYNC_GHOSTS` | `debug.traceRender.showDesyncGhosts` | bool | `true` | In Trace Test Mode and trace capture, render the desync ghost(s). |
@@ -303,6 +452,12 @@ The following is the bundled default `src/main/resources/config.yaml`:
 display:
   aspect: "NATIVE_4_3"   # Display aspect preset; resolves screen pixel width, height stays 224
   windowAutosize: true   # Derive the window size from the aspect preset at the 2x baseline
+  shaderLibraryRoot: shaders   # Root directory scanned for user display shaders
+  shaderSelection: "OFF"   # Last selected display shader: OFF or a root-relative forward-slash path
+  shaderNextKey: RIGHT_BRACKET   # Runtime key to advance to the next display shader
+  shaderPreviousKey: LEFT_BRACKET   # Runtime key to move to the previous display shader
+  shaderPickerKey: BACKSLASH   # Runtime key to open the searchable display shader picker
+  shaderDefaultPhase: PRESENTATION   # Fallback render phase for standalone display shaders
   deadzoneMode: "PROPORTIONAL"   # Camera horizontal deadzone behaviour on wide screens
   colorProfile: "RAW_RGB"   # Display-only color profile for Mega Drive palette presentation
   colorProfileToggleKey: V   # Runtime key to cycle the display color profile
@@ -362,6 +517,7 @@ rewind:
   tapeCoastDeceleration: 0.5   # Per-tick speed decrease after release
   tapeCoastMaxSteps: 4.0   # Maximum rewind steps per tick
   tapeCoastMinSteps: 0.25   # Minimum rewind steps per tick; below 1.0 gives slow-motion rewind
+  historySeconds: 60   # Seconds of live rewind keyframe and input history to retain
   audioHistoryLimitType: "time"   # How the rewind audio PCM history ring is sized
   audioHistorySeconds: 60   # Seconds of PCM history kept when audioHistoryLimitType=time
   audioHistorySizeMb: 10   # Megabytes of PCM history kept when audioHistoryLimitType=size
@@ -370,6 +526,31 @@ rewind:
 crossGame:
   enabled: false   # Enable cross-game feature donation (e.g. S2 sprites in S1)
   source: "s2"   # Donor game for cross-game features
+
+# ── Launch Profiles ──
+# Per-game launch defaults edited from the master title screen.
+launch:
+  s1:
+    rewind: false   # Default Sonic 1 launch profile: enable live rewind
+    crossGameSource: "off"   # Default Sonic 1 launch profile: cross-game donor
+    debugTools: false   # Default Sonic 1 launch profile: enable debug tools
+    aspect: "global"   # Default Sonic 1 launch profile: display aspect override
+    mainCharacter: "sonic"   # Default Sonic 1 launch profile: main character
+    sidekick: "none"   # Default Sonic 1 launch profile: sidekick character
+  s2:
+    rewind: false   # Default Sonic 2 launch profile: enable live rewind
+    crossGameSource: "off"   # Default Sonic 2 launch profile: cross-game donor
+    debugTools: false   # Default Sonic 2 launch profile: enable debug tools
+    aspect: "global"   # Default Sonic 2 launch profile: display aspect override
+    mainCharacter: "sonic"   # Default Sonic 2 launch profile: main character
+    sidekick: "tails"   # Default Sonic 2 launch profile: sidekick character
+  s3k:
+    rewind: false   # Default Sonic 3&K launch profile: enable live rewind
+    crossGameSource: "off"   # Default Sonic 3&K launch profile: cross-game donor
+    debugTools: false   # Default Sonic 3&K launch profile: enable debug tools
+    aspect: "global"   # Default Sonic 3&K launch profile: display aspect override
+    mainCharacter: "sonic"   # Default Sonic 3&K launch profile: main character
+    sidekick: "tails"   # Default Sonic 3&K launch profile: sidekick character
 
 # ── Discord Rich Presence ──
 discord:
@@ -405,18 +586,20 @@ debug:
     s3kSkipIntros: false   # Skip S3K zone intro sequences (AIZ biplane, etc.)
   playback:
     moviePath: ""   # Path to a BizHawk BK2 movie for playback debugging
-    toggleKey: B   # Toggle playback mode
-    loadKey: N   # Load/reload the BK2 movie
-    playPauseKey: M   # Toggle playback play/pause
-    stepBackKey: COMMA   # Step the cursor back one frame
-    stepForwardKey: PERIOD   # Step the cursor forward one frame
-    jumpBackKey: LEFT_BRACKET   # Jump the cursor back by a larger interval
-    jumpForwardKey: RIGHT_BRACKET   # Jump the cursor forward by a larger interval
-    fastRateKey: SLASH   # Cycle playback rate (1x/2x/4x/8x)
-    resetToStartKey: BACKSLASH   # Reset the cursor to the start offset
+    toggleKey: ""   # Toggle playback mode
+    loadKey: ""   # Load/reload the BK2 movie
+    playPauseKey: ""   # Toggle playback play/pause
+    stepBackKey: ""   # Step the cursor back one frame
+    stepForwardKey: ""   # Step the cursor forward one frame
+    jumpBackKey: ""   # Jump the cursor back by a larger interval
+    jumpForwardKey: ""   # Jump the cursor forward by a larger interval
+    fastRateKey: ""   # Cycle playback rate (1x/2x/4x/8x)
+    resetToStartKey: ""   # Reset the cursor to the start offset
     startOffsetFrame: 0   # Starting frame offset for BK2 playback
   traceRewind:
     key: R   # Key held in Trace Test Mode to rewind deterministic engine state
+  rewind:
+    determinismAudit: false   # Re-simulate each completed live-rewind keyframe segment and log the first divergence
   traceRender:
     showDesyncGhosts: true   # Render desync ghosts in Trace Test Mode and trace capture
     showGameHud: true   # Render the game HUD during trace replay/capture

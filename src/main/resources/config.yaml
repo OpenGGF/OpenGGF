@@ -5,6 +5,12 @@
 display:
   aspect: "NATIVE_4_3"   # Display aspect preset; resolves screen pixel width, height stays 224
   windowAutosize: true   # Derive the window size from the aspect preset at the 2x baseline
+  shaderLibraryRoot: shaders   # Root directory scanned for user display shaders
+  shaderSelection: "OFF"   # Last selected display shader: OFF or a root-relative forward-slash path
+  shaderNextKey: RIGHT_BRACKET   # Runtime key to advance to the next display shader
+  shaderPreviousKey: LEFT_BRACKET   # Runtime key to move to the previous display shader
+  shaderPickerKey: BACKSLASH   # Runtime key to open the searchable display shader picker
+  shaderDefaultPhase: PRESENTATION   # Fallback render phase for standalone display shaders
   deadzoneMode: "PROPORTIONAL"   # Camera horizontal deadzone behaviour on wide screens
   colorProfile: "RAW_RGB"   # Display-only color profile for Mega Drive palette presentation
   colorProfileToggleKey: V   # Runtime key to cycle the display color profile
@@ -19,13 +25,14 @@ input:
     left: LEFT   # Player 1: move left
     right: RIGHT   # Player 1: move right
     jump: SPACE   # Player 1: jump
+    start: BACKSPACE   # Player 1: start (in-game pause)
   player2:
     up: I   # Player 2: look up
     down: K   # Player 2: crouch/roll
     left: J   # Player 2: move left
     right: L   # Player 2: move right
     jump: RIGHT_SHIFT   # Player 2: jump
-    start: ENTER   # Player 2: start
+    start: RIGHT_CONTROL   # Player 2: start
 
 # ── Audio ──
 audio:
@@ -64,6 +71,7 @@ rewind:
   tapeCoastDeceleration: 0.5   # Per-tick speed decrease after release
   tapeCoastMaxSteps: 4.0   # Maximum rewind steps per tick
   tapeCoastMinSteps: 0.25   # Minimum rewind steps per tick; below 1.0 gives slow-motion rewind
+  historySeconds: 60   # Seconds of live rewind keyframe and input history to retain
   audioHistoryLimitType: "time"   # How the rewind audio PCM history ring is sized
   audioHistorySeconds: 60   # Seconds of PCM history kept when audioHistoryLimitType=time
   audioHistorySizeMb: 10   # Megabytes of PCM history kept when audioHistoryLimitType=size
@@ -73,11 +81,43 @@ crossGame:
   enabled: false   # Enable cross-game feature donation (e.g. S2 sprites in S1)
   source: "s2"   # Donor game for cross-game features
 
+# ── Launch Profiles ──
+# Per-game launch defaults edited from the master title screen.
+launch:
+  s1:
+    rewind: false   # Default Sonic 1 launch profile: enable live rewind
+    crossGameSource: "off"   # Default Sonic 1 launch profile: cross-game donor
+    debugTools: false   # Default Sonic 1 launch profile: enable debug tools
+    aspect: "global"   # Default Sonic 1 launch profile: display aspect override
+    mainCharacter: "sonic"   # Default Sonic 1 launch profile: main character
+    sidekick: "none"   # Default Sonic 1 launch profile: sidekick character
+  s2:
+    rewind: false   # Default Sonic 2 launch profile: enable live rewind
+    crossGameSource: "off"   # Default Sonic 2 launch profile: cross-game donor
+    debugTools: false   # Default Sonic 2 launch profile: enable debug tools
+    aspect: "global"   # Default Sonic 2 launch profile: display aspect override
+    mainCharacter: "sonic"   # Default Sonic 2 launch profile: main character
+    sidekick: "tails"   # Default Sonic 2 launch profile: sidekick character
+  s3k:
+    rewind: false   # Default Sonic 3&K launch profile: enable live rewind
+    crossGameSource: "off"   # Default Sonic 3&K launch profile: cross-game donor
+    debugTools: false   # Default Sonic 3&K launch profile: enable debug tools
+    aspect: "global"   # Default Sonic 3&K launch profile: display aspect override
+    mainCharacter: "sonic"   # Default Sonic 3&K launch profile: main character
+    sidekick: "tails"   # Default Sonic 3&K launch profile: sidekick character
+
 # ── Discord Rich Presence ──
 discord:
   enabled: false   # Enable Discord Rich Presence updates
   showTimer: true   # Show the level timer in Rich Presence
   showZone: true   # Show the zone and act in Rich Presence
+
+# ── Trace Capture ──
+capture:
+  outputDir: "target/trace-videos"   # Output directory for trace capture videos
+  scale: 4   # Integer nearest-neighbor upscale factor for capture output
+  fps: 60   # Output frame rate for trace capture
+  codec: "ffv1"   # Capture video codec (e.g. ffv1)
 
 # ════════════════════════════════════════════
 #  DEBUG  (developer tooling — safe to ignore for normal play)
@@ -107,15 +147,15 @@ debug:
     s3kSkipIntros: false   # Skip S3K zone intro sequences (AIZ biplane, etc.)
   playback:
     moviePath: ""   # Path to a BizHawk BK2 movie for playback debugging
-    toggleKey: B   # Toggle playback mode
-    loadKey: N   # Load/reload the BK2 movie
-    playPauseKey: M   # Toggle playback play/pause
-    stepBackKey: COMMA   # Step the cursor back one frame
-    stepForwardKey: PERIOD   # Step the cursor forward one frame
-    jumpBackKey: LEFT_BRACKET   # Jump the cursor back by a larger interval
-    jumpForwardKey: RIGHT_BRACKET   # Jump the cursor forward by a larger interval
-    fastRateKey: SLASH   # Cycle playback rate (1x/2x/4x/8x)
-    resetToStartKey: BACKSLASH   # Reset the cursor to the start offset
+    toggleKey: ""   # Toggle playback mode
+    loadKey: ""   # Load/reload the BK2 movie
+    playPauseKey: ""   # Toggle playback play/pause
+    stepBackKey: ""   # Step the cursor back one frame
+    stepForwardKey: ""   # Step the cursor forward one frame
+    jumpBackKey: ""   # Jump the cursor back by a larger interval
+    jumpForwardKey: ""   # Jump the cursor forward by a larger interval
+    fastRateKey: ""   # Cycle playback rate (1x/2x/4x/8x)
+    resetToStartKey: ""   # Reset the cursor to the start offset
     startOffsetFrame: 0   # Starting frame offset for BK2 playback
   traceRewind:
     key: R   # Key held in Trace Test Mode to rewind deterministic engine state

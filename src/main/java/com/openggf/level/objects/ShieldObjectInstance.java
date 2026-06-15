@@ -10,6 +10,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PowerUpObject;
+import com.openggf.game.ShieldType;
 import com.openggf.game.rewind.RewindTransient;
 
 import java.util.List;
@@ -63,6 +64,11 @@ public class ShieldObjectInstance extends AbstractObjectInstance implements Powe
 
     public void setVisible(boolean visible) {
         this.visible = visible;
+    }
+
+    @Override
+    public boolean isShieldFor(PlayableEntity target, ShieldType type) {
+        return player == target && matchesShieldType(type);
     }
 
     @Override

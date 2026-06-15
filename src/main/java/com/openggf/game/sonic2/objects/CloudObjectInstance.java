@@ -8,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -45,18 +46,12 @@ public class CloudObjectInstance extends AbstractObjectInstance {
     // From disassembly: subi.b #$5E,d0
     private static final int SUBTYPE_BASE = 0x5E;
 
-    private int currentX;
-    private int currentY;
     private final int xVelocity;
     private final int mappingFrame;
-
-    // 16.16 fixed-point X accumulator for sub-pixel movement
-    private int xPosFrac;
+    private final SubpixelMotion.State motionState;
 
     public CloudObjectInstance(ObjectSpawn spawn) {
         super(spawn, "Cloud");
-        this.currentX = spawn.x();
-        this.currentY = spawn.y();
 
         // ROM: ObjB3_Init
         // moveq #0,d0 / move.b subtype(a0),d0 / subi.b #$5E,d0
@@ -72,17 +67,17 @@ public class CloudObjectInstance extends AbstractObjectInstance {
             this.xVelocity = VELOCITY_TABLE[0];
             this.mappingFrame = 0;
         }
-        this.xPosFrac = 0;
+        this.motionState = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, this.xVelocity, 0);
     }
 
     @Override
     public int getX() {
-        return currentX;
+        return motionState.x;
     }
 
     @Override
     public int getY() {
-        return currentY;
+        return motionState.y;
     }
 
     @Override
@@ -99,19 +94,16 @@ public class CloudObjectInstance extends AbstractObjectInstance {
         // move.w (Tornado_Velocity_X).w,d0 / add.w d0,x_pos(a0)
         // bra.w Obj_DeleteBehindScreen
 
-        // ObjectMove: x_pos += x_vel (in 256ths of a pixel)
-        xPosFrac += xVelocity;
-        currentX += xPosFrac >> 8;
-        xPosFrac &= 0xFF;
+        SubpixelMotion.speedToPos(motionState);
 
         // Add Tornado velocity (whole pixels, not subpixel)
         int tornadoVelX = services().parallaxManager().getTornadoVelocityX();
-        currentX += tornadoVelX;
+        motionState.x += tornadoVelX;
 
         // Obj_DeleteBehindScreen: delete if x_pos is behind camera
         Camera camera = services().camera();
-        int cameraCoarse = camera.getX() & 0xFF80;
-        int objCoarse = currentX & 0xFF80;
+        int cameraCoarse = (camera.getX() - 0x80) & 0xFF80;
+        int objCoarse = motionState.x & 0xFF80;
         if ((short) (objCoarse - cameraCoarse) < 0) {
             setDestroyed(true);
         }
@@ -122,13 +114,13 @@ public class CloudObjectInstance extends AbstractObjectInstance {
         PatternSpriteRenderer renderer = getRenderer(Sonic2ObjectArtKeys.CLOUDS);
         if (renderer == null) return;
 
-        renderer.drawFrameIndex(mappingFrame, currentX, currentY, false, false);
+        renderer.drawFrameIndex(mappingFrame, motionState.x, motionState.y, false, false);
     }
 
     @Override
     public void appendDebugRenderCommands(DebugRenderContext ctx) {
-        ctx.drawCross(currentX, currentY, 4, 0.8f, 0.8f, 1.0f);
-        ctx.drawWorldLabel(currentX, currentY, -1,
+        ctx.drawCross(motionState.x, motionState.y, 4, 0.8f, 0.8f, 1.0f);
+        ctx.drawWorldLabel(motionState.x, motionState.y, -1,
                 String.format("B3 sub%02X f%d vx%d", spawn.subtype() & 0xFF, mappingFrame, xVelocity),
                 DebugColor.CYAN);
     }

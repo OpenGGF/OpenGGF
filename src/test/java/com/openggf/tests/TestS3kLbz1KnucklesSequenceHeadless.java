@@ -852,8 +852,7 @@ class TestS3kLbz1KnucklesSequenceHeadless {
         }
         assertEquals(4, activeCollapseChildren(),
                 "Collapse phase should create the four building/pillar helper children.");
-        GameServices.parallax().update(Sonic3kZoneIds.ZONE_LBZ, 0, GameServices.camera(), frame, 0);
-        assertNotEquals(0, GameServices.parallax().getShakeOffsetY(),
+        assertVisibleShakeWithinFrames(fixture, 8,
                 "loc_6277A writes Screen_shake_flag=-1; LBZ parallax must publish a visible shake offset "
                         + "instead of relying on a direct Camera shake write that render propagation overwrites.");
         fixture.stepIdleFrames(12);
@@ -1027,6 +1026,16 @@ class TestS3kLbz1KnucklesSequenceHeadless {
         return (int) GameServices.level().getObjectManager().getActiveObjects().stream()
                 .filter(S3kBossExplosionChild.class::isInstance)
                 .count();
+    }
+
+    private void assertVisibleShakeWithinFrames(HeadlessTestFixture fixture, int maxFrames, String message) {
+        for (int i = 0; i < maxFrames; i++) {
+            if (GameServices.parallax().getShakeOffsetY() != 0) {
+                return;
+            }
+            fixture.stepFrame(false, false, false, false, false);
+        }
+        assertNotEquals(0, GameServices.parallax().getShakeOffsetY(), message);
     }
 
     private int activeSongFadeTransitions() {

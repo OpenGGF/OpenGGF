@@ -27,6 +27,15 @@ public final class TraceFixtures {
 
     /** Minimal metadata stub for unit tests. */
     public static TraceMetadata metadata(String gameId, int zoneId, int act) {
+        return metadata(gameId, zoneId, act, null);
+    }
+
+    /** Minimal metadata stub with an explicit frame-0 RNG seed. */
+    public static TraceMetadata metadataWithRngSeed(String gameId, int zoneId, int act, String rngSeedHex) {
+        return metadata(gameId, zoneId, act, rngSeedHex);
+    }
+
+    private static TraceMetadata metadata(String gameId, int zoneId, int act, String rngSeedHex) {
         return new TraceMetadata(
                 gameId,
                 "TEST",
@@ -53,7 +62,7 @@ public final class TraceFixtures {
                 "sonic",
                 List.of(),
                 0,
-                null,
+                rngSeedHex,
                 null,
                 null,
                 null,

@@ -23,6 +23,7 @@ import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -412,6 +413,13 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         return SOLID_PARAMS;
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        // ROM SolidObject uses `bhi` for the right edge (docs/s1disasm/_incObj/sub
+        // SolidObject.asm:126-127), so relX == 2*width remains a valid side contact.
+        return SolidRoutineProfile.fullSolid(false, true, false);
     }
 
     /**

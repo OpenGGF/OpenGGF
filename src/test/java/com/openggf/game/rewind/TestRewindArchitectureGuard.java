@@ -71,7 +71,11 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossSpikeChild.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossVisualChild.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossWeatherMachineChild.java#@RewindTransient", 1),
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossWeatherVisualChild.java#@RewindTransient", 1)
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossWeatherVisualChild.java#@RewindTransient", 1),
+            // Obj50 body/wing links are live object graph structure. The child
+            // pointer is rebuilt from allocation and the wing's parent pointer
+            // mirrors the ROM SST parent pointer rather than rewindable state.
+            Map.entry("src/main/java/com/openggf/game/sonic2/objects/badniks/AquisBadnikInstance.java#@RewindTransient", 2)
     );
 
     private static final Set<String> REWIND_REGISTRY_PRODUCTION_ALLOWLIST = Set.of(

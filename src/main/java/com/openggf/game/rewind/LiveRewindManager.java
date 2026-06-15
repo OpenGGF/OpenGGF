@@ -84,7 +84,9 @@ public final class LiveRewindManager {
         }
         inputSource.discardAfter(rewindController.currentFrame());
         inputSource.appendFrame(input, config);
-        rewindController.recordExternalStep();
+        if (rewindController.recordExternalStep()) {
+            pruneOldHistory();
+        }
     }
 
     public void resetBufferAtCurrentFrame(GameMode mode) {
@@ -124,6 +126,10 @@ public final class LiveRewindManager {
                 new LiveRewindStepper(inputSource, config, () -> LevelFrameContext.from(gameplayMode)),
                 KEYFRAME_INTERVAL);
         rewindController = gameplayMode.getRewindController();
+        if (rewindController != null
+                && config.getBoolean(SonicConfiguration.LIVE_REWIND_DETERMINISM_AUDIT)) {
+            rewindController.setDeterminismAuditor(new RewindDeterminismAuditor());
+        }
         installedGameplayMode = gameplayMode;
         speedController = RewindSpeedController.fromConfig(config);
         rewinding = false;
@@ -145,10 +151,20 @@ public final class LiveRewindManager {
         return config.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED);
     }
 
+    private void pruneOldHistory() {
+        int historySeconds = Math.max(1, config.getInt(SonicConfiguration.REWIND_HISTORY_SECONDS));
+        int retainedFrames = historySeconds * 60;
+        int earliestFrame = rewindController.pruneHistoryToRetainFrames(retainedFrames);
+        inputSource.discardBefore(earliestFrame);
+    }
+
     private void cleanupAudioAfterRealtimeRewind(AudioPresentationPolicy policy) {
         if (rewindController == null) {
             return;
         }
+        // Land the single deferred logical restore at the committed frame
+        // before the presentation cleanup acts on backend logical state.
+        rewindController.commitDeferredAudioRestore();
         GameServices.audio().afterRewindRestore(rewindController.currentFrame(), policy);
     }
 

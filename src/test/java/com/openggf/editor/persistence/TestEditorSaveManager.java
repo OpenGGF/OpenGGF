@@ -189,6 +189,37 @@ class TestEditorSaveManager {
     }
 
     @Test
+    void transientReadIOExceptionLeavesEditorSaveInPlace() throws Exception {
+        MutableLevel edited = createMutableLevel();
+        edited.setBlockInMap(0, 1, 1, 2);
+        EditorSaveManager writer = new EditorSaveManager(tempDir);
+        Path file = writer.save(GameId.S2, 1, 0, edited).file();
+        String original = Files.readString(file);
+
+        EditorSaveManager reader = new EditorSaveManager(tempDir, path -> {
+            throw new java.io.IOException("temporary lock");
+        });
+        MutableLevel fresh = createMutableLevel();
+        EditorSaveManager.ApplyResult result = reader.tryApplyEdits(GameId.S2, 1, 0, fresh);
+
+        assertEquals(EditorSaveManager.ApplyResult.TRANSIENT_FAILURE, result);
+        assertTrue(Files.exists(file), "transient I/O must not quarantine the editor save");
+        assertEquals(original, Files.readString(file));
+        assertFalse(Files.exists(file.resolveSibling(file.getFileName() + ".corrupt")));
+        assertEquals(0, Byte.toUnsignedInt(fresh.getMap().getValue(0, 1, 1)));
+    }
+
+    @Test
+    void saveUsesAtomicMoveFallbackWhenFilesystemDoesNotSupportIt() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/editor/persistence/EditorSaveManager.java"));
+
+        assertTrue(source.contains("catch (AtomicMoveNotSupportedException"),
+                "editor saves must retry without ATOMIC_MOVE on filesystems that do not support it");
+        assertTrue(source.contains("Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);"),
+                "fallback move must still replace the target save file");
+    }
+
+    @Test
     void outOfRangePersistedMapBlockIsQuarantined() throws Exception {
         EditorSaveManager manager = new EditorSaveManager(tempDir);
         EditorSavePayload payload = new EditorSavePayload(
@@ -243,6 +274,66 @@ class TestEditorSaveManager {
         assertEquals(EditorSaveManager.ApplyResult.QUARANTINED, result);
         assertEquals(0, Byte.toUnsignedInt(level.getMap().getValue(0, 1, 1)),
                 "valid earlier map edit must not be applied before later invalid entry quarantines");
+        assertFalse(Files.exists(file));
+        assertTrue(Files.exists(file.resolveSibling(file.getFileName() + ".corrupt")));
+    }
+
+    @Test
+    void wrongLengthChunkStateQuarantinesWithoutPartialMapApply() throws Exception {
+        EditorSaveManager manager = new EditorSaveManager(tempDir);
+        EditorSavePayload payload = new EditorSavePayload(
+                List.of(),
+                List.of(new EditorSavePayload.ChunkState(1, new int[] { 7 })),
+                List.of(new EditorSavePayload.MapCell(0, 1, 1, 2)));
+        EditorSaveEnvelope envelope = new EditorSaveEnvelope(
+                1,
+                GameId.S2.code(),
+                1,
+                0,
+                "2026-05-09T00:00:00Z",
+                payload,
+                sha256(MAPPER.writeValueAsString(payload)));
+        Path file = manager.editPath(GameId.S2, 1, 0);
+        Files.createDirectories(file.getParent());
+        MAPPER.writeValue(file.toFile(), envelope);
+
+        MutableLevel level = createMutableLevel();
+        EditorSaveManager.ApplyResult result = manager.tryApplyEdits(GameId.S2, 1, 0, level);
+
+        assertEquals(EditorSaveManager.ApplyResult.QUARANTINED, result);
+        assertEquals(0, level.getChunk(1).getPatternDesc(0, 0).getPatternIndex());
+        assertEquals(0, Byte.toUnsignedInt(level.getMap().getValue(0, 1, 1)),
+                "valid map edit must not be applied when a chunk state is invalid");
+        assertFalse(Files.exists(file));
+        assertTrue(Files.exists(file.resolveSibling(file.getFileName() + ".corrupt")));
+    }
+
+    @Test
+    void wrongLengthBlockStateQuarantinesWithoutPartialMapApply() throws Exception {
+        EditorSaveManager manager = new EditorSaveManager(tempDir);
+        EditorSavePayload payload = new EditorSavePayload(
+                List.of(new EditorSavePayload.BlockState(1, new int[] { 2, 3 })),
+                List.of(),
+                List.of(new EditorSavePayload.MapCell(0, 1, 1, 2)));
+        EditorSaveEnvelope envelope = new EditorSaveEnvelope(
+                1,
+                GameId.S2.code(),
+                1,
+                0,
+                "2026-05-09T00:00:00Z",
+                payload,
+                sha256(MAPPER.writeValueAsString(payload)));
+        Path file = manager.editPath(GameId.S2, 1, 0);
+        Files.createDirectories(file.getParent());
+        MAPPER.writeValue(file.toFile(), envelope);
+
+        MutableLevel level = createMutableLevel();
+        EditorSaveManager.ApplyResult result = manager.tryApplyEdits(GameId.S2, 1, 0, level);
+
+        assertEquals(EditorSaveManager.ApplyResult.QUARANTINED, result);
+        assertEquals(0, level.getBlock(1).getChunkDesc(0, 0).getChunkIndex());
+        assertEquals(0, Byte.toUnsignedInt(level.getMap().getValue(0, 1, 1)),
+                "valid map edit must not be applied when a block state is invalid");
         assertFalse(Files.exists(file));
         assertTrue(Files.exists(file.resolveSibling(file.getFileName() + ".corrupt")));
     }

@@ -124,4 +124,44 @@ class EncoderSinkTest {
                 || "boom".equals(failure.getCause() != null ? failure.getCause().getMessage() : null));
         assertTrue(enc.aborted, "encoder aborted on failure");
     }
+
+    private static final class BlockingEncoder implements CaptureEncoder {
+        final CountDownLatch enteredEncode = new CountDownLatch(1);
+        final CountDownLatch releaseEncode = new CountDownLatch(1);
+        volatile boolean aborted;
+
+        @Override public void open(Path output, int w, int h, int fps, int sr) { }
+
+        @Override public void encode(CapturedFrame f) throws CaptureException {
+            enteredEncode.countDown();
+            try {
+                releaseEncode.await();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new CaptureException("interrupted", e);
+            }
+        }
+
+        @Override public Path finish() { return Path.of("out.mkv"); }
+
+        @Override public void abort() {
+            aborted = true;
+            releaseEncode.countDown();
+        }
+    }
+
+    @Test
+    @Timeout(10)
+    void stopAbortsAndThrowsWhenEncoderThreadDoesNotExitBeforeTimeout() throws Exception {
+        BlockingEncoder enc = new BlockingEncoder();
+        EncoderSink sink = new EncoderSink(enc, BackpressurePolicy.BLOCK, 2, 50);
+        sink.open(Path.of("out.mkv"), 1, 1, 60, 48000);
+        sink.submit(frame(0));
+        assertTrue(enc.enteredEncode.await(1, TimeUnit.SECONDS));
+
+        CaptureException failure = assertThrows(CaptureException.class, sink::stop);
+
+        assertTrue(failure.getMessage().contains("encoder thread did not stop"));
+        assertTrue(enc.aborted, "stalled encoder must be aborted so ffmpeg pipes/processes are released");
+    }
 }

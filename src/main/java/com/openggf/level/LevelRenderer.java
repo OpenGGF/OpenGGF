@@ -13,6 +13,8 @@ import com.openggf.game.GameServices;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.PhysicsProvider;
 import com.openggf.game.ZoneFeatureProvider;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.render.AdvancedRenderFrameState;
 import com.openggf.game.render.AdvancedRenderModeContext;
 import com.openggf.game.render.AdvancedRenderModeController;
@@ -137,7 +139,6 @@ public final class LevelRenderer {
     private int pendingBgTilePassAlignedBgY;
     private float pendingBgTilePassBgTilemapWorldOffsetX;
     private boolean pendingBgTilePassPerLineScroll;
-    private short[] pendingBgTilePassPerColumnVScroll;
     private int[] pendingBgTilePassHScrollData;
     private float pendingBgTilePassVdpWrapWidth;
     private float pendingBgTilePassNametableBase;
@@ -412,9 +413,6 @@ public final class LevelRenderer {
                 tilemapRenderer.setUpperBandWrap(
                         pendingBgTilePassUpperBandWrapHeightPx,
                         pendingBgTilePassUpperBandWrapWidthTiles);
-                if (pendingBgTilePassPerColumnVScroll != null && pendingBgTilePassPerColumnVScroll.length > 0) {
-                    tilemapRenderer.enablePerColumnVScroll(pendingBgTilePassPerColumnVScroll);
-                }
                 tilemapRenderer.render(
                         TilemapGpuRenderer.Layer.BACKGROUND,
                         pendingBgTilePassRenderWidth,
@@ -491,6 +489,24 @@ public final class LevelRenderer {
         return override != null ? override : lm.parallaxManager.getVScrollPerColumnFGForShader();
     }
 
+    /**
+     * Game-agnostic fallback resolution for {@link PaletteOwnershipRegistry}
+     * writes. Per-game palette cyclers resolve where they exist (S2 cycling
+     * zones, S3K); games and zones without one (S1, S2 SCZ/DEZ) would
+     * otherwise silently drop registry-submitted writes such as the shared
+     * boss hit-flash. No-op when the registry already resolved this frame.
+     */
+    private void resolvePendingPaletteOwnershipWrites() {
+        PaletteOwnershipRegistry registry = GameServices.paletteOwnershipRegistryOrNull();
+        if (registry == null || lm.level == null) {
+            return;
+        }
+        Palette[] underwaterPalettes = lm.waterSystem != null
+                ? lm.waterSystem.getUnderwaterPalette(lm.getFeatureZoneId(), lm.getFeatureActId())
+                : null;
+        PaletteWriteSupport.resolvePendingFrameWrites(registry, lm.level, underwaterPalettes, lm.graphicsManager);
+    }
+
     private void resolveAdvancedRenderFrameState(int frameCounter) {
         AdvancedRenderModeController controller = GameServices.advancedRenderModeControllerOrNull();
         if (controller == null || controller.isEmpty() || lm.camera == null) {
@@ -533,31 +549,9 @@ public final class LevelRenderer {
         cacheViewportForFrame();
 
         Camera camera = lm.camera;
-        int bgScrollY = (int) (camera.getY() * 0.1f);
-        if (lm.game != null) {
-            int levelIdx = lm.levels.get(lm.currentZone).get(lm.currentAct).getLevelIndex();
-            int[] scroll = lm.game.getBackgroundScroll(levelIdx, camera.getX(), camera.getY());
-            bgScrollY = scroll[1];
-        }
-
-        lm.parallaxManager.update(lm.currentZone, lm.currentAct, camera, lm.frameCounter, bgScrollY, lm.level);
-        // frameCounter is now incremented in update() — see comment there.
-        // Run animated tile/palette updates after parallax publishes runtime
-        // deform state; S3K CNZ/MHZ animated tile phases read that state.
-        if (lm.animatedPatternManager != null) {
-            lm.animatedPatternManager.update();
-        }
-        if (lm.animatedPaletteManager != null && lm.animatedPaletteManager != lm.animatedPatternManager) {
-            lm.animatedPaletteManager.update();
-        }
+        int bgScrollY = lm.frameRuntimeUpdater.computeBackgroundScrollY();
+        resolvePendingPaletteOwnershipWrites();
         resolveAdvancedRenderFrameState(lm.frameCounter);
-
-        // Propagate shake offsets from parallax manager to camera.
-        // This allows sprite rendering (via GraphicsManager.flush()) to shake
-        // in sync with FG tiles.
-        camera.setShakeOffsets(
-                lm.parallaxManager.getShakeOffsetX(),
-                lm.parallaxManager.getShakeOffsetY());
 
         List<GLCommand> collisionCommands = lm.debugRenderer != null
                 ? lm.debugRenderer.getCollisionCommands() : new ArrayList<>();
@@ -866,7 +860,9 @@ public final class LevelRenderer {
         pendingBgTilePassAlignedBgY = alignedBgY;
         pendingBgTilePassBgTilemapWorldOffsetX = bgTilemapWorldOffsetX;
         pendingBgTilePassPerLineScroll = perLineScrollActive;
-        pendingBgTilePassPerColumnVScroll = vScrollColumnData;
+        // Per-column BG VScroll is screen-column VSRAM state, so the parallax
+        // compositing pass owns it. Applying it during the FBO tile pass as well
+        // doubles AIZ fire-wave offsets.
         pendingBgTilePassHScrollData = hScrollData;
         pendingBgTilePassVdpWrapWidth = vdpWrapWidthTiles;
         pendingBgTilePassNametableBase = nametableBaseTile;
@@ -912,16 +908,17 @@ public final class LevelRenderer {
 
         // Priority membership is mutable at runtime (plane switchers, hurt/death,
         // zone event overrides, follower objects mirroring player priority).
-        // Rebuild buckets from live state right before drawing the unified pass.
+        // Re-validate the cached buckets against live state right before drawing
+        // the unified pass; they only rebuild when the inputs actually changed.
         if (spriteManager != null) {
-            spriteManager.invalidateRenderBuckets();
+            spriteManager.refreshRenderBucketsIfChanged();
         }
         ObjectManager objectManager = lm.objectManager;
         RingManager ringManager = lm.ringManager;
         GraphicsManager graphicsManager = lm.graphicsManager;
         ZoneFeatureProvider zoneFeatureProvider = lm.zoneFeatureProvider;
         if (objectManager != null) {
-            objectManager.invalidateRenderBuckets();
+            objectManager.refreshRenderBucketsIfChanged();
         }
 
         graphicsManager.setUseSpritePriorityShader(true);
@@ -1019,10 +1016,10 @@ public final class LevelRenderer {
         profiler.beginSection("render.sprites");
 
         if (spriteManager != null && options.includePlayerSprites()) {
-            spriteManager.invalidateRenderBuckets();
+            spriteManager.refreshRenderBucketsIfChanged();
         }
         if (objectManager != null && options.includeObjectSprites()) {
-            objectManager.invalidateRenderBuckets();
+            objectManager.refreshRenderBucketsIfChanged();
         }
 
         graphicsManager.setUseSpritePriorityShader(true);

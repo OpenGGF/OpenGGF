@@ -4,9 +4,12 @@ import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModuleRegistry;
+import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.level.WaterSystem;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +39,18 @@ class TestRespawnStrategies {
         @Override protected void createSensorLines() {}
         void setPhysicsFeatureSetForTest(PhysicsFeatureSet featureSet) {
             setPhysicsFeatureSet(featureSet);
+        }
+    }
+
+    static class GameplayWaterLineSystem extends WaterSystem {
+        @Override
+        public int getWaterLevelY(int zoneId, int actId) {
+            return 0x0500;
+        }
+
+        @Override
+        public int getGameplayWaterLevelY(int zoneId, int actId) {
+            return 0x0520;
         }
     }
 
@@ -138,6 +153,109 @@ class TestRespawnStrategies {
     }
 
     @Test
+    void tailsRespawnTargetYClampsToGameplayWaterLine() {
+        GameplayModeContext mode = TestEnvironment.activeGameplayMode();
+        mode.attachLevelManagers(new GameplayWaterLineSystem(), mode.getParallaxManager(),
+                mode.getTerrainCollisionManager(), mode.getCollisionSystem(),
+                mode.getSpriteManager(), mode.getLevelManager());
+
+        TestableSprite sk = new TestableSprite("tails_p2");
+        sk.setCpuControlled(true);
+        sk.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        TestableSprite main = new TestableSprite("sonic");
+        main.setCentreY((short) 0x0600);
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x0200);
+        Arrays.fill(yHistory, (short) 0x0600);
+        main.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 16);
+
+        SidekickCpuController ctrl = new SidekickCpuController(sk, main);
+        TailsRespawnStrategy strategy = new TailsRespawnStrategy(ctrl);
+
+        assertTrue(strategy.beginApproach(sk, main));
+        assertFalse(strategy.updateApproaching(sk, main, 1));
+
+        assertEquals(0x0510, strategy.diagnosticTargetY(0),
+                "TailsCPU_Respawn clamps target_y to Water_Level_1-$10, not the non-oscillated base level");
+    }
+
+    @Test
+    void sonic2DeadLeaderEntryUsesFlyingRoutineWithoutRespawnTeleport() {
+        TestableSprite sk = new TestableSprite("tails_p2");
+        sk.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sk.setCpuControlled(true);
+        sk.setCentreX((short) 0x1234);
+        sk.setCentreY((short) 0x0456);
+        sk.setRolling(true);
+        sk.setOnObject(true);
+        sk.setPushing(true);
+        sk.setInWater(true);
+        sk.setSpindash(true);
+        sk.setSpindashCounter((short) 0x20);
+        sk.setDirection(com.openggf.physics.Direction.LEFT);
+
+        TestableSprite main = new TestableSprite("sonic");
+        main.setDead(true);
+
+        SidekickCpuController ctrl = new SidekickCpuController(sk, main);
+        ctrl.hydrateFromRomCpuState(0x06, 0, 0, 0, true, 0, 0);
+        ctrl.forceStateForTest(SidekickCpuController.State.NORMAL, 0);
+        short preEntryX = sk.getCentreX();
+        short preEntryY = sk.getCentreY();
+
+        ctrl.update(0);
+
+        assertEquals(SidekickCpuController.State.APPROACHING, ctrl.getState(),
+                "S2 dead-Sonic branch enters TailsCPU_Flying routine 4, not the S3K auto-recovery routine");
+        assertEquals(preEntryX, sk.getCentreX(),
+                "TailsCPU_Normal dead-Sonic entry does not run TailsCPU_Respawn's teleport");
+        assertEquals(preEntryY, sk.getCentreY());
+        assertFalse(sk.getSpindash(), "ROM clears spindash_flag on dead-Sonic flight entry");
+        assertEquals((short) 0, sk.getSpindashCounter());
+        assertTrue(sk.getAir(), "ROM writes status=$02, leaving only Status_InAir set");
+        assertFalse(sk.getRolling());
+        assertFalse(sk.isOnObject());
+        assertFalse(sk.getPushing());
+        assertFalse(sk.isInWater());
+        assertEquals(com.openggf.physics.Direction.RIGHT, sk.getDirection());
+        assertTrue(sk.isObjectControlSuppressesMovement());
+        assertEquals(1, ctrl.getDiagnosticJumpingFlag(),
+                "S2 TailsCPU_Normal's dead-Sonic branch writes routine 4 and flight state "
+                        + "without clearing Tails_CPU_jumping (s2.asm:39254-39264)");
+    }
+
+    @Test
+    void sonic2RespawnRoutinePreservesCpuJumpingFlagOnFlyingEntry() {
+        TestableSprite sk = new TestableSprite("tails_p2");
+        sk.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        sk.setCpuControlled(true);
+
+        TestableSprite main = new TestableSprite("sonic");
+        main.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        main.setCentreX((short) 0x032C);
+        main.setCentreY((short) 0x032C);
+        main.setAir(false);
+        main.setRollingJump(false);
+        main.setInWater(false);
+        main.setPreventTailsRespawn(false);
+
+        SidekickCpuController ctrl = new SidekickCpuController(sk, main);
+        ctrl.hydrateFromRomCpuState(0x06, 0, 0, 0, true, 0, 0);
+        ctrl.forceStateForTest(SidekickCpuController.State.SPAWNING, 0);
+
+        ctrl.update(0);
+
+        assertEquals(SidekickCpuController.State.APPROACHING, ctrl.getState(),
+                "S2 TailsCPU_Respawn writes Tails_CPU_routine=4 when the respawn gate fires");
+        assertEquals(1, ctrl.getDiagnosticJumpingFlag(),
+                "S2 TailsCPU_Respawn does not clear Tails_CPU_jumping "
+                        + "(s2.asm:39116-39130); the normal filter clears it later only when grounded");
+    }
+
+    @Test
     void tailsRespawnBeginWritesNativeBit7FullControl() {
         TestableSprite sk = new TestableSprite("tails_p2");
         sk.setObjectControlAllowsCpu(true);
@@ -219,14 +337,19 @@ class TestRespawnStrategies {
         main.setLrbSolidBit((byte) 0x0F);
         main.setHighPriority(true);
 
-        sk.setCentreX((short) 0x0100);
-        sk.setCentreY((short) 0x0200);
         sk.setTopSolidBit((byte) 0x0C);
         sk.setLrbSolidBit((byte) 0x0D);
         sk.setHighPriority(false);
         sk.setMoveLockTimer(13);
         sk.setObjectControlAllowsCpu(true);
         sk.setObjectControlSuppressesMovement(true);
+        sk.setRolling(true);
+        sk.setOnObject(true);
+        sk.setPushing(true);
+        sk.setInWater(true);
+        sk.setDirection(com.openggf.physics.Direction.LEFT);
+        sk.setCentreX((short) 0x0100);
+        sk.setCentreY((short) 0x0200);
 
         ctrl.setInitialState(SidekickCpuController.State.APPROACHING);
         ctrl.update(0);
@@ -237,6 +360,14 @@ class TestRespawnStrategies {
         assertTrue(sk.isHighPriority());
         assertEquals(0, sk.getMoveLockTimer(),
                 "Tails_Catch_Up_Flying exit clears move_lock before normal CPU control resumes");
+        assertEquals(sk.resolveAnimationId(CanonicalAnimation.WALK), sk.getAnimationId(),
+                "S2 TailsCPU_Flying completion writes AniIDSonAni_Walk");
+        assertTrue(sk.getAir(), "S2 TailsCPU_Flying completion writes status=$02");
+        assertFalse(sk.getRolling());
+        assertFalse(sk.isOnObject());
+        assertFalse(sk.getPushing());
+        assertFalse(sk.isInWater());
+        assertEquals(com.openggf.physics.Direction.RIGHT, sk.getDirection());
         assertFalse(sk.isObjectControlled(),
                 "Tails_Catch_Up_Flying exit clears object_control before normal CPU control resumes");
         assertFalse(sk.isObjectControlAllowsCpu(),

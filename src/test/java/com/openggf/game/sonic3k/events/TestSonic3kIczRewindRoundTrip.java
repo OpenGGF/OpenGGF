@@ -1,8 +1,7 @@
 package com.openggf.game.sonic3k.events;
 
+import com.openggf.game.rewind.schema.ZoneEventSchemaSidecar;
 import org.junit.jupiter.api.Test;
-
-import java.nio.ByteBuffer;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -20,13 +19,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestSonic3kIczRewindRoundTrip {
 
     @Test
-    void rewindStateBytesMatchesWriteOutput() {
+    void schemaCaptureProducesNonEmptyPayload() {
         Sonic3kICZEvents events = new Sonic3kICZEvents();
-        ByteBuffer buf = ByteBuffer.allocate(Sonic3kICZEvents.rewindStateBytes());
-        events.writeRewindState(buf);
+        byte[] payload = ZoneEventSchemaSidecar.capture(events);
 
-        assertEquals(Sonic3kICZEvents.rewindStateBytes(), buf.position(),
-                "writeRewindState must produce exactly rewindStateBytes() bytes");
+        assertTrue(payload.length >= 25,
+                "ICZ schema must encode at minimum the legacy 5 booleans + 5 ints");
     }
 
     @Test
@@ -46,10 +44,7 @@ class TestSonic3kIczRewindRoundTrip {
         assertNotEquals(original.isIndoorPaletteCyclingActive(),
                 restored.isIndoorPaletteCyclingActive());
 
-        ByteBuffer write = ByteBuffer.allocate(Sonic3kICZEvents.rewindStateBytes());
-        original.writeRewindState(write);
-        write.flip();
-        restored.readRewindState(write);
+        ZoneEventSchemaSidecar.restore(restored, ZoneEventSchemaSidecar.capture(original));
 
         assertEquals(original.isEventsFg5(), restored.isEventsFg5(),
                 "eventsFg5 must round-trip through capture/restore");
@@ -73,26 +68,14 @@ class TestSonic3kIczRewindRoundTrip {
         original.setEventsFg5(true);
         original.setIndoorPaletteCyclingActive(false);
 
-        ByteBuffer first = ByteBuffer.allocate(Sonic3kICZEvents.rewindStateBytes());
-        original.writeRewindState(first);
+        byte[] first = ZoneEventSchemaSidecar.capture(original);
 
         Sonic3kICZEvents restored = new Sonic3kICZEvents();
-        ByteBuffer readBack = first.duplicate();
-        readBack.flip();
-        restored.readRewindState(readBack);
+        ZoneEventSchemaSidecar.restore(restored, first);
 
-        ByteBuffer second = ByteBuffer.allocate(Sonic3kICZEvents.rewindStateBytes());
-        restored.writeRewindState(second);
+        byte[] second = ZoneEventSchemaSidecar.capture(restored);
 
-        assertArrayEquals(first.array(), second.array(),
-                "captured bytes must be identical after a write→read→write cycle");
-    }
-
-    @Test
-    void rewindStateSizeIsAtLeastTwentyFour() {
-        // Locked-in contract: any future refactor that drops state must also
-        // either match the byte count or update the constant deliberately.
-        assertTrue(Sonic3kICZEvents.rewindStateBytes() >= 25,
-                "ICZ rewind state must encode at minimum 5 booleans + 5 ints");
+        assertArrayEquals(first, second,
+                "captured bytes must be identical after a schema capture-restore-capture cycle");
     }
 }

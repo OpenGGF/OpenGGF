@@ -10,6 +10,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.Palette;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -102,6 +103,21 @@ public class HczMinibossInstance extends AbstractBossInstance {
     private static final int ENGINE_FRAME = 0x15;
     private static final int WATER_EFFECT_OFFSET_Y = 0x148;
     private static final int WATER_EFFECT_BASE_FRAME = 0x16;
+    private static final int WATER_EFFECT_ROUTINE_IDLE = 4;
+    private static final int WATER_EFFECT_ROUTINE_WINDUP = 6;
+    private static final int WATER_EFFECT_ROUTINE_PULL = 8;
+    private static final int WATER_EFFECT_ROUTINE_COOLDOWN = 10;
+    private static final int WATER_EFFECT_CALLBACK_COMMAND = 0xF4;
+    private static final int[] WATER_EFFECT_WINDUP_SCRIPT = {
+            0x16, 7, 0x17, 7, 0x18, 7,
+            0x16, 6, 0x17, 6, 0x18, 6,
+            0x16, 5, 0x17, 5, 0x18, 5,
+            0x16, 4, 0x17, 4, 0x18, 4,
+            0x16, 3, 0x17, 3, 0x18, 3,
+            0x16, 2, 0x17, 2, 0x18, 2,
+            WATER_EFFECT_CALLBACK_COMMAND
+    };
+    private static final int[] WATER_EFFECT_PULL_SCRIPT = {1, 0x16, 0x17, 0x18, 0xFC};
     private static final int FLOOR_CHECK_RADIUS = 0x28;
     private static final int ROCKET_PHASE_STEP = 4;
     private static final int VORTEX_PHASE_STEP = 2;
@@ -186,6 +202,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
     private static final int[] FLASH_BRIGHT = {0x0AAA, 0x0AAA, 0x0888, 0x0AAA, 0x0EEE, 0x0888, 0x0AAA};
 
     private RocketState[] rockets;
+    private RocketTouchChild[] rocketTouchChildren;
 
     private int anchorY;
     private int waterLevelY;
@@ -197,10 +214,6 @@ public class HczMinibossInstance extends AbstractBossInstance {
     private int storedHorizontalVelocity;
     private int passCounter;
     private boolean closedBody;
-    private boolean rocketsArmed;
-    private int rocketOrbitSpeed;
-    private int rocketSpeedTimer;
-    private RocketSpeedCallback rocketSpeedCallback = RocketSpeedCallback.NONE;
     private boolean arenaYLocked;
     private boolean arenaXLocked;
     private boolean customFlashDirty;
@@ -208,8 +221,18 @@ public class HczMinibossInstance extends AbstractBossInstance {
     private boolean defeatRenderComplete;
     private boolean crossedWaterThisPass;
     private boolean waterPaletteLoaded;
+    private int waterEffectRoutine;
     private int waterEffectFrame;
+    private int waterEffectAnimFrame;
+    private int waterEffectAnimTimer;
+    private boolean waterEffectPullReady;
+    private boolean vortexFinalPullPending;
     private int lastFrameCounter;
+    private int lastHitFrame = -1;
+    private int lastHitRoutine = -1;
+    private int lastHitWaitTimer = -1;
+    private int lastHitWaterEffectRoutine = -1;
+    private String lastHitSource = "none";
     private List<VortexBubbleChild> vortexBubbles;
     private S3kBossExplosionController defeatExplosionController;
 
@@ -238,14 +261,15 @@ public class HczMinibossInstance extends AbstractBossInstance {
 
     private enum RocketSpeedCallback {
         NONE,
-        WIND_DOWN_TO_SPEED_2,
+        WIND_UP_TO_ROUTINE_8,
+        WIND_UP_ARM_SPEED_2,
+        WIND_UP_TO_FULL_SPEED,
         WIND_DOWN_TO_SPEED_1,
-        WIND_DOWN_TO_SPEED_0,
-        WIND_UP_TO_SPEED_2,
-        WIND_UP_TO_FULL_SPEED
+        WIND_DOWN_RETURN_TO_INIT
     }
 
     private static final class RocketState implements com.openggf.game.rewind.RewindStateful<RocketState.RewindState> {
+        private final int subtype;
         private int phaseX;
         private int phaseY;
         private int x;
@@ -253,20 +277,26 @@ public class HczMinibossInstance extends AbstractBossInstance {
         private int frame;
         private boolean front;
         private boolean hFlip;
+        private boolean collisionArmed;
+        private int routine;
+        private int speed;
+        private int timer;
+        private RocketSpeedCallback callback = RocketSpeedCallback.NONE;
 
         private record RewindState(int phaseX, int phaseY, int x, int y, int frame,
-                                   boolean front, boolean hFlip) {}
+                                   boolean front, boolean hFlip, boolean collisionArmed,
+                                   int routine, int speed, int timer, RocketSpeedCallback callback) {}
 
-        private RocketState(int phaseX, int phaseY, boolean hFlip) {
-            this.phaseX = phaseX;
-            this.phaseY = phaseY;
-            this.hFlip = hFlip;
+        private RocketState(int subtype) {
+            this.subtype = subtype;
+            this.hFlip = subtype >= 4;
             this.frame = 1;
         }
 
         @Override
         public RewindState captureRewindStateValue() {
-            return new RewindState(phaseX, phaseY, x, y, frame, front, hFlip);
+            return new RewindState(phaseX, phaseY, x, y, frame, front, hFlip, collisionArmed,
+                    routine, speed, timer, callback);
         }
 
         @Override
@@ -278,6 +308,11 @@ public class HczMinibossInstance extends AbstractBossInstance {
             frame = state.frame();
             front = state.front();
             hFlip = state.hFlip();
+            collisionArmed = state.collisionArmed();
+            routine = state.routine();
+            speed = state.speed();
+            timer = state.timer();
+            callback = state.callback();
         }
     }
 
@@ -297,10 +332,6 @@ public class HczMinibossInstance extends AbstractBossInstance {
         storedHorizontalVelocity = 0;
         passCounter = 0;
         closedBody = false;
-        rocketsArmed = false;
-        rocketOrbitSpeed = ROCKET_PHASE_STEP;
-        rocketSpeedTimer = -1;
-        rocketSpeedCallback = RocketSpeedCallback.NONE;
         waitTimer = -1;
         waitCallback = WaitCallback.NONE;
         ascendTargetY = anchorY;
@@ -312,9 +343,20 @@ public class HczMinibossInstance extends AbstractBossInstance {
         defeatRenderComplete = false;
         crossedWaterThisPass = false;
         waterPaletteLoaded = false;
+        waterEffectRoutine = WATER_EFFECT_ROUTINE_IDLE;
         waterEffectFrame = WATER_EFFECT_BASE_FRAME;
+        waterEffectAnimFrame = 0;
+        waterEffectAnimTimer = 0;
+        waterEffectPullReady = false;
+        vortexFinalPullPending = false;
+        lastHitFrame = -1;
+        lastHitRoutine = -1;
+        lastHitWaitTimer = -1;
+        lastHitWaterEffectRoutine = -1;
+        lastHitSource = "none";
         vortexBubbles = new ArrayList<>();
         defeatExplosionController = null;
+        rocketTouchChildren = null;
         resetRocketPhases();
     }
 
@@ -359,7 +401,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
             return null;
         }
 
-        List<TouchResponseProvider.TouchRegion> regions = new ArrayList<>(6);
+        List<TouchResponseProvider.TouchRegion> regions = new ArrayList<>(2);
         int coreFlags = getCoreCollisionFlags();
         if (coreFlags != 0) {
             regions.add(new TouchResponseProvider.TouchRegion(state.x, state.y, coreFlags));
@@ -368,9 +410,6 @@ public class HczMinibossInstance extends AbstractBossInstance {
         if (!closedBody) {
             regions.add(new TouchResponseProvider.TouchRegion(
                     state.x, state.y + ENGINE_OFFSET_Y, ENGINE_COLLISION_FLAGS));
-        }
-        for (RocketState rocket : rockets()) {
-            regions.add(new TouchResponseProvider.TouchRegion(rocket.x, rocket.y, getRocketCollisionFlags()));
         }
         return regions.toArray(new TouchResponseProvider.TouchRegion[0]);
     }
@@ -392,6 +431,11 @@ public class HczMinibossInstance extends AbstractBossInstance {
         }
 
         state.hitCount--;
+        lastHitFrame = services().objectManager() != null ? services().objectManager().getFrameCounter() : -1;
+        lastHitRoutine = state.routine;
+        lastHitWaitTimer = waitTimer;
+        lastHitWaterEffectRoutine = waterEffectRoutine;
+        lastHitSource = describeHitSource(playerEntity, result);
         state.invulnerabilityTimer = INVULN_TIME;
         state.invulnerable = true;
         paletteFlasher.startFlash();
@@ -415,6 +459,11 @@ public class HczMinibossInstance extends AbstractBossInstance {
         waitTimer = -1;
         waitCallback = WaitCallback.NONE;
         vortexActive = false;
+        waterEffectRoutine = WATER_EFFECT_ROUTINE_IDLE;
+        waterEffectAnimFrame = 0;
+        waterEffectAnimTimer = 0;
+        waterEffectPullReady = false;
+        vortexFinalPullPending = false;
         state.invulnerable = false;
         state.invulnerabilityTimer = 0;
         loadBossPalette();
@@ -433,7 +482,8 @@ public class HczMinibossInstance extends AbstractBossInstance {
         switch (state.routine) {
             case ROUTINE_INIT -> updateInit();
             case ROUTINE_WAIT_TRIGGER -> updateWaitTrigger();
-            case ROUTINE_WAIT_FADE, ROUTINE_WAIT, ROUTINE_COOLDOWN -> updateWaitOnly();
+            case ROUTINE_WAIT_FADE, ROUTINE_WAIT -> updateWaitOnly();
+            case ROUTINE_COOLDOWN -> updateCooldown(player);
             case ROUTINE_DESCEND, ROUTINE_RISE -> updateMoveAndWait();
             case ROUTINE_DIVE -> updateDive();
             case ROUTINE_STRAFE -> updateStrafe();
@@ -447,7 +497,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
         }
 
         updateRocketOrbit();
-        updateWaterEffect(frameCounter);
+        updateWaterEffect();
         updateCustomFlash();
         updateDynamicSpawn(state.x, state.y);
     }
@@ -493,11 +543,12 @@ public class HczMinibossInstance extends AbstractBossInstance {
     private void startFight() {
         services().gameState().setCurrentBossId(0x99);
         services().playMusic(Sonic3kMusic.MINIBOSS.id);
+        resetRocketPhases();
         beginRocketWindUp();
         state.routine = ROUTINE_DESCEND;
         state.yVel = DESCEND_VEL;
         crossedWaterThisPass = false;
-        resetRocketPhases();
+        spawnRocketTouchChildren();
         setWait(DESCEND_TIME, WaitCallback.FINISH_DESCENT);
     }
 
@@ -607,7 +658,6 @@ public class HczMinibossInstance extends AbstractBossInstance {
         state.routine = ROUTINE_WAIT;
         state.xVel = 0;
         state.yVel = 0;
-        rocketsArmed = false;
         beginRocketWindDown();
         services().playSfx(Sonic3kSfx.DOOR_CLOSE.id);
         setWait(0x9F, WaitCallback.BEGIN_VORTEX_SEQUENCE);
@@ -618,6 +668,12 @@ public class HczMinibossInstance extends AbstractBossInstance {
         state.xVel = 0;
         state.yVel = 0;
         vortexActive = true;
+        waterEffectRoutine = WATER_EFFECT_ROUTINE_WINDUP;
+        waterEffectAnimFrame = 0;
+        waterEffectAnimTimer = 1;
+        waterEffectPullReady = false;
+        vortexFinalPullPending = false;
+        waterEffectFrame = WATER_EFFECT_BASE_FRAME;
         crossedWaterThisPass = true;
         services().playSfx(Sonic3kSfx.BOSS_ROTATE.id);
         spawnVortexBubbleBatch();
@@ -626,7 +682,11 @@ public class HczMinibossInstance extends AbstractBossInstance {
 
     private void endVortex() {
         vortexActive = false;
-        releaseVortexPlayers();
+        waterEffectRoutine = WATER_EFFECT_ROUTINE_COOLDOWN;
+        waterEffectAnimFrame = 0;
+        waterEffectAnimTimer = 0;
+        waterEffectPullReady = false;
+        vortexFinalPullPending = true;
         for (VortexBubbleChild bubble : vortexBubbles) {
             bubble.signalVortexEnd();
         }
@@ -735,11 +795,28 @@ public class HczMinibossInstance extends AbstractBossInstance {
     }
 
     private void updateVortex(AbstractPlayableSprite player) {
-        if ((lastFrameCounter & (CONTINUOUS_SFX_INTERVAL - 1)) == 0 && isOnScreen()) {
+        if (waterEffectRoutine == WATER_EFFECT_ROUTINE_PULL
+                && (lastFrameCounter & (CONTINUOUS_SFX_INTERVAL - 1)) == 0
+                && isOnScreen()) {
             services().playSfx(Sonic3kSfx.BOSS_ROTATE.id);
         }
-        applyVortexPull(player);
+        if (waterEffectRoutine == WATER_EFFECT_ROUTINE_PULL && waterEffectPullReady) {
+            applyVortexPull(player);
+        } else if (waterEffectRoutine == WATER_EFFECT_ROUTINE_PULL) {
+            waterEffectPullReady = true;
+        }
         tickWait();
+    }
+
+    private void updateCooldown(AbstractPlayableSprite player) {
+        if (vortexFinalPullPending) {
+            if (player != null) {
+                applyVortexPull(player);
+            }
+            vortexFinalPullPending = false;
+            releaseVortexPlayers();
+        }
+        updateWaitOnly();
     }
 
     private void updatePreVortexDrift() {
@@ -902,12 +979,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
             return;
         }
 
-        if (!sprite.isObjectControlled()) {
-            ObjectControlState.nativeBit7FullControl().applyTo(sprite);
-            sprite.setForcedAnimationId(Sonic3kAnimationIds.FLOAT2.id());
-            sprite.setXSpeed((short) 0);
-            sprite.setYSpeed((short) 0);
-        }
+        boolean firstContact = !sprite.isObjectControlled();
 
         int vortexX = getWaterEffectX();
         int playerX = sprite.getCentreX();
@@ -933,14 +1005,80 @@ public class HczMinibossInstance extends AbstractBossInstance {
 
         xVel = (short) (xVel + xAccel);
         sprite.setXSpeed(xVel);
-        sprite.shiftX(xVel >> 8);
+        sprite.move(xVel, (short) 0);
 
-        int yDist = sprite.getY() - vortexY;
+        int yDist = sprite.getCentreY() - vortexY;
         if (yDist < -0x10) {
-            sprite.setY((short) (sprite.getY() + 1));
+            sprite.move((short) 0, (short) 0x80);
         } else if (yDist > 0x10) {
-            sprite.setY((short) (sprite.getY() - 1));
+            sprite.move((short) 0, (short) -0x80);
         }
+
+        // sub_6A9B8 calls sub_6AA30 before sub_6AA00, so first contact moves
+        // the player once and then clears x/y/ground speed while setting control.
+        if (firstContact) {
+            ObjectControlState.nativeBit7FullControl().applyTo(sprite);
+            sprite.setAir(true);
+            sprite.setForcedAnimationId(Sonic3kAnimationIds.FLOAT2.id());
+            sprite.setXSpeed((short) 0);
+            sprite.setYSpeed((short) 0);
+            sprite.setGSpeed((short) 0);
+        }
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        StringBuilder rocketSummary = new StringBuilder();
+        if (rockets != null) {
+            int count = Math.min(rockets.length, 4);
+            for (int i = 0; i < count; i++) {
+                RocketState rocket = rockets[i];
+                if (rocket == null) {
+                    continue;
+                }
+                if (!rocketSummary.isEmpty()) {
+                    rocketSummary.append(',');
+                }
+                rocketSummary.append(i)
+                        .append(':')
+                        .append(rocket.routine & 0xFF)
+                        .append('/')
+                        .append(rocket.speed);
+            }
+        }
+        return String.format(
+                "r=%02X hits=%d def=%s inv=%s/%d lastHit=%d/%s hr=%02X hw=%d hwr=%02X xV=%04X yV=%04X wait=%d cb=%s pass=%d closed=%s vortex=%s waterR=%02X water=%04X,%04X wf=%d wa=%02X/%02X pullReady=%s rockets=%s",
+                state.routine & 0xFF,
+                state.hitCount,
+                state.defeated,
+                state.invulnerable,
+                state.invulnerabilityTimer,
+                lastHitFrame,
+                lastHitSource,
+                lastHitRoutine & 0xFF,
+                lastHitWaitTimer,
+                lastHitWaterEffectRoutine & 0xFF,
+                state.xVel & 0xFFFF,
+                state.yVel & 0xFFFF,
+                waitTimer,
+                waitCallback,
+                passCounter,
+                closedBody,
+                vortexActive,
+                waterEffectRoutine & 0xFF,
+                getWaterEffectX() & 0xFFFF,
+                getWaterEffectY() & 0xFFFF,
+                waterEffectFrame,
+                waterEffectAnimFrame & 0xFF,
+                waterEffectAnimTimer & 0xFF,
+                waterEffectPullReady,
+                rocketSummary.isEmpty() ? "none" : rocketSummary.toString());
+    }
+
+    private String describeHitSource(PlayableEntity playerEntity, TouchResponseResult result) {
+        String actor = playerEntity != null ? playerEntity.getClass().getSimpleName() : "unknown";
+        String category = result != null && result.category() != null ? result.category().name() : "unknown";
+        return actor + ":" + category;
     }
 
     /**
@@ -965,61 +1103,90 @@ public class HczMinibossInstance extends AbstractBossInstance {
 
     /**
      * Rocket wind-down sequence: matches the disasm's rocket routine $C → 8 chain.
-     * Rockets orbit to home at full speed, then decelerate through speed 2 → 1 → 0.
+     * Rockets orbit to subtype-specific home phases at full speed, then each child
+     * runs its own speed 2 → 1 → routine 2 wait chain.
      * Called when the boss closes for the vortex (bit 3 cleared / startVortexWindup).
      */
     private void beginRocketWindDown() {
-        rocketOrbitSpeed = ROCKET_PHASE_STEP;
-        setRocketSpeedTimer(0x1F, RocketSpeedCallback.WIND_DOWN_TO_SPEED_2);
+        for (RocketState rocket : rockets()) {
+            if (rocket.routine == 10) {
+                rocket.routine = 12;
+                rocket.speed = ROCKET_PHASE_STEP;
+            }
+        }
     }
 
     /**
      * Rocket wind-up sequence: matches the disasm's rocket routine 2 → 4 → 8 → $A chain.
-     * Rockets start slow (speed 1), pause, then ramp to full speed (4).
+     * Rockets start at ROM phases from word_6A344. Subtypes 0/2 advance during the
+     * first wait; subtypes 4/6 hold in routine 6 before joining routine 8.
      * Called when the boss reopens after the vortex (bit 3 set / startPostVortexPause).
      */
     private void beginRocketWindUp() {
-        rocketOrbitSpeed = 1;
-        setRocketSpeedTimer(0x3F, RocketSpeedCallback.WIND_UP_TO_SPEED_2);
+        for (RocketState rocket : rockets()) {
+            initializeRocketWindUp(rocket);
+        }
     }
 
-    private void setRocketSpeedTimer(int frames, RocketSpeedCallback callback) {
-        rocketSpeedTimer = frames;
-        rocketSpeedCallback = callback;
+    private void initializeRocketWindUp(RocketState rocket) {
+        int initialPhase = switch (rocket.subtype) {
+            case 0 -> 0x0000;
+            case 2 -> 0x8080;
+            case 4 -> 0x8000;
+            case 6 -> 0x0080;
+            default -> 0x0000;
+        };
+        rocket.phaseX = (initialPhase >> 8) & 0xFF;
+        rocket.phaseY = initialPhase & 0xFF;
+        rocket.routine = rocket.subtype >= 4 ? 6 : 4;
+        rocket.speed = 1;
+        rocket.timer = 0x3F;
+        rocket.callback = RocketSpeedCallback.WIND_UP_TO_ROUTINE_8;
+        rocket.collisionArmed = false;
+        refreshRocketPosition(rocket);
     }
 
-    private void tickRocketSpeedTimer() {
-        if (rocketSpeedTimer < 0) {
+    private void tickRocketWait(RocketState rocket) {
+        if (rocket.timer < 0) {
             return;
         }
-        rocketSpeedTimer--;
-        if (rocketSpeedTimer >= 0) {
+        rocket.timer--;
+        if (rocket.timer >= 0) {
             return;
         }
-        RocketSpeedCallback callback = rocketSpeedCallback;
-        rocketSpeedCallback = RocketSpeedCallback.NONE;
-        rocketSpeedTimer = -1;
-        runRocketSpeedCallback(callback);
+        RocketSpeedCallback callback = rocket.callback;
+        rocket.callback = RocketSpeedCallback.NONE;
+        rocket.timer = -1;
+        runRocketCallback(rocket, callback);
     }
 
-    private void runRocketSpeedCallback(RocketSpeedCallback callback) {
+    private void runRocketCallback(RocketState rocket, RocketSpeedCallback callback) {
         switch (callback) {
-            case WIND_DOWN_TO_SPEED_2 -> {
-                rocketOrbitSpeed = 2;
-                setRocketSpeedTimer(0x1F, RocketSpeedCallback.WIND_DOWN_TO_SPEED_1);
+            case WIND_UP_TO_ROUTINE_8 -> {
+                rocket.routine = 8;
+                rocket.timer = 0x3F;
+                rocket.callback = RocketSpeedCallback.WIND_UP_ARM_SPEED_2;
             }
-            case WIND_DOWN_TO_SPEED_1 -> {
-                rocketOrbitSpeed = 1;
-                setRocketSpeedTimer(0x1F, RocketSpeedCallback.WIND_DOWN_TO_SPEED_0);
-            }
-            case WIND_DOWN_TO_SPEED_0 -> rocketOrbitSpeed = 0;
-            case WIND_UP_TO_SPEED_2 -> {
-                rocketOrbitSpeed = 2;
-                setRocketSpeedTimer(0x3F, RocketSpeedCallback.WIND_UP_TO_FULL_SPEED);
+            case WIND_UP_ARM_SPEED_2 -> {
+                rocket.speed = 2;
+                rocket.collisionArmed = true;
+                rocket.timer = 0x1F;
+                rocket.callback = RocketSpeedCallback.WIND_UP_TO_FULL_SPEED;
             }
             case WIND_UP_TO_FULL_SPEED -> {
-                rocketOrbitSpeed = ROCKET_PHASE_STEP;
-                rocketsArmed = true;
+                rocket.routine = 10;
+                rocket.speed = ROCKET_PHASE_STEP;
+                rocket.collisionArmed = true;
+            }
+            case WIND_DOWN_TO_SPEED_1 -> {
+                rocket.routine = rocket.subtype >= 4 ? 4 : 6;
+                rocket.speed = 1;
+                rocket.timer = 0x3F;
+                rocket.callback = RocketSpeedCallback.WIND_DOWN_RETURN_TO_INIT;
+            }
+            case WIND_DOWN_RETURN_TO_INIT -> {
+                rocket.routine = 2;
+                rocket.collisionArmed = false;
             }
             case NONE -> {
             }
@@ -1033,21 +1200,11 @@ public class HczMinibossInstance extends AbstractBossInstance {
      * "figure-8 twist" orbit where rockets cross in front of the boss.
      */
     private void updateRocketOrbit() {
-        tickRocketSpeedTimer();
-        int phaseStep = rocketOrbitSpeed;
         int engineIndex = 0;
         RocketState[] rocketStates = rockets();
         for (int i = 0; i < rocketStates.length; i++) {
             RocketState rocket = rocketStates[i];
-            rocket.phaseX = (rocket.phaseX + phaseStep) & 0xFF;
-            rocket.phaseY = (rocket.phaseY + phaseStep) & 0xFF;
-            int offsetX = rocketTwistOffset(rocket.phaseX);
-            int offsetY = rocketTwistOffset(rocket.phaseY);
-            rocket.x = state.x + offsetX;
-            rocket.y = state.y + offsetY;
-            int frameIndex = (rocket.phaseY >> 4) & 0x0F;
-            rocket.frame = ROCKET_FRAMES[frameIndex];
-            rocket.front = frameIndex < 8;
+            updateRocketState(rocket);
             if (i == 0) {
                 engineIndex = (rocket.phaseY >> 3) & 0x0F;
             }
@@ -1055,16 +1212,130 @@ public class HczMinibossInstance extends AbstractBossInstance {
         state.routineSecondary = engineIndex;
     }
 
-    private void updateWaterEffect(int frameCounter) {
+    private void updateRocketState(RocketState rocket) {
+        switch (rocket.routine) {
+            case 4, 8 -> {
+                advanceRocket(rocket, rocket.speed);
+                tickRocketWait(rocket);
+            }
+            case 6 -> tickRocketWait(rocket);
+            case 10 -> advanceRocket(rocket, rocket.speed);
+            case 12 -> {
+                advanceRocket(rocket, rocket.speed);
+                if (rocket.phaseX == rocketWindDownTarget(rocket)) {
+                    rocket.routine = 8;
+                    rocket.collisionArmed = false;
+                    rocket.speed = 2;
+                    rocket.timer = 0x1F;
+                    rocket.callback = RocketSpeedCallback.WIND_DOWN_TO_SPEED_1;
+                }
+            }
+            default -> refreshRocketPosition(rocket);
+        }
+    }
+
+    private void advanceRocketOrbit(int phaseStep) {
+        int engineIndex = 0;
+        RocketState[] rocketStates = rockets();
+        for (int i = 0; i < rocketStates.length; i++) {
+            RocketState rocket = rocketStates[i];
+            advanceRocket(rocket, phaseStep);
+            if (i == 0) {
+                engineIndex = (rocket.phaseY >> 3) & 0x0F;
+            }
+        }
+        state.routineSecondary = engineIndex;
+    }
+
+    private void advanceRocket(RocketState rocket, int phaseStep) {
+        rocket.phaseX = (rocket.phaseX + phaseStep) & 0xFF;
+        rocket.phaseY = (rocket.phaseY + phaseStep) & 0xFF;
+        refreshRocketPosition(rocket);
+    }
+
+    private void refreshRocketPosition(RocketState rocket) {
+        int offsetX = rocketTwistOffset(rocket.phaseX);
+        int offsetY = rocketTwistOffset(rocket.phaseY);
+        rocket.x = state.x + offsetX;
+        rocket.y = state.y + offsetY;
+        int frameIndex = (rocket.phaseY >> 4) & 0x0F;
+        rocket.frame = ROCKET_FRAMES[frameIndex];
+        rocket.front = frameIndex < 8;
+    }
+
+    private int rocketWindDownTarget(RocketState rocket) {
+        return switch (rocket.subtype) {
+            case 0 -> 0x80;
+            case 2 -> 0x00;
+            case 4 -> 0xC0;
+            case 6 -> 0x40;
+            default -> 0x80;
+        };
+    }
+
+    private void refreshRocketOrbitPositions() {
+        advanceRocketOrbit(0);
+    }
+
+    private void updateWaterEffect() {
         if (!isWaterEffectVisible()) {
+            waterEffectRoutine = WATER_EFFECT_ROUTINE_IDLE;
             waterEffectFrame = WATER_EFFECT_BASE_FRAME;
             return;
         }
+        switch (waterEffectRoutine) {
+            case WATER_EFFECT_ROUTINE_WINDUP -> animateWaterEffectWindup();
+            case WATER_EFFECT_ROUTINE_PULL -> animateWaterEffectPull();
+            case WATER_EFFECT_ROUTINE_COOLDOWN -> {
+                waterEffectFrame = WATER_EFFECT_BASE_FRAME;
+                waterEffectRoutine = WATER_EFFECT_ROUTINE_IDLE;
+            }
+            default -> waterEffectFrame = WATER_EFFECT_BASE_FRAME;
+        }
+    }
+
+    private void animateWaterEffectWindup() {
+        waterEffectAnimTimer--;
+        if (waterEffectAnimTimer >= 0) {
+            return;
+        }
+
+        waterEffectAnimFrame += 2;
+        int command = WATER_EFFECT_WINDUP_SCRIPT[waterEffectAnimFrame] & 0xFF;
+        if (command < 0x80) {
+            waterEffectFrame = command;
+            waterEffectAnimTimer = WATER_EFFECT_WINDUP_SCRIPT[waterEffectAnimFrame + 1] & 0xFF;
+            return;
+        }
+
+        waterEffectRoutine = WATER_EFFECT_ROUTINE_PULL;
+        waterEffectAnimFrame = 0;
+        waterEffectAnimTimer = 0;
+        waterEffectPullReady = false;
+        waterEffectFrame = WATER_EFFECT_BASE_FRAME;
+    }
+
+    private void animateWaterEffectPull() {
         if (!vortexActive) {
             waterEffectFrame = WATER_EFFECT_BASE_FRAME;
             return;
         }
-        waterEffectFrame = WATER_EFFECT_BASE_FRAME + ((frameCounter >> 1) % 3);
+        waterEffectAnimTimer--;
+        if (waterEffectAnimTimer >= 0) {
+            return;
+        }
+
+        waterEffectAnimFrame++;
+        int command = WATER_EFFECT_PULL_SCRIPT[waterEffectAnimFrame] & 0xFF;
+        if (command < 0x80) {
+            waterEffectFrame = command;
+            waterEffectAnimTimer = WATER_EFFECT_PULL_SCRIPT[0] & 0xFF;
+            return;
+        }
+
+        waterEffectFrame = WATER_EFFECT_PULL_SCRIPT[1] & 0xFF;
+        waterEffectAnimFrame = 1;
+        waterEffectAnimTimer = WATER_EFFECT_PULL_SCRIPT[0] & 0xFF;
     }
 
     /**
@@ -1209,17 +1480,104 @@ public class HczMinibossInstance extends AbstractBossInstance {
         }
     }
 
-    private void resetRocketPhases() {
+    private void spawnRocketTouchChildren() {
+        if (rocketTouchChildren != null) {
+            return;
+        }
+        // ROM allocates four Obj_HCZMiniboss_Rockets child slots via
+        // CreateChild1_Normal; each child adds itself to Collision_response_list.
         RocketState[] rocketStates = rockets();
-        rocketStates[0].phaseX = 0x00;
-        rocketStates[0].phaseY = 0x00;
-        rocketStates[1].phaseX = 0x80;
-        rocketStates[1].phaseY = 0x80;
-        rocketStates[2].phaseX = 0x80;
-        rocketStates[2].phaseY = 0x00;
-        rocketStates[3].phaseX = 0x00;
-        rocketStates[3].phaseY = 0x80;
-        updateRocketOrbit();
+        rocketTouchChildren = new RocketTouchChild[rocketStates.length];
+        for (int i = 0; i < rocketStates.length; i++) {
+            final int childIndex = i;
+            rocketTouchChildren[i] = spawnChild(() -> new RocketTouchChild(
+                    childIndex, spawn.objectId(), spawn.layoutIndex()));
+        }
+    }
+
+    private final class RocketTouchChild extends AbstractObjectInstance implements TouchResponseProvider {
+        private final int rocketIndex;
+        private final int objectId;
+        private final int layoutIndex;
+
+        private RocketTouchChild(int rocketIndex, int objectId, int layoutIndex) {
+            super(new ObjectSpawn(
+                    rockets()[rocketIndex].x,
+                    rockets()[rocketIndex].y,
+                    objectId,
+                    rocketIndex * 2,
+                    0,
+                    false,
+                    0),
+                    "HCZMinibossRocketTouch");
+            this.rocketIndex = rocketIndex;
+            this.objectId = objectId;
+            this.layoutIndex = layoutIndex;
+        }
+
+        @Override
+        public int getX() {
+            return rockets()[rocketIndex].x;
+        }
+
+        @Override
+        public int getY() {
+            return rockets()[rocketIndex].y;
+        }
+
+        @Override
+        public ObjectSpawn getSpawn() {
+            return new ObjectSpawn(
+                    getX(),
+                    getY(),
+                    objectId,
+                    rocketIndex * 2,
+                    0,
+                    false,
+                    0,
+                    layoutIndex);
+        }
+
+        @Override
+        public int getCollisionFlags() {
+            return getRocketCollisionFlags(rocketIndex);
+        }
+
+        @Override
+        public int getCollisionProperty() {
+            return 0;
+        }
+
+        @Override
+        public TouchResponseProfile getTouchResponseProfile() {
+            return TouchResponseProfile.standardEnemy();
+        }
+
+        @Override
+        public boolean isPersistent() {
+            return HczMinibossInstance.this.isPersistent();
+        }
+
+        @Override
+        public boolean isDestroyed() {
+            return HczMinibossInstance.this.isDestroyed() || defeatRenderComplete;
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // The parent compositor draws rockets in its front/back priority passes.
+        }
+    }
+
+    private void resetRocketPhases() {
+        for (RocketState rocket : rockets()) {
+            initializeRocketWindUp(rocket);
+            rocket.routine = 2;
+            rocket.timer = -1;
+            rocket.callback = RocketSpeedCallback.NONE;
+            rocket.collisionArmed = false;
+        }
+        refreshRocketOrbitPositions();
     }
 
     private RocketState[] rockets() {
@@ -1232,10 +1590,10 @@ public class HczMinibossInstance extends AbstractBossInstance {
             return;
         }
         rockets = new RocketState[] {
-                new RocketState(0x00, 0x00, false),
-                new RocketState(0x80, 0x80, false),
-                new RocketState(0x80, 0x00, true),
-                new RocketState(0x00, 0x80, true)
+                new RocketState(0),
+                new RocketState(2),
+                new RocketState(4),
+                new RocketState(6)
         };
     }
 
@@ -1246,8 +1604,8 @@ public class HczMinibossInstance extends AbstractBossInstance {
         return CORE_COLLISION_FLAGS;
     }
 
-    private int getRocketCollisionFlags() {
-        if (!isFightVisible() || state.defeated || !rocketsArmed) {
+    private int getRocketCollisionFlags(int rocketIndex) {
+        if (!isFightVisible() || state.defeated || !rockets()[rocketIndex].collisionArmed) {
             return 0;
         }
         return ROCKET_COLLISION_FLAGS;
@@ -1419,7 +1777,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
         // Rockets orbit the boss with a front/back split matching VDP priority:
         // Back rockets (priority $200, phaseY index < 8) drawn BEHIND boss body.
         // Front rockets (priority $280, phaseY index >= 8) drawn IN FRONT of boss body.
-        boolean showRocketExhaust = rocketsArmed && (lastFrameCounter & 1) == 0;
+        boolean showRocketExhaust = areRocketExhaustsVisible() && (lastFrameCounter & 1) == 0;
         for (RocketState rocket : rockets()) {
             if (!rocket.front) {
                 if (showRocketExhaust) {
@@ -1448,6 +1806,15 @@ public class HczMinibossInstance extends AbstractBossInstance {
                 renderer.drawFrameIndex(rocket.frame, rocket.x, rocket.y, rocket.hFlip, false);
             }
         }
+    }
+
+    private boolean areRocketExhaustsVisible() {
+        for (RocketState rocket : rockets()) {
+            if (rocket.collisionArmed) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

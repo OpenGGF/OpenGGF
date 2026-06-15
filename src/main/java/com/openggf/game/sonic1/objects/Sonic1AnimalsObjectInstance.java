@@ -47,6 +47,8 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance {
     private static final int SUBTYPE_ENDING_MAX = 0x14;
     private static final int ENDING_SPECIES_COUNT = 7;
     private static final int PRISON_WAIT_FRAMES = 0x0C;
+    private static final int S1_SCREEN_WIDTH = 320;
+    private static final int S1_SCREEN_HEIGHT = 224;
 
     // Anml_VarIndex table (GHZ, LZ, MZ, SLZ, SYZ, SBZ)
     private static final int[][] ZONE_VARIANT_INDEX = {
@@ -116,6 +118,7 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance {
     private int bounceToggle;
     private boolean hFlip = true;
     private boolean endingMode;
+    private boolean romRenderOnScreen = true;
 
     private boolean initialized;
 
@@ -221,7 +224,7 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance {
      * loc_912A: initial falling state for enemy-spawned animals.
      */
     private void updateRoutine912A(int frameCounter) {
-        if (!isOnScreenX()) {
+        if (!romRenderOnScreen) {
             setDestroyed(true);
             return;
         }
@@ -279,7 +282,7 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance {
      * loc_9240: prison wait, then transition back to routine 2.
      */
     private void updateRoutine9240() {
-        if (!isOnScreenX()) {
+        if (!romRenderOnScreen) {
             setDestroyed(true);
             return;
         }
@@ -429,6 +432,8 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance {
     }
 
     private boolean checkFloorCollision() {
+        // ObjFloorDist sets d5 to #$D, the object floor/top-solid bit in S1
+        // (docs/s1disasm/s1disasm/_incObj/sub ObjFloorDist.asm).
         TerrainCheckResult result = ObjectTerrainUtils.checkFloorDist(currentX, currentY, FLOOR_CHECK_HEIGHT);
         if (result.hasCollision()) {
             currentY += result.distance();
@@ -461,16 +466,33 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance {
     // loc_9224 and subtype=0 off-screen cleanup paths
     private void applyDistanceCull(AbstractPlayableSprite player) {
         if (subtype == 0) {
-            if (!isOnScreenX()) {
+            if (!romRenderOnScreen) {
                 setDestroyed(true);
             }
             return;
         }
 
         int dx = currentX - playerX(player);
-        if (dx >= 0 && dx < DELETE_RANGE_AHEAD && !isOnScreenX()) {
+        if (dx >= 0 && dx < DELETE_RANGE_AHEAD && !romRenderOnScreen) {
             setDestroyed(true);
         }
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        romRenderOnScreen = isWithinS1BuildSpritesBounds();
+    }
+
+    private boolean isWithinS1BuildSpritesBounds() {
+        int screenX = currentX - services().camera().getX();
+        int screenY = currentY - services().camera().getY();
+        // Obj28 sets obActWid=8 and leaves obRender bit 4 clear, so S1
+        // BuildSprites uses literal 320x224 bounds and the 32px assumed-height
+        // branch (docs/s1disasm/s1disasm/_inc/BuildSprites.asm).
+        return screenX + 8 >= 0
+                && screenX - 8 < S1_SCREEN_WIDTH
+                && screenY >= -32
+                && screenY < S1_SCREEN_HEIGHT + 32;
     }
 
     private void animateWings() {
@@ -544,5 +566,18 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance {
     @Override
     public int getY() {
         return currentY;
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("routine=%02X var=%d vel=(%04X,%04X) sub=(%04X,%04X) render=%s frame=%d",
+                routine & 0xFF,
+                fromEnemyVariantIndex,
+                xVelocity & 0xFFFF,
+                yVelocity & 0xFFFF,
+                xSub & 0xFFFF,
+                ySub & 0xFFFF,
+                romRenderOnScreen,
+                animFrame);
     }
 }

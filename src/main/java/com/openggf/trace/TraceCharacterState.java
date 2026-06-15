@@ -6,6 +6,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 
 /**
  * Per-character trace state used for optional sidekick tracking in schema v5+.
@@ -52,15 +53,8 @@ public record TraceCharacterState(
                 standOnSlot = aoi.getSlotIndex();
             }
         }
-        int statusByte = 0;
-        if (sprite.getDirection() == Direction.LEFT) {
-            statusByte |= 0x01;
-        }
-        if (sprite.getAir()) statusByte |= 0x02;
-        if (sprite.getRolling()) statusByte |= 0x04;
-        if (sprite.isOnObject()) statusByte |= 0x08;
-        if (sprite.isInWater()) statusByte |= 0x40;
-        int routine = sprite.isHurt() ? 0x04 : 0x02;
+        int statusByte = statusByteFromSprite(sprite);
+        int routine = routineFromSprite(sprite);
         return new TraceCharacterState(true,
                 sprite.getCentreX(),
                 sprite.getCentreY(),
@@ -76,6 +70,39 @@ public record TraceCharacterState(
                 routine,
                 statusByte,
                 standOnSlot);
+    }
+
+    public static int routineFromSprite(AbstractPlayableSprite sprite) {
+        if (sprite == null) {
+            return -1;
+        }
+        if (sprite.getDead()) {
+            return 0x06;
+        }
+        if (sprite.isHurt()) {
+            return 0x04;
+        }
+        SidekickCpuController cpu = sprite.getCpuController();
+        if (sprite.isCpuControlled()
+                && cpu != null
+                && cpu.getState() == SidekickCpuController.State.DEAD_FALLING) {
+            return 0x06;
+        }
+        return 0x02;
+    }
+
+    public static int statusByteFromSprite(AbstractPlayableSprite sprite) {
+        int statusByte = 0;
+        if (sprite.getDirection() == Direction.LEFT) {
+            statusByte |= 0x01;
+        }
+        if (sprite.getAir()) statusByte |= 0x02;
+        if (sprite.getRolling()) statusByte |= 0x04;
+        if (sprite.isOnObject()) statusByte |= 0x08;
+        if (sprite.getRollingJump()) statusByte |= 0x10;
+        if (sprite.getPushing()) statusByte |= 0x20;
+        if (sprite.isInWater()) statusByte |= 0x40;
+        return statusByte;
     }
 
     public static TraceCharacterState parseCsvColumns(String[] parts, int offset) {

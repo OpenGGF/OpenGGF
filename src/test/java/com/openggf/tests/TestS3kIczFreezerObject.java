@@ -1,5 +1,6 @@
 package com.openggf.tests;
 
+import com.openggf.camera.Camera;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplaySessionFactory;
@@ -127,6 +128,7 @@ class TestS3kIczFreezerObject {
         freezer.setServices(services);
 
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x0204, (short) 0x0134);
+        player.setSubpixelRaw(0x2200, 0x7400);
         player.setRingCount(10);
         IczFreezerObjectInstance.CaptureCloud cloud =
                 freezer.createCaptureCloudForTesting(0x0200, 0x0130, false);
@@ -140,6 +142,14 @@ class TestS3kIczFreezerObject {
         assertTrue(player.isObjectControlled(), "Freezer child should take over player control");
         assertTrue(player.isObjectControlSuppressesMovement(), "Freezer capture should suppress player movement");
         assertFalse(player.isObjectControlAllowsCpu(), "Freezer capture should not leave CPU movement enabled");
+        assertEquals(0x0204, player.getCentreX(), "Capture must not shift x_pos while applying frozen animation");
+        assertEquals(0x0134, player.getCentreY(), "Capture must not shift y_pos while applying frozen animation");
+        assertEquals(0x2200, player.getXSubpixelRaw(),
+                "Capture setup writes only x_pos while applying the frozen animation");
+        assertEquals(0x7400, player.getYSubpixelRaw(),
+                "Capture setup writes only y_pos while applying the frozen animation");
+        assertEquals(0x0204, block.getX(), "Frozen block spawns at the ROM capture x_pos");
+        assertEquals(0x0134, block.getY(), "Frozen block spawns at the ROM capture y_pos");
         assertEquals(0x1A, player.getAnimationId());
         assertSame(player, block.capturedPlayerForTesting());
 
@@ -154,6 +164,165 @@ class TestS3kIczFreezerObject {
         assertEquals(120, player.getInvulnerableFrames());
         assertTrue(block.isDestroyed());
         assertEquals(12, block.debrisSpawnedForTesting());
+    }
+
+    @Test
+    void captureCloudFreezesNativeSidekickParticipant() {
+        RecordingServices services = new RecordingServices();
+        IczFreezerObjectInstance freezer = createFreezer(services,
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.ICZ_FREEZER, 0, 0, false, 0));
+        freezer.setServices(services);
+
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0400, (short) 0x0134);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x0204, (short) 0x0134);
+        tails.setCpuControlled(true);
+        tails.setAir(false);
+        tails.setXSpeed((short) 0x0827);
+        tails.setYSpeed((short) 0);
+        tails.setGSpeed((short) 0x0827);
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> main, () -> List.of(tails)));
+
+        IczFreezerObjectInstance.CaptureCloud cloud =
+                freezer.createCaptureCloudForTesting(0x0200, 0x0130, false);
+        cloud.setServices(services);
+
+        for (int frame = 0; frame <= 32; frame++) {
+            cloud.update(frame, main);
+        }
+
+        IczFreezerObjectInstance.FrozenPlayerBlock block = cloud.frozenBlockForTesting();
+        assertFalse(main.isObjectControlled(), "Distant main player should not consume the sidekick capture");
+        assertTrue(tails.isObjectControlled(), "Capture cloud should scan native P2/Tails, not only update() player");
+        assertTrue(tails.getAir());
+        assertEquals(0, tails.getXSpeed());
+        assertEquals(0, tails.getYSpeed());
+        assertEquals(0, tails.getGSpeed());
+        assertSame(tails, block.capturedPlayerForTesting());
+    }
+
+    @Test
+    void parentUnloadLetsCaptureCloudEnterRomOffPhaseScanner() {
+        RecordingServices services = new RecordingServices();
+        IczFreezerObjectInstance freezer = createFreezer(services,
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.ICZ_FREEZER, 0, 0, false, 0));
+        freezer.setServices(services);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x0204, (short) 0x0134);
+        freezer.update(0, player);
+        for (int frame = 1; frame <= 65; frame++) {
+            freezer.update(frame, player);
+        }
+
+        IczFreezerObjectInstance.CaptureCloud cloud = freezer.lastCaptureCloudForTesting();
+        cloud.setServices(services);
+        assertTrue(freezer.isFreezeJetActiveForTesting(), "precondition: cloud is waiting on the active parent jet");
+        assertNull(cloud.frozenBlockForTesting(), "precondition: active-phase capture delay has not elapsed");
+
+        freezer.onUnload();
+        cloud.update(66, player);
+        assertNull(cloud.frozenBlockForTesting(),
+                "ROM off-phase init runs first after the parent slot is cleared");
+        cloud.update(67, player);
+
+        assertTrue(player.isObjectControlled(),
+                "A capture cloud whose parent was unloaded must keep scanning in its off-phase routine");
+        assertSame(player, cloud.frozenBlockForTesting().capturedPlayerForTesting());
+    }
+
+    @Test
+    void captureCloudLifetimeIsOwnedByOffPhaseTimerNotCameraRange() {
+        IczFreezerObjectInstance freezer = createFreezer(new RecordingServices(),
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.ICZ_FREEZER, 0, 0, false, 0));
+
+        IczFreezerObjectInstance.CaptureCloud cloud =
+                freezer.createCaptureCloudForTesting(0x0200, 0x0130, false);
+
+        assertTrue(cloud.isPersistent(),
+                "ROM capture child loc_8A7A2 scans/deletes by its own timer and does not tail-call Sprite_CheckDeleteTouch");
+    }
+
+    @Test
+    void frozenPlayerBlockClearsLeftwardVelocityAtCameraSideClampBeforeMoving() {
+        RecordingServices services = new RecordingServices();
+        Camera camera = mock(Camera.class);
+        when(camera.getX()).thenReturn((short) 0x40A9);
+        services.withCamera(camera);
+
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x3FC4, (short) 0x0373);
+        IczFreezerObjectInstance.FrozenPlayerBlock block =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(tails, 0x3FC4, 0x0373, 0x4060, false);
+        block.setServices(services);
+
+        block.update(2837, tails);
+
+        assertEquals(0x3FC4, block.getX(),
+                "ROM loc_8A80C clears negative x_vel when Camera_X_pos+$20 has crossed x_pos");
+        assertEquals(0x036F, block.getY());
+        assertEquals(0x3FC4, tails.getCentreX());
+        assertEquals(0x036F, tails.getCentreY());
+    }
+
+    @Test
+    void frozenPlayerBlockPersistsOutsideCameraRangeWhileCarryingPlayer() {
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x3FC4, (short) 0x0373);
+        IczFreezerObjectInstance.FrozenPlayerBlock block =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(tails, 0x3FC4, 0x0373, 0x4060, false);
+
+        assertTrue(block.isPersistent(),
+                "ROM loc_8A84C keeps the frozen-player block alive through Draw_Sprite/player sync, not MarkObjGone");
+    }
+
+    @Test
+    void frozenPlayerBlockBreaksOnRomPreDecrementFrameAndOverridesKnockbackDirection() {
+        installLevelGamestate();
+
+        RecordingServices services = new RecordingServices();
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x3FC4, (short) 0x0373);
+        tails.setCpuControlled(true);
+        tails.setRingCount(42);
+        tails.setRolling(true);
+        tails.setDirection(com.openggf.physics.Direction.RIGHT);
+        IczFreezerObjectInstance.FrozenPlayerBlock block =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(tails, 0x3FC4, 0x0373, 0x4060, false);
+        block.setServices(services);
+
+        for (int frame = 32; frame < 159; frame++) {
+            block.update(frame, tails);
+        }
+        assertFalse(block.isDestroyed(), "ROM $2E has not gone negative before the 128th loc_8A84C tick");
+
+        block.update(159, tails);
+
+        assertTrue(block.isDestroyed(), "ROM loc_8A84C pre-decrements $2E and breaks as soon as it is negative");
+        assertFalse(tails.isObjectControlled(), "loc_8A8BA clears object_control on the break frame");
+        assertFalse(tails.getRolling(), "HurtCharacter clears rolling before the break frame is compared");
+        assertEquals((short) -0x0200, tails.getXSpeed(),
+                "loc_8A88A overwrites freezer-break x_vel from render_flags bit 0, not source-X comparison");
+        assertEquals((short) -0x0400, tails.getYSpeed());
+        assertEquals(42, tails.getRingCount(), "ROM Hurt_Sidekick does not spend the main player's rings");
+        assertEquals(List.of(), services.lostRingSpawnFrames);
+    }
+
+    @Test
+    void frozenPlayerBlockSyncPreservesCapturedPlayerSubpixelsUntilBreak() {
+        installLevelGamestate();
+
+        RecordingServices services = new RecordingServices();
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x3FC4, (short) 0x0373);
+        tails.setCpuControlled(true);
+        tails.setSubpixelRaw(0x2200, 0x7400);
+        IczFreezerObjectInstance.FrozenPlayerBlock block =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(tails, 0x3FC4, 0x0373, 0x4060, false);
+        block.setServices(services);
+
+        block.update(32, tails);
+
+        assertEquals(0x2200, tails.getXSubpixelRaw(),
+                "ROM loc_8A84C writes only x_pos(a1), preserving the captured player's x_sub");
+        assertEquals(0x7400, tails.getYSubpixelRaw(),
+                "ROM loc_8A84C writes only y_pos(a1), preserving the captured player's y_sub");
+        assertEquals(0x3FC2, tails.getCentreX());
+        assertEquals(0x036F, tails.getCentreY());
     }
 
     @Test
@@ -184,7 +353,7 @@ class TestS3kIczFreezerObject {
         assertTrue(player.isHurt(), "Freeze break damage should put shieldless Sonic into hurt state");
         assertEquals(0, player.getRingCount(),
                 "Freeze break damage should spend rings like ordinary touch damage");
-        assertEquals(List.of(160), services.lostRingSpawnFrames,
+        assertEquals(List.of(159), services.lostRingSpawnFrames,
                 "Freeze break damage should spawn lost rings before applying hurt");
     }
 
@@ -423,9 +592,14 @@ class TestS3kIczFreezerObject {
     private static final class RecordingServices extends StubObjectServices {
         private final List<Integer> playedSfx = new ArrayList<>();
         private final List<Integer> lostRingSpawnFrames = new ArrayList<>();
+        private Camera camera;
 
         private RecordingServices() {
             withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
+        }
+
+        private void withCamera(Camera camera) {
+            this.camera = camera;
         }
 
         @Override
@@ -439,6 +613,11 @@ class TestS3kIczFreezerObject {
             if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
                 sprite.setRingCount(0);
             }
+        }
+
+        @Override
+        public Camera camera() {
+            return camera;
         }
     }
 

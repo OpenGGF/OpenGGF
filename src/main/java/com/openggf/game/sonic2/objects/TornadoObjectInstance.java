@@ -88,8 +88,6 @@ public class TornadoObjectInstance extends AbstractObjectInstance
 
     private static final int PLAYER_HORIZONTAL_CLAMP = 0x10;
     private static final int PLAYER_INERTIA_CLAMP = 0x900;
-    private static final int OFFSCREEN_DISTANCE = 0x280;
-
     // ------------------------------------------------------------------------
     // WFZ start constants (routine 4)
     // ------------------------------------------------------------------------
@@ -1172,17 +1170,10 @@ public class TornadoObjectInstance extends AbstractObjectInstance
 
     /**
      * Replicates Obj_DeleteOffScreen/MarkObjGone X-range deletion:
-     * ((x_pos & $FF80) - Camera_X_pos_coarse) > $280 (unsigned compare).
+     * ((x_pos & $FF80) - Camera_X_pos_coarse_back) > $280 (unsigned compare).
      */
     private boolean checkMarkObjGone() {
-        Camera camera = services().camera();
-        if (camera == null) {
-            return false;
-        }
-        int cameraXCoarse = camera.getX() & 0xFF80;
-        int objectXCoarse = currentX & 0xFF80;
-        int diff = (objectXCoarse - cameraXCoarse) & 0xFFFF;
-        return diff > OFFSCREEN_DISTANCE;
+        return !isInRangeAt(currentX);
     }
 
     private void syncFixedFromPosition() {

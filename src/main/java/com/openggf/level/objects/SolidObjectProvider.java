@@ -534,6 +534,35 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether this object's ROM solid routine does not run at all this frame,
+     * so its airborne-rider unseat (the {@code SolidObjectTopSloped2}/
+     * {@code SolidObjectFull} air-unseat that clears {@code Status_OnObj}) must
+     * be deferred by one frame.
+     * <p>
+     * Distinct from {@link #suppressSlopeSampleThisFrame}: that controls only
+     * the y_pos slope write inside the object's OWN continued-riding pass,
+     * which the engine evaluates AFTER the object's {@code update()} has run.
+     * The generic airborne-rider unseat in {@code ObjectSolidContactController}
+     * can fire DURING an earlier-slot object's solid pass -- before this
+     * object's {@code update()} has promoted its transition-skip flag for the
+     * frame -- so the unseat suppression needs a predicate that is already
+     * correct at the START of the frame, independent of object exec order.
+     * <p>
+     * Default mirrors {@link #suppressSlopeSampleThisFrame}; objects whose
+     * transition-skip flag is promoted inside {@code update()} (e.g. S3K
+     * {@code Obj_CollapsingPlatform}) override this to also report the pending
+     * (not-yet-promoted) state. ROM: {@code ObjPlatformCollapse_CreateFragments}
+     * jmps to {@code Play_SFX} without running {@code sub_205B6}
+     * (sonic3k.asm:44818, 45394), so the platform performs no air-unseat on the
+     * collapse-transition frame; the rider keeps {@code Status_OnObj} that frame
+     * and is unseated the next frame when {@code loc_205DE} re-runs
+     * {@code sub_205B6}.
+     */
+    default boolean defersAirborneRiderUnseatThisFrame(PlayableEntity player) {
+        return suppressSlopeSampleThisFrame(player);
+    }
+
+    /**
      * Whether continued-riding exit should still apply one final sloped
      * surface sample before clearing {@code Status_OnObj}.
      * <p>

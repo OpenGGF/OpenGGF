@@ -63,6 +63,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
     private static final int VERT_Y_RANGE_MIN = -0x40;
     private static final int VERT_Y_RANGE_MAX = -0x30;
     private static final int VERT_ART_LOAD_PULL_PX = 8;
+    private static final int VERT_KOS_MODULE_WAIT_FRAMES = 6;
     private static final int VERT_RISE_TIMER = 0x60; // 96 frames
     private static final int VERT_ERUPTION_TRIGGER = 0x28;
     private static final int VERT_RISE_PX = 8;
@@ -120,6 +121,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
     private int ySub;
     private boolean playersControlled;
     private boolean debrisSpawned;
+    private int vertArtWaitFramesRemaining = VERT_KOS_MODULE_WAIT_FRAMES;
 
     // Mapping frame for rendering
     private int mappingFrame;
@@ -320,8 +322,10 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
 
         if (xInRange && yInRange) {
             vertPhase = VertPhase.ART_LOAD;
-            // Set object_control = $81 for player(s)
+            // Set object_control = $81 for player(s), then fall through into
+            // loc_302E6 in the same tick while the queued art is pending.
             lockPlayers(player);
+            updateVertArtLoad(player);
             return;
         }
 
@@ -333,25 +337,26 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
 
     /**
      * Phase 2: Load art + pull players up.
-     * ROM: loc_302BE - Queues ArtKosM_HCZGeyserVert, pulls player up by 8px/frame.
-     * Art loads synchronously in the engine, so proceed to setup after one frame.
+     * ROM: loc_302BE queues ArtKosM_HCZGeyserVert, then loc_302E6 polls
+     * Kos_modules_left. While nonzero it pulls players up 8px/frame; when zero,
+     * loc_302FA falls through into the first loc_30338 rise tick.
      */
     private void updateVertArtLoad(AbstractPlayableSprite player) {
-        // Pull player up by 8px each frame while "loading"
-        pullPlayersUp(player, VERT_ART_LOAD_PULL_PX);
-
-        if (!artLoaded) {
-            artLoaded = true;
-            return; // Simulate one frame of art loading
+        if (vertArtWaitFramesRemaining > 0) {
+            pullPlayersUp(player, VERT_ART_LOAD_PULL_PX);
+            vertArtWaitFramesRemaining--;
+            return;
         }
 
         // ROM: loc_302FA - Visual setup
         // mapping_frame = 1, timer $30 = $60, player anim = BLANK (0x1C)
+        artLoaded = true;
         mappingFrame = 1;
         timer = VERT_RISE_TIMER;
         setPlayerAnim(player, Sonic3kAnimationIds.BLANK);
 
         vertPhase = VertPhase.RISE;
+        updateVertRise(player);
     }
 
     /**

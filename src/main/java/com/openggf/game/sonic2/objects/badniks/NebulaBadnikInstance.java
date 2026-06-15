@@ -131,7 +131,7 @@ public class NebulaBadnikInstance extends AbstractBadnikInstance {
 
     private boolean isBehindScreen() {
         Camera camera = services().camera();
-        int cameraCoarse = camera.getX() & 0xFF80;
+        int cameraCoarse = (camera.getX() - 0x80) & 0xFF80;
         int objectCoarse = currentX & 0xFF80;
         return (short) (objectCoarse - cameraCoarse) < 0;
     }

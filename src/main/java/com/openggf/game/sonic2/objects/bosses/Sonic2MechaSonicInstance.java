@@ -878,7 +878,8 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance {
             camera.setMaxX((short) 0x1000);
             Sonic2LevelEventManager eventManager = (Sonic2LevelEventManager) services().levelEventProvider();
             eventManager.setEventRoutine(eventManager.getEventRoutine() + 2);
-            services().gameState().setCurrentBossId(0);
+            // ROM loc_39BA4 leaves Current_Boss_ID at 9; ObjC7 relies on the
+            // non-zero value to keep Sonic_LevelBound on strict boss-arena bounds.
             services().playMusic(Sonic2Music.DEATH_EGG.id);
             // Spawn Eggman transition object (ObjC6 State2) before self-destructing
             spawnEggmanTransition();

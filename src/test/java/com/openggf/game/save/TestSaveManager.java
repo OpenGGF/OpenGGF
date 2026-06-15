@@ -53,9 +53,11 @@ class TestSaveManager {
 
         SaveSlotSummary summary = manager.readSlotSummary("s3k", 1);
 
-        assertEquals(SaveSlotState.EMPTY, summary.state());
+        assertEquals(SaveSlotState.UNAVAILABLE, summary.state());
         assertTrue(Files.exists(slot), "transient I/O must not quarantine the original save");
         assertFalse(Files.exists(slot.resolveSibling("slot1.json.corrupt")));
+        assertFalse(summary.isLoadable());
+        assertFalse(summary.hasRecoverablePayload());
     }
 
     @Test

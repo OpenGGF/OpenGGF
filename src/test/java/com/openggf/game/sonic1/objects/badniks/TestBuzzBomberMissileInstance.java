@@ -9,7 +9,7 @@ public class TestBuzzBomberMissileInstance {
     @Test
     public void missileStaysHarmlessForThirtyCreationFrameTicks() {
         Sonic1BuzzBomberMissileInstance missile =
-                new Sonic1BuzzBomberMissileInstance(0, 0, 0x200, 0x200, false, null);
+                new Sonic1BuzzBomberMissileInstance(0, 0, 0x200, 0x200, false, -1);
 
         assertEquals(0, missile.getCollisionFlags(), "Fresh missile should start harmless");
 

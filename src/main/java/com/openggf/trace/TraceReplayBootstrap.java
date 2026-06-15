@@ -226,19 +226,30 @@ public final class TraceReplayBootstrap {
     }
 
     /**
-     * Sonic 2 runs level objects during the title-card sequence before
+     * Sonic 1 runs one native object pass after initial ObjPosLoad and before
+     * {@code Level_MainLoop} begins ticking {@code v_framecount}: see
+     * {@code docs/s1disasm/sonic.asm:2875-2876} and
+     * {@code docs/s1disasm/sonic.asm:2985-3003}. Headless replay starts at the
+     * first compared gameplay row, so S1 traces whose first row has gameplay
+     * counter 1 need that single native prelude object pass reproduced instead
+     * of copied from trace diagnostics.
+     *
+     * <p>Sonic 2 runs level objects during the title-card sequence before
      * {@code Level_started_flag} is set and before {@code Level_frame_counter}
      * begins ticking in {@code Level_MainLoop}: see s2.asm:5004-5008,
      * s2.asm:5060-5066, and s2.asm:5077-5092. Headless replay starts directly
      * at gameplay frame 1, so it must reproduce that native object prelude
      * without copying pre-trace SST snapshots back into the engine.
      *
-     * <p>Kept as a zero-valued metadata-only compatibility knob. S2 Tornado
-     * title-card object preludes depend on the live ObjB2 routine/subtype
-     * loaded for the route and are therefore selected by
+     * <p>S2 Tornado title-card object preludes depend on the live ObjB2
+     * routine/subtype loaded for the route and are therefore selected by
      * {@code TraceReplaySessionBootstrap}, not by trace zone metadata here.
      */
     public static int levelObjectTitleCardPreludeFramesForTraceReplay(TraceData trace) {
+        int s1PreludeFrames = resolveS1LevelStartObjectPreludeFrames(trace);
+        if (s1PreludeFrames > 0) {
+            return s1PreludeFrames;
+        }
         return 0;
     }
 
@@ -294,6 +305,26 @@ public final class TraceReplayBootstrap {
      * native title-card window contributes 26 leader-history writes.
      */
     private static final int S2_SIDEKICK_TITLE_CARD_PRELUDE_FRAMES = 26;
+
+    private static final int S1_LEVEL_START_OBJECT_PRELUDE_FRAMES = 1;
+
+    private static final int S3K_COMPLETE_RUN_SETUP_ANIMATED_TILE_PRELUDE_FRAMES = 1;
+
+    private static int resolveS1LevelStartObjectPreludeFrames(TraceData trace) {
+        if (trace == null || trace.frameCount() == 0) {
+            return 0;
+        }
+        TraceMetadata meta = trace.metadata();
+        if (meta == null
+                || !"s1".equals(meta.game())
+                || replaySeedTraceIndexForTraceReplay(trace) != 0) {
+            return 0;
+        }
+        TraceFrame firstFrame = trace.getFrame(0);
+        return firstFrame.gameplayFrameCounter() == 1
+                ? S1_LEVEL_START_OBJECT_PRELUDE_FRAMES
+                : 0;
+    }
 
     /**
      * Frame count of the S3K pre-LevelLoop sidekick prelude. Returns 1 only
@@ -378,6 +409,30 @@ public final class TraceReplayBootstrap {
     }
 
     /**
+     * Number of native S3K {@code Animate_Tiles} calls that complete-run
+     * segments observe before the first compared motion row.
+     *
+     * <p>The ROM's setup pass calls {@code Animate_Tiles} after
+     * {@code Process_Sprites} and {@code Render_Sprites}, then unlocks
+     * controls (docs/skdisasm/sonic3k.asm:7849-7860). Replay's structural
+     * handoff row is also routed as VBlank-only, so it cannot run the normal
+     * {@code LevelLoop} tail where S3K advances level animation
+     * (sonic3k.asm:7884-7911). Advance the engine's native animated-pattern
+     * manager for those skipped animation calls instead of copying recorded
+     * animation RAM from the trace.
+     */
+    public static int s3kCompleteRunAnimatedTilePreludeFramesForTraceReplay(TraceData trace) {
+        if (!isS3kCompleteRunSegment(trace)) {
+            return 0;
+        }
+        int frames = S3K_COMPLETE_RUN_SETUP_ANIMATED_TILE_PRELUDE_FRAMES;
+        if (isS3kCompleteRunHandoffCounterTickRow(trace)) {
+            frames++;
+        }
+        return frames;
+    }
+
+    /**
      * Returns false because trace start state is comparison data only. Kept as
      * a named policy gate for callers that need to avoid legacy hydration paths.
      */
@@ -403,6 +458,27 @@ public final class TraceReplayBootstrap {
         return replaySeedTraceIndexForTraceReplay(trace) == 0
                 && !hasPreLevelIntroPrefix(trace)
                 && !isS2TornadoRideStartMetadataCandidate(trace);
+    }
+
+    public static boolean shouldGroundSnapMetadataStartForTraceReplay(TraceData trace) {
+        return !isS3kCompleteRunSegment(trace);
+    }
+
+    /**
+     * S3K complete-run CNZ/MHZ traces begin on a visible handoff row before the
+     * first native motion row. Replay routes that row as {@code VBLANK_ONLY} and
+     * does not drive or compare its gameplay, but ROM still ran a full LevelLoop
+     * iteration on it — incrementing {@code Level_frame_counter} before
+     * {@code Process_Sprites} (sonic3k.asm:7889-7894). The replay harness therefore
+     * ticks the engine's frame counter on this row so the S3K Tails-CPU gates
+     * observe the same {@code Level_frame_counter} edge the ROM did, without any
+     * trace-profile-gated behaviour in the shared sidekick code.
+     */
+    public static boolean isS3kCompleteRunHandoffCounterTickRow(TraceData trace) {
+        if (trace == null || trace.frameCount() == 0) {
+            return false;
+        }
+        return isS3kCompleteRunInitialHandoffRow(trace, null, trace.getFrame(0));
     }
 
     public static List<String> releaseBlockersForTraceReplay(TraceData trace) {
@@ -455,6 +531,9 @@ public final class TraceReplayBootstrap {
     public static TraceExecutionPhase phaseForReplay(TraceData trace,
                                                      TraceFrame previous,
                                                      TraceFrame current) {
+        if (isS3kCompleteRunInitialHandoffRow(trace, previous, current)) {
+            return TraceExecutionPhase.VBLANK_ONLY;
+        }
         if (isPreLevelPrefixInputLatchRow(trace, previous, current)) {
             return TraceExecutionPhase.ADVANCE_ONLY;
         }
@@ -494,6 +573,26 @@ public final class TraceReplayBootstrap {
             return TraceExecutionPhase.VBLANK_ONLY;
         }
         return TraceExecutionModel.forGame(trace.metadata().game()).phaseFor(previous, current);
+    }
+
+    private static boolean isS3kCompleteRunInitialHandoffRow(TraceData trace,
+                                                            TraceFrame previous,
+                                                            TraceFrame current) {
+        if (!isS3kCompleteRunSegment(trace) || current == null) {
+            return false;
+        }
+        if (previous != null || current.frame() != 0) {
+            return false;
+        }
+        TraceFrame next = trace.getFrame(1);
+        return (next == null || !current.stateEquals(next))
+                && !hasNativeInitialVelocity(current);
+    }
+
+    private static boolean hasNativeInitialVelocity(TraceFrame current) {
+        return current.xSpeed() != 0
+                || current.ySpeed() != 0
+                || current.gSpeed() != 0;
     }
 
     private static boolean isSonic3kTransitionModeFrozenRow(

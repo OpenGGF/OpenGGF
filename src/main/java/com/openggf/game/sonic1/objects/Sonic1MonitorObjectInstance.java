@@ -5,6 +5,7 @@ import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
+import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.level.objects.ExplosionObjectInstance;
 import com.openggf.level.objects.ObjectAnimationState;
@@ -23,6 +24,7 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -173,8 +175,9 @@ public class Sonic1MonitorObjectInstance extends AbstractMonitorObjectInstance
             return;
         }
 
-        // Hit from above: must be rolling (spinning)
-        if (!player.getRolling()) {
+        // ROM: Touch_Monitor checks anim(a0) == id_Roll, not Status_Roll.
+        // The two can diverge for a frame around object landings/releases.
+        if (player.getAnimationId() != Sonic1AnimationIds.ROLL.id()) {
             return;
         }
 
@@ -306,6 +309,24 @@ public class Sonic1MonitorObjectInstance extends AbstractMonitorObjectInstance
     @Override
     public int getCollisionProperty() {
         return 0;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TouchResponseProfile.fromProvider(this);
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TouchResponseProfile.fromProvider(this, multiRegionSource);
+    }
+
+    @Override
+    public boolean requiresContinuousTouchCallbacks() {
+        // ROM ReactToItem polls monitors every frame. If the first overlap sees
+        // status.rolling before anim reaches id_Roll, a later frame in the same
+        // overlap still needs to be able to break the monitor.
+        return true;
     }
 
     // From disassembly: Mon_SolidSides params d1=$1A, d2=$0F, d3=$10

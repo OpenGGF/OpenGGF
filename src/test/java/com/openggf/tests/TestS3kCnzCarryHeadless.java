@@ -143,12 +143,75 @@ class TestS3kCnzCarryHeadless {
     }
 
     @Test
+    void cnz1CarryRegrabPreservesRollingStatusAndRadii() {
+        AbstractPlayableSprite sonic = fixture.sprite();
+
+        for (int i = 0; i < 5; i++) {
+            fixture.stepFrame(false, false, false, false, false);
+        }
+        assertEquals(SidekickCpuController.State.CARRYING, sidekickController().getState(),
+                "Precondition: CNZ carry must be active before the jump-off");
+
+        fixture.stepFrame(false, false, false, false, true);
+        assertFalse(sonic.isObjectControlled(),
+                "A/B/C jump-off should release Sonic from Tails carry");
+        assertTrue(sonic.getRolling(),
+                "Jump-off path sets Status_Roll per sonic3k.asm:27295-27297");
+        assertEquals(7, sonic.getXRadius(),
+                "Jump-off path writes rolling x_radius=$07 per sonic3k.asm:27293");
+        assertEquals(14, sonic.getYRadius(),
+                "Jump-off path writes rolling y_radius=$0E per sonic3k.asm:27292");
+
+        boolean regrabbed = false;
+        for (int i = 0; i < 90; i++) {
+            fixture.stepFrame(false, false, false, false, false);
+            if (sonic.isObjectControlled()) {
+                regrabbed = true;
+                break;
+            }
+        }
+
+        assertTrue(regrabbed,
+                "CNZ carry cooldown/proximity loop should regrab Sonic before landing");
+        assertTrue(sonic.getRolling(),
+                "sub_1459E regrab preserves Status_Roll; it only sets Status_InAir "
+                        + "and clears Status_RollJump (sonic3k.asm:27399-27423)");
+        assertEquals(7, sonic.getXRadius(),
+                "sub_1459E does not restore x_radius, so rolling radius must persist");
+        assertEquals(14, sonic.getYRadius(),
+                "sub_1459E does not restore y_radius, so rolling radius must persist");
+
+        boolean landed = false;
+        for (int i = 0; i < 90; i++) {
+            fixture.stepFrame(false, false, false, false, false);
+            if (!sonic.getAir()) {
+                landed = true;
+                break;
+            }
+        }
+
+        assertTrue(landed,
+                "Carried Sonic should land through the post-parentage SonicKnux_DoLevelCollision probe");
+        assertFalse(sonic.getRolling(),
+                "Player_TouchFloor clears Status_Roll on carried landing (sonic3k.asm:24344-24346)");
+        assertEquals(sonic.getStandXRadius(), sonic.getXRadius(),
+                "Player_TouchFloor restores default_x_radius on landing (sonic3k.asm:24342)");
+        assertEquals(sonic.getStandYRadius(), sonic.getYRadius(),
+                "Player_TouchFloor restores default_y_radius on landing (sonic3k.asm:24341)");
+    }
+
+    @Test
     void cnz1CarryGroundsOnRomLandingFrame() {
         AbstractPlayableSprite sonic = fixture.sprite();
 
-        for (int i = 0; i < 107; i++) {
+        for (int i = 0; i < 106; i++) {
             fixture.stepFrame(false, false, false, false, false);
         }
+        assertTrue(sonic.getAir(),
+                "Precondition: frame 106 should still be airborne before the landing probe");
+        int preLandingYSub = sonic.getYSubpixelRaw();
+
+        fixture.stepFrame(false, false, false, false, false);
 
         assertFalse(sonic.getAir(),
                 () -> String.format(
@@ -161,8 +224,8 @@ class TestS3kCnzCarryHeadless {
                         sonic.getGSpeed() & 0xFFFF));
         assertEquals((short) 0x06CC, sonic.getCentreY(),
                 "Frame 107: carried Sonic should snap to the CNZ1 start-floor height");
-        assertEquals(0, sonic.getYSubpixelRaw(),
-                "Frame 107: carried landing should clear Sonic's vertical subpixel remainder");
+        assertEquals(preLandingYSub, sonic.getYSubpixelRaw(),
+                "Frame 107: Player_TouchFloor writes y_pos but preserves Sonic's y_sub");
         assertEquals((short) 0, sonic.getYSpeed(),
                 "Frame 107: landing probe should clear Sonic.y_speed");
         assertEquals(sonic.getXSpeed(), sonic.getGSpeed(),

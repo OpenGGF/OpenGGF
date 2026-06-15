@@ -101,6 +101,9 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     private int solidStatusBits;
     private PlayableEntity p1SolidContact;
     private PlayableEntity p2SolidContact;
+    private int p2SolidContactFrame = Integer.MIN_VALUE;
+    private PlayableEntity p2RecentlyClearedSolidContact;
+    private int p2SolidContactClearedFrame = Integer.MIN_VALUE;
     private MonitorContentsSlot monitorContentsSlot;
 
     // (Icon rising state is managed by AbstractMonitorObjectInstance)
@@ -189,6 +192,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         ensureInitialized();
+        expireRecentlyClearedP2Contact(frameCounter);
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (revealed && !broken) {
             updateRevealed();
@@ -255,17 +259,17 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         // Negate player's Y-speed: neg.w y_vel(a0)
         player.setYSpeed((short) -player.getYSpeed());
 
-        breakMonitor(player);
+        breakMonitor(player, frameCounter);
     }
 
     /**
      * Break the monitor: spawn explosion, start icon rising, mark persistence.
      * ROM: Mon_BreakOpen (sonic3k.asm ~line 40685)
      */
-    private void breakMonitor(AbstractPlayableSprite player) {
+    private void breakMonitor(AbstractPlayableSprite player, int frameCounter) {
         broken = true;
 
-        releaseTouchingPlayersOnBreak(player);
+        releaseTouchingPlayersOnBreak(player, frameCounter);
 
         // Mark as broken in persistence table
         ObjectManager objectManager = services().objectManager();
@@ -539,13 +543,22 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // ROM SolidObject_cont rejects with bhi after comparing relX against
+        // width*2, so the exact right edge remains a zero-distance side contact.
+        // HCZ1 trace frame 97 depends on that contact setting Status_Push while
+        // Sonic is pinned against the monitor.
+        return true;
+    }
+
+    @Override
     public SolidRoutineProfile getSolidRoutineProfile() {
         // S3K monitor wrappers gate roll-animation hits, then branch into the
         // shared SolidObject_cont side/top classifier (docs/skdisasm/sonic3k.asm:
         // 40559-40590, 41394-41632). That normal classifier is required for
         // P2 side contact to win over top landing when horizontal penetration is
         // smaller, e.g. CNZ f11061 against the monitor at $1A50,$00D0.
-        return SolidRoutineProfile.fullSolid(false);
+        return SolidRoutineProfile.fullSolid(false, usesInclusiveRightEdge(), false);
     }
 
     @Override
@@ -564,7 +577,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         int bit = player.isCpuControlled() ? P2_PUSHING : P1_PUSHING;
         if (pushing) {
             solidStatusBits |= bit;
-            rememberSolidContactPlayer(player);
+            rememberSolidContactPlayer(player, Integer.MIN_VALUE);
         } else {
             solidStatusBits &= ~bit;
         }
@@ -578,7 +591,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         int standingBit = playerEntity.isCpuControlled() ? P2_STANDING : P1_STANDING;
         if (contact.standing()) {
             solidStatusBits |= standingBit;
-            rememberSolidContactPlayer(playerEntity);
+            rememberSolidContactPlayer(playerEntity, frameCounter);
         } else {
             solidStatusBits &= ~standingBit;
         }
@@ -600,7 +613,12 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         // bookkeeping on no-contact without disturbing the P1 break-release path.
         solidStatusBits &= ~P2_CONTACT_MASK;
         if (p2SolidContact == playerEntity) {
+            if (p2SolidContactFrame == frameCounter) {
+                p2RecentlyClearedSolidContact = p2SolidContact;
+                p2SolidContactClearedFrame = frameCounter;
+            }
             p2SolidContact = null;
+            p2SolidContactFrame = Integer.MIN_VALUE;
         }
     }
 
@@ -609,17 +627,24 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         return RenderPriority.clamp(3);
     }
 
-    private void rememberSolidContactPlayer(PlayableEntity player) {
+    private void rememberSolidContactPlayer(PlayableEntity player, int frameCounter) {
         if (player.isCpuControlled()) {
             p2SolidContact = player;
+            p2SolidContactFrame = frameCounter;
+            p2RecentlyClearedSolidContact = null;
+            p2SolidContactClearedFrame = Integer.MIN_VALUE;
         } else {
             p1SolidContact = player;
         }
     }
 
-    private void releaseTouchingPlayersOnBreak(AbstractPlayableSprite breaker) {
+    private void releaseTouchingPlayersOnBreak(AbstractPlayableSprite breaker, int frameCounter) {
         int contactBits = solidStatusBits & PLAYER_CONTACT_MASK;
-        if (contactBits == 0) {
+        PlayableEntity sameFrameClearedP2Contact = p2SolidContactClearedFrame == frameCounter
+                ? p2RecentlyClearedSolidContact
+                : null;
+        PlayableEntity inferredP2Contact = inferSidekickMonitorStandingBitOnBreak();
+        if (contactBits == 0 && sameFrameClearedP2Contact == null && inferredP2Contact == null) {
             return;
         }
 
@@ -632,8 +657,43 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         }
         if ((contactBits & P2_CONTACT_MASK) != 0 && p2SolidContact != null) {
             releasePlayerFromBrokenMonitor(p2SolidContact);
+        } else if (sameFrameClearedP2Contact != null) {
+            releasePlayerFromBrokenMonitor(sameFrameClearedP2Contact);
+        } else if (inferredP2Contact != null) {
+            releasePlayerFromBrokenMonitor(inferredP2Contact);
         }
         solidStatusBits &= ~PLAYER_CONTACT_MASK;
+        p2RecentlyClearedSolidContact = null;
+        p2SolidContactClearedFrame = Integer.MIN_VALUE;
+    }
+
+    private PlayableEntity inferSidekickMonitorStandingBitOnBreak() {
+        List<PlayableEntity> sidekicks = services().playerQuery().sidekicks();
+        if (sidekicks == null || sidekicks.isEmpty()) {
+            return null;
+        }
+        for (PlayableEntity sidekick : sidekicks) {
+            if (sidekick != null && sidekick.isCpuControlled() && isWithinMonitorStandingBitBounds(sidekick)) {
+                return sidekick;
+            }
+        }
+        return null;
+    }
+
+    private boolean isWithinMonitorStandingBitBounds(PlayableEntity sidekick) {
+        int relX = sidekick.getCentreX() - posX() + SOLID_WIDTH;
+        int maxRelXInclusive = SOLID_WIDTH * 2;
+        if (relX < 0 || relX > maxRelXInclusive) {
+            return false;
+        }
+        return Math.abs(sidekick.getCentreY() - posY()) <= SOLID_D3;
+    }
+
+    private void expireRecentlyClearedP2Contact(int frameCounter) {
+        if (p2RecentlyClearedSolidContact != null && p2SolidContactClearedFrame != frameCounter) {
+            p2RecentlyClearedSolidContact = null;
+            p2SolidContactClearedFrame = Integer.MIN_VALUE;
+        }
     }
 
     private void releasePlayerFromBrokenMonitor(PlayableEntity player) {
@@ -643,6 +703,10 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         player.setOnObject(false);
         player.setPushing(false);
         player.setAir(true);
+        if (player.isCpuControlled() && player instanceof AbstractPlayableSprite sprite
+                && !sprite.isInWater()) {
+            sprite.suppressNextGravityStep();
+        }
     }
 
     private static final class MonitorContentsSlot extends AbstractObjectInstance {

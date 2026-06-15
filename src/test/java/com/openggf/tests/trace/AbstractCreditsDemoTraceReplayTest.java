@@ -138,6 +138,7 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
 
             // 5. Run frame-by-frame comparison
             TraceBinder binder = new TraceBinder(tolerances());
+            FrontierReplayStopper frontierStopper = FrontierReplayStopper.fromSystemProperties();
 
             for (int i = 0; i < frameLimit; i++) {
                 TraceFrame expected = trace.getFrame(i);
@@ -168,6 +169,9 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
                         sprite.getAir(), sprite.getRolling(),
                         sprite.getGroundMode().ordinal(), romDiag,
                         engineDiag);
+                    if (observeFrontierAndShouldStop(frontierStopper, binder, expected.frame())) {
+                        break;
+                    }
                     continue;
                 }
 
@@ -208,6 +212,9 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
                     sprite.getAir(), sprite.getRolling(),
                     sprite.getGroundMode().ordinal(), romDiag,
                     engineDiag);
+                if (observeFrontierAndShouldStop(frontierStopper, binder, expected.frame())) {
+                    break;
+                }
             }
 
             // 6. Build report
@@ -219,10 +226,10 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
             }
 
             // 8. Log summary
-            System.out.println(report.toSummary());
+            System.out.println(report.toCompactSummary());
 
             // 9. Assert no errors
-            if (report.hasErrors()) {
+            if (report.hasErrors() && Boolean.getBoolean("trace.print.context")) {
                 System.err.println("\n=== Context window around first error ===");
                 System.err.println(report.getContextWindow(firstReportErrorFrame(report), 10));
             }
@@ -238,11 +245,11 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
 
     protected void assertReportHasNoReleaseBlockingDivergences(DivergenceReport report) {
         if (report.hasErrors()) {
-            fail(report.toSummary());
+            fail(report.toCompactSummary());
         }
         if (report.hasWarnings() && !allowDiagnosticOnlyWarnings()) {
             fail("Trace replay warning report is release-blocking by default: "
-                    + report.toSummary());
+                    + report.toCompactSummary());
         }
     }
 
@@ -309,7 +316,7 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
      */
     private EngineDiagnostics captureEngineDiagnostics(AbstractPlayableSprite sprite) {
         // Routine: S1 uses 0=init, 2=control, 4=hurt, 6=death
-        int routine = sprite.isHurt() ? 0x04 : 0x02;
+        int routine = TraceCharacterState.routineFromSprite(sprite);
 
         // Riding object: which SST slot is the player standing on?
         int standOnSlot = -1;
@@ -328,13 +335,7 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
         int rings = sprite.getRingCount();
 
         // Status byte (replicate ROM's status encoding)
-        int statusByte = 0;
-        if (sprite.getDirection() == com.openggf.physics.Direction.LEFT)
-            statusByte |= 0x01;
-        if (sprite.getAir()) statusByte |= 0x02;
-        if (sprite.getRolling()) statusByte |= 0x04;
-        if (sprite.isOnObject()) statusByte |= 0x08;
-        if (sprite.isInWater()) statusByte |= 0x40;
+        int statusByte = TraceCharacterState.statusByteFromSprite(sprite);
 
         // Camera X/Y for ROM-trace cross-reference and camera_x/camera_y
         // comparison in TraceBinder.
@@ -455,6 +456,15 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
         return 0;
     }
 
+    private boolean observeFrontierAndShouldStop(
+            FrontierReplayStopper frontierStopper,
+            TraceBinder binder,
+            int frame) {
+        FrameComparison comparison = binder.comparisonForFrame(frame);
+        frontierStopper.observe(comparison);
+        return frontierStopper.shouldStopAfterFrame(frame);
+    }
+
     private static String combineDiagnostics(String base, String extra) {
         if (base == null || base.isEmpty()) {
             return extra == null ? "" : extra;
@@ -485,5 +495,3 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
         };
     }
 }
-
-

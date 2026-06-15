@@ -19,6 +19,33 @@ public interface PowerUpObject {
     void setVisible(boolean visible);
 
     /**
+     * Returns whether this visual object represents the restored shield type.
+     * Basic shields use the shared default implementation; elemental shields
+     * override this with their concrete type.
+     */
+    default boolean matchesShieldType(ShieldType type) {
+        return type == ShieldType.BASIC;
+    }
+
+    /**
+     * Returns whether this power-up is the shield visual owned by the given
+     * player. Non-shield power-ups must leave the default false so rewind
+     * relinking cannot confuse invincibility stars for a basic shield.
+     */
+    default boolean isShieldFor(PlayableEntity player, ShieldType type) {
+        return false;
+    }
+
+    /**
+     * Called after a rewind restore relinks or respawns this power-up visual.
+     * Implementations with transient renderer/DPLC caches should invalidate
+     * them so the next draw uploads art for the restored animation frame.
+     */
+    default void refreshArtAfterRewindRestore() {
+        // Default no-op for power-ups without transient art caches.
+    }
+
+    /**
      * Notifies this power-up that the player activated its secondary ability.
      * <p>
      * Elemental shields override this to trigger their attack animation/effect:

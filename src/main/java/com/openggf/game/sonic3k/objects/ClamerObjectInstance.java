@@ -95,7 +95,8 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
             AnimalObjectInstance::new,
             false,
             (spawn, svc, pts) -> new Sonic3kPointsObjectInstance(spawn, svc, pts),
-            null
+            null,
+            false
     );
 
     /**

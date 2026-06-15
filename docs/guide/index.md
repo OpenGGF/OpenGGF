@@ -38,6 +38,7 @@ You want to add objects, bosses, zones, or engine improvements.
 
 - [Dev Setup](contributing/dev-setup.md) -- Environment, build, and test setup
 - [Architecture Deep Dive](contributing/architecture.md) -- Providers, services, and runtime
+- [Documentation and Branch Policy](contributing/documentation-policy.md) -- Commit trailers, changelog/discrepancy updates, and PR documentation checks
 - [Tutorial: Implement an Object](contributing/tutorial-implement-object.md) -- Worked example from disassembly to running code
 - [Adding Bosses](contributing/adding-bosses.md) -- Boss-specific patterns
 - [Adding Zones](contributing/adding-zones.md) -- Bringing up a new zone

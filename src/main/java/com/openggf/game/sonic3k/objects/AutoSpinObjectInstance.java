@@ -355,8 +355,13 @@ public class AutoSpinObjectInstance extends BoxObjectInstance {
             return;
         }
 
+        short preRollCentreX = player.getCentreX();
         short preRollCentreY = player.getCentreY();
         player.setRolling(true);
+        // ROM Obj_AutoSpin writes y_radius/x_radius and y_pos only; x_pos is
+        // unchanged. Preserve centre X when the engine's top-left sprite box
+        // changes width on wall modes.
+        player.setCentreXPreserveSubpixel(preRollCentreX);
         // ROM Obj_AutoSpin hardcodes addq.w #5,y_pos after setting roll radii
         // (sonic3k.asm:42464-42469), independent of character height.
         player.setCentreYPreserveSubpixel((short) (preRollCentreY + 5));

@@ -53,7 +53,23 @@ public interface LevelEventProvider {
     }
 
     /**
-     * Updates fixed in-level object RAM that is outside the dynamic SST scan.
+     * Updates fixed in-level object RAM that executes before dynamic level
+     * object slots.
+     * <p>
+     * S1 stores {@code v_sonicbubbles} at object slot 13, before the level
+     * object area starts at slot 32
+     * (docs/s1disasm/s1disasm/_Variables.asm:68; ExecuteObjects.asm:11-31).
+     * Its {@code FindFreeObj} allocations must therefore happen before later
+     * level objects execute in the same frame. The default is a no-op for games
+     * whose fixed sidecars run elsewhere.
+     */
+    default void updateFixedInLevelObjectsBeforeDynamicObjects() {
+        // Default no-op
+    }
+
+    /**
+     * Updates fixed in-level object RAM that is outside the dynamic SST scan and
+     * executes after dynamic level object slots.
      * <p>
      * S3K runs fixed objects such as {@code Breathing_bubbles} and
      * {@code Breathing_bubbles_P2} after dynamic object RAM and before

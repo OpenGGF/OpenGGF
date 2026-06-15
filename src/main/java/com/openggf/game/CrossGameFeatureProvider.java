@@ -382,6 +382,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
                 return;
             }
             instaShieldRenderer = new PlayerSpriteRenderer(instaShieldArtSet);
+            instaShieldRenderer.setRenderContext(donorRenderContext);
 
             LOGGER.info("Loaded donor insta-shield art: " + instaShieldArtSet.artTiles().length + " tiles, "
                     + instaShieldArtSet.mappingFrames().size() + " mapping frames");

@@ -534,6 +534,62 @@ public class TestTouchResponseManager {
     }
 
     @Test
+    public void s3kInstaShieldSuppressesHurtWithoutDeflectingShieldReactiveHurtObject() {
+        when(player.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(player.getDoubleJumpFlag()).thenReturn(1);
+        when(player.getShieldType()).thenReturn(null);
+        when(player.hasShield()).thenReturn(false);
+
+        MockShieldTouchObject projectile = new MockShieldTouchObject(143, 112, 0x88, 0x08);
+        setupTableSize(8, 8, 8);
+        objectManager.addDynamicObject(projectile);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        assertFalse(projectile.wasShieldDeflected,
+                "S3K Insta-Shield temporarily sets Status_Invincible and returns before the shield deflect branch");
+        verify(player, never()).applyHurtOrDeath(anyInt(), any(DamageCause.class), anyBoolean());
+    }
+
+    @Test
+    public void realShieldDeflectsShieldReactiveHurtObject() {
+        when(player.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(player.getDoubleJumpFlag()).thenReturn(0);
+        when(player.hasShield()).thenReturn(true);
+
+        MockShieldTouchObject projectile = new MockShieldTouchObject(143, 112, 0x88, 0x08);
+        setupTableSize(8, 8, 8);
+        objectManager.addDynamicObject(projectile);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        assertTrue(projectile.wasShieldDeflected,
+                "S3K ShieldTouchResponse deflects bit-3 shield-reactive harmful objects for real shields");
+        verify(player, never()).applyHurtOrDeath(anyInt(), any(DamageCause.class), anyBoolean());
+    }
+
+    @Test
+    public void s3kInstaShieldSuppressionUsesPreUpdateObjectPositionDuringPostObjectTouchPass() {
+        when(player.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(player.getDoubleJumpFlag()).thenReturn(1);
+        when(player.getShieldType()).thenReturn(null);
+        when(player.hasShield()).thenReturn(false);
+
+        MockTrackedShieldTouchObject projectile = new MockTrackedShieldTouchObject(
+                143, 112,
+                220, 112,
+                0x88, 0x08);
+        setupTableSize(8, 8, 8);
+        objectManager.addDynamicObject(projectile);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        assertFalse(projectile.wasShieldDeflected,
+                "Post-object touch passes must use the same pre-update object position for Insta-Shield hurt suppression");
+        verify(player, never()).applyHurtOrDeath(anyInt(), any(DamageCause.class), anyBoolean());
+    }
+
+    @Test
     public void singleRegionTouchResultIncludesProfileShieldReactionFlags() {
         MockShieldTouchObject flame = new MockShieldTouchObject(160, 112, 0x88, 0x10);
         setupTableSize(8, 16, 16);
@@ -702,6 +758,101 @@ public class TestTouchResponseManager {
 
         assertTrue(missile.wasTouched,
                 "The GHZ frame-387 missile geometry should overlap Sonic with rolling radii");
+    }
+
+    @Test
+    public void testS3kInlineTouchSkipsObjectAbsentFromPreviousCollisionResponseList() {
+        when(player.getCentreX()).thenReturn((short) 160);
+        when(player.getCentreY()).thenReturn((short) 112);
+        when(player.getYRadius()).thenReturn((short) 15);
+        when(player.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(player.getAnimationId()).thenReturn(Sonic3kAnimationIds.SPINDASH.id());
+        when(player.getYSpeed()).thenReturn((short) 0);
+
+        MockSnapshotAttackableEnemy enemy = new MockSnapshotAttackableEnemy(181, 110, 0x02);
+        setupTableSize(2, 12, 12);
+        objectManager.addDynamicObject(enemy);
+
+        enemy.setPosition(180, 112);
+        objectManager.snapshotTouchResponseState(true);
+        objectManager.runTouchResponsesForPlayer(player, 411, true);
+
+        assertFalse(enemy.wasAttacked,
+                "S3K TouchResponse walks only the previous Collision_response_list before dynamic objects rebuild it");
+        verify(player, never()).setYSpeed(anyShort());
+    }
+
+    @Test
+    public void testS3kInlineTouchUsesPreviousCollisionResponseListCapturedPosition() {
+        when(player.getCentreX()).thenReturn((short) 160);
+        when(player.getCentreY()).thenReturn((short) 112);
+        when(player.getYRadius()).thenReturn((short) 15);
+        when(player.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(player.getAnimationId()).thenReturn(Sonic3kAnimationIds.SPINDASH.id());
+        when(player.getYSpeed()).thenReturn((short) 0);
+
+        MockSnapshotAttackableEnemy enemy = new MockSnapshotAttackableEnemy(181, 110, 0x02);
+        setupTableSize(2, 12, 12);
+        objectManager.addDynamicObject(enemy);
+
+        objectManager.update(0, player, List.of(), 541, false, true, true);
+        enemy.setPosition(180, 112);
+        objectManager.snapshotTouchResponseState(true);
+        objectManager.runTouchResponsesForPlayer(player, 542, true);
+
+        assertFalse(enemy.wasAttacked,
+                "S3K TouchResponse consumes the previous Collision_response_list as captured by the prior object pass");
+    }
+
+    @Test
+    public void testS3kPreviousCollisionResponseListCapturesPostObjectUpdatePosition() {
+        when(player.getCentreX()).thenReturn((short) 160);
+        when(player.getCentreY()).thenReturn((short) 112);
+        when(player.getYRadius()).thenReturn((short) 15);
+        when(player.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(player.getAnimationId()).thenReturn(Sonic3kAnimationIds.SPINDASH.id());
+        when(player.getYSpeed()).thenReturn((short) 0);
+
+        MockMovingSnapshotAttackableEnemy enemy = new MockMovingSnapshotAttackableEnemy(
+                178, 112,
+                176, 112,
+                0x02);
+        setupTableSize(2, 8, 8);
+        objectManager.addDynamicObject(enemy);
+
+        objectManager.update(0, player, List.of(), 541, false, true, true);
+        objectManager.snapshotTouchResponseState(true);
+        objectManager.runTouchResponsesForPlayer(player, 542, true);
+
+        assertTrue(enemy.wasAttacked,
+                "S3K Collision_response_list is populated after an object's routine/draw-touch helper, "
+                        + "so touch must use the post-update position captured with that list");
+    }
+
+    @Test
+    public void testS2InlineTouchUsesFrameStartObjectPositionForAttackableEnemies() {
+        when(player.getCentreX()).thenReturn((short) 168);
+        when(player.getCentreY()).thenReturn((short) 112);
+        when(player.getYRadius()).thenReturn((short) 20);
+        when(player.getAnimationId()).thenReturn(ObjectManager.ANIM_ROLL);
+
+        MockSnapshotAttackableEnemy enemy = new MockSnapshotAttackableEnemy(190, 112, 0x02);
+        setupTableSize(2, 0x0C, 0x14);
+        objectManager.addDynamicObject(enemy);
+
+        objectManager.snapshotTouchResponseState(false);
+        enemy.setPosition(188, 112);
+        objectManager.runTouchResponsesForPlayer(player, 899, true);
+
+        assertFalse(enemy.wasAttacked,
+                "S2 TouchResponse runs from the player slot before Obj91_Charge moves; "
+                        + "the frame-start position must miss even if the post-update position overlaps");
+
+        objectManager.snapshotTouchResponseState(false);
+        objectManager.runTouchResponsesForPlayer(player, 900, true);
+
+        assertTrue(enemy.wasAttacked,
+                "On the following player-slot scan, the same object position is now frame-start state and should hit");
     }
 
     @Test
@@ -892,6 +1043,7 @@ public class TestTouchResponseManager {
 
     private static final class MockShieldTouchObject extends MockTouchObject {
         private final int shieldReactionFlags;
+        private boolean wasShieldDeflected;
 
         private MockShieldTouchObject(int x, int y, int flags, int shieldReactionFlags) {
             super(x, y, flags);
@@ -901,6 +1053,12 @@ public class TestTouchResponseManager {
         @Override
         public int getShieldReactionFlags() {
             return shieldReactionFlags;
+        }
+
+        @Override
+        public boolean onShieldDeflect(PlayableEntity player) {
+            wasShieldDeflected = true;
+            return true;
         }
     }
 
@@ -1010,6 +1168,154 @@ public class TestTouchResponseManager {
         }
     }
 
+    private static final class MockTrackedAttackableEnemy extends MockTrackedTouchObject
+            implements TouchResponseAttackable {
+        boolean wasAttacked = false;
+
+        private MockTrackedAttackableEnemy(int currentX, int currentY, int preUpdateX, int preUpdateY, int flags) {
+            super(currentX, currentY, preUpdateX, preUpdateY, flags);
+        }
+
+        @Override
+        public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
+            wasAttacked = true;
+        }
+    }
+
+    private static final class MockSnapshotAttackableEnemy extends AbstractObjectInstance
+            implements TouchResponseProvider, TouchResponseAttackable {
+        private int currentX;
+        private int currentY;
+        private final int collisionFlags;
+        boolean wasAttacked = false;
+
+        private MockSnapshotAttackableEnemy(int x, int y, int flags) {
+            super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "MockSnapshotAttackableEnemy");
+            this.currentX = x;
+            this.currentY = y;
+            this.collisionFlags = flags;
+        }
+
+        void setPosition(int x, int y) {
+            this.currentX = x;
+            this.currentY = y;
+        }
+
+        @Override
+        public int getX() {
+            return currentX;
+        }
+
+        @Override
+        public int getY() {
+            return currentY;
+        }
+
+        @Override
+        public int getCollisionFlags() {
+            return collisionFlags;
+        }
+
+        @Override
+        public int getCollisionProperty() {
+            return 0;
+        }
+
+        @Override
+        public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
+            wasAttacked = true;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+        }
+    }
+
+    private static final class MockMovingSnapshotAttackableEnemy extends AbstractObjectInstance
+            implements TouchResponseProvider, TouchResponseAttackable {
+        private int currentX;
+        private int currentY;
+        private final int movedX;
+        private final int movedY;
+        private final int collisionFlags;
+        boolean wasAttacked = false;
+
+        private MockMovingSnapshotAttackableEnemy(int initialX, int initialY, int movedX, int movedY, int flags) {
+            super(new ObjectSpawn(initialX, initialY, 0, 0, 0, false, 0), "MockMovingSnapshotAttackableEnemy");
+            this.currentX = initialX;
+            this.currentY = initialY;
+            this.movedX = movedX;
+            this.movedY = movedY;
+            this.collisionFlags = flags;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+            currentX = movedX;
+            currentY = movedY;
+        }
+
+        @Override
+        public int getX() {
+            return currentX;
+        }
+
+        @Override
+        public int getY() {
+            return currentY;
+        }
+
+        @Override
+        public int getCollisionFlags() {
+            return collisionFlags;
+        }
+
+        @Override
+        public int getCollisionProperty() {
+            return 0;
+        }
+
+        @Override
+        public boolean usesCurrentTouchResponseState() {
+            return true;
+        }
+
+        @Override
+        public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
+            wasAttacked = true;
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+        }
+    }
+
+    private static final class MockTrackedShieldTouchObject extends MockTrackedTouchObject {
+        private final int shieldReactionFlags;
+        private boolean wasShieldDeflected;
+
+        private MockTrackedShieldTouchObject(int currentX, int currentY, int preUpdateX, int preUpdateY,
+                int flags, int shieldReactionFlags) {
+            super(currentX, currentY, preUpdateX, preUpdateY, flags);
+            this.shieldReactionFlags = shieldReactionFlags;
+        }
+
+        @Override
+        public int getShieldReactionFlags() {
+            return shieldReactionFlags;
+        }
+
+        @Override
+        public boolean onShieldDeflect(PlayableEntity player) {
+            wasShieldDeflected = true;
+            return true;
+        }
+    }
+
     private static class MockSnapshotTouchObject extends AbstractObjectInstance
             implements TouchResponseProvider, TouchResponseListener {
         private int currentX;
@@ -1102,6 +1408,5 @@ public class TestTouchResponseManager {
         }
     }
 }
-
 
 

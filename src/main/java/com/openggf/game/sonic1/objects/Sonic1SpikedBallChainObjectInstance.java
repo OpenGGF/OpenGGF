@@ -7,6 +7,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -17,7 +19,6 @@ import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
 
@@ -90,6 +91,8 @@ public class Sonic1SpikedBallChainObjectInstance extends AbstractObjectInstance
     private final int[] elementColType;  // collision type per element
     private final int[] elementX;        // current X position
     private final int[] elementY;        // current Y position
+    private final transient ChainChild[] children;
+    private boolean childrenSpawned;
 
     // Art key for rendering
     private final String artKey;
@@ -154,6 +157,7 @@ public class Sonic1SpikedBallChainObjectInstance extends AbstractObjectInstance
         this.elementColType = new int[elementCount];
         this.elementX = new int[elementCount];
         this.elementY = new int[elementCount];
+        this.children = new ChainChild[numChildren];
 
         // Build child elements from outermost inward
         // Disasm: d3 starts at outerRadius, children get d3 -= 0x10 each
@@ -201,15 +205,31 @@ public class Sonic1SpikedBallChainObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed()) {
             return;
+        }
+        if (!childrenSpawned) {
+            spawnChildren();
+            childrenSpawned = true;
         }
 
         // move.w sball_speed(a0),d0 / add.w d0,obAngle(a0)
         angle = (angle + speed) & 0xFFFF;
 
         updatePositions();
+        syncElementObjects();
+    }
+
+    private void spawnChildren() {
+        for (int i = 0; i < children.length; i++) {
+            final int index = i;
+            children[i] = spawnFreeChild(() -> new ChainChild(
+                    buildSpawnAt(elementX[index], elementY[index]),
+                    artKey,
+                    elementFrame[index],
+                    elementColType[index],
+                    origX));
+        }
     }
 
     /**
@@ -248,15 +268,24 @@ public class Sonic1SpikedBallChainObjectInstance extends AbstractObjectInstance
         }
     }
 
+    private void syncElementObjects() {
+        for (int i = 0; i < children.length; i++) {
+            if (children[i] != null) {
+                children[i].setPosition(elementX[i], elementY[i]);
+            }
+        }
+        int parentIdx = elementCount - 1;
+        updateDynamicSpawn(elementX[parentIdx], elementY[parentIdx]);
+    }
+
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(artKey);
         if (renderer == null) return;
 
-        // Render all chain elements (innermost first for correct layering)
-        for (int i = elementCount - 1; i >= 0; i--) {
-            renderer.drawFrameIndex(elementFrame[i], elementX[i], elementY[i], false, false);
-        }
+        int parentIdx = elementCount - 1;
+        renderer.drawFrameIndex(elementFrame[parentIdx], elementX[parentIdx], elementY[parentIdx],
+                false, false);
     }
 
     @Override
@@ -270,12 +299,12 @@ public class Sonic1SpikedBallChainObjectInstance extends AbstractObjectInstance
 
     @Override
     public TouchResponseProfile getTouchResponseProfile() {
-        return getTouchResponseProfile(getMultiTouchRegions() != null);
+        return SINGLE_REGION_HURT_PROFILE;
     }
 
     @Override
     public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
-        return multiRegionSource ? MULTI_REGION_HURT_PROFILE : SINGLE_REGION_HURT_PROFILE;
+        return SINGLE_REGION_HURT_PROFILE;
     }
 
     @Override
@@ -291,36 +320,48 @@ public class Sonic1SpikedBallChainObjectInstance extends AbstractObjectInstance
 
     @Override
     public TouchRegion[] getMultiTouchRegions() {
-        int harmfulCount = 0;
-        for (int i = 0; i < elementCount; i++) {
-            if (elementColType[i] != 0) {
-                harmfulCount++;
-            }
-        }
-        if (harmfulCount == 0) {
-            return null;
-        }
-
-        TouchRegion[] regions = new TouchRegion[harmfulCount];
-        int idx = 0;
-        for (int i = 0; i < elementCount; i++) {
-            if (elementColType[i] != 0) {
-                regions[idx++] = new TouchRegion(elementX[i], elementY[i], elementColType[i]);
-            }
-        }
-        return regions;
+        return null;
     }
 
     // ---- Persistence ----
 
     @Override
-    public boolean isPersistent() {
-        // Disasm: out_of_range.w .delete,sball_origX(a0) — checks origX not current X
-        return !isDestroyed() && isOrigXOnScreen();
+    public int getOutOfRangeReferenceX() {
+        return origX;
     }
 
-    private boolean isOrigXOnScreen() {
-        return isInRangeAt(origX);
+    @Override
+    public void onUnload() {
+        ObjectManager objectManager = tryServices() != null ? tryServices().objectManager() : null;
+        for (ChainChild child : children) {
+            if (child != null) {
+                // Obj57 .delete loops sball_childs and calls DeleteChild, freeing each SST slot immediately.
+                ObjectLifetimeOps.expireDynamic(child);
+                if (objectManager != null) {
+                    objectManager.removeDynamicObject(child);
+                }
+            }
+        }
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        StringBuilder slots = new StringBuilder();
+        for (ChainChild child : children) {
+            if (child != null) {
+                if (!slots.isEmpty()) {
+                    slots.append(',');
+                }
+                slots.append(child.getSlotIndex());
+            }
+        }
+        return String.format("angle=%04X speed=%d children=%d childSlots=[%s] orig=%04X,%04X",
+                angle & 0xFFFF,
+                speed,
+                children.length,
+                slots,
+                origX & 0xFFFF,
+                origY & 0xFFFF);
     }
 
     // ---- Debug rendering ----
@@ -343,6 +384,78 @@ public class Sonic1SpikedBallChainObjectInstance extends AbstractObjectInstance
         // Draw line from pivot to parent element (outermost)
         int parentIdx = elementCount - 1;
         ctx.drawLine(origX, origY, elementX[parentIdx], elementY[parentIdx], 0.5f, 0.5f, 0.5f);
+    }
+
+    private static final class ChainChild extends AbstractObjectInstance
+            implements TouchResponseProvider {
+        private final String artKey;
+        private final int frame;
+        private final int collisionType;
+        private final int originX;
+
+        private ChainChild(ObjectSpawn spawn, String artKey, int frame, int collisionType,
+                           int originX) {
+            super(spawn, "SpikedBallChainChild");
+            this.artKey = artKey;
+            this.frame = frame;
+            this.collisionType = collisionType;
+            this.originX = originX;
+        }
+
+        private void setPosition(int x, int y) {
+            updateDynamicSpawn(x, y);
+        }
+
+        @Override
+        public boolean isPersistent() {
+            return !isDestroyed();
+        }
+
+        @Override
+        public int getOutOfRangeReferenceX() {
+            return originX;
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            PatternSpriteRenderer renderer = getRenderer(artKey);
+            if (renderer != null) {
+                renderer.drawFrameIndex(frame, getX(), getY(), false, false);
+            }
+        }
+
+        @Override
+        public int getPriorityBucket() {
+            return RenderPriority.clamp(DISPLAY_PRIORITY);
+        }
+
+        @Override
+        public TouchResponseProfile getTouchResponseProfile() {
+            return SINGLE_REGION_HURT_PROFILE;
+        }
+
+        @Override
+        public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+            return SINGLE_REGION_HURT_PROFILE;
+        }
+
+        @Override
+        public int getCollisionFlags() {
+            return collisionType;
+        }
+
+        @Override
+        public int getCollisionProperty() {
+            return 0;
+        }
+
+        @Override
+        public String traceDebugDetails() {
+            return String.format("child frame=%d col=%02X orig=%04X",
+                    frame,
+                    collisionType & 0xFF,
+                    originX & 0xFFFF);
+        }
     }
 
 

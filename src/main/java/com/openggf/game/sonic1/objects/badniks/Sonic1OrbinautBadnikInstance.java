@@ -9,6 +9,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
@@ -91,12 +92,14 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance {
             }
         }
 
-        if (routine >= ROUTINE_MOVE) {
-            applySpeedToPos();
+        if (activeSpikes == 0) {
+            // ROM Orb_MoveOrb increments the parent routine as soon as the
+            // last satellite fires, before the parent's next Orb_Display pass.
+            routine = ROUTINE_MOVE;
         }
 
-        if (activeSpikes == 0) {
-            routine = ROUTINE_MOVE;
+        if (routine >= ROUTINE_MOVE) {
+            applySpeedToPos();
         }
     }
 
@@ -205,19 +208,21 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance {
     }
 
     @Override
-    public boolean isPersistent() {
-        return !isDestroyed() && isOnScreenX(192);
-    }
-
-    @Override
     public void onUnload() {
         destroySpikes();
     }
 
     private void destroySpikes() {
         if (spikes != null) {
+            ObjectServices svc = tryServices();
+            ObjectManager objectManager = svc != null ? svc.objectManager() : null;
             for (OrbSpikeObjectInstance spike : spikes) {
                 spike.setDestroyed(true);
+                if (objectManager != null) {
+                    // S1 Orb_ChkDel calls DeleteChild while the parent is
+                    // executing, so these SST slots are reusable immediately.
+                    objectManager.removeDynamicObject(spike);
+                }
             }
         }
     }
@@ -225,6 +230,16 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance {
     @Override
     public int getPriorityBucket() {
         return RenderPriority.clamp(4);
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("parent r=%02X frame=%d active=%d step=%d vel=%04X",
+                routine & 0xFF,
+                animationFrame,
+                activeSpikes,
+                angleStep,
+                xVelocity & 0xFFFF);
     }
 
     @Override
@@ -241,6 +256,9 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance {
 
     private static final class OrbSpikeObjectInstance extends AbstractObjectInstance
             implements TouchResponseProvider {
+        private static final int SPIKE_RENDER_HALF_WIDTH = 16 / 2;
+        private static final int ASSUMED_RENDER_HALF_HEIGHT = 32;
+
         private final Sonic1OrbinautBadnikInstance parent;
 
         private int x;
@@ -355,7 +373,35 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance {
 
         @Override
         public boolean isPersistent() {
-            return !isDestroyed() && isOnScreenX(256);
+            return !isDestroyed() && !launched;
+        }
+
+        @Override
+        public boolean usesCustomOutOfRangeCheck() {
+            return true;
+        }
+
+        @Override
+        public boolean isCustomOutOfRange(int cameraX) {
+            // S1 Orb_MoveOrb (routine 6) has no out_of_range call; it only
+            // deletes when the parent is gone. Routine 8 launches the spike
+            // and then deletes when obRender bit 7 from the previous
+            // BuildSprites pass is clear (docs/s1disasm/s1disasm/_incObj/
+            // 60 Badnik - Orbinaut.asm:183-186). BuildSprites uses the
+            // satellite's obActWid=16/2 and the default 32px assumed height
+            // when setting that bit (BuildSprites.asm:48-58, 86-94).
+            return launched && !isWithinRenderSpriteBounds(
+                    SPIKE_RENDER_HALF_WIDTH, ASSUMED_RENDER_HALF_HEIGHT);
+        }
+
+        @Override
+        public String traceDebugDetails() {
+            return String.format("spike angle=%02X launched=%s vel=%04X parentSlot=%d parentFrame=%d",
+                    angle & 0xFF,
+                    launched,
+                    xVelocity & 0xFFFF,
+                    parent.getSlotIndex(),
+                    parent.getAnimationFrame());
         }
     }
 }

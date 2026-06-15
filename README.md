@@ -117,20 +117,21 @@ sound driver.
 |------|--------|
 | Sonic the Hedgehog (S1) | Broadly playable. All 7 zones, 6 bosses, special stages, title screen, ending/credits. When S3K is the donor, S1 can also use the donated S3K data select screen with runtime-generated zone previews and cross-game team launch support. |
 | Sonic the Hedgehog 2 (S2) | Most complete. All zones, 9 bosses (including both DEZ bosses), special stages, Tails AI, credits/ending. When S3K is the donor, S2 can also use the donated S3K data select screen with runtime-generated zone previews and cross-game team launch support. |
-| Sonic 3 & Knuckles (S3K) | Progressing, and now the main delivery focus. Angel Island Zone is substantially playable, Hydrocity now has early HCZ2 chase coverage, and S3K includes title screen, level select, data select with save/load support, Knuckles glide/climb, Blue Ball special stages (WIP), bonus-stage parity work, palette cycling, and expanding object/badnik coverage. Data select can also be donated to S1/S2 via cross-game donation. |
+| Sonic 3 & Knuckles (S3K) | Near-complete vertical-slice coverage and now the main parity/release focus. AIZ, HCZ, CNZ, MGZ, ICZ, MHZ, and parts of LBZ have substantial route object, event, boss/miniboss, scroll, palette/PLC, and trace coverage; FBZ and later zones remain the largest content frontier. S3K also includes title screen, level select, data select with save/load support, Knuckles glide/climb, Blue Ball special stages (WIP), bonus-stage parity work, palette cycling, and broad object/badnik coverage. Data select can also be donated to S1/S2 via cross-game donation. |
 
 Recent engine work has also moved shared zone behavior onto runtime-owned frameworks: `ZoneRuntimeRegistry`, `PaletteOwnershipRegistry`, `AnimatedTileChannelGraph`, `ZoneLayoutMutationPipeline`, `ScrollEffectComposer`, `SpecialRenderEffectRegistry`, and `AdvancedRenderModeController`. The current roadmap priority is to use those systems to close playable S3K vertical slices rather than to run broad architecture migrations for their own sake. S1/S2 uplift remains valuable when it removes duplication or active risk in code already being touched, but S3K route completeness now leads work selection.
 
 Current migration status is intentionally partial rather than universal. Sonic 2 already uses the runtime-owned stack for HTZ/CNZ runtime state, palette ownership, animated tile orchestration, CNZ staged overlay rendering, and CNZ layout mutations via `ZoneLayoutMutationPipeline`. Sonic 3&K uses the same stack for AIZ/HCZ/CNZ runtime-state adapters, AIZ staged render effects and advanced render modes, HCZ/SOZ animated tile channels, CNZ runtime-state-backed scroll behavior, and seamless terrain-swap/mutation paths routed through the mutation pipeline. The shared scroll-composition helpers are live in AIZ, HCZ, and MGZ. Other S1/S2/S3K zones still mix these frameworks with older zone-local paths and should be treated as follow-up migration work rather than implied complete adoption.
 
-Near-term S3K work should be planned as playable route slices with explicit gates: required traversal objects and badniks, event/camera behavior, scroll/parallax, animated tiles, palette and PLC state, bosses or transitions, rewind coverage where state is gameplay-relevant, trace replay for known blockers, and visual validation against stable-retro where practical. The first target route is AIZ through HCZ, with CNZ/MGZ/ICZ work feeding the same slice-driven standard instead of a checklist-only rollout.
+Near-term S3K work should be planned as playable route slices with explicit gates: required traversal objects and badniks, event/camera behavior, scroll/parallax, animated tiles, palette and PLC state, bosses or transitions, rewind coverage where state is gameplay-relevant, trace replay for known blockers, and visual validation against stable-retro where practical. AIZ through HCZ remains the primary release slice, but CNZ, MGZ, ICZ, MHZ, and LBZ now have enough coverage that work should be prioritized by route blockers and complete-run trace frontiers rather than by first-pass zone bring-up.
 
 Work is ongoing across all three games. Recent branch work spans S3K route
-bring-up (AIZ, CNZ, MGZ, ICZ, and Mushroom Hill), an S3K complete-run per-zone
+stabilization (AIZ, HCZ, CNZ, MGZ, ICZ, Mushroom Hill, and Launch Base), an S3K complete-run per-zone
 trace suite (one Sonic+Tails AIZ->Doomsday movie segmented per zone, each trace
 spanning the act1->act2 transition through the zone-exit handoff) with
-ROM-accurate in-game pause modelling and explicit trace-entry capability
-metadata, animated ROM-derived master-title game previews that replace the
+ROM-accurate in-game pause modelling, explicit trace-entry capability metadata,
+and a frontier-only replay mode that bounds failing trace sweeps to the first
+divergence plus diagnostic context, animated ROM-derived master-title game previews that replace the
 bundled title emblem resource, S2 trace-frontier closures (Sky Chase and Casino
 Night
 level-select replays), object-physics standardization onto shared contracts,
@@ -212,10 +213,10 @@ implementations, research and boilerplate code a lot faster than would have been
 
 ### How can I contribute?
 
-The project is open source. Check the issue tracker, OBJECT_CHECKLIST.md for unimplemented game
-objects, and CHANGELOG.md for the current state of each game. The codebase uses a provider-based
-architecture that makes it relatively straightforward to add new objects, zones, and game-specific
-behaviour.
+The project is open source. Start with [`CONTRIBUTING.md`](CONTRIBUTING.md), then check the issue
+tracker, OBJECT_CHECKLIST.md for unimplemented game objects, and CHANGELOG.md for the current state
+of each game. The codebase uses a provider-based architecture that makes it relatively
+straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
@@ -224,6 +225,64 @@ behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Runtime display shader library branch (2026-06-15).** Merged
+  `feature/ai-display-shader-library-spec-no-trace`, adding a user-supplied
+  root `shaders/` library, runtime shader cycling, a searchable/folder-based
+  shader picker, RetroArch/BizHawk GLSL preset loading, in-app libretro GLSL
+  shader-pack download/update support, shader activation toasts, and a
+  post-processing pipeline that can apply scene, presentation, or final display
+  shader phases without committing third-party shader assets.
+- **S3K AIZ collapsing-platform on-object trace frontier (2026-06-15).** Merged
+  `bugfix/ai-aiz-frontier-f3317`, advancing the S3K AIZ1 trace from frame 3317
+  to 4234 by deferring the airborne-rider unseat by one frame on the collapsing
+  platform's collapse-transition frame (ROM `ObjPlatformCollapse_CreateFragments`
+  skips `sub_205B6` that frame), via a new
+  `SolidObjectProvider.defersAirborneRiderUnseatThisFrame` hook. No S3K trace
+  regresses; S1/S2 unaffected.
+- **S3K AIZ sidekick wall/on-object trace frontier (2026-06-15).** Merged
+  `bugfix/ai-aiz-trace-green`, advancing the S3K AIZ1 trace from frame 2590 to
+  3317 (and HCZ complete-run 407→1402) by two ROM-cited CPU-sidekick fixes:
+  keeping `Status_OnObj` on a same-frame land-and-jump-off-object frame, and
+  restoring the per-frame terrain-wall follow nudge so the sidekick re-pushes
+  flat walls like the ROM — which let a `distance==0→−1` wall-distance band-aid
+  and its `PhysicsFeatureSet` flag be deleted. Includes a BizHawk ROM-execution
+  diagnostic (`tools/bizhawk/diag_tails_wallprobe.lua`) used to capture the
+  ground truth. No S3K trace regresses; S1/S2 unaffected.
+- **AIZ2 battleship wrap contract documentation (2026-06-15).** Merged
+  `bugfix/ai-aiz2-battleship-wrap-docs`, correcting stale documentation and test
+  wording so the AIZ2 post-bombing ship loop is described by its ROM
+  `Level_repeat_offset=$200` gameplay wrap instead of the obsolete `$80` visual
+  approximation, with the remaining seam work documented as display-only. No
+  engine behavior change.
+- **Sonic 2 Death Egg ending trace closure (2026-06-14).** Merged
+  `bugfix/ai-death-egg-ending-cutscene`, restoring the DEZ escape ending path
+  by matching ObjC6 barrier solidity, ObjAF boss-id handoff, and ObjC7 Death
+  Egg Robot animation/sensor/defeat timing to the ROM. The
+  `S2DezEndingLevelSelect` replay now reaches the ending pictures and credits
+  path with no divergences.
+- **Launch configuration screen branch (2026-06-12).** Merged
+  `feature/ai-launch-config-screen`, adding per-title launch profiles from the
+  master title screen, transient session-only configuration overlays, donor-gated
+  main/sidekick character choices, widescreen launch presets, red experimental
+  marking for ultrawide modes, and trace-safe overlay clearing across user,
+  programmatic, failed, and teardown launches.
+- **Rewind palette capture and determinism audit branch (2026-06-12).** Merged
+  `bugfix/ai-rewind-palette-and-audit`, adding live palette-color rewind
+  snapshots, schema-driven S3K zone-event sidecars for AIZ/HCZ/CNZ/MGZ/MHZ/ICZ,
+  malformed-payload guards, S3K shield post-rewind art refresh recovery, and
+  the opt-in `debug.rewind.determinismAudit` segment re-simulation diagnostic.
+- **Engine performance optimization branch (2026-06-12).** Merged
+  `bugfix/ai-performance-optimization`, a 13-task measured pass over the
+  audio, rendering, and rewind hot paths: keyframe-spike max 71.7→27.9 ms,
+  dirty-rect pattern-atlas uploads (≈512× less data per DPLC change),
+  incremental background-window scrolling, SAT replay batching, in-place
+  object restore and deferred audio-driver restores during held rewind
+  (≈22× faster / ≈257× less allocation per backward step on the audio
+  share), evidence-gated SMPS/resampler math (fade fallback removal proven
+  PCM-identical), a disasm-cited Tails CalcAngle parity fix, and committed
+  ROM-gated measurement harnesses. Trace-replay results are byte-identical
+  to the pre-branch baseline throughout; full numbers in
+  `docs/performance/2026-06-11-performance-results-tally.md`.
 - **Develop sync and release-hardening integration (2026-06-11).** Merged the
   latest `origin/develop` release-prep work, carrying configuration/save
   resilience updates, data-select presentation fixes, sidekick and trace
@@ -231,7 +290,8 @@ live in `CHANGELOG.md`; this README keeps only the high-level shape of the relea
   release task/review documentation used to track the 0.6 prerelease line.
 - **Release-readiness review remediation follow-up (2026-06-10).** Merged
   `bugfix/ai-release-review-fixes-20260609`, closing the verified
-  release-review blocker/high/medium findings from `fable-arch-review.md`.
+  release-review blocker/high/medium findings that were later consolidated into
+  `docs/superpowers/plans/2026-06-11-release-remediation.md`.
   The branch restores the S3K AIZ trace gate, fixes rewind map copy-on-write
   isolation, hardens develop trace CI, quarantines malformed config/editor
   saves, tightens architecture guards, and clarifies release config/docs.

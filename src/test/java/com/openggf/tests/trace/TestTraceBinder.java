@@ -95,6 +95,46 @@ public class TestTraceBinder {
     }
 
     @Test
+    void testPrimaryRoutineMismatchIsErrorWhenDiagnosticsCarryRoutine() {
+        TraceFrame frame = new TraceFrame(0, 0x0000,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            0, 0, 0x02, -1, -1, -1, 0x00, -1, -1, -1, -1, null);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, new EngineDiagnostics(0x04, -1, -1, -1, 0x00, -1, -1,
+                -1, -1, -1, -1, "", -1, -1, -1, -1));
+
+        assertTrue(result.hasError());
+        assertEquals(Severity.ERROR, result.fields().get("routine").severity());
+    }
+
+    @Test
+    void testPrimaryStatusByteMismatchIsErrorWhenDiagnosticsCarryStatus() {
+        TraceFrame frame = new TraceFrame(0, 0x0000,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            0, 0, 0x02, -1, -1, -1, 0x04, -1, -1, -1, -1, null);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, new EngineDiagnostics(0x02, -1, -1, -1, 0x00, -1, -1,
+                -1, -1, -1, -1, "", -1, -1, -1, -1));
+
+        assertTrue(result.hasError());
+        assertEquals(Severity.ERROR, result.fields().get("status_byte").severity());
+    }
+
+    @Test
     public void testInputValidationMatch() {
         TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
         TraceFrame frame = TraceFrame.of(0, 0x0008,
@@ -139,6 +179,64 @@ public class TestTraceBinder {
 
         assertTrue(result.hasError());
         assertEquals(Severity.ERROR, result.fields().get("sidekick_x").severity());
+    }
+
+    @Test
+    void testSidekickStatusByteMismatchIsReported() {
+        TraceFrame frame = new TraceFrame(0, 0x0000,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            new TraceCharacterState(true,
+                (short) 0x0040, (short) 0x03A0,
+                (short) 0x0010, (short) 0x0000, (short) 0x0010,
+                (byte) 0x00, false, false, 0,
+                0, 0, 0x02, 0x04, 0x00));
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, null, "tails",
+            new TraceCharacterState(true,
+                (short) 0x0040, (short) 0x03A0,
+                (short) 0x0010, (short) 0x0000, (short) 0x0010,
+                (byte) 0x00, false, false, 0,
+                0, 0, 0x02, 0x00, 0x00));
+
+        assertTrue(result.hasError());
+        assertEquals(Severity.ERROR, result.fields().get("tails_status_byte").severity());
+    }
+
+    @Test
+    void testSidekickRoutineMismatchIsReported() {
+        TraceFrame frame = new TraceFrame(0, 0x0000,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            new TraceCharacterState(true,
+                (short) 0x0040, (short) 0x03A0,
+                (short) 0x0010, (short) 0x0000, (short) 0x0010,
+                (byte) 0x00, false, false, 0,
+                0, 0, 0x02, 0x00, 0x00));
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, null, "tails",
+            new TraceCharacterState(true,
+                (short) 0x0040, (short) 0x03A0,
+                (short) 0x0010, (short) 0x0000, (short) 0x0010,
+                (byte) 0x00, false, false, 0,
+                0, 0, 0x04, 0x00, 0x00));
+
+        assertTrue(result.hasError());
+        assertEquals(Severity.ERROR, result.fields().get("tails_routine").severity());
     }
 
     @Test
@@ -438,6 +536,39 @@ public class TestTraceBinder {
     }
 
     @Test
+    void testSidekickCpuCtrl2NormalStepAcceptsHighByteHeldInput() {
+        TraceFrame frame = TraceFrame.of(218, 0x0000,
+            (short) 0x0371, (short) 0x036C,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0);
+        TraceEvent.CpuState snapshotCpu = new TraceEvent.CpuState(
+                218, "tails", 0x02, 0, 0, 0x06,
+                (short) 0x0301, (short) 0x035C, 0,
+                0, 0x00, 0x00, 0, 0x0068,
+                0x98, 0x00, (short) 0x0351, (short) 0x036C,
+                0x0000, 0x00, 0x00, 0x00, 0x0000);
+        TraceEvent.TailsCpuNormalStep normalStep = new TraceEvent.TailsCpuNormalStep(
+                218, "tails", 0x00, 0x00, 0x0000, 0x0000,
+                0xFF, 0x0000, 0x98, 0x0351, 0x036C, 0x0050, 0x0000,
+                "leader_fast", 0x0800, 0x08,
+                0x0000, 0x0000, 0x00, 0x0000, 0x0000, 0x00);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x02, 0x06, 0x0301, 0x035C,
+                0x08, 0x00, 0x16, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0371, (short) 0x036C,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, null, "tails", null, snapshotCpu, actualCpu, normalStep);
+
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_held").severity());
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_pressed").severity());
+        assertFalse(result.hasError());
+    }
+
+    @Test
     void testSidekickCpuCtrl2StillAcceptsCpuStateWhenNormalStepTapIsZero() {
         TraceFrame frame = TraceFrame.of(1726, 0x0000,
             (short) 0x182F, (short) 0x0417,
@@ -468,6 +599,38 @@ public class TestTraceBinder {
         assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_held").severity());
         assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_pressed").severity());
         assertFalse(result.hasError());
+    }
+
+    @Test
+    void testSidekickCpuCtrl2UsesGeneratedNormalStepNotDelayedHeldInput() {
+        TraceFrame frame = TraceFrame.of(2894, 0x0011,
+            (short) 0x172E, (short) 0x0A5A,
+            (short) 0x0400, (short) 0xFFC0, (short) 0x0300,
+            (byte) 0x00, true, false, 0);
+        TraceEvent.CpuState snapshotCpu = new TraceEvent.CpuState(
+                2894, "tails", 0x00, 0, 0, 0x06,
+                (short) 0x14F5, (short) 0x086C, 0,
+                0, 0x15, 0x04, 0, 0x0000,
+                0x00, 0xFF, (short) 0x0000, (short) 0x0000,
+                0xFFFF, 0xFF, 0x00, 0x00, 0x0000);
+        TraceEvent.TailsCpuNormalStep normalStep = new TraceEvent.TailsCpuNormalStep(
+                2894, "tails", 0x43, 0x00, 0x0300, 0x0400,
+                0x42, 0x1504, 0xFF, 0x168C, 0x0A74, 0xFFAD, 0xFFFF,
+                "fallthrough_sub20", 0x0000, 0x00,
+                0x0000, 0x0000, 0x00, 0x0000, 0x0000, 0x00);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x00, 0x06, 0x14F5, 0x086C,
+                0x15, 0x10, 0x30, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x172E, (short) 0x0A5A,
+            (short) 0x0400, (short) 0xFFC0, (short) 0x0300,
+            (byte) 0x00, true, false, 0,
+            null, null, "tails", null, snapshotCpu, actualCpu, normalStep);
+
+        assertEquals(Severity.ERROR, result.fields().get("tails_cpu_ctrl2_pressed").severity());
+        assertTrue(result.hasError());
     }
 
     @Test
@@ -613,6 +776,34 @@ public class TestTraceBinder {
 
         assertFalse(result.fields().containsKey("camera_x"));
         assertFalse(result.fields().containsKey("camera_y"));
+    }
+
+    @Test
+    void testObjectNearSemanticMatchStillReportsSlotMismatch() {
+        TraceFrame frame = TraceFrame.of(1217, 0xA0E0,
+            (short) 0x0935, (short) 0x044C,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        binder.compareFrame(frame,
+            (short) 0x0935, (short) 0x044C,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0);
+
+        binder.compareObjectNear(1217,
+            java.util.List.of(new TraceEvent.ObjectNear(
+                1217, "sonic", 72, "0x5F", (short) 0x0960, (short) 0x03D0, "0x02", "0x00")),
+            java.util.List.of(new EngineNearbyObject(
+                74, 0x5F, "Bomb", 0x0960, 0x03D0, 0x0960, 0x03D0, true,
+                0x9A, 0x9A, 0x0960, 0x03D0, false, false, true)));
+
+        DivergenceReport report = binder.buildReport();
+        assertFalse(report.errors().isEmpty(), "slot mismatch should be reported");
+        DivergenceGroup firstError = report.errors().getFirst();
+        assertEquals("obj_s48_slot", firstError.field());
+        assertEquals("0x48", firstError.expectedAtStart());
+        assertEquals("0x4A", firstError.actualAtStart());
     }
 
     @Test

@@ -128,6 +128,8 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
 
     /** Active width for bubble render. From disassembly: move.b #$10,obActWid(a0) */
     private static final int ACTIVE_WIDTH = 0x10;
+    /** S1 BuildSprites .assumeHeight band when obRender bit 4 is clear. */
+    private static final int ASSUME_HEIGHT_RENDER_MARGIN = 0x20;
 
     /** Render priority. From disassembly: move.b #1,obPriority(a0) */
     private static final int PRIORITY = 1;
@@ -178,6 +180,13 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
     private int animTimer;
     /** Current mapping frame to render. (obFrame) */
     private int mappingFrame;
+    private transient int lastCollisionPlayerX = Integer.MIN_VALUE;
+    private transient int lastCollisionPlayerY = Integer.MIN_VALUE;
+    private transient boolean lastCollisionPlayerInWater;
+    private transient boolean lastCollisionHit;
+    private boolean regularBubbleNeedsInitialRandom;
+    private final int spawnSubtype;
+    private final String spawnDebug;
 
     // ---- Bubble maker state ----
 
@@ -193,15 +202,34 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
     private int delayCounter;
     /** Current offset into BUBBLE_TYPE_TABLE. (objoff_3C) */
     private int typeTableOffset;
+    /**
+     * ROM Bub_Main writes obRender=$84 before falling through to the first
+     * bubble or maker update, so the first tick passes the render gate even
+     * before BuildSprites has established the live on-screen bit.
+     */
+    private boolean initialRenderGate;
+    /**
+     * Retained obRender bit 7 as last written by the sprite build path. Obj64
+     * maker/child routines read this previous render flag before the next
+     * DisplaySprite call can refresh it.
+     */
+    private boolean renderOnScreen;
+    private boolean makerHasDisplayed;
 
     // ========================================================================
     // Constructor
     // ========================================================================
 
     public Sonic1BubblesObjectInstance(ObjectSpawn spawn) {
+        this(spawn, "");
+    }
+
+    private Sonic1BubblesObjectInstance(ObjectSpawn spawn, String spawnDebug) {
         super(spawn, "Bubbles");
 
         int subtype = spawn.subtype();
+        this.spawnSubtype = subtype;
+        this.spawnDebug = spawnDebug;
 
         if (subtype >= 0x80) {
             // ---- Bubble Maker mode ----
@@ -212,6 +240,7 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
             spawnTime = freq;
             // move.b #6,obAnim(a0)
             animId = 6;
+            initialRenderGate = true;
 
             displayX = spawn.x();
             displayY = spawn.y();
@@ -219,8 +248,10 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
             posX16 = spawn.x() << 16;
             posY16 = spawn.y() << 16;
 
-            // Start in maker routine
-            routine = ROUTINE_MAKER;
+            // ObjPosLoad only writes the SST entry; Bub_Main promotes this
+            // to the maker routine on the object's first ExecuteObjects tick.
+            renderOnScreen = true;
+            routine = ROUTINE_INIT;
         } else {
             // ---- Regular Bubble mode ----
             isMaker = false;
@@ -239,11 +270,17 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
             displayX = spawn.x();
             displayY = spawn.y();
 
-            // jsr (RandomNumber).l / move.b d0,obAngle(a0)
-            wobbleAngle = constructionContext().rng().nextByte();
+            // S1 Obj64 calls RandomNumber in Bub_Main, when the child slot
+            // actually executes. FindFreeObj can allocate a lower slot than the
+            // maker, so constructor-time RNG would run one object pass early.
+            wobbleAngle = 0;
+            regularBubbleNeedsInitialRandom = true;
 
-            // Start in animate routine (init is done inline here)
-            routine = ROUTINE_ANIMATE;
+            // ObjPosLoad/FindFreeObj children begin at Bub_Main and run the
+            // inline setup when ExecuteObjects reaches their slot.
+            initialRenderGate = true;
+            renderOnScreen = true;
+            routine = ROUTINE_INIT;
         }
     }
 
@@ -255,11 +292,43 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (routine) {
+            case ROUTINE_INIT -> updateInit(player);
             case ROUTINE_ANIMATE -> updateAnimate(player);
-            case ROUTINE_CHKWATER -> updateChkWater(player);
+            case ROUTINE_CHKWATER -> updateChkWater(player, consumeInitialRenderGate());
             case ROUTINE_DISPLAY -> updateDisplay();
             case ROUTINE_DELETE -> setDestroyed(true);
             case ROUTINE_MAKER -> updateBubbleMaker(player);
+        }
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (isDestroyed()) {
+            return;
+        }
+        if (isMaker && !makerHasDisplayed) {
+            // Bub_BblMaker only refreshes obRender bit 7 when it reaches the
+            // DisplaySprite tail (docs/s1disasm/s1disasm/_incObj/64 LZ Air
+            // Bubbles.asm:211-219). While the maker is above water, the ROM's
+            // initial obRender=$84 persists until that first display pass.
+            return;
+        }
+        if (routine == ROUTINE_DISPLAY || getWaterLevel() < displayY) {
+            updateRenderOnScreenFlag();
+        }
+    }
+
+    private void updateInit(AbstractPlayableSprite player) {
+        if (isMaker) {
+            // docs/s1disasm/_incObj/64 LZ Air Bubbles.asm: Bub_Main sets
+            // obRoutine=$0A, obAnim=6, bub_time/freq, then branches directly
+            // to Bub_BblMaker on the same object tick.
+            routine = ROUTINE_MAKER;
+            updateBubbleMaker(player);
+        } else {
+            // Non-maker bubbles fall through from Bub_Main to Bub_Animate.
+            routine = ROUTINE_ANIMATE;
+            updateAnimate(player);
         }
     }
 
@@ -268,6 +337,13 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
     // ========================================================================
 
     private void updateAnimate(AbstractPlayableSprite player) {
+        boolean initialGate = consumeInitialRenderGate();
+        if (regularBubbleNeedsInitialRandom) {
+            // ROM: Bub_Main jsr (RandomNumber).l / move.b d0,obAngle(a0)
+            regularBubbleNeedsInitialRandom = false;
+            wobbleAngle = services().rng().nextByte();
+        }
+
         // AnimateSprite with Ani_Bub
         animateSprite();
 
@@ -279,21 +355,21 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
         }
 
         // Fall through to Bub_ChkWater
-        updateChkWater(player);
+        updateChkWater(player, initialGate);
     }
 
     // ========================================================================
     // Routine 4: Bub_ChkWater
     // ========================================================================
 
-    private void updateChkWater(AbstractPlayableSprite player) {
+    private void updateChkWater(AbstractPlayableSprite player, boolean initialGate) {
         int waterY = getWaterLevel();
 
         // cmp.w obY(a0),d0 ; is bubble at/above water?
         // blo.s .wobble ; branch if waterY < bubbleY (bubble underwater)
         if (waterY >= displayY) {
             // Bubble has reached water surface → burst
-            startBurst();
+            startBurstAndDisplay();
             return;
         }
 
@@ -314,7 +390,7 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
             if (checkSonicCollision(player)) {
                 // Player collected the bubble
                 onBubbleCollected(player);
-                startBurst();
+                startBurstAndDisplay();
                 return;
             }
         }
@@ -325,12 +401,13 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
         displayY = posY16 >> 16;
 
         // tst.b obRender(a0) / bpl.s .delete
-        if (!isOnScreen(ACTIVE_WIDTH)) {
+        if (!initialGate && !renderOnScreen) {
             setDestroyed(true);
             return;
         }
 
         // DisplaySprite (render will be handled by appendRenderCommands)
+        updateRenderOnScreenFlag();
     }
 
     // ========================================================================
@@ -342,9 +419,11 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
         animateSprite();
 
         // tst.b obRender(a0) / bpl.s .delete
-        if (!isOnScreen(ACTIVE_WIDTH)) {
+        if (!renderOnScreen) {
             setDestroyed(true);
+            return;
         }
+        updateRenderOnScreenFlag();
     }
 
     // ========================================================================
@@ -354,6 +433,7 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
     private void updateBubbleMaker(AbstractPlayableSprite player) {
         int waterY = getWaterLevel();
         var rng = services().rng();
+        boolean initialGate = consumeInitialRenderGate();
 
         if (productionFlags != 0) {
             // Already in production - continue spawn cycle
@@ -374,7 +454,7 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
             }
 
             // tst.b obRender(a0) / bpl.w .chkdel
-            if (!isOnScreen(ACTIVE_WIDTH)) {
+            if (!initialGate && !renderOnScreen) {
                 checkMakerDeletion(waterY);
                 return;
             }
@@ -431,6 +511,12 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
         animateMaker(waterY);
     }
 
+    private boolean consumeInitialRenderGate() {
+        boolean gate = initialRenderGate;
+        initialRenderGate = false;
+        return gate;
+    }
+
     /**
      * Spawns a single bubble child object.
      * From Bub_BblMaker spawn section (lines 165-196 of disassembly).
@@ -446,12 +532,14 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
 
         // Determine bubble subtype from type table
         int tableIndex = typeTableOffset + typeCounter;
+        int tableSubtype;
         int bubbleSubtype;
         if (tableIndex >= 0 && tableIndex < BUBBLE_TYPE_TABLE.length) {
-            bubbleSubtype = BUBBLE_TYPE_TABLE[tableIndex];
+            tableSubtype = BUBBLE_TYPE_TABLE[tableIndex];
         } else {
-            bubbleSubtype = 0;
+            tableSubtype = 0;
         }
+        bubbleSubtype = tableSubtype;
 
         // docs/s1disasm/_incObj/64 Bubbles.asm:166-177 consumes the spawn
         // delay random word, then the X-offset random word, before any
@@ -459,6 +547,9 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
         // the subtype-2 cadence stays aligned with the ROM.
         int xOffset = rng.nextBits(0x0F) - 8;
         int spawnX = origX + xOffset;
+        int productionFlagsBeforeOverride = productionFlags;
+        int overrideRoll = -1;
+        String overrideReason = "none";
 
         // Check for large bubble override
         // btst #7,objoff_36(a0) / beq.s .fail
@@ -467,10 +558,12 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
             // RandomNumber word with #3, so only the low two bits drive this
             // 25% large-bubble override. Consuming/testing three bits shifts
             // later Obj64 subtype cadence.
-            if (rng.nextBits(0x03) == 0) {
+            overrideRoll = rng.nextBits(0x03);
+            if (overrideRoll == 0) {
                 if ((productionFlags & 0x40) == 0) {
                     productionFlags |= 0x40;
                     bubbleSubtype = 2;
+                    overrideReason = "rng";
                 }
             }
 
@@ -480,6 +573,7 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
             if (typeCounter == 0 && (productionFlags & 0x40) == 0) {
                 productionFlags |= 0x40;
                 bubbleSubtype = 2;
+                overrideReason = "last";
             }
         }
 
@@ -488,7 +582,22 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
                 Sonic1ObjectIds.BUBBLES,
                 bubbleSubtype,
                 0, false, 0);
-        spawnFreeChild(() -> new Sonic1BubblesObjectInstance(childSpawn));
+        int typeCounterBeforeDecrement = typeCounter;
+        int productionFlagsAfterOverride = productionFlags;
+        String childDebug = String.format(
+                "maker=@%04X,%04X tblOff=%02X type=%d idx=%02X table=%d flags=%02X->%02X roll=%d override=%s xoff=%d",
+                origX & 0xFFFF,
+                spawn.y() & 0xFFFF,
+                typeTableOffset & 0xFF,
+                typeCounterBeforeDecrement,
+                tableIndex & 0xFF,
+                tableSubtype,
+                productionFlagsBeforeOverride & 0xFF,
+                productionFlagsAfterOverride & 0xFF,
+                overrideRoll,
+                overrideReason,
+                xOffset);
+        spawnFreeChild(() -> new Sonic1BubblesObjectInstance(childSpawn, childDebug));
     }
 
     /**
@@ -507,6 +616,10 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
         // cmp.w obY(a0),d0 / blo.w DisplaySprite
         // Only display if maker is underwater
         // (if above water, just rts - don't render)
+        if (waterY < displayY) {
+            makerHasDisplayed = true;
+            updateRenderOnScreenFlag();
+        }
     }
 
     /**
@@ -515,7 +628,17 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
     private void checkMakerDeletion(int waterY) {
         if (!isInRange()) {
             setDestroyed(true);
+            return;
         }
+        if (waterY < displayY) {
+            makerHasDisplayed = true;
+            updateRenderOnScreenFlag();
+        }
+    }
+
+    private void updateRenderOnScreenFlag() {
+        renderOnScreen = isWithinRenderSpriteBounds(
+                ACTIVE_WIDTH, ASSUME_HEIGHT_RENDER_MARGIN);
     }
 
     // ========================================================================
@@ -538,6 +661,15 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
         }
         // Force animation reset
         prevAnimId = -1;
+    }
+
+    private void startBurstAndDisplay() {
+        startBurst();
+        if (!isDestroyed()) {
+            // docs/s1disasm/s1disasm/_incObj/64 LZ Air Bubbles.asm:
+            // the .burst path writes routine 6, increments obAnim, then bra.w Bub_Display.
+            updateDisplay();
+        }
     }
 
     /**
@@ -574,19 +706,24 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
         // tst.b (f_playerctrl).w / bmi.s .no_collision
         // (skip if player is in a controlled state - we approximate this)
 
-        if (!player.isInWater()) {
+        lastCollisionPlayerX = player.getCentreX();
+        lastCollisionPlayerY = player.getCentreY();
+        lastCollisionPlayerInWater = player.isInWater();
+        lastCollisionHit = false;
+
+        if (!lastCollisionPlayerInWater) {
             return false;
         }
 
         // S1 Obj64 runs Bub_ChkSonic from the bubble object's ExecuteObjects
-        // slot before the bubble's own SpeedToPos step
-        // (docs/s1disasm/_incObj/64 Bubbles.asm:77-105). The engine's S1
-        // object pass runs after player physics for inline solid parity, so use
-        // the sprite-history pre-current-movement centre for this standalone
-        // object collision check instead of letting a post-movement edge contact
-        // overwrite Sonic with id_GetAir/locktime=35.
-        int playerX = player.getCentreX(1);
-        int playerY = player.getCentreY(1);
+        // slot and reads v_player+obX/obY before the bubble's own SpeedToPos
+        // step (docs/s1disasm/s1disasm/_incObj/64 LZ Air Bubbles.asm:77-105,
+        // 226-251). In the engine's S1 inline order, player physics has already
+        // run before dynamic object slots, so the live centre is the ROM
+        // v_player obX/obY sample; the delayed follower-history buffer is only
+        // for Sonic_RecordPosition-style consumers.
+        int playerX = lastCollisionPlayerX;
+        int playerY = lastCollisionPlayerY;
 
         // X check: subi.w #$10,d1 / cmp.w d0,d1 / bhs.s .no
         //   bhs branches when bubbleLeft >= playerX → no collision
@@ -608,7 +745,32 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance {
             return false;
         }
 
+        lastCollisionHit = true;
         return true;
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        StringBuilder sb = new StringBuilder();
+        if (isMaker) {
+            return String.format("r=%02X anim=%d freq=%d time=%d prod=%02X type=%d delay=%d tbl=%02X render=%s",
+                    routine, animId, spawnFreq, spawnTime, productionFlags & 0xFF, typeCounter,
+                    delayCounter, typeTableOffset & 0xFF, renderOnScreen);
+        }
+        sb.append(String.format("r=%02X anim=%d frm=%d idx=%d t=%d inh=%s",
+                routine, animId, mappingFrame, animFrameIndex, animTimer, inhalable));
+        sb.append(String.format(" sub=%d", spawnSubtype));
+        if (!spawnDebug.isBlank()) {
+            sb.append(" ").append(spawnDebug);
+        }
+        if (lastCollisionPlayerX != Integer.MIN_VALUE) {
+            sb.append(String.format(" col=%s p=@%04X,%04X water=%s",
+                    lastCollisionHit ? "hit" : "miss",
+                    lastCollisionPlayerX & 0xFFFF,
+                    lastCollisionPlayerY & 0xFFFF,
+                    lastCollisionPlayerInWater));
+        }
+        return sb.toString();
     }
 
     // ========================================================================

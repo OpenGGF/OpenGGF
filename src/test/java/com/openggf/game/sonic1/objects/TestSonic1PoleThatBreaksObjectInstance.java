@@ -64,6 +64,31 @@ public class TestSonic1PoleThatBreaksObjectInstance {
     }
 
     @Test
+    public void grabAndClimbPreservePlayerSubpixels() {
+        Sonic1PoleThatBreaksObjectInstance pole = createPole(200, 320, 0);
+        TestPlayableSprite player = new TestPlayableSprite();
+        player.setCentreX((short) 240);
+        player.setCentreY((short) 320);
+        player.setSubpixelRaw(0x6400, 0x9000);
+
+        pole.onTouchResponse(player, TOUCH_RESULT, 1);
+        pole.update(1, player);
+
+        assertEquals(200 + 0x14, player.getCentreX());
+        assertEquals(0x6400, player.getXSubpixelRaw(),
+                "Obj0B .grab uses move.w d0,obX(a1), preserving x_sub");
+        assertEquals(0x9000, player.getYSubpixelRaw());
+
+        player.setDirectionalInputPressed(true, false, false, false);
+        pole.update(2, player);
+
+        assertEquals(319, player.getCentreY());
+        assertEquals(0x6400, player.getXSubpixelRaw());
+        assertEquals(0x9000, player.getYSubpixelRaw(),
+                "Obj0B .moveup uses subq.w/move.w on obY(a1), preserving y_sub");
+    }
+
+    @Test
     public void subtypeZeroNeverAutoBreaksWhileGrabbed() {
         Sonic1PoleThatBreaksObjectInstance pole = createPole(200, 320, 0);
         TestPlayableSprite player = new TestPlayableSprite();
@@ -223,5 +248,4 @@ public class TestSonic1PoleThatBreaksObjectInstance {
     }
 
 }
-
 

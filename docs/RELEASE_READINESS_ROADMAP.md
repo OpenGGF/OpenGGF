@@ -184,6 +184,9 @@ Validation:
 Goal: trace and physics exceptions must be either fixed or visible as release
 limitations.
 
+Detailed current trace problem statements, frontier table, clusters, and
+execution order live in `docs/TRACE_REMEDIATION_PLAN.md`.
+
 Work:
 
 - Release-blocking pre-level intro trace bootstrap.
@@ -213,17 +216,83 @@ Work:
     Tornado shape, not trace-row hydration.
   - `docs/KNOWN_DISCREPANCIES.md` documents the contract and the policy tests
     that keep non-Tornado S2 traces on the generic title-card prelude.
+- Current trace remediation clusters after the 2026-06-12 true-frontier
+  comparator sweep plus the S3K complete-run handoff-row fix:
+  - **S3K complete-run startup carry / native sidekick state:** the old
+    frame-0 setup signatures moved. `s3k_cnz1` now reaches frame 1
+    (`y 0x061C -> 0x0600`), `s3k_mhz1` now reaches frame 1
+    (`y 0x051C -> 0x0500` with `tails_cpu_routine` still expecting `0x000E`),
+    and `s3k_lbz1` now reaches frame 410 (`y_speed 0x0000 -> -0100`).
+    Treat these as startup carry/post-title-card sidekick state bugs before
+    stepping deep traces.
+  - **S1 status-bit / push timing:** `s1_credits_01_mz2`,
+    `s1_credits_04_slz3`, `s1_credits_05_sbz1`,
+    `s1_credits_06_sbz2`, plus `s3k_hcz1`. `s1_credits_05_sbz1`
+    advanced from frame 116 to frame 413 after the Obj66 right-edge
+    `SolidObject` fix; the next owner is facing/on-object handoff.
+  - **Rolling and radius timing:** `s1_ghz1`, `s1_mz3`, `s1_sbz1`,
+    plus the y-off-by-about-five group (`s1_lz2`, `s1_slz1`, `s1_mz2`,
+    `s1_sbz2`, `s2_arz1`, `s2_cnz2`, `s2_scz1`). Hypothesis: one
+    wrong roll/standing radius transition can explain both status and y
+    deltas, because Sonic's standing radius is 19 and rolling/jumping radius
+    is 14.
+  - **Exact `0x100` speed deltas:** `s1_ghz3`, `s1_syz1`, `s1_mz1`,
+    `s2_arz2`, `s2_mcz1`. Diff the single frame's movement subroutine before
+    changing shared constants.
+  - **S2/S3K sidekick CPU state:** `s2_htz1`, `s2_htz2`, `s2_mtz1`,
+    `s2_mtz3`, `s2_ooz2`, `s3k_mhz1`, and downstream Tails movement traces
+    (`s2_cpz1`, `s2_cpz2`, `s2_mcz2`, `s2_mtz2`, `s2_ooz1`, `s2_cnz1`,
+    `s3k_aiz1`). Fix CPU routine/interact/status publication before treating
+    later Tails speeds as independent bugs.
+  - **Springs / launchers:** `s1_sbz3`, `s1_slz3`, `s1_lz1`. These have
+    large same-frame y-speed mismatches and should be checked against the
+    owning spring/launcher trigger routine.
+  - **Individual frontiers:** `s1_lz3` vertical wrap, `s1_syz3`
+    bumper/bounce sign, `s1_slz2` slope factor, `s3k_hcz1` air countdown,
+    `s3k_mgz1` ring pickup, `s3k_icz1` one-pixel rounding, `s2_dez1`
+    ending-route speed, and `s1_lz4` camera.
+- Sidekick CPU audit open problem statements folded into this roadmap:
+  - `s2_mtz2` frame 645 is currently masked by Tails being hurt by a
+    Shellcracker claw where ROM Tails is rolling; suspect solid/touch
+    ordering before changing sidekick CPU.
+  - `s3k_lbz1` no longer stops at the frame-0 camera seed; the frontier is now
+    frame 410 `y_speed`, after native startup/launch state ticks through the
+    initial handoff rows.
+  - `s3k_aiz1` still has a monitor/push sidekick frontier and auto-jump
+    cadence sub-test failures.
+  - The dead-fall path still needs ROM ordering review around
+    `applyDeathMovement` and `Obj02_Dead` / `Tails_Max_Y_pos + $100`.
+  - S2 signpost airborne end-of-act trigger behavior, Obj85 preserved-roll
+    jump suppression, and CPU `Level_frame_counter` visibility remain open
+    audit items.
+  - S3K Tails-alone CPU routines `$1A-$1E`, `$20`, and `$22`, MHZ1
+    carry-intro spawn, ICZ/SSZ dormant park, and star-post zero-kinematics
+    reset remain incomplete.
+  - `s2_scz1` frame 6370 is a merged-baseline Tornado-route y regression and
+    should be treated as non-sidekick until evidence says otherwise.
 
 Recommended order:
 
-1. Keep the accepted AIZ legacy trace predicate bounded by the release guard.
-2. Add focused tests around any future AIZ intro trace bootstrap decision points.
-3. Replace remaining fixture recognition with ROM-state-driven phase handling
+1. Keep the comparator broad enough to report true frontiers; do not narrow or
+   tolerate status/routine mismatches to regain green output.
+2. Continue the S3K complete-run startup carry/native sidekick cluster exposed
+   after the frame-0 handoff-row fix.
+3. Continue the status-bit cluster exposed by the widened comparator, starting
+   with the earliest single-frame `Status_Push` / facing / on-object handoff.
+4. Test the roll/radius hypothesis before treating the y-off-by-five traces as
+   unrelated bugs.
+5. Diff exact-`0x100` speed deltas at the owning movement routine.
+6. Fix sidekick CPU routine/interact/status roots before downstream Tails
+   position or speed symptoms.
+7. Keep the accepted AIZ legacy trace predicate bounded by the release guard.
+8. Add focused tests around any future AIZ intro trace bootstrap decision
+   points.
+9. Replace remaining fixture recognition with ROM-state-driven phase handling
    when new recorder metadata or regenerated fixtures are available.
-4. Add focused bottom-boundary tests for S1/S2 centre-Y behavior before any
+10. Add focused bottom-boundary tests for S1/S2 centre-Y behavior before any
    future flag flip.
-5. Re-run affected S1/S2 traces before changing the feature flags.
-6. Keep the S2 Tornado contract tests green before changing trace bootstrap
+11. Re-run affected S1/S2 traces before changing the feature flags.
+12. Keep the S2 Tornado contract tests green before changing trace bootstrap
    setup.
 
 Validation:

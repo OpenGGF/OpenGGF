@@ -106,6 +106,17 @@ public interface ZoneFeatureProvider {
     }
 
     /**
+     * Returns true while a ROM water/wind tunnel mode flag is active.
+     *
+     * <p>S1 Obj0A consumes {@code f_wtunnelmode} directly while updating
+     * drowning bubbles, advancing {@code drown_origX} before applying the
+     * wobble table.
+     */
+    default boolean isWaterTunnelActive() {
+        return false;
+    }
+
+    /**
      * Updates zone features that must observe a playable after its movement
      * slot, before the next playable's CPU/controller slot runs.
      *

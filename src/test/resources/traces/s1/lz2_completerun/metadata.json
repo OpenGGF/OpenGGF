@@ -7,11 +7,13 @@
   "trace_frame_count": 10173,
   "start_x": "0x0050",
   "start_y": "0x00EC",
-  "recording_date": "2026-06-05",
-  "lua_script_version": "3.2",
+  "rng_seed": "0xCF89035A",
+  "recording_date": "2026-06-13",
+  "lua_script_version": "3.4",
   "trace_schema": 3,
   "csv_version": 4,
+  "aux_schema_extras": ["s1_obj64_state_per_frame"],
+  "source_bk2": "s1-complete-run.bk2",
   "rom_checksum": "",
-  "notes": "",
-  "source_bk2": "s1-complete-run.bk2"
+  "notes": ""
 }

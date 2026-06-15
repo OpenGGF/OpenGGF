@@ -70,7 +70,8 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
             AnimalObjectInstance::new,
             false,  // useRespawnTracking (S3K always removeFromActiveSpawns)
             (spawn, svc, pts) -> new Sonic3kPointsObjectInstance(spawn, svc, pts),
-            null
+            null,
+            false
     );
 
     protected final void defeat(AbstractPlayableSprite player) {

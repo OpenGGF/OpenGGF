@@ -1,5 +1,6 @@
 package com.openggf.tests;
 
+import com.openggf.game.GroundMode;
 import com.openggf.game.sonic3k.objects.Sonic3kSpringObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
@@ -46,6 +47,8 @@ class TestS3kSpringObjectInstance {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         player.setCentreX((short) 8);
         player.setAir(false);
+        player.setGroundMode(GroundMode.GROUND);
+        player.setAngle((byte) 0x04);
 
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0, 0, 0x07, 0x12, 0, false, 0));
@@ -54,6 +57,8 @@ class TestS3kSpringObjectInstance {
 
         assertFalse(player.getAir(),
                 "Grounded horizontal-spring contacts should remain grounded");
+        assertEquals(0x04, player.getAngle() & 0xFF,
+                "ROM sub_23190 does not write angle(a1); shallow floor angle should survive launch");
         assertEquals((short) 0x0A00, player.getXSpeed());
         assertEquals((short) 0x0A00, player.getGSpeed());
     }

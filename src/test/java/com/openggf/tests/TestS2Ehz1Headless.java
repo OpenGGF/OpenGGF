@@ -616,9 +616,9 @@ public class TestS2Ehz1Headless {
         controller.update(1);
 
         // ROM TailsCPU_Normal sends dead-Sonic recovery to routine 4
-        // (TailsCPU_Flying), sets obj_control=$81, and switches to the fly
-        // animation: s2.asm:38906-38915.
-        assertEquals(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, controller.getState());
+        // (TailsCPU_Flying). In the engine's S2 state model, that routine is
+        // APPROACHING; FLIGHT_AUTO_RECOVERY models the S3K catch-up routine.
+        assertEquals(SidekickCpuController.State.APPROACHING, controller.getState());
         assertTrue(tails.isObjectControlled());
         assertTrue(tails.getAir());
     }

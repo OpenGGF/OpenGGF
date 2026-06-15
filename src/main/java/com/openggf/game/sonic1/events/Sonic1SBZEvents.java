@@ -18,9 +18,8 @@ import com.openggf.level.objects.ObjectSpawn;
  * Act 3 (DLE_SBZ3): Zone transition to Final Zone (ROM: LZ act 3).
  * FZ   (DLE_FZ):    5-routine boss sequence with left boundary locking.
  *
- * TODO: Act 2 boss spawn + collapsing floor - DLE_SBZ lines 323-400 in s1disasm.
- *   Routine 2 spawns collapsing floor object; routine 4 spawns Eggman boss.
- *   Boss objects not yet implemented.
+ * Act 2 boss spawn + collapsing floor - DLE_SBZ lines 323-400 in s1disasm:
+ *   Routine 2 spawns the collapsing floor object; routine 4 spawns Eggman.
  * Act 3 zone transition to FZ - DLE_SBZ3: implemented.
  *   Locks player, clears checkpoint, restarts into Final Zone.
  * FZ boss spawn: routine 2 spawns FZ boss (Object 0x85).
@@ -279,8 +278,9 @@ class Sonic1SBZEvents extends Sonic1ZoneEvents {
             // addq.b #2,(v_dle_routine).w
             eventRoutine += 2;
 
-            // TODO: Load FZ boss patterns (not yet implemented)
-            // ROM loads boss art/patterns here
+            // TODO: preload FZ boss pattern PLC here. The boss instance still
+            // loads its runtime art, but the ROM requests the patterns at this
+            // dynamic-level-event boundary.
         }
 
         // loc_72F4: bra.s loc_72C2 - lock left boundary

@@ -7,6 +7,7 @@ import com.openggf.game.sonic2.objects.SignpostObjectInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.physics.Direction;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
@@ -33,12 +34,55 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class TestS2Ehz1BridgeTailsStandingRegression {
 
     private static final Path TRACE_DIR = Path.of("src/test/resources/traces/s2/ehz1_fullrun");
+    private static final int TAILS_OBJ18_LEFT_EDGE_BALANCE_FRAME = 385;
+    private static final int TAILS_OBJ18_BALANCE_WIDTH_FRAME = 395;
     private static final int PROBE_FRAME = 875;
     private static final int DESPAWN_FRAME = 1131;
     private static final int TAILS_BRIDGE_LANDING_FRAME = 2911;
     private static final int SONIC_BRIDGE_JUMP_PREP_FRAME = 4564;
     private static final int SIGNPOST_RESULTS_EDGE_FRAME = 5040;
     private static final int SIGNPOST_RESULTS_FIRST_GROUNDED_DIVERGENCE_FRAME = 5105;
+
+    @Test
+    void tailsFacesLeftAtObj18LeftEdge() throws Exception {
+        BridgeProbe probe = replayToFrame(TAILS_OBJ18_LEFT_EDGE_BALANCE_FRAME);
+        try {
+            TraceFrame expected = probe.expectedFrame();
+            AbstractPlayableSprite tails = probe.tails();
+            assertNotNull(expected.sidekick(), "Trace frame does not contain recorded Tails state");
+            assertNotNull(tails, "Tails should be present at the Obj18 left-edge probe frame");
+            assertEquals(0x11, expected.sidekick().standOnObj(),
+                    "Probe frame changed; expected Tails to be standing on Obj18 slot 0x11");
+            assertEquals(1, expected.sidekick().statusByte() & 0x01,
+                    "Probe frame changed; recorded Tails should be facing left");
+            assertEquals(expected.sidekick().statusByte() & 0x01,
+                    tails.getDirection() == Direction.LEFT ? 1 : 0,
+                    () -> "Tails should face toward Obj18's left edge: " + probe.describeActual());
+        } finally {
+            probe.dispose();
+        }
+    }
+
+    @Test
+    void tailsUsesObj18WidthPixelsForObjectEdgeBalance() throws Exception {
+        BridgeProbe probe = replayToFrame(TAILS_OBJ18_BALANCE_WIDTH_FRAME);
+        try {
+            TraceFrame expected = probe.expectedFrame();
+            AbstractPlayableSprite tails = probe.tails();
+            assertNotNull(expected.sidekick(), "Trace frame does not contain recorded Tails state");
+            assertNotNull(tails, "Tails should be present at the Obj18 balance-width probe frame");
+            assertEquals(0x11, expected.sidekick().standOnObj(),
+                    "Probe frame changed; expected Tails to be standing on Obj18 slot 0x11");
+            assertEquals(expected.sidekick().statusByte() & 0x01,
+                    tails.getDirection() == Direction.LEFT ? 1 : 0,
+                    () -> "Tails facing bit diverged on Obj18 balance edge check: " + probe.describeActual());
+            assertEquals(expected.sidekick().statusByte() & 0x08,
+                    tails.isOnObject() ? 0x08 : 0,
+                    () -> "Tails on-object bit diverged on Obj18 balance edge check: " + probe.describeActual());
+        } finally {
+            probe.dispose();
+        }
+    }
 
     @Test
     void tailsMatchesRecordedPlatformCarryStateAtProbeFrame() throws Exception {

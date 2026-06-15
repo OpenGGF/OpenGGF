@@ -53,13 +53,15 @@ public final class DestructionEffects {
      *                           if false, always uses {@code removeFromActiveSpawns}
      * @param pointsFactory      factory for the floating points popup, or {@code null} to skip
      * @param explosionFactory   factory for a custom replacement explosion object, or {@code null}
+     * @param pointsAllocatedBeforeAnimal if true, allocate the points popup before the animal object
      */
     public record DestructionConfig(
             int sfxId,
             AnimalFactory animalFactory,
             boolean useRespawnTracking,
             PointsFactory pointsFactory,
-            ExplosionFactory explosionFactory
+            ExplosionFactory explosionFactory,
+            boolean pointsAllocatedBeforeAnimal
     ) {
     }
 
@@ -68,9 +70,8 @@ public final class DestructionEffects {
      * <ol>
      *   <li>Handle respawn tracking (mark remembered or remove from active spawns)</li>
      *   <li>Spawn explosion (inheriting the badnik's slot for ROM parity)</li>
-     *   <li>Optionally spawn animal</li>
      *   <li>Calculate and award chain score</li>
-     *   <li>Optionally spawn points popup</li>
+     *   <li>Optionally let the explosion routine allocate animal/points children</li>
      *   <li>Play explosion SFX</li>
      * </ol>
      *
@@ -115,29 +116,16 @@ public final class DestructionEffects {
         if (objectManager != null) {
             ObjectInstance explosion = config.explosionFactory() != null
                     ? config.explosionFactory().create(x, y, services, pointsValue)
-                    : new ExplosionObjectInstance(0x27, x, y, renderManager);
+                    : new ExplosionObjectInstance(
+                            0x27,
+                            x,
+                            y,
+                            renderManager,
+                            config.animalFactory(),
+                            config.pointsFactory(),
+                            pointsValue,
+                            config.pointsAllocatedBeforeAnimal());
             ObjectLifetimeOps.addReplacementAtTransferredSlot(objectManager, explosion, badnikSlot);
-        }
-
-        // --- Optionally spawn animal ---
-        if (config.explosionFactory() == null
-                && config.animalFactory() != null
-                && objectManager != null) {
-            ObjectInstance animal = config.animalFactory().create(
-                    new ObjectSpawn(x, y, 0x28, 0, 0, false, 0), services);
-            if (animal != null) {
-                objectManager.addDynamicObject(animal);
-            }
-        }
-
-        // --- Optionally spawn points popup ---
-        if (config.explosionFactory() == null
-                && config.pointsFactory() != null
-                && objectManager != null) {
-            ObjectInstance points = config.pointsFactory().create(
-                    new ObjectSpawn(x, y, 0x29, 0, 0, false, 0),
-                    services, pointsValue);
-            objectManager.addDynamicObject((AbstractObjectInstance) points);
         }
 
         // --- Play explosion SFX ---

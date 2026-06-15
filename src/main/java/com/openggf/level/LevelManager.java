@@ -23,6 +23,7 @@ import com.openggf.debug.PerformanceProfiler;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
 import com.openggf.game.render.AdvancedRenderModeController;
@@ -71,6 +72,7 @@ import com.openggf.sprites.render.PlayerSpriteRenderer;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -92,6 +94,8 @@ public class LevelManager {
     // the world session in sync.
     Level level;
     int blockPixelSize = 128;  // cached from level
+    // Block-grid index math (pow2 fast path); recomputed in cacheLevelDimensions().
+    private BlockGridIndexer blockGrid = new BlockGridIndexer(128);
     private int chunksPerBlockSide = 8;
     // Cached level pixel dimensions (immutable once level loads).
     // Avoids repeated getLayerWidthBlocks()*blockPixelSize in hot-path collision lookups.
@@ -149,6 +153,7 @@ public class LevelManager {
     PerformanceProfiler profiler;
     private CrossGameFeatureProvider crossGameFeatures;
     final List<List<LevelData>> levels = new ArrayList<>();
+    private final List<PendingLostRingSpawn> pendingLostRingSpawns = new ArrayList<>();
     private final WorldSession worldSession;
     // Local mirror of zone/act state owned by WorldSession. Reads use these
     // fields directly for speed; writes go through writeCurrentZone /
@@ -213,6 +218,7 @@ public class LevelManager {
 
     // Rendering pipeline (extracted from LevelManager — see LevelRenderer).
     private final LevelRenderer levelRenderer = new LevelRenderer(this);
+    final LevelFrameRuntimeUpdater frameRuntimeUpdater = new LevelFrameRuntimeUpdater(this);
     private EngineContext engineServices; private EditorSaveManager editorSaveManager;
 
     @Deprecated(forRemoval = true)
@@ -661,14 +667,8 @@ public class LevelManager {
      */
     public void initZoneFeatures() throws IOException {
         zoneFeatureProvider = gameModule.getZoneFeatureProvider();
-        SpecialRenderEffectRegistry specialRenderEffectRegistry = GameServices.specialRenderEffectRegistryOrNull();
-        AdvancedRenderModeController advancedRenderModeController = GameServices.advancedRenderModeControllerOrNull();
-        if (specialRenderEffectRegistry != null) {
-            specialRenderEffectRegistry.clear();
-        }
-        if (advancedRenderModeController != null) {
-            advancedRenderModeController.clear();
-        }
+        resetZoneScopedRegistriesForLevelLoad();
+        applyLevelLoadPaletteOverrides();
         initializeZoneFeatureProvider(zoneFeatureProvider);
     }
 
@@ -676,15 +676,30 @@ public class LevelManager {
         if (zoneFeatureProvider == null) {
             zoneFeatureProvider = gameModule.getZoneFeatureProvider();
         }
+        resetZoneScopedRegistriesForLevelLoad();
+        applyLevelLoadPaletteOverrides();
+        initializeZoneFeatureProvider(zoneFeatureProvider);
+    }
+
+    void resetZoneScopedRegistriesForLevelLoad() {
+        PaletteOwnershipRegistry paletteOwnershipRegistry = GameServices.paletteOwnershipRegistryOrNull();
         SpecialRenderEffectRegistry specialRenderEffectRegistry = GameServices.specialRenderEffectRegistryOrNull();
         AdvancedRenderModeController advancedRenderModeController = GameServices.advancedRenderModeControllerOrNull();
+        if (paletteOwnershipRegistry != null) {
+            paletteOwnershipRegistry.clear();
+        }
         if (specialRenderEffectRegistry != null) {
             specialRenderEffectRegistry.clear();
         }
         if (advancedRenderModeController != null) {
             advancedRenderModeController.clear();
         }
-        initializeZoneFeatureProvider(zoneFeatureProvider);
+    }
+
+    private void applyLevelLoadPaletteOverrides() {
+        if (game instanceof LevelLoadPaletteOverrideProvider provider && level != null) {
+            provider.applyLevelLoadPaletteOverrides(level, currentZone, currentAct);
+        }
     }
 
     private void initializeZoneFeatureProvider(ZoneFeatureProvider zoneFeatureProvider) throws IOException {
@@ -885,9 +900,15 @@ public class LevelManager {
      * This keeps ReactToItem aligned to the current frame's pre-object-update state.
      */
     public void prepareTouchResponseSnapshots() {
-        if (objectManager != null) {
-            objectManager.snapshotTouchResponseState();
-        }
+        if (objectManager != null) objectManager.snapshotTouchResponseState(touchResponseUsesPreviousCollisionResponseList());
+    }
+
+    private boolean touchResponseUsesPreviousCollisionResponseList() {
+        GameModule activeModule = activeGameModule();
+        return activeModule != null
+                && activeModule.getPhysicsProvider() != null
+                && activeModule.getPhysicsProvider().getFeatureSet() != null
+                && activeModule.getPhysicsProvider().getFeatureSet().touchResponseUsesPreviousCollisionResponseList();
     }
 
     /**
@@ -976,6 +997,12 @@ public class LevelManager {
         }
     }
 
+    public void refreshObjectPostCameraRenderState() {
+        if (objectManager != null) {
+            objectManager.refreshPostCameraRenderState();
+        }
+    }
+
     /**
      * Advances zone scroll handlers that own foreground camera movement.
      *
@@ -1018,6 +1045,7 @@ public class LevelManager {
         // rather than in drawWithSpritePriority() so headless tests see the
         // counter advance even when rendering is disabled.
         frameCounter++;
+        processPendingLostRingSpawns();
 
         Sprite player = null;
         AbstractPlayableSprite playable = null;
@@ -1056,6 +1084,8 @@ public class LevelManager {
                 playable.applyHurtOrDeath(0, DamageCause.TIME_OVER, false);
             }
         }
+
+        frameRuntimeUpdater.updateParallaxAndAnimatedContent();
 
         // Legacy object-before-physics modules update playable water state here.
         // Inline-order modules run this immediately after the player slot in
@@ -1773,23 +1803,7 @@ public class LevelManager {
     }
 
     public void recomputeParallaxAfterRewindRestore() {
-        if (parallaxManager == null || camera == null) {
-            return;
-        }
-        int bgScrollY = (int) (camera.getY() * 0.1f);
-        if (game != null
-                && currentZone >= 0
-                && currentZone < levels.size()
-                && currentAct >= 0
-                && currentAct < levels.get(currentZone).size()) {
-            int levelIdx = levels.get(currentZone).get(currentAct).getLevelIndex();
-            int[] scroll = game.getBackgroundScroll(levelIdx, camera.getX(), camera.getY());
-            bgScrollY = scroll[1];
-        }
-        parallaxManager.update(currentZone, currentAct, camera, frameCounter, bgScrollY, level);
-        camera.setShakeOffsets(
-                parallaxManager.getShakeOffsetX(),
-                parallaxManager.getShakeOffsetY());
+        frameRuntimeUpdater.recomputeParallaxAfterRewindRestore();
     }
 
     /**
@@ -1839,8 +1853,8 @@ public class LevelManager {
                 && zoneFeatureProvider != null && zoneFeatureProvider.bgWrapsHorizontally()) {
             int newBase = Math.floorDiv(bgCameraX, 16) * 16;
             if (newBase != tilemapManager.getBgTilemapBaseX()) {
-                tilemapManager.setBgTilemapBaseX(newBase);
-                tilemapManager.setBackgroundTilemapDirty(true);
+                // Window-only change: eligible for the incremental one-column shift.
+                tilemapManager.requestBgWindowBaseX(newBase);
             }
         } else if (tilemapManager.getBgTilemapBaseX() != 0) {
             tilemapManager.setBgTilemapBaseX(0);
@@ -1919,6 +1933,7 @@ public class LevelManager {
             cachedBgContiguousWidthPx = blockPixelSize;
             cachedBgHeightPx = blockPixelSize;
         }
+        blockGrid = new BlockGridIndexer(blockPixelSize);
     }
 
     /**
@@ -2091,26 +2106,23 @@ public class LevelManager {
         }
 
         // Wrap X (always wraps)
-        int wrappedX = ((x % levelWidth) + levelWidth) % levelWidth;
+        int wrappedX = BlockGridIndexer.wrapCoordinate(x, levelWidth);
 
         // Wrap or clamp Y depending on layer
         int wrappedY = y;
-        if (layer == 1) {
-            // Background loops vertically
-            wrappedY = ((wrappedY % levelHeight) + levelHeight) % levelHeight;
-        } else if (verticalWrapEnabled) {
-            // ROM: LZ3/SBZ2 — FG also wraps vertically
-            wrappedY = ((wrappedY % levelHeight) + levelHeight) % levelHeight;
+        if (layer == 1 || verticalWrapEnabled) {
+            // Background loops vertically; ROM: LZ3/SBZ2 — FG also wraps vertically
+            wrappedY = BlockGridIndexer.wrapCoordinate(wrappedY, levelHeight);
         } else {
             // Foreground clamps
             if (wrappedY < 0 || wrappedY >= levelHeight)
                 return null;
         }
 
-        // Block lookup (inlined from getBlockAtPosition to reuse wrappedX/wrappedY)
+        // Block lookup (inlined from getBlockAtPosition to reuse wrappedX/wrappedY).
         Map map = level.getMap();
-        int mapX = wrappedX / blockPixelSize;
-        int mapY = wrappedY / blockPixelSize;
+        int mapX = blockGrid.blockIndex(wrappedX);
+        int mapY = blockGrid.blockIndex(wrappedY);
 
         byte value = map.getValue(layer, mapX, mapY);
         int blockIndex = value & 0xFF;
@@ -2125,8 +2137,8 @@ public class LevelManager {
         }
 
         // Intra-block position (reuses already-wrapped coordinates)
-        return block.getChunkDesc((wrappedX % blockPixelSize) / LevelConstants.CHUNK_WIDTH,
-                (wrappedY % blockPixelSize) / LevelConstants.CHUNK_HEIGHT);
+        return block.getChunkDesc(blockGrid.blockLocal(wrappedX) / LevelConstants.CHUNK_WIDTH,
+                blockGrid.blockLocal(wrappedY) / LevelConstants.CHUNK_HEIGHT);
     }
 
     /**
@@ -2154,17 +2166,17 @@ public class LevelManager {
         if (levelWidth <= 0 || levelHeight <= 0) {
             return null;
         }
-        int wrappedX = ((x % levelWidth) + levelWidth) % levelWidth;
+        int wrappedX = BlockGridIndexer.wrapCoordinate(x, levelWidth);
         int wrappedY = y;
         if (verticalWrapEnabled) {
-            wrappedY = ((wrappedY % levelHeight) + levelHeight) % levelHeight;
+            wrappedY = BlockGridIndexer.wrapCoordinate(wrappedY, levelHeight);
         } else if (wrappedY < 0 || wrappedY >= levelHeight) {
             return null;
         }
 
         Map map = level.getMap();
-        int mapX = wrappedX / blockPixelSize;
-        int mapY = wrappedY / blockPixelSize;
+        int mapX = blockGrid.blockIndex(wrappedX);
+        int mapY = blockGrid.blockIndex(wrappedY);
 
         int rawBlockIndex = map.getValue(0, mapX, mapY) & 0xFF;
         int resolvedIndex = level.resolveCollisionBlockIndex(rawBlockIndex, mapX, mapY);
@@ -2179,8 +2191,8 @@ public class LevelManager {
         }
 
         return block.getChunkDesc(
-                (wrappedX % blockPixelSize) / LevelConstants.CHUNK_WIDTH,
-                (wrappedY % blockPixelSize) / LevelConstants.CHUNK_HEIGHT);
+                blockGrid.blockLocal(wrappedX) / LevelConstants.CHUNK_WIDTH,
+                blockGrid.blockLocal(wrappedY) / LevelConstants.CHUNK_HEIGHT);
     }
 
     public SolidTile getSolidTileForChunkDesc(ChunkDesc chunkDesc, int solidityBitIndex) {
@@ -2689,6 +2701,49 @@ public class LevelManager {
         ringManager.spawnLostRings(player, count, frameCounter);
     }
 
+    public void spawnLostRingsAfterCurrentFrame(AbstractPlayableSprite player, int frameCounter) {
+        if (player == null || ringManager == null) {
+            return;
+        }
+        int count = player.getRingCount();
+        if (count <= 0) {
+            return;
+        }
+        int preallocatedFirstSlot = -1;
+        if (objectManager != null && objectManager.preallocatesLostRingOwnerSlot()) {
+            preallocatedFirstSlot = objectManager.allocateDynamicSlot();
+        }
+        pendingLostRingSpawns.add(new PendingLostRingSpawn(
+                player, count, player.getCentreX(), player.getCentreY(), frameCounter,
+                preallocatedFirstSlot));
+    }
+
+    private void processPendingLostRingSpawns() {
+        if (pendingLostRingSpawns.isEmpty() || ringManager == null) {
+            return;
+        }
+        Iterator<PendingLostRingSpawn> iterator = pendingLostRingSpawns.iterator();
+        while (iterator.hasNext()) {
+            PendingLostRingSpawn pending = iterator.next();
+            if (frameCounter <= pending.frameCounter()) {
+                continue;
+            }
+            if (pending.player().getRingCount() > 0) {
+                ringManager.spawnLostRingsWithInitialObjectStep(
+                        pending.player(), pending.ringCount(), frameCounter,
+                        pending.x(), pending.y(), pending.preallocatedFirstSlot());
+            } else if (pending.preallocatedFirstSlot() >= 0 && objectManager != null) {
+                objectManager.releaseDynamicSlot(pending.preallocatedFirstSlot());
+            }
+            iterator.remove();
+        }
+    }
+
+    private record PendingLostRingSpawn(
+            AbstractPlayableSprite player, int ringCount, int x, int y, int frameCounter,
+            int preallocatedFirstSlot) {
+    }
+
     // ── Post-load assembly methods ──────────────────────────────────────
     // Extracted from loadCurrentLevel() so profile steps can delegate to them.
     // Each method corresponds to one post-load InitStep (steps 14-20).
@@ -3076,10 +3131,12 @@ public class LevelManager {
         if (level == null || gameModule == null) {
             return;
         }
+        if (editorSaveManager == null || !editorSaveManager.supportsRuntimeEditApply(gameModule.getGameId())) {
+            return;
+        }
         MutableLevel mutableLevel = level instanceof MutableLevel existing
                 ? existing
                 : MutableLevel.snapshot(level);
-        if (editorSaveManager == null) return;
         EditorSaveManager.ApplyResult result = editorSaveManager.tryApplyEdits(gameModule.getGameId(), currentZone, currentAct, mutableLevel);
         if (result == EditorSaveManager.ApplyResult.APPLIED && mutableLevel != level) {
             setLevel(mutableLevel);

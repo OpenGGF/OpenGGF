@@ -35,6 +35,8 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
     private final Sonic1SYZEvents syzEvents;
     private final Sonic1SBZEvents sbzEvents;
     private final Sonic1EndingEvents endingEvents;
+    private final Sonic1FixedAirCountdownManager fixedAirCountdownManager =
+            new Sonic1FixedAirCountdownManager();
 
     // Loop/plane switching manager
     private final Sonic1LoopManager loopManager = new Sonic1LoopManager();
@@ -89,6 +91,7 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
         sbzEvents.init();
         endingEvents.init();
         loopManager.initLevel(zone, act);
+        fixedAirCountdownManager.reset();
         sbz3TransitionRequested = false;
     }
 
@@ -109,6 +112,16 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
             case Sonic1ZoneConstants.ZONE_ENDING -> endingEvents.update(currentAct);
             default -> { /* DLE_Ending: rts */ }
         }
+    }
+
+    @Override
+    public void updateFixedInLevelObjectsBeforeDynamicObjects() {
+        fixedAirCountdownManager.update();
+    }
+
+    @Override
+    public boolean ownsFixedDrowningBubbleCadence(AbstractPlayableSprite player) {
+        return fixedAirCountdownManager.ownsCadenceFor(player);
     }
 
     // =========================================================================
@@ -147,11 +160,13 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
      *   <li>1 byte: sbzEvents.fzTransitionRequested</li>
      *   <li>1 byte: endingEvents.bootstrapApplied</li>
      *   <li>1 byte: endingEvents.endingSonicSpawned</li>
+     *   <li>14 bytes: fixed v_sonicbubbles countdown sidecar</li>
      * </ol>
      */
     @Override
     protected byte[] captureExtra() {
-        ByteBuffer buf = ByteBuffer.allocate(1 + 7 * 4 + 3);
+        ByteBuffer buf = ByteBuffer.allocate(1 + 7 * 4 + 3
+                + Sonic1FixedAirCountdownManager.REWIND_STATE_BYTES);
         buf.put((byte) (sbz3TransitionRequested ? 1 : 0));
         buf.putInt(ghzEvents.eventRoutine);
         buf.putInt(lzEvents.eventRoutine);
@@ -163,12 +178,14 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
         buf.put((byte) (sbzEvents.isFzTransitionRequested() ? 1 : 0));
         buf.put((byte) (endingEvents.isBootstrapApplied() ? 1 : 0));
         buf.put((byte) (endingEvents.isEndingSonicSpawned() ? 1 : 0));
+        fixedAirCountdownManager.writeRewindState(buf);
         return buf.array();
     }
 
     @Override
     protected void restoreExtra(byte[] extra) {
-        if (extra == null || extra.length < 1 + 7 * 4 + 3) {
+        int baseSize = 1 + 7 * 4 + 3;
+        if (extra == null || extra.length < baseSize) {
             return;
         }
         ByteBuffer buf = ByteBuffer.wrap(extra);
@@ -183,6 +200,9 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
         sbzEvents.setFzTransitionRequested(buf.get() != 0);
         endingEvents.setBootstrapApplied(buf.get() != 0);
         endingEvents.setEndingSonicSpawned(buf.get() != 0);
+        if (buf.remaining() >= Sonic1FixedAirCountdownManager.REWIND_STATE_BYTES) {
+            fixedAirCountdownManager.readRewindState(buf);
+        }
     }
 
     private Sonic1ZoneEvents getActiveHandler() {

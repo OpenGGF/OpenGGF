@@ -12,6 +12,7 @@ import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -178,9 +179,32 @@ public class Sonic1GirderBlockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // Sonic_Move's on-object balance check reads obActWid from the stood-on
+        // object's SST, not the SolidObject-expanded d1 width. Obj70 initializes
+        // obActWid to $60 in Gird_Main.
+        return ACTIVE_WIDTH;
+    }
+
+    @Override
     public boolean isTopSolidOnly() {
         // Uses SolidObject (not PlatformObject), so all-sides solid
         return false;
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        // Gird_Action calls the generic S1 SolidObject helper after moving, so
+        // it is a full-sided solid with the ROM Solid_ChkEnter inclusive right edge.
+        return SolidRoutineProfile.fullSolid(false, true, false);
+    }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // SolidObject stores standing/pushing ownership in this girder's SST
+        // status byte. The engine updates the dynamic spawn as the girder moves,
+        // so the latch must follow the live instance, not each transient spawn.
+        return true;
     }
 
     // ---- SolidObjectListener ----

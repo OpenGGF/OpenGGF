@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class TestHczLargeFanCoordinateParity {
 
     @Test
-    void activationWindowUsesPlayerRomCentrePosition() {
+    void activationWindowUsesPlayerRomCentrePositionAfterKosLoadWait() {
         int fanX = 0x0B80;
         int fanY = 0x0580;
         HCZLargeFanObjectInstance fan = new HCZLargeFanObjectInstance(
@@ -23,6 +23,14 @@ class TestHczLargeFanCoordinateParity {
         player.setCentreY((short) (fanY + 0x20));
 
         fan.update(1, player);
+        assertEquals(fanY, fan.getY(),
+                "Obj_HCZLargeFan queues Kosinski art on trigger before the first drop tick");
+        fan.update(2, player);
+        fan.update(3, player);
+        fan.update(4, player);
+        assertEquals(fanY, fan.getY(),
+                "Obj_HCZLargeFan waits for queued art before initializing the falling fan");
+        fan.update(5, player);
 
         assertEquals(fanY + 8, fan.getY(),
                 "Obj_HCZLargeFan compares ROM x_pos/y_pos, which map to player centre coordinates");

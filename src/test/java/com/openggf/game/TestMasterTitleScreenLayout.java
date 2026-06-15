@@ -1,15 +1,37 @@
 package com.openggf.game;
 
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.control.InputHandler;
+import com.openggf.game.launch.LaunchProfile;
+import com.openggf.game.launch.LaunchProfileStore;
+import com.openggf.graphics.PixelFont;
+import com.openggf.testmode.TestModeTracePicker;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_TAB;
+import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
+import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
 /**
  * Headless unit tests for MasterTitleScreen layout math.
  * No OpenGL, no ROM, no singletons — pure arithmetic.
  */
 class TestMasterTitleScreenLayout {
+
+    @TempDir
+    Path tempDir;
 
     // -------------------------------------------------------------------------
     // centerX — native parity
@@ -118,6 +140,21 @@ class TestMasterTitleScreenLayout {
     }
 
     @Test
+    void launchHoverLineUsesAtlasSafeHyphenAndPluralization() {
+        assertEquals("Stock launch - Tab to configure", MasterTitleScreen.launchHoverLine(0));
+        assertEquals("1 option enabled - Tab to configure", MasterTitleScreen.launchHoverLine(1));
+        assertEquals("3 options enabled - Tab to configure", MasterTitleScreen.launchHoverLine(3));
+    }
+
+    @Test
+    void gameEntryFromGameIdMatchesCaseInsensitivelyAndRejectsUnknownIds() {
+        assertEquals(MasterTitleScreen.GameEntry.SONIC_1, MasterTitleScreen.GameEntry.fromGameId("S1"));
+        assertEquals(MasterTitleScreen.GameEntry.SONIC_2, MasterTitleScreen.GameEntry.fromGameId("s2"));
+        assertEquals(MasterTitleScreen.GameEntry.SONIC_3K, MasterTitleScreen.GameEntry.fromGameId("s3k"));
+        assertThrows(IllegalArgumentException.class, () -> MasterTitleScreen.GameEntry.fromGameId("bad"));
+    }
+
+    @Test
     void menuTextColor_keepsUnavailableUnselectedGamesGreyedOut() {
         float[] color = MasterTitleScreen.menuTextColor(false, false, 0);
 
@@ -171,9 +208,28 @@ class TestMasterTitleScreenLayout {
         MasterTitleScreen.PreviewLayout layout = MasterTitleScreen.bottomUiMatteLayout(400);
 
         assertEquals(400, layout.width());
-        assertEquals(48, layout.height());
+        assertEquals(56, layout.height());
         assertEquals(0f, layout.x(), 0f);
         assertEquals(0f, layout.y(), 0f);
+    }
+
+    @Test
+    void launchHoverLineFitsInsideNativeViewportAndBottomMatte() {
+        String line = MasterTitleScreen.launchHoverLine(5);
+        int width = Math.round(line.length() * PixelFont.glyphWidth() * MasterTitleScreen.LAUNCH_HOVER_SCALE);
+        int x = MasterTitleScreen.scaledCenteredTextX(line, 320, MasterTitleScreen.LAUNCH_HOVER_SCALE);
+
+        assertTrue(x >= 4, "hover line should not bleed left");
+        assertTrue(x + width <= 316, "hover line should not bleed right");
+
+        MasterTitleScreen.PreviewLayout matte = MasterTitleScreen.bottomUiMatteLayout(320);
+        assertTrue(MasterTitleScreen.LAUNCH_HOVER_Y >= 224 - matte.height() + 2,
+                "hover line should sit inside the bottom matte");
+    }
+
+    @Test
+    void launchConfigOverlayIsDarkEnoughForTextReadability() {
+        assertTrue(MasterTitleScreen.LAUNCH_PANEL_OVERLAY_ALPHA >= 0.7f);
     }
 
     @Test
@@ -209,5 +265,107 @@ class TestMasterTitleScreenLayout {
         screen.setSelectedIndexForTest(MasterTitleScreen.GameEntry.SONIC_2.ordinal());
 
         assertEquals(1, screen.previewAnimationFrameForTest());
+    }
+
+    @Test
+    void tabOpensLaunchPanelOnlyWhenSelectedRomIsAvailable() {
+        MasterTitleScreen screen = activeScreen();
+        InputHandler input = new InputHandler();
+
+        screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, false);
+        pressFrame(screen, input, GLFW_KEY_TAB);
+        assertFalse(screen.isLaunchConfigPanelOpenForTest());
+
+        screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, true);
+        pressFrame(screen, input, GLFW_KEY_TAB);
+        assertTrue(screen.isLaunchConfigPanelOpenForTest());
+    }
+
+    @Test
+    void testModeTracePickerTakesPrecedenceOverLaunchPanelTab() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+        config.setConfigValue(com.openggf.configuration.SonicConfiguration.TEST_MODE_ENABLED, true);
+        MasterTitleScreen screen = new MasterTitleScreen(config, new TrackingStore(config));
+        screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
+        screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, true);
+        screen.setTracePickerForTest(new TestModeTracePicker(List.of(), null));
+
+        pressFrame(screen, new InputHandler(), GLFW_KEY_TAB);
+
+        assertFalse(screen.isLaunchConfigPanelOpenForTest());
+    }
+
+    @Test
+    void openLaunchPanelDelegatesInputUntilClosed() {
+        MasterTitleScreen screen = activeScreen();
+        InputHandler input = new InputHandler();
+
+        pressFrame(screen, input, GLFW_KEY_TAB);
+        assertTrue(screen.isLaunchConfigPanelOpenForTest());
+
+        pressFrame(screen, input, GLFW_KEY_RIGHT);
+        assertEquals("s2", screen.getSelectedGameId(), "game-select right input should be ignored while panel is open");
+        assertTrue(screen.currentLaunchProfileForTest().rewind(), "right input should cycle the panel row instead");
+
+        pressFrame(screen, input, GLFW_KEY_ENTER);
+        assertFalse(screen.isGameSelected(), "confirm input should be ignored while panel is open");
+    }
+
+    @Test
+    void closingLaunchPanelSavesAndReturnsToNormalMasterTitleInput() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+        TrackingStore store = new TrackingStore(config);
+        MasterTitleScreen screen = new MasterTitleScreen(config, store);
+        screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
+        screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, true);
+        InputHandler input = new InputHandler();
+
+        pressFrame(screen, input, GLFW_KEY_TAB);
+        pressFrame(screen, input, GLFW_KEY_ESCAPE);
+
+        assertFalse(screen.isLaunchConfigPanelOpenForTest());
+        assertEquals(1, store.saved.size());
+
+        pressFrame(screen, input, GLFW_KEY_ENTER);
+        assertTrue(screen.isGameSelected());
+        assertFalse(screen.isProgrammaticSelection());
+    }
+
+    @Test
+    void selectEntryMarksProgrammaticSelection() {
+        MasterTitleScreen screen = activeScreen();
+
+        screen.selectEntry(MasterTitleScreen.GameEntry.SONIC_2);
+
+        assertTrue(screen.isGameSelected());
+        assertTrue(screen.isProgrammaticSelection());
+    }
+
+    private MasterTitleScreen activeScreen() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+        MasterTitleScreen screen = new MasterTitleScreen(config, new TrackingStore(config));
+        screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
+        screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, true);
+        return screen;
+    }
+
+    private static void pressFrame(MasterTitleScreen screen, InputHandler input, int key) {
+        input.handleKeyEvent(key, GLFW_PRESS);
+        screen.update(input);
+        input.handleKeyEvent(key, GLFW_RELEASE);
+        input.update();
+    }
+
+    private static final class TrackingStore extends LaunchProfileStore {
+        private final List<LaunchProfile> saved = new ArrayList<>();
+
+        private TrackingStore(SonicConfigurationService configService) {
+            super(configService);
+        }
+
+        @Override
+        public void save(MasterTitleScreen.GameEntry entry, LaunchProfile profile) {
+            saved.add(profile);
+        }
     }
 }

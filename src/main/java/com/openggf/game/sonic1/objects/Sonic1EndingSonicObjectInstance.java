@@ -367,13 +367,7 @@ public class Sonic1EndingSonicObjectInstance extends AbstractObjectInstance {
         }
         sthSpawned = true;
 
-        setConstructionContext(services());
-        try {
-            Sonic1EndingSTHObjectInstance sth = new Sonic1EndingSTHObjectInstance();
-            spawnDynamicObject(sth);
-        } finally {
-            clearConstructionContext();
-        }
+        spawnChild(Sonic1EndingSTHObjectInstance::new);
     }
 
     private void triggerFlash() {

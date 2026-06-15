@@ -16,7 +16,8 @@ public final class Sonic2BadnikConfig {
             AnimalObjectInstance::new,
             false,  // useRespawnTracking
             (spawn, svc, pts) -> new PointsObjectInstance(spawn, svc, pts),
-            null
+            null,
+            true
     );
 
     private Sonic2BadnikConfig() {

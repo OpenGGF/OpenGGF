@@ -140,6 +140,18 @@ public enum SonicConfiguration {
 	WIDESCREEN_DEADZONE_MODE,
 	/** When true, the display window is derived from DISPLAY_ASPECT at the 2x baseline; when false, SCREEN_WIDTH/SCREEN_HEIGHT are used verbatim. */
 	DISPLAY_WINDOW_AUTOSIZE,
+	/** Root directory scanned for user display shaders (relative to working dir). */
+	DISPLAY_SHADER_LIBRARY_ROOT,
+	/** Last selected display shader: "OFF" or a root-relative forward-slash path. */
+	DISPLAY_SHADER_SELECTION,
+	/** Runtime key to advance to the next display shader. */
+	DISPLAY_SHADER_NEXT_KEY,
+	/** Runtime key to move to the previous display shader. */
+	DISPLAY_SHADER_PREVIOUS_KEY,
+	/** Runtime key to open the searchable display shader picker. */
+	DISPLAY_SHADER_PICKER_KEY,
+	/** Fallback render phase for standalone display shaders (SCENE/PRESENTATION/FINAL). */
+	DISPLAY_SHADER_DEFAULT_PHASE,
 
 	/**
 	 * Region (NTSC/PAL) for audio timing.
@@ -293,6 +305,11 @@ public enum SonicConfiguration {
 	LIVE_REWIND_ENABLED,
 
 	/**
+	 * Whether live rewind audits completed keyframe segments for determinism.
+	 */
+	LIVE_REWIND_DETERMINISM_AUDIT,
+
+	/**
 	 * Key held during ordinary live level play to rewind deterministic gameplay state.
 	 */
 	LIVE_REWIND_KEY,
@@ -325,6 +342,13 @@ public enum SonicConfiguration {
 	 * acceleration ramps it up to {@link #LIVE_REWIND_TAPE_COAST_MAX_STEPS}.
 	 */
 	LIVE_REWIND_TAPE_COAST_MIN_STEPS,
+
+	/**
+	 * Seconds of live rewind keyframe and input history to retain. The actual
+	 * retained window may be up to one keyframe interval longer so replay always
+	 * has a complete keyframe-to-target input segment.
+	 */
+	REWIND_HISTORY_SECONDS,
 
 	/**
 	 * How the rewind audio PCM history ring is sized. Accepted values are
@@ -459,6 +483,45 @@ public enum SonicConfiguration {
 	 * Only used when CROSS_GAME_FEATURES_ENABLED is true.
 	 */
 	CROSS_GAME_SOURCE,
+
+	/** Per-game launch profile for Sonic 1: launch.s1.rewind. */
+	LAUNCH_S1_REWIND,
+	/** Per-game launch profile for Sonic 1: launch.s1.crossGameSource. */
+	LAUNCH_S1_CROSS_GAME_SOURCE,
+	/** Per-game launch profile for Sonic 1: launch.s1.debugTools. */
+	LAUNCH_S1_DEBUG_TOOLS,
+	/** Per-game launch profile for Sonic 1: launch.s1.aspect. */
+	LAUNCH_S1_ASPECT,
+	/** Per-game launch profile for Sonic 1: launch.s1.mainCharacter. */
+	LAUNCH_S1_MAIN_CHARACTER,
+	/** Per-game launch profile for Sonic 1: launch.s1.sidekick. */
+	LAUNCH_S1_SIDEKICK,
+
+	/** Per-game launch profile for Sonic 2: launch.s2.rewind. */
+	LAUNCH_S2_REWIND,
+	/** Per-game launch profile for Sonic 2: launch.s2.crossGameSource. */
+	LAUNCH_S2_CROSS_GAME_SOURCE,
+	/** Per-game launch profile for Sonic 2: launch.s2.debugTools. */
+	LAUNCH_S2_DEBUG_TOOLS,
+	/** Per-game launch profile for Sonic 2: launch.s2.aspect. */
+	LAUNCH_S2_ASPECT,
+	/** Per-game launch profile for Sonic 2: launch.s2.mainCharacter. */
+	LAUNCH_S2_MAIN_CHARACTER,
+	/** Per-game launch profile for Sonic 2: launch.s2.sidekick. */
+	LAUNCH_S2_SIDEKICK,
+
+	/** Per-game launch profile for Sonic 3&K: launch.s3k.rewind. */
+	LAUNCH_S3K_REWIND,
+	/** Per-game launch profile for Sonic 3&K: launch.s3k.crossGameSource. */
+	LAUNCH_S3K_CROSS_GAME_SOURCE,
+	/** Per-game launch profile for Sonic 3&K: launch.s3k.debugTools. */
+	LAUNCH_S3K_DEBUG_TOOLS,
+	/** Per-game launch profile for Sonic 3&K: launch.s3k.aspect. */
+	LAUNCH_S3K_ASPECT,
+	/** Per-game launch profile for Sonic 3&K: launch.s3k.mainCharacter. */
+	LAUNCH_S3K_MAIN_CHARACTER,
+	/** Per-game launch profile for Sonic 3&K: launch.s3k.sidekick. */
+	LAUNCH_S3K_SIDEKICK,
 
 	/**
 	 * When true, the master title screen becomes the Trace Test Mode

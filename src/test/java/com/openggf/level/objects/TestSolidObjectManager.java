@@ -9,6 +9,7 @@ import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.sonic1.Sonic1GameModule;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance;
 import com.openggf.game.sonic3k.objects.AizTransitionFloorObjectInstance;
 import com.openggf.game.sonic3k.objects.CnzTrapDoorInstance;
@@ -1223,6 +1224,46 @@ public class TestSolidObjectManager {
 
             int expectedStandingCenterY = 100 - params.groundHalfHeight() - 19 - 1;
             assertEquals(expectedStandingCenterY, player.getCentreY());
+        } finally {
+            GameModuleRegistry.setCurrent(previous);
+        }
+    }
+
+    @Test
+    public void testS3kObjectLandingRollClearUsesCurrentYRadiusDelta() {
+        GameModule previous = GameModuleRegistry.getCurrent();
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        try {
+            SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+            TestSolidObject object = new TestSolidObject(100, 100, params);
+            ObjectManager manager = buildManager(object);
+
+            TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+            player.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+            player.setWidth(20);
+            player.setHeight(38);
+            player.setAir(true);
+            player.setYSpeed((short) 0x100);
+            player.setRolling(true);
+            player.applyStandingRadii(false);
+
+            player.setCentreX((short) 100);
+            int currentRadius = player.getYRadius();
+            int distY = 8;
+            int centerY = 100 - 4 - (params.groundHalfHeight() + currentRadius) + distY;
+            player.setCentreY((short) centerY);
+
+            manager.updateSolidContacts(player);
+
+            assertTrue(player.isOnObject());
+            assertFalse(player.getAir());
+            assertFalse(player.getRolling());
+
+            int expectedStandingCenterY = 100 - params.groundHalfHeight() - currentRadius - 1;
+            assertEquals(expectedStandingCenterY, player.getCentreY(),
+                    "S3K Player_TouchFloor uses the live y_radius delta; if y_radius is "
+                            + "already standing-height, clearing Status_Roll must not apply "
+                            + "another 5px lift");
         } finally {
             GameModuleRegistry.setCurrent(previous);
         }

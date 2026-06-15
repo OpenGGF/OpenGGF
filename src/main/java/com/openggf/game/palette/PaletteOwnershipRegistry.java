@@ -15,6 +15,7 @@ public final class PaletteOwnershipRegistry implements RewindSnapshottable<Palet
     private final String[][][] owners = new String[2][4][16];
     private final boolean[] normalDirty = new boolean[4];
     private boolean paletteRotationDisabled;
+    private boolean resolvedThisFrame;
 
     public PaletteOwnershipRegistry() {
         resetOwners();
@@ -23,6 +24,7 @@ public final class PaletteOwnershipRegistry implements RewindSnapshottable<Palet
     public void beginFrame() {
         writes.clear();
         resetOwners();
+        resolvedThisFrame = false;
     }
 
     public void clear() {
@@ -46,11 +48,22 @@ public final class PaletteOwnershipRegistry implements RewindSnapshottable<Palet
         return owners[surface.ordinal()][lineIndex][colorIndex];
     }
 
+    /**
+     * Whether {@link #resolveInto} has applied writes since the last
+     * {@link #beginFrame()}. The shared frame fallback uses this so games
+     * whose palette cyclers already resolve (S2 cycling zones, S3K) are not
+     * resolved a second time.
+     */
+    public boolean hasResolvedThisFrame() {
+        return resolvedThisFrame;
+    }
+
     public void resolveInto(Palette[] normal, Palette[] underwater,
                             GraphicsManager graphics, Palette normalLine0) {
         if (writes.isEmpty()) {
             return;
         }
+        resolvedThisFrame = true;
 
         java.util.Arrays.fill(normalDirty, false);
 
@@ -150,6 +163,8 @@ public final class PaletteOwnershipRegistry implements RewindSnapshottable<Palet
 
     @Override
     public void restore(PaletteOwnershipSnapshot snap) {
+        writes.clear();
+        resolvedThisFrame = false;
         byte[] ownerIds = snap.ownerIds();
         String[] ownerTable = snap.ownerTable();
         paletteRotationDisabled = snap.paletteRotationDisabled();

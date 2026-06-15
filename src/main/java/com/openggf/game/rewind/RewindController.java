@@ -2,6 +2,7 @@ package com.openggf.game.rewind;
 
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.rewind.AudioKeyframeStore;
+import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.audio.rewind.AudioReplayReason;
 import com.openggf.audio.rewind.AudioReplayScope;
@@ -9,8 +10,11 @@ import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.SectionProfiler;
 
 import java.util.Objects;
+import java.util.logging.Logger;
 
 public final class RewindController {
+
+    private static final Logger LOGGER = Logger.getLogger(RewindController.class.getName());
 
     private final RewindRegistry registry;
     private final KeyframeStore keyframes;
@@ -23,6 +27,8 @@ public final class RewindController {
     private final SectionProfiler profiler;
 
     private int currentFrame;
+    private boolean audioRestoreDeferred;
+    private RewindDeterminismAuditor determinismAuditor;
 
     public RewindController(
             RewindRegistry registry,
@@ -72,6 +78,10 @@ public final class RewindController {
 
     public int currentFrame() { return currentFrame; }
 
+    public void setDeterminismAuditor(RewindDeterminismAuditor auditor) {
+        this.determinismAuditor = auditor;
+    }
+
     public int earliestAvailableFrame() {
         // v1: trace mode — earliest accessible frame is whatever the
         // earliest stored keyframe is (typically 0).
@@ -85,6 +95,7 @@ public final class RewindController {
      * level-load state while keeping rewind available in the new segment.
      */
     public void resetBufferAtCurrentFrame() {
+        dropDeferredAudioRestore();
         segmentCache.invalidate();
         keyframes.clear();
         keyframes.put(currentFrame, registry.capture());
@@ -103,6 +114,7 @@ public final class RewindController {
      * and any companion audio state to keep the two sides aligned.
      */
     public void resetToFrameZero() {
+        dropDeferredAudioRestore();
         segmentCache.invalidate();
         keyframes.clear();
         currentFrame = 0;
@@ -118,6 +130,7 @@ public final class RewindController {
         if (currentFrame + 1 >= inputs.frameCount()) {
             return;   // end of trace
         }
+        commitDeferredAudioRestore();
         beginAudioFrame(currentFrame + 1);
         Bk2FrameInput in = inputs.read(currentFrame + 1);
         engineStepper.step(in);
@@ -139,14 +152,99 @@ public final class RewindController {
         if (currentFrame + 1 >= inputs.frameCount()) {
             return false;
         }
+        commitDeferredAudioRestore();
         currentFrame++;
         beginAudioFrame(currentFrame);
         segmentCache.invalidate();
         if (currentFrame % keyframeInterval == 0) {
             keyframes.put(currentFrame, registry.capture());
             captureAudioKeyframe(currentFrame);
+            if (determinismAuditor != null) {
+                auditLastSegment();
+            }
         }
         return true;
+    }
+
+    private void auditLastSegment() {
+        try {
+            var prevOpt = keyframes.latestAtOrBefore(currentFrame - 1);
+            var liveOpt = keyframes.latestAtOrBefore(currentFrame);
+            if (prevOpt.isEmpty() || liveOpt.isEmpty() || liveOpt.get().frame() != currentFrame) {
+                return;
+            }
+
+            var prev = prevOpt.get();
+            CompositeSnapshot live = liveOpt.get().snapshot();
+            boolean diverged = false;
+            try (AudioReplayScope ignored = beginAudioReplay(
+                    currentFrame, currentFrame, AudioReplayReason.SEEK)) {
+                try {
+                    registry.restore(prev.snapshot());
+                    primeStepperAtFrame(prev.frame());
+                    int pos = prev.frame();
+                    while (pos < currentFrame) {
+                        engineStepper.step(inputs.read(pos + 1));
+                        pos++;
+                    }
+                    diverged = determinismAuditor.report(
+                            prev.frame(), currentFrame, live, registry.capture());
+                } finally {
+                    registry.restore(live);
+                    primeStepperAtFrame(currentFrame);
+                    restoreAudioLogicalState(currentFrame);
+                    beginAudioFrame(currentFrame);
+                    afterAudioRestore(AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE);
+                }
+            }
+            if (diverged) {
+                determinismAuditor = null;
+            }
+        } catch (RuntimeException e) {
+            LOGGER.warning("Live rewind determinism audit failed and will be disabled: "
+                    + e);
+            determinismAuditor = null;
+        }
+    }
+
+    /**
+     * Drops rewind history older than {@code retainedFrames}, aligned to a
+     * retained keyframe so replay from the new earliest frame still has every
+     * input row needed to reach current time. Audio history is pruned in
+     * lockstep: audio keyframes below the retained keyframe are dropped, and
+     * the command timeline is pruned to the earliest retained audio
+     * keyframe's {@code commandEntryCount} so all surviving keyframes keep
+     * valid replay ranges.
+     *
+     * <p>No production caller exists on this branch yet — the method is
+     * mirrored from the release-remediation branch (whose
+     * {@code LiveRewindManager.pruneOldHistory} invokes it) so the branches
+     * stay in sync and the tests ship with the implementation.
+     *
+     * @return the earliest retained frame after pruning
+     */
+    public int pruneHistoryToRetainFrames(int retainedFrames) {
+        if (retainedFrames <= 0) {
+            return earliestAvailableFrame();
+        }
+        int requestedEarliestFrame = currentFrame - retainedFrames;
+        if (requestedEarliestFrame <= earliestAvailableFrame()) {
+            return earliestAvailableFrame();
+        }
+        var retainedFloor = keyframes.latestAtOrBefore(requestedEarliestFrame);
+        if (retainedFloor.isEmpty()) {
+            return earliestAvailableFrame();
+        }
+        int retainedKeyframe = retainedFloor.get().frame();
+        keyframes.discardBefore(retainedKeyframe);
+        if (audioKeyframes != null) {
+            audioKeyframes.discardBefore(retainedKeyframe);
+            AudioLogicalSnapshot earliestAudio = audioKeyframes.earliestSnapshot();
+            if (earliestAudio != null) {
+                audioManager.pruneAudioCommandsBefore(earliestAudio.commandEntryCount());
+            }
+        }
+        return earliestAvailableFrame();
     }
 
     /**
@@ -188,6 +286,9 @@ public final class RewindController {
             if (profiler != null) profiler.beginSection("rewind.seek");
             keyframes.discardAfter(currentFrame);
             discardAudioAfter(currentFrame);
+            // The seek's own restore lands the committed target state, so any
+            // restore deferred by held backward stepping is superseded here.
+            dropDeferredAudioRestore();
             restoreAudioLogicalState(currentFrame);
             beginAudioFrame(currentFrame);
             primeStepperAtFrame(currentFrame);
@@ -260,7 +361,17 @@ public final class RewindController {
             currentFrame = target;
             keyframes.discardAfter(currentFrame);
             discardAudioAfter(currentFrame);
-            restoreAudioLogicalState(currentFrame);
+            // While reverse audio presentation is active (held rewind), the
+            // audible output comes from the PcmHistoryRing, not the logical
+            // SMPS driver state, so the expensive logical restore is deferred
+            // until the rewind commits (release, seek, forward resume, or
+            // buffer re-root) via commitDeferredAudioRestore().
+            if (shouldDeferAudioRestore()) {
+                audioRestoreDeferred = true;
+            } else {
+                audioRestoreDeferred = false;
+                restoreAudioLogicalState(currentFrame);
+            }
             beginAudioFrame(currentFrame);
             primeStepperAtFrame(currentFrame);
             afterAudioRestore(AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE);
@@ -268,6 +379,51 @@ public final class RewindController {
             if (profiler != null) profiler.endSection("rewind.step");
         }
         return true;
+    }
+
+    /**
+     * Performs the logical audio restore that was deferred during held-rewind
+     * backward stepping, landing exactly one restore at the committed frame.
+     * Invoked automatically on every forward-resume path through this
+     * controller (level-boundary re-roots instead {@link
+     * #dropDeferredAudioRestore() drop} the pending restore); held-rewind
+     * hosts must call it before issuing a non-suppressed
+     * {@code afterRewindRestore} so the presentation cleanup
+     * (stopAllSfx / restoreMusic / stopPlayback) acts on committed-frame state.
+     */
+    public void commitDeferredAudioRestore() {
+        if (!audioRestoreDeferred) {
+            return;
+        }
+        audioRestoreDeferred = false;
+        restoreAudioLogicalState(currentFrame);
+        beginAudioFrame(currentFrame);
+    }
+
+    /**
+     * Discards a pending deferred restore without applying it. Buffer re-roots
+     * follow a committed level/act boundary whose load path has already
+     * reinitialized audio for the new level ({@code LevelManager.loadLevel}
+     * runs its init steps — including fresh audio init — before
+     * {@code resetToFrameZero}; seamless transitions likewise precede
+     * {@code resetBufferAtCurrentFrame}). A deferred commit must never run
+     * after audio has been freshly reinitialized for a new level: committing
+     * the stale pre-rewind state here would overwrite the fresh state and
+     * capture it into the re-rooted audio keyframe.
+     */
+    private void dropDeferredAudioRestore() {
+        audioRestoreDeferred = false;
+    }
+
+    /**
+     * The gate intentionally keys off reverse-presentation state: the
+     * held-rewind hosts (LiveRewindManager / TraceSessionLauncher) own that
+     * lifecycle and bracket exactly the window where audible output comes from
+     * the PcmHistoryRing, while non-presentation backward stepping (e.g. trace
+     * tooling via PlaybackController) must stay eager.
+     */
+    private boolean shouldDeferAudioRestore() {
+        return audioManager != null && audioManager.isReverseAudioPresentationActive();
     }
 
     private AudioReplayScope beginAudioReplay(int fromFrame, int targetFrame, AudioReplayReason reason) {

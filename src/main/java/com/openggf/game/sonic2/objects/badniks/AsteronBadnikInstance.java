@@ -66,6 +66,9 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance {
             {-8, -4, -3 * 256, -1 * 256, 3, 0},     // Up-left
     };
 
+    // ROM ObjA4_SubObjData: make_art_tile(ArtTile_ArtNem_MtzSupernova,0,1).
+    private static final boolean HIGH_PRIORITY_SPRITE = true;
+
     private enum State {
         IDLE,       // Routine 2: waiting for player in range
         ARMED,      // Routine 4: checking direction to fire
@@ -265,7 +268,8 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance {
         if (renderer == null) return;
 
         // Asteron has no directional flipping - it's a symmetric starfish
-        renderer.drawFrameIndex(animFrame, currentX, currentY, false, false);
+        renderer.drawFrameIndexForcedPriority(
+                animFrame, currentX, currentY, false, false, -1, HIGH_PRIORITY_SPRITE);
     }
 
     @Override

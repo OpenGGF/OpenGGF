@@ -82,6 +82,20 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     }
 
     private final Deque<MusicState> musicStack = new ArrayDeque<>();
+
+    /**
+     * Source data for every SMPS music started this session, keyed by logical
+     * descriptor. Lets {@link #restoreLogicalSnapshot} rebuild the override
+     * stack (saved zone music under a 1-up/invincibility jingle) as
+     * restart-from-beginning states; without it, rewinding through an override
+     * window dropped the saved music, so the jingle's end found an empty stack
+     * and zone music never resumed. Cleared on {@link #setAudioProfile} since
+     * base music ids are only unique within one game.
+     */
+    private record CachedMusicSource(AbstractSmpsData data, DacData dacData, SmpsSequencerConfig config) {
+    }
+
+    private final Map<AudioSourceDescriptor, CachedMusicSource> musicSourceCache = new HashMap<>();
     private int currentMusicId = -1;
     private AudioSourceDescriptor currentMusicDescriptor;
     private AudioSourceDescriptor pendingMusicDescriptor;
@@ -211,6 +225,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     public void setAudioProfile(GameAudioProfile profile) {
         this.audioProfile = profile;
         this.smpsConfig = profile != null ? profile.getSequencerConfig() : null;
+        musicSourceCache.clear();
     }
 
     @Override
@@ -321,6 +336,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         boolean fm6DacOff = configService.getBoolean(SonicConfiguration.FM6_DAC_OFF);
 
         AudioSourceDescriptor musicDescriptor = consumePendingMusicDescriptor(musicId);
+        cacheMusicSource(musicDescriptor, data, dacData, requireSmpsConfig());
         SmpsSequencer seq = new SmpsSequencer(data, dacData, smpsDriver, requireSmpsConfig());
         seq.setSourceDescriptor(describeSmpsSource(musicDescriptor, data, false));
         seq.setSampleRate(smpsDriver.getOutputSampleRate());
@@ -412,6 +428,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         boolean fm6DacOff = configService.getBoolean(SonicConfiguration.FM6_DAC_OFF);
 
         AudioSourceDescriptor musicDescriptor = consumePendingMusicDescriptor(musicId);
+        cacheMusicSource(musicDescriptor, data, dacData, effectiveConfig);
         SmpsSequencer seq = new SmpsSequencer(data, dacData, smpsDriver, effectiveConfig);
         seq.setSourceDescriptor(describeSmpsSource(musicDescriptor, data, false));
         seq.setSampleRate(smpsDriver.getOutputSampleRate());
@@ -819,6 +836,8 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(resolver, "resolver");
         synchronized (streamLock) {
+            SmpsDriver reusableMusicDriver = smpsDriver;
+            SmpsDriver reusableSfxDriver = sfxStream instanceof SmpsDriver previousSfx ? previousSfx : null;
             currentStream = null;
             currentSmps = null;
             smpsDriver = null;
@@ -826,25 +845,27 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             currentMusicDescriptor = snapshot.currentMusic();
             currentMusicId = snapshot.currentMusic() != null ? snapshot.currentMusic().id() : -1;
             pendingMusicDescriptor = null;
-            pendingRestore = snapshot.pendingRestore();
             sfxBlocked = snapshot.sfxBlocked();
             speedShoesEnabled = snapshot.speedShoesEnabled();
             speedMultiplier = snapshot.speedMultiplier();
 
             musicStack.clear();
-            pendingRestore = false;
 
             if (snapshot.musicDriver() != null) {
-                smpsDriver = newConfiguredSmpsDriver();
-                smpsDriver.restoreSnapshot(snapshot.musicDriver(), resolver);
+                smpsDriver = restoreDriverFromSnapshot(reusableMusicDriver, snapshot.musicDriver(), resolver);
                 currentStream = smpsDriver;
                 currentSmps = smpsDriver.firstMusicSequencer();
                 rebindFadeCompleteCallbackIfNeeded();
             }
             if (snapshot.standaloneSfxDriver() != null) {
-                SmpsDriver restoredSfxDriver = newConfiguredSmpsDriver();
-                restoredSfxDriver.restoreSnapshot(snapshot.standaloneSfxDriver(), resolver);
-                sfxStream = restoredSfxDriver;
+                sfxStream = restoreDriverFromSnapshot(reusableSfxDriver, snapshot.standaloneSfxDriver(), resolver);
+            }
+            rebuildMusicOverrideStack(snapshot.overrideStack());
+            pendingRestore = snapshot.pendingRestore() && !musicStack.isEmpty();
+            if (sfxBlocked && musicStack.isEmpty() && !restoredFadeInActive()) {
+                // No override to fade back into and no fade-in in flight: with
+                // the latch left set, nothing would ever unblock SFX again.
+                sfxBlocked = false;
             }
             bindRuntimePresentationStreams();
             if (runtimeProvidesPresentationPcm() && !preservePresentationQueue) {
@@ -857,12 +878,101 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     }
 
     private void rebindFadeCompleteCallbackIfNeeded() {
-        if (sfxBlocked && smpsDriver != null && currentSmps != null) {
-            SmpsSequencerSnapshot snapshot = currentSmps.captureSnapshot();
-            if (snapshot.fade().active() && !snapshot.fade().fadeOut()) {
+        if (sfxBlocked && restoredFadeInActive()) {
             smpsDriver.bindMusicFadeCompleteCallback(() -> sfxBlocked = false);
+        }
+    }
+
+    private boolean restoredFadeInActive() {
+        if (smpsDriver == null || currentSmps == null) {
+            return false;
+        }
+        SmpsSequencerSnapshot snapshot = currentSmps.captureSnapshot();
+        return snapshot.fade().active() && !snapshot.fade().fadeOut();
+    }
+
+    private void cacheMusicSource(AudioSourceDescriptor descriptor, AbstractSmpsData data,
+                                  DacData dacData, SmpsSequencerConfig config) {
+        if (descriptor != null && data != null && config != null) {
+            musicSourceCache.put(descriptor, new CachedMusicSource(data, dacData, config));
+        }
+    }
+
+    /**
+     * Rebuilds the saved-music override stack from logical descriptors,
+     * preserving order (head = most recently pushed). Each rebuilt state
+     * restarts its music from the beginning when the override ends — the ROM
+     * also restarts the restored track rather than resuming mid-note.
+     * Descriptors with no cached source (never played this session) are
+     * dropped, matching the previous placeholder behavior.
+     */
+    private void rebuildMusicOverrideStack(List<AudioSourceDescriptor> overrideStack) {
+        for (AudioSourceDescriptor descriptor : overrideStack) {
+            MusicState rebuilt = rebuildOverrideState(descriptor);
+            if (rebuilt != null) {
+                musicStack.addLast(rebuilt);
+            } else if (descriptor != null) {
+                LOGGER.warning("Dropping music override with no rebuildable source: " + descriptor);
             }
         }
+    }
+
+    private MusicState rebuildOverrideState(AudioSourceDescriptor descriptor) {
+        if (descriptor == null) {
+            return null;
+        }
+        CachedMusicSource source = musicSourceCache.get(descriptor);
+        if (source == null) {
+            return null;
+        }
+        SmpsDriver driver = newConfiguredSmpsDriver();
+        if ("PAL".equalsIgnoreCase(configService.getString(SonicConfiguration.REGION))) {
+            driver.setRegion(SmpsSequencer.Region.PAL);
+        } else {
+            driver.setRegion(SmpsSequencer.Region.NTSC);
+        }
+        SmpsSequencer seq = new SmpsSequencer(source.data(), source.dacData(), driver, source.config());
+        seq.setSourceDescriptor(describeSmpsSource(descriptor, source.data(), false));
+        seq.setSampleRate(driver.getOutputSampleRate());
+        seq.setSpeedShoes(speedShoesEnabled);
+        seq.setSpeedMultiplier(speedMultiplier);
+        seq.setFm6DacOff(configService.getBoolean(SonicConfiguration.FM6_DAC_OFF));
+        seq.setFallbackVoiceData(source.data());
+        driver.addSequencer(seq, false);
+        int musicId = descriptor.id() != null ? descriptor.id() : source.data().getId();
+        return new MusicState(driver, seq, driver, musicId, descriptor);
+    }
+
+    /**
+     * Restores a driver snapshot into the previous same-role driver instance
+     * when possible, avoiding a full SmpsDriver/VirtualSynthesizer/Ym2612Chip/
+     * PsgChipGPGX/BlipResampler rebuild per restore (hot during held rewind).
+     *
+     * <p>Reuse boundary: {@code SmpsDriver.restoreSnapshot} clears and rebuilds
+     * every sequencer, lock, latch, and continuous-SFX field, and — when the
+     * snapshot carries a synth snapshot — {@code restoreSynthSnapshot} fully
+     * overwrites the YM2612, PSG, and blip-buffer state (including output
+     * rates, DAC interpolation, and noise-shift mode, so the
+     * {@code newConfiguredSmpsDriver()} config calls are subsumed). The only
+     * construction-time state not covered by the snapshot is the synth's DAC
+     * bank reference, which is nulled here to match a freshly constructed
+     * driver before the sequencer rebuild re-resolves it. Snapshots without a
+     * synth snapshot fall back to {@code silenceAll()}, whose result depends on
+     * pre-existing chip register state — those keep the recreate path.
+     */
+    private SmpsDriver restoreDriverFromSnapshot(
+            SmpsDriver reusable,
+            SmpsDriverSnapshot driverSnapshot,
+            SmpsDriverSnapshot.DependencyResolver resolver) {
+        SmpsDriver driver;
+        if (reusable != null && driverSnapshot.synthSnapshot() != null) {
+            driver = reusable;
+            driver.setDacData(null);
+        } else {
+            driver = newConfiguredSmpsDriver();
+        }
+        driver.restoreSnapshot(driverSnapshot, resolver);
+        return driver;
     }
 
     private SmpsDriver newConfiguredSmpsDriver() {

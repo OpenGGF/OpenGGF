@@ -451,7 +451,12 @@ class TestSidekickCpuControllerCarry {
         sonic.setJumpInputPressed(true);
         controller.update(3);
 
-        assertEquals(SidekickCpuController.State.NORMAL, controller.getState());
+        assertEquals(SidekickCpuController.State.CARRYING, controller.getState(),
+                "Jump release keeps Tails in ROM routine $E until Sonic lands or is regrabbed");
+        assertFalse(sonic.isObjectControlled(),
+                "Jump release clears Sonic object_control while Tails runs the cooldown/regrab loop");
+        assertEquals((short) 0x0100, sonic.getXSpeed(),
+                "A/B/C-only carry jump release preserves x_vel; only a directional press overwrites it");
         assertEquals((short) -0x0380, sonic.getYSpeed(),
                 "Jump release imparts -0x380 y_vel");
         assertTrue(sonic.getAir(),
@@ -464,6 +469,23 @@ class TestSidekickCpuControllerCarry {
                 "Tails_Carry_Sonic jump release clears Status_RollJump");
         assertEquals(0x12, controller.getReleaseCooldownForTest(),
                 "Jump release cooldown is 0x12 (~18 frames)");
+    }
+
+    @Test
+    void jumpPressWithDirectionalPressOverwritesCarryReleaseXVelocity() {
+        AbstractPlayableSprite[] pair = prepareCarry();
+        AbstractPlayableSprite sonic = pair[0];
+        controller.update(1);
+        controller.update(2);
+
+        sonic.setDirectionalInputPressed(false, false, false, false);
+        sonic.setDirectionalInputPressed(false, false, false, true);
+        sonic.setJumpInputPressed(false);
+        sonic.setJumpInputPressed(true);
+        controller.update(3);
+
+        assertEquals((short) 0x0200, sonic.getXSpeed(),
+                "ROM high-byte right press applies the carry jump-release x_vel override");
     }
 
     @Test
@@ -596,7 +618,9 @@ class TestSidekickCpuControllerCarry {
 
         controller.update(3);
 
-        assertEquals(SidekickCpuController.State.NORMAL, controller.getState());
+        assertEquals(SidekickCpuController.State.CARRYING, controller.getState(),
+                "Latch-mismatch release keeps Tails in ROM routine $E while the cooldown/regrab loop runs");
+        assertFalse(sonic.isObjectControlled());
         assertEquals(0x3C, controller.getReleaseCooldownForTest(),
                 "Latch-mismatch release cooldown is 0x3C (~60 frames)");
     }

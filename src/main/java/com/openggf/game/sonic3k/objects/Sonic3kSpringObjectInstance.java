@@ -251,7 +251,6 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         // already clear (sonic3k.asm:47957-48024).
         if (!wasAirborne) {
             player.setAir(false);
-            player.setAngle((byte) 0);
             player.setGroundMode(GroundMode.GROUND);
         }
 
@@ -456,6 +455,8 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         if (landingHandoff) {
             player.setAir(false);
             player.setYSpeed((short) 0);
+            player.setAngle((byte) 0);
+            player.setGroundMode(GroundMode.GROUND);
         }
         proactiveTriggeredThisUpdate.add(player);
         applyHorizontalSpring(player);
@@ -467,8 +468,14 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         }
         // ROM runs Player_2 before the spring object, so an air->ground landing
         // onto the spring line can reach sub_2326C with Status_InAir already
-        // clear. Engine ordering can leave the sidekick airborne until the next
-        // tick; accept only the frame that has reached the spring's Y line.
+        // clear. Underwater falling keeps the ROM sidekick in airborne water
+        // physics for the HCZ spring/waterline case, so do not synthesize this
+        // grounded handoff while Status_Underwater is set.
+        if (player.isInWater()) {
+            return false;
+        }
+        // Engine ordering can leave the sidekick airborne until the next tick;
+        // accept only the frame that has reached the spring's Y line.
         return player.getYSpeed() > 0 && (player.getCentreY() & 0xFFFF) >= (spawn.y() & 0xFFFF);
     }
 
@@ -575,7 +582,22 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean usesInclusiveRightEdge() {
-        return springType == TYPE_HORIZONTAL;
+        // ROM SolidObject_cont gates the horizontal overlap with
+        // cmp.w d3,d0 / bhi.w loc_1E0A2 (sonic3k.asm:41394-41401), where
+        // d0 = (x_pos(a1) - x_pos(a0)) + d1 and d3 = d1*2 (d1 = solid
+        // half-width). bhi rejects only when d0 > d1*2, so the player's
+        // centre sitting exactly on the right edge (d0 == d1*2) is still a
+        // contact. Every Obj_Spring variant reaches SolidObject_cont via
+        // SolidObjectFull2_1P (see the bypassesOffscreenSolidGate() note
+        // below), so the inclusive right edge applies to all spring types,
+        // not just horizontal. AIZ1 CPU-Tails f4234: Tails decelerates from
+        // a leftward run, comes to rest with its centre exactly on the
+        // vertical spring's right edge, then accelerates away; ROM keeps
+        // SolidObject side-contact alive across those frames (loc_1E06E
+        // bset #Status_Push, sonic3k.asm:41488-41495) because the right
+        // edge is inclusive. With an exclusive edge the engine dropped the
+        // contact and Status_Push the moment the centre reached the edge.
+        return true;
     }
 
     /**

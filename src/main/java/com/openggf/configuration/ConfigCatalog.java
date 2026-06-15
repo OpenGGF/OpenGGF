@@ -28,6 +28,11 @@ public final class ConfigCatalog {
     private static final List<SonicConfiguration> EMIT_ORDER;
     private static final Map<String, SonicConfiguration> BY_PATH = new LinkedHashMap<>();
     private static final Map<String, String> SECTION_TITLES = new LinkedHashMap<>();
+    private static final Set<String> LAUNCH_ASPECT_VALUES = Set.of(
+            "global", "NATIVE_4_3", "WIDE_16_10", "WIDE_16_9", "ULTRA_21_9", "SUPER_32_9");
+    private static final Set<String> LAUNCH_CROSS_GAME_VALUES = Set.of("off", "s1", "s2", "s3k");
+    private static final Set<String> LAUNCH_MAIN_CHARACTER_VALUES = Set.of("sonic", "tails", "knuckles");
+    private static final Set<String> LAUNCH_SIDEKICK_VALUES = Set.of("none", "sonic", "tails", "knuckles");
 
     private static void put(SonicConfiguration key, ConfigKeyMeta meta) {
         META.put(key, meta);
@@ -46,6 +51,19 @@ public final class ConfigCatalog {
                 Set.of("NATIVE_4_3", "WIDE_16_10", "WIDE_16_9", "ULTRA_21_9", "SUPER_32_9")));
         put(DISPLAY_WINDOW_AUTOSIZE, of("display", "windowAutosize", BOOL,
                 "Derive the window size from the aspect preset at the 2x baseline"));
+        put(DISPLAY_SHADER_LIBRARY_ROOT, of("display", "shaderLibraryRoot", STRING,
+                "Root directory scanned for user display shaders"));
+        put(DISPLAY_SHADER_SELECTION, of("display", "shaderSelection", STRING,
+                "Last selected display shader: OFF or a root-relative forward-slash path"));
+        put(DISPLAY_SHADER_NEXT_KEY, of("display", "shaderNextKey", KEY,
+                "Runtime key to advance to the next display shader"));
+        put(DISPLAY_SHADER_PREVIOUS_KEY, of("display", "shaderPreviousKey", KEY,
+                "Runtime key to move to the previous display shader"));
+        put(DISPLAY_SHADER_PICKER_KEY, of("display", "shaderPickerKey", KEY,
+                "Runtime key to open the searchable display shader picker"));
+        put(DISPLAY_SHADER_DEFAULT_PHASE, ofEnum("display", "shaderDefaultPhase",
+                "Fallback render phase for standalone display shaders",
+                Set.of("SCENE", "PRESENTATION", "FINAL")));
         put(WIDESCREEN_DEADZONE_MODE, ofEnum("display", "deadzoneMode",
                 "Camera horizontal deadzone behaviour on wide screens",
                 Set.of("CENTER_SCALED", "PROPORTIONAL")));
@@ -117,6 +135,8 @@ public final class ConfigCatalog {
                 "Maximum rewind steps per tick"));
         put(LIVE_REWIND_TAPE_COAST_MIN_STEPS, of("rewind", "tapeCoastMinSteps", DOUBLE,
                 "Minimum rewind steps per tick; below 1.0 gives slow-motion rewind"));
+        put(REWIND_HISTORY_SECONDS, of("rewind", "historySeconds", INT,
+                "Seconds of live rewind keyframe and input history to retain"));
         put(REWIND_AUDIO_HISTORY_LIMIT_TYPE, ofEnum("rewind", "audioHistoryLimitType",
                 "How the rewind audio PCM history ring is sized", Set.of("time", "size")));
         put(REWIND_AUDIO_HISTORY_SECONDS, of("rewind", "audioHistorySeconds", INT,
@@ -129,6 +149,46 @@ public final class ConfigCatalog {
                 "Enable cross-game feature donation (e.g. S2 sprites in S1)"));
         put(CROSS_GAME_SOURCE, ofEnum("crossGame", "source",
                 "Donor game for cross-game features", Set.of("s2", "s3k")));
+
+        // launch (per-game master-title profile defaults)
+        put(LAUNCH_S1_REWIND, of("launch.s1", "rewind", BOOL,
+                "Default Sonic 1 launch profile: enable live rewind"));
+        put(LAUNCH_S1_CROSS_GAME_SOURCE, ofEnum("launch.s1", "crossGameSource",
+                "Default Sonic 1 launch profile: cross-game donor", LAUNCH_CROSS_GAME_VALUES));
+        put(LAUNCH_S1_DEBUG_TOOLS, of("launch.s1", "debugTools", BOOL,
+                "Default Sonic 1 launch profile: enable debug tools"));
+        put(LAUNCH_S1_ASPECT, ofEnum("launch.s1", "aspect",
+                "Default Sonic 1 launch profile: display aspect override", LAUNCH_ASPECT_VALUES));
+        put(LAUNCH_S1_MAIN_CHARACTER, ofEnum("launch.s1", "mainCharacter",
+                "Default Sonic 1 launch profile: main character", LAUNCH_MAIN_CHARACTER_VALUES));
+        put(LAUNCH_S1_SIDEKICK, ofEnum("launch.s1", "sidekick",
+                "Default Sonic 1 launch profile: sidekick character", LAUNCH_SIDEKICK_VALUES));
+
+        put(LAUNCH_S2_REWIND, of("launch.s2", "rewind", BOOL,
+                "Default Sonic 2 launch profile: enable live rewind"));
+        put(LAUNCH_S2_CROSS_GAME_SOURCE, ofEnum("launch.s2", "crossGameSource",
+                "Default Sonic 2 launch profile: cross-game donor", LAUNCH_CROSS_GAME_VALUES));
+        put(LAUNCH_S2_DEBUG_TOOLS, of("launch.s2", "debugTools", BOOL,
+                "Default Sonic 2 launch profile: enable debug tools"));
+        put(LAUNCH_S2_ASPECT, ofEnum("launch.s2", "aspect",
+                "Default Sonic 2 launch profile: display aspect override", LAUNCH_ASPECT_VALUES));
+        put(LAUNCH_S2_MAIN_CHARACTER, ofEnum("launch.s2", "mainCharacter",
+                "Default Sonic 2 launch profile: main character", LAUNCH_MAIN_CHARACTER_VALUES));
+        put(LAUNCH_S2_SIDEKICK, ofEnum("launch.s2", "sidekick",
+                "Default Sonic 2 launch profile: sidekick character", LAUNCH_SIDEKICK_VALUES));
+
+        put(LAUNCH_S3K_REWIND, of("launch.s3k", "rewind", BOOL,
+                "Default Sonic 3&K launch profile: enable live rewind"));
+        put(LAUNCH_S3K_CROSS_GAME_SOURCE, ofEnum("launch.s3k", "crossGameSource",
+                "Default Sonic 3&K launch profile: cross-game donor", LAUNCH_CROSS_GAME_VALUES));
+        put(LAUNCH_S3K_DEBUG_TOOLS, of("launch.s3k", "debugTools", BOOL,
+                "Default Sonic 3&K launch profile: enable debug tools"));
+        put(LAUNCH_S3K_ASPECT, ofEnum("launch.s3k", "aspect",
+                "Default Sonic 3&K launch profile: display aspect override", LAUNCH_ASPECT_VALUES));
+        put(LAUNCH_S3K_MAIN_CHARACTER, ofEnum("launch.s3k", "mainCharacter",
+                "Default Sonic 3&K launch profile: main character", LAUNCH_MAIN_CHARACTER_VALUES));
+        put(LAUNCH_S3K_SIDEKICK, ofEnum("launch.s3k", "sidekick",
+                "Default Sonic 3&K launch profile: sidekick character", LAUNCH_SIDEKICK_VALUES));
 
         // discord
         put(DISCORD_RICH_PRESENCE_ENABLED, of("discord", "enabled", BOOL,
@@ -205,6 +265,11 @@ public final class ConfigCatalog {
         put(TRACE_REWIND_KEY, of("debug.traceRewind", "key", KEY,
                 "Key held in Trace Test Mode to rewind deterministic engine state"));
 
+        // debug.rewind
+        put(LIVE_REWIND_DETERMINISM_AUDIT, of("debug.rewind", "determinismAudit", BOOL,
+                "Audit live-rewind determinism: re-simulate each completed keyframe segment "
+                + "and log the first state divergence (debug; ~2x frame cost)"));
+
         // debug.traceRender (Trace Test Mode + capture visibility)
         put(TRACE_SHOW_DESYNC_GHOSTS, of("debug.traceRender", "showDesyncGhosts", BOOL,
                 "Render the desync ghost(s) in Trace Test Mode and trace capture"));
@@ -257,7 +322,9 @@ public final class ConfigCatalog {
         SECTION_TITLES.put("startup", "Startup");
         SECTION_TITLES.put("rewind", "Rewind (live)");
         SECTION_TITLES.put("crossGame", "Cross-Game");
+        SECTION_TITLES.put("launch", "Launch Profiles");
         SECTION_TITLES.put("discord", "Discord Rich Presence");
+        SECTION_TITLES.put("capture", "Trace Capture");
     }
 
     private ConfigCatalog() {

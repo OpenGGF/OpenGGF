@@ -32,7 +32,7 @@ import java.util.List;
 public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
         implements MultiPieceSolidProvider, SolidObjectListener {
 
-    private enum Phase { IDLE, SWINGING, FALLING, SLIDING, STOPPED }
+    private enum Phase { IDLE, SWING_PENDING, SWINGING, FALLING, SLIDING, STOPPED }
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.ICZ_PLATFORMS;
 
@@ -117,6 +117,7 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
         }
 
         switch (phase) {
+            case SWING_PENDING -> phase = Phase.SWINGING;
             case SWINGING -> updateSwing();
             case FALLING -> updateFalling();
             case SLIDING -> updateSliding();
@@ -276,6 +277,19 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesPieceScopedStandingBits() {
+        return true;
+    }
+
+    @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // Obj_ICZSwingingPlatform child slots pass d1=$2B/$0F directly to
+        // SolidObjectFull, rather than the obActWid+$0B width used by many
+        // generic solid callers.
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity player) {
         return !isDestroyed() && phase != Phase.STOPPED;
     }
@@ -298,7 +312,10 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
 
         int swing = clamp(sign16(speed) >> 1, -MAX_SWING_VELOCITY, MAX_SWING_VELOCITY);
         swingVelocity = swing;
-        phase = Phase.SWINGING;
+        // ROM child routine sub_8B0B0 sets parent flag/velocity and returns;
+        // parent loc_8AD20 switches to the swing routine on its next update,
+        // but the first circular movement does not run until the frame after.
+        phase = Phase.SWING_PENDING;
 
         int adjustedPlayerSpeed = sign16(swing << 1);
         player.setXSpeed((short) adjustedPlayerSpeed);

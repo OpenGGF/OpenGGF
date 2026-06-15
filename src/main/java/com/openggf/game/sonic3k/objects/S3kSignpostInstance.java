@@ -469,7 +469,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
     }
 
     static boolean isWithinRomAfterRange(int signpostX, int signpostY, int cameraX, int cameraY) {
-        int dx = ((signpostX & 0xFF80) - (cameraX & 0xFF80)) & 0xFFFF;
+        int dx = ((signpostX & 0xFF80) - ((cameraX - 0x80) & 0xFF80)) & 0xFFFF;
         if (dx > AFTER_X_RANGE) {
             return false;
         }

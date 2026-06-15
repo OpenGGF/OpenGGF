@@ -16,6 +16,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -76,6 +77,8 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance {
     // ROM: Capture proximity for cross-axis: player within $14-$24 offset
     private static final int CAPTURE_CROSS_MIN = 0x14;
     private static final int CAPTURE_CROSS_MAX = 0x24;
+    private static final int HORIZONTAL_CAPTURE_Y_MIN_OFFSET = -0x14;
+    private static final int HORIZONTAL_CAPTURE_Y_MAX_OFFSET = -0x04;
 
     // ROM: addi.w #$14,d0 / move.w d0,x_pos(a1) — player offset from bar center
     // Vertical bar: player hangs 0x14 (20px) to the right of the bar
@@ -264,12 +267,19 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance {
             // ROM: tst.b 2(a2) / subq.b #1,2(a2) — cooldown active, skip
             if (releaseCooldown[pi] > 0) return;
 
-            // ROM: collision check — player within height range and X range
-            int dy = player.getCentreY() - y;
-            if (Math.abs(dy) > heightPixels) return;
+            int playerX = player.getCentreX();
+            int playerY = player.getCentreY();
 
-            int dx = player.getCentreX() - x;
-            if (dx < CAPTURE_CROSS_MIN || dx > CAPTURE_CROSS_MAX) return;
+            // ROM: player_y must be in [bar_y-height_pixels, bar_y+height_pixels).
+            int top = y - heightPixels;
+            int bottom = y + heightPixels;
+            if (playerY < top || playerY >= bottom) return;
+
+            int dx = playerX - x;
+            // ROM uses `cmp.w x_pos(a1),d0` / `bhs` at bar_x+$14, so the
+            // lower capture edge is strict: player_x must be greater than
+            // bar_x+$14, not equal to it.
+            if (dx <= CAPTURE_CROSS_MIN || dx > CAPTURE_CROSS_MAX) return;
 
             // ROM: cmpi.b #4,routine(a1) / bhs locret
             if (player.getDead() || player.isHurt()) return;
@@ -279,7 +289,7 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance {
             // Capture — ROM: clamp Y, set x = x_pos + $14, anim $11, object_control = 1
             capturePlayer(player, pi, HANG_ANIM_VERTICAL);
             clampPlayerVertical(player);
-            player.setCentreX((short) (x + PLAYER_HANG_OFFSET));
+            NativePositionOps.writeXPosPreserveSubpixel(player, x + PLAYER_HANG_OFFSET);
             // ROM: bclr #Status_Facing,status(a1) — face right
             player.setDirection(Direction.RIGHT);
         } else {
@@ -291,11 +301,10 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance {
             if (player.isDownPressed()) {
                 player.setY((short) (player.getY() + 1));
             }
-            player.setCentreX((short) hangX);
+            NativePositionOps.writeXPosPreserveSubpixel(player, hangX);
             clampPlayerVertical(player);
             player.setXSpeed((short) 0);
             player.setYSpeed((short) 0);
-            player.setGSpeed((short) 0);
 
             // ROM: andi.w #button_A|B|C,d1 / beq locret — ABC to release
             if (player.isJumpPressed()) {
@@ -314,12 +323,17 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance {
         if (!captured[pi]) {
             if (releaseCooldown[pi] > 0) return;
 
-            // ROM: collision check — player within width range and Y range
-            int dx = player.getCentreX() - x;
-            if (Math.abs(dx) > widthPixels) return;
+            int playerX = player.getCentreX();
+            int playerY = player.getCentreY();
 
-            int dy = player.getCentreY() - y;
-            if (dy < -CAPTURE_CROSS_MAX || dy > -(CAPTURE_CROSS_MIN - 4)) return;
+            // ROM: player_x must be in [bar_x-width_pixels, bar_x+width_pixels).
+            int left = x - widthPixels;
+            int right = x + widthPixels;
+            if (playerX < left || playerX >= right) return;
+
+            int dy = playerY - y;
+            // ROM: lower edge is strict (player_y > bar_y-$14), upper edge is inclusive.
+            if (dy <= HORIZONTAL_CAPTURE_Y_MIN_OFFSET || dy > HORIZONTAL_CAPTURE_Y_MAX_OFFSET) return;
 
             if (player.getDead() || player.isHurt()) return;
             if (player.isObjectControlled()) return;
@@ -327,20 +341,19 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance {
             // Capture — ROM: clamp X, set y = y_pos - $14, anim $14, object_control = 1
             capturePlayer(player, pi, HANG_ANIM_HORIZONTAL);
             clampPlayerHorizontal(player);
-            player.setCentreY((short) (y - PLAYER_HANG_OFFSET));
+            NativePositionOps.writeYPosPreserveSubpixel(player, y - PLAYER_HANG_OFFSET);
         } else {
             int hangY = y - PLAYER_HANG_OFFSET;
             if (player.isLeftPressed()) {
-                player.setCentreX((short) (player.getCentreX() - 1));
+                NativePositionOps.addXPosPreserveSubpixel(player, -1);
             }
             if (player.isRightPressed()) {
-                player.setCentreX((short) (player.getCentreX() + 1));
+                NativePositionOps.addXPosPreserveSubpixel(player, 1);
             }
-            player.setCentreY((short) hangY);
+            NativePositionOps.writeYPosPreserveSubpixel(player, hangY);
             clampPlayerHorizontal(player);
             player.setXSpeed((short) 0);
             player.setYSpeed((short) 0);
-            player.setGSpeed((short) 0);
 
             if (player.isJumpPressed()) {
                 releasePlayer(player, pi);
@@ -365,7 +378,6 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance {
         captured[pi] = true;
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
-        player.setGSpeed((short) 0);
         // ROM: move.b #1,object_control(a1)
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         // ROM: move.b #$11,anim(a1) (or #$14 for horizontal)
@@ -408,9 +420,9 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance {
         int minX = x - halfExtent;
         int maxX = x + halfExtent;
         if (playerCX < minX) {
-            player.setCentreX((short) minX);
+            NativePositionOps.writeXPosPreserveSubpixel(player, minX);
         } else if (playerCX > maxX) {
-            player.setCentreX((short) maxX);
+            NativePositionOps.writeXPosPreserveSubpixel(player, maxX);
         }
     }
 

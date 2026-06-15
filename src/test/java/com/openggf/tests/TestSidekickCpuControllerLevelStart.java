@@ -155,6 +155,69 @@ class TestSidekickCpuControllerLevelStart {
                 "The comparison-only pressed byte should remain latched while the hurt routine bypasses CPU writes");
     }
 
+    @Test
+    void levelBoundaryKillPreservesRomOnObjectBitOnEntryFrame() {
+        TestablePlayableSprite leader = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        TestableTailsSprite tails = new TestableTailsSprite("tails_p2", (short) 0x29D, (short) 0x749);
+        tails.setCpuControlled(true);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setOnObject(true);
+        tails.setAir(false);
+        tails.setPushing(true);
+        tails.setRollingJump(true);
+        tails.setJumping(true);
+        tails.setXSpeed((short) 0x120);
+        tails.setYSpeed((short) 0x40);
+        tails.setGSpeed((short) 0x120);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, leader);
+        tails.setCpuController(controller);
+        controller.setInitialState(SidekickCpuController.State.NORMAL);
+
+        controller.despawn(SidekickCpuController.DespawnCause.LEVEL_BOUNDARY);
+
+        assertEquals(SidekickCpuController.State.DEAD_FALLING, controller.getState());
+        assertTrue(tails.isOnObject(),
+                "S2 KillCharacter calls Tails_ResetOnFloor_Part2, which clears in_air/pushing/rolljumping "
+                        + "but does not clear Status_OnObj before setting Status_InAir");
+        assertTrue(tails.getAir(), "KillCharacter sets Status_InAir after ResetOnFloor_Part2");
+        assertFalse(tails.getPushing(), "ResetOnFloor_Part2 clears Status_Push");
+        assertFalse(tails.getRollingJump(), "ResetOnFloor_Part2 clears Status_RollJump");
+        assertFalse(tails.isJumping(), "ResetOnFloor_Part2 clears jumping");
+        assertEquals(0, tails.getXSpeed(), "KillCharacter clears x_vel");
+        assertEquals((short) -0x700, tails.getYSpeed(), "KillCharacter writes y_vel=-$700");
+        assertEquals(0, tails.getGSpeed(), "KillCharacter clears ground_vel");
+    }
+
+    @Test
+    void deadSidekickClearsStaleOnObjectAfterLeavingVisibleWindowAgain() {
+        TestablePlayableSprite leader = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        TestableTailsSprite tails = new TestableTailsSprite("tails_p2", (short) 0x29D, (short) 0x700);
+        tails.setCpuControlled(true);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setDead(true);
+        tails.setAir(true);
+        tails.setOnObject(true);
+        tails.currentCamera().setY((short) 0x640);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, leader);
+        tails.setCpuController(controller);
+        controller.setInitialState(SidekickCpuController.State.NORMAL);
+
+        controller.update(1);
+        assertTrue(tails.isOnObject(),
+                "Dead-fall support should not clear before Tails has re-entered the visible vertical window");
+
+        tails.setCentreY((short) 0x6F0);
+        controller.update(2);
+        assertTrue(tails.isOnObject(), "Re-entering the visible window only arms the stale-support release");
+
+        tails.setCentreY((short) 0x6FF);
+        controller.update(3);
+        assertFalse(tails.isOnObject(),
+                "After re-entering the visible window, leaving it again clears the stale Status_OnObj bit");
+    }
+
     private static void seedLeaderHistory(TestablePlayableSprite leader, int heldMask, boolean jumpPress) {
         for (int i = 0; i < 64; i++) {
             recordLeaderHistory(leader, heldMask, jumpPress);

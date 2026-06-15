@@ -3,6 +3,7 @@ package com.openggf.tests;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import com.openggf.game.GameStateManager;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance;
 import com.openggf.level.LevelManager;
@@ -13,9 +14,12 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseAttackable;
+import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.objects.boss.BossChildComponent;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.List;
 
@@ -66,6 +70,36 @@ public class TestDEZDeathEggRobot {
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static void setIntField(Object target, String name, int value) throws Exception {
+        Field field = Sonic2DeathEggRobotInstance.class.getDeclaredField(name);
+        field.setAccessible(true);
+        field.setInt(target, value);
+    }
+
+    private static void setObjectField(Object target, String name, Object value) throws Exception {
+        Field field = Sonic2DeathEggRobotInstance.class.getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(target, value);
+    }
+
+    private static int getIntField(Object target, String name) throws Exception {
+        Field field = Sonic2DeathEggRobotInstance.class.getDeclaredField(name);
+        field.setAccessible(true);
+        return field.getInt(target);
+    }
+
+    private static void setLongField(Object target, String name, long value) throws Exception {
+        Field field = Sonic2DeathEggRobotInstance.class.getDeclaredField(name);
+        field.setAccessible(true);
+        field.setLong(target, value);
+    }
+
+    private static long getLongField(Object target, String name) throws Exception {
+        Field field = Sonic2DeathEggRobotInstance.class.getDeclaredField(name);
+        field.setAccessible(true);
+        return field.getLong(target);
     }
 
     @BeforeEach
@@ -395,6 +429,27 @@ public class TestDEZDeathEggRobot {
     }
 
     @Test
+    public void fatalHitDefersFirstDefeatFallDispatchUntilNextObjectUpdate() throws Exception {
+        services = ((TestObjectServices) services).withGameState(new GameStateManager());
+        boss.setServices(services);
+        boss.getState().hitCount = 1;
+        setLongField(boss, "bodyYFixed", 0x01240000L);
+
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        boss.onPlayerAttack(player, null);
+
+        assertEquals(0x0E, boss.getBodyRoutine(), "Fatal hit should select ObjC7_Beaten");
+
+        boss.update(100, player);
+        assertEquals(0, boss.getState().yVel,
+                "ObjC7_Beaten skips the caller dispatch; ObjectMoveAndFall must not run on the hit frame");
+
+        boss.update(101, player);
+        assertEquals(0x38, boss.getState().yVel,
+                "ObjC7_Phase1 should start applying ObjectMoveAndFall on the next object update");
+    }
+
+    @Test
     public void defeatBodyRoutineIs0x0E() {
         // ROM: BODY_DEFEAT = 0x0E (s2.asm). Verify initial state is not defeat.
         assertFalse(boss.getBodyRoutine() == 0x0E, "Body routine should NOT be 0x0E initially (that's defeat)");
@@ -487,6 +542,22 @@ public class TestDEZDeathEggRobot {
         assertEquals(12, walk.length, "WALK_CYCLE_KEYFRAMES should have 12 entries");
     }
 
+    @Test
+    public void crouchGroupAnimationCompletesOnlyWhenRomEndMarkerIsRead() throws Exception {
+        java.lang.reflect.Method stepGroupAnimation =
+                Sonic2DeathEggRobotInstance.class.getDeclaredMethod("stepGroupAnimation", int.class);
+        stepGroupAnimation.setAccessible(true);
+
+        // ROM off_3E3D0 runs keyframes 0, 1, 2 for $10 + $10 + 8 frames.
+        // The $C0 end marker is a separate script byte read on the next call.
+        for (int frame = 1; frame <= 40; frame++) {
+            assertFalse((Boolean) stepGroupAnimation.invoke(boss, 3),
+                    "Crouch should still be active while applying keyframe deltas at frame " + frame);
+        }
+        assertTrue((Boolean) stepGroupAnimation.invoke(boss, 3),
+                "Crouch should complete when the ROM $C0 end marker is read on the next frame");
+    }
+
     // ========================================================================
     // CHILDREN REGISTERED WITH OBJECT MANAGER
     // ========================================================================
@@ -552,6 +623,156 @@ public class TestDEZDeathEggRobot {
         int[] yBuf = (int[]) yBufField.get(sensor);
         assertEquals(4, xBuf.length, "xVelBuffer should have 4 elements (3-frame delay)");
         assertEquals(4, yBuf.length, "yVelBuffer should have 4 elements (3-frame delay)");
+    }
+
+    @Test
+    public void targetingSensorUsesRomVelocityFifoDelayBeforeMoving() throws Exception {
+        Class<?> sensorClass = null;
+        for (Class<?> inner : Sonic2DeathEggRobotInstance.class.getDeclaredClasses()) {
+            if (inner.getSimpleName().equals("SensorChild")) {
+                sensorClass = inner;
+                break;
+            }
+        }
+        assertNotNull(sensorClass, "SensorChild inner class should exist");
+
+        Constructor<?> ctor = sensorClass.getDeclaredConstructor(
+                Sonic2DeathEggRobotInstance.class, int.class, int.class);
+        ctor.setAccessible(true);
+
+        Object sensor;
+        setConstructionContext(services);
+        try {
+            sensor = ctor.newInstance(boss, 100, 200);
+        } finally {
+            clearConstructionContext();
+        }
+        ((AbstractObjectInstance) sensor).setServices(services);
+
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short) 100);
+        when(player.getCentreY()).thenReturn((short) 200);
+        when(player.getXSpeed()).thenReturn((short) 0x0180);
+        when(player.getYSpeed()).thenReturn((short) 0);
+
+        // ROM ObjC7_TargettingSensor consumes the oldest velocity slot before
+        // shifting and writing the current player velocity. A newly written
+        // velocity reaches the consumed slot only after four tracking frames
+        // (docs/s2disasm/s2.asm:82972-83003).
+        ((AbstractBossChild) sensor).update(0, player); // routine 0 -> 2
+        for (int frame = 1; frame <= 4; frame++) {
+            ((AbstractBossChild) sensor).update(frame, player);
+        }
+
+        assertEquals(100, ((AbstractBossChild) sensor).getCurrentX(),
+                "Sensor should not consume the just-written velocity before ROM FIFO delay elapses");
+    }
+
+    @Test
+    public void jetStompWaitDoesNotInlineUpdateTargetingSensorBeforeItsSlot() throws Exception {
+        Class<?> sensorClass = null;
+        for (Class<?> inner : Sonic2DeathEggRobotInstance.class.getDeclaredClasses()) {
+            if (inner.getSimpleName().equals("SensorChild")) {
+                sensorClass = inner;
+                break;
+            }
+        }
+        assertNotNull(sensorClass, "SensorChild inner class should exist");
+
+        Constructor<?> ctor = sensorClass.getDeclaredConstructor(
+                Sonic2DeathEggRobotInstance.class, int.class, int.class);
+        ctor.setAccessible(true);
+
+        Object sensor;
+        setConstructionContext(services);
+        try {
+            sensor = ctor.newInstance(boss, 0x831, 0x16C);
+        } finally {
+            clearConstructionContext();
+        }
+        ((AbstractObjectInstance) sensor).setServices(services);
+
+        Field sensorRoutineField = sensorClass.getDeclaredField("sensorRoutine");
+        sensorRoutineField.setAccessible(true);
+
+        setIntField(boss, "bodyRoutine", 0x0C);
+        setIntField(boss, "currentAttack", 2);
+        setIntField(boss, "attackPhase", 6);
+        setObjectField(boss, "sensorChild", sensor);
+
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short) 0x831);
+        when(player.getCentreY()).thenReturn((short) 0x16C);
+        when(player.getXSpeed()).thenReturn((short) 0);
+        when(player.getYSpeed()).thenReturn((short) 0);
+
+        boss.update(100, player);
+
+        assertEquals(0, sensorRoutineField.getInt(sensor),
+                "Body slot must not advance the targeting sensor before the sensor's own object slot runs");
+        assertEquals(6, getIntField(boss, "attackPhase"),
+                "Body should remain in the wait-for-sensor phase until a later object pass reports objoff_28");
+    }
+
+    @Test
+    public void jetStompTargetSnapPreservesBodySubpixelWord() throws Exception {
+        // ROM loc_3D784 writes move.w d0,x_pos(a0). x_pos is the high word of
+        // the 32-bit object position, so the low subpixel word is preserved.
+        setIntField(boss, "bodyRoutine", 0x0C);
+        setIntField(boss, "currentAttack", 2);
+        setIntField(boss, "attackPhase", 6);
+        setIntField(boss, "targetedPlayerX", 0x080C);
+        setIntField(boss, "sensorReportFrame", 199);
+        setLongField(boss, "bodyXFixed", 0x077E5A00L);
+
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short) 0x080C);
+        when(player.getCentreY()).thenReturn((short) 0x016C);
+
+        boss.update(200, player);
+
+        assertEquals(0x080C5A00L, getLongField(boss, "bodyXFixed"),
+                "Target snap must update only the high position word and preserve subpixel carry");
+    }
+
+    @Test
+    public void defeatFloorClampPreservesBodySubpixelWord() throws Exception {
+        // ROM loc_3D8E6 writes move.w #$15C,y_pos(a0). y_pos is the high word
+        // of the 32-bit object position, so the low subpixel word is preserved.
+        setIntField(boss, "bodyRoutine", 0x0E);
+        setIntField(boss, "defeatPhase", 0);
+        setLongField(boss, "bodyYFixed", 0x015B5A00L);
+        boss.getState().y = 0x015B;
+        boss.getState().yVel = 0x0100;
+
+        boss.update(200, null);
+
+        assertEquals(0x015C5A00L, getLongField(boss, "bodyYFixed"),
+                "Defeat floor clamp must preserve y_sub instead of snapping to an integer pixel");
+    }
+
+    @Test
+    public void jetStompConsumesSensorReportOnlyAfterSensorSlotFrame() throws Exception {
+        // ROM ExecuteObjects runs the body in slot 17 before the targeting
+        // sensor child in slot 22. A value written by the sensor this frame
+        // cannot be consumed by loc_3D784 until the next body update.
+        setIntField(boss, "bodyRoutine", 0x0C);
+        setIntField(boss, "currentAttack", 2);
+        setIntField(boss, "attackPhase", 6);
+        setIntField(boss, "targetedPlayerX", 0x080C);
+        setIntField(boss, "sensorReportFrame", 200);
+
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short) 0x080C);
+        when(player.getCentreY()).thenReturn((short) 0x016C);
+
+        boss.update(200, player);
+        assertEquals(6, getIntField(boss, "attackPhase"),
+                "Body slot must not consume a sensor report stamped with the current frame");
+
+        boss.update(201, player);
+        assertEquals(8, getIntField(boss, "attackPhase"),
+                "Body slot should consume the sensor report on the next frame");
     }
 
     @Test
@@ -648,5 +869,3 @@ public class TestDEZDeathEggRobot {
         assertEquals(3, (Math.min(0xFF, 0xFFFF) & 0xC0) >> 6, "dx=0xFFFF -> index 3 (clamped)");
     }
 }
-
-

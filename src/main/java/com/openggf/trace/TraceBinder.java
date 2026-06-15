@@ -45,6 +45,11 @@ public class TraceBinder {
         this.tolerances = tolerances;
     }
 
+    /** Return the latest comparison captured for a frame, if any. */
+    public FrameComparison comparisonForFrame(int frame) {
+        return comparisonsByFrame.get(frame);
+    }
+
     /**
      * Package-private hook used only by tests in this package to flip the
      * native-prelude-mode signal for synthetic {@link TraceData} fixtures
@@ -75,8 +80,8 @@ public class TraceBinder {
 
     /**
      * Compare a single frame with optional engine-side diagnostic context.
-     * The diagnostics are display-only (not compared for pass/fail) but appear
-     * in the context window alongside ROM trace diagnostics for cross-referencing.
+     * TraceBinder compares the diagnostic fields with stable engine parity data
+     * and leaves the rest in the context window for cross-referencing.
      */
     public FrameComparison compareFrame(
             TraceFrame expected,
@@ -171,6 +176,15 @@ public class TraceBinder {
             tolerances.positionWarn(), tolerances.positionError(), false));
         fields.put("y", compareNumeric("y", expected.y(), actualY,
             tolerances.positionWarn(), tolerances.positionError(), false));
+        if (engineDiag != null && expected.hasExtendedData()
+                && engineDiag.xSub() >= 0 && engineDiag.ySub() >= 0) {
+            fields.put("x_sub", compareNumeric("x_sub",
+                    expected.xSub() & 0xFFFF, engineDiag.xSub() & 0xFFFF,
+                    0, 1, false));
+            fields.put("y_sub", compareNumeric("y_sub",
+                    expected.ySub() & 0xFFFF, engineDiag.ySub() & 0xFFFF,
+                    0, 1, false));
+        }
 
         // Speed comparisons
         fields.put("x_speed", compareNumeric("x_speed", expected.xSpeed(), actualXSpeed,
@@ -197,6 +211,17 @@ public class TraceBinder {
         int derivedActualGroundMode = deriveGroundMode(actualAngle & 0xFF);
         fields.put("ground_mode", compareEnum("ground_mode",
             expectedGroundMode, derivedActualGroundMode));
+
+        if (engineDiag != null && expected.routine() >= 0 && engineDiag.routine() >= 0) {
+            fields.put("routine", compareNumeric("routine",
+                    expected.routine() & 0xFF, engineDiag.routine() & 0xFF,
+                    0, 1, false));
+        }
+        if (engineDiag != null && expected.statusByte() >= 0 && engineDiag.statusByte() >= 0) {
+            fields.put("status_byte", compareNumeric("status_byte",
+                    expected.statusByte() & 0xFF, engineDiag.statusByte() & 0xFF,
+                    0, 1, false));
+        }
 
         if (tolerances.ringCountMode() != ToleranceConfig.RingCountMode.DISABLED
                 && expected.rings() >= 0 && engineDiag != null && engineDiag.rings() >= 0) {
@@ -235,6 +260,148 @@ public class TraceBinder {
         FrameComparison result = new FrameComparison(expected.frame(), fields, romDiag, engDiag);
         comparisonsByFrame.put(result.frame(), result);
         return result;
+    }
+
+    /**
+     * Merges read-only auxiliary object comparisons into an already-captured
+     * frame. This is used to surface true object/RNG frontiers before later
+     * player-state symptoms. It never feeds trace data back into the engine.
+     */
+    public void compareObjectNear(
+            int frame,
+            List<TraceEvent.ObjectNear> expectedObjects,
+            List<EngineNearbyObject> actualObjects) {
+        if (expectedObjects == null || expectedObjects.isEmpty()) {
+            return;
+        }
+        FrameComparison existing = comparisonsByFrame.get(frame);
+        if (existing == null) {
+            return;
+        }
+
+        Map<String, FieldComparison> fields = new LinkedHashMap<>(existing.fields());
+        List<EngineNearbyObject> actualList = actualObjects != null ? actualObjects : List.of();
+        List<Integer> matchedActualSlots = new ArrayList<>();
+        List<Integer> expectedTypes = new ArrayList<>();
+
+        for (TraceEvent.ObjectNear expected : expectedObjects) {
+            if (expected.character() != null && !expected.character().isBlank()
+                    && !"sonic".equalsIgnoreCase(expected.character())) {
+                continue;
+            }
+            int slot = expected.slot();
+            int expectedType = parseHexByte(expected.objectType());
+            if (!containsInt(expectedTypes, expectedType)) {
+                expectedTypes.add(expectedType);
+            }
+            EngineNearbyObject actual = findSemanticObjectMatch(expected, expectedType, actualList, matchedActualSlots);
+            if (actual != null) {
+                matchedActualSlots.add(actual.slot());
+            }
+            String prefix = String.format("obj_s%02X_", slot & 0xFF);
+            if (actual != null) {
+                fields.put(prefix + "slot", compareObjectField(
+                        prefix + "slot",
+                        formatHexByte(slot & 0xFF),
+                        formatHexByte(actual.slot() & 0xFF)));
+            }
+            fields.put(prefix + "type", compareObjectField(
+                    prefix + "type",
+                    formatHexByte(expectedType),
+                    actual == null ? "missing" : formatHexByte(actual.objectId() & 0xFF)));
+            if (actual != null && expectedType == (actual.objectId() & 0xFF)) {
+                fields.put(prefix + "x", compareObjectField(
+                        prefix + "x",
+                        formatHex16(expected.x() & 0xFFFF),
+                        formatHex16(actual.currentX() & 0xFFFF)));
+                fields.put(prefix + "y", compareObjectField(
+                        prefix + "y",
+                        formatHex16(expected.y() & 0xFFFF),
+                        formatHex16(actual.currentY() & 0xFFFF)));
+            }
+        }
+
+        for (EngineNearbyObject actual : actualList) {
+            if (containsInt(matchedActualSlots, actual.slot())
+                    || !containsInt(expectedTypes, actual.objectId() & 0xFF)) {
+                continue;
+            }
+            String prefix = String.format("obj_extra_s%02X_", actual.slot() & 0xFF);
+            fields.put(prefix + "type", compareObjectField(
+                    prefix + "type",
+                    "absent",
+                    formatHexByte(actual.objectId() & 0xFF)));
+            fields.put(prefix + "x", compareObjectField(
+                    prefix + "x",
+                    "absent",
+                    formatHex16(actual.currentX() & 0xFFFF)));
+            fields.put(prefix + "y", compareObjectField(
+                    prefix + "y",
+                    "absent",
+                    formatHex16(actual.currentY() & 0xFFFF)));
+        }
+
+        comparisonsByFrame.put(frame, new FrameComparison(
+                existing.frame(), fields, existing.romDiagnostics(), existing.engineDiagnostics()));
+    }
+
+    private static EngineNearbyObject findSemanticObjectMatch(
+            TraceEvent.ObjectNear expected,
+            int expectedType,
+            List<EngineNearbyObject> actualObjects,
+            List<Integer> matchedActualSlots) {
+        int expectedX = expected.x() & 0xFFFF;
+        int expectedY = expected.y() & 0xFFFF;
+        for (EngineNearbyObject actual : actualObjects) {
+            if (containsInt(matchedActualSlots, actual.slot())) {
+                continue;
+            }
+            if ((actual.objectId() & 0xFF) == expectedType
+                    && (actual.currentX() & 0xFFFF) == expectedX
+                    && (actual.currentY() & 0xFFFF) == expectedY) {
+                return actual;
+            }
+        }
+        return null;
+    }
+
+    private static boolean containsInt(List<Integer> values, int target) {
+        for (int value : values) {
+            if (value == target) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static FieldComparison compareObjectField(String name, String expected, String actual) {
+        if (expected.equals(actual)) {
+            return new FieldComparison(name, expected, actual, Severity.MATCH, 0);
+        }
+        return new FieldComparison(name, expected, actual, Severity.ERROR, 1);
+    }
+
+    private static int parseHexByte(String value) {
+        if (value == null || value.isBlank()) {
+            return -1;
+        }
+        String normalized = value.trim();
+        if (normalized.startsWith("0x") || normalized.startsWith("0X")) {
+            normalized = normalized.substring(2);
+        }
+        try {
+            return Integer.parseInt(normalized, 16) & 0xFF;
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
+    private static String formatHexByte(int value) {
+        return value < 0 ? "missing" : String.format("0x%02X", value & 0xFF);
+    }
+
+    private static String formatHex16(int value) {
+        return String.format("0x%04X", value & 0xFFFF);
     }
 
     /**
@@ -374,6 +541,12 @@ public class TraceBinder {
             tolerances.positionWarn(), tolerances.positionError(), false));
         fields.put(prefix + "y", compareNumeric(prefix + "y", expected.y(), actual.y(),
             tolerances.positionWarn(), tolerances.positionError(), false));
+        fields.put(prefix + "x_sub", compareNumeric(prefix + "x_sub",
+                expected.xSub() & 0xFFFF, actual.xSub() & 0xFFFF,
+                0, 1, false));
+        fields.put(prefix + "y_sub", compareNumeric(prefix + "y_sub",
+                expected.ySub() & 0xFFFF, actual.ySub() & 0xFFFF,
+                0, 1, false));
         fields.put(prefix + "x_speed",
             compareNumeric(prefix + "x_speed", expected.xSpeed(), actual.xSpeed(),
                 tolerances.speedWarn(), tolerances.speedError(),
@@ -395,6 +568,16 @@ public class TraceBinder {
         fields.put(prefix + "ground_mode", compareEnum(prefix + "ground_mode",
             deriveGroundMode(expected.angle() & 0xFF),
             deriveGroundMode(actual.angle() & 0xFF)));
+        if (expected.routine() >= 0 && actual.routine() >= 0) {
+            fields.put(prefix + "routine", compareNumeric(prefix + "routine",
+                    expected.routine() & 0xFF, actual.routine() & 0xFF,
+                    0, 1, false));
+        }
+        if (expected.statusByte() >= 0 && actual.statusByte() >= 0) {
+            fields.put(prefix + "status_byte", compareNumeric(prefix + "status_byte",
+                    expected.statusByte() & 0xFF, actual.statusByte() & 0xFF,
+                    0, 1, false));
+        }
     }
 
     private void appendSidekickCpuComparisons(Map<String, FieldComparison> fields, String prefix,
@@ -425,11 +608,11 @@ public class TraceBinder {
                 expected.targetY() & 0xFFFF, actual.targetY() & 0xFFFF, 0, 1, false));
         int expectedHeld = normalizeRomCtrl2LogicalByte(expected.ctrl2Held());
         int expectedHeldAlternate = expectedNormalStep != null
-                ? normalizeRomCtrl2LogicalByte(expectedNormalStep.delayedInput())
+                ? normalizeRomCtrl2LogicalByte(expectedNormalStep.ctrl2Logical())
                 : expectedHeld;
         int expectedPressed = normalizeRomCtrl2PressedByte(expected.ctrl2Pressed());
         int expectedPressedAlternate = expectedNormalStep != null
-                ? normalizeRomCtrl2PressedByte(expectedNormalStep.delayedInput())
+                ? normalizeRomCtrl2PressedByte(expectedNormalStep.ctrl2Logical())
                 : expectedPressed;
         fields.put(prefix + "cpu_ctrl2_held", compareNumericEither(prefix + "cpu_ctrl2_held",
                 expectedHeld, expectedHeldAlternate, actual.generatedHeld() & 0xFF, 0, 1, false));
@@ -475,16 +658,18 @@ public class TraceBinder {
     }
 
     /**
-     * The recorder emits raw ROM button bits for {@code Ctrl_2_Logical}. The
-     * engine collapses A/B/C into its single abstract jump bit while preserving
-     * directional bits.
+     * The recorder emits raw ROM button bits for {@code Ctrl_2_Logical}. Some
+     * diagnostic sites emit the full word, with held bits in the high byte and
+     * pressed bits in the low byte. The engine collapses A/B/C into its single
+     * abstract jump bit while preserving directional bits.
      */
     private static int normalizeRomCtrl2LogicalByte(int raw) {
-        int normalized = raw & (TRACE_INPUT_UP
+        int held = ((raw >>> 8) | raw) & 0xFF;
+        int normalized = held & (TRACE_INPUT_UP
                 | TRACE_INPUT_DOWN
                 | TRACE_INPUT_LEFT
                 | TRACE_INPUT_RIGHT);
-        if ((raw & 0x70) != 0) {
+        if ((held & 0x70) != 0) {
             normalized |= TRACE_INPUT_JUMP;
         }
         return normalized & 0xFF;
@@ -800,5 +985,3 @@ public class TraceBinder {
         }
     }
 }
-
-

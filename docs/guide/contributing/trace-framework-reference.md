@@ -681,13 +681,18 @@ per-frame header (`frame`, `input`, `camera_x`, `camera_y`, `rings`,
 `TraceFrame.parseCsvRow(line, traceSchema)` auto-detects by column count and dispatches to
 the right parser.
 
-**Never compared for pass/fail** (diagnostic-only): `x_sub`, `y_sub`, `routine`,
-`status_byte`, `rings`, `camera_x`, `camera_y`, `gameplay_frame_counter`, `vblank_counter`,
-`lag_counter`, `stand_on_obj`. These appear in the context window and in
-`EngineDiagnostics` for human-readable debugging but do not trigger errors.
+**Compared when both sides record them:** `x_sub`, `y_sub`, `routine`, `status_byte`,
+`rings`, `camera_x`, and `camera_y`. These fields are strict frontier fields when the
+trace row has extended data and `EngineDiagnostics` carries the matching engine snapshot.
+
+**Never compared for pass/fail** (diagnostic-only): `gameplay_frame_counter`,
+`vblank_counter`, `lag_counter`, `stand_on_obj`, and aux-only context fields. These appear
+in the context window and in `EngineDiagnostics` for human-readable debugging but do not
+trigger errors.
 
 **Always compared:** `x`, `y`, `x_speed`, `y_speed`, `g_speed`, `angle`, `air`, `rolling`,
-`ground_mode` (derived from angle), plus the sidekick's copy of those ten in S2 v6.
+`ground_mode` (derived from angle), plus the sidekick's copy of those fields in S2/S3K
+sidekick-capable schemas.
 
 ### 5.3 `aux_state.jsonl` — event catalogue
 
@@ -850,6 +855,8 @@ shared trace-frame fields when both ROM and engine recorded them:
 | `angle` | circular-distance diff | warn ≥1, error ≥1 |
 | `air`, `rolling` | exact match; any mismatch = ERROR | — |
 | `ground_mode` | exact match of `deriveGroundMode(angle) & 0xFF` | — |
+| `x_sub`, `y_sub` | exact match when both sides recorded subpixel diagnostics | warn ≥1, error ≥1 |
+| `routine`, `status_byte` | exact match when both sides recorded character diagnostics | — |
 | `rings` | exact match when both sides recorded; mode-gated | `RingCountMode.FORCE_ERROR` |
 | `camera_x`, `camera_y` | absolute diff (both sides masked `& 0xFFFF`); only fires when ROM trace and `EngineDiagnostics` both recorded camera coords | warn ≥1, error ≥1 |
 

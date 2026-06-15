@@ -838,7 +838,7 @@ public class TestSonic3kAIZEvents {
     }
 
     @Test
-    public void aiz2PostBombingShipLoopWrapsInsideForestMask() throws Exception {
+    public void aiz2PostBombingShipLoopUsesRomRepeatOffset() throws Exception {
         Camera camera = GameServices.camera();
         Sonic3kAIZEvents.resetGlobalState();
         var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
@@ -865,15 +865,15 @@ public class TestSonic3kAIZEvents {
         events.updatePrePhysics(1);
 
         assertEquals(0x44C0, camera.getX() & 0xFFFF,
-                "post-bombing visual wrap should land inside the repeated forest mask, not back at the entrance");
+                "AIZ2_DoShipLoop subtracts the ROM $200 repeat distance from Camera_X_pos");
         assertEquals(0x4560, sonic.getCentreX() & 0xFFFF,
                 "sub_50318 clamps the wrapped player to Camera_X_pos+$A0 before movement");
         assertEquals(0x44D8, tails.getCentreX() & 0xFFFF,
-                "AIZ2_DoShipLoop should wrap native P2, then clamp it to Camera_X_pos+$18");
+                "AIZ2_DoShipLoop wraps native P2, then clamps it to Camera_X_pos+$18");
         assertEquals(0x4500, extraSidekick.getCentreX() & 0xFFFF,
-                "AIZ2_DoShipLoop should preserve all-engine sidekick participation for extra sidekicks");
+                "AIZ2_DoShipLoop must preserve all-engine sidekick participation for extra sidekicks");
         assertEquals(0x200, events.getLevelRepeatOffset(),
-                "post-bombing wraps use the ROM hidden-forest repeat distance");
+                "post-bombing wraps must expose the ROM Level_repeat_offset value");
     }
 
     @Test

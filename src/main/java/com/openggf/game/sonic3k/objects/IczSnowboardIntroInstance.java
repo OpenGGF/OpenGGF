@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -35,7 +36,6 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
     private static final int PLAYER_BOARD_LAUNCH_Y = 0x0159;
     private static final int PLAYER_BOARD_LAUNCH_Y_SUBPIXEL = 0x8800;
     private static final int BOARD_JUMP_Y_SPEED = -0x0600;
-    private static final int SNOWBOARD_JUMP_Y_SPEED = -0x0680;
     private static final int SNOWBOARD_HANDOFF_X = 0x0184;
     private static final int FIRST_SCRIPT_MIN_X = 0x1310;
     private static final int FIRST_SCRIPT_MAX_X = 0x1330;
@@ -222,8 +222,10 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         int centreY = player.getCentreY();
         player.setRolling(true);
         player.setCentreYPreserveSubpixel((short) centreY);
-        player.setControlLocked(true);
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        holdPlayerControlLock(player);
+        // ROM Obj_LevelIntroICZ1 writes object_control = #3 here: low-bit object ownership,
+        // not the bit-7 touch-response suppression state.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setObjectMappingFrameControl(true);
         player.clearForcedInputMask();
     }
@@ -234,17 +236,27 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
     }
 
     private void updateStartupLock(AbstractPlayableSprite player) {
-        player.setControlLocked(true);
+        holdPlayerControlLock(player);
         player.clearForcedInputMask();
         if (--startupTimer > 0) {
             return;
         }
         releaseStartupObjectControl(player);
+        applyStartupReleaseFrameMotion(player);
         state = State.WAIT_FOR_BOARD_JUMP;
     }
 
+    private void applyStartupReleaseFrameMotion(AbstractPlayableSprite player) {
+        // ROM frame order runs Obj_LevelIntroICZ1's timer release before the
+        // player's Obj01_MdAir update is sampled for the trace frame. That frame
+        // therefore performs MoveSprite_TestGravity: SpeedToPos with the old
+        // y_vel, then y_vel += gravity.
+        player.move(player.getXSpeed(), player.getYSpeed());
+        player.setYSpeed((short) (player.getYSpeed() + player.getGravity()));
+    }
+
     private void updateWaitForBoardJump(AbstractPlayableSprite player) {
-        player.setControlLocked(true);
+        holdPlayerControlLock(player);
         releaseStartupObjectControl(player);
         player.clearForcedInputMask();
         if (!player.getAir()) {
@@ -272,7 +284,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
     }
 
     private void updateBoardLaunch(AbstractPlayableSprite player) {
-        player.setControlLocked(true);
+        holdPlayerControlLock(player);
         releaseStartupObjectControl(player);
         player.clearForcedInputMask();
         currentX = player.getCentreX();
@@ -288,11 +300,13 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
     }
 
     private void updateSnowboarding(AbstractPlayableSprite player, int frameCounter) {
-        player.setControlLocked(true);
+        holdPlayerControlLock(player);
         player.clearForcedInputMask();
         currentX = player.getCentreX();
         currentY = player.getCentreY();
-        handleSnowboardJump(player);
+        // ROM loc_3943A follows Sonic while airborne; loc_394A0 speed maintenance starts after that routine handoff.
+        boolean speedMaintenanceActive = sonicSnowboardTouchedGround;
+        queueSnowboardJump(player);
         currentMappingFrame = resolveSonicSnowboardMappingFrame(player);
 
         if ((frameCounter & (QUIET_SKID_INTERVAL - 1)) == 0 && !player.getAir()) {
@@ -300,10 +314,12 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         }
         spawnDustIfNeeded(player);
 
-        if (player.getGSpeed() < MIN_SNOWBOARD_G_SPEED) {
-            player.setGSpeed((short) MIN_SNOWBOARD_G_SPEED);
-        } else if (currentMappingFrame == 8 && player.getGSpeed() >= MIN_SNOWBOARD_G_SPEED) {
-            player.setGSpeed((short) (player.getGSpeed() - FAST_FRAME_G_SPEED_DECEL));
+        if (speedMaintenanceActive) {
+            if (player.getGSpeed() < MIN_SNOWBOARD_G_SPEED) {
+                player.setGSpeed((short) MIN_SNOWBOARD_G_SPEED);
+            } else if (currentMappingFrame == 8 && player.getGSpeed() >= MIN_SNOWBOARD_G_SPEED) {
+                player.setGSpeed((short) (player.getGSpeed() - FAST_FRAME_G_SPEED_DECEL));
+            }
         }
 
         if (player.getCentreX() >= FIRST_SCRIPT_MIN_X && player.getCentreX() < FIRST_SCRIPT_MAX_X) {
@@ -329,11 +345,12 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
     }
 
     private void updateScriptedSlope(AbstractPlayableSprite player) {
+        holdPlayerControlLock(player);
         int[][] table = activeSlope == 1 ? SLOPE_1 : SLOPE_2;
         if (slopeIndex >= table.length) {
             player.setTopSolidBit((byte) 0x0E);
             player.setLrbSolidBit((byte) 0x0F);
-            ObjectControlState.engineScriptedTouchSuppressedMovementActive().applyTo(player);
+            ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(player);
             state = State.SNOWBOARDING;
             return;
         }
@@ -341,8 +358,14 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         currentX = entry[0];
         currentY = entry[1];
         currentMappingFrame = entry[2];
-        player.setCentreX((short) currentX);
-        player.setCentreY((short) currentY);
+        player.setCentreXPreserveSubpixel((short) currentX);
+        player.setCentreYPreserveSubpixel((short) currentY);
+        if (slopeIndex >= table.length) {
+            player.setTopSolidBit((byte) 0x0E);
+            player.setLrbSolidBit((byte) 0x0F);
+            ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(player);
+            state = State.SNOWBOARDING;
+        }
     }
 
     private void crash(AbstractPlayableSprite player) {
@@ -353,9 +376,20 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         // ROM: Obj_LevelIntroICZ1 writes anim(a2) = #$19 on the crash release.
         player.setAnimationId(0x19);
         releasePlayerLocks(player);
+        releaseDormantSidekicksForCrashHandoff();
         services().gameState().setScreenShakeActive(true);
         services().playSfx(Sonic3kSfx.CRASH.id);
         setDestroyed(true);
+    }
+
+    private void releaseDormantSidekicksForCrashHandoff() {
+        for (PlayableEntity sidekickEntity : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (sidekickEntity instanceof AbstractPlayableSprite sidekick
+                    && sidekick.getCpuController() != null) {
+                sidekick.getCpuController().releaseDormantMarkerForLevelEvent();
+            }
+        }
     }
 
     private void spawnDustIfNeeded(AbstractPlayableSprite player) {
@@ -380,17 +414,16 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         }
     }
 
-    private void handleSnowboardJump(AbstractPlayableSprite player) {
+    private void queueSnowboardJump(AbstractPlayableSprite player) {
         if (player.getAir() || !player.isJumpJustPressed()) {
             return;
         }
-        player.setAir(true);
-        player.setJumping(true);
-        player.setYSpeed((short) SNOWBOARD_JUMP_Y_SPEED);
-        player.setRolling(true);
+        // ROM loc_3984E copies raw A/B/C/Start into Ctrl_1_logical after Sonic's
+        // player slot has already run for the frame; the normal jump routine
+        // consumes that logical edge on the following player frame.
+        player.setForcedJumpPress(true);
         overlayAnimationId = 0;
         lastOverlayAnimationId = -1;
-        services().playSfx(com.openggf.audio.GameSound.JUMP);
     }
 
     private void beginSnowboardingOverlay(AbstractPlayableSprite player) {
@@ -405,9 +438,17 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         sonicSnowboardTouchedGround = false;
         player.setMappingFrame(0);
         player.setHidden(true);
-        ObjectControlState.engineScriptedTouchSuppressedMovementActive().applyTo(player);
+        // ROM loc_397FA writes object_control = #2 for the snowboard overlay.
+        // Movement remains active in the engine, but touch responses still run.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(player);
         player.setObjectMappingFrameControl(true);
+        holdPlayerControlLock(player);
         state = State.SNOWBOARDING;
+    }
+
+    private static void holdPlayerControlLock(AbstractPlayableSprite player) {
+        player.setControlLocked(true);
+        player.queueControlLockedForNextFrame(true);
     }
 
     private void releaseStartupObjectControl(AbstractPlayableSprite player) {
@@ -517,6 +558,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         player.setObjectMappingFrameControl(false);
         player.setHidden(false);
         player.clearForcedInputMask();
+        player.clearQueuedControlState();
     }
 
     private int clampFrame(int frame, int frameCount) {

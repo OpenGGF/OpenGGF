@@ -116,8 +116,9 @@ public class Sonic1GargoyleObjectInstance extends AbstractObjectInstance {
         // move.b obDelayAni(a0),obTimeFrame(a0) ; reset timer
         timer = spitDelay;
 
-        // bsr.w ChkObjectVisible / bne.s .nofire
-        if (!isOnScreen(HEAD_ACT_WIDTH * 2)) {
+        // docs/s1disasm/s1disasm/_incObj/62 LZ Gargoyle.asm:38 calls
+        // ChkObjectVisible, which uses exact screen bounds with no act-width margin.
+        if (!isChkObjectVisible()) {
             return;
         }
 

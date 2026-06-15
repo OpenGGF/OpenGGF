@@ -19,6 +19,8 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
@@ -66,6 +68,36 @@ class TestSonic1RingInstance {
         Sonic1RingInstance respawnedChild = findRingAt(manager, 0x0110, 0x0200);
         assertNull(respawnedChild,
                 "Collected child ring should stay absent when the ring group reloads");
+    }
+
+    @Test
+    void sparkleRingIgnoresOutOfRangeUntilRingDelete() {
+        RingManager ringManager = mock(RingManager.class);
+        when(ringManager.collectPlacedRing(any(RingSpawn.class), any(), anyInt()))
+                .thenReturn(true);
+
+        RingSpawn ringSpawn = new RingSpawn(0x0110, 0x0200);
+        Sonic1RingInstance ring = new Sonic1RingInstance(
+                new ObjectSpawn(0x0110, 0x0200, 0x25, 0, 0, false, 0),
+                ringSpawn,
+                0x0100);
+        ring.setServices(new StubObjectServices() {
+            @Override
+            public RingManager ringManager() {
+                return ringManager;
+            }
+        });
+
+        assertTrue(ring.usesCustomOutOfRangeCheck());
+        assertTrue(ring.isCustomOutOfRange(0x0400),
+                "Ring_Animate should still use the group-anchor out_of_range macro");
+
+        TouchResponseResult touch = mock(TouchResponseResult.class);
+        when(touch.category()).thenReturn(TouchCategory.SPECIAL);
+        ring.onTouchResponse(new TestPlayableSprite(), touch, 10);
+
+        assertFalse(ring.isCustomOutOfRange(0x0400),
+                "Ring_Sparkle does not call out_of_range before Ring_Delete");
     }
 
     private static Sonic1RingInstance buildTwoRingGroup(ObjectSpawn spawn) {

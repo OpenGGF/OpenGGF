@@ -1,10 +1,12 @@
 package com.openggf.graphics;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,6 +22,35 @@ class TestVScrollColumnCount {
     }
 
     @Test
+    void tilemapRendererReconfiguresPerColumnVScrollCapacityForResolvedWidth() {
+        TilemapGpuRenderer renderer = new TilemapGpuRenderer(320);
+
+        assertEquals(20, renderer.getVScrollColumnCapacity());
+
+        renderer.applyResolvedDisplayWidth(400);
+
+        assertEquals(25, renderer.getVScrollColumnCapacity());
+    }
+
+    @Test
+    void graphicsManagerReconfiguresExistingTilemapRendererForResolvedDisplayWidthWithoutGl() throws Exception {
+        GraphicsManager graphics = new GraphicsManager();
+        TilemapGpuRenderer renderer = new TilemapGpuRenderer(320);
+        setPrivateField(graphics, "tilemapGpuRenderer", renderer);
+
+        graphics.applyResolvedDisplayWidth(400);
+
+        assertEquals(25, renderer.getVScrollColumnCapacity());
+    }
+
+    @Test
+    void graphicsManagerResolvedDisplayWidthHookIsSafeBeforeTilemapRendererExists() {
+        GraphicsManager graphics = new GraphicsManager();
+
+        assertDoesNotThrow(() -> graphics.applyResolvedDisplayWidth(400));
+    }
+
+    @Test
     void shadersDerivePerColumnVScrollCountFromVisibleWidth() throws IOException {
         String parallax = Files.readString(Path.of("src/main/resources/shaders/shader_parallax_bg.glsl"));
         String tilemap = Files.readString(Path.of("src/main/resources/shaders/shader_tilemap.glsl"));
@@ -32,14 +63,25 @@ class TestVScrollColumnCount {
                 "Parallax shader must convert physical framebuffer X to logical game X before sampling HScroll");
         assertTrue(parallax.contains("ceil(activeDisplayWidth / 16.0)"),
                 "Parallax shader must sample per-column VScroll using the logical active display width");
-        assertTrue(tilemap.contains("ceil(WindowWidth / 16.0)"),
-                "Tilemap shader must sample per-column VScroll using the active render window width");
+        assertTrue(tilemap.contains("uniform float VScrollColumnCount;"),
+                "Tilemap shader must receive the column texture entry count separately from the FBO width");
+        assertTrue(tilemap.contains("float vScrollColumnCount = VScrollColumnCount > 0.0"),
+                "Tilemap shader must prefer the explicit column count: WindowWidth is the BG FBO width "
+                        + "(e.g. 512 at native 320) and mismatches the 20-texel column texture");
         assertFalse(parallax.contains("float gameX = floor(viewportX);"),
                 "Parallax shader must not treat physical framebuffer pixels as logical game pixels");
         assertFalse(parallax.contains("viewportX * 320.0"),
                 "Parallax shader must not collapse widescreen X coordinates into native 320px space");
         assertFalse(parallax.contains("/ 20.0"));
         assertFalse(tilemap.contains("/ 20.0"));
+    }
+
+    @Test
+    void tilemapRendererSuppliesColumnTextureEntryCountToShader() throws IOException {
+        String renderer = Files.readString(Path.of("src/main/java/com/openggf/graphics/TilemapGpuRenderer.java"));
+
+        assertTrue(renderer.contains("setVScrollColumnCount(columnVScrollBuffer.getEntryCount())"),
+                "TilemapGpuRenderer must pass the VScroll column texture's actual entry count to the shader");
     }
 
     @Test
@@ -50,5 +92,21 @@ class TestVScrollColumnCount {
                 "BackgroundRenderer must pass the logical configured screen width to the parallax shader");
         assertTrue(renderer.contains("SonicConfiguration.SCREEN_WIDTH_PIXELS"),
                 "The active display width should come from the logical screen-width configuration");
+    }
+
+    @Test
+    void backgroundPerColumnVScrollIsOwnedByParallaxCompositingPassOnly() throws IOException {
+        String renderer = Files.readString(Path.of("src/main/java/com/openggf/level/LevelRenderer.java"));
+
+        assertTrue(renderer.contains("pendingBgVScrollColumnData = vScrollColumnData;"),
+                "BG per-column VScroll must still feed the parallax compositing pass");
+        assertFalse(renderer.contains("pendingBgTilePassPerColumnVScroll"),
+                "BG tile FBO pass must not also consume per-column VScroll; doing both doubles AIZ fire-wave offsets");
+    }
+
+    private static void setPrivateField(Object target, String fieldName, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(target, value);
     }
 }

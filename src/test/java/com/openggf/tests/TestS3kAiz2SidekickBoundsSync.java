@@ -106,11 +106,9 @@ public class TestS3kAiz2SidekickBoundsSync {
         events.updatePrePhysics(ACT_2);
 
         // AIZ2_DoShipLoop advances Camera_X by 4 to the wrap boundary (0x46C0) and
-        // wraps it back before Process_Sprites, so the post-wrap camera max X must
-        // drop below that boundary. The exact wrap distance is a documented visual
-        // approximation while the ROM HInt screen split is unmodeled
-        // (Sonic3kAIZEvents.BATTLESHIP_WRAP_DIST_POST_BOMBING), so this regression
-        // asserts the boundary *sync*, not a fixed wrap value.
+        // subtracts the ROM $200 Level_repeat_offset before Process_Sprites. This
+        // regression asserts that the sidekick bound mirror observes the post-wrap
+        // camera in the same frame; exact visual compensation belongs to render code.
         int wrappedCameraMaxX = fixture.camera().getMaxX() & 0xFFFF;
         assertTrue(wrappedCameraMaxX < 0x46C0,
                 "AIZ2_DoShipLoop must wrap Camera_max_X_pos back before Process_Sprites");

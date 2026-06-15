@@ -22,8 +22,10 @@ import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.Direction;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -234,6 +236,12 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         }
     }
 
+    @Override
+    public void onUnload() {
+        frostCycleActive = false;
+        freezeJetActive = false;
+    }
+
     public boolean isFrostCycleActiveForTesting() {
         return frostCycleActive;
     }
@@ -320,12 +328,19 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         }
 
         private void scanForCapture(PlayableEntity playerEntity) {
-            AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite sprite ? sprite : null;
-            if (!canCapture(player)) {
-                return;
-            }
+            ObjectServices services = tryServices();
+            ObjectPlayerQuery serviceQuery = services != null ? services.playerQuery() : null;
+            ObjectPlayerQuery query = new ObjectPlayerQuery(
+                    () -> playerEntity,
+                    () -> serviceQuery != null ? serviceQuery.sidekicks() : List.of());
 
-            capture(player);
+            for (PlayableEntity participant : query.playersFor(PLAYER_PARTICIPATION)) {
+                AbstractPlayableSprite player = participant instanceof AbstractPlayableSprite sprite ? sprite : null;
+                if (canCapture(player)) {
+                    capture(player);
+                    return;
+                }
+            }
         }
 
         private boolean canCapture(AbstractPlayableSprite player) {
@@ -343,14 +358,18 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         }
 
         private void capture(AbstractPlayableSprite player) {
+            int capturedX = player.getCentreX();
+            int capturedY = player.getCentreY();
             ObjectControlState.nativeBit7FullControl().applyTo(player);
             player.setAir(true);
             player.setXSpeed((short) 0);
             player.setYSpeed((short) 0);
             player.setGSpeed((short) 0);
             player.setAnimationId(0x1A);
+            NativePositionOps.writeXPosPreserveSubpixel(player, capturedX);
+            NativePositionOps.writeYPosPreserveSubpixel(player, capturedY);
 
-            frozenBlock = spawnChild(() -> new FrozenPlayerBlock(player, parent.x, hFlip));
+            frozenBlock = spawnChild(() -> new FrozenPlayerBlock(player, capturedX, capturedY, parent.x, hFlip));
             setDestroyed(true);
         }
 
@@ -367,6 +386,11 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
             // The ROM capture child is an invisible range checker.
+        }
+
+        @Override
+        public boolean isPersistent() {
+            return true;
         }
 
         public FrozenPlayerBlock frozenBlockForTesting() {
@@ -394,13 +418,23 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         private int breakTimer = BREAK_TIMER;
         private boolean landedOnTerrain;
 
-        public FrozenPlayerBlock(AbstractPlayableSprite capturedPlayer, int parentX, boolean hFlip) {
-            super(new ObjectSpawn(capturedPlayer.getCentreX(), capturedPlayer.getCentreY(),
-                    OBJECT_ID, 0, hFlip ? 1 : 0, false, capturedPlayer.getCentreY()), "ICZFreezerFrozenPlayer");
+        public FrozenPlayerBlock(AbstractPlayableSprite capturedPlayer, int capturedX, int capturedY,
+                int parentX, boolean hFlip) {
+            super(new ObjectSpawn(capturedX, capturedY, OBJECT_ID, 0, hFlip ? 1 : 0, false, capturedY),
+                    "ICZFreezerFrozenPlayer");
             this.capturedPlayer = capturedPlayer;
-            int xSpeed = capturedPlayer.getCentreX() >= parentX ? INITIAL_X_SPEED : -INITIAL_X_SPEED;
-            this.motion = new SubpixelMotion.State(capturedPlayer.getCentreX(), capturedPlayer.getCentreY(),
-                    0, 0, xSpeed, INITIAL_Y_SPEED);
+            int xSpeed = capturedX >= parentX ? INITIAL_X_SPEED : -INITIAL_X_SPEED;
+            this.motion = new SubpixelMotion.State(capturedX, capturedY, 0, 0, xSpeed, INITIAL_Y_SPEED);
+        }
+
+        @Override
+        protected boolean skipsSameFrameUpdateAfterSpawn() {
+            return true;
+        }
+
+        @Override
+        public boolean isPersistent() {
+            return true;
         }
 
         @Override
@@ -410,13 +444,27 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
             }
 
             if (!landedOnTerrain) {
+                applyCameraSideVelocityClamp();
                 SubpixelMotion.moveSprite(motion, GRAVITY);
                 snapToTerrainIfColliding();
             }
             syncCapturedPlayer();
 
-            if (breakTimer-- < 0) {
+            if (--breakTimer < 0) {
                 breakOpen(frameCounter);
+            }
+        }
+
+        private void applyCameraSideVelocityClamp() {
+            ObjectServices services = tryServices();
+            if (services == null || services.camera() == null || motion.xVel == 0) {
+                return;
+            }
+            int cameraX = services.camera().getX() & 0xFFFF;
+            int threshold = (cameraX + (motion.xVel < 0 ? 0x20 : 0x128)) & 0xFFFF;
+            if (Integer.compareUnsigned(threshold, motion.x & 0xFFFF) >= 0) {
+                motion.xVel = 0;
+                motion.xSub = 0;
             }
         }
 
@@ -434,8 +482,8 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
                 return;
             }
             ObjectControlState.nativeBit7FullControl().applyTo(capturedPlayer);
-            capturedPlayer.setCentreX((short) motion.x);
-            capturedPlayer.setCentreY((short) motion.y);
+            NativePositionOps.writeXPosPreserveSubpixel(capturedPlayer, motion.x);
+            NativePositionOps.writeYPosPreserveSubpixel(capturedPlayer, motion.y);
             capturedPlayer.setXSpeed((short) 0);
             capturedPlayer.setYSpeed((short) 0);
             capturedPlayer.setGSpeed((short) 0);
@@ -452,14 +500,23 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         }
 
         private void applyBreakDamage(int frameCounter) {
-            boolean hadRings = capturedPlayer.getRingCount() > 0;
+            boolean sidekick = capturedPlayer.isCpuControlled();
+            boolean hadRings = !sidekick && capturedPlayer.getRingCount() > 0;
             if (hadRings && !capturedPlayer.hasShield() && !capturedPlayer.suppressesLostRingSpawnOnHurt()) {
                 ObjectServices services = tryServices();
                 if (services != null) {
                     services.spawnLostRings(capturedPlayer, frameCounter);
                 }
             }
-            capturedPlayer.applyHurtOrDeath(getX(), DamageCause.SPIKE, hadRings);
+            boolean hurt = sidekick
+                    ? capturedPlayer.applyHurt(getX(), DamageCause.SPIKE)
+                    : capturedPlayer.applyHurtOrDeath(getX(), DamageCause.SPIKE, hadRings);
+            if (hurt && capturedPlayer.getAnimationId() != 0x18) {
+                // ROM loc_8A88A calls HurtCharacter, then overwrites x_vel from
+                // render_flags bit 0 for freezer breaks.
+                int xVel = capturedPlayer.getDirection() == Direction.LEFT ? 0x0200 : -0x0200;
+                capturedPlayer.setXSpeed((short) xVel);
+            }
         }
 
         private void spawnDebris() {
