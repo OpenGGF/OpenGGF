@@ -90,6 +90,17 @@ public class TestDisplayShaderLibrary {
         assertEquals(0, library.indexOfRelativePath("missing.glslp"));
     }
 
+    @Test
+    public void savedSelectionIndexMatchesNormalizedEquivalentPaths() throws IOException {
+        Path root = tempDir.resolve("display-shaders");
+        write(root.resolve("Custom/warm.glsl"), "void main() {}\n");
+
+        DisplayShaderLibrary library = DisplayShaderLibrary.scan(root);
+
+        assertEquals(1, library.indexOfRelativePath("./Custom/warm.glsl"));
+        assertEquals(1, library.indexOfRelativePath("Custom/../Custom/warm.glsl"));
+    }
+
     private static List<String> labels(DisplayShaderLibrary library) {
         return library.entries().stream()
                 .map(DisplayShaderPresetRef::label)

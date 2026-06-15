@@ -2,6 +2,7 @@ package com.openggf.graphics.shaderlib;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -210,10 +211,18 @@ public final class DisplayShaderLibrary {
         if (selection == null) {
             return null;
         }
-        String normalized = selection.trim().replace('\\', '/');
-        if (normalized.isEmpty() || "OFF".equalsIgnoreCase(normalized)) {
+        String trimmed = selection.trim();
+        if (trimmed.isEmpty() || "OFF".equalsIgnoreCase(trimmed)) {
             return null;
         }
-        return normalized;
+        try {
+            Path normalizedPath = Path.of(trimmed.replace('\\', '/')).normalize();
+            if (normalizedPath.isAbsolute() || normalizedPath.startsWith("..") || normalizedPath.getNameCount() == 0) {
+                return null;
+            }
+            return normalizedPath.toString().replace('\\', '/');
+        } catch (InvalidPathException ignored) {
+            return null;
+        }
     }
 }
