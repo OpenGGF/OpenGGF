@@ -368,6 +368,42 @@ public class TestDisplayShaderPipelineSmoke {
         }
     }
 
+    @Test
+    public void sourceScaleTargetsCascadeFromPreviousPassOutput() {
+        try (GlContext ignored = GlContext.open()) {
+            DisplayShaderPipeline pipeline = new DisplayShaderPipeline();
+            pipeline.resize(8, 8, 32, 32);
+
+            DisplayShaderPreset preset = new DisplayShaderPreset("source-cascade", ShaderPhase.FINAL, List.of(
+                    solidColorPass(0.0f, 0.0f, 1.0f, 2, ScaleType.SOURCE),
+                    new DisplayShaderPass(null, """
+                            uniform vec2 InputSize;
+                            uniform vec2 TextureSize;
+                            uniform vec2 OutputSize;
+                            void main() {
+                                bool ok = InputSize == vec2(16.0, 16.0)
+                                    && TextureSize == vec2(16.0, 16.0)
+                                    && OutputSize == vec2(32.0, 32.0);
+                                gl_FragColor = ok ? vec4(0.0, 1.0, 0.0, 1.0) : vec4(1.0, 0.0, 0.0, 1.0);
+                            }
+                            """, GlslShape.FRAGMENT_ONLY, 2, ScaleType.SOURCE, false, WrapMode.CLAMP_TO_EDGE)));
+
+            assertTrue(pipeline.activate(preset));
+            glViewport(0, 0, 32, 32);
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+            pipeline.apply(0, 0, 32, 32, 1);
+
+            ByteBuffer pixel = ByteBuffer.allocateDirect(4);
+            glReadPixels(16, 16, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+            int red = Byte.toUnsignedInt(pixel.get(0));
+            int green = Byte.toUnsignedInt(pixel.get(1));
+            assertTrue(green > 200, "expected cascaded source scale uniforms, red=" + red + " green=" + green);
+            assertTrue(red < 50, "expected low red success pixel, red=" + red + " green=" + green);
+            pipeline.dispose();
+        }
+    }
+
     private static DisplayShaderPreset passthroughPreset() {
         return new DisplayShaderPreset("passthrough", ShaderPhase.FINAL, List.of(
                 new DisplayShaderPass(null, """
@@ -380,11 +416,16 @@ public class TestDisplayShaderPipelineSmoke {
     }
 
     private static DisplayShaderPass solidColorPass(float red, float green, float blue) {
+        return solidColorPass(red, green, blue, 1, ScaleType.SOURCE);
+    }
+
+    private static DisplayShaderPass solidColorPass(float red, float green, float blue,
+                                                    double scale, ScaleType scaleType) {
         return new DisplayShaderPass(null, """
                 void main() {
                     gl_FragColor = vec4(%sf, %sf, %sf, 1.0);
                 }
-                """.formatted(red, green, blue), GlslShape.FRAGMENT_ONLY, 1, ScaleType.SOURCE,
+                """.formatted(red, green, blue), GlslShape.FRAGMENT_ONLY, scale, scaleType,
                 false, WrapMode.CLAMP_TO_EDGE);
     }
 

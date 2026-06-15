@@ -15,8 +15,11 @@ All notable changes to the OpenGGF project are documented in this file.
   during discovery so one bad `.glslp` entry does not hide the downloaded pack.
   Presets with unsupported external texture state are filtered from the
   picker, and RetroArch whole-number decimal scales plus fractional scales,
-  preset parameter uniforms, precision-qualified `FragColor` outputs, and
-  legacy single-byte encoded shader comments are accepted by the loader.
+  per-axis scale settings, preset parameter uniforms, precision-qualified
+  `FragColor` outputs, and legacy single-byte encoded shader comments are
+  accepted by the loader. Final preset passes without explicit scale options now
+  render at viewport resolution, and source-relative pass targets cascade from
+  the previous pass output as RetroArch presets expect.
   Shader activation failures now log the shader label at warning level instead
   of being hidden behind fine-grained logging, and an opt-in shader-pack
   diagnostic test can write a compatibility failure report for local shader

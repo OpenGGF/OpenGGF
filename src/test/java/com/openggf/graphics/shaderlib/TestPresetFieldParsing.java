@@ -70,6 +70,60 @@ public class TestPresetFieldParsing {
     }
 
     @Test
+    public void finalPassWithoutScaleOptionsDefaultsToViewport() throws Exception {
+        Path root = tempDir.resolve("display-shaders");
+        write(root.resolve("crt.glsl"), "void main() {}\n");
+        Path preset = root.resolve("crt.glslp");
+        write(preset, """
+                shaders = 1
+                shader0 = crt.glsl
+                """);
+
+        DisplayShaderPreset loaded = new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.GLSLP),
+                ShaderPhase.FINAL);
+
+        assertEquals(ScaleType.VIEWPORT, loaded.passes().get(0).scaleType());
+        assertEquals(1, loaded.passes().get(0).scale());
+    }
+
+    @Test
+    public void finalPassWithExplicitScaleTypeSourceStaysSource() throws Exception {
+        Path root = tempDir.resolve("display-shaders");
+        write(root.resolve("crt.glsl"), "void main() {}\n");
+        Path preset = root.resolve("crt.glslp");
+        write(preset, """
+                shaders = 1
+                shader0 = crt.glsl
+                scale_type0 = source
+                """);
+
+        DisplayShaderPreset loaded = new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.GLSLP),
+                ShaderPhase.FINAL);
+
+        assertEquals(ScaleType.SOURCE, loaded.passes().get(0).scaleType());
+        assertEquals(1, loaded.passes().get(0).scale());
+    }
+
+    @Test
+    public void intermediatePassWithoutScaleOptionsDefaultsToSource() throws Exception {
+        Path root = tempDir.resolve("display-shaders");
+        write(root.resolve("pass0.glsl"), "void main() {}\n");
+        write(root.resolve("pass1.glsl"), "void main() {}\n");
+        Path preset = root.resolve("two-pass.glslp");
+        write(preset, """
+                shaders = 2
+                shader0 = pass0.glsl
+                shader1 = pass1.glsl
+                """);
+
+        DisplayShaderPreset loaded = new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.GLSLP),
+                ShaderPhase.FINAL);
+
+        assertEquals(ScaleType.SOURCE, loaded.passes().get(0).scaleType());
+        assertEquals(ScaleType.VIEWPORT, loaded.passes().get(1).scaleType());
+    }
+
+    @Test
     public void parsesGlslpWithSameCoreFields() throws Exception {
         Path root = tempDir.resolve("display-shaders");
         write(root.resolve("retro/shaders/pass0.glsl"), "void main() {}\n");
@@ -95,6 +149,30 @@ public class TestPresetFieldParsing {
         assertEquals(ScaleType.VIEWPORT, loaded.passes().get(1).scaleType());
         assertTrue(loaded.passes().get(1).filterLinear());
         assertEquals(WrapMode.REPEAT, loaded.passes().get(1).wrapMode());
+    }
+
+    @Test
+    public void parsesPerAxisScaleFields() throws Exception {
+        Path root = tempDir.resolve("display-shaders");
+        write(root.resolve("retro/pass.glsl"), "void main() {}\n");
+        Path preset = root.resolve("retro/per-axis.glslp");
+        write(preset, """
+                shaders = 1
+                shader0 = pass.glsl
+                scale_type_x0 = viewport
+                scale_x0 = 1.0
+                scale_type_y0 = source
+                scale_y0 = 2.0
+                """);
+
+        DisplayShaderPreset loaded = new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.GLSLP),
+                ShaderPhase.PRESENTATION);
+
+        DisplayShaderPass pass = loaded.passes().get(0);
+        assertEquals(ScaleType.VIEWPORT, pass.scaleTypeX());
+        assertEquals(ScaleType.SOURCE, pass.scaleTypeY());
+        assertEquals(1.0, pass.scaleX());
+        assertEquals(2.0, pass.scaleY());
     }
 
     @Test

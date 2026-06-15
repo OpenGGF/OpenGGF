@@ -359,10 +359,12 @@ public class DisplayShaderPipeline {
             }
 
             for (CompiledPass pass : compiledPasses) {
-                int baseWidth = pass.scaleType() == ScaleType.VIEWPORT ? viewportWidth : sourceWidth;
-                int baseHeight = pass.scaleType() == ScaleType.VIEWPORT ? viewportHeight : sourceHeight;
-                int width = scaledDimension(baseWidth, pass.scale());
-                int height = scaledDimension(baseHeight, pass.scale());
+                int previousWidth = targets.isEmpty() ? sourceWidth : targets.get(targets.size() - 1).width();
+                int previousHeight = targets.isEmpty() ? sourceHeight : targets.get(targets.size() - 1).height();
+                int baseWidth = pass.scaleTypeX() == ScaleType.VIEWPORT ? viewportWidth : previousWidth;
+                int baseHeight = pass.scaleTypeY() == ScaleType.VIEWPORT ? viewportHeight : previousHeight;
+                int width = scaledDimension(baseWidth, pass.scaleX());
+                int height = scaledDimension(baseHeight, pass.scaleY());
                 FboHandle fbo = FboHelper.createColorOnly(width, height, toGlWrapMode(pass.wrapMode()));
                 if (fbo == null) {
                     return null;
@@ -397,8 +399,9 @@ public class DisplayShaderPipeline {
         String fragmentSource = RetroArchGlslCompat.stageSource(pass.fragmentSource(), "FRAGMENT",
                 enableParameterUniforms);
         int programId = compileProgram(vertexSource, fragmentSource, shape);
-        return new CompiledPass(programId, shape, sanitizeScale(pass.scale()),
-                pass.scaleType() == null ? ScaleType.SOURCE : pass.scaleType(),
+        return new CompiledPass(programId, shape, sanitizeScale(pass.scaleX()), sanitizeScale(pass.scaleY()),
+                pass.scaleTypeX() == null ? ScaleType.SOURCE : pass.scaleTypeX(),
+                pass.scaleTypeY() == null ? ScaleType.SOURCE : pass.scaleTypeY(),
                 pass.filterLinear(),
                 pass.wrapMode() == null ? WrapMode.CLAMP_TO_EDGE : pass.wrapMode(),
                 pass.parameterValues());
@@ -581,7 +584,8 @@ public class DisplayShaderPipeline {
         }
     }
 
-    private record CompiledPass(int programId, GlslShape shape, double scale, ScaleType scaleType,
+    private record CompiledPass(int programId, GlslShape shape, double scaleX, double scaleY,
+                                ScaleType scaleTypeX, ScaleType scaleTypeY,
                                 boolean filterLinear, WrapMode wrapMode, Map<String, Float> parameterValues) {
     }
 

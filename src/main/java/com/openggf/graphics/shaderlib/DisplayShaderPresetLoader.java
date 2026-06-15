@@ -60,7 +60,8 @@ public class DisplayShaderPresetLoader {
     private static DisplayShaderPreset loadStandaloneGlsl(DisplayShaderPresetRef ref, ShaderPhase phase)
             throws IOException, DisplayShaderLoadException {
         String source = readGlslSource(ref.absolutePath());
-        DisplayShaderPass pass = passForSource(source, 1, ScaleType.SOURCE, false, WrapMode.CLAMP_TO_EDGE, Map.of());
+        DisplayShaderPass pass = passForSource(source, 1, 1, ScaleType.SOURCE, ScaleType.SOURCE,
+                false, WrapMode.CLAMP_TO_EDGE, Map.of());
         return new DisplayShaderPreset(ref.label(), phase, List.of(pass));
     }
 
@@ -85,9 +86,12 @@ public class DisplayShaderPresetLoader {
             if (format == PresetFormat.GLSLP) {
                 rejectUnsupportedGlslpPassSourceFeatures(source, shaderPath);
             }
+            PassScale passScale = parsePassScale(fields, i, passCount);
             passes.add(passForSource(source,
-                    parseScale(fields.get("scale" + i)),
-                    parseScaleType(fields.get("scale_type" + i)),
+                    passScale.scaleX(),
+                    passScale.scaleY(),
+                    passScale.scaleTypeX(),
+                    passScale.scaleTypeY(),
                     parseFilterLinear(fields.get("filter_linear" + i)),
                     parseWrapMode(fields.get("wrap_mode" + i)),
                     parseParameterValues(source, fields)));
@@ -145,6 +149,47 @@ public class DisplayShaderPresetLoader {
         } catch (NumberFormatException e) {
             throw new DisplayShaderLoadException("Invalid shader scale: " + raw, e);
         }
+    }
+
+    private static PassScale parsePassScale(Map<String, String> fields, int passIndex, int passCount)
+            throws DisplayShaderLoadException {
+        String suffix = Integer.toString(passIndex);
+        String scale = fields.get("scale" + suffix);
+        String scaleX = fields.get("scale_x" + suffix);
+        String scaleY = fields.get("scale_y" + suffix);
+        String scaleType = fields.get("scale_type" + suffix);
+        String scaleTypeX = fields.get("scale_type_x" + suffix);
+        String scaleTypeY = fields.get("scale_type_y" + suffix);
+
+        boolean hasUniformScale = scale != null && !scale.isBlank();
+        boolean hasAnyScaleOption = hasUniformScale
+                || hasValue(scaleX)
+                || hasValue(scaleY)
+                || hasValue(scaleType)
+                || hasValue(scaleTypeX)
+                || hasValue(scaleTypeY);
+        boolean implicitFinalViewport = passIndex == passCount - 1 && !hasAnyScaleOption;
+
+        double parsedScaleX = hasUniformScale ? parseScale(scale) : parseScale(scaleX);
+        double parsedScaleY = hasUniformScale ? parsedScaleX : parseScale(scaleY);
+        ScaleType parsedTypeX;
+        ScaleType parsedTypeY;
+        if (hasValue(scaleType)) {
+            parsedTypeX = parseScaleType(scaleType);
+            parsedTypeY = parsedTypeX;
+        } else if (implicitFinalViewport) {
+            parsedTypeX = ScaleType.VIEWPORT;
+            parsedTypeY = ScaleType.VIEWPORT;
+        } else {
+            parsedTypeX = parseScaleType(scaleTypeX);
+            parsedTypeY = parseScaleType(scaleTypeY);
+        }
+
+        return new PassScale(parsedScaleX, parsedScaleY, parsedTypeX, parsedTypeY);
+    }
+
+    private static boolean hasValue(String raw) {
+        return raw != null && !raw.isBlank();
     }
 
     private static ScaleType parseScaleType(String raw) throws DisplayShaderLoadException {
@@ -271,13 +316,14 @@ public class DisplayShaderPresetLoader {
         return fallback == null ? presetPath : fallback;
     }
 
-    private static DisplayShaderPass passForSource(String source, double scale, ScaleType scaleType,
+    private static DisplayShaderPass passForSource(String source, double scaleX, double scaleY,
+                                                   ScaleType scaleTypeX, ScaleType scaleTypeY,
                                                    boolean filterLinear, WrapMode wrapMode,
                                                    Map<String, Float> parameterValues) {
         GlslShape shape = detectShape(source);
         String vertexSource = shape == GlslShape.COMBINED ? source : null;
-        return new DisplayShaderPass(vertexSource, source, shape, scale, scaleType, filterLinear, wrapMode,
-                parameterValues);
+        return new DisplayShaderPass(vertexSource, source, shape, scaleX, scaleY, scaleTypeX, scaleTypeY,
+                filterLinear, wrapMode, parameterValues);
     }
 
     private static Map<String, Float> parseParameterValues(String source, Map<String, String> fields)
@@ -455,5 +501,8 @@ public class DisplayShaderPresetLoader {
     private enum PresetFormat {
         CGP,
         GLSLP
+    }
+
+    private record PassScale(double scaleX, double scaleY, ScaleType scaleTypeX, ScaleType scaleTypeY) {
     }
 }
