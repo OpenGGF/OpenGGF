@@ -18,6 +18,7 @@ public class DisplayShaderPresetLoader {
     private static final Pattern RETROARCH_FRAGMENT = Pattern.compile("(?im)^\\s*#\\s*elif\\s+defined\\s*\\(\\s*FRAGMENT\\s*\\)");
     private static final Pattern GLSLP_UNSUPPORTED_LINE = Pattern.compile(
             "(?im)^\\s*(?:textures?|texture\\d+|lut\\d*|history\\w*|feedback\\w*|previous\\w*|prev\\w*|preset|reference)\\s*=");
+    private static final Pattern GLSLP_REFERENCE_DIRECTIVE = Pattern.compile("(?im)^\\s*#\\s*reference\\b");
     private static final List<String> SCALER_SEGMENTS = List.of(
             "scalenx", "scalehq", "xbr", "xbrz", "xsal", "xsoft", "hq2x");
 
@@ -212,6 +213,9 @@ public class DisplayShaderPresetLoader {
     private static void rejectUnsupportedGlslpPresetFeatures(String presetText) throws UnsupportedShaderException {
         if (containsInclude(presetText)) {
             throw new UnsupportedShaderException("Shader preset includes are not supported");
+        }
+        if (GLSLP_REFERENCE_DIRECTIVE.matcher(presetText).find()) {
+            throw new UnsupportedShaderException("Shader preset inheritance is not supported");
         }
         Matcher matcher = GLSLP_UNSUPPORTED_LINE.matcher(presetText);
         if (matcher.find()) {

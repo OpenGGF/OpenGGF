@@ -99,6 +99,24 @@ public class TestDisplayShaderPresetLoader {
         assertTrue(error.getMessage().contains(".glsl"));
     }
 
+    @Test
+    public void glslpRejectsReferenceDirectiveInheritance() throws Exception {
+        Path root = tempDir.resolve("display-shaders");
+        Path preset = root.resolve("RetroArch/shaders_glsl/crt/child.glslp");
+        write(preset, """
+                #reference "../base.glslp"
+                shaders = 1
+                shader0 = pass.glsl
+                """);
+        write(root.resolve("RetroArch/shaders_glsl/crt/pass.glsl"), "void main() {}\n");
+
+        UnsupportedShaderException error = assertThrows(UnsupportedShaderException.class,
+                () -> new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.GLSLP),
+                        ShaderPhase.PRESENTATION));
+
+        assertTrue(error.getMessage().contains("inheritance"));
+    }
+
     private static DisplayShaderPresetRef ref(Path root, Path path, DisplayShaderPresetRef.Kind kind) {
         return new DisplayShaderPresetRef(kind, root.relativize(path).toString().replace('\\', '/'), path);
     }
