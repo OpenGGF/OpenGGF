@@ -1,5 +1,59 @@
 # Trace Frontier Log
 
+## 2026-06-15 - S3K AIZ1 collapsing-platform jump-frame Status_OnObj (f3317 -> f4234)
+
+- Scope: S3K AIZ Act 1 focused replay `TestS3kAizTraceReplay` advanced past the
+  collapsing-platform jump-frame `status_byte` divergence. No zone/route/frame
+  carve-outs and no trace write-back; the fix models the ROM
+  `Obj_CollapsingPlatform` collapse-transition frame, which skips its solid pass
+  entirely.
+- First divergence (baseline): frame 3317, `status_byte` ROM=0x000E
+  (Roll|InAir|OnObj) engine=0x0006 (Roll|InAir, OnObj missing). The player jumps
+  on the exact frame the ridden AIZ collapsing platform reaches its collapse
+  trigger.
+- ROM ground truth (BizHawk EmuHawk on the committed AIZ bk2, read-only
+  diagnostic `tools/bizhawk/diag_aiz_collapse_onobj.lua`): on the jump frame the
+  ridden platform (`a0=0xB2E4`, `$3A=1`, `$38=0`) branches
+  `loc_20594 -> ObjPlatformCollapse_CreateFragments` (sonic3k.asm:44818, 45394)
+  which jmps to `Play_SFX` WITHOUT falling through to `sub_205B6`
+  (`SolidObjectTopSloped2`). The platform therefore performs no airborne-rider
+  unseat that frame, so `Sonic_Jump` (sonic3k.asm:23328, sets `Status_InAir`,
+  leaves `Status_OnObj`) leaves status 0x0E; the unseat fires the NEXT frame when
+  `loc_205DE` re-runs `sub_205B6` (`loc_1E338`, sonic3k.asm:41854-41859), giving
+  status 0x06.
+- Root cause: the engine kept clearing `Status_OnObj` on the jump frame because
+  the generic airborne-rider unseat in `ObjectSolidContactController`
+  (`loc_1DCF0`/`loc_1DC98`/`loc_1E338` analogs) still ran on the
+  collapse-transition frame. The existing `suppressSlopeSampleThisFrame`
+  transition skip only suppressed the y_pos slope write inside the platform's own
+  continued-riding pass, not the cross-object airborne unseat -- and that unseat
+  can fire during an earlier-slot object's solid pass, before the platform's
+  `update()` has promoted its transition-skip flag for the frame.
+- Fix (3 files, ROM-cited comments):
+  - `SolidObjectProvider`: added `defersAirborneRiderUnseatThisFrame(player)`
+    default = `suppressSlopeSampleThisFrame(player)`.
+  - `Sonic3kCollapsingPlatformObjectInstance`: overrides it to
+    `transitionFrameSlopeSkip || pendingTransitionSkip` so the skip is reported
+    independent of object exec order within the frame (slope-sample suppression
+    intentionally unchanged to preserve the F6920 y-hold).
+  - `ObjectSolidContactController`: the two generic airborne-rider unseat blocks
+    and the continued-ride airborne branch now defer when the ridden/processed
+    solid signals the transition-frame skip; the slope-sample skip moved to the
+    top of `processInlineRidingObject` so a same-frame jump is not unseated early.
+- Result: `TestS3kAizTraceReplay` first error 3317 -> **4234**
+  (`tails_status_byte` expected=0x0020 actual=0x0000; a separate Tails push-bit
+  frontier), errors 1550 -> 1549.
+- Regression sweep (`-Ds3k/s1/s2.rom.path`):
+  - All `com.openggf.tests.trace.s3k.*TraceReplay`: AizCompleteRun f1095 (=),
+    HczCompleteRun f1402 (=), IczCompleteRun f1986 (=), MhzCompleteRun f966 (=,
+    verified against a stash-baseline run), Cnz/Mgz pre-existing failing sets
+    unchanged. No first error moved earlier.
+  - Must-keep-green S3K: `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+    `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils` all pass.
+  - Shared-code spot check: `TestS1Ghz1TraceReplay`, `TestS2Ehz1TraceReplay`
+    both pass (green).
+- Not committed (handed back for review).
+
 ## 2026-06-15 - S3K MHZ1 cutscene button frontier advance
 
 - Scope: S3K MHZ complete-run trace remediation advanced the focused replay
