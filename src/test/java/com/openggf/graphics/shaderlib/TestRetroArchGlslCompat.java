@@ -2,6 +2,7 @@ package com.openggf.graphics.shaderlib;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -80,6 +81,46 @@ public class TestRetroArchGlslCompat {
     }
 
     @Test
+    public void injectsFragmentOutputAfterLeadingCommentsAndExtensionDirectives() throws Exception {
+        String source = """
+                #version 120
+                // required before extension
+                /*
+                 * keep before extension
+                 */
+                #extension GL_ARB_gpu_shader5 : enable
+                void main() {
+                    gl_FragColor = vec4(1.0);
+                }
+                """;
+
+        String staged = RetroArchGlslCompat.stageSource(source, "FRAGMENT");
+
+        assertTrue(staged.indexOf("// required before extension")
+                < staged.indexOf("#extension GL_ARB_gpu_shader5 : enable"));
+        assertTrue(staged.indexOf("/*") < staged.indexOf("#extension GL_ARB_gpu_shader5 : enable"));
+        assertTrue(staged.indexOf("#extension GL_ARB_gpu_shader5 : enable") < staged.indexOf("out vec4 FragColor;"));
+        assertTrue(staged.indexOf("out vec4 FragColor;") < staged.indexOf("void main()"));
+    }
+
+    @Test
+    public void skipsStageAliasDefinesAlreadyPresentInBody() throws Exception {
+        String withFragmentDefine = RetroArchGlslCompat.stageSource("""
+                #define FRAGMENT
+                void main() {}
+                """, "FRAGMENT");
+        String withCompatDefine = RetroArchGlslCompat.stageSource("""
+                #define COMPAT_FRAGMENT
+                void main() {}
+                """, "FRAGMENT");
+
+        assertEquals(1, countOccurrences(withFragmentDefine, "#define FRAGMENT"));
+        assertEquals(1, countOccurrences(withFragmentDefine, "#define COMPAT_FRAGMENT"));
+        assertEquals(1, countOccurrences(withCompatDefine, "#define FRAGMENT"));
+        assertEquals(1, countOccurrences(withCompatDefine, "#define COMPAT_FRAGMENT"));
+    }
+
+    @Test
     public void detectsTexture2DWithWhitespaceBeforeCall() throws Exception {
         String staged = RetroArchGlslCompat.stageSource("""
                 void main() {
@@ -135,5 +176,15 @@ public class TestRetroArchGlslCompat {
         assertTrue(body.contains("#define COMPAT_TEXTURE texture"));
         assertTrue(body.contains("#ifdef COMPAT_FRAGMENT"));
         assertTrue(body.contains("COMPAT_TEXTURE(Texture, vTexCoord);"));
+    }
+
+    private static int countOccurrences(String source, String needle) {
+        int count = 0;
+        int index = 0;
+        while ((index = source.indexOf(needle, index)) >= 0) {
+            count++;
+            index += needle.length();
+        }
+        return count;
     }
 }

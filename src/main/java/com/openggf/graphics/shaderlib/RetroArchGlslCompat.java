@@ -26,8 +26,8 @@ public final class RetroArchGlslCompat {
         StringBuilder staged = new StringBuilder(source.length() + 128);
 
         staged.append("#version 410 core\n");
-        staged.append("#define ").append(normalizedStage).append('\n');
-        staged.append("#define COMPAT_").append(normalizedStage).append('\n');
+        appendDefineIfMissing(staged, body, normalizedStage);
+        appendDefineIfMissing(staged, body, "COMPAT_" + normalizedStage);
         boolean needsFragColorOutput = needsFragColorOutput(body, normalizedStage);
         appendLegacyPrelude(staged, body, normalizedStage, needsFragColorOutput);
         appendBody(staged, body, needsFragColorOutput);
@@ -57,6 +57,18 @@ public final class RetroArchGlslCompat {
             }
         }
         return matcher.replaceAll("");
+    }
+
+    private static void appendDefineIfMissing(StringBuilder staged, String body, String name) {
+        if (!hasDefine(body, name)) {
+            staged.append("#define ").append(name).append('\n');
+        }
+    }
+
+    private static boolean hasDefine(String body, String name) {
+        return Pattern.compile("(?m)^\\s*#\\s*define\\s+" + Pattern.quote(name) + "\\b")
+                .matcher(body)
+                .find();
     }
 
     private static int parseVersion(String rawVersion) throws DisplayShaderLoadException {
@@ -120,8 +132,23 @@ public final class RetroArchGlslCompat {
             }
 
             String line = body.substring(index, contentEnd).trim();
-            if (line.isEmpty() || line.startsWith("#extension")) {
+            if (line.isEmpty() || line.startsWith("//") || line.startsWith("#extension")) {
                 index = nextIndex;
+                continue;
+            }
+            if (line.startsWith("/*")) {
+                int commentStart = body.indexOf("/*", index);
+                int commentEnd = body.indexOf("*/", commentStart + 2);
+                if (commentEnd < 0) {
+                    return body.length();
+                }
+                index = commentEnd + 2;
+                if (index < body.length() && body.charAt(index) == '\r') {
+                    index++;
+                }
+                if (index < body.length() && body.charAt(index) == '\n') {
+                    index++;
+                }
                 continue;
             }
             break;
