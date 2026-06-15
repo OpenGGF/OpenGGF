@@ -4,7 +4,7 @@ public record DisplayShaderPass(
         String vertexSource,
         String fragmentSource,
         GlslShape shape,
-        int scale,
+        double scale,
         ScaleType scaleType,
         boolean filterLinear,
         WrapMode wrapMode) {

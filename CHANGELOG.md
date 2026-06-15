@@ -12,7 +12,9 @@ All notable changes to the OpenGGF project are documented in this file.
   upstream preset references during discovery so one bad `.glslp` entry does
   not hide the downloaded pack. Presets with unsupported external texture state
   are filtered from the picker, and RetroArch whole-number decimal scales plus
-  legacy single-byte encoded shader comments are accepted by the loader.
+  fractional scales plus legacy single-byte encoded shader comments are
+  accepted by the loader. Shader activation failures now log at warning level
+  instead of being hidden behind fine-grained logging.
 
 - **Display shader notifications now stack with display color toasts:**
   shader selection/failure notifications render above the existing color-profile

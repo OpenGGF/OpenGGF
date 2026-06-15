@@ -101,7 +101,7 @@ public class DisplayShaderPipeline {
             newCombinedVbo = 0;
             return true;
         } catch (Exception e) {
-            LOG.fine("Display shader activation failed: " + e.getMessage());
+            LOG.log(Level.WARNING, "Display shader activation failed", e);
             if (compiled != null) {
                 deletePrograms(compiled);
             }
@@ -309,8 +309,8 @@ public class DisplayShaderPipeline {
             for (CompiledPass pass : compiledPasses) {
                 int baseWidth = pass.scaleType() == ScaleType.VIEWPORT ? viewportWidth : sourceWidth;
                 int baseHeight = pass.scaleType() == ScaleType.VIEWPORT ? viewportHeight : sourceHeight;
-                int width = Math.max(1, baseWidth * Math.max(1, pass.scale()));
-                int height = Math.max(1, baseHeight * Math.max(1, pass.scale()));
+                int width = scaledDimension(baseWidth, pass.scale());
+                int height = scaledDimension(baseHeight, pass.scale());
                 FboHandle fbo = FboHelper.createColorOnly(width, height, toGlWrapMode(pass.wrapMode()));
                 if (fbo == null) {
                     return null;
@@ -343,10 +343,18 @@ public class DisplayShaderPipeline {
                 : RetroArchGlslCompat.stageSource(rawVertexSource, "VERTEX");
         String fragmentSource = RetroArchGlslCompat.stageSource(pass.fragmentSource(), "FRAGMENT");
         int programId = compileProgram(vertexSource, fragmentSource, shape);
-        return new CompiledPass(programId, shape, Math.max(1, pass.scale()),
+        return new CompiledPass(programId, shape, sanitizeScale(pass.scale()),
                 pass.scaleType() == null ? ScaleType.SOURCE : pass.scaleType(),
                 pass.filterLinear(),
                 pass.wrapMode() == null ? WrapMode.CLAMP_TO_EDGE : pass.wrapMode());
+    }
+
+    private static double sanitizeScale(double scale) {
+        return Double.isFinite(scale) && scale > 0.0 ? scale : 1.0;
+    }
+
+    private static int scaledDimension(int baseDimension, double scale) {
+        return Math.max(1, (int) Math.round(baseDimension * sanitizeScale(scale)));
     }
 
     private int compileProgram(String vertexSource, String fragmentSource, GlslShape shape)
@@ -518,7 +526,7 @@ public class DisplayShaderPipeline {
         }
     }
 
-    private record CompiledPass(int programId, GlslShape shape, int scale, ScaleType scaleType,
+    private record CompiledPass(int programId, GlslShape shape, double scale, ScaleType scaleType,
                                 boolean filterLinear, WrapMode wrapMode) {
     }
 

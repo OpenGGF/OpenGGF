@@ -128,21 +128,17 @@ public class DisplayShaderPresetLoader {
         }
     }
 
-    private static int parseScale(String raw) throws DisplayShaderLoadException {
+    private static double parseScale(String raw) throws DisplayShaderLoadException {
         if (raw == null || raw.isBlank()) {
-            return 1;
+            return 1.0;
         }
         try {
             double parsed = Double.parseDouble(raw.trim());
-            if (!Double.isFinite(parsed) || parsed != Math.rint(parsed)) {
+            if (!Double.isFinite(parsed) || parsed <= 0.0) {
                 throw new NumberFormatException(raw);
             }
-            int scale = Math.toIntExact((long) parsed);
-            if (scale < 1) {
-                throw new DisplayShaderLoadException("Shader scale must be at least 1: " + raw);
-            }
-            return scale;
-        } catch (ArithmeticException | NumberFormatException e) {
+            return parsed;
+        } catch (NumberFormatException e) {
             throw new DisplayShaderLoadException("Invalid shader scale: " + raw, e);
         }
     }
@@ -271,7 +267,7 @@ public class DisplayShaderPresetLoader {
         return fallback == null ? presetPath : fallback;
     }
 
-    private static DisplayShaderPass passForSource(String source, int scale, ScaleType scaleType,
+    private static DisplayShaderPass passForSource(String source, double scale, ScaleType scaleType,
                                                    boolean filterLinear, WrapMode wrapMode) {
         GlslShape shape = detectShape(source);
         String vertexSource = shape == GlslShape.COMBINED ? source : null;

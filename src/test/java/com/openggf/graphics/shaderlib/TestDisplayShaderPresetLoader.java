@@ -144,6 +144,25 @@ public class TestDisplayShaderPresetLoader {
     }
 
     @Test
+    public void glslpAcceptsFractionalScale() throws Exception {
+        Path root = tempDir.resolve("display-shaders");
+        Path preset = root.resolve("RetroArch/shaders_glsl/crt/fractional-scale.glslp");
+        write(preset, """
+                shaders = 1
+                shader0 = pass.glsl
+                scale_type0 = source
+                scale0 = 0.25
+                """);
+        write(root.resolve("RetroArch/shaders_glsl/crt/pass.glsl"), "void main() {}\n");
+
+        DisplayShaderPreset loaded = new DisplayShaderPresetLoader().load(
+                ref(root, preset, DisplayShaderPresetRef.Kind.GLSLP),
+                ShaderPhase.PRESENTATION);
+
+        assertEquals(0.25, loaded.passes().get(0).scale());
+    }
+
+    @Test
     public void glslpAcceptsLegacySingleByteEncodedShaderSource() throws Exception {
         Path root = tempDir.resolve("display-shaders");
         Path preset = root.resolve("RetroArch/shaders_glsl/aa/legacy-encoding.glslp");
