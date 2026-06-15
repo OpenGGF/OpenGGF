@@ -4,6 +4,25 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K AIZ collapsing platform keeps the rider on-object across the collapse
+  frame:** ROM `Obj_CollapsingPlatform`'s collapse transition branches
+  `loc_20594 → ObjPlatformCollapse_CreateFragments` (`sonic3k.asm:44818`,
+  `45394`), which `jmp`s to `Play_SFX` WITHOUT running `sub_205B6`
+  (`SolidObjectTopSloped2`) — so the platform performs no airborne-rider unseat
+  on the transition frame. A player who jumps that frame keeps `Status_OnObj`
+  (AIZ1 trace f3317 status `0x0E`), and the unseat fires the next frame when
+  `loc_205DE` re-runs `sub_205B6` (f3318 `0x06`). The engine's generic
+  airborne-rider unseat (`ObjectSolidContactController`) was firing on the
+  transition frame because the existing slope-sample skip only suppressed the
+  y-write in the platform's own ride pass, not the cross-object unseat that can
+  run during an earlier-slot object's solid pass. Added a
+  `SolidObjectProvider.defersAirborneRiderUnseatThisFrame` hook (defaults to the
+  existing slope-skip predicate; the collapsing platform overrides it to also
+  report its pending, not-yet-promoted transition frame), hoisted the
+  transition-frame skip above the airborne-unseat branch, and gated both generic
+  unseat paths on it. Advances the AIZ1 trace frontier from frame 3317 to 4234;
+  no S3K trace regresses and S1/S2 are unaffected.
+
 - **S3K MHZ complete-run trace advances through the MHZ1 cutscene button:**
   the MHZ1 Knuckles cutscene now preserves native player subpixels during the
   clamp, falls through its landing wait like the ROM, clears the P2 logical

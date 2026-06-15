@@ -260,6 +260,22 @@ final class ObjectSolidContactController {
         return featureSet != null && featureSet.solidObjectKeepsOnObjWhenJumpedOffSameFrame();
     }
 
+    /**
+     * True when the given solid object signals that its ROM solid routine does
+     * not execute at all on this frame ({@link SolidObjectProvider#suppressSlopeSampleThisFrame}).
+     * On such a frame the object performs no rider state change -- no sloped
+     * y_pos write and no airborne-rider unseat -- exactly as ROM's
+     * {@code ObjPlatformCollapse_CreateFragments} (sonic3k.asm:45394) jmps to
+     * {@code Play_SFX} without falling through to {@code sub_205B6}
+     * (SolidObjectTopSloped2). Used to defer the generic air-unseat paths by
+     * one frame so a player who jumps on the collapse-transition frame keeps
+     * Status_OnObj, matching the aiz1 trace (f3317 status 0x0E -> f3318 0x06).
+     */
+    private static boolean suppressesSolidPassThisFrame(ObjectInstance instance, PlayableEntity player) {
+        return instance instanceof SolidObjectProvider provider
+                && provider.defersAirborneRiderUnseatThisFrame(player);
+    }
+
     private void setObjectPushingBit(PlayableEntity player, ObjectInstance instance) {
         if (player == null) {
             return;
@@ -1086,7 +1102,15 @@ final class ObjectSolidContactController {
                 // PhysicsFeatureSet.solidObjectKeepsOnObjWhenJumpedOffSameFrame;
                 // sonic3k.asm:41066-41084, 42033-42034, 28553-28554).
                 && !(keepsOnObjWhenJumpedOffSameFrame(player)
-                        && wasStandingBitEstablishedThisFrame(player, ridingObject, ridingPieceIndex))) {
+                        && wasStandingBitEstablishedThisFrame(player, ridingObject, ridingPieceIndex))
+                // ROM: on the S3K Obj_CollapsingPlatform collapse-transition
+                // frame, ObjPlatformCollapse_CreateFragments jmps to Play_SFX
+                // WITHOUT running sub_205B6 (SolidObjectTopSloped2), so the
+                // platform performs no air-unseat that frame. The rider keeps
+                // Status_OnObj (aiz1 trace f3317 status 0x0E); the unseat fires
+                // the next frame when loc_205DE re-runs sub_205B6 (f3318 0x06).
+                // sonic3k.asm:44818, 45394.
+                && !suppressesSolidPassThisFrame(ridingObject, player)) {
             // ROM SolidObjectFull2_1P air-unseat path (sonic3k.asm:41070-41084
             // loc_1DCF0): when the object's a0.d6 standing-bit is still
             // set and Status_InAir is set on the player, the helper
@@ -1122,7 +1146,13 @@ final class ObjectSolidContactController {
                 // keeps Status_OnObj (gated by
                 // PhysicsFeatureSet.solidObjectKeepsOnObjWhenJumpedOffSameFrame).
                 && !(keepsOnObjWhenJumpedOffSameFrame(player)
-                        && wasStandingBitEstablishedThisFrame(player, instance, -1))) {
+                        && wasStandingBitEstablishedThisFrame(player, instance, -1))
+                // Same collapse-transition-frame skip as the loc_1DCF0 block
+                // above: the platform's SolidObjectTopSloped2 does not run on
+                // ObjPlatformCollapse_CreateFragments's transition frame, so its
+                // standing-bit / Status_OnObj clear is deferred one frame
+                // (sonic3k.asm:44818, 45394; aiz1 trace f3317->f3318).
+                && !suppressesSolidPassThisFrame(instance, player)) {
             snapshotObjectStandingBit(player, instance);
             clearObjectStandingBit(player, instance);
             if (instance instanceof SolidObjectProvider staleStandingProvider
@@ -1418,6 +1448,31 @@ final class ObjectSolidContactController {
             params = provider.getSolidParams();
         }
 
+        // ROM: S3K Obj_CollapsingPlatform state-1 -> state-2 transition frame.
+        // When $38 hits 0, loc_20594 branches to ObjPlatformCollapse_CreateFragments
+        // (sonic3k.asm:44818 -> 45394) which jmps to Play_SFX WITHOUT falling
+        // through to sub_205B6 -- so the platform's SolidObjectTopSloped2 does
+        // NOT run on the transition frame at all. The solid routine therefore
+        // makes no change to the rider's status this frame: it neither writes
+        // the sloped y_pos nor runs the airborne-rider unseat (loc_1E338 bclr
+        // Status_OnObj). BizHawk ground truth (aiz1 trace f3317/f3318): on the
+        // jump frame the player keeps Status_OnObj (status 0x0E = Roll|InAir|OnObj);
+        // the unseat fires the NEXT frame when loc_205DE re-runs sub_205B6
+        // (status 0x06). This check MUST precede the player.getAir() unseat
+        // branch below so a player who jumps on the transition frame is not
+        // unseated one frame early. The provider signals the one-frame skip via
+        // suppressSlopeSampleThisFrame(); ride state and the object standing
+        // bit are preserved so next frame's normal solid pass performs the
+        // airborne unseat. Player on-object / air status is left untouched,
+        // mirroring the skipped sub_205B6.
+        if (provider.suppressSlopeSampleThisFrame(player)) {
+            putRidingState(player, instance, currentX, currentY, ridingPieceIndex);
+            setObjectStandingBit(player, instance, ridingPieceIndex);
+            clearGroundWallSuppressionForNormalSolidSupport(player, instance);
+            inlineSupportedPlayers.add(player);
+            return SolidContact.STANDING;
+        }
+
         if (player.getAir()) {
             if (solidProfile.carriesAirborneRiderAfterExitPlatform()) {
                 // Sonic 1 Obj52 MBlock_StandOn is not a normal PlatformObject
@@ -1471,20 +1526,12 @@ final class ObjectSolidContactController {
             if (deltaX != 0 && provider.carriesRiderOnHorizontalMove(player)) {
                 player.shiftX(deltaX);
             }
-            // ROM: S3K Obj_CollapsingPlatform state-1 -> state-2 transition
-            // (sonic3k.asm:44814 loc_20594 -> sonic3k.asm:45394
-            // ObjPlatformCollapse_CreateFragments) skips its sub_205B6
-            // slope-sample / y-write on the transition frame. The provider
-            // signals that one-frame skip via suppressSlopeSampleThisFrame().
-            // Player riding state is preserved unchanged so Sonic continues
-            // standing at last frame's y_pos.
-            if (provider.suppressSlopeSampleThisFrame(player)) {
-                putRidingState(player, instance, currentX, currentY, ridingPieceIndex);
-                setObjectStandingBit(player, instance, ridingPieceIndex);
-                clearGroundWallSuppressionForNormalSolidSupport(player, instance);
-                inlineSupportedPlayers.add(player);
-                return SolidContact.STANDING;
-            }
+            // NOTE: the S3K Obj_CollapsingPlatform transition-frame skip
+            // (suppressSlopeSampleThisFrame) is handled at the top of this
+            // method, before the player.getAir() unseat branch, so a player
+            // who jumps on the transition frame keeps Status_OnObj for that
+            // one frame (matching ROM ObjPlatformCollapse_CreateFragments
+            // skipping sub_205B6 entirely; sonic3k.asm:44818, 45394).
             int surfaceOffset;
             if (instance instanceof SlopedSolidProvider sloped) {
                 int slopeAnchorX = currentX + params.offsetX();

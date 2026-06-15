@@ -294,6 +294,33 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
         return transitionFrameSlopeSkip;
     }
 
+    /**
+     * The collapse-transition frame's airborne-rider unseat must be suppressed
+     * even when the generic unseat in {@code ObjectSolidContactController} is
+     * evaluated BEFORE this platform's {@code update()} promotes
+     * {@link #pendingTransitionSkip} into {@link #transitionFrameSlopeSkip}.
+     * <p>
+     * {@code performCollapse()} runs in {@code update()} of frame N and sets
+     * {@link #pendingTransitionSkip}; frame N+1's {@code update()} promotes it to
+     * {@link #transitionFrameSlopeSkip} (the actual skip frame, matching ROM's
+     * {@code ObjPlatformCollapse_CreateFragments} transition). Within frame N+1,
+     * the controller's airborne-rider unseat can run during an earlier-slot
+     * object's solid pass -- before this platform's {@code update()} has run --
+     * at which point {@link #transitionFrameSlopeSkip} is still {@code false}
+     * but {@link #pendingTransitionSkip} is still {@code true} (set at frame N,
+     * not yet cleared). Reporting the OR keeps the unseat suppressed for that
+     * single frame regardless of object exec order, so the rider keeps
+     * {@code Status_OnObj} on the jump/collapse frame (aiz1 trace f3317 status
+     * 0x0E) and is unseated next frame (f3318 0x06). The slope-sample
+     * suppression above intentionally does NOT include {@link #pendingTransitionSkip}
+     * because the y_pos write is sampled in this object's OWN post-update pass,
+     * one frame after performCollapse (the F6920 hold behavior).
+     */
+    @Override
+    public boolean defersAirborneRiderUnseatThisFrame(PlayableEntity player) {
+        return transitionFrameSlopeSkip || pendingTransitionSkip;
+    }
+
     @Override
     public boolean sampleSlopeOnRideExit(PlayableEntity player) {
         // ROM loc_205DE runs sub_205B6 (SolidObjectTopSloped2) before

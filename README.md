@@ -224,6 +224,13 @@ straightforward to add new objects, zones, and game-specific behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **S3K AIZ collapsing-platform on-object trace frontier (2026-06-15).** Merged
+  `bugfix/ai-aiz-frontier-f3317`, advancing the S3K AIZ1 trace from frame 3317
+  to 4234 by deferring the airborne-rider unseat by one frame on the collapsing
+  platform's collapse-transition frame (ROM `ObjPlatformCollapse_CreateFragments`
+  skips `sub_205B6` that frame), via a new
+  `SolidObjectProvider.defersAirborneRiderUnseatThisFrame` hook. No S3K trace
+  regresses; S1/S2 unaffected.
 - **S3K AIZ sidekick wall/on-object trace frontier (2026-06-15).** Merged
   `bugfix/ai-aiz-trace-green`, advancing the S3K AIZ1 trace from frame 2590 to
   3317 (and HCZ complete-run 407→1402) by two ROM-cited CPU-sidekick fixes:
