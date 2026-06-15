@@ -137,6 +137,10 @@ public final class DisplayShaderPickerController {
         if (!query.isEmpty()) {
             query = query.substring(0, query.length() - 1);
             refreshVisibleItems();
+        } else if (!selectionModel.currentFolder().isEmpty()) {
+            selectionModel.enterParentFolder();
+            refreshVisibleItems();
+            selectedIndex = 0;
         }
     }
 

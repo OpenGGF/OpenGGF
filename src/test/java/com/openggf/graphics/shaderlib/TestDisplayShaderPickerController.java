@@ -178,6 +178,20 @@ class TestDisplayShaderPickerController {
     }
 
     @Test
+    void backspaceWithEmptyQueryNavigatesUpFromFolder() {
+        DisplayShaderPickerController picker = pickerWith(preset("libretro-glsl/crt/crt-easymode.glslp"));
+
+        press(picker, PICKER_KEY, preset("libretro-glsl/crt/crt-easymode.glslp"));
+        DisplayShaderPickerController.Action action = press(picker, GLFW_KEY_BACKSPACE, DisplayShaderPresetRef.OFF);
+
+        assertEquals(DisplayShaderPickerController.ActionType.NONE, action.type());
+        assertTrue(picker.isOpen());
+        assertEquals("", picker.query());
+        assertEquals("libretro-glsl", picker.currentFolder());
+        assertEquals(List.of("..", "crt/"), displayPaths(picker));
+    }
+
+    @Test
     void exposesLibretroDownloadHintForPickerRenderer() {
         assertEquals(
                 "Press F5 to download libretro shader pack",

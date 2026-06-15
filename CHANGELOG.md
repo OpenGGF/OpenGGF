@@ -10,8 +10,9 @@ All notable changes to the OpenGGF project are documented in this file.
   when the update completes. The picker now dims the full widescreen
   presentation area, shows the F5 install hint, browses shader folders with
   `..` parent navigation, and strips folder prefixes from menu rows and
-  selection toasts. It tolerates malformed upstream preset references during
-  discovery so one bad `.glslp` entry does not hide the downloaded pack.
+  selection toasts. Backspace now moves up one shader-browser folder when the
+  search query is empty. It tolerates malformed upstream preset references
+  during discovery so one bad `.glslp` entry does not hide the downloaded pack.
   Presets with unsupported external texture state are filtered from the
   picker, and RetroArch whole-number decimal scales plus fractional scales,
   preset parameter uniforms, precision-qualified `FragColor` outputs, and
