@@ -26,6 +26,7 @@ class TestPlaybackKeyDefaultsUnbound {
         assertEquals(-1, config.getInt(SonicConfiguration.PLAYBACK_FAST_RATE_KEY));
         assertEquals(-1, config.getInt(SonicConfiguration.PLAYBACK_RESET_TO_START_KEY));
 
+        assertEquals("OFF", config.getString(SonicConfiguration.DISPLAY_SHADER_SELECTION));
         assertEquals(GLFW_KEY_RIGHT_BRACKET, config.getInt(SonicConfiguration.DISPLAY_SHADER_NEXT_KEY));
         assertEquals(GLFW_KEY_LEFT_BRACKET, config.getInt(SonicConfiguration.DISPLAY_SHADER_PREVIOUS_KEY));
         assertEquals(GLFW_KEY_BACKSLASH, config.getInt(SonicConfiguration.DISPLAY_SHADER_PICKER_KEY));

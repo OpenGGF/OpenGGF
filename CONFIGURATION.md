@@ -396,7 +396,7 @@ display:
   aspect: "NATIVE_4_3"   # Display aspect preset; resolves screen pixel width, height stays 224
   windowAutosize: true   # Derive the window size from the aspect preset at the 2x baseline
   shaderLibraryRoot: shaders   # Root directory scanned for user display shaders
-  shaderSelection: OFF   # Last selected display shader: OFF or a root-relative forward-slash path
+  shaderSelection: "OFF"   # Last selected display shader: OFF or a root-relative forward-slash path
   shaderNextKey: RIGHT_BRACKET   # Runtime key to advance to the next display shader
   shaderPreviousKey: LEFT_BRACKET   # Runtime key to move to the previous display shader
   shaderPickerKey: BACKSLASH   # Runtime key to open the searchable display shader picker
