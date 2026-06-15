@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+## 2026-06-15 - Trace frontier-only sweep harness bounds failing replay memory
+
+- Scope: trace-replay harness infrastructure only. No engine state is hydrated
+  from trace data, and no ROM-modeled behavior changed. The replay loop now has
+  an opt-in `-Dtrace.frontierOnly=true` mode that stops after the first
+  divergence plus `trace.context.radius` frames, and assertion output uses a
+  compact one-line summary while preserving full JSON/context reports on disk.
+- Selection context: after `adebf201f` on worktree
+  `.worktrees/trace-frontier-clusters`, the previous broad `*TraceReplay` sweep
+  had stopped after 65 tests with `Java heap space: failed reallocation of
+  scalar replaced objects`, leaving later S3K frontiers underreported. The
+  first S3K complete-run repro that previously exhausted heap,
+  `TestS3kCnzCompleteRunTraceReplay`, completed under `MAVEN_OPTS=-Xmx4g` with
+  `-Dtrace.frontierOnly=true` and reported the expected-red first frontier:
+  frame 248 `y_speed` ROM=`-06C8`, engine=`-0700`.
+- S3K frontier batch command:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dtrace.frontierOnly=true -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay,com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay,com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay,com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay,com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay,com.openggf.tests.trace.s3k.TestS3kMgzTraceReplay,com.openggf.tests.trace.s3k.TestS3kMhzCompleteRunTraceReplay -DfailIfNoTests=false -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red build failure, no heap exhaustion. Current S3K first
+  frontiers from the batch: `s3k_cnz1` frame 185 `y_speed`,
+  `s3k_mgz1` frame 238 `status_byte`, `s3k_mhz1` frame 966 `y`,
+  `s3k_hcz1` frame 1402 `tails_status_byte`, `s3k_lbz1` frame 1950
+  `status_byte`, `s3k_icz1` frame 1986 `tails_status_byte`.
+- Focused harness verification:
+  `cmd /c "mvn -Dmse=off -Dtest=com.openggf.tests.trace.TestFrontierReplayStopper,com.openggf.tests.trace.TestDivergenceReport -DfailIfNoTests=false test"`:
+  passed, 21 tests.
+
 ## 2026-06-15 - S1 credits LZ3 Obj0B pole subpixel preservation (f285 -> green)
 
 - Scope: S1 credits demo replay `TestS1Credits03Lz3TraceReplay` advanced past

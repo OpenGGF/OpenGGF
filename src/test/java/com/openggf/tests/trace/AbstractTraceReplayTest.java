@@ -32,6 +32,7 @@ import com.openggf.trace.EngineSnapshot;
 import com.openggf.trace.EngineSidekickCpuState;
 import com.openggf.trace.EngineNearbyObject;
 import com.openggf.trace.EngineNearbyObjectFormatter;
+import com.openggf.trace.FrameComparison;
 import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.TouchResponseDebugHitFormatter;
 import com.openggf.trace.TraceBinder;
@@ -201,8 +202,9 @@ public abstract class AbstractTraceReplayTest {
             EngineSnapshot frameZero = captureEngineSnapshot(fixture);
             binder.compareBootstrapFrame0(trace, frameZero);
 
+            FrontierReplayStopper frontierStopper = FrontierReplayStopper.fromSystemProperties();
             if ("s3k".equals(meta.game())) {
-                replayS3kTrace(trace, meta, fixture, binder, replayStart);
+                replayS3kTrace(trace, meta, fixture, binder, replayStart, frontierStopper);
             } else {
                 int startTraceIndex = replayStart.startingTraceIndex();
                 for (int i = startTraceIndex; i < trace.frameCount(); i++) {
@@ -275,6 +277,10 @@ public abstract class AbstractTraceReplayTest {
                                 objectNearEventsForPrimary(trace, comparisonExpected.frame()),
                                 captureEngineNearbyObjects(sprite));
                     }
+                    if (observeFrontierAndShouldStop(
+                            frontierStopper, binder, comparisonExpected.frame())) {
+                        break;
+                    }
 
                 }
             }
@@ -290,10 +296,10 @@ public abstract class AbstractTraceReplayTest {
             }
 
             // 8. Log summary
-            System.out.println(report.toSummary());
+            System.out.println(report.toCompactSummary());
 
             // 9. Assert no errors
-            if (report.hasErrors()) {
+            if (report.hasErrors() && Boolean.getBoolean("trace.print.context")) {
                 System.err.println("\n=== Context window around first error ===");
                 System.err.println(report.getContextWindow(firstReportErrorFrame(report), 10));
             }
@@ -309,11 +315,11 @@ public abstract class AbstractTraceReplayTest {
 
     protected void assertReportHasNoReleaseBlockingDivergences(DivergenceReport report) {
         if (report.hasErrors()) {
-            fail(report.toSummary());
+            fail(report.toCompactSummary());
         }
         if (report.hasWarnings() && !allowDiagnosticOnlyWarnings()) {
             fail("Trace replay warning report is release-blocking by default: "
-                    + report.toSummary());
+                    + report.toCompactSummary());
         }
     }
 
@@ -362,7 +368,8 @@ public abstract class AbstractTraceReplayTest {
 
     private void replayS3kTrace(TraceData trace, TraceMetadata meta,
                                 HeadlessTestFixture fixture, TraceBinder binder,
-                                TraceReplayBootstrap.ReplayStartState replayStart) {
+                                TraceReplayBootstrap.ReplayStartState replayStart,
+                                FrontierReplayStopper frontierStopper) {
         int driveTraceIndex = replayStart.startingTraceIndex();
         TraceFrame previousDriveFrame = replayStart.hasSeededTraceState()
                 ? trace.getFrame(replayStart.seededTraceIndex())
@@ -402,6 +409,7 @@ public abstract class AbstractTraceReplayTest {
                     expectedSidekickCpu,
                     actualSidekickCpu,
                     expectedSidekickNormalStep);
+            observeFrontierAndShouldStop(frontierStopper, binder, seededFrame.frame());
 
             for (int frame = 0; frame <= replayStart.seededTraceIndex(); frame++) {
                 for (TraceEvent event : trace.getEventsForFrame(frame)) {
@@ -516,6 +524,9 @@ public abstract class AbstractTraceReplayTest {
                         expectedSidekickCpu,
                         actualSidekickCpu,
                         expectedSidekickNormalStep);
+                if (observeFrontierAndShouldStop(frontierStopper, binder, driveFrame.frame())) {
+                    break;
+                }
             }
 
             TraceEvent.Checkpoint traceCheckpoint = trace.latestCheckpointAtOrBefore(driveTraceIndex);
@@ -530,6 +541,15 @@ public abstract class AbstractTraceReplayTest {
             driveTraceIndex++;
             previousDriveFrame = driveFrame;
         }
+    }
+
+    private boolean observeFrontierAndShouldStop(
+            FrontierReplayStopper frontierStopper,
+            TraceBinder binder,
+            int frame) {
+        FrameComparison comparison = binder.comparisonForFrame(frame);
+        frontierStopper.observe(comparison);
+        return frontierStopper.shouldStopAfterFrame(frame);
     }
 
     private S3kCheckpointProbe captureS3kProbe(int replayFrame, AbstractPlayableSprite sprite) {
