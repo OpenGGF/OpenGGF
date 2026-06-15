@@ -45,6 +45,25 @@ public class TestRetroArchGlslCompat {
     }
 
     @Test
+    public void ignoresVertexStageOutputsWhenCheckingCombinedFragmentOutput() throws Exception {
+        String source = """
+                #if defined(VERTEX)
+                out vec2 vTexCoord;
+                void main() {}
+                #elif defined(FRAGMENT)
+                void main() {
+                    gl_FragColor = vec4(1.0);
+                }
+                #endif
+                """;
+
+        String staged = RetroArchGlslCompat.stageSource(source, "FRAGMENT");
+
+        assertTrue(staged.contains("out vec4 FragColor;\n"));
+        assertTrue(staged.contains("#define gl_FragColor FragColor\n"));
+    }
+
+    @Test
     public void emitsCompatStageAliasesBeforeCompatGuardedBlocks() throws Exception {
         String fragment = RetroArchGlslCompat.stageSource("""
                 #ifdef COMPAT_FRAGMENT

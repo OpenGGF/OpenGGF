@@ -105,11 +105,13 @@ The engine scans `.glsl`, `.cgp`, and `.glslp` files at runtime and always inclu
 picker for large libraries. The picker filters by root-relative path and inferred
 category, so typing `crt` narrows entries such as `libretro-glsl/crt/...`.
 
-The optional libretro GLSL pack installer downloads the upstream zip archive from
-GitHub, extracts it into `shaders/libretro-glsl/`, strips the archive's top-level folder,
-and stores update metadata in `shaders/libretro-glsl/.openggf-libretro-glsl.properties`.
-That folder is owned by the installer; put personal shaders in a sibling folder such as
-`shaders/Custom/`.
+The optional libretro GLSL pack installer is available from the shader picker: open the
+picker with `BACKSLASH`, then press `F5` to install or update the pack. The app downloads
+the upstream zip archive from GitHub, extracts it into `shaders/libretro-glsl/`, strips the
+archive's top-level folder, stores update metadata in
+`shaders/libretro-glsl/.openggf-libretro-glsl.properties`, and rescans the shader library
+when the install/update finishes. That folder is owned by the installer; put personal
+shaders in a sibling folder such as `shaders/Custom/`.
 
 Compatibility is intentionally bounded. Fragment-only shaders can sample the current
 scene through declared samplers named `s_p`, `SceneTexture`, or `Texture`. RetroArch and

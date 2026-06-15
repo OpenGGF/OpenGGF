@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **RetroArch GLSL shader pack install/update is available in-app:** the
+  display shader picker can trigger the libretro GLSL zip download, report
+  progress, install into `shaders/libretro-glsl`, and rescan the shader library
+  when the update completes.
+
 - **Display shader notifications now stack with display color toasts:**
   shader selection/failure notifications render above the existing color-profile
   toast and are recorded in the post-fade diagnostic overlay order.

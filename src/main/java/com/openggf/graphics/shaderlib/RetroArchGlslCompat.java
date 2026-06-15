@@ -1,5 +1,7 @@
 package com.openggf.graphics.shaderlib;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -104,9 +106,84 @@ public final class RetroArchGlslCompat {
     }
 
     private static boolean needsFragColorOutput(String body, String stage) {
+        String declarationScanBody = stageRelevantBody(body, stage);
         return "FRAGMENT".equals(stage)
-                && body.contains("gl_FragColor")
-                && !FRAGMENT_OUTPUT.matcher(body).find();
+                && declarationScanBody.contains("gl_FragColor")
+                && !FRAGMENT_OUTPUT.matcher(declarationScanBody).find();
+    }
+
+    private static String stageRelevantBody(String body, String stage) {
+        StringBuilder out = new StringBuilder(body.length());
+        Deque<StageFrame> stack = new ArrayDeque<>();
+        boolean active = true;
+        for (String line : body.split("(?<=\\R)", -1)) {
+            String trimmed = line.trim();
+            String stageIf = stageConditionalStage(trimmed, "#if", "#ifdef");
+            if (stageIf != null) {
+                boolean matches = stageIf.equals(stage);
+                stack.push(new StageFrame(active, matches, true));
+                active = active && matches;
+                continue;
+            }
+            if (trimmed.startsWith("#if")) {
+                stack.push(new StageFrame(active, false, false));
+                continue;
+            }
+
+            String stageElif = stageConditionalStage(trimmed, "#elif");
+            if (stageElif != null && !stack.isEmpty() && stack.peek().stageConditional) {
+                StageFrame frame = stack.peek();
+                boolean matches = stageElif.equals(stage);
+                active = frame.parentActive && !frame.matchedStage && matches;
+                frame.matchedStage = frame.matchedStage || matches;
+                continue;
+            }
+            if (trimmed.startsWith("#elif") && !stack.isEmpty()) {
+                active = stack.peek().parentActive;
+                continue;
+            }
+            if (trimmed.startsWith("#else") && !stack.isEmpty()) {
+                StageFrame frame = stack.peek();
+                active = frame.stageConditional ? frame.parentActive && !frame.matchedStage : frame.parentActive;
+                frame.matchedStage = true;
+                continue;
+            }
+            if (trimmed.startsWith("#endif") && !stack.isEmpty()) {
+                active = stack.pop().parentActive;
+                continue;
+            }
+            if (active) {
+                out.append(line);
+            }
+        }
+        return out.toString();
+    }
+
+    private static String stageConditionalStage(String directive, String... directives) {
+        for (String prefix : directives) {
+            if (!directive.startsWith(prefix)) {
+                continue;
+            }
+            if (directive.matches("^" + Pattern.quote(prefix) + "\\s+(?:defined\\s*\\(\\s*)?VERTEX\\s*\\)?\\s*$")) {
+                return "VERTEX";
+            }
+            if (directive.matches("^" + Pattern.quote(prefix) + "\\s+(?:defined\\s*\\(\\s*)?FRAGMENT\\s*\\)?\\s*$")) {
+                return "FRAGMENT";
+            }
+        }
+        return null;
+    }
+
+    private static final class StageFrame {
+        private final boolean parentActive;
+        private final boolean stageConditional;
+        private boolean matchedStage;
+
+        private StageFrame(boolean parentActive, boolean matchedStage, boolean stageConditional) {
+            this.parentActive = parentActive;
+            this.matchedStage = matchedStage;
+            this.stageConditional = stageConditional;
+        }
     }
 
     private static void appendBody(StringBuilder staged, String body, boolean needsFragColorOutput) {

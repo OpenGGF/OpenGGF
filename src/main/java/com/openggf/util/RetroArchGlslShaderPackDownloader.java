@@ -123,7 +123,13 @@ public final class RetroArchGlslShaderPackDownloader {
             return new UpdateStatus(UpdateState.NOT_INSTALLED, null, null);
         }
 
-        Properties metadata = loadMetadata(metadataPath);
+        Properties metadata;
+        try {
+            metadata = loadMetadata(metadataPath);
+        } catch (ShaderPackDownloadException ex) {
+            listener.onProgress(Stage.COMPLETE, 1, 1, "metadata unreadable; update available");
+            return new UpdateStatus(UpdateState.UPDATE_AVAILABLE, null, null);
+        }
         String storedEtag = emptyToNull(metadata.getProperty("etag"));
         String storedLastModified = emptyToNull(metadata.getProperty("lastModified"));
         Map<String, String> headers = new LinkedHashMap<>();

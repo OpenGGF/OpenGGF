@@ -61,6 +61,7 @@ import com.openggf.graphics.shaderlib.DisplayShaderPresetRef;
 import com.openggf.graphics.shaderlib.DisplayShaderSelectionModel;
 import com.openggf.graphics.shaderlib.ShaderPhase;
 import com.openggf.render.EngineRenderDispatcher;
+import com.openggf.util.RetroArchGlslShaderPackDownloader;
 
 import java.io.IOException;
 import java.nio.IntBuffer;
@@ -123,6 +124,9 @@ public class Engine {
 	private DisplayShaderController displayShaderController;
 	private DisplayShaderPickerController displayShaderPickerController;
 	private int displayShaderFrameCounter;
+	private volatile boolean displayShaderPackDownloadInProgress;
+	private volatile boolean displayShaderPackRescanRequested;
+	private volatile String displayShaderPackStatus;
 
 	private static volatile DebugState debugState = DebugState.NONE;
 	private static volatile DebugOption debugOption = DebugOption.A;
@@ -485,6 +489,21 @@ public class Engine {
 		displayShaderController.applySavedSelectionSilently();
 	}
 
+	private void reloadDisplayShaderLibrary() {
+		DisplayShaderLibrary library = scanDisplayShaderLibrary();
+		DisplayShaderSelectionModel selectionModel = new DisplayShaderSelectionModel(library);
+		String savedSelection = configService.getString(SonicConfiguration.DISPLAY_SHADER_SELECTION);
+		if (displayShaderController != null) {
+			displayShaderController.replaceLibrary(library, savedSelection);
+		}
+		if (displayShaderPickerController != null) {
+			DisplayShaderPresetRef currentRef = displayShaderController != null
+					? displayShaderController.currentRef()
+					: DisplayShaderPresetRef.OFF;
+			displayShaderPickerController.replaceSelectionModel(selectionModel, currentRef);
+		}
+	}
+
 	private DisplayShaderLibrary scanDisplayShaderLibrary() {
 		String root = configService.getString(SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT);
 		try {
@@ -527,6 +546,68 @@ public class Engine {
 	private void persistDisplayShaderSelection(String selection) {
 		configService.setConfigValue(SonicConfiguration.DISPLAY_SHADER_SELECTION, selection);
 		configService.saveConfig();
+	}
+
+	private void startDisplayShaderPackDownload() {
+		if (displayShaderPackDownloadInProgress) {
+			displayShaderPackStatus = "Libretro GLSL: already downloading";
+			return;
+		}
+
+		final Path shaderRoot;
+		try {
+			shaderRoot = Path.of(configService.getString(SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT));
+		} catch (RuntimeException e) {
+			displayShaderPackStatus = "Libretro GLSL failed: invalid shader root";
+			return;
+		}
+
+		displayShaderPackDownloadInProgress = true;
+		displayShaderPackStatus = "Libretro GLSL: checking";
+		Thread downloaderThread = new Thread(() -> {
+			try {
+				RetroArchGlslShaderPackDownloader.InstallResult result =
+						new RetroArchGlslShaderPackDownloader().downloadIfNewer(
+								shaderRoot,
+								this::updateDisplayShaderPackProgress);
+				displayShaderPackStatus = result.downloaded()
+						? "Libretro GLSL: installed"
+						: "Libretro GLSL: up to date";
+				displayShaderPackRescanRequested = true;
+			} catch (RetroArchGlslShaderPackDownloader.ShaderPackDownloadException e) {
+				displayShaderPackStatus = "Libretro GLSL failed: " + e.reason();
+				LOGGER.log(java.util.logging.Level.WARNING, "Libretro GLSL shader pack download failed", e);
+			} finally {
+				displayShaderPackDownloadInProgress = false;
+			}
+		}, "OpenGGF-libretro-glsl-download");
+		downloaderThread.setDaemon(true);
+		downloaderThread.start();
+	}
+
+	private void updateDisplayShaderPackProgress(
+			RetroArchGlslShaderPackDownloader.Stage stage,
+			long completed,
+			long total,
+			String detail) {
+		displayShaderPackStatus = switch (stage) {
+			case CHECKING -> "Libretro GLSL: checking";
+			case DOWNLOADING -> total > 0
+					? "Libretro GLSL: downloading " + Math.min(100, (completed * 100 / total)) + "%"
+					: "Libretro GLSL: downloading";
+			case EXTRACTING -> "Libretro GLSL: extracting " + completed;
+			case COMPLETE -> detail == null || detail.isBlank()
+					? "Libretro GLSL: complete"
+					: "Libretro GLSL: " + detail;
+		};
+	}
+
+	private void processDisplayShaderPackRescan() {
+		if (!displayShaderPackRescanRequested || displayShaderPackDownloadInProgress) {
+			return;
+		}
+		displayShaderPackRescanRequested = false;
+		reloadDisplayShaderLibrary();
 	}
 
 	void refreshLaunchSessionCachedConfig() {
@@ -1435,10 +1516,11 @@ public class Engine {
 		}
 
 		profiler.beginSection("update");
-		if (displayColorProfileController != null) {
+		processDisplayShaderPackRescan();
+		boolean displayShaderPickerHandledInput = updateDisplayShaderInput();
+		if (displayColorProfileController != null && !displayShaderPickerHandledInput) {
 			displayColorProfileController.update(inputHandler);
 		}
-		boolean displayShaderPickerHandledInput = updateDisplayShaderInput();
 		if (displayShaderController != null && !displayShaderPickerHandledInput) {
 			displayShaderController.update(inputHandler);
 		}
@@ -1703,6 +1785,8 @@ public class Engine {
 				displayShaderPickerController.update(inputHandler, currentRef);
 		if (action.type() == DisplayShaderPickerController.ActionType.ACTIVATE && displayShaderController != null) {
 			displayShaderController.select(action.ref());
+		} else if (action.type() == DisplayShaderPickerController.ActionType.DOWNLOAD_LIBRETRO_GLSL) {
+			startDisplayShaderPackDownload();
 		}
 		return wasOpen || displayShaderPickerController.isOpen()
 				|| action.type() != DisplayShaderPickerController.ActionType.NONE;
@@ -1738,6 +1822,15 @@ public class Engine {
 				DebugColor.WHITE,
 				scale);
 		y += lineHeight;
+		if (displayShaderPackStatus != null && !displayShaderPackStatus.isBlank()) {
+			traceHudTextRenderer.drawShadowedText(
+					fitDisplayShaderPickerText(displayShaderPackStatus, maxWidth, scale),
+					x,
+					y,
+					displayShaderPackDownloadInProgress ? DebugColor.CYAN : DebugColor.LIGHT_GRAY,
+					scale);
+			y += lineHeight;
+		}
 
 		List<DisplayShaderSelectionModel.SelectionItem> items = displayShaderPickerController.visibleItems();
 		int selectedIndex = items.indexOf(displayShaderPickerController.selectedItem());

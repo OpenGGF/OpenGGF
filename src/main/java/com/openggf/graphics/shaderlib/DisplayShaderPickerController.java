@@ -8,7 +8,7 @@ import java.util.Objects;
 import static org.lwjgl.glfw.GLFW.*;
 
 public final class DisplayShaderPickerController {
-    private final DisplayShaderSelectionModel selectionModel;
+    private DisplayShaderSelectionModel selectionModel;
     private final int pickerKey;
     private boolean open;
     private String query = "";
@@ -57,6 +57,9 @@ public final class DisplayShaderPickerController {
             deleteLastQueryCharacter();
             return Action.none();
         }
+        if (input.isKeyPressed(GLFW_KEY_F5)) {
+            return new Action(ActionType.DOWNLOAD_LIBRETRO_GLSL, null);
+        }
         Character typed = typedCharacter(input);
         if (typed != null) {
             query += typed;
@@ -79,6 +82,12 @@ public final class DisplayShaderPickerController {
 
     public DisplayShaderSelectionModel.SelectionItem selectedItem() {
         return visibleItems.get(selectedIndex);
+    }
+
+    public void replaceSelectionModel(DisplayShaderSelectionModel newSelectionModel, DisplayShaderPresetRef currentRef) {
+        this.selectionModel = Objects.requireNonNull(newSelectionModel, "newSelectionModel");
+        refreshVisibleItems();
+        selectedIndex = indexOf(currentRef);
     }
 
     private void open(DisplayShaderPresetRef currentRef) {
@@ -168,7 +177,8 @@ public final class DisplayShaderPickerController {
 
     public enum ActionType {
         NONE,
-        ACTIVATE
+        ACTIVATE,
+        DOWNLOAD_LIBRETRO_GLSL
     }
 
     public record Action(ActionType type, DisplayShaderPresetRef ref) {

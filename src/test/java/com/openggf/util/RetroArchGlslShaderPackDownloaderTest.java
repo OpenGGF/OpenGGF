@@ -148,6 +148,17 @@ public class RetroArchGlslShaderPackDownloaderTest {
     }
 
     @Test
+    public void unreadableMetadataIsTreatedAsUpdateable() throws Exception {
+        Path installRoot = tempDir.resolve(RetroArchGlslShaderPackDownloader.INSTALL_DIR_NAME);
+        Files.createDirectories(installRoot.resolve(RetroArchGlslShaderPackDownloader.METADATA_FILE_NAME));
+
+        UpdateStatus update = new RetroArchGlslShaderPackDownloader(new FakeTransport()).checkForUpdate(tempDir,
+                ProgressListener.NONE);
+
+        assertEquals(UpdateState.UPDATE_AVAILABLE, update.state());
+    }
+
+    @Test
     public void defaultTransportFollowsNormalRedirects() {
         assertEquals(HttpClient.Redirect.NORMAL,
                 RetroArchGlslShaderPackDownloader.newDefaultHttpClient().followRedirects());

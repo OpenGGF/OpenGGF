@@ -19,6 +19,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_C;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_F5;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_MINUS;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_PERIOD;
@@ -131,6 +132,18 @@ class TestDisplayShaderPickerController {
         assertEquals(DisplayShaderPickerController.ActionType.NONE, action.type());
         assertNull(action.ref());
         assertFalse(picker.isOpen());
+    }
+
+    @Test
+    void f5RequestsLibretroDownloadWithoutClosingPicker() {
+        DisplayShaderPickerController picker = pickerWith(preset("a.glsl"));
+
+        press(picker, PICKER_KEY, DisplayShaderPresetRef.OFF);
+        DisplayShaderPickerController.Action action = press(picker, GLFW_KEY_F5, DisplayShaderPresetRef.OFF);
+
+        assertEquals(DisplayShaderPickerController.ActionType.DOWNLOAD_LIBRETRO_GLSL, action.type());
+        assertNull(action.ref());
+        assertTrue(picker.isOpen());
     }
 
     private static DisplayShaderPickerController pickerWith(DisplayShaderPresetRef... refs) {

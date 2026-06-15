@@ -8,7 +8,7 @@
 
 OpenGGF can render accurate game pixels, but it has no user-facing post-processing layer for emulator-style presentation effects. BizHawk ships a small set of useful display shaders under `docs/BizHawk-2.11-win-x64/Shaders/BizHawk`, including scanlines, gamma, bicubic filters, and `hq2x`. RetroArch shader distributions also include a large GLSL preset set under `shaders_glsl/`, with `.glslp` presets referencing one or more `.glsl` pass files. The current engine shader system is oriented around internal tile/sprite/fade rendering, not user-selectable final-frame effects.
 
-Users need a way to drop compatible shader presets into a root `shaders/` folder, have the engine discover them at runtime, and cycle forward/backward through the available options with configurable keys.
+Users need a way to drop compatible shader presets into a root `shaders/` folder, optionally download the RetroArch GLSL shader pack into that root from inside the application, have the engine discover compatible entries at runtime, and select shaders without forcing users to step through hundreds of presets one at a time.
 
 ## Goals
 
@@ -20,6 +20,9 @@ Users need a way to drop compatible shader presets into a root `shaders/` folder
 - Support BizHawk-style GLSL presets well enough for the local `BizHawk/*.cgp` files that have GLSL siblings.
 - Support RetroArch GLSL presets (`.glslp` plus referenced `.glsl` pass files) well enough for ordinary single- and multipass `shaders_glsl` presets that are compatible with, or can be normalized into, the engine's OpenGL 4.1 forward-compatible core profile and do not require external textures, includes, history, or Slang.
 - Support standalone GLSL post-process shaders that follow the engine compatibility contract.
+- Provide an application-callable utility for downloading the libretro RetroArch GLSL shader pack from GitHub's zip archive into `shaders/libretro-glsl`, without requiring `git` or a RetroArch installation.
+- Track the downloaded pack version with `shaders/libretro-glsl/.openggf-libretro-glsl.properties` so the application can cheaply check whether a newer pack is available.
+- Provide a scalable selection path for large libraries, so `[`/`]` cycling remains a quick shortcut but not the only practical way to find a shader once `libretro-glsl` is installed.
 - Keep shader effects display-only; they must not affect physics, traces, ROM palette state, or gameplay timing.
 - Show a short on-screen confirmation when the active shader changes.
 
@@ -30,8 +33,7 @@ Users need a way to drop compatible shader presets into a root `shaders/` folder
 - No promise that every BizHawk/RetroArch shader pack will work unchanged.
 - No RetroArch LUT textures, external image resources, `#include` expansion, feedback/history samplers, wildcard preset inheritance, previous-frame buffers, or full RetroArch runtime emulation in this pass.
 - No in-engine parameter editing UI in this pass. `#pragma parameter` declarations may be tolerated, but the shader uses its built-in default constants unless a later feature exposes parameter uniforms.
-- No in-engine menu UI in this pass.
-- No network shader downloads or marketplace integration.
+- No marketplace integration or third-party shader redistribution from this repository. The app may download the upstream libretro GLSL pack at user request, but committed sample shader content remains out of scope unless licensing/attribution is reviewed.
 - No shader hot-reload watcher in this pass. Runtime rescan can happen on startup and optionally when cycling if the library is dirty, but file watching is future work.
 - No shader effects during headless trace replay or tests unless a test explicitly initializes GL presentation.
 
@@ -64,6 +66,16 @@ shaders/
         crt-easymode.glslp
         shaders/
           crt-easymode.glsl
+  libretro-glsl/
+    .openggf-libretro-glsl.properties
+    crt/
+      crt-easymode.glslp
+      shaders/
+        crt-easymode.glsl
+    scanlines/
+      scanline.glslp
+      shaders/
+        scanline.glsl
 ```
 
 At startup, the engine scans `shaders/` recursively and builds a sorted list:
@@ -78,6 +90,8 @@ BizHawk/hq2x.cgp
 Custom/warm-crt.glsl
 RetroArch/shaders_glsl/crt/crt-easymode.glslp
 RetroArch/shaders_glsl/scanlines/scanline.glslp
+libretro-glsl/crt/crt-easymode.glslp
+libretro-glsl/scanlines/scanline.glslp
 ```
 
 Pressing `]` advances to the next entry. Pressing `[` moves to the previous entry. Selecting `Off` disables the post-process pipeline. The current selection is saved, and the screen shows a brief confirmation such as:
@@ -87,6 +101,56 @@ Shader: BizHawk/BizScanlines
 Shader: Off
 Shader failed: Custom/warm-crt
 ```
+
+Linear cycling is not sufficient once the libretro pack is installed. `[` and `]` remain quick previous/next shortcuts, but the user-facing selection model must also support a scalable picker path before the downloaded pack is treated as first-class UX. The picker can be a simple in-engine list or overlay in this implementation, but it must at least support root-relative text filtering and category-aware display using path segments such as `crt`, `scanlines`, `xbr`, and `scalehq`. A future favorites/recent list can build on the same library metadata, but the first implementation should avoid making users cycle through hundreds of entries to reach a known preset.
+
+## Libretro GLSL Pack Download
+
+The application should expose a user-triggered action to install or update the RetroArch GLSL shader pack without requiring RetroArch or `git` on the user's machine. In this implementation, the shader picker owns that action: open the picker with `BACKSLASH`, then press `F5` to install or update the libretro GLSL pack. The download utility itself should remain self-contained and UI-agnostic so it can also be called from a future menu, command palette, or startup prompt.
+
+Download source:
+
+```text
+https://github.com/libretro/glsl-shaders/archive/refs/heads/master.zip
+```
+
+Install target:
+
+```text
+<DISPLAY_SHADER_LIBRARY_ROOT>/libretro-glsl/
+```
+
+Extraction rules:
+
+- Create the configured shader root if needed.
+- Download into a temporary `.part` file under the shader root or `libretro-glsl` staging area.
+- Extract into a staging directory, not directly over the active install.
+- Strip the zip's top-level folder, e.g. `glsl-shaders-master/`, so categories such as `crt/`, `scanlines/`, `xbr/`, and `scalehq/` sit directly under `libretro-glsl/`.
+- Reject zip entries that escape the staging directory after normalization.
+- Replace the existing `libretro-glsl` directory only after the download and extraction both succeed.
+- Write update metadata to `libretro-glsl/.openggf-libretro-glsl.properties`.
+
+Progress reporting:
+
+- Expose a callback interface that reports stage, completed units, total units when known, and a short detail string.
+- Stages should cover at least update check, download, extraction, and completion.
+- Download progress should use response `Content-Length` when available, otherwise report an unknown total.
+- Extraction progress may use entry count or uncompressed byte totals from the zip central directory.
+
+Update check:
+
+- Use a lightweight HTTP check before re-downloading when metadata exists.
+- The simplest acceptable mechanism is `HEAD` or conditional request against the GitHub zip archive using the stored `ETag` / `Last-Modified`.
+- A GitHub commit API check is also acceptable, but the utility must not require authentication.
+- If the remote version matches the stored metadata, report "up to date" and do not download.
+- If metadata is missing, unreadable, or the remote identity differs, treat the pack as installable/updateable.
+- After a successful install/update, rescan the display shader library so the new `libretro-glsl` presets become selectable without requiring a restart.
+
+Error handling:
+
+- Network failures, non-2xx HTTP statuses, interrupted downloads, partial downloads, invalid archives, zip-slip paths, and disk/write failures must surface as checked, categorized exceptions.
+- A failed download or extraction must leave the previous `libretro-glsl` install intact.
+- The utility must not write outside the configured shader root and its `libretro-glsl` child.
 
 ## Configuration
 
@@ -98,6 +162,7 @@ Add display configuration keys:
 | `DISPLAY_SHADER_SELECTION` | string | `OFF` | Last selected shader, stored as `OFF` or a root-relative path |
 | `DISPLAY_SHADER_NEXT_KEY` | key | `RIGHT_BRACKET` | Runtime key for next shader |
 | `DISPLAY_SHADER_PREVIOUS_KEY` | key | `LEFT_BRACKET` | Runtime key for previous shader |
+| `DISPLAY_SHADER_PICKER_KEY` | key | `BACKSLASH` | Runtime key to open the searchable/category-aware shader picker |
 | `DISPLAY_SHADER_DEFAULT_PHASE` | enum | `PRESENTATION` | Fallback render phase for standalone shaders |
 
 `DISPLAY_SHADER_SELECTION` should be path-normalized with forward slashes for stable config files across Windows/macOS/Linux. If the saved selection is missing at startup, fall back to `Off` and log a warning.
@@ -112,6 +177,7 @@ display:
   shaderSelection: OFF
   shaderNextKey: RIGHT_BRACKET
   shaderPreviousKey: LEFT_BRACKET
+  shaderPickerKey: BACKSLASH
   shaderDefaultPhase: PRESENTATION
 ```
 
@@ -120,6 +186,7 @@ display:
 - Insert the new keys in the existing normal `display` section, before every `debug.*` key, so debug sections remain contiguous and last.
 - Register `DISPLAY_SHADER_DEFAULT_PHASE` with `ofEnum(...)` and allowed values `SCENE`, `PRESENTATION`, and `FINAL`.
 - Register `DISPLAY_SHADER_SELECTION` and `DISPLAY_SHADER_LIBRARY_ROOT` as free-form strings.
+- Register `DISPLAY_SHADER_NEXT_KEY`, `DISPLAY_SHADER_PREVIOUS_KEY`, and `DISPLAY_SHADER_PICKER_KEY` as key values.
 
 ## Discovery Rules
 
@@ -364,11 +431,14 @@ Add JUnit 5 coverage for non-GL logic:
 - Saved selection resolves by relative path and falls back to `Off` when missing.
 - Controller cycles forward/backward, wraps around, persists selection, and shows notification text.
 - Controller ignores unbound previous/next keys.
+- Selection picker/filter logic can locate entries by root-relative text and category path segment, so large downloaded libraries do not depend only on linear cycling.
 - All playback-only key defaults are unbound so shader cycling does not double-fire with dormant playback tooling.
 - `DISPLAY_SHADER_DEFAULT_PHASE` is catalogued as an enum with the exact allowed values `SCENE`, `PRESENTATION`, and `FINAL`.
 - `display.*` shader keys emit before the debug block.
 - Shader compatibility metadata computes `video_size`, `texture_size`, and `output_size`.
 - Shader compatibility metadata also computes RetroArch `InputSize`, `TextureSize`, `OutputSize`, `FrameCount`, and `FrameDirection`.
+- Libretro downloader builds the install path as `<shaderRoot>/libretro-glsl`, strips the archive's top-level directory, writes `.openggf-libretro-glsl.properties`, reports download/extract progress, skips download when stored ETag/Last-Modified is current, and preserves an existing install on failure.
+- Libretro downloader rejects zip-slip entries and reports HTTP, network, interrupted, partial-download, invalid-archive, and disk/write failures with categorized checked exceptions.
 
 Add focused GL smoke coverage where practical:
 
@@ -395,6 +465,8 @@ Update `CONFIGURATION.md` with:
 - The GLSL compatibility contract.
 - The HLSL/Cg and Slang limitations.
 - The supported RetroArch GLSL subset: `.glslp` presets, no external textures/LUTs, no includes, no history/feedback buffers, no parameter UI.
+- How to install/update the upstream libretro GLSL pack into `shaders/libretro-glsl`, including the fact that the app downloads GitHub's zip archive and strips the top-level folder.
+- The scalable selection model for large packs: `[`/`]` remain shortcuts, while search/filter/category selection is the practical path for the full libretro library.
 - The fact that root-level `shaders/` is user-supplied and gitignored unless sample shader licensing is explicitly handled.
 - The recovery behavior for broken shaders.
 

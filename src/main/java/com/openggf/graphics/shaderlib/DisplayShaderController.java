@@ -11,7 +11,7 @@ import java.util.function.Predicate;
 public final class DisplayShaderController {
     public static final int NOTIFICATION_FRAMES = 120;
 
-    private final DisplayShaderLibrary library;
+    private DisplayShaderLibrary library;
     private final int nextKey;
     private final int previousKey;
     private final Consumer<String> persistSelection;
@@ -69,6 +69,12 @@ public final class DisplayShaderController {
 
     public DisplayShaderPresetRef currentRef() {
         return library.at(currentIndex);
+    }
+
+    public void replaceLibrary(DisplayShaderLibrary newLibrary, String savedSelection) {
+        this.library = Objects.requireNonNull(newLibrary, "newLibrary");
+        this.currentIndex = library.indexOfRelativePath(savedSelection);
+        this.failedShaderPaths.clear();
     }
 
     public String notificationText() {
