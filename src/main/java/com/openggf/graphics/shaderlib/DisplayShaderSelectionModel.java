@@ -11,6 +11,7 @@ public final class DisplayShaderSelectionModel {
     private static final String OFF_CATEGORY = "System";
 
     private final List<SelectionItem> items;
+    private List<SelectionItem> visibleItems;
 
     public DisplayShaderSelectionModel(DisplayShaderLibrary library) {
         this(Objects.requireNonNull(library, "library").entries());
@@ -21,12 +22,14 @@ public final class DisplayShaderSelectionModel {
         this.items = entries.stream()
                 .map(DisplayShaderSelectionModel::toSelectionItem)
                 .toList();
+        this.visibleItems = items;
     }
 
     public List<SelectionItem> filter(String query) {
         String normalizedQuery = normalizeQuery(query);
         if (normalizedQuery.isEmpty()) {
-            return items;
+            visibleItems = items;
+            return visibleItems;
         }
 
         List<SelectionItem> filtered = new ArrayList<>();
@@ -37,22 +40,22 @@ public final class DisplayShaderSelectionModel {
                 filtered.add(item);
             }
         }
-        return List.copyOf(filtered);
+        visibleItems = List.copyOf(filtered);
+        return visibleItems;
     }
 
     public List<String> categories() {
         Set<String> categories = new LinkedHashSet<>();
         for (SelectionItem item : items) {
             String category = item.category();
-            if (!category.isBlank() && !OFF_CATEGORY.equals(category)) {
+            if (!category.isBlank() && item.ref().kind() != DisplayShaderPresetRef.Kind.OFF) {
                 categories.add(category);
             }
         }
         return List.copyOf(categories);
     }
 
-    public DisplayShaderPresetRef select(List<SelectionItem> visibleItems, int visibleIndex) {
-        Objects.requireNonNull(visibleItems, "visibleItems");
+    public DisplayShaderPresetRef select(int visibleIndex) {
         Objects.checkIndex(visibleIndex, visibleItems.size());
         return visibleItems.get(visibleIndex).ref();
     }

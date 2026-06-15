@@ -90,17 +90,41 @@ public class TestDisplayShaderSelectionModel {
     }
 
     @Test
-    public void selectByVisibleIndexReturnsTheUnderlyingPresetRef() throws IOException {
+    public void categoryListIncludesRealSystemFolder() throws IOException {
+        DisplayShaderSelectionModel model = new DisplayShaderSelectionModel(libraryWith(
+                "System/foo.glsl",
+                "crt/crt-easymode.glslp"));
+
+        assertEquals(List.of("crt", "System"), model.categories());
+    }
+
+    @Test
+    public void selectByCurrentVisibleIndexReturnsTheUnderlyingPresetRef() throws IOException {
         DisplayShaderLibrary library = libraryWith(
                 "crt/crt-easymode.glslp",
                 "scanlines/zebra.glslp");
         DisplayShaderSelectionModel model = new DisplayShaderSelectionModel(library);
-        List<DisplayShaderSelectionModel.SelectionItem> visibleItems = model.filter("zebra");
+        model.filter("zebra");
 
-        DisplayShaderPresetRef selected = model.select(visibleItems, 1);
+        DisplayShaderPresetRef selected = model.select(1);
 
         assertSame(library.at(2), selected);
         assertEquals("scanlines/zebra.glslp", selected.relativePath());
+    }
+
+    @Test
+    public void selectUsesTheMostRecentFilterResult() throws IOException {
+        DisplayShaderLibrary library = libraryWith(
+                "crt/crt-easymode.glslp",
+                "scanlines/zebra.glslp");
+        DisplayShaderSelectionModel model = new DisplayShaderSelectionModel(library);
+        model.filter("zebra");
+        model.filter("crt");
+
+        DisplayShaderPresetRef selected = model.select(1);
+
+        assertSame(library.at(1), selected);
+        assertEquals("crt/crt-easymode.glslp", selected.relativePath());
     }
 
     private DisplayShaderLibrary libraryWith(String... paths) throws IOException {
