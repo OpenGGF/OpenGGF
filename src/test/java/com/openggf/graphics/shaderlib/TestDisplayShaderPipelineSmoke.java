@@ -39,6 +39,28 @@ public class TestDisplayShaderPipelineSmoke {
     }
 
     @Test
+    public void failedActivationKeepsPreviousShaderActive() {
+        try (GlContext ignored = GlContext.open()) {
+            DisplayShaderPipeline pipeline = new DisplayShaderPipeline();
+            pipeline.resize(32, 32, 32, 32);
+            assertTrue(pipeline.activate(passthroughPreset()));
+
+            DisplayShaderPreset broken = new DisplayShaderPreset("broken", ShaderPhase.FINAL, List.of(
+                    new DisplayShaderPass(null, """
+                            uniform sampler2D Texture;
+                            void main() {
+                                this is not valid glsl
+                            }
+                            """, GlslShape.FRAGMENT_ONLY, 1, ScaleType.SOURCE, false, WrapMode.CLAMP_TO_EDGE)));
+
+            assertFalse(pipeline.activate(broken));
+            assertTrue(pipeline.isActive());
+
+            pipeline.dispose();
+        }
+    }
+
+    @Test
     public void combinedRetroArchStyleSourceCompilesAndActivates() {
         try (GlContext ignored = GlContext.open()) {
             DisplayShaderPipeline pipeline = new DisplayShaderPipeline();

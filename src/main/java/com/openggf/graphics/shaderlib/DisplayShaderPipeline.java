@@ -94,14 +94,19 @@ public class DisplayShaderPipeline {
             combinedVbo = newCombinedVbo;
             phase = requestedPhase;
             active = true;
+            compiled = null;
+            fbos = null;
+            newFragmentOnlyVao = 0;
+            newCombinedVao = 0;
+            newCombinedVbo = 0;
             return true;
         } catch (Exception e) {
             LOG.fine("Display shader activation failed: " + e.getMessage());
-            deletePrograms(compiled);
+            if (compiled != null) {
+                deletePrograms(compiled);
+            }
             destroyFbos(fbos);
             deleteVertexResources(newFragmentOnlyVao, newCombinedVao, newCombinedVbo);
-            dispose();
-            phase = requestedPhase;
             return false;
         }
     }

@@ -1438,7 +1438,9 @@ public class Engine {
 		if (displayShaderController != null && !displayShaderPickerHandledInput) {
 			displayShaderController.update(inputHandler);
 		}
-		update();
+		if (!displayShaderPickerHandledInput) {
+			update();
+		}
 		profiler.endSection("update");
 
 		profiler.beginSection("render");
