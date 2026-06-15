@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Display shader GL pipeline added:** `DisplayShaderPipeline` now compiles
+  loaded GLSL passes from source strings, owns capture/per-pass FBOs, supports
+  fragment-only and combined RetroArch-style vertex paths, and composites only
+  the active game viewport rectangle back to the default framebuffer.
+
 - **Display shader configuration foundation added:** `config.yaml` now reserves
   display shader library settings for a future runtime shader picker, including
   the shader root, last selection, next/previous/picker keys, and default render
