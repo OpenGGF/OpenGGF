@@ -75,6 +75,15 @@ public final class DisplayShaderController {
         return notificationFramesRemaining > 0 ? notificationText : null;
     }
 
+    public boolean select(DisplayShaderPresetRef ref) {
+        Objects.requireNonNull(ref, "ref");
+        int nextIndex = indexOf(ref);
+        if (nextIndex < 0) {
+            return false;
+        }
+        return select(nextIndex, library.at(nextIndex));
+    }
+
     private void cycle(int direction) {
         int size = library.size();
         for (int step = 1; step <= size; step++) {
@@ -88,16 +97,25 @@ public final class DisplayShaderController {
         }
     }
 
-    private void select(int nextIndex, DisplayShaderPresetRef ref) {
+    private boolean select(int nextIndex, DisplayShaderPresetRef ref) {
         if (activate.test(ref)) {
             currentIndex = nextIndex;
             persistSelection.accept(persistedValue(ref));
             showNotification("Shader: " + ref.label());
-            return;
+            return true;
         }
 
         markFailed(ref);
         showNotification("Shader failed: " + ref.label());
+        return false;
+    }
+
+    private int indexOf(DisplayShaderPresetRef ref) {
+        if (ref.kind() == DisplayShaderPresetRef.Kind.OFF) {
+            return 0;
+        }
+        int index = library.indexOfRelativePath(ref.relativePath());
+        return index == 0 ? -1 : index;
     }
 
     private boolean isFailedRealShader(DisplayShaderPresetRef ref) {

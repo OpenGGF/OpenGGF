@@ -52,6 +52,14 @@ import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.data.Rom;
 import com.openggf.physics.Direction;
 import com.openggf.graphics.color.DisplayColorProfileController;
+import com.openggf.graphics.shaderlib.DisplayShaderController;
+import com.openggf.graphics.shaderlib.DisplayShaderLibrary;
+import com.openggf.graphics.shaderlib.DisplayShaderPickerController;
+import com.openggf.graphics.shaderlib.DisplayShaderPipeline;
+import com.openggf.graphics.shaderlib.DisplayShaderPresetLoader;
+import com.openggf.graphics.shaderlib.DisplayShaderPresetRef;
+import com.openggf.graphics.shaderlib.DisplayShaderSelectionModel;
+import com.openggf.graphics.shaderlib.ShaderPhase;
 import com.openggf.render.EngineRenderDispatcher;
 
 import java.io.IOException;
@@ -59,6 +67,7 @@ import java.nio.IntBuffer;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -111,6 +120,9 @@ public class Engine {
 	private final PixelFontTextRenderer pauseTextRenderer =
 		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
 	private DisplayColorProfileController displayColorProfileController;
+	private DisplayShaderController displayShaderController;
+	private DisplayShaderPickerController displayShaderPickerController;
+	private int displayShaderFrameCounter;
 
 	private static volatile DebugState debugState = DebugState.NONE;
 	private static volatile DebugOption debugOption = DebugOption.A;
@@ -385,6 +397,7 @@ public class Engine {
 					configService,
 					graphicsManager,
 					this::refreshDisplayPalettes);
+			initializeDisplayShaders();
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
@@ -448,6 +461,68 @@ public class Engine {
 		if (activeLevelManager != null) {
 			activeLevelManager.reloadLevelPalettes();
 		}
+	}
+
+	private void initializeDisplayShaders() {
+		DisplayShaderLibrary library = scanDisplayShaderLibrary();
+		DisplayShaderSelectionModel selectionModel = new DisplayShaderSelectionModel(library);
+		DisplayShaderPresetLoader loader = new DisplayShaderPresetLoader();
+		ShaderPhase defaultPhase = parseDisplayShaderDefaultPhase();
+		displayShaderPickerController = new DisplayShaderPickerController(
+				selectionModel,
+				configService.getInt(SonicConfiguration.DISPLAY_SHADER_PICKER_KEY));
+		displayShaderController = new DisplayShaderController(
+				library,
+				configService.getString(SonicConfiguration.DISPLAY_SHADER_SELECTION),
+				configService.getInt(SonicConfiguration.DISPLAY_SHADER_NEXT_KEY),
+				configService.getInt(SonicConfiguration.DISPLAY_SHADER_PREVIOUS_KEY),
+				this::persistDisplayShaderSelection,
+				ref -> activateDisplayShader(ref, loader, defaultPhase));
+		displayShaderController.applySavedSelectionSilently();
+	}
+
+	private DisplayShaderLibrary scanDisplayShaderLibrary() {
+		String root = configService.getString(SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT);
+		try {
+			return DisplayShaderLibrary.scan(Path.of(root));
+		} catch (RuntimeException e) {
+			LOGGER.warning("Display shader library root is invalid: " + root);
+			return DisplayShaderLibrary.scan(null);
+		}
+	}
+
+	private ShaderPhase parseDisplayShaderDefaultPhase() {
+		String raw = configService.getString(SonicConfiguration.DISPLAY_SHADER_DEFAULT_PHASE);
+		try {
+			return ShaderPhase.valueOf(raw.trim().toUpperCase(Locale.ROOT));
+		} catch (RuntimeException e) {
+			LOGGER.warning("Invalid display shader default phase '" + raw + "', using PRESENTATION");
+			return ShaderPhase.PRESENTATION;
+		}
+	}
+
+	private boolean activateDisplayShader(
+			DisplayShaderPresetRef ref,
+			DisplayShaderPresetLoader loader,
+			ShaderPhase defaultPhase) {
+		DisplayShaderPipeline pipeline = graphicsManager.getDisplayShaderPipeline();
+		if (pipeline == null) {
+			return ref != null && ref.kind() == DisplayShaderPresetRef.Kind.OFF;
+		}
+		if (ref == null || ref.kind() == DisplayShaderPresetRef.Kind.OFF) {
+			return pipeline.activate(null);
+		}
+		try {
+			return pipeline.activate(loader.load(ref, defaultPhase));
+		} catch (Exception e) {
+			LOGGER.log(java.util.logging.Level.WARNING, "Display shader failed to load: " + ref.label(), e);
+			return false;
+		}
+	}
+
+	private void persistDisplayShaderSelection(String selection) {
+		configService.setConfigValue(SonicConfiguration.DISPLAY_SHADER_SELECTION, selection);
+		configService.saveConfig();
 	}
 
 	void refreshLaunchSessionCachedConfig() {
@@ -1359,6 +1434,10 @@ public class Engine {
 		if (displayColorProfileController != null) {
 			displayColorProfileController.update(inputHandler);
 		}
+		boolean displayShaderPickerHandledInput = updateDisplayShaderInput();
+		if (displayShaderController != null && !displayShaderPickerHandledInput) {
+			displayShaderController.update(inputHandler);
+		}
 		update();
 		profiler.endSection("update");
 
@@ -1366,12 +1445,14 @@ public class Engine {
 		graphicsManager.runPendingRenderThreadTasks();
 		draw();
 		graphicsManager.flush();
+		applyDisplayShaderPhase(ShaderPhase.SCENE);
 		profiler.endSection("render");
 
 		// Render screen fade overlay via unified UI render pipeline
 		if (uiPipeline != null) {
 			uiPipeline.renderFadePass();
 		}
+		applyDisplayShaderPhase(ShaderPhase.PRESENTATION);
 		RenderOrderRecorder postFadeRecorder = uiPipeline != null ? uiPipeline.getRenderOrderRecorder() : null;
 
 		// Post-fade diagnostic overlays: intentionally outside UiRenderPipeline so
@@ -1458,6 +1539,9 @@ public class Engine {
 			glUseProgram(0);
 		}
 		profiler.endSection("debug");
+
+		renderDisplayShaderPickerOverlay();
+		applyDisplayShaderPhase(ShaderPhase.FINAL);
 
 		// F12 screenshot capture (after all rendering is complete)
 		if (inputHandler != null && inputHandler.isKeyPressed(GLFW_KEY_F12)) {
@@ -1578,6 +1662,86 @@ public class Engine {
 		int y = 224 - traceHudTextRenderer.lineHeight(scale) - 4;
 		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
 		traceHudTextRenderer.drawShadowedText(text, 4, y, DebugColor.YELLOW, scale);
+	}
+
+	private boolean updateDisplayShaderInput() {
+		if (displayShaderPickerController == null) {
+			return false;
+		}
+		boolean wasOpen = displayShaderPickerController.isOpen();
+		DisplayShaderPresetRef currentRef = displayShaderController != null
+				? displayShaderController.currentRef()
+				: DisplayShaderPresetRef.OFF;
+		DisplayShaderPickerController.Action action =
+				displayShaderPickerController.update(inputHandler, currentRef);
+		if (action.type() == DisplayShaderPickerController.ActionType.ACTIVATE && displayShaderController != null) {
+			displayShaderController.select(action.ref());
+		}
+		return wasOpen || displayShaderPickerController.isOpen()
+				|| action.type() != DisplayShaderPickerController.ActionType.NONE;
+	}
+
+	private void applyDisplayShaderPhase(ShaderPhase phase) {
+		DisplayShaderPipeline pipeline = graphicsManager.getDisplayShaderPipeline();
+		if (pipeline == null || !pipeline.isActive() || pipeline.phase() != phase) {
+			return;
+		}
+		int sourceWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
+		int sourceHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
+		pipeline.resize(sourceWidth, sourceHeight, viewportWidth, viewportHeight);
+		pipeline.apply(viewportX, viewportY, viewportWidth, viewportHeight, displayShaderFrameCounter++);
+	}
+
+	private void renderDisplayShaderPickerOverlay() {
+		if (displayShaderPickerController == null || !displayShaderPickerController.isOpen()) {
+			return;
+		}
+		float scale = 1.0f;
+		int x = 4;
+		int y = 8;
+		int lineHeight = traceHudTextRenderer.lineHeight(scale);
+		int maxWidth = Math.max(48, (int) projectionWidth - x - 4);
+		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+		traceHudTextRenderer.drawShadowedText("Shader", x, y, DebugColor.CYAN, scale);
+		y += lineHeight;
+		traceHudTextRenderer.drawShadowedText(
+				fitDisplayShaderPickerText(displayShaderPickerController.query(), maxWidth, scale),
+				x,
+				y,
+				DebugColor.WHITE,
+				scale);
+		y += lineHeight;
+
+		List<DisplayShaderSelectionModel.SelectionItem> items = displayShaderPickerController.visibleItems();
+		int selectedIndex = items.indexOf(displayShaderPickerController.selectedItem());
+		int maxEntries = Math.max(1, (224 - y - 4) / Math.max(1, lineHeight));
+		int start = Math.max(0, Math.min(selectedIndex - maxEntries / 2, items.size() - maxEntries));
+		int end = Math.min(items.size(), start + maxEntries);
+		for (int i = start; i < end; i++) {
+			DisplayShaderSelectionModel.SelectionItem item = items.get(i);
+			boolean selected = i == selectedIndex;
+			String category = item.category() == null || item.category().isBlank() ? "" : item.category() + " ";
+			String text = (selected ? "> " : "  ") + category + item.displayPath();
+			traceHudTextRenderer.drawShadowedText(
+					fitDisplayShaderPickerText(text, maxWidth, scale),
+					x,
+					y,
+					selected ? DebugColor.YELLOW : DebugColor.LIGHT_GRAY,
+					scale);
+			y += lineHeight;
+		}
+	}
+
+	private String fitDisplayShaderPickerText(String text, int maxWidth, float scale) {
+		if (text == null || traceHudTextRenderer.measureWidth(text, scale) <= maxWidth) {
+			return text == null ? "" : text;
+		}
+		String suffix = "...";
+		int end = text.length();
+		while (end > 0 && traceHudTextRenderer.measureWidth(text.substring(0, end) + suffix, scale) > maxWidth) {
+			end--;
+		}
+		return text.substring(0, end) + suffix;
 	}
 
 	/**

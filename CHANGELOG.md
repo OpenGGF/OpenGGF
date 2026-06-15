@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Display shader pipeline wired into the engine:** `GraphicsManager` now owns
+  the runtime display shader pipeline, Engine applies shader phases at scene,
+  presentation, and final render points, and configured quick-cycle keys plus a
+  searchable picker overlay can activate and persist display shader selections.
+
 - **Display shader GL pipeline added:** `DisplayShaderPipeline` now compiles
   loaded GLSL passes from source strings, owns capture/per-pass FBOs, supports
   fragment-only and combined RetroArch-style vertex paths, and composites only

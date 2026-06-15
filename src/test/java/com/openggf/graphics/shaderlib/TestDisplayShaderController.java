@@ -259,6 +259,56 @@ class TestDisplayShaderController {
         assertEquals("Shader: Off", controller.notificationText());
     }
 
+    @Test
+    void explicitSelectionPersistsAndNotifies() throws IOException {
+        DisplayShaderLibrary library = libraryWithShaders();
+        AtomicReference<String> persisted = new AtomicReference<>();
+        List<DisplayShaderPresetRef> activated = new ArrayList<>();
+        DisplayShaderController controller = new DisplayShaderController(
+                library,
+                "OFF",
+                NEXT_KEY,
+                PREVIOUS_KEY,
+                persisted::set,
+                ref -> {
+                    activated.add(ref);
+                    return true;
+                });
+
+        boolean selected = controller.select(library.at(2));
+
+        assertEquals(true, selected);
+        assertEquals("b.glsl", controller.currentRef().relativePath());
+        assertEquals("b.glsl", persisted.get());
+        assertEquals(List.of(library.at(2)), activated);
+        assertEquals("Shader: b", controller.notificationText());
+    }
+
+    @Test
+    void explicitSelectionFailureDoesNotPersistOrChangeCurrentRef() throws IOException {
+        DisplayShaderLibrary library = libraryWithShaders();
+        AtomicReference<String> persisted = new AtomicReference<>();
+        List<DisplayShaderPresetRef> activated = new ArrayList<>();
+        DisplayShaderController controller = new DisplayShaderController(
+                library,
+                "OFF",
+                NEXT_KEY,
+                PREVIOUS_KEY,
+                persisted::set,
+                ref -> {
+                    activated.add(ref);
+                    return false;
+                });
+
+        boolean selected = controller.select(library.at(1));
+
+        assertEquals(false, selected);
+        assertEquals(DisplayShaderPresetRef.OFF, controller.currentRef());
+        assertNull(persisted.get());
+        assertEquals(List.of(library.at(1)), activated);
+        assertEquals("Shader failed: a", controller.notificationText());
+    }
+
     private DisplayShaderLibrary libraryWithShaders() throws IOException {
         Path root = tempDir.resolve("display-shaders");
         write(root.resolve("a.glsl"));
