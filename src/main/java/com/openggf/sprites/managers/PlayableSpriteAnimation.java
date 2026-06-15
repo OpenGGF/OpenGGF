@@ -480,7 +480,8 @@ public class PlayableSpriteAnimation {
             sprite.setPushing(true);
         }
         if (desiredWithoutPush == null
-                || desiredWithoutPush == currentAnimId
+                || groundMoveAnimByte(profile, desiredWithoutPush)
+                        == groundMoveAnimByte(profile, currentAnimId)
                 || currentAnimId == profile.getPushAnimId()) {
             return;
         }
@@ -490,6 +491,32 @@ public class PlayableSpriteAnimation {
         // 40879-40884; sonic3k.asm:29359-29364,29681-29686). S1 leaves this
         // behind FixBugs.
         sprite.setPushing(false);
+    }
+
+    /**
+     * Collapses the engine's distinct Run animation id onto the Walk id for the
+     * purpose of the ROM {@code anim != prev_anim} push-clear comparison.
+     *
+     * <p>In both S2 and S3K the ground directional-movement routines write the
+     * Walk animation id into the {@code anim} byte regardless of speed — S2
+     * {@code Sonic_MoveRight}/{@code Sonic_MoveLeft} (s2.asm:36956,36891
+     * {@code move.b #AniIDSonAni_Walk,anim(a0)}), S3K {@code sub_14CAC}/
+     * {@code sub_14C20} and {@code SonicKnux_Move} (sonic3k.asm:28122,28056,
+     * 22811,22877 {@code move.b #0,anim(a0)}). The Run frames are a render-time
+     * selection inside that same {@code AniXXX00} script (S2 SonAni_Walk vs
+     * SonAni_Run pointers are dispatched by speed in the animation routine; S3K
+     * {@code Animate_Sonic}/{@code Animate_Tails} loc_15A14 selects Run frames
+     * by {@code ground_vel} within the Walk script). The engine instead models
+     * Run as its own animation id, so a Run->Walk transition that ROM never
+     * records as an {@code anim}-byte change would otherwise trip
+     * {@code Animate}'s {@code anim != prev_anim} push-clear. Treating Run as the
+     * Walk byte here matches the ROM comparison: a CPU sidekick decelerating
+     * from a run into a wall keeps Status_Push across the speed step
+     * (sonic3k.asm:29360-29364,28122 — {@code anim} stays Walk so push is not
+     * cleared).
+     */
+    private static int groundMoveAnimByte(ScriptedVelocityAnimationProfile profile, int animId) {
+        return animId == profile.getRunAnimId() ? profile.getWalkAnimId() : animId;
     }
 
 }

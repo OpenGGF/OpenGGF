@@ -989,14 +989,30 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
-    void expiringStoredInvulnerabilityTimerDoesNotBlockTouchHurt() {
+    void nonzeroInvulnerabilityTimerBlocksTouchHurt() {
+        // ROM Touch_Hurt (sonic3k.asm:21044-21047) gates on
+        // `tst.b invulnerability_timer(a0); bne.s Touch_ChkHurt_Return`: ANY nonzero
+        // timer blocks the hit. The timer is decremented earlier in the same object
+        // slot by Tails_Display (sonic3k.asm:26279-26282), so the value applyHurt sees
+        // is already post-decrement; a post-decrement value of 1 is still nonzero and
+        // must block. Verified against the AIZ2 miniboss trace at frame 7723: ROM keeps
+        // CPU Tails following (tails_x_speed=0x008C) while the body hitbox overlaps,
+        // because Tails has one invulnerability frame remaining, and only hurts at
+        // frame 7724 once the timer reaches 0.
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
         tails.setCentreX((short) 0x11E6);
         tails.setInvulnerableFrames(1);
 
+        assertFalse(tails.applyHurt(0x11F0),
+                "A nonzero (post-decrement) invulnerability timer must block touch hurt, per ROM Touch_Hurt bne");
+        assertFalse(tails.isHurt());
+        assertEquals(1, tails.getInvulnerableFrames());
+
+        // Once the timer has expired to 0, the same touch lands.
+        tails.setInvulnerableFrames(0);
         assertTrue(tails.applyHurt(0x11F0),
-                "The stored post-display timer value 1 is the expiring sample; touch hurt must see it as vulnerable");
+                "With the timer at 0 the ROM Touch_Hurt bne falls through and the hit applies");
         assertTrue(tails.isHurt());
         assertEquals(0x78, tails.getInvulnerableFrames());
     }

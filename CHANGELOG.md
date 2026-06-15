@@ -4,6 +4,18 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K AIZ act-2 trace frontier f5705 -> f14299 (four ROM-cited sidekick/player/object fixes):**
+  (1) the run->walk animation step no longer clears `Status_Push` (ROM keeps the
+  `anim` byte at Walk for grounded movement; `sonic3k.asm:28122,28056`,
+  `s2.asm:36956,36891`); (2) the touch-hurt invulnerability gate blocks on any
+  nonzero i-frame timer (`isDamageBlocked > 1` -> `> 0`, ROM `Touch_Hurt` `bne`,
+  `sonic3k.asm:21044-21047`); (3) the AIZ2 spiked-log spike hurts on the ROM
+  contact frame via its live touch position (`usesCurrentTouchResponseState`,
+  `loc_2B8EE` adds to the collision list post-move, `sonic3k.asm:60179-60190`);
+  (4) the AIZ2 rock re-sets Sonic's `Status_Push` at its inclusive solid edge
+  (`usesInclusiveRightEdge`, ROM `SolidObject_cont` `bhi`, `sonic3k.asm:41403-41406,41494-41500`).
+  Each was full-`*TraceReplay`-A/B-validated with no S1/S2/S3K regression.
+
 - **S3K complete-run traces restore startup objects for native setup preludes:**
   complete-run replay now restores the S3K event-owned startup objects that the
   native setup prelude expects after object reset. ICZ restores the snowboard
