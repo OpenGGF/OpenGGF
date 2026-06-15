@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K CNZ complete-run trace advances through setup object RNG order:**
+  S3K complete-run replay now runs the native setup `Process_Sprites` object
+  pass before applying the frame-zero RNG seed, so already-live setup objects
+  consume RNG in ROM order instead of starting from the trace's frame-zero seed.
+  This advances the CNZ complete-run trace from frame 248 to frame 355's
+  separate bumper/monitor velocity frontier.
+
 - **RetroArch GLSL shader pack install/update is available in-app:** the
   display shader picker can trigger the libretro GLSL zip download, report
   progress, install into `shaders/libretro-glsl`, and rescan the shader library

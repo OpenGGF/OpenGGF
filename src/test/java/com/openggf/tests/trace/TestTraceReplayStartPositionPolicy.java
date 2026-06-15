@@ -246,6 +246,9 @@ class TestTraceReplayStartPositionPolicy {
                     route + " uses default native replay state; phase policy handles handoff rows.");
             assertEquals(0, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace),
                     route + " complete-run segments must not receive the sidekick seed-row prelude.");
+            assertEquals(1, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace),
+                    route + " complete-run segments must reproduce the native S3K setup Process_Sprites pass "
+                            + "before the frame-zero RNG seed is installed.");
             TraceExecutionPhase frameZeroPhase =
                     TraceReplayBootstrap.phaseForReplay(trace, null, trace.getFrame(0));
             TraceFrame frameZero = trace.getFrame(0);

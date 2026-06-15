@@ -244,11 +244,23 @@ public final class TraceReplayBootstrap {
      * <p>S2 Tornado title-card object preludes depend on the live ObjB2
      * routine/subtype loaded for the route and are therefore selected by
      * {@code TraceReplaySessionBootstrap}, not by trace zone metadata here.
+     *
+     * <p>S3K complete-run segments arm after the setup block has already
+     * called {@code SpawnLevelMainSprites}, {@code Process_Sprites}, and
+     * {@code Animate_Tiles}, but before the first replay-driven
+     * {@code LevelLoop} row (docs/skdisasm/sonic3k.asm:7849-7855,
+     * 7884-7894). Replaying the native object pass before applying the
+     * frame-zero RNG seed preserves ROM object initialization order without
+     * copying recorded SST data into the engine.
      */
     public static int levelObjectTitleCardPreludeFramesForTraceReplay(TraceData trace) {
         int s1PreludeFrames = resolveS1LevelStartObjectPreludeFrames(trace);
         if (s1PreludeFrames > 0) {
             return s1PreludeFrames;
+        }
+        int s3kCompleteRunPreludeFrames = resolveS3kCompleteRunObjectPreludeFrames(trace);
+        if (s3kCompleteRunPreludeFrames > 0) {
+            return s3kCompleteRunPreludeFrames;
         }
         return 0;
     }
@@ -308,6 +320,8 @@ public final class TraceReplayBootstrap {
 
     private static final int S1_LEVEL_START_OBJECT_PRELUDE_FRAMES = 1;
 
+    private static final int S3K_COMPLETE_RUN_SETUP_OBJECT_PRELUDE_FRAMES = 1;
+
     private static final int S3K_COMPLETE_RUN_SETUP_ANIMATED_TILE_PRELUDE_FRAMES = 1;
 
     private static int resolveS1LevelStartObjectPreludeFrames(TraceData trace) {
@@ -323,6 +337,12 @@ public final class TraceReplayBootstrap {
         TraceFrame firstFrame = trace.getFrame(0);
         return firstFrame.gameplayFrameCounter() == 1
                 ? S1_LEVEL_START_OBJECT_PRELUDE_FRAMES
+                : 0;
+    }
+
+    private static int resolveS3kCompleteRunObjectPreludeFrames(TraceData trace) {
+        return isS3kCompleteRunSegment(trace)
+                ? S3K_COMPLETE_RUN_SETUP_OBJECT_PRELUDE_FRAMES
                 : 0;
     }
 

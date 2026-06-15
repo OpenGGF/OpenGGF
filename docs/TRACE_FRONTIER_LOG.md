@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+## 2026-06-15 - S3K CNZ complete-run setup object prelude frontier advance
+
+- Scope: S3K complete-run trace bootstrap now reproduces the native setup
+  `Process_Sprites` object pass before applying the frame-zero RNG seed. This
+  keeps already-live setup objects, including CNZ balloons whose init routines
+  consume RNG, on the ROM object/RNG cadence without hydrating object state from
+  trace rows and without zone, route, or frame carve-outs.
+- Disassembly evidence:
+  - `docs/skdisasm/sonic3k.asm:7849-7855` shows the S3K level setup block
+    calling `SpawnLevelMainSprites`, `Process_Sprites`, and `Animate_Tiles`
+    before controls unlock and before the first replay-driven `LevelLoop`.
+  - `docs/skdisasm/sonic3k.asm:7884-7894` shows `LevelLoop` incrementing
+    `Level_frame_counter` and then calling `Process_Sprites` for normal
+    gameplay rows, separate from the setup pass.
+- Regression tests:
+  - `cmd /c mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestTraceReplayStartPositionPolicy#s3kCompleteRunSegmentsDoNotSeedFrameZeroTraceState" "-DfailIfNoTests=false" test`
+  - Result: passed, **1** test. The new assertion failed red before the fix
+    with object prelude frames `0` for `aiz_completerun`.
+- Focused replay:
+  - `cmd /c mvn -Dmse=off -Dtrace.frontierOnly=true -Dtrace.context.radius=20 -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzCompleteRunTraceReplay -DfailIfNoTests=false -Ds3k.rom.path=s3k.gen test`
+  - Result: expected-red trace with **8** bounded errors. The previous frame
+    **248** CNZ balloon/RNG launch frontier is fixed. The first release-blocking
+    error is now frame **355**: `x_speed` expected `-03E2`, actual `-04D0`
+    (`y_speed` also diverges on the same frame: expected `-05CC`, actual
+    `-050F`), with a separate bumper/monitor interaction cluster already in
+    view.
+  - A non-frontier-only expected-red run in the same checkout exhausted the
+    Surefire fork heap while retaining thousands of downstream mismatches. Use
+    `-Dtrace.frontierOnly=true` for frontier verification and sweeps unless the
+    full downstream report is explicitly needed.
+
 ## 2026-06-15 - Trace frontier-only sweep harness bounds failing replay memory
 
 - Scope: trace-replay harness infrastructure only. No engine state is hydrated
