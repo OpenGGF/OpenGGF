@@ -252,11 +252,21 @@ public final class TraceReplayBootstrap {
      * 7884-7894). Replaying the native object pass before applying the
      * frame-zero RNG seed preserves ROM object initialization order without
      * copying recorded SST data into the engine.
+     *
+     * <p>S3K Sonic+Tails level-select seed-frame traces have the same setup
+     * {@code Process_Sprites} pass before their first compared row, but keep
+     * Sonic's frame-0 movement as comparison-only state. Replay therefore runs
+     * the native level-object pass here and the sidekick-only tick separately,
+     * both before normal frame-1 driving begins.
      */
     public static int levelObjectTitleCardPreludeFramesForTraceReplay(TraceData trace) {
         int s1PreludeFrames = resolveS1LevelStartObjectPreludeFrames(trace);
         if (s1PreludeFrames > 0) {
             return s1PreludeFrames;
+        }
+        int s3kSeedFramePreludeFrames = resolveS3kSeedFrameObjectPreludeFrames(trace);
+        if (s3kSeedFramePreludeFrames > 0) {
+            return s3kSeedFramePreludeFrames;
         }
         int s3kCompleteRunPreludeFrames = resolveS3kCompleteRunObjectPreludeFrames(trace);
         if (s3kCompleteRunPreludeFrames > 0) {
@@ -342,6 +352,12 @@ public final class TraceReplayBootstrap {
 
     private static int resolveS3kCompleteRunObjectPreludeFrames(TraceData trace) {
         return isS3kCompleteRunSegment(trace)
+                ? S3K_COMPLETE_RUN_SETUP_OBJECT_PRELUDE_FRAMES
+                : 0;
+    }
+
+    private static int resolveS3kSeedFrameObjectPreludeFrames(TraceData trace) {
+        return usesSidekickTitleCardSeedFrame(trace)
                 ? S3K_COMPLETE_RUN_SETUP_OBJECT_PRELUDE_FRAMES
                 : 0;
     }

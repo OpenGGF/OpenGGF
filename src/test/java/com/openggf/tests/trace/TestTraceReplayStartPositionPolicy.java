@@ -184,6 +184,10 @@ class TestTraceReplayStartPositionPolicy {
                 TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace),
                 "S3K Sonic+Tails seed-frame traces need the single native sidekick setup tick "
                         + "observed before the first compared row.");
+        assertEquals(1,
+                TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace),
+                "The same seed-frame trace has already run the setup Process_Sprites pass "
+                        + "that initializes level objects such as Obj_CNZBalloon natively.");
         assertEquals(new TraceReplayBootstrap.ReplayStartState(1, 0),
                 TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, null),
                 "Frame 0 is still a strict seed comparison; normal full-frame driving starts "

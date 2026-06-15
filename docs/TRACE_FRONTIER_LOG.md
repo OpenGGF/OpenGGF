@@ -1,5 +1,51 @@
 # Trace Frontier Log
 
+## 2026-06-16 - S3K seed-frame setup object prelude advances CNZ route
+
+- Scope: S3K Sonic+Tails level-select seed-frame trace bootstrap only. These
+  traces already have the native setup `Process_Sprites` object pass in effect
+  before the first compared row, but Sonic's own frame-0 movement remains
+  comparison-only state. Replay now runs the native level-object setup pass
+  before normal frame-1 driving, separately from the existing sidekick-only
+  title-card prelude, without hydrating trace object/SST state.
+- Disassembly evidence: `docs/skdisasm/sonic3k.asm:66752-66775` initializes
+  `Obj_CNZBalloon` by consuming `Random_Number` into `angle(a0)`, and
+  `docs/skdisasm/sonic3k.asm:66783-66791` increments that angle every object
+  pass before calculating `y_pos`. The recorded CNZ frame-zero objects match the
+  reset-seed RNG bytes after the setup pass has already advanced them; starting
+  from the trace's frame-zero RNG seed without that pass moves the balloon phase
+  enough to create the frame-185 contact mismatch.
+- Focused regression test:
+  `cmd /c "mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=com.openggf.tests.trace.TestTraceReplayStartPositionPolicy#s3kGameplayTraceSeedsFrameZeroAfterSidekickOnlyPrelude -DfailIfNoTests=false test"`.
+  Result: passed, 1 test. The new assertion failed red before the fix with
+  object prelude frames `0` for the same seed-frame trace.
+- Focused frontier check:
+  `cmd /c "mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=20 -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red. `TestS3kCnzTraceReplay` advanced from frame 185
+  `y_speed` (expected `0x0370`, actual `-0700`) to frame 1558
+  `tails_cpu_interact` (expected `0x0003`, actual `0x0000`).
+- Full trace sweep:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dtrace.frontierOnly=true -Dtrace.context.radius=20 -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red, 90 tests, 50 failures, 1 error. Compared with the prior
+  90-test sweep at 53 failures and 1 error, the tracked S3K route frontier
+  advance is CNZ frame 185 -> 1558; the AIZ worker stack on the same branch is
+  also confirmed at `TestS3kAizTraceReplay` frame 14299
+  `tails_cpu_ctrl2_held` after its documented frame 5705 -> 14299 advance.
+  Other tracked S3K frontiers from the prior sweep remain in the same order:
+  `TestS3kMgzTraceReplay` frame 238 `status_byte`,
+  `TestS3kCnzCompleteRunTraceReplay` frame 355 `x_speed`,
+  `TestS3kMgzCompleteRunTraceReplay` frame 738 `rings`,
+  `TestS3kMhzCompleteRunTraceReplay` frame 966 `y`,
+  `TestS3kAizCompleteRunTraceReplay` frame 1095 `x_sub`,
+  `TestS3kHczCompleteRunTraceReplay` frame 1402 `tails_status_byte`,
+  `TestS3kIczCompleteRunTraceReplay` frame 1116 `tails_cpu_routine`,
+  and `TestS3kLbzCompleteRunTraceReplay` frame 1950 `status_byte`.
+- Cluster status: the earliest radius/rolling-hypothesis target was not a
+  radius bug; it was a setup object/RNG prelude issue and is advanced to a later
+  Tails-CPU frontier. Per the requested cluster order, the next target is the
+  exact `0x100` speed-delta cluster rather than following CNZ's new Tails-CPU
+  frontier yet.
+
 ## 2026-06-16 - S3K complete-run setup object restoration advances ICZ/LBZ
 
 - Scope: S3K complete-run trace bootstrap only. Complete-run segment setup now

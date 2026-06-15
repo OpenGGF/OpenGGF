@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K seed-frame traces replay the native setup object prelude:**
+  Sonic+Tails level-select seed-frame traces now run the setup
+  `Process_Sprites` object pass before the first replay-driven gameplay frame,
+  matching the ROM object/RNG cadence without copying recorded object state.
+  This advances the CNZ route frontier from frame 185's balloon-contact
+  `y_speed` mismatch to frame 1558's later Tails-CPU interaction frontier.
+
 - **S3K AIZ act-2 trace frontier f5705 -> f14299 (four ROM-cited sidekick/player/object fixes):**
   (1) the run->walk animation step no longer clears `Status_Push` (ROM keeps the
   `anim` byte at Walk for grounded movement; `sonic3k.asm:28122,28056`,
