@@ -104,6 +104,21 @@ public class TestRetroArchGlslCompat {
     }
 
     @Test
+    public void injectsFragmentOutputAfterLeadingDefinesAndExtensionDirectives() throws Exception {
+        String staged = RetroArchGlslCompat.stageSource("""
+                #define FRAGMENT
+                #extension GL_ARB_gpu_shader5 : enable
+                void main() {
+                    gl_FragColor = vec4(1.0);
+                }
+                """, "FRAGMENT");
+
+        assertTrue(staged.indexOf("#define FRAGMENT") < staged.indexOf("#extension GL_ARB_gpu_shader5 : enable"));
+        assertTrue(staged.indexOf("#extension GL_ARB_gpu_shader5 : enable") < staged.indexOf("out vec4 FragColor;"));
+        assertTrue(staged.indexOf("out vec4 FragColor;") < staged.indexOf("void main()"));
+    }
+
+    @Test
     public void skipsStageAliasDefinesAlreadyPresentInBody() throws Exception {
         String withFragmentDefine = RetroArchGlslCompat.stageSource("""
                 #define FRAGMENT

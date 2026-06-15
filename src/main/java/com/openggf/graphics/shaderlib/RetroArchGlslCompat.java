@@ -132,7 +132,8 @@ public final class RetroArchGlslCompat {
             }
 
             String line = body.substring(index, contentEnd).trim();
-            if (line.isEmpty() || line.startsWith("//") || line.startsWith("#extension")) {
+            if (line.isEmpty() || line.startsWith("//") || line.startsWith("#define")
+                    || line.startsWith("#extension")) {
                 index = nextIndex;
                 continue;
             }
