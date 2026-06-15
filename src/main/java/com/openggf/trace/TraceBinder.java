@@ -45,6 +45,11 @@ public class TraceBinder {
         this.tolerances = tolerances;
     }
 
+    /** Return the latest comparison captured for a frame, if any. */
+    public FrameComparison comparisonForFrame(int frame) {
+        return comparisonsByFrame.get(frame);
+    }
+
     /**
      * Package-private hook used only by tests in this package to flip the
      * native-prelude-mode signal for synthetic {@link TraceData} fixtures
@@ -980,4 +985,3 @@ public class TraceBinder {
         }
     }
 }
-

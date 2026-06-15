@@ -129,8 +129,9 @@ Work is ongoing across all three games. Recent branch work spans S3K route
 stabilization (AIZ, HCZ, CNZ, MGZ, ICZ, Mushroom Hill, and Launch Base), an S3K complete-run per-zone
 trace suite (one Sonic+Tails AIZ->Doomsday movie segmented per zone, each trace
 spanning the act1->act2 transition through the zone-exit handoff) with
-ROM-accurate in-game pause modelling and explicit trace-entry capability
-metadata, animated ROM-derived master-title game previews that replace the
+ROM-accurate in-game pause modelling, explicit trace-entry capability metadata,
+and a frontier-only replay mode that bounds failing trace sweeps to the first
+divergence plus diagnostic context, animated ROM-derived master-title game previews that replace the
 bundled title emblem resource, S2 trace-frontier closures (Sky Chase and Casino
 Night
 level-select replays), object-physics standardization onto shared contracts,

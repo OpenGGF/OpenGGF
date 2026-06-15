@@ -1,5 +1,114 @@
 # Trace Frontier Log
 
+## 2026-06-15 - Trace frontier-only sweep harness bounds failing replay memory
+
+- Scope: trace-replay harness infrastructure only. No engine state is hydrated
+  from trace data, and no ROM-modeled behavior changed. The replay loop now has
+  an opt-in `-Dtrace.frontierOnly=true` mode that stops after the first
+  divergence plus `trace.context.radius` frames, and assertion output uses a
+  compact one-line summary while preserving full JSON/context reports on disk.
+- Selection context: after `adebf201f` on worktree
+  `.worktrees/trace-frontier-clusters`, the previous broad `*TraceReplay` sweep
+  had stopped after 65 tests with `Java heap space: failed reallocation of
+  scalar replaced objects`, leaving later S3K frontiers underreported. The
+  first S3K complete-run repro that previously exhausted heap,
+  `TestS3kCnzCompleteRunTraceReplay`, completed under `MAVEN_OPTS=-Xmx4g` with
+  `-Dtrace.frontierOnly=true` and reported the expected-red first frontier:
+  frame 248 `y_speed` ROM=`-06C8`, engine=`-0700`.
+- S3K frontier batch command:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dtrace.frontierOnly=true -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay,com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay,com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay,com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay,com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay,com.openggf.tests.trace.s3k.TestS3kMgzTraceReplay,com.openggf.tests.trace.s3k.TestS3kMhzCompleteRunTraceReplay -DfailIfNoTests=false -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red build failure, no heap exhaustion. Current S3K first
+  frontiers from the batch: `s3k_cnz1` frame 185 `y_speed`,
+  `s3k_mgz1` frame 238 `status_byte`, `s3k_mhz1` frame 966 `y`,
+  `s3k_hcz1` frame 1402 `tails_status_byte`, `s3k_lbz1` frame 1950
+  `status_byte`, `s3k_icz1` frame 1986 `tails_status_byte`.
+- Focused harness verification:
+  `cmd /c "mvn -Dmse=off -Dtest=com.openggf.tests.trace.TestFrontierReplayStopper,com.openggf.tests.trace.TestDivergenceReport -DfailIfNoTests=false test"`:
+  passed, 21 tests.
+
+## 2026-06-15 - S1 credits LZ3 Obj0B pole subpixel preservation (f285 -> green)
+
+- Scope: S1 credits demo replay `TestS1Credits03Lz3TraceReplay` advanced past
+  the frame-285 `x_sub` divergence and is now green. No trace data is written
+  into engine state; the fix models ROM Obj0B word writes to the player's native
+  position fields.
+- Selection context: after commit `53344d851` on worktree
+  `.worktrees/aiz-frontier-2`, a broad `*TraceReplay` sweep with
+  `cmd /c "mvn -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`
+  stopped after 65 tests with `Java heap space: failed reallocation of scalar
+  replaced objects`, but the completed reports identified the earliest current
+  completed frontier as `s1_credits_03_lz3` frame 285 `x_sub` ROM=0x6400,
+  engine=0x0000. The user-specified SBZ3 focused replay was separately
+  reconfirmed green on this branch.
+- Root cause: the engine's `Sonic1PoleThatBreaksObjectInstance` used
+  `setCentreX`/`setCentreY` for player position writes, which zero the sprite's
+  subpixel fields. ROM Obj0B uses word-only writes: `.grab` does
+  `move.w d0,obX(a1)` after adding `$14` to the pole X, while `.moveup` and
+  `.movedown` use `subq.w`/`addq.w` and clamp with `move.w d0,obY(a1)`
+  (`docs/s1disasm/_incObj/0B LZ Pole that Breaks.asm`). Those writes update the
+  pixel word only and preserve `x_sub`/`y_sub`.
+- Fix: Obj0B now calls `setCentreXPreserveSubpixel` on grab and
+  `setCentreYPreserveSubpixel` while climbing. Added a focused unit guard that
+  seeds `x_sub=0x6400,y_sub=0x9000` and asserts both survive the grab/climb
+  path.
+- Focused verification:
+  - `cmd /c "mvn -Dmse=off -Dtest=com.openggf.game.sonic1.objects.TestSonic1PoleThatBreaksObjectInstance -DfailIfNoTests=false test"`:
+    passed, 10 tests.
+  - `cmd /c "mvn -Dmse=off -Dtest=com.openggf.tests.trace.s1.TestS1Credits03Lz3TraceReplay -DfailIfNoTests=false test"`:
+    passed, credits LZ3 now reports "All frames match trace. No divergences."
+  - `cmd /c "mvn -Dmse=off -Dtest=com.openggf.tests.trace.s1.TestS1Lz3CompleteRunTraceReplay,com.openggf.tests.trace.s1.TestS1Sbz3CompleteRunTraceReplay -DfailIfNoTests=false test"`:
+    SBZ3 passed; LZ3 complete-run remains expected-red at frame 466 `y`
+    ROM=0x0807 engine=0x0007, a separate Y-wrap/position frontier.
+
+## 2026-06-15 - S3K AIZ1 vertical-spring inclusive right edge / CPU-Tails Status_Push (f4234 -> f5705)
+
+- Scope: S3K AIZ Act 1 focused replay `TestS3kAizTraceReplay` advanced past the
+  CPU-sidekick (Tails) `tails_status_byte` divergence at frame 4234. No
+  zone/route/frame carve-outs and no trace write-back; the fix corrects the ROM
+  `SolidObject_cont` horizontal-overlap right-edge inclusivity for the S3K Spring
+  object.
+- First divergence (baseline): frame 4234, `tails_status_byte` ROM=0x0020
+  (Status_Push) engine=0x0000. Error count 1549.
+- Command: `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" test "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen"`
+  (worktree `.worktrees/aiz-frontier-2`, branch `bugfix/ai-aiz-frontier-f4234`,
+  develop HEAD bc42a064d).
+- ROM ground truth (BizHawk EmuHawk on the committed AIZ bk2, read-only
+  diagnostic `tools/bizhawk/diag_tails_push_source.lua`): around emu frames
+  4743-4746 the vertical Up-spring at (0x2850, 0x02EC) (object `a0=0xB1BC`)
+  side-contacts CPU Tails (`a1=0xB04A`) via `SolidObjectFull2_1P` ->
+  `SolidObject_cont` -> `loc_1E06E` `bset #Status_Push,status(a1)`
+  (sonic3k.asm:41394-41401, 41468-41495). Tails decelerates from a leftward run,
+  comes to rest with its centre exactly on the spring's right edge
+  (x = spring_x + 0x1B, half-width 0x1B), then accelerates away; ROM holds
+  Status_Push across those frames (the spring SolidObject runs after Tails'
+  movement in object order and re-sets the bit the same frame Tails'
+  facing-flip clear dropped it).
+- Root cause: `SolidObject_cont` gates the X overlap with `cmp.w d3,d0 / bhi.w`
+  (d0 = (x_pos(a1)-x_pos(a0))+d1, d3 = d1*2), so the right edge is INCLUSIVE
+  (d0 == d1*2 is still a contact). The engine's contact gate treated the right
+  edge as exclusive for the vertical spring (`usesInclusiveRightEdge()` returned
+  true only for the horizontal variant), so the moment Tails' centre reached the
+  edge the engine dropped the contact and never re-set Status_Push.
+- Fix: `Sonic3kSpringObjectInstance.usesInclusiveRightEdge()` now returns true
+  for ALL spring variants (every Obj_Spring reaches SolidObject_cont via
+  SolidObjectFull2_1P). Cross-game ROM check: S2 `SolidObject_LeftRight ->
+  SolidObject_AtEdge` (s2.asm:35407-35439) and S1 `Solid_AlignToSide`
+  (_incObj/sub SolidObject.asm:218-242) share the same unconditional-grounded
+  push and inclusive `bhi` edge; change scoped to the S3K spring object only, no
+  shared/global default flipped.
+- Result: `s3k_aiz1` advances to frame **5705** `tails_status_byte` ROM=0x0020
+  engine=0x0000 (a separate AIZ2-reload solid-push case, `cp aiz2_reload_resume`).
+  Error count 1549 -> 1548.
+- Non-regression (same command set, `-Ds3k.rom.path=s3k.gen`): AizCompleteRun
+  f1095 `x_speed`, HczCompleteRun f1402 `tails_status_byte`, IczCompleteRun
+  f1986 `tails_status_byte`, MhzCompleteRun f966 `y`; all unchanged from
+  baseline. `TestS3kCnzTraceReplay` / `TestS3kMgzTraceReplay` single-act
+  alignment errors (trace frames 33271 / 39672) verified identical with and
+  without the fix via stash A/B. Must-keep-green `TestS3kAiz1SkipHeadless`,
+  `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
+  `TestSonic3kDecodingUtils` all pass. S1 `TestS1Ghz1TraceReplay` and S2
+  `TestS2Ehz1TraceReplay` spot-checks green.
+
 ## 2026-06-15 - S3K AIZ1 collapsing-platform jump-frame Status_OnObj (f3317 -> f4234)
 
 - Scope: S3K AIZ Act 1 focused replay `TestS3kAizTraceReplay` advanced past the

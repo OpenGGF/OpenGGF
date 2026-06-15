@@ -96,7 +96,12 @@ class TestSonic3kSpringObjectInstance {
         SolidRoutineProfile horizontalProfile = horizontal.getSolidRoutineProfile();
 
         assertEquals(SolidRoutineKind.FULL_SOLID, verticalProfile.kind());
-        assertFalse(verticalProfile.inclusiveRightEdge());
+        // ROM SolidObject_cont uses an inclusive right edge for every Obj_Spring
+        // variant (cmp.w d3,d0 / bhi.w, sonic3k.asm:41394-41401), not only the
+        // horizontal one. AIZ1 CPU-Tails f4234 proved the vertical spring keeps
+        // SolidObject side-contact/Status_Push alive when Tails' centre sits on
+        // the spring's exact right edge.
+        assertTrue(verticalProfile.inclusiveRightEdge());
         assertTrue(verticalProfile.bypassesOffscreenSolidGate());
         assertEquals(SolidRoutineKind.FULL_SOLID, horizontalProfile.kind());
         assertTrue(horizontalProfile.inclusiveRightEdge());
@@ -200,7 +205,7 @@ class TestSonic3kSpringObjectInstance {
     }
 
     @Test
-    void horizontalSpringOptsIntoInclusiveSolidRightEdge() throws Exception {
+    void allSpringVariantsUseInclusiveSolidRightEdge() throws Exception {
         Sonic3kSpringObjectInstance horizontal = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.SPRING, 0x10, 0, false, 0));
         horizontal.setServices(new TestObjectServices().withGameState(new GameStateManager()));
@@ -211,9 +216,13 @@ class TestSonic3kSpringObjectInstance {
         vertical.setServices(new TestObjectServices().withGameState(new GameStateManager()));
         invoke(vertical, "ensureInitialized");
 
+        // Every Obj_Spring variant resolves solidity through SolidObjectFull2_1P
+        // -> SolidObject_cont, whose x-window rejects only with bhi (d0 > d1*2),
+        // making the right edge inclusive (sonic3k.asm:41394-41401). AIZ1 f4234.
         assertEquals(true, horizontal.usesInclusiveRightEdge(),
                 "Obj_Spring_Horizontal uses SolidObjectFull2_1P, whose x-window rejects with bhi");
-        assertEquals(false, vertical.usesInclusiveRightEdge());
+        assertEquals(true, vertical.usesInclusiveRightEdge(),
+                "Obj_Spring (vertical) also reaches SolidObject_cont's inclusive bhi x-window");
     }
 
     @Test

@@ -125,8 +125,9 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
 
-        // move.w d0,obX(a1)
-        player.setCentreX((short) grabX);
+        // ROM Obj0B writes only obX(a1)'s pixel word; x_sub is preserved.
+        // docs/s1disasm/_incObj/0B LZ Pole that Breaks.asm: .grab move.w d0,obX(a1)
+        player.setCentreXPreserveSubpixel((short) grabX);
 
         // bclr #0,obStatus(a1)
         player.setDirection(Direction.RIGHT);
@@ -168,7 +169,7 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
             if (newY < minY) {
                 newY = minY;
             }
-            player.setCentreY((short) newY);
+            player.setCentreYPreserveSubpixel((short) newY);
         }
 
         int maxY = minY + CLIMB_RANGE;
@@ -177,7 +178,7 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
             if (newY > maxY) {
                 newY = maxY;
             }
-            player.setCentreY((short) newY);
+            player.setCentreYPreserveSubpixel((short) newY);
         }
 
         if (player.isJumpJustPressed()) {

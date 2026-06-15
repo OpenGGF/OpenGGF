@@ -72,6 +72,25 @@ public class TestDivergenceReport {
     }
 
     @Test
+    void testCompactSummaryOmitsInlineDiagnostics() {
+        FrameComparison frame = makeComparisonWithDiagnostics(5, "x_speed",
+            Severity.ERROR, "0x0100", "0x0200",
+            "sub=(0000,5000) rtn=02 cam=(1308,0390)",
+            "eng-player anim=00 frame=07 tick=07 vel=(0200,0000)");
+        DivergenceReport report = new DivergenceReport(List.of(frame));
+
+        String fullSummary = report.toSummary();
+        String compactSummary = report.toCompactSummary();
+
+        assertTrue(fullSummary.contains("rom={sub=(0000,5000)"));
+        assertTrue(compactSummary.contains("1 error"));
+        assertTrue(compactSummary.contains("frame 5"));
+        assertTrue(compactSummary.contains("x_speed mismatch"));
+        assertFalse(compactSummary.contains("rom={"));
+        assertFalse(compactSummary.contains("engine={"));
+    }
+
+    @Test
     void testContextWindow() {
         FrameComparison f0 = makeMatchComparison(0, (short) 0x50, (short) 0x3B0);
         FrameComparison f1 = makeMatchComparison(1, (short) 0x51, (short) 0x3B0);
@@ -280,6 +299,15 @@ public class TestDivergenceReport {
         return new FrameComparison(frame, fields);
     }
 
+    private FrameComparison makeComparisonWithDiagnostics(int frame, String field,
+            Severity severity, String expected, String actual,
+            String romDiagnostics, String engineDiagnostics) {
+        Map<String, FieldComparison> fields = new LinkedHashMap<>();
+        fields.put(field, new FieldComparison(field, expected, actual, severity,
+            severity == Severity.MATCH ? 0 : 1));
+        return new FrameComparison(frame, fields, romDiagnostics, engineDiagnostics);
+    }
+
     private FrameComparison makeMatchComparison(int frame, short x, short y) {
         Map<String, FieldComparison> fields = new LinkedHashMap<>();
         String xHex = String.format("0x%04X", x & 0xFFFF);
@@ -414,4 +442,3 @@ public class TestDivergenceReport {
         return TraceData.load(dir);
     }
 }
-

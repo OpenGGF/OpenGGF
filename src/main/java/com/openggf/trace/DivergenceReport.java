@@ -73,6 +73,20 @@ public class DivergenceReport {
     }
 
     public String toSummary() {
+        return buildSummary(true);
+    }
+
+    /**
+     * Compact one-line summary for assertion messages and sweep logs.
+     * Full ROM/engine diagnostics are still written to JSON and context files
+     * by callers; keeping this short avoids duplicating large context windows
+     * into Surefire XML and console buffers during full trace sweeps.
+     */
+    public String toCompactSummary() {
+        return buildSummary(false);
+    }
+
+    private String buildSummary(boolean includeInlineDiagnostics) {
         int errorCount = totalErrorCount();
         int warningCount = totalWarningCount();
 
@@ -94,17 +108,19 @@ public class DivergenceReport {
 
         BootstrapDivergence firstBootstrapError = firstBootstrapDivergence(BootstrapDivergence.Severity.ERROR);
         if (firstBootstrapError != null) {
-            appendBootstrapSummary(sb, "error", firstBootstrapError);
+            appendBootstrapSummary(sb, "error", firstBootstrapError, includeInlineDiagnostics);
         } else if (!errors.isEmpty()) {
             DivergenceGroup first = errors.get(0);
             sb.append(String.format(" First error: frame %d -- %s mismatch (expected=%s, actual=%s)",
                 first.startFrame(), first.field(), first.expectedAtStart(), first.actualAtStart()));
-            appendFirstErrorDiagnostics(sb, first);
+            if (includeInlineDiagnostics) {
+                appendFirstErrorDiagnostics(sb, first);
+            }
         } else {
             BootstrapDivergence firstBootstrapWarning =
                     firstBootstrapDivergence(BootstrapDivergence.Severity.WARNING);
             if (firstBootstrapWarning != null) {
-                appendBootstrapSummary(sb, "warning", firstBootstrapWarning);
+                appendBootstrapSummary(sb, "warning", firstBootstrapWarning, includeInlineDiagnostics);
             }
         }
 
@@ -113,10 +129,13 @@ public class DivergenceReport {
     }
 
     private void appendBootstrapSummary(StringBuilder sb, String label,
-                                        BootstrapDivergence divergence) {
+                                        BootstrapDivergence divergence,
+                                        boolean includeInlineDiagnostics) {
         sb.append(String.format(" First bootstrap %s: frame 0 -- %s mismatch (expected=%s, actual=%s)",
             label, divergence.field(), divergence.expected(), divergence.actual()));
-        if (divergence.context() != null && !divergence.context().isBlank()) {
+        if (includeInlineDiagnostics
+                && divergence.context() != null
+                && !divergence.context().isBlank()) {
             sb.append(" ").append(divergence.context());
         }
     }
