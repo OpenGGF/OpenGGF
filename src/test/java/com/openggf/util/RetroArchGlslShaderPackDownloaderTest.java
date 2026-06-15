@@ -15,10 +15,12 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -26,6 +28,12 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.function.Predicate;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -137,6 +145,42 @@ public class RetroArchGlslShaderPackDownloaderTest {
 
         assertEquals(UpdateState.UPDATE_AVAILABLE, update.state());
         assertEquals("\"remote\"", update.etag());
+    }
+
+    @Test
+    public void defaultTransportFollowsNormalRedirects() {
+        assertEquals(HttpClient.Redirect.NORMAL,
+                RetroArchGlslShaderPackDownloader.newDefaultHttpClient().followRedirects());
+    }
+
+    @Test
+    public void concurrentDownloadsForSameRootSerializeBeforeTransportAndReplace() throws Exception {
+        byte[] firstArchive = zip(Map.of("glsl-shaders-master/first.glslp", "shader0 = first.glsl\n"));
+        byte[] secondArchive = zip(Map.of("glsl-shaders-master/second.glslp", "shader0 = second.glsl\n"));
+        BlockingTransport transport = new BlockingTransport(firstArchive, secondArchive);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<InstallResult> first = executor.submit(() -> new RetroArchGlslShaderPackDownloader(transport)
+                    .download(tempDir, ProgressListener.NONE));
+            assertTrue(transport.awaitFirstEntered(), "first download should reach transport");
+
+            Future<InstallResult> second = executor.submit(() -> new RetroArchGlslShaderPackDownloader(transport)
+                    .download(tempDir, ProgressListener.NONE));
+            Thread.sleep(150);
+
+            assertEquals(1, transport.startedRequests(),
+                    "second download should wait on the install lock before contacting transport");
+
+            transport.releaseFirst();
+            assertTrue(first.get(5, TimeUnit.SECONDS).downloaded());
+            assertTrue(second.get(5, TimeUnit.SECONDS).downloaded());
+            assertEquals(2, transport.startedRequests());
+            assertTrue(Files.exists(tempDir.resolve("libretro-glsl/second.glslp")));
+        } finally {
+            transport.releaseFirst();
+            executor.shutdownNow();
+            assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+        }
     }
 
     @Test
@@ -261,5 +305,43 @@ public class RetroArchGlslShaderPackDownloaderTest {
 
     private record ResponseRule(Predicate<HttpRequest> matches, int statusCode, Map<String, List<String>> headers,
                                 byte[] body) {
+    }
+
+    private static final class BlockingTransport implements RetroArchGlslShaderPackDownloader.HttpTransport {
+        private final List<byte[]> bodies;
+        private final CountDownLatch firstEntered = new CountDownLatch(1);
+        private final CountDownLatch releaseFirst = new CountDownLatch(1);
+        private final AtomicInteger startedRequests = new AtomicInteger();
+
+        BlockingTransport(byte[] firstBody, byte[] secondBody) {
+            this.bodies = Collections.synchronizedList(new ArrayList<>(List.of(firstBody, secondBody)));
+        }
+
+        boolean awaitFirstEntered() throws InterruptedException {
+            return firstEntered.await(5, TimeUnit.SECONDS);
+        }
+
+        void releaseFirst() {
+            releaseFirst.countDown();
+        }
+
+        int startedRequests() {
+            return startedRequests.get();
+        }
+
+        @Override
+        public HttpResponse send(HttpRequest request) throws IOException, InterruptedException {
+            int requestNumber = startedRequests.incrementAndGet();
+            if (requestNumber == 1) {
+                firstEntered.countDown();
+                releaseFirst.await();
+            }
+            if (bodies.isEmpty()) {
+                throw new IOException("unexpected extra request");
+            }
+            byte[] body = bodies.remove(0);
+            return new HttpResponse(200, headers("ETag", "\"etag-" + requestNumber + "\""),
+                    new ByteArrayInputStream(body), body.length);
+        }
     }
 }

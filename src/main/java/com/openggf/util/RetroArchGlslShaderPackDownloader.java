@@ -5,9 +5,13 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.channels.FileLockInterruptionException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -18,6 +22,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
@@ -30,6 +36,8 @@ public final class RetroArchGlslShaderPackDownloader {
     public static final String METADATA_FILE_NAME = ".openggf-libretro-glsl.properties";
 
     private static final int BUFFER_SIZE = 64 * 1024;
+    private static final String LOCK_FILE_NAME = ".openggf-libretro-glsl.lock";
+    private static final ConcurrentHashMap<Path, ReentrantLock> JVM_LOCKS = new ConcurrentHashMap<>();
 
     private final HttpTransport transport;
 
@@ -44,6 +52,31 @@ public final class RetroArchGlslShaderPackDownloader {
     public InstallResult download(Path shaderRoot, ProgressListener progress) throws ShaderPackDownloadException {
         ProgressListener listener = progressOrNone(progress);
         Path root = normalizeRoot(shaderRoot);
+        return withInstallLock(root, () -> downloadLocked(root, listener));
+    }
+
+    public InstallResult downloadIfNewer(Path shaderRoot, ProgressListener progress) throws ShaderPackDownloadException {
+        ProgressListener listener = progressOrNone(progress);
+        Path root = normalizeRoot(shaderRoot);
+        return withInstallLock(root, () -> {
+            UpdateStatus status = checkForUpdateLocked(root, listener);
+            if (status.state() == UpdateState.UP_TO_DATE) {
+                return new InstallResult(root.resolve(INSTALL_DIR_NAME), false, status.etag(), status.lastModified());
+            }
+            return downloadLocked(root, listener);
+        });
+    }
+
+    public UpdateStatus checkForUpdate(Path shaderRoot, ProgressListener progress) throws ShaderPackDownloadException {
+        ProgressListener listener = progressOrNone(progress);
+        Path root = normalizeRoot(shaderRoot);
+        if (!Files.exists(root)) {
+            return new UpdateStatus(UpdateState.NOT_INSTALLED, null, null);
+        }
+        return withInstallLock(root, () -> checkForUpdateLocked(root, listener));
+    }
+
+    private InstallResult downloadLocked(Path root, ProgressListener listener) throws ShaderPackDownloadException {
         Path installRoot = root.resolve(INSTALL_DIR_NAME);
         Path stagingRoot = root.resolve(".openggf-libretro-glsl-staging-" + UUID.randomUUID());
         Path archivePart = stagingRoot.resolve("archive.zip.part");
@@ -83,18 +116,7 @@ public final class RetroArchGlslShaderPackDownloader {
         }
     }
 
-    public InstallResult downloadIfNewer(Path shaderRoot, ProgressListener progress) throws ShaderPackDownloadException {
-        Path root = normalizeRoot(shaderRoot);
-        UpdateStatus status = checkForUpdate(root, progress);
-        if (status.state() == UpdateState.UP_TO_DATE) {
-            return new InstallResult(root.resolve(INSTALL_DIR_NAME), false, status.etag(), status.lastModified());
-        }
-        return download(root, progress);
-    }
-
-    public UpdateStatus checkForUpdate(Path shaderRoot, ProgressListener progress) throws ShaderPackDownloadException {
-        ProgressListener listener = progressOrNone(progress);
-        Path root = normalizeRoot(shaderRoot);
+    private UpdateStatus checkForUpdateLocked(Path root, ProgressListener listener) throws ShaderPackDownloadException {
         Path installRoot = root.resolve(INSTALL_DIR_NAME);
         Path metadataPath = installRoot.resolve(METADATA_FILE_NAME);
         if (!Files.isDirectory(installRoot) || !Files.exists(metadataPath)) {
@@ -133,6 +155,30 @@ public final class RetroArchGlslShaderPackDownloader {
             return new UpdateStatus(state, remoteEtag, remoteLastModified);
         } catch (IOException ex) {
             throw failure(FailureReason.NETWORK, "Failed to close update-check response", ex);
+        }
+    }
+
+    private <T> T withInstallLock(Path root, LockOperation<T> operation) throws ShaderPackDownloadException {
+        createDirectory(root);
+        Path lockPath = root.resolve(LOCK_FILE_NAME);
+        ReentrantLock jvmLock = JVM_LOCKS.computeIfAbsent(root, ignored -> new ReentrantLock());
+        boolean jvmLockHeld = false;
+        try {
+            jvmLock.lockInterruptibly();
+            jvmLockHeld = true;
+            try (FileChannel channel = FileChannel.open(lockPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+                 FileLock ignored = channel.lock()) {
+                return operation.run();
+            }
+        } catch (InterruptedException | FileLockInterruptionException ex) {
+            Thread.currentThread().interrupt();
+            throw failure(FailureReason.INTERRUPTED, "Interrupted while waiting for shader pack install lock", ex);
+        } catch (IOException ex) {
+            throw failure(FailureReason.DISK, "Failed to lock shader pack install root " + root, ex);
+        } finally {
+            if (jvmLockHeld) {
+                jvmLock.unlock();
+            }
         }
     }
 
@@ -346,6 +392,12 @@ public final class RetroArchGlslShaderPackDownloader {
         return progress == null ? ProgressListener.NONE : progress;
     }
 
+    static HttpClient newDefaultHttpClient() {
+        return HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build();
+    }
+
     private static ShaderPackDownloadException failure(FailureReason reason, String message) {
         return new ShaderPackDownloadException(reason, message);
     }
@@ -427,6 +479,11 @@ public final class RetroArchGlslShaderPackDownloader {
     private record DownloadIdentity(String etag, String lastModified) {
     }
 
+    @FunctionalInterface
+    private interface LockOperation<T> {
+        T run() throws ShaderPackDownloadException;
+    }
+
     public record HttpRequest(String method, URI uri, Map<String, String> headers) {
         public HttpRequest {
             method = Objects.requireNonNull(method, "method");
@@ -474,7 +531,7 @@ public final class RetroArchGlslShaderPackDownloader {
     }
 
     private static final class JavaHttpTransport implements HttpTransport {
-        private final HttpClient client = HttpClient.newHttpClient();
+        private final HttpClient client = newDefaultHttpClient();
 
         @Override
         public HttpResponse send(HttpRequest request) throws IOException, InterruptedException {
