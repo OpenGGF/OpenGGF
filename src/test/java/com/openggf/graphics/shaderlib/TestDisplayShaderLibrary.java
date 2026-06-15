@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestDisplayShaderLibrary {
 
@@ -65,6 +66,19 @@ public class TestDisplayShaderLibrary {
     }
 
     @Test
+    public void cgpCgReferenceHidesPairedGlslSibling() throws IOException {
+        Path root = tempDir.resolve("display-shaders");
+        write(root.resolve("BizHawk/BizScanlines.cgp"), "shader0 = BizScanlines.cg\n");
+        write(root.resolve("BizHawk/BizScanlines.cg"), "void main() {}\n");
+        write(root.resolve("BizHawk/BizScanlines.glsl"), "void main() {}\n");
+        write(root.resolve("BizHawk/Other.glsl"), "void main() {}\n");
+
+        DisplayShaderLibrary library = DisplayShaderLibrary.scan(root);
+
+        assertEquals(List.of("Off", "BizHawk/BizScanlines", "BizHawk/Other"), labels(library));
+    }
+
+    @Test
     public void hiddenDirectoriesAndSlangAreIgnored() throws IOException {
         Path root = tempDir.resolve("display-shaders");
         write(root.resolve(".hidden/secret.glslp"), "shader0 = secret.glsl\n");
@@ -99,6 +113,21 @@ public class TestDisplayShaderLibrary {
 
         assertEquals(1, library.indexOfRelativePath("./Custom/warm.glsl"));
         assertEquals(1, library.indexOfRelativePath("Custom/../Custom/warm.glsl"));
+    }
+
+    @Test
+    public void caseInsensitiveSortUsesNaturalPathTieBreaker() {
+        DisplayShaderPresetRef upper = new DisplayShaderPresetRef(
+                DisplayShaderPresetRef.Kind.GLSL,
+                "Shaders/Warm.glsl",
+                Path.of("Shaders", "Warm.glsl"));
+        DisplayShaderPresetRef lower = new DisplayShaderPresetRef(
+                DisplayShaderPresetRef.Kind.GLSL,
+                "shaders/warm.glsl",
+                Path.of("shaders", "warm.glsl"));
+
+        assertEquals(0, String.CASE_INSENSITIVE_ORDER.compare(upper.relativePath(), lower.relativePath()));
+        assertTrue(DisplayShaderLibrary.compareEntriesForScanOrder(upper, lower) < 0);
     }
 
     private static List<String> labels(DisplayShaderLibrary library) {

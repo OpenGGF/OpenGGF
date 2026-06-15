@@ -16,6 +16,9 @@ import java.util.stream.Stream;
 
 public final class DisplayShaderLibrary {
     private static final Pattern SHADER_REF_PATTERN = Pattern.compile("^\\s*shader\\d+\\s*=\\s*(.+?)\\s*$");
+    private static final Comparator<DisplayShaderPresetRef> ENTRY_ORDER =
+            Comparator.comparing(DisplayShaderPresetRef::relativePath, String.CASE_INSENSITIVE_ORDER)
+                    .thenComparing(DisplayShaderPresetRef::relativePath);
 
     private final List<DisplayShaderPresetRef> entries;
 
@@ -59,7 +62,7 @@ public final class DisplayShaderLibrary {
             selectableEntries.add(new DisplayShaderPresetRef(kind, relativePath(normalizedRoot, path), path));
         }
 
-        selectableEntries.sort(Comparator.comparing(DisplayShaderPresetRef::relativePath, String.CASE_INSENSITIVE_ORDER));
+        selectableEntries.sort(DisplayShaderLibrary::compareEntriesForScanOrder);
 
         List<DisplayShaderPresetRef> entries = new ArrayList<>();
         entries.add(DisplayShaderPresetRef.OFF);
@@ -90,6 +93,10 @@ public final class DisplayShaderLibrary {
             }
         }
         return 0;
+    }
+
+    static int compareEntriesForScanOrder(DisplayShaderPresetRef left, DisplayShaderPresetRef right) {
+        return ENTRY_ORDER.compare(left, right);
     }
 
     private static DisplayShaderLibrary offOnly() {
@@ -173,11 +180,24 @@ public final class DisplayShaderLibrary {
                 continue;
             }
             Path resolved = parent.resolve(rawRef).toAbsolutePath().normalize();
-            if (resolved.startsWith(root) && ".glsl".equals(extension(resolved))) {
+            if (!resolved.startsWith(root)) {
+                continue;
+            }
+            String extension = extension(resolved);
+            if (".glsl".equals(extension)) {
                 refs.add(resolved);
+            } else if (".cg".equals(extension)) {
+                refs.add(replaceExtension(resolved, ".glsl"));
             }
         }
         return refs;
+    }
+
+    private static Path replaceExtension(Path path, String replacementExtension) {
+        String fileName = path.getFileName().toString();
+        int dot = fileName.lastIndexOf('.');
+        String baseName = dot < 0 ? fileName : fileName.substring(0, dot);
+        return path.resolveSibling(baseName + replacementExtension).toAbsolutePath().normalize();
     }
 
     private static String stripOptionalQuotes(String value) {
