@@ -16,6 +16,10 @@ public class DisplayShaderPresetLoader {
     private static final Pattern BIZHAWK_FRAGMENT = Pattern.compile("(?im)^\\s*#\\s*ifdef\\s+FRAGMENT\\b");
     private static final Pattern RETROARCH_VERTEX = Pattern.compile("(?im)^\\s*#\\s*if\\s+defined\\s*\\(\\s*VERTEX\\s*\\)");
     private static final Pattern RETROARCH_FRAGMENT = Pattern.compile("(?im)^\\s*#\\s*elif\\s+defined\\s*\\(\\s*FRAGMENT\\s*\\)");
+    private static final Pattern UNDERSCORE_VERTEX = Pattern.compile("(?im)\\b__vertex__\\b");
+    private static final Pattern UNDERSCORE_FRAGMENT = Pattern.compile("(?im)\\b__fragment__\\b");
+    private static final Pattern COMPAT_VERTEX = Pattern.compile("(?im)\\bCOMPAT_VERTEX\\b");
+    private static final Pattern COMPAT_FRAGMENT = Pattern.compile("(?im)\\bCOMPAT_FRAGMENT\\b");
     private static final Pattern GLSLP_UNSUPPORTED_LINE = Pattern.compile(
             "(?im)^\\s*(?:textures?|texture\\d+|lut\\d*|history\\w*|feedback\\w*|previous\\w*|prev\\w*|preset|reference)\\s*=");
     private static final Pattern GLSLP_REFERENCE_DIRECTIVE = Pattern.compile("(?im)^\\s*#\\s*reference\\b");
@@ -24,15 +28,18 @@ public class DisplayShaderPresetLoader {
     private static final Pattern GLSLP_EXTERNAL_TEXTURE_SOURCE = Pattern.compile(
             "(?im)^\\s*uniform\\s+sampler(?:1D|2D|3D|Cube)\\s+\\w*(?:LUT|Lookup|External)\\w*\\s*(?:\\[[^\\]]+])?\\s*;");
     private static final List<String> SCALER_SEGMENTS = List.of(
-            "scalenx", "scalehq", "xbr", "xbrz", "xsal", "xsoft", "hq2x");
+            "scalenx", "scalehq", "xbr", "xbrz", "xsal", "xsoft", "hq2x", "hq4x", "scalefx", "omniscale");
 
     public DisplayShaderPreset load(DisplayShaderPresetRef ref, ShaderPhase defaultPhase)
-            throws IOException, UnsupportedShaderException {
-        if (ref == null || ref.kind() == DisplayShaderPresetRef.Kind.OFF) {
-            throw new UnsupportedShaderException("Off is not a loadable shader preset");
+            throws IOException, DisplayShaderLoadException {
+        if (ref == null) {
+            throw new DisplayShaderLoadException("Shader preset ref is required");
+        }
+        if (ref.kind() == DisplayShaderPresetRef.Kind.OFF) {
+            return new DisplayShaderPreset(ref.label(), defaultPhase, List.of());
         }
         if (ref.absolutePath() == null) {
-            throw new UnsupportedShaderException("Shader preset has no source path");
+            throw new DisplayShaderLoadException("Shader preset has no source path");
         }
 
         ShaderPhase phase = forceScalerPhase(ref) ? ShaderPhase.SCENE : defaultPhase;
@@ -40,23 +47,21 @@ public class DisplayShaderPresetLoader {
             case GLSL -> loadStandaloneGlsl(ref, phase);
             case CGP -> loadPreset(ref, phase, PresetFormat.CGP);
             case GLSLP -> loadPreset(ref, phase, PresetFormat.GLSLP);
-            case OFF -> throw new UnsupportedShaderException("Off is not a loadable shader preset");
+            case OFF -> new DisplayShaderPreset(ref.label(), phase, List.of());
         };
     }
 
     private static DisplayShaderPreset loadStandaloneGlsl(DisplayShaderPresetRef ref, ShaderPhase phase)
-            throws IOException, UnsupportedShaderException {
+            throws IOException, DisplayShaderLoadException {
         String source = readGlslSource(ref.absolutePath());
         DisplayShaderPass pass = passForSource(source, 1, ScaleType.SOURCE, false, WrapMode.CLAMP_TO_EDGE);
         return new DisplayShaderPreset(ref.label(), phase, List.of(pass));
     }
 
     private static DisplayShaderPreset loadPreset(DisplayShaderPresetRef ref, ShaderPhase phase, PresetFormat format)
-            throws IOException, UnsupportedShaderException {
+            throws IOException, DisplayShaderLoadException {
         String presetText = Files.readString(ref.absolutePath());
-        if (format == PresetFormat.GLSLP) {
-            rejectUnsupportedGlslpPresetFeatures(presetText);
-        }
+        rejectUnsupportedPresetFeatures(presetText);
 
         Map<String, String> fields = parseFields(presetText);
         int passCount = parseRequiredPassCount(fields, ref);
@@ -66,7 +71,7 @@ public class DisplayShaderPresetLoader {
         for (int i = 0; i < passCount; i++) {
             String shaderRef = fields.get("shader" + i);
             if (shaderRef == null || shaderRef.isBlank()) {
-                throw new UnsupportedShaderException("Preset is missing shader" + i + ": " + ref.label());
+                throw new DisplayShaderLoadException("Preset is missing shader" + i + ": " + ref.label());
             }
             Path shaderPath = resolveShaderPath(parent, shaderRef, format);
             String source = readGlslSource(shaderPath);
@@ -103,46 +108,46 @@ public class DisplayShaderPresetLoader {
     }
 
     private static int parseRequiredPassCount(Map<String, String> fields, DisplayShaderPresetRef ref)
-            throws UnsupportedShaderException {
+            throws DisplayShaderLoadException {
         String raw = fields.get("shaders");
         if (raw == null || raw.isBlank()) {
-            throw new UnsupportedShaderException("Preset is missing shaders count: " + ref.label());
+            throw new DisplayShaderLoadException("Preset is missing shaders count: " + ref.label());
         }
         try {
             int count = Integer.parseInt(raw);
             if (count < 1) {
-                throw new UnsupportedShaderException("Preset has no GLSL shader passes: " + ref.label());
+                throw new DisplayShaderLoadException("Preset has no GLSL shader passes: " + ref.label());
             }
             return count;
         } catch (NumberFormatException e) {
-            throw new UnsupportedShaderException("Invalid shaders count in preset: " + raw, e);
+            throw new DisplayShaderLoadException("Invalid shaders count in preset: " + raw, e);
         }
     }
 
-    private static int parseScale(String raw) throws UnsupportedShaderException {
+    private static int parseScale(String raw) throws DisplayShaderLoadException {
         if (raw == null || raw.isBlank()) {
             return 1;
         }
         try {
             int scale = Integer.parseInt(raw);
             if (scale < 1) {
-                throw new UnsupportedShaderException("Shader scale must be at least 1: " + raw);
+                throw new DisplayShaderLoadException("Shader scale must be at least 1: " + raw);
             }
             return scale;
         } catch (NumberFormatException e) {
-            throw new UnsupportedShaderException("Invalid shader scale: " + raw, e);
+            throw new DisplayShaderLoadException("Invalid shader scale: " + raw, e);
         }
     }
 
-    private static ScaleType parseScaleType(String raw) throws UnsupportedShaderException {
+    private static ScaleType parseScaleType(String raw) throws DisplayShaderLoadException {
         if (raw == null || raw.isBlank()) {
             return ScaleType.SOURCE;
         }
         return switch (raw.trim().toLowerCase(Locale.ROOT)) {
             case "source" -> ScaleType.SOURCE;
             case "viewport" -> ScaleType.VIEWPORT;
-            case "absolute" -> throw new UnsupportedShaderException("Absolute shader scale_type is not supported");
-            default -> throw new UnsupportedShaderException("Unsupported shader scale_type: " + raw);
+            case "absolute" -> throw new DisplayShaderLoadException("Absolute shader scale_type is not supported");
+            default -> throw new DisplayShaderLoadException("Unsupported shader scale_type: " + raw);
         };
     }
 
@@ -150,32 +155,33 @@ public class DisplayShaderPresetLoader {
         return raw != null && Boolean.parseBoolean(raw.trim());
     }
 
-    private static WrapMode parseWrapMode(String raw) {
+    private static WrapMode parseWrapMode(String raw) throws DisplayShaderLoadException {
         if (raw == null || raw.isBlank()) {
             return WrapMode.CLAMP_TO_EDGE;
         }
         return switch (raw.trim().toLowerCase(Locale.ROOT)) {
-            case "clamp_to_border" -> WrapMode.CLAMP_TO_BORDER;
+            case "clamp_to_edge", "clamp_to_border" -> WrapMode.CLAMP_TO_EDGE;
             case "repeat" -> WrapMode.REPEAT;
-            default -> WrapMode.CLAMP_TO_EDGE;
+            case "mirrored_repeat" -> WrapMode.MIRRORED_REPEAT;
+            default -> throw new DisplayShaderLoadException("Unsupported shader wrap_mode: " + raw);
         };
     }
 
     private static Path resolveShaderPath(Path parent, String rawShaderRef, PresetFormat format)
-            throws UnsupportedShaderException {
+            throws DisplayShaderLoadException {
         String normalizedRef = rawShaderRef.replace('\\', '/');
         Path relative = Path.of(normalizedRef);
         if (relative.isAbsolute()) {
-            throw new UnsupportedShaderException("Absolute shader paths are not supported: " + rawShaderRef);
+            throw new DisplayShaderLoadException("Absolute shader paths are not supported: " + rawShaderRef);
         }
 
         if (format == PresetFormat.GLSLP) {
             if (!".glsl".equals(extension(relative))) {
-                throw new UnsupportedShaderException("GLSLP pass source must reference a .glsl file: " + rawShaderRef);
+                throw new DisplayShaderLoadException("GLSLP pass source must reference a .glsl file: " + rawShaderRef);
             }
             Path exact = parent.resolve(relative).normalize();
             if (!Files.isRegularFile(exact)) {
-                throw new UnsupportedShaderException("Missing GLSL shader source: " + rawShaderRef);
+                throw new DisplayShaderLoadException("Missing GLSL shader source: " + rawShaderRef);
             }
             return exact;
         }
@@ -191,7 +197,7 @@ public class DisplayShaderPresetLoader {
         if (Files.isRegularFile(sibling)) {
             return sibling;
         }
-        throw new UnsupportedShaderException("CGP preset has no loadable GLSL source for " + rawShaderRef);
+        throw new DisplayShaderLoadException("CGP preset has no loadable GLSL source for " + rawShaderRef);
     }
 
     private static DisplayShaderPass passForSource(String source, int scale, ScaleType scaleType,
@@ -203,42 +209,44 @@ public class DisplayShaderPresetLoader {
 
     private static GlslShape detectShape(String source) {
         if ((BIZHAWK_VERTEX.matcher(source).find() && BIZHAWK_FRAGMENT.matcher(source).find())
-                || (RETROARCH_VERTEX.matcher(source).find() && RETROARCH_FRAGMENT.matcher(source).find())) {
+                || (RETROARCH_VERTEX.matcher(source).find() && RETROARCH_FRAGMENT.matcher(source).find())
+                || (UNDERSCORE_VERTEX.matcher(source).find() && UNDERSCORE_FRAGMENT.matcher(source).find())
+                || (COMPAT_VERTEX.matcher(source).find() && COMPAT_FRAGMENT.matcher(source).find())) {
             return GlslShape.COMBINED;
         }
         return GlslShape.FRAGMENT_ONLY;
     }
 
-    private static String readGlslSource(Path path) throws IOException, UnsupportedShaderException {
+    private static String readGlslSource(Path path) throws IOException, DisplayShaderLoadException {
         String source = Files.readString(path);
         if (containsInclude(source)) {
-            throw new UnsupportedShaderException("Shader includes are not supported: " + path.getFileName());
+            throw new DisplayShaderLoadException("Shader includes are not supported: " + path.getFileName());
         }
         return source;
     }
 
-    private static void rejectUnsupportedGlslpPresetFeatures(String presetText) throws UnsupportedShaderException {
+    private static void rejectUnsupportedPresetFeatures(String presetText) throws DisplayShaderLoadException {
         if (containsInclude(presetText)) {
-            throw new UnsupportedShaderException("Shader preset includes are not supported");
+            throw new DisplayShaderLoadException("Shader preset includes are not supported");
         }
         if (GLSLP_REFERENCE_DIRECTIVE.matcher(presetText).find()) {
-            throw new UnsupportedShaderException("Shader preset inheritance is not supported");
+            throw new DisplayShaderLoadException("Shader preset inheritance is not supported");
         }
         Matcher matcher = GLSLP_UNSUPPORTED_LINE.matcher(presetText);
         if (matcher.find()) {
-            throw new UnsupportedShaderException("Shader preset uses unsupported multi-pass external state: "
+            throw new DisplayShaderLoadException("Shader preset uses unsupported multi-pass external state: "
                     + matcher.group().trim());
         }
     }
 
     private static void rejectUnsupportedGlslpPassSourceFeatures(String source, Path path)
-            throws UnsupportedShaderException {
+            throws DisplayShaderLoadException {
         if (GLSLP_RUNTIME_INPUT_SOURCE.matcher(source).find()) {
-            throw new UnsupportedShaderException("GLSLP pass source uses unsupported runtime input: "
+            throw new DisplayShaderLoadException("GLSLP pass source uses unsupported runtime input: "
                     + path.getFileName());
         }
         if (GLSLP_EXTERNAL_TEXTURE_SOURCE.matcher(source).find()) {
-            throw new UnsupportedShaderException("GLSLP pass source uses unsupported external texture sampler: "
+            throw new DisplayShaderLoadException("GLSLP pass source uses unsupported external texture sampler: "
                     + path.getFileName());
         }
     }

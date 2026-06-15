@@ -17,6 +17,16 @@ public class TestDisplayShaderPresetLoader {
     Path tempDir;
 
     @Test
+    public void offLoadsAsEmptyPassthroughPreset() throws Exception {
+        DisplayShaderPreset loaded = new DisplayShaderPresetLoader().load(DisplayShaderPresetRef.OFF,
+                ShaderPhase.FINAL);
+
+        assertEquals("Off", loaded.label());
+        assertEquals(ShaderPhase.FINAL, loaded.phase());
+        assertEquals(0, loaded.passes().size());
+    }
+
+    @Test
     public void loadsBizHawkCgpByMappingCgReferenceToGlslSibling() throws Exception {
         Path root = tempDir.resolve("display-shaders");
         Path preset = root.resolve("BizHawk/BizScanlines.cgp");
@@ -43,7 +53,7 @@ public class TestDisplayShaderPresetLoader {
                 shader0 = BizScanlines.cg
                 """);
 
-        UnsupportedShaderException error = assertThrows(UnsupportedShaderException.class,
+        DisplayShaderLoadException error = assertThrows(DisplayShaderLoadException.class,
                 () -> new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.CGP),
                         ShaderPhase.PRESENTATION));
 
@@ -52,15 +62,43 @@ public class TestDisplayShaderPresetLoader {
 
     @Test
     public void hq2xCgpDefaultsToScenePhase() throws Exception {
+        assertScalerCgpDefaultsToScene("BizHawk/hq2x/hq2x.cgp", "hq2x.cg", "hq2x.glsl");
+    }
+
+    @Test
+    public void hq4xCgpDefaultsToScenePhase() throws Exception {
+        assertScalerCgpDefaultsToScene("BizHawk/hq4x/hq4x.cgp", "hq4x.cg", "hq4x.glsl");
+    }
+
+    @Test
+    public void scalefxCgpDefaultsToScenePhase() throws Exception {
+        assertScalerCgpDefaultsToScene("RetroArch/shaders_glsl/scalefx/scalefx.glslp", "scalefx.glsl", "scalefx.glsl");
+    }
+
+    @Test
+    public void omniscaleCgpDefaultsToScenePhase() throws Exception {
+        assertScalerCgpDefaultsToScene("RetroArch/shaders_glsl/omniscale/omniscale.glslp", "omniscale.glsl", "omniscale.glsl");
+    }
+
+    @Test
+    public void xbrzCgpDefaultsToScenePhase() throws Exception {
+        assertScalerCgpDefaultsToScene("RetroArch/shaders_glsl/xbrz/xbrz.glslp", "xbrz.glsl", "xbrz.glsl");
+    }
+
+    private void assertScalerCgpDefaultsToScene(String presetRelativePath, String shaderRef, String sourceFileName)
+            throws Exception {
         Path root = tempDir.resolve("display-shaders");
-        Path preset = root.resolve("BizHawk/hq2x/hq2x.cgp");
+        Path preset = root.resolve(presetRelativePath);
         write(preset, """
                 shaders = 1
-                shader0 = hq2x.cg
-                """);
-        write(root.resolve("BizHawk/hq2x/hq2x.glsl"), "void main() {}\n");
+                shader0 = %s
+                """.formatted(shaderRef));
+        write(preset.getParent().resolve(sourceFileName), "void main() {}\n");
+        DisplayShaderPresetRef.Kind kind = presetRelativePath.endsWith(".cgp")
+                ? DisplayShaderPresetRef.Kind.CGP
+                : DisplayShaderPresetRef.Kind.GLSLP;
 
-        DisplayShaderPreset loaded = new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.CGP),
+        DisplayShaderPreset loaded = new DisplayShaderPresetLoader().load(ref(root, preset, kind),
                 ShaderPhase.PRESENTATION);
 
         assertEquals(ShaderPhase.SCENE, loaded.phase());
@@ -92,7 +130,7 @@ public class TestDisplayShaderPresetLoader {
                 shader0 = crt.slang
                 """);
 
-        UnsupportedShaderException error = assertThrows(UnsupportedShaderException.class,
+        DisplayShaderLoadException error = assertThrows(DisplayShaderLoadException.class,
                 () -> new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.GLSLP),
                         ShaderPhase.PRESENTATION));
 
@@ -110,11 +148,65 @@ public class TestDisplayShaderPresetLoader {
                 """);
         write(root.resolve("RetroArch/shaders_glsl/crt/pass.glsl"), "void main() {}\n");
 
-        UnsupportedShaderException error = assertThrows(UnsupportedShaderException.class,
+        DisplayShaderLoadException error = assertThrows(DisplayShaderLoadException.class,
                 () -> new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.GLSLP),
                         ShaderPhase.PRESENTATION));
 
         assertTrue(error.getMessage().contains("inheritance"));
+    }
+
+    @Test
+    public void cgpRejectsReferenceAssignmentInheritance() throws Exception {
+        Path root = tempDir.resolve("display-shaders");
+        Path preset = root.resolve("BizHawk/child.cgp");
+        write(preset, """
+                reference = base.cgp
+                shaders = 1
+                shader0 = child.cg
+                """);
+        write(root.resolve("BizHawk/child.glsl"), "void main() {}\n");
+
+        DisplayShaderLoadException error = assertThrows(DisplayShaderLoadException.class,
+                () -> new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.CGP),
+                        ShaderPhase.PRESENTATION));
+
+        assertTrue(error.getMessage().contains("unsupported"));
+    }
+
+    @Test
+    public void cgpRejectsReferenceDirectiveInheritance() throws Exception {
+        Path root = tempDir.resolve("display-shaders");
+        Path preset = root.resolve("BizHawk/child.cgp");
+        write(preset, """
+                #reference "base.cgp"
+                shaders = 1
+                shader0 = child.cg
+                """);
+        write(root.resolve("BizHawk/child.glsl"), "void main() {}\n");
+
+        DisplayShaderLoadException error = assertThrows(DisplayShaderLoadException.class,
+                () -> new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.CGP),
+                        ShaderPhase.PRESENTATION));
+
+        assertTrue(error.getMessage().contains("inheritance"));
+    }
+
+    @Test
+    public void cgpRejectsIncludeDirective() throws Exception {
+        Path root = tempDir.resolve("display-shaders");
+        Path preset = root.resolve("BizHawk/child.cgp");
+        write(preset, """
+                #include "base.cgp"
+                shaders = 1
+                shader0 = child.cg
+                """);
+        write(root.resolve("BizHawk/child.glsl"), "void main() {}\n");
+
+        DisplayShaderLoadException error = assertThrows(DisplayShaderLoadException.class,
+                () -> new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.CGP),
+                        ShaderPhase.PRESENTATION));
+
+        assertTrue(error.getMessage().contains("includes"));
     }
 
     @Test
@@ -131,7 +223,7 @@ public class TestDisplayShaderPresetLoader {
                 void main() {}
                 """);
 
-        UnsupportedShaderException error = assertThrows(UnsupportedShaderException.class,
+        DisplayShaderLoadException error = assertThrows(DisplayShaderLoadException.class,
                 () -> new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.GLSLP),
                         ShaderPhase.PRESENTATION));
 
@@ -151,7 +243,7 @@ public class TestDisplayShaderPresetLoader {
                 void main() {}
                 """);
 
-        UnsupportedShaderException error = assertThrows(UnsupportedShaderException.class,
+        DisplayShaderLoadException error = assertThrows(DisplayShaderLoadException.class,
                 () -> new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.GLSLP),
                         ShaderPhase.PRESENTATION));
 

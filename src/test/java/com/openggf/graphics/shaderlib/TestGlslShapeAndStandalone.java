@@ -54,6 +54,43 @@ public class TestGlslShapeAndStandalone {
     }
 
     @Test
+    public void detectsUnderscoreVertexFragmentCombinedShape() throws Exception {
+        Path root = tempDir.resolve("display-shaders");
+        Path shader = root.resolve("RetroArch/underscore-combined.glsl");
+        write(shader, """
+                #ifdef __vertex__
+                void main() {}
+                #endif
+                #ifdef __fragment__
+                void main() {}
+                #endif
+                """);
+
+        DisplayShaderPass pass = loadStandalone(root, shader).passes().get(0);
+
+        assertEquals(GlslShape.COMBINED, pass.shape());
+        assertEquals(pass.fragmentSource(), pass.vertexSource());
+    }
+
+    @Test
+    public void detectsCompatVertexFragmentCombinedShape() throws Exception {
+        Path root = tempDir.resolve("display-shaders");
+        Path shader = root.resolve("RetroArch/compat-combined.glsl");
+        write(shader, """
+                #if defined(COMPAT_VERTEX)
+                void main() {}
+                #elif defined(COMPAT_FRAGMENT)
+                void main() {}
+                #endif
+                """);
+
+        DisplayShaderPass pass = loadStandalone(root, shader).passes().get(0);
+
+        assertEquals(GlslShape.COMBINED, pass.shape());
+        assertEquals(pass.fragmentSource(), pass.vertexSource());
+    }
+
+    @Test
     public void fragmentOnlyWhenNoVertexSection() throws Exception {
         Path root = tempDir.resolve("display-shaders");
         Path shader = root.resolve("fragment.glsl");

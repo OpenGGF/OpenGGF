@@ -6,9 +6,12 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestPresetFieldParsing {
@@ -46,7 +49,7 @@ public class TestPresetFieldParsing {
         assertEquals(3, loaded.passes().get(1).scale());
         assertEquals(ScaleType.VIEWPORT, loaded.passes().get(1).scaleType());
         assertTrue(loaded.passes().get(1).filterLinear());
-        assertEquals(WrapMode.CLAMP_TO_BORDER, loaded.passes().get(1).wrapMode());
+        assertEquals(WrapMode.CLAMP_TO_EDGE, loaded.passes().get(1).wrapMode());
     }
 
     @Test
@@ -92,6 +95,67 @@ public class TestPresetFieldParsing {
         assertEquals(ScaleType.VIEWPORT, loaded.passes().get(1).scaleType());
         assertTrue(loaded.passes().get(1).filterLinear());
         assertEquals(WrapMode.REPEAT, loaded.passes().get(1).wrapMode());
+    }
+
+    @Test
+    public void parsesSupportedGlslpWrapModes() throws Exception {
+        Path root = tempDir.resolve("display-shaders");
+        write(root.resolve("retro/pass0.glsl"), "void main() {}\n");
+        write(root.resolve("retro/pass1.glsl"), "void main() {}\n");
+        write(root.resolve("retro/pass2.glsl"), "void main() {}\n");
+        write(root.resolve("retro/pass3.glsl"), "void main() {}\n");
+        Path preset = root.resolve("retro/wraps.glslp");
+        write(preset, """
+                shaders = 4
+                shader0 = pass0.glsl
+                wrap_mode0 = clamp_to_border
+                shader1 = pass1.glsl
+                wrap_mode1 = clamp_to_edge
+                shader2 = pass2.glsl
+                wrap_mode2 = repeat
+                shader3 = pass3.glsl
+                wrap_mode3 = mirrored_repeat
+                """);
+
+        DisplayShaderPreset loaded = new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.GLSLP),
+                ShaderPhase.PRESENTATION);
+
+        assertEquals(WrapMode.CLAMP_TO_EDGE, loaded.passes().get(0).wrapMode());
+        assertEquals(WrapMode.CLAMP_TO_EDGE, loaded.passes().get(1).wrapMode());
+        assertEquals(WrapMode.REPEAT, loaded.passes().get(2).wrapMode());
+        assertEquals(WrapMode.MIRRORED_REPEAT, loaded.passes().get(3).wrapMode());
+    }
+
+    @Test
+    public void unknownWrapModeFailsLoad() throws Exception {
+        Path root = tempDir.resolve("display-shaders");
+        write(root.resolve("retro/pass.glsl"), "void main() {}\n");
+        Path preset = root.resolve("retro/wrap.glslp");
+        write(preset, """
+                shaders = 1
+                shader0 = pass.glsl
+                wrap_mode0 = mystery
+                """);
+
+        DisplayShaderLoadException error = assertThrows(DisplayShaderLoadException.class,
+                () -> new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.GLSLP),
+                        ShaderPhase.PRESENTATION));
+
+        assertTrue(error.getMessage().contains("wrap_mode"));
+    }
+
+    @Test
+    public void displayShaderPresetDefensivelyCopiesPassList() {
+        DisplayShaderPass pass = new DisplayShaderPass(null, "void main() {}\n", GlslShape.FRAGMENT_ONLY,
+                1, ScaleType.SOURCE, false, WrapMode.CLAMP_TO_EDGE);
+        List<DisplayShaderPass> passes = new ArrayList<>();
+        passes.add(pass);
+
+        DisplayShaderPreset preset = new DisplayShaderPreset("copy-test", ShaderPhase.FINAL, passes);
+        passes.clear();
+
+        assertEquals(1, preset.passes().size());
+        assertThrows(UnsupportedOperationException.class, () -> preset.passes().add(pass));
     }
 
     private static DisplayShaderPresetRef ref(Path root, Path path, DisplayShaderPresetRef.Kind kind) {

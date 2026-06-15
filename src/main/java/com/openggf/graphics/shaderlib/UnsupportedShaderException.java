@@ -1,6 +1,6 @@
 package com.openggf.graphics.shaderlib;
 
-public class UnsupportedShaderException extends Exception {
+public class UnsupportedShaderException extends DisplayShaderLoadException {
     public UnsupportedShaderException(String message) {
         super(message);
     }
