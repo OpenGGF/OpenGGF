@@ -139,6 +139,22 @@ final class ObjectSolidContactController {
     // (beginInlineFrame).
     private final Map<PlayableEntity, Set<Object>> objectStandingBitSnapshot =
             new IdentityHashMap<>(2);
+    // Per-frame set of solid object latch keys whose standing bit was first
+    // ESTABLISHED THIS FRAME by a fresh landing (RideObject_SetRide-equivalent
+    // STANDING contact). ROM evaluates each object's SolidObjectFull once per
+    // frame, so the airborne-rider unseat (loc_1DC98 / loc_1DCF0) that clears
+    // Status_OnObj can never observe "standing bit set AND Status_InAir set" on
+    // the same frame the bit was just set; it fires only on a SUBSEQUENT frame.
+    // The engine's inline post-physics solid pass can otherwise observe the
+    // post-jump airborne state in the same engine tick that established the
+    // ride and unseat it one frame early. When
+    // PhysicsFeatureSet.solidObjectKeepsOnObjWhenJumpedOffSameFrame() is true,
+    // this latch suppresses the same-frame unseat. Cleared per-frame
+    // (beginInlineFrame). ROM: sonic3k.asm:41016-41035 (loc_1DC98),
+    // 41066-41084 (loc_1DCF0), 42033-42034 (RideObject_SetRide sets the bit),
+    // 28553-28554 (Tails_Jump leaves Status_OnObj set).
+    private final Map<PlayableEntity, Set<Object>> standingBitEstablishedThisFrame =
+            new IdentityHashMap<>(2);
 
     private static Object airUnseatLatchKeyFor(ObjectInstance instance) {
         if (instance == null) {
@@ -202,6 +218,46 @@ final class ObjectSolidContactController {
 
     boolean hasStandingLatch(PlayableEntity player, ObjectInstance instance) {
         return hasObjectStandingBit(player, instance);
+    }
+
+    /**
+     * Mark this instance's standing bit as established (by a fresh landing) on
+     * the current frame, so the same-frame airborne-rider unseat is suppressed
+     * for games that gate on
+     * {@link PhysicsFeatureSet#solidObjectKeepsOnObjWhenJumpedOffSameFrame()}.
+     * Mirrors ROM's once-per-frame SolidObjectFull evaluation: the unseat
+     * (loc_1DC98 / loc_1DCF0) only observes a bit set on a prior frame.
+     */
+    private void markStandingBitEstablishedThisFrame(PlayableEntity player, ObjectInstance instance,
+            int pieceIndex) {
+        if (player == null || !keepsOnObjWhenJumpedOffSameFrame(player)) {
+            return;
+        }
+        Object key = airUnseatLatchKeyFor(instance, pieceIndex);
+        if (key == null) {
+            return;
+        }
+        standingBitEstablishedThisFrame
+                .computeIfAbsent(player, p -> new HashSet<>())
+                .add(key);
+    }
+
+    private boolean wasStandingBitEstablishedThisFrame(PlayableEntity player, ObjectInstance instance,
+            int pieceIndex) {
+        if (player == null) {
+            return false;
+        }
+        Set<Object> set = standingBitEstablishedThisFrame.get(player);
+        if (set == null) {
+            return false;
+        }
+        Object key = airUnseatLatchKeyFor(instance, pieceIndex);
+        return key != null && set.contains(key);
+    }
+
+    private static boolean keepsOnObjWhenJumpedOffSameFrame(PlayableEntity player) {
+        PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
+        return featureSet != null && featureSet.solidObjectKeepsOnObjWhenJumpedOffSameFrame();
     }
 
     private void setObjectPushingBit(PlayableEntity player, ObjectInstance instance) {
@@ -382,6 +438,7 @@ final class ObjectSolidContactController {
         objectStandingBitSet.clear();
         objectPushingBitSet.clear();
         objectStandingBitSnapshot.clear();
+        standingBitEstablishedThisFrame.clear();
     }
 
     ObjectManagerSnapshot.SolidContactState captureRewindState() {
@@ -837,6 +894,10 @@ final class ObjectSolidContactController {
         // objectStandingBitSnapshot IS cleared per-frame: it caches the
         // pre-clear value of the bit for the lift gate to read.
         objectStandingBitSnapshot.clear();
+        // standingBitEstablishedThisFrame IS cleared per-frame: it only
+        // protects a ride newly established on the CURRENT frame from a
+        // same-frame unseat (ROM evaluates each SolidObjectFull once/frame).
+        standingBitEstablishedThisFrame.clear();
     }
 
     void finishInlineFrame(PlayableEntity player, List<? extends PlayableEntity> sidekicks) {
@@ -1016,7 +1077,16 @@ final class ObjectSolidContactController {
         // (docs/skdisasm/sonic3k.asm:41006-41010 before 41021-41034).
         if (ridingObject != null && player.getAir()
                 && !carriesAirborneRiderAfterExitPlatform(ridingObject)
-                && !shouldSkipRidingAirUnseatForOffscreenSidekick(player, ridingObject)) {
+                && !shouldSkipRidingAirUnseatForOffscreenSidekick(player, ridingObject)
+                // ROM evaluates each object's SolidObjectFull once per frame:
+                // the loc_1DCF0 air-unseat cannot fire on the same frame the
+                // ride was established by RideObject_SetRide. Skip the
+                // same-frame unseat when this ride was just established this
+                // frame (gated by
+                // PhysicsFeatureSet.solidObjectKeepsOnObjWhenJumpedOffSameFrame;
+                // sonic3k.asm:41066-41084, 42033-42034, 28553-28554).
+                && !(keepsOnObjWhenJumpedOffSameFrame(player)
+                        && wasStandingBitEstablishedThisFrame(player, ridingObject, ridingPieceIndex))) {
             // ROM SolidObjectFull2_1P air-unseat path (sonic3k.asm:41070-41084
             // loc_1DCF0): when the object's a0.d6 standing-bit is still
             // set and Status_InAir is set on the player, the helper
@@ -1044,7 +1114,15 @@ final class ObjectSolidContactController {
         // consult it after the bit-clear has propagated.
         if (instance != null && player.getAir()
                 && hasObjectStandingBit(player, instance)
-                && !shouldSkipRidingAirUnseatForOffscreenSidekick(player, instance)) {
+                && !shouldSkipRidingAirUnseatForOffscreenSidekick(player, instance)
+                // Same-frame unseat suppression: ROM's loc_1DC98 stale-rider
+                // clear (sonic3k.asm:41017-41035) only observes the standing
+                // bit on a frame AFTER RideObject_SetRide set it. Skip when the
+                // bit was just established this frame so a same-frame jump-off
+                // keeps Status_OnObj (gated by
+                // PhysicsFeatureSet.solidObjectKeepsOnObjWhenJumpedOffSameFrame).
+                && !(keepsOnObjWhenJumpedOffSameFrame(player)
+                        && wasStandingBitEstablishedThisFrame(player, instance, -1))) {
             snapshotObjectStandingBit(player, instance);
             clearObjectStandingBit(player, instance);
             if (instance instanceof SolidObjectProvider staleStandingProvider
@@ -1174,6 +1252,10 @@ final class ObjectSolidContactController {
             if (result.standing()) {
                 putRidingState(player, instance, result.ridingX(), result.ridingY(), result.pieceIndex());
                 setObjectStandingBit(player, instance, result.pieceIndex());
+                // Fresh multi-piece landing: latch so the same-frame
+                // airborne-rider unseat is suppressed (see
+                // markStandingBitEstablishedThisFrame).
+                markStandingBitEstablishedThisFrame(player, instance, result.pieceIndex());
                 clearGroundWallSuppressionForNormalSolidSupport(player, instance);
                 inlineSupportedPlayers.add(player);
             }
@@ -1309,6 +1391,10 @@ final class ObjectSolidContactController {
                     : instance.getX();
             putRidingState(player, instance, newRideBaselineX, instance.getY(), -1);
             setObjectStandingBit(player, instance);
+            // Fresh new-contact landing: latch so the same-frame airborne-rider
+            // unseat is suppressed (ROM evaluates SolidObjectFull once/frame;
+            // see markStandingBitEstablishedThisFrame).
+            markStandingBitEstablishedThisFrame(player, instance, -1);
             clearGroundWallSuppressionForNormalSolidSupport(player, instance);
             inlineSupportedPlayers.add(player);
         }
@@ -1769,6 +1855,7 @@ final class ObjectSolidContactController {
         // objectStandingBitSet intentionally not cleared per-frame: see
         // beginInlineFrame note. ROM a0.d6 persists across frames.
         objectStandingBitSnapshot.clear();
+        standingBitEstablishedThisFrame.clear();
         if (player == null || objectManager == null || player.getDead()) {
             if (player != null) ridingStates.remove(player);
             return;
@@ -2197,7 +2284,11 @@ final class ObjectSolidContactController {
             }
             if (multiPiece.usesPieceScopedStandingBits()
                     && player.getAir()
-                    && hasObjectStandingBit(player, instance, i)) {
+                    && hasObjectStandingBit(player, instance, i)
+                    // Same-frame unseat suppression (ROM once-per-frame
+                    // SolidObjectFull): keep a piece ride established this frame.
+                    && !(keepsOnObjWhenJumpedOffSameFrame(player)
+                            && wasStandingBitEstablishedThisFrame(player, instance, i))) {
                 snapshotObjectStandingBit(player, instance, i);
                 clearObjectStandingBit(player, instance, i);
                 if (multiPiece.airborneStaleStandingBitReturnsNoContact(player)) {
@@ -3144,6 +3235,14 @@ final class ObjectSolidContactController {
                 // path on the next frame.
                 if (instance != null) {
                     setObjectStandingBit(player, instance, pieceIndex);
+                    // ROM SolidObjectFull evaluates each object once per frame:
+                    // the air-unseat (loc_1DC98 / loc_1DCF0) that clears
+                    // Status_OnObj can only observe the bit on a SUBSEQUENT
+                    // frame, never on this RideObject_SetRide frame. Latch the
+                    // fresh landing so a same-frame jump-off (Tails_Jump sets
+                    // Status_InAir without clearing Status_OnObj,
+                    // sonic3k.asm:28553-28554) does not get unseated this frame.
+                    markStandingBitEstablishedThisFrame(player, instance, pieceIndex);
                 }
             } else if (upwardVelocity) {
                 // apply=false geometry probe (collision sensor / debug):

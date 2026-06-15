@@ -4,6 +4,21 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K sidekick keeps `Status_OnObj` on a land-and-jump-off-object frame:**
+  ROM evaluates each solid object's `SolidObjectFull` once per frame, so when a
+  CPU sidekick (Tails) lands on a solid object and auto-jumps the same frame it
+  briefly carries `Status_InAir|Status_OnObj` (`RideObject_SetRide` sets OnObj,
+  `sonic3k.asm:42033-42034`; `Tails_Jump` sets InAir without clearing OnObj,
+  `sonic3k.asm:28553-28554`; the airborne-rider unseat at `loc_1DC98`/`loc_1DCF0`
+  only fires the next frame, `sonic3k.asm:41016-41035`/`41066-41084`). The engine
+  resolved solids in an inline post-physics pass and unseated the ride the same
+  tick it was established. A new `PhysicsFeatureSet`
+  `solidObjectKeepsOnObjWhenJumpedOffSameFrame` flag (S3K only; S1/S2 false and
+  unchanged by construction) latches a ride established this frame by a fresh
+  landing and suppresses the same-frame unseat. Advances the AIZ1 trace frontier
+  from frame 2590 to 3135 and the HCZ complete-run from 407 to 1402 with no S3K
+  trace regression.
+
 - **S3K LBZ complete-run trace advances through Orbinaut and rolling-drum
   frontiers:** Orbinaut child touch-list publication now samples the child
   after its circular movement, LBZ rolling drums expose the ROM code-pointer

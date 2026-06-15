@@ -952,7 +952,41 @@ public record PhysicsFeatureSet(
          *  (s1 Drowning Countdown.asm:47,86; s2.asm:41899,41941-41942).
          *  S3K sets {@code y_vel=-$100} and calls {@code MoveSprite2}
          *  (sonic3k.asm:33312,33347). */
-        int mouthBubbleRiseVelocity
+        int mouthBubbleRiseVelocity,
+        /**
+         * Whether a solid-object ride/standing bit ESTABLISHED THIS FRAME (by a
+         * fresh landing) is protected from the same-frame airborne-rider unseat.
+         *
+         * <p>ROM models the per-object solid pass as a single
+         * {@code SolidObjectFull} evaluation per object per frame. On the frame a
+         * player lands on an object and immediately jumps off it, the landing
+         * ({@code RideObject_SetRide}: {@code bset #Status_OnObj} and
+         * {@code bset d6,status(a0)}, sonic3k.asm:42033-42034) and the jump
+         * ({@code Tails_Jump}/{@code Sonic_Jump}: {@code bset #Status_InAir}, but
+         * NO {@code bclr #Status_OnObj}, sonic3k.asm:28553-28554) both run that
+         * frame, leaving the player with {@code Status_InAir|Status_OnObj}. The
+         * airborne-rider unseat that clears {@code Status_OnObj}/the object
+         * standing bit ({@code SolidObjectFull_1P loc_1DC98}
+         * sonic3k.asm:41016-41035; {@code SolidObjectFull2_1P loc_1DCF0}
+         * sonic3k.asm:41066-41084) only observes "standing bit set AND
+         * Status_InAir set" on a SUBSEQUENT frame's single SolidObjectFull call,
+         * so it fires one frame later — never on the same frame the bit was just
+         * set by the landing.
+         *
+         * <p>The engine resolves solids in an inline post-physics pass and can
+         * observe the post-jump airborne state in the same engine tick that
+         * established the ride, unseating it one frame too early (AIZ1 trace
+         * f2590: Tails lands on the slot-22 Spikes object and auto-jumps the same
+         * frame; ROM {@code tails_status_byte=0x0A}, engine produced {@code 0x02}
+         * because the just-set OnObj was cleared the same frame). When this flag
+         * is {@code true}, the unseat is skipped for a ride first established this
+         * frame, matching ROM's once-per-frame SolidObjectFull evaluation.
+         *
+         * <p>S3K: {@code true}. S1/S2: {@code false} (their inline/post-movement
+         * ordering and trace baselines are unaffected; gating keeps the existing
+         * same-frame unseat behavior for those games by construction).
+         */
+        boolean solidObjectKeepsOnObjWhenJumpedOffSameFrame
 ) {
     /** S1: no delay - camera pans immediately (s1.asm: Sonic_LookUp directly modifies v_lookshift). */
     public static final short LOOK_SCROLL_DELAY_NONE = 0;
@@ -1165,7 +1199,8 @@ public record PhysicsFeatureSet(
                     source.solidObjectBarelyPokingResolvesAsSide(),
                     source.speedShoesTimerDecimation(),
                     source.mouthBubbleTimerBias(),
-                    source.mouthBubbleRiseVelocity()
+                    source.mouthBubbleRiseVelocity(),
+                    source.solidObjectKeepsOnObjWhenJumpedOffSameFrame()
             );
         }
     }
@@ -1223,7 +1258,8 @@ public record PhysicsFeatureSet(
             true /* solidObjectBarelyPokingResolvesAsSide: S1 Solid_cont sends d1<=4 to Solid_SideAir (s1disasm/_incObj/sub SolidObject.asm:181-184), which returns moveq #1,d4 = side contact (lines 211-214) */,
             1 /* speedShoesTimerDecimation: S1 per-frame word timer */,
             0 /* mouthBubbleTimerBias: S1 LZ Obj64 air bubbles use a distinct bubble-maker structure with no (RandomNumber&$F)+8 mouth-bubble delay */,
-            -0x88 /* mouthBubbleRiseVelocity: S1 Obj0A small bubbles use y_vel=-$88 with SpeedToPos */);
+            -0x88 /* mouthBubbleRiseVelocity: S1 Obj0A small bubbles use y_vel=-$88 with SpeedToPos */,
+            false /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S1 unaffected (no CPU sidekick; existing same-frame unseat ordering preserved by gating) */);
 
     /** Sonic 2: spindash with standard speed table (s2.asm:37294), dual collision paths, delayed look scroll,
      *  preserves high ground speed on input (s2.asm:36610-36616),
@@ -1284,7 +1320,8 @@ public record PhysicsFeatureSet(
             true /* solidObjectBarelyPokingResolvesAsSide: S2 SolidObject_cont sends d1<=4 to SolidObject_SideAir (s2.asm:35404-35412), which returns moveq #1,d4 = side contact (s2.asm:35447-35453); lets MTZ Obj66 Spring Wall fire its in-air -$800,-$800 diagonal bounce (s2.asm:53221-53232,53283-53340) */,
             1 /* speedShoesTimerDecimation: S2 per-frame word timer (s2.asm:36008-36025) */,
             8 /* mouthBubbleTimerBias: S2 Obj0A_Animate next mouth-bubble delay = (RandomNumber&$F)+8 (s2.asm:42201-42204) */,
-            -0x88 /* mouthBubbleRiseVelocity: S2 Obj0A small bubbles use y_vel=-$88 with SpeedToPos (s2.asm:41899,41941-41942) */);
+            -0x88 /* mouthBubbleRiseVelocity: S2 Obj0A small bubbles use y_vel=-$88 with SpeedToPos (s2.asm:41899,41941-41942) */,
+            false /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S2 unaffected; existing same-frame unseat ordering preserved by gating */);
 
     /** Sonic 3&K: spindash with same speed table as S2, dual collision paths, delayed look scroll,
      *  preserves high ground speed on input, elemental shields,
@@ -1347,7 +1384,8 @@ public record PhysicsFeatureSet(
             false /* solidObjectBarelyPokingResolvesAsSide: S3K SolidObject_cont sends d1<=4 to loc_1E0D4 (TOP/BOTTOM), not SideAir (sonic3k.asm:41463-41466; loc_1E0D4 at 41541-41546) — keep existing absDistY>4 gate */,
             8 /* speedShoesTimerDecimation: S3K byte timer decremented every 8th level frame (sonic3k.asm:22072-22078; init 40818) */,
             8 /* mouthBubbleTimerBias: S3K shares the S2 Obj0A mouth-bubble cadence (RandomNumber&$F)+8 */,
-            -0x100 /* mouthBubbleRiseVelocity: S3K AirCountdown uses y_vel=-$100 with MoveSprite2 (sonic3k.asm:33312,33347) */);
+            -0x100 /* mouthBubbleRiseVelocity: S3K AirCountdown uses y_vel=-$100 with MoveSprite2 (sonic3k.asm:33312,33347) */,
+            true /* solidObjectKeepsOnObjWhenJumpedOffSameFrame: S3K SolidObjectFull runs once/object/frame. A land-and-jump-off frame keeps Status_OnObj|Status_InAir (RideObject_SetRide bset Status_OnObj sonic3k.asm:42033; Tails_Jump bset Status_InAir without clearing OnObj sonic3k.asm:28553-28554); the airborne-rider unseat (loc_1DC98 41016-41035 / loc_1DCF0 41066-41084) fires only on the NEXT frame. AIZ1 f2590 Tails-on-Spikes: ROM 0x0A, engine was 0x02. */);
 
     /** Returns true when the game supports dual collision paths (primary/secondary). */
     public boolean hasDualCollisionPaths() {

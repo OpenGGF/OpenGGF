@@ -14254,3 +14254,37 @@ Result:
 | s3k_lbz1 | f410 | y_speed | 0x0000 | -0100 | 5254 |
 | s3k_mgz1 | f454 | tails_status_byte | 0x0003 | 0x0002 | 9312 |
 | s3k_mhz1 | f71 | camera_y | 0x04C5 | 0x04BF | 4507 |
+
+## 2026-06-15 — S3K sidekick same-frame land-and-jump Status_OnObj
+
+Worktree `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\aiz-trace-green`,
+branch `bugfix/ai-aiz-trace-green`, off develop `a0c6dfb9f`. Clean branch (no
+uncommitted investigation edits at measurement time).
+Commands:
+`mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" test "-DfailIfNoTests=false"`
+`mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.*TraceReplay" test "-DfailIfNoTests=false"`
+`mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kBootstrapResolver,com.openggf.tests.TestSonic3kDecodingUtils" test "-DfailIfNoTests=false"`
+
+Fix:
+- New `PhysicsFeatureSet.solidObjectKeepsOnObjWhenJumpedOffSameFrame` (S3K
+  true, S1/S2 false). `ObjectSolidContactController` latches a solid ride/
+  standing bit established this frame by a fresh landing and skips the
+  same-frame airborne-rider unseat for it, matching ROM's once-per-frame
+  `SolidObjectFull` evaluation (`docs/skdisasm/sonic3k.asm:41016-41035`,
+  `41066-41084`, `42033-42034`, `28553-28554`). S1/S2 paths unchanged by
+  construction (flag false).
+
+Result (measured baseline develop `a0c6dfb9f` vs with-fix, both via full S3K sweep):
+- `TestS3kAizTraceReplay` (`s3k_aiz1`): first error **f2590 -> f3135**; error
+  count 2195 -> 2099. The f2590 `tails_status_byte` (expected 0x000A, actual
+  0x0002) divergence is resolved. New f3135 is `tails_g_speed` where Tails
+  stands on object 0x35 `AizForegroundPlantInstance`, which does not implement
+  `SolidObjectProvider` — a separate object-implementation gap (next frontier),
+  shared with the 3 AIZ sidekick auto-jump-cadence regression tests.
+- `TestS3kHczCompleteRunTraceReplay`: first error **f407 -> f1402**
+  (`tails_status_byte`) — advanced as a bonus from the same fix.
+- No S3K trace regressed (byte-identical failing-summary set otherwise; only the
+  two forward moves above). The 4 must-keep-green S3K tests pass.
+- Note: the summary table earlier in this file predates develop `a0c6dfb9f` and
+  is stale (it lists `s3k_aiz1` at f1058); the values above are the current
+  measured baselines.
