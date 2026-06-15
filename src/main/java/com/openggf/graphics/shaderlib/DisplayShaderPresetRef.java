@@ -29,4 +29,13 @@ public record DisplayShaderPresetRef(Kind kind, String relativePath, Path absolu
         }
         return label;
     }
+
+    public String shortLabel() {
+        if (kind == Kind.OFF) {
+            return "Off";
+        }
+        String label = label();
+        int slash = label.lastIndexOf('/');
+        return slash < 0 ? label : label.substring(slash + 1);
+    }
 }

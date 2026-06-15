@@ -43,7 +43,19 @@ public final class DisplayShaderPickerController {
             return Action.none();
         }
         if (input.isKeyPressed(GLFW_KEY_ENTER)) {
-            DisplayShaderPresetRef selectedRef = selectedItem().ref();
+            DisplayShaderSelectionModel.SelectionItem selected = selectedItem();
+            if (selected.directory()) {
+                if (selected.parentDirectory()) {
+                    selectionModel.enterParentFolder();
+                } else {
+                    selectionModel.enterFolder(selected.folderPath());
+                }
+                query = "";
+                refreshVisibleItems();
+                selectedIndex = 0;
+                return Action.none();
+            }
+            DisplayShaderPresetRef selectedRef = selected.ref();
             close();
             return new Action(ActionType.ACTIVATE, selectedRef);
         }
@@ -78,6 +90,10 @@ public final class DisplayShaderPickerController {
         return query;
     }
 
+    public String currentFolder() {
+        return selectionModel.currentFolder();
+    }
+
     public List<DisplayShaderSelectionModel.SelectionItem> visibleItems() {
         return visibleItems;
     }
@@ -92,6 +108,7 @@ public final class DisplayShaderPickerController {
 
     public void replaceSelectionModel(DisplayShaderSelectionModel newSelectionModel, DisplayShaderPresetRef currentRef) {
         this.selectionModel = Objects.requireNonNull(newSelectionModel, "newSelectionModel");
+        this.selectionModel.showFolderFor(currentRef);
         refreshVisibleItems();
         selectedIndex = indexOf(currentRef);
     }
@@ -99,6 +116,7 @@ public final class DisplayShaderPickerController {
     private void open(DisplayShaderPresetRef currentRef) {
         open = true;
         query = "";
+        selectionModel.showFolderFor(currentRef);
         refreshVisibleItems();
         selectedIndex = indexOf(currentRef);
     }
@@ -136,7 +154,8 @@ public final class DisplayShaderPickerController {
             return 0;
         }
         for (int i = 0; i < visibleItems.size(); i++) {
-            if (sameRef(visibleItems.get(i).ref(), ref)) {
+            DisplayShaderPresetRef rowRef = visibleItems.get(i).ref();
+            if (rowRef != null && sameRef(rowRef, ref)) {
                 return i;
             }
         }

@@ -5,6 +5,7 @@ import com.openggf.util.FboHelper.FboHandle;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -58,16 +59,19 @@ public class DisplayShaderPipeline {
     private int viewportHeight = 1;
     private ShaderPhase phase = ShaderPhase.FINAL;
     private boolean active;
+    private String lastActivationFailure = "";
 
     public boolean activate(DisplayShaderPreset preset) {
         ShaderPhase requestedPhase = preset == null || preset.phase() == null ? ShaderPhase.FINAL : preset.phase();
         if (preset == null || preset.passes().isEmpty()) {
             dispose();
             phase = requestedPhase;
+            lastActivationFailure = "";
             return true;
         }
 
         List<CompiledPass> compiled = new ArrayList<>(preset.passes().size());
+        String presetLabel = preset.label() == null || preset.label().isBlank() ? "<unnamed>" : preset.label();
         FboSet fbos = null;
         int newFragmentOnlyVao = 0;
         int newCombinedVao = 0;
@@ -94,6 +98,7 @@ public class DisplayShaderPipeline {
             combinedVbo = newCombinedVbo;
             phase = requestedPhase;
             active = true;
+            lastActivationFailure = "";
             compiled = null;
             fbos = null;
             newFragmentOnlyVao = 0;
@@ -101,7 +106,8 @@ public class DisplayShaderPipeline {
             newCombinedVbo = 0;
             return true;
         } catch (Exception e) {
-            LOG.log(Level.WARNING, "Display shader activation failed", e);
+            lastActivationFailure = e.getMessage() == null ? e.toString() : e.getMessage();
+            LOG.log(Level.WARNING, "Display shader activation failed: " + presetLabel, e);
             if (compiled != null) {
                 deletePrograms(compiled);
             }
@@ -109,6 +115,10 @@ public class DisplayShaderPipeline {
             deleteVertexResources(newFragmentOnlyVao, newCombinedVao, newCombinedVbo);
             return false;
         }
+    }
+
+    public String lastActivationFailure() {
+        return lastActivationFailure;
     }
 
     public boolean isActive() {
@@ -227,7 +237,7 @@ public class DisplayShaderPipeline {
         glBindTexture(GL_TEXTURE_2D, inputTexture);
         configureSampler(pass);
         setUniforms(pass.programId(), sourceWidth, sourceHeight,
-                inputWidth, inputHeight, target.width(), target.height(), frameCount);
+                inputWidth, inputHeight, target.width(), target.height(), frameCount, pass.parameterValues());
 
         if (pass.shape() == GlslShape.FRAGMENT_ONLY) {
             glBindVertexArray(fragmentOnlyVao);
@@ -247,7 +257,8 @@ public class DisplayShaderPipeline {
     }
 
     private void setUniforms(int programId, int videoWidth, int videoHeight, int inputWidth, int inputHeight,
-                             int outputWidth, int outputHeight, int frameCount) {
+                             int outputWidth, int outputHeight, int frameCount,
+                             Map<String, Float> parameterValues) {
         setSampler(programId, "s_p");
         setSampler(programId, "SceneTexture");
         setSampler(programId, "Texture");
@@ -261,6 +272,11 @@ public class DisplayShaderPipeline {
 
         setInt(programId, "FrameCount", frameCount);
         setInt(programId, "FrameDirection", 1);
+        if (parameterValues != null) {
+            for (Map.Entry<String, Float> entry : parameterValues.entrySet()) {
+                setFloat(programId, entry.getKey(), entry.getValue());
+            }
+        }
         int mvpLocation = glGetUniformLocation(programId, "MVPMatrix");
         if (mvpLocation >= 0) {
             glUniformMatrix4fv(mvpLocation, false, IDENTITY_MATRIX);
@@ -285,6 +301,13 @@ public class DisplayShaderPipeline {
         int location = glGetUniformLocation(programId, name);
         if (location >= 0) {
             glUniform1i(location, value);
+        }
+    }
+
+    private void setFloat(int programId, String name, float value) {
+        int location = glGetUniformLocation(programId, name);
+        if (location >= 0) {
+            glUniform1f(location, value);
         }
     }
 
@@ -338,15 +361,18 @@ public class DisplayShaderPipeline {
         String rawVertexSource = shape == GlslShape.FRAGMENT_ONLY
                 ? FULLSCREEN_VERTEX_SOURCE
                 : firstPresent(pass.vertexSource(), pass.fragmentSource());
+        boolean enableParameterUniforms = !pass.parameterValues().isEmpty();
         String vertexSource = shape == GlslShape.FRAGMENT_ONLY
                 ? rawVertexSource
-                : RetroArchGlslCompat.stageSource(rawVertexSource, "VERTEX");
-        String fragmentSource = RetroArchGlslCompat.stageSource(pass.fragmentSource(), "FRAGMENT");
+                : RetroArchGlslCompat.stageSource(rawVertexSource, "VERTEX", enableParameterUniforms);
+        String fragmentSource = RetroArchGlslCompat.stageSource(pass.fragmentSource(), "FRAGMENT",
+                enableParameterUniforms);
         int programId = compileProgram(vertexSource, fragmentSource, shape);
         return new CompiledPass(programId, shape, sanitizeScale(pass.scale()),
                 pass.scaleType() == null ? ScaleType.SOURCE : pass.scaleType(),
                 pass.filterLinear(),
-                pass.wrapMode() == null ? WrapMode.CLAMP_TO_EDGE : pass.wrapMode());
+                pass.wrapMode() == null ? WrapMode.CLAMP_TO_EDGE : pass.wrapMode(),
+                pass.parameterValues());
     }
 
     private static double sanitizeScale(double scale) {
@@ -527,7 +553,7 @@ public class DisplayShaderPipeline {
     }
 
     private record CompiledPass(int programId, GlslShape shape, double scale, ScaleType scaleType,
-                                boolean filterLinear, WrapMode wrapMode) {
+                                boolean filterLinear, WrapMode wrapMode, Map<String, Float> parameterValues) {
     }
 
     private record PassTarget(FboHandle fbo, int width, int height) {

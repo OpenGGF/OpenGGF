@@ -43,7 +43,7 @@ class TestDisplayShaderPickerController {
 
         assertTrue(picker.isOpen());
         assertEquals("", picker.query());
-        assertEquals(List.of("Off", "crt/crt-easymode.glslp", "scanlines/zebra.glslp"), displayPaths(picker));
+        assertEquals(List.of("..", "crt-easymode.glslp"), displayPaths(picker));
         assertSame(current, picker.selectedItem().ref());
     }
 
@@ -59,7 +59,7 @@ class TestDisplayShaderPickerController {
         press(picker, GLFW_KEY_T, DisplayShaderPresetRef.OFF);
 
         assertEquals("crt", picker.query());
-        assertEquals(List.of("Off", "libretro-glsl/crt/crt-easymode.glslp"), displayPaths(picker));
+        assertEquals(List.of("Off"), displayPaths(picker));
     }
 
     @Test
@@ -144,6 +144,37 @@ class TestDisplayShaderPickerController {
         assertEquals(DisplayShaderPickerController.ActionType.DOWNLOAD_LIBRETRO_GLSL, action.type());
         assertNull(action.ref());
         assertTrue(picker.isOpen());
+    }
+
+    @Test
+    void enterOnFolderNavigatesWithoutClosingPicker() {
+        DisplayShaderPresetRef crt = preset("libretro-glsl/crt/crt-easymode.glslp");
+        DisplayShaderPickerController picker = pickerWith(crt, preset("libretro-glsl/scanlines/zebra.glslp"));
+
+        press(picker, PICKER_KEY, DisplayShaderPresetRef.OFF);
+        press(picker, GLFW_KEY_DOWN, DisplayShaderPresetRef.OFF);
+        DisplayShaderPickerController.Action firstEnter = press(picker, GLFW_KEY_ENTER, DisplayShaderPresetRef.OFF);
+        press(picker, GLFW_KEY_DOWN, DisplayShaderPresetRef.OFF);
+        DisplayShaderPickerController.Action secondEnter = press(picker, GLFW_KEY_ENTER, DisplayShaderPresetRef.OFF);
+
+        assertEquals(DisplayShaderPickerController.ActionType.NONE, firstEnter.type());
+        assertEquals(DisplayShaderPickerController.ActionType.NONE, secondEnter.type());
+        assertTrue(picker.isOpen());
+        assertEquals("libretro-glsl/crt", picker.currentFolder());
+        assertEquals(List.of("..", "crt-easymode.glslp"), displayPaths(picker));
+    }
+
+    @Test
+    void enterOnParentFolderNavigatesUp() {
+        DisplayShaderPickerController picker = pickerWith(preset("libretro-glsl/crt/crt-easymode.glslp"));
+
+        press(picker, PICKER_KEY, preset("libretro-glsl/crt/crt-easymode.glslp"));
+        press(picker, GLFW_KEY_UP, DisplayShaderPresetRef.OFF);
+        DisplayShaderPickerController.Action action = press(picker, GLFW_KEY_ENTER, DisplayShaderPresetRef.OFF);
+
+        assertEquals(DisplayShaderPickerController.ActionType.NONE, action.type());
+        assertEquals("libretro-glsl", picker.currentFolder());
+        assertEquals(List.of("..", "crt/"), displayPaths(picker));
     }
 
     @Test

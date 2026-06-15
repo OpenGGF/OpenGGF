@@ -285,6 +285,25 @@ class TestDisplayShaderController {
     }
 
     @Test
+    void nestedSelectionNotificationUsesBasenameOnly() throws IOException {
+        Path root = tempDir.resolve("display-shaders");
+        write(root.resolve("libretro-glsl/crt/crt-easymode.glslp"));
+        DisplayShaderLibrary library = DisplayShaderLibrary.scan(root);
+        DisplayShaderController controller = new DisplayShaderController(
+                library,
+                "OFF",
+                NEXT_KEY,
+                PREVIOUS_KEY,
+                selection -> {
+                },
+                ref -> true);
+
+        controller.select(library.at(1));
+
+        assertEquals("Shader: crt-easymode", controller.notificationText());
+    }
+
+    @Test
     void explicitSelectionFailureDoesNotPersistOrChangeCurrentRef() throws IOException {
         DisplayShaderLibrary library = libraryWithShaders();
         AtomicReference<String> persisted = new AtomicReference<>();

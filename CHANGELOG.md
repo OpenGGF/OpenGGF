@@ -8,13 +8,18 @@ All notable changes to the OpenGGF project are documented in this file.
   display shader picker can trigger the libretro GLSL zip download, report
   progress, install into `shaders/libretro-glsl`, and rescan the shader library
   when the update completes. The picker now dims the full widescreen
-  presentation area, shows the F5 install hint, and tolerates malformed
-  upstream preset references during discovery so one bad `.glslp` entry does
-  not hide the downloaded pack. Presets with unsupported external texture state
-  are filtered from the picker, and RetroArch whole-number decimal scales plus
-  fractional scales plus legacy single-byte encoded shader comments are
-  accepted by the loader. Shader activation failures now log at warning level
-  instead of being hidden behind fine-grained logging.
+  presentation area, shows the F5 install hint, browses shader folders with
+  `..` parent navigation, and strips folder prefixes from menu rows and
+  selection toasts. It tolerates malformed upstream preset references during
+  discovery so one bad `.glslp` entry does not hide the downloaded pack.
+  Presets with unsupported external texture state are filtered from the
+  picker, and RetroArch whole-number decimal scales plus fractional scales,
+  preset parameter uniforms, precision-qualified `FragColor` outputs, and
+  legacy single-byte encoded shader comments are accepted by the loader.
+  Shader activation failures now log the shader label at warning level instead
+  of being hidden behind fine-grained logging, and an opt-in shader-pack
+  diagnostic test can write a compatibility failure report for local shader
+  roots.
 
 - **Display shader notifications now stack with display color toasts:**
   shader selection/failure notifications render above the existing color-profile

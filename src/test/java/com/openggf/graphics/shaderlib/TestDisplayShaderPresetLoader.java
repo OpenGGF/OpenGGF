@@ -182,6 +182,35 @@ public class TestDisplayShaderPresetLoader {
     }
 
     @Test
+    public void glslpCarriesPragmaParameterDefaultsAndPresetOverrides() throws Exception {
+        Path root = tempDir.resolve("display-shaders");
+        Path preset = root.resolve("RetroArch/shaders_glsl/crt/gizmo.glslp");
+        write(preset, """
+                shaders = 1
+                shader0 = gizmo.glsl
+                HORIZONTAL_BLUR = "1.0"
+                """);
+        write(root.resolve("RetroArch/shaders_glsl/crt/gizmo.glsl"), """
+                #pragma parameter BRIGHTNESS "Scanline Intensity" 0.5 0.05 1.0 0.05
+                #pragma parameter HORIZONTAL_BLUR "Horizontal Blur" 0.0 0.0 1.0 1.0
+                #if defined(FRAGMENT)
+                #ifdef PARAMETER_UNIFORM
+                uniform float BRIGHTNESS;
+                uniform float HORIZONTAL_BLUR;
+                #endif
+                void main() {}
+                #endif
+                """);
+
+        DisplayShaderPreset loaded = new DisplayShaderPresetLoader().load(
+                ref(root, preset, DisplayShaderPresetRef.Kind.GLSLP),
+                ShaderPhase.PRESENTATION);
+
+        assertEquals(0.5f, loaded.passes().get(0).parameterValues().get("BRIGHTNESS"));
+        assertEquals(1.0f, loaded.passes().get(0).parameterValues().get("HORIZONTAL_BLUR"));
+    }
+
+    @Test
     public void glslpRejectsShaderPathEscapingLibraryRoot() throws Exception {
         Path root = tempDir.resolve("display-shaders");
         Path preset = root.resolve("RetroArch/shaders_glsl/crt/escape.glslp");

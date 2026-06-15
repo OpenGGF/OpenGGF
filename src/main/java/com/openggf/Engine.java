@@ -1814,7 +1814,12 @@ public class Engine {
 		int lineHeight = traceHudTextRenderer.lineHeight(scale);
 		int maxWidth = Math.max(48, (int) projectionWidth - x - 4);
 		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
-		traceHudTextRenderer.drawShadowedText("Shader", x, y, DebugColor.CYAN, scale);
+		traceHudTextRenderer.drawShadowedText(
+				fitDisplayShaderPickerText(displayShaderPickerCurrentFolderText(), maxWidth, scale),
+				x,
+				y,
+				DebugColor.CYAN,
+				scale);
 		y += lineHeight;
 		traceHudTextRenderer.drawShadowedText(
 				fitDisplayShaderPickerText(displayShaderPickerController.query(), maxWidth, scale),
@@ -1848,8 +1853,7 @@ public class Engine {
 		for (int i = start; i < end; i++) {
 			DisplayShaderSelectionModel.SelectionItem item = items.get(i);
 			boolean selected = i == selectedIndex;
-			String category = item.category() == null || item.category().isBlank() ? "" : item.category() + " ";
-			String text = (selected ? "> " : "  ") + category + item.displayPath();
+			String text = (selected ? "> " : "  ") + item.displayPath();
 			traceHudTextRenderer.drawShadowedText(
 					fitDisplayShaderPickerText(text, maxWidth, scale),
 					x,
@@ -1858,6 +1862,16 @@ public class Engine {
 					scale);
 			y += lineHeight;
 		}
+	}
+
+	private String displayShaderPickerCurrentFolderText() {
+		String root = configService.getString(SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT);
+		String normalizedRoot = root == null || root.isBlank() ? "shaders" : root.trim().replace('\\', '/');
+		while (normalizedRoot.endsWith("/")) {
+			normalizedRoot = normalizedRoot.substring(0, normalizedRoot.length() - 1);
+		}
+		String folder = displayShaderPickerController.currentFolder();
+		return folder == null || folder.isBlank() ? normalizedRoot : normalizedRoot + "/" + folder;
 	}
 
 	private void renderDisplayShaderPickerBackdrop() {

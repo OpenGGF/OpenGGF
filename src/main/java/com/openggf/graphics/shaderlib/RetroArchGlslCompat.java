@@ -13,12 +13,17 @@ public final class RetroArchGlslCompat {
     private static final Pattern ATTRIBUTE_TOKEN = Pattern.compile("\\battribute\\b");
     private static final Pattern VARYING_TOKEN = Pattern.compile("\\bvarying\\b");
     private static final Pattern FRAGMENT_OUTPUT = Pattern.compile(
-            "(?m)^\\s*(?:layout\\s*\\([^\\r\\n]*\\)\\s*)?out\\s+\\w+\\s+\\w+\\s*(?:\\[[^\\]]+\\])?\\s*;");
+            "(?m)^\\s*(?:layout\\s*\\([^\\r\\n]*\\)\\s*)?out\\s+(?:\\w+\\s+)*\\w+\\s+\\w+\\s*(?:\\[[^\\]]+\\])?\\s*;");
 
     private RetroArchGlslCompat() {
     }
 
     public static String stageSource(String source, String stage) throws DisplayShaderLoadException {
+        return stageSource(source, stage, false);
+    }
+
+    public static String stageSource(String source, String stage, boolean enableParameterUniforms)
+            throws DisplayShaderLoadException {
         if (source == null) {
             throw new DisplayShaderLoadException("Shader source is required");
         }
@@ -30,6 +35,9 @@ public final class RetroArchGlslCompat {
         staged.append("#version 410 core\n");
         appendDefineIfMissing(staged, body, normalizedStage);
         appendDefineIfMissing(staged, body, "COMPAT_" + normalizedStage);
+        if (enableParameterUniforms) {
+            appendDefineIfMissing(staged, body, "PARAMETER_UNIFORM");
+        }
         boolean needsFragColorOutput = needsFragColorOutput(body, normalizedStage);
         appendLegacyPrelude(staged, body, normalizedStage, needsFragColorOutput);
         appendBody(staged, body, needsFragColorOutput);

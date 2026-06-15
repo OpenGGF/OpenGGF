@@ -8,6 +8,7 @@ import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -23,6 +24,8 @@ public class DisplayShaderPresetLoader {
     private static final Pattern UNDERSCORE_FRAGMENT = Pattern.compile("(?im)\\b__fragment__\\b");
     private static final Pattern COMPAT_VERTEX = Pattern.compile("(?im)\\bCOMPAT_VERTEX\\b");
     private static final Pattern COMPAT_FRAGMENT = Pattern.compile("(?im)\\bCOMPAT_FRAGMENT\\b");
+    private static final Pattern PARAMETER_PRAGMA = Pattern.compile(
+            "(?im)^\\s*#\\s*pragma\\s+parameter\\s+([A-Za-z_]\\w*)\\s+\"[^\"]*\"\\s+([-+]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?)\\b");
     private static final Pattern GLSLP_UNSUPPORTED_LINE = Pattern.compile(
             "(?im)^\\s*(?:textures?|texture\\d+|lut\\d*|history\\w*|feedback\\w*|previous\\w*|prev\\w*|preset|reference)\\s*=");
     private static final Pattern GLSLP_REFERENCE_DIRECTIVE = Pattern.compile("(?im)^\\s*#\\s*reference\\b");
@@ -57,7 +60,7 @@ public class DisplayShaderPresetLoader {
     private static DisplayShaderPreset loadStandaloneGlsl(DisplayShaderPresetRef ref, ShaderPhase phase)
             throws IOException, DisplayShaderLoadException {
         String source = readGlslSource(ref.absolutePath());
-        DisplayShaderPass pass = passForSource(source, 1, ScaleType.SOURCE, false, WrapMode.CLAMP_TO_EDGE);
+        DisplayShaderPass pass = passForSource(source, 1, ScaleType.SOURCE, false, WrapMode.CLAMP_TO_EDGE, Map.of());
         return new DisplayShaderPreset(ref.label(), phase, List.of(pass));
     }
 
@@ -86,7 +89,8 @@ public class DisplayShaderPresetLoader {
                     parseScale(fields.get("scale" + i)),
                     parseScaleType(fields.get("scale_type" + i)),
                     parseFilterLinear(fields.get("filter_linear" + i)),
-                    parseWrapMode(fields.get("wrap_mode" + i))));
+                    parseWrapMode(fields.get("wrap_mode" + i)),
+                    parseParameterValues(source, fields)));
         }
 
         return new DisplayShaderPreset(ref.label(), phase, List.copyOf(passes));
@@ -268,10 +272,40 @@ public class DisplayShaderPresetLoader {
     }
 
     private static DisplayShaderPass passForSource(String source, double scale, ScaleType scaleType,
-                                                   boolean filterLinear, WrapMode wrapMode) {
+                                                   boolean filterLinear, WrapMode wrapMode,
+                                                   Map<String, Float> parameterValues) {
         GlslShape shape = detectShape(source);
         String vertexSource = shape == GlslShape.COMBINED ? source : null;
-        return new DisplayShaderPass(vertexSource, source, shape, scale, scaleType, filterLinear, wrapMode);
+        return new DisplayShaderPass(vertexSource, source, shape, scale, scaleType, filterLinear, wrapMode,
+                parameterValues);
+    }
+
+    private static Map<String, Float> parseParameterValues(String source, Map<String, String> fields)
+            throws DisplayShaderLoadException {
+        Map<String, Float> values = new LinkedHashMap<>();
+        Matcher matcher = PARAMETER_PRAGMA.matcher(source);
+        while (matcher.find()) {
+            String name = matcher.group(1);
+            float value = parseParameterValue(name, matcher.group(2));
+            String override = fields.get(name.toLowerCase(Locale.ROOT));
+            if (override != null && !override.isBlank()) {
+                value = parseParameterValue(name, override);
+            }
+            values.put(name, value);
+        }
+        return values;
+    }
+
+    private static float parseParameterValue(String name, String raw) throws DisplayShaderLoadException {
+        try {
+            float parsed = Float.parseFloat(raw.trim());
+            if (!Float.isFinite(parsed)) {
+                throw new NumberFormatException(raw);
+            }
+            return parsed;
+        } catch (NumberFormatException e) {
+            throw new DisplayShaderLoadException("Invalid shader parameter value for " + name + ": " + raw, e);
+        }
     }
 
     private static GlslShape detectShape(String source) {

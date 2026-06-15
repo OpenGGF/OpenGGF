@@ -6,6 +6,7 @@ import org.lwjgl.opengl.GL;
 
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -34,6 +35,7 @@ public class TestDisplayShaderPipelineSmoke {
 
             assertFalse(pipeline.activate(preset));
             assertFalse(pipeline.isActive());
+            assertTrue(pipeline.lastActivationFailure().contains("Display shader compile failed"));
             pipeline.dispose();
         }
     }
@@ -105,6 +107,57 @@ public class TestDisplayShaderPipelineSmoke {
     }
 
     @Test
+    public void combinedTextureCoordinatesPreserveXAxisAndYAxis() {
+        try (GlContext ignored = GlContext.open()) {
+            DisplayShaderPipeline pipeline = new DisplayShaderPipeline();
+            pipeline.resize(32, 16, 32, 16);
+
+            String source = """
+                    #if defined(VERTEX)
+                    attribute vec4 VertexCoord;
+                    attribute vec2 TexCoord;
+                    varying vec2 TEX0;
+                    uniform mat4 MVPMatrix;
+                    void main() {
+                        gl_Position = MVPMatrix * VertexCoord;
+                        TEX0 = TexCoord;
+                    }
+                    #elif defined(FRAGMENT)
+                    varying vec2 TEX0;
+                    void main() {
+                        gl_FragColor = vec4(TEX0.x, TEX0.y, 0.0, 1.0);
+                    }
+                    #endif
+                    """;
+
+            DisplayShaderPreset preset = new DisplayShaderPreset("axis-check", ShaderPhase.FINAL, List.of(
+                    new DisplayShaderPass(source, source, GlslShape.COMBINED, 1, ScaleType.SOURCE,
+                            false, WrapMode.CLAMP_TO_EDGE)));
+
+            assertTrue(pipeline.activate(preset));
+            glViewport(0, 0, 32, 16);
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+            pipeline.apply(0, 0, 32, 16, 1);
+
+            ByteBuffer rightMiddle = ByteBuffer.allocateDirect(4);
+            glReadPixels(28, 8, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, rightMiddle);
+            int rightRed = Byte.toUnsignedInt(rightMiddle.get(0));
+            int rightGreen = Byte.toUnsignedInt(rightMiddle.get(1));
+            assertTrue(rightRed > rightGreen, "expected x axis to dominate at right edge, red="
+                    + rightRed + " green=" + rightGreen);
+
+            ByteBuffer topMiddle = ByteBuffer.allocateDirect(4);
+            glReadPixels(16, 14, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, topMiddle);
+            int topRed = Byte.toUnsignedInt(topMiddle.get(0));
+            int topGreen = Byte.toUnsignedInt(topMiddle.get(1));
+            assertTrue(topGreen > topRed, "expected y axis to dominate at top edge, red="
+                    + topRed + " green=" + topGreen);
+            pipeline.dispose();
+        }
+    }
+
+    @Test
     public void fragmentOnlyPassthroughActivatesAndApplies() {
         try (GlContext ignored = GlContext.open()) {
             DisplayShaderPipeline pipeline = new DisplayShaderPipeline();
@@ -130,6 +183,41 @@ public class TestDisplayShaderPipelineSmoke {
             pipeline.apply(0, 0, 32, 32, 7);
 
             assertTrue(pipeline.isActive());
+            pipeline.dispose();
+        }
+    }
+
+    @Test
+    public void retroArchParameterUniformSourceActivatesAndBindsPresetValue() {
+        try (GlContext ignored = GlContext.open()) {
+            DisplayShaderPipeline pipeline = new DisplayShaderPipeline();
+            pipeline.resize(16, 16, 16, 16);
+
+            DisplayShaderPreset preset = new DisplayShaderPreset("parameter-uniform", ShaderPhase.FINAL, List.of(
+                    new DisplayShaderPass(null, """
+                            #ifdef PARAMETER_UNIFORM
+                            uniform float HORIZONTAL_BLUR;
+                            #endif
+                            void main() {
+                                gl_FragColor = HORIZONTAL_BLUR == 1.0
+                                    ? vec4(0.0, 1.0, 0.0, 1.0)
+                                    : vec4(1.0, 0.0, 0.0, 1.0);
+                            }
+                            """, GlslShape.FRAGMENT_ONLY, 1, ScaleType.SOURCE, false,
+                            WrapMode.CLAMP_TO_EDGE, Map.of("HORIZONTAL_BLUR", 1.0f))));
+
+            assertTrue(pipeline.activate(preset));
+            glViewport(0, 0, 16, 16);
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+            pipeline.apply(0, 0, 16, 16, 1);
+
+            ByteBuffer pixel = ByteBuffer.allocateDirect(4);
+            glReadPixels(8, 8, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+            int red = Byte.toUnsignedInt(pixel.get(0));
+            int green = Byte.toUnsignedInt(pixel.get(1));
+            assertTrue(green > 200, "expected bound parameter to render green, red=" + red + " green=" + green);
+            assertTrue(red < 50, "expected low red success pixel, red=" + red + " green=" + green);
             pipeline.dispose();
         }
     }

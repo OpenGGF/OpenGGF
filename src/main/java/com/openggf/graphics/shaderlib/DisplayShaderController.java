@@ -107,12 +107,12 @@ public final class DisplayShaderController {
         if (activate.test(ref)) {
             currentIndex = nextIndex;
             persistSelection.accept(persistedValue(ref));
-            showNotification("Shader: " + ref.label());
+            showNotification("Shader: " + ref.shortLabel());
             return true;
         }
 
         markFailed(ref);
-        showNotification("Shader failed: " + ref.label());
+        showNotification("Shader failed: " + ref.shortLabel());
         return false;
     }
 

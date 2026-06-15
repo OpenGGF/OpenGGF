@@ -195,6 +195,44 @@ public class TestRetroArchGlslCompat {
     }
 
     @Test
+    public void precisionQualifiedFragColorOutputPreventsDuplicateInjection() throws Exception {
+        String source = """
+                #if defined(VERTEX)
+                void main() {}
+                #elif defined(FRAGMENT)
+                #if __VERSION__ >= 130
+                #define COMPAT_PRECISION
+                out COMPAT_PRECISION vec4 FragColor;
+                #else
+                #define FragColor gl_FragColor
+                #endif
+                void main() {
+                    FragColor = vec4(1.0);
+                }
+                #endif
+                """;
+
+        String staged = RetroArchGlslCompat.stageSource(source, "FRAGMENT");
+
+        assertTrue(staged.contains("out COMPAT_PRECISION vec4 FragColor;"));
+        assertFalse(staged.contains("out vec4 FragColor;"));
+        assertEquals(1, countOccurrences(staged, "FragColor;"));
+    }
+
+    @Test
+    public void canEnableRetroArchParameterUniformBlocks() throws Exception {
+        String staged = RetroArchGlslCompat.stageSource("""
+                #ifdef PARAMETER_UNIFORM
+                uniform float HORIZONTAL_BLUR;
+                #endif
+                void main() {}
+                """, "FRAGMENT", true);
+
+        assertTrue(staged.contains("#define PARAMETER_UNIFORM\n"));
+        assertTrue(staged.indexOf("#define PARAMETER_UNIFORM") < staged.indexOf("#ifdef PARAMETER_UNIFORM"));
+    }
+
+    @Test
     public void preservesRetroArchCompatMacrosInBody() throws Exception {
         String source = """
                 #define COMPAT_TEXTURE texture

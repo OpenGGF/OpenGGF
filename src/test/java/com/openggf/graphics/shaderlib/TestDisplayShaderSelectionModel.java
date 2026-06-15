@@ -17,7 +17,7 @@ public class TestDisplayShaderSelectionModel {
     Path tempDir;
 
     @Test
-    public void emptyQueryReturnsOffThenSortedEntries() throws IOException {
+    public void emptyQueryReturnsRootOffAndImmediateFolders() throws IOException {
         DisplayShaderSelectionModel model = new DisplayShaderSelectionModel(libraryWith(
                 "scanlines/zebra.glslp",
                 "crt/crt-easymode.glslp",
@@ -27,9 +27,9 @@ public class TestDisplayShaderSelectionModel {
 
         assertEquals(List.of(
                 "Off",
-                "BizHawk/BizScanlines.cgp",
-                "crt/crt-easymode.glslp",
-                "scanlines/zebra.glslp"), displayPaths(items));
+                "BizHawk/",
+                "crt/",
+                "scanlines/"), displayPaths(items));
         assertEquals(List.of(
                 "System",
                 "BizHawk",
@@ -50,10 +50,10 @@ public class TestDisplayShaderSelectionModel {
 
         assertEquals(List.of(
                 "Off",
-                "scanlines/zebra.glslp",
-                "crt/crt-easymode.glslp"), displayPaths(items));
-        assertSame(scanline, items.get(1).ref());
-        assertSame(crt, items.get(2).ref());
+                "crt/",
+                "scanlines/"), displayPaths(items));
+        assertSame(null, items.get(1).ref());
+        assertSame(null, items.get(2).ref());
     }
 
     @Test
@@ -64,7 +64,7 @@ public class TestDisplayShaderSelectionModel {
 
         List<DisplayShaderSelectionModel.SelectionItem> items = model.filter("EASYMODE");
 
-        assertEquals(List.of("Off", "libretro-glsl/crt/crt-easymode.glslp"), displayPaths(items));
+        assertEquals(List.of("Off"), displayPaths(items));
     }
 
     @Test
@@ -75,8 +75,7 @@ public class TestDisplayShaderSelectionModel {
 
         List<DisplayShaderSelectionModel.SelectionItem> items = model.filter("scanlines");
 
-        assertEquals(List.of("Off", "RetroArch/shaders_glsl/scanlines/scanline.glslp"), displayPaths(items));
-        assertEquals("scanlines", items.get(1).category());
+        assertEquals(List.of("Off"), displayPaths(items));
     }
 
     @Test
@@ -104,6 +103,7 @@ public class TestDisplayShaderSelectionModel {
                 "crt/crt-easymode.glslp",
                 "scanlines/zebra.glslp");
         DisplayShaderSelectionModel model = new DisplayShaderSelectionModel(library);
+        model.enterFolder("scanlines");
         model.filter("zebra");
 
         DisplayShaderPresetRef selected = model.select(1);
@@ -118,13 +118,46 @@ public class TestDisplayShaderSelectionModel {
                 "crt/crt-easymode.glslp",
                 "scanlines/zebra.glslp");
         DisplayShaderSelectionModel model = new DisplayShaderSelectionModel(library);
+        model.enterFolder("scanlines");
         model.filter("zebra");
+        model.enterParentFolder();
+        model.enterFolder("crt");
         model.filter("crt");
 
         DisplayShaderPresetRef selected = model.select(1);
 
         assertSame(library.at(1), selected);
         assertEquals("crt/crt-easymode.glslp", selected.relativePath());
+    }
+
+    @Test
+    public void enteringFolderShowsParentFoldersAndBasenameOnlyShaders() throws IOException {
+        DisplayShaderLibrary library = libraryWith(
+                "libretro-glsl/crt/crt-easymode.glslp",
+                "libretro-glsl/crt/crtglow_gauss.glslp",
+                "libretro-glsl/scanlines/zebra.glslp");
+        DisplayShaderSelectionModel model = new DisplayShaderSelectionModel(library);
+
+        model.enterFolder("libretro-glsl");
+        model.enterFolder("crt");
+        List<DisplayShaderSelectionModel.SelectionItem> items = model.filter("");
+
+        assertEquals("libretro-glsl/crt", model.currentFolder());
+        assertEquals(List.of("..", "crt-easymode.glslp", "crtglow_gauss.glslp"), displayPaths(items));
+        assertSame(library.at(1), items.get(1).ref());
+    }
+
+    @Test
+    public void currentFolderContainingSelectionOpensToThatFolder() throws IOException {
+        DisplayShaderLibrary library = libraryWith(
+                "libretro-glsl/crt/crt-easymode.glslp",
+                "libretro-glsl/scanlines/zebra.glslp");
+        DisplayShaderSelectionModel model = new DisplayShaderSelectionModel(library);
+
+        model.showFolderFor(library.at(1));
+
+        assertEquals("libretro-glsl/crt", model.currentFolder());
+        assertEquals(List.of("..", "crt-easymode.glslp"), displayPaths(model.filter("")));
     }
 
     private DisplayShaderLibrary libraryWith(String... paths) throws IOException {
