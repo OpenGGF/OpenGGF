@@ -33,6 +33,41 @@ All notable changes to the OpenGGF project are documented in this file.
   bound after object movement, preventing an exact-boundary frame from entering
   the wait/charge sequence early. The ARZ2 level-select trace advances from
   frame 899 to frame 3214's separate vertical-speed frontier.
+- **S3K CPU sidekick re-pushes against a flat terrain wall each frame (removes a
+  wall-distance band-aid):** ROM `Tails_CPU_Control` advances the CPU sidekick
+  +1px toward the leader every frame its current `Status_Push` bit is clear
+  (`loc_13E34 addq.w #1,x_pos`, gated at `loc_13DF2`, `sonic3k.asm:26702`,
+  `26734-26741`); that nudge puts Tails one pixel into the wall so the next
+  `Tails_InputAcceleration_Path` check pushes it back, producing a stable
+  per-frame oscillation. The engine was suppressing that nudge during its
+  object-order push-grace window even for a pure terrain wall (no object
+  involved), so Tails free-accelerated into the wall and never re-pushed — which
+  had been masked by a `distance==0 → −1` CPU-sidekick wall-distance override
+  (`PhysicsFeatureSet.sidekickGroundWallZeroDistanceSeamPenetrates`). The
+  follow-nudge suppression is now gated on object context, restoring ROM
+  behavior, and the override plus its feature flag are deleted in favor of ROM
+  `bpl` semantics (push only when the predicted-position wall distance is
+  negative, `sonic3k.asm:19679-19743`, `27974-28018`). Ground truth was captured
+  with a new BizHawk diagnostic (`tools/bizhawk/diag_tails_wallprobe.lua`):
+  ROM returns wall distance 0 at AIZ f3135 (no push) and −1 at HCZ f940 (push).
+  Advances the AIZ1 trace frontier from frame 3135 to 3317 (the 3 sidekick
+  auto-jump-cadence regression tests pass) while HCZ holds frame 1402 via real
+  physics; no S3K trace regresses and S1/S2 are unaffected.
+
+- **S3K sidekick keeps `Status_OnObj` on a land-and-jump-off-object frame:**
+  ROM evaluates each solid object's `SolidObjectFull` once per frame, so when a
+  CPU sidekick (Tails) lands on a solid object and auto-jumps the same frame it
+  briefly carries `Status_InAir|Status_OnObj` (`RideObject_SetRide` sets OnObj,
+  `sonic3k.asm:42033-42034`; `Tails_Jump` sets InAir without clearing OnObj,
+  `sonic3k.asm:28553-28554`; the airborne-rider unseat at `loc_1DC98`/`loc_1DCF0`
+  only fires the next frame, `sonic3k.asm:41016-41035`/`41066-41084`). The engine
+  resolved solids in an inline post-physics pass and unseated the ride the same
+  tick it was established. A new `PhysicsFeatureSet`
+  `solidObjectKeepsOnObjWhenJumpedOffSameFrame` flag (S3K only; S1/S2 false and
+  unchanged by construction) latches a ride established this frame by a fresh
+  landing and suppresses the same-frame unseat. Advances the AIZ1 trace frontier
+  from frame 2590 to 3135 and the HCZ complete-run from 407 to 1402 with no S3K
+  trace regression.
 
 - **S3K LBZ complete-run trace advances through Orbinaut and rolling-drum
   frontiers:** Orbinaut child touch-list publication now samples the child

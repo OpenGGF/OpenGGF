@@ -629,34 +629,6 @@ public class CollisionSystemTest {
     }
 
     @Test
-    public void s2CpuSidekickZeroDistanceGroundWallProbeRemainsClear() {
-        FeatureSetCollisionTestSprite player = newCollisionTestSprite();
-        player.setFeatureSet(PhysicsFeatureSet.SONIC_2);
-        player.setCpuControlled(true);
-        player.setGSpeed((short) 0x000C);
-        player.capturePreCpuControlSnapshot();
-
-        assertEquals(0, invokeNormaliseGroundWallDistance(player, 0, 0x40),
-                "S2 Tails CalcRoomInFront must keep a zero-distance horizontal seam clear");
-        assertFalse(invokeShouldDeferGroundWallVelocityResponse(player, 0, 0x40),
-                "S2 Tails must not take the S3K deferred wall-response path at a clear seam");
-    }
-
-    @Test
-    public void s3kCpuSidekickZeroDistanceGroundWallProbeCanBecomePenetrationAfterExistingInertia() {
-        FeatureSetCollisionTestSprite player = newCollisionTestSprite();
-        player.setFeatureSet(PhysicsFeatureSet.SONIC_3K);
-        player.setCpuControlled(true);
-        player.setGSpeed((short) 0x000C);
-        player.capturePreCpuControlSnapshot();
-
-        assertEquals(-1, invokeNormaliseGroundWallDistance(player, 0, 0x40),
-                "S3K Tails treats the zero-distance seam as first penetration after entering CPU control with inertia");
-        assertTrue(invokeShouldDeferGroundWallVelocityResponse(player, 0, 0x40),
-                "S3K keeps the wall response deferred until after the same-frame position step");
-    }
-
-    @Test
     public void oddRightWallAngleFallbackIsSensorDrivenNotCoordinateWindow() {
         AbstractPlayableSprite player = newCollisionTestSprite();
         player.setGroundMode(GroundMode.RIGHTWALL);
@@ -715,30 +687,6 @@ public class CollisionSystemTest {
             return method.invoke(null, angle, gSpeed);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Failed to invoke describeCalcRoomInFrontProbe", e);
-        }
-    }
-
-    private static int invokeNormaliseGroundWallDistance(AbstractPlayableSprite player, int distance, int mode) {
-        try {
-            Method method = CollisionSystem.class.getDeclaredMethod(
-                    "normaliseGroundWallDistance", AbstractPlayableSprite.class, int.class, int.class);
-            method.setAccessible(true);
-            return ((Number) method.invoke(null, player, distance, mode)).intValue();
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError("Failed to invoke normaliseGroundWallDistance", e);
-        }
-    }
-
-    private static boolean invokeShouldDeferGroundWallVelocityResponse(AbstractPlayableSprite player,
-                                                                       int rawDistance,
-                                                                       int mode) {
-        try {
-            Method method = CollisionSystem.class.getDeclaredMethod(
-                    "shouldDeferGroundWallVelocityResponse", AbstractPlayableSprite.class, int.class, int.class);
-            method.setAccessible(true);
-            return (Boolean) method.invoke(null, player, rawDistance, mode);
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError("Failed to invoke shouldDeferGroundWallVelocityResponse", e);
         }
     }
 

@@ -300,7 +300,6 @@ public class CollisionSystem {
         CalcRoomInFrontProbe probe = describeCalcRoomInFrontProbe(angle, gSpeed);
         SensorResult result = scanCalcRoomInFront(sprite, probe, predictedDx, predictedDy);
 
-
         if (result == null) {
             return;
         }
@@ -308,13 +307,18 @@ public class CollisionSystem {
         int rotation = (gSpeed < 0) ? 0x40 : 0xC0;
         int rotatedAngle = (angle + rotation) & 0xFF;
         int mode = (rotatedAngle + 0x20) & 0xC0;
-        int distance = normaliseGroundWallDistance(sprite, result.distance(), mode);
+        // ROM CalcRoomInFront (sub_F61C, sonic3k.asm:19679-19743) pushes only when
+        // the predicted-position wall distance is negative (the caller's tst.w d1 /
+        // bpl, e.g. Tails_InputAcceleration_Path loc_14BA8..loc_14C00,
+        // sonic3k.asm:27974-28018). The engine's predicted-position scan already
+        // reproduces FindWall's per-cell penetration (sub_F584 loc_F60C not.w d1,
+        // sonic3k.asm:19666-19672): a flush empty-cell edge yields distance 0 (no
+        // push) and a predicted pixel inside a solid cell yields a negative
+        // distance (push). The S3K CPU sidekick reaches the penetrating pixel via
+        // the per-frame follow nudge (loc_13E34 addq.w #1,x_pos,
+        // sonic3k.asm:26734-26741), so no zero-distance seam override is required.
+        int distance = result.distance();
         if (distance >= 0) {
-            return;
-        }
-
-        if (shouldDeferGroundWallVelocityResponse(sprite, result.distance(), mode)) {
-            sprite.deferGroundWallVelocityResponse(mode, distance);
             return;
         }
 
@@ -353,31 +357,6 @@ public class CollisionSystem {
             default -> {
             }
         }
-    }
-
-    private static boolean shouldDeferGroundWallVelocityResponse(AbstractPlayableSprite sprite, int rawDistance, int mode) {
-        return rawDistance == 0
-                && sidekickGroundWallZeroDistanceSeamPenetrates(sprite, mode);
-    }
-
-    private static int normaliseGroundWallDistance(AbstractPlayableSprite sprite, int distance, int mode) {
-        if (distance == 0 && sidekickGroundWallZeroDistanceSeamPenetrates(sprite, mode)) {
-            return -1;
-        }
-        return distance;
-    }
-
-    private static boolean sidekickGroundWallZeroDistanceSeamPenetrates(AbstractPlayableSprite sprite, int mode) {
-        var featureSet = sprite.getPhysicsFeatureSet();
-        // S3K's CPU sidekick path can resolve the same horizontal seam as the
-        // first penetrating pixel, but only after the CPU routine entered the
-        // frame with existing inertia. S2 leaves the equivalent zero-distance
-        // seam clear, so the behavior is gated through PhysicsFeatureSet.
-        return featureSet != null
-                && featureSet.sidekickGroundWallZeroDistanceSeamPenetrates()
-                && sprite.isCpuControlled()
-                && sprite.getPreCpuControlGSpeed() != 0
-                && (mode == 0x40 || mode == 0xC0);
     }
 
     private static boolean shouldSetGroundWallPush(AbstractPlayableSprite sprite, int mode) {

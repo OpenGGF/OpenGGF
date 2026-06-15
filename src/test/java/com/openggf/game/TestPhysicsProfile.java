@@ -249,15 +249,6 @@ public class TestPhysicsProfile {
                 "S3K permanently latches respawn-table bits after player kill");
     }
 
-    @Test
-    public void testSidekickGroundWallZeroDistanceSeamPenetrates_PerGame() {
-        assertFalse(PhysicsFeatureSet.SONIC_1.sidekickGroundWallZeroDistanceSeamPenetrates(),
-                "S1 has no CPU sidekick ground-wall seam path");
-        assertFalse(PhysicsFeatureSet.SONIC_2.sidekickGroundWallZeroDistanceSeamPenetrates(),
-                "S2 Tails keeps zero-distance CalcRoomInFront seams clear");
-        assertTrue(PhysicsFeatureSet.SONIC_3K.sidekickGroundWallZeroDistanceSeamPenetrates(),
-                "S3K Tails can defer a zero-distance seam as first penetration after existing inertia");
-    }
 
     @Test
     public void testObjectsExecuteAfterPlayerPhysics_PerGame() {

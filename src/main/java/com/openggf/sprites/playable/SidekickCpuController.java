@@ -1912,6 +1912,7 @@ public class SidekickCpuController {
                 && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0;
         boolean localGracePushBypass = gracePushBypass
                 && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y;
+        boolean objectOrderFollowSteeringContext = isObjectOrderFollowSteeringContext(effectiveLeader);
         boolean supportGraceKeepsFollowSteering =
                 localGracePushBypass && isDoorSupportGraceFollowSteeringContext();
         int followSnapThreshold = resolveFollowSnapThreshold();
@@ -1929,8 +1930,23 @@ public class SidekickCpuController {
         boolean localBelowTargetBridgeWindow =
                 normalPushingGraceFrames >= LOCAL_BELOW_TARGET_PUSH_BRIDGE_MIN_GRACE
                         && normalPushingGraceFrames <= LOCAL_BELOW_TARGET_PUSH_BRIDGE_MAX_GRACE;
+        // The local push-grace nudge suppression is an object-order bridge: it
+        // exists for zones where solid-object processing clears Tails' push bit a
+        // frame early/late relative to ROM's CPU slot, so the engine must not run
+        // ROM loc_13E0A/loc_13E34's +/-1 x_pos follow nudge while that stale-bit
+        // window is open. ROM itself gates that nudge only on the *current*
+        // Status_Push bit (loc_13DF2 btst #Status_Push; beq, sonic3k.asm:26702),
+        // with no multi-frame grace. For a pure terrain-wall push (no solid
+        // object involved) the engine's push bit timing already matches ROM, so
+        // there is no stale window to bridge and the grace must not suppress the
+        // ROM nudge — otherwise Tails free-accelerates into the wall instead of
+        // re-pushing each frame (HCZ1 flat right-wall, sonic3k.asm:26707-26741).
+        boolean localGracePushBypassObjectContext = localGracePushBypass
+                && (objectOrderFollowSteeringContext
+                || leaderStatusOnObject
+                || currentRidingObject() != null);
         boolean suppressLocalGraceFollowNudge =
-                localGracePushBypass
+                localGracePushBypassObjectContext
                         && normalPushingGraceFrames >= OBJECT_ORDER_PUSH_BRIDGE_MIN_GRACE
                         && !leaderStatusOnObject
                         && !supportGraceKeepsFollowSteering
@@ -1995,7 +2011,6 @@ public class SidekickCpuController {
                         && !delayedInputIntoFollowSide
                         && dy >= 0
                         && localBelowTargetFacingIntoFollowSide;
-        boolean objectOrderFollowSteeringContext = isObjectOrderFollowSteeringContext(effectiveLeader);
         boolean objectOrderGrace = localGracePushBypass
                 && normalPushingGraceFrames >= OBJECT_ORDER_PUSH_BRIDGE_MIN_GRACE
                 && objectOrderFollowSteeringContext

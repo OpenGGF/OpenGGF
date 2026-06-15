@@ -224,6 +224,15 @@ straightforward to add new objects, zones, and game-specific behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **S3K AIZ sidekick wall/on-object trace frontier (2026-06-15).** Merged
+  `bugfix/ai-aiz-trace-green`, advancing the S3K AIZ1 trace from frame 2590 to
+  3317 (and HCZ complete-run 407→1402) by two ROM-cited CPU-sidekick fixes:
+  keeping `Status_OnObj` on a same-frame land-and-jump-off-object frame, and
+  restoring the per-frame terrain-wall follow nudge so the sidekick re-pushes
+  flat walls like the ROM — which let a `distance==0→−1` wall-distance band-aid
+  and its `PhysicsFeatureSet` flag be deleted. Includes a BizHawk ROM-execution
+  diagnostic (`tools/bizhawk/diag_tails_wallprobe.lua`) used to capture the
+  ground truth. No S3K trace regresses; S1/S2 unaffected.
 - **AIZ2 battleship wrap contract documentation (2026-06-15).** Merged
   `bugfix/ai-aiz2-battleship-wrap-docs`, correcting stale documentation and test
   wording so the AIZ2 post-bombing ship loop is described by its ROM
