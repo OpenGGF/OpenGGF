@@ -52,6 +52,49 @@ class TestDisplayShaderController {
     }
 
     @Test
+    void notificationClearsAfterTimeout() throws IOException {
+        DisplayShaderController controller = new DisplayShaderController(
+                libraryWithShaders(),
+                "OFF",
+                NEXT_KEY,
+                PREVIOUS_KEY,
+                selection -> {
+                },
+                ref -> true);
+
+        press(controller, NEXT_KEY);
+        assertEquals("Shader: a", controller.notificationText());
+
+        InputHandler input = new InputHandler();
+        for (int i = 0; i < DisplayShaderController.NOTIFICATION_FRAMES; i++) {
+            controller.update(input);
+            input.update();
+        }
+
+        assertNull(controller.notificationText());
+    }
+
+    @Test
+    void heldNextKeyDoesNotCycleRepeatedlyWithoutNewEdge() throws IOException {
+        DisplayShaderController controller = new DisplayShaderController(
+                libraryWithShaders(),
+                "OFF",
+                NEXT_KEY,
+                PREVIOUS_KEY,
+                selection -> {
+                },
+                ref -> true);
+        InputHandler input = new InputHandler();
+
+        input.handleKeyEvent(NEXT_KEY, GLFW_PRESS);
+        controller.update(input);
+        input.update();
+        controller.update(input);
+
+        assertEquals("a.glsl", controller.currentRef().relativePath());
+    }
+
+    @Test
     void previousFromOffWrapsToLastEntry() throws IOException {
         DisplayShaderLibrary library = libraryWithShaders();
         AtomicReference<String> persisted = new AtomicReference<>();
