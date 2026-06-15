@@ -4,6 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K MHZ complete-run trace advances through the MHZ1 cutscene button:**
+  the MHZ1 Knuckles cutscene now preserves native player subpixels during the
+  clamp, falls through its landing wait like the ROM, clears the P2 logical
+  latch through the signed `Ctrl_2_locked` path, and the cutscene button now
+  runs its ROM `SolidObjectFull` checkpoint with the inclusive right edge used
+  by `SolidObject_cont`. This advances the MHZ complete-run trace from frame
+  850 through the frame-936 `Status_Push` mismatch to frame 966's separate
+  post-button jump `y` frontier.
+
 - **S1 MZ2 complete-run trace advances through object-slot lifetime
   frontiers:** Obj23 Buzz Bomber missiles now keep their ROM slot until the
   bottom-boundary delete, Obj4E lava wall trails follow the parent routine-8

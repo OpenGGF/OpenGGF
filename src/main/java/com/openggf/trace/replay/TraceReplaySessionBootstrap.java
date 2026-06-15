@@ -8,6 +8,7 @@ import com.openggf.game.InitStep;
 import com.openggf.game.LevelInitProfile;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.session.GameplayTeamBootstrap;
+import com.openggf.game.sonic3k.Sonic3kLevelAnimationManager;
 import com.openggf.game.sonic2.objects.TornadoObjectInstance;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.game.sonic2.trace.Sonic2TornadoRidePrelude;
@@ -209,6 +210,7 @@ public final class TraceReplaySessionBootstrap {
         }
         OscillationManager.suppressNextFrames(
                 TraceReplayBootstrap.initialOscillationSuppressionFramesForTraceReplay(trace));
+        advanceAnimatedTilePreludeForTraceReplay(trace);
         int sidekickPreludeFrames =
                 TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace);
         int objectPreludeFrames = 0;
@@ -579,9 +581,25 @@ public final class TraceReplaySessionBootstrap {
         for (int i = 0; i < preTraceOsc; i++) {
             OscillationManager.update(-(preTraceOsc - i));
         }
+        advanceAnimatedTilePreludeForTraceReplay(trace);
         TraceReplayBootstrap.SnapshotReport snapshotReport =
                 TraceReplayBootstrap.reportPreTraceObjectSnapshots(trace);
         return new BootstrapResult(snapshotReport, TraceReplayBootstrap.ReplayStartState.DEFAULT);
+    }
+
+    private static void advanceAnimatedTilePreludeForTraceReplay(TraceData trace) {
+        int frames = TraceReplayBootstrap.s3kCompleteRunAnimatedTilePreludeFramesForTraceReplay(trace);
+        if (frames <= 0 || GameServices.levelOrNull() == null) {
+            return;
+        }
+        var animatedPatternManager = GameServices.levelOrNull().getAnimatedPatternManager();
+        for (int i = 0; i < frames; i++) {
+            if (animatedPatternManager instanceof Sonic3kLevelAnimationManager s3kAnimationManager) {
+                s3kAnimationManager.updatePatternsOnlyForReplayBootstrap();
+            } else if (animatedPatternManager != null) {
+                animatedPatternManager.update();
+            }
+        }
     }
 
     /**

@@ -477,6 +477,15 @@ public class SidekickCpuController {
         controller2SignedLocked = locked;
     }
 
+    public void clearController2LogicalLatch() {
+        // ROM objects that write Ctrl_2_locked often also clear Ctrl_2_logical
+        // at the same site. Keep this separate from setController2SignedLocked:
+        // a signed lock by itself preserves the previous logical word.
+        diagnosticCtrl2HeldLatch = 0;
+        diagnosticCtrl2PressedLatch = 0;
+        clearInputs();
+    }
+
     public boolean isController2SignedLocked() {
         return controller2SignedLocked;
     }

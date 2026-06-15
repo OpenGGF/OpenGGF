@@ -213,6 +213,41 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void explicitCtrl2LogicalClearDropsSignedLockDiagnosticLatch() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x0335);
+        Arrays.fill(yHistory, (short) 0x05A2);
+        Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        controller.update(0x00DA);
+        assertEquals(AbstractPlayableSprite.INPUT_RIGHT,
+                controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_RIGHT);
+
+        controller.setController2SignedLocked(true);
+        controller.clearController2LogicalLatch();
+        controller.update(0x00DB);
+
+        Assertions.assertAll(
+                () -> assertEquals("ctrl2_signed_lock_skip",
+                        controller.getLatestNormalStepDiagnostics().followBranch()),
+                () -> assertEquals(0,
+                        controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_RIGHT,
+                        "Objects such as MHZ1's Player_2 stopper clear Ctrl_2_logical "
+                                + "when they set the signed Ctrl_2_locked byte "
+                                + "(sonic3k.asm:130013-130018)."));
+    }
+
+    @Test
     void negativeCtrl2LockReportsClearedLogicalWordOnceEndingPoseObjectControlOwnsSidekick() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");

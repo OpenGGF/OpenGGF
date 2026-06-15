@@ -308,6 +308,8 @@ public final class TraceReplayBootstrap {
 
     private static final int S1_LEVEL_START_OBJECT_PRELUDE_FRAMES = 1;
 
+    private static final int S3K_COMPLETE_RUN_SETUP_ANIMATED_TILE_PRELUDE_FRAMES = 1;
+
     private static int resolveS1LevelStartObjectPreludeFrames(TraceData trace) {
         if (trace == null || trace.frameCount() == 0) {
             return 0;
@@ -404,6 +406,30 @@ public final class TraceReplayBootstrap {
      */
     public static int s2GenericObjectTitleCardPreludeFramesForTraceReplay(TraceData trace) {
         return resolveS2TitleCardPreludeFrames(trace);
+    }
+
+    /**
+     * Number of native S3K {@code Animate_Tiles} calls that complete-run
+     * segments observe before the first compared motion row.
+     *
+     * <p>The ROM's setup pass calls {@code Animate_Tiles} after
+     * {@code Process_Sprites} and {@code Render_Sprites}, then unlocks
+     * controls (docs/skdisasm/sonic3k.asm:7849-7860). Replay's structural
+     * handoff row is also routed as VBlank-only, so it cannot run the normal
+     * {@code LevelLoop} tail where S3K advances level animation
+     * (sonic3k.asm:7884-7911). Advance the engine's native animated-pattern
+     * manager for those skipped animation calls instead of copying recorded
+     * animation RAM from the trace.
+     */
+    public static int s3kCompleteRunAnimatedTilePreludeFramesForTraceReplay(TraceData trace) {
+        if (!isS3kCompleteRunSegment(trace)) {
+            return 0;
+        }
+        int frames = S3K_COMPLETE_RUN_SETUP_ANIMATED_TILE_PRELUDE_FRAMES;
+        if (isS3kCompleteRunHandoffCounterTickRow(trace)) {
+            frames++;
+        }
+        return frames;
     }
 
     /**

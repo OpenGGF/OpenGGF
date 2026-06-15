@@ -653,16 +653,18 @@ public class TraceBinder {
     }
 
     /**
-     * The recorder emits raw ROM button bits for {@code Ctrl_2_Logical}. The
-     * engine collapses A/B/C into its single abstract jump bit while preserving
-     * directional bits.
+     * The recorder emits raw ROM button bits for {@code Ctrl_2_Logical}. Some
+     * diagnostic sites emit the full word, with held bits in the high byte and
+     * pressed bits in the low byte. The engine collapses A/B/C into its single
+     * abstract jump bit while preserving directional bits.
      */
     private static int normalizeRomCtrl2LogicalByte(int raw) {
-        int normalized = raw & (TRACE_INPUT_UP
+        int held = ((raw >>> 8) | raw) & 0xFF;
+        int normalized = held & (TRACE_INPUT_UP
                 | TRACE_INPUT_DOWN
                 | TRACE_INPUT_LEFT
                 | TRACE_INPUT_RIGHT);
-        if ((raw & 0x70) != 0) {
+        if ((held & 0x70) != 0) {
             normalized |= TRACE_INPUT_JUMP;
         }
         return normalized & 0xFF;
@@ -978,5 +980,4 @@ public class TraceBinder {
         }
     }
 }
-
 

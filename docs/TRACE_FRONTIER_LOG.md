@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+## 2026-06-15 - S3K MHZ1 cutscene button frontier advance
+
+- Scope: S3K MHZ complete-run trace remediation advanced the focused replay
+  through the MHZ1 cutscene/button cluster without hydrating engine state from
+  trace rows and without zone, route, or frame carve-outs. The fixes model the
+  ROM cutscene clamp, landing wait fall-through, P2 logical latch clearing, and
+  the button's object-local `SolidObjectFull` call.
+- Disassembly evidence:
+  - `docs/skdisasm/sonic3k.asm:130013-130018` shows the cutscene P2 stopper
+    setting `Ctrl_2_locked`, clearing `Ctrl_2_logical`, and then stopping the
+    object.
+  - `docs/skdisasm/sonic3k.asm:130101-130117,177944-177952` shows the button
+    installing `Wait_Draw` with `$2E=$5F`, with `Obj_Wait` branching to the
+    callback on the underflow tick.
+  - `docs/skdisasm/sonic3k.asm:130120-130146,134100-134105` shows
+    `loc_62F0A`/`loc_62F4C` calling `sub_65DEC`, which loads `d1=$1B,d2=4,d3=5`
+    before `SolidObjectFull`.
+  - `docs/skdisasm/sonic3k.asm:41410-41532` shows `SolidObject_cont` using the
+    `cmp/bhi` X-window path and setting `Status_Push` on grounded side contact.
+- Regression tests:
+  - `mvn -Dmse=off -Dsurefire.forkCount=1 -Dtest=com.openggf.game.sonic3k.objects.TestMhz1CutsceneObjects#mhz1ButtonNormalRouteRunsInlineSolidCheckpointForSidePush -DfailIfNoTests=false test`
+  - Result: passed, **1** test.
+- Focused replay:
+- `mvn -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.argLine="-Xshare:off -Xmx4g" -Dtest=com.openggf.tests.trace.s3k.TestS3kMhzCompleteRunTraceReplay -DfailIfNoTests=false -Ds3k.rom.path=s3k.gen test`
+  - Result: expected-red trace with **4047** errors. The previous frame **850**
+    cutscene/controller frontier and frame **936** `Status_Push` mismatch are
+    fixed. The first release-blocking error is now frame **966**: `y` expected
+    `0x0669`, actual `0x0666`, a separate post-button jump-position frontier.
+
 ## 2026-06-15 - S1 MZ2 object lifetime frontier advance
 
 - Scope: S1 MZ2 complete-run trace remediation advanced the focused replay

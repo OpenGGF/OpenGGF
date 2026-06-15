@@ -83,6 +83,10 @@ class TestTraceReplayStartPositionPolicy {
                 "The AIZ intro prefix now drives the first LevelLoop tick natively, so "
                         + "Obj_FloatingPlatform must see the live OscillateNumDo phase without "
                         + "an extra replay-local suppression.");
+        assertEquals(0,
+                TraceReplayBootstrap.s3kCompleteRunAnimatedTilePreludeFramesForTraceReplay(trace),
+                "Pre-level-prefix full-run traces simulate the intro natively and must not "
+                        + "receive complete-run segment animation prelude.");
     }
 
     @Test
@@ -257,6 +261,9 @@ class TestTraceReplayStartPositionPolicy {
             assertEquals(handoffBeforeNativeMotionRow,
                     TraceReplayBootstrap.isS3kCompleteRunHandoffCounterTickRow(trace),
                     route + " only handoff-before-motion rows tick Level_frame_counter without driving compared gameplay.");
+            assertEquals(1 + (handoffBeforeNativeMotionRow ? 1 : 0),
+                    TraceReplayBootstrap.s3kCompleteRunAnimatedTilePreludeFramesForTraceReplay(trace),
+                    route + " advances only native S3K Animate_Tiles calls skipped before the first driven motion row.");
         }
     }
 

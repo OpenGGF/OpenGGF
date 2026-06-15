@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -35,7 +36,7 @@ import java.util.Set;
  * animation-frame gated bounce response.
  */
 public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider {
     private static final int ANIM_IDLE = 0;
     private static final int ANIM_BOUNCE = 1;
     private static final int BOUNCE_MAPPING_FRAME = 3;
@@ -46,6 +47,7 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
     private static final int MEDIUM_BOUNCE_THRESHOLD = 0x0760;
     private static final int HIGH_BOUNCE_THRESHOLD = 0x0860;
     private static final int BOUNCE_BONUS = 0x20;
+    private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0003;
     private static final int[] MAPPING_GROUND_HALF_HEIGHTS = {
             0x12, 0x08, 0x12, 0x12
     };
@@ -150,6 +152,13 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
     @Override
     public int getPriorityBucket() {
         return priorityBucket;
+    }
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        // Obj_MHZMushroomCap lives at 0x0003E080; S3K Tails_CPU_interact stores word 0
+        // of the stood-on object SST (docs/skdisasm/sonic3k.asm:26816-26843, 82129).
+        return ROM_CODE_POINTER_HIGH_WORD;
     }
 
     @Override

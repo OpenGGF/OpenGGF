@@ -7,6 +7,12 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.RespawnState;
 import com.openggf.game.save.SaveReason;
+import com.openggf.game.solid.ContactKind;
+import com.openggf.game.solid.DefaultSolidExecutionRegistry;
+import com.openggf.game.solid.PlayerSolidContactResult;
+import com.openggf.game.solid.PostContactState;
+import com.openggf.game.solid.PreContactState;
+import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -45,6 +51,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -2167,6 +2174,33 @@ class TestMhz1CutsceneObjects {
     }
 
     @Test
+    void knucklesCutsceneWaitCounterFallsThroughOnLandingFrame() {
+        Camera camera = new Camera();
+        camera.setY((short) 0x054C);
+        Mhz1CutsceneKnucklesInstance cutscene = new Mhz1CutsceneKnucklesInstance(new ObjectSpawn(
+                0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0));
+        cutscene.setServices(new TestObjectServices().withCamera(camera));
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0389, (short) 0x0580);
+        sonic.setCentreX((short) 0x0389);
+        sonic.setAir(false);
+
+        cutscene.update(0, sonic);
+        cutscene.update(1, sonic);
+        cutscene.update(2, sonic);
+        for (int frame = 3; frame < 34; frame++) {
+            cutscene.update(frame, sonic);
+        }
+
+        assertEquals(0x054C, camera.getY() & 0xFFFF,
+                "loc_62D2C sets $2E=$20 and falls through to loc_62D42; the first 32 decrements do not scroll yet");
+
+        cutscene.update(34, sonic);
+
+        assertEquals(0x054E, camera.getY() & 0xFFFF,
+                "the next loc_62D42 tick underflows the wait counter and falls through to loc_62D5A in the same frame");
+    }
+
+    @Test
     void knucklesCutsceneSetsAndClearsScrollLockAroundCameraPan() {
         Camera camera = new Camera();
         camera.setY((short) 0x0570);
@@ -2272,15 +2306,65 @@ class TestMhz1CutsceneObjects {
                 .findFirst().orElseThrow();
         cutsceneKnuckles.setServices(services);
         advanceMhz1CutsceneKnucklesToButtonRange(cutsceneKnuckles, button, sonic);
-        for (int frame = 0; frame < 0x61; frame++) {
+        for (int frame = 0; frame < 0x5F; frame++) {
             button.update(420 + frame, sonic);
         }
         knuckles.update(0, sonic);
 
         assertFalse(sonic.isControlLocked(),
-                "loc_62D70 clears Control_Locked after the button callback sets _unkFAB8=$0C");
+                "Obj_MHZ1CutsceneButton reaches Wait_Draw at loc_62ED0 before its long callback wait; "
+                        + "Obj_Wait must branch to loc_62EFC soon enough for the next controller slot pass");
         assertEquals(0, sonic.getForcedInputMask());
         assertTrue(knuckles.isDestroyed());
+    }
+
+    @Test
+    void mhz1ButtonNormalRouteRunsInlineSolidCheckpointForSidePush() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        when(objectManager.activeObjectsOfType(Mhz1CutsceneKnucklesInstance.class))
+                .thenReturn(List.of());
+        DefaultSolidExecutionRegistry solidExecution = new DefaultSolidExecutionRegistry();
+        TestObjectServices services = new TestObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+        }.withZoneRuntimeRegistry(runtime(PlayerCharacter.KNUCKLES))
+                .withSolidExecutionRegistry(solidExecution);
+
+        Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
+                0x03FA, 0x067C, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
+        button.setServices(services);
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x03E6, (short) 0x066D);
+
+        assertTrue(button.usesInclusiveRightEdge(),
+                "sub_65DEC reaches SolidObject_cont, whose X-window check rejects with bhi, not bhs; "
+                        + "relX == width*2 is still a valid zero-distance side contact");
+
+        solidExecution.beginFrame(0, List.of(sonic));
+        solidExecution.beginObject(button, () -> {
+            sonic.setPushing(true);
+            return new SolidCheckpointBatch(button, Map.of(sonic, new PlayerSolidContactResult(
+                    ContactKind.SIDE,
+                    false,
+                    false,
+                    true,
+                    false,
+                    PreContactState.ZERO,
+                    new PostContactState((short) 0, (short) 0, false, false, true),
+                    1)));
+        });
+        try {
+            button.update(936, sonic);
+        } finally {
+            solidExecution.endObject(button);
+            solidExecution.finishFrame();
+        }
+
+        assertTrue(sonic.getPushing(),
+                "loc_62F0A calls sub_65DEC/SolidObjectFull before testing standing bits, so side contacts "
+                        + "must set Status_Push from the button slot itself "
+                        + "(docs/skdisasm/sonic3k.asm:130120-130128,134100-134105,41488-41495)");
     }
 
     @Test

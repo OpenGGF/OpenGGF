@@ -536,6 +536,39 @@ public class TestTraceBinder {
     }
 
     @Test
+    void testSidekickCpuCtrl2NormalStepAcceptsHighByteHeldInput() {
+        TraceFrame frame = TraceFrame.of(218, 0x0000,
+            (short) 0x0371, (short) 0x036C,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0);
+        TraceEvent.CpuState snapshotCpu = new TraceEvent.CpuState(
+                218, "tails", 0x02, 0, 0, 0x06,
+                (short) 0x0301, (short) 0x035C, 0,
+                0, 0x00, 0x00, 0, 0x0068,
+                0x98, 0x00, (short) 0x0351, (short) 0x036C,
+                0x0000, 0x00, 0x00, 0x00, 0x0000);
+        TraceEvent.TailsCpuNormalStep normalStep = new TraceEvent.TailsCpuNormalStep(
+                218, "tails", 0x00, 0x00, 0x0000, 0x0000,
+                0xFF, 0x0000, 0x98, 0x0351, 0x036C, 0x0050, 0x0000,
+                "leader_fast", 0x0800, 0x08,
+                0x0000, 0x0000, 0x00, 0x0000, 0x0000, 0x00);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x02, 0x06, 0x0301, 0x035C,
+                0x08, 0x00, 0x16, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0371, (short) 0x036C,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, null, "tails", null, snapshotCpu, actualCpu, normalStep);
+
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_held").severity());
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_pressed").severity());
+        assertFalse(result.hasError());
+    }
+
+    @Test
     void testSidekickCpuCtrl2StillAcceptsCpuStateWhenNormalStepTapIsZero() {
         TraceFrame frame = TraceFrame.of(1726, 0x0000,
             (short) 0x182F, (short) 0x0417,
