@@ -9,6 +9,7 @@ import com.openggf.game.LevelInitProfile;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.sonic3k.Sonic3kLevelAnimationManager;
+import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic2.objects.TornadoObjectInstance;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.game.sonic2.trace.Sonic2TornadoRidePrelude;
@@ -269,6 +270,12 @@ public final class TraceReplaySessionBootstrap {
             // object ticks, so prelude state comes from object code rather
             // than recorded SST data.
             objectManager.reset(cameraX);
+            if (TraceReplayBootstrap.isS3kCompleteRunSegment(trace)) {
+                var levelEventProvider = GameServices.module().getLevelEventProvider();
+                if (levelEventProvider instanceof Sonic3kLevelEventManager s3kLem) {
+                    s3kLem.restoreCompleteRunSegmentObjectsAfterPreludeReset();
+                }
+            }
             AbstractPlayableSprite player = fixture != null ? fixture.sprite() : null;
             List<AbstractPlayableSprite> sidekicks = gameplayMode.getSpriteManager() != null
                     ? gameplayMode.getSpriteManager().getSidekicks()
@@ -687,7 +694,7 @@ public final class TraceReplaySessionBootstrap {
             var levelEventProvider = GameServices.module().getLevelEventProvider();
             if (levelEventProvider instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager s3kLem) {
                 if (TraceReplayBootstrap.isS3kCompleteRunSegment(trace)) {
-                    s3kLem.applyZonePlayerStateAfterTitleCard();
+                    s3kLem.applyCompleteRunSegmentPlayerStateAfterTitleCard();
                     s3kLem.armCarryIntroHandoffAfterTitleCard();
                 } else {
                     s3kLem.applyZonePlayerState();

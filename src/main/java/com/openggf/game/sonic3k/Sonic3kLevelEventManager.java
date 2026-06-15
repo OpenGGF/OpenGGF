@@ -517,6 +517,40 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
     }
 
+    public void applyCompleteRunSegmentPlayerStateAfterTitleCard() {
+        applyZonePlayerStateAfterTitleCard();
+        releaseCompleteRunSegmentStartupLatchesAfterTitleCard();
+    }
+
+    public void restoreCompleteRunSegmentObjectsAfterPreludeReset() {
+        if (currentZone == Sonic3kZoneIds.ZONE_AIZ && currentAct == 0 && aizEvents != null) {
+            aizEvents.restoreIntroObjectAfterPreludeReset();
+        }
+        if (currentZone == Sonic3kZoneIds.ZONE_ICZ && currentAct == 0 && iczEvents != null) {
+            iczEvents.restoreSnowboardIntroPostPreludeReset(GameServices.camera().getFocusedSprite());
+        }
+        if (currentZone == Sonic3kZoneIds.ZONE_LBZ && currentAct == 0) {
+            spawnLbz1GroundLaunchIntroForSetupPrelude();
+        }
+    }
+
+    private void releaseIczStartupObjectControlAfterTitleCard() {
+        AbstractPlayableSprite player = GameServices.camera().getFocusedSprite();
+        if (player == null) {
+            return;
+        }
+        ObjectControlState.none().applyTo(player);
+        player.setObjectMappingFrameControl(false);
+        player.clearForcedInputMask();
+    }
+
+    private void releaseCompleteRunSegmentStartupLatchesAfterTitleCard() {
+        if (currentZone == Sonic3kZoneIds.ZONE_ICZ && currentAct == 0
+                && iczEvents != null && iczEvents.hasSonicSnowboardIntroPlayerMode()) {
+            releaseIczStartupObjectControlAfterTitleCard();
+        }
+    }
+
     /**
      * Complete-run trace handoffs begin after ROM has already run the first
      * Tails CPU init tick for carry-intro zones (loc_13A32/loc_13A8E ->
@@ -565,6 +599,25 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 objectManager.createDynamicObject(() -> new Lbz1GroundLaunchIntroInstance(spawn));
         if (intro != null && armImmediately) {
             intro.applyInitialHoldForLevelStart();
+        }
+    }
+
+    private void spawnLbz1GroundLaunchIntroForSetupPrelude() {
+        ObjectManager objectManager = GameServices.level().getObjectManager();
+        if (objectManager == null) {
+            return;
+        }
+        for (ObjectInstance object : objectManager.getActiveObjects()) {
+            if (object instanceof Lbz1GroundLaunchIntroInstance intro && !intro.isDestroyed()) {
+                intro.applyInitialHoldForNativeSetupPass();
+                return;
+            }
+        }
+        ObjectSpawn spawn = new ObjectSpawn(0, 0, 0, 0, 0, false, 0);
+        Lbz1GroundLaunchIntroInstance intro =
+                objectManager.createDynamicObject(() -> new Lbz1GroundLaunchIntroInstance(spawn));
+        if (intro != null) {
+            intro.applyInitialHoldForNativeSetupPass();
         }
     }
 

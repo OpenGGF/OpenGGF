@@ -4,6 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K complete-run traces restore startup objects for native setup preludes:**
+  complete-run replay now restores the S3K event-owned startup objects that the
+  native setup prelude expects after object reset. ICZ restores the snowboard
+  intro in its post-startup handoff state and treats repeated visible launch
+  rows as VBlank-only until motion changes, while LBZ restores the ground-launch
+  countdown with the native setup tick accounted for. This advances ICZ
+  complete-run from frame 29 to frame 1116 and LBZ complete-run from frame 29
+  to frame 1950 without adding trace-state hydration or route carve-outs.
+
 - **S3K CNZ complete-run trace advances through setup object RNG order:**
   S3K complete-run replay now runs the native setup `Process_Sprites` object
   pass before applying the frame-zero RNG seed, so already-live setup objects

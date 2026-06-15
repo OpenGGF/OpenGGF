@@ -554,6 +554,9 @@ public final class TraceReplayBootstrap {
         if (isS3kCompleteRunInitialHandoffRow(trace, previous, current)) {
             return TraceExecutionPhase.VBLANK_ONLY;
         }
+        if (isS3kCompleteRunVisibleVelocityHoldRow(trace, previous, current)) {
+            return TraceExecutionPhase.VBLANK_ONLY;
+        }
         if (isPreLevelPrefixInputLatchRow(trace, previous, current)) {
             return TraceExecutionPhase.ADVANCE_ONLY;
         }
@@ -596,8 +599,8 @@ public final class TraceReplayBootstrap {
     }
 
     private static boolean isS3kCompleteRunInitialHandoffRow(TraceData trace,
-                                                            TraceFrame previous,
-                                                            TraceFrame current) {
+                                                             TraceFrame previous,
+                                                             TraceFrame current) {
         if (!isS3kCompleteRunSegment(trace) || current == null) {
             return false;
         }
@@ -607,6 +610,58 @@ public final class TraceReplayBootstrap {
         TraceFrame next = trace.getFrame(1);
         return (next == null || !current.stateEquals(next))
                 && !hasNativeInitialVelocity(current);
+    }
+
+    private static boolean isS3kCompleteRunVisibleVelocityHoldRow(TraceData trace,
+                                                                  TraceFrame previous,
+                                                                  TraceFrame current) {
+        if (!isS3kCompleteRunSegment(trace) || current == null || !hasNativeInitialVelocity(current)) {
+            return false;
+        }
+        int index = traceIndexForFrame(trace, current);
+        if (index < 0) {
+            return false;
+        }
+        if (index == 0) {
+            if (trace.frameCount() < 2) {
+                return false;
+            }
+            TraceFrame next = trace.getFrame(1);
+            return current.stateEquals(next) && executionCountersEqual(current, next);
+        }
+        if (previous == null
+                || !current.stateEquals(previous)
+                || !executionCountersEqual(current, previous)) {
+            return false;
+        }
+        for (int i = 1; i <= index; i++) {
+            TraceFrame prior = trace.getFrame(i - 1);
+            TraceFrame row = trace.getFrame(i);
+            if (!row.stateEquals(prior) || !executionCountersEqual(row, prior)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static int traceIndexForFrame(TraceData trace, TraceFrame frame) {
+        int frameNumber = frame.frame();
+        if (frameNumber >= 0 && frameNumber < trace.frameCount()
+                && trace.getFrame(frameNumber).frame() == frameNumber) {
+            return frameNumber;
+        }
+        for (int i = 0; i < trace.frameCount(); i++) {
+            if (trace.getFrame(i).frame() == frameNumber) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static boolean executionCountersEqual(TraceFrame left, TraceFrame right) {
+        return left.gameplayFrameCounter() == right.gameplayFrameCounter()
+                && left.vblankCounter() == right.vblankCounter()
+                && left.lagCounter() == right.lagCounter();
     }
 
     private static boolean hasNativeInitialVelocity(TraceFrame current) {

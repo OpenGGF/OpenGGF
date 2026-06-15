@@ -1,5 +1,46 @@
 # Trace Frontier Log
 
+## 2026-06-16 - S3K complete-run setup object restoration advances ICZ/LBZ
+
+- Scope: S3K complete-run trace bootstrap only. Complete-run segment setup now
+  restores the event-owned startup objects that the native setup prelude needs
+  after `objectManager.reset(cameraX)`, without hydrating object state from
+  trace rows. ICZ restores and primes the snowboard intro into the post-startup
+  board-handoff state, LBZ restores the ground-launch countdown with the native
+  one setup tick already accounted for, and AIZ restores the plane intro object
+  without dispatching it early.
+- Phase fix: ICZ complete-run frames 0-28 are repeated visible rows with native
+  launch velocity already present (`x_speed=0x0800`) but unchanged gameplay,
+  VBlank, and lag counters. Those rows now stay `VBLANK_ONLY` until the first
+  state-changing frame 29; LBZ remains a normal gameplay setup countdown
+  because its repeated rows have zero visible velocity.
+- Focused regression test:
+  `cmd /c "mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=com.openggf.tests.trace.TestTraceReplayStartPositionPolicy#s3kCompleteRunVisibleVelocityHoldRowsWaitForFirstStateChange -DfailIfNoTests=false test"`.
+  Result: passed, 1 test.
+- Focused frontier check:
+  `cmd /c "mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay,com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay -DfailIfNoTests=false -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red. ICZ advanced from frame 29 `x` setup drift to frame
+  1116 `tails_cpu_routine` (expected `0x0002`, actual `0x0004`). LBZ advanced
+  from frame 29 `y_speed` ground-launch setup drift to frame 1950
+  `status_byte` (expected `0x0021`, actual `0x0001`).
+- Full trace sweep:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dtrace.frontierOnly=true -Dtrace.context.radius=20 -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red, 90 tests, 53 failures, 1 error. The S3K complete-run
+  setup targets are no longer the true earliest frontiers. Current relevant
+  S3K frontiers from the sweep: `TestS3kCnzTraceReplay` frame 185
+  `y_speed`, `TestS3kMgzTraceReplay` frame 238 `status_byte`,
+  `TestS3kCnzCompleteRunTraceReplay` frame 355 `x_speed`,
+  `TestS3kMgzCompleteRunTraceReplay` frame 738 `rings`,
+  `TestS3kMhzCompleteRunTraceReplay` frame 966 `y`,
+  `TestS3kAizCompleteRunTraceReplay` frame 1095 `x_sub`,
+  `TestS3kHczCompleteRunTraceReplay` frame 1402 `tails_status_byte`,
+  `TestS3kIczCompleteRunTraceReplay` frame 1116 `tails_cpu_routine`,
+  and `TestS3kLbzCompleteRunTraceReplay` frame 1950 `status_byte`.
+- Cluster status: frame-0/setup issues for ICZ and LBZ are cleared/advanced.
+  No new trace-suite count regression was detected by the full sweep. Per the
+  requested order, the next target is the radius/rolling hypothesis, with the
+  earliest current S3K frontier at `TestS3kCnzTraceReplay` frame 185.
+
 ## 2026-06-15 - S3K CNZ complete-run setup object prelude frontier advance
 
 - Scope: S3K complete-run trace bootstrap now reproduces the native setup

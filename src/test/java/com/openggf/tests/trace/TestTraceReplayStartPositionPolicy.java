@@ -256,7 +256,13 @@ class TestTraceReplayStartPositionPolicy {
                     && frameZero.xSpeed() == 0
                     && frameZero.ySpeed() == 0
                     && frameZero.gSpeed() == 0;
+            boolean visibleVelocityHoldRow = frameZero.stateEquals(trace.getFrame(1))
+                    && (frameZero.xSpeed() != 0 || frameZero.ySpeed() != 0 || frameZero.gSpeed() != 0)
+                    && frameZero.gameplayFrameCounter() == trace.getFrame(1).gameplayFrameCounter()
+                    && frameZero.vblankCounter() == trace.getFrame(1).vblankCounter()
+                    && frameZero.lagCounter() == trace.getFrame(1).lagCounter();
             TraceExecutionPhase expectedFrameZeroPhase = handoffBeforeNativeMotionRow
+                    || visibleVelocityHoldRow
                     ? TraceExecutionPhase.VBLANK_ONLY
                     : TraceExecutionPhase.FULL_LEVEL_FRAME;
             assertEquals(expectedFrameZeroPhase, frameZeroPhase,
@@ -319,6 +325,30 @@ class TestTraceReplayStartPositionPolicy {
         assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
                 TraceReplayBootstrap.phaseForReplay(mhz, mhz.getFrame(0), mhz.getFrame(1)),
                 "MHZ row 1 advances state from the handoff row and should tick exactly once.");
+    }
+
+    @Test
+    void s3kCompleteRunVisibleVelocityHoldRowsWaitForFirstStateChange() throws Exception {
+        TraceData icz = TraceData.load(Path.of("src/test/resources/traces/s3k/icz_completerun"));
+        TraceData lbz = TraceData.load(Path.of("src/test/resources/traces/s3k/lbz_completerun"));
+
+        assertEquals(0x0800, icz.getFrame(0).xSpeed() & 0xFFFF,
+                "ICZ frame 0 carries native launch velocity even though the visible row is still held.");
+        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
+                TraceReplayBootstrap.phaseForReplay(icz, null, icz.getFrame(0)),
+                "The initial ICZ complete-run visible hold row is before the first native motion sample.");
+        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
+                TraceReplayBootstrap.phaseForReplay(icz, icz.getFrame(27), icz.getFrame(28)),
+                "Repeated visible ICZ startup rows should not tick gameplay before motion appears.");
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+                TraceReplayBootstrap.phaseForReplay(icz, icz.getFrame(28), icz.getFrame(29)),
+                "The first ICZ state-changing row owns the native movement step.");
+
+        assertEquals(0, lbz.getFrame(0).ySpeed(),
+                "LBZ's repeated rows are a zero-velocity hidden launch countdown, not a visible velocity hold.");
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+                TraceReplayBootstrap.phaseForReplay(lbz, null, lbz.getFrame(0)),
+                "LBZ still ticks the hidden ground-launch countdown during repeated visible rows.");
     }
 
     @Test
