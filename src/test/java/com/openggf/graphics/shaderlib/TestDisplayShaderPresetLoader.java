@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
@@ -121,6 +122,44 @@ public class TestDisplayShaderPresetLoader {
 
         assertEquals(ShaderPhase.FINAL, loaded.phase());
         assertEquals("void main() {}\n", loaded.passes().get(0).fragmentSource());
+    }
+
+    @Test
+    public void glslpAcceptsDecimalFormattedIntegerScale() throws Exception {
+        Path root = tempDir.resolve("display-shaders");
+        Path preset = root.resolve("RetroArch/shaders_glsl/aa/scale.glslp");
+        write(preset, """
+                shaders = 1
+                shader0 = pass.glsl
+                scale_type0 = source
+                scale0 = 2.0
+                """);
+        write(root.resolve("RetroArch/shaders_glsl/aa/pass.glsl"), "void main() {}\n");
+
+        DisplayShaderPreset loaded = new DisplayShaderPresetLoader().load(
+                ref(root, preset, DisplayShaderPresetRef.Kind.GLSLP),
+                ShaderPhase.PRESENTATION);
+
+        assertEquals(2, loaded.passes().get(0).scale());
+    }
+
+    @Test
+    public void glslpAcceptsLegacySingleByteEncodedShaderSource() throws Exception {
+        Path root = tempDir.resolve("display-shaders");
+        Path preset = root.resolve("RetroArch/shaders_glsl/aa/legacy-encoding.glslp");
+        write(preset, """
+                shaders = 1
+                shader0 = pass.glsl
+                """);
+        byte[] latin1Source = "/* Copyright \u00a9 */\nvoid main() {}\n".getBytes(StandardCharsets.ISO_8859_1);
+        Files.createDirectories(preset.getParent());
+        Files.write(root.resolve("RetroArch/shaders_glsl/aa/pass.glsl"), latin1Source);
+
+        DisplayShaderPreset loaded = new DisplayShaderPresetLoader().load(
+                ref(root, preset, DisplayShaderPresetRef.Kind.GLSLP),
+                ShaderPhase.PRESENTATION);
+
+        assertTrue(loaded.passes().get(0).fragmentSource().contains("void main()"));
     }
 
     @Test

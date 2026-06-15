@@ -1,6 +1,8 @@
 package com.openggf.graphics.shaderlib;
 
 import java.io.IOException;
+import java.nio.charset.MalformedInputException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -61,7 +63,7 @@ public class DisplayShaderPresetLoader {
 
     private static DisplayShaderPreset loadPreset(DisplayShaderPresetRef ref, ShaderPhase phase, PresetFormat format)
             throws IOException, DisplayShaderLoadException {
-        String presetText = Files.readString(ref.absolutePath());
+        String presetText = readTextFile(ref.absolutePath());
         rejectUnsupportedPresetFeatures(presetText);
 
         Map<String, String> fields = parseFields(presetText);
@@ -131,12 +133,16 @@ public class DisplayShaderPresetLoader {
             return 1;
         }
         try {
-            int scale = Integer.parseInt(raw);
+            double parsed = Double.parseDouble(raw.trim());
+            if (!Double.isFinite(parsed) || parsed != Math.rint(parsed)) {
+                throw new NumberFormatException(raw);
+            }
+            int scale = Math.toIntExact((long) parsed);
             if (scale < 1) {
                 throw new DisplayShaderLoadException("Shader scale must be at least 1: " + raw);
             }
             return scale;
-        } catch (NumberFormatException e) {
+        } catch (ArithmeticException | NumberFormatException e) {
             throw new DisplayShaderLoadException("Invalid shader scale: " + raw, e);
         }
     }
@@ -287,11 +293,19 @@ public class DisplayShaderPresetLoader {
             throw new DisplayShaderLoadException("Shader source symbolic links are not supported: "
                     + path.getFileName());
         }
-        String source = Files.readString(path);
+        String source = readTextFile(path);
         if (containsInclude(source)) {
             throw new DisplayShaderLoadException("Shader includes are not supported: " + path.getFileName());
         }
         return source;
+    }
+
+    private static String readTextFile(Path path) throws IOException {
+        try {
+            return Files.readString(path, StandardCharsets.UTF_8);
+        } catch (MalformedInputException e) {
+            return Files.readString(path, StandardCharsets.ISO_8859_1);
+        }
     }
 
     private static void rejectUnsupportedPresetFeatures(String presetText) throws DisplayShaderLoadException {
@@ -305,6 +319,15 @@ public class DisplayShaderPresetLoader {
         if (matcher.find()) {
             throw new DisplayShaderLoadException("Shader preset uses unsupported multi-pass external state: "
                     + matcher.group().trim());
+        }
+    }
+
+    static boolean supportsPresetFeaturesForDiscovery(String presetText) {
+        try {
+            rejectUnsupportedPresetFeatures(presetText);
+            return true;
+        } catch (DisplayShaderLoadException ignored) {
+            return false;
         }
     }
 

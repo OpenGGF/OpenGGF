@@ -40,10 +40,13 @@ public final class DisplayShaderLibrary {
                     .filter(path -> !hasHiddenRelativeDirectory(normalizedRoot, path))
                     .forEach(path -> {
                         Path normalizedPath = path.toAbsolutePath().normalize();
-                        discoveredFiles.add(normalizedPath);
                         if (isPresetFile(normalizedPath)) {
                             referencedShaderPasses.addAll(readReferencedShaderPasses(normalizedRoot, normalizedPath));
                         }
+                        if (isUnsupportedPresetForDiscovery(normalizedPath)) {
+                            return;
+                        }
+                        discoveredFiles.add(normalizedPath);
                     });
         } catch (IOException ignored) {
             return offOnly();
@@ -139,6 +142,17 @@ public final class DisplayShaderLibrary {
     private static boolean isPresetFile(Path path) {
         DisplayShaderPresetRef.Kind kind = kindFor(path);
         return kind == DisplayShaderPresetRef.Kind.CGP || kind == DisplayShaderPresetRef.Kind.GLSLP;
+    }
+
+    private static boolean isUnsupportedPresetForDiscovery(Path path) {
+        if (!isPresetFile(path)) {
+            return false;
+        }
+        try {
+            return !DisplayShaderPresetLoader.supportsPresetFeaturesForDiscovery(Files.readString(path));
+        } catch (IOException ignored) {
+            return false;
+        }
     }
 
     private static DisplayShaderPresetRef.Kind kindFor(Path path) {

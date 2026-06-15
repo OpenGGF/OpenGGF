@@ -117,6 +117,27 @@ public class TestDisplayShaderLibrary {
     }
 
     @Test
+    public void unsupportedExternalTexturePresetsAreNotSelectable() throws IOException {
+        Path root = tempDir.resolve("display-shaders");
+        write(root.resolve("borders/gameboy.glslp"), """
+                shaders = 1
+                shader0 = pass.glsl
+                textures = "BORDER"
+                BORDER = "border.png"
+                """);
+        write(root.resolve("borders/pass.glsl"), "void main() {}\n");
+        write(root.resolve("crt/compatible.glslp"), """
+                shaders = 1
+                shader0 = pass.glsl
+                """);
+        write(root.resolve("crt/pass.glsl"), "void main() {}\n");
+
+        DisplayShaderLibrary library = DisplayShaderLibrary.scan(root);
+
+        assertEquals(List.of("Off", "crt/compatible"), labels(library));
+    }
+
+    @Test
     public void savedSelectionIndexFallsBackToOffWhenMissing() throws IOException {
         Path root = tempDir.resolve("display-shaders");
         write(root.resolve("Custom/warm.glsl"), "void main() {}\n");
