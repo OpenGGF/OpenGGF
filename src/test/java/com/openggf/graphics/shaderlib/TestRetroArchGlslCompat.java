@@ -44,6 +44,53 @@ public class TestRetroArchGlslCompat {
     }
 
     @Test
+    public void emitsCompatStageAliasesBeforeCompatGuardedBlocks() throws Exception {
+        String fragment = RetroArchGlslCompat.stageSource("""
+                #ifdef COMPAT_FRAGMENT
+                vec4 enabledFragmentBlock;
+                #endif
+                """, "FRAGMENT");
+        String vertex = RetroArchGlslCompat.stageSource("""
+                #ifdef COMPAT_VERTEX
+                vec4 enabledVertexBlock;
+                #endif
+                """, "VERTEX");
+
+        assertTrue(fragment.contains("#define COMPAT_FRAGMENT\n"));
+        assertTrue(fragment.indexOf("#define COMPAT_FRAGMENT") < fragment.indexOf("#ifdef COMPAT_FRAGMENT"));
+        assertTrue(vertex.contains("#define COMPAT_VERTEX\n"));
+        assertTrue(vertex.indexOf("#define COMPAT_VERTEX") < vertex.indexOf("#ifdef COMPAT_VERTEX"));
+    }
+
+    @Test
+    public void injectsFragmentOutputAfterLeadingExtensionDirectives() throws Exception {
+        String source = """
+                #version 120
+                #extension GL_ARB_gpu_shader5 : enable
+                void main() {
+                    gl_FragColor = vec4(1.0);
+                }
+                """;
+
+        String staged = RetroArchGlslCompat.stageSource(source, "FRAGMENT");
+
+        assertFalse(staged.contains("#version 120"));
+        assertTrue(staged.indexOf("#extension GL_ARB_gpu_shader5 : enable") < staged.indexOf("out vec4 FragColor;"));
+        assertTrue(staged.indexOf("out vec4 FragColor;") < staged.indexOf("void main()"));
+    }
+
+    @Test
+    public void detectsTexture2DWithWhitespaceBeforeCall() throws Exception {
+        String staged = RetroArchGlslCompat.stageSource("""
+                void main() {
+                    gl_FragColor = texture2D (Texture, uv);
+                }
+                """, "FRAGMENT");
+
+        assertTrue(staged.contains("#define texture2D texture\n"));
+    }
+
+    @Test
     public void injectsLegacyVertexPreludeStageAware() throws Exception {
         String source = """
                 attribute vec4 VertexCoord;
