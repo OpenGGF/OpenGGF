@@ -6,10 +6,12 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestDisplayShaderPresetLoader {
 
@@ -139,6 +141,42 @@ public class TestDisplayShaderPresetLoader {
     }
 
     @Test
+    public void glslpRejectsRootedOrDriveQualifiedShaderRefs() throws Exception {
+        assertShaderRefRejected("/evil.glsl");
+        if (isWindows()) {
+            assertShaderRefRejected("D:evil.glsl");
+            assertShaderRefRejected("C:\\abs\\evil.glsl");
+        }
+    }
+
+    @Test
+    public void glslpRejectsSymlinkPassSourceEscapingLibraryRoot() throws Exception {
+        Path root = tempDir.resolve("display-shaders");
+        Path preset = root.resolve("RetroArch/shaders_glsl/crt/symlink.glslp");
+        Path link = root.resolve("RetroArch/shaders_glsl/crt/linked.glsl");
+        write(preset, """
+                shaders = 1
+                shader0 = linked.glsl
+                """);
+        write(tempDir.resolve("outside.glsl"), "void main() {}\n");
+        Files.createDirectories(link.getParent());
+        boolean symlinkCreated = false;
+        try {
+            Files.createSymbolicLink(link, tempDir.resolve("outside.glsl"));
+            symlinkCreated = true;
+        } catch (IOException | UnsupportedOperationException | SecurityException e) {
+            // Symlink creation can require privileges on Windows or be disabled on some filesystems.
+        }
+        assumeTrue(symlinkCreated, "Symlink creation is unavailable in this environment");
+
+        DisplayShaderLoadException error = assertThrows(DisplayShaderLoadException.class,
+                () -> new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.GLSLP),
+                        ShaderPhase.PRESENTATION));
+
+        assertTrue(error.getMessage().contains("symbolic link"));
+    }
+
+    @Test
     public void cgpRejectsCgFallbackPathEscapingLibraryRoot() throws Exception {
         Path root = tempDir.resolve("display-shaders");
         Path preset = root.resolve("BizHawk/nested/escape.cgp");
@@ -186,6 +224,25 @@ public class TestDisplayShaderPresetLoader {
                         ShaderPhase.PRESENTATION));
 
         assertTrue(error.getMessage().contains("bad"));
+    }
+
+    private void assertShaderRefRejected(String shaderRef) throws Exception {
+        Path root = tempDir.resolve("display-shaders-" + Integer.toUnsignedString(shaderRef.hashCode()));
+        Path preset = root.resolve("RetroArch/shaders_glsl/crt/rooted.glslp");
+        write(preset, """
+                shaders = 1
+                shader0 = %s
+                """.formatted(shaderRef));
+
+        DisplayShaderLoadException error = assertThrows(DisplayShaderLoadException.class,
+                () -> new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.GLSLP),
+                        ShaderPhase.PRESENTATION));
+
+        assertTrue(error.getMessage().contains(shaderRef));
+    }
+
+    private static boolean isWindows() {
+        return System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("win");
     }
 
     @Test

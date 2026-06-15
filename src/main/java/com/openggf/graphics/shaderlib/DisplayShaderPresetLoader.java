@@ -172,8 +172,8 @@ public class DisplayShaderPresetLoader {
     private static Path resolveShaderPath(Path parent, Path shaderRoot, String rawShaderRef, PresetFormat format)
             throws DisplayShaderLoadException {
         Path relative = parseShaderReferencePath(rawShaderRef);
-        if (relative.isAbsolute()) {
-            throw new DisplayShaderLoadException("Absolute shader paths are not supported: " + rawShaderRef);
+        if (relative.isAbsolute() || relative.getRoot() != null) {
+            throw new DisplayShaderLoadException("Absolute or rooted shader paths are not supported: " + rawShaderRef);
         }
 
         if (format == PresetFormat.GLSLP) {
@@ -268,6 +268,10 @@ public class DisplayShaderPresetLoader {
     }
 
     private static String readGlslSource(Path path) throws IOException, DisplayShaderLoadException {
+        if (Files.isSymbolicLink(path)) {
+            throw new DisplayShaderLoadException("Shader source symbolic links are not supported: "
+                    + path.getFileName());
+        }
         String source = Files.readString(path);
         if (containsInclude(source)) {
             throw new DisplayShaderLoadException("Shader includes are not supported: " + path.getFileName());
