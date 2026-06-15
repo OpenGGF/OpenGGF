@@ -1,5 +1,44 @@
 # Trace Frontier Log
 
+## 2026-06-15 - S3K AIZ f3135->f3317 via CPU-sidekick terrain-wall follow nudge
+
+- Scope: Removed the `sidekickGroundWallZeroDistanceSeamPenetrates` zero-distance
+  CalcRoomInFront override (the `distance==0 -> -1` band-aid) and replaced it with
+  the real ROM physics it was masking. Ground-truth BizHawk capture
+  (`tools/bizhawk/trace_output/hcz_tails_wallprobe.txt` /
+  per-frame `Tails` x_pos) showed the S3K CPU sidekick reaches the penetrating
+  wall pixel via the per-frame follow nudge (`Tails_CPU_Control` loc_13E34
+  `addq.w #1,x_pos`, sonic3k.asm:26734-26741), not via a wall-scan special case.
+  The engine's `SidekickCpuController.updateNormal()` was suppressing that nudge
+  during its multi-frame `localGracePushBypass` window even for a pure terrain
+  wall (no solid object involved), so engine Tails free-accelerated into the wall
+  instead of oscillating push/no-push every frame like ROM. The grace bridge now
+  only suppresses the nudge in genuine object-order contexts.
+- Disassembly evidence:
+  - `docs/skdisasm/sonic3k.asm:26702-26741` (`Tails_CPU_Control` loc_13DF2 /
+    loc_13E26 / loc_13E34): the +/-1 `x_pos` follow nudge runs whenever Tails'
+    *current* `Status_Push` bit is clear; there is no multi-frame grace.
+  - `docs/skdisasm/sonic3k.asm:19679-19743` (`sub_F61C` CalcRoomInFront) and
+    `docs/skdisasm/sonic3k.asm:19604-19672` (`sub_F584` FindWall, loc_F60C
+    `not.w d1`): the predicted-position scan yields a negative distance only when
+    the predicted pixel lands inside a solid cell; a flush empty-cell edge is 0.
+  - `docs/skdisasm/sonic3k.asm:27974-28018` (`Tails_InputAcceleration_Path`
+    loc_14BA8..loc_14C00): `tst.w d1 / bpl` pushes only on negative distance and
+    applies `sub.w d1,x_vel` immediately.
+- Frontier movement (oracle, `-Ds3k.rom.path=s3k.gen`):
+  - `TestS3kAizTraceReplay.replayMatchesTrace`: first error **f3135 -> f3317**
+    (`status_byte` exp 0x000E act 0x0006); error count 2099 -> 1557. The 3
+    sibling sidekick auto-jump tests now pass.
+  - `TestS3kHczCompleteRunTraceReplay.replayMatchesTrace`: **holds f1402**
+    (`tails_status_byte` exp 0x0002 act 0x0003); error count 3327 (unchanged) -
+    now reached via real terrain physics, not the override.
+- No regression (A/B at HEAD, `-Xmx3g -Dsurefire.forkCount=1`): AizCompleteRun
+  f1095, Icz f1986, Mhz f175, CnzCompleteRun f248, MgzCompleteRun f738,
+  LbzCompleteRun f1950 - all identical with and without the change. Must-keep
+  green S3K (`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+  `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`) pass; S1 GHZ1 and
+  S2 EHZ1 trace replays remain green.
+
 ## 2026-06-14 - S3K LBZ Orbinaut and rolling-drum frontier advance
 
 - Scope: S3K LBZ complete-run remediation advanced the focused trace through

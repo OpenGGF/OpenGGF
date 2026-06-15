@@ -43,59 +43,66 @@ class TestS3kHcz1GroundWallProbe {
     }
 
     @Test
-    void hcz1FlatRightWallProbeDoesNotPushOnFirstCpuAccelerationFromRest() {
-        Tails tails = newRecordedHczTails();
-        tails.setXSpeed((short) 0x0000);
-        tails.setGSpeed((short) 0x0000);
-        tails.capturePreCpuControlSnapshot();
+    void hcz1FlatRightWallProbeDoesNotPushAtTheEmptyCellEdge() {
+        // ROM BizHawk capture (hcz_tails_wallprobe.txt): on the non-push frames
+        // Tails sits one pixel short of the wall (x_pos=0x0315, x_sub=0x1500,
+        // x_vel=6). CalcRoomInFront predicts x=0x031F (x_pos+$A), the flush edge of
+        // the empty cell, so FindWall returns distance 0 and there is no push.
+        Tails tails = newRecordedHczTails(0x0315, 0x1500);
         tails.setXSpeed((short) 0x0006);
         tails.setGSpeed((short) 0x0006);
 
-        assertRecordedWallSeam();
+        TerrainCheckResult terrain = ObjectTerrainUtils.checkRightWallDist(0x031F, 0x0618);
+        assertTrue(terrain.hasCollision(),
+                "HCZ1 terrain sanity check: ROM CalcRoomInFront probes x_pos+$A,y_pos+$8 at this frame");
+        assertEquals(0, terrain.distance(),
+                "HCZ1 terrain sanity check: the predicted probe pixel is flush at the empty-cell edge");
 
         GameServices.collision().resolveGroundWallCollision(tails);
 
         assertEquals(0x0006, tails.getGSpeed() & 0xFFFF,
-                "The first S3K Tails CPU follow-acceleration tick from rest should not treat the zero-distance seam as penetration");
+                "A flush empty-cell-edge probe (distance 0) must not clear ground_vel");
         assertEquals(0x0006, tails.getXSpeed() & 0xFFFF,
-                "The f939 wall probe should leave the just-applied CPU acceleration intact");
+                "A flush empty-cell-edge probe must leave the just-applied CPU acceleration intact");
         assertFalse(tails.getPushing(),
-                "Status_Push starts on the next frame, after Tails entered CPU control with existing ground speed");
+                "ROM CalcRoomInFront only sets Status_Push on a negative (penetrating) distance");
     }
 
     @Test
     void hcz1FlatRightWallProbePushesAtRecordedTailsFrontier() {
-        Tails tails = newRecordedHczTails();
-        tails.setXSpeed((short) 0x0006);
-        tails.setGSpeed((short) 0x0006);
-        tails.capturePreCpuControlSnapshot();
+        // ROM BizHawk capture: on the push frames the CPU follow nudge
+        // (Tails_CPU_Control loc_13E34 addq.w #1,x_pos, sonic3k.asm:26734-26741)
+        // has already advanced Tails to x_pos=0x0316. Tails_InputAcceleration_Path
+        // accelerates to x_vel=12 and CalcRoomInFront predicts x=0x0320, one pixel
+        // inside the flat right-wall cell, so FindWall returns a genuine distance
+        // -1 (sub_F584 loc_F60C not.w d1, sonic3k.asm:19666-19672) and the wall
+        // response runs immediately (loc_14C00, sonic3k.asm:28012-28018).
+        Tails tails = newRecordedHczTails(0x0316, 0x1500);
         tails.setXSpeed((short) 0x000C);
         tails.setGSpeed((short) 0x000C);
 
-        assertRecordedWallSeam();
+        TerrainCheckResult terrain = ObjectTerrainUtils.checkRightWallDist(0x0320, 0x0618);
+        assertTrue(terrain.hasCollision(),
+                "HCZ1 terrain sanity check: ROM CalcRoomInFront probes x_pos+$A,y_pos+$8 at this frame");
+        assertEquals(-1, terrain.distance(),
+                "HCZ1 terrain sanity check: the predicted probe pixel is one pixel inside the right-wall cell");
 
         GameServices.collision().resolveGroundWallCollision(tails);
-        assertEquals(0x000C, tails.getGSpeed() & 0xFFFF,
-                "S3K CPU Tails applies the zero-distance wall velocity response after the same-frame position step");
-        assertEquals(0x000C, tails.getXSpeed() & 0xFFFF,
-                "The f940 position step should still use the pre-wall-response velocity");
-        tails.move(tails.getXSpeed(), tails.getYSpeed());
-        GameServices.collision().applyDeferredGroundWallVelocityResponse(tails);
 
         assertEquals(0, tails.getGSpeed(),
                 "CalcRoomInFront should clear ground_vel as soon as the projected right-wall probe overlaps terrain");
         assertEquals(0xFF0C, tails.getXSpeed() & 0xFFFF,
-                "Distance -1 at x=$031F should subtract one pixel of velocity, matching S3K Tails_InputAcceleration_Path");
+                "Distance -1 at x=$0320 should subtract one pixel of velocity, matching S3K Tails_InputAcceleration_Path");
         assertTrue(tails.getPushing(),
                 "S3K ground-wall collision should set Status_Push when Tails faces into the right wall");
     }
 
-    private static Tails newRecordedHczTails() {
-        Tails tails = new Tails("tails", (short) 0x0315, (short) 0x0610);
+    private static Tails newRecordedHczTails(int centreX, int xSubpixel) {
+        Tails tails = new Tails("tails", (short) centreX, (short) 0x0610);
         tails.setCpuControlled(true);
-        tails.setCentreX((short) 0x0315);
+        tails.setCentreX((short) centreX);
         tails.setCentreY((short) 0x0610);
-        tails.setSubpixelRaw(0x1500, 0x5E00);
+        tails.setSubpixelRaw(xSubpixel, 0x5E00);
         tails.setGroundMode(GroundMode.GROUND);
         tails.setDirection(Direction.RIGHT);
         tails.setAir(false);
@@ -104,13 +111,5 @@ class TestS3kHcz1GroundWallProbe {
         tails.setInWater(true);
         tails.setYSpeed((short) 0x0000);
         return tails;
-    }
-
-    private static void assertRecordedWallSeam() {
-        TerrainCheckResult terrain = ObjectTerrainUtils.checkRightWallDist(0x031F, 0x0618);
-        assertTrue(terrain.hasCollision(),
-                "HCZ1 terrain sanity check: ROM CalcRoomInFront probes x_pos+$A,y_pos+$8 at this frame");
-        assertEquals(0, terrain.distance(),
-                "HCZ1 terrain sanity check: object terrain sees the right-wall surface exactly at the probe");
     }
 }
