@@ -19,6 +19,10 @@ public class DisplayShaderPresetLoader {
     private static final Pattern GLSLP_UNSUPPORTED_LINE = Pattern.compile(
             "(?im)^\\s*(?:textures?|texture\\d+|lut\\d*|history\\w*|feedback\\w*|previous\\w*|prev\\w*|preset|reference)\\s*=");
     private static final Pattern GLSLP_REFERENCE_DIRECTIVE = Pattern.compile("(?im)^\\s*#\\s*reference\\b");
+    private static final Pattern GLSLP_RUNTIME_INPUT_SOURCE = Pattern.compile(
+            "(?i)\\b(?:OriginalHistory\\d*|PassPrev\\d*|Prev|Feedback)\\b");
+    private static final Pattern GLSLP_EXTERNAL_TEXTURE_SOURCE = Pattern.compile(
+            "(?im)^\\s*uniform\\s+sampler(?:1D|2D|3D|Cube)\\s+\\w*(?:LUT|Lookup|External)\\w*\\s*(?:\\[[^\\]]+])?\\s*;");
     private static final List<String> SCALER_SEGMENTS = List.of(
             "scalenx", "scalehq", "xbr", "xbrz", "xsal", "xsoft", "hq2x");
 
@@ -66,6 +70,9 @@ public class DisplayShaderPresetLoader {
             }
             Path shaderPath = resolveShaderPath(parent, shaderRef, format);
             String source = readGlslSource(shaderPath);
+            if (format == PresetFormat.GLSLP) {
+                rejectUnsupportedGlslpPassSourceFeatures(source, shaderPath);
+            }
             passes.add(passForSource(source,
                     parseScale(fields.get("scale" + i)),
                     parseScaleType(fields.get("scale_type" + i)),
@@ -221,6 +228,18 @@ public class DisplayShaderPresetLoader {
         if (matcher.find()) {
             throw new UnsupportedShaderException("Shader preset uses unsupported multi-pass external state: "
                     + matcher.group().trim());
+        }
+    }
+
+    private static void rejectUnsupportedGlslpPassSourceFeatures(String source, Path path)
+            throws UnsupportedShaderException {
+        if (GLSLP_RUNTIME_INPUT_SOURCE.matcher(source).find()) {
+            throw new UnsupportedShaderException("GLSLP pass source uses unsupported runtime input: "
+                    + path.getFileName());
+        }
+        if (GLSLP_EXTERNAL_TEXTURE_SOURCE.matcher(source).find()) {
+            throw new UnsupportedShaderException("GLSLP pass source uses unsupported external texture sampler: "
+                    + path.getFileName());
         }
     }
 

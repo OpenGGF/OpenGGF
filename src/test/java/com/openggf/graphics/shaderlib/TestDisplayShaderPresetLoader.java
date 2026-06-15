@@ -117,6 +117,47 @@ public class TestDisplayShaderPresetLoader {
         assertTrue(error.getMessage().contains("inheritance"));
     }
 
+    @Test
+    public void glslpRejectsHistoryRuntimeInputInPassSource() throws Exception {
+        Path root = tempDir.resolve("display-shaders");
+        Path preset = root.resolve("RetroArch/shaders_glsl/crt/history.glslp");
+        write(preset, """
+                shaders = 1
+                shader0 = history.glsl
+                """);
+        write(root.resolve("RetroArch/shaders_glsl/crt/history.glsl"), """
+                #pragma parameter glow "Glow" 0.5 0.0 1.0 0.1
+                uniform sampler2D OriginalHistory0;
+                void main() {}
+                """);
+
+        UnsupportedShaderException error = assertThrows(UnsupportedShaderException.class,
+                () -> new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.GLSLP),
+                        ShaderPhase.PRESENTATION));
+
+        assertTrue(error.getMessage().contains("runtime input"));
+    }
+
+    @Test
+    public void glslpRejectsLutSamplerInPassSource() throws Exception {
+        Path root = tempDir.resolve("display-shaders");
+        Path preset = root.resolve("RetroArch/shaders_glsl/crt/lut.glslp");
+        write(preset, """
+                shaders = 1
+                shader0 = lut.glsl
+                """);
+        write(root.resolve("RetroArch/shaders_glsl/crt/lut.glsl"), """
+                uniform sampler2D LUT;
+                void main() {}
+                """);
+
+        UnsupportedShaderException error = assertThrows(UnsupportedShaderException.class,
+                () -> new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.GLSLP),
+                        ShaderPhase.PRESENTATION));
+
+        assertTrue(error.getMessage().contains("external texture"));
+    }
+
     private static DisplayShaderPresetRef ref(Path root, Path path, DisplayShaderPresetRef.Kind kind) {
         return new DisplayShaderPresetRef(kind, root.relativize(path).toString().replace('\\', '/'), path);
     }
