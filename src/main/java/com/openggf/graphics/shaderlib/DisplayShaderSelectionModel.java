@@ -13,8 +13,12 @@ public final class DisplayShaderSelectionModel {
     private final List<SelectionItem> items;
 
     public DisplayShaderSelectionModel(DisplayShaderLibrary library) {
-        Objects.requireNonNull(library, "library");
-        this.items = library.entries().stream()
+        this(Objects.requireNonNull(library, "library").entries());
+    }
+
+    public DisplayShaderSelectionModel(List<DisplayShaderPresetRef> entries) {
+        Objects.requireNonNull(entries, "entries");
+        this.items = entries.stream()
                 .map(DisplayShaderSelectionModel::toSelectionItem)
                 .toList();
     }

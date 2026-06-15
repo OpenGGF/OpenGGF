@@ -38,6 +38,25 @@ public class TestDisplayShaderSelectionModel {
     }
 
     @Test
+    public void constructionFromListPreservesEmptyFilterOrder() {
+        DisplayShaderPresetRef scanline = preset("scanlines/zebra.glslp");
+        DisplayShaderPresetRef crt = preset("crt/crt-easymode.glslp");
+        DisplayShaderSelectionModel model = new DisplayShaderSelectionModel(List.of(
+                DisplayShaderPresetRef.OFF,
+                scanline,
+                crt));
+
+        List<DisplayShaderSelectionModel.SelectionItem> items = model.filter("");
+
+        assertEquals(List.of(
+                "Off",
+                "scanlines/zebra.glslp",
+                "crt/crt-easymode.glslp"), displayPaths(items));
+        assertSame(scanline, items.get(1).ref());
+        assertSame(crt, items.get(2).ref());
+    }
+
+    @Test
     public void textQueryMatchesRootRelativePathCaseInsensitively() throws IOException {
         DisplayShaderSelectionModel model = new DisplayShaderSelectionModel(libraryWith(
                 "libretro-glsl/crt/crt-easymode.glslp",
@@ -90,6 +109,13 @@ public class TestDisplayShaderSelectionModel {
             write(root.resolve(path), "# shader preset\n");
         }
         return DisplayShaderLibrary.scan(root);
+    }
+
+    private static DisplayShaderPresetRef preset(String relativePath) {
+        return new DisplayShaderPresetRef(
+                DisplayShaderPresetRef.Kind.GLSLP,
+                relativePath,
+                Path.of("display-shaders").resolve(relativePath));
     }
 
     private static List<String> displayPaths(List<DisplayShaderSelectionModel.SelectionItem> items) {
