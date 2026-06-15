@@ -1440,6 +1440,9 @@ public class Engine {
 		}
 		if (!displayShaderPickerHandledInput) {
 			update();
+		} else if (inputHandler != null) {
+			// Modal picker frames skip GameLoop.step(), so advance key edges here.
+			inputHandler.update();
 		}
 		profiler.endSection("update");
 
