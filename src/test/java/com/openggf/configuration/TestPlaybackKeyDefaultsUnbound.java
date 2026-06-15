@@ -3,9 +3,12 @@ package com.openggf.configuration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSLASH;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_BRACKET;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_BRACKET;
@@ -30,5 +33,19 @@ class TestPlaybackKeyDefaultsUnbound {
         assertEquals(GLFW_KEY_RIGHT_BRACKET, config.getInt(SonicConfiguration.DISPLAY_SHADER_NEXT_KEY));
         assertEquals(GLFW_KEY_LEFT_BRACKET, config.getInt(SonicConfiguration.DISPLAY_SHADER_PREVIOUS_KEY));
         assertEquals(GLFW_KEY_BACKSLASH, config.getInt(SonicConfiguration.DISPLAY_SHADER_PICKER_KEY));
+    }
+
+    @Test
+    void existingUnquotedOffShaderSelectionMigratesBackToOffString(@TempDir Path tempDir) throws IOException {
+        Path configYaml = tempDir.resolve("config.yaml");
+        Files.writeString(configYaml, """
+                display:
+                  shaderSelection: OFF
+                """);
+
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+
+        assertEquals("OFF", config.getString(SonicConfiguration.DISPLAY_SHADER_SELECTION));
+        assertTrue(Files.readString(configYaml).contains("shaderSelection: \"OFF\""));
     }
 }

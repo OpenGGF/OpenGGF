@@ -126,6 +126,9 @@ public class SonicConfigurationService {
 		if (migrationService.migrateDeprecatedDisplayColorProfileToggleKey(config)) {
 			configChanged = true;
 		}
+		if (normalizeDisplayShaderSelection(config)) {
+			configChanged = true;
+		}
 
 		boolean defaultsInserted = applyDefaults();
 		validateEnumeratedValues();
@@ -516,6 +519,22 @@ public class SonicConfigurationService {
 				}
 			}
 		}
+	}
+
+	private boolean normalizeDisplayShaderSelection(Map<String, Object> config) {
+		if (config == null) {
+			return false;
+		}
+		String key = SonicConfiguration.DISPLAY_SHADER_SELECTION.name();
+		Object value = config.get(key);
+		boolean parsedFromUnquotedOff = Boolean.FALSE.equals(value)
+				|| (value instanceof String str && "false".equalsIgnoreCase(str.trim()));
+		if (!parsedFromUnquotedOff) {
+			return false;
+		}
+		config.put(key, "OFF");
+		intCache.clear();
+		return true;
 	}
 
 	private boolean applyDefaults() {
