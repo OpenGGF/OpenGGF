@@ -391,13 +391,7 @@ public class Engine {
 		GL.createCapabilities();
 
 		try {
-			graphicsManager.init(RESOURCES_SHADERS_PIXEL_SHADER_GLSL);
-			graphicsManager.setEngine(this);
-			displayColorProfileController = DisplayColorProfileController.fromConfig(
-					configService,
-					graphicsManager,
-					this::refreshDisplayPalettes);
-			initializeDisplayShaders();
+			initializePresentationGraphics();
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
@@ -461,6 +455,16 @@ public class Engine {
 		if (activeLevelManager != null) {
 			activeLevelManager.reloadLevelPalettes();
 		}
+	}
+
+	private void initializePresentationGraphics() throws IOException {
+		graphicsManager.init(RESOURCES_SHADERS_PIXEL_SHADER_GLSL);
+		graphicsManager.setEngine(this);
+		displayColorProfileController = DisplayColorProfileController.fromConfig(
+				configService,
+				graphicsManager,
+				this::refreshDisplayPalettes);
+		initializeDisplayShaders();
 	}
 
 	private void initializeDisplayShaders() {
