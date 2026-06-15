@@ -5,6 +5,12 @@
 display:
   aspect: "NATIVE_4_3"   # Display aspect preset; resolves screen pixel width, height stays 224
   windowAutosize: true   # Derive the window size from the aspect preset at the 2x baseline
+  shaderLibraryRoot: shaders   # Root directory scanned for user display shaders
+  shaderSelection: OFF   # Last selected display shader: OFF or a root-relative forward-slash path
+  shaderNextKey: RIGHT_BRACKET   # Runtime key to advance to the next display shader
+  shaderPreviousKey: LEFT_BRACKET   # Runtime key to move to the previous display shader
+  shaderPickerKey: BACKSLASH   # Runtime key to open the searchable display shader picker
+  shaderDefaultPhase: PRESENTATION   # Fallback render phase for standalone display shaders
   deadzoneMode: "PROPORTIONAL"   # Camera horizontal deadzone behaviour on wide screens
   colorProfile: "RAW_RGB"   # Display-only color profile for Mega Drive palette presentation
   colorProfileToggleKey: V   # Runtime key to cycle the display color profile
@@ -141,15 +147,15 @@ debug:
     s3kSkipIntros: false   # Skip S3K zone intro sequences (AIZ biplane, etc.)
   playback:
     moviePath: ""   # Path to a BizHawk BK2 movie for playback debugging
-    toggleKey: B   # Toggle playback mode
-    loadKey: N   # Load/reload the BK2 movie
-    playPauseKey: M   # Toggle playback play/pause
-    stepBackKey: COMMA   # Step the cursor back one frame
-    stepForwardKey: PERIOD   # Step the cursor forward one frame
-    jumpBackKey: LEFT_BRACKET   # Jump the cursor back by a larger interval
-    jumpForwardKey: RIGHT_BRACKET   # Jump the cursor forward by a larger interval
-    fastRateKey: SLASH   # Cycle playback rate (1x/2x/4x/8x)
-    resetToStartKey: BACKSLASH   # Reset the cursor to the start offset
+    toggleKey: ""   # Toggle playback mode
+    loadKey: ""   # Load/reload the BK2 movie
+    playPauseKey: ""   # Toggle playback play/pause
+    stepBackKey: ""   # Step the cursor back one frame
+    stepForwardKey: ""   # Step the cursor forward one frame
+    jumpBackKey: ""   # Jump the cursor back by a larger interval
+    jumpForwardKey: ""   # Jump the cursor forward by a larger interval
+    fastRateKey: ""   # Cycle playback rate (1x/2x/4x/8x)
+    resetToStartKey: ""   # Reset the cursor to the start offset
     startOffsetFrame: 0   # Starting frame offset for BK2 playback
   traceRewind:
     key: R   # Key held in Trace Test Mode to rewind deterministic engine state

@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Display shader configuration foundation added:** `config.yaml` now reserves
+  display shader library settings for a future runtime shader picker, including
+  the shader root, last selection, next/previous/picker keys, and default render
+  phase. BK2 playback debug keys are now unbound by default so the new shader
+  cycle defaults can use the bracket/backslash keys without playback shortcut
+  collisions.
+
 - **S3K MHZ complete-run trace advances through the MHZ1 cutscene button:**
   the MHZ1 Knuckles cutscene now preserves native player subpixels during the
   clamp, falls through its landing wait like the ROM, clears the P2 logical
