@@ -1,5 +1,54 @@
 # Trace Frontier Log
 
+## 2026-06-15 - S3K AIZ1 vertical-spring inclusive right edge / CPU-Tails Status_Push (f4234 -> f5705)
+
+- Scope: S3K AIZ Act 1 focused replay `TestS3kAizTraceReplay` advanced past the
+  CPU-sidekick (Tails) `tails_status_byte` divergence at frame 4234. No
+  zone/route/frame carve-outs and no trace write-back; the fix corrects the ROM
+  `SolidObject_cont` horizontal-overlap right-edge inclusivity for the S3K Spring
+  object.
+- First divergence (baseline): frame 4234, `tails_status_byte` ROM=0x0020
+  (Status_Push) engine=0x0000. Error count 1549.
+- Command: `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" test "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen"`
+  (worktree `.worktrees/aiz-frontier-2`, branch `bugfix/ai-aiz-frontier-f4234`,
+  develop HEAD bc42a064d).
+- ROM ground truth (BizHawk EmuHawk on the committed AIZ bk2, read-only
+  diagnostic `tools/bizhawk/diag_tails_push_source.lua`): around emu frames
+  4743-4746 the vertical Up-spring at (0x2850, 0x02EC) (object `a0=0xB1BC`)
+  side-contacts CPU Tails (`a1=0xB04A`) via `SolidObjectFull2_1P` ->
+  `SolidObject_cont` -> `loc_1E06E` `bset #Status_Push,status(a1)`
+  (sonic3k.asm:41394-41401, 41468-41495). Tails decelerates from a leftward run,
+  comes to rest with its centre exactly on the spring's right edge
+  (x = spring_x + 0x1B, half-width 0x1B), then accelerates away; ROM holds
+  Status_Push across those frames (the spring SolidObject runs after Tails'
+  movement in object order and re-sets the bit the same frame Tails'
+  facing-flip clear dropped it).
+- Root cause: `SolidObject_cont` gates the X overlap with `cmp.w d3,d0 / bhi.w`
+  (d0 = (x_pos(a1)-x_pos(a0))+d1, d3 = d1*2), so the right edge is INCLUSIVE
+  (d0 == d1*2 is still a contact). The engine's contact gate treated the right
+  edge as exclusive for the vertical spring (`usesInclusiveRightEdge()` returned
+  true only for the horizontal variant), so the moment Tails' centre reached the
+  edge the engine dropped the contact and never re-set Status_Push.
+- Fix: `Sonic3kSpringObjectInstance.usesInclusiveRightEdge()` now returns true
+  for ALL spring variants (every Obj_Spring reaches SolidObject_cont via
+  SolidObjectFull2_1P). Cross-game ROM check: S2 `SolidObject_LeftRight ->
+  SolidObject_AtEdge` (s2.asm:35407-35439) and S1 `Solid_AlignToSide`
+  (_incObj/sub SolidObject.asm:218-242) share the same unconditional-grounded
+  push and inclusive `bhi` edge; change scoped to the S3K spring object only, no
+  shared/global default flipped.
+- Result: `s3k_aiz1` advances to frame **5705** `tails_status_byte` ROM=0x0020
+  engine=0x0000 (a separate AIZ2-reload solid-push case, `cp aiz2_reload_resume`).
+  Error count 1549 -> 1548.
+- Non-regression (same command set, `-Ds3k.rom.path=s3k.gen`): AizCompleteRun
+  f1095 `x_speed`, HczCompleteRun f1402 `tails_status_byte`, IczCompleteRun
+  f1986 `tails_status_byte`, MhzCompleteRun f966 `y`; all unchanged from
+  baseline. `TestS3kCnzTraceReplay` / `TestS3kMgzTraceReplay` single-act
+  alignment errors (trace frames 33271 / 39672) verified identical with and
+  without the fix via stash A/B. Must-keep-green `TestS3kAiz1SkipHeadless`,
+  `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
+  `TestSonic3kDecodingUtils` all pass. S1 `TestS1Ghz1TraceReplay` and S2
+  `TestS2Ehz1TraceReplay` spot-checks green.
+
 ## 2026-06-15 - S3K AIZ1 collapsing-platform jump-frame Status_OnObj (f3317 -> f4234)
 
 - Scope: S3K AIZ Act 1 focused replay `TestS3kAizTraceReplay` advanced past the

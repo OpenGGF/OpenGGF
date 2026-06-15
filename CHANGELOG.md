@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K springs keep ROM inclusive side contact on every variant:** all S3K
+  spring variants now expose `SolidObject_cont`'s inclusive right edge, not just
+  horizontal springs. This preserves `Status_Push` when CPU Tails is exactly on
+  a vertical spring's right edge, advancing the focused AIZ1 trace from frame
+  4234 to frame 5705 without changing the HCZ, ICZ, MHZ, or AIZ complete-run
+  frontiers.
+
 - **S3K AIZ collapsing platform keeps the rider on-object across the collapse
   frame:** ROM `Obj_CollapsingPlatform`'s collapse transition branches
   `loc_20594 → ObjPlatformCollapse_CreateFragments` (`sonic3k.asm:44818`,
