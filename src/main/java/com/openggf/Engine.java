@@ -1463,6 +1463,7 @@ public class Engine {
 			postFadeRecorder.recordPostFadeDiagnostic("DisplayColorProfileNotification");
 		}
 		renderDisplayColorProfileNotification();
+		renderDisplayShaderNotification();
 
 		// Trace Test Mode HUD and live rewind HUD: drawn after the fade pass so
 		// counters and TRACE COMPLETE remain readable during fade-to-black teardown.
@@ -1660,6 +1661,20 @@ public class Engine {
 		}
 		float scale = 1.0f;
 		int y = 224 - traceHudTextRenderer.lineHeight(scale) - 4;
+		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+		traceHudTextRenderer.drawShadowedText(text, 4, y, DebugColor.YELLOW, scale);
+	}
+
+	private void renderDisplayShaderNotification() {
+		if (displayShaderController == null) {
+			return;
+		}
+		String text = displayShaderController.notificationText();
+		if (text == null) {
+			return;
+		}
+		float scale = 1.0f;
+		int y = 224 - traceHudTextRenderer.lineHeight(scale) * 2 - 4;
 		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
 		traceHudTextRenderer.drawShadowedText(text, 4, y, DebugColor.YELLOW, scale);
 	}
