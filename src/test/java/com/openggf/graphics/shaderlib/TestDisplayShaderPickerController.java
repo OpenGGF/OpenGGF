@@ -146,6 +146,13 @@ class TestDisplayShaderPickerController {
         assertTrue(picker.isOpen());
     }
 
+    @Test
+    void exposesLibretroDownloadHintForPickerRenderer() {
+        assertEquals(
+                "Press F5 to download libretro shader pack",
+                DisplayShaderPickerController.downloadHintText());
+    }
+
     private static DisplayShaderPickerController pickerWith(DisplayShaderPresetRef... refs) {
         List<DisplayShaderPresetRef> entries = new java.util.ArrayList<>();
         entries.add(DisplayShaderPresetRef.OFF);

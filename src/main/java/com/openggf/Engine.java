@@ -1807,6 +1807,7 @@ public class Engine {
 		if (displayShaderPickerController == null || !displayShaderPickerController.isOpen()) {
 			return;
 		}
+		renderDisplayShaderPickerBackdrop();
 		float scale = 1.0f;
 		int x = 4;
 		int y = 8;
@@ -1820,6 +1821,13 @@ public class Engine {
 				x,
 				y,
 				DebugColor.WHITE,
+				scale);
+		y += lineHeight;
+		traceHudTextRenderer.drawShadowedText(
+				fitDisplayShaderPickerText(DisplayShaderPickerController.downloadHintText(), maxWidth, scale),
+				x,
+				y,
+				DebugColor.LIGHT_GRAY,
 				scale);
 		y += lineHeight;
 		if (displayShaderPackStatus != null && !displayShaderPackStatus.isBlank()) {
@@ -1850,6 +1858,21 @@ public class Engine {
 					scale);
 			y += lineHeight;
 		}
+	}
+
+	private void renderDisplayShaderPickerBackdrop() {
+		new GLCommand(
+				GLCommand.CommandType.RECTI,
+				GL_TRIANGLE_FAN,
+				GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
+				0.0f,
+				0.0f,
+				0.0f,
+				0.58f,
+				0,
+				0,
+				(int) projectionWidth,
+				(int) realHeight).execute(0, 0, 0, 0);
 	}
 
 	private String fitDisplayShaderPickerText(String text, int maxWidth, float scale) {

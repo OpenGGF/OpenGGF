@@ -7,7 +7,10 @@ All notable changes to the OpenGGF project are documented in this file.
 - **RetroArch GLSL shader pack install/update is available in-app:** the
   display shader picker can trigger the libretro GLSL zip download, report
   progress, install into `shaders/libretro-glsl`, and rescan the shader library
-  when the update completes.
+  when the update completes. The picker now dims the full widescreen
+  presentation area, shows the F5 install hint, and tolerates malformed
+  upstream preset references during discovery so one bad `.glslp` entry does
+  not hide the downloaded pack.
 
 - **Display shader notifications now stack with display color toasts:**
   shader selection/failure notifications render above the existing color-profile

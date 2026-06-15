@@ -8,6 +8,8 @@ import java.util.Objects;
 import static org.lwjgl.glfw.GLFW.*;
 
 public final class DisplayShaderPickerController {
+    private static final String DOWNLOAD_HINT_TEXT = "Press F5 to download libretro shader pack";
+
     private DisplayShaderSelectionModel selectionModel;
     private final int pickerKey;
     private boolean open;
@@ -78,6 +80,10 @@ public final class DisplayShaderPickerController {
 
     public List<DisplayShaderSelectionModel.SelectionItem> visibleItems() {
         return visibleItems;
+    }
+
+    public static String downloadHintText() {
+        return DOWNLOAD_HINT_TEXT;
     }
 
     public DisplayShaderSelectionModel.SelectionItem selectedItem() {

@@ -66,6 +66,31 @@ public class TestDisplayShaderLibrary {
     }
 
     @Test
+    public void quotedPresetReferencesAndInlineCommentsDoNotAbortScan() throws IOException {
+        Path root = tempDir.resolve("display-shaders");
+        write(root.resolve("crt/quoted.glslp"),
+                "shader0 = \"shaders/quoted-pass.glsl\"\n"
+                        + "shader1 = shaders/comment-pass.glsl # still a pass reference\n");
+        write(root.resolve("crt/shaders/quoted-pass.glsl"), "void main() {}\n");
+        write(root.resolve("crt/shaders/comment-pass.glsl"), "void main() {}\n");
+
+        DisplayShaderLibrary library = DisplayShaderLibrary.scan(root);
+
+        assertEquals(List.of("Off", "crt/quoted"), labels(library));
+    }
+
+    @Test
+    public void invalidPresetReferenceIsIgnoredWithoutDroppingOtherEntries() throws IOException {
+        Path root = tempDir.resolve("display-shaders");
+        write(root.resolve("bad/bad-ref.glslp"), "shader0 = \"shaders/bad-pass.glsl\"\"\n");
+        write(root.resolve("good/kept.glsl"), "void main() {}\n");
+
+        DisplayShaderLibrary library = DisplayShaderLibrary.scan(root);
+
+        assertEquals(List.of("Off", "bad/bad-ref", "good/kept"), labels(library));
+    }
+
+    @Test
     public void cgpCgReferenceHidesPairedGlslSibling() throws IOException {
         Path root = tempDir.resolve("display-shaders");
         write(root.resolve("BizHawk/BizScanlines.cgp"), "shader0 = BizScanlines.cg\n");

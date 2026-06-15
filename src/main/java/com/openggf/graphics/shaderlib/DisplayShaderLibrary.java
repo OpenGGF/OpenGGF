@@ -175,11 +175,16 @@ public final class DisplayShaderLibrary {
             if (!matcher.matches()) {
                 continue;
             }
-            String rawRef = stripOptionalQuotes(matcher.group(1).trim());
+            String rawRef = normalizePresetReference(matcher.group(1).trim());
             if (rawRef.isBlank()) {
                 continue;
             }
-            Path resolved = parent.resolve(rawRef).toAbsolutePath().normalize();
+            Path resolved;
+            try {
+                resolved = parent.resolve(rawRef).toAbsolutePath().normalize();
+            } catch (InvalidPathException ignored) {
+                continue;
+            }
             if (!resolved.startsWith(root)) {
                 continue;
             }
@@ -200,15 +205,20 @@ public final class DisplayShaderLibrary {
         return path.resolveSibling(baseName + replacementExtension).toAbsolutePath().normalize();
     }
 
-    private static String stripOptionalQuotes(String value) {
-        if (value.length() >= 2) {
-            char first = value.charAt(0);
-            char last = value.charAt(value.length() - 1);
-            if ((first == '"' && last == '"') || (first == '\'' && last == '\'')) {
-                return value.substring(1, value.length() - 1).trim();
+    private static String normalizePresetReference(String value) {
+        if (value.isBlank()) {
+            return "";
+        }
+        char first = value.charAt(0);
+        if (first == '"' || first == '\'') {
+            int closingQuote = value.indexOf(first, 1);
+            if (closingQuote > 1) {
+                return value.substring(1, closingQuote).trim();
             }
         }
-        return value;
+        int commentIndex = value.indexOf('#');
+        String withoutComment = commentIndex >= 0 ? value.substring(0, commentIndex) : value;
+        return withoutComment.trim();
     }
 
     private static boolean hasImplementationSegment(Path root, Path file) {
