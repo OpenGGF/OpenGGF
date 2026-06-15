@@ -216,6 +216,21 @@ public class DisplayShaderPresetLoader {
         if (!resolved.startsWith(normalizedRoot)) {
             throw new DisplayShaderLoadException("Shader path escapes shader library root: " + rawShaderRef);
         }
+        if (Files.isSymbolicLink(resolved)) {
+            throw new DisplayShaderLoadException("Shader source symbolic links are not supported: "
+                    + resolved.getFileName());
+        }
+        if (Files.exists(resolved)) {
+            try {
+                Path rootReal = normalizedRoot.toRealPath();
+                Path resolvedReal = resolved.toRealPath();
+                if (!resolvedReal.startsWith(rootReal)) {
+                    throw new DisplayShaderLoadException("Shader path escapes shader library root: " + rawShaderRef);
+                }
+            } catch (IOException e) {
+                throw new DisplayShaderLoadException("Unable to resolve shader source path: " + rawShaderRef, e);
+            }
+        }
         return resolved;
     }
 

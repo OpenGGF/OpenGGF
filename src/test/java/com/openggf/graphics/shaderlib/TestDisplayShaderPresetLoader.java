@@ -177,6 +177,34 @@ public class TestDisplayShaderPresetLoader {
     }
 
     @Test
+    public void glslpRejectsSymlinkDirectoryPassSourceEscapingLibraryRoot() throws Exception {
+        Path root = tempDir.resolve("display-shaders");
+        Path preset = root.resolve("RetroArch/shaders_glsl/crt/symlink-dir.glslp");
+        Path linkDir = root.resolve("RetroArch/shaders_glsl/crt/linked-dir");
+        Path outsideDir = tempDir.resolve("outside-dir");
+        write(preset, """
+                shaders = 1
+                shader0 = linked-dir/pass.glsl
+                """);
+        write(outsideDir.resolve("pass.glsl"), "void main() {}\n");
+        Files.createDirectories(linkDir.getParent());
+        boolean symlinkCreated = false;
+        try {
+            Files.createSymbolicLink(linkDir, outsideDir);
+            symlinkCreated = true;
+        } catch (IOException | UnsupportedOperationException | SecurityException e) {
+            // Symlink creation can require privileges on Windows or be disabled on some filesystems.
+        }
+        assumeTrue(symlinkCreated, "Symlink creation is unavailable in this environment");
+
+        DisplayShaderLoadException error = assertThrows(DisplayShaderLoadException.class,
+                () -> new DisplayShaderPresetLoader().load(ref(root, preset, DisplayShaderPresetRef.Kind.GLSLP),
+                        ShaderPhase.PRESENTATION));
+
+        assertTrue(error.getMessage().contains("escapes"));
+    }
+
+    @Test
     public void cgpRejectsCgFallbackPathEscapingLibraryRoot() throws Exception {
         Path root = tempDir.resolve("display-shaders");
         Path preset = root.resolve("BizHawk/nested/escape.cgp");
