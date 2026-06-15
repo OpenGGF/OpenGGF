@@ -1468,6 +1468,9 @@ public class Engine {
 			postFadeRecorder.recordPostFadeDiagnostic("DisplayColorProfileNotification");
 		}
 		renderDisplayColorProfileNotification();
+		if (postFadeRecorder != null) {
+			postFadeRecorder.recordPostFadeDiagnostic("DisplayShaderNotification");
+		}
 		renderDisplayShaderNotification();
 
 		// Trace Test Mode HUD and live rewind HUD: drawn after the fade pass so

@@ -4,6 +4,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Display shader notifications now stack with display color toasts:**
+  shader selection/failure notifications render above the existing color-profile
+  toast and are recorded in the post-fade diagnostic overlay order.
+
 - **Display shader pipeline wired into the engine:** `GraphicsManager` now owns
   the runtime display shader pipeline, Engine applies shader phases at scene,
   presentation, and final render points, and configured quick-cycle keys plus a
