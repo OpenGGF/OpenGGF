@@ -233,6 +233,7 @@ public class Engine {
 		this.gameLoop.setDataSelectActionHandler(this::launchGameplayFromDataSelect);
 		this.gameLoop.setReturnToMasterTitleHandler(this::returnToMasterTitleScreen);
 		this.gameLoop.setMasterTitleLaunchFailureHandler(this::rollbackLaunchSessionCachedConfig);
+		this.gameLoop.setApplicationExitHandler(this::requestApplicationExit);
 		this.realWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
 		this.realHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
 		this.projectionWidth = realWidth;
@@ -735,6 +736,12 @@ public class Engine {
 
 		// Phase 2: load ROM, sprites, audio, level
 		initializeGame();
+	}
+
+	private void requestApplicationExit() {
+		if (window != NULL) {
+			glfwSetWindowShouldClose(window, true);
+		}
 	}
 
 	/**
@@ -1575,6 +1582,7 @@ public class Engine {
 			}
 			gameLoop.renderLiveRewindHud(traceHudTextRenderer);
 		}
+		renderEscapeToMasterTitlePrompt(postFadeRecorder);
 		if (getCurrentGameMode() == GameMode.CREDITS_DEMO) {
 			EndingProvider provider = gameLoop.getEndingProvider();
 			if (provider != null && provider.shouldRenderDemoSpritesOverFade()) {
@@ -1771,6 +1779,70 @@ public class Engine {
 		int y = 224 - traceHudTextRenderer.lineHeight(scale) * 2 - 4;
 		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
 		traceHudTextRenderer.drawShadowedText(text, 4, y, DebugColor.YELLOW, scale);
+	}
+
+	private void renderEscapeToMasterTitlePrompt(RenderOrderRecorder postFadeRecorder) {
+		if (gameLoop == null) {
+			return;
+		}
+		EscapeToMasterTitleController controller = gameLoop.getEscapeToMasterTitleController();
+		if (controller == null || !controller.visible()) {
+			return;
+		}
+		if (postFadeRecorder != null) {
+			postFadeRecorder.recordPostFadeDiagnostic("EscapeToMasterTitlePrompt");
+		}
+		float scale = 1.0f;
+		int x = 4;
+		int y = 4;
+		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+		traceHudTextRenderer.drawShadowedText(controller.message(), x, y, DebugColor.WHITE, scale);
+		renderEscapeProgressBar(x, y + traceHudTextRenderer.lineHeight(scale) + 2, controller.progress());
+	}
+
+	private void renderEscapeProgressBar(int x, int y, double progress) {
+		final int width = 144;
+		final int height = 6;
+		int fillWidth = (int) Math.round(Math.max(0.0, Math.min(1.0, progress)) * (width - 2));
+
+		drawEscapeProgressRect(x, y, x + width, y + height,
+				0.0f, 0.0f, 0.0f, 0.65f, GLCommand.BlendType.ONE_MINUS_SRC_ALPHA);
+		drawEscapeProgressRect(x, y, x + width, y + 1,
+				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID);
+		drawEscapeProgressRect(x, y + height - 1, x + width, y + height,
+				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID);
+		drawEscapeProgressRect(x, y, x + 1, y + height,
+				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID);
+		drawEscapeProgressRect(x + width - 1, y, x + width, y + height,
+				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID);
+		if (fillWidth > 0) {
+			drawEscapeProgressRect(x + 1, y + 1, x + 1 + fillWidth, y + height - 1,
+					1.0f, 1.0f, 0.0f, 1.0f, GLCommand.BlendType.SOLID);
+		}
+	}
+
+	private void drawEscapeProgressRect(
+			int x1,
+			int y1,
+			int x2,
+			int y2,
+			float red,
+			float green,
+			float blue,
+			float alpha,
+			GLCommand.BlendType blendType) {
+		new GLCommand(
+				GLCommand.CommandType.RECTI,
+				GL_TRIANGLE_FAN,
+				blendType,
+				red,
+				green,
+				blue,
+				alpha,
+				x1,
+				y1,
+				x2,
+				y2).execute(0, 0, 0, 0);
 	}
 
 	private boolean updateDisplayShaderInput() {

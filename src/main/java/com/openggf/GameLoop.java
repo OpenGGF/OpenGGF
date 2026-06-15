@@ -128,6 +128,7 @@ public class GameLoop {
     private final BootScreenModeController bootScreenModeController = new BootScreenModeController();
     private final MenuScreenModeController menuScreenModeController = new MenuScreenModeController();
     private final PresenceManager presenceManager;
+    private final EscapeToMasterTitleController escapeToMasterTitleController;
     private MasterTitleLaunchCoordinator masterTitleLaunchCoordinator;
 
     // The active session-owned gameplay mode. Cached fields above are sourced from this context.
@@ -141,6 +142,7 @@ public class GameLoop {
     private EditorInputHandler editorInputHandler;
     private Runnable editorPlaytestToggleHandler;
     private Runnable editorFreshStartHandler;
+    private Runnable applicationExitHandler = () -> {};
     private GameMode currentGameMode = GameMode.LEVEL;
     private Runnable editorStateSyncHandler;
     private Supplier<MasterTitleScreen> masterTitleScreenSupplier;
@@ -211,6 +213,10 @@ public class GameLoop {
         this.playbackDebugManager = this.engineServices.playbackDebug();
         this.liveRewindManager = new LiveRewindManager(configService);
         this.masterTitleLaunchCoordinator = new MasterTitleLaunchCoordinator(configService);
+        this.escapeToMasterTitleController = new EscapeToMasterTitleController(
+                () -> resolveFadeManager().isActive(),
+                this::startEscapeToMasterTitleTransition,
+                this::startEscapeApplicationExitTransition);
         this.presenceManager = new PresenceManager(
                 configService.getBoolean(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED),
                 configService.getBoolean(SonicConfiguration.DISCORD_RICH_PRESENCE_SHOW_TIMER),
@@ -284,6 +290,10 @@ public class GameLoop {
         liveRewindManager.renderHud(currentGameMode, textRenderer);
     }
 
+    public EscapeToMasterTitleController getEscapeToMasterTitleController() {
+        return escapeToMasterTitleController;
+    }
+
     public void setEditorPlaytestToggleHandler(Runnable editorPlaytestToggleHandler) {
         this.editorPlaytestToggleHandler = editorPlaytestToggleHandler;
     }
@@ -294,6 +304,10 @@ public class GameLoop {
 
     public void setEditorFreshStartHandler(Runnable editorFreshStartHandler) {
         this.editorFreshStartHandler = editorFreshStartHandler;
+    }
+
+    public void setApplicationExitHandler(Runnable applicationExitHandler) {
+        this.applicationExitHandler = applicationExitHandler != null ? applicationExitHandler : () -> {};
     }
 
     public void setEditorStateSyncHandler(Runnable editorStateSyncHandler) {
@@ -489,6 +503,7 @@ public class GameLoop {
         // Master title screen mode - runs before any ROM/game systems are loaded.
         // Must be checked before pause handling since Enter is both confirm and pause.
         if (currentGameMode == GameMode.MASTER_TITLE_SCREEN) {
+            escapeToMasterTitleController.update(currentGameMode, inputHandler);
             bootScreenModeController.updateMasterTitle(
                     masterTitleScreenSupplier != null ? masterTitleScreenSupplier.get() : null,
                     inputHandler,
@@ -530,6 +545,8 @@ public class GameLoop {
             inputHandler.update();
             return;
         }
+
+        escapeToMasterTitleController.update(currentGameMode, inputHandler);
 
         // Handle pause toggle - must work even when paused
         int pauseKey = configService.getInt(SonicConfiguration.PAUSE_KEY);
@@ -2530,7 +2547,26 @@ public class GameLoop {
      * gameplay state. Called by {@link TraceSessionLauncher#teardown()}.
      */
     void returnToMasterTitle() {
+        escapeToMasterTitleController.reset();
         masterTitleLaunchCoordinator.returnToMasterTitle();
+    }
+
+    private void startEscapeToMasterTitleTransition() {
+        FadeManager manager = resolveFadeManager();
+        if (manager.isActive()) {
+            return;
+        }
+        audioManager.fadeOutMusic();
+        manager.startFadeToBlack(this::returnToMasterTitle);
+    }
+
+    private void startEscapeApplicationExitTransition() {
+        FadeManager manager = resolveFadeManager();
+        if (manager.isActive()) {
+            return;
+        }
+        audioManager.fadeOutMusic();
+        manager.startFadeToBlack(applicationExitHandler);
     }
 
     /**

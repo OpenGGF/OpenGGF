@@ -5,6 +5,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.control.InputHandler;
+import com.openggf.audio.AudioManager;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.DataSelectProvider;
@@ -266,6 +267,104 @@ public class TestGameLoop {
 
         assertDoesNotThrow(loop::step);
         assertTrue(fadeManager.isActive(), "Bootstrap fade should start while no gameplay mode exists");
+    }
+
+    @Test
+    void escapeHoldFadesAudioAndScreenBeforeReturningToMasterTitle() throws Exception {
+        InputHandler input = new InputHandler();
+        GameLoop loop = new GameLoop(input);
+        AudioManager audioManager = mock(AudioManager.class);
+        FadeManager fadeManager = mock(FadeManager.class);
+        AtomicReference<Runnable> fadeCallback = new AtomicReference<>();
+        AtomicBoolean returnedToMasterTitle = new AtomicBoolean(false);
+
+        when(fadeManager.isActive()).thenReturn(false);
+        doAnswer(invocation -> {
+            fadeCallback.set(invocation.getArgument(0));
+            return null;
+        }).when(fadeManager).startFadeToBlack(any());
+        setPrivateField(loop, "audioManager", audioManager);
+        setPrivateField(loop, "fadeManager", fadeManager);
+        loop.setReturnToMasterTitleHandler(() -> returnedToMasterTitle.set(true));
+
+        input.handleKeyEvent(GLFW_KEY_ESCAPE, GLFW_PRESS);
+        for (int frame = 0; frame < EscapeToMasterTitleController.HOLD_FRAMES; frame++) {
+            loop.getEscapeToMasterTitleController().update(GameMode.LEVEL, input);
+            input.update();
+        }
+
+        verify(audioManager).fadeOutMusic();
+        verify(fadeManager).startFadeToBlack(any());
+        assertFalse(returnedToMasterTitle.get(), "return should wait for fade-to-black callback");
+
+        assertNotNull(fadeCallback.get());
+        fadeCallback.get().run();
+        assertTrue(returnedToMasterTitle.get());
+    }
+
+    @Test
+    void escapeHoldOnMasterTitleFadesAudioAndScreenBeforeExitingApplication() throws Exception {
+        SessionManager.clear();
+        SessionManager.clear();
+
+        AudioManager audioManager = mock(AudioManager.class);
+        FadeManager fadeManager = mock(FadeManager.class);
+        com.openggf.graphics.GraphicsManager graphicsManager = mock(com.openggf.graphics.GraphicsManager.class);
+        EngineContext engineContext = new EngineContext(
+                SonicConfigurationService.getInstance(),
+                graphicsManager,
+                audioManager,
+                com.openggf.data.RomManager.getInstance(),
+                com.openggf.debug.PerformanceProfiler.getInstance(),
+                com.openggf.debug.DebugOverlayManager.getInstance(),
+                com.openggf.debug.playback.PlaybackDebugManager.getInstance(),
+                com.openggf.game.RomDetectionService.getInstance(),
+                com.openggf.game.CrossGameFeatureProvider.getInstance());
+        InputHandler input = new InputHandler();
+        GameLoop loop = new GameLoop(engineContext, input);
+        MasterTitleScreen masterTitleScreen = mock(MasterTitleScreen.class);
+        AtomicReference<Runnable> fadeCallback = new AtomicReference<>();
+        AtomicBoolean exitedApplication = new AtomicBoolean(false);
+
+        when(fadeManager.isActive()).thenReturn(false);
+        when(graphicsManager.getFadeManager()).thenReturn(fadeManager);
+        doAnswer(invocation -> {
+            fadeCallback.set(invocation.getArgument(0));
+            return null;
+        }).when(fadeManager).startFadeToBlack(any());
+        loop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
+        loop.setMasterTitleScreenSupplier(() -> masterTitleScreen);
+        loop.setApplicationExitHandler(() -> exitedApplication.set(true));
+
+        input.handleKeyEvent(GLFW_KEY_ESCAPE, GLFW_PRESS);
+        for (int frame = 0; frame < EscapeToMasterTitleController.HOLD_FRAMES; frame++) {
+            loop.step();
+        }
+
+        verify(audioManager).fadeOutMusic();
+        verify(fadeManager).startFadeToBlack(any());
+        assertFalse(exitedApplication.get(), "application exit should wait for fade-to-black callback");
+
+        assertNotNull(fadeCallback.get());
+        fadeCallback.get().run();
+        assertTrue(exitedApplication.get());
+    }
+
+    @Test
+    void escapePromptProgressRendersWithRectanglesInsteadOfTextBar() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/Engine.java"));
+        int promptRenderer = source.indexOf("private void renderEscapeToMasterTitlePrompt");
+        int progressRenderer = source.indexOf("private void renderEscapeProgressBar");
+        int nextMethod = source.indexOf("private boolean updateDisplayShaderInput()");
+
+        assertTrue(promptRenderer >= 0, "Engine must render the Escape prompt overlay");
+        assertTrue(progressRenderer > promptRenderer, "Escape progress must have a rectangle renderer");
+        assertTrue(nextMethod > progressRenderer, "Escape progress renderer must stay in the overlay section");
+        String escapeOverlaySource = source.substring(promptRenderer, nextMethod);
+        assertTrue(escapeOverlaySource.contains("GLCommand.CommandType.RECTI"),
+                "Escape progress should render with rectangle commands");
+        assertFalse(escapeOverlaySource.contains("buildEscapeProgressBar"),
+                "Escape progress should not render as an ASCII text bar");
     }
 
     @Test
@@ -2086,4 +2185,3 @@ public class TestGameLoop {
         }
     }
 }
-
