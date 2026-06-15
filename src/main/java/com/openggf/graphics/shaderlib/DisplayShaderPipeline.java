@@ -175,7 +175,7 @@ public class DisplayShaderPipeline {
             for (int i = 0; i < passes.size(); i++) {
                 CompiledPass pass = passes.get(i);
                 PassTarget target = passTargets.get(i);
-                renderPass(pass, target, inputTexture, inputWidth, inputHeight, frameCount);
+                renderPass(i, pass, target, inputTexture, inputWidth, inputHeight, frameCount);
                 inputTexture = target.fbo().textureId();
                 inputWidth = target.width();
                 inputHeight = target.height();
@@ -225,7 +225,7 @@ public class DisplayShaderPipeline {
                 GL_COLOR_BUFFER_BIT, GL_NEAREST);
     }
 
-    private void renderPass(CompiledPass pass, PassTarget target, int inputTexture,
+    private void renderPass(int passIndex, CompiledPass pass, PassTarget target, int inputTexture,
                             int inputWidth, int inputHeight, int frameCount) {
         glBindFramebuffer(GL_FRAMEBUFFER, target.fbo().fboId());
         glViewport(0, 0, target.width(), target.height());
@@ -238,6 +238,7 @@ public class DisplayShaderPipeline {
         configureSampler(pass);
         setUniforms(pass.programId(), sourceWidth, sourceHeight,
                 inputWidth, inputHeight, target.width(), target.height(), frameCount, pass.parameterValues());
+        bindPassHistoryTextures(pass.programId(), passIndex, pass);
 
         if (pass.shape() == GlslShape.FRAGMENT_ONLY) {
             glBindVertexArray(fragmentOnlyVao);
@@ -246,6 +247,30 @@ public class DisplayShaderPipeline {
             glBindVertexArray(combinedVao);
             glDrawArrays(GL_TRIANGLES, 0, 6);
         }
+    }
+
+    private void bindPassHistoryTextures(int programId, int passIndex, CompiledPass pass) {
+        int maxTextureUnits = glGetInteger(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS);
+        int maxHistory = Math.min(passIndex, Math.max(0, maxTextureUnits - 1));
+        for (int historyIndex = 1; historyIndex <= maxHistory; historyIndex++) {
+            PassTarget previous = passTargets.get(passIndex - historyIndex);
+            glActiveTexture(GL_TEXTURE0 + historyIndex);
+            glBindTexture(GL_TEXTURE_2D, previous.fbo().textureId());
+            configureSampler(pass);
+            setSampler(programId, "PassPrev" + historyIndex + "Texture", historyIndex);
+            setVec2(programId, "PassPrev" + historyIndex + "InputSize", previous.width(), previous.height());
+            setVec2(programId, "PassPrev" + historyIndex + "TextureSize", previous.width(), previous.height());
+            setVec2(programId, "PassPrev" + historyIndex + "OutputSize", previous.width(), previous.height());
+        }
+
+        if (passIndex > 0) {
+            setSampler(programId, "PassPrevTexture", 1);
+            PassTarget previous = passTargets.get(passIndex - 1);
+            setVec2(programId, "PassPrevInputSize", previous.width(), previous.height());
+            setVec2(programId, "PassPrevTextureSize", previous.width(), previous.height());
+            setVec2(programId, "PassPrevOutputSize", previous.width(), previous.height());
+        }
+        glActiveTexture(GL_TEXTURE0);
     }
 
     private void blitToDefaultViewport(PassTarget target, int vpX, int vpY, int vpW, int vpH, int filter) {
@@ -284,9 +309,13 @@ public class DisplayShaderPipeline {
     }
 
     private void setSampler(int programId, String name) {
+        setSampler(programId, name, 0);
+    }
+
+    private void setSampler(int programId, String name, int textureUnit) {
         int location = glGetUniformLocation(programId, name);
         if (location >= 0) {
-            glUniform1i(location, 0);
+            glUniform1i(location, textureUnit);
         }
     }
 

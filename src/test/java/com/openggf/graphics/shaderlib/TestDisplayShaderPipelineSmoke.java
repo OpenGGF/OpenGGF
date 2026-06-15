@@ -223,6 +223,47 @@ public class TestDisplayShaderPipelineSmoke {
     }
 
     @Test
+    public void passPrevTextureSamplerBindsEarlierPassOutput() {
+        try (GlContext ignored = GlContext.open()) {
+            DisplayShaderPipeline pipeline = new DisplayShaderPipeline();
+            pipeline.resize(16, 16, 16, 16);
+
+            DisplayShaderPreset preset = new DisplayShaderPreset("pass-prev", ShaderPhase.FINAL, List.of(
+                    solidColorPass(1.0f, 0.0f, 0.0f),
+                    solidColorPass(0.0f, 1.0f, 0.0f),
+                    solidColorPass(0.0f, 0.0f, 1.0f),
+                    solidColorPass(0.0f, 0.0f, 1.0f),
+                    solidColorPass(0.0f, 0.0f, 1.0f),
+                    new DisplayShaderPass(null, """
+                            uniform sampler2D Texture;
+                            uniform sampler2D PassPrev4Texture;
+                            uniform vec2 OutputSize;
+                            void main() {
+                                vec2 uv = gl_FragCoord.xy / OutputSize;
+                                gl_FragColor = texture2D(PassPrev4Texture, uv);
+                            }
+                            """, GlslShape.FRAGMENT_ONLY, 1, ScaleType.SOURCE, false, WrapMode.CLAMP_TO_EDGE)));
+
+            assertTrue(pipeline.activate(preset));
+            glViewport(0, 0, 16, 16);
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+            pipeline.apply(0, 0, 16, 16, 1);
+
+            ByteBuffer pixel = ByteBuffer.allocateDirect(4);
+            glReadPixels(8, 8, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+            int red = Byte.toUnsignedInt(pixel.get(0));
+            int green = Byte.toUnsignedInt(pixel.get(1));
+            int blue = Byte.toUnsignedInt(pixel.get(2));
+            assertTrue(green > 200, "expected PassPrev4Texture to sample green pass, red="
+                    + red + " green=" + green + " blue=" + blue);
+            assertTrue(red < 50, "expected low red, red=" + red + " green=" + green + " blue=" + blue);
+            assertTrue(blue < 50, "expected low blue, red=" + red + " green=" + green + " blue=" + blue);
+            pipeline.dispose();
+        }
+    }
+
+    @Test
     public void applyRestoresCallerGlStateAfterSuccess() {
         try (GlContext ignored = GlContext.open()) {
             DisplayShaderPipeline pipeline = new DisplayShaderPipeline();
@@ -336,6 +377,15 @@ public class TestDisplayShaderPipelineSmoke {
                             gl_FragColor = texture2D(Texture, gl_FragCoord.xy / OutputSize);
                         }
                         """, GlslShape.FRAGMENT_ONLY, 1, ScaleType.SOURCE, false, WrapMode.CLAMP_TO_EDGE)));
+    }
+
+    private static DisplayShaderPass solidColorPass(float red, float green, float blue) {
+        return new DisplayShaderPass(null, """
+                void main() {
+                    gl_FragColor = vec4(%sf, %sf, %sf, 1.0);
+                }
+                """.formatted(red, green, blue), GlslShape.FRAGMENT_ONLY, 1, ScaleType.SOURCE,
+                false, WrapMode.CLAMP_TO_EDGE);
     }
 
     private static int createSentinelProgram() {

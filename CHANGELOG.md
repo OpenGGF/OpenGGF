@@ -19,7 +19,9 @@ All notable changes to the OpenGGF project are documented in this file.
   Shader activation failures now log the shader label at warning level instead
   of being hidden behind fine-grained logging, and an opt-in shader-pack
   diagnostic test can write a compatibility failure report for local shader
-  roots.
+  roots. RetroArch pass-history samplers such as `PassPrev4Texture` now bind
+  the intended earlier pass output, fixing glow resolve chains that sample both
+  the CRT pass and a blurred bloom pass.
 
 - **Display shader notifications now stack with display color toasts:**
   shader selection/failure notifications render above the existing color-profile
