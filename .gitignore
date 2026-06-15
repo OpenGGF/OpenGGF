@@ -52,6 +52,9 @@ tools/*
 # Screenshots (keep locally)
 docs/screenshots/
 
+# User-supplied display shader library (root-level; engine shaders live in src/main/resources/shaders)
+/shaders/
+
 # Claude Code workspace (keep skills tracked)
 .claude/*
 !.claude/skills/

@@ -76,6 +76,61 @@ The `config.yaml` is organized into the following top-level sections:
 | `DISPLAY_SHADER_DEFAULT_PHASE` | `display.shaderDefaultPhase` | enum | `"PRESENTATION"` | Fallback render phase for standalone display shaders. Accepted values: `"SCENE"`, `"PRESENTATION"`, `"FINAL"`. |
 | `WIDESCREEN_DEADZONE_MODE` | `display.deadzoneMode` | string | `"PROPORTIONAL"` | Camera horizontal deadzone behaviour on wide screens: `"CENTER_SCALED"` keeps the native 16px deadzone band; `"PROPORTIONAL"` scales the band width with the screen width. **EXPERIMENTAL** — takes effect only when a widescreen preset is active. |
 
+### Display shader library
+
+Display shaders are user-supplied post-processing shaders loaded from the root-level
+`shaders/` directory. This is separate from `src/main/resources/shaders`, which contains
+engine-owned shaders required for normal rendering. The root `shaders/` directory is
+gitignored so local shader packs and third-party shader licenses stay outside the repo
+unless they are reviewed separately.
+
+Recommended layout:
+
+```text
+shaders/
+  Custom/
+    warm-crt.glsl
+  BizHawk/
+    BizScanlines.cgp
+    BizScanlines.glsl
+  libretro-glsl/
+    crt/
+    scanlines/
+    ...
+    .openggf-libretro-glsl.properties
+```
+
+The engine scans `.glsl`, `.cgp`, and `.glslp` files at runtime and always includes
+`Off`. Use `]` and `[` to cycle quickly, or press `BACKSLASH` to open the searchable
+picker for large libraries. The picker filters by root-relative path and inferred
+category, so typing `crt` narrows entries such as `libretro-glsl/crt/...`.
+
+The optional libretro GLSL pack installer downloads the upstream zip archive from
+GitHub, extracts it into `shaders/libretro-glsl/`, strips the archive's top-level folder,
+and stores update metadata in `shaders/libretro-glsl/.openggf-libretro-glsl.properties`.
+That folder is owned by the installer; put personal shaders in a sibling folder such as
+`shaders/Custom/`.
+
+Compatibility is intentionally bounded. Fragment-only shaders can sample the current
+scene through declared samplers named `s_p`, `SceneTexture`, or `Texture`. RetroArch and
+BizHawk-style uniforms are populated by location when declared: `IN.video_size`,
+`IN.texture_size`, `IN.output_size`, `InputSize`, `TextureSize`, `OutputSize`,
+`FrameCount`, `FrameDirection`, and `MVPMatrix`. Combined shaders may declare
+`VertexCoord`, `TexCoord`, and `COLOR` attributes; the engine binds them to fixed quad
+locations. The engine does not inject uniform declarations.
+
+HLSL/Cg-only presets can be discovered but fail on selection unless a loadable GLSL
+sibling exists. Unsupported preset inheritance, external LUT textures, previous-frame
+history, and malformed shaders fail safely: the selection is rejected, the shader is
+remembered as failed for the current process, rendering continues, and the user can return
+to `Off`.
+
+Display shaders affect presentation only. F12 screenshots are captured after the display
+shader composite, so screenshots include the selected shader. Trace replay/capture uses a
+separate render path that stops before display shader application, so trace artifacts stay
+shader-free; if trace capture is ever refactored to call the main `Engine.display()` path,
+display shader application must be gated off for trace capture.
+
 ---
 
 ## ROM Files
