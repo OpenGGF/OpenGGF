@@ -227,6 +227,12 @@ straightforward to add new objects, zones, and game-specific behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Development-timeline 2024 prologue (2026-06-16).** Merged
+  `feature/ai-journey-timeline-prologue`, adding the two oldest dev clips (the
+  white-box-under-terrain physics rewrite and the first Emerald Hill tiles
+  decompressed from the ROM, Oct 2024) as a chronological prologue to
+  `docs/DEVELOPMENT_TIMELINE.md`, so it matches the hall of shame in
+  `docs/AI_JOURNEY.md`. Reuses existing `assets/ai-journey/` media; docs-only.
 - **AI journey journal expansion + development-timeline gallery (2026-06-16).** Merged
   `feature/ai-journey-expansion`, substantially expanding `docs/AI_JOURNEY.md` against
   the commit log and the project's two-person chat history: corrects the AI-use timeline
