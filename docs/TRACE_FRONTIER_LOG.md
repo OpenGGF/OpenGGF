@@ -11,26 +11,27 @@ branch-local measurements.
 | Item | Current value |
 |---|---|
 | Overall trace-suite state | Expected-red, not release-green |
-| Latest logged full-sweep aggregate | 90 `*TraceReplay` tests, 53 failures, 1 error |
-| Latest focused frontier | `TestS2Cnz2LevelSelectTraceReplay` advanced to frame `3691` |
-| Current blocking field | CNZ2 Tails `tails_status_byte` mismatch (`0x0020` vs `0x0000`) after clearing airborne zero-horizontal-speed facing diagnostics |
-| Current owner hypothesis | Status-only sidekick lifetime/marker/on-object/airborne-zero-x-speed facing mismatches are trace-framework noise when kinematics match; continue active Tails CPU/status frontiers before movement-only/downstream frontiers |
+| Latest logged full-sweep aggregate | 90 `*TraceReplay` tests, 52 failures, 1 error |
+| Latest focused frontier | `TestS2ArzLevelSelectTraceReplay` cleared to full-trace green |
+| Current blocking field | CNZ1 Tails `tails_cpu_ctrl2_held` mismatch (`0x0010` vs `0x0000`) after clearing ARZ landing-frame CPU mirror diagnostics |
+| Current owner hypothesis | Status-only sidekick lifetime/marker/on-object/airborne-zero-x-speed facing mismatches and first-landing CPU mirror lag are trace-framework noise when kinematics match; continue active Tails CPU/status frontiers before movement-only/downstream frontiers |
 | Current branch context in newest entries | `bugfix/ai-trace-frontier-develop` after cherry-picking the AIZ worker chain |
-| Last frontier move | S2 CNZ2 level-select `f2928 -> f3691` by keeping airborne zero-horizontal-speed facing-only diagnostics out of the release-blocking frontier |
+| Last frontier move | S2 ARZ level-select `f3172 -> green` by keeping first-landing CPU mirror lag diagnostics out of the release-blocking frontier |
 
 ### Active queue
 
 1. Continue the ordered Tails CPU/status cluster. The newest full sweep is
-   expected-red at 90 trace tests / 53 trace failures / 1 trace error; it also
+   expected-red at 90 trace tests / 52 trace failures / 1 trace error; it also
    reports pre-existing non-trace guard ratchets because the Maven selector still
    lets those tests into the run.
 2. MCZ2 advanced from f2411 to f4482 after clearing a stationary on-object
    facing-only status diagnostic. CNZ2 has now advanced from f2919 to f3691
    after clearing stationary/on-object and airborne zero-horizontal-speed
-   facing-only status diagnostics.
-3. The next earliest active CPU/status target is ARZ f3172
-   (`tails_cpu_interact`, `0x0000` vs `0x0024`). Then consider CNZ1 f3675,
-   CNZ2 f3691, HTZ f4229, and MCZ2 f4482. Movement-only frontiers
+   facing-only status diagnostics. ARZ now clears to green after removing
+   first-landing CPU mirror lag from the reported frontier.
+3. The next earliest active CPU/status target is CNZ1 f3675
+   (`tails_cpu_ctrl2_held`, `0x0010` vs `0x0000`). Then consider CNZ2 f3691,
+   HTZ f4229, and MCZ2 f4482. Movement-only frontiers
    such as HCZ f1489, OOZ f1775, CPZ1 f1157, and CNZ complete-run f1846 should
    wait until the CPU/status cluster is exhausted.
 4. Known branch-local follow-up from the S2 ARZ2 work: ARZ2 advanced to `f523`
@@ -47,7 +48,6 @@ branch-local measurements.
 | `s2_mtz3` / `TestS2Mtz3LevelSelectTraceReplay` | `1973` | Tails `tails_g_speed` | `0x0000` | `0x03C1` | true headline refined from same-frame status byte | Tails movement after CPU/status |
 | `s2_ooz1` / `TestS2OozLevelSelectTraceReplay` | `1775` | Tails `tails_x_speed` | `0x0018` | `-0080` | advanced from f1251 status-only diagnostics | movement downstream of Tails CPU |
 | `s2_cpz2` / `TestS2Cpz2LevelSelectTraceReplay` | `2888` | Tails `x` | `0x10F8` | `0x10F0` | advanced from f759 | movement downstream of Tails CPU |
-| `s2_arz1` / `TestS2ArzLevelSelectTraceReplay` | `3172` | Tails `tails_cpu_interact` | `0x0000` | `0x0024` | advanced from f2011 | active Tails CPU/interact |
 | `s2_cnz1` / `TestS2CnzLevelSelectTraceReplay` | `3675` | Tails `tails_cpu_ctrl2_held` | `0x0010` | `0x0000` | held | active Tails CPU/control |
 | `s2_cnz2` / `TestS2Cnz2LevelSelectTraceReplay` | `3691` | Tails `tails_status_byte` | `0x0020` | `0x0000` | advanced from f2928 airborne facing-only diagnostic | active Tails status |
 | `s2_htz1` / `TestS2HtzLevelSelectTraceReplay` | `4229` | Tails `tails_cpu_interact` | `0x0036` | `0x0014` | advanced from f3733 | active Tails CPU/interact |
@@ -76,6 +76,10 @@ At CNZ2 `f2928`, Tails has just become airborne with matching position,
 subpixels, routine, y-speed progression, angle, and zero x/ground speed; only
 the facing bit differs until horizontal speed begins at f2940. That diagnostic
 no longer owns the frontier, and CNZ2 now reports f3691.
+At ARZ `f3172` and `f3960`, Tails has just landed on an object with matching
+sidekick kinematics. ROM has already latched the raw `tails_interact` slot but
+the CPU mirror remains zero until the next frame, so the diagnostic no longer
+owns a release-blocking frontier. ARZ now completes green.
 
 ### Stale-data warnings
 
@@ -102,6 +106,46 @@ no longer owns the frontier, and CNZ2 now reports f3691.
   cleanup. Do not delete historical evidence only because it is stale.
 
 ## Evidence Ledger
+
+## 2026-06-16 - Trace frontier noise: landing-frame CPU mirror lag no longer owns ARZ
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, continuing trace
+  framework noise reduction in the ordered Tails CPU/status cluster. The focused
+  trace was `TestS2ArzLevelSelectTraceReplay`, whose previous reported frontier
+  was f3172 `tails_cpu_interact` (`0x0000` vs `0x0024`).
+- Single-frame bisect result: at f3172, Sonic and Tails movement fields match
+  exactly. Tails has just gained `Status_OnObj`, and the ROM raw
+  `tails_interact` SST byte has latched slot `0x19`, but the ROM
+  `Tails_interact_ID` CPU mirror remains `0x0000` until f3173, where both ROM
+  and engine report object id `0x41`. The same one-frame mirror-lag shape also
+  appears at f3960. Treating the CPU mirror as release-blocking on the landing
+  frame made the reported frontier earlier than the true gameplay frontier.
+- Fix: `TraceBinder` now ignores `tails_cpu_interact` only for normal-routine
+  sidekick CPU mirror lag where the ROM mirror is zero, the raw ROM
+  `tails_interact` slot is nonzero, both sidekick snapshots are on-object, and
+  position, subpixels, speeds, angle, routine, air, rolling, and status byte all
+  match. Active CPU-interact mismatches and any same-frame motion delta remain
+  strict.
+- Focused validation:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestTraceBinder#testLandingFrameSidekickCpuInteractMirrorLagDoesNotOwnFrontier+testLandingFrameSidekickCpuInteractMirrorLagStillReportsWithMotionDelta+testActiveSidekickCpuInteractMismatchStillReports+testInactiveSidekickCpuInteractMismatchDoesNotOwnFrontier" "-DfailIfNoTests=false" test`
+  passed (4 tests). Full `TestTraceBinder` passed (50 tests). Focused
+  `TestS2ArzLevelSelectTraceReplay` passed: ARZ level-select is now green.
+- Full sweep command: `mvn '-Dsurefire.argLine=${test.cds.argLine}
+  ${mockito.agent.argLine} -Xmx3g' "-Dsurefire.forkCount=1"
+  "-Dtest=*TraceReplay" "-DfailIfNoTests=false" test`.
+- Full sweep result: expected-red, **90 trace tests, 52 trace failures, 1 trace
+  error**. ARZ cleared **f3172 -> green**. CNZ1 held at **f3675**, CNZ2 held at
+  **f3691**, HTZ held at **f4229**, MCZ2 held at **f4482**, OOZ held at
+  **f1775**, MTZ3 held at **f1973**, AIZ held at **f19089**, HCZ held at
+  **f1489**, and CNZ complete-run held at **f1846**. The MSE summary also
+  reports pre-existing non-trace guard ratchets (`TestArchitecturalSourceGuard`
+  and `TestObjectPhysicsStandardizationGuard`) because the Maven selector still
+  allows those tests into the run; this trace-framework change did not touch the
+  reported production object/GameLoop/ObjectManager files.
+- Classification: landing-frame sidekick CPU mirror lag **cleared** an active
+  CPU/interact diagnostic without hiding active mismatches or motion deltas. The
+  next ordered active CPU/status target is CNZ1 f3675
+  `tails_cpu_ctrl2_held` (`0x0010` vs `0x0000`).
 
 ## 2026-06-16 - Trace frontier noise: airborne zero-horizontal facing no longer owns CNZ2
 

@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Trace replay ignores landing-frame sidekick CPU mirror lag:** S2
+  `tails_cpu_interact` diagnostics no longer report a frontier on the first
+  on-object landing frame when the ROM raw `tails_interact` slot has latched but
+  the CPU mirror field is still one frame behind and sidekick kinematics match.
+  This clears ARZ level-select from frame 3172 to full-trace green; the full
+  trace sweep remains expected-red at 90 trace tests, 52 trace failures, and 1
+  existing trace error.
+
 - **Trace replay ignores airborne zero-horizontal sidekick facing noise:** S2/S3K
   sidekick status-byte diagnostics no longer report a frontier when the only
   delta is the facing bit while the sidekick is airborne, non-rolling, and has

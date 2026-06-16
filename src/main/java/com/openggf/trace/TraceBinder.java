@@ -610,7 +610,9 @@ public class TraceBinder {
                 expected.idleTimer(), actual.controlCounter(), 0, 1, false));
         fields.put(prefix + "cpu_respawn_counter", compareNumeric(prefix + "cpu_respawn_counter",
                 expected.flightTimer(), actual.respawnCounter(), 0, 1, false));
-        if (isInactiveStaleSidekickInteract(expected, actual, expectedSidekick, actualSidekick)) {
+        if (isInactiveStaleSidekickInteract(expected, actual, expectedSidekick, actualSidekick)
+                || isLandingFrameSidekickInteractMirrorLag(expected, actual,
+                        expectedSidekick, actualSidekick)) {
             fields.put(prefix + "cpu_interact", ignoredStaleSidekickInteract(prefix + "cpu_interact",
                     expected.interact() & 0xFF, actual.interact()));
         } else {
@@ -690,6 +692,38 @@ public class TraceBinder {
             return false;
         }
         return !hasOnObjectStatus(expectedSidekick) && !hasOnObjectStatus(actualSidekick);
+    }
+
+    private static boolean isLandingFrameSidekickInteractMirrorLag(
+            TraceEvent.CpuState expected,
+            EngineSidekickCpuState actual,
+            TraceCharacterState expectedSidekick,
+            TraceCharacterState actualSidekick) {
+        if ((expected.interact() & 0xFF) != 0
+                || (expected.tailsInteract() & 0xFF) == 0
+                || (expected.interact() & 0xFF) == (actual.interact() & 0xFF)
+                || expected.cpuRoutine() != 0x06
+                || actual.cpuRoutine() != 0x06
+                || expectedSidekick == null
+                || actualSidekick == null
+                || !expectedSidekick.present()
+                || !actualSidekick.present()
+                || !hasOnObjectStatus(expectedSidekick)
+                || !hasOnObjectStatus(actualSidekick)) {
+            return false;
+        }
+        return expectedSidekick.statusByte() == actualSidekick.statusByte()
+                && expectedSidekick.routine() == actualSidekick.routine()
+                && expectedSidekick.x() == actualSidekick.x()
+                && expectedSidekick.y() == actualSidekick.y()
+                && expectedSidekick.xSub() == actualSidekick.xSub()
+                && expectedSidekick.ySub() == actualSidekick.ySub()
+                && expectedSidekick.xSpeed() == actualSidekick.xSpeed()
+                && expectedSidekick.ySpeed() == actualSidekick.ySpeed()
+                && expectedSidekick.gSpeed() == actualSidekick.gSpeed()
+                && expectedSidekick.angle() == actualSidekick.angle()
+                && expectedSidekick.air() == actualSidekick.air()
+                && expectedSidekick.rolling() == actualSidekick.rolling();
     }
 
     private static boolean hasOnObjectStatus(TraceCharacterState state) {

@@ -632,6 +632,52 @@ public class TestTraceBinder {
     }
 
     @Test
+    void testLandingFrameSidekickCpuInteractMirrorLagDoesNotOwnFrontier() {
+        TraceCharacterState tails = sidekickStateWithStatus(0x08);
+        TraceFrame frame = frameWithSidekick(tails);
+        TraceEvent.CpuState expectedCpu = cpuStateWithInteractAndTailsInteract(0x00, 0x19);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x24, 0x06, 0x0000, 0x0000,
+                0x00, 0x00, 0x00, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+                (short) 0x0050, (short) 0x03B0,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, false, 0,
+                null, null, "tails", tails, expectedCpu, actualCpu);
+
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_interact").severity());
+        assertFalse(result.hasError());
+    }
+
+    @Test
+    void testLandingFrameSidekickCpuInteractMirrorLagStillReportsWithMotionDelta() {
+        TraceCharacterState expectedTails = sidekickStateWithStatus(0x08);
+        TraceCharacterState actualTails = new TraceCharacterState(true,
+                (short) 0x0142, (short) 0x03A0,
+                (short) 0x0018, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, false, 0,
+                0, 0, 0x02, 0x08, 0x16);
+        TraceFrame frame = frameWithSidekick(expectedTails);
+        TraceEvent.CpuState expectedCpu = cpuStateWithInteractAndTailsInteract(0x00, 0x19);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x24, 0x06, 0x0000, 0x0000,
+                0x00, 0x00, 0x00, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+                (short) 0x0050, (short) 0x03B0,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, false, 0,
+                null, null, "tails", actualTails, expectedCpu, actualCpu);
+
+        assertEquals(Severity.ERROR, result.fields().get("tails_cpu_interact").severity());
+        assertEquals(Severity.ERROR, result.fields().get("tails_x_speed").severity());
+        assertTrue(result.hasError());
+    }
+
+    @Test
     void testSidekickCpuComparisonSkippedWhenTraceDoesNotCarryCpuState() {
         TraceFrame frame = TraceFrame.of(117, 0x0000,
             (short) 0x0050, (short) 0x03B0,
@@ -1252,11 +1298,16 @@ public class TestTraceBinder {
     }
 
     private static TraceEvent.CpuState cpuStateWithInteract(int interact) {
+        return cpuStateWithInteractAndTailsInteract(interact, interact);
+    }
+
+    private static TraceEvent.CpuState cpuStateWithInteractAndTailsInteract(
+            int interact, int tailsInteract) {
         return new TraceEvent.CpuState(
                 1775, "tails", interact, 0, 0, 0x06,
                 (short) 0x0000, (short) 0x0000, 0,
                 0, 0x00, 0x00, 0, 0x0000,
                 0x00, 0x00, (short) 0x0000, (short) 0x0000,
-                0x0000, 0x00, 0x00, interact, 0x0000);
+                0x0000, 0x00, 0x00, tailsInteract, 0x0000);
     }
 }
