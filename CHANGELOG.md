@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 HTZ2 Tails panic release follows the rolling-only/spin-dash branch:**
+  Sonic 2 sidekick panic now lets the engine's rolling-only/pinball state feed
+  the ROM `spin_dash_flag` branch used by `TailsCPU_Panic`, so the `$7F`
+  release cadence exits panic at HTZ2 frame 1023 even while inertia is still
+  nonzero. The HTZ2 trace advances to frame 1078's later Sonic `y_speed`
+  frontier, with the full trace-suite failure count unchanged.
+
 - **S2 MTZ SteamSpring keeps ROM contact on the inclusive right edge:**
   Obj42 now opts into `SolidObject_cont`'s `bhi` right-edge rule so Tails keeps
   `Status_Push` at the exact MTZ steam-piston boundary. The MTZ1 level-select

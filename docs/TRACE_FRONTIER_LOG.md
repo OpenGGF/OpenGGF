@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+## 2026-06-16 - S2 HTZ2 panic release advances past Tails CPU routine mismatch
+
+- Scope: Sonic 2 sidekick panic control. The current Tails CPU cluster target was
+  `TestS2Htz2LevelSelectTraceReplay` frame 1023, where ROM had already changed
+  `Tails_CPU_routine` from panic `0x0008` back to normal `0x0006`, while the
+  engine stayed in panic.
+- Bisect result: the single-frame context showed `Level_frame_counter=$0400`,
+  `pinballMode=true`, nonzero inertia/ground speed, and no move-lock or manual
+  control counter. `TailsCPU_Panic` reads `spin_dash_flag`, then the panic
+  charging branch checks `(Level_frame_counter+1).b & $7F` and releases to
+  routine `6` on zero (`docs/s2disasm/s2.asm:39458-39491`). The engine stores
+  this S2 rolling-only panic state as `pinballMode`, so
+  `PhysicsFeatureSet.SONIC_2.sidekickPanicTreatsPinballModeAsSpindashFlag`
+  now enables the same release branch for S2 instead of blocking on nonzero
+  `g_speed`.
+- Focused frontier check:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=32 -Dtest=com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Ds2.rom.path=s2.gen test"`.
+  Result: expected-red. `TestS2Htz2LevelSelectTraceReplay` advanced from frame
+  1023 `tails_cpu_routine` (expected `0x0006`, actual `0x0008`) to frame 1078
+  `y_speed` (expected `-0568`, actual `0x0568`), so the HTZ2 Tails CPU frontier
+  is cleared and the next local frontier is movement/spring-contact downstream.
+- Full trace sweep:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=24 -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=\"Sonic and Knuckles & Sonic 3 (W) [!].gen\" test"`.
+  Result: expected-red, 90 tests, 50 failures, 1 error. Compared with the prior
+  90-test sweep at 50 failures and 1 error, aggregate counts did not regress;
+  the intentional frontier movement is `s2_htz2` frame 1023 -> frame 1078. The
+  next earliest Tails CPU cluster target is
+  `TestS2Mtz2LevelSelectTraceReplay` frame 1073 `tails_cpu_interact` (expected
+  `0x0000`, actual `0x00A0`), narrowly ahead of `TestS2MtzLevelSelectTraceReplay`
+  frame 1169.
+
 ## 2026-06-16 - S2 MTZ SteamSpring inclusive edge advances MTZ1 frontier
 
 - Scope: Sonic 2 Obj42 SteamSpring solid-contact parity. The earliest current
