@@ -30,7 +30,8 @@ themselves how a Mega Drive moves a hedgehog around a screen, one stubborn detai
 
 The hand-built core — the rendering pipeline, the physics rewrite, the subpixel movement
 model, the sensor-based collision system — was designed and written by a person, over years,
-against the community disassemblies.
+working from Sonic Retro documentation and community hacking guides — not the disassemblies,
+which only became the reference much later.
 
 That foundation matters to the rest of this story: every later experiment with AI happened
 *on top of* a hand-built engine with a hard, objective definition of "correct" — the original
@@ -42,8 +43,8 @@ The first time AI touched this project, nobody intended to keep a line of what i
 
 The plan was deliberately cynical, and at the time the cynicism was correct: we didn't trust the
 models to write good code. So the idea was never "let AI build it." It was to point AI at the
-enormous body of *reference* material that already exists — Sonic Retro write-ups, historical
-ROM-hacking notes, the disassemblies — have it digest all of that and emit some terrible,
+enormous body of *reference* material that already exists — Sonic Retro write-ups and historical
+ROM-hacking notes — have it digest all of that and emit some terrible,
 barely-readable code that nevertheless *worked*, then reverse-engineer that throwaway code by hand
 into something clean enough to keep. AI as a research scratchpad, not an author.
 
