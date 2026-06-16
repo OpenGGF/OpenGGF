@@ -97,9 +97,11 @@ pointed:
 > *"What we really need is an LLM with large enough recall that we can feed it the entire s2 asm
 > disassembly and ask it to convert it into java"* — James, 21 Oct 2024
 
-It was, to be clear, a mess getting there — the physics in those weeks was gloriously broken, and
-we have the receipts (see [the hall of shame](#the-hall-of-shame)). But the lesson stuck:
-**plausibility is not accuracy, and only the ROM gets a vote.**
+It was, to be clear, a mess getting there. The engine around it was still very much a work in
+progress — James's hand-coded physics had Sonic sinking through the floor, and we have the receipts
+(see [the hall of shame](#the-hall-of-shame)) — but that was the *human* half of the build. The
+AI's job here was narrower and cleaner: turn ROM bytes into level data, verified against the ROM.
+And the lesson from that half stuck: **plausibility is not accuracy, and only the ROM gets a vote.**
 
 ## June 2025 — Agentic Codex: the floodgates
 
@@ -248,7 +250,7 @@ affectionate museum — drawn from the dev clips James and Farrell fired at each
 | | |
 |:---:|:---:|
 | ![Sonic as a white box sinking under the terrain, Oct 2024](assets/ai-journey/2024-10-under-terrain.gif) | ![White-box Sonic on Emerald Hill tiles decompressed from the ROM, Oct 2024](assets/ai-journey/2024-10-rom-loading.gif) |
-| **Oct 2024** — Sonic is a white box, and he *"sits under the terrain."* The first ChatGPT-era physics. | **Oct 2024** — *"oh shiiiiit."* Still a white box, but standing on **real Emerald Hill tiles, decompressed from the ROM** — the Kosinski payoff, live. |
+| **Oct 2024** — Sonic is a white box who *"sits under the terrain."* **James's hand-coded physics**, mid-rewrite — the human half of the build. | **Oct 2024** — *"oh shiiiiit."* Same white box, now standing on **real Emerald Hill tiles decompressed from the ROM** — the moment the ChatGPT-assisted Kosinski work paid off. |
 
 And the one exhibit you have to *hear*: 🔊 **[Casino Night Zone as a garbled shotgun](assets/ai-journey/2025-12-garbled-shotgun.mp4)** (Dec 2025) — the audio engine's first inception, embedded up in [the November section](#the-exception-that-proves-the-rule-audio).
 
@@ -256,8 +258,8 @@ Honourable mentions, by caption alone:
 
 | When | What we said | What it was |
 |------|--------------|-------------|
-| Oct 2024 | *"Getting closer, still trying to work out why he sits under the terrain"* | Sonic embedded *below* the ground — the first ChatGPT-era physics |
-| Oct 2024 | *"oh shiiiiit"* | `sonic the bingus.mp4`; the moment it sort-of worked |
+| Oct 2024 | *"Getting closer, still trying to work out why he sits under the terrain"* | Sonic embedded *below* the ground — James's hand-coded collision, mid-rewrite |
+| Oct 2024 | *"oh shiiiiit"* | `sonic the bingus.mp4`; ROM level data decompressing for the first time |
 | Jan 2026 | *"There was an attempt"* | an honest caption for an honest result |
 | Jan 2026 | *"Very rough around the edges… it hurts when it [lands]"* | early S3K physics |
 | Jan 2026 | *"that'll be why I could hear it going mad"* | the audio engine's first, feral inception |
