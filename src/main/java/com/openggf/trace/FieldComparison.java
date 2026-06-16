@@ -8,11 +8,18 @@ public record FieldComparison(
     String expected,
     String actual,
     Severity severity,
-    int delta
+    int delta,
+    boolean observedMismatch
 ) {
+    public FieldComparison(String fieldName, String expected, String actual, Severity severity, int delta) {
+        this(fieldName, expected, actual, severity, delta, false);
+    }
+
     public boolean isDivergent() {
         return severity != Severity.MATCH;
     }
+
+    public boolean isContextRelevant() {
+        return isDivergent() || observedMismatch;
+    }
 }
-
-

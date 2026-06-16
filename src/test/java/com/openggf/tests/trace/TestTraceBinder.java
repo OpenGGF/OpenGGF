@@ -237,6 +237,8 @@ public class TestTraceBinder {
 
         assertFalse(result.hasError());
         assertEquals(Severity.MATCH, result.fields().get("tails_status_byte").severity());
+        assertTrue(result.fields().get("tails_status_byte").observedMismatch(),
+                "Ignored push-only status mismatches should still be visible in trace context.");
     }
 
     @Test

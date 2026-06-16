@@ -226,6 +226,31 @@ public class TestDivergenceReport {
     }
 
     @Test
+    void contextWindowShowsObservedNonBlockingMismatchesByDefault() {
+        Map<String, FieldComparison> f4Fields = new LinkedHashMap<>();
+        f4Fields.put("tails_status_byte", new FieldComparison(
+                "tails_status_byte", "0x0029", "0x0009", Severity.MATCH, 0, true));
+        FrameComparison f4 = new FrameComparison(4, f4Fields);
+        FrameComparison f5 = makeComparison(5, "tails_x_speed", Severity.ERROR, "0x0080", "0x0000");
+        DivergenceReport report = new DivergenceReport(List.of(f4, f5));
+
+        String previous = System.clearProperty("trace.context.fields");
+        try {
+            String context = report.getContextWindow(5, 1);
+
+            assertTrue(context.contains("Exp tails_status_byte"),
+                    "Observed non-blocking mismatches should remain visible in compact context.");
+            assertTrue(context.contains("~0x0009"),
+                    "Observed non-blocking mismatches should use a distinct non-error marker.");
+            assertFalse(report.hasWarnings());
+            assertEquals(1, report.errors().size());
+            assertEquals("tails_x_speed", report.errors().get(0).field());
+        } finally {
+            restoreProperty("trace.context.fields", previous);
+        }
+    }
+
+    @Test
     void contextWindowCanRenderAllComparedFieldsWhenRequested() {
         FrameComparison frame = makeMixedComparison(5);
         DivergenceReport report = new DivergenceReport(List.of(frame));

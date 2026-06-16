@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Trace context marks tolerated status mismatches:** trace replay context
+  windows now keep ignored-but-real sidekick status-byte mismatches visible with
+  a `~` marker, so push/facing diagnostics that precede a movement frontier can
+  be spotted without turning those tolerated deltas into release-blocking
+  errors.
+
 - **Trace context reports default to divergent columns only:** trace replay
   context windows now omit matching fields by default, cap long ROM/engine
   diagnostic lines, use a two-frame saved window radius, and omit empty

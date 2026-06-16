@@ -1014,7 +1014,7 @@ public class TraceBinder {
     }
 
     private static FieldComparison ignoredSidekickStatus(String name, int expected, int actual) {
-        return new FieldComparison(name, formatHex(expected), formatHex(actual), Severity.MATCH, 0);
+        return new FieldComparison(name, formatHex(expected), formatHex(actual), Severity.MATCH, 0, true);
     }
 
     private static FieldComparison ignoredLatchedCtrl2(String name, int expected, int actual) {

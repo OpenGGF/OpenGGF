@@ -310,7 +310,7 @@ public class DivergenceReport {
                     fieldNames.addAll(fc.fields().keySet());
                 } else {
                     fc.fields().entrySet().stream()
-                            .filter(entry -> entry.getValue().isDivergent())
+                            .filter(entry -> entry.getValue().isContextRelevant())
                             .map(Map.Entry::getKey)
                             .forEach(fieldNames::add);
                 }
@@ -338,7 +338,9 @@ public class DivergenceReport {
             for (String field : fieldNames) {
                 FieldComparison comp = fc.fields().get(field);
                 if (comp != null) {
-                    String marker = comp.severity() == Severity.ERROR ? "*" : " ";
+                    String marker = comp.severity() == Severity.ERROR
+                            ? "*"
+                            : comp.observedMismatch() ? "~" : " ";
                     sb.append(String.format(" | %-8s |%s%-7s",
                         comp.expected(), marker, comp.actual()));
                 } else {
