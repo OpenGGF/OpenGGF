@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K CNZ orbiting bumper bounce uses the ROM-current orbit point:** Obj_Bumper
+  now advances its orbit before consuming pending touch responses and resolves
+  the object-pass `Level_frame_counter+1` tick from the live level counter. This
+  makes the collision-response list publish the current visible orbit point and
+  advances the CNZ complete-run trace from frame 355's bumper `y_speed` mismatch
+  to frame 946's later 1-pixel `y` movement frontier, with no parsed
+  first-error-frame regression in the full trace sweep.
+
 - **S2 ARZ2 swinging-platform child slot matches the ROM SST layout:** Obj15 now
   allocates the non-rendering display child used by the ROM multi-sprite chain
   and mirrors the swing oscillator through the object's x-flip bit. The ARZ2

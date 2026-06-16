@@ -11,22 +11,22 @@ branch-local measurements.
 | Item | Current value |
 |---|---|
 | Overall trace-suite state | Expected-red, not release-green |
-| Latest logged full-sweep aggregate | 90 `*TraceReplay` tests, 51 failures, 1 error |
-| Latest focused frontier | `TestS3kAizTraceReplay` at frame `19089` |
-| Current blocking field | leader `g_speed` sign flip near the AIZ2 end-boss arena (`-00B0` vs `0x00B0`) |
-| Current owner hypothesis | leader movement downstream of the cleared same-frame-spawn touch-response timing issue |
+| Latest logged full-sweep aggregate | 90 `*TraceReplay` tests, 54 failures, 1 error |
+| Latest focused frontier | `TestS3kCnzCompleteRunTraceReplay` at frame `946` |
+| Current blocking field | CNZ player `y` off by 1 pixel (`0x0709` vs `0x0708`) after the orbiting-bumper bounce |
+| Current owner hypothesis | remaining CNZ movement/radius follow-on after ROM-current Obj_Bumper orbit timing |
 | Current branch context in newest entries | `bugfix/ai-trace-frontier-develop` after cherry-picking the AIZ worker chain |
-| Last frontier move | AIZ `f16944 -> f19089` via S3K previous-list spawn-touch skip clearing |
+| Last frontier move | CNZ complete-run `f355 -> f946` via ROM-current Obj_Bumper orbit/list timing |
 
 ### Active queue
 
-1. Bisect **S3K AIZ f19089** leader `g_speed` sign flip inside the single
-   frontier frame if the ordered cluster queue keeps AIZ as the highest-leverage
-   active target.
+1. Bisect **S3K CNZ complete-run f946** inside the single frontier frame if the
+   ordered cluster queue keeps radius/rolling or CNZ movement follow-on ahead of
+   the exact-`0x100` speed-delta cluster.
 2. Re-check the ordered frontier queue against the latest full `*TraceReplay`
    sweep before selecting the next target. The newest sweep is expected-red at
-   90 tests / 51 failures / 1 error; AIZ advanced, while CNZ/MGZ route tests
-   still report independent focused/complete-run failures.
+   90 tests / 54 failures / 1 error; CNZ complete-run advanced, AIZ held at
+   f19089, and MGZ/LBZ/MHZ/HCZ held at their prior first-error frames.
 3. Known branch-local follow-up from the S2 ARZ2 work: ARZ2 advanced to `f523`
    missing Obj91 after the Obj15 child-slot fix, but that entry predates the
    newest AIZ-focused branch state. Reconfirm before treating it as the next
@@ -36,12 +36,13 @@ branch-local measurements.
 
 | Trace | Frame | Field | ROM | Engine | Status | Next owner |
 |---|---:|---|---:|---:|---|---|
-| `s3k_aiz1` / `TestS3kAizTraceReplay` | `19089` | leader `g_speed` | `-00B0` | `0x00B0` | expected-red | leader movement near AIZ2 end-boss approach |
+| `s3k_cnz1` / `TestS3kCnzCompleteRunTraceReplay` | `946` | player `y` | `0x0709` | `0x0708` | advanced | CNZ movement/radius follow-on |
+| `s3k_aiz1` / `TestS3kAizTraceReplay` | `19089` | leader `g_speed` | `-00B0` | `0x00B0` | held | leader movement near AIZ2 end-boss approach |
 
-At `f19089`, the trace has passed the AIZ2 battleship bombing run and wrap into
-the end-boss arena approach. The f16944 `tails_y_speed` hurt-recoil divergence
-is cleared by modeling ROM's one-frame S3K `Collision_response_list` latency for
-same-frame-spawned hazards.
+At CNZ `f946`, the earlier orbiting-bumper `y_speed` vector mismatch at f355 is
+cleared; the remaining divergence is a 1-pixel player `y` follow-on. AIZ still
+holds at `f19089`, after the trace passes the AIZ2 battleship bombing run and
+wrap into the end-boss arena approach.
 
 ### Stale-data warnings
 
@@ -68,6 +69,39 @@ same-frame-spawned hazards.
   cleanup. Do not delete historical evidence only because it is stale.
 
 ## Evidence Ledger
+
+## 2026-06-16 - S3K CNZ complete-run f355 -> f946 via ROM-current Obj_Bumper orbit/list timing
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, targeting the earliest
+  radius/rolling-route frontier after the AIZ worker chain held at f19089. The
+  selected trace was `TestS3kCnzCompleteRunTraceReplay` (`s3k_cnz1`).
+- Single-frame bisect result: at f355, ROM bounced Sonic from an orbiting
+  `Obj_Bumper` after the object had advanced to its current visible orbit point
+  for the object pass. The engine processed the pending touch against the prior
+  orbit point and used the wrong low-byte phase for `Level_frame_counter+1`,
+  producing `y_speed` ROM `-05CC` vs engine `-050F`.
+- Fix: `CnzBumperObjectInstance` now advances the orbit before consuming pending
+  touches and resolves the object-pass `Level_frame_counter+1` value from the
+  engine's stored level counter plus two ticks. The published multi-region touch
+  point now matches the current visible orbit point. This models the ROM object
+  routine ordering without a zone/route/frame carve-out.
+- Focused validation: `TestCnzBumperObjectInstance` GREEN; focused
+  `TestS3kCnzCompleteRunTraceReplay` remains expected-red but advances to
+  **f946**, first error player `y` mismatch (`0x0709` vs `0x0708`).
+- Full sweep command: `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off
+  -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1
+  -Dsurefire.redirectTestOutputToFile=false -Dtest=*TraceReplay
+  -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Dsonic1.rom.path=s1.gen
+  -Ds2.rom.path=s2.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`.
+- Full sweep result: expected-red, **90 tests, 54 failures, 1 error**. Parsed
+  report JSON shows no first-error-frame regressions versus the prior baseline.
+  CNZ complete-run advanced from f355 to f946. AIZ held at f19089; MGZ f738,
+  LBZ f1694, MHZ f966, HCZ f1402, and the S1/S2 frontiers held. The added
+  failure count comes from CNZ-focused assertions reached after the complete-run
+  frontier moved; the existing CNZ miniboss null-parent error remains.
+- Classification: CNZ **advanced**; AIZ and other parsed report frontiers
+  **held**; no parsed first-frontier **regression** observed. Next target should
+  remain ordered by the cluster policy from this updated routing table.
 
 ## 2026-06-16 - Local full sweep after AIZ worker chain cherry-pick confirms AIZ f19089
 
