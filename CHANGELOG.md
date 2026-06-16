@@ -90,9 +90,9 @@ All notable changes to the OpenGGF project are documented in this file.
 
 - **`AbstractPlayableSprite` ground-wall response extraction (guard paydown, no
   behavior change):** extracted the per-frame ground-wall collision response
-  cluster - deferred-velocity staging, terrain `Status_Push` provenance,
-  same-frame terrain-push marker, and the pre-CPU-control inertia snapshot used
-  by the S3K Tails wall probe - into a focused `GroundWallResponseState`
+  cluster - deferred-velocity staging, terrain `Status_Push` provenance, and the
+  pre-CPU-control inertia snapshot used by the S3K Tails wall probe - into a
+  focused `GroundWallResponseState`
   collaborator, delegating the existing accessors. The holder field is
   `@RewindTransient` because the values are recomputed or cleared each frame.
   This brings `AbstractPlayableSprite.java` under its release-critical

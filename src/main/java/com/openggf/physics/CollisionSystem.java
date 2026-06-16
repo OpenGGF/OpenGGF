@@ -344,7 +344,6 @@ public class CollisionSystem {
                 sprite.setGSpeed((short) 0);
                 if (shouldSetGroundWallPush(sprite, mode)) {
                     sprite.setPushing(true);
-                    sprite.markGroundWallPushSetThisFrame();
                     sprite.markPushFromGroundWallCollision();
                 }
             }
@@ -354,7 +353,6 @@ public class CollisionSystem {
                 sprite.setGSpeed((short) 0);
                 if (shouldSetGroundWallPush(sprite, mode)) {
                     sprite.setPushing(true);
-                    sprite.markGroundWallPushSetThisFrame();
                     sprite.markPushFromGroundWallCollision();
                 }
             }

@@ -499,11 +499,7 @@ public class PlayableSpriteAnimation {
                 || !sprite.getPhysicsFeatureSet().animationChangeClearsPush()) {
             return;
         }
-        boolean groundWallPushSetThisFrame = sprite.consumeGroundWallPushSetThisFrame();
         if (prevAnimByteId < 0 || animByteId == prevAnimByteId) {
-            return;
-        }
-        if (groundWallPushSetThisFrame) {
             return;
         }
 

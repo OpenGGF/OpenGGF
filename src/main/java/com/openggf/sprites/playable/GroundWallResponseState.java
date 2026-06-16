@@ -18,10 +18,6 @@ package com.openggf.sprites.playable;
  *       collision (sonic3k.asm:28012-28017 {@code bset Status_Push}), not by a released
  *       solid-object contact. Lets the CPU sidekick keep a genuine ROM terrain push
  *       live for the loc_13DD0 read.</li>
- *   <li>The <b>same-frame terrain push marker</b> ({@code groundWallPushSetThisFrame}):
- *       true when the wall pass freshly set push after the animation clear point. The
- *       animation resolver consumes it so it does not erase a genuine same-frame wall
- *       push.</li>
  *   <li>The <b>pre-control ground speed</b> ({@code preControlGSpeed}): snapshot of
  *       ground speed before the CPU sidekick controller mutates the sprite this frame.
  *       S3K's Tails CPU wall probe uses the pre-control inertia for zero-distance seam
@@ -38,7 +34,6 @@ final class GroundWallResponseState {
     private int mode;
     private int distance;
     private boolean pushFromGroundWallCollision;
-    private boolean groundWallPushSetThisFrame;
     private short preControlGSpeed;
 
     void defer(int mode, int distance) {
@@ -69,19 +64,8 @@ final class GroundWallResponseState {
         this.pushFromGroundWallCollision = true;
     }
 
-    void markGroundWallPushSetThisFrame() {
-        this.groundWallPushSetThisFrame = true;
-    }
-
-    boolean consumeGroundWallPushSetThisFrame() {
-        boolean result = groundWallPushSetThisFrame;
-        groundWallPushSetThisFrame = false;
-        return result;
-    }
-
     void clearPushState() {
         this.pushFromGroundWallCollision = false;
-        this.groundWallPushSetThisFrame = false;
     }
 
     boolean isPushFromGroundWallCollision() {

@@ -248,8 +248,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected short prePhysicsCentreY = 0;
 
         /** Per-frame ground-wall collision response (pre-control inertia snapshot for the
-         * wall probe, deferred velocity, terrain push provenance, same-frame terrain
-         * push marker). All fields are recomputed/cleared each frame, so this holder is
+         * wall probe, deferred velocity, terrain push provenance). All fields are
+         * recomputed/cleared each frame, so this holder is
          * not persisted by the explicit rewind snapshot. */
         @RewindTransient(reason = "ground-wall response state is recomputed from terrain collision each frame")
         protected final GroundWallResponseState groundWallResponse = new GroundWallResponseState();
@@ -2143,14 +2143,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (!pushing) {
                         groundWallResponse.clearPushState();
                 }
-        }
-
-        public void markGroundWallPushSetThisFrame() {
-                groundWallResponse.markGroundWallPushSetThisFrame();
-        }
-
-        public boolean consumeGroundWallPushSetThisFrame() {
-                return groundWallResponse.consumeGroundWallPushSetThisFrame();
         }
 
         /** Marks the live push bit as set this cycle by a terrain ground-wall collision. */

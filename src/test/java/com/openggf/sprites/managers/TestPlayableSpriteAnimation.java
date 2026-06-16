@@ -37,10 +37,13 @@ public class TestPlayableSpriteAnimation {
     public void s3kIdleToWalkAnimationChangeClearsGroundPush() {
         TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
         sprite.setAnimationId(5);
+        sprite.setMovementInputActive(false);
+        sprite.getAnimationManager().update(0);
+
         sprite.setMovementInputActive(true);
         sprite.setPushing(true);
 
-        sprite.getAnimationManager().update(0);
+        sprite.getAnimationManager().update(1);
 
         assertFalse(sprite.getPushing(),
                 "S3K Animate_Tails2P clears Status_Push when MoveRight changes anim from idle to walk");
@@ -52,10 +55,13 @@ public class TestPlayableSpriteAnimation {
     public void s2IdleToWalkAnimationChangeClearsGroundPush() {
         TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_2);
         sprite.setAnimationId(5);
+        sprite.setMovementInputActive(false);
+        sprite.getAnimationManager().update(0);
+
         sprite.setMovementInputActive(true);
         sprite.setPushing(true);
 
-        sprite.getAnimationManager().update(0);
+        sprite.getAnimationManager().update(1);
 
         assertFalse(sprite.getPushing(),
                 "S2 Animate_Sonic/Tails clears Status_Push when anim changes from idle to walk");
@@ -64,20 +70,19 @@ public class TestPlayableSpriteAnimation {
     }
 
     @Test
-    public void s2FreshGroundWallPushSurvivesWalkToIdleAnimationCheck() {
+    public void s2GroundPushSurvivesInitialRomAnimByteCapture() {
         TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_2);
         sprite.setAnimationId(0);
         sprite.setMovementInputActive(false);
         sprite.setGSpeed((short) 0);
         sprite.setPushing(true);
-        sprite.markGroundWallPushSetThisFrame();
 
         sprite.getAnimationManager().update(759);
 
         assertTrue(sprite.getPushing(),
-                "S2 wall response sets Status_Push after Tails' idle clear point; animation must not erase it");
+                "S2 does not clear Status_Push before prev_anim has a captured ROM anim byte");
         assertEquals(4, sprite.getAnimationId(),
-                "Fresh wall push should render the push animation instead of resolving to idle");
+                "The preserved push bit should render the push animation instead of resolving to idle");
     }
 
     @Test
@@ -85,10 +90,13 @@ public class TestPlayableSpriteAnimation {
         TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
         sprite.setAnimationId(1);
         sprite.setMovementInputActive(true);
+        sprite.setGSpeed((short) 0x0700);
+        sprite.getAnimationManager().update(0);
+
         sprite.setPushing(true);
         sprite.setGSpeed((short) 0x0200);
 
-        sprite.getAnimationManager().update(0);
+        sprite.getAnimationManager().update(1);
 
         assertTrue(sprite.getPushing(),
                 "S3K keeps Status_Push when only the engine's render-time Run id collapses to the ROM Walk anim byte");
@@ -99,13 +107,15 @@ public class TestPlayableSpriteAnimation {
     @Test
     public void s3kAirborneRollAnimationChangeClearsPush() {
         TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
+        sprite.setAnimationId(5);
+        sprite.getAnimationManager().update(0);
+
         sprite.setAir(true);
         sprite.setRolling(true);
         sprite.setJumping(true);
-        sprite.setAnimationId(5);
         sprite.setPushing(true);
 
-        sprite.getAnimationManager().update(0);
+        sprite.getAnimationManager().update(1);
 
         assertFalse(sprite.getPushing(),
                 "S3K Animate_Tails2P clears Status_Push on anim != prev_anim even while airborne/rolling");
@@ -116,13 +126,15 @@ public class TestPlayableSpriteAnimation {
     @Test
     public void s2AirborneRollAnimationChangeClearsPush() {
         TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_2);
+        sprite.setAnimationId(5);
+        sprite.getAnimationManager().update(0);
+
         sprite.setAir(true);
         sprite.setRolling(true);
         sprite.setJumping(true);
-        sprite.setAnimationId(5);
         sprite.setPushing(true);
 
-        sprite.getAnimationManager().update(0);
+        sprite.getAnimationManager().update(1);
 
         assertFalse(sprite.getPushing(),
                 "S2 Animate_Tails clears Status_Push on anim != prev_anim even while airborne/rolling");

@@ -1,14 +1,82 @@
 # Trace Frontier Log
 
+## Agent Quick State
+
+Read this section first. Treat it as the current routing table for trace work;
+the dated entries below are the evidence ledger and may include superseded
+branch-local measurements.
+
+### Current authoritative state
+
+| Item | Current value |
+|---|---|
+| Overall trace-suite state | Expected-red, not release-green |
+| Latest logged full-sweep aggregate | 90 `*TraceReplay` tests, 50 failures, 1 error |
+| Latest focused frontier | `TestS3kAizTraceReplay` at frame `16944` |
+| Current blocking field | `tails_y_speed`, ROM `-0x400`, engine `0x0000` |
+| Current owner hypothesis | S3K same-frame spawned explosion visibility in the touch-response / `Collision_response_list` path |
+| Current branch context in newest entries | `bugfix/ai-rewind-dynobj-membership`, worktree `.worktrees/rewind-dynobj` |
+| Last non-frontier refactor check | Ground-wall response extraction held AIZ at `f16944` with 515 errors |
+
+### Active queue
+
+1. Resolve **S3K AIZ f16944** by modeling ROM collision-response-list timing for
+   same-frame-spawned `Obj_AIZBombExplosion` touch visibility. Do not solve this
+   with an AIZ-only, explosion-only, route/frame, or enlarged-hitbox carve-out.
+2. After AIZ, re-check the ordered frontier queue against a fresh full
+   `*TraceReplay` sweep before selecting the next target.
+3. Known branch-local follow-up from the S2 ARZ2 work: ARZ2 advanced to `f523`
+   missing Obj91 after the Obj15 child-slot fix, but that entry predates the
+   newest AIZ-focused branch state. Reconfirm before treating it as the next
+   global target.
+
+### Current focused frontier details
+
+| Trace | Frame | Field | ROM | Engine | Status | Next owner |
+|---|---:|---|---:|---:|---|---|
+| `s3k_aiz1` / `TestS3kAizTraceReplay` | `16944` | `tails_y_speed` | `-0x400` | `0x0000` | expected-red | S3K touch-response visibility for same-frame spawned explosion |
+
+At `f16944`, BizHawk confirms ROM hurts CPU Tails via `HurtCharacter`
+(`sonic3k.asm:10294` / `loc_102E0`) from an `Obj_AIZBombExplosion`
+(`col=$8B`, 8x8) on the bomb detonation frame. The engine's newly spawned
+explosion is not visible to the sidekick touch-response loop until about two
+frames later, after fast CPU Tails has moved past the tight hitbox.
+
+### Stale-data warnings
+
+- Older tables listing 62, 63, or 65 trace failures are historical snapshots,
+  not the current aggregate.
+- Older AIZ frontier claims at `f3135`, `f14299`, `f14301`, `f15016`, `f15795`,
+  and `f16217` have been superseded by `f16944`.
+- The bottom duplicate/older `S2 ARZ2 Obj15 child SST slot` entry is useful
+  history, but its note that "AIZ remains at f14299" is superseded by the
+  newer top entries.
+- A green focused test or guard suite does not imply the trace suite is green.
+  The current suite state remains expected-red until a fresh full sweep says
+  otherwise.
+
+### Update protocol for future agents
+
+- When a full `*TraceReplay` sweep is run, update `Agent Quick State` before
+  adding the dated evidence entry.
+- When a focused trace frontier moves, update the active queue and focused
+  frontier table in this section.
+- If a measurement is branch-local, dirty-worktree, investigation-only, or
+  superseded, say so explicitly in both this summary and the dated entry.
+- Keep the dated ledger append-only unless intentionally doing a documentation
+  cleanup. Do not delete historical evidence only because it is stale.
+
+## Evidence Ledger
+
 ## 2026-06-16 - Guard paydown: AbstractPlayableSprite ground-wall response extraction (NO frontier movement)
 
 - Scope: pure structural refactor on `bugfix/ai-rewind-dynobj-membership` to bring
   `AbstractPlayableSprite.java` under its `TestArchitecturalSourceGuard`
   release-critical line budget (≤5047; landed at 5036). NOT a trace fix.
 - Change: extracted the cohesive per-frame ground-wall collision response cluster
-  (deferred-velocity `mode`/`distance`, terrain `Status_Push` provenance, the
-  same-frame terrain-push marker, and the pre-CPU-control inertia snapshot for
-  the S3K Tails wall probe) into a new `GroundWallResponseState` collaborator;
+  (deferred-velocity `mode`/`distance`, terrain `Status_Push` provenance, and the
+  pre-CPU-control inertia snapshot for the S3K Tails wall probe) into a new
+  `GroundWallResponseState` collaborator;
   `AbstractPlayableSprite` keeps one `@RewindTransient` holder field and
   delegates the existing accessors. These pieces are recomputed or cleared each
   frame and were absent from the explicit playable snapshot, so rewind
