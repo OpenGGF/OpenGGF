@@ -88,6 +88,17 @@ All notable changes to the OpenGGF project are documented in this file.
   (`usesInclusiveRightEdge`, ROM `SolidObject_cont` `bhi`, `sonic3k.asm:41403-41406,41494-41500`).
   Each was full-`*TraceReplay`-A/B-validated with no S1/S2/S3K regression.
 
+- **CPU sidekick auto-jump flag persists while push-bypassing (S3K):** ROM's
+  `Tails_CPU_Control` auto-jump carry/clear (`loc_13E64`) is only reached on the
+  non-push-bypass path; when Tails is pushing and the delayed leader was not
+  pushing 16 frames ago, `loc_13DD0` branches straight to `loc_13E9C`
+  (`sonic3k.asm:26702-26705`), so the auto-jump flag is neither cleared on the
+  ground nor drives a jump-hold (`26753-26758`). The engine cleared
+  `Tails_CPU_auto_jump_flag` on the first grounded frame, so a sustained AIZ2
+  stuck-push lost the flag. Gated the flag's hold/ground-clear on the ROM bypass
+  condition. This advances the S3K AIZ1 trace frontier from frame 15795 to 16217
+  with no first-error-frame regression in the full trace sweep.
+
 - **Status_Push frame-end clear keys on the real ROM `anim` byte, not the push
   render substitution (S2/S3K):** ROM shows the pushing frames inside the walk
   script's special handler (`Animate_Sonic loc_12A72 btst #5,status`,

@@ -2172,7 +2172,35 @@ public class SidekickCpuController {
             }
         }
 
-        if (jumpingFlag) {
+        // ROM loc_13E64 (the Tails_CPU_auto_jump_flag carry/clear) is only reached
+        // on the NON-push-bypass path. When Tails is pushing and the delayed leader
+        // was not pushing 16 frames ago, loc_13DD0 branches straight to loc_13E9C
+        // (beq.w loc_13E9C, sonic3k.asm:26705), bypassing loc_13E64 entirely. So in
+        // the push-bypass state the auto-jump flag neither drives a jump hold
+        // (loc_13E64 ori #(A|B|C)<<8,d1 skipped) nor gets cleared on the ground
+        // (loc_13E64 move.b #0,auto_jump_flag skipped, sonic3k.asm:26753-26758);
+        // the flag simply persists, and the frame's jump input comes from the
+        // delayed-leader Ctrl_2 passthrough. This matches the f15795 AIZ2 stuck-push
+        // bounce: ROM holds Tails_CPU_auto_jump_flag set across ~18 grounded push
+        // frames (BizHawk: PUSHBYP every frame, loc_13E64 never reached), while the
+        // engine was clearing it on the first grounded frame.
+        // ROM loc_13DD0 takes the auto-jump bypass (beq.w loc_13E9C) using the
+        // LITERAL current Status_Push bit (btst #Status_Push,status(a0)) AND the
+        // delayed leader not pushing 16 frames ago (btst #5,d4),
+        // sonic3k.asm:26702-26705. That is exactly the condition under which
+        // loc_13E64 (the auto_jump_flag carry/clear) is skipped. Use the literal
+        // push bit here, not romVisibleCurrentStatusPush / currentPushBypass: those
+        // strip a rolling+nonzero-ground_vel "stale push" for follow steering, but
+        // the jump-launch frame (status Push+Roll, ground_vel = -Tails_Jump) still
+        // has Status_Push set and ROM still bypasses loc_13E64 there (BizHawk: the
+        // gvel=-0x880 launch frame still hits PUSHBYP, flag still held). objectOrderGrace
+        // remains an additional engine-side bridge for the same loc_13DD0 read.
+        boolean autoJumpPushBypass =
+                ((currentStatusPush
+                        && (recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0)
+                        || objectOrderGrace)
+                        && !(sidekick.getRolling() && sidekick.shouldPreserveRollingOnNextRollStop());
+        if (jumpingFlag && !autoJumpPushBypass) {
             inputJump = true;
             boolean delayedJumpOnly = (recordedInput & (AbstractPlayableSprite.INPUT_UP
                     | AbstractPlayableSprite.INPUT_DOWN

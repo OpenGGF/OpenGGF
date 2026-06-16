@@ -1,5 +1,65 @@
 # Trace Frontier Log
 
+## 2026-06-16 - S3K AIZ f15795 -> f16217 via Tails_CPU_auto_jump_flag persisting through the push-bypass
+
+- Scope: focused S3K AIZ trace remediation on `TestS3kAizTraceReplay`
+  (`aiz1_to_hcz_fullrun`, report key `s3k_aiz1`) in worktree
+  `.worktrees/rewind-dynobj`, branch `bugfix/ai-rewind-dynobj-membership`
+  (on top of a410d0537). Comparison-only; ROM-cited; no zone/route/frame
+  carve-out.
+- Command: `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" test "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen"`.
+- First divergence (baseline): f15795 (span through f15812), field
+  `tails_cpu_jumping` ROM=0x0001 engine=0x0000. CPU Tails is stuck pushing a
+  RIGHT wall underwater in the AIZ2 reload (ap=1, x=0x3693, status=0x21); ROM
+  fires an auto-jump and HOLDS `Tails_CPU_auto_jump_flag` for ~18 grounded
+  frames; the engine cleared its `jumpingFlag` on the first grounded frame.
+- BizHawk ground truth (Genplus-gx, `s3-aiz1-2-sonictails.bk2`, hooks at the
+  push-bypass branch 0x13DEE, loc_13E64 0x13E64, the flag-clear 0x13E76, the
+  loc_13E9C $3F gate 0x13E9C/0x13EA0, the flag-set 0x13EB2, and the
+  Ctrl_2_logical write 0x13EB8; Tails base 0xB04A, auto_jump_flag at 0xF70F):
+  during the stuck-push the bypass branch 0x13DEE fires EVERY frame (Tails
+  pushing AND delayed leader not pushing 16 frames ago), so loc_13E64 is never
+  reached. On the frame `(Level_frame_counter+1) & 0x3F == 0` the gate at
+  loc_13E9C sets `Tails_CPU_auto_jump_flag`=1 and presses A|B|C; on the
+  following ~18 push-bypass frames the flag is NOT cleared (loc_13E64's
+  `move.b #0,auto_jump_flag` is bypassed) and no jump input is written
+  (Ctrl_2_logical d1=0x0000) — the jump impulse comes from the press on the
+  gate frame. The flag clears only when Tails stops pushing and the NORMAL
+  path reaches loc_13E64 (move.b #0). The jump-launch frame (gvel=-0x880,
+  status Push+Roll=0x25) STILL hits the bypass — Status_Push is set there.
+- Root cause: `SidekickCpuController` modelled loc_13E64's flag clear with
+  `if (!sidekick.getAir()) jumpingFlag = false;`, firing every grounded frame.
+  But ROM only reaches loc_13E64 on the NON-push-bypass path; while in the
+  push-bypass (loc_13DD0 `beq.w loc_13E9C`, sonic3k.asm:26702-26705) the clear
+  (and the flag-driven jump hold) are skipped. The engine therefore dropped the
+  flag a frame after setting it.
+- Fix (1 file, ROM-cited): gate the auto-jump flag's jump-hold + ground-clear
+  block on `!autoJumpPushBypass`, where `autoJumpPushBypass` is the LITERAL ROM
+  loc_13DD0 bypass condition: current Status_Push bit set
+  (`currentStatusPush`, the raw `btst #Status_Push,status(a0)`) AND the delayed
+  leader not pushing 16 frames ago (`(recordedStatus & STATUS_PUSHING)==0`,
+  the `btst #5,d4`), plus the existing `objectOrderGrace` engine bridge and the
+  Obj85 preserved-rolling suppression. Uses the raw push bit (not
+  `romVisibleCurrentStatusPush`/`currentPushBypass`, which strip a
+  rolling+nonzero-ground_vel "stale push" for follow steering) because the
+  jump-launch frame still has Status_Push set and ROM still bypasses loc_13E64
+  there. While push-bypassing, the flag now persists (matching ROM) and drives
+  no input (ROM Ctrl_2 d1=0); follow/jump input is unchanged.
+- Result: `TestS3kAizTraceReplay` first error **f15795 -> f16217** (516 vs 518
+  errors). New frontier is `tails_status_byte` (ROM=0x03 engine=0x02, bit
+  0x01=facing) at f16217 -- an unrelated Tails facing-direction issue.
+- A/B sweep (`*TraceReplay`, full + per-class ALONE to defeat singleton
+  contamination): NO first-error-frame regression in any S1/S2/S3K trace. Aiz
+  advanced 15795->16217; all other frontiers identical (AizCompleteRun f1095,
+  HczCompleteRun f1402, IczCompleteRun f3116, MhzCompleteRun f966,
+  MgzCompleteRun f738, LbzCompleteRun f1950; S2 Arz f2011, Ooz f1251,
+  Ooz2 f1070). Most downstream error counts dropped (Htz/Mcz2/Mtz2/Mgz/Mhz/Lbz
+  lower); S2 Arz/Ooz gained downstream errors past unchanged frontiers.
+  `TestSidekickCpuFollowParity` same 5 pre-existing failures (verified BEFORE==
+  AFTER; none are the `...AutoJump...` methods, which stay green). Physics units
+  (TestPhysicsProfile, TestCollisionModel, CollisionSystemTest) and the 4
+  must-keep-green S3K tests pass.
+
 ## 2026-06-16 - S3K AIZ f15016 -> f15795 via anim-byte (not push-render) prev_anim push-clear at AIZ2 right-wall bounce
 
 - Scope: focused S3K AIZ trace remediation on `TestS3kAizTraceReplay`
