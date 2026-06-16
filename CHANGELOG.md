@@ -289,6 +289,20 @@ All notable changes to the OpenGGF project are documented in this file.
   (`usesInclusiveRightEdge`, ROM `SolidObject_cont` `bhi`, `sonic3k.asm:41403-41406,41494-41500`).
   Each was full-`*TraceReplay`-A/B-validated with no S1/S2/S3K regression.
 
+- **AIZ2 forest canopy reveals naturally and loops seamlessly across the battleship
+  ship-loop wrap:** during the post-bombing forest loop, ROM `AIZ2_DoShipLoop`
+  subtracts `$200` from `Camera_X_pos` each loop, and `$200` equals the Plane A
+  nametable width. The forest columns drawn at the leading edge reappear at the
+  wrapped camera X on hardware because the foreground is a persistent nametable
+  drawn incrementally. The engine re-sampled the flat FG layout by wrapped world
+  X, which landed in a canopy gap and dropped the dense forest for several frames
+  each loop. The foreground tilemap now models the ROM as a persistent `$200`-
+  wide Plane A ring while the forest loop is active: it draws only entering
+  leading-edge columns from the flat layout and retains the rest, so the wrapped
+  camera reads the cells the leading edge filled. This is gated on the ROM
+  post-bombing wrap state via `AizZoneRuntimeState`; player/terrain collision and
+  the AIZ trace frontier remain unchanged.
+
 - **S3K same-frame-spawned hazard touch latency (1 frame, ROM-accurate):** a
   hazard spawned during frame N's object pass (e.g. an AIZ2 battleship bomb
   explosion) registers itself to the S3K `Collision_response_list` and draws

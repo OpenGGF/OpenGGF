@@ -85,10 +85,19 @@ public class LevelTilemapManager {
     private int foregroundTilemapWidthTiles;
     private int foregroundTilemapHeightTiles;
     private boolean foregroundTilemapDirty = true;
-    // Last FG horizontal-wrap state (AIZ2 ship loop); a change forces a rebuild
-    // so the FG tilemap flips between full-width and the $200 forest window.
+    // AIZ2 ship-loop persistent FG ring ($200-wide Plane A nametable analog).
+    // While active, the FG tilemap is a $200-wide ring whose cells RETAIN the
+    // last forest column drawn into them at the camera's leading edge, giving a
+    // natural column-by-column reveal AND a seamless $200 loop (s3.asm:70956).
+    // A state change (full-width <-> ring) forces a rebuild.
     private Boolean lastForegroundWrap;
-    private int lastForegroundWrapBaseX;
+    // Whether the persistent ring has been seeded for the current loop activation.
+    private boolean foregroundRingSeeded;
+    // Camera world X / screen width pushed each frame (by LevelManager) so the
+    // ring fills the leading-edge column at the camera's current position.
+    private int foregroundRingCameraX;
+    private int foregroundRingScreenWidthPx;
+    private static final int FG_RING_WIDTH_PX = VDP_BG_PLANE_WIDTH_PX;
 
     // --- Pattern lookup data ---
     private byte[] patternLookupData;
@@ -242,34 +251,48 @@ public class LevelTilemapManager {
                                             int currentZone,
                                             ParallaxManager parallaxManager,
                                             boolean verticalWrapEnabled) {
-        // Detect FG horizontal-wrap state/base changes (AIZ2 ship loop) and force
-        // a rebuild so the FG tilemap flips between full-width and the $200 forest
-        // window (or re-anchors when the forest base changes).
+        // Detect AIZ2 ship-loop FG ring state change (full-width <-> $200 ring)
+        // and force a rebuild on the transition. While the ring is active, the
+        // FG tilemap is NOT fully rebuilt each frame (that would snap the whole
+        // canopy in); instead it is a persistent $200 ring whose leading-edge
+        // column is filled incrementally as the camera advances (natural reveal),
+        // with all other cells retained (seamless $200 wrap).
         boolean fgWrap = zoneFeatureProvider != null && zoneFeatureProvider.foregroundWrapsHorizontally();
-        int fgWrapBaseX = fgWrap ? zoneFeatureProvider.foregroundWrapBaseX() : 0;
-        if (lastForegroundWrap != null
-                && (lastForegroundWrap != fgWrap || lastForegroundWrapBaseX != fgWrapBaseX)) {
+        if (lastForegroundWrap != null && lastForegroundWrap != fgWrap) {
             foregroundTilemapDirty = true;
+            foregroundRingSeeded = false;
         }
         lastForegroundWrap = fgWrap;
-        lastForegroundWrapBaseX = fgWrapBaseX;
-        if (!foregroundTilemapDirty && foregroundTilemapData != null && patternLookupData != null) {
-            return;
-        }
+
         Level level = geometry.level();
         if (level == null || level.getMap() == null) {
             return;
         }
+
+        // FG ring active and already built: incremental leading-edge fill only.
+        if (fgWrap && !foregroundTilemapDirty && foregroundTilemapData != null
+                && patternLookupData != null && foregroundRingSeeded) {
+            if (foregroundRingFillLeadingEdge(blockLookup, level)) {
+                uploadForegroundTilemap();
+            }
+            return;
+        }
+
+        if (!foregroundTilemapDirty && foregroundTilemapData != null && patternLookupData != null) {
+            return;
+        }
+
         buildForegroundTilemapData(blockLookup, zoneFeatureProvider, currentZone,
                 parallaxManager, verticalWrapEnabled);
         foregroundTilemapDirty = false;
-        ensurePatternLookupData();
-        TilemapGpuRenderer renderer = graphicsManager.getTilemapGpuRenderer();
-        if (renderer != null) {
-            renderer.setTilemapData(TilemapGpuRenderer.Layer.FOREGROUND, foregroundTilemapData,
-                    foregroundTilemapWidthTiles, foregroundTilemapHeightTiles);
-            renderer.setPatternLookupData(patternLookupData, patternLookupSize);
+        // On a fresh $200-ring build, seed the currently-visible columns from the
+        // flat layout so the screen is populated, then hand off to the
+        // incremental leading-edge fill on subsequent frames.
+        if (fgWrap) {
+            foregroundRingSeed(blockLookup, level);
+            foregroundRingSeeded = true;
         }
+        uploadForegroundTilemap();
     }
 
     /**
@@ -504,14 +527,14 @@ public class LevelTilemapManager {
                 && zoneFeatureProvider.useLinearBackgroundLayoutOverflow(currentZone);
 
         // FOREGROUND (Plane A) horizontal wrap at the VDP plane width ($200). Used
-        // by AIZ2's post-bombing ship loop so the looped forest canopy stays
-        // continuous across the $200 camera wrap (the engine analog of the ROM's
-        // $200 Plane A nametable ring; s3.asm:70956). The $200 window is built from
-        // the provider's forest base so it holds the forest, not the layout gap.
+        // by AIZ2's post-bombing ship loop. The texture is allocated $200-wide
+        // here; its cell content is filled INCREMENTALLY by the persistent-ring
+        // seed + per-frame leading-edge fill (see ensureForegroundTilemapData),
+        // NOT by this full build (which would snap the whole canopy in). The
+        // engine analog of the ROM's $200 Plane A nametable ring; s3.asm:70956.
         boolean fgWrap = layerIndex == 0
                 && zoneFeatureProvider != null
                 && zoneFeatureProvider.foregroundWrapsHorizontally();
-        int fgWrapBaseX = fgWrap ? zoneFeatureProvider.foregroundWrapBaseX() : 0;
 
         // Use the currently selected BG period width. LevelManager may widen this
         // beyond the scroll handler's nominal period when the renderer needs the
@@ -536,12 +559,6 @@ public class LevelTilemapManager {
         } else if (layerIndex == 1 && bgWrap && bgContiguousWidthPx > 0) {
             bgXQueryOffset = ((bgTilemapBaseX % bgContiguousWidthPx) + bgContiguousWidthPx)
                     % bgContiguousWidthPx;
-        } else if (fgWrap) {
-            // Build the $200 FG window from the forest base so it holds the looped
-            // forest section. The shader wraps worldX at this tilemap width, so
-            // wrapped/unwrapped camera positions ($44Cx and $46Cx) sample the same
-            // forest columns.
-            bgXQueryOffset = fgWrapBaseX;
         }
 
         // S3K CNZ miniboss (CNZ1BGE_Boss) loops a fixed 256px BG band drawn from layout
@@ -649,6 +666,90 @@ public class LevelTilemapManager {
                 }
             }
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // AIZ2 ship-loop persistent foreground ring (Plane A nametable analog)
+    // -----------------------------------------------------------------------
+
+    /**
+     * Pushes the current camera world X and screen width for the persistent FG
+     * ring's leading-edge fill. Called each frame (by {@code LevelManager}) while
+     * the AIZ2 forest loop is active, mirroring the BG window base-X push.
+     */
+    public void setForegroundRingCamera(int cameraX, int screenWidthPx) {
+        this.foregroundRingCameraX = cameraX;
+        this.foregroundRingScreenWidthPx = screenWidthPx;
+    }
+
+    /**
+     * Seeds the persistent FG ring's currently-visible columns from the flat
+     * layout at the camera's position, so the screen is populated on the frame
+     * the loop activates. The leading-edge fill then advances it incrementally.
+     *
+     * <p>ROM: Plane A holds whatever {@code DrawTilesAsYouMove} last wrote; the
+     * engine seeds the visible window here so there is no empty frame, then draws
+     * the entering column at the leading edge each frame (s3.asm:70638,70680).
+     */
+    private void foregroundRingSeed(BlockLookup blockLookup, Level level) {
+        if (foregroundTilemapData == null) {
+            return;
+        }
+        int chunkWidth = LevelConstants.CHUNK_WIDTH;
+        // Seed all 64 ring cells from the flat layout over the $200 span ending at
+        // the camera's leading edge. Every cell c == worldX mod $200 is hit once,
+        // matching what the flat-sample would show at the current camera position
+        // (so the onset is identical to the pre-fix natural scroll-in). The
+        // leading-edge fill then advances forest into the cells frame-by-frame.
+        int lead = foregroundRingCameraX + foregroundRingScreenWidthPx;
+        int rightCol = Math.floorDiv(lead, chunkWidth) * chunkWidth;
+        for (int worldX = rightCol - FG_RING_WIDTH_PX + chunkWidth; worldX <= rightCol; worldX += chunkWidth) {
+            fillForegroundRingColumnAtWorld(blockLookup, level, worldX);
+        }
+    }
+
+    /**
+     * Fills the persistent FG ring's leading-edge column(s) (the rightmost
+     * on-screen chunk columns at the camera's current position) from the flat
+     * layout, retaining all other cells. As the camera advances into the forest
+     * band, the entering columns draw forest into their ring cells; the wrapped
+     * camera then re-shows those retained cells (seamless $200 loop), matching
+     * the ROM Plane A ring. Returns true if any cell was rewritten.
+     */
+    private boolean foregroundRingFillLeadingEdge(BlockLookup blockLookup, Level level) {
+        if (foregroundTilemapData == null) {
+            return false;
+        }
+        int chunkWidth = LevelConstants.CHUNK_WIDTH;
+        // Redraw the leading edge region each frame: the rightmost ~2 chunk
+        // columns of the visible window. This is idempotent (re-drawing forest
+        // already there) and guarantees newly-entered columns are filled as the
+        // camera advances up to 4px/frame.
+        int lead = foregroundRingCameraX + foregroundRingScreenWidthPx;
+        int rightCol = Math.floorDiv(lead, chunkWidth) * chunkWidth;
+        for (int worldX = rightCol - chunkWidth; worldX <= rightCol + chunkWidth; worldX += chunkWidth) {
+            fillForegroundRingColumnAtWorld(blockLookup, level, worldX);
+        }
+        return true;
+    }
+
+    /**
+     * Writes the flat-layout chunk column at world X {@code worldX} into the FG
+     * ring cell {@code worldX mod $200}, so the shader's {@code floor(worldX/8)
+     * mod 64} lookup finds it. Reuses {@link #fillChunkColumn} via a per-column
+     * query offset.
+     */
+    private void fillForegroundRingColumnAtWorld(BlockLookup blockLookup, Level level, int worldX) {
+        int chunkWidth = LevelConstants.CHUNK_WIDTH;
+        int worldChunkX = Math.floorDiv(worldX, chunkWidth) * chunkWidth;
+        int localX = Math.floorMod(worldChunkX, FG_RING_WIDTH_PX);
+        int xQueryOffset = worldChunkX - localX;
+        int widthTiles = foregroundTilemapWidthTiles;
+        int heightTiles = foregroundTilemapHeightTiles;
+        BgBuildParams ringParams = new BgBuildParams(false, false, xQueryOffset, 0,
+                FG_RING_WIDTH_PX, heightTiles * Pattern.PATTERN_HEIGHT);
+        fillChunkColumn(foregroundTilemapData, widthTiles, heightTiles, (byte) 0, localX,
+                ringParams, blockLookup, level, geometry.blockPixelSize());
     }
 
     private Block lookupBackgroundBlockWithLinearRowOverflow(Level level, int x, int y, int blockPixelSize) {
@@ -1099,7 +1200,9 @@ public class LevelTilemapManager {
         backgroundTilemapDirty = true;
         lastRequiresFullWidthBgTilemap = null;
         lastForegroundWrap = null;
-        lastForegroundWrapBaseX = 0;
+        foregroundRingSeeded = false;
+        foregroundRingCameraX = 0;
+        foregroundRingScreenWidthPx = 0;
         bgTilemapBaseX = 0;
         currentBgPeriodWidth = VDP_BG_PLANE_WIDTH_PX;
         foregroundTilemapDirty = true;

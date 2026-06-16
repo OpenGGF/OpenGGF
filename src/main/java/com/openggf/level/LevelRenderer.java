@@ -577,6 +577,11 @@ public final class LevelRenderer {
 
         // Draw Foreground (Layer 0) low-priority pass
         profiler.beginSection("render.fg");
+        // Push camera state for the AIZ2 ship-loop persistent FG ring's
+        // leading-edge fill (mirrors the BG window selection). Uses the same
+        // world X the FG passes sample (getXWithShake) so the ring cell the
+        // shader reads is the one the ring fills.
+        lm.applyForegroundTilemapWindowSelection((int) camera.getXWithShake(), lm.cachedScreenWidth);
         lm.ensureForegroundTilemapData();
         enqueueForegroundTilemapPass(camera, 0);
 

@@ -1887,6 +1887,20 @@ public class LevelManager {
     }
 
     /**
+     * Pushes the current camera X / screen width to the tilemap manager so the
+     * AIZ2 ship-loop persistent FG ring can fill its leading-edge column at the
+     * camera's position (mirrors {@link #applyBackgroundTilemapWindowSelection}).
+     * Must be called before {@link #ensureForegroundTilemapData()} each frame.
+     */
+    void applyForegroundTilemapWindowSelection(int cameraX, int screenWidthPx) {
+        if (tilemapManager != null
+                && zoneFeatureProvider != null
+                && zoneFeatureProvider.foregroundWrapsHorizontally()) {
+            tilemapManager.setForegroundRingCamera(cameraX, screenWidthPx);
+        }
+    }
+
+    /**
      * Ensures the live foreground tilemap cache represents the current layout
      * before a ROM-style script mutates layout RAM without requesting a redraw.
      */

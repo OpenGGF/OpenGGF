@@ -153,16 +153,6 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         return isAizBattleshipForestLoopActive();
     }
 
-    @Override
-    public int foregroundWrapBaseX() {
-        // Anchor the $200 FG wrap window at the boss-approach forest base so it
-        // holds the looped forest, not the layout gap at the wrapped camera X.
-        return isAizBattleshipForestLoopActive() ? AIZ2_FOREST_LOOP_BASE_X : 0;
-    }
-
-    /** ROM layout X of the AIZ2 post-bombing boss-approach forest canopy band. */
-    private static final int AIZ2_FOREST_LOOP_BASE_X = 0x4600;
-
     /**
      * AIZ2 {@code AIZ2_DoShipLoop} post-bombing forest loop active (ROM state only:
      * the auto-scroll loop is running with the post-bombing $46C0 wrap boundary).
