@@ -11,20 +11,22 @@ branch-local measurements.
 | Item | Current value |
 |---|---|
 | Overall trace-suite state | Expected-red, not release-green |
-| Latest logged full-sweep aggregate | 90 `*TraceReplay` tests, 50 failures, 1 error |
+| Latest logged full-sweep aggregate | 90 `*TraceReplay` tests, 51 failures, 1 error |
 | Latest focused frontier | `TestS3kAizTraceReplay` at frame `19089` |
-| Current blocking field | leader `g_speed` sign flip near the AIZ2 end-boss arena |
+| Current blocking field | leader `g_speed` sign flip near the AIZ2 end-boss arena (`-00B0` vs `0x00B0`) |
 | Current owner hypothesis | leader movement downstream of the cleared same-frame-spawn touch-response timing issue |
 | Current branch context in newest entries | `bugfix/ai-trace-frontier-develop` after cherry-picking the AIZ worker chain |
 | Last frontier move | AIZ `f16944 -> f19089` via S3K previous-list spawn-touch skip clearing |
 
 ### Active queue
 
-1. Verify **S3K AIZ f19089** on this branch and bisect the leader `g_speed`
-   sign flip inside the single frontier frame if the full sweep keeps AIZ as
-   the highest-leverage active cluster.
-2. Re-check the ordered frontier queue against a fresh full
-   `*TraceReplay` sweep before selecting the next target.
+1. Bisect **S3K AIZ f19089** leader `g_speed` sign flip inside the single
+   frontier frame if the ordered cluster queue keeps AIZ as the highest-leverage
+   active target.
+2. Re-check the ordered frontier queue against the latest full `*TraceReplay`
+   sweep before selecting the next target. The newest sweep is expected-red at
+   90 tests / 51 failures / 1 error; AIZ advanced, while CNZ/MGZ route tests
+   still report independent focused/complete-run failures.
 3. Known branch-local follow-up from the S2 ARZ2 work: ARZ2 advanced to `f523`
    missing Obj91 after the Obj15 child-slot fix, but that entry predates the
    newest AIZ-focused branch state. Reconfirm before treating it as the next
@@ -34,7 +36,7 @@ branch-local measurements.
 
 | Trace | Frame | Field | ROM | Engine | Status | Next owner |
 |---|---:|---|---:|---:|---|---|
-| `s3k_aiz1` / `TestS3kAizTraceReplay` | `19089` | leader `g_speed` | sign differs | sign differs | expected-red | leader movement near AIZ2 end-boss approach |
+| `s3k_aiz1` / `TestS3kAizTraceReplay` | `19089` | leader `g_speed` | `-00B0` | `0x00B0` | expected-red | leader movement near AIZ2 end-boss approach |
 
 At `f19089`, the trace has passed the AIZ2 battleship bombing run and wrap into
 the end-boss arena approach. The f16944 `tails_y_speed` hurt-recoil divergence
@@ -66,6 +68,34 @@ same-frame-spawned hazards.
   cleanup. Do not delete historical evidence only because it is stale.
 
 ## Evidence Ledger
+
+## 2026-06-16 - Local full sweep after AIZ worker chain cherry-pick confirms AIZ f19089
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop` after cherry-picking the
+  AIZ worker chain and committing the local conflict-resolution fix for ROM
+  anim-byte `Status_Push` clearing plus the S3K previous-list spawn-touch skip
+  clearing fix.
+- Focused validation before the sweep: `TestS3kAizTraceReplay` remains
+  expected-red but advanced at **f19089**, 207 errors, 0 warnings. First error:
+  leader `g_speed` mismatch, ROM/trace `-00B0` vs engine `0x00B0`. Latest
+  checkpoint: `cp aiz2_reload_resume z=0 a=1 ap=0 gm=12`; latest zone/act:
+  `zoneact z=0 a=1 ap=1 gm=12`.
+- Full sweep command: `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off
+  -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1
+  -Dsurefire.redirectTestOutputToFile=false -Dtest=*TraceReplay
+  -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Dsonic1.rom.path=s1.gen
+  -Ds2.rom.path=s2.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`.
+- Full sweep result: expected-red, **90 tests, 51 failures, 1 error**. AIZ
+  `TestS3kAizTraceReplay` stayed at **f19089**. `TestS3kAizCompleteRunTraceReplay`
+  remained an independent complete-run frontier at f1095 (`x_speed`), CNZ
+  complete-run remained at f355 (`y_speed`), MGZ complete-run remained at f738
+  (`rings`), LBZ at f1694 (`air`), MHZ at f966 (`y`), and HCZ at f1402
+  (`tails_status_byte`). The lone error remains in `TestS3kCnzTraceReplay`
+  (`traceReplayCnzMinibossParentSecondMovePassUsesRomPhase` null parent).
+- Classification: AIZ movement **advanced** from f16944 to f19089 and held in
+  the full sweep. The suite aggregate is not green; the next target should be
+  selected from the ordered cluster policy using this sweep as the current
+  branch-local routing data.
 
 ## 2026-06-16 - S3K AIZ f16944 -> f19089 via 1-frame same-frame-spawn touch latency (AIZ2 bomb-explosion hurt)
 
