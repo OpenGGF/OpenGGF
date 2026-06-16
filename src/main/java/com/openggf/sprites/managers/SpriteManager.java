@@ -612,9 +612,20 @@ public class SpriteManager {
 					activePlayableUpdate = null;
 				}
 			}
+			advanceFixedSkidDustAfterCpuInteractSampling(playables);
 			sweepFlyoffDespawnedTemporarySidekicks();
 		} finally {
 			endPlayableFrame();
+		}
+	}
+
+	private void advanceFixedSkidDustAfterCpuInteractSampling(List<AbstractPlayableSprite> playables) {
+		for (AbstractPlayableSprite playable : playables) {
+			if (!playable.getAir()
+					|| !(playable.getMovementManager() instanceof PlayableSpriteMovement movement)) {
+				continue;
+			}
+			movement.advanceFixedSkidDustWhileStopAnimPersists();
 		}
 	}
 

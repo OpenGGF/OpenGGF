@@ -12,25 +12,26 @@ branch-local measurements.
 |---|---|
 | Overall trace-suite state | Expected-red, not release-green |
 | Latest logged full-sweep aggregate | 90 `*TraceReplay` tests, 53 failures, 1 error |
-| Latest focused frontier | `TestS3kCnzCompleteRunTraceReplay` advanced to frame `1846` |
-| Current blocking field | CNZ Tails `tails_x_speed` mismatch (`0x0024` vs `-1000`) after clearing the barber-pole `Tails_CPU_interact` mirror |
-| Current owner hypothesis | CNZ complete-run moved into movement downstream of Tails CPU; continue the ordered Tails CPU/status queue with the latest sweep's earliest remaining CPU/status frontier, `TestS2ArzLevelSelectTraceReplay` frame `1285` (`tails_cpu_interact`) |
+| Latest focused frontier | `TestS2ArzLevelSelectTraceReplay` advanced to frame `2011` |
+| Current blocking field | ARZ Tails `tails_cpu_interact` mismatch (`0x0090` vs `0x0000`) after clearing the stale Obj08 skid-dust slot mismatch at f1285 |
+| Current owner hypothesis | ARZ level-select moved past the airborne Stop/Skid fixed-dust slot timing issue; continue the ordered Tails CPU/status queue with the latest sweep's earliest remaining CPU/status frontier, `TestS2Mtz2LevelSelectTraceReplay` frame `1075` (`tails_cpu_interact`) |
 | Current branch context in newest entries | `bugfix/ai-trace-frontier-develop` after cherry-picking the AIZ worker chain |
-| Last frontier move | CNZ complete-run `f1467 -> f1846` via the CNZ barber pole ROM code-pointer high word for S3K `Tails_CPU_interact` |
+| Last frontier move | S2 ARZ level-select `f1285 -> f2011` via post-CPU fixed Obj08 skid-dust ticking while Stop/Skid animation persists |
 
 ### Active queue
 
 1. Continue the ordered Tails CPU/status cluster. The newest full sweep is
-   expected-red at 90 tests / 53 failures / 1 error; CNZ complete-run advanced
-   out of the `tails_cpu_interact` mirror and now lands on downstream Tails
-   movement.
+   expected-red at 90 tests / 53 failures / 1 error; S2 ARZ level-select
+   advanced out of the f1285 fixed Obj08 skid-dust slot timing mismatch and now
+   lands on a later `tails_cpu_interact` mismatch at f2011.
 2. The latest sweep's earliest remaining CPU/status frontier is
-   `TestS2ArzLevelSelectTraceReplay` f1285 (`tails_cpu_interact`, `0x0008`
-   vs `0x0000`). Earlier movement/downstream frontiers such as S2 OOZ2 f1070
+   `TestS2Mtz2LevelSelectTraceReplay` f1075 (`tails_cpu_interact`, `0x0037`
+   vs `0x0008`). Earlier movement/downstream frontiers such as S2 OOZ2 f1070
    (`air`), S2 CPZ1 f1157 (`tails_x_speed`), and CNZ complete-run f1846
    (`tails_x_speed`) should wait until the CPU/status cluster is exhausted.
-3. Keep S2 MTZ3 f1381, HCZ f1402, and other Tails CPU/status frontiers in the
-   same cluster queue until a full sweep moves them out of the cluster.
+3. Keep S2 OOZ f1251, S2 MTZ3 f1381, HCZ f1402, ARZ f2011, and other Tails
+   CPU/status frontiers in the same cluster queue until a full sweep moves them
+   out of the cluster.
 4. Known branch-local follow-up from the S2 ARZ2 work: ARZ2 advanced to `f523`
    missing Obj91 after the Obj15 child-slot fix, but that entry predates the
    newest AIZ-focused branch state. Reconfirm before treating it as the next
@@ -42,6 +43,7 @@ branch-local measurements.
 |---|---:|---|---:|---:|---|---|
 | `s3k_mgz1` / `TestS3kMgzTraceReplay` | `539` | rings | `10` | `11` | advanced from f312 | downstream ring/object collection |
 | `s2_cpz2` / `TestS2Cpz2LevelSelectTraceReplay` | `2888` | Tails `x` | `0x10F8` | `0x10F0` | advanced from f759 | movement downstream of Tails CPU |
+| `s2_arz1` / `TestS2ArzLevelSelectTraceReplay` | `2011` | Tails `tails_cpu_interact` | `0x0090` | `0x0000` | advanced from f1285 | Tails CPU/interact |
 | `s3k_icz1` / `TestS3kIczCompleteRunTraceReplay` | `3116` | `status_byte` | `0x0008` | `0x0009` | advanced from f1116 | movement/status downstream |
 | `s3k_cnz1` / `TestS3kCnzCompleteRunTraceReplay` | `1846` | Tails `tails_x_speed` | `0x0024` | `-1000` | advanced from f1467 | movement downstream of Tails CPU |
 | `s3k_aiz1` / `TestS3kAizTraceReplay` | `19089` | leader `g_speed` | `-00B0` | `0x00B0` | held | leader movement near AIZ2 end-boss approach |
@@ -77,6 +79,53 @@ run and wrap into the end-boss arena approach.
   cleanup. Do not delete historical evidence only because it is stale.
 
 ## Evidence Ledger
+
+## 2026-06-16 - S2 ARZ level-select f1285 -> f2011 via fixed Obj08 skid-dust timing
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, targeting the ordered
+  Tails CPU/status cluster after CNZ complete-run advanced into downstream
+  movement. The selected earliest CPU/status frontier trace was
+  `TestS2ArzLevelSelectTraceReplay`.
+- Single-frame bisect result: at f1285, Sonic/Tails positions and velocities
+  matched, but ROM `Tails_CPU_interact` dereferenced stale Tails interact slot
+  16 as Obj08 (`0x0008`) while the engine saw an empty slot (`0x0000`). The
+  ROM fixed Sonic_Dust/Obj08 controller had kept ticking while Sonic was
+  airborne because Sonic's `anim` byte still held Stop/Skid (`0x0D`), allocating
+  a skid-dust child into slot 16 after the CPU mirror had sampled f1284 and
+  before f1285.
+- Disassembly evidence: S2 `Obj08_CheckSkid` keeps the fixed dust object alive
+  while the parent animation is `AniIDSonAni_Stop` and allocates an Obj08 child
+  on the 4-tick cadence (`docs/s2disasm/s2.asm:42759-42797`). S2
+  `TailsCPU_UpdateObjInteract` dereferences `interact(a0)` and copies the
+  target slot id to `Tails_interact_ID`
+  (`docs/s2disasm/s2.asm:39435-39446`).
+- Fix: `PlayableSpriteMovement` exposes a fixed-dust Stop/Skid tick gated by
+  the existing fixed-dust feature and the scripted skid animation id, and
+  `SpriteManager` runs it after all playable CPU interact sampling for the
+  frame. Grounded skid spawning remains on the existing direct path. No trace
+  data is written into engine state, and there is no zone, route, or frame
+  carve-out.
+- Focused validation:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.sprites.managers.TestPlayableSpriteMovement#s2FixedSkidDustTicksWhileAirborneStopAnimationPersists" test`
+  passed. Focused `TestS2ArzLevelSelectTraceReplay` remains expected-red but
+  advances from **f1285** `tails_cpu_interact` (`0x0008` vs `0x0000`) to
+  **f2011** `tails_cpu_interact` (`0x0090` vs `0x0000`).
+- Full sweep command: `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off
+  -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1
+  -Dsurefire.redirectTestOutputToFile=false -Dtrace.frontierOnly=true
+  -Dtrace.context.radius=4 -Dtest=*TraceReplay -DfailIfNoTests=false
+  -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Dsonic2.rom.path=s2.gen
+  -Ds3k.rom.path=s3k.gen test"`.
+- Full sweep result: expected-red, **90 tests, 53 failures, 1 error**. The
+  intentional movement is ARZ level-select **f1285 -> f2011**. Named visible
+  frontiers otherwise held, including AIZ route f19089, AIZ complete-run f1095,
+  CNZ route f291, CNZ complete-run f1846, HCZ f1402, ICZ f3116, LBZ f1694,
+  MGZ route f539, MGZ complete-run f738, and MHZ f966. No unrelated
+  first-error-frame regression was observed.
+- Classification: ARZ Tails CPU/interact frontier **cleared/advanced** to a
+  later CPU-interact mismatch. The next ordered Tails CPU/status target from
+  this sweep is `TestS2Mtz2LevelSelectTraceReplay` f1075
+  (`tails_cpu_interact`, `0x0037` vs `0x0008`).
 
 ## 2026-06-16 - S3K CNZ complete-run f1467 -> f1846 via barber-pole CPU interact pointer
 

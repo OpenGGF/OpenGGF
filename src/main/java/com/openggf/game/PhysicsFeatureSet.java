@@ -1384,11 +1384,13 @@ public record PhysicsFeatureSet(
     }
 
     /**
-     * S2/S3K water entry/exit splashes reuse the fixed per-player dust object
-     * instead of allocating a normal dynamic SST slot: S2 writes
+     * S2/S3K water entry/exit splashes and skid-dust ownership reuse the fixed
+     * per-player dust object instead of allocating a normal dynamic SST slot: S2 writes
      * {@code #(1<<8)} to {@code Sonic_Dust+anim} (docs/s2disasm/s2.asm:36102,
      * 36132) and S3K writes the same splash animation through {@code anim(a6)}
-     * (docs/skdisasm/sonic3k.asm:22241,22281). S1 lacks this spindash/dust
+     * (docs/skdisasm/sonic3k.asm:22241,22281). S2 skid dust is spawned by that
+     * fixed object while the parent remains in Stop/Skid animation
+     * (docs/s2disasm/s2.asm:42759-42797). S1 lacks this spindash/dust
      * object path and keeps its object-based LZ splash.
      */
     public boolean waterSplashUsesFixedDustObject() {

@@ -3198,6 +3198,21 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		advanceSkidDustTimer();
 	}
 
+	void advanceFixedSkidDustWhileStopAnimPersists() {
+		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+		if (featureSet == null || !featureSet.waterSplashUsesFixedDustObject()) {
+			return;
+		}
+		if (!(sprite.getAnimationProfile() instanceof ScriptedVelocityAnimationProfile profile)) {
+			return;
+		}
+		int skidAnimId = profile.getSkidAnimId();
+		if (skidAnimId < 0 || sprite.getAnimationId() != skidAnimId) {
+			return;
+		}
+		advanceSkidDustTimer();
+	}
+
 	private void advanceSkidDustTimer() {
 		// ROM Obj08_CheckSkid keeps ticking the fixed Sonic_Dust/Tails_Dust
 		// object while the parent remains in the Stop animation; entering

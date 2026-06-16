@@ -4,6 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 fixed Obj08 skid dust keeps ticking while Stop/Skid animation persists:**
+  airborne S2/S3K players now tick the fixed dust object after CPU sidekick
+  interact sampling when the animation byte remains on the configured skid id,
+  matching S2 `Obj08_CheckSkid` without trace or zone carve-outs. This advances
+  the ARZ level-select trace from frame 1285's `tails_cpu_interact` mismatch to
+  frame 2011's later `tails_cpu_interact` frontier; the full frontier-only
+  trace sweep remains expected-red at 53 failures and 1 existing error with no
+  unrelated first-error regression observed.
+
 - **S3K CNZ barber poles expose their ROM object pointer to CPU Tails:** CNZ
   barber-pole instances now publish the high word of `loc_33376`/`loc_335A8`
   through `RomObjectCodePointerProvider`, so S3K `Tails_CPU_interact` sees the

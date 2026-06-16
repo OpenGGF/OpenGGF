@@ -6,12 +6,15 @@ import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.ShieldType;
+import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.Sonic3kSuperStateController;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.Sonic2SuperStateController;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.SkidDustObjectInstance;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.FrameCollisionPlan;
 import com.openggf.physics.TrigLookupTable;
@@ -19,6 +22,7 @@ import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Tails;
+import com.openggf.sprites.render.PlayerSpriteRenderer;
 import com.openggf.tests.FullReset;
 import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestEnvironment;
@@ -34,11 +38,13 @@ import com.openggf.sprites.playable.SecondaryAbility;
 import com.openggf.sprites.playable.SuperState;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 @ExtendWith(SingletonResetExtension.class)
 @FullReset
@@ -915,6 +921,34 @@ public class TestPlayableSpriteMovement {
                 assertEquals((short) -0x0300, mockSprite.getGSpeed());
                 assertEquals(Direction.RIGHT, mockSprite.getDirection(),
                         "0xFD00 is still above the ROM cmpi.w #-$400 skid threshold");
+        }
+
+        @Test
+        public void s2FixedSkidDustTicksWhileAirborneStopAnimationPersists() throws Exception {
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                Field objectManagerField = GameServices.level().getClass().getDeclaredField("objectManager");
+                objectManagerField.setAccessible(true);
+                objectManagerField.set(GameServices.level(), new ObjectManager(List.of(), null, 0, null, null));
+
+                mockSprite.setSpindashDustController(new SpindashDustController(
+                        mockSprite, mock(PlayerSpriteRenderer.class)));
+                mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                        .setSkidAnimId(Sonic2AnimationIds.SKID));
+                mockSprite.setAnimationId(Sonic2AnimationIds.SKID);
+                mockSprite.setAir(true);
+                mockSprite.setRolling(false);
+                mockSprite.setHurt(false);
+                mockSprite.setCentreX((short) 0x09AE);
+                mockSprite.setCentreY((short) 0x0340);
+                mockSprite.setSkidDustTimer(0);
+
+                manager.advanceFixedSkidDustWhileStopAnimPersists();
+
+                assertEquals(3, mockSprite.getSkidDustTimer(),
+                        "Obj08 fixed dust timer should keep ticking while Stop/Skid anim persists airborne");
+                assertEquals(1, GameServices.level().getObjectManager()
+                        .activeObjectsOfType(SkidDustObjectInstance.class).size(),
+                        "Ticking from timer 0 should allocate one skid dust child object");
         }
 
         @Test
