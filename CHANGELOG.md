@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Trace replay ignores HTZ landing sidekick latch noise:** S2
+  `tails_cpu_interact` and grounded ROM-only `Status_Push` diagnostics no longer
+  report a frontier when sidekick kinematics match exactly across landing and
+  grounded frames. This advances HTZ1 level-select from frame 4229 through frame
+  4494 to frame 6114; the full trace sweep remains expected-red at 90 trace
+  tests, 52 trace failures, and 1 existing trace error.
+
 - **Trace replay ignores stationary released sidekick push-bit noise:** S2
   sidekick status-byte diagnostics no longer report a frontier when ROM carries
   a one-frame `Status_Push` tail with a stale stand slot after release while the

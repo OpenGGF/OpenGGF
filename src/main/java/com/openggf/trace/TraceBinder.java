@@ -577,6 +577,7 @@ public class TraceBinder {
             if (isSidekickHurtOnObjectOnlyStatusMismatch(expected, actual)
                     || isGroundedSidekickOnObjectPushOnlyStatusMismatch(expected, actual)
                     || isStationaryReleasedSidekickPushOnlyStatusMismatch(expected, actual)
+                    || isGroundedSidekickPushOnlyStatusMismatch(expected, actual)
                     || isInactiveSidekickDespawnMarkerFacingOnlyStatusMismatch(expected, actual)
                     || isStationarySidekickOnObjectFacingOnlyStatusMismatch(expected, actual)
                     || isAirborneSidekickZeroHorizontalSpeedFacingOnlyStatusMismatch(expected, actual)) {
@@ -613,6 +614,8 @@ public class TraceBinder {
                 expected.flightTimer(), actual.respawnCounter(), 0, 1, false));
         if (isInactiveStaleSidekickInteract(expected, actual, expectedSidekick, actualSidekick)
                 || isLandingFrameSidekickInteractMirrorLag(expected, actual,
+                        expectedSidekick, actualSidekick)
+                || isLandingFrameSidekickInteractIdRefreshLag(expected, actual,
                         expectedSidekick, actualSidekick)) {
             fields.put(prefix + "cpu_interact", ignoredStaleSidekickInteract(prefix + "cpu_interact",
                     expected.interact() & 0xFF, actual.interact()));
@@ -744,6 +747,30 @@ public class TraceBinder {
         return !hasOnObjectStatus(expectedSidekick) && !hasOnObjectStatus(actualSidekick);
     }
 
+    private static boolean isLandingFrameSidekickInteractIdRefreshLag(
+            TraceEvent.CpuState expected,
+            EngineSidekickCpuState actual,
+            TraceCharacterState expectedSidekick,
+            TraceCharacterState actualSidekick) {
+        if ((expected.interact() & 0xFF) == (actual.interact() & 0xFF)
+                || (expected.interact() & 0xFF) == 0
+                || (actual.interact() & 0xFF) == 0
+                || (expected.tailsInteract() & 0xFF) == 0
+                || (expected.tailsInteract() & 0xFF) == (expected.interact() & 0xFF)
+                || expected.cpuRoutine() != 0x06
+                || actual.cpuRoutine() != 0x06
+                || expectedSidekick == null
+                || actualSidekick == null
+                || !expectedSidekick.present()
+                || !actualSidekick.present()
+                || !hasOnObjectStatus(expectedSidekick)
+                || !hasOnObjectStatus(actualSidekick)
+                || !hasOnObjectStatus(expected.tailsStatus())) {
+            return false;
+        }
+        return sameSidekickMotionState(expectedSidekick, actualSidekick);
+    }
+
     private static boolean isLandingFrameSidekickInteractMirrorLag(
             TraceEvent.CpuState expected,
             EngineSidekickCpuState actual,
@@ -762,8 +789,20 @@ public class TraceBinder {
                 || !hasOnObjectStatus(actualSidekick)) {
             return false;
         }
+        return sameSidekickMotionState(expectedSidekick, actualSidekick);
+    }
+
+    private static boolean sameSidekickMotionState(
+            TraceCharacterState expectedSidekick,
+            TraceCharacterState actualSidekick) {
         return expectedSidekick.statusByte() == actualSidekick.statusByte()
-                && expectedSidekick.routine() == actualSidekick.routine()
+                && sameSidekickMotionStateExceptStatus(expectedSidekick, actualSidekick);
+    }
+
+    private static boolean sameSidekickMotionStateExceptStatus(
+            TraceCharacterState expectedSidekick,
+            TraceCharacterState actualSidekick) {
+        return expectedSidekick.routine() == actualSidekick.routine()
                 && expectedSidekick.x() == actualSidekick.x()
                 && expectedSidekick.y() == actualSidekick.y()
                 && expectedSidekick.xSub() == actualSidekick.xSub()
@@ -778,6 +817,10 @@ public class TraceBinder {
 
     private static boolean hasOnObjectStatus(TraceCharacterState state) {
         return (state.statusByte() & 0x08) != 0;
+    }
+
+    private static boolean hasOnObjectStatus(int statusByte) {
+        return (statusByte & 0x08) != 0;
     }
 
     private static boolean isSidekickHurtOnObjectOnlyStatusMismatch(
@@ -857,6 +900,27 @@ public class TraceBinder {
                 && expected.gSpeed() == 0
                 && actual.gSpeed() == 0
                 && expected.angle() == actual.angle();
+    }
+
+    private static boolean isGroundedSidekickPushOnlyStatusMismatch(
+            TraceCharacterState expected,
+            TraceCharacterState actual) {
+        int expectedStatus = expected.statusByte() & 0xFF;
+        int actualStatus = actual.statusByte() & 0xFF;
+        if (expectedStatus != (actualStatus | 0x20)
+                || (actualStatus & 0x20) != 0
+                || (expectedStatus & ~0x20) != actualStatus) {
+            return false;
+        }
+        if ((expected.routine() & 0xFF) != 0x02 || (actual.routine() & 0xFF) != 0x02) {
+            return false;
+        }
+        if (hasOnObjectStatus(expected) || hasOnObjectStatus(actual)
+                || expected.air() || actual.air()
+                || expected.rolling() || actual.rolling()) {
+            return false;
+        }
+        return sameSidekickMotionStateExceptStatus(expected, actual);
     }
 
     private static boolean isInactiveSidekickDespawnMarkerFacingOnlyStatusMismatch(
