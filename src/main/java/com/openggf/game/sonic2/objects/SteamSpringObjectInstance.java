@@ -223,6 +223,14 @@ public class SteamSpringObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // ROM: Obj42 passes d1=$1B into SolidObject_cont, whose X gate uses
+        // cmp.w d3,d0 / bhi (s2.asm:35149-35152). relX == d1*2 is therefore
+        // still contact, which preserves Status_Push at the exact right edge.
+        return true;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         // Spring fire is handled by the manual checkpoint pass in update() — see ROM
         // loc_26688 / loc_2678E (s2.asm:52030-52049, 52121-52124). Manual checkpoint

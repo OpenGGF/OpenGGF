@@ -71,6 +71,13 @@ public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance 
         holdPlayersBeforeLaunch();
     }
 
+    public void applyInitialHoldForNativeSetupPass() {
+        armed = true;
+        initialized = true;
+        timer = PRE_LAUNCH_DELAY_FRAMES + 1;
+        holdPlayersBeforeLaunch();
+    }
+
     private void updatePreLaunch() {
         holdPlayersBeforeLaunch();
         if (--timer > 0) {

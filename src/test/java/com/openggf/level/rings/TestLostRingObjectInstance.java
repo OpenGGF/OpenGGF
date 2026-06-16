@@ -402,6 +402,32 @@ class TestLostRingObjectInstance {
     }
 
     @Test
+    void s2SpawnUsesPreallocatedObj37OwnerSlot() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        ObjectManager objectManager = new ObjectManager(List.of(),
+                new NoOpObjectRegistry(ObjectSlotLayout.SONIC_2), 0, null, null);
+        setField(levelManager, "objectManager", objectManager);
+
+        RingManager ringManager = buildRingManagerWithLevelManager(levelManager);
+        setField(levelManager, "ringManager", ringManager);
+
+        for (int slot = 16; slot <= 22; slot++) {
+            assertTrue(objectManager.reserveDynamicSlot(slot), "setup should reserve slot " + slot);
+        }
+        SpawnTestPlayableSprite player = new SpawnTestPlayableSprite((short) 0x100, (short) 0x100);
+
+        ringManager.spawnLostRings(player, 3, 0);
+
+        List<LostRingObjectInstance> rings =
+                objectManager.activeObjectsOfType(LostRingObjectInstance.class);
+        assertEquals(3, rings.size());
+        assertEquals(23, rings.get(0).getSlotIndex(),
+                "S2 HurtCharacter preallocates the first Obj37 owner slot before Obj37_Init");
+        assertTrue(rings.get(1).getSlotIndex() > rings.get(0).getSlotIndex(),
+                "subsequent S2 lost rings allocate after the owner slot");
+    }
+
+    @Test
     void s3kSpawnUsesPreallocatedObj37OwnerSlot() throws Exception {
         LevelManager levelManager = GameServices.level();
         ObjectManager objectManager = new ObjectManager(List.of(),

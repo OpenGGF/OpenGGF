@@ -244,11 +244,33 @@ public final class TraceReplayBootstrap {
      * <p>S2 Tornado title-card object preludes depend on the live ObjB2
      * routine/subtype loaded for the route and are therefore selected by
      * {@code TraceReplaySessionBootstrap}, not by trace zone metadata here.
+     *
+     * <p>S3K complete-run segments arm after the setup block has already
+     * called {@code SpawnLevelMainSprites}, {@code Process_Sprites}, and
+     * {@code Animate_Tiles}, but before the first replay-driven
+     * {@code LevelLoop} row (docs/skdisasm/sonic3k.asm:7849-7855,
+     * 7884-7894). Replaying the native object pass before applying the
+     * frame-zero RNG seed preserves ROM object initialization order without
+     * copying recorded SST data into the engine.
+     *
+     * <p>S3K Sonic+Tails level-select seed-frame traces have the same setup
+     * {@code Process_Sprites} pass before their first compared row, but keep
+     * Sonic's frame-0 movement as comparison-only state. Replay therefore runs
+     * the native level-object pass here and the sidekick-only tick separately,
+     * both before normal frame-1 driving begins.
      */
     public static int levelObjectTitleCardPreludeFramesForTraceReplay(TraceData trace) {
         int s1PreludeFrames = resolveS1LevelStartObjectPreludeFrames(trace);
         if (s1PreludeFrames > 0) {
             return s1PreludeFrames;
+        }
+        int s3kSeedFramePreludeFrames = resolveS3kSeedFrameObjectPreludeFrames(trace);
+        if (s3kSeedFramePreludeFrames > 0) {
+            return s3kSeedFramePreludeFrames;
+        }
+        int s3kCompleteRunPreludeFrames = resolveS3kCompleteRunObjectPreludeFrames(trace);
+        if (s3kCompleteRunPreludeFrames > 0) {
+            return s3kCompleteRunPreludeFrames;
         }
         return 0;
     }
@@ -308,6 +330,8 @@ public final class TraceReplayBootstrap {
 
     private static final int S1_LEVEL_START_OBJECT_PRELUDE_FRAMES = 1;
 
+    private static final int S3K_COMPLETE_RUN_SETUP_OBJECT_PRELUDE_FRAMES = 1;
+
     private static final int S3K_COMPLETE_RUN_SETUP_ANIMATED_TILE_PRELUDE_FRAMES = 1;
 
     private static int resolveS1LevelStartObjectPreludeFrames(TraceData trace) {
@@ -323,6 +347,18 @@ public final class TraceReplayBootstrap {
         TraceFrame firstFrame = trace.getFrame(0);
         return firstFrame.gameplayFrameCounter() == 1
                 ? S1_LEVEL_START_OBJECT_PRELUDE_FRAMES
+                : 0;
+    }
+
+    private static int resolveS3kCompleteRunObjectPreludeFrames(TraceData trace) {
+        return isS3kCompleteRunSegment(trace)
+                ? S3K_COMPLETE_RUN_SETUP_OBJECT_PRELUDE_FRAMES
+                : 0;
+    }
+
+    private static int resolveS3kSeedFrameObjectPreludeFrames(TraceData trace) {
+        return usesSidekickTitleCardSeedFrame(trace)
+                ? S3K_COMPLETE_RUN_SETUP_OBJECT_PRELUDE_FRAMES
                 : 0;
     }
 
@@ -534,6 +570,9 @@ public final class TraceReplayBootstrap {
         if (isS3kCompleteRunInitialHandoffRow(trace, previous, current)) {
             return TraceExecutionPhase.VBLANK_ONLY;
         }
+        if (isS3kCompleteRunVisibleVelocityHoldRow(trace, previous, current)) {
+            return TraceExecutionPhase.VBLANK_ONLY;
+        }
         if (isPreLevelPrefixInputLatchRow(trace, previous, current)) {
             return TraceExecutionPhase.ADVANCE_ONLY;
         }
@@ -576,8 +615,8 @@ public final class TraceReplayBootstrap {
     }
 
     private static boolean isS3kCompleteRunInitialHandoffRow(TraceData trace,
-                                                            TraceFrame previous,
-                                                            TraceFrame current) {
+                                                             TraceFrame previous,
+                                                             TraceFrame current) {
         if (!isS3kCompleteRunSegment(trace) || current == null) {
             return false;
         }
@@ -587,6 +626,58 @@ public final class TraceReplayBootstrap {
         TraceFrame next = trace.getFrame(1);
         return (next == null || !current.stateEquals(next))
                 && !hasNativeInitialVelocity(current);
+    }
+
+    private static boolean isS3kCompleteRunVisibleVelocityHoldRow(TraceData trace,
+                                                                  TraceFrame previous,
+                                                                  TraceFrame current) {
+        if (!isS3kCompleteRunSegment(trace) || current == null || !hasNativeInitialVelocity(current)) {
+            return false;
+        }
+        int index = traceIndexForFrame(trace, current);
+        if (index < 0) {
+            return false;
+        }
+        if (index == 0) {
+            if (trace.frameCount() < 2) {
+                return false;
+            }
+            TraceFrame next = trace.getFrame(1);
+            return current.stateEquals(next) && executionCountersEqual(current, next);
+        }
+        if (previous == null
+                || !current.stateEquals(previous)
+                || !executionCountersEqual(current, previous)) {
+            return false;
+        }
+        for (int i = 1; i <= index; i++) {
+            TraceFrame prior = trace.getFrame(i - 1);
+            TraceFrame row = trace.getFrame(i);
+            if (!row.stateEquals(prior) || !executionCountersEqual(row, prior)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static int traceIndexForFrame(TraceData trace, TraceFrame frame) {
+        int frameNumber = frame.frame();
+        if (frameNumber >= 0 && frameNumber < trace.frameCount()
+                && trace.getFrame(frameNumber).frame() == frameNumber) {
+            return frameNumber;
+        }
+        for (int i = 0; i < trace.frameCount(); i++) {
+            if (trace.getFrame(i).frame() == frameNumber) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static boolean executionCountersEqual(TraceFrame left, TraceFrame right) {
+        return left.gameplayFrameCounter() == right.gameplayFrameCounter()
+                && left.vblankCounter() == right.vblankCounter()
+                && left.lagCounter() == right.lagCounter();
     }
 
     private static boolean hasNativeInitialVelocity(TraceFrame current) {

@@ -3084,6 +3084,10 @@ final class ObjectSolidContactController {
             // (ROM processes objects after Sonic moves). Ground side collision keeps
             // pre-movement behavior for wall alignment consistency.
             boolean skipSideEffects = deferSideToPostMovement && player.getAir();
+            if (instance instanceof SolidObjectProvider solidProvider
+                    && solidProvider.sideContactReturnsNoContact(player)) {
+                return null;
+            }
             if (apply
                     && isSignedObjectControlSideContactRejected(player, instance)) {
                 return null;
@@ -3669,7 +3673,3 @@ final class ObjectSolidContactController {
         player.applyPostObjectLandingAbilities(savedDoubleJumpFlag);
     }
 }
-
-
-
-

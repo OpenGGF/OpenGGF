@@ -111,6 +111,18 @@ public class SteamPuffObjectInstance extends AbstractObjectInstance
         return 0;
     }
 
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        // ROM loc_2683A tails to DisplaySprite, not MarkObjGone; the puff's
+        // lifetime is owned by its animation counter.
+        return true;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        return false;
+    }
+
     // --- Rendering ---
 
     @Override

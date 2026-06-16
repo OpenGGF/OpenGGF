@@ -298,6 +298,22 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj_AIZLRZEMZRock calls SolidObjectFull (sonic3k.asm:43935). For a player
+        // who is not standing on the rock, SolidObjectFull_1P branches to loc_1DF88 ->
+        // SolidObject_cont (sonic3k.asm:41022-41023, 41399), whose initial X gate is
+        // cmp.w d3,d0 / bhi loc_1E0A2 (41403-41406): contact when d0 <= 2*halfwidth,
+        // so the player's centre sitting exactly on the rock's right solid edge
+        // (relX == width*2) is an inclusive zero-distance side contact and re-sets
+        // Status_Push via loc_1E06E (41494-41500). Without this, AIZ2 trace f14193 --
+        // Sonic rolling left into the rock at x=0x328B, exactly on its right edge --
+        // dropped the push the ROM keeps (status 0x21 vs 0x01) after the roll-stop
+        // animation change cleared it. Matches the horizontal-spring SolidObjectFull2_1P
+        // inclusive-edge case.
+        return true;
+    }
+
+    @Override
     public int getX() {
         return currentX;
     }

@@ -330,21 +330,22 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance {
                 return;
             }
 
-            // ROM: loc_3BCDE - ObjectMove + PlatformObject
-            // ObjectMove: y_vel is sign-extended to 32-bit, shifted left 8 bits,
-            // then added to 32-bit position (16.16 format: upper 16 = integer, lower 16 = subpixel).
-            // ext.l d0 / asl.l #8,d0 / add.l d0,d3
+            var batch = services().solidExecution().resolveSolidNowAll();
+            PlayerSolidContactResult result = batch.perPlayer().get(player);
+            int solidY = currentY;
+
+            // ROM: loc_3BCDE - ObjectMove + PlatformObject. The engine's manual
+            // checkpoint resolves contact before post-checkpoint carry, so keep
+            // the movement after the checkpoint and report geometry from the
+            // solid y_pos that the checkpoint used.
             long yPos32 = ((long) currentY << 16) | (ySubpixel & 0xFFFF);
             yPos32 += ((long) yVelocity << 8);
             currentY = (int) (yPos32 >> 16);
             ySubpixel = (int) (yPos32 & 0xFFFF);
 
-            // ROM: loc_3BCDE calls ObjectMove, then PlatformObject immediately.
-            var batch = services().solidExecution().resolveSolidNowAll();
-            PlayerSolidContactResult result = batch.perPlayer().get(player);
             int maxTop = SOLID_HALF_HEIGHT_AIR + player.getYRadius();
             int relX = player.getCentreX() - currentX + SOLID_HALF_WIDTH;
-            int relY = player.getCentreY() - currentY + 4 + maxTop;
+            int relY = player.getCentreY() - solidY + 4 + maxTop;
             lastSolidGeometry = String.format("geom p=(%04X,%04X) r=(%d,%d) rel=(%d,%d) maxTop=%d",
                     player.getCentreX() & 0xFFFF,
                     player.getCentreY() & 0xFFFF,

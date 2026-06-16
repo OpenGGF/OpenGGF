@@ -283,6 +283,11 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     @Override
+    public void clearSpawnTouchSkip() {
+        skipTouchThisFrame = false;
+    }
+
+    @Override
     public boolean isSkipSolidContactThisFrame() {
         return solidContactFirstFrame;
     }

@@ -4,6 +4,189 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 ARZ2 swinging-platform child slot matches the ROM SST layout:** Obj15 now
+  allocates the non-rendering display child used by the ROM multi-sprite chain
+  and mirrors the swing oscillator through the object's x-flip bit. The ARZ2
+  level-select trace advances from frame 187's missing Obj15 child slot to
+  frame 523's later missing Obj91 object frontier, with the full trace-suite
+  failure count unchanged.
+
+- **S2 respawn-tracked badnik kills keep the ROM placement latch:** Sonic 2
+  layout entries killed by the player now preserve `ChkLoadObj`'s remembered
+  bit instead of becoming streamable again in the same level. The MTZ1
+  level-select trace advances from frame 1169's ObjA4/Obj74
+  `tails_cpu_interact` slot mismatch to frame 1267's later `y` movement
+  frontier, with the full trace-suite failure count unchanged.
+
+- **S2 MTZ2 object-slot cadence advances past the Obj37/Tails CPU frontier:**
+  Obj37 lost-ring spill timing, collected-ring sparkle lifetime, Obj08 skid-dust
+  deletion, Obj6C conveyor parent expansion, Obj70 cog child slot pressure, and
+  S2 badnik destruction/respawn ordering now better match the ROM object pass.
+  The MTZ2 level-select trace advances from frame 1073's
+  `tails_cpu_interact` mismatch to frame 1265's later `g_speed` movement
+  frontier, with the full trace-suite failure count unchanged.
+
+- **S2 HTZ2 Tails panic release follows the rolling-only/spin-dash branch:**
+  Sonic 2 sidekick panic now lets the engine's rolling-only/pinball state feed
+  the ROM `spin_dash_flag` branch used by `TailsCPU_Panic`, so the `$7F`
+  release cadence exits panic at HTZ2 frame 1023 even while inertia is still
+  nonzero. The HTZ2 trace advances to frame 1078's later Sonic `y_speed`
+  frontier, with the full trace-suite failure count unchanged.
+
+- **S2 MTZ SteamSpring keeps ROM contact on the inclusive right edge:**
+  Obj42 now opts into `SolidObject_cont`'s `bhi` right-edge rule so Tails keeps
+  `Status_Push` at the exact MTZ steam-piston boundary. The MTZ1 level-select
+  trace advances from frame 1006's `tails_status_byte` mismatch to frame 1169's
+  later `tails_cpu_interact` frontier, with the full trace-suite failure count
+  unchanged.
+
+- **S2 HTZ2 Tails CPU frontier now reports the true routine mismatch:**
+  routine-8 panic `Ctrl_2` held/pressed latch differences are ignored only while
+  both sidekick states are still coasting with nonzero ground speed, so the HTZ2
+  trace advances from frame 936's non-actionable latched `Ctrl_2` mismatch to
+  frame 1023's actionable `tails_cpu_routine` mismatch without changing the
+  full trace-suite failure count.
+
+- **S2 MTZ object-slot parity advances the MTZ1 Tails CPU frontier:**
+  SteamPuff, MTZ long-platform child cog, monitor contents, Asteron
+  explosion/projectile, and post-camera object placement now better match the
+  ROM object lifetime/slot cadence. The hidden MTZ occupancy oracle advances to
+  frame 1132, and the visible MTZ level-select trace advances from frame 931's
+  `tails_cpu_interact` mismatch to frame 1006's later `tails_status_byte`
+  mismatch with no added or removed full-suite trace failures.
+
+- **Fresh ground-wall push survives the same-frame animation clear:** terrain
+  side-wall collision now marks push contact set after the idle/walk animation
+  clear point so the animation resolver does not erase `Status_Push` later in
+  the same frame. This advances the CPZ2 level-select Tails CPU frontier from
+  frame 759's missing push bit to frame 2888's later `tails_x` mismatch without
+  changing the trace-suite failure count.
+
+- **S2 lost-ring spill slots match Obj37 owner-slot allocation:** Sonic 2 now
+  preallocates the first lost-ring Obj37 owner slot before spilling remaining
+  rings, matching `HurtCharacter`/`Obj37_Init` scan order. This advances the
+  MTZ2 level-select Tails CPU frontier from frame 645's early claw hurt to frame
+  1073's later `tails_cpu_interact` mismatch without changing the trace-suite
+  failure count.
+
+- **S3K seed-frame traces replay the native setup object prelude:**
+  Sonic+Tails level-select seed-frame traces now run the setup
+  `Process_Sprites` object pass before the first replay-driven gameplay frame,
+  matching the ROM object/RNG cadence without copying recorded object state.
+  This advances the CNZ route frontier from frame 185's balloon-contact
+  `y_speed` mismatch to frame 1558's later Tails-CPU interaction frontier.
+
+- **S3K AIZ act-2 trace frontier f5705 -> f14299 (four ROM-cited sidekick/player/object fixes):**
+  (1) the run->walk animation step no longer clears `Status_Push` (ROM keeps the
+  `anim` byte at Walk for grounded movement; `sonic3k.asm:28122,28056`,
+  `s2.asm:36956,36891`); (2) the touch-hurt invulnerability gate blocks on any
+  nonzero i-frame timer (`isDamageBlocked > 1` -> `> 0`, ROM `Touch_Hurt` `bne`,
+  `sonic3k.asm:21044-21047`); (3) the AIZ2 spiked-log spike hurts on the ROM
+  contact frame via its live touch position (`usesCurrentTouchResponseState`,
+  `loc_2B8EE` adds to the collision list post-move, `sonic3k.asm:60179-60190`);
+  (4) the AIZ2 rock re-sets Sonic's `Status_Push` at its inclusive solid edge
+  (`usesInclusiveRightEdge`, ROM `SolidObject_cont` `bhi`, `sonic3k.asm:41403-41406,41494-41500`).
+  Each was full-`*TraceReplay`-A/B-validated with no S1/S2/S3K regression.
+
+- **S3K same-frame-spawned hazard touch latency (1 frame, ROM-accurate):** a
+  hazard spawned during frame N's object pass (e.g. an AIZ2 battleship bomb
+  explosion) registers itself to the S3K `Collision_response_list` and draws
+  (sets obRender bit 7) on that same frame, so ROM's player slot - which
+  consumes the list on the next frame before `Obj_ResetCollisionResponseList`
+  clears it - hits it with a 1-frame latency. The engine's previous-list path
+  skipped the frame-start touch snapshot and therefore did not clear the
+  same-frame-spawn `skipTouchThisFrame` flag, making a freshly spawned hazard
+  touch-visible one frame late. The previous-list path now clears only that
+  spawn-skip flag at frame start (`clearSpawnTouchSkip`), preserving the S3K
+  list model while matching ROM timing. This advances the S3K AIZ1 trace
+  frontier from frame 16944 to 19089 (515 -> 207 errors), with no
+  first-error-frame regression in the full trace sweep.
+
+- **`AbstractPlayableSprite` ground-wall response extraction (guard paydown, no
+  behavior change):** extracted the per-frame ground-wall collision response
+  cluster - deferred-velocity staging, terrain `Status_Push` provenance, and the
+  pre-CPU-control inertia snapshot used by the S3K Tails wall probe - into a
+  focused `GroundWallResponseState`
+  collaborator, delegating the existing accessors. The holder field is
+  `@RewindTransient` because the values are recomputed or cleared each frame.
+  This brings `AbstractPlayableSprite.java` under its release-critical
+  `TestArchitecturalSourceGuard` line budget. Pure refactor: AIZ trace frontier
+  unchanged at frame 16944.
+
+- **CPU sidekick off-screen stuck-respawn faces per ROM `loc_13F40` (S3K):**
+  when the CPU sidekick is stuck pushing and flight-timer-respawns to the
+  off-screen catch-up sentinel (`x_pos=0x7F00`, routine 8), ROM `loc_13F40`
+  runs its facing block on the post-warp x position, so the sentinel faces left
+  until the catch-up snap clears facing and routine 4 re-derives it. The engine's
+  despawn-marker path always faced right; it now models `loc_13F40` only on the
+  routine-8 stuck respawn and clears facing on the snap, preserving death and
+  boundary-kill marker behavior. This advances the S3K AIZ1 trace frontier from
+  frame 16217 to 16944 with no first-error-frame regression in the full trace
+  sweep.
+
+- **CPU sidekick auto-jump flag persists while push-bypassing (S3K):** ROM's
+  `Tails_CPU_Control` auto-jump carry/clear (`loc_13E64`) is only reached on the
+  non-push-bypass path; when Tails is pushing and the delayed leader was not
+  pushing 16 frames ago, `loc_13DD0` branches straight to `loc_13E9C`
+  (`sonic3k.asm:26702-26705`), so the auto-jump flag is neither cleared on the
+  ground nor drives a jump-hold (`26753-26758`). The engine cleared
+  `Tails_CPU_auto_jump_flag` on the first grounded frame, so a sustained AIZ2
+  stuck-push lost the flag. Gated the flag's hold/ground-clear on the ROM bypass
+  condition. This advances the S3K AIZ1 trace frontier from frame 15795 to 16217
+  with no first-error-frame regression in the full trace sweep.
+
+- **Status_Push frame-end clear keys on the real ROM `anim` byte, not the push
+  render substitution (S2/S3K):** ROM shows the pushing frames inside the walk
+  script's special handler (`Animate_Sonic loc_12A72 btst #5,status`,
+  `sonic3k.asm:24832`; `Animate_Tails` reads `anim` directly, `29356-29364`),
+  keeping the `anim`/`prev_anim` byte at the movement-selected value (walk/wait/
+  balance). The engine substitutes a distinct push render-anim id, which it was
+  also feeding into the `anim != prev_anim` push-clear comparison. The push-clear
+  now resolves the anim id with the push render substitution disabled and tracks
+  the grounded movement anim byte separately, including rewind state. This
+  advances the S3K AIZ1 trace frontier from frame 15016 to 15795 with no
+  first-error-frame regression in the full trace sweep.
+
+- **Grounded facing-flip clears `Status_Push` unconditionally at frame end
+  (S2/S3K):** ROM's `Sonic_MoveLeft`/`MoveRight` and Tails equivalents set
+  `prev_anim=Run` on a facing flip (`sonic3k.asm:28041,28109`), so the same
+  frame's `Animate_*` clears `Status_Push` via `anim != prev_anim`
+  (`sonic3k.asm:29359-29364,29681-29686`) independent of whether the character
+  was already pushing. The engine only armed its post-ground-wall push clear
+  when push was already set before the wall pass; removing that gate advances
+  the S3K AIZ1 trace frontier from frame 14301 to 15016 with no first-error-frame
+  regression in the full trace sweep.
+
+- **CPU sidekick keeps a genuine terrain wall push for the ROM `loc_13DD0`
+  read (AIZ2 underwater wall bounce):** the engine's released-underwater
+  pre-CPU push-clear was discarding a `Status_Push` bit that a terrain
+  ground-wall collision had freshly re-set, so the CPU follow-steering picked
+  the wrong direction (`tails_cpu_ctrl2_held` LEFT vs ROM RIGHT). ROM has no such
+  pre-clear - `loc_13DD0` reads the live `Status_Push` and branches around
+  FollowLeft/FollowRight to keep the delayed Ctrl_2 word (`sonic3k.asm:26702-26705`),
+  and a wall rebound sets push via `Tails_DoLevelCollision loc_14C00`
+  (`sonic3k.asm:27997-28017`). Added a terrain-push provenance flag
+  (`pushFromGroundWallCollision`, `@RewindTransient`) so only a stale
+  released-object push is pre-cleared. Advances the S3K AIZ1 trace frontier from
+  frame 14299 to 14301 (errors 723 -> 527; the underwater-bounce velocity phase
+  now matches ROM); full `*TraceReplay` A/B sweep zero S1/S2/S3K regression.
+
+- **S3K complete-run traces restore startup objects for native setup preludes:**
+  complete-run replay now restores the S3K event-owned startup objects that the
+  native setup prelude expects after object reset. ICZ restores the snowboard
+  intro in its post-startup handoff state and treats repeated visible launch
+  rows as VBlank-only until motion changes, while LBZ restores the ground-launch
+  countdown with the native setup tick accounted for. This advances ICZ
+  complete-run from frame 29 to frame 1116 and LBZ complete-run from frame 29
+  to frame 1950 without adding trace-state hydration or route carve-outs.
+
+- **S3K CNZ complete-run trace advances through setup object RNG order:**
+  S3K complete-run replay now runs the native setup `Process_Sprites` object
+  pass before applying the frame-zero RNG seed, so already-live setup objects
+  consume RNG in ROM order instead of starting from the trace's frame-zero seed.
+  This advances the CNZ complete-run trace from frame 248 to frame 355's
+  separate bumper/monitor velocity frontier.
+
 - **RetroArch GLSL shader pack install/update is available in-app:** the
   display shader picker can trigger the libretro GLSL zip download, report
   progress, install into `shaders/libretro-glsl`, and rescan the shader library

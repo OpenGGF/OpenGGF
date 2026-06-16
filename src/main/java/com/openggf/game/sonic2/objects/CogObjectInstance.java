@@ -1,19 +1,22 @@
 package com.openggf.game.sonic2.objects;
 
 import com.openggf.debug.DebugRenderContext;
-import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.MultiPieceSolidProvider;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -143,6 +146,8 @@ public class CogObjectInstance extends AbstractObjectInstance
     private final int[] toothFrame = new int[NUM_TEETH];
     // Per-tooth position offset into POSITIONS table (objoff_34 per child)
     private final int[] toothOffset = new int[NUM_TEETH];
+    private final List<CogSlotChildInstance> slotChildren = new ArrayList<>();
+    private boolean childrenSpawned;
 
     public CogObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -160,6 +165,7 @@ public class CogObjectInstance extends AbstractObjectInstance
 
         // Initial rotation phase is 0
         this.rotationPhase = 0;
+        this.childrenSpawned = false;
 
         // Calculate initial positions
         updateToothPositions();
@@ -182,6 +188,8 @@ public class CogObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        ensureSlotChildrenSpawned();
+
         // ROM Obj70_Main (s2.asm:54662-54665): move.b (Level_frame_counter+1).w,d0;
         // andi.w #$F,d0; bne loc_286CA. On 68k, +1 reads the low byte of the word
         // label. LevelManager stores the previous completed frame until its late-frame
@@ -192,6 +200,36 @@ public class CogObjectInstance extends AbstractObjectInstance
         }
 
         updateToothPositions();
+    }
+
+    private void ensureSlotChildrenSpawned() {
+        if (childrenSpawned) {
+            return;
+        }
+
+        // ROM Obj70_Init uses the current SST slot for tooth 0, then calls
+        // AllocateObjectAfterCurrent seven times and copies Obj70 into each
+        // child slot (docs/s2disasm/s2.asm:55039-55078). The parent keeps the
+        // engine's unified multi-piece solid/render model; these children
+        // preserve the ROM's dynamic slot pressure.
+        for (int i = 1; i < NUM_TEETH; i++) {
+            int toothIndex = i;
+            ObjectSpawn childSpawn = buildCogChildSpawn(toothX[toothIndex], toothY[toothIndex]);
+            CogSlotChildInstance child = spawnChild(() -> new CogSlotChildInstance(childSpawn, this));
+            slotChildren.add(child);
+        }
+        childrenSpawned = true;
+    }
+
+    private ObjectSpawn buildCogChildSpawn(int x, int y) {
+        return new ObjectSpawn(
+                x,
+                y,
+                spawn.objectId(),
+                spawn.subtype(),
+                spawn.renderFlags(),
+                spawn.respawnTracked(),
+                spawn.rawYWord());
     }
 
     /**
@@ -256,6 +294,24 @@ public class CogObjectInstance extends AbstractObjectInstance
         }
     }
 
+    @Override
+    public PerObjectRewindSnapshot captureRewindState() {
+        return super.captureRewindState().withObjectSubclassExtra(
+                new CogRewindExtra(rotationPhase, toothOffset.clone(), childrenSpawned));
+    }
+
+    @Override
+    public void restoreRewindState(PerObjectRewindSnapshot snapshot) {
+        super.restoreRewindState(snapshot);
+        if (snapshot.objectSubclassExtra() instanceof CogRewindExtra extra) {
+            rotationPhase = extra.rotationPhase();
+            int[] restoredOffsets = extra.toothOffset();
+            System.arraycopy(restoredOffsets, 0, toothOffset, 0, Math.min(restoredOffsets.length, toothOffset.length));
+            childrenSpawned = extra.childrenSpawned();
+            updateToothPositions();
+        }
+    }
+
     /**
      * Returns collision parameters for a specific tooth based on its mapping frame.
      * From byte_28706 table (s2.asm line 54723).
@@ -296,6 +352,15 @@ public class CogObjectInstance extends AbstractObjectInstance
         // SolidObject in allocation order (s2.asm:54617-54651, 54691-54703).
         // Earlier teeth can side-push Sonic before the ridden tooth's
         // standing-bit branch performs its ExitPlatform bounds check.
+        return true;
+    }
+
+    @Override
+    public boolean usesPieceScopedStandingBits() {
+        // Each ROM tooth is a separate SST slot with its own status(a0)
+        // standing bits (s2.asm:55039-55078). Keep the engine latch per
+        // tooth so an airborne stale-rider branch clears only that tooth and
+        // skips SolidObject_cont instead of falling into a sibling side hit.
         return true;
     }
 
@@ -343,9 +408,29 @@ public class CogObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean sideContactReturnsNoContact(PlayableEntity player) {
+        // Obj70's eight ROM teeth are separate SST slots. When a sidekick is
+        // airborne while a tooth's standing bit is still set, SolidObject clears
+        // that bit and returns d4=0 before SolidObject_cont can apply the
+        // airborne side correction (s2.asm:35021-35040, 55039-55141). The
+        // engine compresses the teeth into one multi-piece solid, so suppress
+        // this Obj70-only fresh side correction to preserve the ROM stale-rider
+        // handoff instead of zeroing Tails' x velocity one frame early.
+        return player.isCpuControlled();
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // No special handling needed
+    }
+
+    @Override
+    public void onUnload() {
+        for (CogSlotChildInstance child : slotChildren) {
+            ObjectLifetimeOps.expireDynamic(child);
+        }
+        slotChildren.clear();
     }
 
     // Rendering
@@ -392,4 +477,41 @@ public class CogObjectInstance extends AbstractObjectInstance
         ctx.drawLine(baseX, baseY - 4, baseX, baseY + 4, 1.0f, 1.0f, 0.0f);
     }
 
+    private record CogRewindExtra(
+            int rotationPhase,
+            int[] toothOffset,
+            boolean childrenSpawned
+    ) implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {
+    }
+
+    private static final class CogSlotChildInstance extends AbstractObjectInstance {
+        private final CogObjectInstance parent;
+
+        CogSlotChildInstance(ObjectSpawn spawn, CogObjectInstance parent) {
+            super(spawn, "CogSlot");
+            this.parent = parent;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity playerEntity) {
+            if (parent.isDestroyed()) {
+                ObjectLifetimeOps.expireDynamic(this);
+            }
+        }
+
+        @Override
+        public boolean usesCustomOutOfRangeCheck() {
+            return true;
+        }
+
+        @Override
+        public boolean isCustomOutOfRange(int cameraX) {
+            return parent.isDestroyed();
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // Slot-pressure child only; the parent renders all cog teeth.
+        }
+    }
 }

@@ -832,6 +832,28 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         return true;
     }
 
+    public void restoreIntroObjectAfterPreludeReset() {
+        if (!shouldSpawnIntro(0)) {
+            return;
+        }
+        AizPlaneIntroInstance existing = findLiveIntroObject();
+        if (existing != null) {
+            AizPlaneIntroInstance.adoptActiveIntroInstance(existing);
+            introSpawned = true;
+            return;
+        }
+        LevelManager lm = levelManager();
+        if (lm == null || lm.getObjectManager() == null) {
+            return;
+        }
+        ObjectSpawn spawn = new ObjectSpawn(0x60, 0x30, 0, 0, 0, false, 0);
+        AizPlaneIntroInstance intro = spawnObject(() -> new AizPlaneIntroInstance(spawn));
+        introSpawned = intro != null;
+        if (introSpawned) {
+            LOG.info("AIZ1 intro: restored plane intro object for setup prelude");
+        }
+    }
+
     private boolean hasLiveIntroObject() {
         return findLiveIntroObject() != null;
     }

@@ -1268,9 +1268,11 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     /**
      * Extend the active set for spawns visible with the post-camera position.
      * <p>
-     * When the post-camera X is in a higher chunk than the last processed chunk,
-     * scans spawns in the gap between the old and new window right edges and
-     * adds eligible ones to the active set.
+     * When the post-camera X is in a different chunk than the last processed
+     * chunk, scans spawns in the gap exposed by the camera step and adds
+     * eligible ones to the active set. Forward scans use the old/new right
+     * edges; backward scans use the old/new left edges and descend through the
+     * placement list, matching the ROM's right-to-left backward ObjPosLoad pass.
      * <p>
      * In counter mode, this is a full forward scan that advances the cursor
      * and updates lastCameraChunk/lastCameraX, because counter values must
@@ -1302,10 +1304,10 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             return;
         }
         int postChunk = toCoarseChunk(postCameraX);
-        if (postChunk <= lastCameraChunk) {
-            return; // Camera didn't advance to a new chunk
+        if (postChunk == lastCameraChunk) {
+            return; // Camera didn't cross a chunk boundary
         }
-        {
+        if (postChunk > lastCameraChunk) {
             int oldWindowEnd = getWindowEnd(lastCameraX);
             int newWindowEnd = postChunk + getLoadAhead();
             for (int i = cursorIndex; i < spawns.size(); i++) {
@@ -1314,6 +1316,22 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
                     break;
                 }
                 if (sx >= oldWindowEnd) {
+                    if (legacyNoCreate) {
+                        trySpawn(i);
+                    } else {
+                        trySpawn(i, callback);
+                    }
+                }
+            }
+        } else {
+            int oldWindowStart = getWindowStart(lastCameraX);
+            int newWindowStart = getWindowStart(postCameraX);
+            for (int i = leftCursorIndex - 1; i >= 0; i--) {
+                int sx = spawns.get(i).x();
+                if (sx <= newWindowStart) {
+                    break;
+                }
+                if (sx < oldWindowStart) {
                     if (legacyNoCreate) {
                         trySpawn(i);
                     } else {

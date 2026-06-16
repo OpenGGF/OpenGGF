@@ -105,6 +105,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     private boolean bigSnowPileSpawned;
     private boolean act2TransitionRequested;
     private int activeAct;
+    private IczSnowboardIntroInstance snowboardIntro;
 
     @Override
     public void init(int act) {
@@ -112,6 +113,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         activeAct = act;
         eventsFg5 = false;
         introSpawned = false;
+        snowboardIntro = null;
         backgroundRoutine = 0;
         bigSnowOffset = 0;
         bigSnowOffsetSubpixels = 0;
@@ -183,11 +185,24 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
                 IczSnowboardIntroInstance.INITIAL_SNOWBOARD_Y,
                 0, 0, 0, false,
                 IczSnowboardIntroInstance.INITIAL_SNOWBOARD_Y);
-        spawnObject(() -> new IczSnowboardIntroInstance(spawn));
+        snowboardIntro = spawnObject(() -> new IczSnowboardIntroInstance(spawn));
     }
 
     public boolean shouldEnterIntroSidekickDormantMarker(AbstractPlayableSprite sidekick) {
         return sidekick != null && activeAct == 0 && hasSonicSnowboardIntroPlayerMode();
+    }
+
+    public void primeSnowboardIntroPostStartupForCompleteRun(AbstractPlayableSprite player) {
+        if (snowboardIntro != null && !snowboardIntro.isDestroyed()) {
+            snowboardIntro.primePostStartupWaitForBoardHandoff(player);
+        }
+    }
+
+    public void restoreSnowboardIntroPostPreludeReset(AbstractPlayableSprite player) {
+        introSpawned = false;
+        snowboardIntro = null;
+        spawnSonicSnowboardIntro();
+        primeSnowboardIntroPostStartupForCompleteRun(player);
     }
 
     /**

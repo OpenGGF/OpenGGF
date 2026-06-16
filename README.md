@@ -201,14 +201,16 @@ Various agents (Claude, Codex, and Gemini, in various models, versions and forms
 the commit history doesn't hide it; you'll see `Co-Authored-By` tags throughout. But the project
 has been in development since 2013, long before AI coding assistants existed.
 
-The core engine framework, architecture, rendering pipeline, physics engine, and collision system
-were designed and coded by hand. The multi-game provider architecture, the GPU shader pipeline, the
-SMPS audio driver, and the original physics rewrite are all human-authored. AI was brought in
-for bulk analysis and research, to accelerate bulk object and boss implementation, debugging, validation, and
-unit tests; all under direct architectural oversight, with accuracy verified against the original
-ROM disassemblies. Every commit is reviewed, tested, and corrected where needed.
+The pre-AI core — the engine framework and architecture, the rendering pipeline, the physics
+engine and its subpixel movement model, and the sensor-based collision system — was designed and
+coded by hand over years, long before any agent touched the repo. Other subsystems were built
+with heavy AI assistance under direct human oversight; the SMPS audio engine, in particular, was
+AI-built and steered against reference implementations rather than hand-written. AI was brought in for bulk analysis and research, to accelerate
+object and boss implementation, debugging, validation, and unit tests; all with accuracy verified
+against the original ROM disassemblies. Every commit is reviewed, tested, and corrected where
+needed.
 
-You can't prompt your way to ROM accuracy (yet!). But we certainly prompted our way through object
+[You can't prompt your way to ROM accuracy (yet!)](docs/AI_JOURNEY.md). But we certainly prompted our way through object
 implementations, research and boilerplate code a lot faster than would have been possible by hand.
 
 ### How can I contribute?
@@ -225,6 +227,16 @@ straightforward to add new objects, zones, and game-specific behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **S3K AIZ trace frontier to f19089 + AI journey journal (2026-06-16).** Merged
+  `bugfix/ai-trace-frontier-develop`, advancing the S3K AIZ trace past the AIZ2
+  battleship bombing run and wrap into the end-boss arena approach (frame ~19089)
+  via ROM-cited fixes: same-frame-spawned hazard touch latency (1-frame), the
+  `Status_Push` frame-end clear keyed on the real ROM anim byte (S2/S3K), and
+  CPU-sidekick off-screen respawn-facing / auto-jump / wall-push state (S3K),
+  plus S2 MTZ/HTZ/ARZ object-slot frontier advances and a `GroundWallResponseState`
+  extraction. Also adds `docs/AI_JOURNEY.md` — a commit-log-verified history of
+  the project's AI use — and corrects the README's AI-authorship section (the
+  SMPS audio engine was AI-built, not hand-authored).
 - **Runtime display shader library branch (2026-06-15).** Merged
   `feature/ai-display-shader-library-spec-no-trace`, adding a user-supplied
   root `shaders/` library, runtime shader cycling, a searchable/folder-based

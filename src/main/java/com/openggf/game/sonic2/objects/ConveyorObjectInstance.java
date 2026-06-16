@@ -144,13 +144,19 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
     private int waypointOffset;
 
     /** Total path byte length (objoff_39). High byte of objoff_38 word. */
-    private final int pathLength;
+    private int pathLength;
 
     /** Waypoint advance direction (objoff_3A): +4 or -4. */
     private int waypointDelta;
 
     /** Path waypoint data (objoff_3C pointer). */
-    private final int[][] pathData;
+    private int[][] pathData;
+
+    /** Current subtype byte after parent spawners rewrite themselves into child 0. */
+    private int activeSubtype;
+
+    /** True while a bit-7 parent spawner is waiting for its first ExecuteObjects pass. */
+    private boolean pendingParentExpansion;
 
     /** X/Y velocity in 8.8 fixed point. */
     private int xVel;
@@ -190,9 +196,29 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
         this.baseX = baseX;
         this.baseY = baseY;
         this.xFlip = (spawn.renderFlags() & 0x01) != 0;
+        this.activeSubtype = spawn.subtype() & 0xFF;
 
-        int subtype = spawn.subtype();
+        int subtype = activeSubtype;
+        if ((subtype & 0x80) != 0) {
+            pendingParentExpansion = true;
+            pathData = PATH_WAYPOINTS[0];
+            pathLength = 0;
+            x = spawn.x();
+            y = spawn.y();
+            targetX = x;
+            targetY = y;
+            waypointOffset = 0;
+            waypointDelta = WAYPOINT_STEP;
+            xSub = 0;
+            ySub = 0;
+            updateDynamicSpawn(x, y);
+            return;
+        }
 
+        initializePlatformState(subtype, spawn.x(), spawn.y());
+    }
+
+    private void initializePlatformState(int subtype, int startX, int startY) {
         // Determine path table from upper bits. ROM (s2.asm:54227-54233):
         //   lsr.w #3,d0 / andi.w #$1E,d0  => word offset into off_28252.
         // As a table index (word entries) that is ((subtype>>3)&0x1E)/2
@@ -227,8 +253,8 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
         this.targetY = baseY + signExtend16(pathData[wpIndex][1]);
 
         // Set current position and calculate initial velocity
-        this.x = spawn.x();
-        this.y = spawn.y();
+        this.x = startX;
+        this.y = startY;
         this.xSub = 0;
         this.ySub = 0;
         calculateVelocity();
@@ -256,70 +282,7 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
      * @return The first child instance (or an individual platform when bit 7 is clear)
      */
     public static ConveyorObjectInstance createOrSpawnChildren(ObjectSpawn spawn) {
-        int subtype = spawn.subtype();
-
-        if ((subtype & 0x80) == 0) {
-            // Individual platform (bit 7 clear) - create normally
-            return new ConveyorObjectInstance(spawn, "Conveyor");
-        }
-
-        // Parent spawner (bit 7 set) - bake into first child + spawn remaining 7
-        int layoutIndex = subtype & 0x7F;
-        if (layoutIndex >= CHILD_LAYOUTS.length) {
-            LOGGER.warning("Conveyor parent subtype 0x" + Integer.toHexString(subtype)
-                    + " has invalid layout index " + layoutIndex);
-            return null;
-        }
-
-        var ctx = constructionContext();
-        ObjectManager manager = ctx != null ? ctx.objectManager() : null;
-
-        int[][] layout = CHILD_LAYOUTS[layoutIndex];
-        int parentX = spawn.x();
-        int parentY = spawn.y();
-        int parentStatus = spawn.renderFlags();
-
-        // First child: reuse the parent's spawn slot. ROM Obj6C_Init at
-        // s2.asm:54275 (movea.l a0,a1) writes the first child into the parent's
-        // own SST entry. Mirror this so placement sees the spawn as "loaded" via
-        // registerActiveObject in the caller and does NOT add it back to
-        // sortedNewSpawns next frame, which would re-spawn the full child set.
-        int[] firstChild = layout[0];
-        int firstX = parentX + signExtend16(firstChild[0]);
-        int firstY = parentY + signExtend16(firstChild[1]);
-        int firstSubtype = firstChild[2] & 0xFF;
-        ObjectSpawn firstSpawn = new ObjectSpawn(
-                firstX, firstY,
-                Sonic2ObjectIds.CONVEYOR,
-                firstSubtype,
-                parentStatus,
-                false,
-                spawn.rawYWord());
-        ConveyorObjectInstance firstInstance =
-                new ConveyorObjectInstance(firstSpawn, "Conveyor", parentX, parentY);
-
-        // Remaining children: spawn as dynamic objects with parent's x/y as base.
-        if (manager != null && !ObjectConstructionContext.isRewindActiveRestore()) {
-            for (int i = 1; i < layout.length; i++) {
-                int[] child = layout[i];
-                int childX = parentX + signExtend16(child[0]);
-                int childY = parentY + signExtend16(child[1]);
-                int childSubtype = child[2] & 0xFF;
-
-                ObjectSpawn childSpawn = new ObjectSpawn(
-                        childX, childY,
-                        Sonic2ObjectIds.CONVEYOR,
-                        childSubtype,
-                        parentStatus,
-                        false,
-                        spawn.rawYWord());
-
-                manager.createDynamicObject(() ->
-                        new ConveyorObjectInstance(childSpawn, "Conveyor", parentX, parentY));
-            }
-        }
-
-        return firstInstance;
+        return new ConveyorObjectInstance(spawn, "Conveyor");
     }
 
     static ConveyorObjectInstance recreateForRewind(ObjectSpawn spawn, PerObjectRewindSnapshot snapshot) {
@@ -344,7 +307,9 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
                         xVel,
                         yVel,
                         xSub,
-                        ySub));
+                        ySub,
+                        activeSubtype,
+                        pendingParentExpansion));
     }
 
     @Override
@@ -361,6 +326,16 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
             yVel = extra.yVel();
             xSub = extra.xSub();
             ySub = extra.ySub();
+            activeSubtype = extra.activeSubtype();
+            pendingParentExpansion = extra.pendingParentExpansion();
+            if (!pendingParentExpansion) {
+                int pathIndex = (activeSubtype >> 4) & 0x0F;
+                if (pathIndex >= PATH_WAYPOINTS.length) {
+                    pathIndex = 0;
+                }
+                pathData = PATH_WAYPOINTS[pathIndex];
+                pathLength = pathData.length * 4;
+            }
             updateDynamicSpawn(x, y);
         }
     }
@@ -403,6 +378,10 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
         if (isDestroyed()) {
             return;
         }
+        if (pendingParentExpansion) {
+            expandParentSpawner();
+            return;
+        }
 
         // Obj6C_Main (s2.asm:54304-54311): save old x_pos to the stack, run the
         // waypoint check + ObjectMove, then pass the PRE-MOVE x_pos as d4 to
@@ -440,6 +419,60 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
         }
 
         updateDynamicSpawn(x, y);
+    }
+
+    /**
+     * ROM Obj6C parent spawners do not expand during ObjPosLoad. They first sit
+     * in the loaded SST slot, then their routine-0 execution rewrites that same
+     * slot into child 0 and allocates the remaining children
+     * (docs/s2disasm/s2.asm:54632-54716).
+     */
+    private void expandParentSpawner() {
+        int layoutIndex = activeSubtype & 0x7F;
+        if (layoutIndex >= CHILD_LAYOUTS.length) {
+            LOGGER.warning("Conveyor parent subtype 0x" + Integer.toHexString(activeSubtype)
+                    + " has invalid layout index " + layoutIndex);
+            setDestroyed(true);
+            return;
+        }
+
+        int[][] layout = CHILD_LAYOUTS[layoutIndex];
+        int parentX = spawn.x();
+        int parentY = spawn.y();
+        int parentStatus = spawn.renderFlags();
+
+        int[] firstChild = layout[0];
+        int firstX = parentX + signExtend16(firstChild[0]);
+        int firstY = parentY + signExtend16(firstChild[1]);
+        activeSubtype = firstChild[2] & 0xFF;
+        pendingParentExpansion = false;
+        initializePlatformState(activeSubtype, firstX, firstY);
+
+        ObjectManager manager = services().objectManager();
+        if (manager != null && !ObjectConstructionContext.isRewindActiveRestore()) {
+            for (int i = 1; i < layout.length; i++) {
+                int[] child = layout[i];
+                int childX = parentX + signExtend16(child[0]);
+                int childY = parentY + signExtend16(child[1]);
+                int childSubtype = child[2] & 0xFF;
+                ObjectSpawn childSpawn = new ObjectSpawn(
+                        childX, childY,
+                        Sonic2ObjectIds.CONVEYOR,
+                        childSubtype,
+                        parentStatus,
+                        false,
+                        spawn.rawYWord());
+                manager.createDynamicObject(() ->
+                        new ConveyorObjectInstance(childSpawn, "Conveyor", parentX, parentY));
+            }
+        }
+    }
+
+    @Override
+    protected ObjectSpawn buildSpawnAt(int x, int y) {
+        return new ObjectSpawn(x, y, spawn.objectId(), activeSubtype,
+                spawn.renderFlags(), spawn.respawnTracked(), spawn.rawYWord(),
+                spawn.layoutIndex());
     }
 
     /**
@@ -586,7 +619,9 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
             int xVel,
             int yVel,
             int xSub,
-            int ySub
+            int ySub,
+            int activeSubtype,
+            boolean pendingParentExpansion
     ) implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {
     }
 }

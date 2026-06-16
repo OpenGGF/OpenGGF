@@ -11,8 +11,8 @@ import com.openggf.level.objects.AbstractMonitorObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -28,8 +28,6 @@ import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.level.render.SpriteMappingFrame;
-import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -44,7 +42,6 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
     private static final Logger LOGGER = Logger.getLogger(MonitorObjectInstance.class.getName());
     private static final int HALF_RADIUS = 0x0E;
     private static final int BROKEN_FRAME = 0x0B;
-    private static final int ICON_FRAME_OFFSET = 1;
     private static final int RING_MONITOR_REWARD = 10;
 
     // Monitor falling constants (from ROM: Touch_Monitor and Obj26_Main)
@@ -127,16 +124,6 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
     }
 
     @Override
-    protected boolean delayFirstIconUpdateAfterBreak() {
-        // ROM Obj26_Break spawns separate Obj2E monitor contents with FindFreeObj.
-        // In this trace the contents land in slot 21 while the shell is slot 26,
-        // so the child cannot execute until the next object pass (s2.asm:25523,
-        // 25557-25622). This class embeds Obj2E state in the shell, so skip the
-        // shell's same-frame post-break update to preserve child-object timing.
-        return true;
-    }
-
-    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
@@ -150,7 +137,9 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
             mappingFrame = animationState.getMappingFrame();
             return;
         }
-        updateIcon();
+        // ROM Obj26_Break leaves the shell as the broken monitor. Obj2E monitor
+        // contents is a separate dynamic object, so the shell does not own icon
+        // rise or power-up timing after the break.
     }
 
     /**
@@ -268,7 +257,13 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         releaseTouchingCharactersOnBreak(objectManager, player);
         player.setYSpeed((short) -player.getYSpeed());
         mappingFrame = BROKEN_FRAME;
-        startIconRise(spawn.y(), player);
+        MonitorContentsObjectInstance contents = spawnFreeChild(() -> new MonitorContentsObjectInstance(
+                spawn.x(), spawn.y(), type.id, player));
+        if (contents.getSlotIndex() >= 0
+                && getSlotIndex() >= 0
+                && contents.getSlotIndex() < getSlotIndex()) {
+            contents.delayFirstIconUpdateForPassedSlot();
+        }
 
         ObjectRenderManager renderManager = services().renderManager();
         if (renderManager != null) {
@@ -315,17 +310,6 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         // Use currentY for rendering (supports falling animation)
         renderer.drawFrameIndex(frameIndex, spawn.x(), currentY, false, false);
 
-        if (iconActive) {
-            int iconFrame = resolveIconFrame();
-            ObjectSpriteSheet sheet = renderManager.getMonitorSheet();
-            if (iconFrame >= 0 && sheet != null && iconFrame < sheet.getFrameCount()) {
-                SpriteMappingFrame mappingFrame = sheet.getFrame(iconFrame);
-                if (mappingFrame != null && !mappingFrame.pieces().isEmpty()) {
-                    SpriteMappingPiece iconPiece = mappingFrame.pieces().get(0);
-                    renderer.drawPieces(List.of(iconPiece), spawn.x(), iconSubY >> 8, false, false);
-                }
-            }
-        }
     }
 
     @Override
@@ -527,30 +511,34 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
 
     @Override
     protected void applyPowerup(PlayableEntity playerEntity) {
+        applyMonitorPowerup(type.id, playerEntity, services());
+    }
+
+    static void applyMonitorPowerup(int subtype, PlayableEntity playerEntity, ObjectServices services) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        switch (type) {
+        switch (MonitorType.fromSubtype(subtype)) {
             case RINGS -> {
                 player.addRings(RING_MONITOR_REWARD);
-                services().playSfx(GameSound.RING);
+                services.playSfx(GameSound.RING);
             }
             case SHIELD -> {
                 player.giveShield();
-                services().playSfx(Sonic2Sfx.SHIELD.id);
+                services.playSfx(Sonic2Sfx.SHIELD.id);
             }
             case SHOES -> {
                 player.giveSpeedShoes();
-                services().playMusic(Sonic2SmpsConstants.CMD_SPEED_UP);
+                services.playMusic(Sonic2SmpsConstants.CMD_SPEED_UP);
             }
             case INVINCIBILITY -> {
                 // ROM: tst.b (Super_Sonic_flag).w / bne.s +++ - skip when Super Sonic
                 if (!player.isSuperSonic()) {
                     player.giveInvincibility();
-                    services().playMusic(GameMusic.INVINCIBILITY);
+                    services.playMusic(GameMusic.INVINCIBILITY);
                 }
             }
             case SONIC, TAILS -> {
-                services().playMusic(GameMusic.EXTRA_LIFE);
-                services().gameState().addLife();
+                services.playMusic(GameMusic.EXTRA_LIFE);
+                services.gameState().addLife();
             }
             case EGGMAN, STATIC -> {
                 // ROM: robotnik_monitor (s2.asm:25656-25658)
@@ -569,18 +557,6 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
             }
             default -> {}
         }
-    }
-
-    private int resolveIconFrame() {
-        if (type == MonitorType.BROKEN) {
-            return -1;
-        }
-        // ROM Obj2E_Init: mapping_frame = anim + 1, where anim = the monitor subtype.
-        // The icon shown is fixed by subtype, NOT by who broke the monitor. The
-        // character-awareness of the Sonic 1-up icon comes from its art tile ($154 =
-        // ArtTile_ArtNem_life_counter), which Sonic2ObjectArt(Provider) loads with the
-        // main character's life-counter face. (s2.asm:25770-25772; obj26.asm)
-        return type.id + ICON_FRAME_OFFSET;
     }
 
     @Override
@@ -653,4 +629,3 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         }
     }
 }
-

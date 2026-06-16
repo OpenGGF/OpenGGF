@@ -351,6 +351,22 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
             }
         }
 
+        /**
+         * ROM parity: {@code loc_2B8EE} copies the parent position, applies the
+         * mapping-frame spike offset, and only THEN tail-calls
+         * {@code Add_SpriteToCollisionResponseList} (sonic3k.asm:60179-60190). The
+         * entry placed on {@code Collision_response_list} therefore carries this
+         * child's freshly-computed current x/y, not a frame-start snapshot. The
+         * inline player/sidekick touch path must read the live position for this
+         * object (mirroring Obj37 bouncing rings / lost rings) or the spike's
+         * dangerous-Y frame is consulted one frame late, missing the AIZ2
+         * underwater hurt the ROM applies on the contact frame.
+         */
+        @Override
+        public boolean usesCurrentTouchResponseState() {
+            return true;
+        }
+
         @Override
         public int getX() {
             return currentX;

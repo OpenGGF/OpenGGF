@@ -14,10 +14,10 @@ public final class Sonic2BadnikConfig {
     public static final DestructionConfig DESTRUCTION = new DestructionConfig(
             Sonic2Sfx.EXPLOSION.id,
             AnimalObjectInstance::new,
-            false,  // useRespawnTracking
+            true,   // useRespawnTracking for placements with the ROM respawn bit set
             (spawn, svc, pts) -> new PointsObjectInstance(spawn, svc, pts),
             null,
-            true
+            false
     );
 
     private Sonic2BadnikConfig() {
