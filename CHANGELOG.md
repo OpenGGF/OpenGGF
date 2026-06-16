@@ -88,6 +88,17 @@ All notable changes to the OpenGGF project are documented in this file.
   (`usesInclusiveRightEdge`, ROM `SolidObject_cont` `bhi`, `sonic3k.asm:41403-41406,41494-41500`).
   Each was full-`*TraceReplay`-A/B-validated with no S1/S2/S3K regression.
 
+- **CPU sidekick off-screen stuck-respawn faces per ROM `loc_13F40` (S3K):**
+  when the CPU sidekick is stuck pushing and flight-timer-respawns to the
+  off-screen catch-up sentinel (`x_pos=0x7F00`, routine 8), ROM `loc_13F40`
+  runs its facing block on the post-warp x position, so the sentinel faces left
+  until the catch-up snap clears facing and routine 4 re-derives it. The engine's
+  despawn-marker path always faced right; it now models `loc_13F40` only on the
+  routine-8 stuck respawn and clears facing on the snap, preserving death and
+  boundary-kill marker behavior. This advances the S3K AIZ1 trace frontier from
+  frame 16217 to 16944 with no first-error-frame regression in the full trace
+  sweep.
+
 - **CPU sidekick auto-jump flag persists while push-bypassing (S3K):** ROM's
   `Tails_CPU_Control` auto-jump carry/clear (`loc_13E64`) is only reached on the
   non-push-bypass path; when Tails is pushing and the delayed leader was not

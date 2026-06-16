@@ -3186,6 +3186,12 @@ public class SidekickCpuController {
         // ROM loc_13B50 (sonic3k.asm:26502-26508) writes double_jump_flag=0,
         // status=2, and object_control=$81. Movement remains owned by the CPU
         // flight routine; normal air physics must not be used to carry Tails.
+        // status=#2 also clears Status_Facing, so the catch-up snap resets Tails
+        // to face right; routine 4 (Tails_FlySwim_Unknown) then re-derives facing
+        // from x_pos vs target each frame (sonic3k.asm:26509,26566-26589). Without
+        // this, the off-screen LEFT facing held during routine 2 leaks into the
+        // first routine-4 frame where x_pos == target (no facing write).
+        sidekick.setDirection(Direction.RIGHT);
         sidekick.setDoubleJumpFlag(0);
 
         flightTimer = 0;
@@ -3974,7 +3980,13 @@ public class SidekickCpuController {
             beginLevelBoundaryKill();
             return;
         }
-        applyDespawnMarker();
+        // ROM routine 8 (PANIC / loc_13F40, sonic3k.asm:26851) calls sub_13EFC
+        // and, after the off-screen-timeout respawn tail-calls sub_13ECA, falls
+        // through to its facing block (sonic3k.asm:26861-26865) on the post-warp
+        // x_pos. Routine 6 (NORMAL / loc_13D78, sonic3k.asm:26668) instead branches
+        // to loc_13EBE after the same respawn (object_control bit 7 -> bmi) and
+        // never runs a facing block, so it keeps sub_13ECA's cleared facing.
+        applyDespawnMarker(state == State.PANIC);
     }
 
     /**
@@ -4243,6 +4255,20 @@ public class SidekickCpuController {
      * flow because its TailsCPU_Respawn path owns the approach sequence.
      */
     private void applyDespawnMarker() {
+        applyDespawnMarker(false);
+    }
+
+    /**
+     * @param fromStuckRespawnRoutine8 true when the marker warp is the S3K
+     *        flight-timer / off-screen stuck respawn reached from routine 8
+     *        ({@code loc_13F40} -> {@code bsr sub_13EFC} -> {@code sub_13ECA},
+     *        sonic3k.asm:26852,26837). After sub_13ECA returns, loc_13F40
+     *        continues and runs its facing block on the POST-warp x_pos
+     *        (sonic3k.asm:26861-26865), facing Tails toward the leader. The
+     *        death / boundary-kill marker paths (Kill_Character, sub_123C2)
+     *        do NOT run that block, so they keep sub_13ECA's cleared facing.
+     */
+    private void applyDespawnMarker(boolean fromStuckRespawnRoutine8) {
         PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
         boolean s3kCatchUpMarker = fs != null && fs.sidekickRespawnEntersCatchUpFlight();
         state = s3kCatchUpMarker
@@ -4277,10 +4303,31 @@ public class SidekickCpuController {
         sidekick.setOnObject(false);
         sidekick.setPushing(false);
         sidekick.setLatchedSolidObjectId(0);
-        sidekick.setDirection(Direction.RIGHT);
+        if (!s3kCatchUpMarker || !fromStuckRespawnRoutine8) {
+            // sub_13ECA writes status=Status_InAir (facing bit cleared). The death
+            // / boundary-kill marker paths (and S2's SPAWNING flow) leave it there,
+            // so Tails faces right. AIZ trace F2405 (a LEVEL_BOUNDARY kill marker)
+            // confirms ROM status=$02 there.
+            sidekick.setDirection(Direction.RIGHT);
+        }
         sidekick.setAir(true);
         sidekick.setCentreXPreserveSubpixel(resolveDespawnX());
         sidekick.setCentreYPreserveSubpixel((short) 0);
+        if (s3kCatchUpMarker && fromStuckRespawnRoutine8) {
+            // ROM sub_13ECA itself only writes status=Status_InAir (facing clear),
+            // but on the S3K stuck-respawn frame it is tail-called from routine 8
+            // (loc_13F40, sonic3k.asm:26852 bsr sub_13EFC -> sub_13ECA). loc_13F40
+            // then continues PAST the sub_13EFC call and runs its facing block on
+            // the POST-warp x_pos: bclr Status_Facing; if x_pos(a0) >= x_pos(a1)
+            // bset Status_Facing (sonic3k.asm:26861-26865). The despawn sentinel
+            // x_pos ($7F00) is always to the right of the leader, so Tails faces
+            // LEFT, and routine 2 (Tails_Catch_Up_Flying) leaves the bit untouched
+            // while parked off-screen. (BizHawk: status=$03 held across the catch-up
+            // wait; AIZ2 reload f16217.)
+            int leaderX = leader != null ? (leader.getCentreX() & 0xFFFF) : 0;
+            int sentinelX = resolveDespawnX() & 0xFFFF;
+            sidekick.setDirection(sentinelX >= leaderX ? Direction.LEFT : Direction.RIGHT);
+        }
         sidekick.setDead(false);
         sidekick.setDeathCountdown(0);
         sidekick.setSpindash(false);

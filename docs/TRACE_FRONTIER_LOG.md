@@ -1,5 +1,65 @@
 # Trace Frontier Log
 
+## 2026-06-16 - S3K AIZ f16217 -> f16944 via routine-8 stuck-respawn facing + catch-up-snap facing reset
+
+- Scope: focused S3K AIZ trace remediation on `TestS3kAizTraceReplay`
+  (`aiz1_to_hcz_fullrun`, report key `s3k_aiz1`) in worktree
+  `.worktrees/rewind-dynobj`, branch `bugfix/ai-rewind-dynobj-membership`
+  (on top of ebb1cd5fe). Comparison-only; ROM-cited; no zone/route/frame
+  carve-out.
+- Command: `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" test "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen"`.
+- First divergence (baseline): f16217 (span through f16242), `tails_status_byte`
+  ROM=0x03 engine=0x02 (bit 0x01 = Status_Facing / facing-left). CPU Tails got
+  stuck pushing in the AIZ2 reload, the auto-jump did not free her, so she
+  flight-timer-respawned to the off-screen catch-up sentinel (x_pos=0x7F00) and
+  flew back. ROM faces her LEFT for the whole off-screen catch-up; engine faced
+  her right.
+- BizHawk ground truth (Genplus-gx, `s3-aiz1-2-sonictails.bk2`, hooks at the
+  respawn sub_13ECA 0x13ECA, routines Tails_Catch_Up_Flying 0x13B26 /
+  Tails_FlySwim_Unknown 0x13BF8, the flight facing bset/bclr 0x13C98/0x13CAA,
+  plus per-frame Tails_CPU_routine 0xF708 / target_X 0xF70A / status; Tails base
+  0xB04A): the stuck respawn runs in ROM routine 8 (loc_13F40). loc_13F40
+  `bsr sub_13EFC` tail-calls sub_13ECA (x_pos=0x7F00, status=0x02 InAir,
+  routine=2), then loc_13F40 CONTINUES past the call and runs its facing block
+  on the post-warp x_pos: `bclr Status_Facing; if x_pos(a0) >= x_pos(a1)
+  bset Status_Facing` (sonic3k.asm:26861-26865). 0x7F00 >= leader.x -> faces
+  LEFT (status 0x03), and routine 2 (Tails_Catch_Up_Flying) leaves it untouched
+  while parked off-screen. The catch-up snap (loc_13B50, routine 2->4) then does
+  `move.b #2,status` (sonic3k.asm:26509), clearing facing back to right, and
+  routine 4 re-derives facing from x_pos vs target each frame. Contrast AIZ
+  trace F2405: a LEVEL_BOUNDARY death-kill marker (Kill_Character/sub_123C2, NOT
+  routine 8) leaves sub_13ECA's cleared facing -> ROM status=0x02 there.
+- Root cause: the engine's `applyDespawnMarker` (the sub_13ECA equivalent)
+  unconditionally `setDirection(RIGHT)` for every despawn-marker entry, and the
+  catch-up snap `updateCatchUpFlight` (loc_13B50) never wrote facing. So the
+  routine-8 stuck respawn never faced left, and once that was fixed the snap
+  leaked the left facing into the first routine-4 frame (where x_pos==target, no
+  facing write) -> f16243 over-corrected to facing-left.
+- Fix (1 file, ROM-cited): `SidekickCpuController`
+  1. `applyDespawnMarker(boolean fromStuckRespawnRoutine8)`: when the marker is
+     reached from the routine-8 stuck/off-screen respawn path
+     (`triggerDespawn` direct, gated on `state == State.PANIC` = ROM routine 8),
+     set facing per loc_13F40: LEFT if the despawn-sentinel x >= leader.x
+     (always true at 0x7F00), else RIGHT. Death / boundary-kill / S2 SPAWNING
+     marker paths keep sub_13ECA's cleared (RIGHT) facing (preserves F2405).
+  2. `updateCatchUpFlight` (loc_13B50 snap): `setDirection(RIGHT)` to model
+     `move.b #2,status` clearing Status_Facing, so routine 4 re-derives facing
+     instead of inheriting the off-screen LEFT.
+- Result: `TestS3kAizTraceReplay` first error **f16217 -> f16944** (515 vs 516
+  errors). New frontier is `tails_y_speed` (ROM=-0x400 engine=0x000) at f16944 --
+  an unrelated Tails jump/bounce velocity issue.
+- A/B sweep (`*TraceReplay`, full + per-class ALONE to defeat singleton
+  contamination): NO first-error-frame regression in any S1/S2/S3K trace. Aiz
+  advanced 16217->16944; all other frontiers identical (AizCompleteRun f1095,
+  HczCompleteRun f1402, IczCompleteRun f3116, MhzCompleteRun f966,
+  MgzCompleteRun f738, LbzCompleteRun f1950; S2 Wfz f3519, Ooz f1251, Cpz f1157,
+  Arz f2011). A few downstream error counts shifted slightly (Icz +7, Mgz -1,
+  Hcz/Aiz unchanged-frame deltas) past their unchanged frontiers.
+  `TestSidekickCpuFollowParity` same 5 pre-existing `LocalPushGrace`/`Nudge`
+  failures (verified BEFORE==AFTER; none facing-related, none newly failing).
+  Physics units (TestPhysicsProfile, TestCollisionModel, CollisionSystemTest)
+  and the 4 must-keep-green S3K tests pass.
+
 ## 2026-06-16 - S3K AIZ f15795 -> f16217 via Tails_CPU_auto_jump_flag persisting through the push-bypass
 
 - Scope: focused S3K AIZ trace remediation on `TestS3kAizTraceReplay`
