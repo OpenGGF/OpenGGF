@@ -64,7 +64,24 @@ public class TestPlayableSpriteAnimation {
     }
 
     @Test
-    public void s3kRunToWalkAnimationChangeClearsGroundPush() {
+    public void s2FreshGroundWallPushSurvivesWalkToIdleAnimationCheck() {
+        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_2);
+        sprite.setAnimationId(0);
+        sprite.setMovementInputActive(false);
+        sprite.setGSpeed((short) 0);
+        sprite.setPushing(true);
+        sprite.markGroundWallPushSetThisFrame();
+
+        sprite.getAnimationManager().update(759);
+
+        assertTrue(sprite.getPushing(),
+                "S2 wall response sets Status_Push after Tails' idle clear point; animation must not erase it");
+        assertEquals(4, sprite.getAnimationId(),
+                "Fresh wall push should render the push animation instead of resolving to idle");
+    }
+
+    @Test
+    public void s3kRunToWalkAnimationStepKeepsGroundPush() {
         TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
         sprite.setAnimationId(1);
         sprite.setMovementInputActive(true);
@@ -73,10 +90,10 @@ public class TestPlayableSpriteAnimation {
 
         sprite.getAnimationManager().update(0);
 
-        assertFalse(sprite.getPushing(),
-                "S3K clears Status_Push for any grounded anim change, not only idle to walk");
-        assertEquals(0, sprite.getAnimationId(),
-                "After the push clear, animation resolution should choose walk instead of push");
+        assertTrue(sprite.getPushing(),
+                "S3K keeps Status_Push when only the engine's render-time Run id collapses to the ROM Walk anim byte");
+        assertEquals(4, sprite.getAnimationId(),
+                "The preserved push bit should continue selecting the push animation");
     }
 
     @Test

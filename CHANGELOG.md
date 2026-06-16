@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Fresh ground-wall push survives the same-frame animation clear:** terrain
+  side-wall collision now marks push contact set after the idle/walk animation
+  clear point so the animation resolver does not erase `Status_Push` later in
+  the same frame. This advances the CPZ2 level-select Tails CPU frontier from
+  frame 759's missing push bit to frame 2888's later `tails_x` mismatch without
+  changing the trace-suite failure count.
+
 - **S2 lost-ring spill slots match Obj37 owner-slot allocation:** Sonic 2 now
   preallocates the first lost-ring Obj37 owner slot before spilling remaining
   rings, matching `HurtCharacter`/`Obj37_Init` scan order. This advances the

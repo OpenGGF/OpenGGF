@@ -472,6 +472,7 @@ public class PlayableSpriteAnimation {
         }
 
         int currentAnimId = sprite.getAnimationId();
+        boolean groundWallPushSetThisFrame = sprite.consumeGroundWallPushSetThisFrame();
         Integer desiredWithoutPush;
         sprite.setPushing(false);
         try {
@@ -483,6 +484,10 @@ public class PlayableSpriteAnimation {
                 || groundMoveAnimByte(profile, desiredWithoutPush)
                         == groundMoveAnimByte(profile, currentAnimId)
                 || currentAnimId == profile.getPushAnimId()) {
+            return;
+        }
+
+        if (groundWallPushSetThisFrame) {
             return;
         }
 

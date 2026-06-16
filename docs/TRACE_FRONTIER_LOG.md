@@ -1,5 +1,40 @@
 # Trace Frontier Log
 
+## 2026-06-16 - Fresh ground-wall push survives animation clear and advances CPZ2
+
+- Scope: shared playable terrain/animation coordination. Ground-wall terrain
+  collision now marks `Status_Push` as freshly set for the current frame, and
+  the S2/S3K animation-change push-clear path consumes that marker before
+  deciding whether to erase the bit. This preserves the ROM-observed push bit
+  when terrain collision sets it after the earlier idle clear point, without
+  hydrating trace state or adding a route/frame carve-out.
+- Disassembly evidence: `docs/s2disasm/s2.asm:39675-39696` shows Tails'
+  normal idle path clearing `Status_Push` before choosing Wait when inertia is
+  already zero, while `docs/s2disasm/s2.asm:38370-38386` shows the animation
+  driver clears push on animation-byte changes. The bisect showed the terrain
+  wall response happens after the idle clear point for this row, so the later
+  animation check must not erase the newly set ground-wall push.
+- Bisect result: the earliest active Tails CPU frontier was
+  `TestS2Cpz2LevelSelectTraceReplay` frame 759. Position, velocity, and ground
+  speed matched the trace; only `tails_status_byte` missed bit `0x20`. A
+  single-frame probe showed a mode `0x40` ground-wall collision at distance `-1`
+  setting push, followed by the animation resolver seeing Walk -> Idle and
+  clearing it in the same compared frame.
+- Focused regression/frontier check:
+  `cmd /c "mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=com.openggf.sprites.managers.TestPlayableSpriteAnimation#s2FreshGroundWallPushSurvivesWalkToIdleAnimationCheck,com.openggf.tests.trace.s2.TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace -Dtrace.frontierOnly=true -Dtrace.context.radius=20 -DfailIfNoTests=false -Ds2.rom.path=s2.gen test"`.
+  Result: expected-red. The new animation regression test passed, and
+  `TestS2Cpz2LevelSelectTraceReplay` advanced from frame 759
+  `tails_status_byte` (expected `0x0020`, actual `0x0000`) to frame 2888
+  `tails_x` (expected `0x10F8`, actual `0x10F0`).
+- Full trace sweep:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dtrace.frontierOnly=true -Dtrace.context.radius=20 -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red, 90 tests, 50 failures, 1 error. Compared with the prior
+  90-test sweep at 50 failures and 1 error, `s2_cpz2` advanced 759 -> 2888
+  with no aggregate-count regression. The next target remains in the Tails CPU
+  cluster: the earliest current Tails CPU frontier is
+  `TestS2MtzLevelSelectTraceReplay` frame 931 `tails_cpu_interact` (expected
+  `0x009F`, actual `0x0006`).
+
 ## 2026-06-16 - S2 lost-ring Obj37 owner slot advances MTZ2 Tails CPU frontier
 
 - Scope: Sonic 2 lost-ring allocation only. `ObjectSlotLayout.SONIC_2` now

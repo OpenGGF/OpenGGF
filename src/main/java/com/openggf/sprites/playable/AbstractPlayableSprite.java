@@ -258,6 +258,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected boolean deferredGroundWallVelocityResponse = false;
         protected int deferredGroundWallVelocityMode = 0;
         protected int deferredGroundWallVelocityDistance = 0;
+        protected transient boolean groundWallPushSetThisFrame = false;
 
         /**
          * Whether this sprite is currently jumping (ROM: jumping(a0) status bit).
@@ -2163,6 +2164,19 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setPushing(boolean pushing) {
                 this.pushing = pushing;
+                if (!pushing) {
+                        groundWallPushSetThisFrame = false;
+                }
+        }
+
+        public void markGroundWallPushSetThisFrame() {
+                this.groundWallPushSetThisFrame = true;
+        }
+
+        public boolean consumeGroundWallPushSetThisFrame() {
+                boolean result = groundWallPushSetThisFrame;
+                groundWallPushSetThisFrame = false;
+                return result;
         }
 
         public boolean getSkidding() {
@@ -5048,5 +5062,4 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return -0x400;
         }
 }
-
 
