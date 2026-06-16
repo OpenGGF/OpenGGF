@@ -246,11 +246,11 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
 
     protected void assertReportHasNoReleaseBlockingDivergences(DivergenceReport report) {
         if (report.hasErrors()) {
-            fail(report.toCompactSummary());
+            fail(report.toAssertionSummary());
         }
         if (report.hasWarnings() && !allowDiagnosticOnlyWarnings()) {
             fail("Trace replay warning report is release-blocking by default: "
-                    + report.toCompactSummary());
+                    + report.toAssertionSummary());
         }
     }
 

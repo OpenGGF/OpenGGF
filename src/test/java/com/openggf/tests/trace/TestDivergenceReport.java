@@ -91,6 +91,27 @@ public class TestDivergenceReport {
     }
 
     @Test
+    void assertionSummaryOmitsTraceContextAndInlineDiagnostics() throws IOException {
+        FrameComparison frame = makeComparisonWithDiagnostics(5, "x_speed",
+            Severity.ERROR, "0x0100", "0x0200",
+            "sub=(0000,5000) rtn=02 cam=(1308,0390)",
+            "eng-player anim=00 frame=07 tick=07 vel=(0200,0000)");
+        TraceData trace = createTraceDataWithAuxState();
+        DivergenceReport report = new DivergenceReport(List.of(frame), trace);
+
+        String assertionSummary = report.toAssertionSummary();
+
+        assertTrue(assertionSummary.contains("Trace replay diverged."));
+        assertTrue(assertionSummary.contains("Totals: 1 error, 0 warnings."));
+        assertTrue(assertionSummary.contains(
+                "First error: frame 5 -- x_speed mismatch (expected=0x0100, actual=0x0200)"));
+        assertFalse(assertionSummary.contains("Latest checkpoint:"));
+        assertFalse(assertionSummary.contains("Latest zone/act state:"));
+        assertFalse(assertionSummary.contains("rom={"));
+        assertFalse(assertionSummary.contains("engine={"));
+    }
+
+    @Test
     void testJsonSummaryUsesCompactSummary() {
         FrameComparison frame = makeComparisonWithDiagnostics(5, "x_speed",
             Severity.ERROR, "0x0100", "0x0200",

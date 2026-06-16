@@ -86,6 +86,51 @@ public class DivergenceReport {
         return buildSummary(false);
     }
 
+    /**
+     * Short assertion-only summary for failing trace replay tests. The
+     * JSON/context report files carry checkpoint, zone, and diagnostics detail;
+     * this string stays small so full sweeps do not flood Surefire XML and
+     * console output with repeated context.
+     */
+    public String toAssertionSummary() {
+        int errorCount = totalErrorCount();
+        int warningCount = totalWarningCount();
+
+        if (errorCount == 0 && warningCount == 0) {
+            return "All frames match trace. No divergences.";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(errorCount > 0
+                ? "Trace replay diverged. "
+                : "Trace replay produced warnings. ");
+        sb.append(String.format("Totals: %d error%s, %d warning%s.",
+            errorCount, errorCount == 1 ? "" : "s",
+            warningCount, warningCount == 1 ? "" : "s"));
+
+        BootstrapDivergence firstBootstrapError =
+                firstBootstrapDivergence(BootstrapDivergence.Severity.ERROR);
+        if (firstBootstrapError != null) {
+            appendBootstrapSummary(sb, "error", firstBootstrapError, false);
+            return sb.toString();
+        }
+        if (!errors.isEmpty()) {
+            appendGroupSummary(sb, "error", errors.get(0));
+            return sb.toString();
+        }
+
+        BootstrapDivergence firstBootstrapWarning =
+                firstBootstrapDivergence(BootstrapDivergence.Severity.WARNING);
+        if (firstBootstrapWarning != null) {
+            appendBootstrapSummary(sb, "warning", firstBootstrapWarning, false);
+            return sb.toString();
+        }
+        if (!warnings.isEmpty()) {
+            appendGroupSummary(sb, "warning", warnings.get(0));
+        }
+        return sb.toString();
+    }
+
     private String buildSummary(boolean includeInlineDiagnostics) {
         int errorCount = totalErrorCount();
         int warningCount = totalWarningCount();
@@ -138,6 +183,11 @@ public class DivergenceReport {
                 && !divergence.context().isBlank()) {
             sb.append(" ").append(divergence.context());
         }
+    }
+
+    private void appendGroupSummary(StringBuilder sb, String label, DivergenceGroup group) {
+        sb.append(String.format(" First %s: frame %d -- %s mismatch (expected=%s, actual=%s)",
+            label, group.startFrame(), group.field(), group.expectedAtStart(), group.actualAtStart()));
     }
 
     /**

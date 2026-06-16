@@ -13,7 +13,9 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestTraceReplayReportPolicy {
 
@@ -36,6 +38,22 @@ class TestTraceReplayReportPolicy {
     }
 
     @Test
+    void traceReplayErrorsUseNoiseReducedAssertionSummary() {
+        ReportPolicySubject subject = new ReportPolicySubject(false);
+        DivergenceReport report = errorReport();
+
+        AssertionError error = assertThrows(AssertionError.class,
+                () -> subject.assertClean(report));
+
+        String message = error.getMessage();
+        assertTrue(message.startsWith("Trace replay diverged. Totals: 1 error, 0 warnings."));
+        assertTrue(message.contains(
+                "First error: frame 7 -- x mismatch (expected=0x0100, actual=0x0101)"));
+        assertFalse(message.contains("Latest checkpoint:"));
+        assertFalse(message.contains("Latest zone/act state:"));
+    }
+
+    @Test
     void creditsDemoTraceWarningsAreReleaseBlockingByDefault() {
         CreditsReportPolicySubject subject = new CreditsReportPolicySubject(false);
         DivergenceReport report = warningOnlyReport();
@@ -51,6 +69,30 @@ class TestTraceReplayReportPolicy {
         DivergenceReport report = warningOnlyReport();
 
         assertDoesNotThrow(() -> subject.assertClean(report));
+    }
+
+    @Test
+    void creditsDemoTraceErrorsUseNoiseReducedAssertionSummary() {
+        CreditsReportPolicySubject subject = new CreditsReportPolicySubject(false);
+        DivergenceReport report = errorReport();
+
+        AssertionError error = assertThrows(AssertionError.class,
+                () -> subject.assertClean(report));
+
+        String message = error.getMessage();
+        assertTrue(message.startsWith("Trace replay diverged. Totals: 1 error, 0 warnings."));
+        assertTrue(message.contains(
+                "First error: frame 7 -- x mismatch (expected=0x0100, actual=0x0101)"));
+        assertFalse(message.contains("Latest checkpoint:"));
+        assertFalse(message.contains("Latest zone/act state:"));
+    }
+
+    private static DivergenceReport errorReport() {
+        Map<String, FieldComparison> fields = new LinkedHashMap<>();
+        fields.put("x",
+                new FieldComparison("x",
+                        "0x0100", "0x0101", Severity.ERROR, 1));
+        return new DivergenceReport(List.of(new FrameComparison(7, fields)));
     }
 
     private static DivergenceReport warningOnlyReport() {

@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Trace replay assertion failures now use a terse frontier summary:** failing
+  trace replay tests now keep checkpoint, zone, and diagnostics detail in the
+  JSON/context artifacts while the Surefire assertion message reports only the
+  totals and first frontier mismatch. This reduces full-sweep console and XML
+  noise without changing trace comparison behavior or report contents.
+
 - **S2 Tails flying timeout preserves the CPU auto-jump flag:** the S2
   `TailsCPU_Flying` off-screen timeout path now returns to routine 2 without
   clearing `Tails_CPU_jumping`, matching the ROM write set for the zero-marker
