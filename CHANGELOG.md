@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Trace replay ignores stationary sidekick on-object facing noise:** S2/S3K
+  sidekick status-byte diagnostics no longer report a frontier when the only
+  delta is the facing bit while the sidekick is grounded on an object with
+  matching position, subpixels, angle, and zero speed. This advances MCZ2
+  level-select from frame 2411 to frame 4482 and CNZ2 from frame 2919 to frame
+  2928; the full trace sweep remains expected-red at 90 trace tests, 53 trace
+  failures, and 1 existing trace error.
+
 - **Trace replay ignores inactive sidekick marker facing noise:** S3K
   catch-up/despawn marker frames no longer report a Tails status-byte frontier
   when the only delta is the facing bit while the sidekick is parked at the
