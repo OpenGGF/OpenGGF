@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 MTZ SteamSpring keeps ROM contact on the inclusive right edge:**
+  Obj42 now opts into `SolidObject_cont`'s `bhi` right-edge rule so Tails keeps
+  `Status_Push` at the exact MTZ steam-piston boundary. The MTZ1 level-select
+  trace advances from frame 1006's `tails_status_byte` mismatch to frame 1169's
+  later `tails_cpu_interact` frontier, with the full trace-suite failure count
+  unchanged.
+
 - **S2 HTZ2 Tails CPU frontier now reports the true routine mismatch:**
   routine-8 panic `Ctrl_2` held/pressed latch differences are ignored only while
   both sidekick states are still coasting with nonzero ground speed, so the HTZ2

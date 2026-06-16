@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+## 2026-06-16 - S2 MTZ SteamSpring inclusive edge advances MTZ1 frontier
+
+- Scope: Sonic 2 Obj42 SteamSpring solid-contact parity. The earliest current
+  MTZ1 Tails CPU frontier was `TestS2MtzLevelSelectTraceReplay` frame 1006,
+  where ROM Tails kept `Status_Push`/`Status_OnObj` on the exact right edge of
+  the MTZ steam piston but the engine treated that edge as outside the solid.
+- Bisect result: the single-frame context showed ROM Obj42 at `x_pos=$04B0`
+  with `d1=$1B`, Tails at `x_pos=$04CB`, and `obj_control/interact` pointing at
+  the spring. `SolidObject_cont` computes `relX + d1 = $36`, compares against
+  `d1*2`, and rejects only on `bhi`; therefore `relX == d1*2` is still contact.
+  `SteamSpringObjectInstance.usesInclusiveRightEdge()` now opts this object into
+  the ROM right-edge rule instead of using the engine's default exclusive edge.
+- Focused regression/frontier checks:
+  `mvn clean "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" "-DfailIfNoTests=false" test`:
+  passed, 30 tests.
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=24 -Dtest=com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Ds2.rom.path=s2.gen test"`:
+  expected-red, advanced from frame 1006 `tails_status_byte` (expected
+  `0x0021`, actual `0x0001`) to frame 1169 `tails_cpu_interact` (expected
+  `0x0074`, actual `0x00A4`).
+- Full trace sweep:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red, 90 tests, 50 failures, 1 error. Compared with the prior
+  90-test sweep at 50 failures and 1 error, suite counts did not regress; the
+  intentional movement is `TestS2MtzLevelSelectTraceReplay` frame 1006 -> frame
+  1169. The next earliest Tails CPU cluster target is
+  `TestS2Htz2LevelSelectTraceReplay` frame 1023 `tails_cpu_routine` (expected
+  `0x0006`, actual `0x0008`), followed by `TestS2Mtz2LevelSelectTraceReplay`
+  frame 1073 `tails_cpu_interact`.
+
 ## 2026-06-16 - S2 HTZ2 panic Ctrl_2 latch no longer masks true Tails CPU frontier
 
 - Scope: trace comparator frontier reporting only. Sonic 2 HTZ2 exposed a
