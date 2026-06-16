@@ -3,6 +3,9 @@ package com.openggf.tools;
 import com.openggf.GameLoop;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
+import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
 import com.openggf.capture.BackpressurePolicy;
 import com.openggf.capture.CaptureRecorder;
 import com.openggf.capture.CapturedFrame;
@@ -87,7 +90,8 @@ public final class TraceCaptureTool {
      * config defaults.
      */
     public record Args(String trace, Path outDir, int scale, int fps, String codec,
-                       boolean showGhosts, long verifyFrame, int[] verifyFrames) {
+                       boolean showGhosts, long verifyFrame, int[] verifyFrames,
+                       String clip, int tailFrames) {
 
         public static Args parse(String[] argv) {
             SonicConfigurationService config = GameServices.configuration();
@@ -98,6 +102,8 @@ public final class TraceCaptureTool {
             String codec = config.getString(SonicConfiguration.CAPTURE_CODEC);
             boolean showGhosts = config.getBoolean(SonicConfiguration.TRACE_SHOW_DESYNC_GHOSTS);
             int[] verifyFrames = null;
+            String clip = null;
+            int tailFrames = 150;
 
             for (int i = 0; i < argv.length; i++) {
                 String arg = argv[i];
@@ -110,13 +116,16 @@ public final class TraceCaptureTool {
                     case "--no-ghosts" -> showGhosts = false;
                     case "--ghosts" -> showGhosts = true;
                     case "--verify" -> verifyFrames = parseFrameList(requireValue(argv, ++i, arg));
+                    case "--clip" -> clip = requireValue(argv, ++i, arg);
+                    case "--tail-frames" -> tailFrames = Integer.parseInt(requireValue(argv, ++i, arg));
                     default -> throw new IllegalArgumentException("Unknown argument: " + arg);
                 }
             }
             if (trace == null || trace.isBlank()) {
                 throw new IllegalArgumentException("--trace <id|name|dir> is required");
             }
-            return new Args(trace, Paths.get(outDir), scale, fps, codec, showGhosts, -1, verifyFrames);
+            return new Args(trace, Paths.get(outDir), scale, fps, codec, showGhosts, -1,
+                    verifyFrames, clip, tailFrames);
         }
 
         private static int[] parseFrameList(String spec) {
@@ -249,8 +258,11 @@ public final class TraceCaptureTool {
 
         long captured = 0;
         try {
-            captured = driveAndCapture(trace, meta, frameDriver, replayStart,
-                    loop, grabber, audioTap, recorder);
+            captured = args.clip() != null
+                    ? driveClip(trace, frameDriver, replayStart, grabber, audioTap,
+                            recorder, args.clip(), args.tailFrames())
+                    : driveAndCapture(trace, meta, frameDriver, replayStart,
+                            loop, grabber, audioTap, recorder);
         } finally {
             Path out = recorder.stop();
             GameServices.audio().endCaptureMode();
@@ -301,6 +313,107 @@ public final class TraceCaptureTool {
             previousDriveFrame = driveFrame;
         }
         return frameIndex;
+    }
+
+    /**
+     * Clip capture: fast-forwards (drives the trace without rendering/recording)
+     * until the clip's start event, records only the window, and stops a tail
+     * after the clip's stop event. Supports {@code aiz-battleship-to-boss}: start
+     * recording when the AIZ2 battleship auto-scroll activates
+     * ({@link com.openggf.game.sonic3k.events.Sonic3kAIZEvents#isBattleshipAutoScrollActive()}),
+     * stop when the engine issues the AIZ2 end-boss music fade
+     * ({@code AizEndBossInstance} → {@link com.openggf.audio.AudioManager#fadeOutMusic()}),
+     * then record {@code tailFrames} more so the fade is visible/audible. Returns
+     * the captured (submitted) frame count.
+     */
+    private long driveClip(TraceData trace, RecordingFrameDriver frameDriver,
+                           TraceReplayBootstrap.ReplayStartState replayStart,
+                           GlReadPixelsGrabber grabber, DrainPcmAudioTap audioTap,
+                           CaptureRecorder recorder, String clipName, int tailFrames)
+            throws Exception {
+        if (!"aiz-battleship-to-boss".equals(clipName)) {
+            throw new IllegalArgumentException("Unknown --clip '" + clipName
+                    + "' (supported: aiz-battleship-to-boss)");
+        }
+        // The aiz1_to_hcz trace transitions AIZ1 -> AIZ2 mid-run, and the act load
+        // recreates the Sonic3kAIZEvents instance (Sonic3kLevelEventManager:189), so
+        // the live handler must be re-resolved each frame (never cached). The
+        // battleship (and its auto-scroll flag) live on the AIZ2 instance.
+        if (resolveAizEvents() == null) {
+            throw new IllegalStateException(
+                    "--clip aiz-battleship-to-boss requires an S3K AIZ trace");
+        }
+
+        short[] pcmBuffer = new short[16384];
+        short[] discardBuffer = new short[16384];
+        long frameIndex = 0;          // captured (submitted) frame count
+        boolean capturing = false;
+        long fadeBaseline = -1;
+        long stopAtFrame = -1;        // captured-frame index at which to stop (after tail)
+
+        int driveTraceIndex = replayStart.startingTraceIndex();
+        TraceFrame previousDriveFrame = replayStart.hasSeededTraceState()
+                ? trace.getFrame(replayStart.seededTraceIndex())
+                : driveTraceIndex > 0 ? trace.getFrame(driveTraceIndex - 1) : null;
+
+        System.out.println("clip aiz-battleship-to-boss: fast-forwarding to battleship start...");
+        while (driveTraceIndex < trace.frameCount()) {
+            TraceFrame driveFrame = trace.getFrame(driveTraceIndex);
+            TraceExecutionPhase phase =
+                    TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
+            boolean stepped = driveOneFrame(trace, frameDriver, replayStart, phase, driveTraceIndex);
+
+            if (stepped && TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
+                if (!capturing) {
+                    Sonic3kAIZEvents live = resolveAizEvents();
+                    if (live != null && live.isBattleshipAutoScrollActive()) {
+                        capturing = true;
+                        fadeBaseline = GameServices.audio().musicFadeOutCount();
+                        System.out.println("clip: battleship start -> capture begins at trace frame "
+                                + driveFrame.frame());
+                    }
+                }
+                if (capturing) {
+                    renderFrame();
+                    byte[] rgba = grabber.grab();
+                    int sampleCount = audioTap.drain(pcmBuffer);
+                    recorder.submit(new CapturedFrame(rgba, SCREEN_WIDTH, SCREEN_HEIGHT,
+                            pcmBuffer, sampleCount, frameIndex++));
+                    if (stopAtFrame < 0
+                            && GameServices.audio().musicFadeOutCount() > fadeBaseline) {
+                        stopAtFrame = frameIndex + tailFrames;
+                        System.out.println("clip: boss music fade at trace frame "
+                                + driveFrame.frame() + " -> recording " + tailFrames
+                                + " more frame(s)");
+                    }
+                    if (stopAtFrame >= 0 && frameIndex >= stopAtFrame) {
+                        break;
+                    }
+                } else {
+                    // Fast-forward: advance audio synthesis but discard it so the
+                    // capture-mode ring does not overflow before the window opens.
+                    audioTap.drain(discardBuffer);
+                }
+            }
+
+            driveTraceIndex++;
+            previousDriveFrame = driveFrame;
+        }
+        if (!capturing) {
+            System.out.println("clip: WARNING battleship start never detected; nothing captured");
+        } else if (stopAtFrame < 0) {
+            System.out.println("clip: WARNING boss music fade never detected; captured to end of "
+                    + "trace (" + frameIndex + " frames)");
+        }
+        return frameIndex;
+    }
+
+    private Sonic3kAIZEvents resolveAizEvents() {
+        if (GameServices.module().getLevelEventProvider()
+                instanceof Sonic3kLevelEventManager s3kEvents) {
+            return s3kEvents.getAizEvents();
+        }
+        return null;
     }
 
     /**
@@ -356,6 +469,17 @@ public final class TraceCaptureTool {
     private boolean driveOneFrame(TraceData trace, RecordingFrameDriver frameDriver,
                                   TraceReplayBootstrap.ReplayStartState replayStart,
                                   TraceExecutionPhase phase, int driveTraceIndex) {
+        // Begin the palette-ownership frame exactly as GameLoop.update does
+        // (GameLoop.java:448-450). The headless replay drive path
+        // (RecordingFrameDriver) omits this because the trace TEST never renders;
+        // without it PaletteOwnershipRegistry.writes accumulate across every
+        // captured frame (never cleared) and resolvedThisFrame stays set, so the
+        // rendered palette freezes/corrupts — e.g. the AIZ2 forest->boss palette
+        // transition garbles. Capture-only: physics/comparison is unaffected.
+        PaletteOwnershipRegistry paletteRegistry = GameServices.paletteOwnershipRegistryOrNull();
+        if (paletteRegistry != null) {
+            paletteRegistry.beginFrame();
+        }
         if (phase == TraceExecutionPhase.VBLANK_ONLY) {
             frameDriver.skipFrameFromRecording();
             // Mirror AbstractTraceReplayTest: the S3K complete-run handoff row
