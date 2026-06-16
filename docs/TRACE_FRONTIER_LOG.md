@@ -12,22 +12,21 @@ branch-local measurements.
 |---|---|
 | Overall trace-suite state | Expected-red, not release-green |
 | Latest logged full-sweep aggregate | 90 `*TraceReplay` tests, 54 failures, 1 error |
-| Latest focused frontier | `TestS3kCnzCompleteRunTraceReplay` at frame `1139` |
-| Current blocking field | CNZ Tails `status` bit mismatch (`0x0000` vs `0x0020`) after the complete-run oscillator setup fix |
-| Current owner hypothesis | Tails CPU/status follow-on after S3K complete-run setup oscillator parity |
+| Latest focused frontier | `TestS3kMgzTraceReplay` advanced to frame `539` |
+| Current blocking field | MGZ route `rings` mismatch (`10` vs `11`) after clearing the monitor `tails_cpu_interact` frontier |
+| Current owner hypothesis | next Tails CPU/status target from the full sweep is `TestS2Cpz2LevelSelectTraceReplay` frame `759` |
 | Current branch context in newest entries | `bugfix/ai-trace-frontier-develop` after cherry-picking the AIZ worker chain |
-| Last frontier move | CNZ complete-run `f946 -> f1139` via S3K complete-run pre-trace oscillator setup parity |
+| Last frontier move | MGZ route `f312 -> f539` via S3K monitor ROM code-pointer reporting for `Tails_CPU_interact` |
 
 ### Active queue
 
-1. Re-check the ordered frontier queue after the S3K complete-run setup
-   oscillator fix. CNZ complete-run now lands in a Tails status/CPU signature at
-   f1139, while AIZ complete-run f1095, MGZ f738, LBZ f1694, MHZ f966, HCZ
-   f1402, and ICZ f1116 held.
-2. Re-check the ordered frontier queue against the latest full `*TraceReplay`
-   sweep before selecting the next target. The newest sweep is expected-red at
-   90 tests / 54 failures / 1 error; CNZ complete-run advanced, AIZ held at
-   f19089, and MGZ/LBZ/MHZ/HCZ held at their prior first-error frames.
+1. Continue the ordered Tails CPU/status cluster. The newest full sweep is
+   expected-red at 90 tests / 54 failures / 1 error; MGZ route advanced out of
+   `tails_cpu_interact` to a downstream ring-count mismatch, while S2 CPZ2 now
+   appears as the earliest remaining Tails status frontier at f759.
+2. Keep CNZ complete-run f1139, HCZ f1402, ICZ f1116, S2 ARZ1 f1285, and other
+   Tails CPU/status frontiers in the same cluster queue until a full sweep moves
+   them out of the cluster.
 3. Known branch-local follow-up from the S2 ARZ2 work: ARZ2 advanced to `f523`
    missing Obj91 after the Obj15 child-slot fix, but that entry predates the
    newest AIZ-focused branch state. Reconfirm before treating it as the next
@@ -37,13 +36,16 @@ branch-local measurements.
 
 | Trace | Frame | Field | ROM | Engine | Status | Next owner |
 |---|---:|---|---:|---:|---|---|
+| `s3k_mgz1` / `TestS3kMgzTraceReplay` | `539` | rings | `10` | `11` | advanced from f312 | downstream ring/object collection |
+| `s2_cpz2` / `TestS2Cpz2LevelSelectTraceReplay` | `759` | Tails `status` | `0x0020` | `0x0000` | next queue target | Tails CPU/status |
 | `s3k_cnz1` / `TestS3kCnzCompleteRunTraceReplay` | `1139` | Tails `status` | `0x0000` | `0x0020` | advanced | Tails CPU/status follow-on |
 | `s3k_aiz1` / `TestS3kAizTraceReplay` | `19089` | leader `g_speed` | `-00B0` | `0x00B0` | held | leader movement near AIZ2 end-boss approach |
 
-At CNZ `f1139`, the earlier orbiting-bumper `y_speed` vector mismatch at f355
-and the complete-run oscillator-phase `y` mismatch at f946 are cleared. AIZ
-still holds at `f19089`, after the trace passes the AIZ2 battleship bombing run
-and wrap into the end-boss arena approach.
+At MGZ route `f539`, the earlier `tails_cpu_interact` mismatch at f312 is
+cleared; Tails now observes the monitor's ROM object-code high word through the
+same stood-on-object path as other S3K solids. The new MGZ route frontier is a
+downstream ring-count mismatch. AIZ still holds at `f19089`, after the trace
+passes the AIZ2 battleship bombing run and wrap into the end-boss arena approach.
 
 ### Stale-data warnings
 
@@ -70,6 +72,40 @@ and wrap into the end-boss arena approach.
   cleanup. Do not delete historical evidence only because it is stale.
 
 ## Evidence Ledger
+
+## 2026-06-16 - S3K MGZ route f312 -> f539 via monitor CPU-interact pointer
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, targeting the Tails
+  CPU cluster after the complete-run setup fixes. The selected earliest local
+  frontier trace was `TestS3kMgzTraceReplay` (`s3k_mgz1` route).
+- Single-frame bisect result: at f312, ROM and engine Tails kinematics and
+  stood-on monitor position matched, but the trace expected
+  `tails_cpu_interact=0x0001` while the engine reported `0x0000`. ROM stores the
+  high word of the stood-on object's SST code pointer in the CPU interact word;
+  the monitor at slot 6 is `Obj_Monitor` at `0x0001D566`.
+- Fix: `Sonic3kMonitorObjectInstance` now implements
+  `RomObjectCodePointerProvider` and exposes high word `0x0001`, reusing the
+  existing S3K sidekick interact reporting path used by other ROM-backed solid
+  objects. No trace state is written into engine state.
+- Focused validation: `TestSonic3kMonitorObjectInstance` passed. Focused
+  `TestS3kMgzTraceReplay` remains expected-red but advances from **f312**
+  `tails_cpu_interact` (`0x0001` vs `0x0000`) to **f539** `rings`
+  (`10` vs `11`).
+- Full sweep command: `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off
+  -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1
+  -Dsurefire.redirectTestOutputToFile=false -Dtest=*TraceReplay
+  -DfailIfNoTests=false -Dtrace.frontierOnly=true -Dtrace.context.radius=2
+  -Ds3k.rom.path=s3k.gen test"`.
+- Full sweep result: expected-red, **90 tests, 54 failures, 1 error**. The
+  intentional movement is MGZ route **f312 -> f539**. AIZ route held at f19089,
+  CNZ route held at f291, HCZ held at f1402, ICZ held at f1116, LBZ held at
+  f1694, MGZ complete-run held at f738 in the Surefire summary, and MHZ held at
+  f966. The next ordered Tails CPU/status cluster target from the parsed sweep
+  is `TestS2Cpz2LevelSelectTraceReplay` at f759 (`tails_status_byte`
+  `0x0020` vs `0x0000`).
+- Classification: MGZ route Tails CPU frontier **cleared/advanced** into a
+  downstream ring-count mismatch; no named first-error-frame **regression**
+  observed in the full sweep.
 
 ## 2026-06-16 - S3K complete-run oscillator setup parity advances CNZ f946 -> f1139
 

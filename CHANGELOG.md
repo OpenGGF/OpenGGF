@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K monitors expose their ROM object pointer to CPU Tails:** S3K monitor
+  instances now publish the high word of `Obj_Monitor` (`0x0001D566`) through
+  the existing `RomObjectCodePointerProvider` path, so `Tails_CPU_interact`
+  sees the same stood-on monitor identity the ROM stores. This advances the MGZ
+  route trace from frame 312's `tails_cpu_interact` mismatch to frame 539's
+  later ring-count frontier, with no named first-error-frame regression in the
+  full trace sweep.
+
 - **S3K complete-run traces seed the prior oscillator setup pass:** per-zone S3K
   complete-run segments now enter replay with the ROM's setup `OscillateNumDo`
   phase already visible to the first object pass. This advances the CNZ
