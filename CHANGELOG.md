@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 lost-ring spill slots match Obj37 owner-slot allocation:** Sonic 2 now
+  preallocates the first lost-ring Obj37 owner slot before spilling remaining
+  rings, matching `HurtCharacter`/`Obj37_Init` scan order. This advances the
+  MTZ2 level-select Tails CPU frontier from frame 645's early claw hurt to frame
+  1073's later `tails_cpu_interact` mismatch without changing the trace-suite
+  failure count.
+
 - **S3K seed-frame traces replay the native setup object prelude:**
   Sonic+Tails level-select seed-frame traces now run the setup
   `Process_Sprites` object pass before the first replay-driven gameplay frame,

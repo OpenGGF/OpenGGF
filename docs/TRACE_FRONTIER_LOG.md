@@ -1,5 +1,41 @@
 # Trace Frontier Log
 
+## 2026-06-16 - S2 lost-ring Obj37 owner slot advances MTZ2 Tails CPU frontier
+
+- Scope: Sonic 2 lost-ring allocation only. `ObjectSlotLayout.SONIC_2` now
+  models the ROM `HurtCharacter` path that allocates the first Obj37 owner slot
+  before `Obj37_Init` spills the remaining lost rings with `AllocateObject`.
+  This keeps the S2 object scan order aligned when Tails overlaps both a lost
+  ring and a damaging object during the same touch-response pass.
+- Disassembly evidence: `docs/s2disasm/s2.asm:85386-85404` allocates and seeds
+  the first `ObjID_LostRings` object from `HurtCharacter`, and
+  `docs/s2disasm/s2.asm:25123-25155` has `Obj37_Init` use that current object
+  as the first ring before calling `AllocateObject` for later spill entries.
+- Bisect result: the earliest Tails CPU cluster frontier was
+  `TestS2Mtz2LevelSelectTraceReplay` frame 645. A single-frame object/touch
+  probe showed the engine hurting Tails on ObjA0 Shellcracker claw one frame
+  before the ROM, because the engine's lost rings were allocated later than the
+  ROM's slots. The ROM's earlier Obj37 lost ring entry is scanned first and
+  consumes the overlap before the claw; the prior Shellcracker pending-init
+  collision hypothesis did not advance the trace and was rejected.
+- Focused regression test:
+  `cmd /c "mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=com.openggf.level.rings.TestLostRingObjectInstance -DfailIfNoTests=false test"`.
+  Result: passed, 19 tests.
+- Focused frontier check:
+  `cmd /c "mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=20 -Dtest=com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Ds2.rom.path=s2.gen test"`.
+  Result: expected-red. `TestS2Mtz2LevelSelectTraceReplay` advanced from frame
+  645 `tails_x_speed` (expected `0x00C1`, actual `-0200`) to frame 1073
+  `tails_cpu_interact` (expected `0x0000`, actual `0x00A0`).
+- Full trace sweep:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dtrace.frontierOnly=true -Dtrace.context.radius=20 -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red, 90 tests, 50 failures, 1 error. Compared with the prior
+  90-test sweep at 50 failures and 1 error, `s2_mtz2` advanced 645 -> 1073
+  with no aggregate-count regression. The exact `0x100` speed-delta cluster did
+  not remain as the highest-leverage active cluster after the preceding setup
+  and AIZ advances, so the next target remains in the Tails CPU cluster: the
+  earliest current Tails CPU frontier is `TestS2Cpz2LevelSelectTraceReplay`
+  frame 759 `tails_status_byte` (expected `0x0020`, actual `0x0000`).
+
 ## 2026-06-16 - S3K seed-frame setup object prelude advances CNZ route
 
 - Scope: S3K Sonic+Tails level-select seed-frame trace bootstrap only. These
