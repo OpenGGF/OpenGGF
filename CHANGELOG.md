@@ -4,6 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 MTZ Obj6A unloads from its ROM base-X anchor:** MTZ moving platforms
+  now feed their saved `objoff_32` base X into the shared off-screen unload
+  check instead of their current moving X, matching Obj6A's `MarkObjGone2`
+  path. This clears the MTZ3 Tails CPU live-slot identity mismatch by keeping
+  slot 22 as the ROM Obj6E platform and advances the level-select trace from
+  frame 1669 to frame 1743; the full trace sweep remains expected-red at 90
+  tests, 53 failures, and 1 existing error with no named first-frontier
+  regression observed.
+
 - **Trace replay assertion failures now use a terse frontier summary:** failing
   trace replay tests now keep checkpoint, zone, and diagnostics detail in the
   JSON/context artifacts while the Surefire assertion message reports only the

@@ -12,20 +12,20 @@ branch-local measurements.
 |---|---|
 | Overall trace-suite state | Expected-red, not release-green |
 | Latest logged full-sweep aggregate | 90 `*TraceReplay` tests, 53 failures, 1 error |
-| Latest focused frontier | `TestS2Mtz3LevelSelectTraceReplay` advanced to frame `1669` |
-| Current blocking field | MTZ3 Tails `tails_cpu_interact` mismatch (`0x006E` vs `0x00A4`) after clearing the S2 flying-timeout `tails_cpu_jumping` delta at f1381 |
-| Current owner hypothesis | MTZ3 moved past the routine-4 flying timeout flag-preservation mismatch into a later Tails CPU/interact identity mismatch; continue the ordered Tails CPU/status queue before movement-only frontiers |
+| Latest focused frontier | `TestS2Mtz3LevelSelectTraceReplay` advanced to frame `1743` |
+| Current blocking field | MTZ3 Tails `tails_status_byte` mismatch (`0x0000` vs `0x0020`) after clearing the f1669 live-slot `tails_cpu_interact` identity delta |
+| Current owner hypothesis | MTZ3 moved past the Tails CPU live-slot identity mismatch into a later Tails status-bit mismatch; continue the ordered Tails CPU/status queue before movement-only frontiers |
 | Current branch context in newest entries | `bugfix/ai-trace-frontier-develop` after cherry-picking the AIZ worker chain |
-| Last frontier move | S2 MTZ3 level-select `f1381 -> f1669` by preserving `Tails_CPU_jumping` through S2 `TailsCPU_Flying` off-screen timeout |
+| Last frontier move | S2 MTZ3 level-select `f1669 -> f1743` by unloading MTZ Obj6A from its ROM base-X anchor so slot 22 remains the ROM Obj6E platform |
 
 ### Active queue
 
 1. Continue the ordered Tails CPU/status cluster. The newest full sweep is
    expected-red at 90 tests / 53 failures / 1 error; MTZ3 advanced out of
-   f1381 `tails_cpu_jumping` into f1669 `tails_cpu_interact`.
+   f1669 `tails_cpu_interact` into f1743 `tails_status_byte`.
 2. The latest sweep's current CPU/status frontier is
-   `TestS2Mtz3LevelSelectTraceReplay` f1669 (`tails_cpu_interact`, `0x006E`
-   vs `0x00A4`). Earlier movement/downstream frontiers such as S2 OOZ2 f1070
+   `TestS2Mtz3LevelSelectTraceReplay` f1743 (`tails_status_byte`, `0x0000`
+   vs `0x0020`). Earlier movement/downstream frontiers such as S2 OOZ2 f1070
    (`air`), S2 HTZ2 f1078 (`y_speed`), S2 CPZ1 f1157 (`tails_x_speed`), and
    CNZ complete-run f1846 (`tails_x_speed`) should wait until the CPU/status
    cluster is exhausted.
@@ -43,19 +43,19 @@ branch-local measurements.
 |---|---:|---|---:|---:|---|---|
 | `s3k_mgz1` / `TestS3kMgzTraceReplay` | `539` | rings | `10` | `11` | advanced from f312 | downstream ring/object collection |
 | `s2_mtz2` / `TestS2Mtz2LevelSelectTraceReplay` | `1265` | leader `g_speed` | `0x014B` | `0x047A` | advanced from f1075 | leader movement / ground-mode |
-| `s2_mtz3` / `TestS2Mtz3LevelSelectTraceReplay` | `1669` | Tails `tails_cpu_interact` | `0x006E` | `0x00A4` | advanced from f1381 | Tails CPU/interact |
+| `s2_mtz3` / `TestS2Mtz3LevelSelectTraceReplay` | `1743` | Tails `tails_status_byte` | `0x0000` | `0x0020` | advanced from f1669 | Tails CPU/status |
 | `s2_cpz2` / `TestS2Cpz2LevelSelectTraceReplay` | `2888` | Tails `x` | `0x10F8` | `0x10F0` | advanced from f759 | movement downstream of Tails CPU |
 | `s2_arz1` / `TestS2ArzLevelSelectTraceReplay` | `2011` | Tails `tails_cpu_interact` | `0x0090` | `0x0000` | advanced from f1285 | Tails CPU/interact |
 | `s3k_icz1` / `TestS3kIczCompleteRunTraceReplay` | `3116` | `status_byte` | `0x0008` | `0x0009` | advanced from f1116 | movement/status downstream |
 | `s3k_cnz1` / `TestS3kCnzCompleteRunTraceReplay` | `1846` | Tails `tails_x_speed` | `0x0024` | `-1000` | advanced from f1467 | movement downstream of Tails CPU |
 | `s3k_aiz1` / `TestS3kAizTraceReplay` | `19089` | leader `g_speed` | `-00B0` | `0x00B0` | held | leader movement near AIZ2 end-boss approach |
 
-At MTZ3 `f1669`, the earlier `tails_cpu_jumping` mismatch at f1381 is cleared;
-S2 `TailsCPU_Flying` timeout now preserves the ROM-visible auto-jump flag while
-returning to routine 2 and the zero marker. The new MTZ3 frontier is a later
-Tails CPU interact identity mismatch. AIZ still holds at `f19089`, after the
-trace passes the AIZ2 battleship bombing run and wrap into the end-boss arena
-approach.
+At MTZ3 `f1743`, the earlier `tails_cpu_interact` mismatch at f1669 is cleared;
+MTZ Obj6A now unloads through its ROM `objoff_32` base-X reference, so the later
+streaming group keeps slot 22 as the ROM Obj6E platform before Tails CPU
+dereferences `interact(a0)=0x16`. The new MTZ3 frontier is a later Tails
+status-bit mismatch. AIZ still holds at `f19089`, after the trace passes the
+AIZ2 battleship bombing run and wrap into the end-boss arena approach.
 
 ### Stale-data warnings
 
@@ -82,6 +82,44 @@ approach.
   cleanup. Do not delete historical evidence only because it is stale.
 
 ## Evidence Ledger
+
+## 2026-06-16 - S2 MTZ3 level-select f1669 -> f1743 via Obj6A base-X unload
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, continuing the
+  ordered Tails CPU/status cluster. The selected earliest CPU/status frontier
+  trace was `TestS2Mtz3LevelSelectTraceReplay`.
+- Single-frame/slot bisect result: at f1669, all compared kinematics matched,
+  but ROM `TailsCPU_UpdateObjInteract` dereferenced `interact(a0)=0x16` to a
+  live Obj6E platform (`0x006E`) while the engine's slot 22 held ObjA4
+  (`0x00A4`). Replaying the ROM aux occupancy stream showed an earlier durable
+  slot drift at f555: ROM unloaded MTZ Obj6A from slot 17, while the engine kept
+  it alive and later allocated the f1556 Obj6E/ObjA4 group one slot off.
+- Disassembly evidence: S2 Obj6A stores initial `x_pos` in `objoff_32`, then
+  passes `objoff_32` in `d0` to `MarkObjGone2` after movement/collision
+  (`docs/s2disasm/s2.asm:54147-54149,54216-54217,54238-54239`). The engine's
+  default unload reference read the moving platform's current `x`, not the ROM
+  base anchor.
+- Fix: `MCZRotPformsObjectInstance.getOutOfRangeReferenceX()` now returns
+  `baseX`, matching Obj6A's `objoff_32` unload anchor. The occupancy oracle now
+  asserts the immediate f555 slot-17 unload and the later f1556 slot-22 Obj6E
+  identity needed by Tails CPU. No trace data is written into engine state, and
+  there is no zone, route, or frame carve-out.
+- Focused validation:
+  `mvn -q "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#mtz3MovingPlatformUnloadReleasesRomSlot17+mtz3RotatingPlatformLoadKeepsRomSlot22Identity" "-DfailIfNoTests=false" "-Ds2.rom.path=s2.gen" test`
+  passed. Focused `TestS2Mtz3LevelSelectTraceReplay` remains expected-red but
+  advances from **f1669** `tails_cpu_interact` (`0x006E` vs `0x00A4`) to
+  **f1743** `tails_status_byte` (`0x0000` vs `0x0020`).
+- Full sweep command: `mvn -q "-Dmse=off" "-Dsurefire.argLine=-Xshare:off -Xmx3g"
+  "-Dsurefire.forkCount=1" "-Dsurefire.redirectTestOutputToFile=true"
+  "-Dtrace.frontierOnly=true" "-Dtrace.context.radius=24"
+  "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen"
+  "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" test`.
+- Full sweep result: expected-red, **90 tests, 53 failures, 1 error**. The
+  intentional movement is MTZ3 level-select **f1669 -> f1743**. Current named
+  frontiers otherwise held in this sweep, including AIZ route f19089, AIZ
+  complete-run f1095, CNZ route f291, CNZ complete-run f1846, HCZ f1402, ICZ
+  f3116, LBZ f1694, MGZ route f539, MGZ complete-run f738, MHZ f966, MTZ2
+  f1265, ARZ f2011, and OOZ f1251.
 
 ## 2026-06-16 - S2 MTZ3 level-select f1381 -> f1669 via flying-timeout CPU jump preservation
 

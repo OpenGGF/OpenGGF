@@ -140,6 +140,65 @@ public class TestS2ObjectOccupancyOracle {
     }
 
     @Test
+    public void mtz3RotatingPlatformLoadKeepsRomSlot22Identity() throws Exception {
+        SlotCheck slotCheck = driveTrace("mtz3", Sonic2ZoneConstants.ZONE_MTZ, 2,
+                (trace, om, frame) -> {
+                    if (frame != 1556) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    Assertions.assertEquals(0x6E, expected.get(22),
+                            "ROM fixture should load the MTZ large rotating platform into slot 22 at MTZ3 f1556");
+                    return new SlotCheck(actual.get(22), describeSlots(actual, 16, 35));
+                });
+        Assertions.assertNotNull(slotCheck);
+        Assertions.assertEquals(0x6E, slotCheck.actualId(),
+                "MTZ3 slot 22 must remain the ROM Obj6E platform slot because "
+                        + "TailsCPU_UpdateObjInteract dereferences interact(a0)=0x16 live; actual slots "
+                        + slotCheck.summary());
+    }
+
+    @Test
+    public void mtz3MovingPlatformUnloadReleasesRomSlot17() throws Exception {
+        SlotCheck slotCheck = driveTrace("mtz3", Sonic2ZoneConstants.ZONE_MTZ, 2,
+                (trace, om, frame) -> {
+                    if (frame != 555) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    Assertions.assertNull(expected.get(17),
+                            "ROM fixture should unload MTZ Obj6A from slot 17 at MTZ3 f555");
+                    return new SlotCheck(actual.get(17), describeSlots(actual, 16, 24));
+                });
+        Assertions.assertNotNull(slotCheck);
+        Assertions.assertNull(slotCheck.actualId(),
+                "MTZ Obj6A must unload from its ROM slot when objoff_32 leaves "
+                        + "the MarkObjGone2 window; actual slots " + slotCheck.summary());
+    }
+
+    private record SlotCheck(Integer actualId, String summary) {
+    }
+
+    private static String describeSlots(Map<Integer, Integer> occupancy, int firstSlot, int lastSlot) {
+        StringBuilder sb = new StringBuilder();
+        for (int slot = firstSlot; slot <= lastSlot; slot++) {
+            Integer id = occupancy.get(slot);
+            if (id == null) {
+                continue;
+            }
+            if (!sb.isEmpty()) {
+                sb.append(' ');
+            }
+            sb.append(slot).append(':').append(String.format("%02X", id & 0xFF));
+        }
+        return sb.toString();
+    }
+
+    @Test
     public void scz1TransientOccupancyMatchesRom() throws Exception {
         assertTransientOccupancy("scz", Sonic2ZoneConstants.ZONE_SCZ, 0);
     }
