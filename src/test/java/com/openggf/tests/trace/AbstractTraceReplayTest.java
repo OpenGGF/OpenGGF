@@ -58,6 +58,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.logging.Handler;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -70,9 +72,30 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public abstract class AbstractTraceReplayTest {
     private static final Logger LOGGER = Logger.getLogger(AbstractTraceReplayTest.class.getName());
+    private static final boolean QUIET_TRACE_LOGS =
+            Boolean.parseBoolean(System.getProperty("trace.quietLogs", "true"));
+
+    static {
+        if (QUIET_TRACE_LOGS) {
+            System.setProperty("slf4j.internal.verbosity", "ERROR");
+            quietJavaUtilLogging();
+        }
+    }
 
     /** Which game ROM this test requires. */
     protected abstract SonicGame game();
+
+    private static void quietJavaUtilLogging() {
+        Logger root = Logger.getLogger("");
+        if (root.getLevel() == null || root.getLevel().intValue() < Level.WARNING.intValue()) {
+            root.setLevel(Level.WARNING);
+        }
+        for (Handler handler : root.getHandlers()) {
+            if (handler.getLevel() == null || handler.getLevel().intValue() < Level.WARNING.intValue()) {
+                handler.setLevel(Level.WARNING);
+            }
+        }
+    }
 
     /** Zone index (0-based). */
     protected abstract int zone();

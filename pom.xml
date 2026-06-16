@@ -18,6 +18,8 @@
         <mockito.agent.path>"${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar"</mockito.agent.path>
         <mockito.agent.argLine>-javaagent:${mockito.agent.path}</mockito.agent.argLine>
         <test.cds.argLine>-Xshare:off</test.cds.argLine>
+        <test.logging.config.file>${project.basedir}/src/test/resources/quiet-logging.properties</test.logging.config.file>
+        <test.slf4j.verbosity>ERROR</test.slf4j.verbosity>
         <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g</surefire.argLine>
         <surefire.forkCount>4</surefire.forkCount>
     </properties>
@@ -106,6 +108,11 @@
                             <argLine>${surefire.argLine}</argLine>
                             <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>true</reuseForks>
+                            <systemPropertyVariables>
+                                <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
+                                <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
+                                <project.basedir>${project.basedir}</project.basedir>
+                            </systemPropertyVariables>
                             <includes>
                                 <include>**/tests/trace/**/*.java</include>
                                 <include>**/tests/trace/**/*TraceReplay.java</include>
@@ -357,6 +364,8 @@
                              which surefire-launched forks inherit; pass it explicitly so IDE
                              runs from arbitrary working dirs also find the source tree. -->
                         <project.basedir>${project.basedir}</project.basedir>
+                        <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
+                        <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
                     </systemPropertyVariables>
                     <!-- Exclude tests that require a GL context/display -->
                     <excludes>
