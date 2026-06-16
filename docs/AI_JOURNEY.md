@@ -160,9 +160,12 @@ Which meant a human had to *become* the oracle. Getting from Jules's blind first
 accurate was weeks of Farrell sitting through detuned, clipping, wrong-instrument builds — ear
 against the speaker, diagnosing chip-state bugs by hand in the IntelliJ debugger: FM operators,
 key-on timing, DAC rate maths, one screech at a time. The agent typed; the human listened,
-diagnosed, and corrected, over and over. The honest record is that the audio engine is
-**AI-scaffolded and human-tuned by ear** — and it was, by some distance, the most painful work in
-the whole project, precisely because there was nothing automated to be wrong against.
+diagnosed, and corrected, over and over. Part of becoming the oracle meant *building* one: a
+standalone [sound-test app](DEVELOPMENT_TIMELINE.md) to play any track on demand and A/B the
+engine's output against the real driver by ear — the closest thing to an automated check that a
+subsystem like this allows. The honest record is that the audio engine is **AI-scaffolded and
+human-tuned by ear** — and it was, by some distance, the most painful work in the whole project,
+precisely because there was nothing automated to be wrong against.
 
 The crowning specimen: **Casino Night Zone confidently playing the options-menu theme**, rendered
 through the half-finished FM chip as a *garbled shotgun.* It was so bad it was perfect. The
@@ -251,20 +254,12 @@ affectionate museum — drawn from the dev clips James and Farrell fired at each
 |:---:|:---:|
 | ![Sonic as a white box sinking under the terrain, Oct 2024](assets/ai-journey/2024-10-under-terrain.gif) | ![White-box Sonic on Emerald Hill tiles decompressed from the ROM, Oct 2024](assets/ai-journey/2024-10-rom-loading.gif) |
 | **Oct 2024** — Sonic is a white box who *"sits under the terrain."* **James's hand-coded physics**, mid-rewrite — the human half of the build. | **Oct 2024** — *"oh shiiiiit."* Same white box, now standing on **real Emerald Hill tiles decompressed from the ROM** — the moment the ChatGPT-assisted Kosinski work paid off. |
+| ![The AIZ swing-vine flinging Sonic around wildly, Feb 2026](assets/timeline/aiz-vine.gif) | ![Twenty-one Sonics following one Tails through Angel Island Zone, Mar 2026](assets/timeline/21-sonics.gif) |
+| **Feb 2026** — the **AIZ swing-vine freaking the fuck out.** Shown at full speed; you're welcome. | **Mar 2026** — *"what if we could have more than one sidekick?"* **21 Sonics and 1 Tails**, and the perf graph barely flinches. |
 
 And the one exhibit you have to *hear*: 🔊 **[Casino Night Zone as a garbled shotgun](assets/ai-journey/2025-12-garbled-shotgun.mp4)** (Dec 2025) — the audio engine's first inception, embedded up in [the November section](#the-exception-that-proves-the-rule-audio).
 
-Honourable mentions, by caption alone:
-
-| When | What we said | What it was |
-|------|--------------|-------------|
-| Oct 2024 | *"Getting closer, still trying to work out why he sits under the terrain"* | Sonic embedded *below* the ground — James's hand-coded collision, mid-rewrite |
-| Oct 2024 | *"oh shiiiiit"* | `sonic the bingus.mp4`; ROM level data decompressing for the first time |
-| Jan 2026 | *"There was an attempt"* | an honest caption for an honest result |
-| Jan 2026 | *"Very rough around the edges… it hurts when it [lands]"* | early S3K physics |
-| Jan 2026 | *"that'll be why I could hear it going mad"* | the audio engine's first, feral inception |
-| Feb 2026 | *"I mean it plays SOMETHING back rofl"* | audio, still finding itself |
-| Feb 2026 | *"this is how far one gets without fucking up"* | a speedrun of accumulating glitches |
+These are only the highlights. The full captioned reel — 40 builds of it, from special-stage garbage and bosses through car-crushers to Sonic learning to walk on the ceiling and the audio slowly un-mangling itself — lives in **[the Development Timeline](DEVELOPMENT_TIMELINE.md)**.
 
 ## A note on the tools themselves
 
