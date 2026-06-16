@@ -231,6 +231,12 @@ straightforward to add new objects, zones, and game-specific behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Timeline-clip tooling for contributors (2026-06-16).** Merged
+  `feature/timeline-clip-tooling`, adding `docs/assets/timeline/make_clip.py`
+  (a one-shot ffmpeg encoder that produces house-style GIFs/MP3s — 320px,
+  8 fps, midpoint-centred, 64-colour palette) and `docs/assets/timeline/README.md`
+  documenting the settings and how to add a Development Timeline clip, so
+  contributed clips stay visually consistent. Docs/tooling only.
 - **Dev-clip date correction + README timeline link (2026-06-16).** Merged
   `feature/ai-journey-clip-date-fix`: the oldest dev clip (white box under
   terrain) is a v0.05 build from 2015-04-09 captured in 2024, not an Oct 2024
