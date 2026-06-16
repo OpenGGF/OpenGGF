@@ -136,23 +136,36 @@ close-to-accurate code took *many* prompts and constant correction. Good rate li
 capability; controllability not yet there, and in honest side-by-side use it never clearly beat
 Codex.
 
-### The punchline: an agent finally did the audio
+### The exception that proves the rule: audio
 
-Remember the audio nobody got round to for five years? **Jules built it.**
+Remember the audio nobody got round to for five years? It finally got built in this window — but
+*how* is the most important story on this page, because audio is the one place where the whole
+"give the model an oracle" trick **breaks**.
 
-There are **no audio-engine commits anywhere in the repo before this window** — the entire
-SMPS/YM2612 stack is built here, starting with **`887eca634` (27 Nov 2025): "Implement FM
-Instrument Loading for SMPS Audio Engine,"** by Jules. Over the following weeks Jules authored the
-bulk of the audio engine (~88 distinct commits): the YM2612 implementation (CSM, SSG-EG,
-attack-logic), DAC noise/volume correctness, SMPS sequencer accuracy against SMPSPlay/libvgm, PSG
-envelopes. The audio engine the human side had promised since 2020 was finally written — and not
-by either of them. The honest record is that it's an **AI-built, heavily-steered subsystem**.
+The entire SMPS/YM2612 stack starts here — there are **no audio-engine commits anywhere in the repo
+before it** — with **`887eca634` (27 Nov 2025): "Implement FM Instrument Loading for SMPS Audio
+Engine,"** by Jules, which then generated the bulk of the scaffolding over the following weeks
+(~88 commits): the YM2612 implementation (CSM, SSG-EG, attack-logic), DAC handling, the SMPS
+sequencer, PSG envelopes.
 
-It was, at first, *appalling*. The early SMPS builds were a sonic warzone: detuned, clipping,
-channels firing the wrong instruments. The crowning moment: **Casino Night Zone confidently
-playing the options-menu theme**, rendered through the half-finished FM chip as what can only be
-described as a *garbled shotgun.* It was so bad it was perfect. The earliest recording of it
-survives — **3 December 2025**. The picture is deceptively calm; the sound is the whole point:
+But Jules had **no way of knowing whether a single note of it was correct.** A decompressor is
+bit-exact or it isn't; a trace diverges on a numbered frame or it doesn't. Sound has no such
+oracle — *"does this FM patch match the real Mega Drive?"* is a question a 2025 model simply could
+not answer about its own output. So it confidently emitted code that produced ear-splitting
+screeches and reported success.
+
+Which meant a human had to *become* the oracle. Getting from Jules's blind first draft to something
+accurate was weeks of Farrell sitting through detuned, clipping, wrong-instrument builds — ear
+against the speaker, diagnosing chip-state bugs by hand in the IntelliJ debugger: FM operators,
+key-on timing, DAC rate maths, one screech at a time. The agent typed; the human listened,
+diagnosed, and corrected, over and over. The honest record is that the audio engine is
+**AI-scaffolded and human-tuned by ear** — and it was, by some distance, the most painful work in
+the whole project, precisely because there was nothing automated to be wrong against.
+
+The crowning specimen: **Casino Night Zone confidently playing the options-menu theme**, rendered
+through the half-finished FM chip as a *garbled shotgun.* It was so bad it was perfect. The
+earliest recording survives — **3 December 2025**. The picture is deceptively calm; the sound is
+the whole point:
 
 <video src="assets/ai-journey/2025-12-garbled-shotgun.mp4" controls width="480"></video>
 
@@ -237,7 +250,7 @@ affectionate museum — drawn from the dev clips James and Farrell fired at each
 | ![Sonic as a white box sinking under the terrain, Oct 2024](assets/ai-journey/2024-10-under-terrain.gif) | ![White-box Sonic on Emerald Hill tiles decompressed from the ROM, Oct 2024](assets/ai-journey/2024-10-rom-loading.gif) |
 | **Oct 2024** — Sonic is a white box, and he *"sits under the terrain."* The first ChatGPT-era physics. | **Oct 2024** — *"oh shiiiiit."* Still a white box, but standing on **real Emerald Hill tiles, decompressed from the ROM** — the Kosinski payoff, live. |
 
-And the one exhibit you have to *hear*: 🔊 **[Casino Night Zone as a garbled shotgun](assets/ai-journey/2025-12-garbled-shotgun.mp4)** (Dec 2025) — the audio engine's first inception, embedded up in [the November section](#the-punchline-an-agent-finally-did-the-audio).
+And the one exhibit you have to *hear*: 🔊 **[Casino Night Zone as a garbled shotgun](assets/ai-journey/2025-12-garbled-shotgun.mp4)** (Dec 2025) — the audio engine's first inception, embedded up in [the November section](#the-exception-that-proves-the-rule-audio).
 
 Honourable mentions, by caption alone:
 
@@ -283,8 +296,8 @@ So — can you prompt your way to ROM accuracy?
 **Not directly.** A prompt still can't *originate* hardware-exact behaviour. The things that made
 any of this possible — the hand-built engine, the architecture, the trace harness, the
 "model-the-ROM-instruction-or-don't-ship-it" discipline, and the review on every commit — are
-human. And where AI *built* a whole subsystem (the audio engine), it did so under constant human
-steering against a reference.
+human. And where AI *scaffolded* a whole subsystem (the audio engine), a human still had to tune it
+to correctness by ear, in the debugger, because there was no automated oracle to lean on.
 
 **But the gap has narrowed in a way that genuinely surprised us.** With a real oracle in the loop
 — a byte-exact decompressor test in 2024, a frame-exact trace of the original game in 2026 — AI
