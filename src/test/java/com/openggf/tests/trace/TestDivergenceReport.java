@@ -72,6 +72,22 @@ public class TestDivergenceReport {
     }
 
     @Test
+    void sameFrameSummaryPrefersMovementFieldOverStatusByteDiagnostic() {
+        Map<String, FieldComparison> fields = new LinkedHashMap<>();
+        fields.put("tails_status_byte", new FieldComparison(
+                "tails_status_byte", "0x0028", "0x0008", Severity.ERROR, 1));
+        fields.put("tails_x_speed", new FieldComparison(
+                "tails_x_speed", "0x0018", "-0080", Severity.ERROR, 1));
+        FrameComparison frame = new FrameComparison(1775, fields);
+
+        DivergenceReport report = new DivergenceReport(List.of(frame));
+
+        assertEquals("tails_x_speed", report.errors().get(0).field());
+        assertTrue(report.toAssertionSummary().contains(
+                "First error: frame 1775 -- tails_x_speed mismatch"));
+    }
+
+    @Test
     void testCompactSummaryOmitsInlineDiagnostics() {
         FrameComparison frame = makeComparisonWithDiagnostics(5, "x_speed",
             Severity.ERROR, "0x0100", "0x0200",

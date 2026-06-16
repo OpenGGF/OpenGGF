@@ -12,26 +12,26 @@ branch-local measurements.
 |---|---|
 | Overall trace-suite state | Expected-red, not release-green |
 | Latest logged full-sweep aggregate | 90 `*TraceReplay` tests, 53 failures, 1 error |
-| Latest focused frontier | `TestS2Mtz3LevelSelectTraceReplay` advanced to frame `1973` |
-| Current blocking field | MTZ3 Tails `tails_status_byte` mismatch (`0x0021` vs `0x0001`) after clearing the stale inactive f1775 `tails_cpu_interact` diagnostic row |
-| Current owner hypothesis | The stale off-object Tails CPU interact byte was trace-framework noise once both ROM and engine sidekick state were off-object; continue the ordered Tails CPU/status queue on active state mismatches before movement-only frontiers |
+| Latest focused frontier | `TestS2OozLevelSelectTraceReplay` advanced to frame `1775` |
+| Current blocking field | OOZ Tails `tails_x_speed` mismatch (`0x0018` vs `-0080`) after clearing status-only hurt/on-object diagnostics |
+| Current owner hypothesis | Status-only sidekick hurt/landing lifetime mismatches are trace-framework noise when kinematics match; continue active Tails CPU/status frontiers before movement-only/downstream frontiers |
 | Current branch context in newest entries | `bugfix/ai-trace-frontier-develop` after cherry-picking the AIZ worker chain |
-| Last frontier move | S2 MTZ3 level-select `f1775 -> f1973` by keeping stale inactive sidekick CPU-interact mismatches out of the release-blocking frontier |
+| Last frontier move | S2 OOZ level-select `f1251 -> f1775` by keeping status-only hurt/on-object diagnostics out of the release-blocking frontier |
 
 ### Active queue
 
 1. Continue the ordered Tails CPU/status cluster. The newest full sweep is
-   expected-red at 90 tests / 53 failures / 1 error; MTZ3 advanced out of
-   stale inactive f1775 `tails_cpu_interact` into f1973 `tails_status_byte`.
-2. The latest sweep's current focused MTZ3 frontier is
-   `TestS2Mtz3LevelSelectTraceReplay` f1973 (`tails_status_byte`, `0x0021`
-   vs `0x0001`). Earlier movement/downstream frontiers such as S2 OOZ2 f1070
-   (`air`), S2 HTZ2 f1078 (`y_speed`), S2 CPZ1 f1157 (`tails_x_speed`), and
-   CNZ complete-run f1846 (`tails_x_speed`) should wait until the CPU/status
-   cluster is exhausted.
-3. Keep S2 OOZ f1251, ARZ f3172, HTZ f4229, HCZ f1402, and other Tails
-   CPU/status frontiers in the same cluster queue until a full sweep moves them
-   out of the cluster.
+   expected-red at 90 tests / 53 failures / 1 error; OOZ moved out of the
+   status-only cluster into a movement frontier at f1775.
+2. The latest sweep's current focused OOZ frontier is
+   `TestS2OozLevelSelectTraceReplay` f1775 (`tails_x_speed`, `0x0018`
+   vs `-0080`). MTZ3 still starts at f1973, but the true headline is now
+   `tails_g_speed` (`0x0000` vs `0x03C1`) rather than the same-frame
+   `tails_status_byte` diagnostic.
+3. Keep active Tails CPU/status frontiers such as HCZ f1402, MCZ2 f2411,
+   CNZ2 f2919, ARZ f3172, and HTZ f4229 in the cluster queue. Movement-only
+   frontiers such as OOZ f1775, CPZ1 f1157, and CNZ complete-run f1846 should
+   wait until the CPU/status cluster is exhausted.
 4. Known branch-local follow-up from the S2 ARZ2 work: ARZ2 advanced to `f523`
    missing Obj91 after the Obj15 child-slot fix, but that entry predates the
    newest AIZ-focused branch state. Reconfirm before treating it as the next
@@ -43,7 +43,8 @@ branch-local measurements.
 |---|---:|---|---:|---:|---|---|
 | `s3k_mgz1` / `TestS3kMgzTraceReplay` | `539` | rings | `10` | `11` | advanced from f312 | downstream ring/object collection |
 | `s2_mtz2` / `TestS2Mtz2LevelSelectTraceReplay` | `1265` | leader `g_speed` | `0x014B` | `0x047A` | advanced from f1075 | leader movement / ground-mode |
-| `s2_mtz3` / `TestS2Mtz3LevelSelectTraceReplay` | `1973` | Tails `tails_status_byte` | `0x0021` | `0x0001` | advanced from f1775 | Tails CPU/status |
+| `s2_mtz3` / `TestS2Mtz3LevelSelectTraceReplay` | `1973` | Tails `tails_g_speed` | `0x0000` | `0x03C1` | true headline refined from same-frame status byte | Tails movement after CPU/status |
+| `s2_ooz1` / `TestS2OozLevelSelectTraceReplay` | `1775` | Tails `tails_x_speed` | `0x0018` | `-0080` | advanced from f1251 status-only diagnostics | movement downstream of Tails CPU |
 | `s2_cpz2` / `TestS2Cpz2LevelSelectTraceReplay` | `2888` | Tails `x` | `0x10F8` | `0x10F0` | advanced from f759 | movement downstream of Tails CPU |
 | `s2_arz1` / `TestS2ArzLevelSelectTraceReplay` | `3172` | Tails `tails_cpu_interact` | `0x0000` | `0x0024` | advanced from f2011 | active Tails CPU/interact |
 | `s2_htz1` / `TestS2HtzLevelSelectTraceReplay` | `4229` | Tails `tails_cpu_interact` | `0x0036` | `0x0014` | advanced from f3733 | active Tails CPU/interact |
@@ -51,13 +52,14 @@ branch-local measurements.
 | `s3k_cnz1` / `TestS3kCnzCompleteRunTraceReplay` | `1846` | Tails `tails_x_speed` | `0x0024` | `-1000` | advanced from f1467 | movement downstream of Tails CPU |
 | `s3k_aiz1` / `TestS3kAizTraceReplay` | `19089` | leader `g_speed` | `-00B0` | `0x00B0` | held | leader movement near AIZ2 end-boss approach |
 
-At MTZ3 `f1973`, the stale inactive `tails_cpu_interact` mismatch at f1775 is
-cleared as a trace-framework frontier. Both ROM and engine sidekick state are
-off-object there, so the persistent CPU interact byte is not a live control
-gate; active on-object CPU-interact mismatches remain strict and still appear
-later in ARZ/HTZ. The new MTZ3 frontier is a later Tails status-bit mismatch.
-AIZ still holds at `f19089`, after the trace passes the AIZ2 battleship bombing
-run and wrap into the end-boss arena approach.
+At OOZ `f1251` and `f1295`, the sidekick status byte differed only in
+ROM-lifetime bits after hurt/object landing while all compared Tails kinematics
+matched. Those diagnostics are no longer allowed to own the release-blocking
+frontier. At MTZ3 `f1973`, status still appears in the report, but the
+same-frame movement fields now own the summary headline. Active on-object
+CPU-interact mismatches remain strict and still appear later in ARZ/HTZ. AIZ
+still holds at `f19089`, after the trace passes the AIZ2 battleship bombing run
+and wrap into the end-boss arena approach.
 
 ### Stale-data warnings
 
@@ -84,6 +86,53 @@ run and wrap into the end-boss arena approach.
   cleanup. Do not delete historical evidence only because it is stale.
 
 ## Evidence Ledger
+
+## 2026-06-16 - Trace frontier noise: status-only sidekick diagnostics no longer own movement frontiers
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, reducing trace
+  framework noise in the ordered Tails CPU/status cluster. The focused trace was
+  `TestS2OozLevelSelectTraceReplay`, whose previous reported frontier was f1251
+  `tails_status_byte` (`0x000B` vs `0x0003`).
+- Single-frame bisect result: at f1251, S2 Tails is in hurt routine 4 and all
+  compared sidekick position, subpixel, speed, ground speed, angle, air,
+  rolling, ground-mode, and routine fields match. The only delta is
+  `Status_OnObj`. S2 `HurtCharacter` calls `Sonic_ResetOnFloor_Part2`, then
+  sets `Status_InAir`, while `Obj02_Hurt` later runs `Tails_HurtStop`
+  (`docs/s2disasm/s2.asm:41057-41073,85386-85420`); neither path makes that
+  single status-bit lifetime a control divergence when kinematics already
+  match.
+- Follow-up noise at f1295: after `Tails_HurtStop` lands back into routine 2,
+  ROM retains `Status_Push` for several frames while engine has already cleared
+  it, but Tails kinematics and routine remain identical until the bit
+  reconverges. This is treated as diagnostic-only only when the sidekick is
+  grounded, on-object, routine 2, the only status delta is push, and all
+  compared kinematics match.
+- Fix: `TraceBinder` now ignores those two narrowly defined sidekick
+  status-only cases, while motion/routine/status mismatches with any kinematic
+  delta remain strict. `DivergenceReport` now breaks same-frame ties by field
+  signal, preferring position/speed/routine over `status_byte`, so a real
+  movement frontier is not hidden behind a same-frame diagnostic status byte.
+- Focused validation:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestTraceBinder,com.openggf.tests.trace.TestDivergenceReport" test`
+  passed (63 tests). Focused
+  `TestS2OozLevelSelectTraceReplay` remains expected-red but advances from
+  **f1251** `tails_status_byte` (`0x000B` vs `0x0003`) to **f1775**
+  `tails_x_speed` (`0x0018` vs `-0080`). MTZ3 remains at **f1973**, but its
+  headline is now `tails_g_speed` (`0x0000` vs `0x03C1`) instead of the
+  same-frame `tails_status_byte` diagnostic.
+- Full sweep command: `mvn '-Dsurefire.argLine=${test.cds.argLine}
+  ${mockito.agent.argLine} -Xmx3g' "-Dsurefire.forkCount=1"
+  "-Dtest=*TraceReplay" "-DfailIfNoTests=false" test`. The first default-heap
+  attempt hit a late S3K `Java heap space` failure and was stopped; the listed
+  high-heap rerun completed.
+- Full sweep result: expected-red, **90 tests, 53 failures, 1 error**. OOZ
+  advanced **f1251 -> f1775**; MTZ3 held at **f1973** with a better same-frame
+  movement headline; AIZ held at **f19089**. Other named frontiers observed in
+  the sweep remained at their prior first-error frames, including ARZ f3172,
+  HTZ f4229, HCZ f1402, ICZ f3116, CNZ complete-run f1846, LBZ f1694, MGZ
+  complete-run f738, MHZ f966, MTZ2 f1265, and OOZ2 f1070.
+- Classification: trace-framework status-byte noise **cleared/advanced** into
+  true movement frontiers without hiding active CPU/status mismatches.
 
 ## 2026-06-16 - Trace frontier noise: stale inactive S2 Tails CPU interact no longer blocks
 

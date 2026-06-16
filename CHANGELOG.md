@@ -4,6 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Trace replay reports movement before same-frame status noise:** sidekick
+  status-byte diagnostics no longer own the release-blocking frontier when S2
+  Tails is in hurt/on-object status-bit lifetime states with matching
+  kinematics, and same-frame report summaries now prefer movement/routine
+  fields over `status_byte`. This advances OOZ level-select from frame 1251 to
+  frame 1775 and changes MTZ3's frame-1973 headline from status byte to
+  `tails_g_speed`; the full trace sweep remains expected-red at 90 tests, 53
+  failures, and 1 existing error.
+
 - **Trace replay ignores stale inactive Tails CPU interact snapshots:** S2
   `tails_cpu_interact` mismatches no longer own the release-blocking frontier
   when both recorded and engine sidekick states are off-object, since that

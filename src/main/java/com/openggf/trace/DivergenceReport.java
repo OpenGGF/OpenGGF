@@ -635,9 +635,34 @@ public class DivergenceReport {
             groups.add(builder.build());
         }
 
-        groups.sort(Comparator.comparingInt(DivergenceGroup::startFrame));
+        groups.sort(Comparator
+            .comparingInt(DivergenceGroup::startFrame)
+            .thenComparingInt(g -> fieldSummaryPriority(g.field())));
         markCascading(groups);
         return groups;
+    }
+
+    private static int fieldSummaryPriority(String field) {
+        if (field == null) {
+            return 50;
+        }
+        if (field.equals("x") || field.equals("y")
+                || field.endsWith("_x") || field.endsWith("_y")
+                || field.equals("x_sub") || field.equals("y_sub")
+                || field.endsWith("_x_sub") || field.endsWith("_y_sub")
+                || field.equals("x_speed") || field.equals("y_speed")
+                || field.equals("g_speed")
+                || field.endsWith("_x_speed") || field.endsWith("_y_speed")
+                || field.endsWith("_g_speed")) {
+            return 0;
+        }
+        if (field.equals("routine") || field.endsWith("_routine")) {
+            return 10;
+        }
+        if (field.equals("status_byte") || field.endsWith("_status_byte")) {
+            return 40;
+        }
+        return 20;
     }
 
     private static void markCascading(List<DivergenceGroup> groups) {

@@ -574,9 +574,16 @@ public class TraceBinder {
                     0, 1, false));
         }
         if (expected.statusByte() >= 0 && actual.statusByte() >= 0) {
-            fields.put(prefix + "status_byte", compareNumeric(prefix + "status_byte",
-                    expected.statusByte() & 0xFF, actual.statusByte() & 0xFF,
-                    0, 1, false));
+            if (isSidekickHurtOnObjectOnlyStatusMismatch(expected, actual)
+                    || isGroundedSidekickOnObjectPushOnlyStatusMismatch(expected, actual)) {
+                fields.put(prefix + "status_byte", ignoredSidekickStatus(
+                        prefix + "status_byte",
+                        expected.statusByte() & 0xFF, actual.statusByte() & 0xFF));
+            } else {
+                fields.put(prefix + "status_byte", compareNumeric(prefix + "status_byte",
+                        expected.statusByte() & 0xFF, actual.statusByte() & 0xFF,
+                        0, 1, false));
+            }
         }
     }
 
@@ -686,7 +693,60 @@ public class TraceBinder {
         return (state.statusByte() & 0x08) != 0;
     }
 
+    private static boolean isSidekickHurtOnObjectOnlyStatusMismatch(
+            TraceCharacterState expected,
+            TraceCharacterState actual) {
+        int expectedStatus = expected.statusByte() & 0xFF;
+        int actualStatus = actual.statusByte() & 0xFF;
+        if ((expectedStatus ^ actualStatus) != 0x08) {
+            return false;
+        }
+        if ((expected.routine() & 0xFF) != 0x04 || (actual.routine() & 0xFF) != 0x04) {
+            return false;
+        }
+        return expected.x() == actual.x()
+                && expected.y() == actual.y()
+                && expected.xSub() == actual.xSub()
+                && expected.ySub() == actual.ySub()
+                && expected.xSpeed() == actual.xSpeed()
+                && expected.ySpeed() == actual.ySpeed()
+                && expected.gSpeed() == actual.gSpeed()
+                && expected.angle() == actual.angle()
+                && expected.air() == actual.air()
+                && expected.rolling() == actual.rolling();
+    }
+
+    private static boolean isGroundedSidekickOnObjectPushOnlyStatusMismatch(
+            TraceCharacterState expected,
+            TraceCharacterState actual) {
+        int expectedStatus = expected.statusByte() & 0xFF;
+        int actualStatus = actual.statusByte() & 0xFF;
+        if ((expectedStatus ^ actualStatus) != 0x20) {
+            return false;
+        }
+        if ((expected.routine() & 0xFF) != 0x02 || (actual.routine() & 0xFF) != 0x02) {
+            return false;
+        }
+        if (!hasOnObjectStatus(expected) || !hasOnObjectStatus(actual)
+                || expected.air() || actual.air()
+                || expected.rolling() || actual.rolling()) {
+            return false;
+        }
+        return expected.x() == actual.x()
+                && expected.y() == actual.y()
+                && expected.xSub() == actual.xSub()
+                && expected.ySub() == actual.ySub()
+                && expected.xSpeed() == actual.xSpeed()
+                && expected.ySpeed() == actual.ySpeed()
+                && expected.gSpeed() == actual.gSpeed()
+                && expected.angle() == actual.angle();
+    }
+
     private static FieldComparison ignoredStaleSidekickInteract(String name, int expected, int actual) {
+        return new FieldComparison(name, formatHex(expected), formatHex(actual), Severity.MATCH, 0);
+    }
+
+    private static FieldComparison ignoredSidekickStatus(String name, int expected, int actual) {
         return new FieldComparison(name, formatHex(expected), formatHex(actual), Severity.MATCH, 0);
     }
 
