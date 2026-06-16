@@ -9,7 +9,9 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ExplosionObjectInstance;
 import com.openggf.level.objects.SolidRoutineKind;
 import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.StubObjectServices;
@@ -21,6 +23,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 
 import java.lang.reflect.Field;
 
@@ -29,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 
 class TestMonitorObjectInstance {
@@ -115,6 +119,39 @@ class TestMonitorObjectInstance {
         assertEquals(0xFEE0, player.getYSpeed() & 0xFFFF,
                 "Breaking the monitor should negate the player's downward Y speed");
         verify(objectManager).markRemembered(monitor.getSpawn());
+    }
+
+    @Test
+    void touchFromAboveSpawnsMonitorContentsBeforeExplosion() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        MonitorObjectInstance monitor = new MonitorObjectInstance(
+                new ObjectSpawn(0x0100, 0x0100, 0x26, 0x06, 0, false, 0),
+                "Monitor");
+        monitor.setServices(new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+
+            @Override
+            public ObjectRenderManager renderManager() {
+                return renderManager;
+            }
+        });
+
+        DummyPlayer player = new DummyPlayer();
+        player.setRolling(true);
+        player.setAnimationId(Sonic2AnimationIds.ROLL);
+        player.setYSpeed((short) 0x0120);
+
+        monitor.onTouchResponse(player, TOUCH_RESULT, 1);
+
+        InOrder order = inOrder(objectManager);
+        order.verify(objectManager).addDynamicObject(
+                org.mockito.ArgumentMatchers.argThat(MonitorContentsObjectInstance.class::isInstance));
+        order.verify(objectManager).addDynamicObject(
+                org.mockito.ArgumentMatchers.argThat(ExplosionObjectInstance.class::isInstance));
     }
 
     @Test

@@ -71,6 +71,9 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             buzzerFlameCodec(),
             conveyorCodec(),
             ObjectRewindDynamicCodecs.pointsCodec(PointsObjectInstance.class),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    MonitorContentsObjectInstance.class,
+                    spawn -> new MonitorContentsObjectInstance(spawn, null)),
             checkpointDongleCodec(),
             checkpointStarCodec());
 
@@ -337,6 +340,8 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> new SpikeObjectInstance(spawn, registry.getPrimaryName(spawn.objectId())));
         registerFactory(Sonic2ObjectIds.MONITOR,
                 (spawn, registry) -> new MonitorObjectInstance(spawn, registry.getPrimaryName(spawn.objectId())));
+        registerFactory(Sonic2ObjectIds.MONITOR_CONTENTS,
+                (spawn, registry) -> new MonitorContentsObjectInstance(spawn, null));
         registerFactory(Sonic2ObjectIds.CHECKPOINT,
                 (spawn, registry) -> new CheckpointObjectInstance(spawn, registry.getPrimaryName(spawn.objectId())));
 

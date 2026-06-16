@@ -1,5 +1,46 @@
 # Trace Frontier Log
 
+## 2026-06-16 - S2 MTZ object-slot parity advances MTZ1 Tails CPU frontier
+
+- Scope: Sonic 2 object lifetime, dynamic allocation, and post-camera placement
+  cadence on the MTZ route. The batch keeps the ROM's object slot order through
+  several hidden MTZ occupancy frontiers without hydrating trace state or adding
+  route/frame carve-outs: Obj42 SteamPuff no longer unloads through the
+  MarkObjGone range window, Obj65 bit-7 long platforms defer their child cog
+  until the first routine pass, broken monitors allocate a real Obj2E monitor
+  contents object before the Obj27 explosion, Asteron death converts the current
+  slot to Obj27 and allocates Obj98 spike children after it, and the post-camera
+  object loader performs the ROM's backward left-gap scan without moving the
+  main placement cursor.
+- WFZ regression fix: ObjBD small metal platform children now resolve their
+  manual solid checkpoint before applying the post-checkpoint vertical move and
+  report geometry from the solid `y_pos` used by that checkpoint. This preserves
+  `TestS2WfzLevelSelectTraceReplay` while keeping the MTZ slot advances.
+- Bisect result: the hidden MTZ occupancy oracle advanced through frames 487,
+  535, 716, 753/778/819/823, and now reports the earliest hidden mismatch at
+  frame 1132 slot 29 (`expectedId=0x28`, `actualId=0x29`). The visible
+  `TestS2MtzLevelSelectTraceReplay` frontier advanced from frame 931
+  `tails_cpu_interact` (expected `0x009F`, actual `0x0006`) to frame 1006
+  `tails_status_byte` (expected `0x0021`, actual `0x0001`).
+- Focused regression/frontier checks:
+  `cmd /c "mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=false -Dtest=com.openggf.level.objects.TestObjectPlacementManager#postCameraBackwardScanCreatesLeftGapSpawnsInRomOrder,com.openggf.game.sonic2.objects.TestMonitorObjectInstance,com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#steamPuffDoesNotUseMarkObjGoneUnloadWindow+mtzLongPlatformDefersBit7ChildCogUntilFirstRoutinePass,com.openggf.game.sonic2.objects.badniks.TestAsteronBadnikInstance -DfailIfNoTests=false test"`:
+  passed, 14 tests.
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=40 -Dtest=com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Ds2.rom.path=s2.gen test"`:
+  passed, all frames match.
+  `cmd /c "mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=false -Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#measureMtz1OccupancyDivergence -DfailIfNoTests=false -Ds2.rom.path=s2.gen test"`:
+  expected measurement result at frame 1132 slot 29.
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=40 -Dtest=com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Ds2.rom.path=s2.gen test"`:
+  expected-red, advanced to frame 1006.
+- Full trace sweep:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dtrace.frontierOnly=true -Dtrace.context.radius=20 -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red, 90 tests, 50 failures, 1 error. XML comparison against
+  the pre-fix baseline found no added or removed failing/erroring trace
+  testcases; only `TestS2MtzLevelSelectTraceReplay` changed from frame 931 to
+  frame 1006. The next highest-leverage target remains the Tails CPU cluster:
+  the earliest current Tails CPU frontier is
+  `TestS2Htz2LevelSelectTraceReplay` frame 936 `tails_cpu_ctrl2_held`
+  (expected `0x0002`, actual `0x0000`).
+
 ## 2026-06-16 - Fresh ground-wall push survives animation clear and advances CPZ2
 
 - Scope: shared playable terrain/animation coordination. Ground-wall terrain

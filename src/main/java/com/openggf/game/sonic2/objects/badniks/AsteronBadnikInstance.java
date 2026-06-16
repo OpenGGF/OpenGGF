@@ -4,6 +4,7 @@ import com.openggf.level.objects.AbstractBadnikInstance;
 
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
+import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.ExplosionObjectInstance;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -41,6 +42,7 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance {
 
     // Timer for routine 6 movement phase: objoff_2A = $40 (64 frames)
     private static final int MOVE_TIMER_INIT = 0x40;
+    private static final int PROJECTILE_SUBTYPE = 0x30;
 
     // Detection ranges from routine 2 (loc_389B6)
     // d2 + $60 compared to $C0 → player within -$60..$60 horizontally
@@ -199,17 +201,20 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance {
      * Obj_CreateProjectiles with the 5-entry projectile table.
      */
     private void explode() {
-        // Destroy self (the Asteron becomes an explosion)
-        setDestroyed(true);
-
         var objectManager = services().objectManager();
+        int transferredSlot = ObjectLifetimeOps.detachSlotForTransfer(this);
+        ObjectLifetimeOps.destroyLatched(this);
         ObjectLifetimeOps.removeSpawnFromActive(objectManager, spawn);
 
-        // Spawn explosion at current position
+        // ROM loc_38A44 changes this SST slot in-place to Obj27, leaving the
+        // Asteron slot occupied before Obj_CreateProjectiles allocates children.
         final int explosionX = currentX;
         final int explosionY = currentY;
-        spawnFreeChild(() -> new ExplosionObjectInstance(
-                0x27, explosionX, explosionY, services().renderManager()));
+        ObjectLifetimeOps.addReplacementAtTransferredSlot(
+                objectManager,
+                new ExplosionObjectInstance(
+                        Sonic2ObjectIds.EXPLOSION, explosionX, explosionY, services().renderManager()),
+                transferredSlot);
 
         // Play explosion SFX
         services().playSfx(
@@ -224,8 +229,11 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance {
             final int mappingFrame = data[4];
             final boolean hFlip = data[5] != 0;
 
-            spawnFreeChild(() -> new BadnikProjectileInstance(
-                    spawn,
+            ObjectSpawn projectileSpawn = new ObjectSpawn(
+                    projX, projY, Sonic2ObjectIds.PROJECTILE, PROJECTILE_SUBTYPE,
+                    0, false, 0);
+            BadnikProjectileInstance projectile = spawnChild(() -> new BadnikProjectileInstance(
+                    projectileSpawn,
                     BadnikProjectileInstance.ProjectileType.ASTERON_SPIKE,
                     projX, projY,
                     projXVel, projYVel,
@@ -233,6 +241,7 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance {
                     hFlip,
                     0,      // No initial delay
                     mappingFrame));
+            projectile.deferFirstMovementForLoadSubObjectInit();
         }
     }
 

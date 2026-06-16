@@ -132,6 +132,7 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
     private boolean triggered;   // objoff_38 - trigger flag
     private int buttonId;        // objoff_3E - ButtonVine trigger ID
     private boolean xFlip;       // status.npc.x_flip
+    private boolean pendingChildCogSpawn;
 
     // Standing detection
     private boolean contactStanding;
@@ -221,6 +222,10 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        if (pendingChildCogSpawn) {
+            pendingChildCogSpawn = false;
+            spawnChildCog();
+        }
         executeMovement(frameCounter, player);
         updateDynamicSpawn(x, y);
         // ROM loc_26C1C tail (s2.asm:52469-52484) marks the object gone + clears
@@ -352,8 +357,10 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
                 currentDist = maxDist;
             }
 
-            // Spawn child cog (s2.asm lines 52419-52437)
-            spawnChildCog();
+            // Placement-loaded objects enter the engine object table before their first
+            // ExecuteObjects routine pass. Defer the AllocateObjectAfterCurrent child
+            // creation to that first update so Obj65 parent/child slot timing matches ROM.
+            pendingChildCogSpawn = true;
 
             // At loc_26C16: andi.b #$F,subtype(a0) - applies to the NEW subtype
             moveSubtype = childSubtype & 0x0F;

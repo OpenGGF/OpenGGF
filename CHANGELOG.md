@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 MTZ object-slot parity advances the MTZ1 Tails CPU frontier:**
+  SteamPuff, MTZ long-platform child cog, monitor contents, Asteron
+  explosion/projectile, and post-camera object placement now better match the
+  ROM object lifetime/slot cadence. The hidden MTZ occupancy oracle advances to
+  frame 1132, and the visible MTZ level-select trace advances from frame 931's
+  `tails_cpu_interact` mismatch to frame 1006's later `tails_status_byte`
+  mismatch with no added or removed full-suite trace failures.
+
 - **Fresh ground-wall push survives the same-frame animation clear:** terrain
   side-wall collision now marks push contact set after the idle/walk animation
   clear point so the animation resolver does not erase `Status_Push` later in

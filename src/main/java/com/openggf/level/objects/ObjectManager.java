@@ -943,11 +943,11 @@ public class ObjectManager {
      * ROM parity: {@code ObjPosLoad} runs <b>after</b> {@code DeformLayers}
      * (camera update), so it sees the camera's post-update position. The primary
      * {@code placement.update()} inside {@link #update} uses the pre-camera
-     * position. When the camera advance crosses a 128px chunk boundary between
-     * those two positions, the post-camera spawn window is wider on the right
-     * side. Objects in that gap are delayed by one extra frame, breaking the
-     * engine's normal compensation (pipeline delay vs post-move touch check)
-     * and creating a 4px collision offset.
+     * position. When the camera crosses a 128px chunk boundary between those
+     * two positions, the post-camera spawn window exposes a right-side gap
+     * while moving forward or a left-side gap while moving backward. Objects in
+     * that gap must materialize before the frame ends, matching ROM ObjPosLoad
+     * timing.
      * <p>
      * This method scans the gap region (between the old and new window right
      * edges) and materializes any eligible spawns into the current frame's

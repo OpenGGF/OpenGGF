@@ -1,5 +1,6 @@
 package com.openggf.level.objects;
 
+import com.openggf.game.sonic2.objects.S2ObjectWindowing;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -209,6 +210,33 @@ public class TestObjectPlacementManager {
                 "Backward scan should add the non-tracked spawn to the active window");
         assertEquals(List.of(spawn), created,
                 "Backward counter-based post-camera scan should inline-create non-tracked spawns");
+    }
+
+    @Test
+    public void postCameraBackwardScanCreatesLeftGapSpawnsInRomOrder() {
+        ObjectSpawn outside = new ObjectSpawn(0x04C0, 0, 0x06, 0, 0, false, 0);
+        ObjectSpawn left = new ObjectSpawn(0x0520, 0, 0x65, 0, 0, false, 0);
+        ObjectSpawn right = new ObjectSpawn(0x0568, 0, 0x9F, 0, 0, false, 0);
+        ObjectSpawn inWindow = new ObjectSpawn(0x0600, 0, 0x47, 0, 0, false, 0);
+        ObjectPlacementController manager =
+                new ObjectPlacementController(List.of(outside, left, right, inWindow), () -> 320);
+        manager.setWindowingStrategy(S2ObjectWindowing.INSTANCE);
+        manager.reset(0x0600);
+
+        List<ObjectSpawn> created = new ArrayList<>();
+        manager.extendForPostCamera(0x05FF, (newSpawn, counterValue) -> {
+            created.add(newSpawn);
+            return true;
+        });
+
+        assertEquals(List.of(right, left), created,
+                "S2 backward ObjPosLoad scans descending X across the newly exposed left gap");
+        assertFalse(manager.getActiveSpawns().contains(outside),
+                "Spawns at or left of the new left edge remain outside the load window");
+        assertTrue(manager.getActiveSpawns().contains(left));
+        assertTrue(manager.getActiveSpawns().contains(right));
+        assertEquals(0x0600, manager.getLastCameraChunk(),
+                "Post-camera gap creation must not advance the primary placement cursor");
     }
 }
 

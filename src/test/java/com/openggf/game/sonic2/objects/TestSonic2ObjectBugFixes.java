@@ -92,6 +92,16 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void steamPuffDoesNotUseMarkObjGoneUnloadWindow() {
+        SteamPuffObjectInstance puff = new SteamPuffObjectInstance(0x0208, 0x0270, true);
+
+        assertTrue(puff.usesCustomOutOfRangeCheck(),
+                "Obj42 routine 4 tails to DisplaySprite, not MarkObjGone");
+        assertFalse(puff.isCustomOutOfRange(0x0306),
+                "Obj42 steam puffs must survive off-screen until their animation deletes them");
+    }
+
+    @Test
     void spikyBlockRendersParentBlockMappingFrameFour() {
         PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
         when(renderer.isReady()).thenReturn(true);
@@ -162,6 +172,30 @@ class TestSonic2ObjectBugFixes {
                 "Obj65 loc_26D94 checks Sidekick after MainCharacter before retracting");
         assertEquals(0x0A60, platform.getX(),
                 "A native P2/Tails inside the proximity box must keep the fully extended platform stationary");
+    }
+
+    @Test
+    void mtzLongPlatformDefersBit7ChildCogUntilFirstRoutinePass() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        StubObjectServices services = new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+        };
+
+        MTZLongPlatformObjectInstance platform = ObjectConstructionContext.construct(services,
+                () -> new MTZLongPlatformObjectInstance(
+                        new ObjectSpawn(0x0600, 0x01B0, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x80, 0, false, 0)));
+        platform.setServices(services);
+
+        verify(objectManager, never()).addDynamicObjectAfterCurrent(
+                org.mockito.ArgumentMatchers.any(AbstractObjectInstance.class));
+
+        platform.update(0, new TestablePlayableSprite("sonic", (short) 0x0600, (short) 0x01B0));
+
+        verify(objectManager).addDynamicObjectAfterCurrent(
+                org.mockito.ArgumentMatchers.argThat(MTZLongPlatformCogInstance.class::isInstance));
     }
 
     @Test

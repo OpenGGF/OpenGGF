@@ -8,6 +8,7 @@ public final class Sonic2ObjectIds {
     public static final int BUTTON = 0x47;         // Button (Obj47) - trigger button that activates other objects via ButtonVine_Trigger
     public static final int SPIKES = 0x36;
     public static final int MONITOR = 0x26;
+    public static final int MONITOR_CONTENTS = 0x2E;
     public static final int CHECKPOINT = 0x79;
     public static final int BRIDGE = 0x11;
     public static final int SEESAW = 0x14;
