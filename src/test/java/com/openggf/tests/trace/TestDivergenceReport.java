@@ -174,6 +174,84 @@ public class TestDivergenceReport {
     }
 
     @Test
+    void contextWindowDefaultsToFrontierFrameDiagnosticsOnly() {
+        FrameComparison f4 = makeComparisonWithDiagnostics(4, "x_speed",
+            Severity.ERROR, "0x0100", "0x0200",
+            "rom frame 4", "engine frame 4");
+        FrameComparison f5 = makeComparisonWithDiagnostics(5, "x_speed",
+            Severity.ERROR, "0x0100", "0x0200",
+            "rom frame 5", "engine frame 5");
+        FrameComparison f6 = makeComparisonWithDiagnostics(6, "x_speed",
+            Severity.ERROR, "0x0100", "0x0200",
+            "rom frame 6", "engine frame 6");
+        DivergenceReport report = new DivergenceReport(List.of(f4, f5, f6));
+
+        String previous = System.clearProperty("trace.context.diagnostics");
+        try {
+            String context = report.getContextWindow(5, 1);
+
+            assertTrue(context.contains("4"));
+            assertTrue(context.contains("5"));
+            assertTrue(context.contains("6"));
+            assertFalse(context.contains("rom frame 4"));
+            assertTrue(context.contains("rom frame 5"));
+            assertFalse(context.contains("rom frame 6"));
+            assertEquals(1, countOccurrences(context, "       ROM: "));
+            assertEquals(1, countOccurrences(context, "       ENG: "));
+        } finally {
+            restoreProperty("trace.context.diagnostics", previous);
+        }
+    }
+
+    @Test
+    void contextWindowCanRenderAllFrameDiagnosticsWhenRequested() {
+        FrameComparison f4 = makeComparisonWithDiagnostics(4, "x_speed",
+            Severity.ERROR, "0x0100", "0x0200",
+            "rom frame 4", "engine frame 4");
+        FrameComparison f5 = makeComparisonWithDiagnostics(5, "x_speed",
+            Severity.ERROR, "0x0100", "0x0200",
+            "rom frame 5", "engine frame 5");
+        FrameComparison f6 = makeComparisonWithDiagnostics(6, "x_speed",
+            Severity.ERROR, "0x0100", "0x0200",
+            "rom frame 6", "engine frame 6");
+        DivergenceReport report = new DivergenceReport(List.of(f4, f5, f6));
+
+        String previous = System.setProperty("trace.context.diagnostics", "all");
+        try {
+            String context = report.getContextWindow(5, 1);
+
+            assertTrue(context.contains("rom frame 4"));
+            assertTrue(context.contains("rom frame 5"));
+            assertTrue(context.contains("rom frame 6"));
+            assertEquals(3, countOccurrences(context, "       ROM: "));
+            assertEquals(3, countOccurrences(context, "       ENG: "));
+        } finally {
+            restoreProperty("trace.context.diagnostics", previous);
+        }
+    }
+
+    @Test
+    void contextWindowCanSuppressAllFrameDiagnosticsWhenRequested() {
+        FrameComparison frame = makeComparisonWithDiagnostics(5, "x_speed",
+            Severity.ERROR, "0x0100", "0x0200",
+            "rom frame 5", "engine frame 5");
+        DivergenceReport report = new DivergenceReport(List.of(frame));
+
+        String previous = System.setProperty("trace.context.diagnostics", "none");
+        try {
+            String context = report.getContextWindow(5, 0);
+
+            assertTrue(context.contains("Frame"));
+            assertFalse(context.contains("rom frame 5"));
+            assertFalse(context.contains("engine frame 5"));
+            assertEquals(0, countOccurrences(context, "       ROM: "));
+            assertEquals(0, countOccurrences(context, "       ENG: "));
+        } finally {
+            restoreProperty("trace.context.diagnostics", previous);
+        }
+    }
+
+    @Test
     void testSummaryIncludesLatestCheckpointAndZoneActState() throws IOException {
         TraceData trace = createTraceDataWithAuxState();
         FrameComparison frame = makeComparison(2, "air", Severity.ERROR, "0", "1");
@@ -494,5 +572,23 @@ public class TestDivergenceReport {
             {"frame":5,"vfc":1700,"event":"aiz_transition_floor_solid","slot":4,"object_status":"0x90","object_x":"0x2FB0","object_y":"0x03A0","p1_standing":false,"p2_standing":true,"p1_path":"first_reject","p2_path":"standing","p1_d1":"0x00A0","p1_d2":"0x0010","p1_d3":"0x0010","p1_status":"0x00","p1_object_control":"0x00","p1_y_radius":"0x13","p1_x":"0x2FCD","p1_y":"0x0379","p1_y_vel":"0x0000","p1_interact_slot":4,"p2_d1":"0x00A0","p2_d2":"0x0140","p2_d3":"0x0010","p2_status":"0x08","p2_object_control":"0x00","p2_y_radius":"0x10","p2_x":"0x2FB1","p2_y":"0x0380","p2_y_vel":"0x0000","p2_interact_slot":4}
             """);
         return TraceData.load(dir);
+    }
+
+    private static int countOccurrences(String text, String needle) {
+        int count = 0;
+        int index = 0;
+        while ((index = text.indexOf(needle, index)) >= 0) {
+            count++;
+            index += needle.length();
+        }
+        return count;
+    }
+
+    private static void restoreProperty(String key, String value) {
+        if (value == null) {
+            System.clearProperty(key);
+        } else {
+            System.setProperty(key, value);
+        }
     }
 }

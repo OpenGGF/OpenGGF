@@ -12,6 +12,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -299,14 +300,10 @@ public class DivergenceReport {
         sb.append(String.format("%-6s", "Frame"));
 
         Set<String> fieldNames = new LinkedHashSet<>();
-        boolean hasDiagnostics = false;
         for (int i = start; i <= end; i++) {
             if (i < allComparisons.size()) {
                 FrameComparison fc = allComparisons.get(i);
                 fieldNames.addAll(fc.fields().keySet());
-                if (!fc.romDiagnostics().isEmpty() || !fc.engineDiagnostics().isEmpty()) {
-                    hasDiagnostics = true;
-                }
             }
         }
 
@@ -331,7 +328,7 @@ public class DivergenceReport {
                     sb.append(String.format(" | %-8s | %-8s", "?", "?"));
                 }
             }
-            if (hasDiagnostics && fc.hasDivergence()) {
+            if (shouldRenderFrameDiagnostics(fc, centreFrame)) {
                 String romDiag = fc.romDiagnostics();
                 String engDiag = fc.engineDiagnostics();
                 if (!romDiag.isEmpty() || !engDiag.isEmpty()) {
@@ -342,6 +339,20 @@ public class DivergenceReport {
             sb.append("\n");
         }
         return sb.toString();
+    }
+
+    private boolean shouldRenderFrameDiagnostics(FrameComparison comparison, int centreFrame) {
+        if (!comparison.hasDivergence()) {
+            return false;
+        }
+        String mode = System.getProperty("trace.context.diagnostics", "frontier")
+                .trim()
+                .toLowerCase(Locale.ROOT);
+        return switch (mode) {
+            case "all", "full", "verbose" -> true;
+            case "none", "off", "false" -> false;
+            default -> comparison.frame() == centreFrame;
+        };
     }
 
     private int comparisonIndexForFrame(int frame) {

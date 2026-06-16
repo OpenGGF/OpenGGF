@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Trace context reports default to frontier-frame diagnostics:** trace replay
+  context files still include the requested frame table, but ROM/engine
+  diagnostic blocks now render only for the frontier frame by default to keep
+  full-sweep reports readable. Use `-Dtrace.context.diagnostics=all` for the
+  previous verbose window, or `none` for a table-only context.
+
 - **Trace replay ignores HTZ landing sidekick latch noise:** S2
   `tails_cpu_interact` and grounded ROM-only `Status_Push` diagnostics no longer
   report a frontier when sidekick kinematics match exactly across landing and
