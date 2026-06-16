@@ -98,7 +98,8 @@ pointed:
 > disassembly and ask it to convert it into java"* — James, 21 Oct 2024
 
 It was, to be clear, a mess getting there. The engine around it was still very much a work in
-progress — James's hand-coded physics had Sonic sinking through the floor, and we have the receipts
+progress — James's hand-coded physics had a long-running habit of letting Sonic sink through the
+floor, and the oldest clip we have (a v0.05 build) catches it in the act
 (see [the hall of shame](#the-hall-of-shame)) — but that was the *human* half of the build. The
 AI's job here was narrower and cleaner: turn ROM bytes into level data, verified against the ROM.
 And the lesson from that half stuck: **plausibility is not accuracy, and only the ROM gets a vote.**
@@ -252,8 +253,8 @@ affectionate museum — drawn from the dev clips James and Farrell fired at each
 
 | | |
 |:---:|:---:|
-| ![Sonic as a white box sinking under the terrain, Oct 2024](assets/ai-journey/2024-10-under-terrain.gif) | ![White-box Sonic on Emerald Hill tiles decompressed from the ROM, Oct 2024](assets/ai-journey/2024-10-rom-loading.gif) |
-| **Oct 2024** — Sonic is a white box who *"sits under the terrain."* **James's hand-coded physics**, mid-rewrite — the human half of the build. | **Oct 2024** — *"oh shiiiiit."* Same white box, now standing on **real Emerald Hill tiles decompressed from the ROM** — the moment the ChatGPT-assisted Kosinski work paid off. |
+| ![Sonic as a white box sinking under the terrain, v0.05 build from 2015](assets/ai-journey/2024-10-under-terrain.gif) | ![White-box Sonic on Emerald Hill tiles decompressed from the ROM, Oct 2024](assets/ai-journey/2024-10-rom-loading.gif) |
+| **v0.05 (2015)** — Sonic is a white box who *"sits under the terrain."* **James's original hand-coded physics** — the human half of the build, a decade before any agent. *(Clip captured 2024.)* | **Oct 2024** — *"oh shiiiiit."* Same white box, now standing on **real Emerald Hill tiles decompressed from the ROM** — the moment the ChatGPT-assisted Kosinski work paid off. |
 | ![The AIZ swing-vine flinging Sonic around wildly, Feb 2026](assets/timeline/aiz-vine.gif) | ![Twenty-one Sonics following one Tails through Angel Island Zone, Mar 2026](assets/timeline/21-sonics.gif) |
 | **Feb 2026** — the **AIZ swing-vine completely losing it.** Shown at full speed; you're welcome. | **Mar 2026** — *"what if we could have more than one sidekick?"* **21 Sonics and 1 Tails**, and the perf graph barely flinches. |
 

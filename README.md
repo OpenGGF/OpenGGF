@@ -213,6 +213,10 @@ needed.
 [You can't prompt your way to ROM accuracy (yet!)](docs/AI_JOURNEY.md). But we certainly prompted our way through object
 implementations, research and boilerplate code a lot faster than would have been possible by hand.
 
+For the visual version of that story, the [Development Timeline](docs/DEVELOPMENT_TIMELINE.md) is a
+captioned gallery of real dev builds — bugs and all — from a 2015 white-box prototype through to
+the present, including the audio engine slowly un-mangling itself.
+
 ### How can I contribute?
 
 The project is open source. Start with [`CONTRIBUTING.md`](CONTRIBUTING.md), then check the issue
@@ -227,6 +231,11 @@ straightforward to add new objects, zones, and game-specific behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Dev-clip date correction + README timeline link (2026-06-16).** Merged
+  `feature/ai-journey-clip-date-fix`: the oldest dev clip (white box under
+  terrain) is a v0.05 build from 2015-04-09 captured in 2024, not an Oct 2024
+  build — corrected in `docs/AI_JOURNEY.md` and `docs/DEVELOPMENT_TIMELINE.md`.
+  Also links the Development Timeline from the README's AI section. Docs-only.
 - **Development-timeline 2024 prologue (2026-06-16).** Merged
   `feature/ai-journey-timeline-prologue`, adding the two oldest dev clips (the
   white-box-under-terrain physics rewrite and the first Emerald Hill tiles
