@@ -19,6 +19,7 @@ public class PlayableSpriteAnimation {
     // animation substitution, which the ROM anim byte does not. See
     // ScriptedVelocityAnimationProfile.resolveGroundMovementAnimId.
     private int lastGroundMovementAnimId = -1;
+    private int groundMovementAnimSpeedSnapshot = Integer.MIN_VALUE;
 
     /**
      * Resets the tracked animation ID so the next update sees a mismatch
@@ -60,6 +61,22 @@ public class PlayableSpriteAnimation {
     }
 
     public record RewindState(int lastAnimationId, int lastGroundMovementAnimId) {}
+
+    public void captureGroundMovementAnimSpeed(short speed) {
+        groundMovementAnimSpeedSnapshot = speed;
+    }
+
+    public void clearGroundMovementAnimSpeed() {
+        groundMovementAnimSpeedSnapshot = Integer.MIN_VALUE;
+    }
+
+    public boolean hasGroundMovementAnimSpeed() {
+        return groundMovementAnimSpeedSnapshot != Integer.MIN_VALUE;
+    }
+
+    public short getGroundMovementAnimSpeed() {
+        return hasGroundMovementAnimSpeed() ? (short) groundMovementAnimSpeedSnapshot : sprite.getGSpeed();
+    }
 
     public void update(int frameCounter) {
         if (sprite == null) {

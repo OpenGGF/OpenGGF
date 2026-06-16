@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 CPZ2 Tails push animation uses pre-wall inertia:** grounded movement now
+  snapshots the pre-friction, pre-wall-probe ground speed for animation
+  selection, matching the ROM order where Tails chooses Wait/Walk before
+  no-input friction and ground-wall collision can zero inertia. This advances
+  the CPZ2 level-select trace from frame 759's `tails_status_byte` mismatch to
+  frame 2888's later Tails `x` mismatch; the full frontier-only trace sweep
+  improves from 54 to 53 failures with 1 existing error.
+
 - **S3K monitors expose their ROM object pointer to CPU Tails:** S3K monitor
   instances now publish the high word of `Obj_Monitor` (`0x0001D566`) through
   the existing `RomObjectCodePointerProvider` path, so `Tails_CPU_interact`
@@ -77,13 +85,6 @@ All notable changes to the OpenGGF project are documented in this file.
   frame 1132, and the visible MTZ level-select trace advances from frame 931's
   `tails_cpu_interact` mismatch to frame 1006's later `tails_status_byte`
   mismatch with no added or removed full-suite trace failures.
-
-- **Fresh ground-wall push survives the same-frame animation clear:** terrain
-  side-wall collision now marks push contact set after the idle/walk animation
-  clear point so the animation resolver does not erase `Status_Push` later in
-  the same frame. This advances the CPZ2 level-select Tails CPU frontier from
-  frame 759's missing push bit to frame 2888's later `tails_x` mismatch without
-  changing the trace-suite failure count.
 
 - **S2 lost-ring spill slots match Obj37 owner-slot allocation:** Sonic 2 now
   preallocates the first lost-ring Obj37 owner slot before spilling remaining

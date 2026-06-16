@@ -11,23 +11,27 @@ branch-local measurements.
 | Item | Current value |
 |---|---|
 | Overall trace-suite state | Expected-red, not release-green |
-| Latest logged full-sweep aggregate | 90 `*TraceReplay` tests, 54 failures, 1 error |
-| Latest focused frontier | `TestS3kMgzTraceReplay` advanced to frame `539` |
-| Current blocking field | MGZ route `rings` mismatch (`10` vs `11`) after clearing the monitor `tails_cpu_interact` frontier |
-| Current owner hypothesis | next Tails CPU/status target from the full sweep is `TestS2Cpz2LevelSelectTraceReplay` frame `759` |
+| Latest logged full-sweep aggregate | 90 `*TraceReplay` tests, 53 failures, 1 error |
+| Latest focused frontier | `TestS2Cpz2LevelSelectTraceReplay` advanced to frame `2888` |
+| Current blocking field | CPZ2 Tails `x` mismatch (`0x10F8` vs `0x10F0`) after clearing the frame-759 push-status frontier |
+| Current owner hypothesis | continue the Tails CPU/status cluster; the latest sweep's earliest remaining CPU/status frontier is `TestS3kIczCompleteRunTraceReplay` frame `1116` (`tails_cpu_routine`) |
 | Current branch context in newest entries | `bugfix/ai-trace-frontier-develop` after cherry-picking the AIZ worker chain |
-| Last frontier move | MGZ route `f312 -> f539` via S3K monitor ROM code-pointer reporting for `Tails_CPU_interact` |
+| Last frontier move | CPZ2 `f759 -> f2888` via pre-friction/pre-wall ground animation speed for Tails push-status retention |
 
 ### Active queue
 
 1. Continue the ordered Tails CPU/status cluster. The newest full sweep is
-   expected-red at 90 tests / 54 failures / 1 error; MGZ route advanced out of
-   `tails_cpu_interact` to a downstream ring-count mismatch, while S2 CPZ2 now
-   appears as the earliest remaining Tails status frontier at f759.
-2. Keep CNZ complete-run f1139, HCZ f1402, ICZ f1116, S2 ARZ1 f1285, and other
-   Tails CPU/status frontiers in the same cluster queue until a full sweep moves
-   them out of the cluster.
-3. Known branch-local follow-up from the S2 ARZ2 work: ARZ2 advanced to `f523`
+   expected-red at 90 tests / 53 failures / 1 error; S2 CPZ2 advanced out of
+   `tails_status_byte` to a downstream Tails movement mismatch.
+2. The latest sweep's earliest remaining CPU/status frontier is
+   `TestS3kIczCompleteRunTraceReplay` f1116 (`tails_cpu_routine`). Earlier
+   movement/downstream frontiers such as S2 OOZ2 f1070 (`air`) and S2 CPZ1
+   f1157 (`tails_x_speed`) should wait until the CPU/status cluster is
+   exhausted.
+3. Keep S2 OOZ f1251, CNZ complete-run f1139, HCZ f1402, S2 ARZ1 f1285, and
+   other Tails CPU/status frontiers in the same cluster queue until a full sweep
+   moves them out of the cluster.
+4. Known branch-local follow-up from the S2 ARZ2 work: ARZ2 advanced to `f523`
    missing Obj91 after the Obj15 child-slot fix, but that entry predates the
    newest AIZ-focused branch state. Reconfirm before treating it as the next
    global target.
@@ -37,15 +41,16 @@ branch-local measurements.
 | Trace | Frame | Field | ROM | Engine | Status | Next owner |
 |---|---:|---|---:|---:|---|---|
 | `s3k_mgz1` / `TestS3kMgzTraceReplay` | `539` | rings | `10` | `11` | advanced from f312 | downstream ring/object collection |
-| `s2_cpz2` / `TestS2Cpz2LevelSelectTraceReplay` | `759` | Tails `status` | `0x0020` | `0x0000` | next queue target | Tails CPU/status |
+| `s2_cpz2` / `TestS2Cpz2LevelSelectTraceReplay` | `2888` | Tails `x` | `0x10F8` | `0x10F0` | advanced from f759 | movement downstream of Tails CPU |
+| `s3k_icz1` / `TestS3kIczCompleteRunTraceReplay` | `1116` | Tails `cpu_routine` | `0x0002` | `0x0004` | next queue target | Tails CPU/status |
 | `s3k_cnz1` / `TestS3kCnzCompleteRunTraceReplay` | `1139` | Tails `status` | `0x0000` | `0x0020` | advanced | Tails CPU/status follow-on |
 | `s3k_aiz1` / `TestS3kAizTraceReplay` | `19089` | leader `g_speed` | `-00B0` | `0x00B0` | held | leader movement near AIZ2 end-boss approach |
 
-At MGZ route `f539`, the earlier `tails_cpu_interact` mismatch at f312 is
-cleared; Tails now observes the monitor's ROM object-code high word through the
-same stood-on-object path as other S3K solids. The new MGZ route frontier is a
-downstream ring-count mismatch. AIZ still holds at `f19089`, after the trace
-passes the AIZ2 battleship bombing run and wrap into the end-boss arena approach.
+At CPZ2 `f2888`, the earlier `tails_status_byte` mismatch at f759 is cleared;
+Tails keeps the ROM push bit when ground movement animation is chosen from the
+pre-friction/pre-wall inertia. The new CPZ2 frontier is downstream movement.
+AIZ still holds at `f19089`, after the trace passes the AIZ2 battleship bombing
+run and wrap into the end-boss arena approach.
 
 ### Stale-data warnings
 
@@ -72,6 +77,46 @@ passes the AIZ2 battleship bombing run and wrap into the end-boss arena approach
   cleanup. Do not delete historical evidence only because it is stale.
 
 ## Evidence Ledger
+
+## 2026-06-16 - S2 CPZ2 f759 -> f2888 via pre-friction ground animation speed snapshot
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, targeting the ordered
+  Tails CPU/status cluster after MGZ route advanced to a downstream ring-count
+  mismatch. The selected earliest frontier trace was
+  `TestS2Cpz2LevelSelectTraceReplay`.
+- Single-frame bisect result: at f759, ROM and engine Tails position, velocity,
+  and ground speed matched, but the trace expected `tails_status_byte=0x0020`
+  while the engine reported `0x0000`. The engine's ground-wall collision set
+  push, then the same frame's animation clear resolved Wait from post-wall
+  zeroed inertia and cleared push. ROM chooses the grounded movement anim before
+  no-input friction and the ground-wall check can zero inertia.
+- Disassembly evidence: S2 `Tails_Move` performs the animation/ground movement
+  branch before `Obj02_UpdateSpeedOnGround` and `Obj02_CheckWallsOnGround`
+  (`docs/s2disasm/s2.asm:39689-39693`, `39789-39865`).
+- Fix: `PlayableSpriteMovement` captures the pre-friction/pre-wall ground speed
+  on `PlayableSpriteAnimation`, and
+  `ScriptedVelocityAnimationProfile.resolveGroundMovementAnimId` uses that
+  frame-local value for grounded movement animation selection. No trace state is
+  written into engine state, and there is no zone, route, or frame carve-out.
+- Focused validation: `TestS2Cpz2LevelSelectTraceReplay` remains expected-red
+  but advances from **f759** `tails_status_byte` (`0x0020` vs `0x0000`) to
+  **f2888** Tails `x` (`0x10F8` vs `0x10F0`).
+- Full sweep command: `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off
+  -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1
+  -Dsurefire.redirectTestOutputToFile=false -Dtrace.frontierOnly=true
+  -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen
+  -Dsonic1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Dsonic2.rom.path=s2.gen
+  -Ds3k.rom.path=s3k.gen -Dsonic3k.rom.path=s3k.gen test"`.
+- Full sweep result: expected-red, **90 tests, 53 failures, 1 error**. The
+  intentional movement is CPZ2 **f759 -> f2888**, and the aggregate improves
+  from 54 to 53 failures with the existing error still present. Named first
+  frontiers such as AIZ f19089, MGZ route f539, MGZ complete-run f738, MHZ f966,
+  HCZ f1402, ICZ f1116, CNZ route f291, and CNZ complete-run f1139 held or
+  stayed in their already-classified clusters.
+- Classification: CPZ2 Tails CPU/status frontier **cleared/advanced** into a
+  downstream movement mismatch. The next ordered cluster target remains Tails
+  CPU/status; the latest sweep's earliest remaining CPU/status frontier is
+  `TestS3kIczCompleteRunTraceReplay` f1116 (`tails_cpu_routine`).
 
 ## 2026-06-16 - S3K MGZ route f312 -> f539 via monitor CPU-interact pointer
 

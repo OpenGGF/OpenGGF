@@ -474,6 +474,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// This is the input state AFTER control lock/move lock filtering, used to determine
 		// walk vs idle animation (ROM: Sonic_MoveLeft/MoveRight set walk anim when called).
 		sprite.setMovementInputActive(inputLeft || inputRight);
+		sprite.getAnimationManager().clearGroundMovementAnimSpeed();
 
 		clearStaleCpuPushVelocityBeforeGroundMove();
 
@@ -2004,6 +2005,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// consumes this so a sidekick whose inertia decays to 0 this frame does not
 		// duck a frame early (S2 MCZ1 Tails spindash/jump divergence at f2362).
 		preFrictionGroundSpeed = gSpeed;
+		sprite.getAnimationManager().captureGroundMovementAnimSpeed((short) gSpeed);
 
 		// Friction
 		// ROM ref: s2.asm:36443-36446 — Super Sonic uses normal friction (0x0C) not his profile friction (0x30)
