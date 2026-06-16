@@ -12,26 +12,25 @@ branch-local measurements.
 |---|---|
 | Overall trace-suite state | Expected-red, not release-green |
 | Latest logged full-sweep aggregate | 90 `*TraceReplay` tests, 53 failures, 1 error |
-| Latest focused frontier | `TestS3kIczCompleteRunTraceReplay` advanced to frame `3116` |
-| Current blocking field | ICZ main-player `status_byte` mismatch (`0x0008` vs `0x0009`) after clearing the frame-1116 Tails catch-up routine gate |
-| Current owner hypothesis | continue the Tails CPU/status cluster; the latest sweep's earliest remaining CPU/status frontier is `TestS3kCnzCompleteRunTraceReplay` frame `1139` (`tails_status_byte`) |
+| Latest focused frontier | `TestS3kCnzCompleteRunTraceReplay` advanced to frame `1846` |
+| Current blocking field | CNZ Tails `tails_x_speed` mismatch (`0x0024` vs `-1000`) after clearing the barber-pole `Tails_CPU_interact` mirror |
+| Current owner hypothesis | CNZ complete-run moved into movement downstream of Tails CPU; continue the ordered Tails CPU/status queue with the latest sweep's earliest remaining CPU/status frontier, `TestS2ArzLevelSelectTraceReplay` frame `1285` (`tails_cpu_interact`) |
 | Current branch context in newest entries | `bugfix/ai-trace-frontier-develop` after cherry-picking the AIZ worker chain |
-| Last frontier move | ICZ complete-run `f1116 -> f3116` via replay-start counter phase from the S3K complete-run Pos_table cursor |
+| Last frontier move | CNZ complete-run `f1467 -> f1846` via the CNZ barber pole ROM code-pointer high word for S3K `Tails_CPU_interact` |
 
 ### Active queue
 
 1. Continue the ordered Tails CPU/status cluster. The newest full sweep is
-   expected-red at 90 tests / 53 failures / 1 error; ICZ complete-run advanced
-   out of the early `tails_cpu_routine` catch-up gate to a later main-player
-   status mismatch.
+   expected-red at 90 tests / 53 failures / 1 error; CNZ complete-run advanced
+   out of the `tails_cpu_interact` mirror and now lands on downstream Tails
+   movement.
 2. The latest sweep's earliest remaining CPU/status frontier is
-   `TestS3kCnzCompleteRunTraceReplay` f1139 (`tails_status_byte`). Earlier
-   movement/downstream frontiers such as S2 OOZ2 f1070 (`air`), S2 CPZ1
-   f1157 (`tails_x_speed`), and ICZ f3116 (`status_byte`) should wait until the
-   CPU/status cluster is exhausted.
-3. Keep S2 OOZ f1251, HCZ f1402, S2 ARZ1 f1285, and
-   other Tails CPU/status frontiers in the same cluster queue until a full sweep
-   moves them out of the cluster.
+   `TestS2ArzLevelSelectTraceReplay` f1285 (`tails_cpu_interact`, `0x0008`
+   vs `0x0000`). Earlier movement/downstream frontiers such as S2 OOZ2 f1070
+   (`air`), S2 CPZ1 f1157 (`tails_x_speed`), and CNZ complete-run f1846
+   (`tails_x_speed`) should wait until the CPU/status cluster is exhausted.
+3. Keep S2 MTZ3 f1381, HCZ f1402, and other Tails CPU/status frontiers in the
+   same cluster queue until a full sweep moves them out of the cluster.
 4. Known branch-local follow-up from the S2 ARZ2 work: ARZ2 advanced to `f523`
    missing Obj91 after the Obj15 child-slot fix, but that entry predates the
    newest AIZ-focused branch state. Reconfirm before treating it as the next
@@ -44,7 +43,7 @@ branch-local measurements.
 | `s3k_mgz1` / `TestS3kMgzTraceReplay` | `539` | rings | `10` | `11` | advanced from f312 | downstream ring/object collection |
 | `s2_cpz2` / `TestS2Cpz2LevelSelectTraceReplay` | `2888` | Tails `x` | `0x10F8` | `0x10F0` | advanced from f759 | movement downstream of Tails CPU |
 | `s3k_icz1` / `TestS3kIczCompleteRunTraceReplay` | `3116` | `status_byte` | `0x0008` | `0x0009` | advanced from f1116 | movement/status downstream |
-| `s3k_cnz1` / `TestS3kCnzCompleteRunTraceReplay` | `1139` | Tails `status` | `0x0000` | `0x0020` | advanced | Tails CPU/status follow-on |
+| `s3k_cnz1` / `TestS3kCnzCompleteRunTraceReplay` | `1846` | Tails `tails_x_speed` | `0x0024` | `-1000` | advanced from f1467 | movement downstream of Tails CPU |
 | `s3k_aiz1` / `TestS3kAizTraceReplay` | `19089` | leader `g_speed` | `-00B0` | `0x00B0` | held | leader movement near AIZ2 end-boss approach |
 
 At CPZ2 `f2888`, the earlier `tails_status_byte` mismatch at f759 is cleared;
@@ -78,6 +77,49 @@ run and wrap into the end-boss arena approach.
   cleanup. Do not delete historical evidence only because it is stale.
 
 ## Evidence Ledger
+
+## 2026-06-16 - S3K CNZ complete-run f1467 -> f1846 via barber-pole CPU interact pointer
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, targeting the ordered
+  Tails CPU/status cluster after the retracting-spike latch fix advanced CNZ
+  complete-run to f1467. The selected frontier trace was
+  `TestS3kCnzCompleteRunTraceReplay`.
+- Single-frame bisect result: at f1467, ROM and engine both had Tails latched
+  to slot 9, the CNZ barber pole object, with matching riding context and
+  kinematics. The engine still reported `tails_cpu_interact=0x0000` because
+  `SidekickCpuController.currentS3kInteractWord()` only mirrors stood-on
+  objects that implement `RomObjectCodePointerProvider`, and the barber pole
+  had not exposed its ROM SST code pointer identity.
+- Disassembly evidence: S3K `sub_13EFC` copies word 0 of the stood-on object
+  SST into `Tails_CPU_interact` (`docs/skdisasm/sonic3k.asm:26839-26843`).
+  `Obj_CNZBarberPoleSprite` installs `loc_33376` into that word for the normal
+  branch (`docs/skdisasm/sonic3k.asm:69350-69353`), and the mirrored branch
+  `loc_335A8` is in the same `$0003xxxx` bank
+  (`docs/skdisasm/sonic3k.asm:69583-69589`).
+- Fix: `CnzBarberPoleObjectInstance` now implements
+  `RomObjectCodePointerProvider` and returns high word `0x0003`, with a unit
+  test pinning the S3K CPU-interact contract. No trace data is written into
+  engine state, and there is no zone, route, or frame carve-out.
+- Focused validation:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic3k.objects.TestCnzBarberPoleObjectInstance" test`
+  passed. Focused `TestS3kCnzCompleteRunTraceReplay` remains expected-red but
+  advances from **f1467** `tails_cpu_interact` (`0x0003` vs `0x0000`) to
+  **f1846** `tails_x_speed` (`0x0024` vs `-1000`).
+- Full sweep command: `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off
+  -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1
+  -Dsurefire.redirectTestOutputToFile=false -Dtrace.frontierOnly=true
+  -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen
+  -Dsonic1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Dsonic2.rom.path=s2.gen
+  -Ds3k.rom.path=s3k.gen -Dsonic3k.rom.path=s3k.gen test"`.
+- Full sweep result: expected-red, **90 tests, 53 failures, 1 error**. The
+  intentional movement is CNZ complete-run **f1467 -> f1846**. Named visible
+  frontiers otherwise held: AIZ route f19089, AIZ complete-run f1095, CNZ route
+  f291, HCZ f1402, ICZ f3116, LBZ f1694, MGZ route f539, MGZ complete-run
+  f738, and MHZ f966. No unrelated first-error-frame regression was observed.
+- Classification: CNZ Tails CPU/interact frontier **cleared/advanced** into
+  movement downstream of Tails CPU. The next ordered Tails CPU/status target
+  from this sweep is `TestS2ArzLevelSelectTraceReplay` f1285
+  (`tails_cpu_interact`, `0x0008` vs `0x0000`).
 
 ## 2026-06-16 - S3K ICZ complete-run f1116 -> f3116 via Pos_table replay counter phase
 

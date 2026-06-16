@@ -4,6 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K CNZ barber poles expose their ROM object pointer to CPU Tails:** CNZ
+  barber-pole instances now publish the high word of `loc_33376`/`loc_335A8`
+  through `RomObjectCodePointerProvider`, so S3K `Tails_CPU_interact` sees the
+  same stood-on object identity the ROM stores. This advances the CNZ
+  complete-run trace from frame 1467's `tails_cpu_interact` mismatch to frame
+  1846's later `tails_x_speed` frontier; the full frontier-only trace sweep
+  remains expected-red at 53 failures and 1 existing error with no unrelated
+  first-error regression observed.
+
 - **S3K CNZ retracting spikes keep ROM solid latch identity:** shared S2/S3K
   spike objects now keep `SolidObjectFull` standing/pushing latch state on the
   live object instance instead of the dynamic spawn position while retracting.
