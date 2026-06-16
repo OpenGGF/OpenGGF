@@ -202,7 +202,9 @@ public abstract class AbstractTraceReplayTest {
             ObjectManager om = GameServices.level().getObjectManager();
             List<TraceEvent.ObjectStateSnapshot> preTraceSnapshots =
                     trace.preTraceObjectSnapshots();
-            if (!preTraceSnapshots.isEmpty() && om != null) {
+            if (TraceReplayConsole.shouldPrintBootstrap()
+                    && !preTraceSnapshots.isEmpty()
+                    && om != null) {
                 System.out.printf(
                         "Reported %d/%d pre-trace object snapshots (%d warnings)%n",
                         snapshotReport.matched(), snapshotReport.attempted(),
@@ -318,11 +320,12 @@ public abstract class AbstractTraceReplayTest {
                 writeReport(report, meta);
             }
 
-            // 8. Log summary
-            System.out.println(report.toCompactSummary());
+            // 8. Log summary only when explicitly requested. Failing assertions
+            // still carry the compact frontier summary.
+            TraceReplayConsole.printSummary(report);
 
             // 9. Assert no errors
-            if (report.hasErrors() && Boolean.getBoolean("trace.print.context")) {
+            if (report.hasErrors() && TraceReplayConsole.shouldPrintContext()) {
                 System.err.println("\n=== Context window around first error ===");
                 System.err.println(report.getContextWindow(firstReportErrorFrame(report), 10));
             }

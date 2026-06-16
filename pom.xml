@@ -15,6 +15,7 @@
         <lwjgl.version>3.3.3</lwjgl.version>
         <joml.version>1.10.5</joml.version>
         <mockito.version>5.14.2</mockito.version>
+        <slf4j.version>2.0.17</slf4j.version>
         <mockito.agent.path>"${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar"</mockito.agent.path>
         <mockito.agent.argLine>-javaagent:${mockito.agent.path}</mockito.agent.argLine>
         <test.cds.argLine>-Xshare:off</test.cds.argLine>
@@ -474,6 +475,12 @@
             <groupId>com.tngtech.archunit</groupId>
             <artifactId>archunit-junit5</artifactId>
             <version>1.4.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-nop</artifactId>
+            <version>${slf4j.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>

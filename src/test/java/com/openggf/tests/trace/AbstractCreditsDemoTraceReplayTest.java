@@ -225,11 +225,12 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
                 writeReport(report, idx);
             }
 
-            // 8. Log summary
-            System.out.println(report.toCompactSummary());
+            // 8. Log summary only when explicitly requested. Failing assertions
+            // still carry the compact frontier summary.
+            TraceReplayConsole.printSummary(report);
 
             // 9. Assert no errors
-            if (report.hasErrors() && Boolean.getBoolean("trace.print.context")) {
+            if (report.hasErrors() && TraceReplayConsole.shouldPrintContext()) {
                 System.err.println("\n=== Context window around first error ===");
                 System.err.println(report.getContextWindow(firstReportErrorFrame(report), 10));
             }
