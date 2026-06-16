@@ -326,6 +326,33 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether CPU sidekick follow steering should treat this still-ridden object
+     * as preserving the previous frame's push bit until the ROM CPU slot reads
+     * it.
+     * <p>
+     * This is intentionally object-local. Most objects should not bridge a
+     * cleared {@code Status_Push}: their current helper phase already matches
+     * what the CPU sees. Plain SolidObject/SolidObjectFull callers that keep
+     * standing/pushing bits in the live object status byte can opt in when trace
+     * evidence shows the engine has reconciled support before TailsCPU_Normal
+     * reads {@code Status_Push} (S2 loc_24836, docs/s2disasm/s2.asm:39291-39294).
+     */
+    default boolean preservesSidekickCpuPushGraceWhileRiding(PlayableEntity player) {
+        return false;
+    }
+
+    /**
+     * Minimum remaining push-grace frames for the CPU sidekick riding bridge.
+     * <p>
+     * The default keeps the conservative shared threshold. Objects with ROM
+     * evidence that their {@code SolidObject} status byte stays visible longer
+     * to Tails' CPU slot may lower this value locally.
+     */
+    default int sidekickCpuPushGraceMinimumFramesWhileRiding(PlayableEntity player) {
+        return Integer.MAX_VALUE;
+    }
+
+    /**
      * Whether the right edge of the full solid X window is inclusive.
      * <p>
      * Most engine objects keep the established exclusive bound. S3K horizontal

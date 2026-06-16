@@ -1804,6 +1804,20 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     }
 
     /**
+     * True while the post-bombing ship loop is repeating the forest section
+     * ({@code AIZ2_DoShipLoop} with {@code Events_bg+$02 = $46C0}, s3.asm:70569,
+     * 70956-70971). ROM state only: the auto-scroll loop is active and its wrap
+     * boundary is the post-bombing forest boundary. Drives the FG Plane A {@code $200}
+     * horizontal wrap that keeps the looped forest canopy continuous across the
+     * camera wrap (the engine analog of the ROM's {@code $200} Plane A nametable
+     * ring, since the {@code $200} wrap distance equals the nametable width).
+     */
+    public boolean isBattleshipForestLoopActive() {
+        return battleshipAutoScrollActive
+                && battleshipWrapX == BATTLESHIP_WRAP_X_POST_BOMBING;
+    }
+
+    /**
      * ROM: AIZ2BGE_Normal one-time BG Y adjustment ($A8 or -$198).
      * Applied when eventsFg5 fires (resize4). The scroll handler adds this to vscrollFactorBG.
      */

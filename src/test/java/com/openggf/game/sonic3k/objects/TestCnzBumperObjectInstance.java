@@ -73,7 +73,7 @@ class TestCnzBumperObjectInstance {
 
         bumper.update(0x0D4C, null);
 
-        int expectedAngle = (0x80 + ((0x011C + 1) & 0xFF)) & 0xFF;
+        int expectedAngle = (0x80 + ((0x011C + 2) & 0xFF)) & 0xFF;
         assertEquals(0x03E8 + (TrigLookupTable.cosHex(expectedAngle) >> 2), bumper.getX());
         assertEquals(0x0630 + (TrigLookupTable.sinHex(expectedAngle) >> 2), bumper.getY());
     }
@@ -170,8 +170,9 @@ class TestCnzBumperObjectInstance {
 
         bumper.update(0x0D53, null);
 
-        assertEquals(0x03CF, bumper.getX());
-        assertEquals(0x066B, bumper.getY());
+        int expectedVisibleAngle = (0x2B + ((0x0124 + 2) & 0xFF)) & 0xFF;
+        assertEquals(0x03E8 + (TrigLookupTable.cosHex(expectedVisibleAngle) >> 2), bumper.getX());
+        assertEquals(0x0630 + (TrigLookupTable.sinHex(expectedVisibleAngle) >> 2), bumper.getY());
 
         bumper.onTouchResponse(player, new TouchResponseResult(0x17, 8, 8, TouchCategory.SPECIAL), 0x0D53);
         bumper.update(0x0D53, null);
@@ -188,7 +189,7 @@ class TestCnzBumperObjectInstance {
     }
 
     @Test
-    void movingBumperExposesPreviousOrbitPointForTouchResponse() throws Exception {
+    void movingBumperExposesCurrentOrbitPointForTouchResponseList() throws Exception {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
@@ -199,17 +200,14 @@ class TestCnzBumperObjectInstance {
 
         setLevelFrameCounter(levelManager, 0x015E);
         bumper.update(0x0D8D, null);
-        int listedX = bumper.getX();
-        int listedY = bumper.getY();
 
         setLevelFrameCounter(levelManager, 0x015F);
         bumper.update(0x0D8E, null);
 
-        assertEquals(listedX, bumper.getMultiTouchRegions()[0].x(),
-                "Obj_Bumper joins the collision-response list after orbiting; Sonic's next "
-                        + "ReactToItem sees that prior listed point");
-        assertEquals(listedY, bumper.getMultiTouchRegions()[0].y());
-        assertTrue(bumper.getX() != listedX || bumper.getY() != listedY);
+        assertEquals(bumper.getX(), bumper.getMultiTouchRegions()[0].x(),
+                "Obj_Bumper joins the collision-response list after orbiting, so the "
+                        + "published touch point is the current visible orbit point");
+        assertEquals(bumper.getY(), bumper.getMultiTouchRegions()[0].y());
     }
 
     @Test

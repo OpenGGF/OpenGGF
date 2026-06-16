@@ -211,6 +211,415 @@ public class TestTraceBinder {
     }
 
     @Test
+    void testSidekickHurtOnObjectStatusOnlyMismatchIsIgnored() {
+        TraceFrame frame = new TraceFrame(0, 0x0000,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            new TraceCharacterState(true,
+                (short) 0x0040, (short) 0x03A0,
+                (short) 0x0010, (short) 0x0000, (short) 0x0010,
+                (byte) 0x00, true, false, 0,
+                0, 0, 0x04, 0x0B, 0x00));
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, null, "tails",
+            new TraceCharacterState(true,
+                (short) 0x0040, (short) 0x03A0,
+                (short) 0x0010, (short) 0x0000, (short) 0x0010,
+                (byte) 0x00, true, false, 0,
+                0, 0, 0x04, 0x03, 0x00));
+
+        assertFalse(result.hasError());
+        assertEquals(Severity.MATCH, result.fields().get("tails_status_byte").severity());
+        assertTrue(result.fields().get("tails_status_byte").observedMismatch(),
+                "Ignored push-only status mismatches should still be visible in trace context.");
+    }
+
+    @Test
+    void testSidekickHurtOnObjectStatusMismatchStillReportsWithMotionDelta() {
+        TraceFrame frame = new TraceFrame(0, 0x0000,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            new TraceCharacterState(true,
+                (short) 0x0040, (short) 0x03A0,
+                (short) 0x0010, (short) 0x0000, (short) 0x0010,
+                (byte) 0x00, true, false, 0,
+                0, 0, 0x04, 0x0B, 0x00));
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, null, "tails",
+            new TraceCharacterState(true,
+                (short) 0x0041, (short) 0x03A0,
+                (short) 0x0010, (short) 0x0000, (short) 0x0010,
+                (byte) 0x00, true, false, 0,
+                0, 0, 0x04, 0x03, 0x00));
+
+        assertTrue(result.hasError());
+        assertEquals(Severity.ERROR, result.fields().get("tails_status_byte").severity());
+        assertEquals(Severity.ERROR, result.fields().get("tails_x").severity());
+    }
+
+    @Test
+    void testGroundedSidekickOnObjectPushOnlyStatusMismatchIsIgnoredWhenMotionMatches() {
+        TraceFrame frame = new TraceFrame(0, 0x0000,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            new TraceCharacterState(true,
+                (short) 0x08E3, (short) 0x0674,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, false, 0,
+                0x0D00, 0xD900, 0x02, 0x29, 0x00));
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, null, "tails",
+            new TraceCharacterState(true,
+                (short) 0x08E3, (short) 0x0674,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, false, 0,
+                0x0D00, 0xD900, 0x02, 0x09, 0x00));
+
+        assertFalse(result.hasError());
+        assertEquals(Severity.MATCH, result.fields().get("tails_status_byte").severity());
+    }
+
+    @Test
+    void testGroundedSidekickOnObjectPushStatusMismatchStillReportsWithMotionDelta() {
+        TraceFrame frame = new TraceFrame(0, 0x0000,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            new TraceCharacterState(true,
+                (short) 0x08E3, (short) 0x0674,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, false, 0,
+                0x0D00, 0xD900, 0x02, 0x29, 0x00));
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, null, "tails",
+            new TraceCharacterState(true,
+                (short) 0x08E3, (short) 0x0674,
+                (short) 0x0018, (short) 0x0000, (short) 0x0018,
+                (byte) 0x00, false, false, 0,
+                0x0D00, 0xD900, 0x02, 0x09, 0x00));
+
+        assertTrue(result.hasError());
+        assertEquals(Severity.ERROR, result.fields().get("tails_status_byte").severity());
+        assertEquals(Severity.ERROR, result.fields().get("tails_x_speed").severity());
+    }
+
+    @Test
+    void testStationaryReleasedSidekickPushOnlyStatusMismatchIsIgnored() {
+        TraceFrame frame = new TraceFrame(3691, 0x0000,
+            (short) 0x1914, (short) 0x036F,
+            (short) -0x0100, (short) 0x0000, (short) -0x0100,
+            (byte) 0x00, false, true, 0,
+            0x7000, 0x1E00, 0x0D, 0x0D, 0x0E6C, 0x21, 0x3DD8, 0,
+            0x1884, 0x030A, -1,
+            new TraceCharacterState(true,
+                (short) 0x158A, (short) 0x0470,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, false, 0,
+                0x9D00, 0xA800, 0x02, 0x20, 0x1E));
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x1914, (short) 0x036F,
+            (short) -0x0100, (short) 0x0000, (short) -0x0100,
+            (byte) 0x00, false, true, 0,
+            null, null, "tails",
+            new TraceCharacterState(true,
+                (short) 0x158A, (short) 0x0470,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, false, 0,
+                0x9D00, 0xA800, 0x02, 0x00, -1));
+
+        assertFalse(result.hasError());
+        assertEquals(Severity.MATCH, result.fields().get("tails_status_byte").severity());
+    }
+
+    @Test
+    void testStationaryReleasedSidekickPushStatusMismatchStillReportsWithMotionDelta() {
+        TraceFrame frame = new TraceFrame(3691, 0x0000,
+            (short) 0x1914, (short) 0x036F,
+            (short) -0x0100, (short) 0x0000, (short) -0x0100,
+            (byte) 0x00, false, true, 0,
+            0x7000, 0x1E00, 0x0D, 0x0D, 0x0E6C, 0x21, 0x3DD8, 0,
+            0x1884, 0x030A, -1,
+            new TraceCharacterState(true,
+                (short) 0x158A, (short) 0x0470,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, false, 0,
+                0x9D00, 0xA800, 0x02, 0x20, 0x1E));
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x1914, (short) 0x036F,
+            (short) -0x0100, (short) 0x0000, (short) -0x0100,
+            (byte) 0x00, false, true, 0,
+            null, null, "tails",
+            new TraceCharacterState(true,
+                (short) 0x158A, (short) 0x0470,
+                (short) 0x000C, (short) 0x0000, (short) 0x000C,
+                (byte) 0x00, false, false, 0,
+                0x9D00, 0xA800, 0x02, 0x00, -1));
+
+        assertTrue(result.hasError());
+        assertEquals(Severity.ERROR, result.fields().get("tails_status_byte").severity());
+        assertEquals(Severity.ERROR, result.fields().get("tails_x_speed").severity());
+    }
+
+    @Test
+    void testMovingGroundedSidekickPushOnlyStatusMismatchIsIgnoredWhenMotionMatches() {
+        TraceCharacterState expectedTails = new TraceCharacterState(true,
+                (short) 0x13CB, (short) 0x03F5,
+                (short) 0xFFB8, (short) 0x0000, (short) 0xFFB8,
+                (byte) 0x00, false, false, 0,
+                0x6300, 0xFF00, 0x02, 0x21, 0x1E);
+        TraceFrame frame = frameWithSidekick(4494, expectedTails);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+                (short) 0x08D3, (short) 0x0693,
+                (short) 0x0090, (short) 0xFB1D, (short) 0x0633,
+                (byte) 0xCC, false, true, 3,
+                null, null, "tails",
+                new TraceCharacterState(true,
+                        (short) 0x13CB, (short) 0x03F5,
+                        (short) 0xFFB8, (short) 0x0000, (short) 0xFFB8,
+                        (byte) 0x00, false, false, 0,
+                        0x6300, 0xFF00, 0x02, 0x01, 0x1E));
+
+        assertFalse(result.hasError());
+        assertEquals(Severity.MATCH, result.fields().get("tails_status_byte").severity());
+    }
+
+    @Test
+    void testMovingGroundedSidekickPushStatusMismatchStillReportsWithMotionDelta() {
+        TraceCharacterState expectedTails = new TraceCharacterState(true,
+                (short) 0x13CB, (short) 0x03F5,
+                (short) 0xFFB8, (short) 0x0000, (short) 0xFFB8,
+                (byte) 0x00, false, false, 0,
+                0x6300, 0xFF00, 0x02, 0x21, 0x1E);
+        TraceFrame frame = frameWithSidekick(4494, expectedTails);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+                (short) 0x08D3, (short) 0x0693,
+                (short) 0x0090, (short) 0xFB1D, (short) 0x0633,
+                (byte) 0xCC, false, true, 3,
+                null, null, "tails",
+                new TraceCharacterState(true,
+                        (short) 0x13CB, (short) 0x03F6,
+                        (short) 0xFFB8, (short) 0x0000, (short) 0xFFB8,
+                        (byte) 0x00, false, false, 0,
+                        0x6300, 0xFF00, 0x02, 0x01, 0x1E));
+
+        assertTrue(result.hasError());
+        assertEquals(Severity.ERROR, result.fields().get("tails_status_byte").severity());
+        assertEquals(Severity.ERROR, result.fields().get("tails_y").severity());
+    }
+
+    @Test
+    void testInactiveSidekickDespawnMarkerFacingOnlyStatusMismatchIsIgnored() {
+        TraceFrame frame = new TraceFrame(0, 0x0000,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            new TraceCharacterState(true,
+                (short) 0x0000, (short) 0x0000,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, true, false, 0,
+                0xB500, 0x1E00, 0x02, 0x02, 0x07));
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, null, "tails",
+            new TraceCharacterState(true,
+                (short) 0x0000, (short) 0x0000,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, true, false, 0,
+                0xB500, 0x1E00, 0x02, 0x03, -1));
+
+        assertFalse(result.hasError());
+        assertEquals(Severity.MATCH, result.fields().get("tails_status_byte").severity());
+    }
+
+    @Test
+    void testInactiveSidekickDespawnMarkerFacingMismatchStillReportsWithMotionDelta() {
+        TraceFrame frame = new TraceFrame(0, 0x0000,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            new TraceCharacterState(true,
+                (short) 0x0000, (short) 0x0000,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, true, false, 0,
+                0xB500, 0x1E00, 0x02, 0x02, 0x07));
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, null, "tails",
+            new TraceCharacterState(true,
+                (short) 0x0001, (short) 0x0000,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, true, false, 0,
+                0xB500, 0x1E00, 0x02, 0x03, -1));
+
+        assertTrue(result.hasError());
+        assertEquals(Severity.ERROR, result.fields().get("tails_status_byte").severity());
+        assertEquals(Severity.ERROR, result.fields().get("tails_x").severity());
+    }
+
+    @Test
+    void testStationarySidekickOnObjectFacingOnlyStatusMismatchIsIgnored() {
+        TraceFrame frame = new TraceFrame(0, 0x0000,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            new TraceCharacterState(true,
+                (short) 0x0753, (short) 0x02EC,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, false, 0,
+                0x6A00, 0x0B00, 0x02, 0x08, 0x27));
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, null, "tails",
+            new TraceCharacterState(true,
+                (short) 0x0753, (short) 0x02EC,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, false, 0,
+                0x6A00, 0x0B00, 0x02, 0x09, 0x22));
+
+        assertFalse(result.hasError());
+        assertEquals(Severity.MATCH, result.fields().get("tails_status_byte").severity());
+    }
+
+    @Test
+    void testStationarySidekickOnObjectFacingMismatchStillReportsWithMotionDelta() {
+        TraceFrame frame = new TraceFrame(0, 0x0000,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            new TraceCharacterState(true,
+                (short) 0x0753, (short) 0x02EC,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, false, 0,
+                0x6A00, 0x0B00, 0x02, 0x08, 0x27));
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x0050, (short) 0x03B0,
+            (short) 0x0000, (short) 0x0000, (short) 0x0000,
+            (byte) 0x00, false, false, 0,
+            null, null, "tails",
+            new TraceCharacterState(true,
+                (short) 0x0753, (short) 0x02EC,
+                (short) 0x000C, (short) 0x0000, (short) 0x000C,
+                (byte) 0x00, false, false, 0,
+                0x6A00, 0x0B00, 0x02, 0x09, 0x22));
+
+        assertTrue(result.hasError());
+        assertEquals(Severity.ERROR, result.fields().get("tails_status_byte").severity());
+        assertEquals(Severity.ERROR, result.fields().get("tails_x_speed").severity());
+    }
+
+    @Test
+    void testAirborneSidekickZeroHorizontalSpeedFacingOnlyStatusMismatchIsIgnored() {
+        TraceFrame frame = new TraceFrame(0, 0x0000,
+            (short) 0x13B0, (short) 0x03ED,
+            (short) 0x00F0, (short) -0x0530, (short) 0x0000,
+            (byte) 0x00, true, true, 0,
+            0x4000, 0x5300, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            new TraceCharacterState(true,
+                (short) 0x13A0, (short) 0x0410,
+                (short) 0x0000, (short) 0x0038, (short) 0x0000,
+                (byte) 0x00, true, false, 0,
+                0x8100, 0x9700, 0x02, 0x03, -1));
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x13B0, (short) 0x03ED,
+            (short) 0x00F0, (short) -0x0530, (short) 0x0000,
+            (byte) 0x00, true, true, 0,
+            null, null, "tails",
+            new TraceCharacterState(true,
+                (short) 0x13A0, (short) 0x0410,
+                (short) 0x0000, (short) 0x0038, (short) 0x0000,
+                (byte) 0x00, true, false, 0,
+                0x8100, 0x9700, 0x02, 0x02, -1));
+
+        assertFalse(result.hasError());
+        assertEquals(Severity.MATCH, result.fields().get("tails_status_byte").severity());
+    }
+
+    @Test
+    void testAirborneSidekickFacingMismatchStillReportsWithHorizontalMotionDelta() {
+        TraceFrame frame = new TraceFrame(0, 0x0000,
+            (short) 0x13B0, (short) 0x03ED,
+            (short) 0x00F0, (short) -0x0530, (short) 0x0000,
+            (byte) 0x00, true, true, 0,
+            0x4000, 0x5300, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            new TraceCharacterState(true,
+                (short) 0x13A0, (short) 0x0410,
+                (short) 0x0000, (short) 0x0038, (short) 0x0000,
+                (byte) 0x00, true, false, 0,
+                0x8100, 0x9700, 0x02, 0x03, -1));
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x13B0, (short) 0x03ED,
+            (short) 0x00F0, (short) -0x0530, (short) 0x0000,
+            (byte) 0x00, true, true, 0,
+            null, null, "tails",
+            new TraceCharacterState(true,
+                (short) 0x13A0, (short) 0x0410,
+                (short) 0x0018, (short) 0x0038, (short) 0x0000,
+                (byte) 0x00, true, false, 0,
+                0x8100, 0x9700, 0x02, 0x02, -1));
+
+        assertTrue(result.hasError());
+        assertEquals(Severity.ERROR, result.fields().get("tails_status_byte").severity());
+        assertEquals(Severity.ERROR, result.fields().get("tails_x_speed").severity());
+    }
+
+    @Test
     void testSidekickRoutineMismatchIsReported() {
         TraceFrame frame = new TraceFrame(0, 0x0000,
             (short) 0x0050, (short) 0x03B0,
@@ -294,6 +703,157 @@ public class TestTraceBinder {
 
         assertTrue(result.hasError());
         assertEquals(Severity.ERROR, result.fields().get("tails_cpu_routine").severity());
+    }
+
+    @Test
+    void testInactiveSidekickCpuInteractMismatchDoesNotOwnFrontier() {
+        TraceCharacterState tails = sidekickStateWithStatus(0x00);
+        TraceFrame frame = frameWithSidekick(tails);
+        TraceEvent.CpuState expectedCpu = cpuStateWithInteract(0x6E);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x00, 0x06, 0x0000, 0x0000,
+                0x00, 0x00, 0x00, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+                (short) 0x0050, (short) 0x03B0,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, false, 0,
+                null, null, "tails", tails, expectedCpu, actualCpu);
+
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_interact").severity());
+        assertFalse(result.hasError());
+    }
+
+    @Test
+    void testActiveSidekickCpuInteractMismatchStillReports() {
+        TraceCharacterState tails = sidekickStateWithStatus(0x08);
+        TraceFrame frame = frameWithSidekick(tails);
+        TraceEvent.CpuState expectedCpu = cpuStateWithInteract(0x6E);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x00, 0x06, 0x0000, 0x0000,
+                0x00, 0x00, 0x00, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+                (short) 0x0050, (short) 0x03B0,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, false, 0,
+                null, null, "tails", tails, expectedCpu, actualCpu);
+
+        assertEquals(Severity.ERROR, result.fields().get("tails_cpu_interact").severity());
+        assertTrue(result.hasError());
+    }
+
+    @Test
+    void testLandingFrameSidekickCpuInteractMirrorLagDoesNotOwnFrontier() {
+        TraceCharacterState tails = sidekickStateWithStatus(0x08);
+        TraceFrame frame = frameWithSidekick(tails);
+        TraceEvent.CpuState expectedCpu = cpuStateWithInteractAndTailsInteract(0x00, 0x19);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x24, 0x06, 0x0000, 0x0000,
+                0x00, 0x00, 0x00, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+                (short) 0x0050, (short) 0x03B0,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, false, 0,
+                null, null, "tails", tails, expectedCpu, actualCpu);
+
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_interact").severity());
+        assertFalse(result.hasError());
+    }
+
+    @Test
+    void testLandingFrameSidekickCpuInteractMirrorLagStillReportsWithMotionDelta() {
+        TraceCharacterState expectedTails = sidekickStateWithStatus(0x08);
+        TraceCharacterState actualTails = new TraceCharacterState(true,
+                (short) 0x0142, (short) 0x03A0,
+                (short) 0x0018, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, false, 0,
+                0, 0, 0x02, 0x08, 0x16);
+        TraceFrame frame = frameWithSidekick(expectedTails);
+        TraceEvent.CpuState expectedCpu = cpuStateWithInteractAndTailsInteract(0x00, 0x19);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x24, 0x06, 0x0000, 0x0000,
+                0x00, 0x00, 0x00, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+                (short) 0x0050, (short) 0x03B0,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, false, 0,
+                null, null, "tails", actualTails, expectedCpu, actualCpu);
+
+        assertEquals(Severity.ERROR, result.fields().get("tails_cpu_interact").severity());
+        assertEquals(Severity.ERROR, result.fields().get("tails_x_speed").severity());
+        assertTrue(result.hasError());
+    }
+
+    @Test
+    void testLandingFrameStaleSidekickCpuInteractIdDoesNotOwnFrontier() {
+        TraceCharacterState landedTails = new TraceCharacterState(true,
+                (short) 0x1537, (short) 0x041A,
+                (short) 0xFF61, (short) 0x0000, (short) 0xFF61,
+                (byte) 0x00, false, false, 0,
+                0x9200, 0x7F00, 0x02, 0x09, 0x16);
+        TraceFrame frame = frameWithSidekick(4229, landedTails);
+        TraceEvent.CpuState expectedCpu = new TraceEvent.CpuState(
+                4229, "tails", 0x36, 0, 0, 0x06,
+                (short) 0x06DD, (short) 0x03F0, 0,
+                0, 0x04, 0x00, 0, 0x0400,
+                0x6C, 0x28, (short) 0x1538, (short) 0x0418,
+                0x0400, 0x09, 0x09, 0x16, 0xFF61);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x14, 0x06, 0x06DD, 0x03F0,
+                0x04, 0x00, 0x0A, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+                (short) 0x08D3, (short) 0x0693,
+                (short) 0x0090, (short) 0xFB1D, (short) 0x0633,
+                (byte) 0xCC, false, true, 3,
+                null, null, "tails", landedTails, expectedCpu, actualCpu);
+
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_interact").severity());
+        assertFalse(result.hasError(),
+                "A one-frame ROM Tails_interact_ID refresh lag on landing is a diagnostic-only frontier");
+    }
+
+    @Test
+    void testLandingFrameStaleSidekickCpuInteractIdStillReportsWithMotionDelta() {
+        TraceCharacterState expectedTails = new TraceCharacterState(true,
+                (short) 0x1537, (short) 0x041A,
+                (short) 0xFF61, (short) 0x0000, (short) 0xFF61,
+                (byte) 0x00, false, false, 0,
+                0x9200, 0x7F00, 0x02, 0x09, 0x16);
+        TraceCharacterState actualTails = new TraceCharacterState(true,
+                (short) 0x1537, (short) 0x041B,
+                (short) 0xFF61, (short) 0x0000, (short) 0xFF61,
+                (byte) 0x00, false, false, 0,
+                0x9200, 0x7F00, 0x02, 0x09, 0x16);
+        TraceFrame frame = frameWithSidekick(4229, expectedTails);
+        TraceEvent.CpuState expectedCpu = new TraceEvent.CpuState(
+                4229, "tails", 0x36, 0, 0, 0x06,
+                (short) 0x06DD, (short) 0x03F0, 0,
+                0, 0x04, 0x00, 0, 0x0400,
+                0x6C, 0x28, (short) 0x1538, (short) 0x0418,
+                0x0400, 0x09, 0x09, 0x16, 0xFF61);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x14, 0x06, 0x06DD, 0x03F0,
+                0x04, 0x00, 0x0A, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+                (short) 0x08D3, (short) 0x0693,
+                (short) 0x0090, (short) 0xFB1D, (short) 0x0633,
+                (byte) 0xCC, false, true, 3,
+                null, null, "tails", actualTails, expectedCpu, actualCpu);
+
+        assertEquals(Severity.ERROR, result.fields().get("tails_cpu_interact").severity());
+        assertEquals(Severity.ERROR, result.fields().get("tails_y").severity());
+        assertTrue(result.hasError());
     }
 
     @Test
@@ -686,6 +1246,84 @@ public class TestTraceBinder {
         assertTrue(result.hasError());
     }
 
+    @Test
+    void testSidekickCpuCtrl2HeldMirrorOnObjectDoesNotOwnFrontier() {
+        TraceCharacterState landedTails = traceSidekickOnObjectAtRest();
+        TraceFrame frame = frameWithSidekick(3675, landedTails);
+        TraceEvent.CpuState snapshotCpu = cpuStateWithCtrl2HeldMirror(3675);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x01, 0x06, 0x1070, 0x06CA,
+                0x00, 0x00, 0x25, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x08D3, (short) 0x0693,
+            (short) 0x0090, (short) 0xFB1D, (short) 0x0633,
+            (byte) 0xCC, false, true, 3,
+            null, null, "tails", landedTails, snapshotCpu, actualCpu);
+
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_held").severity());
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_pressed").severity());
+        assertFalse(result.hasError(),
+                "Ctrl_2 held can mirror Ctrl_1 on an on-object stationary frame without owning the frontier");
+    }
+
+    @Test
+    void testSidekickCpuCtrl2HeldMirrorStillReportsWithMotionDelta() {
+        TraceCharacterState expectedTails = traceSidekickOnObjectAtRest();
+        TraceCharacterState actualTails = new TraceCharacterState(true,
+                (short) 0x1070, (short) 0x06CF,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, true, 0,
+                0xE000, 0x0C00, 0x02, 0x0C, 0x25);
+        TraceFrame frame = frameWithSidekick(3675, expectedTails);
+        TraceEvent.CpuState snapshotCpu = cpuStateWithCtrl2HeldMirror(3675);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x01, 0x06, 0x1070, 0x06CA,
+                0x00, 0x00, 0x25, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x08D3, (short) 0x0693,
+            (short) 0x0090, (short) 0xFB1D, (short) 0x0633,
+            (byte) 0xCC, false, true, 3,
+            null, null, "tails", actualTails, snapshotCpu, actualCpu);
+
+        assertEquals(Severity.ERROR, result.fields().get("tails_cpu_ctrl2_held").severity());
+        assertEquals(Severity.ERROR, result.fields().get("tails_y").severity());
+        assertTrue(result.hasError());
+    }
+
+    @Test
+    void testSidekickCpuCtrl2HeldJumpOnlyNoopDoesNotOwnFrontier() {
+        TraceCharacterState tails = new TraceCharacterState(true,
+                (short) 0x1012, (short) 0x0580,
+                (short) 0x03C8, (short) 0x0933, (short) 0x09FB,
+                (byte) 0x30, false, true, 0,
+                0x3000, 0xEF00, 0x02, 0x05, 0x2E);
+        TraceFrame frame = frameWithSidekick(3876, tails);
+        TraceEvent.CpuState snapshotCpu = new TraceEvent.CpuState(
+                3876, "tails", 0x85, 0, 79, 0x06,
+                (short) 0x1070, (short) 0x06CA, 0,
+                0, 0x74, 0x04, 0, 0x0000,
+                0xFC, 0xB8, (short) 0x0F71, (short) 0x03EC,
+                0x0000, 0x02, 0x05, 0x33, 0x09FB);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 79, 0x85, 0x06, 0x1070, 0x06CA,
+                0x04, 0x04, 0x2E, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x08D3, (short) 0x0693,
+            (short) 0x0090, (short) 0xFB1D, (short) 0x0633,
+            (byte) 0xCC, false, true, 3,
+            null, null, "tails", tails, snapshotCpu, actualCpu);
+
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_held").severity());
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_pressed").severity());
+        assertFalse(result.hasError());
+    }
+
     private static TraceCharacterState traceSidekickWithGroundSpeed(short gSpeed) {
         return new TraceCharacterState(true,
                 (short) 0x08AF, (short) 0x07BF,
@@ -701,6 +1339,23 @@ public class TestTraceBinder {
                 (byte) 0xCC, false, true, 3,
                 0xCA00, 0xAD00, 0x02, 0x0833, 0x064E, 15, 0x06,
                 0x03A9, 0x12, 0x30DF, 0, sidekick);
+    }
+
+    private static TraceCharacterState traceSidekickOnObjectAtRest() {
+        return new TraceCharacterState(true,
+                (short) 0x1070, (short) 0x06CE,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, true, 0,
+                0xE000, 0x0C00, 0x02, 0x0C, 0x25);
+    }
+
+    private static TraceEvent.CpuState cpuStateWithCtrl2HeldMirror(int frame) {
+        return new TraceEvent.CpuState(
+                frame, "tails", 0x01, 0, 0, 0x06,
+                (short) 0x1070, (short) 0x06CA, 0,
+                0, 0x10, 0x00, 0, 0x1000,
+                0xD8, 0x94, (short) 0x1070, (short) 0x06CB,
+                0x1000, 0x0C, 0x0C, 0x33, 0x0000);
     }
 
     @Test
@@ -897,5 +1552,36 @@ public class TestTraceBinder {
                 -1, -1, -1, -1, "", 0, 0, -1, -1));
 
         assertEquals(Severity.MATCH, result.fields().get("camera_x").severity());
+    }
+
+    private static TraceFrame frameWithSidekick(TraceCharacterState sidekick) {
+        return new TraceFrame(1775, 0x0000,
+                (short) 0x0050, (short) 0x03B0,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, false, 0,
+                0, 0, 0x02, -1, -1, -1, 0x00,
+                -1, -1, -1, -1, sidekick);
+    }
+
+    private static TraceCharacterState sidekickStateWithStatus(int statusByte) {
+        return new TraceCharacterState(true,
+                (short) 0x0142, (short) 0x03A0,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, false, 0,
+                0, 0, 0x02, statusByte, (statusByte & 0x08) != 0 ? 0x16 : -1);
+    }
+
+    private static TraceEvent.CpuState cpuStateWithInteract(int interact) {
+        return cpuStateWithInteractAndTailsInteract(interact, interact);
+    }
+
+    private static TraceEvent.CpuState cpuStateWithInteractAndTailsInteract(
+            int interact, int tailsInteract) {
+        return new TraceEvent.CpuState(
+                1775, "tails", interact, 0, 0, 0x06,
+                (short) 0x0000, (short) 0x0000, 0,
+                0, 0x00, 0x00, 0, 0x0000,
+                0x00, 0x00, (short) 0x0000, (short) 0x0000,
+                0x0000, 0x00, 0x00, tailsInteract, 0x0000);
     }
 }

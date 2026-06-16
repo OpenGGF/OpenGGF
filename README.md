@@ -231,6 +231,14 @@ straightforward to add new objects, zones, and game-specific behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Trace frontier reporting/noise reduction + AIZ2 visual capture fixes (2026-06-17).** Merged
+  `bugfix/ai-trace-frontier-develop`, making trace replay reports focus on the
+  true release-blocking frontier, compacting noisy diagnostic context, advancing
+  several S2/S3K route frontiers, and carrying the AIZ worker's trace-faithful
+  `TraceCaptureTool` frame driver. The same branch adds the AIZ2 battleship
+  section clip mode and fixes the display-only forest-canopy Plane-A wrap so
+  the post-bombing loop reveals and wraps like the ROM while leaving the AIZ
+  gameplay frontier at f19089.
 - **Timeline-clip tooling for contributors (2026-06-16).** Merged
   `feature/timeline-clip-tooling`, adding `docs/assets/timeline/make_clip.py`
   (a one-shot ffmpeg encoder that produces house-style GIFs/MP3s — 320px,

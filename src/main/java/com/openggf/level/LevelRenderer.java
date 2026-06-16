@@ -577,6 +577,10 @@ public final class LevelRenderer {
 
         // Draw Foreground (Layer 0) low-priority pass
         profiler.beginSection("render.fg");
+        if (lm.tilemapManager != null && lm.zoneFeatureProvider != null
+                && lm.zoneFeatureProvider.foregroundWrapsHorizontally()) {
+            lm.tilemapManager.setForegroundRingCamera((int) camera.getXWithShake(), lm.cachedScreenWidth);
+        }
         lm.ensureForegroundTilemapData();
         enqueueForegroundTilemapPass(camera, 0);
 

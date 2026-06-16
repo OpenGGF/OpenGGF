@@ -189,6 +189,7 @@ class TestSidekickCpuDespawnParity {
         tails.setRenderFlagOnScreen(false);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(0x04, 0, 0, 0, true, 0, 0);
         controller.forceStateForTest(SidekickCpuController.State.APPROACHING, 0);
 
         for (int i = 0; i < 300; i++) {
@@ -205,6 +206,9 @@ class TestSidekickCpuDespawnParity {
         assertTrue(tails.getAir());
         assertFalse(tails.getRolling());
         assertTrue(tails.isObjectControlled());
+        assertEquals(1, controller.getDiagnosticJumpingFlag(),
+                "S2 TailsCPU_Flying timeout does not clear Tails_CPU_jumping "
+                        + "(docs/s2disasm/s2.asm:39136-39149)");
     }
 
     @Test

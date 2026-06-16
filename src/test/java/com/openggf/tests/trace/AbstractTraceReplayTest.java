@@ -58,6 +58,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.logging.Handler;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -70,9 +72,30 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public abstract class AbstractTraceReplayTest {
     private static final Logger LOGGER = Logger.getLogger(AbstractTraceReplayTest.class.getName());
+    private static final boolean QUIET_TRACE_LOGS =
+            Boolean.parseBoolean(System.getProperty("trace.quietLogs", "true"));
+
+    static {
+        if (QUIET_TRACE_LOGS) {
+            System.setProperty("slf4j.internal.verbosity", "ERROR");
+            quietJavaUtilLogging();
+        }
+    }
 
     /** Which game ROM this test requires. */
     protected abstract SonicGame game();
+
+    private static void quietJavaUtilLogging() {
+        Logger root = Logger.getLogger("");
+        if (root.getLevel() == null || root.getLevel().intValue() < Level.WARNING.intValue()) {
+            root.setLevel(Level.WARNING);
+        }
+        for (Handler handler : root.getHandlers()) {
+            if (handler.getLevel() == null || handler.getLevel().intValue() < Level.WARNING.intValue()) {
+                handler.setLevel(Level.WARNING);
+            }
+        }
+    }
 
     /** Zone index (0-based). */
     protected abstract int zone();
@@ -179,7 +202,9 @@ public abstract class AbstractTraceReplayTest {
             ObjectManager om = GameServices.level().getObjectManager();
             List<TraceEvent.ObjectStateSnapshot> preTraceSnapshots =
                     trace.preTraceObjectSnapshots();
-            if (!preTraceSnapshots.isEmpty() && om != null) {
+            if (TraceReplayConsole.shouldPrintBootstrap()
+                    && !preTraceSnapshots.isEmpty()
+                    && om != null) {
                 System.out.printf(
                         "Reported %d/%d pre-trace object snapshots (%d warnings)%n",
                         snapshotReport.matched(), snapshotReport.attempted(),
@@ -295,13 +320,15 @@ public abstract class AbstractTraceReplayTest {
                 writeReport(report, meta);
             }
 
-            // 8. Log summary
-            System.out.println(report.toCompactSummary());
+            // 8. Log summary only when explicitly requested. Failing assertions
+            // still carry the compact frontier summary.
+            TraceReplayConsole.printSummary(report);
 
             // 9. Assert no errors
-            if (report.hasErrors() && Boolean.getBoolean("trace.print.context")) {
+            if (report.hasErrors() && TraceReplayConsole.shouldPrintContext()) {
                 System.err.println("\n=== Context window around first error ===");
-                System.err.println(report.getContextWindow(firstReportErrorFrame(report), 10));
+                System.err.println(report.getContextWindow(
+                        firstReportErrorFrame(report), TraceReplayConsole.contextRadius()));
             }
             assertReportHasNoReleaseBlockingDivergences(report);
         } finally {
@@ -315,11 +342,11 @@ public abstract class AbstractTraceReplayTest {
 
     protected void assertReportHasNoReleaseBlockingDivergences(DivergenceReport report) {
         if (report.hasErrors()) {
-            fail(report.toCompactSummary());
+            fail(report.toAssertionSummary());
         }
         if (report.hasWarnings() && !allowDiagnosticOnlyWarnings()) {
             fail("Trace replay warning report is release-blocking by default: "
-                    + report.toCompactSummary());
+                    + report.toAssertionSummary());
         }
     }
 
@@ -457,6 +484,8 @@ public abstract class AbstractTraceReplayTest {
         //   * AIZ:  T_289.gfc=0 (still inside intro)         → fc 0→0  (no change),
         //                                 then iter K=290 step fc 0→1 = ROM.gfc(T_290)=1 ✓
         TraceReplaySessionBootstrap.alignFrameCountersForReplayStart(
+                trace,
+                replayStart,
                 previousDriveFrame,
                 driveTraceIndex < trace.frameCount() ? trace.getFrame(driveTraceIndex) : null);
         while (driveTraceIndex < trace.frameCount()) {
@@ -1206,9 +1235,9 @@ public abstract class AbstractTraceReplayTest {
 
             if (report.hasErrors()) {
                 Path contextPath = outDir.resolve(prefix + "_context.txt");
-                int contextRadius = Integer.getInteger("trace.context.radius", 20);
                 Files.writeString(contextPath,
-                    report.getContextWindow(firstReportErrorFrame(report), contextRadius));
+                    report.getContextWindow(
+                            firstReportErrorFrame(report), TraceReplayConsole.contextRadius()));
             }
         } catch (IOException e) {
             System.err.println("Warning: failed to write report: " + e.getMessage());

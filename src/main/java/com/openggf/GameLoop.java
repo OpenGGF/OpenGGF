@@ -466,10 +466,6 @@ public class GameLoop {
         playbackDebugManager.handleInput(inputHandler);
         playbackDebugManager.setObservedMode(currentGameMode);
 
-        // Trace realtime rewind must run before the playback input bridge.
-        // On the release frame it seeks the BK2 timeline back to PLAY; sampling
-        // forced input before that would feed the resumed gameplay tick a
-        // zero/stale mask while the comparator advances the rewound movie row.
         if (currentGameMode == GameMode.LEVEL
                 && TraceSessionLauncher.active() != null
                 && TraceSessionLauncher.active().handleRealtimeRewindInput(inputHandler)) {
@@ -485,8 +481,6 @@ public class GameLoop {
 
         syncPlaybackInputBridge();
 
-        // Legal disclaimer screen mode - runs before master title screen.
-        // Must be checked before pause handling since keys trigger dismissal.
         if (currentGameMode == GameMode.LEGAL_DISCLAIMER) {
             bootScreenModeController.updateLegalDisclaimer(
                     legalDisclaimerSupplier != null ? legalDisclaimerSupplier.get() : null,
@@ -500,8 +494,6 @@ public class GameLoop {
             return;
         }
 
-        // Master title screen mode - runs before any ROM/game systems are loaded.
-        // Must be checked before pause handling since Enter is both confirm and pause.
         if (currentGameMode == GameMode.MASTER_TITLE_SCREEN) {
             escapeToMasterTitleController.update(currentGameMode, inputHandler);
             bootScreenModeController.updateMasterTitle(
@@ -535,9 +527,6 @@ public class GameLoop {
             return;
         }
 
-        // Trace Test Mode: Esc during a live trace session begins the
-        // early-exit fade. Checked before pause so Esc never gets eaten
-        // by another handler.
         if (currentGameMode == GameMode.LEVEL
                 && TraceSessionLauncher.active() != null
                 && inputHandler.isKeyPressed(GLFW_KEY_ESCAPE)) {
@@ -548,7 +537,6 @@ public class GameLoop {
 
         escapeToMasterTitleController.update(currentGameMode, inputHandler);
 
-        // Handle pause toggle - must work even when paused
         int pauseKey = configService.getInt(SonicConfiguration.PAUSE_KEY);
         if (!userPauseInputAllowedForCurrentMode() && userPaused) {
             userPaused = false;
@@ -558,23 +546,13 @@ public class GameLoop {
             toggleUserPause();
         }
 
-        // Handle frame step - only works when paused
-        // isKeyPressed() only returns true on the first frame the key is pressed,
-        // so the key must be released and pressed again to step another frame
         int frameStepKey = configService.getInt(SonicConfiguration.FRAME_STEP_KEY);
         boolean doFrameStep = isPaused() && inputHandler.isKeyPressed(frameStepKey);
 
-        // Tick the trace test-mode camera focus controller AFTER toggleUserPause so
-        // it observes the post-toggle pause state. This guarantees that on the
-        // unpause-press frame the controller restores the original camera BEFORE
-        // any sprite/object/manager update path samples camera position later in
-        // this method. Must run before the paused early-return so the same call
-        // also handles the pause-enter snapshot and the frame-step camera restore.
         if (traceCameraFocusController != null) {
             traceCameraFocusController.tick(inputHandler);
         }
 
-        // When paused (and not frame stepping), still update input handler so we can detect keys
         if (isPaused() && !doFrameStep) {
             inputHandler.update();
             return;
@@ -599,12 +577,10 @@ public class GameLoop {
             debugOverlayManager.getObjectArtViewer().updateInput(inputHandler);
         }
 
-        // Check for Special Stage toggle (TAB by default)
         if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_KEY))) {
             handleSpecialStageDebugKey();
         }
 
-        // Check for Bonus Stage toggle (Shift+B)
         BonusStageType debugBonusType = debugShortcutsEnabled
                 ? resolveBonusStageDebugShortcut(inputHandler)
                 : BonusStageType.NONE;
@@ -612,31 +588,26 @@ public class GameLoop {
             handleBonusStageDebugKey(debugBonusType);
         }
 
-        // Per-mode update dispatch. Each branch delegates to a cohesive handler
-        // that preserves the original frame ordering, profiler bracketing, and
-        // early-return semantics. SPECIAL_STAGE / SPECIAL_STAGE_RESULTS fall
-        // through to the shared post-update tail; the screen modes early-return.
         if (currentGameMode == GameMode.SPECIAL_STAGE) {
             updateSpecialStageMode();
         } else if (currentGameMode == GameMode.SPECIAL_STAGE_RESULTS) {
             updateSpecialStageResultsMode();
         } else if (currentGameMode == GameMode.TITLE_CARD) {
             if (!updateTitleCardMode(doFrameStep)) {
-                return; // Still in the locked title-card phase; LEVEL logic deferred.
+                return;
             }
-            // Title card released control this frame: fall through to LEVEL mode.
         } else if (currentGameMode == GameMode.TITLE_SCREEN) {
             updateTitleScreenMode();
             profiler.endSection("input");
-            return; // Don't process LEVEL mode logic
+            return;
         } else if (currentGameMode == GameMode.LEVEL_SELECT) {
             updateLevelSelectMode();
             profiler.endSection("input");
-            return; // Don't process LEVEL mode logic
+            return;
         } else if (currentGameMode == GameMode.DATA_SELECT) {
             updateDataSelectMode();
             profiler.endSection("input");
-            return; // Don't process LEVEL mode logic
+            return;
         } else if (currentGameMode == GameMode.CREDITS_TEXT
                 || currentGameMode == GameMode.CREDITS_DEMO
                 || currentGameMode == GameMode.TRY_AGAIN_END
@@ -649,20 +620,14 @@ public class GameLoop {
 
         profiler.endSection("input");
 
-        // LEVEL mode (or just transitioned from TITLE_CARD)
         if (currentGameMode == GameMode.LEVEL) {
             if (!updateLevelMode(doFrameStep)) {
-                return; // LEVEL mode requested a transition/fade; skip the per-frame tail.
+                return;
             }
         } else if (currentGameMode == GameMode.BONUS_STAGE) {
             updateBonusStageMode(doFrameStep);
         }
 
-        // Post-update hook for the trace test-mode camera focus controller.
-        // Runs after gameplay updates but before the frame is rendered, so the
-        // controller can re-apply the chosen focus camera within the same frame
-        // a frame-step ran in. No flicker; sidekick despawns mid-step are handled
-        // here (rebuild + fall back to DEFAULT before render).
         if (traceCameraFocusController != null) {
             traceCameraFocusController.postUpdate();
         }

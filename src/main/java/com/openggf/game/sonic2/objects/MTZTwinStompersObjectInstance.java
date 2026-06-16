@@ -180,6 +180,16 @@ public class MTZTwinStompersObjectInstance extends AbstractObjectInstance
     public int getY() {
         return currentY;
     }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // Obj64 stores player standing/pushing bits in its live SST status byte.
+        // The engine rebuilds this moving object's dynamic spawn as y_pos changes,
+        // so use the instance key to let SolidObject_TestClearPush observe the
+        // same per-SST bits across the next no-contact frame (s2.asm:35456-35467).
+        return true;
+    }
+
     @Override
     public SolidObjectParams getSolidParams() {
         // s2.asm:52264-52270: d1 = width_pixels + $B, d2 = objoff_2E, d3 = objoff_2E + 1.

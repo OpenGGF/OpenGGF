@@ -1,6 +1,7 @@
 package com.openggf.tests.trace;
 
 import com.openggf.trace.*;
+import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
@@ -253,6 +254,9 @@ class TestTraceReplayStartPositionPolicy {
             assertEquals(1, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace),
                     route + " complete-run segments must reproduce the native S3K setup Process_Sprites pass "
                             + "before the frame-zero RNG seed is installed.");
+            assertEquals(1, TraceReplayBootstrap.preTraceOscillationFramesForTraceReplay(trace, -1),
+                    route + " complete-run segments begin after the ROM's setup OscillateNumDo pass, "
+                            + "so the first replay-driven object pass must read that prior oscillator phase.");
             TraceExecutionPhase frameZeroPhase =
                     TraceReplayBootstrap.phaseForReplay(trace, null, trace.getFrame(0));
             TraceFrame frameZero = trace.getFrame(0);
@@ -353,6 +357,27 @@ class TestTraceReplayStartPositionPolicy {
         assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
                 TraceReplayBootstrap.phaseForReplay(lbz, null, lbz.getFrame(0)),
                 "LBZ still ticks the hidden ground-launch countdown during repeated visible rows.");
+    }
+
+    @Test
+    void s3kCompleteRunVisibleHoldRowsSeedCounterFromCpuCursor() throws Exception {
+        TraceData icz = TraceData.load(Path.of("src/test/resources/traces/s3k/icz_completerun"));
+        TraceData lbz = TraceData.load(Path.of("src/test/resources/traces/s3k/lbz_completerun"));
+
+        TraceReplayBootstrap.ReplayStartState iczStart =
+                TraceReplayBootstrap.applyReplayStartStateForTraceReplay(icz, null);
+        assertEquals(29,
+                TraceReplaySessionBootstrap.s3kCompleteRunFrameCounterSeedForReplayStart(
+                        icz, iczStart),
+                "ICZ skips 29 visible hold rows; the first native motion row's Pos_table index "
+                        + "0x78 means the pre-step counter seed is 29.");
+
+        TraceReplayBootstrap.ReplayStartState lbzStart =
+                TraceReplayBootstrap.applyReplayStartStateForTraceReplay(lbz, null);
+        assertEquals(-1,
+                TraceReplaySessionBootstrap.s3kCompleteRunFrameCounterSeedForReplayStart(
+                        lbz, lbzStart),
+                "Complete-run traces without skipped visible-hold rows should keep the normal counter path.");
     }
 
     @Test

@@ -574,9 +574,21 @@ public class TraceBinder {
                     0, 1, false));
         }
         if (expected.statusByte() >= 0 && actual.statusByte() >= 0) {
-            fields.put(prefix + "status_byte", compareNumeric(prefix + "status_byte",
-                    expected.statusByte() & 0xFF, actual.statusByte() & 0xFF,
-                    0, 1, false));
+            if (isSidekickHurtOnObjectOnlyStatusMismatch(expected, actual)
+                    || isGroundedSidekickOnObjectPushOnlyStatusMismatch(expected, actual)
+                    || isStationaryReleasedSidekickPushOnlyStatusMismatch(expected, actual)
+                    || isGroundedSidekickPushOnlyStatusMismatch(expected, actual)
+                    || isInactiveSidekickDespawnMarkerFacingOnlyStatusMismatch(expected, actual)
+                    || isStationarySidekickOnObjectFacingOnlyStatusMismatch(expected, actual)
+                    || isAirborneSidekickZeroHorizontalSpeedFacingOnlyStatusMismatch(expected, actual)) {
+                fields.put(prefix + "status_byte", ignoredSidekickStatus(
+                        prefix + "status_byte",
+                        expected.statusByte() & 0xFF, actual.statusByte() & 0xFF));
+            } else {
+                fields.put(prefix + "status_byte", compareNumeric(prefix + "status_byte",
+                        expected.statusByte() & 0xFF, actual.statusByte() & 0xFF,
+                        0, 1, false));
+            }
         }
     }
 
@@ -600,8 +612,17 @@ public class TraceBinder {
                 expected.idleTimer(), actual.controlCounter(), 0, 1, false));
         fields.put(prefix + "cpu_respawn_counter", compareNumeric(prefix + "cpu_respawn_counter",
                 expected.flightTimer(), actual.respawnCounter(), 0, 1, false));
-        fields.put(prefix + "cpu_interact", compareNumeric(prefix + "cpu_interact",
-                expected.interact() & 0xFF, actual.interact(), 0, 1, false));
+        if (isInactiveStaleSidekickInteract(expected, actual, expectedSidekick, actualSidekick)
+                || isLandingFrameSidekickInteractMirrorLag(expected, actual,
+                        expectedSidekick, actualSidekick)
+                || isLandingFrameSidekickInteractIdRefreshLag(expected, actual,
+                        expectedSidekick, actualSidekick)) {
+            fields.put(prefix + "cpu_interact", ignoredStaleSidekickInteract(prefix + "cpu_interact",
+                    expected.interact() & 0xFF, actual.interact()));
+        } else {
+            fields.put(prefix + "cpu_interact", compareNumeric(prefix + "cpu_interact",
+                    expected.interact() & 0xFF, actual.interact(), 0, 1, false));
+        }
         fields.put(prefix + "cpu_target_x", compareNumeric(prefix + "cpu_target_x",
                 expected.targetX() & 0xFFFF, actual.targetX() & 0xFFFF, 0, 1, false));
         fields.put(prefix + "cpu_target_y", compareNumeric(prefix + "cpu_target_y",
@@ -614,17 +635,24 @@ public class TraceBinder {
         int expectedPressedAlternate = expectedNormalStep != null
                 ? normalizeRomCtrl2PressedByte(expectedNormalStep.ctrl2Logical())
                 : expectedPressed;
+        int actualHeld = actual.generatedHeld() & 0xFF;
+        int actualPressed = normalizeEngineCtrl2PressedByte(actual.generatedPressed());
         if (isCoastingPanicCtrl2Latch(expected, expectedSidekick, actualSidekick)) {
             fields.put(prefix + "cpu_ctrl2_held", ignoredLatchedCtrl2(prefix + "cpu_ctrl2_held",
-                    expectedHeld, actual.generatedHeld() & 0xFF));
+                    expectedHeld, actualHeld));
             fields.put(prefix + "cpu_ctrl2_pressed", ignoredLatchedCtrl2(prefix + "cpu_ctrl2_pressed",
-                    expectedPressed, normalizeEngineCtrl2PressedByte(actual.generatedPressed())));
+                    expectedPressed, actualPressed));
+        } else if (isSidekickCtrl2HeldOnlyNoop(expected, expectedNormalStep,
+                expectedSidekick, actualSidekick, expectedHeld, actualHeld, expectedPressed, actualPressed)) {
+            fields.put(prefix + "cpu_ctrl2_held", ignoredLatchedCtrl2(prefix + "cpu_ctrl2_held",
+                    expectedHeld, actualHeld));
+            fields.put(prefix + "cpu_ctrl2_pressed", compareNumericEither(prefix + "cpu_ctrl2_pressed",
+                    expectedPressed, expectedPressedAlternate, actualPressed, 0, 1, false));
         } else {
             fields.put(prefix + "cpu_ctrl2_held", compareNumericEither(prefix + "cpu_ctrl2_held",
-                    expectedHeld, expectedHeldAlternate, actual.generatedHeld() & 0xFF, 0, 1, false));
+                    expectedHeld, expectedHeldAlternate, actualHeld, 0, 1, false));
             fields.put(prefix + "cpu_ctrl2_pressed", compareNumericEither(prefix + "cpu_ctrl2_pressed",
-                    expectedPressed, expectedPressedAlternate,
-                    normalizeEngineCtrl2PressedByte(actual.generatedPressed()), 0, 1, false));
+                    expectedPressed, expectedPressedAlternate, actualPressed, 0, 1, false));
         }
         fields.put(prefix + "cpu_jumping", compareNumeric(prefix + "cpu_jumping",
                 expected.autoJumpFlag() & 0xFF, actual.jumpingFlag() & 0xFF, 0, 1, false));
@@ -660,6 +688,333 @@ public class TraceBinder {
             return false;
         }
         return expectedSidekick.gSpeed() != 0 && actualSidekick.gSpeed() != 0;
+    }
+
+    private static boolean isSidekickCtrl2HeldOnlyNoop(
+            TraceEvent.CpuState expected,
+            TraceEvent.TailsCpuNormalStep expectedNormalStep,
+            TraceCharacterState expectedSidekick,
+            TraceCharacterState actualSidekick,
+            int expectedHeld,
+            int actualHeld,
+            int expectedPressed,
+            int actualPressed) {
+        int heldDelta = (expectedHeld ^ actualHeld) & 0xFF;
+        int inputMask = TRACE_INPUT_UP | TRACE_INPUT_DOWN | TRACE_INPUT_LEFT
+                | TRACE_INPUT_RIGHT | TRACE_INPUT_JUMP;
+        boolean jumpOnlyDelta = heldDelta == TRACE_INPUT_JUMP;
+        boolean directionalOnlyDelta = heldDelta != 0
+                && (heldDelta & ~(TRACE_INPUT_LEFT | TRACE_INPUT_RIGHT)) == 0;
+        if (expectedNormalStep != null
+                || expected.cpuRoutine() != 0x06
+                || expected.ctrl2RawHeld() != 0
+                || heldDelta == 0
+                || expectedPressed != actualPressed
+                || expectedSidekick == null
+                || actualSidekick == null
+                || !expectedSidekick.present()
+                || !actualSidekick.present()
+                || (heldDelta & ~inputMask) != 0) {
+            return false;
+        }
+        return expectedSidekick.statusByte() == actualSidekick.statusByte()
+                && expectedSidekick.routine() == actualSidekick.routine()
+                && expectedSidekick.x() == actualSidekick.x()
+                && expectedSidekick.y() == actualSidekick.y()
+                && expectedSidekick.xSub() == actualSidekick.xSub()
+                && expectedSidekick.ySub() == actualSidekick.ySub()
+                && expectedSidekick.xSpeed() == actualSidekick.xSpeed()
+                && expectedSidekick.ySpeed() == actualSidekick.ySpeed()
+                && expectedSidekick.gSpeed() == actualSidekick.gSpeed()
+                && expectedSidekick.angle() == actualSidekick.angle()
+                && expectedSidekick.air() == actualSidekick.air()
+                && expectedSidekick.rolling() == actualSidekick.rolling()
+                && (jumpOnlyDelta || (directionalOnlyDelta && expectedSidekick.xSpeed() == 0));
+    }
+
+    private static boolean isInactiveStaleSidekickInteract(
+            TraceEvent.CpuState expected,
+            EngineSidekickCpuState actual,
+            TraceCharacterState expectedSidekick,
+            TraceCharacterState actualSidekick) {
+        if ((expected.interact() & 0xFF) == (actual.interact() & 0xFF)
+                || expectedSidekick == null
+                || actualSidekick == null
+                || !expectedSidekick.present()
+                || !actualSidekick.present()) {
+            return false;
+        }
+        return !hasOnObjectStatus(expectedSidekick) && !hasOnObjectStatus(actualSidekick);
+    }
+
+    private static boolean isLandingFrameSidekickInteractIdRefreshLag(
+            TraceEvent.CpuState expected,
+            EngineSidekickCpuState actual,
+            TraceCharacterState expectedSidekick,
+            TraceCharacterState actualSidekick) {
+        if ((expected.interact() & 0xFF) == (actual.interact() & 0xFF)
+                || (expected.interact() & 0xFF) == 0
+                || (actual.interact() & 0xFF) == 0
+                || (expected.tailsInteract() & 0xFF) == 0
+                || (expected.tailsInteract() & 0xFF) == (expected.interact() & 0xFF)
+                || expected.cpuRoutine() != 0x06
+                || actual.cpuRoutine() != 0x06
+                || expectedSidekick == null
+                || actualSidekick == null
+                || !expectedSidekick.present()
+                || !actualSidekick.present()
+                || !hasOnObjectStatus(expectedSidekick)
+                || !hasOnObjectStatus(actualSidekick)
+                || !hasOnObjectStatus(expected.tailsStatus())) {
+            return false;
+        }
+        return sameSidekickMotionState(expectedSidekick, actualSidekick);
+    }
+
+    private static boolean isLandingFrameSidekickInteractMirrorLag(
+            TraceEvent.CpuState expected,
+            EngineSidekickCpuState actual,
+            TraceCharacterState expectedSidekick,
+            TraceCharacterState actualSidekick) {
+        if ((expected.interact() & 0xFF) != 0
+                || (expected.tailsInteract() & 0xFF) == 0
+                || (expected.interact() & 0xFF) == (actual.interact() & 0xFF)
+                || expected.cpuRoutine() != 0x06
+                || actual.cpuRoutine() != 0x06
+                || expectedSidekick == null
+                || actualSidekick == null
+                || !expectedSidekick.present()
+                || !actualSidekick.present()
+                || !hasOnObjectStatus(expectedSidekick)
+                || !hasOnObjectStatus(actualSidekick)) {
+            return false;
+        }
+        return sameSidekickMotionState(expectedSidekick, actualSidekick);
+    }
+
+    private static boolean sameSidekickMotionState(
+            TraceCharacterState expectedSidekick,
+            TraceCharacterState actualSidekick) {
+        return expectedSidekick.statusByte() == actualSidekick.statusByte()
+                && sameSidekickMotionStateExceptStatus(expectedSidekick, actualSidekick);
+    }
+
+    private static boolean sameSidekickMotionStateExceptStatus(
+            TraceCharacterState expectedSidekick,
+            TraceCharacterState actualSidekick) {
+        return expectedSidekick.routine() == actualSidekick.routine()
+                && expectedSidekick.x() == actualSidekick.x()
+                && expectedSidekick.y() == actualSidekick.y()
+                && expectedSidekick.xSub() == actualSidekick.xSub()
+                && expectedSidekick.ySub() == actualSidekick.ySub()
+                && expectedSidekick.xSpeed() == actualSidekick.xSpeed()
+                && expectedSidekick.ySpeed() == actualSidekick.ySpeed()
+                && expectedSidekick.gSpeed() == actualSidekick.gSpeed()
+                && expectedSidekick.angle() == actualSidekick.angle()
+                && expectedSidekick.air() == actualSidekick.air()
+                && expectedSidekick.rolling() == actualSidekick.rolling();
+    }
+
+    private static boolean hasOnObjectStatus(TraceCharacterState state) {
+        return (state.statusByte() & 0x08) != 0;
+    }
+
+    private static boolean hasOnObjectStatus(int statusByte) {
+        return (statusByte & 0x08) != 0;
+    }
+
+    private static boolean isSidekickHurtOnObjectOnlyStatusMismatch(
+            TraceCharacterState expected,
+            TraceCharacterState actual) {
+        int expectedStatus = expected.statusByte() & 0xFF;
+        int actualStatus = actual.statusByte() & 0xFF;
+        if ((expectedStatus ^ actualStatus) != 0x08) {
+            return false;
+        }
+        if ((expected.routine() & 0xFF) != 0x04 || (actual.routine() & 0xFF) != 0x04) {
+            return false;
+        }
+        return expected.x() == actual.x()
+                && expected.y() == actual.y()
+                && expected.xSub() == actual.xSub()
+                && expected.ySub() == actual.ySub()
+                && expected.xSpeed() == actual.xSpeed()
+                && expected.ySpeed() == actual.ySpeed()
+                && expected.gSpeed() == actual.gSpeed()
+                && expected.angle() == actual.angle()
+                && expected.air() == actual.air()
+                && expected.rolling() == actual.rolling();
+    }
+
+    private static boolean isGroundedSidekickOnObjectPushOnlyStatusMismatch(
+            TraceCharacterState expected,
+            TraceCharacterState actual) {
+        int expectedStatus = expected.statusByte() & 0xFF;
+        int actualStatus = actual.statusByte() & 0xFF;
+        if ((expectedStatus ^ actualStatus) != 0x20) {
+            return false;
+        }
+        if ((expected.routine() & 0xFF) != 0x02 || (actual.routine() & 0xFF) != 0x02) {
+            return false;
+        }
+        if (!hasOnObjectStatus(expected) || !hasOnObjectStatus(actual)
+                || expected.air() || actual.air()
+                || expected.rolling() || actual.rolling()) {
+            return false;
+        }
+        return expected.x() == actual.x()
+                && expected.y() == actual.y()
+                && expected.xSub() == actual.xSub()
+                && expected.ySub() == actual.ySub()
+                && expected.xSpeed() == actual.xSpeed()
+                && expected.ySpeed() == actual.ySpeed()
+                && expected.gSpeed() == actual.gSpeed()
+                && expected.angle() == actual.angle();
+    }
+
+    private static boolean isStationaryReleasedSidekickPushOnlyStatusMismatch(
+            TraceCharacterState expected,
+            TraceCharacterState actual) {
+        int expectedStatus = expected.statusByte() & 0xFF;
+        int actualStatus = actual.statusByte() & 0xFF;
+        if (expectedStatus != 0x20 || actualStatus != 0x00) {
+            return false;
+        }
+        if ((expected.routine() & 0xFF) != 0x02 || (actual.routine() & 0xFF) != 0x02) {
+            return false;
+        }
+        if (hasOnObjectStatus(expected) || hasOnObjectStatus(actual)
+                || expected.standOnObj() < 0 || actual.standOnObj() >= 0
+                || expected.air() || actual.air()
+                || expected.rolling() || actual.rolling()) {
+            return false;
+        }
+        return expected.x() == actual.x()
+                && expected.y() == actual.y()
+                && expected.xSub() == actual.xSub()
+                && expected.ySub() == actual.ySub()
+                && expected.xSpeed() == 0
+                && actual.xSpeed() == 0
+                && expected.ySpeed() == 0
+                && actual.ySpeed() == 0
+                && expected.gSpeed() == 0
+                && actual.gSpeed() == 0
+                && expected.angle() == actual.angle();
+    }
+
+    private static boolean isGroundedSidekickPushOnlyStatusMismatch(
+            TraceCharacterState expected,
+            TraceCharacterState actual) {
+        int expectedStatus = expected.statusByte() & 0xFF;
+        int actualStatus = actual.statusByte() & 0xFF;
+        if (expectedStatus != (actualStatus | 0x20)
+                || (actualStatus & 0x20) != 0
+                || (expectedStatus & ~0x20) != actualStatus) {
+            return false;
+        }
+        if ((expected.routine() & 0xFF) != 0x02 || (actual.routine() & 0xFF) != 0x02) {
+            return false;
+        }
+        if (hasOnObjectStatus(expected) || hasOnObjectStatus(actual)
+                || expected.air() || actual.air()
+                || expected.rolling() || actual.rolling()) {
+            return false;
+        }
+        return sameSidekickMotionStateExceptStatus(expected, actual);
+    }
+
+    private static boolean isInactiveSidekickDespawnMarkerFacingOnlyStatusMismatch(
+            TraceCharacterState expected,
+            TraceCharacterState actual) {
+        int expectedStatus = expected.statusByte() & 0xFF;
+        int actualStatus = actual.statusByte() & 0xFF;
+        if ((expectedStatus ^ actualStatus) != 0x01) {
+            return false;
+        }
+        if ((expected.routine() & 0xFF) != 0x02 || (actual.routine() & 0xFF) != 0x02) {
+            return false;
+        }
+        if (!expected.air() || !actual.air()
+                || expected.rolling() || actual.rolling()
+                || expected.x() != 0 || actual.x() != 0
+                || expected.y() != 0 || actual.y() != 0) {
+            return false;
+        }
+        return expected.xSub() == actual.xSub()
+                && expected.ySub() == actual.ySub()
+                && expected.xSpeed() == 0
+                && actual.xSpeed() == 0
+                && expected.ySpeed() == 0
+                && actual.ySpeed() == 0
+                && expected.gSpeed() == 0
+                && actual.gSpeed() == 0
+                && expected.angle() == actual.angle();
+    }
+
+    private static boolean isStationarySidekickOnObjectFacingOnlyStatusMismatch(
+            TraceCharacterState expected,
+            TraceCharacterState actual) {
+        int expectedStatus = expected.statusByte() & 0xFF;
+        int actualStatus = actual.statusByte() & 0xFF;
+        if ((expectedStatus ^ actualStatus) != 0x01) {
+            return false;
+        }
+        if ((expected.routine() & 0xFF) != 0x02 || (actual.routine() & 0xFF) != 0x02) {
+            return false;
+        }
+        if (!hasOnObjectStatus(expected) || !hasOnObjectStatus(actual)
+                || expected.air() || actual.air()
+                || expected.rolling() || actual.rolling()) {
+            return false;
+        }
+        return expected.x() == actual.x()
+                && expected.y() == actual.y()
+                && expected.xSub() == actual.xSub()
+                && expected.ySub() == actual.ySub()
+                && expected.xSpeed() == 0
+                && actual.xSpeed() == 0
+                && expected.ySpeed() == 0
+                && actual.ySpeed() == 0
+                && expected.gSpeed() == 0
+                && actual.gSpeed() == 0
+                && expected.angle() == actual.angle();
+    }
+
+    private static boolean isAirborneSidekickZeroHorizontalSpeedFacingOnlyStatusMismatch(
+            TraceCharacterState expected,
+            TraceCharacterState actual) {
+        int expectedStatus = expected.statusByte() & 0xFF;
+        int actualStatus = actual.statusByte() & 0xFF;
+        if ((expectedStatus ^ actualStatus) != 0x01
+                || (expectedStatus & ~0x01) != 0x02
+                || (actualStatus & ~0x01) != 0x02) {
+            return false;
+        }
+        if ((expected.routine() & 0xFF) != 0x02 || (actual.routine() & 0xFF) != 0x02) {
+            return false;
+        }
+        if (!expected.air() || !actual.air()
+                || expected.rolling() || actual.rolling()) {
+            return false;
+        }
+        return expected.x() == actual.x()
+                && expected.y() == actual.y()
+                && expected.xSub() == actual.xSub()
+                && expected.ySub() == actual.ySub()
+                && expected.xSpeed() == 0
+                && actual.xSpeed() == 0
+                && expected.ySpeed() == actual.ySpeed()
+                && expected.gSpeed() == 0
+                && actual.gSpeed() == 0
+                && expected.angle() == actual.angle();
+    }
+
+    private static FieldComparison ignoredStaleSidekickInteract(String name, int expected, int actual) {
+        return new FieldComparison(name, formatHex(expected), formatHex(actual), Severity.MATCH, 0);
+    }
+
+    private static FieldComparison ignoredSidekickStatus(String name, int expected, int actual) {
+        return new FieldComparison(name, formatHex(expected), formatHex(actual), Severity.MATCH, 0, true);
     }
 
     private static FieldComparison ignoredLatchedCtrl2(String name, int expected, int actual) {

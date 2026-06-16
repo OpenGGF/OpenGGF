@@ -225,13 +225,15 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
                 writeReport(report, idx);
             }
 
-            // 8. Log summary
-            System.out.println(report.toCompactSummary());
+            // 8. Log summary only when explicitly requested. Failing assertions
+            // still carry the compact frontier summary.
+            TraceReplayConsole.printSummary(report);
 
             // 9. Assert no errors
-            if (report.hasErrors() && Boolean.getBoolean("trace.print.context")) {
+            if (report.hasErrors() && TraceReplayConsole.shouldPrintContext()) {
                 System.err.println("\n=== Context window around first error ===");
-                System.err.println(report.getContextWindow(firstReportErrorFrame(report), 10));
+                System.err.println(report.getContextWindow(
+                        firstReportErrorFrame(report), TraceReplayConsole.contextRadius()));
             }
             assertReportHasNoReleaseBlockingDivergences(report);
         } finally {
@@ -245,11 +247,11 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
 
     protected void assertReportHasNoReleaseBlockingDivergences(DivergenceReport report) {
         if (report.hasErrors()) {
-            fail(report.toCompactSummary());
+            fail(report.toAssertionSummary());
         }
         if (report.hasWarnings() && !allowDiagnosticOnlyWarnings()) {
             fail("Trace replay warning report is release-blocking by default: "
-                    + report.toCompactSummary());
+                    + report.toAssertionSummary());
         }
     }
 
@@ -442,7 +444,8 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
             if (report.hasErrors()) {
                 Path contextPath = outDir.resolve(prefix + "_context.txt");
                 Files.writeString(contextPath,
-                    report.getContextWindow(firstReportErrorFrame(report), 20));
+                    report.getContextWindow(
+                            firstReportErrorFrame(report), TraceReplayConsole.contextRadius()));
             }
         } catch (IOException e) {
             System.err.println("Warning: failed to write report: " + e.getMessage());

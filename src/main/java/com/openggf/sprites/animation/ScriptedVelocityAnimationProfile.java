@@ -2,6 +2,7 @@ package com.openggf.sprites.animation;
 
 import com.openggf.game.AnimationId;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.managers.PlayableSpriteAnimation;
 
 /**
  * Chooses animation script IDs based on simple movement state.
@@ -220,7 +221,14 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         // Use isMovementInputActive() which reflects EFFECTIVE input (after control lock filtering),
         // not raw button state, to match ROM behavior where animation is only set in movement routines.
         boolean pressingDirection = sprite.isMovementInputActive();
-        int speed = Math.abs(sprite.getGSpeed());
+        // Ground movement chooses Wait/Walk before the no-input friction and
+        // ground-wall probe can zero inertia (S2 Tails_Move s2.asm:39689-39693,
+        // Obj02_UpdateSpeedOnGround/Obj02_CheckWallsOnGround s2.asm:39789-39865).
+        PlayableSpriteAnimation animation = sprite.getAnimationManager();
+        int animSpeed = animation != null && animation.hasGroundMovementAnimSpeed()
+                ? animation.getGroundMovementAnimSpeed()
+                : sprite.getGSpeed();
+        int speed = Math.abs(animSpeed);
 
         // Run animation at high speeds (ROM: cmpi.w #$600,d2)
         if (speed >= runSpeedThreshold) {

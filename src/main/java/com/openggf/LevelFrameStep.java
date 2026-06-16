@@ -91,6 +91,10 @@ public final class LevelFrameStep {
         return true;
     }
 
+    public static void updateTimers(LevelFrameContext context) {
+        context.timerManager().update();
+    }
+
     /**
      * Executes one frame of level-mode updates in the canonical production order.
      * <p>

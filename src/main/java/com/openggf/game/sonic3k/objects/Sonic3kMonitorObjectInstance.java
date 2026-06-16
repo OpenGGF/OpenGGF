@@ -17,6 +17,7 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -53,7 +54,7 @@ import java.util.logging.Logger;
  */
 public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         implements TouchResponseProvider, TouchResponseListener,
-        SolidObjectProvider, SolidObjectListener {
+        SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kMonitorObjectInstance.class.getName());
 
     // From disassembly: solid params d1=$19, d2=$10, d3=$11
@@ -77,6 +78,9 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
 
     // Y radius for floor collision (from solid params d2)
     private static final int Y_RADIUS = 0x10;
+
+    // Obj_Monitor = 0x0001D566 in the S&K-side ROM.
+    private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0001;
 
     // docs/skdisasm/sonic3k.constants.asm:131-148 define object status bits 3-6
     // as p1/p2 standing and pushing. Obj_MonitorBreak consumes these at
@@ -152,6 +156,13 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     @Override
     public boolean shouldStayActiveWhenRemembered() {
         return true;
+    }
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        // Tails_CPU_interact stores word 0 of the stood-on object SST
+        // (docs/skdisasm/sonic3k.asm:26816-26843).
+        return ROM_CODE_POINTER_HIGH_WORD;
     }
 
     @Override

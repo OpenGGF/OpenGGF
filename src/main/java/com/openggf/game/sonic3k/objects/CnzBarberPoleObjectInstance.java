@@ -7,6 +7,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -24,11 +25,13 @@ import java.util.Map;
  * object's per-player work area, then positions them along the pole using
  * {@code GetSineCosine}.
  */
-public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance {
+public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance
+        implements RomObjectCodePointerProvider {
 
     private static final int TRACK_LIMIT = 0xA0;
     private static final int TRACK_FRACTION_MASK = 0xFFFF;
     private static final int MIN_GROUND_SPEED_TO_STAY_ATTACHED = 0x118;
+    private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0003;
 
     private final boolean mirrored;
     private final Map<AbstractPlayableSprite, RiderState> riders = new IdentityHashMap<>();
@@ -36,6 +39,15 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance {
     public CnzBarberPoleObjectInstance(ObjectSpawn spawn) {
         super(spawn, "CNZBarberPoleSprite");
         this.mirrored = spawn.subtype() != 0;
+    }
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        // loc_33376 and mirrored loc_335A8 are both in the $0003xxxx bank.
+        // S3K sub_13EFC copies word 0 of the stood-on object SST into
+        // Tails_CPU_interact (docs/skdisasm/sonic3k.asm:26839-26843,
+        // 69350-69353, 69583-69589).
+        return ROM_CODE_POINTER_HIGH_WORD;
     }
 
     @Override

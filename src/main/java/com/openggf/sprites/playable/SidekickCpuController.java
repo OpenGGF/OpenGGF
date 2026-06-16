@@ -17,6 +17,7 @@ import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.PerObjectRewindSnapshot.SidekickCpuRewindExtra;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
+import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.Direction;
 import com.openggf.physics.FrameCollisionPlan;
@@ -51,6 +52,8 @@ public class SidekickCpuController {
     private static final int LOCAL_BELOW_TARGET_PUSH_BRIDGE_MAX_GRACE =
             PUSH_STATUS_GRACE_FRAMES - 4;
     private static final int LOCAL_BELOW_TARGET_PUSH_BRIDGE_MIN_GRACE = 3;
+    private static final int RIDING_OBJECT_PUSH_BRIDGE_MIN_GRACE =
+            PUSH_STATUS_GRACE_FRAMES - 2;
     private static final int OBJECT_ORDER_PUSH_BRIDGE_MIN_GRACE = 4;
     private static final int LOCAL_BELOW_TARGET_REBOUND_NUDGE_MIN_GSPEED = 0x80;
     private static final int FAST_LEADER_NO_LIVE_OBJECT_INPUT_NUDGE_MAX_UPWARD_GAP = 0x40;
@@ -1578,7 +1581,6 @@ public class SidekickCpuController {
         state = State.SPAWNING;
         despawnCounter = 0;
         normalFrameCount = 0;
-        jumpingFlag = false;
         suppressNextAirbornePushFollowSteering = false;
         releasedUnderwaterPushConsumed = false;
     }
@@ -1929,6 +1931,15 @@ public class SidekickCpuController {
         boolean objectOrderFollowSteeringContext = isObjectOrderFollowSteeringContext(effectiveLeader);
         boolean supportGraceKeepsFollowSteering =
                 localGracePushBypass && isDoorSupportGraceFollowSteeringContext();
+        ObjectInstance ridingObject = currentRidingObject();
+        boolean ridingObjectPushGrace = !sidekick.getAir()
+                && sidekick.isOnObject()
+                && !sidekick.getRolling()
+                && normalPushingGraceFrames >= sidekickCpuPushGraceMinimumFramesWhileRiding(ridingObject)
+                && (recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
+                && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
+                && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y
+                && preservesSidekickCpuPushGraceWhileRiding(ridingObject);
         int followSnapThreshold = resolveFollowSnapThreshold();
         boolean localBelowTargetFacingIntoFollowSide =
                 (dx > 0 && sidekick.getDirection() == Direction.RIGHT)
@@ -1958,7 +1969,7 @@ public class SidekickCpuController {
         boolean localGracePushBypassObjectContext = localGracePushBypass
                 && (objectOrderFollowSteeringContext
                 || leaderStatusOnObject
-                || currentRidingObject() != null);
+                || ridingObject != null);
         boolean suppressLocalGraceFollowNudge =
                 localGracePushBypassObjectContext
                         && normalPushingGraceFrames >= OBJECT_ORDER_PUSH_BRIDGE_MIN_GRACE
@@ -1968,7 +1979,7 @@ public class SidekickCpuController {
         int localGraceAbsDx = Math.abs(dx);
         boolean fastLeaderNoLiveObjectNudge =
                 effectiveLeader.getGSpeed() >= 0x400
-                        && currentRidingObject() == null
+                        && ridingObject == null
                         && (localGraceAbsDx < followSnapThreshold
                         || (normalPushingGraceFrames <= OBJECT_ORDER_PUSH_BRIDGE_MIN_GRACE + 1
                         && dy >= -JUMP_HEIGHT_THRESHOLD)
@@ -2037,9 +2048,11 @@ public class SidekickCpuController {
                         && sidekick.isObjectControlSuppressesMovement();
         boolean skipFollowSteering = currentPushBypass
                 || localBelowTargetGrace
+                || ridingObjectPushGrace
                 || (objectOrderGrace && !supportGraceKeepsFollowSteering);
         String followBranch = currentPushBypass ? "current_push_bypass"
                 : localBelowTargetGrace ? "grace_push_bypass"
+                : ridingObjectPushGrace ? "riding_push_grace"
                 : (objectOrderGrace && !supportGraceKeepsFollowSteering) ? "grace_push_bypass"
                 : leaderStatusOnObject ? "leader_on_object"
                 : effectiveLeader.getGSpeed() >= 0x400 ? "leader_fast"
@@ -2555,6 +2568,32 @@ public class SidekickCpuController {
             return true;
         }
         return levelManager.getObjectManager().isActiveObjectInstance(ridingObject);
+    }
+
+    private boolean preservesSidekickCpuPushGraceWhileRiding(ObjectInstance ridingObject) {
+        if (!hasLiveRidingObject(ridingObject)) {
+            return false;
+        }
+        if (ridingObject instanceof SolidObjectProvider provider) {
+            return provider.preservesSidekickCpuPushGraceWhileRiding(sidekick);
+        }
+        return false;
+    }
+
+    private int sidekickCpuPushGraceMinimumFramesWhileRiding(ObjectInstance ridingObject) {
+        if (!hasLiveRidingObject(ridingObject)) {
+            return Integer.MAX_VALUE;
+        }
+        if (ridingObject instanceof SolidObjectProvider provider) {
+            int providerMinimum = provider.sidekickCpuPushGraceMinimumFramesWhileRiding(sidekick);
+            if (providerMinimum != Integer.MAX_VALUE) {
+                return providerMinimum;
+            }
+            if (provider.preservesSidekickCpuPushGraceWhileRiding(sidekick)) {
+                return RIDING_OBJECT_PUSH_BRIDGE_MIN_GRACE;
+            }
+        }
+        return Integer.MAX_VALUE;
     }
 
     private boolean usesSidekickRomVisibleCatchUpMarkerFrameCounterBridge() {

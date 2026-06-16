@@ -106,7 +106,7 @@ public class ShieldObjectInstance extends AbstractObjectInstance implements Powe
     }
 
     public void destroy() {
-        setDestroyed(true);
+        ObjectLifetimeOps.destroyLatched(this);
     }
 
     protected PlayableEntity getPlayer() {

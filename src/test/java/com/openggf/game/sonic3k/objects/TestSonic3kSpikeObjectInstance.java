@@ -31,6 +31,16 @@ class TestSonic3kSpikeObjectInstance {
     }
 
     @Test
+    void movingSpikesKeepSolidLatchOnLiveObjectSlot() {
+        Sonic3kSpikeObjectInstance spikes = new Sonic3kSpikeObjectInstance(
+                new ObjectSpawn(0x0C06, 0x06D4, Sonic3kObjectIds.SPIKES, 0x01, 0, false, 0));
+
+        assertTrue(spikes.usesInstanceSolidStateLatchKey(),
+                "Obj_Spikes stores standing/pushing bits in status(a0), so retracting spikes must keep "
+                        + "solid latch state on the live object slot while updateDynamicSpawn changes position");
+    }
+
+    @Test
     void spikesInitFrameDoesNotMoveOrRunSolidBodyUntilNextExecution() {
         Sonic3kSpikeObjectInstance spikes = new Sonic3kSpikeObjectInstance(
                 new ObjectSpawn(0x2000, 0x0145, Sonic3kObjectIds.SPIKES, 0x01, 0x02, false, 0));

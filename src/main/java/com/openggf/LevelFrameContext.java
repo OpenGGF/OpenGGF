@@ -9,6 +9,7 @@ import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.PhysicsProvider;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.sprites.managers.SpriteManager;
+import com.openggf.timer.TimerManager;
 
 import java.util.Objects;
 
@@ -17,7 +18,8 @@ public record LevelFrameContext(GameModule gameModule,
                                 LevelEventProvider levelEventProvider,
                                 BonusStageProvider bonusStageProvider,
                                 SpriteManager spriteManager,
-                                GameStateManager gameStateManager) {
+                                GameStateManager gameStateManager,
+                                TimerManager timerManager) {
 
     public LevelFrameContext {
         Objects.requireNonNull(gameModule, "gameModule");
@@ -37,6 +39,7 @@ public record LevelFrameContext(GameModule gameModule,
                 module.getLevelEventProvider(),
                 context.getActiveBonusStageProvider(),
                 context.getSpriteManager(),
-                context.getGameStateManager());
+                context.getGameStateManager(),
+                context.getTimerManager());
     }
 }

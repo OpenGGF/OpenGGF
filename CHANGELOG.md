@@ -4,6 +4,214 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Trace context marks tolerated status mismatches:** trace replay context
+  windows now keep ignored-but-real sidekick status-byte mismatches visible with
+  a `~` marker, so push/facing diagnostics that precede a movement frontier can
+  be spotted without turning those tolerated deltas into release-blocking
+  errors.
+
+- **Trace context reports default to divergent columns only:** trace replay
+  context windows now omit matching fields by default, cap long ROM/engine
+  diagnostic lines, use a two-frame saved window radius, and omit empty
+  bootstrap sections, reducing full-sweep artifact and console noise. Use
+  `-Dtrace.context.fields=all`, `-Dtrace.context.diagnosticChars=full`,
+  `-Dtrace.context.bootstrap=always`, and `-Dtrace.context.radius=N` to restore
+  wider investigation output.
+
+- **S2 OOZ spike riding preserves ROM-visible Tails push timing:** CPU Tails
+  now keeps the delayed follow input when still riding live S2 Obj36 spikes
+  through the frame where ROM `TailsCPU_Normal` reads `Status_Push` before the
+  later solid-object pass clears it. Obj36 now lowers that CPU-rider push bridge
+  only after the solid-object side response has flipped Tails to negative ground
+  speed, while the preceding positive-speed frame still falls through ROM
+  FollowLeft. This advances OOZ1 level-select from frame 1775 to frame 1782; the
+  full trace sweep remains expected-red at 90 trace tests, 52 trace failures,
+  and 1 existing trace error.
+
+- **Trace context reports default to frontier-frame diagnostics:** trace replay
+  context files still include the requested frame table, but ROM/engine
+  diagnostic blocks now render only for the frontier frame by default to keep
+  full-sweep reports readable. Use `-Dtrace.context.diagnostics=all` for the
+  previous verbose window, or `none` for a table-only context.
+
+- **Trace replay ignores HTZ landing sidekick latch noise:** S2
+  `tails_cpu_interact` and grounded ROM-only `Status_Push` diagnostics no longer
+  report a frontier when sidekick kinematics match exactly across landing and
+  grounded frames. This advances HTZ1 level-select from frame 4229 through frame
+  4494 to frame 6114; the full trace sweep remains expected-red at 90 trace
+  tests, 52 trace failures, and 1 existing trace error.
+
+- **Trace replay ignores stationary released sidekick push-bit noise:** S2
+  sidekick status-byte diagnostics no longer report a frontier when ROM carries
+  a one-frame `Status_Push` tail with a stale stand slot after release while the
+  engine has already cleared both and all Tails kinematics are stationary and
+  matching. This advances CNZ2 level-select from frame 3691 to frame 4418; the
+  full trace sweep remains expected-red at 90 trace tests, 52 trace failures,
+  and 1 existing trace error.
+
+- **Trace replay ignores held-only sidekick Ctrl2 latch noise:** S2 sidekick
+  `tails_cpu_ctrl2_held` diagnostics no longer report a frontier when the ROM
+  logical Ctrl2 held word carries only a latched held bit while raw P2 input is
+  zero, the pressed edge and sidekick kinematics match, and no decision-time
+  CPU normal-step diagnostic exists. This advances CNZ1 level-select from frame
+  3675 to frame 3906; the full trace sweep remains expected-red at 90 trace
+  tests, 52 trace failures, and 1 existing trace error.
+
+- **Trace replay ignores landing-frame sidekick CPU mirror lag:** S2
+  `tails_cpu_interact` diagnostics no longer report a frontier on the first
+  on-object landing frame when the ROM raw `tails_interact` slot has latched but
+  the CPU mirror field is still one frame behind and sidekick kinematics match.
+  This clears ARZ level-select from frame 3172 to full-trace green; the full
+  trace sweep remains expected-red at 90 trace tests, 52 trace failures, and 1
+  existing trace error.
+
+- **Trace replay ignores airborne zero-horizontal sidekick facing noise:** S2/S3K
+  sidekick status-byte diagnostics no longer report a frontier when the only
+  delta is the facing bit while the sidekick is airborne, non-rolling, and has
+  matching kinematics with zero horizontal and ground speed. This advances CNZ2
+  level-select from frame 2928 to frame 3691; the full trace sweep remains
+  expected-red at 90 trace tests, 53 trace failures, and 1 existing trace error.
+
+- **Trace replay ignores stationary sidekick on-object facing noise:** S2/S3K
+  sidekick status-byte diagnostics no longer report a frontier when the only
+  delta is the facing bit while the sidekick is grounded on an object with
+  matching position, subpixels, angle, and zero speed. This advances MCZ2
+  level-select from frame 2411 to frame 4482 and CNZ2 from frame 2919 to frame
+  2928; the full trace sweep remains expected-red at 90 trace tests, 53 trace
+  failures, and 1 existing trace error.
+
+- **Trace replay ignores inactive sidekick marker facing noise:** S3K
+  catch-up/despawn marker frames no longer report a Tails status-byte frontier
+  when the only delta is the facing bit while the sidekick is parked at the
+  inactive marker with matching kinematics. This advances HCZ complete-run from
+  frame 1402 to frame 1489; the full trace sweep remains expected-red at 90
+  tests, 53 failures, and 1 existing error.
+
+- **Trace replay reports movement before same-frame status noise:** sidekick
+  status-byte diagnostics no longer own the release-blocking frontier when S2
+  Tails is in hurt/on-object status-bit lifetime states with matching
+  kinematics, and same-frame report summaries now prefer movement/routine
+  fields over `status_byte`. This advances OOZ level-select from frame 1251 to
+  frame 1775 and changes MTZ3's frame-1973 headline from status byte to
+  `tails_g_speed`; the full trace sweep remains expected-red at 90 tests, 53
+  failures, and 1 existing error.
+
+- **Trace replay ignores stale inactive Tails CPU interact snapshots:** S2
+  `tails_cpu_interact` mismatches no longer own the release-blocking frontier
+  when both recorded and engine sidekick states are off-object, since that
+  persistent slot byte is stale diagnostic state rather than an active CPU
+  control gate. Active/on-object CPU-interact mismatches remain strict. This
+  advances MTZ3 level-select from frame 1775 to frame 1973, ARZ from frame 2011
+  to frame 3172, and HTZ from frame 3733 to frame 4229; the full frontier-only
+  trace sweep remains expected-red at 90 tests, 53 failures, and 1 existing
+  error.
+
+- **S2 MTZ twin stompers keep ROM solid latch identity while moving:** MTZ
+  Obj64 now keys shared solid standing/pushing state on the live object
+  instance while rebuilding its dynamic spawn as it moves, matching the ROM SST
+  `status(a0)` bits used by `SolidObject_TestClearPush`. This clears the MTZ3
+  stale Tails `Status_Push` frontier and advances the level-select trace from
+  frame 1743 to frame 1775; the full frontier-only trace sweep remains
+  expected-red at 90 tests, 53 failures, and 1 existing error.
+
+- **S2 MTZ Obj6A unloads from its ROM base-X anchor:** MTZ moving platforms
+  now feed their saved `objoff_32` base X into the shared off-screen unload
+  check instead of their current moving X, matching Obj6A's `MarkObjGone2`
+  path. This clears the MTZ3 Tails CPU live-slot identity mismatch by keeping
+  slot 22 as the ROM Obj6E platform and advances the level-select trace from
+  frame 1669 to frame 1743; the full trace sweep remains expected-red at 90
+  tests, 53 failures, and 1 existing error with no named first-frontier
+  regression observed.
+
+- **Trace replay assertion failures now use a terse frontier summary:** failing
+  trace replay tests now keep checkpoint, zone, and diagnostics detail in the
+  JSON/context artifacts while the Surefire assertion message reports only the
+  totals and first frontier mismatch. This reduces full-sweep console and XML
+  noise without changing trace comparison behavior or report contents.
+
+- **S2 Tails flying timeout preserves the CPU auto-jump flag:** the S2
+  `TailsCPU_Flying` off-screen timeout path now returns to routine 2 without
+  clearing `Tails_CPU_jumping`, matching the ROM write set for the zero-marker
+  timeout. This advances the MTZ3 level-select trace from frame 1381's
+  `tails_cpu_jumping` mismatch to frame 1669's later `tails_cpu_interact`
+  frontier; the full frontier-only trace sweep remains expected-red at 53
+  failures and 1 existing error.
+
+- **S2 fixed Obj08 skid dust stops when hurt/death flow takes over:** the
+  post-CPU fixed dust tick now returns while the player is hurt or dead, matching
+  the ROM handoff from `Obj08_CheckSkid` to `HurtCharacter` instead of letting a
+  stale Stop/Skid animation allocate an extra Obj08 child ahead of lost rings.
+  This advances the MTZ2 level-select trace from frame 1075's
+  `tails_cpu_interact` mismatch to frame 1265's later leader movement frontier;
+  the full frontier-only trace sweep remains expected-red at 53 failures and 1
+  existing error.
+
+- **S2 fixed Obj08 skid dust keeps ticking while Stop/Skid animation persists:**
+  airborne S2/S3K players now tick the fixed dust object after CPU sidekick
+  interact sampling when the animation byte remains on the configured skid id,
+  matching S2 `Obj08_CheckSkid` without trace or zone carve-outs. This advances
+  the ARZ level-select trace from frame 1285's `tails_cpu_interact` mismatch to
+  frame 2011's later `tails_cpu_interact` frontier; the full frontier-only
+  trace sweep remains expected-red at 53 failures and 1 existing error with no
+  unrelated first-error regression observed.
+
+- **S3K CNZ barber poles expose their ROM object pointer to CPU Tails:** CNZ
+  barber-pole instances now publish the high word of `loc_33376`/`loc_335A8`
+  through `RomObjectCodePointerProvider`, so S3K `Tails_CPU_interact` sees the
+  same stood-on object identity the ROM stores. This advances the CNZ
+  complete-run trace from frame 1467's `tails_cpu_interact` mismatch to frame
+  1846's later `tails_x_speed` frontier; the full frontier-only trace sweep
+  remains expected-red at 53 failures and 1 existing error with no unrelated
+  first-error regression observed.
+
+- **S3K CNZ retracting spikes keep ROM solid latch identity:** shared S2/S3K
+  spike objects now keep `SolidObjectFull` standing/pushing latch state on the
+  live object instance instead of the dynamic spawn position while retracting.
+  This advances the CNZ complete-run trace from frame 1139's stale Tails
+  `Status_Push` mismatch to frame 1467's later `tails_cpu_interact` frontier;
+  the full frontier-only trace sweep remains expected-red at 53 failures and 1
+  existing error with no unrelated first-error regression observed.
+
+- **S3K complete-run visible-hold rows seed replay counters from the CPU cursor:**
+  S3K complete-run replay now derives the one-time `Level_frame_counter` phase
+  from the recorded Tails CPU `pos_table_index` when startup visible-hold rows
+  are skipped and the normal gameplay counter column is unusable. This advances
+  the ICZ complete-run trace from frame 1116's early Tails catch-up routine
+  mismatch to frame 3116's later main-player status mismatch; the full
+  frontier-only trace sweep remains expected-red at 53 failures and 1 existing
+  error, with no named first-frontier regression observed.
+
+- **S2 CPZ2 Tails push animation uses pre-wall inertia:** grounded movement now
+  snapshots the pre-friction, pre-wall-probe ground speed for animation
+  selection, matching the ROM order where Tails chooses Wait/Walk before
+  no-input friction and ground-wall collision can zero inertia. This advances
+  the CPZ2 level-select trace from frame 759's `tails_status_byte` mismatch to
+  frame 2888's later Tails `x` mismatch; the full frontier-only trace sweep
+  improves from 54 to 53 failures with 1 existing error.
+
+- **S3K monitors expose their ROM object pointer to CPU Tails:** S3K monitor
+  instances now publish the high word of `Obj_Monitor` (`0x0001D566`) through
+  the existing `RomObjectCodePointerProvider` path, so `Tails_CPU_interact`
+  sees the same stood-on monitor identity the ROM stores. This advances the MGZ
+  route trace from frame 312's `tails_cpu_interact` mismatch to frame 539's
+  later ring-count frontier, with no named first-error-frame regression in the
+  full trace sweep.
+
+- **S3K complete-run traces seed the prior oscillator setup pass:** per-zone S3K
+  complete-run segments now enter replay with the ROM's setup `OscillateNumDo`
+  phase already visible to the first object pass. This advances the CNZ
+  complete-run trace from frame 946's hover-fan-driven 1-pixel `y` mismatch to
+  frame 1139's later Tails status frontier, with no first-error-frame regression
+  in the full trace sweep.
+
+- **S3K CNZ orbiting bumper bounce uses the ROM-current orbit point:** Obj_Bumper
+  now advances its orbit before consuming pending touch responses and resolves
+  the object-pass `Level_frame_counter+1` tick from the live level counter. This
+  makes the collision-response list publish the current visible orbit point and
+  advances the CNZ complete-run trace from frame 355's bumper `y_speed` mismatch
+  to frame 946's later 1-pixel `y` movement frontier, with no parsed
+  first-error-frame regression in the full trace sweep.
+
 - **S2 ARZ2 swinging-platform child slot matches the ROM SST layout:** Obj15 now
   allocates the non-rendering display child used by the ROM multi-sprite chain
   and mirrors the swing oscillator through the object's x-flip bit. The ARZ2
@@ -55,13 +263,6 @@ All notable changes to the OpenGGF project are documented in this file.
   `tails_cpu_interact` mismatch to frame 1006's later `tails_status_byte`
   mismatch with no added or removed full-suite trace failures.
 
-- **Fresh ground-wall push survives the same-frame animation clear:** terrain
-  side-wall collision now marks push contact set after the idle/walk animation
-  clear point so the animation resolver does not erase `Status_Push` later in
-  the same frame. This advances the CPZ2 level-select Tails CPU frontier from
-  frame 759's missing push bit to frame 2888's later `tails_x` mismatch without
-  changing the trace-suite failure count.
-
 - **S2 lost-ring spill slots match Obj37 owner-slot allocation:** Sonic 2 now
   preallocates the first lost-ring Obj37 owner slot before spilling remaining
   rings, matching `HurtCharacter`/`Obj37_Init` scan order. This advances the
@@ -87,6 +288,20 @@ All notable changes to the OpenGGF project are documented in this file.
   (4) the AIZ2 rock re-sets Sonic's `Status_Push` at its inclusive solid edge
   (`usesInclusiveRightEdge`, ROM `SolidObject_cont` `bhi`, `sonic3k.asm:41403-41406,41494-41500`).
   Each was full-`*TraceReplay`-A/B-validated with no S1/S2/S3K regression.
+
+- **AIZ2 forest canopy reveals naturally and loops seamlessly across the battleship
+  ship-loop wrap:** during the post-bombing forest loop, ROM `AIZ2_DoShipLoop`
+  subtracts `$200` from `Camera_X_pos` each loop, and `$200` equals the Plane A
+  nametable width. The forest columns drawn at the leading edge reappear at the
+  wrapped camera X on hardware because the foreground is a persistent nametable
+  drawn incrementally. The engine re-sampled the flat FG layout by wrapped world
+  X, which landed in a canopy gap and dropped the dense forest for several frames
+  each loop. The foreground tilemap now models the ROM as a persistent `$200`-
+  wide Plane A ring while the forest loop is active: it draws only entering
+  leading-edge columns from the flat layout and retains the rest, so the wrapped
+  camera reads the cells the leading edge filled. This is gated on the ROM
+  post-bombing wrap state via `AizZoneRuntimeState`; player/terrain collision and
+  the AIZ trace frontier remain unchanged.
 
 - **S3K same-frame-spawned hazard touch latency (1 frame, ROM-accurate):** a
   hazard spawned during frame N's object pass (e.g. an AIZ2 battleship bomb
