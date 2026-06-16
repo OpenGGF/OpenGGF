@@ -12,26 +12,27 @@ branch-local measurements.
 |---|---|
 | Overall trace-suite state | Expected-red, not release-green |
 | Latest logged full-sweep aggregate | 90 `*TraceReplay` tests, 53 failures, 1 error |
-| Latest focused frontier | `TestS2ArzLevelSelectTraceReplay` advanced to frame `2011` |
-| Current blocking field | ARZ Tails `tails_cpu_interact` mismatch (`0x0090` vs `0x0000`) after clearing the stale Obj08 skid-dust slot mismatch at f1285 |
-| Current owner hypothesis | ARZ level-select moved past the airborne Stop/Skid fixed-dust slot timing issue; continue the ordered Tails CPU/status queue with the latest sweep's earliest remaining CPU/status frontier, `TestS2Mtz2LevelSelectTraceReplay` frame `1075` (`tails_cpu_interact`) |
+| Latest focused frontier | `TestS2Mtz2LevelSelectTraceReplay` advanced to frame `1265` |
+| Current blocking field | MTZ3 Tails `tails_cpu_jumping` mismatch (`0x0001` vs `0x0000`) after clearing MTZ2's stale Obj08/lost-ring slot interaction at f1075 |
+| Current owner hypothesis | MTZ2 moved past the hurt-routine fixed Obj08 skid-dust slot mismatch into downstream leader movement; continue the ordered Tails CPU/status queue with `TestS2Mtz3LevelSelectTraceReplay` frame `1381` (`tails_cpu_jumping`) before movement-only frontiers |
 | Current branch context in newest entries | `bugfix/ai-trace-frontier-develop` after cherry-picking the AIZ worker chain |
-| Last frontier move | S2 ARZ level-select `f1285 -> f2011` via post-CPU fixed Obj08 skid-dust ticking while Stop/Skid animation persists |
+| Last frontier move | S2 MTZ2 level-select `f1075 -> f1265` by stopping fixed Obj08 skid-dust ticks once the player enters hurt/death flow |
 
 ### Active queue
 
 1. Continue the ordered Tails CPU/status cluster. The newest full sweep is
-   expected-red at 90 tests / 53 failures / 1 error; S2 ARZ level-select
-   advanced out of the f1285 fixed Obj08 skid-dust slot timing mismatch and now
-   lands on a later `tails_cpu_interact` mismatch at f2011.
+   expected-red at 90 tests / 53 failures / 1 error; MTZ2 advanced out of
+   f1075 `tails_cpu_interact` into f1265 leader movement/ground-mode
+   divergence.
 2. The latest sweep's earliest remaining CPU/status frontier is
-   `TestS2Mtz2LevelSelectTraceReplay` f1075 (`tails_cpu_interact`, `0x0037`
-   vs `0x0008`). Earlier movement/downstream frontiers such as S2 OOZ2 f1070
-   (`air`), S2 CPZ1 f1157 (`tails_x_speed`), and CNZ complete-run f1846
-   (`tails_x_speed`) should wait until the CPU/status cluster is exhausted.
-3. Keep S2 OOZ f1251, S2 MTZ3 f1381, HCZ f1402, ARZ f2011, and other Tails
-   CPU/status frontiers in the same cluster queue until a full sweep moves them
-   out of the cluster.
+   `TestS2Mtz3LevelSelectTraceReplay` f1381 (`tails_cpu_jumping`, `0x0001`
+   vs `0x0000`). Earlier movement/downstream frontiers such as S2 OOZ2 f1070
+   (`air`), S2 HTZ2 f1078 (`y_speed`), S2 CPZ1 f1157 (`tails_x_speed`), and
+   CNZ complete-run f1846 (`tails_x_speed`) should wait until the CPU/status
+   cluster is exhausted.
+3. Keep S2 OOZ f1251, HCZ f1402, ARZ f2011, and other Tails CPU/status
+   frontiers in the same cluster queue until a full sweep moves them out of
+   the cluster.
 4. Known branch-local follow-up from the S2 ARZ2 work: ARZ2 advanced to `f523`
    missing Obj91 after the Obj15 child-slot fix, but that entry predates the
    newest AIZ-focused branch state. Reconfirm before treating it as the next
@@ -42,17 +43,20 @@ branch-local measurements.
 | Trace | Frame | Field | ROM | Engine | Status | Next owner |
 |---|---:|---|---:|---:|---|---|
 | `s3k_mgz1` / `TestS3kMgzTraceReplay` | `539` | rings | `10` | `11` | advanced from f312 | downstream ring/object collection |
+| `s2_mtz2` / `TestS2Mtz2LevelSelectTraceReplay` | `1265` | leader `g_speed` | `0x014B` | `0x047A` | advanced from f1075 | leader movement / ground-mode |
+| `s2_mtz3` / `TestS2Mtz3LevelSelectTraceReplay` | `1381` | Tails `tails_cpu_jumping` | `0x0001` | `0x0000` | held | Tails CPU/status |
 | `s2_cpz2` / `TestS2Cpz2LevelSelectTraceReplay` | `2888` | Tails `x` | `0x10F8` | `0x10F0` | advanced from f759 | movement downstream of Tails CPU |
 | `s2_arz1` / `TestS2ArzLevelSelectTraceReplay` | `2011` | Tails `tails_cpu_interact` | `0x0090` | `0x0000` | advanced from f1285 | Tails CPU/interact |
 | `s3k_icz1` / `TestS3kIczCompleteRunTraceReplay` | `3116` | `status_byte` | `0x0008` | `0x0009` | advanced from f1116 | movement/status downstream |
 | `s3k_cnz1` / `TestS3kCnzCompleteRunTraceReplay` | `1846` | Tails `tails_x_speed` | `0x0024` | `-1000` | advanced from f1467 | movement downstream of Tails CPU |
 | `s3k_aiz1` / `TestS3kAizTraceReplay` | `19089` | leader `g_speed` | `-00B0` | `0x00B0` | held | leader movement near AIZ2 end-boss approach |
 
-At CPZ2 `f2888`, the earlier `tails_status_byte` mismatch at f759 is cleared;
-Tails keeps the ROM push bit when ground movement animation is chosen from the
-pre-friction/pre-wall inertia. The new CPZ2 frontier is downstream movement.
-AIZ still holds at `f19089`, after the trace passes the AIZ2 battleship bombing
-run and wrap into the end-boss arena approach.
+At MTZ2 `f1265`, the earlier `tails_cpu_interact` mismatch at f1075 is cleared;
+the fixed Obj08 controller no longer allocates an extra skid-dust child after
+Sonic has entered the hurt routine, so lost-ring slots line up for the Tails CPU
+interact dereference. The new MTZ2 frontier is downstream leader
+movement/ground-mode. AIZ still holds at `f19089`, after the trace passes the
+AIZ2 battleship bombing run and wrap into the end-boss arena approach.
 
 ### Stale-data warnings
 
@@ -79,6 +83,50 @@ run and wrap into the end-boss arena approach.
   cleanup. Do not delete historical evidence only because it is stale.
 
 ## Evidence Ledger
+
+## 2026-06-16 - S2 MTZ2 level-select f1075 -> f1265 via hurt-routine fixed Obj08 gating
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, targeting the ordered
+  Tails CPU/status cluster after ARZ level-select advanced to f2011. The
+  selected earliest CPU/status frontier trace was
+  `TestS2Mtz2LevelSelectTraceReplay`.
+- Single-frame bisect result: at f1075, player and Tails kinematics matched,
+  but ROM `tails_cpu_interact` dereferenced a lost-ring slot (`Obj37`, `0x0037`)
+  while the engine dereferenced an extra Obj08 skid-dust child (`0x0008`). The
+  extra child occupied the slot where ROM had already allocated lost rings.
+- Disassembly evidence: S2 `Obj08_CheckSkid` allocates child Obj08 only while
+  the parent animation byte is `AniIDSonAni_Stop`
+  (`docs/s2disasm/s2.asm:42759-42797`). `HurtCharacter` sets routine 4 and writes
+  `AniIDSonAni_Hurt2` before returning (`docs/s2disasm/s2.asm:85386-85443`),
+  so the fixed dust controller must not continue ticking after hurt/death flow
+  takes over.
+- Fix: `PlayableSpriteMovement.advanceFixedSkidDustWhileStopAnimPersists()`
+  now returns while the player is hurt or dead. The existing positive path still
+  ticks airborne Stop/Skid dust for S2/S3K when the animation id remains on the
+  configured skid id. No trace data is written into engine state, and there is
+  no zone, route, or frame carve-out.
+- Focused validation:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.sprites.managers.TestPlayableSpriteMovement#s2FixedSkidDustTicksWhileAirborneStopAnimationPersists+s2FixedSkidDustDoesNotTickDuringHurtRoutine" -DfailIfNoTests=false test`
+  passed. Focused `TestS2Mtz2LevelSelectTraceReplay` remains expected-red but
+  advances from **f1075** `tails_cpu_interact` (`0x0037` vs `0x0008`) to
+  **f1265** leader `g_speed` (`0x014B` vs `0x047A`). Focused
+  `TestS2Ehz1TraceReplay` passed as a green sentinel after the sweep.
+- Full sweep command: `mvn -q "-Dmse=off" "-Dsurefire.argLine=-Xshare:off -Xmx3g"
+  "-Dsurefire.forkCount=1" "-Dsurefire.redirectTestOutputToFile=true"
+  "-Dtrace.frontierOnly=true" "-Dtrace.context.radius=24"
+  "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen"
+  "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" test`.
+- Full sweep result: expected-red, **90 tests, 53 failures, 1 error**. The
+  intentional movement is MTZ2 level-select **f1075 -> f1265**. Current named
+  frontiers otherwise held in this sweep, including AIZ route f19089, AIZ
+  complete-run f1095, CNZ route f291, CNZ complete-run f1846, HCZ f1402, ICZ
+  f3116, LBZ f1694, MGZ route f539, MGZ complete-run f738, MHZ f966, and ARZ
+  f2011. The next ordered CPU/status target from this sweep is
+  `TestS2Mtz3LevelSelectTraceReplay` f1381 (`tails_cpu_jumping`, `0x0001` vs
+  `0x0000`).
+- Classification: MTZ2 Tails CPU/interact frontier **cleared/advanced** into
+  downstream leader movement. Continue Tails CPU/status before movement-only
+  frontiers.
 
 ## 2026-06-16 - S2 ARZ level-select f1285 -> f2011 via fixed Obj08 skid-dust timing
 

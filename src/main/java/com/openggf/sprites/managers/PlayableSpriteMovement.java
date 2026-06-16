@@ -3206,6 +3206,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (!(sprite.getAnimationProfile() instanceof ScriptedVelocityAnimationProfile profile)) {
 			return;
 		}
+		if (sprite.isHurt() || sprite.getDead()) {
+			return;
+		}
 		int skidAnimId = profile.getSkidAnimId();
 		if (skidAnimId < 0 || sprite.getAnimationId() != skidAnimId) {
 			return;

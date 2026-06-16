@@ -4,6 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 fixed Obj08 skid dust stops when hurt/death flow takes over:** the
+  post-CPU fixed dust tick now returns while the player is hurt or dead, matching
+  the ROM handoff from `Obj08_CheckSkid` to `HurtCharacter` instead of letting a
+  stale Stop/Skid animation allocate an extra Obj08 child ahead of lost rings.
+  This advances the MTZ2 level-select trace from frame 1075's
+  `tails_cpu_interact` mismatch to frame 1265's later leader movement frontier;
+  the full frontier-only trace sweep remains expected-red at 53 failures and 1
+  existing error.
+
 - **S2 fixed Obj08 skid dust keeps ticking while Stop/Skid animation persists:**
   airborne S2/S3K players now tick the fixed dust object after CPU sidekick
   interact sampling when the animation byte remains on the configured skid id,

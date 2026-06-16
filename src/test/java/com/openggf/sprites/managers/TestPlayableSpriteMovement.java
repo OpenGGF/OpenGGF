@@ -952,6 +952,34 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void s2FixedSkidDustDoesNotTickDuringHurtRoutine() throws Exception {
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                Field objectManagerField = GameServices.level().getClass().getDeclaredField("objectManager");
+                objectManagerField.setAccessible(true);
+                objectManagerField.set(GameServices.level(), new ObjectManager(List.of(), null, 0, null, null));
+
+                mockSprite.setSpindashDustController(new SpindashDustController(
+                        mockSprite, mock(PlayerSpriteRenderer.class)));
+                mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                        .setSkidAnimId(Sonic2AnimationIds.SKID));
+                mockSprite.setAnimationId(Sonic2AnimationIds.SKID);
+                mockSprite.setAir(true);
+                mockSprite.setRolling(false);
+                mockSprite.setHurt(true);
+                mockSprite.setCentreX((short) 0x0556);
+                mockSprite.setCentreY((short) 0x044C);
+                mockSprite.setSkidDustTimer(0);
+
+                manager.advanceFixedSkidDustWhileStopAnimPersists();
+
+                assertEquals(0, mockSprite.getSkidDustTimer(),
+                        "Obj08_CheckSkid stops ticking once the parent has entered the hurt routine");
+                assertEquals(0, GameServices.level().getObjectManager()
+                        .activeObjectsOfType(SkidDustObjectInstance.class).size(),
+                        "Hurt routine must not allocate an extra skid dust object ahead of lost rings");
+        }
+
+        @Test
         public void testLeftInputMaintainHighSpeed() throws Exception {
                 // Setup: Running super fast LEFT (-3000), holding Left. Flat ground.
                 mockSprite.setGSpeed((short) -3000);
