@@ -3,7 +3,7 @@ package com.openggf.tests.trace;
 import com.openggf.trace.DivergenceReport;
 
 final class TraceReplayConsole {
-    private static final int DEFAULT_CONTEXT_RADIUS = 6;
+    private static final int DEFAULT_CONTEXT_RADIUS = 2;
     private static final boolean PRINT_SUMMARY =
             Boolean.getBoolean("trace.print.summary");
     private static final boolean PRINT_BOOTSTRAP =

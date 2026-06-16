@@ -6,10 +6,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 - **Trace context reports default to divergent columns only:** trace replay
   context windows now omit matching fields by default, cap long ROM/engine
-  diagnostic lines, and use a smaller saved window radius, reducing full-sweep
-  artifact and console noise. Use `-Dtrace.context.fields=all`,
-  `-Dtrace.context.diagnosticChars=full`, and `-Dtrace.context.radius=N` to
-  restore wider investigation output.
+  diagnostic lines, use a two-frame saved window radius, and omit empty
+  bootstrap sections, reducing full-sweep artifact and console noise. Use
+  `-Dtrace.context.fields=all`, `-Dtrace.context.diagnosticChars=full`,
+  `-Dtrace.context.bootstrap=always`, and `-Dtrace.context.radius=N` to restore
+  wider investigation output.
 
 - **S2 OOZ spike riding preserves ROM-visible Tails push timing:** CPU Tails
   now keeps the delayed follow input when still riding live S2 Obj36 spikes

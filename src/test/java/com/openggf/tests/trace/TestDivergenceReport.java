@@ -160,6 +160,41 @@ public class TestDivergenceReport {
     }
 
     @Test
+    void contextWindowOmitsEmptyBootstrapSectionByDefault() {
+        FrameComparison frame = makeComparison(2, "air", Severity.ERROR, "0", "1");
+        DivergenceReport report = new DivergenceReport(List.of(frame));
+
+        String previous = System.clearProperty("trace.context.bootstrap");
+        try {
+            String context = report.getContextWindow(2, 0);
+
+            assertFalse(context.contains("=== Bootstrap (frame 0) ==="));
+            assertFalse(context.contains("(no bootstrap divergences)"));
+            assertTrue(context.contains("=== Per-frame ==="));
+        } finally {
+            restoreProperty("trace.context.bootstrap", previous);
+        }
+    }
+
+    @Test
+    void contextWindowCanRenderEmptyBootstrapSectionWhenRequested() {
+        FrameComparison frame = makeComparison(2, "air", Severity.ERROR, "0", "1");
+        DivergenceReport report = new DivergenceReport(List.of(frame));
+
+        String previous = System.setProperty("trace.context.bootstrap", "always");
+        try {
+            String context = report.getContextWindow(2, 0);
+
+            assertTrue(context.contains("=== Bootstrap (frame 0) ==="));
+            assertTrue(context.contains("(no bootstrap divergences)"));
+            assertTrue(context.indexOf("=== Bootstrap (frame 0) ===")
+                    < context.indexOf("=== Per-frame ==="));
+        } finally {
+            restoreProperty("trace.context.bootstrap", previous);
+        }
+    }
+
+    @Test
     void testContextWindowUsesFrameNumbersNotListIndexes() {
         FrameComparison f100 = makeMatchComparison(100, (short) 0x50, (short) 0x3B0);
         FrameComparison f101 = makeComparison(101, "air", Severity.ERROR, "0", "1");

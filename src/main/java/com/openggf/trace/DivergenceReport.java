@@ -294,7 +294,9 @@ public class DivergenceReport {
         int end = Math.min(allComparisons.size() - 1, centreIndex + radius);
 
         StringBuilder sb = new StringBuilder();
-        appendBootstrapSection(sb);
+        if (shouldRenderBootstrapSection()) {
+            appendBootstrapSection(sb);
+        }
         appendTraceContextWindow(sb, centreFrame);
         sb.append("=== Per-frame ===\n");
         sb.append(String.format("%-6s", "Frame"));
@@ -655,6 +657,19 @@ public class DivergenceReport {
             }
         }
         return null;
+    }
+
+    private boolean shouldRenderBootstrapSection() {
+        if (!bootstrapDivergences.isEmpty()) {
+            return true;
+        }
+        String mode = System.getProperty("trace.context.bootstrap", "divergent")
+                .trim()
+                .toLowerCase(Locale.ROOT);
+        return switch (mode) {
+            case "all", "always", "full", "true" -> true;
+            default -> false;
+        };
     }
 
     private static List<DivergenceGroup> buildGroups(List<FrameComparison> comparisons) {

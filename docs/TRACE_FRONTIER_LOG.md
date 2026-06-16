@@ -23,10 +23,10 @@ branch-local measurements.
 1. The ordered Tails CPU/status cluster is exhausted under the newest full
    sweep. The sweep remains expected-red at 90 trace tests / 52 trace failures /
    1 trace error. The latest rerun used the quieter trace context defaults
-   (six-frame frontier-only stop radius, divergent context columns, capped
-   ROM/engine diagnostics), so downstream error counts are lower by design;
-   first-frontier frames are the comparison metric and no first-frontier
-   regression was observed.
+   (two-frame frontier-only stop radius, divergent context columns, capped
+   ROM/engine diagnostics, empty bootstrap sections omitted), so downstream
+   error counts are lower by design; first-frontier frames are the comparison
+   metric and no first-frontier regression was observed.
 2. MCZ2 advanced from f2411 to f4482 after clearing a stationary on-object
    facing-only status diagnostic. CNZ2 has now advanced from f2919 to f3691
    after clearing stationary/on-object and airborne zero-horizontal-speed
@@ -142,6 +142,36 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
   cleanup. Do not delete historical evidence only because it is stale.
 
 ## Evidence Ledger
+
+## 2026-06-16 - Trace context output defaults tightened to reduce sweep artifact noise
+
+- Scope: trace reporting/framework only on
+  `bugfix/ai-trace-frontier-develop`. This does not change trace comparison
+  semantics or any engine replay path.
+- Change: saved context windows now omit the empty
+  `=== Bootstrap (frame 0) ===` / `(no bootstrap divergences)` section unless
+  bootstrap divergences exist. The empty block can still be restored with
+  `-Dtrace.context.bootstrap=always`. The default saved context radius is now
+  **2** frames instead of **6**; wider bisection output remains opt-in with
+  `-Dtrace.context.radius=N`.
+- Focused verification:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestDivergenceReport,com.openggf.tests.trace.TestTraceReplayReportPolicy,com.openggf.trace.TestBootstrapComparatorReporting" "-DfailIfNoTests=false" test`.
+  Result: 40 tests, 0 failures, 0 errors.
+- Focused frontier check:
+  `mvn "-Dmse=off" "-Dsurefire.argLine=-Xmx4g" "-Dsurefire.forkCount=1" "-Dsurefire.redirectTestOutputToFile=true" "-Dtrace.frontierOnly=true" "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Ds2.rom.path=s2.gen" "-Dsonic2.rom.path=s2.gen" test`.
+  Result: expected-red at the same OOZ frontier, **f1782** `tails_x`
+  (`0x0CE4` vs `0x0CE3`), with 6 errors. The generated
+  `s2_ooz1_context.txt` is now **10 lines / 2623 characters** under the
+  default settings.
+- Full sweep:
+  `mvn "-Dmse=off" "-Dsurefire.argLine=-Xmx4g" "-Dsurefire.forkCount=1" "-Dsurefire.redirectTestOutputToFile=true" "-Dtrace.frontierOnly=true" "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Dsonic1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Dsonic2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsonic3k.rom.path=s3k.gen" test`.
+  Result: expected-red, **90 trace tests, 52 failures, 1 existing error**.
+  Watched frontiers held: OOZ **f1782**, CNZ1 **f3906**, CNZ2 **f4418**,
+  HTZ **f6114**, MCZ2 **f4485**, MTZ3 **f1973**, CNZ complete-run **f1846**,
+  and AIZ **f19089**.
+- Classification: reporting-only cleanup; no frontier cleared, advanced, or
+  regressed. Continue the ordered target at OOZ f1782, movement downstream of
+  Tails CPU.
 
 ## 2026-06-16 - S2 Obj36 negative-inertia riding push bridge advances OOZ to f1782
 
