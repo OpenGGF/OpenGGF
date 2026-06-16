@@ -18,6 +18,7 @@ import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFWErrorCallback;
@@ -207,13 +208,31 @@ public final class HeadlessGameBoot implements AutoCloseable {
                     new HeadlessSmpsAudioBackend(audioConfig, services.profiler()));
         }
 
-        // --- level + team -----------------------------------------------
-        GameServices.level().loadZoneAndAct(zone, act);
+        // --- per-replay subsystem reset ---------------------------------
+        // Clear the per-zone subsystem state (sprites, collision, camera, fade,
+        // game state, timers, water, parallax, level events, RNG seed) the same
+        // way the headless trace tests do via TestEnvironment.resetPerTest() and
+        // the live launcher does via resetLevelSubsystemsForReplay(). Without
+        // this, residual state left by the bootstrap EngineContext (title-screen
+        // defaults, default level, residual level-event/intro state) leaks into
+        // the AIZ intro and slips object/event timing by ~1 vbla frame mid-intro,
+        // which cascades into a player-path desync (e.g. AIZ landing at trace
+        // ~2170 lands 3px off and snowballs).
+        TraceReplaySessionBootstrap.resetLevelSubsystemsForReplay();
 
+        // --- team + level -----------------------------------------------
+        // Register the active team BEFORE loadZoneAndAct so the level load's
+        // spawnPlayerAtStartPosition finds the main sprite (otherwise the
+        // camera's focusedSprite ends up null / the player is never spawned at
+        // the start position). This mirrors the trace-replay test fixture and
+        // the live TraceReplayDriver bootstrap order.
         SonicConfigurationService configService = GameServices.configuration();
         GameplayTeamBootstrap.BootstrappedTeam team =
                 GameplayTeamBootstrap.registerActiveTeam(
                         module, GameServices.sprites(), configService);
+
+        GameServices.level().loadZoneAndAct(zone, act);
+
         GameServices.camera().setFocusedSprite(team.mainSprite());
         GameServices.camera().updatePosition(true);
 

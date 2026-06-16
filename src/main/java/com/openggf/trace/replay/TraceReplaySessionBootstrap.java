@@ -720,6 +720,46 @@ public final class TraceReplaySessionBootstrap {
      * Legacy-AIZ traces are short-circuited because their prefix is
      * consumed by deterministic warmup.
      */
+    /**
+     * Runs the post-load level init that {@code HeadlessTestFixture.Builder.build}
+     * performs unconditionally (steps 7-12): re-anchor registered sidekicks, wire
+     * {@code GroundSensor}, re-run camera + level-event init so they pick up the
+     * spawned player, re-apply S3K zone player state, refresh sidekick CPU bounds,
+     * and snap the player to ground.
+     *
+     * <p>The test fixture always runs these at build time because
+     * {@code TestEnvironment.resetPerTest()} cleared the transient managers. The
+     * headless trace-capture tool boots via {@code HeadlessGameBoot.boot}, which
+     * only does {@code loadZoneAndAct}; it must call this so capture starts from
+     * the same post-load state the tests do (otherwise physics drifts by the
+     * first collision). {@link #applyStartPositionAndGroundSnap} performs the same
+     * init for metadata-start traces; this is the unconditional variant for
+     * callers (e.g. pre-level-intro-prefix traces) where that method short-circuits.
+     */
+    public static void applyPostLoadLevelInit(TraceData trace) {
+        var level = GameServices.levelOrNull();
+        if (level == null) {
+            return;
+        }
+        AbstractPlayableSprite sprite = GameServices.cameraOrNull() != null
+                ? GameServices.camera().getFocusedSprite()
+                : null;
+        GameplayTeamBootstrap.repositionRegisteredSidekicks(GameServices.module(), level);
+        GroundSensor.setLevelManager(level);
+        level.initCameraForLevel();
+        level.initLevelEventsForLevel();
+        var levelEventProvider = GameServices.module().getLevelEventProvider();
+        if (levelEventProvider instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager s3kLem) {
+            s3kLem.applyZonePlayerState();
+        }
+        refreshSidekickCpuBoundsFromCamera();
+        var collision = GameServices.collisionOrNull();
+        if (collision != null && sprite != null) {
+            collision.resolveGroundAttachment(
+                    FrameCollisionPlan.terrainOnly(), sprite, 14, () -> false);
+        }
+    }
+
     public static void applyStartPositionAndGroundSnap(TraceData trace,
                                                        TraceReplayFixture fixture) {
         if (!TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace)) {
