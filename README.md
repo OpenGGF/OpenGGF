@@ -227,6 +227,14 @@ straightforward to add new objects, zones, and game-specific behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **AI journey journal expansion + development-timeline gallery (2026-06-16).** Merged
+  `feature/ai-journey-expansion`, substantially expanding `docs/AI_JOURNEY.md` against
+  the commit log and the project's two-person chat history: corrects the AI-use timeline
+  (first real AI work was ChatGPT + Kosinski in Sept 2024, agentic Codex in June 2025,
+  Jules-scaffolded/human-tuned audio in Nov 2025), reframes audio as the oracle-less
+  exception, and adds a curated hall of shame. Adds `docs/DEVELOPMENT_TIMELINE.md`, a
+  captioned GIF/audio gallery of ~40 dev builds (Dec 2025 → Apr 2026), with media under
+  `docs/assets/`. Docs-only; no engine change.
 - **S3K AIZ trace frontier to f19089 + AI journey journal (2026-06-16).** Merged
   `bugfix/ai-trace-frontier-develop`, advancing the S3K AIZ trace past the AIZ2
   battleship bombing run and wrap into the end-boss arena approach (frame ~19089)
