@@ -94,6 +94,7 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
     private static final int TRAP_COOLDOWN = 60;       // Frames to wait after rotation
     private static final int TRAP_ROTATION_STEP = 8;   // Angle change per frame
     private static final int TRAP_ROTATION_MAX = 0x200; // Maximum rotation accumulator
+    private static final int DISPLAY_CHILD_ANCHOR_LENGTH = 0x40;
 
     // Static mapping data (loaded per-zone)
     private static final LazyMappingHolder OOZ_MAPPINGS = new LazyMappingHolder();
@@ -116,6 +117,9 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
     // Chain link positions
     private final int[] chainX;
     private final int[] chainY;
+    private int displayChildX;
+    private int displayChildY;
+    private SwingingPlatformDisplayChild displayChild;
 
     // Trap mode state
     private int trapCooldown;
@@ -157,6 +161,8 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
         // Initialize chain position arrays
         this.chainX = new int[chainCount];
         this.chainY = new int[chainCount];
+        this.displayChildX = spawn.x();
+        this.displayChildY = spawn.y() + DISPLAY_CHILD_ANCHOR_LENGTH;
 
         // Initialize trap mode state
         this.trapAngle = 0x8000;  // Start at top position
@@ -221,6 +227,7 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
         if (isDestroyed()) {
             return;
         }
+        ensureDisplayChild();
 
         // Update based on behavior mode
         switch (behaviorMode) {
@@ -232,6 +239,13 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
         }
 
         updateDynamicSpawn(x, y);
+    }
+
+    private void ensureDisplayChild() {
+        if (displayChild != null) {
+            return;
+        }
+        displayChild = spawnChild(() -> new SwingingPlatformDisplayChild(this));
     }
 
     /**
@@ -350,8 +364,11 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
      * </ul>
      */
     private void updatePositions(int oscValue) {
+        int effectiveOscValue = mirroredOscillatorValue(oscValue);
         // ROM sub_FE70 (s2.asm:22604-22654): jsrto JmpTo2_CalcSine with d0=oscValue.
         // CalcSine returns d0=sin(oscValue), d1=cos(oscValue) from the SINCOSLIST table.
+        // If status.x_flip is set, s2.asm:22617-22620 negates the oscillator byte and adds $80
+        // before CalcSine, mirroring the swing around objoff_3A/38.
         //
         // The chain-link loop accumulates d0 (sin) into Y and d1 (cos) into X:
         //   sin(oscValue) drives Y: oscValue=0x40 → sin=256 → hangs straight down
@@ -366,13 +383,24 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
         // perfectly antisymmetric (e.g. SINCOSLIST[147]=-117 while SINCOSLIST[19]=115),
         // so sin(osc-0x40) ≠ -cos(osc) for all values. Using oscValue directly is the
         // only way to match the ROM's CalcSine(oscValue) call exactly.
-        int sin = calcSine(oscValue);   // d0 = sin(oscValue) → drives Y
-        int cos = calcCosine(oscValue); // d1 = cos(oscValue) → drives X
+        int sin = calcSine(effectiveOscValue);   // d0 = sin(oscValue) → drives Y
+        int cos = calcCosine(effectiveOscValue); // d1 = cos(oscValue) → drives X
 
         // Platform hangs at (chainCount + 0.5) increments of 0x10 per link from pivot.
         int chainLength = chainCount * 0x10 + 8;
+        int displayChildXOffset = (cos * DISPLAY_CHILD_ANCHOR_LENGTH) >> 8;
+        int displayChildYOffset = (sin * DISPLAY_CHILD_ANCHOR_LENGTH) >> 8;
         int xOffset = (cos * chainLength) >> 8;
         int yOffset = (sin * chainLength) >> 8;
+
+        // ROM sub_FE70 copies the just-written sub6_x/sub6_y multi-sprite entry
+        // into the child object's x_pos/y_pos, while the parent/platform position
+        // is the full chain endpoint plus a half-link.
+        displayChildX = baseX + displayChildXOffset;
+        displayChildY = baseY + displayChildYOffset;
+        if (displayChild != null) {
+            displayChild.syncFromParent();
+        }
 
         // Platform position
         this.x = baseX + xOffset;
@@ -384,6 +412,14 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
             chainX[i] = baseX + ((cos * linkLength) >> 8);
             chainY[i] = baseY + ((sin * linkLength) >> 8);
         }
+    }
+
+    private int mirroredOscillatorValue(int oscValue) {
+        int value = oscValue & 0xFF;
+        if ((spawn.renderFlags() & 0x01) != 0) {
+            value = (0x80 - value) & 0xFF;
+        }
+        return value;
     }
 
     /**
@@ -553,6 +589,66 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
         // Draw platform center (red cross)
         ctx.drawLine(x - 4, y, x + 4, y, 1.0f, 0.0f, 0.0f);
         ctx.drawLine(x, y - 4, x, y + 4, 1.0f, 0.0f, 0.0f);
+    }
+
+    private static final class SwingingPlatformDisplayChild extends AbstractObjectInstance {
+        private final SwingingPlatformObjectInstance parent;
+        private int x;
+        private int y;
+
+        private SwingingPlatformDisplayChild(SwingingPlatformObjectInstance parent) {
+            super(new ObjectSpawn(
+                    parent.displayChildX,
+                    parent.displayChildY,
+                    parent.spawn.objectId(),
+                    parent.spawn.subtype(),
+                    parent.spawn.renderFlags(),
+                    false,
+                    parent.spawn.rawYWord()),
+                    "SwingingPlatformDisplayChild");
+            this.parent = parent;
+            syncFromParent();
+        }
+
+        private void syncFromParent() {
+            this.x = parent.displayChildX;
+            this.y = parent.displayChildY;
+            updateDynamicSpawn(x, y);
+        }
+
+        @Override
+        public int getX() {
+            return x;
+        }
+
+        @Override
+        public int getY() {
+            return y;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity playerEntity) {
+            if (parent.isDestroyed()) {
+                setDestroyed(true);
+                return;
+            }
+            syncFromParent();
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // Parent renders the full multi-sprite assembly; this instance only occupies the ROM SST child slot.
+        }
+
+        @Override
+        public int getOutOfRangeReferenceX() {
+            return parent.getOutOfRangeReferenceX();
+        }
+
+        @Override
+        public boolean isHighPriority() {
+            return false;
+        }
     }
 
 }

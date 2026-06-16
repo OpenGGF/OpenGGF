@@ -15089,3 +15089,33 @@ Tails x_pos diff vs ROM across the HCZ approach (CPU-sidekick movement chain;
 
 No engine change committed in this entry (investigation only). The diagnostic
 lua is committed for reuse. AIZ frontier remains f3135; HCZ remains f1402.
+
+## 2026-06-16 — S2 ARZ2 Obj15 child SST slot exposes the true frontier
+
+Branch `bugfix/ai-trace-frontier-develop`.
+Commands:
+`cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=false -Dtrace.frontierOnly=true -Dtrace.context.radius=20 -Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Dsonic2.rom.path=s2.gen test"`
+`cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=false -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Dsonic1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=\"Sonic and Knuckles & Sonic 3 (W) [!].gen\" test"`
+
+Fix:
+- `SwingingPlatformObjectInstance` now creates the ROM Obj15 display-child SST
+  slot with the parent's object id/subtype/render flags. The child is
+  non-rendering because the parent still emits the complete multi-sprite
+  assembly; it exists to preserve object-slot/frontier parity.
+- `updatePositions` now mirrors the oscillator when the object's x-flip bit is
+  set, matching Obj15 `sub_FE70` (`s2.asm:22617-22620`), and copies the
+  0x40-anchor multi-sprite child position into that child slot while keeping the
+  parent/platform at the full chain endpoint plus half-link.
+
+Result:
+- Focused ARZ2 expected-red advanced from **f187** `obj_s17_type` missing Obj15
+  child slot to **f523** `obj_s13_type` missing Obj91. The old f187 setup/object
+  slot divergence is cleared.
+- Full `*TraceReplay` sweep remains expected-red with the same release-blocking
+  shape as the prior baseline: **90 tests, 50 failures, 1 error**. ARZ2 reports
+  **3863 errors, first error f523**. No unrelated first-error regression was
+  observed in the Maven failing summary; the AIZ route remains at f14299 on this
+  branch because the worker Items 5-9 chain has not yet been reconciled here.
+- Next local target after this scoped ARZ2 commit is to reconcile the worker
+  AIZ f14299 -> f16944 chain now that its class-size guard rejection has been
+  resolved, then resume the ordered cluster queue from the measured frontier set.

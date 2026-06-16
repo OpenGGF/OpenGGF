@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 ARZ2 swinging-platform child slot matches the ROM SST layout:** Obj15 now
+  allocates the non-rendering display child used by the ROM multi-sprite chain
+  and mirrors the swing oscillator through the object's x-flip bit. The ARZ2
+  level-select trace advances from frame 187's missing Obj15 child slot to
+  frame 523's later missing Obj91 object frontier, with the full trace-suite
+  failure count unchanged.
+
 - **S2 respawn-tracked badnik kills keep the ROM placement latch:** Sonic 2
   layout entries killed by the player now preserve `ChkLoadObj`'s remembered
   bit instead of becoming streamable again in the same level. The MTZ1
