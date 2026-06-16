@@ -1,39 +1,43 @@
 # OpenGGF — Development Timeline
 
 *A captioned gallery of the engine clawing its way toward accuracy, roughly Dec 2025 →
-Apr 2026. Every clip is a real build, fired across a chat between James and Farrell at the
-moment it happened. The grand, fact-checked version of this story — who built what, which AI
-did which, and why accuracy needed an oracle — is in [The AI Journey](AI_JOURNEY.md); this page
-is just the receipts, in order, bugs and all.*
+Apr 2026. Every clip is a real build, shared between James and Farrell at the moment it
+happened. The grand, fact-checked version of this story — who built what, which AI did which,
+and why accuracy needed an oracle — is in [The AI Journey](AI_JOURNEY.md); this page is just
+the receipts, in order, bugs and all.*
 
-> GIFs are short and silent (the audio disasters get their due in the journal). Versions in the
-> headings are the build's own self-reported version string.
+> Clips are short and silent. A few items were only ever interesting for their *sound*, so
+> those are short audio files rather than pointless silent GIFs.
 
 ---
 
-## Sound & the first objects (Alpha V0.06, Dec 2025 – Jan 2026)
+## Sound &amp; the first objects (Alpha V0.06, Dec 2025 – Jan 2026)
 
-**2025-12-12** — First build where the **FM tones sound close to right**. PSG is fucked, the noise channel is missing, and the SMPS loops are broken in places.
+**2025-12-12** — First build where the **FM tones sound close to right**. PSG is busted, the noise channel is missing, and the SMPS loops are broken in places.
 
-![fm-tones-close](assets/timeline/fm-tones-close.gif)
+<audio controls src="assets/timeline/fm-tones-close.mp3"></audio>
 
-**2025-12-12** — Right at the end: a **secret first demo of spindash** — with sound.
+> ▶ **[Listen (mp3)](assets/timeline/fm-tones-close.mp3)**
+
+**2025-12-12** — Right at the end: a **secret first demo of spindash**.
 
 ![secret-spindash](assets/timeline/secret-spindash.gif)
 
 **2025-12-18** — **PSG starts working** — but badly out of tune, and the noise channel is rough.
 
-![psg-out-of-tune](assets/timeline/psg-out-of-tune.gif)
+<audio controls src="assets/timeline/psg-out-of-tune.mp3"></audio>
 
-**2025-12-22** — Still detuned PSG, but **rings exist now** — one of the first objects (with incorrect gaps between them).
+> ▶ **[Listen (mp3)](assets/timeline/psg-out-of-tune.mp3)**
+
+**2025-12-22** — Still detuned PSG, but **rings exist now** — one of the first objects (with the wrong gaps between them).
 
 ![first-rings](assets/timeline/first-rings.gif)
 
-**2026-01-02** — **First build with real Sonic sprites.** Collision is very wonky, no sprite priority yet — Sonic falls through the terrain ten seconds in. *(whoops!)*
+**2026-01-02** — **First build with real Sonic sprites.** Collision is very wonky, no sprite priority yet — and Sonic falls through the terrain ten seconds in. *(whoops!)*
 
 ![first-sprites-fall](assets/timeline/first-sprites-fall.gif)
 
-**2026-01-05** — A crude spring with a **very flaccid strength** to it — and spikes.
+**2026-01-05** — A crude spring with a **comically weak strength** to it — and spikes.
 
 ![flaccid-spring](assets/timeline/flaccid-spring.gif)
 
@@ -43,7 +47,7 @@ is just the receipts, in order, bugs and all.*
 
 ---
 
-## EHZ playable & the special-stage struggle (0.1, Jan 2026)
+## EHZ playable &amp; the special-stage struggle (0.1, Jan 2026)
 
 **2026-01-10** — **First debug overlay, badniks and item monitors** — ending with Sonic falling through the EHZ bridge.
 
@@ -53,7 +57,7 @@ is just the receipts, in order, bugs and all.*
 
 ![first-ehz-run](assets/timeline/first-ehz-run.gif)
 
-**2026-01-11** — First attempt at **Sonic 2 special stages** (6s in): almost incomprehensible garbage tiles.
+**2026-01-11** — First attempt at **Sonic 2 special stages**: almost incomprehensible garbage tiles.
 
 ![special-garbage](assets/timeline/special-garbage.gif)
 
@@ -115,13 +119,15 @@ is just the receipts, in order, bugs and all.*
 
 ---
 
-## Sonic 3 & Knuckles begins (0.3, Feb 2026)
+## Sonic 3 &amp; Knuckles begins (0.3, Feb 2026)
 
-**2026-02-08** — The **sound-test app**, written to start tackling the audio engine's longstanding issues — beginning with Sonic 1 vs Sonic 3&K audio-driver/profile differences. The human's diagnostic oracle for a subsystem that had none.
+**2026-02-08** — The **sound-test app**, written to start tackling the audio engine's longstanding issues — beginning with Sonic 1 vs Sonic 3 &amp; Knuckles audio-driver/profile differences. The human's diagnostic oracle for a subsystem that had none.
 
-![sound-test-app](assets/timeline/sound-test-app.gif)
+<audio controls src="assets/timeline/sound-test-app.mp3"></audio>
 
-**2026-02-08** — **First attempt at Sonic 3 & Knuckles support** — a very early prototype of loading S3K tiles.
+> ▶ **[Listen (mp3)](assets/timeline/sound-test-app.mp3)**
+
+**2026-02-08** — **First attempt at Sonic 3 &amp; Knuckles support** — a very early prototype of loading S3K tiles.
 
 ![first-s3k](assets/timeline/first-s3k.gif)
 
@@ -141,11 +147,11 @@ is just the receipts, in order, bugs and all.*
 
 ![elemental-shields](assets/timeline/elemental-shields.gif)
 
-**2026-02-19** — The **AIZ swing-vine freaking the fuck out.** Very funny.
+**2026-02-19** — The **AIZ swing-vine completely losing it.** Very funny.
 
 ![aiz-vine](assets/timeline/aiz-vine.gif)
 
-**2026-02-22** — First demo of **ROM donation**: Sonic & Tails (S2 sprites) in Sonic 1's Labyrinth Zone. Underwater Tails' palette is a bit off, but it works.
+**2026-02-22** — First demo of **ROM donation**: Sonic &amp; Tails (S2 sprites) in Sonic 1's Labyrinth Zone. Underwater Tails' palette is a bit off, but it works.
 
 ![rom-donation](assets/timeline/rom-donation.gif)
 
@@ -161,7 +167,7 @@ is just the receipts, in order, bugs and all.*
 
 ![openggf-name](assets/timeline/openggf-name.gif)
 
-**2026-02-25** — **Sonic 3 sprites donated into Sonic 1**, with S3&K Super Sonic — while layering sound profiles almost flawlessly (music and SFX from different audio drivers at once).
+**2026-02-25** — **Sonic 3 sprites donated into Sonic 1**, with S3 &amp; K Super Sonic — while layering sound profiles almost flawlessly (music and SFX from different audio drivers at once).
 
 ![s3-super-in-s1](assets/timeline/s3-super-in-s1.gif)
 
@@ -173,11 +179,11 @@ is just the receipts, in order, bugs and all.*
 
 ![aiz-seamless](assets/timeline/aiz-seamless.gif)
 
-**2026-03-19** — A dumb idea: **custom sidekicks identical to the main character.** Thus, Sonic & Sonic in Sonic 2 was born.
+**2026-03-19** — A daft idea: **custom sidekicks identical to the main character.** Thus, Sonic &amp; Sonic in Sonic 2 was born.
 
 ![sonic-and-sonic](assets/timeline/sonic-and-sonic.gif)
 
-**2026-03-19** — Couldn't stop there — **more than one sidekick.** Sonic & Sonic & Sonic & Sonic & … (bugs since fixed).
+**2026-03-19** — Couldn't stop there — **more than one sidekick.** Sonic &amp; Sonic &amp; Sonic &amp; Sonic &amp; … (bugs since fixed).
 
 ![lots-of-sonics](assets/timeline/lots-of-sonics.gif)
 
@@ -185,11 +191,11 @@ is just the receipts, in order, bugs and all.*
 
 ![21-sonics](assets/timeline/21-sonics.gif)
 
-**2026-04-08** — **S3K Pachinko bonus stage** working, with Tails & Knuckles as sidekicks.
+**2026-04-08** — **S3K Pachinko bonus stage** working, with Tails &amp; Knuckles as sidekicks.
 
 ![pachinko](assets/timeline/pachinko.gif)
 
-**2026-04-08** — **S3K slot-machine bonus stage** freaking out with glitchy graphics.
+**2026-04-08** — **S3K slot-machine bonus stage** glitching out.
 
 ![slot-glitch](assets/timeline/slot-glitch.gif)
 

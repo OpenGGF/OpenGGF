@@ -34,7 +34,7 @@ model, the sensor-based collision system — was designed and written by hand, o
 working from Sonic Retro documentation and community hacking guides. Not the disassemblies;
 those only became the reference much later. Even the doubt was there from early on:
 
-> *"what the fuck were we thinking when we wanted to make a Java version of this shit"*
+> *"what were we thinking, wanting to make a Java version of this…"*
 > — Farrell, 2017
 
 That foundation matters to everything that follows: every later experiment with AI happened
@@ -184,7 +184,7 @@ the whole point:
 From there it was the long climb to accuracy, including discoveries like the Sonic 2 sound driver
 hardcoding a wait specifically for the CPZ gloop sound:
 
-> *"who the fuck puts that in the sound driver"* — Farrell, Jan 2026
+> *"who puts that in the sound driver"* — Farrell, Jan 2026
 
 ## February–March 2026 — AI in earnest: specs and plans
 
@@ -255,7 +255,7 @@ affectionate museum — drawn from the dev clips James and Farrell fired at each
 | ![Sonic as a white box sinking under the terrain, Oct 2024](assets/ai-journey/2024-10-under-terrain.gif) | ![White-box Sonic on Emerald Hill tiles decompressed from the ROM, Oct 2024](assets/ai-journey/2024-10-rom-loading.gif) |
 | **Oct 2024** — Sonic is a white box who *"sits under the terrain."* **James's hand-coded physics**, mid-rewrite — the human half of the build. | **Oct 2024** — *"oh shiiiiit."* Same white box, now standing on **real Emerald Hill tiles decompressed from the ROM** — the moment the ChatGPT-assisted Kosinski work paid off. |
 | ![The AIZ swing-vine flinging Sonic around wildly, Feb 2026](assets/timeline/aiz-vine.gif) | ![Twenty-one Sonics following one Tails through Angel Island Zone, Mar 2026](assets/timeline/21-sonics.gif) |
-| **Feb 2026** — the **AIZ swing-vine freaking the fuck out.** Shown at full speed; you're welcome. | **Mar 2026** — *"what if we could have more than one sidekick?"* **21 Sonics and 1 Tails**, and the perf graph barely flinches. |
+| **Feb 2026** — the **AIZ swing-vine completely losing it.** Shown at full speed; you're welcome. | **Mar 2026** — *"what if we could have more than one sidekick?"* **21 Sonics and 1 Tails**, and the perf graph barely flinches. |
 
 And the one exhibit you have to *hear*: 🔊 **[Casino Night Zone as a garbled shotgun](assets/ai-journey/2025-12-garbled-shotgun.mp4)** (Dec 2025) — the audio engine's first inception, embedded up in [the November section](#the-exception-that-proves-the-rule-audio).
 
