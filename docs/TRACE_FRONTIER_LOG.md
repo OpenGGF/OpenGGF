@@ -12,23 +12,24 @@ branch-local measurements.
 |---|---|
 | Overall trace-suite state | Expected-red, not release-green |
 | Latest logged full-sweep aggregate | 90 `*TraceReplay` tests, 53 failures, 1 error |
-| Latest focused frontier | `TestS2Cpz2LevelSelectTraceReplay` advanced to frame `2888` |
-| Current blocking field | CPZ2 Tails `x` mismatch (`0x10F8` vs `0x10F0`) after clearing the frame-759 push-status frontier |
-| Current owner hypothesis | continue the Tails CPU/status cluster; the latest sweep's earliest remaining CPU/status frontier is `TestS3kIczCompleteRunTraceReplay` frame `1116` (`tails_cpu_routine`) |
+| Latest focused frontier | `TestS3kIczCompleteRunTraceReplay` advanced to frame `3116` |
+| Current blocking field | ICZ main-player `status_byte` mismatch (`0x0008` vs `0x0009`) after clearing the frame-1116 Tails catch-up routine gate |
+| Current owner hypothesis | continue the Tails CPU/status cluster; the latest sweep's earliest remaining CPU/status frontier is `TestS3kCnzCompleteRunTraceReplay` frame `1139` (`tails_status_byte`) |
 | Current branch context in newest entries | `bugfix/ai-trace-frontier-develop` after cherry-picking the AIZ worker chain |
-| Last frontier move | CPZ2 `f759 -> f2888` via pre-friction/pre-wall ground animation speed for Tails push-status retention |
+| Last frontier move | ICZ complete-run `f1116 -> f3116` via replay-start counter phase from the S3K complete-run Pos_table cursor |
 
 ### Active queue
 
 1. Continue the ordered Tails CPU/status cluster. The newest full sweep is
-   expected-red at 90 tests / 53 failures / 1 error; S2 CPZ2 advanced out of
-   `tails_status_byte` to a downstream Tails movement mismatch.
+   expected-red at 90 tests / 53 failures / 1 error; ICZ complete-run advanced
+   out of the early `tails_cpu_routine` catch-up gate to a later main-player
+   status mismatch.
 2. The latest sweep's earliest remaining CPU/status frontier is
-   `TestS3kIczCompleteRunTraceReplay` f1116 (`tails_cpu_routine`). Earlier
-   movement/downstream frontiers such as S2 OOZ2 f1070 (`air`) and S2 CPZ1
-   f1157 (`tails_x_speed`) should wait until the CPU/status cluster is
-   exhausted.
-3. Keep S2 OOZ f1251, CNZ complete-run f1139, HCZ f1402, S2 ARZ1 f1285, and
+   `TestS3kCnzCompleteRunTraceReplay` f1139 (`tails_status_byte`). Earlier
+   movement/downstream frontiers such as S2 OOZ2 f1070 (`air`), S2 CPZ1
+   f1157 (`tails_x_speed`), and ICZ f3116 (`status_byte`) should wait until the
+   CPU/status cluster is exhausted.
+3. Keep S2 OOZ f1251, HCZ f1402, S2 ARZ1 f1285, and
    other Tails CPU/status frontiers in the same cluster queue until a full sweep
    moves them out of the cluster.
 4. Known branch-local follow-up from the S2 ARZ2 work: ARZ2 advanced to `f523`
@@ -42,7 +43,7 @@ branch-local measurements.
 |---|---:|---|---:|---:|---|---|
 | `s3k_mgz1` / `TestS3kMgzTraceReplay` | `539` | rings | `10` | `11` | advanced from f312 | downstream ring/object collection |
 | `s2_cpz2` / `TestS2Cpz2LevelSelectTraceReplay` | `2888` | Tails `x` | `0x10F8` | `0x10F0` | advanced from f759 | movement downstream of Tails CPU |
-| `s3k_icz1` / `TestS3kIczCompleteRunTraceReplay` | `1116` | Tails `cpu_routine` | `0x0002` | `0x0004` | next queue target | Tails CPU/status |
+| `s3k_icz1` / `TestS3kIczCompleteRunTraceReplay` | `3116` | `status_byte` | `0x0008` | `0x0009` | advanced from f1116 | movement/status downstream |
 | `s3k_cnz1` / `TestS3kCnzCompleteRunTraceReplay` | `1139` | Tails `status` | `0x0000` | `0x0020` | advanced | Tails CPU/status follow-on |
 | `s3k_aiz1` / `TestS3kAizTraceReplay` | `19089` | leader `g_speed` | `-00B0` | `0x00B0` | held | leader movement near AIZ2 end-boss approach |
 
@@ -77,6 +78,58 @@ run and wrap into the end-boss arena approach.
   cleanup. Do not delete historical evidence only because it is stale.
 
 ## Evidence Ledger
+
+## 2026-06-16 - S3K ICZ complete-run f1116 -> f3116 via Pos_table replay counter phase
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, targeting the ordered
+  Tails CPU/status cluster after CPZ2 advanced to downstream movement. The
+  selected earliest CPU/status frontier trace was
+  `TestS3kIczCompleteRunTraceReplay`.
+- Single-frame bisect result: ICZ starts with 29 visible hold rows that replay
+  intentionally routes as `VBLANK_ONLY`, but the complete-run trace's
+  `gameplay_frame_counter` column is zeroed throughout. The harness therefore
+  seeded `Level_frame_counter` from `0` before the first driven motion row,
+  while the ROM-visible Tails CPU/Sonic history phase had already advanced to
+  the equivalent of counter `30`. That made the Tails catch-up flight gate
+  (`Level_frame_counter & $3F`) fire 35 frames early, changing
+  `Tails_CPU_routine` from `2` to `4` at f1116.
+- Disassembly evidence: S3K `Tails_Catch_Up_Flying` tests
+  `(Level_frame_counter & $3F)` before snapping Tails to catch-up routine 4
+  (`docs/skdisasm/sonic3k.asm:26474-26509`), and `Sonic_RecordPos` advances
+  `Pos_table_index` by four per native record write
+  (`docs/skdisasm/sonic3k.asm:22124-22139`). The first real ICZ motion row has
+  recorded `pos_table_index=0x78`, so the pre-step replay counter seed is
+  `(0x78 / 4) - 1 = 29`.
+- Fix: `TraceReplaySessionBootstrap.alignFrameCountersForReplayStart` now has a
+  trace-aware overload used by both headless replay and the live trace driver.
+  It keeps the normal `gameplay_frame_counter` path for ordinary traces, but for
+  S3K complete-run segments with skipped visible-hold rows and per-frame CPU
+  state it derives the one-time replay counter phase from the first full
+  gameplay row's Tails CPU `pos_table_index`. This is replay-start timing
+  bootstrap only; no player, sidekick, object, camera, or per-frame trace state
+  is copied into the engine.
+- Focused validation: `TestTraceReplayStartPositionPolicy` pins the ICZ seed at
+  `29` and verifies LBZ does not take the fallback path. Focused
+  `TestS3kIczCompleteRunTraceReplay` remains expected-red but advances from
+  **f1116** `tails_cpu_routine` (`0x0002` vs `0x0004`) to **f3116**
+  main-player `status_byte` (`0x0008` vs `0x0009`), with error count dropping
+  from 8 to 1.
+- Full sweep command: `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off
+  -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1
+  -Dsurefire.redirectTestOutputToFile=false -Dtrace.frontierOnly=true
+  -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen
+  -Dsonic1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Dsonic2.rom.path=s2.gen
+  -Ds3k.rom.path=s3k.gen -Dsonic3k.rom.path=s3k.gen test"`.
+- Full sweep result: expected-red, **90 tests, 53 failures, 1 error**. The
+  intentional movement is ICZ complete-run **f1116 -> f3116**. The named
+  frontiers visible in the full sweep otherwise held: AIZ route f19089, AIZ
+  complete-run f1095, CNZ route f291, CNZ complete-run f1139, HCZ f1402, LBZ
+  f1694, MGZ route f539, MGZ complete-run f738, MHZ f966, and the visible S1/S2
+  frontier set. No named first-error-frame regression was observed.
+- Classification: ICZ Tails CPU catch-up frontier **cleared/advanced** into a
+  downstream main-player status mismatch. The next ordered Tails CPU/status
+  target from this sweep is `TestS3kCnzCompleteRunTraceReplay` f1139
+  (`tails_status_byte`, `0x0000` vs `0x0020`).
 
 ## 2026-06-16 - S2 CPZ2 f759 -> f2888 via pre-friction ground animation speed snapshot
 

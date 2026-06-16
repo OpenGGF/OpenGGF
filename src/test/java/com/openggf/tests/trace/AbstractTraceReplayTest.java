@@ -480,6 +480,8 @@ public abstract class AbstractTraceReplayTest {
         //   * AIZ:  T_289.gfc=0 (still inside intro)         → fc 0→0  (no change),
         //                                 then iter K=290 step fc 0→1 = ROM.gfc(T_290)=1 ✓
         TraceReplaySessionBootstrap.alignFrameCountersForReplayStart(
+                trace,
+                replayStart,
                 previousDriveFrame,
                 driveTraceIndex < trace.frameCount() ? trace.getFrame(driveTraceIndex) : null);
         while (driveTraceIndex < trace.frameCount()) {

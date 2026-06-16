@@ -4,6 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K complete-run visible-hold rows seed replay counters from the CPU cursor:**
+  S3K complete-run replay now derives the one-time `Level_frame_counter` phase
+  from the recorded Tails CPU `pos_table_index` when startup visible-hold rows
+  are skipped and the normal gameplay counter column is unusable. This advances
+  the ICZ complete-run trace from frame 1116's early Tails catch-up routine
+  mismatch to frame 3116's later main-player status mismatch; the full
+  frontier-only trace sweep remains expected-red at 53 failures and 1 existing
+  error, with no named first-frontier regression observed.
+
 - **S2 CPZ2 Tails push animation uses pre-wall inertia:** grounded movement now
   snapshots the pre-friction, pre-wall-probe ground speed for animation
   selection, matching the ROM order where Tails chooses Wait/Walk before

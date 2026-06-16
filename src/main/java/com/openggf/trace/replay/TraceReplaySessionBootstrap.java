@@ -21,6 +21,8 @@ import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceEvent;
+import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceReplayBootstrap;
@@ -626,6 +628,77 @@ public final class TraceReplaySessionBootstrap {
                 && GameServices.levelOrNull() != null) {
             GameServices.levelOrNull().setFrameCounter(firstDriveFrame.gameplayFrameCounter());
         }
+    }
+
+    /**
+     * Align replay-local gameplay counters once before the comparison loop.
+     *
+     * <p>Most traces expose ROM {@code Level_frame_counter} directly in
+     * {@code physics.csv}. S3K complete-run segments recorded before that column
+     * was reliable can still expose the same low-six timing phase through the
+     * per-frame Tails CPU {@code pos_table_index}: Sonic_RecordPos advances that
+     * byte by four each native object tick, and the Tails catch-up cadence reads
+     * {@code Level_frame_counter & $3F}. Use it only as a trace-start timing seed
+     * when initial visible hold rows are intentionally skipped by replay.
+     */
+    public static void alignFrameCountersForReplayStart(
+            TraceData trace,
+            TraceReplayBootstrap.ReplayStartState replayStart,
+            TraceFrame previousDriveFrame,
+            TraceFrame firstDriveFrame) {
+        int completeRunSeed = s3kCompleteRunFrameCounterSeedForReplayStart(trace, replayStart);
+        if (completeRunSeed >= 0) {
+            if (GameServices.spritesOrNull() != null) {
+                GameServices.spritesOrNull().setFrameCounter(completeRunSeed);
+            }
+            if (GameServices.levelOrNull() != null) {
+                GameServices.levelOrNull().setFrameCounter(completeRunSeed);
+            }
+            return;
+        }
+        alignFrameCountersForReplayStart(previousDriveFrame, firstDriveFrame);
+    }
+
+    public static int s3kCompleteRunFrameCounterSeedForReplayStart(
+            TraceData trace,
+            TraceReplayBootstrap.ReplayStartState replayStart) {
+        if (!TraceReplayBootstrap.isS3kCompleteRunSegment(trace)
+                || replayStart == null
+                || trace.metadata() == null
+                || !trace.metadata().hasPerFrameCpuState()
+                || trace.metadata().recordedSidekicks().isEmpty()
+                || TraceReplayBootstrap.isS3kCompleteRunHandoffCounterTickRow(trace)) {
+            return -1;
+        }
+        int startIndex = Math.max(0, replayStart.startingTraceIndex());
+        int firstFullFrameIndex = firstFullLevelFrameIndex(trace, startIndex);
+        if (firstFullFrameIndex <= startIndex) {
+            return -1;
+        }
+        TraceFrame firstFullFrame = trace.getFrame(firstFullFrameIndex);
+        if (firstFullFrame.gameplayFrameCounter() > 0) {
+            return -1;
+        }
+        String sidekick = trace.metadata().recordedSidekicks().getFirst();
+        TraceEvent.CpuState cpuState = trace.cpuStateForFrame(firstFullFrame.frame(), sidekick);
+        if (cpuState == null || cpuState.posTableIndex() < 0) {
+            return -1;
+        }
+        int visibleCounterLow6 = ((cpuState.posTableIndex() & 0xFF) >>> 2) & 0x3F;
+        return (visibleCounterLow6 - 1) & 0x3F;
+    }
+
+    private static int firstFullLevelFrameIndex(TraceData trace, int startIndex) {
+        TraceFrame previous = startIndex > 0 ? trace.getFrame(startIndex - 1) : null;
+        for (int i = startIndex; i < trace.frameCount(); i++) {
+            TraceFrame current = trace.getFrame(i);
+            if (TraceReplayBootstrap.phaseForReplay(trace, previous, current)
+                    == TraceExecutionPhase.FULL_LEVEL_FRAME) {
+                return i;
+            }
+            previous = current;
+        }
+        return -1;
     }
 
     /**
