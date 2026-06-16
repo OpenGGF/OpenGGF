@@ -91,6 +91,23 @@ public class TestDivergenceReport {
     }
 
     @Test
+    void testJsonSummaryUsesCompactSummary() {
+        FrameComparison frame = makeComparisonWithDiagnostics(5, "x_speed",
+            Severity.ERROR, "0x0100", "0x0200",
+            "sub=(0000,5000) rtn=02 cam=(1308,0390)",
+            "eng-player anim=00 frame=07 tick=07 vel=(0200,0000)");
+        DivergenceReport report = new DivergenceReport(List.of(frame));
+
+        String json = report.toJson();
+
+        assertTrue(json.contains("\"summary\""));
+        assertTrue(json.contains("First error: frame 5 -- x_speed mismatch"));
+        assertFalse(json.contains("rom={"));
+        assertFalse(json.contains("engine={"));
+        assertFalse(json.contains("eng-player anim=00"));
+    }
+
+    @Test
     void testContextWindow() {
         FrameComparison f0 = makeMatchComparison(0, (short) 0x50, (short) 0x3B0);
         FrameComparison f1 = makeMatchComparison(1, (short) 0x51, (short) 0x3B0);

@@ -193,7 +193,7 @@ public class DivergenceReport {
             root.put("bootstrap_error_count", bootstrapErrorCount());
             root.put("bootstrap_warning_count", bootstrapWarningCount());
             root.put("total_frames", allComparisons.size());
-            root.put("summary", toSummary());
+            root.put("summary", toCompactSummary());
 
             int referenceFrame = summaryReferenceFrame();
             TraceEvent.Checkpoint checkpoint = latestCheckpointAtOrBefore(referenceFrame);
