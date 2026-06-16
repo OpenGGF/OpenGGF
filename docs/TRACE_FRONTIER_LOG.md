@@ -1,5 +1,37 @@
 # Trace Frontier Log
 
+## 2026-06-16 - Guard paydown: AbstractPlayableSprite ground-wall response extraction (NO frontier movement)
+
+- Scope: pure structural refactor on `bugfix/ai-rewind-dynobj-membership` to bring
+  `AbstractPlayableSprite.java` under its `TestArchitecturalSourceGuard`
+  release-critical line budget (≤5047; landed at 5036). NOT a trace fix.
+- Change: extracted the cohesive per-frame ground-wall collision response cluster
+  (deferred-velocity `mode`/`distance`, terrain `Status_Push` provenance, the
+  same-frame terrain-push marker, and the pre-CPU-control inertia snapshot for
+  the S3K Tails wall probe) into a new `GroundWallResponseState` collaborator;
+  `AbstractPlayableSprite` keeps one `@RewindTransient` holder field and
+  delegates the existing accessors. These pieces are recomputed or cleared each
+  frame and were absent from the explicit playable snapshot, so rewind
+  capture/restore is byte-identical.
+- Validation: `mvn -DskipTests package` BUILD SUCCESS; `TestArchitecturalSourceGuard`
+  GREEN (5036 ≤ budget); rewind field-inventory audit, capture-memoization-equivalence,
+  and scratch-reuse GREEN; `TestRewindTorture` shows only its 2 pre-existing failures
+  (identical at HEAD, confirmed by stash A/B); 4 must-keep-green S3K + physics units
+  GREEN; `TestSidekickCpuFollowParity` only its 5 pre-existing
+  `LocalPushGrace`/`Nudge` failures. **`TestS3kAizTraceReplay` first-error frame
+  UNCHANGED at f16944 / 515 errors** in both directions (pure refactor).
+- Standing next frontier (BLOCKED, separate shared-system task): **AIZ f16944**,
+  field `tails_y_speed` ROM=-0x400 vs engine=0x0000. BizHawk-verified: in the AIZ2
+  battleship bombing run, ROM hurts the CPU sidekick Tails via `HurtCharacter`
+  (sonic3k.asm:10294/loc_102E0; y_vel=-0x400, x_vel=+0x200, anim=$1A) from an
+  `Obj_AIZBombExplosion` (col=$8B, 8×8) on the bomb's detonation frame. The engine's
+  freshly-spawned explosion is not visible to the sidekick touch-response loop until
+  ~2 frames later (S3K previous-collision-response-list timing), by which point the
+  fast CPU Tails has advanced ~8px past the tight hitbox. Root cause is the
+  same-frame-spawn → touch-visibility gap in shared S3K touch code; a correct fix
+  needs ROM `Collision_response_list` slot-ordering analysis and must not be a
+  per-object overlap-fudge/carve-out.
+
 ## 2026-06-16 - S3K AIZ f16217 -> f16944 via routine-8 stuck-respawn facing + catch-up-snap facing reset
 
 - Scope: focused S3K AIZ trace remediation on `TestS3kAizTraceReplay`

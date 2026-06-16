@@ -88,6 +88,17 @@ All notable changes to the OpenGGF project are documented in this file.
   (`usesInclusiveRightEdge`, ROM `SolidObject_cont` `bhi`, `sonic3k.asm:41403-41406,41494-41500`).
   Each was full-`*TraceReplay`-A/B-validated with no S1/S2/S3K regression.
 
+- **`AbstractPlayableSprite` ground-wall response extraction (guard paydown, no
+  behavior change):** extracted the per-frame ground-wall collision response
+  cluster - deferred-velocity staging, terrain `Status_Push` provenance,
+  same-frame terrain-push marker, and the pre-CPU-control inertia snapshot used
+  by the S3K Tails wall probe - into a focused `GroundWallResponseState`
+  collaborator, delegating the existing accessors. The holder field is
+  `@RewindTransient` because the values are recomputed or cleared each frame.
+  This brings `AbstractPlayableSprite.java` under its release-critical
+  `TestArchitecturalSourceGuard` line budget. Pure refactor: AIZ trace frontier
+  unchanged at frame 16944.
+
 - **CPU sidekick off-screen stuck-respawn faces per ROM `loc_13F40` (S3K):**
   when the CPU sidekick is stuck pushing and flight-timer-respawns to the
   off-screen catch-up sentinel (`x_pos=0x7F00`, routine 8), ROM `loc_13F40`
