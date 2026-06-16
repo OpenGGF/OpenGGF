@@ -2516,6 +2516,7 @@ public class ObjectManager {
         if (instance.isDestroyedRespawnable()) {
             placement.removeFromActiveForUnload(spawn);
         } else {
+            if (slotLayout == ObjectSlotLayout.SONIC_2 && spawn != null && spawn.respawnTracked()) placement.markRemembered(spawn);
             placement.removeFromActive(spawn);
             solidContacts.evictLatchForDestroyedSpawn(spawn);
         }

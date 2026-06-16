@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 respawn-tracked badnik kills keep the ROM placement latch:** Sonic 2
+  layout entries killed by the player now preserve `ChkLoadObj`'s remembered
+  bit instead of becoming streamable again in the same level. The MTZ1
+  level-select trace advances from frame 1169's ObjA4/Obj74
+  `tails_cpu_interact` slot mismatch to frame 1267's later `y` movement
+  frontier, with the full trace-suite failure count unchanged.
+
 - **S2 MTZ2 object-slot cadence advances past the Obj37/Tails CPU frontier:**
   Obj37 lost-ring spill timing, collected-ring sparkle lifetime, Obj08 skid-dust
   deletion, Obj6C conveyor parent expansion, Obj70 cog child slot pressure, and

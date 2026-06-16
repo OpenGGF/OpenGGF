@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -116,6 +117,26 @@ public class TestS2ObjectOccupancyOracle {
                     first.expectedId() & 0xFF, first.actualId() & 0xFF);
         }
         // Measurement only: MTZ1 is a trace frontier, not a green trace.
+    }
+
+    @Test
+    public void mtz1RespawnTrackedBadnikKillDoesNotReloadThroughPlacementWindow() throws Exception {
+        Integer slot21Id = driveTrace("mtz", Sonic2ZoneConstants.ZONE_MTZ, 0,
+                (trace, om, frame) -> {
+                    if (frame != 1168) {
+                        return null;
+                    }
+                    Map<Integer, Integer> expected =
+                            ObjectOccupancyOracle.expectedOccupancy(trace, frame, FIRST_DYNAMIC_SLOT);
+                    Map<Integer, Integer> actual = om.occupiedDynamicSlotIds();
+                    Assertions.assertEquals(0x74, expected.get(21),
+                            "ROM fixture should load the invisible block into slot 21 at MTZ1 f1168");
+                    return actual.get(21);
+                });
+        Assertions.assertNotNull(slot21Id);
+        Assertions.assertEquals(0x74, slot21Id,
+                "S2 ChkLoadObj must skip the killed respawn-tracked Asteron at x=$0720 "
+                        + "so the next streamed object takes slot 21");
     }
 
     @Test

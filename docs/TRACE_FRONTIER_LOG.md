@@ -1,5 +1,40 @@
 # Trace Frontier Log
 
+## 2026-06-16 - S2 respawn-tracked kills keep the ChkLoadObj latch
+
+- Scope: Sonic 2 respawn-tracked layout object lifetime. The current Tails CPU
+  cluster target was `TestS2MtzLevelSelectTraceReplay` frame 1169, where ROM
+  Tails interacted with the newly-streamed Obj74 invisible block in dynamic slot
+  21, but the engine had reloaded the earlier killed ObjA4 Asteron into that
+  slot.
+- Bisect result: frame 1168 was the single-frame slot divergence. MTZ1 layout
+  entry x=`$0720`, y=`$0190`, id=`$A4` is respawn-tracked and was loaded at
+  frame 577, then killed before the camera returned. ROM `ChkLoadObj` still
+  `bset`/tests bit 7 in the respawn table and skips an already-set entry
+  (`docs/s2disasm/s2.asm:33592-33607`); the player-kill path does not run
+  `MarkObjGone`, so that bit remains set until level reset. The engine was
+  removing the spawn from the active placement set without preserving the S2
+  remembered bit, so the placement scan reloaded ObjA4 and displaced Obj74/Obj64
+  by one slot.
+- Focused regression/frontier checks:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#mtz1RespawnTrackedBadnikKillDoesNotReloadThroughPlacementWindow -DfailIfNoTests=false -Dsonic2.rom.path=s2.gen test"`.
+  Red before the fix: expected slot 21 id `0x74`, actual `0xA4`. Green after
+  the fix.
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=48 -Dtest=com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Dsonic2.rom.path=s2.gen test"`.
+  Result: expected-red. `TestS2MtzLevelSelectTraceReplay` advanced from frame
+  1169 `tails_cpu_interact` (expected `0x0074`, actual `0x00A4`) to frame 1267
+  `y` (expected `0x00AC`, actual `0x00A4`). The MTZ1 object-slot/Tails
+  interaction frontier is cleared; the next local owner is downstream movement.
+- Full trace sweep:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=24 -Dtest=*TraceReplay -DfailIfNoTests=false -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red, 90 tests, 50 failures, 1 error. Compared with the prior
+  90-test sweep at 50 failures and 1 error, aggregate counts did not regress;
+  the intentional frontier movement is `s2_mtz1` frame 1169 -> frame 1267.
+  The next visible Tails CPU cluster target from this sweep is
+  `TestS2ArzLevelSelectTraceReplay` frame 1285 `tails_cpu_interact` (expected
+  `0x0008`, actual `0x0000`); MTZ1 moves to the later movement-downstream
+  cluster.
+
 ## 2026-06-16 - S2 MTZ2 object-slot cadence advances past Obj37/Tails CPU frontier
 
 - Scope: Sonic 2 MTZ2 object allocation and per-frame object timing. The current
