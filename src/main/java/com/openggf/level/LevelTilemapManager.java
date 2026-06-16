@@ -85,6 +85,10 @@ public class LevelTilemapManager {
     private int foregroundTilemapWidthTiles;
     private int foregroundTilemapHeightTiles;
     private boolean foregroundTilemapDirty = true;
+    // Last FG horizontal-wrap state (AIZ2 ship loop); a change forces a rebuild
+    // so the FG tilemap flips between full-width and the $200 forest window.
+    private Boolean lastForegroundWrap;
+    private int lastForegroundWrapBaseX;
 
     // --- Pattern lookup data ---
     private byte[] patternLookupData;
@@ -238,6 +242,17 @@ public class LevelTilemapManager {
                                             int currentZone,
                                             ParallaxManager parallaxManager,
                                             boolean verticalWrapEnabled) {
+        // Detect FG horizontal-wrap state/base changes (AIZ2 ship loop) and force
+        // a rebuild so the FG tilemap flips between full-width and the $200 forest
+        // window (or re-anchors when the forest base changes).
+        boolean fgWrap = zoneFeatureProvider != null && zoneFeatureProvider.foregroundWrapsHorizontally();
+        int fgWrapBaseX = fgWrap ? zoneFeatureProvider.foregroundWrapBaseX() : 0;
+        if (lastForegroundWrap != null
+                && (lastForegroundWrap != fgWrap || lastForegroundWrapBaseX != fgWrapBaseX)) {
+            foregroundTilemapDirty = true;
+        }
+        lastForegroundWrap = fgWrap;
+        lastForegroundWrapBaseX = fgWrapBaseX;
         if (!foregroundTilemapDirty && foregroundTilemapData != null && patternLookupData != null) {
             return;
         }
@@ -487,12 +502,25 @@ public class LevelTilemapManager {
                 && !zoneRuntimeRequiresFullWidthBgTilemap();
         boolean bgLinearRowOverflow = bgWrap
                 && zoneFeatureProvider.useLinearBackgroundLayoutOverflow(currentZone);
+
+        // FOREGROUND (Plane A) horizontal wrap at the VDP plane width ($200). Used
+        // by AIZ2's post-bombing ship loop so the looped forest canopy stays
+        // continuous across the $200 camera wrap (the engine analog of the ROM's
+        // $200 Plane A nametable ring; s3.asm:70956). The $200 window is built from
+        // the provider's forest base so it holds the forest, not the layout gap.
+        boolean fgWrap = layerIndex == 0
+                && zoneFeatureProvider != null
+                && zoneFeatureProvider.foregroundWrapsHorizontally();
+        int fgWrapBaseX = fgWrap ? zoneFeatureProvider.foregroundWrapBaseX() : 0;
+
         // Use the currently selected BG period width. LevelManager may widen this
         // beyond the scroll handler's nominal period when the renderer needs the
         // full BG strip instead of a 64-cell wrapped cache (for example MGZ2
         // state 8's per-line rebuild path).
         int bgPeriodWidth = currentBgPeriodWidth;
-        int levelWidth = bgWrap ? bgPeriodWidth : layerLevelWidth;
+        int levelWidth = bgWrap ? bgPeriodWidth
+                : fgWrap ? VDP_BG_PLANE_WIDTH_PX
+                : layerLevelWidth;
 
         // For BG layers wider than 512px (e.g., SBZ 15360px), the 64-tile tilemap
         // must contain tiles from the correct BG map region, not always from position 0.
@@ -508,6 +536,12 @@ public class LevelTilemapManager {
         } else if (layerIndex == 1 && bgWrap && bgContiguousWidthPx > 0) {
             bgXQueryOffset = ((bgTilemapBaseX % bgContiguousWidthPx) + bgContiguousWidthPx)
                     % bgContiguousWidthPx;
+        } else if (fgWrap) {
+            // Build the $200 FG window from the forest base so it holds the looped
+            // forest section. The shader wraps worldX at this tilemap width, so
+            // wrapped/unwrapped camera positions ($44Cx and $46Cx) sample the same
+            // forest columns.
+            bgXQueryOffset = fgWrapBaseX;
         }
 
         // S3K CNZ miniboss (CNZ1BGE_Boss) loops a fixed 256px BG band drawn from layout
@@ -1064,6 +1098,8 @@ public class LevelTilemapManager {
         prebuiltBgTilemap = null;
         backgroundTilemapDirty = true;
         lastRequiresFullWidthBgTilemap = null;
+        lastForegroundWrap = null;
+        lastForegroundWrapBaseX = 0;
         bgTilemapBaseX = 0;
         currentBgPeriodWidth = VDP_BG_PLANE_WIDTH_PX;
         foregroundTilemapDirty = true;
