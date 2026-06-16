@@ -631,17 +631,24 @@ public class TraceBinder {
         int expectedPressedAlternate = expectedNormalStep != null
                 ? normalizeRomCtrl2PressedByte(expectedNormalStep.ctrl2Logical())
                 : expectedPressed;
+        int actualHeld = actual.generatedHeld() & 0xFF;
+        int actualPressed = normalizeEngineCtrl2PressedByte(actual.generatedPressed());
         if (isCoastingPanicCtrl2Latch(expected, expectedSidekick, actualSidekick)) {
             fields.put(prefix + "cpu_ctrl2_held", ignoredLatchedCtrl2(prefix + "cpu_ctrl2_held",
-                    expectedHeld, actual.generatedHeld() & 0xFF));
+                    expectedHeld, actualHeld));
             fields.put(prefix + "cpu_ctrl2_pressed", ignoredLatchedCtrl2(prefix + "cpu_ctrl2_pressed",
-                    expectedPressed, normalizeEngineCtrl2PressedByte(actual.generatedPressed())));
+                    expectedPressed, actualPressed));
+        } else if (isSidekickCtrl2HeldOnlyNoop(expected, expectedNormalStep,
+                expectedSidekick, actualSidekick, expectedHeld, actualHeld, expectedPressed, actualPressed)) {
+            fields.put(prefix + "cpu_ctrl2_held", ignoredLatchedCtrl2(prefix + "cpu_ctrl2_held",
+                    expectedHeld, actualHeld));
+            fields.put(prefix + "cpu_ctrl2_pressed", compareNumericEither(prefix + "cpu_ctrl2_pressed",
+                    expectedPressed, expectedPressedAlternate, actualPressed, 0, 1, false));
         } else {
             fields.put(prefix + "cpu_ctrl2_held", compareNumericEither(prefix + "cpu_ctrl2_held",
-                    expectedHeld, expectedHeldAlternate, actual.generatedHeld() & 0xFF, 0, 1, false));
+                    expectedHeld, expectedHeldAlternate, actualHeld, 0, 1, false));
             fields.put(prefix + "cpu_ctrl2_pressed", compareNumericEither(prefix + "cpu_ctrl2_pressed",
-                    expectedPressed, expectedPressedAlternate,
-                    normalizeEngineCtrl2PressedByte(actual.generatedPressed()), 0, 1, false));
+                    expectedPressed, expectedPressedAlternate, actualPressed, 0, 1, false));
         }
         fields.put(prefix + "cpu_jumping", compareNumeric(prefix + "cpu_jumping",
                 expected.autoJumpFlag() & 0xFF, actual.jumpingFlag() & 0xFF, 0, 1, false));
@@ -677,6 +684,48 @@ public class TraceBinder {
             return false;
         }
         return expectedSidekick.gSpeed() != 0 && actualSidekick.gSpeed() != 0;
+    }
+
+    private static boolean isSidekickCtrl2HeldOnlyNoop(
+            TraceEvent.CpuState expected,
+            TraceEvent.TailsCpuNormalStep expectedNormalStep,
+            TraceCharacterState expectedSidekick,
+            TraceCharacterState actualSidekick,
+            int expectedHeld,
+            int actualHeld,
+            int expectedPressed,
+            int actualPressed) {
+        int heldDelta = (expectedHeld ^ actualHeld) & 0xFF;
+        int inputMask = TRACE_INPUT_UP | TRACE_INPUT_DOWN | TRACE_INPUT_LEFT
+                | TRACE_INPUT_RIGHT | TRACE_INPUT_JUMP;
+        boolean jumpOnlyDelta = heldDelta == TRACE_INPUT_JUMP;
+        boolean directionalOnlyDelta = heldDelta != 0
+                && (heldDelta & ~(TRACE_INPUT_LEFT | TRACE_INPUT_RIGHT)) == 0;
+        if (expectedNormalStep != null
+                || expected.cpuRoutine() != 0x06
+                || expected.ctrl2RawHeld() != 0
+                || heldDelta == 0
+                || expectedPressed != actualPressed
+                || expectedSidekick == null
+                || actualSidekick == null
+                || !expectedSidekick.present()
+                || !actualSidekick.present()
+                || (heldDelta & ~inputMask) != 0) {
+            return false;
+        }
+        return expectedSidekick.statusByte() == actualSidekick.statusByte()
+                && expectedSidekick.routine() == actualSidekick.routine()
+                && expectedSidekick.x() == actualSidekick.x()
+                && expectedSidekick.y() == actualSidekick.y()
+                && expectedSidekick.xSub() == actualSidekick.xSub()
+                && expectedSidekick.ySub() == actualSidekick.ySub()
+                && expectedSidekick.xSpeed() == actualSidekick.xSpeed()
+                && expectedSidekick.ySpeed() == actualSidekick.ySpeed()
+                && expectedSidekick.gSpeed() == actualSidekick.gSpeed()
+                && expectedSidekick.angle() == actualSidekick.angle()
+                && expectedSidekick.air() == actualSidekick.air()
+                && expectedSidekick.rolling() == actualSidekick.rolling()
+                && (jumpOnlyDelta || (directionalOnlyDelta && expectedSidekick.xSpeed() == 0));
     }
 
     private static boolean isInactiveStaleSidekickInteract(

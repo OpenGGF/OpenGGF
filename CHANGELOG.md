@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Trace replay ignores held-only sidekick Ctrl2 latch noise:** S2 sidekick
+  `tails_cpu_ctrl2_held` diagnostics no longer report a frontier when the ROM
+  logical Ctrl2 held word carries only a latched held bit while raw P2 input is
+  zero, the pressed edge and sidekick kinematics match, and no decision-time
+  CPU normal-step diagnostic exists. This advances CNZ1 level-select from frame
+  3675 to frame 3906; the full trace sweep remains expected-red at 90 trace
+  tests, 52 trace failures, and 1 existing trace error.
+
 - **Trace replay ignores landing-frame sidekick CPU mirror lag:** S2
   `tails_cpu_interact` diagnostics no longer report a frontier on the first
   on-object landing frame when the ROM raw `tails_interact` slot has latched but

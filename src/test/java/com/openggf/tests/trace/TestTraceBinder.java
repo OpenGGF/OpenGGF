@@ -1067,6 +1067,84 @@ public class TestTraceBinder {
         assertTrue(result.hasError());
     }
 
+    @Test
+    void testSidekickCpuCtrl2HeldMirrorOnObjectDoesNotOwnFrontier() {
+        TraceCharacterState landedTails = traceSidekickOnObjectAtRest();
+        TraceFrame frame = frameWithSidekick(3675, landedTails);
+        TraceEvent.CpuState snapshotCpu = cpuStateWithCtrl2HeldMirror(3675);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x01, 0x06, 0x1070, 0x06CA,
+                0x00, 0x00, 0x25, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x08D3, (short) 0x0693,
+            (short) 0x0090, (short) 0xFB1D, (short) 0x0633,
+            (byte) 0xCC, false, true, 3,
+            null, null, "tails", landedTails, snapshotCpu, actualCpu);
+
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_held").severity());
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_pressed").severity());
+        assertFalse(result.hasError(),
+                "Ctrl_2 held can mirror Ctrl_1 on an on-object stationary frame without owning the frontier");
+    }
+
+    @Test
+    void testSidekickCpuCtrl2HeldMirrorStillReportsWithMotionDelta() {
+        TraceCharacterState expectedTails = traceSidekickOnObjectAtRest();
+        TraceCharacterState actualTails = new TraceCharacterState(true,
+                (short) 0x1070, (short) 0x06CF,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, true, 0,
+                0xE000, 0x0C00, 0x02, 0x0C, 0x25);
+        TraceFrame frame = frameWithSidekick(3675, expectedTails);
+        TraceEvent.CpuState snapshotCpu = cpuStateWithCtrl2HeldMirror(3675);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x01, 0x06, 0x1070, 0x06CA,
+                0x00, 0x00, 0x25, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x08D3, (short) 0x0693,
+            (short) 0x0090, (short) 0xFB1D, (short) 0x0633,
+            (byte) 0xCC, false, true, 3,
+            null, null, "tails", actualTails, snapshotCpu, actualCpu);
+
+        assertEquals(Severity.ERROR, result.fields().get("tails_cpu_ctrl2_held").severity());
+        assertEquals(Severity.ERROR, result.fields().get("tails_y").severity());
+        assertTrue(result.hasError());
+    }
+
+    @Test
+    void testSidekickCpuCtrl2HeldJumpOnlyNoopDoesNotOwnFrontier() {
+        TraceCharacterState tails = new TraceCharacterState(true,
+                (short) 0x1012, (short) 0x0580,
+                (short) 0x03C8, (short) 0x0933, (short) 0x09FB,
+                (byte) 0x30, false, true, 0,
+                0x3000, 0xEF00, 0x02, 0x05, 0x2E);
+        TraceFrame frame = frameWithSidekick(3876, tails);
+        TraceEvent.CpuState snapshotCpu = new TraceEvent.CpuState(
+                3876, "tails", 0x85, 0, 79, 0x06,
+                (short) 0x1070, (short) 0x06CA, 0,
+                0, 0x74, 0x04, 0, 0x0000,
+                0xFC, 0xB8, (short) 0x0F71, (short) 0x03EC,
+                0x0000, 0x02, 0x05, 0x33, 0x09FB);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 79, 0x85, 0x06, 0x1070, 0x06CA,
+                0x04, 0x04, 0x2E, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x08D3, (short) 0x0693,
+            (short) 0x0090, (short) 0xFB1D, (short) 0x0633,
+            (byte) 0xCC, false, true, 3,
+            null, null, "tails", tails, snapshotCpu, actualCpu);
+
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_held").severity());
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_pressed").severity());
+        assertFalse(result.hasError());
+    }
+
     private static TraceCharacterState traceSidekickWithGroundSpeed(short gSpeed) {
         return new TraceCharacterState(true,
                 (short) 0x08AF, (short) 0x07BF,
@@ -1082,6 +1160,23 @@ public class TestTraceBinder {
                 (byte) 0xCC, false, true, 3,
                 0xCA00, 0xAD00, 0x02, 0x0833, 0x064E, 15, 0x06,
                 0x03A9, 0x12, 0x30DF, 0, sidekick);
+    }
+
+    private static TraceCharacterState traceSidekickOnObjectAtRest() {
+        return new TraceCharacterState(true,
+                (short) 0x1070, (short) 0x06CE,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, true, 0,
+                0xE000, 0x0C00, 0x02, 0x0C, 0x25);
+    }
+
+    private static TraceEvent.CpuState cpuStateWithCtrl2HeldMirror(int frame) {
+        return new TraceEvent.CpuState(
+                frame, "tails", 0x01, 0, 0, 0x06,
+                (short) 0x1070, (short) 0x06CA, 0,
+                0, 0x10, 0x00, 0, 0x1000,
+                0xD8, 0x94, (short) 0x1070, (short) 0x06CB,
+                0x1000, 0x0C, 0x0C, 0x33, 0x0000);
     }
 
     @Test
