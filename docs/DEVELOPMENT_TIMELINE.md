@@ -1,7 +1,7 @@
 # OpenGGF — Development Timeline
 
-*A captioned gallery of the engine clawing its way toward accuracy: an Oct 2024 prologue,
-then the main run from Dec 2025 → Apr 2026. Every clip is a real build, shared between James
+*A captioned gallery of the engine clawing its way toward accuracy: a prologue reaching back
+to a 2015 build, then the main run from Dec 2025 → Apr 2026. Every clip is a real build, shared between James
 and Farrell at the moment it happened. The grand, fact-checked version of this story — who
 built what, which AI did which, and why accuracy needed an oracle — is in
 [The AI Journey](AI_JOURNEY.md); this page is just the receipts, in order, bugs and all.*
@@ -11,18 +11,19 @@ built what, which AI did which, and why accuracy needed an oracle — is in
 
 ---
 
-## The 2024 prologue — a white box and the first ROM tiles
+## The prologue — the hand-built years, and the first ROM tiles
 
-*Long before the AI-era run below, two clips survive from the hand-built years. They're the
-oldest receipts there are, and they bookend the moment the project first reached into a real
-ROM. (Both also appear in [The AI Journey](AI_JOURNEY.md)'s hall of shame.)*
+*Long before the AI-era run below, two clips survive from the hand-built years — separated by
+nearly a decade. The first is an ancient build; the second is the moment the project first
+reached into a real ROM. (Both also appear in [The AI Journey](AI_JOURNEY.md)'s hall of shame.)*
 
-**2024-10** — Sonic is a white box that *"sits under the terrain."* This is **James's
-hand-coded physics**, mid-rewrite — the human half of the build, years before any agent touched it.
+**v0.05 (build 2015-04-09; clip captured 2024)** — Sonic is a white box that *"sits under the
+terrain."* This is **James's original hand-coded physics** — the human half of the build, a
+decade before any agent touched it.
 
-![Sonic as a white box sinking under the terrain, Oct 2024](assets/ai-journey/2024-10-under-terrain.gif)
+![Sonic as a white box sinking under the terrain, v0.05 build from 2015](assets/ai-journey/2024-10-under-terrain.gif)
 
-**2024-10** — *"oh shiiiiit."* The same white box, now standing on **real Emerald Hill tiles
+**2024-10** — *"oh shiiiiit."* Still the white box, now standing on **real Emerald Hill tiles
 decompressed straight from the ROM** — the moment the first ChatGPT-assisted Kosinski work paid off.
 
 ![White-box Sonic on Emerald Hill tiles decompressed from the ROM, Oct 2024](assets/ai-journey/2024-10-rom-loading.gif)
