@@ -175,6 +175,13 @@ public final class TraceReplayBootstrap {
         if (seedTraceIndex < 0 || seedTraceIndex >= trace.frameCount()) {
             return 0;
         }
+        if (isS3kCompleteRunSegment(trace)) {
+            // Per-zone complete-run segments arm after the ROM has already
+            // completed the setup LevelLoop OscillateNumDo pass. The first
+            // replay-driven object pass therefore needs to see that prior
+            // oscillator phase before it advances natively.
+            return Math.max(1, trace.metadata().preTraceOscillationFrames());
+        }
         if (usesSidekickTitleCardSeedFrame(trace)) {
             // The S3K Sonic+Tails seed row is not driven through a full engine
             // frame, but the ROM row has already passed LevelLoop's

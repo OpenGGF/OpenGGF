@@ -12,17 +12,18 @@ branch-local measurements.
 |---|---|
 | Overall trace-suite state | Expected-red, not release-green |
 | Latest logged full-sweep aggregate | 90 `*TraceReplay` tests, 54 failures, 1 error |
-| Latest focused frontier | `TestS3kCnzCompleteRunTraceReplay` at frame `946` |
-| Current blocking field | CNZ player `y` off by 1 pixel (`0x0709` vs `0x0708`) after the orbiting-bumper bounce |
-| Current owner hypothesis | remaining CNZ movement/radius follow-on after ROM-current Obj_Bumper orbit timing |
+| Latest focused frontier | `TestS3kCnzCompleteRunTraceReplay` at frame `1139` |
+| Current blocking field | CNZ Tails `status` bit mismatch (`0x0000` vs `0x0020`) after the complete-run oscillator setup fix |
+| Current owner hypothesis | Tails CPU/status follow-on after S3K complete-run setup oscillator parity |
 | Current branch context in newest entries | `bugfix/ai-trace-frontier-develop` after cherry-picking the AIZ worker chain |
-| Last frontier move | CNZ complete-run `f355 -> f946` via ROM-current Obj_Bumper orbit/list timing |
+| Last frontier move | CNZ complete-run `f946 -> f1139` via S3K complete-run pre-trace oscillator setup parity |
 
 ### Active queue
 
-1. Bisect **S3K CNZ complete-run f946** inside the single frontier frame if the
-   ordered cluster queue keeps radius/rolling or CNZ movement follow-on ahead of
-   the exact-`0x100` speed-delta cluster.
+1. Re-check the ordered frontier queue after the S3K complete-run setup
+   oscillator fix. CNZ complete-run now lands in a Tails status/CPU signature at
+   f1139, while AIZ complete-run f1095, MGZ f738, LBZ f1694, MHZ f966, HCZ
+   f1402, and ICZ f1116 held.
 2. Re-check the ordered frontier queue against the latest full `*TraceReplay`
    sweep before selecting the next target. The newest sweep is expected-red at
    90 tests / 54 failures / 1 error; CNZ complete-run advanced, AIZ held at
@@ -36,13 +37,13 @@ branch-local measurements.
 
 | Trace | Frame | Field | ROM | Engine | Status | Next owner |
 |---|---:|---|---:|---:|---|---|
-| `s3k_cnz1` / `TestS3kCnzCompleteRunTraceReplay` | `946` | player `y` | `0x0709` | `0x0708` | advanced | CNZ movement/radius follow-on |
+| `s3k_cnz1` / `TestS3kCnzCompleteRunTraceReplay` | `1139` | Tails `status` | `0x0000` | `0x0020` | advanced | Tails CPU/status follow-on |
 | `s3k_aiz1` / `TestS3kAizTraceReplay` | `19089` | leader `g_speed` | `-00B0` | `0x00B0` | held | leader movement near AIZ2 end-boss approach |
 
-At CNZ `f946`, the earlier orbiting-bumper `y_speed` vector mismatch at f355 is
-cleared; the remaining divergence is a 1-pixel player `y` follow-on. AIZ still
-holds at `f19089`, after the trace passes the AIZ2 battleship bombing run and
-wrap into the end-boss arena approach.
+At CNZ `f1139`, the earlier orbiting-bumper `y_speed` vector mismatch at f355
+and the complete-run oscillator-phase `y` mismatch at f946 are cleared. AIZ
+still holds at `f19089`, after the trace passes the AIZ2 battleship bombing run
+and wrap into the end-boss arena approach.
 
 ### Stale-data warnings
 
@@ -69,6 +70,42 @@ wrap into the end-boss arena approach.
   cleanup. Do not delete historical evidence only because it is stale.
 
 ## Evidence Ledger
+
+## 2026-06-16 - S3K complete-run oscillator setup parity advances CNZ f946 -> f1139
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, targeting the
+  frame-0/setup class after CNZ complete-run advanced to f946. The selected
+  earliest frontier trace was `TestS3kCnzCompleteRunTraceReplay` (`s3k_cnz1`).
+- Single-frame bisect result: f946's 1-pixel player `y` mismatch was not caused
+  by terrain collision or CNZ hover-fan arithmetic. The fan was reading
+  `Oscillating_table+$16` one setup tick behind the trace (`0x08` in engine vs
+  ROM `0x07`), so the top-edge lift path applied a -1 pixel adjustment that the
+  ROM did not apply on that frame.
+- Fix: `TraceReplayBootstrap.preTraceOscillationFramesForTraceReplay` now gives
+  S3K per-zone complete-run segments a one-tick floor, preserving higher
+  metadata values. `TestTraceReplayStartPositionPolicy` asserts that complete-run
+  segments begin after the ROM's setup `OscillateNumDo` pass, so the first
+  replay-driven object pass observes the prior oscillator phase.
+- Focused validation: `TestTraceReplayStartPositionPolicy` passed when run with
+  the focused CNZ complete-run trace. The focused trace remains expected-red but
+  advances from **f946** player `y` mismatch to **f1139**
+  `tails_status_byte` mismatch (`0x0000` vs `0x0020`).
+- Full sweep command: `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off
+  -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1
+  -Dsurefire.redirectTestOutputToFile=false -Dtest=*TraceReplay
+  -DfailIfNoTests=false -Dtrace.frontierOnly=true -Dtrace.context.radius=2
+  -Ds3k.rom.path=s3k.gen test"`.
+- Full sweep result: expected-red, **90 tests, 54 failures, 1 error**. Surefire
+  reports show CNZ complete-run advanced from f946 to f1139. AIZ complete-run
+  held at f1095 (`x_sub`), AIZ route held at f19089 (`g_speed`), HCZ held at
+  f1402, ICZ at f1116, LBZ at f1694, MGZ complete-run at f738, MGZ route at
+  f312, and MHZ at f966. Parsed report JSON has route-key collisions for some
+  complete-run segments, so complete-run first-error comparisons are taken from
+  Surefire text plus Maven output.
+- Classification: CNZ complete-run **advanced**; other named S3K complete-run
+  frontiers **held** by first-error frame; no first-error-frame **regression**
+  observed in the full sweep. The next target should be selected from the
+  ordered cluster policy using this updated routing table.
 
 ## 2026-06-16 - S3K CNZ complete-run f355 -> f946 via ROM-current Obj_Bumper orbit/list timing
 

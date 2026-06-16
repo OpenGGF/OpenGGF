@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K complete-run traces seed the prior oscillator setup pass:** per-zone S3K
+  complete-run segments now enter replay with the ROM's setup `OscillateNumDo`
+  phase already visible to the first object pass. This advances the CNZ
+  complete-run trace from frame 946's hover-fan-driven 1-pixel `y` mismatch to
+  frame 1139's later Tails status frontier, with no first-error-frame regression
+  in the full trace sweep.
+
 - **S3K CNZ orbiting bumper bounce uses the ROM-current orbit point:** Obj_Bumper
   now advances its orbit before consuming pending touch responses and resolves
   the object-pass `Level_frame_counter+1` tick from the live level counter. This
