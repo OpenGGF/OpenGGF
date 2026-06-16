@@ -536,6 +536,59 @@ public class TestTraceBinder {
     }
 
     @Test
+    void testSidekickCpuCtrl2IgnoresLatchedPanicInputWhileCoasting() {
+        TraceCharacterState expectedTails = traceSidekickWithGroundSpeed((short) 0x09AB);
+        TraceFrame frame = frameWithSidekick(936, expectedTails);
+        TraceEvent.CpuState expectedCpu = new TraceEvent.CpuState(
+                936, "tails", 0x41, 0, 0x18, 0x08,
+                (short) 0x0000, (short) 0x0000, 0,
+                0, 0x02, 0x02, 0, 0x0800,
+                0x0C, 0xC8, (short) 0x08D1, (short) 0x06F8,
+                0x0200, 0x04, 0x04, 0x12, 0x09AB);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0x18, 0x41, 0x08, 0x0000, 0x0000,
+                0x00, 0x00, -1, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x08D3, (short) 0x0693,
+            (short) 0x0090, (short) 0xFB1D, (short) 0x0633,
+            (byte) 0xCC, false, true, 3,
+            null, null, "tails", expectedTails, expectedCpu, actualCpu);
+
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_held").severity());
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_ctrl2_pressed").severity());
+        assertFalse(result.hasError(),
+                "Routine-8 Ctrl_2 latch differences while inertia is nonzero are not an actionable frontier");
+    }
+
+    @Test
+    void testSidekickCpuCtrl2StillFailsForStationaryPanicInputMismatch() {
+        TraceCharacterState expectedTails = traceSidekickWithGroundSpeed((short) 0x0000);
+        TraceFrame frame = frameWithSidekick(937, expectedTails);
+        TraceEvent.CpuState expectedCpu = new TraceEvent.CpuState(
+                937, "tails", 0x41, 0, 0x18, 0x08,
+                (short) 0x0000, (short) 0x0000, 0,
+                0, 0x02, 0x02, 0, 0x0800,
+                0x0C, 0xC8, (short) 0x08D1, (short) 0x06F8,
+                0x0200, 0x04, 0x04, 0x12, 0x0000);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0x18, 0x41, 0x08, 0x0000, 0x0000,
+                0x00, 0x00, -1, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x08D3, (short) 0x0693,
+            (short) 0x0090, (short) 0xFB1D, (short) 0x0633,
+            (byte) 0xCC, false, true, 3,
+            null, null, "tails", expectedTails, expectedCpu, actualCpu);
+
+        assertEquals(Severity.ERROR, result.fields().get("tails_cpu_ctrl2_held").severity());
+        assertTrue(result.hasError(),
+                "Once routine 8 can write DOWN, Ctrl_2 remains a strict frontier signal");
+    }
+
+    @Test
     void testSidekickCpuCtrl2NormalStepAcceptsHighByteHeldInput() {
         TraceFrame frame = TraceFrame.of(218, 0x0000,
             (short) 0x0371, (short) 0x036C,
@@ -631,6 +684,23 @@ public class TestTraceBinder {
 
         assertEquals(Severity.ERROR, result.fields().get("tails_cpu_ctrl2_pressed").severity());
         assertTrue(result.hasError());
+    }
+
+    private static TraceCharacterState traceSidekickWithGroundSpeed(short gSpeed) {
+        return new TraceCharacterState(true,
+                (short) 0x08AF, (short) 0x07BF,
+                (short) 0x08E9, (short) 0xFC56, gSpeed,
+                (byte) 0xE8, false, true, 0,
+                0x0700, 0xF600, 0x02, 0x04, 0x12);
+    }
+
+    private static TraceFrame frameWithSidekick(int frame, TraceCharacterState sidekick) {
+        return new TraceFrame(frame, 0x0000,
+                (short) 0x08D3, (short) 0x0693,
+                (short) 0x0090, (short) 0xFB1D, (short) 0x0633,
+                (byte) 0xCC, false, true, 3,
+                0xCA00, 0xAD00, 0x02, 0x0833, 0x064E, 15, 0x06,
+                0x03A9, 0x12, 0x30DF, 0, sidekick);
     }
 
     @Test

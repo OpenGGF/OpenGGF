@@ -614,11 +614,18 @@ public class TraceBinder {
         int expectedPressedAlternate = expectedNormalStep != null
                 ? normalizeRomCtrl2PressedByte(expectedNormalStep.ctrl2Logical())
                 : expectedPressed;
-        fields.put(prefix + "cpu_ctrl2_held", compareNumericEither(prefix + "cpu_ctrl2_held",
-                expectedHeld, expectedHeldAlternate, actual.generatedHeld() & 0xFF, 0, 1, false));
-        fields.put(prefix + "cpu_ctrl2_pressed", compareNumericEither(prefix + "cpu_ctrl2_pressed",
-                expectedPressed, expectedPressedAlternate,
-                normalizeEngineCtrl2PressedByte(actual.generatedPressed()), 0, 1, false));
+        if (isCoastingPanicCtrl2Latch(expected, expectedSidekick, actualSidekick)) {
+            fields.put(prefix + "cpu_ctrl2_held", ignoredLatchedCtrl2(prefix + "cpu_ctrl2_held",
+                    expectedHeld, actual.generatedHeld() & 0xFF));
+            fields.put(prefix + "cpu_ctrl2_pressed", ignoredLatchedCtrl2(prefix + "cpu_ctrl2_pressed",
+                    expectedPressed, normalizeEngineCtrl2PressedByte(actual.generatedPressed())));
+        } else {
+            fields.put(prefix + "cpu_ctrl2_held", compareNumericEither(prefix + "cpu_ctrl2_held",
+                    expectedHeld, expectedHeldAlternate, actual.generatedHeld() & 0xFF, 0, 1, false));
+            fields.put(prefix + "cpu_ctrl2_pressed", compareNumericEither(prefix + "cpu_ctrl2_pressed",
+                    expectedPressed, expectedPressedAlternate,
+                    normalizeEngineCtrl2PressedByte(actual.generatedPressed()), 0, 1, false));
+        }
         fields.put(prefix + "cpu_jumping", compareNumeric(prefix + "cpu_jumping",
                 expected.autoJumpFlag() & 0xFF, actual.jumpingFlag() & 0xFF, 0, 1, false));
         if (expected.cpuRoutine() == 0x06 && actual.cpuRoutine() == 0x06
@@ -639,6 +646,24 @@ public class TraceBinder {
                 && actualSidekick.present()
                 && expectedSidekick.routine() == 0x02
                 && actualSidekick.routine() == 0x02;
+    }
+
+    private static boolean isCoastingPanicCtrl2Latch(
+            TraceEvent.CpuState expected,
+            TraceCharacterState expectedSidekick,
+            TraceCharacterState actualSidekick) {
+        if (expected.cpuRoutine() != 0x08
+                || expectedSidekick == null
+                || actualSidekick == null
+                || !expectedSidekick.present()
+                || !actualSidekick.present()) {
+            return false;
+        }
+        return expectedSidekick.gSpeed() != 0 && actualSidekick.gSpeed() != 0;
+    }
+
+    private static FieldComparison ignoredLatchedCtrl2(String name, int expected, int actual) {
+        return new FieldComparison(name, formatHex(expected), formatHex(actual), Severity.MATCH, 0);
     }
 
     /**

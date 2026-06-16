@@ -1,5 +1,38 @@
 # Trace Frontier Log
 
+## 2026-06-16 - S2 HTZ2 panic Ctrl_2 latch no longer masks true Tails CPU frontier
+
+- Scope: trace comparator frontier reporting only. Sonic 2 HTZ2 exposed a
+  `tails_cpu_ctrl2_held` mismatch at frame 936 while Tails was in CPU routine
+  `0x08` (panic) and still coasting with nonzero `g_speed`. The S2 panic
+  routine returns before writing DOWN while inertia is nonzero, so the recorded
+  post-frame `Ctrl_2_Logical` latch is not the branch-local decision that drives
+  movement. The comparator now treats routine-8 `Ctrl_2` held/pressed latch
+  differences as non-frontier only while both recorded and replayed sidekick
+  states are present and still coasting; once `g_speed` reaches zero, `Ctrl_2`
+  remains a strict comparison field.
+- Bisect result: the earliest current Tails CPU frontier was
+  `TestS2Htz2LevelSelectTraceReplay` frame 936. Frame-local inspection showed
+  matching routine `0x08` and nonzero sidekick ground speed on both sides, with
+  the visible mismatch isolated to the latched global `Ctrl_2` bytes. Focused
+  replay advanced HTZ2 to frame 1023 `tails_cpu_routine` (expected `0x0006`,
+  actual `0x0008`), making the reported frontier the actionable CPU state
+  transition.
+- Focused regression/frontier checks:
+  `mvn "-Dtest=com.openggf.tests.trace.TestTraceBinder" test`: the
+  `TestTraceBinder` XML report passed, 36 tests, 0 failures, 0 errors.
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=80 -Dtest=com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Ds2.rom.path=s2.gen test"`:
+  expected-red, advanced from frame 936 `tails_cpu_ctrl2_held` to frame 1023
+  `tails_cpu_routine`.
+- Full trace sweep:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red, 90 tests, 50 failures, 1 error. Compared with the prior
+  90-test sweep at 50 failures and 1 error, the suite counts did not regress;
+  the intentional frontier movement is `TestS2Htz2LevelSelectTraceReplay`
+  frame 936 -> frame 1023. The earliest current Tails CPU cluster target is
+  now `TestS2MtzLevelSelectTraceReplay` frame 1006 `tails_status_byte`
+  (expected `0x0021`, actual `0x0001`), narrowly ahead of HTZ2 frame 1023.
+
 ## 2026-06-16 - S2 MTZ object-slot parity advances MTZ1 Tails CPU frontier
 
 - Scope: Sonic 2 object lifetime, dynamic allocation, and post-camera placement

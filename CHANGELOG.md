@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 HTZ2 Tails CPU frontier now reports the true routine mismatch:**
+  routine-8 panic `Ctrl_2` held/pressed latch differences are ignored only while
+  both sidekick states are still coasting with nonzero ground speed, so the HTZ2
+  trace advances from frame 936's non-actionable latched `Ctrl_2` mismatch to
+  frame 1023's actionable `tails_cpu_routine` mismatch without changing the
+  full trace-suite failure count.
+
 - **S2 MTZ object-slot parity advances the MTZ1 Tails CPU frontier:**
   SteamPuff, MTZ long-platform child cog, monitor contents, Asteron
   explosion/projectile, and post-camera object placement now better match the
