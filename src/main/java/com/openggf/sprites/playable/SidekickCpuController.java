@@ -1578,7 +1578,6 @@ public class SidekickCpuController {
         state = State.SPAWNING;
         despawnCounter = 0;
         normalFrameCount = 0;
-        jumpingFlag = false;
         suppressNextAirbornePushFollowSteering = false;
         releasedUnderwaterPushConsumed = false;
     }

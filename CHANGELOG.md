@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 Tails flying timeout preserves the CPU auto-jump flag:** the S2
+  `TailsCPU_Flying` off-screen timeout path now returns to routine 2 without
+  clearing `Tails_CPU_jumping`, matching the ROM write set for the zero-marker
+  timeout. This advances the MTZ3 level-select trace from frame 1381's
+  `tails_cpu_jumping` mismatch to frame 1669's later `tails_cpu_interact`
+  frontier; the full frontier-only trace sweep remains expected-red at 53
+  failures and 1 existing error.
+
 - **S2 fixed Obj08 skid dust stops when hurt/death flow takes over:** the
   post-CPU fixed dust tick now returns while the player is hurt or dead, matching
   the ROM handoff from `Obj08_CheckSkid` to `HurtCharacter` instead of letting a
