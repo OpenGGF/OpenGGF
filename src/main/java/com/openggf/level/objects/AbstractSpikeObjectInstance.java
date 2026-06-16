@@ -74,6 +74,15 @@ public abstract class AbstractSpikeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // S2 Obj36 and S3K Obj_Spikes store standing/pushing bits in the live
+        // object status byte. Moving/retracting spikes rebuild their dynamic
+        // engine spawn as they move, so the solid latch must follow the object
+        // slot, not the value-equal spawn position.
+        return true;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {
         if (player == null) {
             return;

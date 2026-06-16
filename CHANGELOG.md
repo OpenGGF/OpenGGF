@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K CNZ retracting spikes keep ROM solid latch identity:** shared S2/S3K
+  spike objects now keep `SolidObjectFull` standing/pushing latch state on the
+  live object instance instead of the dynamic spawn position while retracting.
+  This advances the CNZ complete-run trace from frame 1139's stale Tails
+  `Status_Push` mismatch to frame 1467's later `tails_cpu_interact` frontier;
+  the full frontier-only trace sweep remains expected-red at 53 failures and 1
+  existing error with no unrelated first-error regression observed.
+
 - **S3K complete-run visible-hold rows seed replay counters from the CPU cursor:**
   S3K complete-run replay now derives the one-time `Level_frame_counter` phase
   from the recorded Tails CPU `pos_table_index` when startup visible-hold rows

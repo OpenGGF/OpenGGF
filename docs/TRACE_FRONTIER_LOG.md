@@ -15771,3 +15771,39 @@ Result:
 - Next local target after this scoped ARZ2 commit is to reconcile the worker
   AIZ f14299 -> f16944 chain now that its class-size guard rejection has been
   resolved, then resume the ordered cluster queue from the measured frontier set.
+
+## 2026-06-16 — S3K CNZ complete-run spike SST latch clears Tails push
+
+Branch `bugfix/ai-trace-frontier-develop`.
+Commands:
+`cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=false -Dtrace.frontierOnly=true -Dtrace.context.radius=8 -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzCompleteRunTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Ds3k.rom.path=s3k.gen -Dsonic3k.rom.path=s3k.gen test"`
+`mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic3k.objects.TestSonic3kSpikeObjectInstance,com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" test`
+`cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=false -Dtrace.frontierOnly=true -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Dsonic1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen -Dsonic3k.rom.path=s3k.gen test"`
+For A/B, temporarily reversed the three-file spike latch patch via
+`git apply -R target/spike-latch-fix.patch`, reran the same full `*TraceReplay`
+command, saved `target/spike-latch-baseline-frontiers.json`, then reapplied the
+patch and reran the focused CNZ complete-run command.
+
+Fix:
+- `AbstractSpikeObjectInstance` now returns true for
+  `usesInstanceSolidStateLatchKey()`, so shared S2/S3K retracting spikes keep
+  their solid standing/pushing latch on the live object instance instead of the
+  value-equal dynamic `ObjectSpawn` position. This matches ROM SST semantics:
+  S3K `Obj_Spikes` stores per-player push/standing bits in `status(a0)` while
+  calling `SolidObjectFull` (`docs/skdisasm/sonic3k.asm:48930-49027`), and the
+  generic solid helper clears that same object's pushing bit plus player
+  `Status_Push` in `sub_1E0C2` (`sonic3k.asm:41517-41537`). The same rule was
+  already present in the S2 spike subclass; it is now hosted by the shared spike
+  base instead of S2-only code.
+- Added S3K spike unit coverage for the live-object latch key.
+
+Result:
+- Focused `TestS3kCnzCompleteRunTraceReplay` advanced from **f1139**
+  `tails_status_byte` (expected `0x0000`, actual `0x0020`) to **f1467**
+  `tails_cpu_interact` (expected `0x0003`, actual `0x0000`).
+- Full `*TraceReplay` A/B sweep with the patch applied and then temporarily
+  reversed produced the same overall expected-red shape: **90 tests, 53
+  failures, 1 error**. No unrelated first-error regression was observed. The
+  only measured frontier move was the CNZ complete-run f1139 -> f1467 advance.
+- The next target in the ordered Tails CPU cluster is the new CNZ complete-run
+  f1467 `tails_cpu_interact` divergence.
