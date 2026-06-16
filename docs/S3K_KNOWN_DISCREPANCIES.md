@@ -310,10 +310,20 @@ silently.
 Gameplay state follows the S&K disassembly: `AIZ2_DoShipLoop` writes
 `Level_repeat_offset=$200` and subtracts `$200` from camera/player state when
 the post-bombing ship loop reaches `$46C0`
-(`docs/skdisasm/skdisasm/sonic3k.asm:105200-105221`). The remaining known gap
-is display-only: the engine still needs validation of the ROM split/background
-refresh behavior around the hidden repeat. Do not change
-`BATTLESHIP_WRAP_DIST_POST_BOMBING` away from `$200` to hide the seam.
+(`docs/skdisasm/skdisasm/sonic3k.asm:105200-105221`). Do not change
+`BATTLESHIP_WRAP_DIST_POST_BOMBING` away from `$200`.
+
+**Display validated seamless (2026-06-16).** Once the AIZ trace frontier advanced
+past the battleship (`TestS3kAizTraceReplay` first error f19089, into the AIZ2
+end-boss arena), the ship-loop wrap was visually validated via a trace-faithful
+`TraceCaptureTool` capture: at the `$200` wrap (trace f16507 cam `$443C` → f16508
+cam `$4240`) the burning-forest background renders continuously with **no seam,
+no repeated columns, and no empty `$200`–`$400` filler scrolling into view** — the
+current non-wrapping `SwScrlAiz.battleshipSmoothScrollX` BG deform handles the loop
+seamlessly. The earlier-deferred forest-loop BG fix
+(`docs/superpowers/plans/2026-05-29-aiz2-battleship-wrap-seam.md`) is **not
+warranted**: its premise (empty filler scrolls into view) does not manifest with
+the current smooth-scroll renderer. No remaining display gap.
 
 ---
 
