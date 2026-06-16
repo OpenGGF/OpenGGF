@@ -297,6 +297,46 @@ public class TestTraceBinder {
     }
 
     @Test
+    void testInactiveSidekickCpuInteractMismatchDoesNotOwnFrontier() {
+        TraceCharacterState tails = sidekickStateWithStatus(0x00);
+        TraceFrame frame = frameWithSidekick(tails);
+        TraceEvent.CpuState expectedCpu = cpuStateWithInteract(0x6E);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x00, 0x06, 0x0000, 0x0000,
+                0x00, 0x00, 0x00, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+                (short) 0x0050, (short) 0x03B0,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, false, 0,
+                null, null, "tails", tails, expectedCpu, actualCpu);
+
+        assertEquals(Severity.MATCH, result.fields().get("tails_cpu_interact").severity());
+        assertFalse(result.hasError());
+    }
+
+    @Test
+    void testActiveSidekickCpuInteractMismatchStillReports() {
+        TraceCharacterState tails = sidekickStateWithStatus(0x08);
+        TraceFrame frame = frameWithSidekick(tails);
+        TraceEvent.CpuState expectedCpu = cpuStateWithInteract(0x6E);
+        EngineSidekickCpuState actualCpu = new EngineSidekickCpuState(
+                0, 0, 0x00, 0x06, 0x0000, 0x0000,
+                0x00, 0x00, 0x00, 0);
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+                (short) 0x0050, (short) 0x03B0,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, false, 0,
+                null, null, "tails", tails, expectedCpu, actualCpu);
+
+        assertEquals(Severity.ERROR, result.fields().get("tails_cpu_interact").severity());
+        assertTrue(result.hasError());
+    }
+
+    @Test
     void testSidekickCpuComparisonSkippedWhenTraceDoesNotCarryCpuState() {
         TraceFrame frame = TraceFrame.of(117, 0x0000,
             (short) 0x0050, (short) 0x03B0,
@@ -897,5 +937,31 @@ public class TestTraceBinder {
                 -1, -1, -1, -1, "", 0, 0, -1, -1));
 
         assertEquals(Severity.MATCH, result.fields().get("camera_x").severity());
+    }
+
+    private static TraceFrame frameWithSidekick(TraceCharacterState sidekick) {
+        return new TraceFrame(1775, 0x0000,
+                (short) 0x0050, (short) 0x03B0,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, false, 0,
+                0, 0, 0x02, -1, -1, -1, 0x00,
+                -1, -1, -1, -1, sidekick);
+    }
+
+    private static TraceCharacterState sidekickStateWithStatus(int statusByte) {
+        return new TraceCharacterState(true,
+                (short) 0x0142, (short) 0x03A0,
+                (short) 0x0000, (short) 0x0000, (short) 0x0000,
+                (byte) 0x00, false, false, 0,
+                0, 0, 0x02, statusByte, (statusByte & 0x08) != 0 ? 0x16 : -1);
+    }
+
+    private static TraceEvent.CpuState cpuStateWithInteract(int interact) {
+        return new TraceEvent.CpuState(
+                1775, "tails", interact, 0, 0, 0x06,
+                (short) 0x0000, (short) 0x0000, 0,
+                0, 0x00, 0x00, 0, 0x0000,
+                0x00, 0x00, (short) 0x0000, (short) 0x0000,
+                0x0000, 0x00, 0x00, interact, 0x0000);
     }
 }

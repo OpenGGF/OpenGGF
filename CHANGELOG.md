@@ -4,6 +4,16 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Trace replay ignores stale inactive Tails CPU interact snapshots:** S2
+  `tails_cpu_interact` mismatches no longer own the release-blocking frontier
+  when both recorded and engine sidekick states are off-object, since that
+  persistent slot byte is stale diagnostic state rather than an active CPU
+  control gate. Active/on-object CPU-interact mismatches remain strict. This
+  advances MTZ3 level-select from frame 1775 to frame 1973, ARZ from frame 2011
+  to frame 3172, and HTZ from frame 3733 to frame 4229; the full frontier-only
+  trace sweep remains expected-red at 90 tests, 53 failures, and 1 existing
+  error.
+
 - **S2 MTZ twin stompers keep ROM solid latch identity while moving:** MTZ
   Obj64 now keys shared solid standing/pushing state on the live object
   instance while rebuilding its dynamic spawn as it moves, matching the ROM SST

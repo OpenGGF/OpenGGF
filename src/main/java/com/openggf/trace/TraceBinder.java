@@ -600,8 +600,13 @@ public class TraceBinder {
                 expected.idleTimer(), actual.controlCounter(), 0, 1, false));
         fields.put(prefix + "cpu_respawn_counter", compareNumeric(prefix + "cpu_respawn_counter",
                 expected.flightTimer(), actual.respawnCounter(), 0, 1, false));
-        fields.put(prefix + "cpu_interact", compareNumeric(prefix + "cpu_interact",
-                expected.interact() & 0xFF, actual.interact(), 0, 1, false));
+        if (isInactiveStaleSidekickInteract(expected, actual, expectedSidekick, actualSidekick)) {
+            fields.put(prefix + "cpu_interact", ignoredStaleSidekickInteract(prefix + "cpu_interact",
+                    expected.interact() & 0xFF, actual.interact()));
+        } else {
+            fields.put(prefix + "cpu_interact", compareNumeric(prefix + "cpu_interact",
+                    expected.interact() & 0xFF, actual.interact(), 0, 1, false));
+        }
         fields.put(prefix + "cpu_target_x", compareNumeric(prefix + "cpu_target_x",
                 expected.targetX() & 0xFFFF, actual.targetX() & 0xFFFF, 0, 1, false));
         fields.put(prefix + "cpu_target_y", compareNumeric(prefix + "cpu_target_y",
@@ -660,6 +665,29 @@ public class TraceBinder {
             return false;
         }
         return expectedSidekick.gSpeed() != 0 && actualSidekick.gSpeed() != 0;
+    }
+
+    private static boolean isInactiveStaleSidekickInteract(
+            TraceEvent.CpuState expected,
+            EngineSidekickCpuState actual,
+            TraceCharacterState expectedSidekick,
+            TraceCharacterState actualSidekick) {
+        if ((expected.interact() & 0xFF) == (actual.interact() & 0xFF)
+                || expectedSidekick == null
+                || actualSidekick == null
+                || !expectedSidekick.present()
+                || !actualSidekick.present()) {
+            return false;
+        }
+        return !hasOnObjectStatus(expectedSidekick) && !hasOnObjectStatus(actualSidekick);
+    }
+
+    private static boolean hasOnObjectStatus(TraceCharacterState state) {
+        return (state.statusByte() & 0x08) != 0;
+    }
+
+    private static FieldComparison ignoredStaleSidekickInteract(String name, int expected, int actual) {
+        return new FieldComparison(name, formatHex(expected), formatHex(actual), Severity.MATCH, 0);
     }
 
     private static FieldComparison ignoredLatchedCtrl2(String name, int expected, int actual) {
