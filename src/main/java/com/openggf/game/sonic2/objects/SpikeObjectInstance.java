@@ -63,4 +63,17 @@ public class SpikeObjectInstance extends AbstractSpikeObjectInstance {
         return player != null && player.isCpuControlled();
     }
 
+    @Override
+    public int sidekickCpuPushGraceMinimumFramesWhileRiding(PlayableEntity player) {
+        if (player == null || !player.isCpuControlled()) {
+            return Integer.MAX_VALUE;
+        }
+        // OOZ f1778 still falls through FollowLeft while Tails is moving right.
+        // At f1779 the previous SolidObject side response has flipped inertia to
+        // -$80, and Obj36's status byte is still visible to TailsCPU_Normal's
+        // status(a0) test, preserving delayed RIGHT into Tails_TurnRight
+        // (docs/s2disasm/s2.asm:39291-39294, 39958-39985).
+        return player.getGSpeed() < 0 ? 11 : 14;
+    }
+
 }

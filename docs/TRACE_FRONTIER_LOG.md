@@ -12,11 +12,11 @@ branch-local measurements.
 |---|---|
 | Overall trace-suite state | Expected-red, not release-green |
 | Latest logged full-sweep aggregate | 90 `*TraceReplay` tests, 52 failures, 1 error |
-| Latest focused frontier | `TestS2OozLevelSelectTraceReplay` advanced to f1779 Tails `tails_x` |
-| Current blocking field | Movement downstream of Tails CPU: earliest current table target is OOZ f1779 Tails `tails_x`/`tails_x_speed` after preserving the ROM-visible S2 Obj36 riding push bypass at f1775 |
+| Latest focused frontier | `TestS2OozLevelSelectTraceReplay` advanced to f1782 Tails `tails_x` |
+| Current blocking field | Movement downstream of Tails CPU: earliest current table target is OOZ f1782 Tails `tails_x`/`tails_x_speed` after preserving the ROM-visible S2 Obj36 negative-inertia riding push bridge |
 | Current owner hypothesis | Status-only sidekick lifetime/marker/on-object/airborne-zero-x-speed facing mismatches, first-landing CPU mirror/interact refresh lag, held-only Ctrl2 diagnostic latches, stationary released push-bit tails, and grounded push-bit-only tails are trace-framework noise when kinematics and pressed edges match; current sweep has moved the active S2 Tails CPU/status cluster into movement frontiers, and OOZ now points at the next real post-bypass movement delta |
 | Current branch context in newest entries | `bugfix/ai-trace-frontier-develop` after cherry-picking the AIZ worker chain and tightening trace context output defaults |
-| Last frontier move | S2 OOZ1 level-select `f1775 -> f1779` by preserving the S2 Obj36 live-riding push grace that ROM TailsCPU_Normal still sees before the later solid-object pass |
+| Last frontier move | S2 OOZ1 level-select `f1779 -> f1782` by lowering the Obj36 riding push bridge only after SolidObject response flips CPU Tails to negative ground speed |
 
 ### Active queue
 
@@ -39,8 +39,8 @@ branch-local measurements.
    grounded push-bit-only diagnostic. MCZ2 has advanced from f4482 to f4485,
    where movement now owns the first error.
 3. Continue the ordered cluster list at movement downstream of Tails CPU. The
-   earliest current table target is still OOZ, now f1779 `tails_x` /
-   `tails_x_speed` after the S2 Obj36 push-bypass fix; CNZ complete-run f1846,
+   earliest current table target is still OOZ, now f1782 `tails_x` /
+   `tails_x_speed` after the S2 Obj36 negative-inertia push bridge fix; CNZ complete-run f1846,
    MTZ3 f1973, CNZ1 f3906, CNZ2 f4418, MCZ2 f4485, and HTZ f6114 are later
    movement/downstream frontiers.
 4. Known branch-local follow-up from the S2 ARZ2 work: ARZ2 advanced to `f523`
@@ -55,7 +55,7 @@ branch-local measurements.
 | `s3k_mgz1` / `TestS3kMgzTraceReplay` | `539` | rings | `10` | `11` | advanced from f312 | downstream ring/object collection |
 | `s2_mtz2` / `TestS2Mtz2LevelSelectTraceReplay` | `1265` | leader `y` | `0x0464` | `0x0462` | advanced from f1075 | leader movement / ground-mode |
 | `s2_mtz3` / `TestS2Mtz3LevelSelectTraceReplay` | `1973` | Tails `tails_x` | `0x07C9` | `0x07CA` | true headline refined from same-frame status byte | Tails movement after CPU/status |
-| `s2_ooz1` / `TestS2OozLevelSelectTraceReplay` | `1779` | Tails `tails_x` | `0x0CE4` | `0x0CE3` | advanced from f1775 S2 Obj36 riding push-bypass movement delta | movement downstream of Tails CPU |
+| `s2_ooz1` / `TestS2OozLevelSelectTraceReplay` | `1782` | Tails `tails_x` | `0x0CE4` | `0x0CE3` | advanced from f1779 S2 Obj36 negative-inertia riding push bridge movement delta | movement downstream of Tails CPU |
 | `s2_cpz2` / `TestS2Cpz2LevelSelectTraceReplay` | `2888` | Tails `x` | `0x10F8` | `0x10F0` | advanced from f759 | movement downstream of Tails CPU |
 | `s2_cnz1` / `TestS2CnzLevelSelectTraceReplay` | `3906` | Tails `tails_y` | `0x06C0` | `0x06C1` | advanced from f3675/f3759/f3876 held-only Ctrl2 diagnostics | movement downstream of Tails CPU |
 | `s2_cnz2` / `TestS2Cnz2LevelSelectTraceReplay` | `4418` | Tails `tails_y` | `0x02F0` | `0x02F1` | advanced from f3691 stationary released push-bit diagnostic | movement downstream of Tails CPU |
@@ -111,8 +111,11 @@ At OOZ `f1775`, Tails is grounded on a live S2 Obj36 spike. ROM
 `TailsCPU_Normal` still sees the prior-frame `Status_Push` before the later
 solid-object pass clears it, so it bypasses FollowLeft/FollowRight and preserves
 the delayed Ctrl1 RIGHT sample. The engine had already cleared push before the
-CPU step and generated LEFT, flipping Tails to `-0080` x/ground speed. S2 Obj36
-now opts into an object-owned riding push grace, and OOZ advances to `f1779`.
+CPU step and generated LEFT, flipping Tails to `-0080` x/ground speed. At
+`f1778`, positive Tails ground speed still must fall through FollowLeft; at
+`f1779`, after the solid-object side response flips Tails negative, Obj36 uses a
+lower CPU-rider push bridge so the delayed RIGHT sample is preserved. OOZ now
+advances to `f1782`, another Obj36 contact-cadence movement delta.
 
 ### Stale-data warnings
 
@@ -139,6 +142,38 @@ now opts into an object-owned riding push grace, and OOZ advances to `f1779`.
   cleanup. Do not delete historical evidence only because it is stale.
 
 ## Evidence Ledger
+
+## 2026-06-16 - S2 Obj36 negative-inertia riding push bridge advances OOZ to f1782
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, continuing the
+  movement-downstream-of-Tails-CPU cluster. The focused trace was
+  `TestS2OozLevelSelectTraceReplay`, whose previous frontier was f1779 Tails
+  `tails_x` (`0x0CE4` vs `0x0CE3`).
+- Single-frame bisect result: f1778 and f1779 split the Obj36 riding cadence.
+  At f1778, CPU Tails still has positive ground speed (`+0x30`) and ROM falls
+  through FollowLeft. At f1779, the prior SolidObject side response has flipped
+  Tails negative (`-0x80`), and ROM still bridges the riding push bit so
+  `TailsCPU_Normal` preserves the delayed RIGHT sample. A flat lower threshold
+  regressed f1778; the threshold must depend on the live CPU rider's ground
+  speed.
+- Fix: `SolidObjectProvider` now exposes
+  `sidekickCpuPushGraceMinimumFramesWhileRiding(...)`. S2 Obj36 returns a lower
+  bridge only for CPU riders with negative ground speed, otherwise keeping the
+  existing conservative threshold. The sidekick controller still requires a
+  live riding object and keeps the legacy boolean hook as the fallback path.
+- Focused validation:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestSidekickCpuControllerLevelStart" "-DfailIfNoTests=false" test`
+  passed 10/0. Focused OOZ replay remains expected-red but advances from
+  **f1779** `tails_x` to **f1782** `tails_x`, with 6 frontier-only errors.
+  Focused CNZ1, HTZ1, MCZ1, and MCZ2 replays held at their prior first
+  frontiers.
+- Full sweep result: expected-red, **90 trace tests, 52 trace failures, 1 trace
+  error**. OOZ advanced **f1779 -> f1782**. CNZ1 held at **f3906**, CNZ2 held
+  at **f4418**, HTZ held at **f6114**, MCZ2 held at **f4485**, MTZ3 held at
+  **f1973**, CNZ complete-run held at **f1846**, and AIZ held at **f19089**.
+- Classification: OOZ movement frontier **advanced** with no watched
+  first-frontier regression. The next ordered target remains OOZ, now f1782
+  Tails movement downstream of the corrected Obj36 negative-inertia push bridge.
 
 ## 2026-06-16 - Trace context output defaults reduced sweep noise without moving frontiers
 

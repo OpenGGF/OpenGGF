@@ -342,6 +342,17 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Minimum remaining push-grace frames for the CPU sidekick riding bridge.
+     * <p>
+     * The default keeps the conservative shared threshold. Objects with ROM
+     * evidence that their {@code SolidObject} status byte stays visible longer
+     * to Tails' CPU slot may lower this value locally.
+     */
+    default int sidekickCpuPushGraceMinimumFramesWhileRiding(PlayableEntity player) {
+        return Integer.MAX_VALUE;
+    }
+
+    /**
      * Whether the right edge of the full solid X window is inclusive.
      * <p>
      * Most engine objects keep the established exclusive bound. S3K horizontal
