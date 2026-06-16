@@ -53,4 +53,14 @@ public class SpikeObjectInstance extends AbstractSpikeObjectInstance {
         return true;
     }
 
+    @Override
+    public boolean preservesSidekickCpuPushGraceWhileRiding(PlayableEntity player) {
+        // S2 Obj36 calls SolidObject/SolidObjectFull and keeps standing/pushing
+        // state in the object status byte. TailsCPU_Normal reads Tails'
+        // current Status_Push before the later solid-object pass can clear it
+        // (docs/s2disasm/s2.asm:39291-39294), so a CPU sidekick still riding
+        // live spikes may bridge the just-cleared engine push flag.
+        return player != null && player.isCpuControlled();
+    }
+
 }

@@ -12,11 +12,11 @@ branch-local measurements.
 |---|---|
 | Overall trace-suite state | Expected-red, not release-green |
 | Latest logged full-sweep aggregate | 90 `*TraceReplay` tests, 52 failures, 1 error |
-| Latest focused frontier | `TestS2HtzLevelSelectTraceReplay` advanced to f6114 leader `air` |
-| Current blocking field | Movement downstream of Tails CPU/status noise: earliest current table target is OOZ f1775 `tails_x_speed` after clearing HTZ landing CPU-interact and moving grounded push-bit diagnostics |
-| Current owner hypothesis | Status-only sidekick lifetime/marker/on-object/airborne-zero-x-speed facing mismatches, first-landing CPU mirror/interact refresh lag, held-only Ctrl2 diagnostic latches, stationary released push-bit tails, and grounded push-bit-only tails are trace-framework noise when kinematics and pressed edges match; current sweep has moved the active S2 Tails CPU/status cluster into movement frontiers |
+| Latest focused frontier | `TestS2OozLevelSelectTraceReplay` advanced to f1779 Tails `tails_x` |
+| Current blocking field | Movement downstream of Tails CPU: earliest current table target is OOZ f1779 Tails `tails_x`/`tails_x_speed` after preserving the ROM-visible S2 Obj36 riding push bypass at f1775 |
+| Current owner hypothesis | Status-only sidekick lifetime/marker/on-object/airborne-zero-x-speed facing mismatches, first-landing CPU mirror/interact refresh lag, held-only Ctrl2 diagnostic latches, stationary released push-bit tails, and grounded push-bit-only tails are trace-framework noise when kinematics and pressed edges match; current sweep has moved the active S2 Tails CPU/status cluster into movement frontiers, and OOZ now points at the next real post-bypass movement delta |
 | Current branch context in newest entries | `bugfix/ai-trace-frontier-develop` after cherry-picking the AIZ worker chain |
-| Last frontier move | S2 HTZ1 level-select `f4229 -> f6114` by keeping landing-frame CPU interact refresh lag and grounded push-bit-only diagnostics out of the release-blocking frontier |
+| Last frontier move | S2 OOZ1 level-select `f1775 -> f1779` by preserving the S2 Obj36 live-riding push grace that ROM TailsCPU_Normal still sees before the later solid-object pass |
 
 ### Active queue
 
@@ -36,9 +36,10 @@ branch-local measurements.
    grounded push-bit-only diagnostic. MCZ2 has advanced from f4482 to f4485,
    where movement now owns the first error.
 3. Continue the ordered cluster list at movement downstream of Tails CPU. The
-   earliest current table target is OOZ f1775 `tails_x_speed`; CNZ complete-run
-   f1846, MTZ3 f1973, CNZ1 f3906, CNZ2 f4418, MCZ2 f4485, and HTZ f6114 are
-   later movement/downstream frontiers.
+   earliest current table target is still OOZ, now f1779 `tails_x` /
+   `tails_x_speed` after the S2 Obj36 push-bypass fix; CNZ complete-run f1846,
+   MTZ3 f1973, CNZ1 f3906, CNZ2 f4418, MCZ2 f4485, and HTZ f6114 are later
+   movement/downstream frontiers.
 4. Known branch-local follow-up from the S2 ARZ2 work: ARZ2 advanced to `f523`
    missing Obj91 after the Obj15 child-slot fix, but that entry predates the
    newest AIZ-focused branch state. Reconfirm before treating it as the next
@@ -51,7 +52,7 @@ branch-local measurements.
 | `s3k_mgz1` / `TestS3kMgzTraceReplay` | `539` | rings | `10` | `11` | advanced from f312 | downstream ring/object collection |
 | `s2_mtz2` / `TestS2Mtz2LevelSelectTraceReplay` | `1265` | leader `g_speed` | `0x014B` | `0x047A` | advanced from f1075 | leader movement / ground-mode |
 | `s2_mtz3` / `TestS2Mtz3LevelSelectTraceReplay` | `1973` | Tails `tails_g_speed` | `0x0000` | `0x03C1` | true headline refined from same-frame status byte | Tails movement after CPU/status |
-| `s2_ooz1` / `TestS2OozLevelSelectTraceReplay` | `1775` | Tails `tails_x_speed` | `0x0018` | `-0080` | advanced from f1251 status-only diagnostics | movement downstream of Tails CPU |
+| `s2_ooz1` / `TestS2OozLevelSelectTraceReplay` | `1779` | Tails `tails_x` | `0x0CE4` | `0x0CE3` | advanced from f1775 S2 Obj36 riding push-bypass movement delta | movement downstream of Tails CPU |
 | `s2_cpz2` / `TestS2Cpz2LevelSelectTraceReplay` | `2888` | Tails `x` | `0x10F8` | `0x10F0` | advanced from f759 | movement downstream of Tails CPU |
 | `s2_cnz1` / `TestS2CnzLevelSelectTraceReplay` | `3906` | Tails `tails_y` | `0x06C0` | `0x06C1` | advanced from f3675/f3759/f3876 held-only Ctrl2 diagnostics | movement downstream of Tails CPU |
 | `s2_cnz2` / `TestS2Cnz2LevelSelectTraceReplay` | `4418` | Tails `tails_y` | `0x02F0` | `0x02F1` | advanced from f3691 stationary released push-bit diagnostic | movement downstream of Tails CPU |
@@ -103,6 +104,12 @@ grounded `Status_Push` bit while sidekick movement and state otherwise match;
 those diagnostics no longer own the frontier. HTZ now reports the leader
 object-riding release mismatch at `f6114`, and MCZ2 now reports Tails movement
 at `f4485`.
+At OOZ `f1775`, Tails is grounded on a live S2 Obj36 spike. ROM
+`TailsCPU_Normal` still sees the prior-frame `Status_Push` before the later
+solid-object pass clears it, so it bypasses FollowLeft/FollowRight and preserves
+the delayed Ctrl1 RIGHT sample. The engine had already cleared push before the
+CPU step and generated LEFT, flipping Tails to `-0080` x/ground speed. S2 Obj36
+now opts into an object-owned riding push grace, and OOZ advances to `f1779`.
 
 ### Stale-data warnings
 
@@ -129,6 +136,52 @@ at `f4485`.
   cleanup. Do not delete historical evidence only because it is stale.
 
 ## Evidence Ledger
+
+## 2026-06-16 - S2 OOZ Obj36 riding push grace advances the Tails movement frontier
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, first fix in the
+  movement-downstream-of-Tails-CPU cluster after the trace-framework noise
+  reductions. The focused trace was `TestS2OozLevelSelectTraceReplay`, whose
+  previous true frontier was f1775 `tails_x_speed` (`0x0018` vs `-0080`).
+- Single-frame bisect result: at OOZ f1775, Tails is grounded, non-rolling, and
+  still riding live S2 Obj36 spikes. ROM `TailsCPU_Normal` tests Tails'
+  current `Status_Push` before the later solid-object pass can clear it and,
+  because the delayed leader status is not pushing, branches around
+  FollowLeft/FollowRight while preserving the delayed Ctrl1 RIGHT sample
+  (docs/s2disasm/s2.asm:39291-39294). The engine had already cleared the push
+  bit before the CPU step, generated LEFT follow steering, and post-physics
+  flipped Tails to `-0080` x/ground speed.
+- Fix: keep S2's global `sidekickPushBypassUsesGraceStatus` flag false and add
+  an object-owned `SolidObjectProvider` hook for the narrow ROM helper shape.
+  S2 Obj36 spikes opt in with the disassembly citation; the sidekick controller
+  consumes that hook only for a live, grounded, non-rolling CPU sidekick still
+  riding the object with recent push grace. This avoids the earlier broad S2
+  prototype that regressed CNZ1 to f202 and HTZ1 to f5685.
+- Focused validation:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestSidekickCpuControllerLevelStart" "-DfailIfNoTests=false" test`
+  passed 8/0. Focused OOZ replay remains expected-red but advances from
+  **f1775** `tails_x_speed` to **f1779** `tails_x`, with 8 frontier-only
+  errors. Focused CNZ1 replay holds at **f3906** and focused HTZ1 replay holds
+  at **f6114**, confirming the broad-prototype regressions are gone.
+- Full sweep command: `mvn "-Dsurefire.argLine=${test.cds.argLine}
+  ${mockito.agent.argLine} -Xmx3g" "-Dsurefire.forkCount=1"
+  "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen"
+  "-Dsonic1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen"
+  "-Dsonic2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen"
+  "-Dsonic3k.rom.path=s3k.gen" test`.
+- Full sweep result: expected-red, **90 trace tests, 52 trace failures, 1 trace
+  error**. OOZ advanced **f1775 -> f1779**. CNZ1 held at **f3906**, CNZ2 held
+  at **f4418**, HTZ held at **f6114**, MCZ2 held at **f4485**, MTZ3 held at
+  **f1973**, CNZ complete-run held at **f1846**, AIZ held at **f19089**, HCZ
+  held at **f1489**, ICZ held at **f3116**, LBZ held at **f1694**, MGZ
+  complete-run held at **f738**, and MHZ held at **f966**. The MSE summary also
+  reports pre-existing non-trace guard ratchets
+  (`TestArchitecturalSourceGuard` and `TestObjectPhysicsStandardizationGuard`)
+  because the Maven selector still lets those tests into the run; this fix did
+  not touch the reported production object/GameLoop/ObjectManager files.
+- Classification: OOZ movement frontier **advanced** without first-error
+  regressions in the checked suite. The next ordered target remains OOZ, now
+  f1779 Tails movement downstream of the corrected push-bypass frame.
 
 ## 2026-06-16 - Trace frontier noise: HTZ landing interact and grounded push-bit diagnostics no longer own frontiers
 

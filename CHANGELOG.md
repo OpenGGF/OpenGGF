@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 OOZ spike riding preserves ROM-visible Tails push timing:** CPU Tails
+  now keeps the delayed follow input when still riding live S2 Obj36 spikes
+  through the frame where ROM `TailsCPU_Normal` reads `Status_Push` before the
+  later solid-object pass clears it. This advances OOZ1 level-select from frame
+  1775 to frame 1779; the full trace sweep remains expected-red at 90 trace
+  tests, 52 trace failures, and 1 existing trace error.
+
 - **Trace context reports default to frontier-frame diagnostics:** trace replay
   context files still include the requested frame table, but ROM/engine
   diagnostic blocks now render only for the frontier frame by default to keep
