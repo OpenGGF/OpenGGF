@@ -345,6 +345,7 @@ public class CollisionSystem {
                 if (shouldSetGroundWallPush(sprite, mode)) {
                     sprite.setPushing(true);
                     sprite.markGroundWallPushSetThisFrame();
+                    sprite.markPushFromGroundWallCollision();
                 }
             }
             case 0x80 -> sprite.setYSpeed((short) (sprite.getYSpeed() - velocityAdjustment));
@@ -354,6 +355,7 @@ public class CollisionSystem {
                 if (shouldSetGroundWallPush(sprite, mode)) {
                     sprite.setPushing(true);
                     sprite.markGroundWallPushSetThisFrame();
+                    sprite.markPushFromGroundWallCollision();
                 }
             }
             default -> {

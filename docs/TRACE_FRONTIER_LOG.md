@@ -1,5 +1,52 @@
 # Trace Frontier Log
 
+## 2026-06-16 - S3K AIZ f14299 -> f14301 via terrain-wall push provenance at AIZ2 underwater bounce
+
+- Scope: focused S3K AIZ trace remediation on `TestS3kAizTraceReplay`
+  (`aiz1_to_hcz_fullrun`, report key `s3k_aiz1`) in worktree
+  `.worktrees/rewind-dynobj`, branch `bugfix/ai-rewind-dynobj-membership`.
+  Trace data stayed comparison-only diagnostic input; the fix models the live
+  ROM `Status_Push` read at `Tails_CPU_Control` loc_13DD0 and adds no
+  zone/route/frame carve-out.
+- Command: `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" test "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen"`.
+- First divergence (baseline): f14299, `tails_cpu_ctrl2_held` ROM=0x0008 (RIGHT)
+  engine=0x0004 (LEFT). CPU Tails is pinned against a LEFT wall UNDERWATER at
+  whole-pixel x=0x31CA (AIZ2 reload, ap=1), grounded, bouncing in sub-pixel.
+- Root cause (verified by instrumentation): on the wall-rebound frames the
+  engine entered `SidekickCpuController.updateNormal` with the genuine ROM push
+  bit set (entryPush=true, status 0x61, matching ROM loc_13DD0), but the
+  pre-CPU released-underwater consumed-clear (lines 1621-1625, added by commit
+  56644e0fd for the AIZ2-reload stale released-object push) wrongly discarded
+  it because the stale interact slot (a destroyed MonitorContents) kept
+  `releasedUnderwaterPushConsumed` latched. With push cleared, the loc_13DD0
+  bypass (sonic3k.asm:26702-26705) did not fire, follow-steering ran, and the
+  follow direction toward the delayed leader produced LEFT instead of ROM's
+  delayed-Ctrl RIGHT. ROM sets that push via terrain ground-wall collision
+  (`Tails_DoLevelCollision` loc_14C00 bset Status_Push, sonic3k.asm:28012-28017)
+  and reads it live at loc_13DD0; ROM has no equivalent pre-clear.
+- Fix (3 files, ROM-cited): add a transient (`@RewindTransient`) push-provenance
+  flag on `AbstractPlayableSprite` (`pushFromGroundWallCollision`), set it in
+  `CollisionSystem.applyGroundWallVelocityResponse` when a terrain ground-wall
+  collision raises `Status_Push`, clear it whenever push is cleared, and gate
+  the `SidekickCpuController` released-underwater pre-clear on
+  `!isPushFromGroundWallCollision()`. A genuine terrain wall push now survives
+  to the loc_13DD0 read (bypass -> delayed RIGHT); a stale released-object push
+  (no terrain provenance) is still pre-cleared, so the original
+  `TestSidekickCpuFollowParity` released-slot guard stays green.
+- Result: `TestS3kAizTraceReplay` first error **f14299 -> f14301**
+  (`tails_status_byte` ROM=0x41 engine=0x61: a separate, deeper underwater
+  wall-sensor penetration-frequency issue where the engine registers a wall hit
+  on the small-rebound frame that ROM does not); errors 723 -> 527. The
+  underwater bounce velocity phase now matches ROM exactly
+  (00F4,0006,FF80,007A,FFFA cycle). No regression: S3K AizCompleteRun f1095,
+  HczCompleteRun f1402, IczCompleteRun f3116, MhzCompleteRun f966 bit-identical
+  to baseline; Cnz f39672 / Mgz f33271 are pre-existing BK2 input-alignment
+  failures (not physics). S2 sweep A/B identical (7 classes, all first-error
+  frames unchanged). Must-keep-green S3K + `TestObjectServicesMigrationGuard`
+  pass; `TestSidekickCpuFollowParity` 6->5 (the 1 transient regression from an
+  earlier velocity-only discriminator was eliminated by the provenance flag;
+  the remaining 5 are pre-existing, A/B verified).
+
 ## 2026-06-16 - S2 ARZ2 object-near reporting exposes the true frontier
 
 - Scope: exact `0x100` speed-delta cluster triage for

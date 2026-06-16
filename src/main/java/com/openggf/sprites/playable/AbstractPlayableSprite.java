@@ -260,6 +260,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected int deferredGroundWallVelocityDistance = 0;
         protected transient boolean groundWallPushSetThisFrame = false;
 
+        /** True when the live {@code Status_Push} bit was set this cycle by a terrain
+         * ground-wall collision (sonic3k.asm:28012-28017 bset Status_Push), not by a
+         * released solid-object contact; lets the CPU sidekick keep a genuine ROM
+         * terrain push live for the loc_13DD0 read. Transient (recomputed per frame). */
+        @RewindTransient(reason = "ground-wall push provenance is recomputed from terrain collision each frame")
+        protected boolean pushFromGroundWallCollision = false;
+
         /**
          * Whether this sprite is currently jumping (ROM: jumping(a0) status bit).
          * Distinct from 'air' - you can be airborne without having jumped
@@ -2166,6 +2173,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.pushing = pushing;
                 if (!pushing) {
                         groundWallPushSetThisFrame = false;
+                        pushFromGroundWallCollision = false;
                 }
         }
 
@@ -2177,6 +2185,16 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 boolean result = groundWallPushSetThisFrame;
                 groundWallPushSetThisFrame = false;
                 return result;
+        }
+
+        /** Marks the live push bit as set this cycle by a terrain ground-wall collision. */
+        public void markPushFromGroundWallCollision() {
+                this.pushFromGroundWallCollision = true;
+        }
+
+        /** @return true when the live push bit came from a terrain ground-wall collision. */
+        public boolean isPushFromGroundWallCollision() {
+                return pushFromGroundWallCollision;
         }
 
         public boolean getSkidding() {

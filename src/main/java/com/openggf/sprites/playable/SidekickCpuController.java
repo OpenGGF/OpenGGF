@@ -1618,9 +1618,23 @@ public class SidekickCpuController {
         boolean currentPushing = sidekick.getPushing();
         boolean releasedUnderwaterObjectSlot = isReleasedUnderwaterObjectSlotState();
         boolean releasedUnderwaterZeroSpeedPush = isReleasedUnderwaterZeroSpeedPushState();
+        // The released-underwater consumed-clear discards a push bit that the
+        // engine treats as stale residue from a released solid-object contact
+        // whose interact slot is still latched (AIZ2 reload water rebound). It
+        // must NOT discard a push bit that was freshly re-set this cycle by a
+        // genuine ROM terrain ground-wall collision (Tails_DoLevelCollision
+        // loc_14C00/loc_14BCA bset Status_Push, sonic3k.asm:27997-28017). ROM
+        // has no such pre-CPU clear: loc_13DD0 reads the live Status_Push, and
+        // when a wall rebound re-set it ROM still branches around FollowLeft/
+        // FollowRight to preserve the delayed Ctrl_2 word (sonic3k.asm:26702-
+        // 26705). A push carrying terrain ground-wall provenance is genuine and
+        // must survive to the loc_13DD0 read (AIZ2 reload underwater wall bounce,
+        // trace F14299); only a stale released-object push (no terrain
+        // provenance) is pre-cleared here.
         if (currentPushing
                 && releasedUnderwaterPushConsumed
-                && releasedUnderwaterZeroSpeedPush) {
+                && releasedUnderwaterZeroSpeedPush
+                && !sidekick.isPushFromGroundWallCollision()) {
             sidekick.setPushing(false);
             currentPushing = false;
         } else if (!releasedUnderwaterObjectSlot) {

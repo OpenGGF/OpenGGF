@@ -88,6 +88,20 @@ All notable changes to the OpenGGF project are documented in this file.
   (`usesInclusiveRightEdge`, ROM `SolidObject_cont` `bhi`, `sonic3k.asm:41403-41406,41494-41500`).
   Each was full-`*TraceReplay`-A/B-validated with no S1/S2/S3K regression.
 
+- **CPU sidekick keeps a genuine terrain wall push for the ROM `loc_13DD0`
+  read (AIZ2 underwater wall bounce):** the engine's released-underwater
+  pre-CPU push-clear was discarding a `Status_Push` bit that a terrain
+  ground-wall collision had freshly re-set, so the CPU follow-steering picked
+  the wrong direction (`tails_cpu_ctrl2_held` LEFT vs ROM RIGHT). ROM has no such
+  pre-clear - `loc_13DD0` reads the live `Status_Push` and branches around
+  FollowLeft/FollowRight to keep the delayed Ctrl_2 word (`sonic3k.asm:26702-26705`),
+  and a wall rebound sets push via `Tails_DoLevelCollision loc_14C00`
+  (`sonic3k.asm:27997-28017`). Added a terrain-push provenance flag
+  (`pushFromGroundWallCollision`, `@RewindTransient`) so only a stale
+  released-object push is pre-cleared. Advances the S3K AIZ1 trace frontier from
+  frame 14299 to 14301 (errors 723 -> 527; the underwater-bounce velocity phase
+  now matches ROM); full `*TraceReplay` A/B sweep zero S1/S2/S3K regression.
+
 - **S3K complete-run traces restore startup objects for native setup preludes:**
   complete-run replay now restores the S3K event-owned startup objects that the
   native setup prelude expects after object reset. ICZ restores the snowboard
