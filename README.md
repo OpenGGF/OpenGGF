@@ -201,14 +201,16 @@ Various agents (Claude, Codex, and Gemini, in various models, versions and forms
 the commit history doesn't hide it; you'll see `Co-Authored-By` tags throughout. But the project
 has been in development since 2013, long before AI coding assistants existed.
 
-The core engine framework, architecture, rendering pipeline, physics engine, and collision system
-were designed and coded by hand. The multi-game provider architecture, the GPU shader pipeline, the
-SMPS audio driver, and the original physics rewrite are all human-authored. AI was brought in
-for bulk analysis and research, to accelerate bulk object and boss implementation, debugging, validation, and
-unit tests; all under direct architectural oversight, with accuracy verified against the original
-ROM disassemblies. Every commit is reviewed, tested, and corrected where needed.
+The pre-AI core — the engine framework and architecture, the rendering pipeline, the physics
+engine and its subpixel movement model, and the sensor-based collision system — was designed and
+coded by hand over years, long before any agent touched the repo. Other subsystems were built
+with heavy AI assistance under direct human oversight; the SMPS audio engine, in particular, was
+AI-built and steered against reference implementations rather than hand-written. AI was brought in for bulk analysis and research, to accelerate
+object and boss implementation, debugging, validation, and unit tests; all with accuracy verified
+against the original ROM disassemblies. Every commit is reviewed, tested, and corrected where
+needed.
 
-You can't prompt your way to ROM accuracy (yet!). But we certainly prompted our way through object
+[You can't prompt your way to ROM accuracy (yet!)](docs/AI_JOURNEY.md). But we certainly prompted our way through object
 implementations, research and boilerplate code a lot faster than would have been possible by hand.
 
 ### How can I contribute?
