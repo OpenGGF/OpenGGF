@@ -12,25 +12,25 @@ branch-local measurements.
 |---|---|
 | Overall trace-suite state | Expected-red, not release-green |
 | Latest logged full-sweep aggregate | 90 `*TraceReplay` tests, 53 failures, 1 error |
-| Latest focused frontier | `TestS2OozLevelSelectTraceReplay` advanced to frame `1775` |
-| Current blocking field | OOZ Tails `tails_x_speed` mismatch (`0x0018` vs `-0080`) after clearing status-only hurt/on-object diagnostics |
-| Current owner hypothesis | Status-only sidekick hurt/landing lifetime mismatches are trace-framework noise when kinematics match; continue active Tails CPU/status frontiers before movement-only/downstream frontiers |
+| Latest focused frontier | `TestS3kHczCompleteRunTraceReplay` advanced to frame `1489` |
+| Current blocking field | HCZ leader `y` mismatch (`0x0776` vs `0x0775`) after clearing inactive sidekick marker facing diagnostics |
+| Current owner hypothesis | Status-only sidekick lifetime/marker mismatches are trace-framework noise when kinematics match; continue active Tails CPU/status frontiers before movement-only/downstream frontiers |
 | Current branch context in newest entries | `bugfix/ai-trace-frontier-develop` after cherry-picking the AIZ worker chain |
-| Last frontier move | S2 OOZ level-select `f1251 -> f1775` by keeping status-only hurt/on-object diagnostics out of the release-blocking frontier |
+| Last frontier move | S3K HCZ complete-run `f1402 -> f1489` by keeping inactive marker facing-only diagnostics out of the release-blocking frontier |
 
 ### Active queue
 
 1. Continue the ordered Tails CPU/status cluster. The newest full sweep is
-   expected-red at 90 tests / 53 failures / 1 error; OOZ moved out of the
-   status-only cluster into a movement frontier at f1775.
-2. The latest sweep's current focused OOZ frontier is
-   `TestS2OozLevelSelectTraceReplay` f1775 (`tails_x_speed`, `0x0018`
-   vs `-0080`). MTZ3 still starts at f1973, but the true headline is now
-   `tails_g_speed` (`0x0000` vs `0x03C1`) rather than the same-frame
-   `tails_status_byte` diagnostic.
-3. Keep active Tails CPU/status frontiers such as HCZ f1402, MCZ2 f2411,
-   CNZ2 f2919, ARZ f3172, and HTZ f4229 in the cluster queue. Movement-only
-   frontiers such as OOZ f1775, CPZ1 f1157, and CNZ complete-run f1846 should
+   expected-red at 90 tests / 53 failures / 1 error; HCZ moved out of the
+   inactive-marker status cluster into a movement frontier at f1489.
+2. The latest sweep's current focused HCZ frontier is
+   `TestS3kHczCompleteRunTraceReplay` f1489 (`y`, `0x0776` vs `0x0775`).
+   OOZ remains a movement frontier at f1775 (`tails_x_speed`, `0x0018`
+   vs `-0080`), and MTZ3 remains a movement frontier at f1973
+   (`tails_g_speed`, `0x0000` vs `0x03C1`).
+3. Keep active Tails CPU/status frontiers such as MCZ2 f2411, CNZ2 f2919,
+   ARZ f3172, and HTZ f4229 in the cluster queue. Movement-only frontiers
+   such as HCZ f1489, OOZ f1775, CPZ1 f1157, and CNZ complete-run f1846 should
    wait until the CPU/status cluster is exhausted.
 4. Known branch-local follow-up from the S2 ARZ2 work: ARZ2 advanced to `f523`
    missing Obj91 after the Obj15 child-slot fix, but that entry predates the
@@ -48,6 +48,7 @@ branch-local measurements.
 | `s2_cpz2` / `TestS2Cpz2LevelSelectTraceReplay` | `2888` | Tails `x` | `0x10F8` | `0x10F0` | advanced from f759 | movement downstream of Tails CPU |
 | `s2_arz1` / `TestS2ArzLevelSelectTraceReplay` | `3172` | Tails `tails_cpu_interact` | `0x0000` | `0x0024` | advanced from f2011 | active Tails CPU/interact |
 | `s2_htz1` / `TestS2HtzLevelSelectTraceReplay` | `4229` | Tails `tails_cpu_interact` | `0x0036` | `0x0014` | advanced from f3733 | active Tails CPU/interact |
+| `s3k_hcz1` / `TestS3kHczCompleteRunTraceReplay` | `1489` | leader `y` | `0x0776` | `0x0775` | advanced from f1402 inactive marker status | leader movement / camera follow |
 | `s3k_icz1` / `TestS3kIczCompleteRunTraceReplay` | `3116` | `status_byte` | `0x0008` | `0x0009` | advanced from f1116 | movement/status downstream |
 | `s3k_cnz1` / `TestS3kCnzCompleteRunTraceReplay` | `1846` | Tails `tails_x_speed` | `0x0024` | `-1000` | advanced from f1467 | movement downstream of Tails CPU |
 | `s3k_aiz1` / `TestS3kAizTraceReplay` | `19089` | leader `g_speed` | `-00B0` | `0x00B0` | held | leader movement near AIZ2 end-boss approach |
@@ -60,6 +61,10 @@ same-frame movement fields now own the summary headline. Active on-object
 CPU-interact mismatches remain strict and still appear later in ARZ/HTZ. AIZ
 still holds at `f19089`, after the trace passes the AIZ2 battleship bombing run
 and wrap into the end-boss arena approach.
+At HCZ `f1402`, the sidekick is parked at the inactive catch-up/despawn marker
+with matching position, subpixel, speeds, routine, and CPU fields; only the
+facing bit differs for the hidden marker window. That diagnostic no longer owns
+the frontier, and HCZ now reports the later leader movement mismatch at `f1489`.
 
 ### Stale-data warnings
 
@@ -86,6 +91,48 @@ and wrap into the end-boss arena approach.
   cleanup. Do not delete historical evidence only because it is stale.
 
 ## Evidence Ledger
+
+## 2026-06-16 - Trace frontier noise: inactive marker facing no longer owns HCZ
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, continuing trace
+  framework noise reduction in the ordered Tails CPU/status cluster. The
+  focused trace was `TestS3kHczCompleteRunTraceReplay`, whose previous reported
+  frontier was f1402 `tails_status_byte` (`0x0002` vs `0x0003`).
+- Single-frame bisect result: at f1402, the sidekick is in routine 2, airborne,
+  parked at the inactive `(0,0)` marker with zero x/y/ground speed and matching
+  subpixels. The sidekick CPU diagnostic has already written the S3K
+  catch-up/despawn marker state (`object_control=$81`, routine 2, status
+  `Status_InAir`) and all compared CPU fields match; only the live sprite
+  facing bit differs in the comparator snapshot.
+- Disassembly evidence: S3K `sub_13ECA` writes the catch-up marker by setting
+  `Tails_CPU_routine=2`, `object_control=$81`, `status=Status_InAir`, and
+  parking Tails at the marker. The later routine-8 stuck-respawn path is the
+  special case that runs `loc_13F40`'s facing block after the marker write
+  (`docs/skdisasm/sonic3k.asm:26800-26809,26861-26865`). HCZ f1402 is the
+  inactive marker window, not an active movement/control divergence.
+- Fix: `TraceBinder` now ignores the facing-bit-only status mismatch only when
+  both sidekick snapshots are routine 2, airborne, parked at `(0,0)`, zero-speed,
+  matching subpixel/angle states. Any motion delta, active position, routine
+  mismatch, or other status-bit delta remains strict.
+- Focused validation:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestTraceBinder#testInactiveSidekickDespawnMarkerFacingOnlyStatusMismatchIsIgnored+testInactiveSidekickDespawnMarkerFacingMismatchStillReportsWithMotionDelta+testSidekickStatusByteMismatchIsReported" "-DfailIfNoTests=false" test`
+  passed (3 tests). Focused
+  `TestS3kHczCompleteRunTraceReplay` remains expected-red but advances from
+  **f1402** `tails_status_byte` (`0x0002` vs `0x0003`) to **f1489** `y`
+  (`0x0776` vs `0x0775`), with total errors `4247 -> 4246`.
+- Full sweep command: `mvn '-Dsurefire.argLine=${test.cds.argLine}
+  ${mockito.agent.argLine} -Xmx3g' "-Dsurefire.forkCount=1"
+  "-Dtest=*TraceReplay" "-DfailIfNoTests=false" test`.
+- Full sweep result: expected-red, **90 tests, 53 failures, 1 error**. HCZ
+  advanced **f1402 -> f1489**; AIZ held at **f19089**; OOZ held at **f1775**;
+  MTZ3 held at **f1973**; active CPU/status frontiers still include MCZ2
+  **f2411**, CNZ2 **f2919**, ARZ **f3172**, and HTZ **f4229**. The MSE summary
+  also reports pre-existing non-trace guard ratchets (`TestArchitecturalSourceGuard`
+  and `TestObjectPhysicsStandardizationGuard`) because the Maven selector still
+  allows those tests into the run; this trace-framework change did not touch the
+  reported production object/GameLoop/ObjectManager files.
+- Classification: inactive marker status-byte noise **cleared/advanced** into a
+  true movement frontier without hiding active CPU/status mismatches.
 
 ## 2026-06-16 - Trace frontier noise: status-only sidekick diagnostics no longer own movement frontiers
 

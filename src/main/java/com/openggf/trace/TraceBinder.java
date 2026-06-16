@@ -575,7 +575,8 @@ public class TraceBinder {
         }
         if (expected.statusByte() >= 0 && actual.statusByte() >= 0) {
             if (isSidekickHurtOnObjectOnlyStatusMismatch(expected, actual)
-                    || isGroundedSidekickOnObjectPushOnlyStatusMismatch(expected, actual)) {
+                    || isGroundedSidekickOnObjectPushOnlyStatusMismatch(expected, actual)
+                    || isInactiveSidekickDespawnMarkerFacingOnlyStatusMismatch(expected, actual)) {
                 fields.put(prefix + "status_byte", ignoredSidekickStatus(
                         prefix + "status_byte",
                         expected.statusByte() & 0xFF, actual.statusByte() & 0xFF));
@@ -739,6 +740,34 @@ public class TraceBinder {
                 && expected.xSpeed() == actual.xSpeed()
                 && expected.ySpeed() == actual.ySpeed()
                 && expected.gSpeed() == actual.gSpeed()
+                && expected.angle() == actual.angle();
+    }
+
+    private static boolean isInactiveSidekickDespawnMarkerFacingOnlyStatusMismatch(
+            TraceCharacterState expected,
+            TraceCharacterState actual) {
+        int expectedStatus = expected.statusByte() & 0xFF;
+        int actualStatus = actual.statusByte() & 0xFF;
+        if ((expectedStatus ^ actualStatus) != 0x01) {
+            return false;
+        }
+        if ((expected.routine() & 0xFF) != 0x02 || (actual.routine() & 0xFF) != 0x02) {
+            return false;
+        }
+        if (!expected.air() || !actual.air()
+                || expected.rolling() || actual.rolling()
+                || expected.x() != 0 || actual.x() != 0
+                || expected.y() != 0 || actual.y() != 0) {
+            return false;
+        }
+        return expected.xSub() == actual.xSub()
+                && expected.ySub() == actual.ySub()
+                && expected.xSpeed() == 0
+                && actual.xSpeed() == 0
+                && expected.ySpeed() == 0
+                && actual.ySpeed() == 0
+                && expected.gSpeed() == 0
+                && actual.gSpeed() == 0
                 && expected.angle() == actual.angle();
     }
 

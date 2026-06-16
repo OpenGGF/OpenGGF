@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Trace replay ignores inactive sidekick marker facing noise:** S3K
+  catch-up/despawn marker frames no longer report a Tails status-byte frontier
+  when the only delta is the facing bit while the sidekick is parked at the
+  inactive marker with matching kinematics. This advances HCZ complete-run from
+  frame 1402 to frame 1489; the full trace sweep remains expected-red at 90
+  tests, 53 failures, and 1 existing error.
+
 - **Trace replay reports movement before same-frame status noise:** sidekick
   status-byte diagnostics no longer own the release-blocking frontier when S2
   Tails is in hurt/on-object status-bit lifetime states with matching
