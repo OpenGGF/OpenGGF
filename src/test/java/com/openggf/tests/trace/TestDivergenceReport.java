@@ -174,6 +174,40 @@ public class TestDivergenceReport {
     }
 
     @Test
+    void contextWindowDefaultsToDivergentFieldsOnly() {
+        FrameComparison frame = makeMixedComparison(5);
+        DivergenceReport report = new DivergenceReport(List.of(frame));
+
+        String previous = System.clearProperty("trace.context.fields");
+        try {
+            String context = report.getContextWindow(5, 0);
+
+            assertTrue(context.contains("Exp air"));
+            assertFalse(context.contains("Exp x"));
+            assertFalse(context.contains("Act x"));
+        } finally {
+            restoreProperty("trace.context.fields", previous);
+        }
+    }
+
+    @Test
+    void contextWindowCanRenderAllComparedFieldsWhenRequested() {
+        FrameComparison frame = makeMixedComparison(5);
+        DivergenceReport report = new DivergenceReport(List.of(frame));
+
+        String previous = System.setProperty("trace.context.fields", "all");
+        try {
+            String context = report.getContextWindow(5, 0);
+
+            assertTrue(context.contains("Exp air"));
+            assertTrue(context.contains("Exp x"));
+            assertTrue(context.contains("Act x"));
+        } finally {
+            restoreProperty("trace.context.fields", previous);
+        }
+    }
+
+    @Test
     void contextWindowDefaultsToFrontierFrameDiagnosticsOnly() {
         FrameComparison f4 = makeComparisonWithDiagnostics(4, "x_speed",
             Severity.ERROR, "0x0100", "0x0200",
@@ -248,6 +282,44 @@ public class TestDivergenceReport {
             assertEquals(0, countOccurrences(context, "       ENG: "));
         } finally {
             restoreProperty("trace.context.diagnostics", previous);
+        }
+    }
+
+    @Test
+    void contextWindowTruncatesLongFrameDiagnosticsByDefault() {
+        String longDiagnostic = "a".repeat(950) + "tail";
+        FrameComparison frame = makeComparisonWithDiagnostics(5, "x_speed",
+            Severity.ERROR, "0x0100", "0x0200",
+            longDiagnostic, longDiagnostic);
+        DivergenceReport report = new DivergenceReport(List.of(frame));
+
+        String previous = System.clearProperty("trace.context.diagnosticChars");
+        try {
+            String context = report.getContextWindow(5, 0);
+
+            assertTrue(context.contains("[truncated "));
+            assertFalse(context.contains("tail"));
+        } finally {
+            restoreProperty("trace.context.diagnosticChars", previous);
+        }
+    }
+
+    @Test
+    void contextWindowCanRenderFullFrameDiagnosticsWhenRequested() {
+        String longDiagnostic = "a".repeat(950) + "tail";
+        FrameComparison frame = makeComparisonWithDiagnostics(5, "x_speed",
+            Severity.ERROR, "0x0100", "0x0200",
+            longDiagnostic, longDiagnostic);
+        DivergenceReport report = new DivergenceReport(List.of(frame));
+
+        String previous = System.setProperty("trace.context.diagnosticChars", "full");
+        try {
+            String context = report.getContextWindow(5, 0);
+
+            assertFalse(context.contains("[truncated "));
+            assertTrue(context.contains("tail"));
+        } finally {
+            restoreProperty("trace.context.diagnosticChars", previous);
         }
     }
 
@@ -447,6 +519,13 @@ public class TestDivergenceReport {
         fields.put("x", new FieldComparison("x", xHex, xHex, Severity.MATCH, 0));
         fields.put("y", new FieldComparison("y", yHex, yHex, Severity.MATCH, 0));
         fields.put("air", new FieldComparison("air", "0", "0", Severity.MATCH, 0));
+        return new FrameComparison(frame, fields);
+    }
+
+    private FrameComparison makeMixedComparison(int frame) {
+        Map<String, FieldComparison> fields = new LinkedHashMap<>();
+        fields.put("x", new FieldComparison("x", "0x0100", "0x0100", Severity.MATCH, 0));
+        fields.put("air", new FieldComparison("air", "0", "1", Severity.ERROR, 1));
         return new FrameComparison(frame, fields);
     }
 

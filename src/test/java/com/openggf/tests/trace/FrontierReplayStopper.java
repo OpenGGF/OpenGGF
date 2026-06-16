@@ -13,7 +13,7 @@ final class FrontierReplayStopper {
     }
 
     static FrontierReplayStopper fromSystemProperties() {
-        int contextRadius = Integer.getInteger("trace.context.radius", 20);
+        int contextRadius = TraceReplayConsole.contextRadius();
         return Boolean.getBoolean("trace.frontierOnly")
                 ? enabled(contextRadius)
                 : disabled(contextRadius);

@@ -300,10 +300,25 @@ public class DivergenceReport {
         sb.append(String.format("%-6s", "Frame"));
 
         Set<String> fieldNames = new LinkedHashSet<>();
+        boolean allFields = shouldRenderAllContextFields();
         for (int i = start; i <= end; i++) {
             if (i < allComparisons.size()) {
                 FrameComparison fc = allComparisons.get(i);
-                fieldNames.addAll(fc.fields().keySet());
+                if (allFields) {
+                    fieldNames.addAll(fc.fields().keySet());
+                } else {
+                    fc.fields().entrySet().stream()
+                            .filter(entry -> entry.getValue().isDivergent())
+                            .map(Map.Entry::getKey)
+                            .forEach(fieldNames::add);
+                }
+            }
+        }
+        if (fieldNames.isEmpty()) {
+            for (int i = start; i <= end; i++) {
+                if (i < allComparisons.size()) {
+                    fieldNames.addAll(allComparisons.get(i).fields().keySet());
+                }
             }
         }
 
@@ -332,8 +347,8 @@ public class DivergenceReport {
                 String romDiag = fc.romDiagnostics();
                 String engDiag = fc.engineDiagnostics();
                 if (!romDiag.isEmpty() || !engDiag.isEmpty()) {
-                    sb.append("\n       ROM: ").append(romDiag.isEmpty() ? "-" : romDiag);
-                    sb.append("\n       ENG: ").append(engDiag.isEmpty() ? "-" : engDiag);
+                    sb.append("\n       ROM: ").append(formatContextDiagnostics(romDiag));
+                    sb.append("\n       ENG: ").append(formatContextDiagnostics(engDiag));
                 }
             }
             sb.append("\n");
@@ -353,6 +368,45 @@ public class DivergenceReport {
             case "none", "off", "false" -> false;
             default -> comparison.frame() == centreFrame;
         };
+    }
+
+    private boolean shouldRenderAllContextFields() {
+        String mode = System.getProperty("trace.context.fields", "divergent")
+                .trim()
+                .toLowerCase(Locale.ROOT);
+        return switch (mode) {
+            case "all", "full", "compared" -> true;
+            default -> false;
+        };
+    }
+
+    private String formatContextDiagnostics(String diagnostics) {
+        if (diagnostics == null || diagnostics.isEmpty()) {
+            return "-";
+        }
+        int maxChars = contextDiagnosticMaxChars();
+        if (maxChars < 0 || diagnostics.length() <= maxChars) {
+            return diagnostics;
+        }
+        int visibleChars = Math.max(0, maxChars);
+        return diagnostics.substring(0, visibleChars)
+                + "... [truncated "
+                + (diagnostics.length() - visibleChars)
+                + " chars; set -Dtrace.context.diagnosticChars=full]";
+    }
+
+    private int contextDiagnosticMaxChars() {
+        String value = System.getProperty("trace.context.diagnosticChars", "900")
+                .trim()
+                .toLowerCase(Locale.ROOT);
+        if (value.equals("full") || value.equals("all") || value.equals("unlimited")) {
+            return -1;
+        }
+        try {
+            return Math.max(0, Integer.parseInt(value));
+        } catch (NumberFormatException e) {
+            return 900;
+        }
     }
 
     private int comparisonIndexForFrame(int frame) {

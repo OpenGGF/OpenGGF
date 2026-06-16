@@ -3,6 +3,7 @@ package com.openggf.tests.trace;
 import com.openggf.trace.DivergenceReport;
 
 final class TraceReplayConsole {
+    private static final int DEFAULT_CONTEXT_RADIUS = 6;
     private static final boolean PRINT_SUMMARY =
             Boolean.getBoolean("trace.print.summary");
     private static final boolean PRINT_BOOTSTRAP =
@@ -19,6 +20,10 @@ final class TraceReplayConsole {
 
     static boolean shouldPrintContext() {
         return PRINT_CONTEXT;
+    }
+
+    static int contextRadius() {
+        return Integer.getInteger("trace.context.radius", DEFAULT_CONTEXT_RADIUS);
     }
 
     static void printSummary(DivergenceReport report) {

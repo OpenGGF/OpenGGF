@@ -327,7 +327,8 @@ public abstract class AbstractTraceReplayTest {
             // 9. Assert no errors
             if (report.hasErrors() && TraceReplayConsole.shouldPrintContext()) {
                 System.err.println("\n=== Context window around first error ===");
-                System.err.println(report.getContextWindow(firstReportErrorFrame(report), 10));
+                System.err.println(report.getContextWindow(
+                        firstReportErrorFrame(report), TraceReplayConsole.contextRadius()));
             }
             assertReportHasNoReleaseBlockingDivergences(report);
         } finally {
@@ -1234,9 +1235,9 @@ public abstract class AbstractTraceReplayTest {
 
             if (report.hasErrors()) {
                 Path contextPath = outDir.resolve(prefix + "_context.txt");
-                int contextRadius = Integer.getInteger("trace.context.radius", 20);
                 Files.writeString(contextPath,
-                    report.getContextWindow(firstReportErrorFrame(report), contextRadius));
+                    report.getContextWindow(
+                            firstReportErrorFrame(report), TraceReplayConsole.contextRadius()));
             }
         } catch (IOException e) {
             System.err.println("Warning: failed to write report: " + e.getMessage());

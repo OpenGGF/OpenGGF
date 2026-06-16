@@ -15,15 +15,18 @@ branch-local measurements.
 | Latest focused frontier | `TestS2OozLevelSelectTraceReplay` advanced to f1779 Tails `tails_x` |
 | Current blocking field | Movement downstream of Tails CPU: earliest current table target is OOZ f1779 Tails `tails_x`/`tails_x_speed` after preserving the ROM-visible S2 Obj36 riding push bypass at f1775 |
 | Current owner hypothesis | Status-only sidekick lifetime/marker/on-object/airborne-zero-x-speed facing mismatches, first-landing CPU mirror/interact refresh lag, held-only Ctrl2 diagnostic latches, stationary released push-bit tails, and grounded push-bit-only tails are trace-framework noise when kinematics and pressed edges match; current sweep has moved the active S2 Tails CPU/status cluster into movement frontiers, and OOZ now points at the next real post-bypass movement delta |
-| Current branch context in newest entries | `bugfix/ai-trace-frontier-develop` after cherry-picking the AIZ worker chain |
+| Current branch context in newest entries | `bugfix/ai-trace-frontier-develop` after cherry-picking the AIZ worker chain and tightening trace context output defaults |
 | Last frontier move | S2 OOZ1 level-select `f1775 -> f1779` by preserving the S2 Obj36 live-riding push grace that ROM TailsCPU_Normal still sees before the later solid-object pass |
 
 ### Active queue
 
 1. The ordered Tails CPU/status cluster is exhausted under the newest full
    sweep. The sweep remains expected-red at 90 trace tests / 52 trace failures /
-   1 trace error; it also reports pre-existing non-trace guard ratchets because
-   the Maven selector still lets those tests into the run.
+   1 trace error. The latest rerun used the quieter trace context defaults
+   (six-frame frontier-only stop radius, divergent context columns, capped
+   ROM/engine diagnostics), so downstream error counts are lower by design;
+   first-frontier frames are the comparison metric and no first-frontier
+   regression was observed.
 2. MCZ2 advanced from f2411 to f4482 after clearing a stationary on-object
    facing-only status diagnostic. CNZ2 has now advanced from f2919 to f3691
    after clearing stationary/on-object and airborne zero-horizontal-speed
@@ -50,8 +53,8 @@ branch-local measurements.
 | Trace | Frame | Field | ROM | Engine | Status | Next owner |
 |---|---:|---|---:|---:|---|---|
 | `s3k_mgz1` / `TestS3kMgzTraceReplay` | `539` | rings | `10` | `11` | advanced from f312 | downstream ring/object collection |
-| `s2_mtz2` / `TestS2Mtz2LevelSelectTraceReplay` | `1265` | leader `g_speed` | `0x014B` | `0x047A` | advanced from f1075 | leader movement / ground-mode |
-| `s2_mtz3` / `TestS2Mtz3LevelSelectTraceReplay` | `1973` | Tails `tails_g_speed` | `0x0000` | `0x03C1` | true headline refined from same-frame status byte | Tails movement after CPU/status |
+| `s2_mtz2` / `TestS2Mtz2LevelSelectTraceReplay` | `1265` | leader `y` | `0x0464` | `0x0462` | advanced from f1075 | leader movement / ground-mode |
+| `s2_mtz3` / `TestS2Mtz3LevelSelectTraceReplay` | `1973` | Tails `tails_x` | `0x07C9` | `0x07CA` | true headline refined from same-frame status byte | Tails movement after CPU/status |
 | `s2_ooz1` / `TestS2OozLevelSelectTraceReplay` | `1779` | Tails `tails_x` | `0x0CE4` | `0x0CE3` | advanced from f1775 S2 Obj36 riding push-bypass movement delta | movement downstream of Tails CPU |
 | `s2_cpz2` / `TestS2Cpz2LevelSelectTraceReplay` | `2888` | Tails `x` | `0x10F8` | `0x10F0` | advanced from f759 | movement downstream of Tails CPU |
 | `s2_cnz1` / `TestS2CnzLevelSelectTraceReplay` | `3906` | Tails `tails_y` | `0x06C0` | `0x06C1` | advanced from f3675/f3759/f3876 held-only Ctrl2 diagnostics | movement downstream of Tails CPU |
@@ -136,6 +139,33 @@ now opts into an object-owned riding push grace, and OOZ advances to `f1779`.
   cleanup. Do not delete historical evidence only because it is stale.
 
 ## Evidence Ledger
+
+## 2026-06-16 - Trace context output defaults reduced sweep noise without moving frontiers
+
+- Scope: trace reporting/framework only on `bugfix/ai-trace-frontier-develop`.
+  `DivergenceReport` context windows now default to divergent columns only and
+  cap long ROM/engine diagnostic lines; trace replay harness context windows
+  and `trace.frontierOnly` stop after six frames by default. Wider
+  investigation output remains opt-in with `-Dtrace.context.fields=all`,
+  `-Dtrace.context.diagnosticChars=full`, and `-Dtrace.context.radius=N`.
+- Focused verification:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestDivergenceReport,com.openggf.tests.trace.TestFrontierReplayStopper,com.openggf.tests.trace.TestTraceReplayReportPolicy" "-DfailIfNoTests=false" test`.
+  Result: 37 tests, 0 failures, 0 errors.
+- Focused frontier check:
+  `mvn "-Dmse=off" "-Dsurefire.argLine=-Xmx4g" "-Dsurefire.forkCount=1" "-Dsurefire.redirectTestOutputToFile=true" "-Dtrace.frontierOnly=true" "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Ds2.rom.path=s2.gen" "-Dsonic2.rom.path=s2.gen" test`.
+  Result: expected-red at the same OOZ frontier, f1779 `tails_x`
+  (`0x0CE4` vs `0x0CE3`). The generated `s2_ooz1_context.txt` is now 19 lines
+  / 3521 characters with a capped ENG diagnostic line, versus the previous
+  uncapped frontier diagnostic shape.
+- Clean full sweep:
+  cleared `target/trace-reports`, then ran
+  `mvn "-Dmse=off" "-Dsurefire.argLine=-Xmx4g" "-Dsurefire.forkCount=1" "-Dsurefire.redirectTestOutputToFile=true" "-Dtrace.frontierOnly=true" "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Dsonic1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Dsonic2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsonic3k.rom.path=s3k.gen" test`.
+  Result: expected-red at 90 tests, 52 failures, 1 existing error. No tracked
+  first-frontier regression was observed; downstream error counts are smaller
+  under the new six-frame default and are not comparable to older
+  `trace.context.radius=20` sweeps.
+- Current routing remains unchanged: continue movement downstream of Tails CPU
+  at the earliest ordered target, OOZ f1779.
 
 ## 2026-06-16 - S2 OOZ Obj36 riding push grace advances the Tails movement frontier
 

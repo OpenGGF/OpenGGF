@@ -232,7 +232,8 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
             // 9. Assert no errors
             if (report.hasErrors() && TraceReplayConsole.shouldPrintContext()) {
                 System.err.println("\n=== Context window around first error ===");
-                System.err.println(report.getContextWindow(firstReportErrorFrame(report), 10));
+                System.err.println(report.getContextWindow(
+                        firstReportErrorFrame(report), TraceReplayConsole.contextRadius()));
             }
             assertReportHasNoReleaseBlockingDivergences(report);
         } finally {
@@ -443,7 +444,8 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
             if (report.hasErrors()) {
                 Path contextPath = outDir.resolve(prefix + "_context.txt");
                 Files.writeString(contextPath,
-                    report.getContextWindow(firstReportErrorFrame(report), 20));
+                    report.getContextWindow(
+                            firstReportErrorFrame(report), TraceReplayConsole.contextRadius()));
             }
         } catch (IOException e) {
             System.err.println("Warning: failed to write report: " + e.getMessage());
