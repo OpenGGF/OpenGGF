@@ -4,6 +4,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSlotLayout;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.SharedLevel;
 import com.openggf.tests.TestEnvironment;
@@ -180,7 +181,36 @@ public class TestS2ObjectOccupancyOracle {
                         + "the MarkObjGone2 window; actual slots " + slotCheck.summary());
     }
 
+    @Test
+    public void mtz3TwinStomperNoContactClearsTailsPushAtRomFrame1743() throws Exception {
+        PushCheck pushCheck = driveTrace("mtz3", Sonic2ZoneConstants.ZONE_MTZ, 2,
+                (trace, om, frame) -> {
+                    if (frame != 1743) {
+                        return null;
+                    }
+                    TraceFrame expected = trace.getFrame(frame);
+                    Assertions.assertNotNull(expected.sidekick(),
+                            "MTZ3 trace row f1743 must include Tails state");
+                    Assertions.assertEquals(0, expected.sidekick().statusByte() & 0x20,
+                            "ROM fixture should have cleared Tails Status_Push at MTZ3 f1743");
+                    Assertions.assertFalse(GameServices.sprites().getSidekicks().isEmpty(),
+                            "Engine fixture must have a CPU Tails sidekick at MTZ3 f1743");
+                    AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+                    return new PushCheck(tails.getPushing(), tails.getCentreX(), tails.getCentreY(),
+                            describeSlots(om.occupiedDynamicSlotIds(), 24, 28));
+                });
+        Assertions.assertNotNull(pushCheck);
+        Assertions.assertFalse(pushCheck.pushing(),
+                "S2 SolidObject_TestClearPush must clear Tails Status_Push when Obj64 "
+                        + "is no longer contacting Tails at MTZ3 f1743; tails=("
+                        + String.format("%04X,%04X", pushCheck.tailsX(), pushCheck.tailsY())
+                        + ") nearby slots " + pushCheck.summary());
+    }
+
     private record SlotCheck(Integer actualId, String summary) {
+    }
+
+    private record PushCheck(boolean pushing, int tailsX, int tailsY, String summary) {
     }
 
     private static String describeSlots(Map<Integer, Integer> occupancy, int firstSlot, int lastSlot) {

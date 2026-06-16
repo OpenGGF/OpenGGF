@@ -16022,3 +16022,38 @@ Result:
   only measured frontier move was the CNZ complete-run f1139 -> f1467 advance.
 - The next target in the ordered Tails CPU cluster is the new CNZ complete-run
   f1467 `tails_cpu_interact` divergence.
+
+## 2026-06-16 — S2 MTZ3 Obj64 live SST latch clears stale Tails push
+
+Branch `bugfix/ai-trace-frontier-develop`.
+Commands:
+`mvn -q "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#mtz3TwinStomperNoContactClearsTailsPushAtRomFrame1743" "-DfailIfNoTests=false" "-Ds2.rom.path=s2.gen" test`
+`mvn -q "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Ds2.rom.path=s2.gen" test`
+`mvn -q "-Dmse=off" "-Dsurefire.argLine=-Xmx4g" "-Dsurefire.forkCount=1" "-Dsurefire.redirectTestOutputToFile=false" "-Dtrace.frontierOnly=true" "-Dtrace.context.radius=20" "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Dsonic1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Dsonic2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsonic3k.rom.path=s3k.gen" test`
+
+Fix:
+- `MTZTwinStompersObjectInstance` now returns true from
+  `usesInstanceSolidStateLatchKey()`. S2 Obj64 stores player standing/pushing
+  bits in its live SST `status(a0)` while calling `SolidObject` after movement
+  (`docs/s2disasm/s2.asm:52669-52677`), and the generic no-contact path clears
+  the same object's pushing bit plus player `Status_Push` in
+  `SolidObject_TestClearPush` (`docs/s2disasm/s2.asm:35456-35467`). The engine
+  rebuilds Obj64's dynamic spawn as its `y_pos` moves, so the spawn-position key
+  lost the prior pushing bit before the next no-contact clear path.
+- Added a focused MTZ3 replay regression that drives the real trace to f1743
+  and asserts ROM Tails has `Status_Push` clear while the engine sidekick push
+  bit is also clear. The test failed before the fix with Tails still pushing at
+  `(0605,05F0)` and Obj64 nearby in slot 26; it passes after the latch-key fix.
+
+Result:
+- Focused `TestS2Mtz3LevelSelectTraceReplay` advanced from **f1743**
+  `tails_status_byte` (expected `0x0000`, actual `0x0020`) to **f1775**
+  `tails_cpu_interact` (expected `0x006E`, actual `0x0000`).
+- Full frontier-only `*TraceReplay` sweep remains expected-red at **90 tests,
+  53 failures, 1 error**. MTZ3 reports one frontier error at **f1775**. No
+  unrelated first-frontier regression was observed in the named replay summary;
+  S3K AIZ remains f19089, S3K CNZ complete-run remains f1846, and the current
+  S1/S2 named frontiers match the branch's prior baseline shape.
+- Next target in the ordered Tails CPU cluster is MTZ3 f1775
+  `tails_cpu_interact`, which now follows the cleared stale-`Status_Push`
+  release.

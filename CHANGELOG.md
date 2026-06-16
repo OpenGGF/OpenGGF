@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 MTZ twin stompers keep ROM solid latch identity while moving:** MTZ
+  Obj64 now keys shared solid standing/pushing state on the live object
+  instance while rebuilding its dynamic spawn as it moves, matching the ROM SST
+  `status(a0)` bits used by `SolidObject_TestClearPush`. This clears the MTZ3
+  stale Tails `Status_Push` frontier and advances the level-select trace from
+  frame 1743 to frame 1775; the full frontier-only trace sweep remains
+  expected-red at 90 tests, 53 failures, and 1 existing error.
+
 - **S2 MTZ Obj6A unloads from its ROM base-X anchor:** MTZ moving platforms
   now feed their saved `objoff_32` base X into the shared off-screen unload
   check instead of their current moving X, matching Obj6A's `MarkObjGone2`
