@@ -292,6 +292,7 @@ public class DivergenceReport {
         int centreIndex = comparisonIndexForFrame(centreFrame);
         int start = Math.max(0, centreIndex - radius);
         int end = Math.min(allComparisons.size() - 1, centreIndex + radius);
+        List<FrameComparison> rows = contextRows(start, end, centreFrame);
 
         StringBuilder sb = new StringBuilder();
         if (shouldRenderBootstrapSection()) {
@@ -303,24 +304,19 @@ public class DivergenceReport {
 
         Set<String> fieldNames = new LinkedHashSet<>();
         boolean allFields = shouldRenderAllContextFields();
-        for (int i = start; i <= end; i++) {
-            if (i < allComparisons.size()) {
-                FrameComparison fc = allComparisons.get(i);
-                if (allFields) {
-                    fieldNames.addAll(fc.fields().keySet());
-                } else {
-                    fc.fields().entrySet().stream()
-                            .filter(entry -> entry.getValue().isContextRelevant())
-                            .map(Map.Entry::getKey)
-                            .forEach(fieldNames::add);
-                }
+        for (FrameComparison fc : rows) {
+            if (allFields) {
+                fieldNames.addAll(fc.fields().keySet());
+            } else {
+                fc.fields().entrySet().stream()
+                        .filter(entry -> entry.getValue().isContextRelevant())
+                        .map(Map.Entry::getKey)
+                        .forEach(fieldNames::add);
             }
         }
         if (fieldNames.isEmpty()) {
-            for (int i = start; i <= end; i++) {
-                if (i < allComparisons.size()) {
-                    fieldNames.addAll(allComparisons.get(i).fields().keySet());
-                }
+            for (FrameComparison fc : rows) {
+                fieldNames.addAll(fc.fields().keySet());
             }
         }
 
@@ -329,11 +325,7 @@ public class DivergenceReport {
         }
         sb.append("\n");
 
-        for (int i = start; i <= end; i++) {
-            if (i >= allComparisons.size()) {
-                break;
-            }
-            FrameComparison fc = allComparisons.get(i);
+        for (FrameComparison fc : rows) {
             sb.append(String.format("%-6d", fc.frame()));
             for (String field : fieldNames) {
                 FieldComparison comp = fc.fields().get(field);
@@ -358,6 +350,35 @@ public class DivergenceReport {
             sb.append("\n");
         }
         return sb.toString();
+    }
+
+    private List<FrameComparison> contextRows(int start, int end, int centreFrame) {
+        List<FrameComparison> radiusRows = new ArrayList<>();
+        for (int i = start; i <= end && i < allComparisons.size(); i++) {
+            radiusRows.add(allComparisons.get(i));
+        }
+        if (shouldRenderAllContextRows()) {
+            return radiusRows;
+        }
+        List<FrameComparison> relevantRows = radiusRows.stream()
+                .filter(fc -> fc.frame() == centreFrame || hasContextRelevantField(fc))
+                .toList();
+        return relevantRows.isEmpty() ? radiusRows : relevantRows;
+    }
+
+    private boolean hasContextRelevantField(FrameComparison comparison) {
+        return comparison.fields().values().stream()
+                .anyMatch(FieldComparison::isContextRelevant);
+    }
+
+    private boolean shouldRenderAllContextRows() {
+        String mode = System.getProperty("trace.context.rows", "relevant")
+                .trim()
+                .toLowerCase(Locale.ROOT);
+        return switch (mode) {
+            case "all", "full", "radius", "window" -> true;
+            default -> false;
+        };
     }
 
     private boolean shouldRenderFrameDiagnostics(FrameComparison comparison, int centreFrame) {

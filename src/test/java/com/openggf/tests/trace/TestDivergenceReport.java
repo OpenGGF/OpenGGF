@@ -201,7 +201,13 @@ public class TestDivergenceReport {
         FrameComparison f102 = makeMatchComparison(102, (short) 0x54, (short) 0x3B0);
 
         DivergenceReport report = new DivergenceReport(List.of(f100, f101, f102));
-        String context = report.getContextWindow(101, 1);
+        String previous = System.setProperty("trace.context.rows", "all");
+        String context;
+        try {
+            context = report.getContextWindow(101, 1);
+        } finally {
+            restoreProperty("trace.context.rows", previous);
+        }
 
         assertTrue(context.contains("100"));
         assertTrue(context.contains("101"));
@@ -247,6 +253,55 @@ public class TestDivergenceReport {
             assertEquals("tails_x_speed", report.errors().get(0).field());
         } finally {
             restoreProperty("trace.context.fields", previous);
+        }
+    }
+
+    @Test
+    void contextWindowDefaultsToRelevantRowsOnly() {
+        FrameComparison f3 = makeMatchComparison(3, (short) 0x50, (short) 0x3B0);
+        Map<String, FieldComparison> f4Fields = new LinkedHashMap<>();
+        f4Fields.put("tails_status_byte", new FieldComparison(
+                "tails_status_byte", "0x0029", "0x0009", Severity.MATCH, 0, true));
+        FrameComparison f4 = new FrameComparison(4, f4Fields);
+        FrameComparison f5 = makeComparison(5, "tails_x_speed", Severity.ERROR, "0x0080", "0x0000");
+        FrameComparison f6 = makeMatchComparison(6, (short) 0x54, (short) 0x3B0);
+        DivergenceReport report = new DivergenceReport(List.of(f3, f4, f5, f6));
+
+        String previous = System.clearProperty("trace.context.rows");
+        try {
+            String context = report.getContextWindow(5, 2);
+
+            assertFalse(context.contains("3     "),
+                    "Default context should omit radius rows with no divergent or observed fields.");
+            assertTrue(context.contains("4     "),
+                    "Observed non-blocking mismatches should remain in the compact row set.");
+            assertTrue(context.contains("5     "),
+                    "The frontier row should always remain in the compact row set.");
+            assertFalse(context.contains("6     "),
+                    "Default context should omit post-frontier match-only rows.");
+        } finally {
+            restoreProperty("trace.context.rows", previous);
+        }
+    }
+
+    @Test
+    void contextWindowCanRenderAllRowsWhenRequested() {
+        FrameComparison f3 = makeMatchComparison(3, (short) 0x50, (short) 0x3B0);
+        FrameComparison f4 = makeMatchComparison(4, (short) 0x51, (short) 0x3B0);
+        FrameComparison f5 = makeComparison(5, "tails_x_speed", Severity.ERROR, "0x0080", "0x0000");
+        FrameComparison f6 = makeMatchComparison(6, (short) 0x54, (short) 0x3B0);
+        DivergenceReport report = new DivergenceReport(List.of(f3, f4, f5, f6));
+
+        String previous = System.setProperty("trace.context.rows", "all");
+        try {
+            String context = report.getContextWindow(5, 2);
+
+            assertTrue(context.contains("3     "));
+            assertTrue(context.contains("4     "));
+            assertTrue(context.contains("5     "));
+            assertTrue(context.contains("6     "));
+        } finally {
+            restoreProperty("trace.context.rows", previous);
         }
     }
 

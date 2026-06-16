@@ -23,10 +23,11 @@ branch-local measurements.
 1. The ordered Tails CPU/status cluster is exhausted under the newest full
    sweep. The sweep remains expected-red at 90 trace tests / 52 trace failures /
    1 trace error. The latest rerun used the quieter trace context defaults
-   (two-frame frontier-only stop radius, divergent context columns, capped
-   ROM/engine diagnostics, empty bootstrap sections omitted), so downstream
-   error counts are lower by design; first-frontier frames are the comparison
-   metric and no first-frontier regression was observed.
+   (two-frame frontier-only stop radius, relevant context rows, divergent
+   context columns, capped ROM/engine diagnostics, empty bootstrap sections
+   omitted), so downstream error counts are lower by design; first-frontier
+   frames are the comparison metric and no first-frontier regression was
+   observed.
 2. MCZ2 advanced from f2411 to f4482 after clearing a stationary on-object
    facing-only status diagnostic. CNZ2 has now advanced from f2919 to f3691
    after clearing stationary/on-object and airborne zero-horizontal-speed
@@ -142,6 +143,30 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
   cleanup. Do not delete historical evidence only because it is stale.
 
 ## Evidence Ledger
+
+## 2026-06-16 - Trace context rows reduced to frontier-relevant output
+
+- Scope: trace reporting/framework only on
+  `bugfix/ai-trace-frontier-develop`. This does not change trace comparison
+  semantics, report JSON grouping, or any engine replay path.
+- Change: saved context windows now default to rows with a blocking mismatch,
+  observed non-blocking mismatch, or the frontier frame itself. Match-only
+  lead-in/trailing rows inside the radius are omitted by default. Full radius
+  row output remains opt-in with `-Dtrace.context.rows=all` (also accepts
+  `full`, `radius`, or `window`).
+- Focused verification:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestDivergenceReport,com.openggf.tests.trace.TestTraceReplayReportPolicy" test`.
+  Result: 41 tests, 0 failures, 0 errors.
+- Focused frontier check:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay" test`.
+  Result: expected-red at the same OOZ frontier, **f1782** `tails_x`
+  (`0x0CE4` vs `0x0CE3`), with 1344 errors. The generated
+  `s2_ooz1_context.txt` is now **8 lines / 2503 characters** under default
+  settings while still showing f1781 as an observed `tails_status_byte`
+  mismatch and f1782 as the release-blocking movement frontier.
+- Classification: reporting-only cleanup; no frontier cleared, advanced, or
+  regressed. Continue the ordered target at OOZ f1782, movement downstream of
+  Tails CPU.
 
 ## 2026-06-16 - Trace context output defaults tightened to reduce sweep artifact noise
 
