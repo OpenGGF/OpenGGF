@@ -88,6 +88,16 @@ All notable changes to the OpenGGF project are documented in this file.
   (`usesInclusiveRightEdge`, ROM `SolidObject_cont` `bhi`, `sonic3k.asm:41403-41406,41494-41500`).
   Each was full-`*TraceReplay`-A/B-validated with no S1/S2/S3K regression.
 
+- **Grounded facing-flip clears `Status_Push` unconditionally at frame end
+  (S2/S3K):** ROM's `Sonic_MoveLeft`/`MoveRight` and Tails equivalents set
+  `prev_anim=Run` on a facing flip (`sonic3k.asm:28041,28109`), so the same
+  frame's `Animate_*` clears `Status_Push` via `anim != prev_anim`
+  (`sonic3k.asm:29359-29364,29681-29686`) independent of whether the character
+  was already pushing. The engine only armed its post-ground-wall push clear
+  when push was already set before the wall pass; removing that gate advances
+  the S3K AIZ1 trace frontier from frame 14301 to 15016 with no first-error-frame
+  regression in the full trace sweep.
+
 - **CPU sidekick keeps a genuine terrain wall push for the ROM `loc_13DD0`
   read (AIZ2 underwater wall bounce):** the engine's released-underwater
   pre-CPU push-clear was discarding a `Status_Push` bit that a terrain

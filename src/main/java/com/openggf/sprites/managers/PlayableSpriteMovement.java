@@ -3119,14 +3119,25 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// See S3K Tails MoveLeft/MoveRight at sonic3k.asm:27797-27815 and
 		// 28094-28109. Do not pre-clear push while the player is still braking
 		// from the opposite direction.
+		//
+		// On the facing flip these routines also set prev_anim=Run/1
+		// (sonic3k.asm:28041 sub_14C20, 28109 sub_14CAC; s2 equivalents), which
+		// makes the SAME frame's Animate_Sonic/Animate_Tails clear Status_Push
+		// when anim != prev_anim (sonic3k.asm:29359-29364,29681-29686). That
+		// frame-end animation clear is independent of whether the character was
+		// already pushing when the flip happened: it removes any Status_Push the
+		// ground-wall collision sets later in the same frame. Arm the post-ground-
+		// wall clear on any grounded, non-rolling facing flip, not only when push
+		// was already set before the wall pass. (AIZ2 underwater CPU-Tails wall
+		// bounce: the flip frame's wall hit re-sets push, but ROM's prev_anim
+		// sentinel still clears it that frame, so push is gone entering the next
+		// no-hit frame.)
 		if (left && !right && sprite.getDirection() == Direction.RIGHT && gSpeed <= 0) {
-			boolean wasPushing = sprite.getPushing();
 			sprite.setPushing(false);
-			facingFlipForcesPushClearAfterGroundWall = wasPushing && !sprite.getAir() && !sprite.getRolling();
+			facingFlipForcesPushClearAfterGroundWall = !sprite.getAir() && !sprite.getRolling();
 		} else if (right && !left && sprite.getDirection() == Direction.LEFT && gSpeed >= 0) {
-			boolean wasPushing = sprite.getPushing();
 			sprite.setPushing(false);
-			facingFlipForcesPushClearAfterGroundWall = wasPushing && !sprite.getAir() && !sprite.getRolling();
+			facingFlipForcesPushClearAfterGroundWall = !sprite.getAir() && !sprite.getRolling();
 		}
 	}
 

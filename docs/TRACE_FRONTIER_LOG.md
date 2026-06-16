@@ -1,5 +1,51 @@
 # Trace Frontier Log
 
+## 2026-06-16 - S3K AIZ f14301 -> f15016 via facing-flip prev_anim push-clear at AIZ2 underwater bounce
+
+- Scope: focused S3K AIZ trace remediation on `TestS3kAizTraceReplay`
+  (`aiz1_to_hcz_fullrun`, report key `s3k_aiz1`) in worktree
+  `.worktrees/rewind-dynobj`, branch `bugfix/ai-rewind-dynobj-membership`.
+  Trace data stayed comparison-only diagnostic input; the fix models the ROM
+  facing-flip + animation push-clear and adds no zone/route/frame carve-out.
+- Command: `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" test "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen"`.
+- First divergence (baseline): f14301, `tails_status_byte` ROM=0x41 engine=0x61
+  (the differing bit is 0x20 Status_Push). CPU Tails is in an AIZ2 underwater
+  grounded sub-pixel bounce against a LEFT wall at whole-pixel x=0x31CA.
+- BizHawk ground truth (Genplus-gx, `s3-aiz1-2-sonictails.bk2`, hooks at the
+  Tails wall gate 0x14B9E, sub_F61C return 0x14BB4, the push branch 0x14C00, and
+  Animate_Tails_Part2 0x15868/0x15884, filtered to Tails base 0xB04A in
+  AIZ act 2): on the small-rebound frame (x_sub=0x9400, ground_vel=-6) ROM's
+  wall sensor returns d1=0 -> NO push branch; on the deeper frame (x_pos=0x31C9,
+  ground_vel=-12) it returns d1=-1 -> push. The engine's
+  `CollisionSystem.resolveGroundWallCollision` reproduces both distances exactly
+  (dist=0 vs -1). The divergence was push RETENTION: ROM clears Status_Push at
+  frame end in `Animate_Tails_Part2` (sonic3k.asm:29359-29364) when anim !=
+  prev_anim, because the facing flip in `sub_14C20`/`sub_14CAC`
+  (sonic3k.asm:28041/28109) set prev_anim=1 that frame. The engine only armed
+  its equivalent post-ground-wall clear when the sprite was ALREADY pushing
+  before the wall pass (`wasPushing` gate), so a push the wall set later on the
+  same flip frame survived into the next no-hit frame as a stale 0x20.
+- Fix (1 file, ROM-cited): in
+  `PlayableSpriteMovement.updatePushingOnDirectionChange`, arm
+  `facingFlipForcesPushClearAfterGroundWall` on any grounded, non-rolling facing
+  flip (matching ROM's unconditional prev_anim=1 sentinel), not only when push
+  was already set before the wall pass. This is shared S2/S3K code gated by
+  `PhysicsFeatureSet.animationChangeClearsPush()` (S1 leaves it behind FixBugs),
+  so it stays ROM-general.
+- Result: `TestS3kAizTraceReplay` first error **f14301 -> f15016**
+  (`tails_status_byte` ROM=0x00 engine=0x20: a separate one-frame push-phase
+  offset at a later AIZ2 right-wall bounce, x=0x36B5); errors 527 -> 525.
+- A/B sweep (`*TraceReplay`, run per-class ALONE to avoid singleton
+  contamination): NO first-error-frame regression. Identical frontier for
+  S3K AizCompleteRun (f1095), HczCompleteRun (f1402), IczCompleteRun (f3116),
+  MhzCompleteRun (f966), LbzCompleteRun (f1950), MgzCompleteRun (f738), and
+  S2 Ooz2/Mtz2/Cnz. Two traces (S3K MgzCompleteRun, S2 Ooz) keep the same
+  first-error frame but gain downstream errors past their existing divergence.
+  `TestSidekickCpuFollowParity` has the same 5 pre-existing failures before and
+  after (unchanged by this fix). Physics unit tests (TestPhysicsProfile,
+  TestCollisionModel, CollisionSystemTest, TestSpindashGating) and the 4
+  must-keep-green S3K tests pass.
+
 ## 2026-06-16 - S3K AIZ f14299 -> f14301 via terrain-wall push provenance at AIZ2 underwater bounce
 
 - Scope: focused S3K AIZ trace remediation on `TestS3kAizTraceReplay`
