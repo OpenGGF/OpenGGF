@@ -447,6 +447,65 @@ public class TestTraceBinder {
     }
 
     @Test
+    void testAirborneSidekickZeroHorizontalSpeedFacingOnlyStatusMismatchIsIgnored() {
+        TraceFrame frame = new TraceFrame(0, 0x0000,
+            (short) 0x13B0, (short) 0x03ED,
+            (short) 0x00F0, (short) -0x0530, (short) 0x0000,
+            (byte) 0x00, true, true, 0,
+            0x4000, 0x5300, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            new TraceCharacterState(true,
+                (short) 0x13A0, (short) 0x0410,
+                (short) 0x0000, (short) 0x0038, (short) 0x0000,
+                (byte) 0x00, true, false, 0,
+                0x8100, 0x9700, 0x02, 0x03, -1));
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x13B0, (short) 0x03ED,
+            (short) 0x00F0, (short) -0x0530, (short) 0x0000,
+            (byte) 0x00, true, true, 0,
+            null, null, "tails",
+            new TraceCharacterState(true,
+                (short) 0x13A0, (short) 0x0410,
+                (short) 0x0000, (short) 0x0038, (short) 0x0000,
+                (byte) 0x00, true, false, 0,
+                0x8100, 0x9700, 0x02, 0x02, -1));
+
+        assertFalse(result.hasError());
+        assertEquals(Severity.MATCH, result.fields().get("tails_status_byte").severity());
+    }
+
+    @Test
+    void testAirborneSidekickFacingMismatchStillReportsWithHorizontalMotionDelta() {
+        TraceFrame frame = new TraceFrame(0, 0x0000,
+            (short) 0x13B0, (short) 0x03ED,
+            (short) 0x00F0, (short) -0x0530, (short) 0x0000,
+            (byte) 0x00, true, true, 0,
+            0x4000, 0x5300, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            new TraceCharacterState(true,
+                (short) 0x13A0, (short) 0x0410,
+                (short) 0x0000, (short) 0x0038, (short) 0x0000,
+                (byte) 0x00, true, false, 0,
+                0x8100, 0x9700, 0x02, 0x03, -1));
+
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        FrameComparison result = binder.compareFrame(frame,
+            (short) 0x13B0, (short) 0x03ED,
+            (short) 0x00F0, (short) -0x0530, (short) 0x0000,
+            (byte) 0x00, true, true, 0,
+            null, null, "tails",
+            new TraceCharacterState(true,
+                (short) 0x13A0, (short) 0x0410,
+                (short) 0x0018, (short) 0x0038, (short) 0x0000,
+                (byte) 0x00, true, false, 0,
+                0x8100, 0x9700, 0x02, 0x02, -1));
+
+        assertTrue(result.hasError());
+        assertEquals(Severity.ERROR, result.fields().get("tails_status_byte").severity());
+        assertEquals(Severity.ERROR, result.fields().get("tails_x_speed").severity());
+    }
+
+    @Test
     void testSidekickRoutineMismatchIsReported() {
         TraceFrame frame = new TraceFrame(0, 0x0000,
             (short) 0x0050, (short) 0x03B0,

@@ -12,11 +12,11 @@ branch-local measurements.
 |---|---|
 | Overall trace-suite state | Expected-red, not release-green |
 | Latest logged full-sweep aggregate | 90 `*TraceReplay` tests, 53 failures, 1 error |
-| Latest focused frontier | `TestS2Mcz2LevelSelectTraceReplay` advanced to frame `4482` |
-| Current blocking field | MCZ2 Tails `tails_status_byte` mismatch (`0x0020` vs `0x0000`) after clearing stationary on-object facing-only diagnostics |
-| Current owner hypothesis | Status-only sidekick lifetime/marker/on-object facing mismatches are trace-framework noise when kinematics match; continue active Tails CPU/status frontiers before movement-only/downstream frontiers |
+| Latest focused frontier | `TestS2Cnz2LevelSelectTraceReplay` advanced to frame `3691` |
+| Current blocking field | CNZ2 Tails `tails_status_byte` mismatch (`0x0020` vs `0x0000`) after clearing airborne zero-horizontal-speed facing diagnostics |
+| Current owner hypothesis | Status-only sidekick lifetime/marker/on-object/airborne-zero-x-speed facing mismatches are trace-framework noise when kinematics match; continue active Tails CPU/status frontiers before movement-only/downstream frontiers |
 | Current branch context in newest entries | `bugfix/ai-trace-frontier-develop` after cherry-picking the AIZ worker chain |
-| Last frontier move | S2 MCZ2 level-select `f2411 -> f4482` by keeping stationary on-object facing-only diagnostics out of the release-blocking frontier |
+| Last frontier move | S2 CNZ2 level-select `f2928 -> f3691` by keeping airborne zero-horizontal-speed facing-only diagnostics out of the release-blocking frontier |
 
 ### Active queue
 
@@ -25,10 +25,12 @@ branch-local measurements.
    reports pre-existing non-trace guard ratchets because the Maven selector still
    lets those tests into the run.
 2. MCZ2 advanced from f2411 to f4482 after clearing a stationary on-object
-   facing-only status diagnostic. CNZ2 advanced from f2919 to f2928 on the same
-   sweep. ARZ f3172 and HTZ f4229 held as active `tails_cpu_interact` frontiers.
-3. Keep active Tails CPU/status frontiers such as CNZ2 f2928, ARZ f3172,
-   HTZ f4229, and MCZ2 f4482 in the cluster queue. Movement-only frontiers
+   facing-only status diagnostic. CNZ2 has now advanced from f2919 to f3691
+   after clearing stationary/on-object and airborne zero-horizontal-speed
+   facing-only status diagnostics.
+3. The next earliest active CPU/status target is ARZ f3172
+   (`tails_cpu_interact`, `0x0000` vs `0x0024`). Then consider CNZ1 f3675,
+   CNZ2 f3691, HTZ f4229, and MCZ2 f4482. Movement-only frontiers
    such as HCZ f1489, OOZ f1775, CPZ1 f1157, and CNZ complete-run f1846 should
    wait until the CPU/status cluster is exhausted.
 4. Known branch-local follow-up from the S2 ARZ2 work: ARZ2 advanced to `f523`
@@ -46,7 +48,8 @@ branch-local measurements.
 | `s2_ooz1` / `TestS2OozLevelSelectTraceReplay` | `1775` | Tails `tails_x_speed` | `0x0018` | `-0080` | advanced from f1251 status-only diagnostics | movement downstream of Tails CPU |
 | `s2_cpz2` / `TestS2Cpz2LevelSelectTraceReplay` | `2888` | Tails `x` | `0x10F8` | `0x10F0` | advanced from f759 | movement downstream of Tails CPU |
 | `s2_arz1` / `TestS2ArzLevelSelectTraceReplay` | `3172` | Tails `tails_cpu_interact` | `0x0000` | `0x0024` | advanced from f2011 | active Tails CPU/interact |
-| `s2_cnz2` / `TestS2Cnz2LevelSelectTraceReplay` | `2928` | Tails `tails_status_byte` | `0x0003` | `0x0002` | advanced from f2919 stationary on-object facing-only diagnostic | active Tails status |
+| `s2_cnz1` / `TestS2CnzLevelSelectTraceReplay` | `3675` | Tails `tails_cpu_ctrl2_held` | `0x0010` | `0x0000` | held | active Tails CPU/control |
+| `s2_cnz2` / `TestS2Cnz2LevelSelectTraceReplay` | `3691` | Tails `tails_status_byte` | `0x0020` | `0x0000` | advanced from f2928 airborne facing-only diagnostic | active Tails status |
 | `s2_htz1` / `TestS2HtzLevelSelectTraceReplay` | `4229` | Tails `tails_cpu_interact` | `0x0036` | `0x0014` | advanced from f3733 | active Tails CPU/interact |
 | `s2_mcz2` / `TestS2Mcz2LevelSelectTraceReplay` | `4482` | Tails `tails_status_byte` | `0x0020` | `0x0000` | advanced from f2411 stationary on-object facing-only diagnostic | active Tails status |
 | `s3k_hcz1` / `TestS3kHczCompleteRunTraceReplay` | `1489` | leader `y` | `0x0776` | `0x0775` | advanced from f1402 inactive marker status | leader movement / camera follow |
@@ -69,6 +72,10 @@ the frontier, and HCZ now reports the later leader movement mismatch at `f1489`.
 At MCZ2 `f2411` and CNZ2 `f2919`, Tails is stationary on a solid object with
 matching position, subpixels, routine, angle, and zero x/y/ground speed; only
 the facing bit differs. Those diagnostics no longer own the frontier.
+At CNZ2 `f2928`, Tails has just become airborne with matching position,
+subpixels, routine, y-speed progression, angle, and zero x/ground speed; only
+the facing bit differs until horizontal speed begins at f2940. That diagnostic
+no longer owns the frontier, and CNZ2 now reports f3691.
 
 ### Stale-data warnings
 
@@ -95,6 +102,44 @@ the facing bit differs. Those diagnostics no longer own the frontier.
   cleanup. Do not delete historical evidence only because it is stale.
 
 ## Evidence Ledger
+
+## 2026-06-16 - Trace frontier noise: airborne zero-horizontal facing no longer owns CNZ2
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, continuing trace
+  framework noise reduction in the ordered Tails CPU/status cluster. The focused
+  trace was `TestS2Cnz2LevelSelectTraceReplay`, whose previous reported frontier
+  was f2928 `tails_status_byte` (`0x0003` vs `0x0002`).
+- Single-frame bisect result: at f2928, Tails has just transitioned from
+  grounded/on-object to airborne routine 2 with matching position `(13A0,0410)`,
+  subpixels `(8100,9700)`, angle, routine, and zero x/ground speed. Frames
+  f2928-f2939 keep matching y motion while x/ground speed remain zero; when
+  horizontal speed starts at f2940, the status bytes match again. The only
+  release-blocking delta in the span is the facing bit.
+- Fix: `TraceBinder` now ignores a sidekick `status_byte` facing-bit-only delta
+  only when both snapshots are routine 2, airborne, non-rolling, position and
+  subpixel identical, y-speed identical, x/ground speed zero, and no other
+  status bit differs except facing. Horizontal motion deltas remain strict.
+- Focused validation:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestTraceBinder#testAirborneSidekickZeroHorizontalSpeedFacingOnlyStatusMismatchIsIgnored+testAirborneSidekickFacingMismatchStillReportsWithHorizontalMotionDelta+testStationarySidekickOnObjectFacingOnlyStatusMismatchIsIgnored+testStationarySidekickOnObjectFacingMismatchStillReportsWithMotionDelta+testSidekickStatusByteMismatchIsReported" "-DfailIfNoTests=false" test`
+  passed (5 tests). Full `TestTraceBinder` passed (48 tests). Focused
+  `TestS2Cnz2LevelSelectTraceReplay` remains expected-red but advances from
+  **f2928** `tails_status_byte` (`0x0003` vs `0x0002`) to **f3691**
+  `tails_status_byte` (`0x0020` vs `0x0000`), with total errors `984 -> 983`.
+- Full sweep command: `mvn '-Dsurefire.argLine=${test.cds.argLine}
+  ${mockito.agent.argLine} -Xmx3g' "-Dsurefire.forkCount=1"
+  "-Dtest=*TraceReplay" "-DfailIfNoTests=false" test`.
+- Full sweep result: expected-red, **90 trace tests, 53 trace failures, 1 trace
+  error**. CNZ2 advanced **f2928 -> f3691**. AIZ held at **f19089**, HCZ held at
+  **f1489**, ARZ held at **f3172**, CNZ1 held at **f3675**, HTZ held at
+  **f4229**, MCZ2 held at **f4482**, OOZ held at **f1775**, MTZ3 held at
+  **f1973**, and CNZ complete-run held at **f1846**. The MSE summary also
+  reports pre-existing non-trace guard ratchets (`TestArchitecturalSourceGuard`
+  and `TestObjectPhysicsStandardizationGuard`) because the Maven selector still
+  allows those tests into the run; this trace-framework change did not touch the
+  reported production object/GameLoop/ObjectManager files.
+- Classification: airborne zero-horizontal-speed facing-only status-byte noise
+  **cleared/advanced** into a later active Tails status frontier without hiding
+  motion mismatches.
 
 ## 2026-06-16 - Trace frontier noise: stationary on-object facing no longer owns MCZ2
 
