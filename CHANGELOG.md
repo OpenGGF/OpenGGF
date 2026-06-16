@@ -88,6 +88,18 @@ All notable changes to the OpenGGF project are documented in this file.
   (`usesInclusiveRightEdge`, ROM `SolidObject_cont` `bhi`, `sonic3k.asm:41403-41406,41494-41500`).
   Each was full-`*TraceReplay`-A/B-validated with no S1/S2/S3K regression.
 
+- **Status_Push frame-end clear keys on the real ROM `anim` byte, not the push
+  render substitution (S2/S3K):** ROM shows the pushing frames inside the walk
+  script's special handler (`Animate_Sonic loc_12A72 btst #5,status`,
+  `sonic3k.asm:24832`; `Animate_Tails` reads `anim` directly, `29356-29364`),
+  keeping the `anim`/`prev_anim` byte at the movement-selected value (walk/wait/
+  balance). The engine substitutes a distinct push render-anim id, which it was
+  also feeding into the `anim != prev_anim` push-clear comparison. The push-clear
+  now resolves the anim id with the push render substitution disabled and tracks
+  the grounded movement anim byte separately, including rewind state. This
+  advances the S3K AIZ1 trace frontier from frame 15016 to 15795 with no
+  first-error-frame regression in the full trace sweep.
+
 - **Grounded facing-flip clears `Status_Push` unconditionally at frame end
   (S2/S3K):** ROM's `Sonic_MoveLeft`/`MoveRight` and Tails equivalents set
   `prev_anim=Run` on a facing flip (`sonic3k.asm:28041,28109`), so the same

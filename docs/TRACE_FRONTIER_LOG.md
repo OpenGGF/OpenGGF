@@ -1,5 +1,63 @@
 # Trace Frontier Log
 
+## 2026-06-16 - S3K AIZ f15016 -> f15795 via anim-byte (not push-render) prev_anim push-clear at AIZ2 right-wall bounce
+
+- Scope: focused S3K AIZ trace remediation on `TestS3kAizTraceReplay`
+  (`aiz1_to_hcz_fullrun`, report key `s3k_aiz1`) in worktree
+  `.worktrees/rewind-dynobj`, branch `bugfix/ai-rewind-dynobj-membership`
+  (on top of 26670aad2). Comparison-only; ROM-cited; no zone/route/frame
+  carve-out.
+- Command: `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" test "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen"`.
+- First divergence (baseline): f15016, `tails_status_byte` ROM=0x00 engine=0x20
+  (Status_Push 0x20). CPU Tails in an AIZ2 underwater grounded sub-pixel bounce
+  against a RIGHT wall at whole-pixel x=0x36B5; engine HAS push where ROM cleared
+  it, a 1-frame push-bit phase slip.
+- BizHawk ground truth (Genplus-gx, `s3-aiz1-2-sonictails.bk2`, hooks at the wall
+  gate 0x14B9E, sub_F61C 0x14BB4, left/right push branches 0x14C12/0x14BF2, the
+  idle/facing/friction clears 0x14A2E/0x14C30/0x14CBA, and Animate_Tails
+  0x15868/0x15884, Tails base 0xB04A in AIZ act 1): at the divergent ROM frame
+  the wall hit (sub_F61C d1=-1) sets Status_Push, but Animate_Tails clears it the
+  SAME frame because the movement `anim` byte (0=WALK) differs from `prev_anim`
+  (5=WAIT, set by the prior grounded idle frame loc_14A16/loc_14A34). The engine
+  reproduces the wall hit exactly (predDx=1, dist=-1) but did NOT clear push.
+  Cross-checked against a SUSTAINED push at AIZ1 x=0x1CED (frames ~3219-3231):
+  ROM holds Status_Push there with anim=5, prev_anim=5 (no anim change, no
+  clear) -- so the rule is genuinely "clear iff the movement anim byte changes".
+- Root cause: the engine's `clearPushForAnimationChange` compared the rendered
+  animation id against `lastAnimationId`, but the engine substitutes a distinct
+  `pushAnimId` for rendering when Status_Push is set
+  (`ScriptedVelocityAnimationProfile.resolveAnimationId`). ROM has NO distinct
+  push anim BYTE: the push frames are a sub-handler inside the walk script
+  (Animate_Sonic loc_12A72 btst #5,status, sonic3k.asm:24832; Animate_Tails reads
+  `anim` directly, 29356-29364), and `anim`/`prev_anim` stay at the
+  movement-selected value (WALK/WAIT/BALANCE/ROLL...). The render substitution
+  desynced the engine's anim-id from the ROM anim byte that actually drives the
+  push-clear.
+- Fix (2 files, ROM-cited):
+  1. `ScriptedVelocityAnimationProfile`: split out `resolveGroundMovementAnimId`
+     and add an `applyPushRenderSubstitution` overload of `resolveAnimationId`;
+     rendering keeps the push substitution, but the push-clear resolves the anim
+     id with it disabled (the real ROM anim byte, still honoring the
+     higher-priority roll/air/hurt/spring branches).
+  2. `PlayableSpriteAnimation`: track the movement anim byte
+     (`lastGroundMovementAnimId`, with rewind state) and clear Status_Push only
+     when this frame's movement anim byte differs from the previous frame's,
+     matching Animate_Sonic/Animate_Tails. Gated by
+     `PhysicsFeatureSet.animationChangeClearsPush()` (S1 behind FixBugs).
+- Result: `TestS3kAizTraceReplay` first error **f15016 -> f15795** (518 vs 525
+  errors). New frontier is an unrelated field, `tails_cpu_jumping` (ROM=1
+  engine=0): the CPU sidekick auto-jump trigger, not a push/status issue.
+- A/B sweep (`*TraceReplay`, full + per-class ALONE to defeat singleton
+  contamination): NO first-error-frame regression in any S1/S2/S3K trace. Aiz
+  advanced 15016->15795; all other frontiers identical (AizCompleteRun f1095,
+  HczCompleteRun f1402, IczCompleteRun f3116, MgzCompleteRun f738,
+  LbzCompleteRun f1950; S2 Arz f2011, Cpz f1157, Mtz2 f645). Most downstream
+  error counts dropped (Hcz/Icz/Mgz/Lbz/Cnz lower); S2 Cpz +2 past its unchanged
+  frontier. `TestS3kCnzTraceReplay` 9F/1E unchanged. `TestSidekickCpuFollowParity`
+  same 5 pre-existing failures; `TestRewindTorture` same 2 pre-existing failures.
+  Physics units (TestPhysicsProfile, TestCollisionModel, CollisionSystemTest) and
+  the 4 must-keep-green S3K tests pass.
+
 ## 2026-06-16 - S3K AIZ f14301 -> f15016 via facing-flip prev_anim push-clear at AIZ2 underwater bounce
 
 - Scope: focused S3K AIZ trace remediation on `TestS3kAizTraceReplay`

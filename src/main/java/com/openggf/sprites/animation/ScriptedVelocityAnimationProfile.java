@@ -92,6 +92,18 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
 
     @Override
     public Integer resolveAnimationId(AbstractPlayableSprite sprite, int frameCounter, int scriptCount) {
+        return resolveAnimationId(sprite, frameCounter, scriptCount, true);
+    }
+
+    /**
+     * @param applyPushRenderSubstitution when false, skips the {@link #pushAnimId}
+     *        render substitution so the result is the ROM {@code anim} byte the
+     *        movement/state code actually writes (push display is a sub-handler of
+     *        the walk script in ROM, not a distinct anim byte). Used by the
+     *        Status_Push frame-end clear, which keys on the real anim byte.
+     */
+    public Integer resolveAnimationId(AbstractPlayableSprite sprite, int frameCounter, int scriptCount,
+                                      boolean applyPushRenderSubstitution) {
         // ROM: when f_playerctrl is set, Sonic_Move and normal movement routines don't run,
         // so they never overwrite obAnim. Let the controlling object's animation stick.
         if (sprite.isObjectControlled()) {
@@ -177,9 +189,25 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             return duckAnimId;
         }
         // ROM-accurate: Pushing state takes priority over speed-based animations
-        if (sprite.getPushing() && pushAnimId >= 0) {
+        // for RENDERING only. ROM keeps the anim byte at the movement-selected
+        // value (walk/wait) and shows the push frames inside the walk script's
+        // special handler (Animate_Sonic loc_12A72 btst #5,status, sonic3k.asm
+        // 24832; Animate_Tails reads anim directly, 29356-29364). So skip this
+        // substitution when the caller wants the real ROM anim byte.
+        if (applyPushRenderSubstitution && sprite.getPushing() && pushAnimId >= 0) {
             return pushAnimId;
         }
+        return resolveGroundMovementAnimId(sprite);
+    }
+
+    /**
+     * Resolves the grounded movement-selected animation id (walk / run / balance /
+     * idle). Only reached after the higher-priority state branches in
+     * {@link #resolveAnimationId} (air/roll/hurt/spring/...), so callers wanting
+     * the full ROM anim byte must go through
+     * {@code resolveAnimationId(..., false)} rather than calling this directly.
+     */
+    public int resolveGroundMovementAnimId(AbstractPlayableSprite sprite) {
         // ROM-accurate: Skidding state (braking at speed >= 0x400)
         if (sprite.getSkidding() && skidAnimId >= 0) {
             return skidAnimId;
