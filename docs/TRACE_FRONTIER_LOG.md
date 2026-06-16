@@ -1,5 +1,39 @@
 # Trace Frontier Log
 
+## 2026-06-16 - S2 ARZ2 object-near reporting exposes the true frontier
+
+- Scope: exact `0x100` speed-delta cluster triage for
+  `TestS2Arz2LevelSelectTraceReplay`. The previously reported frontier was
+  frame 1817 `y_speed` (expected `-0090`, actual `-0190`), but the single-frame
+  bisect showed that bounce arithmetic was already ROM-correct and the speed
+  delta was downstream of earlier dynamic-slot divergence.
+- Bisect result: the ROM spills lost rings when the ring count drops at trace
+  frame 1717, after low dynamic slots are still occupied by ARZ objects; the
+  engine's earlier slot cadence allowed an Obj37 lost ring into a low slot. At
+  the old frame-1817 symptom, the engine therefore collected the low-slot lost
+  ring before reaching the Grounder in the touch loop, while the ROM killed the
+  Grounder first and applied the enemy bounce. Enabling dynamic-slot
+  `object_near` comparison for ARZ2 moves the reported frontier to the earlier
+  object-slot cause instead of the downstream speed mismatch.
+- Focused frontier check:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=false -Dtrace.frontierOnly=true -Dtrace.context.radius=20 -Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Dsonic2.rom.path=s2.gen test"`.
+  Result: expected-red. `s2_arz2` now reports frame 187
+  `obj_s17_type` (expected `0x15`, actual `missing`). Player/Tails physics still
+  match at frame 187; ROM has dynamic Obj15/SwingingPlatform near slot 23 at
+  `@03B6,0416` routine `04`, while the engine has not yet produced the matching
+  dynamic platform. By frame 194 the engine has an extra/mispositioned Obj15 at
+  `@03B8,045E`, while the ROM has Obj15 entries at `@0397,045E` and
+  `@03A0,0417`, so the next local target is ARZ2 Obj15 placement/movement slot
+  cadence, not enemy-bounce physics.
+- Full trace sweep:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=24 -Dtest=*TraceReplay -DfailIfNoTests=false -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red, 90 tests, 50 failures, 1 error. Compared with the
+  previous 90-test sweep at 50 failures and 1 error, aggregate counts did not
+  regress. The intentional reporting movement is `s2_arz2` frame 1817
+  `y_speed` -> frame 187 `obj_s17_type`; this is a true-frontier exposure, so
+  the exact `0x100` speed delta is reclassified as downstream of the ARZ2
+  Obj15 dynamic-slot frontier.
+
 ## 2026-06-16 - S2 respawn-tracked kills keep the ChkLoadObj latch
 
 - Scope: Sonic 2 respawn-tracked layout object lifetime. The current Tails CPU
