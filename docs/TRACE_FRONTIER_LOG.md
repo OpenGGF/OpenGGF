@@ -12,18 +12,18 @@ branch-local measurements.
 |---|---|
 | Overall trace-suite state | Expected-red, not release-green |
 | Latest logged full-sweep aggregate | 90 `*TraceReplay` tests, 50 failures, 1 error |
-| Latest focused frontier | `TestS3kAizTraceReplay` at frame `16944` |
-| Current blocking field | `tails_y_speed`, ROM `-0x400`, engine `0x0000` |
-| Current owner hypothesis | S3K same-frame spawned explosion visibility in the touch-response / `Collision_response_list` path |
-| Current branch context in newest entries | `bugfix/ai-rewind-dynobj-membership`, worktree `.worktrees/rewind-dynobj` |
-| Last non-frontier refactor check | Ground-wall response extraction held AIZ at `f16944` with 515 errors |
+| Latest focused frontier | `TestS3kAizTraceReplay` at frame `19089` |
+| Current blocking field | leader `g_speed` sign flip near the AIZ2 end-boss arena |
+| Current owner hypothesis | leader movement downstream of the cleared same-frame-spawn touch-response timing issue |
+| Current branch context in newest entries | `bugfix/ai-trace-frontier-develop` after cherry-picking the AIZ worker chain |
+| Last frontier move | AIZ `f16944 -> f19089` via S3K previous-list spawn-touch skip clearing |
 
 ### Active queue
 
-1. Resolve **S3K AIZ f16944** by modeling ROM collision-response-list timing for
-   same-frame-spawned `Obj_AIZBombExplosion` touch visibility. Do not solve this
-   with an AIZ-only, explosion-only, route/frame, or enlarged-hitbox carve-out.
-2. After AIZ, re-check the ordered frontier queue against a fresh full
+1. Verify **S3K AIZ f19089** on this branch and bisect the leader `g_speed`
+   sign flip inside the single frontier frame if the full sweep keeps AIZ as
+   the highest-leverage active cluster.
+2. Re-check the ordered frontier queue against a fresh full
    `*TraceReplay` sweep before selecting the next target.
 3. Known branch-local follow-up from the S2 ARZ2 work: ARZ2 advanced to `f523`
    missing Obj91 after the Obj15 child-slot fix, but that entry predates the
@@ -34,20 +34,19 @@ branch-local measurements.
 
 | Trace | Frame | Field | ROM | Engine | Status | Next owner |
 |---|---:|---|---:|---:|---|---|
-| `s3k_aiz1` / `TestS3kAizTraceReplay` | `16944` | `tails_y_speed` | `-0x400` | `0x0000` | expected-red | S3K touch-response visibility for same-frame spawned explosion |
+| `s3k_aiz1` / `TestS3kAizTraceReplay` | `19089` | leader `g_speed` | sign differs | sign differs | expected-red | leader movement near AIZ2 end-boss approach |
 
-At `f16944`, BizHawk confirms ROM hurts CPU Tails via `HurtCharacter`
-(`sonic3k.asm:10294` / `loc_102E0`) from an `Obj_AIZBombExplosion`
-(`col=$8B`, 8x8) on the bomb detonation frame. The engine's newly spawned
-explosion is not visible to the sidekick touch-response loop until about two
-frames later, after fast CPU Tails has moved past the tight hitbox.
+At `f19089`, the trace has passed the AIZ2 battleship bombing run and wrap into
+the end-boss arena approach. The f16944 `tails_y_speed` hurt-recoil divergence
+is cleared by modeling ROM's one-frame S3K `Collision_response_list` latency for
+same-frame-spawned hazards.
 
 ### Stale-data warnings
 
 - Older tables listing 62, 63, or 65 trace failures are historical snapshots,
   not the current aggregate.
 - Older AIZ frontier claims at `f3135`, `f14299`, `f14301`, `f15016`, `f15795`,
-  and `f16217` have been superseded by `f16944`.
+  `f16217`, and `f16944` have been superseded by `f19089`.
 - The bottom duplicate/older `S2 ARZ2 Obj15 child SST slot` entry is useful
   history, but its note that "AIZ remains at f14299" is superseded by the
   newer top entries.
@@ -67,6 +66,60 @@ frames later, after fast CPU Tails has moved past the tight hitbox.
   cleanup. Do not delete historical evidence only because it is stale.
 
 ## Evidence Ledger
+
+## 2026-06-16 - S3K AIZ f16944 -> f19089 via 1-frame same-frame-spawn touch latency (AIZ2 bomb-explosion hurt)
+
+- Scope: S3K AIZ trace fix on `TestS3kAizTraceReplay` (`aiz1_to_hcz_fullrun`,
+  report key `s3k_aiz1`) in `.worktrees/rewind-dynobj`, branch
+  `bugfix/ai-rewind-dynobj-membership` (on top of 1d486377b). Comparison-only;
+  ROM-cited; no carve-out; shared touch-system change validated by full A/B sweep.
+- Command: `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" test "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen"`.
+- First divergence (baseline): f16944 (span through ~f16988), `tails_y_speed`
+  ROM=-0x400 vs engine=0x0000. In the AIZ2 battleship bombing run, ROM hurts the
+  CPU sidekick Tails (`HurtCharacter`, sonic3k.asm:10294/loc_102E0: y_vel=-0x400,
+  x_vel=+0x200, anim=0x1A) from an `Obj_AIZBombExplosion` (col=0x8B, 8×8); the
+  engine missed the hurt.
+- PHASE A — ROM collision-response-list latency = **1 frame** (BizHawk + disasm,
+  overturning the earlier BLOCKED premise of 0): object slot order is
+  Sonic(0xB000) < Tails(0xB04A) < Reserved_object_3 / Obj_ResetCollisionResponseList
+  (0xB094) < Dynamic objects incl. bomb explosions (0xB0DE+). Per frame the player
+  consumes `Collision_response_list` during Sonic/Tails_Display BEFORE
+  Reserved_object_3 clears it and BEFORE the explosions rebuild it — so the player
+  sees hazards that registered LAST frame. BizHawk (movie s3-aiz1-2-sonictails.bk2):
+  the hurting explosion (0xB612, x=0x4390) detonated + called
+  `Add_SpriteToCollisionResponseList` (0x1040C) at movie frame 17453, and
+  `HurtCharacter` fired on Tails at frame 17454 = exactly 1-frame latency. So the
+  engine's `usePrevious=true` (previous-list) model is ROM-correct; do NOT flip it.
+- PHASE B — engine had 2-frame latency (1 extra). Frame-stamped: bomb detonates
+  lfc=16635 (explosion spawned via `spawnChild`/`addDynamicObjectAfterCurrent`,
+  active, captured into lfc=16636's list with flags=0x8B). At lfc=16636 the
+  explosion IS in the touch loop's previous-list but `isSkipTouchThisFrame()=true`
+  so it is skipped; it is only processed at lfc=16637, by which point the fast CPU
+  Tails advanced ~8px past the 8×8 hitbox (overlap=false → miss). Cause: the
+  same-frame-spawn skip flag (ObjectManager set-true for higher-slot same-frame-exec
+  children, the obRender-bit-7 first-frame gate) is only cleared inside
+  `snapshotTouchResponseState`, which the S3K previous-list path skips
+  (`shouldRefreshFrameStartSnapshot()` = `!usePrevious` = false) to preserve the
+  list — so the flag survived into the next frame's player touch pass.
+- PHASE C — fix (3 files, +23 lines, smallest correct change, NO usePrevious flip,
+  NO carve-out): added `ObjectInstance.clearSpawnTouchSkip()` (default no-op),
+  overridden in `AbstractObjectInstance` to clear `skipTouchThisFrame`, and called
+  from `ObjectManager.refreshTouchResponseSnapshot` on the previous-list branch.
+  This clears the spawn-skip flag at frame start for S3K — matching ROM's 1-frame
+  latency for a hazard that registered + drew on its spawn frame. S1/S2 (which
+  refresh the full frame-start snapshot) are unchanged. ObjectManager kept at its
+  3900-line guard budget (explanatory comment lives on the interface method).
+- Result: `TestS3kAizTraceReplay` first error **f16944 -> f19089** (515 -> 207
+  errors); the long downstream Tails-hurt-arc divergence collapses. New frontier
+  f19089 is `g_speed` on the LEADER (Sonic) — unrelated.
+- A/B sweep (`*TraceReplay`, full + per-class ALONE to defeat singleton
+  contamination): NO first-error-frame regression in any S1/S2/S3K trace. Aiz
+  advanced 16944->19089; AizCompleteRun f1095, HczCompleteRun f1402,
+  IczCompleteRun f3116, MhzCompleteRun f966, MgzCompleteRun f738, LbzCompleteRun
+  f1950, S2 Ooz f1251 all unchanged (Icz/Lbz +7/+12 downstream errors past their
+  unchanged frontiers). `TestArchitecturalSourceGuard` GREEN; 4 must-keep-green
+  S3K + `TestAizShipBombInstance` + physics units GREEN; `TestSidekickCpuFollowParity`
+  same 5 pre-existing `LocalPushGrace`/`Nudge` failures.
 
 ## 2026-06-16 - Guard paydown: AbstractPlayableSprite ground-wall response extraction (NO frontier movement)
 
@@ -88,17 +141,10 @@ frames later, after fast CPU Tails has moved past the tight hitbox.
   GREEN; `TestSidekickCpuFollowParity` only its 5 pre-existing
   `LocalPushGrace`/`Nudge` failures. **`TestS3kAizTraceReplay` first-error frame
   UNCHANGED at f16944 / 515 errors** in both directions (pure refactor).
-- Standing next frontier (BLOCKED, separate shared-system task): **AIZ f16944**,
-  field `tails_y_speed` ROM=-0x400 vs engine=0x0000. BizHawk-verified: in the AIZ2
-  battleship bombing run, ROM hurts the CPU sidekick Tails via `HurtCharacter`
-  (sonic3k.asm:10294/loc_102E0; y_vel=-0x400, x_vel=+0x200, anim=$1A) from an
-  `Obj_AIZBombExplosion` (col=$8B, 8×8) on the bomb's detonation frame. The engine's
-  freshly-spawned explosion is not visible to the sidekick touch-response loop until
-  ~2 frames later (S3K previous-collision-response-list timing), by which point the
-  fast CPU Tails has advanced ~8px past the tight hitbox. Root cause is the
-  same-frame-spawn → touch-visibility gap in shared S3K touch code; a correct fix
-  needs ROM `Collision_response_list` slot-ordering analysis and must not be a
-  per-object overlap-fudge/carve-out.
+- Superseded next-frontier note: this refactor left **AIZ f16944** (`tails_y_speed`
+  ROM=-0x400 vs engine=0x0000) as the standing target at the time. The later
+  2026-06-16 same-frame-spawn touch-latency fix above clears that frontier by
+  modeling ROM `Collision_response_list` slot timing, advancing AIZ to f19089.
 
 ## 2026-06-16 - S3K AIZ f16217 -> f16944 via routine-8 stuck-respawn facing + catch-up-snap facing reset
 

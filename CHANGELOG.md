@@ -88,6 +88,20 @@ All notable changes to the OpenGGF project are documented in this file.
   (`usesInclusiveRightEdge`, ROM `SolidObject_cont` `bhi`, `sonic3k.asm:41403-41406,41494-41500`).
   Each was full-`*TraceReplay`-A/B-validated with no S1/S2/S3K regression.
 
+- **S3K same-frame-spawned hazard touch latency (1 frame, ROM-accurate):** a
+  hazard spawned during frame N's object pass (e.g. an AIZ2 battleship bomb
+  explosion) registers itself to the S3K `Collision_response_list` and draws
+  (sets obRender bit 7) on that same frame, so ROM's player slot - which
+  consumes the list on the next frame before `Obj_ResetCollisionResponseList`
+  clears it - hits it with a 1-frame latency. The engine's previous-list path
+  skipped the frame-start touch snapshot and therefore did not clear the
+  same-frame-spawn `skipTouchThisFrame` flag, making a freshly spawned hazard
+  touch-visible one frame late. The previous-list path now clears only that
+  spawn-skip flag at frame start (`clearSpawnTouchSkip`), preserving the S3K
+  list model while matching ROM timing. This advances the S3K AIZ1 trace
+  frontier from frame 16944 to 19089 (515 -> 207 errors), with no
+  first-error-frame regression in the full trace sweep.
+
 - **`AbstractPlayableSprite` ground-wall response extraction (guard paydown, no
   behavior change):** extracted the per-frame ground-wall collision response
   cluster - deferred-velocity staging, terrain `Status_Push` provenance, and the

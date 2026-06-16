@@ -484,6 +484,8 @@ public class ObjectManager {
     private void refreshTouchResponseSnapshot(ObjectInstance inst) {
         if (collisionResponseList.shouldRefreshFrameStartSnapshot()) {
             inst.snapshotTouchResponseState();
+        } else {
+            inst.clearSpawnTouchSkip(); // S3K previous-list path: see ObjectInstance.clearSpawnTouchSkip
         }
     }
 
