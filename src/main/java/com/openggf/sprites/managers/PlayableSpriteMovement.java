@@ -1903,6 +1903,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					if (shouldTriggerGroundSkid(gSpeed, false)) {
 						sprite.setDirection(Direction.RIGHT);
 						handleSkid();
+					} else if (sprite.getSkidding()) {
+						advanceSkidDustTimer();
 					}
 				} else {
 					sprite.setSkidding(false);
@@ -1924,6 +1926,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					if (shouldTriggerGroundSkid(gSpeed, true)) {
 						sprite.setDirection(Direction.LEFT);
 						handleSkid();
+					} else if (sprite.getSkidding()) {
+						advanceSkidDustTimer();
 					}
 				} else {
 					sprite.setSkidding(false);
@@ -3178,7 +3182,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private void handleSkid() {
 		if (!sprite.getSkidding()) sprite.setSkidding(true);
 		audioManager.playSfx(GameSound.SKID);
+		advanceSkidDustTimer();
+	}
 
+	private void advanceSkidDustTimer() {
+		// ROM Obj08_CheckSkid keeps ticking the fixed Sonic_Dust/Tails_Dust
+		// object while the parent remains in the Stop animation; entering
+		// Sonic_TurnLeft/Right only switches the dust object into that routine
+		// and seeds mapping_frame=$15 (docs/s2disasm/s2.asm:36927-36929,
+		// 36988-36990, 42759-42797).
 		int dustTimer = sprite.getSkidDustTimer() - 1;
 		if (dustTimer < 0) {
 			dustTimer = 3;

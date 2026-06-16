@@ -3921,7 +3921,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public void setRolling(boolean rolling) {
                 if (this.rolling == rolling) {
                         if (rolling) {
-                                applyRollAnimationFromProfile();
+                                applyRollAnimationFromProfile(); setSkidding(false);
                         }
                         return;
                 }
@@ -3944,7 +3944,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
                 this.rolling = rolling;
                 if (rolling) {
-                        applyRollAnimationFromProfile();
+                        applyRollAnimationFromProfile(); setSkidding(false);
                 }
         }
 
@@ -3969,7 +3969,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public void setRollingFlagPreserveRadii(boolean rolling) {
                 this.rolling = rolling;
                 if (rolling) {
-                        applyRollAnimationFromProfile();
+                        applyRollAnimationFromProfile(); setSkidding(false);
                 }
         }
 
@@ -5062,4 +5062,3 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return -0x400;
         }
 }
-

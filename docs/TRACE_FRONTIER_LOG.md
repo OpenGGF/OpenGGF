@@ -1,5 +1,39 @@
 # Trace Frontier Log
 
+## 2026-06-16 - S2 MTZ2 object-slot cadence advances past Obj37/Tails CPU frontier
+
+- Scope: Sonic 2 MTZ2 object allocation and per-frame object timing. The current
+  Tails CPU cluster target was `TestS2Mtz2LevelSelectTraceReplay` frame 1073,
+  where ROM Tails had not yet latched the newly-spilled Obj37 lost ring but the
+  engine let the later sidekick slot observe it in the same player pass.
+- Bisect result: the frame-1073 mismatch was a compounded slot-cadence issue
+  rather than a CPU branch by itself. The fix keeps Obj37 spill allocation
+  visible after the current player hurt path, anchors the collected Obj37 sparkle
+  routine to the object's next slot update, uses the S2 sparkle animation delay
+  byte, and lets Obj08 skid-dust deletion live through its ROM delete routine.
+  MTZ2 also needed ROM slot pressure from Obj6C parent conveyors expanding on
+  their first object pass, Obj70 cogs reserving the seven child tooth slots,
+  S2 badnik placements honoring respawn tracking, and Obj27 destruction
+  allocating the animal before points. Obj70 still renders/collides through the
+  parent multi-piece model, but its sidekick side-contact path now models the
+  stale-rider no-contact branch exposed by separate ROM tooth slots.
+- Focused frontier check:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=32 -Dtest=com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Ds2.rom.path=s2.gen test"`.
+  Result: expected-red. `TestS2Mtz2LevelSelectTraceReplay` advanced from frame
+  1073 `tails_cpu_interact` (expected `0x0000`, actual `0x00A0`) to frame 1265
+  `g_speed` (expected `0x014B`, actual `0x047A`). The MTZ2 Tails CPU/object
+  latch frontier is cleared; the next local owner is downstream movement around
+  wall-mode/terrain speed.
+- Full trace sweep:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=24 -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=\"Sonic and Knuckles & Sonic 3 (W) [!].gen\" test"`.
+  Result: expected-red, 90 tests, 50 failures, 1 error. Compared with the prior
+  90-test sweep at 50 failures and 1 error, aggregate counts did not regress;
+  the intentional frontier movement is `s2_mtz2` frame 1073 -> frame 1265.
+  The next earliest Tails CPU cluster target is now
+  `TestS2MtzLevelSelectTraceReplay` frame 1169 `tails_cpu_interact` (expected
+  `0x0074`, actual `0x00A4`); MTZ2 moves to the later movement-downstream
+  cluster.
+
 ## 2026-06-16 - S2 HTZ2 panic release advances past Tails CPU routine mismatch
 
 - Scope: Sonic 2 sidekick panic control. The current Tails CPU cluster target was

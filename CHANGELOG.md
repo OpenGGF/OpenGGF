@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 MTZ2 object-slot cadence advances past the Obj37/Tails CPU frontier:**
+  Obj37 lost-ring spill timing, collected-ring sparkle lifetime, Obj08 skid-dust
+  deletion, Obj6C conveyor parent expansion, Obj70 cog child slot pressure, and
+  S2 badnik destruction/respawn ordering now better match the ROM object pass.
+  The MTZ2 level-select trace advances from frame 1073's
+  `tails_cpu_interact` mismatch to frame 1265's later `g_speed` movement
+  frontier, with the full trace-suite failure count unchanged.
+
 - **S2 HTZ2 Tails panic release follows the rolling-only/spin-dash branch:**
   Sonic 2 sidekick panic now lets the engine's rolling-only/pinball state feed
   the ROM `spin_dash_flag` branch used by `TailsCPU_Panic`, so the `$7F`

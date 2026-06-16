@@ -1468,7 +1468,8 @@ public class LevelManager {
             return;
         }
         try {
-            SpriteArtSet dustArt = dustProv.loadSpindashDustArt(playable.getCode());
+            String characterCode = playable.getCode().endsWith("_p2") ? playable.getCode().substring(0, playable.getCode().length() - 3) : playable.getCode();
+            SpriteArtSet dustArt = dustProv.loadSpindashDustArt(characterCode);
             if (dustArt == null || dustArt.bankSize() <= 0 || dustArt.mappingFrames().isEmpty()
                     || dustArt.dplcFrames().isEmpty()) {
                 playable.setSpindashDustController(null);

@@ -1088,7 +1088,10 @@ final class ObjectTouchResponseController {
         if (hadRings && !player.hasShield() && !suppressLostRingSpawn) {
             // Requires the concrete playable type, but still goes through ObjectServices.
             if (player instanceof AbstractPlayableSprite aps) {
-                objectManager.services().spawnLostRings(aps, currentFrameCounter);
+                // ROM Obj37 allocation becomes visible after the current player slot's
+                // hurt handling, but later playable slots do not refresh their CPU
+                // interact latch from those new rings until their next object tick.
+                objectManager.services().spawnLostRingsAfterCurrentFrame(aps, currentFrameCounter - 1);
             }
         }
         player.applyHurtOrDeath(sourceX, cause, hadRings);
@@ -1098,4 +1101,3 @@ final class ObjectTouchResponseController {
         return debugState;
     }
 }
-

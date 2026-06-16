@@ -286,6 +286,19 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether a side classification should return no contact before applying
+     * side correction or speed zeroing.
+     * <p>
+     * This is for ROM objects whose own per-slot standing bit can route a
+     * player through a stale-rider branch before {@code SolidObject_cont}.
+     * Use only with an object-level disassembly citation; ordinary full solids
+     * should keep the shared side-contact behavior.
+     */
+    default boolean sideContactReturnsNoContact(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Whether a grounded lower-half edge escape from the squash path should
      * set the player/object push bits even when the player is not moving into
      * the object.

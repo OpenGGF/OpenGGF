@@ -28,6 +28,7 @@ public class SkidDustObjectInstance extends AbstractObjectInstance {
     // Skid animation frames from obj08.asm Obj08Ani_Skid
     private static final int[] SKID_FRAMES = { 0x11, 0x12, 0x13, 0x14 };
     private static final int FRAME_DELAY = 3; // 4 game ticks per frame
+    private static final int DELETE_ROUTINE_DELAY = 2;
 
     // Frame 0x15 (21) has the DPLC that loads skid dust tiles.
     // Frames 0x11-0x14 have empty DPLCs and reuse tiles from frame 0x15.
@@ -36,6 +37,7 @@ public class SkidDustObjectInstance extends AbstractObjectInstance {
     private final PlayerSpriteRenderer renderer;
     private int animTimer;
     private int frameIndex;
+    private int deleteRoutineDelay = -1;
     private final boolean facingLeft;
     private boolean dplcPreloaded = false;
 
@@ -77,16 +79,43 @@ public class SkidDustObjectInstance extends AbstractObjectInstance {
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
+        if (deleteRoutineDelay >= 0) {
+            if (deleteRoutineDelay-- == 0) {
+                ObjectLifetimeOps.expireDynamic(this);
+            }
+            return;
+        }
+
         // Decrement animation timer
         animTimer--;
         if (animTimer < 0) {
             animTimer = FRAME_DELAY;
             frameIndex++;
 
-            // Check if animation is complete
+            // ROM animation command $FC increments Obj08 to routine 4; the
+            // object remains allocated until that delete routine is reached on
+            // a later RunObjects pass (docs/s2disasm/s2.asm:42660-42664,
+            // 42846-42847).
             if (frameIndex >= SKID_FRAMES.length) {
-                ObjectLifetimeOps.expireDynamic(this);
+                deleteRoutineDelay = DELETE_ROUTINE_DELAY;
             }
+        }
+    }
+
+    @Override
+    public PerObjectRewindSnapshot captureRewindState() {
+        return super.captureRewindState().withObjectSubclassExtra(
+                new SkidDustRewindExtra(animTimer, frameIndex, deleteRoutineDelay, dplcPreloaded));
+    }
+
+    @Override
+    public void restoreRewindState(PerObjectRewindSnapshot snapshot) {
+        super.restoreRewindState(snapshot);
+        if (snapshot.objectSubclassExtra() instanceof SkidDustRewindExtra extra) {
+            animTimer = extra.animTimer();
+            frameIndex = extra.frameIndex();
+            deleteRoutineDelay = extra.deleteRoutineDelay();
+            dplcPreloaded = extra.dplcPreloaded();
         }
     }
 
@@ -163,5 +192,13 @@ public class SkidDustObjectInstance extends AbstractObjectInstance {
                 objectManager.addDynamicObject(dust);
             }
         }
+    }
+
+    private record SkidDustRewindExtra(
+            int animTimer,
+            int frameIndex,
+            int deleteRoutineDelay,
+            boolean dplcPreloaded
+    ) implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {
     }
 }
