@@ -4,6 +4,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K: HCZ conveyor belt, MHZ pulley lift / swing vine, MGZ head-trigger and badnik projectiles, ICZ big snow pile, end-of-act signpost (+ stub), air-countdown bubbles, and StarPost stars now rewind cleanly (recreate codecs).**
+
 - **AIZ2 ship-loop and boss no longer break under rewind:** holding rewind
   during the Sonic 3&K AIZ2 battleship auto-scroll loop or the miniboss/end-boss
   no longer softlocks, desyncs, or corrupts graphics. The AIZ2 ship/boss dynamic

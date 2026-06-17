@@ -28,6 +28,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.badniks.BloominatorBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.RhinobotBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.S3kBadnikProjectileInstance;
 import com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.SparkleBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance;
@@ -164,7 +165,41 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             aizEndBossChildCodec(AizEndBossBombChild.class,
                     boss -> new AizEndBossBombChild(boss, 0, 0, 0)),
             aizEndBossChildCodec(AizEndBossSmokeChild.class,
-                    boss -> new AizEndBossSmokeChild(boss, 0, 0, false)));
+                    boss -> new AizEndBossSmokeChild(boss, 0, 0, false)),
+
+            // --- Release-slice batch 1: HCZ/MHZ/MGZ/ICZ rewind recreate codecs ---
+            // Without these, recreateDynamicObject() returns null for the listed
+            // objects captured in a rewind keyframe and they vanish on restore.
+            // Self-contained objects use exactSpawnCodec (re-running the ctor from
+            // the captured spawn); non-spawn differentiator scalars were made
+            // non-final so the generic field capturer reapplies them after recreate.
+
+            // Self-contained (constructor derives all state from the spawn).
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    HCZConveyorBeltObjectInstance.class,
+                    HCZConveyorBeltObjectInstance::new),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    MhzPulleyLiftObjectInstance.class, MhzPulleyLiftObjectInstance::new),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    MhzSwingVineObjectInstance.class, MhzSwingVineObjectInstance::new),
+
+            // Self-contained, non-final differentiators reapplied after recreate.
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    S3kBadnikProjectileInstance.class,
+                    s -> S3kBadnikProjectileInstance.forRewindRecreate(s)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    MGZHeadTriggerProjectileInstance.class,
+                    s -> new MGZHeadTriggerProjectileInstance(s.x(), s.y(), 0, false)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    S3kSignpostInstance.class, s -> new S3kSignpostInstance(0, 0)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    S3kAirCountdownObjectInstance.class,
+                    s -> new S3kAirCountdownObjectInstance(0, 0, 0, 0, 0)),
+
+            // Parent/sibling relink codecs.
+            iczBigSnowPileCodec(),
+            signpostStubCodec(),
+            starPostStarChildCodec());
 
     // AIZ2 dynamic objects still intentionally dropped on rewind restore (no codec):
     //   (none remaining) — all AIZ2 battleship/boss transient children are now
@@ -487,6 +522,108 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             }
         }
         return best;
+    }
+
+    /**
+     * Codec for {@link IczBigSnowPileInstance}. The pile's only non-spawn
+     * constructor argument is the live {@link Sonic3kICZEvents} parent, which is
+     * a long-lived singleton owned by {@link Sonic3kLevelEventManager} (present
+     * for the whole ICZ session). It is reached via the level event provider
+     * rather than an active-object scan. If the events owner is absent the pile
+     * is dropped (codec returns null) rather than recreated with a null parent.
+     */
+    private static DynamicObjectRewindCodec iczBigSnowPileCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == IczBigSnowPileInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return IczBigSnowPileInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                if (!(context.objectServices().levelEventProvider()
+                        instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager mgr)) {
+                    return null;
+                }
+                com.openggf.game.sonic3k.events.Sonic3kICZEvents events = mgr.getIczEvents();
+                if (events == null) {
+                    return null;
+                }
+                return new IczBigSnowPileInstance(entry.spawn(), events);
+            }
+        };
+    }
+
+    /**
+     * Codec for {@link S3kSignpostStubChild}. The stub's only non-derivable
+     * field is its live {@link S3kSignpostInstance} parent. The signpost is
+     * spawned (and recreated) before the stub in spawn order, so it is present
+     * in {@code getActiveObjects()} during the stub's recreate. The signpost is
+     * effectively a singleton, so a plain type scan is unambiguous; if absent
+     * the stub is dropped.
+     */
+    private static DynamicObjectRewindCodec signpostStubCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == S3kSignpostStubChild.class;
+            }
+
+            @Override
+            public String className() {
+                return S3kSignpostStubChild.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                S3kSignpostInstance parent = findLiveInstance(context, S3kSignpostInstance.class);
+                if (parent == null) {
+                    return null;
+                }
+                return new S3kSignpostStubChild(parent);
+            }
+        };
+    }
+
+    /**
+     * Codec for {@link Sonic3kStarPostStarChild}. The orbiting star's only
+     * non-derivable field is its live {@link Sonic3kStarPostObjectInstance}
+     * parent; the star re-derives its orbit center from that parent in the
+     * constructor. Several StarPosts may be live, so the parent is relinked by
+     * nearest captured spawn position (the dummy spawn stores the parent's
+     * center). StarPosts are layout objects recreated before the dynamic-object
+     * restore loop, so the parent is present; if absent the star is dropped.
+     */
+    private static DynamicObjectRewindCodec starPostStarChildCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == Sonic3kStarPostStarChild.class;
+            }
+
+            @Override
+            public String className() {
+                return Sonic3kStarPostStarChild.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                Sonic3kStarPostObjectInstance parent = findNearestLiveInstance(
+                        context, Sonic3kStarPostObjectInstance.class, entry.spawn());
+                if (parent == null) {
+                    return null;
+                }
+                return new Sonic3kStarPostStarChild(parent);
+            }
+        };
     }
 
     @Override
