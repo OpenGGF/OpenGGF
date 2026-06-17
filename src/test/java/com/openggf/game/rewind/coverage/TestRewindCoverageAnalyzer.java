@@ -99,5 +99,16 @@ class TestRewindCoverageAnalyzer {
         assertFalse(cov.unIdObjectRefFields().contains("boss"),
                 "ObjectInstance ref classified structural by policy must NOT be reported as un-id'd gap");
     }
+
+    @Test
+    void enumerationIncludesRuntimeChildSpawnedClasses() {
+        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K);
+        assertTrue(report.objects().stream()
+                .anyMatch(o -> o.className().endsWith("AizShipBombInstance")),
+                "child-spawned classes must be enumerated by the classpath scan");
+        assertTrue(report.objects().stream()
+                .anyMatch(o -> o.className().endsWith("AizEndBossArmChild")),
+                "boss-child classes must be enumerated by the classpath scan");
+    }
 }
 
