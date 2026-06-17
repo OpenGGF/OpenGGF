@@ -758,7 +758,6 @@ com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance#recreate
 com.openggf.game.sonic3k.objects.Aiz1TreeObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Aiz1ZiplinePegObjectInstance#recreate
-com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance#recreate
 com.openggf.game.sonic3k.objects.AizBombExplosionInstance#finalScalar#posY
 com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance#finalScalar#halfWidth
@@ -782,7 +781,6 @@ com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance#finalScalar#xFlip
 com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance#recreate
 com.openggf.game.sonic3k.objects.AizEmeraldScatterInstance#finalScalar#mappingFrame
 com.openggf.game.sonic3k.objects.AizEmeraldScatterInstance#recreate
-com.openggf.game.sonic3k.objects.AizEndBossInstance#recreate
 com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance#finalScalar#phaseOffset
 com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance#finalScalar#spawnX
 com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance#finalScalar#spawnY
@@ -811,8 +809,6 @@ com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance#recreate
 com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#finalScalar#xOffset
 com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#finalScalar#yOffset
 com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#recreate
-com.openggf.game.sonic3k.objects.AizIntroPlaneChild#recreate
-com.openggf.game.sonic3k.objects.AizIntroWaveChild#recreate
 com.openggf.game.sonic3k.objects.AizLrzRockObjectInstance#finalScalar#baseX
 com.openggf.game.sonic3k.objects.AizLrzRockObjectInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.AizLrzRockObjectInstance#finalScalar#behaviorBits
@@ -1509,20 +1505,10 @@ com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#finalScalar#centreX
 com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#finalScalar#centreY
 com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#objectRef#endCannon
 com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance#recreate
-com.openggf.game.sonic3k.objects.bosses.HczEndBossBlade#recreate
-com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeSplash#recreate
-com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeWaterChute#finalScalar#slotIndex
-com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeWaterChute#recreate
 com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance#finalScalar#fixedX
 com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance#finalScalar#fixedY
-com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance#recreate
-com.openggf.game.sonic3k.objects.bosses.HczEndBossGeyserCutscene#recreate
-com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance#recreate
-com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikShip#recreate
 com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine#finalScalar#xOffset
 com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine#finalScalar#yOffset
-com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine#recreate
-com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn#recreate
 com.openggf.game.sonic3k.objects.bosses.IczEndBossEggCapsuleInstance#finalScalar#centreX
 com.openggf.game.sonic3k.objects.bosses.IczEndBossEggCapsuleInstance#finalScalar#centreY
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance#objectRef#bossSnowdustEmitter

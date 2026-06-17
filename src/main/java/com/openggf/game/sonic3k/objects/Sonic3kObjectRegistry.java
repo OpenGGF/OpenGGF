@@ -36,7 +36,15 @@ import com.openggf.game.sonic3k.objects.badniks.SparkleBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance;
 import com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossBlade;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeSplash;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeWaterChute;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossGeyserCutscene;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikShip;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance;
@@ -245,7 +253,49 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             starPostStarChildCodec(),
             starPostBonusStarChildCodec(),
             ssEntryFlashCodec(),
-            buggernautBabyCodec());
+            buggernautBabyCodec(),
+
+            // --- Release-slice batch 4: HCZ end-boss scene + AIZ boss/intro codecs ---
+            // Without these, recreateDynamicObject() returns null for the listed
+            // objects captured in a rewind keyframe and they vanish on restore.
+            // Self-contained gameplay-critical bosses/cutscenes/capsules use
+            // exactSpawnCodec; boss/parent-linked children use relink codecs that
+            // resolve the live boss recreated earlier in the restore order. Non-spawn
+            // differentiator scalars were made non-final where needed so the generic
+            // field capturer reapplies them after recreate.
+
+            // Self-contained gameplay-critical bosses / cutscenes / capsules.
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    AizEndBossInstance.class, s -> new AizEndBossInstance(s)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    Aiz2EndEggCapsuleInstance.class,
+                    s -> new Aiz2EndEggCapsuleInstance(s.x(), s.y())),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    HczEndBossInstance.class, s -> new HczEndBossInstance(s)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    HczEndBossEggCapsuleInstance.class,
+                    s -> new HczEndBossEggCapsuleInstance(s.x(), s.y())),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    HczEndBossGeyserCutscene.class,
+                    s -> new HczEndBossGeyserCutscene(s.x(), s.y())),
+
+            // HCZ end-boss children — relink to the live boss recreated earlier.
+            // Turbine is registered BEFORE the water column so the column's
+            // sibling relink finds it already live in getActiveObjects().
+            hczEndBossChildCodec(HczEndBossRobotnikShip.class, HczEndBossRobotnikShip::new),
+            bossChildCodec(HczEndBossTurbine.class, HczEndBossInstance.class,
+                    boss -> new HczEndBossTurbine(boss, 0, 0x24)),
+            hczEndBossChildCodec(HczEndBossBlade.class,
+                    boss -> new HczEndBossBlade(boss, 0, 0, 0)),
+            hczEndBossChildCodec(HczEndBossBladeWaterChute.class,
+                    boss -> new HczEndBossBladeWaterChute(boss, 0, 0)),
+            hczEndBossSplashCodec(),
+            hczWaterColumnCodec(),
+
+            // AIZ1 intro biplane cutscene children (parent-relink to the live
+            // AizPlaneIntroInstance orchestrator).
+            aizPlaneIntroChildCodec(),
+            aizPlaneIntroWaveChildCodec());
 
     // AIZ2 dynamic objects still intentionally dropped on rewind restore (no codec):
     //   (none remaining) — all AIZ2 battleship/boss transient children are now
@@ -329,6 +379,143 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             Class<? extends AbstractObjectInstance> type,
             Function<AizEndBossInstance, ? extends AbstractObjectInstance> factory) {
         return bossChildCodec(type, AizEndBossInstance.class, factory);
+    }
+
+    /**
+     * Codec for an HCZ end-boss child. The live {@link HczEndBossInstance} is the
+     * placed/layout-spawned boss recreated before the dynamic-object restore loop,
+     * so it is found in {@code getActiveObjects()} and passed into the child
+     * constructor. If the boss is absent the child is dropped (codec returns null).
+     */
+    private static DynamicObjectRewindCodec hczEndBossChildCodec(
+            Class<? extends AbstractObjectInstance> type,
+            Function<HczEndBossInstance, ? extends AbstractObjectInstance> factory) {
+        return bossChildCodec(type, HczEndBossInstance.class, factory);
+    }
+
+    /**
+     * Codec for the HCZ end-boss blade splash. Relinks the live boss and recovers
+     * the splash spawn X from the captured spawn (AbstractBossChild keeps
+     * {@code dynamicSpawn.x() == currentX == bladeX}). The animation scalars are
+     * non-final and reapplied by the generic field capturer after recreate.
+     */
+    private static DynamicObjectRewindCodec hczEndBossSplashCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == HczEndBossBladeSplash.class;
+            }
+
+            @Override
+            public String className() {
+                return HczEndBossBladeSplash.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                HczEndBossInstance boss = findLiveBossForRewind(context, HczEndBossInstance.class);
+                if (boss == null) {
+                    return null; // parent not yet live; drop this restore
+                }
+                return new HczEndBossBladeSplash(boss, entry.spawn().x());
+            }
+        };
+    }
+
+    /**
+     * Codec for the HCZ end-boss water column. It needs both the live
+     * {@link HczEndBossInstance} (a placed/active object) and the live
+     * {@link HczEndBossTurbine} sibling. The turbine is itself a dynamic child
+     * captured earlier in spawn order, and its codec is registered before this one
+     * so it is already recreated (and present in {@code getActiveObjects()}) when
+     * the column relinks. If either is absent the column is dropped.
+     */
+    private static DynamicObjectRewindCodec hczWaterColumnCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == HczEndBossWaterColumn.class;
+            }
+
+            @Override
+            public String className() {
+                return HczEndBossWaterColumn.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                HczEndBossInstance boss = findLiveBossForRewind(context, HczEndBossInstance.class);
+                HczEndBossTurbine turbine = findLiveInstance(context, HczEndBossTurbine.class);
+                if (boss == null || turbine == null) {
+                    return null;
+                }
+                return new HczEndBossWaterColumn(boss, turbine);
+            }
+        };
+    }
+
+    /**
+     * Codec for the AIZ1 intro biplane child. The live
+     * {@link AizPlaneIntroInstance} orchestrator is resolved via its static
+     * accessor (set in its constructor, cleared on destroy), which is more robust
+     * than scanning active objects and avoids spawn-order assumptions. The plane
+     * child's {@code parent} is final and passed into the constructor. If the
+     * intro is over (no live orchestrator) the child is dropped.
+     */
+    private static DynamicObjectRewindCodec aizPlaneIntroChildCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == AizIntroPlaneChild.class;
+            }
+
+            @Override
+            public String className() {
+                return AizIntroPlaneChild.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                AizPlaneIntroInstance parent = AizPlaneIntroInstance.getActiveIntroInstance();
+                if (parent == null) {
+                    return null;
+                }
+                return new AizIntroPlaneChild(entry.spawn(), parent);
+            }
+        };
+    }
+
+    /**
+     * Codec for the AIZ1 intro wave-splash child. Relinks the single live
+     * {@link AizPlaneIntroInstance} orchestrator (passed into the constructor and
+     * used live each frame via its scroll speed). If the intro is over the wave is
+     * dropped.
+     */
+    private static DynamicObjectRewindCodec aizPlaneIntroWaveChildCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == AizIntroWaveChild.class;
+            }
+
+            @Override
+            public String className() {
+                return AizIntroWaveChild.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                AizPlaneIntroInstance parent = AizPlaneIntroInstance.getActiveIntroInstance();
+                if (parent == null) {
+                    return null;
+                }
+                return new AizIntroWaveChild(entry.spawn(), parent);
+            }
+        };
     }
 
     private static <B extends AbstractBossInstance> DynamicObjectRewindCodec bossChildCodec(

@@ -449,3 +449,31 @@ All other batch-2 S3K transient/relink children (`AizRockFragmentChild`,
 `Sonic3kStarPostBonusStarChild`, `Sonic3kSSEntryFlashObjectInstance`,
 `IczEndBossEggCapsuleInstance`, `CaterkillerJrBodyInstance`, `BuggernautBabyInstance`) now
 have rewind codecs in `Sonic3kObjectRegistry` and are restored on a backward seek.
+
+## Batch-4 Rewind: Transient Cosmetic Children Not Rewound
+
+`AizIntroEmeraldGlowChild` is intentionally **not** given its own rewind codec (its
+`#recreate` and `#finalScalar#xOffset` / `#finalScalar#yOffset` keys stay in
+`src/test/resources/rewind/coverage-baseline.txt`). It is the AIZ1 intro-biplane emerald
+glow — a purely cosmetic 3-frame cycle that does **not** even render
+(`AizIntroPlaneChild.appendRenderCommands` omits it) and holds no player, score, or
+terrain state. More importantly it is never a dynamic-object snapshot entry: the two glow
+children are created with raw `new` and held only as `glowChild1`/`glowChild2` fields on
+`AizIntroPlaneChild` (already enrolled as structural sub-object refs in
+`DefaultObjectRewindPolicies.STRUCTURAL_OBJECT_FIELD_NAMES`); they are never passed to
+`addDynamicObject`, so there is no `DynamicObjectEntry` / `entry.spawn()` to drive an
+`exactSpawnCodec` or relink codec. The coverage-baseline keys are over-approximation false
+positives from the spawnable-class scan. Restoring the glow follows transitively for free
+from the owning `AizIntroPlaneChild` relink codec (which re-creates its boosters and is
+relinked to the live `AizPlaneIntroInstance`), so no separate codec is warranted.
+
+This mirrors the AIZ2/Batch-2 transient-children precedent above: capture is only
+worthwhile when a dropped object would otherwise visibly re-emit and play forward.
+
+The other batch-4 HCZ end-boss scene objects (`HczEndBossInstance`,
+`HczEndBossEggCapsuleInstance`, `HczEndBossGeyserCutscene`, `HczEndBossRobotnikShip`,
+`HczEndBossTurbine`, `HczEndBossBlade`, `HczEndBossBladeSplash`,
+`HczEndBossBladeWaterChute`, `HczEndBossWaterColumn`) plus the AIZ boss/intro objects
+(`AizEndBossInstance`, `Aiz2EndEggCapsuleInstance`, `AizIntroPlaneChild`,
+`AizIntroWaveChild`) now have rewind codecs in `Sonic3kObjectRegistry` and are restored on
+a backward seek.

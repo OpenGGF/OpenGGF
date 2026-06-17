@@ -114,8 +114,9 @@ public class HczEndBossBladeWaterChute extends AbstractBossChild {
     // Instance state
     // =========================================================================
     private final HczEndBossInstance boss;
-    private final int slotIndex;         // 0-4 (subtype / 2)
-    private final int[] animScript;      // animation data for this slot
+    // Non-final so the generic field capturer reapplies it after a rewind
+    // recreate (see hczEndBossChildCodec in Sonic3kObjectRegistry).
+    private int slotIndex;               // 0-4 (subtype / 2)
 
     private int state;
     private int waitTimer;               // staggered start delay
@@ -139,7 +140,6 @@ public class HczEndBossBladeWaterChute extends AbstractBossChild {
         super(boss, "HCZEndBossBladeWaterChute[" + slotIndex + "]", 3, 0);
         this.boss = boss;
         this.slotIndex = Math.min(Math.max(slotIndex, 0), 4);
-        this.animScript = ANIM_SCRIPTS[this.slotIndex];
 
         // Position: blade's X, water level + Y offset
         this.currentX = bladeX;
@@ -295,6 +295,7 @@ public class HczEndBossBladeWaterChute extends AbstractBossChild {
             return;
         }
 
+        int[] animScript = animScript();
         int nextFrameIndex = animFrameIndex + 2;
         if (nextFrameIndex >= animScript.length) {
             animComplete = true;
@@ -310,6 +311,15 @@ public class HczEndBossBladeWaterChute extends AbstractBossChild {
         animFrameIndex = nextFrameIndex;
         mappingFrame = frameValue;
         animFrameTimer = animScript[nextFrameIndex + 1];
+    }
+
+    /**
+     * Animation data for this chute's slot. Derived from {@link #slotIndex} (not
+     * cached in a field) so it stays consistent after a rewind recreate reapplies
+     * the captured {@code slotIndex}.
+     */
+    private int[] animScript() {
+        return ANIM_SCRIPTS[slotIndex];
     }
 
     // =========================================================================
