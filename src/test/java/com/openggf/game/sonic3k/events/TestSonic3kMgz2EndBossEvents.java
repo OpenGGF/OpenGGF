@@ -834,15 +834,18 @@ class TestSonic3kMgz2EndBossEvents {
 
         AbstractPlayableSprite tails = triggerBossTransitionWithTailsBelowLine(events);
 
-        tails.getCpuController().update(7);
+        boolean sawJumpPulse = false;
+        for (int frame = 7; frame < 24; frame++) {
+            tails.getCpuController().update(frame);
+            assertEquals(SidekickCpuController.State.CARRYING, tails.getCpuController().getState());
+            assertFalse(tails.getCpuController().getInputRight(),
+                    "MGZ rescue routine $16 does not reuse the CNZ carry's synthetic-right input");
+            sawJumpPulse |= tails.getCpuController().getInputJump()
+                    && tails.getCpuController().getInputJumpPress();
+        }
 
-        assertEquals(SidekickCpuController.State.CARRYING, tails.getCpuController().getState());
-        assertTrue(tails.getCpuController().getInputJump(),
+        assertTrue(sawJumpPulse,
                 "MGZ rescue routine $16 pulses A/B/C every 8 frames so Tails keeps flying upward");
-        assertTrue(tails.getCpuController().getInputJumpPress(),
-                "Ctrl_2_logical includes the press bits, not just held bits");
-        assertFalse(tails.getCpuController().getInputRight(),
-                "MGZ rescue routine $16 does not reuse the CNZ carry's synthetic-right input");
     }
 
     private static ObjectManager installObjectManager() throws NoSuchFieldException, IllegalAccessException {

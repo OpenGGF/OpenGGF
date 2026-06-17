@@ -490,8 +490,9 @@ class TestS3kMgz2BgRiseHeadless {
             LevelManager levelManager = GameServices.level();
             SensorResult fgResult = config.vertical()
                     ? invokeSensorMethod(groundSensor, "scanVertical",
-                    new Class<?>[] {LevelManager.class, short.class, short.class, int.class, Direction.class},
-                    levelManager, originalX, originalY, solidityBit, config.direction())
+                    new Class<?>[] {LevelManager.class, short.class, short.class, int.class, Direction.class,
+                            boolean.class},
+                    levelManager, originalX, originalY, solidityBit, config.direction(), false)
                     : null;
             SensorResult bgResult = invokeSensorMethod(groundSensor, "scanBackgroundCollision",
                     new Class<?>[] {LevelManager.class, short.class, short.class, int.class, Direction.class,

@@ -388,8 +388,10 @@ public final class RewindSnapshotDiff {
         if (!cls.isRecord()) return Objects.equals(a, b);
         for (var component : cls.getRecordComponents()) {
             try {
-                Object av = component.getAccessor().invoke(a);
-                Object bv = component.getAccessor().invoke(b);
+                var accessor = component.getAccessor();
+                accessor.setAccessible(true);
+                Object av = accessor.invoke(a);
+                Object bv = accessor.invoke(b);
                 if (!fieldContentEqual(av, bv)) return false;
             } catch (ReflectiveOperationException e) {
                 throw new RuntimeException(

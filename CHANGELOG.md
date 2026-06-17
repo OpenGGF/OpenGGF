@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Test-suite cleanup aligns stale parity assumptions with trace-frontier fixes:**
+  rewind snapshot diffs now compare private record content safely, S1 fixed-air
+  countdown cadence no longer trips the zone-event runtime access guard, dynamic
+  object rewind restores conveyor spawns to live classification, and headless
+  tilemap reads preserve runtime foreground writes even when render pattern
+  lookup data is unavailable.
+
 - **Trace context marks tolerated status mismatches:** trace replay context
   windows now keep ignored-but-real sidekick status-byte mismatches visible with
   a `~` marker, so push/facing diagnostics that precede a movement frontier can
