@@ -149,6 +149,33 @@ public class AizIntroArtLoader {
     }
 
     /**
+     * Loads only the shared Cutscene Knuckles art bundle used outside the AIZ
+     * intro, without pulling in plane, emerald, wave, or cork-floor resources.
+     */
+    public static synchronized void loadCutsceneKnucklesArt(ObjectServices services) {
+        if (knucklesSheet != null
+                && knucklesPatterns != null
+                && knucklesMappings != null
+                && knucklesDplcFrames != null
+                && cutsceneKnucklesPalette != null
+                && cutsceneKnucklesPalette.length > 0) {
+            return;
+        }
+
+        ObjectServices previousServices = activeServices;
+        activeServices = services;
+        try {
+            loadKnucklesArt();
+            loadKnucklesMappings();
+            loadKnucklesDplc();
+            loadCutsceneKnucklesPalette();
+            buildCutsceneKnucklesSheet();
+        } finally {
+            activeServices = previousServices;
+        }
+    }
+
+    /**
      * Resets all cached data, forcing a reload on the next call to
      * {@link #loadAllIntroArt()}. Intended for level transitions.
      */
@@ -804,7 +831,7 @@ public class AizIntroArtLoader {
     }
 
     public static PatternSpriteRenderer getKnucklesRenderer(ObjectServices services) {
-        ensureRenderersCached(services);
+        ensureCutsceneKnucklesRendererCached(services);
         return knucklesRenderer;
     }
 
@@ -1092,7 +1119,17 @@ public class AizIntroArtLoader {
             introSpritesSheet = new ObjectSpriteSheet(introSpritesPatterns, waveMappings, 0, 1);
         }
 
-        // Knuckles sheet: palette index 1 (Knuckles palette line), frame delay 1
+        buildCutsceneKnucklesSheet();
+
+        // Cork floor sheet: palette index 2 (ROM: make_art_tile($001,2,0)), frame delay 1
+        // No DPLCs — static art, tile indices reference Nemesis patterns directly.
+        if (corkFloorPatterns != null && corkFloorMappings != null) {
+            corkFloorSheet = new ObjectSpriteSheet(corkFloorPatterns, corkFloorMappings, 2, 1);
+        }
+    }
+
+    private static void buildCutsceneKnucklesSheet() {
+        // Knuckles sheet: palette index 1 (Knuckles palette line), frame delay 1.
         // Apply DPLC remapping so mapping tile indices reference the correct source tiles.
         if (knucklesPatterns != null
                 && knucklesPatterns.length > 0
@@ -1103,12 +1140,24 @@ public class AizIntroArtLoader {
             List<SpriteMappingFrame> remapped = applyDplcRemap(knucklesMappings, knucklesDplcFrames);
             knucklesSheet = new ObjectSpriteSheet(knucklesPatterns, remapped, 1, 1);
         }
+    }
 
-        // Cork floor sheet: palette index 2 (ROM: make_art_tile($001,2,0)), frame delay 1
-        // No DPLCs — static art, tile indices reference Nemesis patterns directly.
-        if (corkFloorPatterns != null && corkFloorMappings != null) {
-            corkFloorSheet = new ObjectSpriteSheet(corkFloorPatterns, corkFloorMappings, 2, 1);
+    private static void ensureCutsceneKnucklesRendererCached(ObjectServices services) {
+        if (knucklesRenderer != null && knucklesRenderer.isReady()) {
+            return;
         }
+        if (knucklesSheet == null) {
+            loadCutsceneKnucklesArt(services);
+        }
+        if (knucklesSheet == null || knucklesPatterns == null || knucklesPatterns.length == 0) {
+            return;
+        }
+        GraphicsManager gm = graphicsManager(services);
+        if (gm == null) {
+            return;
+        }
+        knucklesRenderer = new PatternSpriteRenderer(knucklesSheet);
+        knucklesRenderer.ensurePatternsCached(gm, INTRO_PATTERN_BASE);
     }
 
     /**

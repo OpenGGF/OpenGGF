@@ -162,7 +162,7 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance {
             ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
-        AizIntroArtLoader.loadAllIntroArt(services());
+        AizIntroArtLoader.loadCutsceneKnucklesArt(services());
         AizIntroArtLoader.applyKnucklesPalette(services());
         ensureBossExplosionArtReady();
         mappingFrame = INITIAL_MAPPING_FRAME;
