@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
+import com.openggf.game.sonic3k.events.Sonic3kMGZEvents;
 import com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.BatbotBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.BuggernautBabyInstance;
@@ -365,7 +367,73 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
 
             // MHZ weather-machine visual children — relink to the live
             // weather-machine child recreated just above (in spawn order).
-            mhzEndBossWeatherVisualChildCodec());
+            mhzEndBossWeatherVisualChildCodec(),
+
+            // --- Release-slice batch 6: LBZ/CNZ/AIZ1 cutscene + MGZ end-act +
+            // MHZ ship/door + shield/spark rewind recreate codecs ---------------
+            // Without these, recreateDynamicObject() returns null for the listed
+            // objects captured in a rewind keyframe and they vanish on restore.
+            // Self-contained objects use exactSpawnCodec; non-spawn differentiator
+            // scalars were made non-final where needed so the generic field capturer
+            // reapplies them after recreate. Parent/sibling-linked objects use relink
+            // codecs that resolve the live parent (placed/layout cutscene or event
+            // manager) recreated earlier in the restore order.
+
+            // LBZ1 Knuckles cutscene family.
+            cutsceneKnucklesLbz1CollapseChildCodec(),
+            cutsceneKnucklesLbz1RangeHelperCodec(),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    CutsceneKnucklesLbz1ThrownBomb.class,
+                    s -> new CutsceneKnucklesLbz1ThrownBomb(s.x(), s.y())),
+
+            // AIZ1 intro Knuckles rock: parent recreated FIRST (self-contained),
+            // then the rock child relinks to the live parent in getActiveObjects().
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    CutsceneKnucklesAiz1Instance.class,
+                    s -> new CutsceneKnucklesAiz1Instance(s)),
+            cutsceneKnucklesAiz1RockChildCodec(),
+
+            // CNZ2 Knuckles cutscene blocking wall: relink to the placed parent.
+            cutsceneKnuxCnz2WallCodec(),
+
+            // S3K InstaShield (player-bound; rebinds the live player like its
+            // fire/lightning/bubble shield siblings).
+            ObjectRewindDynamicCodecs.deferredPlayerBoundCodec(
+                    InstaShieldObjectInstance.class,
+                    com.openggf.level.objects.ShieldObjectInstance.class),
+
+            // LightningShield spark particle (self-contained; re-fetches art).
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    LightningSparkObjectInstance.class,
+                    LightningSparkObjectInstance::forRewindRecreate),
+
+            // MGZ end-of-act capsule / animals / results / collapse floor / boss.
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    Mgz2EndEggCapsuleInstance.class,
+                    s -> new Mgz2EndEggCapsuleInstance(s.x(), s.y())),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    Mgz2CapsuleAnimalInstance.class,
+                    s -> new Mgz2CapsuleAnimalInstance(s, 0, 0, 0)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    S3kResultsScreenObjectInstance.class,
+                    s -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    Mgz2ResultsScreenObjectInstance.class,
+                    s -> new Mgz2ResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0)),
+            mgz2CollapseSolidCodec(),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    MgzDrillingRobotnikInstance.class,
+                    s -> new MgzDrillingRobotnikInstance(s, false)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    MgzEndBossInstance.class, s -> new MgzEndBossInstance(s)),
+
+            // MHZ1 Knuckles cutscene door (relink to the placed button parent).
+            mhz1CutsceneDoorCodec(),
+
+            // MHZ Act 2 ship-sequence controller (self-contained; ROM-fixed seeds).
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    MhzShipSequenceControllerInstance.class,
+                    s -> new MhzShipSequenceControllerInstance(0x04C0, 0x4000)));
 
     // AIZ2 dynamic objects still intentionally dropped on rewind restore (no codec):
     //   (none remaining) — all AIZ2 battleship/boss transient children are now
@@ -1000,6 +1068,210 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     return null;
                 }
                 return MhzEndBossWeatherVisualChild.forRewindRecreate(parent, entry.spawn());
+            }
+        };
+    }
+
+    // ---- Batch-6 relink codecs --------------------------------------------
+
+    /**
+     * Codec for the LBZ1 Knuckles-cutscene collapse child. Relinks the single live
+     * {@link CutsceneKnucklesLbz1Instance} parent (a placed/persistent cutscene
+     * singleton re-spawned via the placement path on restore, hence present in
+     * getActiveObjects()). subtype is spawn-derivable and passed into the
+     * constructor; motion/timer scalars are reapplied by the field capturer.
+     */
+    private static DynamicObjectRewindCodec cutsceneKnucklesLbz1CollapseChildCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == CutsceneKnucklesLbz1CollapseChild.class;
+            }
+
+            @Override
+            public String className() {
+                return CutsceneKnucklesLbz1CollapseChild.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                CutsceneKnucklesLbz1Instance parent =
+                        findLiveInstance(context, CutsceneKnucklesLbz1Instance.class);
+                if (parent == null) {
+                    return null;
+                }
+                return new CutsceneKnucklesLbz1CollapseChild(parent, entry.spawn().subtype());
+            }
+        };
+    }
+
+    /**
+     * Codec for the LBZ1 Knuckles-cutscene range helper. Relinks the single live
+     * {@link CutsceneKnucklesLbz1Instance} parent (a placed object re-spawned via
+     * the placement path on restore, present in getActiveObjects()). Position is
+     * spawn-derivable; the parent is passed into the constructor. Dropped if the
+     * cutscene parent is no longer live.
+     */
+    private static DynamicObjectRewindCodec cutsceneKnucklesLbz1RangeHelperCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == CutsceneKnucklesLbz1RangeHelper.class;
+            }
+
+            @Override
+            public String className() {
+                return CutsceneKnucklesLbz1RangeHelper.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                CutsceneKnucklesLbz1Instance parent =
+                        findLiveInstance(context, CutsceneKnucklesLbz1Instance.class);
+                if (parent == null) {
+                    return null;
+                }
+                return new CutsceneKnucklesLbz1RangeHelper(
+                        parent, entry.spawn().x(), entry.spawn().y());
+            }
+        };
+    }
+
+    /**
+     * Codec for the AIZ1 intro Knuckles rock child. Relinks the live
+     * {@link CutsceneKnucklesAiz1Instance} parent (recreated earlier in the
+     * dynamic-object restore order via its exactSpawnCodec, so it is present in
+     * getActiveObjects()). The child's {@code parent} field is final and passed
+     * into the constructor; if no live parent exists the child is dropped.
+     */
+    private static DynamicObjectRewindCodec cutsceneKnucklesAiz1RockChildCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == CutsceneKnucklesRockChild.class;
+            }
+
+            @Override
+            public String className() {
+                return CutsceneKnucklesRockChild.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                CutsceneKnucklesAiz1Instance parent =
+                        findLiveInstance(context, CutsceneKnucklesAiz1Instance.class);
+                if (parent == null) {
+                    return null;
+                }
+                return new CutsceneKnucklesRockChild(entry.spawn(), parent);
+            }
+        };
+    }
+
+    /**
+     * Codec for {@link CutsceneKnuxCnz2WallInstance}. The wall's only non-spawn
+     * constructor argument is its live {@link CutsceneKnucklesCnz2AInstance}
+     * cutscene parent (a placed object re-spawned from placement on restore).
+     * Relinks to that live parent so the invisible blocking wall is rebuilt with
+     * the correct owner; dropped if the parent is absent.
+     */
+    private static DynamicObjectRewindCodec cutsceneKnuxCnz2WallCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == CutsceneKnuxCnz2WallInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return CutsceneKnuxCnz2WallInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                CutsceneKnucklesCnz2AInstance parent =
+                        findLiveInstance(context, CutsceneKnucklesCnz2AInstance.class);
+                if (parent == null) {
+                    return null;
+                }
+                return new CutsceneKnuxCnz2WallInstance(entry.spawn(), parent);
+            }
+        };
+    }
+
+    /**
+     * Codec for the MGZ2 level-collapse solids. The solid's scroll/delete suppliers
+     * are bound to the live {@link Sonic3kMGZEvents} manager, so this relinks
+     * through the event provider and rebuilds the solid via the owner-side
+     * {@link Sonic3kMGZEvents#recreateCollapseSolidForRewind(ObjectSpawn)} factory.
+     * Dropped if the MGZ event manager is gone (cannot rebind suppliers).
+     */
+    private static DynamicObjectRewindCodec mgz2CollapseSolidCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == Mgz2LevelCollapseSolidInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return Mgz2LevelCollapseSolidInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                Sonic3kMGZEvents mgz = findLiveMgzEventsForRewind(context);
+                if (mgz == null) {
+                    return null;
+                }
+                return mgz.recreateCollapseSolidForRewind(entry.spawn());
+            }
+        };
+    }
+
+    private static Sonic3kMGZEvents findLiveMgzEventsForRewind(
+            DynamicObjectRecreateContext context) {
+        if (context.objectServices().levelEventProvider()
+                instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager mgr) {
+            return mgr.getMgzEvents();
+        }
+        return null;
+    }
+
+    /**
+     * Codec for the MHZ1 Knuckles-cutscene door. Relinks the single live
+     * {@link Mhz1CutsceneButtonInstance} parent (a placed object recreated before
+     * the dynamic-restore loop, present in getActiveObjects()). The door's
+     * {@code parent} field is final and passed into the constructor; the door's
+     * slide position/state are reapplied by the field capturer. Dropped if the
+     * button parent is absent.
+     */
+    private static DynamicObjectRewindCodec mhz1CutsceneDoorCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == Mhz1CutsceneDoorInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return Mhz1CutsceneDoorInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                Mhz1CutsceneButtonInstance parent =
+                        findLiveInstance(context, Mhz1CutsceneButtonInstance.class);
+                if (parent == null) {
+                    return null;
+                }
+                return new Mhz1CutsceneDoorInstance(parent);
             }
         };
     }

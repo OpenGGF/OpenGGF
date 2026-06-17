@@ -1833,6 +1833,40 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         return screenEventRoutine == SCREEN_EVENT_MOVE_BG || collapseFinished;
     }
 
+    /**
+     * Rewind recreate factory for a single MGZ2 level-collapse solid. The solid's
+     * two functional-interface constructor args (scroll supplier + delete supplier)
+     * are bound to this live event manager and cannot be reconstructed from the
+     * captured {@link ObjectSpawn} alone, so the dynamic rewind codec relinks
+     * through here. anchorX/baseY come from the spawn; the column index is recovered
+     * from anchorX. The recreated solid is re-registered into the (transient)
+     * tracking array so the manager's per-frame updates and SCREEN_EVENT_MOVE_BG
+     * teardown continue to drive/destroy it after rewind. Returns {@code null} if
+     * the anchor is out of range.
+     */
+    public Mgz2LevelCollapseSolidInstance recreateCollapseSolidForRewind(ObjectSpawn spawn) {
+        int anchorX = spawn.x();
+        int baseY = spawn.y();
+        int column = (anchorX - COLLAPSE_SOLID_START_X) / COLLAPSE_SOLID_STEP_X;
+        if (column < 0 || column >= COLLAPSE_COLUMN_COUNT) {
+            return null;
+        }
+        final int scrollColumn = column;
+        Mgz2LevelCollapseSolidInstance solid = new Mgz2LevelCollapseSolidInstance(
+                anchorX,
+                baseY,
+                () -> collapseScrollPosition[scrollColumn],
+                this::isCollapseSolidDeleteState);
+        // createCollapseSolids() registers the high solid first (index even) then
+        // the low solid (index odd) per column; mirror that mapping here.
+        int solidIndex = scrollColumn * 2
+                + (baseY == COLLAPSE_SOLID_LOW_BASE_Y ? 1 : 0);
+        if (solidIndex >= 0 && solidIndex < collapseSolids.length) {
+            collapseSolids[solidIndex] = solid;
+        }
+        return solid;
+    }
+
     private void snapshotForegroundTilemapBeforeCollapseClear() {
         LevelManager levelManager = levelManager();
         if (levelManager != null) {

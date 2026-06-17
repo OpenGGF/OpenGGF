@@ -10,7 +10,13 @@ import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.game.GameModule;
+import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.sprites.art.SpriteArtSet;
 
 import java.util.List;
 
@@ -74,6 +80,30 @@ public class LightningSparkObjectInstance extends AbstractObjectInstance {
         this.frameIndex = 0;
         this.currentMappingFrame = 0;
         initAnimation();
+    }
+
+    /**
+     * Rewind recreate factory. The captured dynamic spawn carries the spark's
+     * position; movement/animation scalars are reapplied by the generic field
+     * capturer after recreate, so the constructor velocities are placeholders.
+     * Art (animation set + spark tiles) is re-fetched from the live S3K object-art
+     * provider exactly as {@link LightningShieldObjectInstance#triggerSparks()}
+     * does; the object null-guards missing art, so a structurally-valid instance is
+     * always returned.
+     */
+    public static LightningSparkObjectInstance forRewindRecreate(ObjectSpawn spawn) {
+        SpriteAnimationSet animSet = null;
+        Pattern[] sparkTiles = null;
+        GameModule module = GameModuleRegistry.getCurrent();
+        if (module != null
+                && module.getObjectArtProvider() instanceof Sonic3kObjectArtProvider s3k) {
+            SpriteArtSet sparkArt = s3k.getShieldArtSet(Sonic3kObjectArtKeys.LIGHTNING_SPARK);
+            if (sparkArt != null) {
+                animSet = sparkArt.animationSet();
+                sparkTiles = sparkArt.artTiles();
+            }
+        }
+        return new LightningSparkObjectInstance(spawn.x(), spawn.y(), 0, 0, animSet, sparkTiles);
     }
 
     @Override
