@@ -20,6 +20,34 @@ All notable changes to the OpenGGF project are documented in this file.
   children (bombs, explosions, flames) — are now captured and restored, so the
   scene reverses cleanly under rewind (see S3K_KNOWN_DISCREPANCIES.md).
 
+- **Test-suite cleanup aligns stale parity assumptions with trace-frontier fixes:**
+  rewind snapshot diffs now compare private record content safely, S1 fixed-air
+  countdown cadence no longer trips the zone-event runtime access guard, dynamic
+  object rewind restores conveyor spawns to live classification, and headless
+  tilemap reads preserve runtime foreground writes even when render pattern
+  lookup data is unavailable.
+
+- **AIZ miniboss self-destructs if carried across an act reload:** the AIZ2
+  fightable miniboss (object 0x91, `AizMinibossInstance`) is spawned in AIZ2 and
+  holds the boss arena camera lock every frame even after defeat (it does not use
+  the defeat sequencer), self-destructing only when the end-of-level camera
+  widening completes. It is persistent, so if it were ever carried across a seamless
+  act reload while still alive it would become an invisible, camera-locking ghost in
+  the next act. It now removes itself and its tracked children when carried across the
+  act transition, hardening the same object-lifetime guarantee applied to the AIZ1
+  cutscene miniboss.
+
+- **AIZ1 cutscene miniboss no longer strands flame children in AIZ2:** the
+  AIZ Act 1 cutscene miniboss (object 0x90, `AizMinibossCutsceneInstance`) is a
+  one-shot scripted object whose long fly-off is still running when the AIZ1->AIZ2
+  fire transition snapshots persistent objects. Because it and its persistent
+  flame-barrel children were carried across the seamless reload without the world
+  offset being applied, they stranded partway through AIZ2 -- an invisible-bodied
+  "copy" of the miniboss whose flames kept hurting the player. It now removes
+  itself and its tracked children when carried across the act transition,
+  mirroring the ROM where `Obj_AIZMinibossCutscene`s object slot does not survive
+  the AIZ2 level reload.
+
 - **Trace context marks tolerated status mismatches:** trace replay context
   windows now keep ignored-but-real sidekick status-byte mismatches visible with
   a `~` marker, so push/facing diagnostics that precede a movement frontier can

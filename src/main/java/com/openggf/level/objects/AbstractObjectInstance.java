@@ -209,6 +209,15 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         }
     }
 
+    /**
+     * Rebuilds dynamic spawn metadata even when the tracked coordinates did not
+     * move. Subclasses whose spawn identity depends on restored local state
+     * should use this after restoring that state.
+     */
+    protected void rebuildDynamicSpawn(int x, int y) {
+        dynamicSpawn = buildSpawnAt(x, y);
+    }
+
     @Override
     public boolean participatesInLevelRepeatOffset() {
         return false;

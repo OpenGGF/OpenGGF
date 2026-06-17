@@ -194,8 +194,9 @@ public class LevelTilemapManager {
             backgroundTilemapDirty = true;
             bgWindowShiftCandidate = false;
         }
-        if (!backgroundTilemapDirty && backgroundTilemapData != null && patternLookupData != null) {
+        if (!backgroundTilemapDirty && backgroundTilemapData != null) {
             lastRequiresFullWidthBgTilemap = requiresFullWidthBgTilemap;
+            ensurePatternLookupData();
             // Tilemap data already up to date — but still push VDP wrap height
             // to the renderer in case it was null during the initial build.
             TilemapGpuRenderer renderer = graphicsManager.getTilemapGpuRenderer();
@@ -271,14 +272,16 @@ public class LevelTilemapManager {
 
         // FG ring active and already built: incremental leading-edge fill only.
         if (fgWrap && !foregroundTilemapDirty && foregroundTilemapData != null
-                && patternLookupData != null && foregroundRingSeeded) {
+                && foregroundRingSeeded) {
             if (foregroundRingFillLeadingEdge(blockLookup, level)) {
                 uploadForegroundTilemap();
             }
+            ensurePatternLookupData();
             return;
         }
 
-        if (!foregroundTilemapDirty && foregroundTilemapData != null && patternLookupData != null) {
+        if (!foregroundTilemapDirty && foregroundTilemapData != null) {
+            ensurePatternLookupData();
             return;
         }
 

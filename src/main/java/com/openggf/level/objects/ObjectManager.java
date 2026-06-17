@@ -284,9 +284,9 @@ public class ObjectManager {
         // Materialize the current ObjectPlacementController window immediately after reset.
         // S1 needs this for ROM parity at level start; for S2/S3K it keeps
         // manual camera resets and headless probes from sitting on an empty
-        // active window until a later ObjectPlacementController delta occurs. The load step is
-        // idempotent, so the first gameplay update will not duplicate instances.
-        syncActiveSpawnsLoad(skipVerticalSpawnLoadFilterForGame);
+        // active window until a later ObjectPlacementController delta occurs. Initial reset
+        // materialization still honors the camera-Y filter; S2's vertical bypass is runtime-only.
+        syncActiveSpawnsLoad(false);
     }
 
     ObjectServices services() {

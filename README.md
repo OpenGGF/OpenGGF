@@ -231,6 +231,24 @@ straightforward to add new objects, zones, and game-specific behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Test-suite cleanup after trace-frontier fixes (2026-06-17).** Merged
+  `bugfix/ai-test-suite-cleanup`, aligning stale parity and guard tests with the
+  current trace-frontier behavior while fixing the underlying rewind snapshot,
+  dynamic object lifecycle, S1 fixed-air countdown access, and headless tilemap
+  cache issues exposed by the full suite.
+- **AIZ miniboss self-destructs if carried across an act reload (2026-06-17).** Merged
+  `bugfix/ai-aiz2-miniboss-defeat-carry-guard`, hardening the AIZ2 fightable miniboss
+  (object 0x91) against the same ghost failure mode as the AIZ1 cutscene fix: the persistent
+  boss, which holds the arena camera lock even after defeat, now removes itself and its
+  tracked children if it is ever carried across a seamless act reload instead of becoming an
+  invisible camera-locking ghost in the next act.
+- **AIZ1 cutscene miniboss no longer strands flame children in AIZ2 (2026-06-17).** Merged
+  `bugfix/ai-aiz2-miniboss-carry`, fixing an AIZ playthrough bug where the AIZ Act 1
+  cutscene miniboss (object 0x90) and its persistent flame-barrel children were carried
+  across the seamless AIZ1->AIZ2 fire reload without the world offset applied, stranding an
+  invisible-bodied "copy" of the miniboss whose flames kept hurting the player partway
+  through AIZ2. The cutscene object now removes itself and its tracked children when carried
+  across the act transition, matching the ROM.
 - **Trace frontier reporting/noise reduction + AIZ2 visual capture fixes (2026-06-17).** Merged
   `bugfix/ai-trace-frontier-develop`, making trace replay reports focus on the
   true release-blocking frontier, compacting noisy diagnostic context, advancing

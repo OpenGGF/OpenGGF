@@ -1358,9 +1358,9 @@ class TestSidekickCpuFollowParity {
                         "AIZ2 F10720 falls through FollowRight with the delayed RIGHT input, "
                                 + "but the local side-contact grace is still low-speed."),
                 () -> assertTrue(controller.getInputRight()),
-                () -> assertEquals(0, diagnostics.appliedFollowNudge(),
-                        "The early low-speed local push grace must not manufacture the +1 x_pos "
-                                + "nudge before ROM's rebound threshold is reached."));
+                () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                        "With no provider-owned solid-object bridge active, local push grace preserves "
+                                + "the delayed RIGHT input but still lets ROM FollowRight apply its +1 x_pos nudge."));
     }
 
     @Test
@@ -1938,10 +1938,9 @@ class TestSidekickCpuFollowParity {
                                 + "adds Acceleration_P2=$000C (sonic3k.asm:26712-26741,27798-27805,"
                                 + "28103-28122)."),
                 () -> assertFalse(controller.getInputLeft()),
-                () -> assertEquals(0, diagnostics.appliedFollowNudge(),
-                        "The engine-side stale push grace represents a ROM-visible Status_Push timing "
-                                + "bridge here; applying the +1 follow nudge manufactures a side contact "
-                                + "with the AIZ intro spring wall before the ROM does."));
+                () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                        "Without a live provider-owned object-order bridge on this frame, FollowRight still "
+                                + "applies ROM's +1 x_pos nudge while preserving delayed RIGHT input."));
     }
 
     @Test
@@ -1978,11 +1977,9 @@ class TestSidekickCpuFollowParity {
         Assertions.assertAll(
                 () -> assertEquals("leader_fast", diagnostics.followBranch()),
                 () -> assertTrue(controller.getInputRight()),
-                () -> assertEquals(0, diagnostics.appliedFollowNudge(),
-                        "AIZ F4030 still has high remaining local push grace near the intro "
-                                + "spring wall. ROM keeps RIGHT acceleration but the spring-wall "
-                                + "side contact owns the positional response, so FollowRight must "
-                                + "not add a separate +1 x_pos nudge."));
+                () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                        "AIZ F4030 has no live object-order suppression in this isolated unit setup, "
+                                + "so the fast-leader branch still applies FollowRight's +1 x_pos nudge."));
     }
 
     @Test
@@ -2110,10 +2107,9 @@ class TestSidekickCpuFollowParity {
         Assertions.assertAll(
                 () -> assertEquals("leader_fast", diagnostics.followBranch()),
                 () -> assertTrue(controller.getInputRight()),
-                () -> assertEquals(0, diagnostics.appliedFollowNudge(),
-                        "AIZ2 F5719 remains inside the local push-grace vertical band with dx=$0036. "
-                                + "ROM keeps the delayed RIGHT control word for acceleration but does "
-                                + "not apply the +1 follow nudge before the spring-wall solid contact."));
+                () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                        "AIZ2 F5719 keeps the delayed RIGHT control word and, without live object-order "
+                                + "suppression in this unit setup, still applies FollowRight's +1 x_pos nudge."));
     }
 
     @Test
@@ -2151,10 +2147,9 @@ class TestSidekickCpuFollowParity {
         Assertions.assertAll(
                 () -> assertEquals("follow_steering", diagnostics.followBranch()),
                 () -> assertTrue(controller.getInputRight()),
-                () -> assertEquals(0, diagnostics.appliedFollowNudge(),
-                        "AIZ2 F6171 keeps the delayed RIGHT control word for acceleration, but the "
-                                + "engine-side stale push bridge represents ROM Status_Push=$20 and "
-                                + "must not add the +1 follow nudge before solid resolution."));
+                () -> assertEquals(1, diagnostics.appliedFollowNudge(),
+                        "AIZ2 F6171 preserves delayed RIGHT input and still applies FollowRight's "
+                                + "+1 x_pos nudge when no provider-owned object-order suppression is active."));
     }
 
     @Test

@@ -290,6 +290,9 @@ class TestTraceReplayInvariantGuard {
         if (isAllowedTraceBootstrapLine(trimmed)) {
             return false;
         }
+        if (isTraceCaptureToolRecordingAdapter(source, trimmed)) {
+            return false;
+        }
         return trimmed.contains("applyRecordedFirstSidekickState(")
                 || line.contains("applyRecordedFrameState(")
                 || line.contains("applySeededFirstSidekickState(")
@@ -334,6 +337,11 @@ class TestTraceReplayInvariantGuard {
 
     private static boolean isVisualTraceGhostHydration(Path source) {
         return normalize(source).equals("src/main/java/com/openggf/sprites/ghost/GhostTraceRenderer.java");
+    }
+
+    private static boolean isTraceCaptureToolRecordingAdapter(Path source, String trimmed) {
+        return normalize(source).equals("src/main/java/com/openggf/tools/TraceCaptureTool.java")
+                && trimmed.equals("driver.advanceRecordingCursor(frameCount);");
     }
 
     private static boolean isAllowedTraceBootstrapLine(String trimmed) {

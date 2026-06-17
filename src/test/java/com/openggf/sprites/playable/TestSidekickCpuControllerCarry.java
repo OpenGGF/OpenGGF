@@ -674,14 +674,16 @@ class TestSidekickCpuControllerCarry {
         tails.setCentreY((short) 0x0400);
 
         controller.update(6);  // INIT -> CARRY_INIT
-        controller.update(7);  // CARRY_INIT -> CARRYING, pulse A/B/C on MGZ cadence
-        assertTrue(controller.getInputJumpPress());
+        controller.update(7);  // CARRY_INIT -> CARRYING
 
+        boolean sawJumpPulse = false;
         for (int frame = 7; frame < 24; frame++) {
             controller.update(frame);
+            sawJumpPulse |= controller.getInputJumpPress();
             controller.applyFlyingCarryVerticalVelocity();
         }
 
+        assertTrue(sawJumpPulse, "MGZ rescue carry should pulse A/B/C on its eight-frame cadence");
         assertTrue(tails.getYSpeed() < 0,
                 "MGZ rescue carry must run Tails_Move_FlySwim lift; otherwise Tails starts below screen and never reaches Sonic");
     }

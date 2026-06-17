@@ -9,6 +9,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.S3kAizEventWriteSupport;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.boss.AbstractBossChild;
@@ -141,6 +142,27 @@ public class AizMinibossCutsceneInstance extends AbstractBossInstance {
         // (sonic3k.asm:136734-136896), so the subtype-2 special explosion
         // controller can exhaust all 39 Random_Number draws.
         return true;
+    }
+
+    /**
+     * The AIZ1 cutscene miniboss is a one-shot scripted scene object: its long fly-off
+     * (EXIT_TIME_AIZ1 = 0x120) is usually still running when the AIZ1->AIZ2 fire transition
+     * snapshots persistent objects, so it (and its persistent flame-barrel children) would
+     * otherwise be carried into AIZ2. There the world delta is not applied to it (the default
+     * {@code onCarriedAcrossSeamlessTransition} is a no-op), stranding its still-firing flame
+     * children partway through AIZ2 with no coherent parent — they keep hurting the player.
+     *
+     * <p>ROM: Obj_AIZMinibossCutscene's object RAM slot does not survive the AIZ2 level reload.
+     * Mirror that by removing this object and its tracked children when the act transition
+     * carries them, instead of letting them ride into AIZ2.
+     */
+    @Override
+    public void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
+        for (var child : getChildComponents()) {
+            ObjectLifetimeOps.destroyBossChildLatched(child);
+        }
+        getChildComponents().clear();
+        ObjectLifetimeOps.destroyLatched(this);
     }
 
     @Override

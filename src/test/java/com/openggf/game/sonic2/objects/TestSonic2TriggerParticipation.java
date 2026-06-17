@@ -27,6 +27,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -43,6 +44,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class TestSonic2TriggerParticipation {
+
+    @BeforeEach
+    void resetObjectCameraBounds() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 0x2000, 0x2000, 0);
+    }
 
     @Test
     void arrowShooterDetectsQueryOnlySidekick() throws Exception {

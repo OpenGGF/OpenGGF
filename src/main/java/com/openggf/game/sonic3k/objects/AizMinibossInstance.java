@@ -13,6 +13,7 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.Palette;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -825,6 +826,27 @@ public class AizMinibossInstance extends AbstractBossInstance {
         // Dynamic_resize spawns the boss offscreen, then Obj_AIZMiniboss waits
         // for the later camera trigger before it appears.
         return true;
+    }
+
+    /**
+     * The AIZ miniboss is spawned in AIZ2 and fought there; it is never legitimately carried
+     * across a seamless act reload. It is {@code isPersistent()=true} and, because it does not use
+     * the defeat sequencer, keeps running {@code maintainArenaCameraLock()} every frame even after
+     * defeat — releasing the arena and self-destructing only when the end-of-level camera widening
+     * completes. If it were ever carried into the next act (e.g. while still defeated-but-alive),
+     * the default no-op carry hook would leave it un-offset and it would become an invisible,
+     * camera-locking ghost — the same failure mode fixed for the AIZ1 cutscene miniboss.
+     *
+     * <p>Guard against that: remove this object and its tracked children when the act transition
+     * carries them, matching the ROM where the boss object's RAM slot does not survive a reload.
+     */
+    @Override
+    public void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
+        for (var child : childComponents) {
+            ObjectLifetimeOps.destroyBossChildLatched(child);
+        }
+        childComponents.clear();
+        ObjectLifetimeOps.destroyLatched(this);
     }
 
     @Override

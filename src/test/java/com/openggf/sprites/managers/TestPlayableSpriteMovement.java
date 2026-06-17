@@ -2438,7 +2438,7 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
-        public void testS3kLeftWallPushSurvivesFacingFlipClearWhenContactIsLive() throws Exception {
+        public void testS3kFacingFlipClearsLeftWallPushLatchLikeRom() throws Exception {
                 setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
                 mockSprite.setAir(false);
                 mockSprite.setRolling(false);
@@ -2460,8 +2460,9 @@ public class TestPlayableSpriteMovement {
 
                 assertEquals(Direction.LEFT, mockSprite.getDirection(),
                                 "Pressing left from rest should face into the left wall before CalcRoomInFront");
-                assertTrue(mockSprite.getPushing(),
-                                "Live left-wall push contact must not be cleared by the prior facing-flip latch");
+                assertFalse(mockSprite.getPushing(),
+                                "S3K grounded facing-flip push clear is unconditional; a later CalcRoomInFront "
+                                                + "contact can set Status_Push again in the normal movement path");
         }
 
         /**
