@@ -4,6 +4,17 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **HCZ waterfall priority renders over foreground ramps again:** Hydrocity now
+  registers a foreground-stage BG high-priority replay pass so Plane B waterfall
+  tiles cover low-priority Plane A ramp chunks instead of leaving cut-away gaps.
+  The HCZ2 wall-chase overlay reuses the same replay path for its post-sprite
+  water-wall pass.
+
+- **Multiple CPU sidekicks keep stable draw order behind the lead player:** the
+  sprite render buckets now add CPU sidekicks from the configured sidekick chain
+  before non-CPU playables, preserving expected overlap order when duplicate or
+  multiple sidekicks share the player priority bucket.
+
 - **AIZ miniboss body/flames no longer strand in AIZ2 (actual carry-path fix):**
   the AIZ1 cutscene miniboss (object 0x90) is a *placed* layout object, so it is
   never in the seamless-reload dynamic-object carry snapshot; its earlier

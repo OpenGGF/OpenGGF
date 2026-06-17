@@ -112,6 +112,39 @@ public class TestSpriteManagerRender {
     }
 
     @Test
+    public void testMultipleSidekicksKeepChainRenderOrderBeforeMainPlayer() {
+        List<String> drawOrder = new ArrayList<>();
+        SpriteManager spriteManager = GameServices.sprites();
+
+        TestPlayableSprite main = new TestPlayableSprite("main", drawOrder);
+        main.setPriorityBucket(2);
+        main.setHighPriority(false);
+
+        TestPlayableSprite firstSidekick = new TestPlayableSprite("sidekick0", drawOrder);
+        firstSidekick.setCpuControlled(true);
+        firstSidekick.setPriorityBucket(2);
+        firstSidekick.setHighPriority(false);
+
+        TestPlayableSprite secondSidekick = new TestPlayableSprite("sidekick1", drawOrder);
+        secondSidekick.setCpuControlled(true);
+        secondSidekick.setPriorityBucket(2);
+        secondSidekick.setHighPriority(false);
+
+        spriteManager.addSprite(main);
+        spriteManager.addSprite(firstSidekick);
+        spriteManager.addSprite(secondSidekick);
+
+        try {
+            spriteManager.drawLowPriority();
+            assertEquals(List.of("sidekick0", "sidekick1", "main"), drawOrder);
+        } finally {
+            spriteManager.removeSprite(main.getCode());
+            spriteManager.removeSprite(firstSidekick.getCode());
+            spriteManager.removeSprite(secondSidekick.getCode());
+        }
+    }
+
+    @Test
     public void testSonic2SidekickSuppressionZones() throws Exception {
         List<String> drawOrder = new ArrayList<>();
         SpriteManager spriteManager = GameServices.sprites();
