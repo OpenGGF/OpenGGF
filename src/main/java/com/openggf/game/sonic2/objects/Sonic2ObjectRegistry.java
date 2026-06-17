@@ -71,6 +71,7 @@ import com.openggf.game.sonic2.objects.bosses.HTZBossFlamethrower;
 import com.openggf.game.sonic2.objects.bosses.HTZBossLavaBall;
 import com.openggf.game.sonic2.objects.bosses.CNZBossElectricBall;
 import com.openggf.game.sonic2.objects.bosses.CPZBossContainer;
+import com.openggf.game.sonic2.objects.bosses.CPZBossContainerExtend;
 import com.openggf.game.sonic2.objects.bosses.CPZBossContainerFloor;
 import com.openggf.game.sonic2.objects.bosses.CPZBossDripper;
 import com.openggf.game.sonic2.objects.bosses.CPZBossFallingPart;
@@ -160,6 +161,18 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                     BombPrizeObjectInstance.class,
                     spawn -> new BombPrizeObjectInstance(
                             spawn.x(), spawn.y(), 0, 0, 0, new int[]{0})),
+            // Batch-6 S2 rewind codecs (CNZ slot-machine ring prize, MTZ steam puff,
+            // HTZ seesaw ball, CPZ-boss container extend).
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    RingPrizeObjectInstance.class,
+                    spawn -> new RingPrizeObjectInstance(
+                            spawn.x(), spawn.y(), 0, 0, 0, new int[]{0})),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    SteamPuffObjectInstance.class,
+                    spawn -> new SteamPuffObjectInstance(
+                            spawn.x(), spawn.y(), (spawn.renderFlags() & 0x01) != 0)),
+            seesawBallCodec(),
+            cpzBossContainerExtendCodec(),
             htzFlamethrowerCodec(),
             htzBossLavaBallCodec(),
             cnzBossElectricBallCodec(),
@@ -1043,6 +1056,80 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                 return new CPZBossContainerFloor(entry.spawn(), boss, container, false);
             }
         };
+    }
+
+    private static DynamicObjectRewindCodec cpzBossContainerExtendCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance instanceof CPZBossContainerExtend;
+            }
+
+            @Override
+            public String className() {
+                return CPZBossContainerExtend.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                // Both parents (boss + container) are placed/dynamic objects restored
+                // earlier in spawn order, so they are live during recreate. The extend's
+                // object-ref fields (mainBoss/container) are final and arrive via the ctor;
+                // the scalar/state fields (x, y, renderFlags, anim, mappingFrame) are
+                // non-final and reapplied by restoreObjectRewindState.
+                Sonic2CPZBossInstance boss = findLiveInstance(context, Sonic2CPZBossInstance.class);
+                CPZBossContainer container = findLiveInstance(context, CPZBossContainer.class);
+                if (boss == null || container == null) {
+                    return null;
+                }
+                return new CPZBossContainerExtend(entry.spawn(), boss, container);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec seesawBallCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance instanceof SeesawBallObjectInstance;
+            }
+
+            @Override
+            public String className() {
+                return SeesawBallObjectInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                SeesawObjectInstance parent = findSeesawParentForRewind(context);
+                if (parent == null) {
+                    return null; // no live parent -> stay dropped this frame
+                }
+                // Derive ctor args from the live parent exactly as SeesawObjectInstance
+                // .spawnBall() does. initialX/initialY are placeholders; xPos/yPos
+                // (non-final) are reapplied by restoreObjectRewindState afterwards, as is
+                // storedAngle, so 'flipped' only needs to seed a valid initial value.
+                int centerX = parent.getSpawn().x();
+                int bottomY = parent.getSpawn().y() + 0x10;
+                boolean flipped = parent.isFlippedHorizontal();
+                return new SeesawBallObjectInstance(centerX, bottomY, centerX, bottomY, parent, flipped);
+            }
+        };
+    }
+
+    private static SeesawObjectInstance findSeesawParentForRewind(DynamicObjectRecreateContext context) {
+        // One Seesaw (subtype 0) spawns exactly one ball; match the live seesaw that is
+        // still missing its ball so the restore re-links 1:1.
+        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+            if (inst instanceof SeesawObjectInstance seesaw
+                    && seesaw.getSpawn().subtype() == 0
+                    && !seesaw.hasLiveBall()) {
+                return seesaw;
+            }
+        }
+        return null;
     }
 
     private static DynamicObjectRewindCodec cpzBossFlameCodec() {

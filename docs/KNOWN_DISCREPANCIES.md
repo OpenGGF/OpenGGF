@@ -1108,3 +1108,33 @@ batch-2/3/4 cosmetic cases above. All other batch-5 S1 objects that were previou
 now have rewind codecs in `Sonic1ObjectRegistry` and are restored on a backward seek:
 `Sonic1EndingEmeraldsObjectInstance`, `Sonic1EndingSonicObjectInstance`,
 `Sonic1GlassReflectionInstance`, and `Sonic1ResultsScreenObjectInstance`.
+
+## Batch-6 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)
+
+Two batch-6 cosmetic transient children are intentionally **not** captured/recreated across
+a held-rewind boundary (no rewind codec; their `#recreate` / `#finalScalar` keys stay in
+`src/test/resources/rewind/coverage-baseline.txt`). Both self-regenerate, hold no
+player/score/terrain state, and are structurally awkward to codec because their only
+constructor takes the live player rather than an `ObjectSpawn`. This mirrors the AIZ2
+transient-children precedent and the batch-2/3/4/5 cosmetic cases above.
+
+- `com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance` (S2 Super Sonic sparkle/trail,
+  ROM Obj7E): every scalar field (`animActive`, `freezeFlag`, `mappingFrame`, `frameTimer`,
+  `visible`, `snapX`, `snapY`) is re-derived each frame from the live player's speed and centre
+  position, and a full 6-frame cycle re-emits continuously while `|gSpeed| >= 0x800`. Its only
+  ctor is `(AbstractPlayableSprite player)` (`super(null, ...)`, no `ObjectSpawn`), so
+  `exactSpawnCodec` cannot supply the arg; it is owned and re-spawned by
+  `Sonic2SuperStateController` (not the power-up spawner), so a deferred player-bound codec
+  would orphan the pending entry. Dropping it causes at most a brief cosmetic absence that
+  naturally re-emits.
+- `com.openggf.level.objects.SplashObjectInstance` (water splash; spawned on the S2 power-up path
+  and the S3K HCZ miniboss path): a ~30-frame animation (10 frames x 3 ticks) that self-expires
+  via `ObjectLifetimeOps.expireDynamic(this)`, re-emitted on every water entry/exit. Its direct
+  S1 sibling `Sonic1SplashObjectInstance` is already an established accept-drop with the same
+  rationale. `facingLeft` is spawn-derivable and the renderer is transient.
+
+All other batch-6 S2 objects that were previously dropped now have rewind codecs in
+`Sonic2ObjectRegistry` and are restored on a backward seek: `RingPrizeObjectInstance` (CNZ
+slot-machine ring prize), `SteamPuffObjectInstance` (MTZ steam puff), `SeesawBallObjectInstance`
+(HTZ seesaw ball, parent-relink), and `CPZBossContainerExtend` (CPZ-boss container extend,
+boss+container relink).

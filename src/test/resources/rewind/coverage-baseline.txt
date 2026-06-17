@@ -545,9 +545,6 @@ com.openggf.game.sonic2.objects.PointPokeyObjectInstance#finalScalar#halfWidth
 com.openggf.game.sonic2.objects.PointPokeyObjectInstance#finalScalar#highPriority
 com.openggf.game.sonic2.objects.PointPokeyObjectInstance#finalScalar#r
 com.openggf.game.sonic2.objects.PointPokeyObjectInstance#recreate
-com.openggf.game.sonic2.objects.RingPrizeObjectInstance#finalScalar#machineX
-com.openggf.game.sonic2.objects.RingPrizeObjectInstance#finalScalar#machineY
-com.openggf.game.sonic2.objects.RingPrizeObjectInstance#recreate
 com.openggf.game.sonic2.objects.RisingLavaObjectInstance#finalScalar#baseX
 com.openggf.game.sonic2.objects.RisingLavaObjectInstance#finalScalar#baseY
 com.openggf.game.sonic2.objects.RisingLavaObjectInstance#finalScalar#subtype
@@ -556,9 +553,6 @@ com.openggf.game.sonic2.objects.RisingLavaObjectInstance#recreate
 com.openggf.game.sonic2.objects.RisingPillarObjectInstance#recreate
 com.openggf.game.sonic2.objects.RivetObjectInstance#objectRef#lastNativeMainPlayer
 com.openggf.game.sonic2.objects.RivetObjectInstance#recreate
-com.openggf.game.sonic2.objects.SeesawBallObjectInstance#finalScalar#seesawBottomY
-com.openggf.game.sonic2.objects.SeesawBallObjectInstance#finalScalar#seesawCenterX
-com.openggf.game.sonic2.objects.SeesawBallObjectInstance#recreate
 com.openggf.game.sonic2.objects.SeesawObjectInstance#finalScalar#b
 com.openggf.game.sonic2.objects.SeesawObjectInstance#finalScalar#g
 com.openggf.game.sonic2.objects.SeesawObjectInstance#finalScalar#halfHeight
@@ -619,7 +613,6 @@ com.openggf.game.sonic2.objects.SpringboardObjectInstance#finalScalar#r
 com.openggf.game.sonic2.objects.SpringboardObjectInstance#objectRef#launchPlayer
 com.openggf.game.sonic2.objects.SpringboardObjectInstance#recreate
 com.openggf.game.sonic2.objects.SteamPuffObjectInstance#finalScalar#xFlipped
-com.openggf.game.sonic2.objects.SteamPuffObjectInstance#recreate
 com.openggf.game.sonic2.objects.SteamSpringObjectInstance#finalScalar#baseY
 com.openggf.game.sonic2.objects.SteamSpringObjectInstance#recreate
 com.openggf.game.sonic2.objects.StomperObjectInstance#finalScalar#baseY
@@ -703,7 +696,6 @@ com.openggf.game.sonic2.objects.badniks.WFZUnknownBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.WhispBadnikInstance#recreate
 com.openggf.game.sonic2.objects.bosses.ARZBossArrow#finalScalar#fromRightPillar
 com.openggf.game.sonic2.objects.bosses.ARZBossEyes#recreate
-com.openggf.game.sonic2.objects.bosses.CPZBossContainerExtend#recreate
 com.openggf.game.sonic2.objects.bosses.CPZBossSmokePuff#recreate
 com.openggf.game.sonic2.objects.bosses.EHZBossGroundVehicle#finalScalar#initialY
 com.openggf.game.sonic2.objects.bosses.HTZBossSmokeParticle#recreate

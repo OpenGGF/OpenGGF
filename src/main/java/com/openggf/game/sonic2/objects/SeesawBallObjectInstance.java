@@ -64,8 +64,10 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
 
     private State state = State.RESTING;
 
-    // Parent seesaw reference
-    private final SeesawObjectInstance parent;
+    // Parent seesaw reference.
+    // Un-final so GenericFieldCapturer can reapply it after the parent-relink rewind
+    // codec recreates the ball; the codec relinks it through the ctor.
+    private SeesawObjectInstance parent;
 
     // Position tracking - combined 16.16 fixed-point (pixel in bits 16-31, subpixel in bits 0-15)
     // This matches ROM's 32-bit position format for correct signed arithmetic
@@ -74,9 +76,11 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
     private int xVel;  // 8.8 fixed-point velocity
     private int yVel;  // 8.8 fixed-point velocity
 
-    // Seesaw reference position (objoff_30, objoff_34 in ROM)
-    private final int seesawCenterX;
-    private final int seesawBottomY;
+    // Seesaw reference position (objoff_30, objoff_34 in ROM).
+    // Un-final so GenericFieldCapturer reapplies the captured values after the rewind
+    // codec recreates the ball with placeholder ctor args.
+    private int seesawCenterX;
+    private int seesawBottomY;
 
     // Stored angle state (objoff_3A in ROM)
     private int storedAngle;
@@ -84,8 +88,10 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
     // Palette animation frame (toggles every 4 frames)
     private int paletteFrame;
     private int animTimer;
-    // Store spawn for dynamic override
-    private final ObjectSpawn originalSpawn;
+    // Store spawn for dynamic override.
+    // Un-final for rewind-capture consistency (policy-marked TRANSIENT; reapplied/relinked
+    // via the ctor on recreate).
+    private ObjectSpawn originalSpawn;
 
     public SeesawBallObjectInstance(
             int seesawCenterX,

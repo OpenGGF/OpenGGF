@@ -41,8 +41,11 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance {
     // Position tracking (16.16 fixed point for precision)
     private int currentX;      // 16.16 fixed point X
     private int currentY;      // 16.16 fixed point Y
-    private final int machineX; // Machine center X
-    private final int machineY; // Machine center Y
+    // Un-final: not spawn-derivable (cage center, distinct from spawn position) and not
+    // captured by GenericFieldCapturer when final. Reapplied by restoreObjectRewindState
+    // after the exactSpawnCodec recreates with placeholder 0 (mirrors BombPrizeObjectInstance).
+    private int machineX; // Machine center X
+    private int machineY; // Machine center Y
 
     // Display delay before becoming collectible
     private int displayDelay;

@@ -380,8 +380,17 @@ public class SeesawObjectInstance extends BoxObjectInstance
         this.standingPlayer2 = null;
     }
 
-    private boolean isFlippedHorizontal() {
+    public boolean isFlippedHorizontal() {
         return (spawn.renderFlags() & 0x1) != 0;
+    }
+
+    /**
+     * Whether this seesaw currently has a live (non-destroyed) ball child.
+     * Used by the rewind codec to relink a recreated ball to the one seesaw
+     * still missing its ball (one ball per subtype-0 seesaw).
+     */
+    public boolean hasLiveBall() {
+        return ball != null && !ball.isDestroyed();
     }
 
     /**
