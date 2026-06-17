@@ -524,6 +524,18 @@ public final class TraceReplayBootstrap {
         return isS3kCompleteRunInitialHandoffRow(trace, null, trace.getFrame(0));
     }
 
+    /**
+     * Native animated-tile ticks completed on an S3K complete-run handoff row
+     * that replay skips for gameplay comparison. The ROM LevelLoop still reaches
+     * {@code Animate_Tiles} after {@code Process_Sprites} on that row
+     * (sonic3k.asm:7884-7906), so consumers of {@code Anim_Counters} such as
+     * MHZ mushroom caps must see the same completed post-object phase before the
+     * first driven row.
+     */
+    public static int s3kCompleteRunHandoffAnimatedTilePreludeFramesForTraceReplay(TraceData trace) {
+        return isS3kCompleteRunHandoffCounterTickRow(trace) ? 1 : 0;
+    }
+
     public static List<String> releaseBlockersForTraceReplay(TraceData trace) {
         return List.of();
     }

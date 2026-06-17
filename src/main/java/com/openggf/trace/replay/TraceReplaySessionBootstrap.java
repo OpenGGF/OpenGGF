@@ -355,6 +355,33 @@ public final class TraceReplaySessionBootstrap {
     }
 
     /**
+     * Mirrors native post-row effects for an S3K complete-run handoff row that
+     * replay skips for gameplay comparison. ROM still ran LevelLoop on that
+     * row: {@code Level_frame_counter} increments before {@code Process_Sprites}
+     * and {@code Animate_Tiles} runs after it (sonic3k.asm:7889-7906). This
+     * advances only live timing systems; it never copies frame data from the
+     * trace into engine state.
+     */
+    public static boolean applyS3kCompleteRunHandoffNativePostRowEffects(TraceData trace) {
+        if (!TraceReplayBootstrap.isS3kCompleteRunHandoffCounterTickRow(trace)) {
+            return false;
+        }
+        var sprites = GameServices.spritesOrNull();
+        if (sprites != null) {
+            sprites.setFrameCounter(sprites.getFrameCounter() + 1);
+        }
+        var level = GameServices.levelOrNull();
+        int animatedTileFrames =
+                TraceReplayBootstrap.s3kCompleteRunHandoffAnimatedTilePreludeFramesForTraceReplay(trace);
+        if (level != null && level.getAnimatedPatternManager() != null) {
+            for (int i = 0; i < animatedTileFrames; i++) {
+                level.getAnimatedPatternManager().update();
+            }
+        }
+        return true;
+    }
+
+    /**
      * Applies the ROM RNG seed captured at the first compared trace frame.
      *
      * <p>This is a frame-0 bootstrap value, equivalent to loading a save-state

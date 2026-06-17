@@ -19,6 +19,7 @@ import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceReplayBootstrap;
+import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -99,6 +100,9 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
         lastInputMask = frame.p1InputMask();
         lastStartPressed = frame.p1StartPressed();
         if (wasSkipped) {
+            if (cursor == 0 && TraceReplayBootstrap.isS3kCompleteRunHandoffCounterTickRow(trace)) {
+                TraceReplaySessionBootstrap.applyS3kCompleteRunHandoffNativePostRowEffects(trace);
+            }
             if (cursor < trace.frameCount()) {
                 currentVisualFrame = trace.getFrame(cursor);
             }

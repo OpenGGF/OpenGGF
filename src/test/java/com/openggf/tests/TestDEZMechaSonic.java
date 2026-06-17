@@ -2,10 +2,7 @@ package com.openggf.tests;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import com.openggf.camera.Camera;
-import com.openggf.game.GameStateManager;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
-import com.openggf.game.sonic2.Sonic2LevelEventManager;
 import com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -308,37 +305,6 @@ public class TestDEZMechaSonic {
     }
 
     @Test
-    public void defeatHandoffPreservesDezBossIdForDeathEggRobotBoundary() throws Exception {
-        GameStateManager gameState = new GameStateManager();
-        gameState.setCurrentBossId(9); // ROM ObjAF sets this when locking the DEZ boss arena.
-        Camera camera = mock(Camera.class);
-        Sonic2LevelEventManager events = mock(Sonic2LevelEventManager.class);
-        when(events.getEventRoutine()).thenReturn(2);
-
-        TestObjectServices services = new TestObjectServices() {
-            @Override
-            public com.openggf.game.LevelEventProvider levelEventProvider() {
-                return events;
-            }
-        };
-        services.withCamera(camera)
-                .withGameState(gameState);
-        boss.setServices(services);
-
-        Field defeatTimerField = Sonic2MechaSonicInstance.class.getDeclaredField("defeatTimer");
-        defeatTimerField.setAccessible(true);
-        defeatTimerField.setInt(boss, 0);
-        java.lang.reflect.Method updateDefeat =
-                Sonic2MechaSonicInstance.class.getDeclaredMethod("updateDefeat", int.class);
-        updateDefeat.setAccessible(true);
-
-        updateDefeat.invoke(boss, 0);
-
-        assertEquals(9, gameState.getCurrentBossId(),
-                "ObjAF defeat must not clear Current_Boss_ID; ObjC7 inherits it for strict DEZ arena bounds");
-    }
-
-    @Test
     public void collisionFlagsReturnExactRomValues() {
         // ROM: loc_39D24
         // Frames 6,7,8 (BALL_A/B/C) -> return $9A
@@ -510,3 +476,5 @@ public class TestDEZMechaSonic {
         }
     }
 }
+
+

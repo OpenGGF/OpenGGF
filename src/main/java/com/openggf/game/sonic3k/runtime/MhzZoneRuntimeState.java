@@ -17,6 +17,12 @@ import java.util.Objects;
  * that contract explicit without coupling animation code to the scroll handler.
  */
 public final class MhzZoneRuntimeState implements S3kZoneRuntimeState {
+    // ROM level setup runs Process_Sprites then Animate_Tiles before LevelLoop
+    // (sonic3k.asm:7853-7855). MHZ caps read Anim_Counters+$F during
+    // Process_Sprites (82199), and AnimateTiles_MHZ advances it by 2 later
+    // in the same frame (54901-54908, 7894-7906).
+    private static final int INITIAL_MUSHROOM_CAP_POSITION_COUNTER = 2;
+
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
     private final Sonic3kMHZEvents events;
@@ -25,7 +31,7 @@ public final class MhzZoneRuntimeState implements S3kZoneRuntimeState {
     private int nearBgCameraX;
     private int pollenParticleCount;
     private int pollenLeafPatternCounter;
-    private int mushroomCapPositionCounter;
+    private int mushroomCapPositionCounter = INITIAL_MUSHROOM_CAP_POSITION_COUNTER;
     private int endBossArenaTallSupportX;
     private final int[] endBossArenaSpikeX = new int[6];
 

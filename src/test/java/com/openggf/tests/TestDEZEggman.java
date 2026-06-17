@@ -312,16 +312,20 @@ public class TestDEZEggman {
         player.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
         player.setWidth(20);
         player.setHeight(38);
+        player.setCentreX((short) 0x03E5);
+        player.setCentreY((short) 0x0160);
         player.setAirForTest(false);
         player.setXSpeed((short) 0x100);
         player.setGSpeed((short) 0x100);
 
         MutableObjectServices services = new MutableObjectServices();
         Camera camera = mock(Camera.class);
-        when(camera.getX()).thenReturn((short) 0x0345);
-        when(camera.getY()).thenReturn((short) 0x00C8);
+        when(camera.getX()).thenReturn((short) 0x0300);
+        when(camera.getY()).thenReturn((short) 0x0100);
         when(camera.getWidth()).thenReturn((short) 320);
         when(camera.getHeight()).thenReturn((short) 224);
+        when(camera.isVerticalWrapEnabled()).thenReturn(false);
+        services.withCamera(camera);
         ObjectManager objectManager = new ObjectManager(
                 List.of(),
                 sonic2Registry(wall),
@@ -442,3 +446,5 @@ public class TestDEZEggman {
         return (int[]) field.get(null);
     }
 }
+
+

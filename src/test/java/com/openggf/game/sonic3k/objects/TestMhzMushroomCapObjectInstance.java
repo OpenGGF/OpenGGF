@@ -10,6 +10,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -46,6 +47,18 @@ class TestMhzMushroomCapObjectInstance {
                 "Obj_MHZMushroomCap calls SolidObjectTop every frame");
         assertEquals(1, cap.getPriorityBucket(),
                 "Obj_MHZMushroomCap initializes priority=$80 unless subtype bit 7 is set");
+    }
+
+    @Test
+    void mushroomCapProvidesS3kTailsCpuInteractPointerWord() {
+        MhzMushroomCapObjectInstance cap = new MhzMushroomCapObjectInstance(new ObjectSpawn(
+                0x1200, 0x0500, MHZ_MUSHROOM_CAP, 0, 0, false, 0));
+
+        RomObjectCodePointerProvider pointerProvider =
+                assertInstanceOf(RomObjectCodePointerProvider.class, cap);
+        assertEquals(0x0003, pointerProvider.romObjectCodePointerHighWord(),
+                "Obj_MHZMushroomCap is installed at 0x0003E080; S3K Tails_CPU_interact "
+                        + "stores word 0's high word while Tails stands on it");
     }
 
     @Test
@@ -124,6 +137,25 @@ class TestMhzMushroomCapObjectInstance {
     }
 
     @Test
+    void mushroomCapAppliesRuntimeCounterPositionWhenServicesAreInjected() {
+        ZoneRuntimeRegistry runtimeRegistry = new ZoneRuntimeRegistry();
+        MhzZoneRuntimeState runtimeState =
+                new MhzZoneRuntimeState(0, PlayerCharacter.SONIC_AND_TAILS);
+        runtimeState.publishMushroomCapPositionCounter(0x20);
+        runtimeRegistry.install(runtimeState);
+
+        MhzMushroomCapObjectInstance cap = new MhzMushroomCapObjectInstance(new ObjectSpawn(
+                0x1200, 0x0500, MHZ_MUSHROOM_CAP, 0, 0, false, 0));
+
+        cap.setServices(new TestObjectServices().withZoneRuntimeRegistry(runtimeRegistry));
+
+        assertEquals(0x11FE, cap.getX(),
+                "Obj_MHZMushroomCap init falls through to its main routine and reads "
+                        + "Anim_Counters+$F before the first solid/contact pass");
+        assertEquals(0x0500, cap.getY());
+    }
+
+    @Test
     void darkSpottedMushroomCapRendersRomLevelArtFrame() {
         PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
         when(renderer.isReady()).thenReturn(true);
@@ -156,7 +188,7 @@ class TestMhzMushroomCapObjectInstance {
         cap.appendRenderCommands(new ArrayList<>());
 
         verify(renderManager).getRenderer(Sonic3kObjectArtKeys.MHZ_MUSHROOM_CAP_LIGHT);
-        verify(renderer).drawFrameIndexForcedPriority(0, 0x1200, 0x0500, false, false, -1, true);
+        verify(renderer).drawFrameIndexForcedPriority(0, 0x11FD, 0x0501, false, false, -1, true);
     }
 
     @Test
