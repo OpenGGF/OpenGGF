@@ -4,6 +4,16 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **AIZ miniboss self-destructs if carried across an act reload:** the AIZ2
+  fightable miniboss (object 0x91, `AizMinibossInstance`) is spawned in AIZ2 and
+  holds the boss arena camera lock every frame even after defeat (it does not use
+  the defeat sequencer), self-destructing only when the end-of-level camera
+  widening completes. It is persistent, so if it were ever carried across a seamless
+  act reload while still alive it would become an invisible, camera-locking ghost in
+  the next act. It now removes itself and its tracked children when carried across the
+  act transition, hardening the same object-lifetime guarantee applied to the AIZ1
+  cutscene miniboss.
+
 - **AIZ1 cutscene miniboss no longer strands flame children in AIZ2:** the
   AIZ Act 1 cutscene miniboss (object 0x90, `AizMinibossCutsceneInstance`) is a
   one-shot scripted object whose long fly-off is still running when the AIZ1->AIZ2
