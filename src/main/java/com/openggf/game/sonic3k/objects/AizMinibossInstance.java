@@ -827,6 +827,27 @@ public class AizMinibossInstance extends AbstractBossInstance {
         return true;
     }
 
+    /**
+     * The AIZ miniboss is spawned in AIZ2 and fought there; it is never legitimately carried
+     * across a seamless act reload. It is {@code isPersistent()=true} and, because it does not use
+     * the defeat sequencer, keeps running {@code maintainArenaCameraLock()} every frame even after
+     * defeat — releasing the arena and self-destructing only when the end-of-level camera widening
+     * completes. If it were ever carried into the next act (e.g. while still defeated-but-alive),
+     * the default no-op carry hook would leave it un-offset and it would become an invisible,
+     * camera-locking ghost — the same failure mode fixed for the AIZ1 cutscene miniboss.
+     *
+     * <p>Guard against that: remove this object and its tracked children when the act transition
+     * carries them, matching the ROM where the boss object's RAM slot does not survive a reload.
+     */
+    @Override
+    public void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
+        for (var child : childComponents) {
+            child.setDestroyed(true);
+        }
+        childComponents.clear();
+        setDestroyed(true);
+    }
+
     @Override
     public int getPriorityBucket() {
         // ROM: ObjDat_AIZMiniboss priority $0200 → $200/$80 = bucket 4
