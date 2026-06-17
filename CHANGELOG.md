@@ -4,6 +4,19 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **AIZ miniboss body/flames no longer strand in AIZ2 (actual carry-path fix):**
+  the AIZ1 cutscene miniboss (object 0x90) is a *placed* layout object, so it is
+  never in the seamless-reload dynamic-object carry snapshot; its earlier
+  `onCarriedAcrossSeamlessTransition` override therefore never ran. The objects
+  actually carried across the AIZ1->AIZ2 fire reload were its persistent boss
+  component children (body/arm/flame barrels), which inherit persistence only to
+  survive the off-screen cull during the fixed-arena fight. They were carried
+  un-offset and stranded an art-less (invisible) body plus still-hurting flame
+  barrels partway through AIZ2. `ObjectManager.snapshotPersistentDynamicObjectsForTransition`
+  now excludes `BossChildComponent` instances, mirroring ROM `Load_Level` clearing
+  `Dynamic_object_RAM` (a boss object group does not survive a level reload).
+  Off-screen boss-part persistence during a fight is unaffected.
+
 - **Test-suite cleanup aligns stale parity assumptions with trace-frontier fixes:**
   rewind snapshot diffs now compare private record content safely, S1 fixed-air
   countdown cadence no longer trips the zone-event runtime access guard, dynamic
