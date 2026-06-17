@@ -86,23 +86,8 @@ public class TestS3kVoiceResolution {
         assertTrue(sk.getChannels() > 0, "S&K Mini-Boss should have FM channels");
         assertTrue(s3.getChannels() > 0, "S3 Mini-Boss should have FM channels");
 
-        for (int v = 0; v < 10; v++) {
-            byte[] skVoice = sk.getVoice(v);
-            byte[] s3Voice = s3.getVoice(v);
-            boolean skNull = (skVoice == null);
-            boolean s3Null = (s3Voice == null);
-            if (skNull && s3Null) continue;
-
-            System.out.println("\nVoice " + v + ":");
-            if (!skNull) System.out.println("  S&K: " + hexDump(skVoice));
-            else System.out.println("  S&K: null");
-            if (!s3Null) System.out.println("  S3:  " + hexDump(s3Voice));
-            else System.out.println("  S3:  null");
-
-            if (!skNull && !s3Null) {
-                System.out.println("  Match: " + java.util.Arrays.equals(skVoice, s3Voice));
-            }
-        }
+        assertCrossVersionVoiceRelationStable(sk, s3, loader.loadMusic(0x18), loader.loadS3Music(0x2E),
+                "Mini-Boss S&K(0x18) vs S3(0x2E)");
     }
 
     @Test
@@ -121,11 +106,40 @@ public class TestS3kVoiceResolution {
         assertTrue(sk.getChannels() > 0, "S&K Knuckles should have FM channels");
         assertTrue(s3.getChannels() > 0, "S3 Knuckles should have FM channels");
 
+        assertCrossVersionVoiceRelationStable(sk, s3, loader.loadMusic(0x1F), loader.loadS3Music(0x1F),
+                "Knuckles S&K(0x1F) vs S3(0x1F)");
+    }
+
+    /**
+     * Characterization guard for the S&amp;K-vs-S3 voice relationship.
+     *
+     * <p>The intended direction (the S&amp;K and S3 voice tables may legitimately
+     * match for shared themes or differ for half-specific arrangements) is not
+     * asserted here. Instead, this prints the per-voice comparison for diagnostics
+     * and pins the relationship to be reproducible: ROM-backed voice resolution is
+     * deterministic, so a fresh reload of each track must reproduce the exact same
+     * per-voice null-state and the exact same {@code Arrays.equals(sk, s3)} result.
+     * This fails if voice resolution becomes non-deterministic or returns garbage.
+     */
+    private void assertCrossVersionVoiceRelationStable(
+            AbstractSmpsData sk, AbstractSmpsData s3,
+            AbstractSmpsData skReload, AbstractSmpsData s3Reload,
+            String label) {
         for (int v = 0; v < 10; v++) {
             byte[] skVoice = sk.getVoice(v);
             byte[] s3Voice = s3.getVoice(v);
             boolean skNull = (skVoice == null);
             boolean s3Null = (s3Voice == null);
+
+            byte[] skVoiceReload = skReload.getVoice(v);
+            byte[] s3VoiceReload = s3Reload.getVoice(v);
+
+            // Null-state must be reproducible across reloads.
+            assertEquals(skNull, skVoiceReload == null,
+                    label + " voice " + v + ": S&K null-state must be reproducible");
+            assertEquals(s3Null, s3VoiceReload == null,
+                    label + " voice " + v + ": S3 null-state must be reproducible");
+
             if (skNull && s3Null) continue;
 
             System.out.println("\nVoice " + v + ":");
@@ -134,8 +148,23 @@ public class TestS3kVoiceResolution {
             if (!s3Null) System.out.println("  S3:  " + hexDump(s3Voice));
             else System.out.println("  S3:  null");
 
+            // A reloaded voice must be byte-identical (deterministic resolution).
+            if (!skNull) {
+                assertArrayEquals(skVoice, skVoiceReload,
+                        label + " voice " + v + ": S&K voice resolution must be deterministic");
+            }
+            if (!s3Null) {
+                assertArrayEquals(s3Voice, s3VoiceReload,
+                        label + " voice " + v + ": S3 voice resolution must be deterministic");
+            }
+
             if (!skNull && !s3Null) {
-                System.out.println("  Match: " + java.util.Arrays.equals(skVoice, s3Voice));
+                boolean match = java.util.Arrays.equals(skVoice, s3Voice);
+                System.out.println("  Match: " + match);
+                // characterization guard: the cross-version relationship is whatever
+                // the ROM currently resolves to, and it must be reproducible.
+                assertEquals(match, java.util.Arrays.equals(skVoiceReload, s3VoiceReload),
+                        label + " voice " + v + ": cross-version match result must be reproducible");
             }
         }
     }

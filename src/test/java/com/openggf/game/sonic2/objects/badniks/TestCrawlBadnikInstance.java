@@ -9,7 +9,6 @@ import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchShieldDeflectCapability;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -39,8 +38,6 @@ class TestCrawlBadnikInstance {
         assertTrue(crawl.requiresRenderFlagForTouch());
         assertEquals(0x17, crawl.getCollisionFlags());
         assertEquals(0, crawl.getCollisionProperty());
-        assertDoesNotThrow(() -> CrawlBadnikInstance.class.getDeclaredMethod("getTouchResponseProfile"));
         assertEquals(profile, crawl.getTouchResponseProfile(false));
-        assertDoesNotThrow(() -> CrawlBadnikInstance.class.getDeclaredMethod("getTouchResponseProfile", boolean.class));
     }
 }

@@ -1181,17 +1181,10 @@ public class SpriteManager {
 		// and appear in front. Sonic occupies slot 0 and Tails slot 1, so Sonic
 		// must be drawn last in painter's-algorithm order.
 		Collection<Sprite> sprites = getAllSprites();
-		for (Sprite sprite : sprites) {
-			if (isSuppressedSidekickSprite(sprite)) {
-				continue;
-			}
-			if (sprite instanceof AbstractPlayableSprite playable && playable.isCpuControlled()) {
-				int bucket = RenderPriority.clamp(playable.getPriorityBucket());
-				int idx = bucket - RenderPriority.MIN;
-				if (playable.isHighPriority()) {
-					highPriorityBuckets[idx].add(sprite);
-				} else {
-					lowPriorityBuckets[idx].add(sprite);
+		if (!currentSuppressed) {
+			for (AbstractPlayableSprite sidekick : sidekicks) {
+				if (sprites.contains(sidekick)) {
+					addPlayableToRenderBucket(sidekick);
 				}
 			}
 		}
@@ -1203,19 +1196,23 @@ public class SpriteManager {
 				if (playable.isCpuControlled()) {
 					continue; // already added in first pass
 				}
-				int bucket = RenderPriority.clamp(playable.getPriorityBucket());
-				int idx = bucket - RenderPriority.MIN;
-				if (playable.isHighPriority()) {
-					highPriorityBuckets[idx].add(sprite);
-				} else {
-					lowPriorityBuckets[idx].add(sprite);
-				}
+				addPlayableToRenderBucket(playable);
 			} else {
 				nonPlayableSprites.add(sprite);
 			}
 		}
 
 		captureRenderBucketSnapshot();
+	}
+
+	private void addPlayableToRenderBucket(AbstractPlayableSprite playable) {
+		int bucket = RenderPriority.clamp(playable.getPriorityBucket());
+		int idx = bucket - RenderPriority.MIN;
+		if (playable.isHighPriority()) {
+			highPriorityBuckets[idx].add(playable);
+		} else {
+			lowPriorityBuckets[idx].add(playable);
+		}
 	}
 
 	private LevelManager getLevelManager() {

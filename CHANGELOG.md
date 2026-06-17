@@ -51,6 +51,53 @@ All notable changes to the OpenGGF project are documented in this file.
   restore. All AIZ2 ship/boss dynamic objects — including the transient combat
   children (bombs, explosions, flames) — are now captured and restored, so the
   scene reverses cleanly under rewind (see S3K_KNOWN_DISCREPANCIES.md).
+- **AIZ end-sign flow keeps Sonic in the foreground layer:** when the AIZ
+  miniboss signpost falls, clearing the boss flag no longer releases Sonic's
+  high-priority foreground state early. Sonic and elemental shields continue
+  rendering in front of the AIZ tree masks through the results flow.
+
+- **Breakable blocks use ROM roll-animation snapshots for spin breaks:** S1,
+  S2, and S3K breakable-wall/block/rock checks now gate spin breaks on the
+  saved roll animation ID instead of the mutable rolling status bit, preventing
+  sidekick/contact ordering from letting Tails break an object while Sonic stalls.
+
+- **User pause indicator stays on-screen and fades:** the Enter-key engine pause
+  overlay now renders in the logical bottom-right corner instead of using window
+  viewport pixels, preventing clipped "PAU" text in display modes where those
+  coordinate spaces differ. The label now fades smoothly in and out every half
+  second while paused.
+
+- **Sonic sidekicks run in from clear terrain and keep extension overlays isolated:**
+  Sonic sidekick respawn now uses Sonic-specific ground run-in behavior, staggers
+  multi-sidekick entries, seeds catch-up speed from the main player when needed,
+  and scans inward from the screen edge so run-in spawns do not embed in ledge
+  terrain. Sidekick-only insta-shield overlays now use auxiliary dynamic object
+  space, keeping extension effects out of ROM-modeled object slots and rewind
+  dynamic-object snapshots.
+
+- **HCZ waterfall priority renders over foreground ramps again:** Hydrocity now
+  registers a foreground-stage BG high-priority replay pass so Plane B waterfall
+  tiles cover low-priority Plane A ramp chunks instead of leaving cut-away gaps.
+  The HCZ2 wall-chase overlay reuses the same replay path for its post-sprite
+  water-wall pass.
+
+- **Multiple CPU sidekicks keep stable draw order behind the lead player:** the
+  sprite render buckets now add CPU sidekicks from the configured sidekick chain
+  before non-CPU playables, preserving expected overlap order when duplicate or
+  multiple sidekicks share the player priority bucket.
+
+- **AIZ miniboss body/flames no longer strand in AIZ2 (actual carry-path fix):**
+  the AIZ1 cutscene miniboss (object 0x90) is a *placed* layout object, so it is
+  never in the seamless-reload dynamic-object carry snapshot; its earlier
+  `onCarriedAcrossSeamlessTransition` override therefore never ran. The objects
+  actually carried across the AIZ1->AIZ2 fire reload were its persistent boss
+  component children (body/arm/flame barrels), which inherit persistence only to
+  survive the off-screen cull during the fixed-arena fight. They were carried
+  un-offset and stranded an art-less (invisible) body plus still-hurting flame
+  barrels partway through AIZ2. `ObjectManager.snapshotPersistentDynamicObjectsForTransition`
+  now excludes `BossChildComponent` instances, mirroring ROM `Load_Level` clearing
+  `Dynamic_object_RAM` (a boss object group does not survive a level reload).
+  Off-screen boss-part persistence during a fight is unaffected.
 
 - **Test-suite cleanup aligns stale parity assumptions with trace-frontier fixes:**
   rewind snapshot diffs now compare private record content safely, S1 fixed-air

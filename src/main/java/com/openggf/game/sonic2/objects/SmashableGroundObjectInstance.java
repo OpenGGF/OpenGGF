@@ -2,6 +2,7 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.level.objects.BoxObjectInstance;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 
 import com.openggf.audio.GameSound;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -159,20 +160,21 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
 
         // Determine if this object can be broken:
         // - Jump-breakable mode: any landing breaks it
-        // - Normal mode: player must be rolling AND have solid bit = $E (from spin attack)
+        // - Normal mode: player must have roll animation AND solid bit = $E (from spin attack)
         boolean canBreak = false;
-        boolean wasRolling = services().objectManager() != null
-                ? services().objectManager().getPreContactRolling()
-                : player.getRolling();
+        int preContactAnimationId = services().objectManager() != null
+                ? services().objectManager().getPreContactAnimationId()
+                : player.getAnimationId();
+        boolean wasRollAnimating = preContactAnimationId == Sonic2AnimationIds.ROLL.id();
 
         if (jumpBreakable) {
             // Jump-breakable mode: breaks when player lands on it
             canBreak = true;
         } else {
-            // Normal mode: check if player is rolling
+            // Normal mode: check the saved player animation
             // Original checks: cmpi.b #AniIDSonAni_Roll,objoff_32(a0)
             // and: cmpi.b #$E,(MainCharacter+top_solid_bit).w
-            if (wasRolling && (player.getTopSolidBit() & 0xFF) == 0x0E) {
+            if (wasRollAnimating && (player.getTopSolidBit() & 0xFF) == 0x0E) {
                 canBreak = true;
             }
         }

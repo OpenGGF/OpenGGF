@@ -136,7 +136,12 @@ bundled title emblem resource, S2 trace-frontier closures (Sky Chase and Casino
 Night
 level-select replays), object-physics standardization onto shared contracts,
 expanded rewind coverage, and architecture-guard hardening across runtime
-ownership, trace/rewind invariants, and object-service boundaries. See
+ownership, trace/rewind invariants, and object-service boundaries. A recent
+test-suite quality pass (driven by a multi-agent audit) replaced assertion-free
+diagnostic, tautological, and source-text-grep tests with real behavioral
+oracles, and added a guard that fails the build on assertion-free `@Test`
+methods, plus order-dependence hardening (an S3K AIZ replay-probe crash fix
+and a fork-mate state-leak fix flagged by the singleton-lifecycle guard). See
 CHANGELOG.md for the detailed, per-merge history.
 
 ### Where do I get ROMs?
@@ -231,6 +236,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **AIZ2 rewind softlock fixed + full rewind-coverage campaign (2026-06-17).** Merged
+  `bugfix/ai-aiz2-rewind-loop-boss`. Fixed the AIZ2 boss / ship-loop held-rewind softlock and visual
+  corruption, then shipped a Phase-1 rewind-coverage audit (`RewindCoverageAnalyzer` + report-only
+  `TestRewindCoverageGuard` vs a committed baseline) and closed the entire at-risk backlog: ~159
+  runtime-spawned objects across S1/S2/S3K (boss children, projectiles, traversal/capture objects,
+  cutscene objects, results/slot machines) now have rewind recreate codecs instead of being silently
+  dropped on a backward seek, with the genuinely-cosmetic remainder documented as known discrepancies.
+  Coverage baseline ratcheted from 1705 to 1452 gap keys; the guard fails CI on any new gap.
+- **AIZ miniboss body/flames no longer strand in AIZ2 -- actual carry-path fix (2026-06-17).** Merged
+  `bugfix/ai-aiz2-boss-child-carry-strand`. The two earlier AIZ miniboss carry fixes targeted the
+  *placed* cutscene object (0x90), which is never in the dynamic-object carry snapshot, so they
+  did not stop the strand. The objects actually carried across the AIZ1->AIZ2 fire reload were the
+  miniboss boss component children (body/arm/flame barrels); the carry snapshot now excludes
+  `BossChildComponent`, matching ROM `Load_Level` clearing `Dynamic_object_RAM`. Off-screen
+  boss-part persistence during a fight is unaffected.
 - **Test-suite cleanup after trace-frontier fixes (2026-06-17).** Merged
   `bugfix/ai-test-suite-cleanup`, aligning stale parity and guard tests with the
   current trace-frontier behavior while fixing the underlying rewind snapshot,

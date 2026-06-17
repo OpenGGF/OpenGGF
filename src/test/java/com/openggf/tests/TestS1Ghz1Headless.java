@@ -129,6 +129,15 @@ public class TestS1Ghz1Headless {
                     fixture.sprite().getAir(), fixture.sprite().getAngle() & 0xFF, fixture.sprite().getGroundMode(),
                     leftD, leftA, rightD, rightA);
         }
+
+        // Robust invariants: with no input Sonic must not be carried off the slope
+        // top -- centre X must not drift from the seeded target, and the position
+        // stays sane. (The transient air/wall-mode blip is the bug under probe, so
+        // grounded/GroundMode are deliberately not asserted.)
+        assertEquals(0, fixture.sprite().getGSpeed(), "Ground speed should stay zero with no input");
+        assertTrue(Math.abs(fixture.sprite().getCentreX() - TARGET_X) <= 2,
+                "Centre X should not drift with no input (cx=" + fixture.sprite().getCentreX() + ")");
+        assertSlopeTopPositionSane("slope-top no-input");
     }
 
     @Test
@@ -170,6 +179,13 @@ public class TestS1Ghz1Headless {
                     right != null ? right.angle() & 0xFF : -1,
                     right != null ? right.tileId() : -1);
         }
+
+        // Robust invariants: arriving on the flat top from the 0xFC slope with no
+        // input, Sonic's centre X must not drift and the position stays sane.
+        // (Grounded/GroundMode/angle are not asserted -- the air blip is the bug.)
+        assertTrue(Math.abs(fixture.sprite().getCentreX() - TARGET_X) <= 2,
+                "Centre X should not drift with no input (cx=" + fixture.sprite().getCentreX() + ")");
+        assertSlopeTopPositionSane("slope-top incoming-angle");
     }
 
     @Test
@@ -194,9 +210,18 @@ public class TestS1Ghz1Headless {
 
         GroundMode lastMode = fixture.sprite().getGroundMode();
         int lastAngle = fixture.sprite().getAngle() & 0xFF;
+        int maxX = GameServices.level().getCurrentLevel().getMaxX();
+        int maxY = GameServices.level().getCurrentLevel().getMaxY();
         for (int frame = 0; frame < 260; frame++) {
             boolean holdRight = frame < 180;
             fixture.stepFrame(false, false, false, holdRight, false);
+            // Robust per-frame invariant: even if Sonic transiently blips airborne
+            // at the slope top, his centre must stay within the (scrolling) level
+            // bounds and never tunnel out. Grounded/GroundMode are not asserted.
+            int fcx = fixture.sprite().getCentreX();
+            int fcy = fixture.sprite().getCentreY();
+            assertTrue(fcx >= 0 && fcx <= maxX + 256, "Approach frame " + frame + ": centre X in bounds (cx=" + fcx + ")");
+            assertTrue(fcy >= 0 && fcy <= maxY + 256, "Approach frame " + frame + ": centre Y in bounds (cy=" + fcy + ")");
 
             int angle = fixture.sprite().getAngle() & 0xFF;
             GroundMode mode = fixture.sprite().getGroundMode();
@@ -222,6 +247,12 @@ public class TestS1Ghz1Headless {
             lastMode = mode;
             lastAngle = angle;
         }
+
+        // Holding right then releasing must have carried Sonic rightward past the
+        // 1750 start, and he must end at a sane in-level position (not tunnelled).
+        assertTrue(fixture.sprite().getCentreX() > 1750, "Sonic should have advanced rightward from the start");
+        assertTrue(fixture.sprite().getCentreY() >= 0 && fixture.sprite().getCentreY() <= maxY + 256,
+                "Sonic should rest at a sane in-level Y (not tunnelled out, cy=" + fixture.sprite().getCentreY() + ")");
     }
 
     @Test
@@ -233,6 +264,11 @@ public class TestS1Ghz1Headless {
             System.out.printf("startOffset=%+d settled: x=%d y=%d cx=%d cy=%d air=%b angle=0x%02X mode=%s%n",
                     startOffset, fixture.sprite().getX(), fixture.sprite().getY(), fixture.sprite().getCentreX(), fixture.sprite().getCentreY(),
                     fixture.sprite().getAir(), fixture.sprite().getAngle() & 0xFF, fixture.sprite().getGroundMode());
+
+            // Each micro-offset start must settle at a sane in-level position
+            // (no tunnelling). Grounded/GroundMode are not asserted -- the air
+            // blip at the slope top is the bug under investigation.
+            assertSlopeTopPositionSane("micro-nudge settle startOffset=" + startOffset);
 
             slopeRunNudgeSequence("RIGHT", false, true);
             slopeResetAtTarget(startOffset);
@@ -258,6 +294,11 @@ public class TestS1Ghz1Headless {
                     fixture.sprite().getGSpeed(), fixture.sprite().getXSpeed(), fixture.sprite().getYSpeed(),
                     fixture.sprite().getAir(), fixture.sprite().getAngle() & 0xFF, fixture.sprite().getGroundMode(),
                     leftD, leftA, rightD, rightA);
+
+            // A single-direction micro-nudge on the flat top must keep Sonic at a
+            // sane in-level position (no tunnelling). Grounded is not asserted --
+            // the transient air blip is the bug these probes investigate.
+            assertSlopeTopPositionSane(label.trim() + " nudge frame " + frame);
         }
     }
 
@@ -304,6 +345,10 @@ public class TestS1Ghz1Headless {
             fixture.stepFrame(false, false, false, false, false);
         }
 
+        // Settled at a sane in-level position before the nudge (grounded not
+        // asserted -- the slope-top air blip is the bug under probe).
+        assertSlopeTopPositionSane("centre-1896 pre-nudge");
+
         Sensor[] groundSensors = fixture.sprite().getGroundSensors();
         System.out.println("=== diagnosticCentre1896LeftNudge ===");
         System.out.printf("topSolidBit=0x%02X lrbSolidBit=0x%02X xRad=%d yRad=%d%n",
@@ -328,13 +373,23 @@ public class TestS1Ghz1Headless {
                     right != null ? right.distance() : -99,
                     right != null ? right.angle() & 0xFF : -1,
                     right != null ? right.tileId() : -1);
+
+            // Holding left near the slope top must keep Sonic at a sane in-level
+            // position (no tunnelling). Grounded is not asserted -- the air blip
+            // is the bug under investigation.
+            assertSlopeTopPositionSane("centre-1896 left nudge frame " + frame);
         }
+
+        // The left nudge moves Sonic left (or holds) but never right of the 1896
+        // start -- a robust invariant regardless of the air blip.
+        assertTrue(fixture.sprite().getCentreX() <= 1896, "Left nudge must not push Sonic rightward (cx=" + fixture.sprite().getCentreX() + ")");
     }
 
     @Test
     public void diagnosticFindEmbeddedPositionsNear1900() {
         System.out.println("=== diagnosticFindEmbeddedPositionsNear1900 ===");
         Sensor[] groundSensors = fixture.sprite().getGroundSensors();
+        int embeddedCount = 0;
         for (int cx = 1888; cx <= 1912; cx++) {
             fixture.sprite().setCentreX((short) cx);
             fixture.sprite().setCentreY((short) 857);
@@ -353,6 +408,9 @@ public class TestS1Ghz1Headless {
             int leftD = left != null ? left.distance() : -99;
             int rightD = right != null ? right.distance() : -99;
             boolean embedded = leftD <= 0 && rightD <= 0;
+            if (embedded) {
+                embeddedCount++;
+            }
             if (embedded || cx == 1900) {
                 System.out.printf("cx=%d x=%d embedded=%b angle=0x%02X mode=%s | L(d=%d a=0x%02X tid=%d) R(d=%d a=0x%02X tid=%d)%n",
                         fixture.sprite().getCentreX(), fixture.sprite().getX(), embedded, fixture.sprite().getAngle() & 0xFF, fixture.sprite().getGroundMode(),
@@ -360,11 +418,17 @@ public class TestS1Ghz1Headless {
                         rightD, right != null ? right.angle() & 0xFF : -1, right != null ? right.tileId() : -1);
             }
         }
+
+        // After settling on the flat slope top, no probed centre position should
+        // leave Sonic embedded (both ground sensors penetrating, distance <= 0).
+        assertEquals(0, embeddedCount,
+                "No settled position in [1888,1912] should leave Sonic embedded in terrain");
     }
 
     @Test
     public void diagnosticFindImageStateNear1902() {
         System.out.println("=== diagnosticFindImageStateNear1902 ===");
+        int anomalyHits = 0;
         for (int startX = 1888; startX <= 1912; startX++) {
             slopeResetAtTopLeft(startX, TARGET_Y);
             for (int frame = 0; frame < 24; frame++) {
@@ -372,12 +436,20 @@ public class TestS1Ghz1Headless {
                 int x = fixture.sprite().getX();
                 int angle = fixture.sprite().getAngle() & 0xFF;
                 if (x >= 1901 && x <= 1903 && fixture.sprite().getAir() && angle == 0xCC) {
+                    anomalyHits++;
                     System.out.printf("HIT startX=%d frame=%d x=%d cx=%d y=%d g=%d xs=%d ys=%d mode=%s%n",
                             startX, frame, x, fixture.sprite().getCentreX(), fixture.sprite().getY(),
                             fixture.sprite().getGSpeed(), fixture.sprite().getXSpeed(), fixture.sprite().getYSpeed(), fixture.sprite().getGroundMode());
                 }
             }
         }
+
+        // The anomalous airborne wall-angle (0xCC) image-state near x=1902 is the
+        // slope-top blip under investigation and currently occurs.
+        // characterization upper bound: current anomalous-state count; a fix toward
+        // 0 passes, a regression that increases it fails.
+        assertTrue(anomalyHits <= 7,
+                "Anomalous airborne angle=0xCC state count near x=1902 should not increase (hits=" + anomalyHits + ")");
     }
 
     @Test
@@ -392,6 +464,10 @@ public class TestS1Ghz1Headless {
         int footY0 = fixture.sprite().getCentreY() + fixture.sprite().getYRadius();
         slopePrintVerticalScanState("A0", aX0, footY0);
         slopePrintVerticalScanState("B0", bX0, footY0);
+        // Settled at a sane in-level position before the step (grounded not
+        // asserted -- the slope-top air blip is the bug under probe).
+        assertSlopeTopPositionSane("1903 pre-step");
+
         Sensor[] sensors = fixture.sprite().getGroundSensors();
         SensorResult a0 = sensors[0].scan();
         SensorResult b0 = sensors[1].scan();
@@ -430,6 +506,12 @@ public class TestS1Ghz1Headless {
         int footY1 = fixture.sprite().getCentreY() + fixture.sprite().getYRadius();
         slopePrintVerticalScanState("A1", aX1, footY1);
         slopePrintVerticalScanState("B1", bX1, footY1);
+
+        // A single left step at x=1903 on the slope top must keep Sonic at a sane
+        // in-level position. Grounded/GroundMode and no-rightward-push are NOT
+        // asserted -- the transient air blip is the bug under probe and actually
+        // pushes Sonic rightward (to cx~1912) here.
+        assertSlopeTopPositionSane("1903 post-step");
     }
 
     @Test
@@ -439,6 +521,30 @@ public class TestS1Ghz1Headless {
         fixture.sprite().setTopSolidBit((byte) 0x0D);
         fixture.sprite().setLrbSolidBit((byte) 0x0E);
         diagnostic1903SingleLeftStep();
+    }
+
+    /**
+     * Robust invariant for the slope-top probes. The transient airborne "blip"
+     * at the slope top is the unresolved bug these diagnostics investigate, so we
+     * deliberately do NOT assert grounded/airborne or a specific GroundMode here.
+     * Instead we assert the sprite stays at a sane in-level position and never
+     * tunnels far below the slope-top floor -- invariants that must hold whether
+     * or not the blip is ever fixed.
+     */
+    private void assertSlopeTopPositionSane(String context) {
+        int maxX = GameServices.level().getCurrentLevel().getMaxX();
+        int maxY = GameServices.level().getCurrentLevel().getMaxY();
+        int cx = fixture.sprite().getCentreX();
+        int cy = fixture.sprite().getCentreY();
+        // Boundaries grow as the camera scrolls, so allow a margin past the maxima.
+        assertTrue(cx >= 0 && cx <= maxX + 256,
+                context + ": centre X should stay in level bounds (cx=" + cx + ", maxX=" + maxX + ")");
+        assertTrue(cy >= 0 && cy <= maxY + 256,
+                context + ": centre Y should stay in level bounds (cy=" + cy + ", maxY=" + maxY + ")");
+        // The slope top sits near y=857; tunnelling through the floor would send
+        // Sonic far below it. A generous lower bound catches that.
+        assertTrue(cy <= 1200,
+                context + ": Sonic should not tunnel far below the slope-top floor (cy=" + cy + ")");
     }
 
     private void slopePrintVerticalScanState(String label, int x, int y) {

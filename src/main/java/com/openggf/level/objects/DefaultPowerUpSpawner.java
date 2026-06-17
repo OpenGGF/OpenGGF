@@ -176,6 +176,10 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
         if (objectManager == null || object == null) {
             return;
         }
+        if (usesAuxiliaryDynamicObjectSpace(object)) {
+            objectManager.addAuxiliaryDynamicObject(object);
+            return;
+        }
         // Rewind: if a captured entry is pending for this dynamic class (Shield/Stars),
         // honour both the captured slot and the captured per-object field surface
         // so the post-restore re-spawn lands on the same slot the reference run had
@@ -195,6 +199,15 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
             return;
         }
         objectManager.addDynamicObject(object);
+    }
+
+    private boolean usesAuxiliaryDynamicObjectSpace(ObjectInstance object) {
+        if (!(object instanceof InstaShieldHandle)
+                || !(object instanceof ShieldObjectInstance shield)
+                || !(shield.getPlayer() instanceof AbstractPlayableSprite owner)) {
+            return false;
+        }
+        return owner.isCpuControlled();
     }
 
     private com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry

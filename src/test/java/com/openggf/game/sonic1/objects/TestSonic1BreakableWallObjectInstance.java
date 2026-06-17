@@ -4,6 +4,7 @@ import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.PreContactState;
 import com.openggf.game.solid.SolidCheckpointBatch;
+import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
@@ -45,12 +46,41 @@ class TestSonic1BreakableWallObjectInstance {
                 "Breakable wall should use ObjectPlayerQuery participants instead of the raw sidekick list");
     }
 
+    @Test
+    void sideBreakUsesRollAnimationSnapshotNotRollingStatus() {
+        TestPlayableSprite player = rollingPlayerAt(0x0F00);
+        player.setRolling(false);
+        player.setAnimationId(Sonic1AnimationIds.ROLL.id());
+
+        TestableSonic1BreakableWallObjectInstance wall = new TestableSonic1BreakableWallObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, 0x3C, 0, 0, false, 0));
+        wall.setCheckpointBatch(new SolidCheckpointBatch(wall, Map.of(
+                player, sideContact(0x0480, false, Sonic1AnimationIds.ROLL.id())
+        )));
+        wall.setServices(new TestObjectServices() {
+            private final ObjectPlayerQuery playerQuery = new ObjectPlayerQuery(
+                    () -> player,
+                    List::of);
+
+            @Override
+            public ObjectPlayerQuery playerQuery() {
+                return playerQuery;
+            }
+        });
+
+        wall.update(1, player);
+
+        assertTrue(wall.isDestroyed(),
+                "S1 Smashable Wall checks obAnim(a1)==id_Roll after SolidObject, not status rolling");
+    }
+
     private static TestPlayableSprite rollingPlayerAt(int centreX) {
         TestPlayableSprite player = new TestPlayableSprite();
         player.setCentreX((short) centreX);
         player.setCentreY((short) 0x1000);
         player.setAir(false);
         player.setRolling(true);
+        player.setAnimationId(Sonic1AnimationIds.ROLL.id());
         player.setXSpeed((short) 0x0480);
         return player;
     }
@@ -61,8 +91,12 @@ class TestSonic1BreakableWallObjectInstance {
     }
 
     private static PlayerSolidContactResult sideContact(int xSpeed) {
+        return sideContact(xSpeed, true, Sonic1AnimationIds.ROLL.id());
+    }
+
+    private static PlayerSolidContactResult sideContact(int xSpeed, boolean rolling, int animationId) {
         return new PlayerSolidContactResult(ContactKind.SIDE, false, false, true, false,
-                new PreContactState((short) xSpeed, (short) 0, true, 0), null, 0);
+                new PreContactState((short) xSpeed, (short) 0, rolling, animationId), null, 0);
     }
 
     private static final class TestableSonic1BreakableWallObjectInstance extends Sonic1BreakableWallObjectInstance {

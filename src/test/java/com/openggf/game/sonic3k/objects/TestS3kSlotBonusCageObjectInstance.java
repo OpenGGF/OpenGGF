@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageController;
+import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.Sonic;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -152,7 +154,9 @@ class TestS3kSlotBonusCageObjectInstance {
         cage.update(0, player);
         cage.update(1, player);
 
-        cage.appendRenderCommands(new ArrayList<>());
+        List<GLCommand> cmds = new ArrayList<>();
+        cage.appendRenderCommands(cmds);
+        assertTrue(cmds.isEmpty(), "unused cage visual must emit no render commands");
     }
 
     @Test

@@ -8,6 +8,7 @@ import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.solid.ContactKind;
+import com.openggf.level.objects.boss.BossChildComponent;
 import com.openggf.game.solid.ObjectSolidExecutionContext;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.PlayerStandingState;
@@ -73,6 +74,8 @@ public class ObjectManager {
     private final Map<ObjectSpawn, ObjectInstance> activeObjects = new IdentityHashMap<>();
     private final Map<ObjectInstance, ObjectSpawn> instanceToSpawn = new IdentityHashMap<>();
     private final List<ObjectInstance> dynamicObjects = new ArrayList<>();
+    private final Set<ObjectInstance> auxiliaryDynamicObjects =
+            Collections.newSetFromMap(new IdentityHashMap<>());
     private final List<ObjectInstance> dynamicFallbackScratch = new ArrayList<>();
     private final List<ObjectInstance> activeFallbackScratch = new ArrayList<>();
     // Per-frame scratch collections reused to avoid steady-state allocation.
@@ -261,6 +264,7 @@ public class ObjectManager {
     public void reset(int cameraX) {
         clearActiveObjects();
         dynamicObjects.clear();
+        auxiliaryDynamicObjects.clear();
         deferredDynamicExecThisFrame.clear();
         reservedChildSlots.clear();
         slotAllocator.clear();
@@ -710,7 +714,7 @@ public class ObjectManager {
                         dispatchDestroyRemoveFromActive(instance, spawn);
                         removeActiveObject(spawn);
                     } else {
-                        dynamicObjects.remove(instance);
+                        removeDynamicObjectInstance(instance);
                     }
                     objectsRemoved = true;
                 }
@@ -722,7 +726,7 @@ public class ObjectManager {
                 if (inst.isDestroyed()) {
                     releaseSlotIfManaged(inst);
                     inst.onUnload();
-                    dynamicObjects.remove(inst);
+                    removeDynamicObjectInstance(inst);
                     objectsRemoved = true;
                     continue;
                 }
@@ -735,7 +739,7 @@ public class ObjectManager {
                 if (inst.isDestroyed()) {
                     releaseSlotIfManaged(inst);
                     inst.onUnload();
-                    dynamicObjects.remove(inst);
+                    removeDynamicObjectInstance(inst);
                     objectsRemoved = true;
                 }
             }
@@ -863,7 +867,7 @@ public class ObjectManager {
                         dispatchDestroyRemoveFromActive(instance, spawn);
                         removeActiveObject(spawn);
                     } else {
-                        dynamicObjects.remove(instance);
+                        removeDynamicObjectInstance(instance);
                     }
                     objectsRemoved = true;
                 }
@@ -875,7 +879,7 @@ public class ObjectManager {
                 if (inst.isDestroyed()) {
                     releaseSlotIfManaged(inst);
                     inst.onUnload();
-                    dynamicObjects.remove(inst);
+                    removeDynamicObjectInstance(inst);
                     objectsRemoved = true;
                     continue;
                 }
@@ -889,7 +893,7 @@ public class ObjectManager {
                 if (inst.isDestroyed()) {
                     releaseSlotIfManaged(inst);
                     inst.onUnload();
-                    dynamicObjects.remove(inst);
+                    removeDynamicObjectInstance(inst);
                     objectsRemoved = true;
                 }
             }
@@ -1338,9 +1342,22 @@ public class ObjectManager {
     public List<ObjectInstance> snapshotPersistentDynamicObjectsForTransition() {
         List<ObjectInstance> snapshot = new ArrayList<>();
         for (ObjectInstance instance : dynamicObjects) {
-            if (instance != null && !instance.isDestroyed() && instance.isPersistent()) {
-                snapshot.add(instance);
+            if (instance == null || instance.isDestroyed() || !instance.isPersistent()) {
+                continue;
             }
+            // ROM Load_Level clears Dynamic_object_RAM, so a boss object group does
+            // not survive a level reload. Boss component children report persistent
+            // only so they survive the off-screen cull during the fixed-arena fight
+            // (see AbstractBossChild.isPersistent); they must NOT ride a seamless act
+            // reload. Carrying them strands them un-offset in the new act — concretely
+            // the placed AIZ1 miniboss cutscene is dropped on the AIZ1->AIZ2 fire
+            // reload while its persistent body/arm/flame-barrel children were carried,
+            // leaving an art-less (invisible) body and still-hurting flame barrels
+            // partway through AIZ2.
+            if (instance instanceof BossChildComponent) {
+                continue;
+            }
+            snapshot.add(instance);
         }
         return snapshot;
     }
@@ -1508,7 +1525,7 @@ public class ObjectManager {
         if (object == null) {
             return;
         }
-        boolean removed = dynamicObjects.remove(object);
+        boolean removed = removeDynamicObjectInstance(object);
         if (!removed) {
             return;
         }
@@ -1527,6 +1544,14 @@ public class ObjectManager {
         object.onUnload();
         bucketsDirty = true;
         activeObjectsCacheDirty = true;
+    }
+
+    private boolean removeDynamicObjectInstance(ObjectInstance object) {
+        boolean removed = dynamicObjects.remove(object);
+        if (removed) {
+            auxiliaryDynamicObjects.remove(object);
+        }
+        return removed;
     }
 
     /**
@@ -1561,6 +1586,30 @@ public class ObjectManager {
      */
     public void addDynamicObjectNextFrame(ObjectInstance object) {
         addDynamicObjectInternal(object, false, false);
+    }
+
+    /**
+     * Adds an engine-owned auxiliary dynamic object without allocating a ROM SST slot.
+     * <p>
+     * Use this only for non-standard runtime extensions that must update/render with
+     * objects but are not part of the original game's object pool, such as extra
+     * sidekick-only overlays. ROM-modeled children, projectiles, effects, shields, and
+     * other object routines must continue through {@link #addDynamicObject(ObjectInstance)}
+     * or one of the explicit slot-allocation variants so trace-visible slot pressure
+     * stays faithful to the original game.
+     */
+    public void addAuxiliaryDynamicObject(ObjectInstance object) {
+        if (object == null) {
+            return;
+        }
+        if (object instanceof AbstractObjectInstance aoi) {
+            aoi.setServices(objectServices);
+            aoi.setSlotIndex(-1);
+        }
+        dynamicObjects.add(object);
+        auxiliaryDynamicObjects.add(object);
+        bucketsDirty = true;
+        activeObjectsCacheDirty = true;
     }
 
     private void addDynamicObjectInternal(ObjectInstance object,
@@ -1848,7 +1897,7 @@ public class ObjectManager {
     }
 
     private int getDynamicObjectCount() {
-        return dynamicObjects.size();
+        return dynamicObjects.size() - auxiliaryDynamicObjects.size();
     }
 
     /**
@@ -2318,6 +2367,9 @@ public class ObjectManager {
     /** Pre-contact player rolling state, before landing clears it. */
     public boolean getPreContactRolling() { return solidContacts.getPreContactRolling(); }
 
+    /** Pre-contact player animation ID, before solid contact resolution can change it. */
+    public int getPreContactAnimationId() { return solidContacts.getPreContactAnimationId(); }
+
     public TouchResponseDebugState getTouchResponseDebugState() {
         return touchResponses != null ? touchResponses.getDebugState() : null;
     }
@@ -2572,7 +2624,7 @@ public class ObjectManager {
             }
             removeActiveObject(spawn);
         } else {
-            dynamicObjects.remove(instance);
+            removeDynamicObjectInstance(instance);
         }
         return true;
     }
@@ -3112,6 +3164,9 @@ public class ObjectManager {
                 List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry> dynamicEntries =
                         new ArrayList<>();
                 for (ObjectInstance inst : dynamicObjects) {
+                    if (auxiliaryDynamicObjects.contains(inst)) {
+                        continue;
+                    }
                     if (inst instanceof AbstractObjectInstance aoi) {
                         dynamicEntries.add(
                                 new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry(
@@ -3167,6 +3222,7 @@ public class ObjectManager {
                 //    re-registered below.
                 clearActiveObjects();
                 dynamicObjects.clear();
+                auxiliaryDynamicObjects.clear();
                 Arrays.fill(execOrder, null);
                 pendingPlayerBoundEntries.clear();
 

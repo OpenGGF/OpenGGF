@@ -46,10 +46,35 @@ public class CollisionSystemTest {
 
     @Test
     public void testTraceRecordsTerrainProbeEvents() {
-        SensorResult[] results = collisionSystem.terrainProbes(null, new Sensor[0], "ground");
+        AbstractPlayableSprite player = Mockito.mock(AbstractPlayableSprite.class);
+        // Drive a real probe with two live sensors. terrainProbes records one
+        // TERRAIN_PROBE_RESULT per pooled slot (named "<type>_<index>") when the
+        // trace is active. The pooled buffer holds MAX_SENSORS (6) slots, so the
+        // two live sensors are followed by null-result slots.
+        Sensor sensorA = new FixedSensor(player, Direction.DOWN, 5);
+        Sensor sensorB = new FixedSensor(player, Direction.DOWN, 8);
+
+        SensorResult[] results = collisionSystem.terrainProbes(
+                player, new Sensor[] { sensorA, sensorB }, "ground");
+
+        assertEquals(5, results[0].distance());
+        assertEquals(8, results[1].distance());
 
         List<CollisionEvent> events = trace.getEvents();
-        assertNotNull(events);
+        assertEquals(results.length, events.size(),
+                "terrainProbes must record one probe-result event per pooled slot");
+        // The first two events carry the live sensor results.
+        assertEquals(CollisionEvent.EventType.TERRAIN_PROBE_RESULT, events.get(0).type());
+        assertEquals("ground_0", events.get(0).description());
+        assertEquals(5, events.get(0).distance());
+        assertTrue(events.get(0).flag1(), "live sensor result must mark a hit");
+        assertEquals(CollisionEvent.EventType.TERRAIN_PROBE_RESULT, events.get(1).type());
+        assertEquals("ground_1", events.get(1).description());
+        assertEquals(8, events.get(1).distance());
+        // Remaining pooled slots are empty -> null-result probe events.
+        assertEquals("ground_2", events.get(2).description());
+        assertEquals(Integer.MAX_VALUE, events.get(2).distance());
+        assertFalse(events.get(2).flag1(), "empty slot result must not mark a hit");
     }
 
     @Test
@@ -394,6 +419,8 @@ public class CollisionSystemTest {
     @Test
     public void testNoOpTraceClearDoesNotThrow() {
         NoOpCollisionTrace.INSTANCE.clear();
+        assertTrue(NoOpCollisionTrace.INSTANCE.getEvents().isEmpty(),
+                "no-op trace must record nothing, even after clear()");
     }
 
     @Test
@@ -407,6 +434,8 @@ public class CollisionSystemTest {
         noop.onSolidResolved(null, false, false);
         noop.onSolidContactsComplete(false, 0, 0);
         noop.onPostAdjustment("test", 0, 0);
+        assertTrue(noop.getEvents().isEmpty(),
+                "no-op trace must drop every recorded event");
     }
 
     @Test
@@ -432,7 +461,10 @@ public class CollisionSystemTest {
 
     @Test
     public void testClearRidingObject_noObjectManager() {
-        collisionSystem.clearRidingObject(null);
+        // Null-safety contract: clearing with no object manager is a safe no-op
+        // and leaves the riding query reporting no riding object.
+        assertDoesNotThrow(() -> collisionSystem.clearRidingObject(null));
+        assertFalse(collisionSystem.isRidingObject(null));
     }
 
     @Test

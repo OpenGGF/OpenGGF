@@ -24,6 +24,9 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 @RequiresRom(SonicGame.SONIC_1)
 class DebugS1Ghz1SlotProbe {
 
@@ -59,6 +62,8 @@ class DebugS1Ghz1SlotProbe {
             }
 
             String previousSummary = "";
+            int framesProcessed = 0;
+            int windowFramesObserved = 0;
             for (int i = 0; i < trace.frameCount(); i++) {
                 TraceFrame expected = trace.getFrame(i);
                 TraceFrame previous = i > 0 ? trace.getFrame(i - 1) : null;
@@ -69,10 +74,12 @@ class DebugS1Ghz1SlotProbe {
                 } else {
                     fixture.stepFrameFromRecording();
                 }
+                framesProcessed++;
 
                 if (i < 280 || i > 340) {
                     continue;
                 }
+                windowFramesObserved++;
 
                 String summary = summariseSlots(om, 32, 50);
                 String romSummary = summariseRomEvents(trace.getEventsForFrame(i), 32, 50);
@@ -97,6 +104,19 @@ class DebugS1Ghz1SlotProbe {
                             expected.gameplayFrameCounter(),
                             romSummary);
                 }
+            }
+
+            // characterization guard: the probe must actually step the trace
+            // and reach its 280-340 inspection window, and the engine slot/ROM
+            // summary it computes must remain stable (regression tripwire).
+            assertTrue(trace.frameCount() > 0, "trace loaded no frames");
+            assertEquals(trace.frameCount(), framesProcessed,
+                    "probe did not step every trace frame");
+            assertTrue(windowFramesObserved > 0,
+                    "probe never reached the slot-inspection window");
+            if (trace.frameCount() > 340) {
+                assertEquals(61, windowFramesObserved,
+                        "slot-inspection window coverage regressed");
             }
         } finally {
             sharedLevel.dispose();

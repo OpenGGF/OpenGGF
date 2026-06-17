@@ -50,14 +50,14 @@ class TestS3kSpecialRenderEffectRegistration {
     }
 
     @Test
-    void hczRegistersWallChaseBgOverlayAtAfterSprites() {
+    void hczRegistersBgHighOverlayAndWallChaseOverlay() {
         Sonic3kZoneFeatureProvider provider = new Sonic3kZoneFeatureProvider();
         SpecialRenderEffectRegistry registry = new SpecialRenderEffectRegistry();
 
         provider.registerSpecialRenderEffects(registry, Sonic3kZoneIds.ZONE_HCZ, 0);
 
         assertEquals(0, registry.size(SpecialRenderEffectStage.AFTER_BACKGROUND));
-        assertEquals(0, registry.size(SpecialRenderEffectStage.AFTER_FOREGROUND));
+        assertEquals(1, registry.size(SpecialRenderEffectStage.AFTER_FOREGROUND));
         assertEquals(1, registry.size(SpecialRenderEffectStage.AFTER_SPRITES));
     }
 

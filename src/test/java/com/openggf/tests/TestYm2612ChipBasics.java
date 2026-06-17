@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import com.openggf.audio.synth.Ym2612Chip;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -121,6 +122,10 @@ public class TestYm2612ChipBasics {
         chip.write(0, 0x98, 0x08); // op3 SSG-EG enable
         chip.write(0, 0x9C, 0x08); // op4 SSG-EG enable
 
+        // All four operators should be counted as SSG-EG active.
+        assertEquals(4, chip.getSsgEgActiveCountForTest(),
+                "All four channel-0 operators should register as SSG-EG active");
+
         // Render some samples with SSG-EG active
         int[] left = new int[64];
         int[] right = new int[64];
@@ -129,22 +134,18 @@ public class TestYm2612ChipBasics {
         // Force silence the channel (this is the AU5 fix path)
         chip.forceSilenceChannel(0);
 
-        // Render again - should not throw or produce garbage.
         // Before the AU5 fix, ssgEgActiveCount would leak and never return to 0.
+        // This count reset is the actual "ResetsSSGEGState" regression target.
+        assertEquals(0, chip.getSsgEgActiveCountForTest(),
+                "forceSilenceChannel must clear the SSG-EG active count (AU5 regression)");
+
+        // Render again - should not throw or produce garbage.
+        // (Output is not asserted silent: forceSilenceChannel resets envelope/SSG-EG
+        // state but does not guarantee a fully-zero tail, so the SSG-EG count reset
+        // above is the meaningful oracle.)
         int[] left2 = new int[512];
         int[] right2 = new int[512];
         chip.renderStereo(left2, right2);
-
-        // After forceSilence, channel 0 should be silent (all samples zero)
-        boolean allSilent = true;
-        for (int v : left2) {
-            if (v != 0) {
-                allSilent = false;
-                break;
-            }
-        }
-        // Note: other channels may produce output, so just verify no exception was thrown
-        // The main validation is that the method completes without error
     }
 
     private static void configureSimpleVoice(Ym2612Chip chip) {

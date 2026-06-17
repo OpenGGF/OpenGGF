@@ -32,6 +32,13 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @RequiresRom(SonicGame.SONIC_2)
 public class TestSpawnPositions {
+    /**
+     * The original Sonic 2 game intentionally spawns players up to ~3 pixels inside the
+     * ground; the physics system pushes them out during the title card. Spawns within this
+     * tolerance are expected behaviour, not a misconfiguration.
+     */
+    private static final int SPAWN_INSIDE_GROUND_TOLERANCE = 3;
+
     private Rom rom;
     private Game game;
     private LevelManager levelManager;
@@ -141,19 +148,26 @@ public class TestSpawnPositions {
     public void testAllSpawnPositions() throws Exception {
         List<SpawnTestResult> results = new ArrayList<>();
         List<SpawnTestResult> failures = new ArrayList<>();
+        List<String> unloadable = new ArrayList<>();
 
         for (LevelData levelData : LevelData.values()) {
             try {
                 SpawnTestResult result = testSpawnPosition(levelData);
                 results.add(result);
 
-                // Check if spawn is inside ground (negative distance)
-                if (result.distance0 < 0 || result.distance1 < 0) {
+                // Check if spawn is excessively inside the ground. The original Sonic 2
+                // game intentionally spawns players up to ~3px inside the ground (physics
+                // pushes them out during the title card), so allow that documented tolerance.
+                if (result.distance0 < -SPAWN_INSIDE_GROUND_TOLERANCE
+                        || result.distance1 < -SPAWN_INSIDE_GROUND_TOLERANCE) {
                     failures.add(result);
                 }
             } catch (Exception e) {
-                System.err.println("Failed to test " + levelData.name() + ": " + e.getMessage());
-                e.printStackTrace();
+                // This fixture runs under the Sonic 2 module (@RequiresRom(SONIC_2)), so
+                // levels from other games in the shared LevelData enum cannot be loaded
+                // here. Record and surface them loudly rather than silently swallowing,
+                // but do not fail the spawn-position oracle on an out-of-scope load issue.
+                unloadable.add(levelData.name() + " (" + e.getMessage() + ")");
             }
         }
 
@@ -185,16 +199,21 @@ public class TestSpawnPositions {
             }
         }
 
-        // Note: The original Sonic 2 game intentionally spawns players ~3 pixels inside
-        // the ground.
-        // The physics system pushes them up to the correct position during the title
-        // card.
-        // This is expected behavior, not a bug. The test documents this for reference.
-        //
-        // If you need to enforce strict spawn positioning, uncomment the assertion
-        // below:
-        // assertTrue(// failures.isEmpty(), "Some levels have spawn positions inside ground: " +
-        // failures.stream().map(f -> f.levelData.name()).toList());
+        if (!unloadable.isEmpty()) {
+            System.out.println("\n=== SKIPPED (could not load under the Sonic 2 module) ===");
+            unloadable.forEach(u -> System.out.println("  " + u));
+        }
+
+        // We must actually have exercised some levels — guard against a harness change
+        // that silently loads nothing.
+        assertFalse(results.isEmpty(), "No spawn positions were tested at all");
+
+        // The original Sonic 2 game intentionally spawns players up to ~3 pixels inside
+        // the ground; the physics system pushes them out during the title card. Anything
+        // deeper than that documented tolerance is a misconfigured spawn Y coordinate.
+        assertTrue(failures.isEmpty(),
+                "Some levels have spawn positions more than " + SPAWN_INSIDE_GROUND_TOLERANCE
+                        + "px inside ground: " + failures.stream().map(f -> f.levelData.name()).toList());
     }
 
     @Test
@@ -211,9 +230,11 @@ public class TestSpawnPositions {
             System.out.println("Expected distance should be >= 0 (on or above ground)");
         }
 
-        // This test documents the current behavior - uncomment to enforce:
-        // assertTrue(result.distance0 >= 0 &&
-        // result.distance1 >= 0, "Spawn should not be inside ground");
+        // Allow the documented ~3px intentional spawn-inside-ground tolerance; anything
+        // deeper indicates a misconfigured spawn Y coordinate.
+        assertTrue(result.distance0 >= -SPAWN_INSIDE_GROUND_TOLERANCE
+                        && result.distance1 >= -SPAWN_INSIDE_GROUND_TOLERANCE,
+                "Spawn should not be more than " + SPAWN_INSIDE_GROUND_TOLERANCE + "px inside ground");
     }
 
     /**

@@ -2223,6 +2223,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return drowningDeath;
         }
 
+        public void clearDrowningDeathState() {
+                drowningDeath = false;
+                drownPreDeathTimer = 0;
+        }
+
         /**
          * Ticks the drown pre-death timer. Returns true when the timer expires (transition to dead).
          */

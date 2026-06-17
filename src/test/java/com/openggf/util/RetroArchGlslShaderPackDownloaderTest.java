@@ -173,12 +173,27 @@ public class RetroArchGlslShaderPackDownloaderTest {
         try {
             Future<InstallResult> first = executor.submit(() -> new RetroArchGlslShaderPackDownloader(transport)
                     .download(tempDir, ProgressListener.NONE));
+            // Deterministic gate: the first worker has reached the transport and
+            // is now parked on releaseFirst while holding the install lock.
             assertTrue(transport.awaitFirstEntered(), "first download should reach transport");
 
-            Future<InstallResult> second = executor.submit(() -> new RetroArchGlslShaderPackDownloader(transport)
-                    .download(tempDir, ProgressListener.NONE));
-            Thread.sleep(150);
-
+            // The second worker signals that it is actively running (and thus
+            // contending for the install lock) before we assert. This replaces a
+            // fixed Thread.sleep with a real happens-before signal, so the test
+            // is not racy.
+            CountDownLatch secondStarted = new CountDownLatch(1);
+            Future<InstallResult> second = executor.submit(() -> {
+                secondStarted.countDown();
+                return new RetroArchGlslShaderPackDownloader(transport)
+                        .download(tempDir, ProgressListener.NONE);
+            });
+            assertTrue(secondStarted.await(5, TimeUnit.SECONDS),
+                    "second download worker should start running");
+            // Give the second worker a bounded window to (incorrectly) reach the
+            // transport. While the first holds the install lock the count must
+            // stay at 1; awaitSecondEntered must time out rather than fire.
+            assertFalse(transport.awaitSecondEntered(),
+                    "second download must not reach transport while first holds the install lock");
             assertEquals(1, transport.startedRequests(),
                     "second download should wait on the install lock before contacting transport");
 
@@ -321,6 +336,7 @@ public class RetroArchGlslShaderPackDownloaderTest {
     private static final class BlockingTransport implements RetroArchGlslShaderPackDownloader.HttpTransport {
         private final List<byte[]> bodies;
         private final CountDownLatch firstEntered = new CountDownLatch(1);
+        private final CountDownLatch secondEntered = new CountDownLatch(1);
         private final CountDownLatch releaseFirst = new CountDownLatch(1);
         private final AtomicInteger startedRequests = new AtomicInteger();
 
@@ -330,6 +346,15 @@ public class RetroArchGlslShaderPackDownloaderTest {
 
         boolean awaitFirstEntered() throws InterruptedException {
             return firstEntered.await(5, TimeUnit.SECONDS);
+        }
+
+        /**
+         * Bounded wait for a SECOND request to reach the transport. Expected to
+         * time out (return false) while the first request holds the install
+         * lock — a true return signals the serialization contract was broken.
+         */
+        boolean awaitSecondEntered() throws InterruptedException {
+            return secondEntered.await(500, TimeUnit.MILLISECONDS);
         }
 
         void releaseFirst() {
@@ -346,6 +371,8 @@ public class RetroArchGlslShaderPackDownloaderTest {
             if (requestNumber == 1) {
                 firstEntered.countDown();
                 releaseFirst.await();
+            } else {
+                secondEntered.countDown();
             }
             if (bodies.isEmpty()) {
                 throw new IOException("unexpected extra request");
