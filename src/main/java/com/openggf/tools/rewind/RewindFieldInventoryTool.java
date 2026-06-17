@@ -5,6 +5,8 @@ import com.openggf.game.rewind.GenericRewindEligibility;
 import com.openggf.game.rewind.RewindDeferred;
 import com.openggf.game.rewind.RewindScanSupport;
 import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.rewind.coverage.RewindCoverageAnalyzer;
+import com.openggf.game.rewind.coverage.RewindCoverageReport;
 import com.openggf.game.rewind.schema.RewindCodec;
 import com.openggf.game.rewind.schema.RewindCodecs;
 import com.openggf.game.rewind.schema.RewindFieldPolicy;
@@ -42,6 +44,11 @@ public final class RewindFieldInventoryTool {
             return;
         }
 
+        if (args.length == 1 && "--coverage".equals(args[0])) {
+            System.out.print(renderCoverageReport());
+            return;
+        }
+
         List<String> unsupported = unsupportedFields();
         if (unsupported.isEmpty()) {
             System.out.println("No unsupported rewind fields found.");
@@ -51,6 +58,28 @@ public final class RewindFieldInventoryTool {
         System.err.println("Unsupported rewind fields:");
         unsupported.forEach(System.err::println);
         System.exit(1);
+    }
+
+    /**
+     * Runs the coverage analyzer across all games and returns the rendered report
+     * with a summary line appended.
+     *
+     * <p>The summary line always contains the literal substrings {@code "coverage:"}
+     * and {@code "gaps"}, e.g.:
+     * <pre>coverage: 42/100 covered, 58 gaps</pre>
+     *
+     * @return the full rendered text of the coverage report plus the summary line
+     */
+    public static String renderCoverageReport() {
+        RewindCoverageReport report = RewindCoverageAnalyzer.analyzeAll();
+        int totalCount = report.objects().size();
+        int gapCount = report.gapKeys().size();
+        int coveredCount = totalCount - (int) report.objects().stream()
+                .filter(obj -> !obj.gapKeys().isEmpty())
+                .count();
+        String rendered = report.render();
+        return rendered + "coverage: " + coveredCount + "/" + totalCount
+                + " covered, " + gapCount + " gaps\n";
     }
 
     static List<String> unsupportedFields() throws Exception {
