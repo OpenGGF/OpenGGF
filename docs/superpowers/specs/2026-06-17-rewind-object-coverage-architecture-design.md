@@ -126,7 +126,7 @@ Extend `RewindFieldInventoryTool` (`com.openggf.tools.rewind`) to print, per gam
 
 ## 6. Phased delivery
 
-1. **Audit + static guard** — implement 3.5 + 3.7 first to make the *true* scope visible (list every gap) before changing behavior. Guard starts in report-only mode, then flips to failing once the backlog is burned down.
+1. **Audit + static guard** — implement 3.5 + 3.7 first to make the *true* scope visible (list every gap) before changing behavior. **IMPLEMENTED (report-only) on `feature/ai-rewind-coverage-audit`; baseline = 1705 gap keys: 584 `#recreate` (mostly layout over-approximations, refined in Phase 2), 1079 `#finalScalar`, 42 `#objectRef`.** Guard starts in report-only mode, then flips to failing once the backlog is burned down.
 2. **Identity model + convert codecs to `RewindRecreatable`** — 3.2 (per-object ids in the snapshot, dynamic-counter capture, ordered two-phase restore) + 3.1. **Convert** the existing `DYNAMIC_REWIND_CODECS` entries into `RewindRecreatable` implementations **while keeping the dynamic/static restore split**; do *not* retire the split yet. This is the smaller-blast-radius path: it lets the identity model be tested against the already-covered objects before any new dynamic-object path changes, and eliminates silent drop + ref fragility incrementally. Retiring the split is a later, optional step once identity is proven.
 3. **Capture completeness** — 3.3; close the `final`-field gap; guard flips to failing for it.
 4. **Event idempotency** — 3.4; reproduce and close the airship-`0x4074` duplicate and AIZ intro; generalize Fix-B reconcile.
