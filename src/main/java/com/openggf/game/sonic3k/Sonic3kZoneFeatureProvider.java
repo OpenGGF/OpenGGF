@@ -148,6 +148,23 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
                 || isCnzBossBackgroundWindowActive(zoneId);
     }
 
+    @Override
+    public boolean foregroundWrapsHorizontally() {
+        return isAizBattleshipForestLoopActive();
+    }
+
+    /**
+     * AIZ2 {@code AIZ2_DoShipLoop} post-bombing forest loop active (ROM state only:
+     * the auto-scroll loop is running with the post-bombing $46C0 wrap boundary).
+     */
+    private boolean isAizBattleshipForestLoopActive() {
+        if (getFeatureZoneId() != Sonic3kZoneIds.ZONE_AIZ || !GameServices.hasRuntime()) {
+            return false;
+        }
+        AizZoneRuntimeState aizState = getAizState();
+        return aizState != null && aizState.isBattleshipForestLoopActive();
+    }
+
     private boolean isCnzBossBackgroundWindowActive(int zoneId) {
         if (zoneId != Sonic3kZoneIds.ZONE_CNZ) {
             return false;

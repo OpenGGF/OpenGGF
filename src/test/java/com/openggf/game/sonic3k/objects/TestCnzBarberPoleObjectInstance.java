@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic1.objects.TestPlayableSprite;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.TestObjectServices;
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +18,16 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestCnzBarberPoleObjectInstance {
+
+    @Test
+    void exposesRomCodePointerForS3kTailsCpuInteract() {
+        CnzBarberPoleObjectInstance pole = new CnzBarberPoleObjectInstance(
+                new ObjectSpawn(0x0F70, 0x0810, Sonic3kObjectIds.CNZ_BARBER_POLE, 0, 0, false, 0));
+
+        assertTrue(pole instanceof RomObjectCodePointerProvider);
+        assertEquals(0x0003, ((RomObjectCodePointerProvider) pole).romObjectCodePointerHighWord(),
+                "S3K sub_13EFC stores word 0 of loc_33376/loc_335A8 into Tails_CPU_interact");
+    }
 
     @Test
     void unloadUsesLatchedLifecycleDestructionPolicy() {

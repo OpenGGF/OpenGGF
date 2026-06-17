@@ -235,9 +235,11 @@ public record PhysicsFeatureSet(
          *  engine by {@code pinballMode}, but ROM tests the shared
          *  {@code spin_dash_flag} byte in {@code sub_13EF0}
          *  (sonic3k.asm:26858).
-         *  <p>S2: false -- {@code TailsCPU_Panic} tests only
-         *  {@code spindash_flag}; {@code pinball_mode} is a separate byte and
-         *  does not force Ctrl_2 down (s2.asm:39458-39467).
+         *  <p>S2: true -- {@code TailsCPU_Panic} tests
+         *  {@code spindash_flag} rather than {@code pinball_mode}
+         *  (s2.asm:39458-39467), but the engine represents S2's rolling-only
+         *  panic release state through {@code pinballMode}; HTZ2 exits panic at
+         *  {@code Level_frame_counter=$0400} while inertia is still nonzero.
          *  <p>S1: false (no Tails CPU sidekick). */
         boolean sidekickPanicTreatsPinballModeAsSpindashFlag,
         /**
@@ -1272,7 +1274,7 @@ public record PhysicsFeatureSet(
             SIDEKICK_FOLLOW_SNAP_S2, SIDEKICK_DESPAWN_X_S2, SIDEKICK_FOLLOW_LEAD_OFFSET_NONE,
             false /* sidekickFollowNudgeBlockedByObjectControlBit0: S2 TailsCPU_Normal has no object_control bit-0 gate on FollowLeft/FollowRight nudge (s2.asm:38952-38975) */,
             false /* sidekickDelayedJumpPressUsesHistoryEdge: preserve S2 delayed low-byte press replay baseline */,
-            false /* sidekickPanicTreatsPinballModeAsSpindashFlag: S2 TailsCPU_Panic only tests spindash_flag, not pinball_mode (s2.asm:39458-39467) */,
+            true /* sidekickPanicTreatsPinballModeAsSpindashFlag: S2 TailsCPU_Panic reads spin_dash_flag, but the engine's S2 rolling-only/pinball representation must feed that branch for the $7F release cadence; HTZ2 f1023 exits panic at Level_frame_counter $0400 while inertia remains nonzero (s2.asm:39458-39491). */,
             true, false /* useScreenYWrapValueForVisibility: S2 keeps 32-margin */,
             true /* sidekickDespawnUsesObjectIdMismatch: S2 cmp.b id(a3),d0 in TailsCPU_CheckDespawn (s2.asm:39067) */,
             SIDEKICK_FLY_LAND_BLOCKERS_S2, false /* sidekickFlyLandRequiresLeaderAlive: S2 TailsCPU_Flying_Part2 has no Sonic-routine check */,
@@ -1382,11 +1384,13 @@ public record PhysicsFeatureSet(
     }
 
     /**
-     * S2/S3K water entry/exit splashes reuse the fixed per-player dust object
-     * instead of allocating a normal dynamic SST slot: S2 writes
+     * S2/S3K water entry/exit splashes and skid-dust ownership reuse the fixed
+     * per-player dust object instead of allocating a normal dynamic SST slot: S2 writes
      * {@code #(1<<8)} to {@code Sonic_Dust+anim} (docs/s2disasm/s2.asm:36102,
      * 36132) and S3K writes the same splash animation through {@code anim(a6)}
-     * (docs/skdisasm/sonic3k.asm:22241,22281). S1 lacks this spindash/dust
+     * (docs/skdisasm/sonic3k.asm:22241,22281). S2 skid dust is spawned by that
+     * fixed object while the parent remains in Stop/Skid animation
+     * (docs/s2disasm/s2.asm:42759-42797). S1 lacks this spindash/dust
      * object path and keeps its object-based LZ splash.
      */
     public boolean waterSplashUsesFixedDustObject() {

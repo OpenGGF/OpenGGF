@@ -140,6 +140,8 @@ public final class TraceReplayDriver {
                 ? trace.getFrame(boot.replayStart().seededTraceIndex())
                 : initialCursor > 0 ? trace.getFrame(initialCursor - 1) : null;
         TraceReplaySessionBootstrap.alignFrameCountersForReplayStart(
+                trace,
+                boot.replayStart(),
                 previousDriveFrame,
                 initialCursor < trace.frameCount() ? trace.getFrame(initialCursor) : null);
         this.comparator = new LiveTraceComparator(

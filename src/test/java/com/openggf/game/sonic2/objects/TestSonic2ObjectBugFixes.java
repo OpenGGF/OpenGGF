@@ -13,7 +13,9 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.objects.ObjectConstructionContext;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
@@ -92,6 +94,42 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void steamSpringRightEdgeUsesRomInclusiveSolidObjectGate() {
+        SteamSpringObjectInstance spring = new SteamSpringObjectInstance(
+                new ObjectSpawn(0x04B0, 0x0140, Sonic2ObjectIds.STEAM_SPRING, 0x00, 0, false, 0));
+        spring.snapshotPreUpdatePosition();
+        ObjectManager manager = buildSingleObjectManager(spring);
+
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        tails.setWidth(18);
+        tails.setHeight(18);
+        tails.setAir(false);
+        tails.setXSpeed((short) -0x100);
+        tails.setGSpeed((short) -0x100);
+        tails.setCentreX((short) 0x04CB);
+        tails.setCentreY((short) 0x0150);
+
+        manager.updateSolidContacts(tails);
+
+        assertTrue(tails.getPushing(),
+                "Obj42 SolidObject_cont uses bhi, so relX == $1B*2 must still set Status_Push");
+        assertEquals(0, tails.getXSpeed());
+        assertEquals(0, tails.getGSpeed());
+        assertEquals(0x04CB, tails.getCentreX(),
+                "Exact right-edge contact has zero shove distance and should not move Tails");
+    }
+
+    @Test
+    void steamPuffDoesNotUseMarkObjGoneUnloadWindow() {
+        SteamPuffObjectInstance puff = new SteamPuffObjectInstance(0x0208, 0x0270, true);
+
+        assertTrue(puff.usesCustomOutOfRangeCheck(),
+                "Obj42 routine 4 tails to DisplaySprite, not MarkObjGone");
+        assertFalse(puff.isCustomOutOfRange(0x0306),
+                "Obj42 steam puffs must survive off-screen until their animation deletes them");
+    }
+
+    @Test
     void spikyBlockRendersParentBlockMappingFrameFour() {
         PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
         when(renderer.isReady()).thenReturn(true);
@@ -162,6 +200,30 @@ class TestSonic2ObjectBugFixes {
                 "Obj65 loc_26D94 checks Sidekick after MainCharacter before retracting");
         assertEquals(0x0A60, platform.getX(),
                 "A native P2/Tails inside the proximity box must keep the fully extended platform stationary");
+    }
+
+    @Test
+    void mtzLongPlatformDefersBit7ChildCogUntilFirstRoutinePass() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        StubObjectServices services = new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+        };
+
+        MTZLongPlatformObjectInstance platform = ObjectConstructionContext.construct(services,
+                () -> new MTZLongPlatformObjectInstance(
+                        new ObjectSpawn(0x0600, 0x01B0, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x80, 0, false, 0)));
+        platform.setServices(services);
+
+        verify(objectManager, never()).addDynamicObjectAfterCurrent(
+                org.mockito.ArgumentMatchers.any(AbstractObjectInstance.class));
+
+        platform.update(0, new TestablePlayableSprite("sonic", (short) 0x0600, (short) 0x01B0));
+
+        verify(objectManager).addDynamicObjectAfterCurrent(
+                org.mockito.ArgumentMatchers.argThat(MTZLongPlatformCogInstance.class::isInstance));
     }
 
     @Test
@@ -556,6 +618,31 @@ class TestSonic2ObjectBugFixes {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.setBoolean(target, value);
+    }
+
+    private static ObjectManager buildSingleObjectManager(ObjectInstance instance) {
+        ObjectRegistry registry = new ObjectRegistry() {
+            @Override
+            public ObjectInstance create(ObjectSpawn spawn) {
+                return instance;
+            }
+
+            @Override
+            public void reportCoverage(List<ObjectSpawn> spawns) {
+                // No-op for tests.
+            }
+
+            @Override
+            public String getPrimaryName(int objectId) {
+                return "TEST";
+            }
+        };
+
+        ObjectManager objectManager = new ObjectManager(List.of(), registry, 0, null, null,
+                null, null, new StubObjectServices());
+        objectManager.reset(0);
+        objectManager.addDynamicObject(instance);
+        return objectManager;
     }
 
     private static final class ZoneActServices extends StubObjectServices {

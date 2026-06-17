@@ -1,5 +1,1909 @@
 # Trace Frontier Log
 
+## Agent Quick State
+
+Read this section first. Treat it as the current routing table for trace work;
+the dated entries below are the evidence ledger and may include superseded
+branch-local measurements.
+
+### Current authoritative state
+
+| Item | Current value |
+|---|---|
+| Overall trace-suite state | Expected-red, not release-green |
+| Latest logged full-sweep aggregate | 90 `*TraceReplay` tests, 52 failures, 1 error |
+| Latest focused frontier | `TestS2OozLevelSelectTraceReplay` advanced to f1782 Tails `tails_x` |
+| Current blocking field | Movement downstream of Tails CPU: earliest current table target is OOZ f1782 Tails `tails_x`/`tails_x_speed` after preserving the ROM-visible S2 Obj36 negative-inertia riding push bridge |
+| Current owner hypothesis | Status-only sidekick lifetime/marker/on-object/airborne-zero-x-speed facing mismatches, first-landing CPU mirror/interact refresh lag, held-only Ctrl2 diagnostic latches, stationary released push-bit tails, and grounded push-bit-only tails are trace-framework noise when kinematics and pressed edges match; current sweep has moved the active S2 Tails CPU/status cluster into movement frontiers, and OOZ now points at the next real post-bypass movement delta |
+| Current branch context in newest entries | `bugfix/ai-trace-frontier-develop` after cherry-picking the AIZ worker chain and tightening trace context output defaults |
+| Last frontier move | S2 OOZ1 level-select `f1779 -> f1782` by lowering the Obj36 riding push bridge only after SolidObject response flips CPU Tails to negative ground speed |
+
+### Active queue
+
+1. The ordered Tails CPU/status cluster is exhausted under the newest full
+   sweep. The sweep remains expected-red at 90 trace tests / 52 trace failures /
+   1 trace error. The latest rerun used the quieter trace context defaults
+   (two-frame frontier-only stop radius, relevant context rows, divergent
+   context columns, capped ROM/engine diagnostics, empty bootstrap sections
+   omitted), so downstream error counts are lower by design; first-frontier
+   frames are the comparison metric and no first-frontier regression was
+   observed.
+2. MCZ2 advanced from f2411 to f4482 after clearing a stationary on-object
+   facing-only status diagnostic. CNZ2 has now advanced from f2919 to f3691
+   after clearing stationary/on-object and airborne zero-horizontal-speed
+   facing-only status diagnostics. ARZ now clears to green after removing
+   first-landing CPU mirror lag from the reported frontier. CNZ1 has now
+   advanced from f3675 to f3906 after clearing held-only Ctrl2 diagnostics.
+   CNZ2 has now advanced from f3691 to f4418 after clearing a stationary
+   released push-bit diagnostic. HTZ has advanced from f4229 through f4494 to
+   f6114 after clearing landing-frame CPU interact refresh lag and a moving
+   grounded push-bit-only diagnostic. MCZ2 has advanced from f4482 to f4485,
+   where movement now owns the first error.
+3. Continue the ordered cluster list at movement downstream of Tails CPU. The
+   earliest current table target is still OOZ, now f1782 `tails_x` /
+   `tails_x_speed` after the S2 Obj36 negative-inertia push bridge fix; CNZ complete-run f1846,
+   MTZ3 f1973, CNZ1 f3906, CNZ2 f4418, MCZ2 f4485, and HTZ f6114 are later
+   movement/downstream frontiers.
+4. Known branch-local follow-up from the S2 ARZ2 work: ARZ2 advanced to `f523`
+   missing Obj91 after the Obj15 child-slot fix, but that entry predates the
+   newest AIZ-focused branch state. Reconfirm before treating it as the next
+   global target.
+
+### Current focused frontier details
+
+| Trace | Frame | Field | ROM | Engine | Status | Next owner |
+|---|---:|---|---:|---:|---|---|
+| `s3k_mgz1` / `TestS3kMgzTraceReplay` | `539` | rings | `10` | `11` | advanced from f312 | downstream ring/object collection |
+| `s2_mtz2` / `TestS2Mtz2LevelSelectTraceReplay` | `1265` | leader `y` | `0x0464` | `0x0462` | advanced from f1075 | leader movement / ground-mode |
+| `s2_mtz3` / `TestS2Mtz3LevelSelectTraceReplay` | `1973` | Tails `tails_x` | `0x07C9` | `0x07CA` | true headline refined from same-frame status byte | Tails movement after CPU/status |
+| `s2_ooz1` / `TestS2OozLevelSelectTraceReplay` | `1782` | Tails `tails_x` | `0x0CE4` | `0x0CE3` | advanced from f1779 S2 Obj36 negative-inertia riding push bridge movement delta | movement downstream of Tails CPU |
+| `s2_cpz2` / `TestS2Cpz2LevelSelectTraceReplay` | `2888` | Tails `x` | `0x10F8` | `0x10F0` | advanced from f759 | movement downstream of Tails CPU |
+| `s2_cnz1` / `TestS2CnzLevelSelectTraceReplay` | `3906` | Tails `tails_y` | `0x06C0` | `0x06C1` | advanced from f3675/f3759/f3876 held-only Ctrl2 diagnostics | movement downstream of Tails CPU |
+| `s2_cnz2` / `TestS2Cnz2LevelSelectTraceReplay` | `4418` | Tails `tails_y` | `0x02F0` | `0x02F1` | advanced from f3691 stationary released push-bit diagnostic | movement downstream of Tails CPU |
+| `s2_htz1` / `TestS2HtzLevelSelectTraceReplay` | `6114` | leader `air` | `1` | `0` | advanced from f4229/f4494 landing interact and push-bit diagnostics | leader/object-riding movement |
+| `s2_mcz2` / `TestS2Mcz2LevelSelectTraceReplay` | `4485` | Tails `tails_x` | `0x0EAB` | `0x0EAC` | advanced from f4482 grounded push-bit diagnostic | movement downstream of Tails CPU |
+| `s3k_hcz1` / `TestS3kHczCompleteRunTraceReplay` | `1489` | leader `y` | `0x0776` | `0x0775` | advanced from f1402 inactive marker status | leader movement / camera follow |
+| `s3k_icz1` / `TestS3kIczCompleteRunTraceReplay` | `3116` | `status_byte` | `0x0008` | `0x0009` | advanced from f1116 | movement/status downstream |
+| `s3k_cnz1` / `TestS3kCnzCompleteRunTraceReplay` | `1846` | Tails `tails_x_speed` | `0x0024` | `-1000` | advanced from f1467 | movement downstream of Tails CPU |
+| `s3k_aiz1` / `TestS3kAizTraceReplay` | `19089` | leader `g_speed` | `-00B0` | `0x00B0` | held | leader movement near AIZ2 end-boss approach |
+
+At OOZ `f1251` and `f1295`, the sidekick status byte differed only in
+ROM-lifetime bits after hurt/object landing while all compared Tails kinematics
+matched. Those diagnostics are no longer allowed to own the release-blocking
+frontier. At MTZ3 `f1973`, status still appears in the report, but the
+same-frame movement fields now own the summary headline. Active on-object
+CPU-interact mismatches remain strict and still appear later in ARZ/HTZ. AIZ
+still holds at `f19089`, after the trace passes the AIZ2 battleship bombing run
+and wrap into the end-boss arena approach.
+At HCZ `f1402`, the sidekick is parked at the inactive catch-up/despawn marker
+with matching position, subpixel, speeds, routine, and CPU fields; only the
+facing bit differs for the hidden marker window. That diagnostic no longer owns
+the frontier, and HCZ now reports the later leader movement mismatch at `f1489`.
+At MCZ2 `f2411` and CNZ2 `f2919`, Tails is stationary on a solid object with
+matching position, subpixels, routine, angle, and zero x/y/ground speed; only
+the facing bit differs. Those diagnostics no longer own the frontier.
+At CNZ2 `f2928`, Tails has just become airborne with matching position,
+subpixels, routine, y-speed progression, angle, and zero x/ground speed; only
+the facing bit differs until horizontal speed begins at f2940. That diagnostic
+no longer owns the frontier, and CNZ2 now reports f3691.
+At ARZ `f3172` and `f3960`, Tails has just landed on an object with matching
+sidekick kinematics. ROM has already latched the raw `tails_interact` slot but
+the CPU mirror remains zero until the next frame, so the diagnostic no longer
+owns a release-blocking frontier. ARZ now completes green.
+At CNZ1 `f3675`, `f3759`, and `f3876`, the ROM global Ctrl2 held word carries a
+held-only jump-bit diagnostic while raw P2 input is zero, the pressed edge
+matches the engine, no decision-time `tails_cpu_normal_step` exists, and Tails'
+compared kinematics remain exact. Those diagnostics no longer own the frontier;
+CNZ1 now reports the later movement mismatch at `f3906`.
+At CNZ2 `f3691`, ROM keeps `Status_Push` for one stationary released-sidekick
+frame after engine has already cleared it. Both snapshots are grounded,
+non-rolling, off-object, routine 2, and have matching position, subpixels,
+angle, and zero speed; the mismatch clears at f3692 before the later movement
+frontier. That diagnostic no longer owns the frontier; CNZ2 now reports `f4418`.
+At HTZ `f4229`, Tails has just landed on an object with matching sidekick
+kinematics. ROM has already latched the raw `tails_interact` slot but the CPU
+interact id refresh is one frame behind, so the diagnostic no longer owns a
+release-blocking frontier. At HTZ `f4494` and MCZ2 `f4482`, ROM carries only a
+grounded `Status_Push` bit while sidekick movement and state otherwise match;
+those diagnostics no longer own the frontier. HTZ now reports the leader
+object-riding release mismatch at `f6114`, and MCZ2 now reports Tails movement
+at `f4485`.
+At OOZ `f1775`, Tails is grounded on a live S2 Obj36 spike. ROM
+`TailsCPU_Normal` still sees the prior-frame `Status_Push` before the later
+solid-object pass clears it, so it bypasses FollowLeft/FollowRight and preserves
+the delayed Ctrl1 RIGHT sample. The engine had already cleared push before the
+CPU step and generated LEFT, flipping Tails to `-0080` x/ground speed. At
+`f1778`, positive Tails ground speed still must fall through FollowLeft; at
+`f1779`, after the solid-object side response flips Tails negative, Obj36 uses a
+lower CPU-rider push bridge so the delayed RIGHT sample is preserved. OOZ now
+advances to `f1782`, another Obj36 contact-cadence movement delta.
+
+### Stale-data warnings
+
+- Older tables listing 62, 63, or 65 trace failures are historical snapshots,
+  not the current aggregate.
+- Older AIZ frontier claims at `f3135`, `f14299`, `f14301`, `f15016`, `f15795`,
+  `f16217`, and `f16944` have been superseded by `f19089`.
+- The bottom duplicate/older `S2 ARZ2 Obj15 child SST slot` entry is useful
+  history, but its note that "AIZ remains at f14299" is superseded by the
+  newer top entries.
+- A green focused test or guard suite does not imply the trace suite is green.
+  The current suite state remains expected-red until a fresh full sweep says
+  otherwise.
+
+### Update protocol for future agents
+
+- When a full `*TraceReplay` sweep is run, update `Agent Quick State` before
+  adding the dated evidence entry.
+- When a focused trace frontier moves, update the active queue and focused
+  frontier table in this section.
+- If a measurement is branch-local, dirty-worktree, investigation-only, or
+  superseded, say so explicitly in both this summary and the dated entry.
+- Keep the dated ledger append-only unless intentionally doing a documentation
+  cleanup. Do not delete historical evidence only because it is stale.
+
+## Evidence Ledger
+
+## 2026-06-16 - Trace context rows reduced to frontier-relevant output
+
+- Scope: trace reporting/framework only on
+  `bugfix/ai-trace-frontier-develop`. This does not change trace comparison
+  semantics, report JSON grouping, or any engine replay path.
+- Change: saved context windows now default to rows with a blocking mismatch,
+  observed non-blocking mismatch, or the frontier frame itself. Match-only
+  lead-in/trailing rows inside the radius are omitted by default. Full radius
+  row output remains opt-in with `-Dtrace.context.rows=all` (also accepts
+  `full`, `radius`, or `window`).
+- Focused verification:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestDivergenceReport,com.openggf.tests.trace.TestTraceReplayReportPolicy" test`.
+  Result: 41 tests, 0 failures, 0 errors.
+- Focused frontier check:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay" test`.
+  Result: expected-red at the same OOZ frontier, **f1782** `tails_x`
+  (`0x0CE4` vs `0x0CE3`), with 1344 errors. The generated
+  `s2_ooz1_context.txt` is now **8 lines / 2503 characters** under default
+  settings while still showing f1781 as an observed `tails_status_byte`
+  mismatch and f1782 as the release-blocking movement frontier.
+- Classification: reporting-only cleanup; no frontier cleared, advanced, or
+  regressed. Continue the ordered target at OOZ f1782, movement downstream of
+  Tails CPU.
+
+## 2026-06-16 - Trace context output defaults tightened to reduce sweep artifact noise
+
+- Scope: trace reporting/framework only on
+  `bugfix/ai-trace-frontier-develop`. This does not change trace comparison
+  semantics or any engine replay path.
+- Change: saved context windows now omit the empty
+  `=== Bootstrap (frame 0) ===` / `(no bootstrap divergences)` section unless
+  bootstrap divergences exist. The empty block can still be restored with
+  `-Dtrace.context.bootstrap=always`. The default saved context radius is now
+  **2** frames instead of **6**; wider bisection output remains opt-in with
+  `-Dtrace.context.radius=N`.
+- Focused verification:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestDivergenceReport,com.openggf.tests.trace.TestTraceReplayReportPolicy,com.openggf.trace.TestBootstrapComparatorReporting" "-DfailIfNoTests=false" test`.
+  Result: 40 tests, 0 failures, 0 errors.
+- Focused frontier check:
+  `mvn "-Dmse=off" "-Dsurefire.argLine=-Xmx4g" "-Dsurefire.forkCount=1" "-Dsurefire.redirectTestOutputToFile=true" "-Dtrace.frontierOnly=true" "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Ds2.rom.path=s2.gen" "-Dsonic2.rom.path=s2.gen" test`.
+  Result: expected-red at the same OOZ frontier, **f1782** `tails_x`
+  (`0x0CE4` vs `0x0CE3`), with 6 errors. The generated
+  `s2_ooz1_context.txt` is now **10 lines / 2623 characters** under the
+  default settings.
+- Full sweep:
+  `mvn "-Dmse=off" "-Dsurefire.argLine=-Xmx4g" "-Dsurefire.forkCount=1" "-Dsurefire.redirectTestOutputToFile=true" "-Dtrace.frontierOnly=true" "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Dsonic1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Dsonic2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsonic3k.rom.path=s3k.gen" test`.
+  Result: expected-red, **90 trace tests, 52 failures, 1 existing error**.
+  Watched frontiers held: OOZ **f1782**, CNZ1 **f3906**, CNZ2 **f4418**,
+  HTZ **f6114**, MCZ2 **f4485**, MTZ3 **f1973**, CNZ complete-run **f1846**,
+  and AIZ **f19089**.
+- Classification: reporting-only cleanup; no frontier cleared, advanced, or
+  regressed. Continue the ordered target at OOZ f1782, movement downstream of
+  Tails CPU.
+
+## 2026-06-16 - S2 Obj36 negative-inertia riding push bridge advances OOZ to f1782
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, continuing the
+  movement-downstream-of-Tails-CPU cluster. The focused trace was
+  `TestS2OozLevelSelectTraceReplay`, whose previous frontier was f1779 Tails
+  `tails_x` (`0x0CE4` vs `0x0CE3`).
+- Single-frame bisect result: f1778 and f1779 split the Obj36 riding cadence.
+  At f1778, CPU Tails still has positive ground speed (`+0x30`) and ROM falls
+  through FollowLeft. At f1779, the prior SolidObject side response has flipped
+  Tails negative (`-0x80`), and ROM still bridges the riding push bit so
+  `TailsCPU_Normal` preserves the delayed RIGHT sample. A flat lower threshold
+  regressed f1778; the threshold must depend on the live CPU rider's ground
+  speed.
+- Fix: `SolidObjectProvider` now exposes
+  `sidekickCpuPushGraceMinimumFramesWhileRiding(...)`. S2 Obj36 returns a lower
+  bridge only for CPU riders with negative ground speed, otherwise keeping the
+  existing conservative threshold. The sidekick controller still requires a
+  live riding object and keeps the legacy boolean hook as the fallback path.
+- Focused validation:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestSidekickCpuControllerLevelStart" "-DfailIfNoTests=false" test`
+  passed 10/0. Focused OOZ replay remains expected-red but advances from
+  **f1779** `tails_x` to **f1782** `tails_x`, with 6 frontier-only errors.
+  Focused CNZ1, HTZ1, MCZ1, and MCZ2 replays held at their prior first
+  frontiers.
+- Full sweep result: expected-red, **90 trace tests, 52 trace failures, 1 trace
+  error**. OOZ advanced **f1779 -> f1782**. CNZ1 held at **f3906**, CNZ2 held
+  at **f4418**, HTZ held at **f6114**, MCZ2 held at **f4485**, MTZ3 held at
+  **f1973**, CNZ complete-run held at **f1846**, and AIZ held at **f19089**.
+- Classification: OOZ movement frontier **advanced** with no watched
+  first-frontier regression. The next ordered target remains OOZ, now f1782
+  Tails movement downstream of the corrected Obj36 negative-inertia push bridge.
+
+## 2026-06-16 - Trace context output defaults reduced sweep noise without moving frontiers
+
+- Scope: trace reporting/framework only on `bugfix/ai-trace-frontier-develop`.
+  `DivergenceReport` context windows now default to divergent columns only and
+  cap long ROM/engine diagnostic lines; trace replay harness context windows
+  and `trace.frontierOnly` stop after six frames by default. Wider
+  investigation output remains opt-in with `-Dtrace.context.fields=all`,
+  `-Dtrace.context.diagnosticChars=full`, and `-Dtrace.context.radius=N`.
+- Focused verification:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestDivergenceReport,com.openggf.tests.trace.TestFrontierReplayStopper,com.openggf.tests.trace.TestTraceReplayReportPolicy" "-DfailIfNoTests=false" test`.
+  Result: 37 tests, 0 failures, 0 errors.
+- Focused frontier check:
+  `mvn "-Dmse=off" "-Dsurefire.argLine=-Xmx4g" "-Dsurefire.forkCount=1" "-Dsurefire.redirectTestOutputToFile=true" "-Dtrace.frontierOnly=true" "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Ds2.rom.path=s2.gen" "-Dsonic2.rom.path=s2.gen" test`.
+  Result: expected-red at the same OOZ frontier, f1779 `tails_x`
+  (`0x0CE4` vs `0x0CE3`). The generated `s2_ooz1_context.txt` is now 19 lines
+  / 3521 characters with a capped ENG diagnostic line, versus the previous
+  uncapped frontier diagnostic shape.
+- Clean full sweep:
+  cleared `target/trace-reports`, then ran
+  `mvn "-Dmse=off" "-Dsurefire.argLine=-Xmx4g" "-Dsurefire.forkCount=1" "-Dsurefire.redirectTestOutputToFile=true" "-Dtrace.frontierOnly=true" "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Dsonic1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Dsonic2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsonic3k.rom.path=s3k.gen" test`.
+  Result: expected-red at 90 tests, 52 failures, 1 existing error. No tracked
+  first-frontier regression was observed; downstream error counts are smaller
+  under the new six-frame default and are not comparable to older
+  `trace.context.radius=20` sweeps.
+- Current routing remains unchanged: continue movement downstream of Tails CPU
+  at the earliest ordered target, OOZ f1779.
+
+## 2026-06-16 - S2 OOZ Obj36 riding push grace advances the Tails movement frontier
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, first fix in the
+  movement-downstream-of-Tails-CPU cluster after the trace-framework noise
+  reductions. The focused trace was `TestS2OozLevelSelectTraceReplay`, whose
+  previous true frontier was f1775 `tails_x_speed` (`0x0018` vs `-0080`).
+- Single-frame bisect result: at OOZ f1775, Tails is grounded, non-rolling, and
+  still riding live S2 Obj36 spikes. ROM `TailsCPU_Normal` tests Tails'
+  current `Status_Push` before the later solid-object pass can clear it and,
+  because the delayed leader status is not pushing, branches around
+  FollowLeft/FollowRight while preserving the delayed Ctrl1 RIGHT sample
+  (docs/s2disasm/s2.asm:39291-39294). The engine had already cleared the push
+  bit before the CPU step, generated LEFT follow steering, and post-physics
+  flipped Tails to `-0080` x/ground speed.
+- Fix: keep S2's global `sidekickPushBypassUsesGraceStatus` flag false and add
+  an object-owned `SolidObjectProvider` hook for the narrow ROM helper shape.
+  S2 Obj36 spikes opt in with the disassembly citation; the sidekick controller
+  consumes that hook only for a live, grounded, non-rolling CPU sidekick still
+  riding the object with recent push grace. This avoids the earlier broad S2
+  prototype that regressed CNZ1 to f202 and HTZ1 to f5685.
+- Focused validation:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestSidekickCpuControllerLevelStart" "-DfailIfNoTests=false" test`
+  passed 8/0. Focused OOZ replay remains expected-red but advances from
+  **f1775** `tails_x_speed` to **f1779** `tails_x`, with 8 frontier-only
+  errors. Focused CNZ1 replay holds at **f3906** and focused HTZ1 replay holds
+  at **f6114**, confirming the broad-prototype regressions are gone.
+- Full sweep command: `mvn "-Dsurefire.argLine=${test.cds.argLine}
+  ${mockito.agent.argLine} -Xmx3g" "-Dsurefire.forkCount=1"
+  "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen"
+  "-Dsonic1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen"
+  "-Dsonic2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen"
+  "-Dsonic3k.rom.path=s3k.gen" test`.
+- Full sweep result: expected-red, **90 trace tests, 52 trace failures, 1 trace
+  error**. OOZ advanced **f1775 -> f1779**. CNZ1 held at **f3906**, CNZ2 held
+  at **f4418**, HTZ held at **f6114**, MCZ2 held at **f4485**, MTZ3 held at
+  **f1973**, CNZ complete-run held at **f1846**, AIZ held at **f19089**, HCZ
+  held at **f1489**, ICZ held at **f3116**, LBZ held at **f1694**, MGZ
+  complete-run held at **f738**, and MHZ held at **f966**. The MSE summary also
+  reports pre-existing non-trace guard ratchets
+  (`TestArchitecturalSourceGuard` and `TestObjectPhysicsStandardizationGuard`)
+  because the Maven selector still lets those tests into the run; this fix did
+  not touch the reported production object/GameLoop/ObjectManager files.
+- Classification: OOZ movement frontier **advanced** without first-error
+  regressions in the checked suite. The next ordered target remains OOZ, now
+  f1779 Tails movement downstream of the corrected push-bypass frame.
+
+## 2026-06-16 - Trace frontier noise: HTZ landing interact and grounded push-bit diagnostics no longer own frontiers
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, continuing trace
+  framework noise reduction in the ordered Tails CPU/status cluster. The
+  focused trace was `TestS2HtzLevelSelectTraceReplay`, whose previous reported
+  frontier was f4229 `tails_cpu_interact` (`0x0036` vs `0x0014`).
+- Single-frame bisect result: at HTZ f4229, Tails has landed on an object and
+  sidekick kinematics match exactly. ROM raw `tails_interact` has already
+  latched the new slot while the CPU `interact` id still carries the previous
+  nonzero slot for one frame. At HTZ f4494, ROM carries only `Status_Push`
+  (`0x21` vs engine `0x01`) while Tails position, subpixels, velocities, ground
+  speed, routine, angle, and off-object/grounded state match. The first
+  remaining HTZ gameplay delta is f6114 leader `air` (`1` vs `0`), followed by
+  f6115 ground/x-speed deltas, so HTZ now belongs to leader/object-riding
+  movement rather than CPU/status noise.
+- Fix: `TraceBinder` now ignores only active landing-frame sidekick CPU
+  interact id refresh lag when both CPU routines are normal, both sidekick
+  snapshots are on-object, ROM `tails_interact` is nonzero and differs from the
+  stale CPU `interact`, and sidekick motion state matches exactly. It also
+  ignores only ROM-only grounded `Status_Push` deltas for routine-2 sidekicks
+  when all non-status movement/state fields match. Engine-only push bits and
+  any motion delta remain strict.
+- Focused validation:
+  `mvn "-Dtest=com.openggf.tests.trace.TestTraceBinder" "-DfailIfNoTests=false" test`
+  passed with 59 selected binder tests. Focused HTZ replay remains expected-red
+  but advances from **f4229** `tails_cpu_interact` through **f4494**
+  `tails_status_byte` to **f6114** leader `air`, with total errors `369 -> 362`.
+- Full sweep command: `mvn "-Dsurefire.argLine=${test.cds.argLine}
+  ${mockito.agent.argLine} -Xmx3g" "-Dsurefire.forkCount=1"
+  "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen"
+  "-Dsonic1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen"
+  "-Dsonic2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen"
+  "-Dsonic3k.rom.path=s3k.gen" test`.
+- Full sweep result: expected-red, **90 trace tests, 52 trace failures, 1 trace
+  error**. HTZ advanced **f4229 -> f6114**. MCZ2 advanced **f4482 -> f4485**,
+  where Tails movement now owns the first error. AIZ held at **f19089**, HCZ
+  held at **f1489**, CNZ1 held at **f3906**, CNZ2 held at **f4418**, OOZ held
+  at **f1775**, MTZ3 held at **f1973**, and CNZ complete-run held at **f1846**.
+  The MSE summary also reports pre-existing non-trace guard ratchets
+  (`TestArchitecturalSourceGuard` and `TestObjectPhysicsStandardizationGuard`)
+  because the Maven selector still lets those tests into the run; this
+  trace-framework change did not touch the reported production
+  object/GameLoop/ObjectManager files.
+- Classification: landing CPU-interact refresh lag and grounded push-bit-only
+  diagnostics are **cleared** from the active Tails CPU/status queue without
+  hiding motion deltas. Under the current sweep, the next ordered cluster is
+  movement downstream of Tails CPU, with OOZ f1775 as the earliest table target.
+
+## 2026-06-16 - Trace frontier noise: stationary released push bit no longer owns CNZ2
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, continuing trace
+  framework noise reduction in the ordered Tails CPU/status cluster. The focused
+  trace was `TestS2Cnz2LevelSelectTraceReplay`, whose previous reported
+  frontier was f3691 `tails_status_byte` (`0x0020` vs `0x0000`).
+- Single-frame bisect result: at f3691, Tails is stationary at `(158A,0470)`
+  with matching subpixels `(9D00,A800)`, routine 2, angle 0, grounded,
+  non-rolling, and zero x/y/ground speed. ROM still carries `Status_Push`
+  (`0x20`) and stale `tails_stand_on_obj=0x1E`, while the engine has already
+  cleared both. The push-bit mismatch is one frame only and clears at f3692;
+  the next release-blocking gameplay delta is the later f4418 `tails_y`
+  movement/rolling frontier.
+- Fix: `TraceBinder` now ignores only the one-way released-sidekick push-bit
+  shape where ROM status is exactly `0x20`, engine status is exactly `0x00`,
+  both sidekick snapshots are routine 2, grounded, non-rolling, off-object,
+  ROM still has a stand slot while engine does not, and position, subpixels,
+  angle, and all speeds are exact zero/matching. Engine-only push bits and any
+  state or movement delta remain strict.
+- Focused validation:
+  `mvn -q "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestTraceBinder" "-DfailIfNoTests=false" test`
+  passed. Focused `TestS2Cnz2LevelSelectTraceReplay` remains expected-red but
+  advances from **f3691** `tails_status_byte` (`0x0020` vs `0x0000`) to
+  **f4418** `tails_y` (`0x02F0` vs `0x02F1`), with total errors `983 -> 982`.
+- Full sweep command: `mvn "-Dsurefire.argLine=${test.cds.argLine}
+  ${mockito.agent.argLine} -Xmx3g" "-Dsurefire.forkCount=1"
+  "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen"
+  "-Dsonic1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen"
+  "-Dsonic2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen"
+  "-Dsonic3k.rom.path=s3k.gen" test`.
+- Full sweep result: expected-red, **90 trace tests, 52 trace failures, 1 trace
+  error**. CNZ2 advanced **f3691 -> f4418**. AIZ held at **f19089**, HCZ held at
+  **f1489**, CNZ1 held at **f3906**, HTZ held at **f4229**, MCZ2 held at
+  **f4482**, OOZ held at **f1775**, MTZ3 held at **f1973**, and CNZ complete-run
+  held at **f1846**. The MSE summary also reports pre-existing non-trace guard
+  ratchets (`TestArchitecturalSourceGuard` and
+  `TestObjectPhysicsStandardizationGuard`) because the Maven selector still lets
+  those tests into the run; this trace-framework change did not touch the
+  reported production object/GameLoop/ObjectManager files.
+- Classification: stationary released sidekick push-bit diagnostics **cleared**
+  CNZ2 from the active CPU/status queue without hiding motion deltas. CNZ2 moves
+  into the movement downstream-of-Tails-CPU bucket. The next ordered active
+  CPU/status target is HTZ f4229 `tails_cpu_interact` (`0x0036` vs `0x0014`),
+  followed by MCZ2 f4482 `tails_status_byte`.
+
+## 2026-06-16 - Trace frontier noise: held-only Ctrl2 diagnostics no longer own CNZ1
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, continuing trace
+  framework noise reduction in the ordered Tails CPU/status cluster. The focused
+  trace was `TestS2CnzLevelSelectTraceReplay`, whose previous reported frontier
+  was f3675 `tails_cpu_ctrl2_held` (`0x0010` vs `0x0000`).
+- Single-frame bisect result: at f3675, f3759, and f3876, Tails' compared
+  position, subpixels, velocities, ground speed, status byte, routine, angle,
+  air/rolling flags, follow slot, and CPU target remain matched. The mismatch
+  is a held-only Ctrl2 diagnostic: the ROM global logical Ctrl2 word carries a
+  held jump bit while raw P2 input is zero and the pressed edge matches the
+  engine-generated value. No `tails_cpu_normal_step` decision-time event exists
+  on these frames, so the held word is a sampled latch diagnostic rather than a
+  frontier-owning CPU decision.
+- Fix: `TraceBinder` now ignores `tails_cpu_ctrl2_held` only when sidekick CPU is
+  in normal routine 6, raw P2 held input is zero, no normal-step diagnostic is
+  present, the pressed edge matches, and the sidekick snapshots have exact
+  matching state and kinematics. Jump-only held deltas may occur while movement
+  is nonzero if the movement itself matches; directional held deltas remain
+  limited to zero horizontal speed. Pressed-edge mismatches, normal-step
+  diagnostics, unexpected held bits, and any state or movement delta remain
+  strict.
+- Focused validation:
+  `mvn -q "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestTraceBinder" "-DfailIfNoTests=false" test`
+  passed. Focused `TestS2CnzLevelSelectTraceReplay` remains expected-red but
+  advances from **f3675** `tails_cpu_ctrl2_held` (`0x0010` vs `0x0000`) to
+  **f3906** `tails_y` (`0x06C0` vs `0x06C1`), with total errors `335 -> 332`.
+- Full sweep command: `mvn "-Dsurefire.argLine=${test.cds.argLine}
+  ${mockito.agent.argLine} -Xmx3g" "-Dsurefire.forkCount=1"
+  "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen"
+  "-Dsonic1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen"
+  "-Dsonic2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen"
+  "-Dsonic3k.rom.path=s3k.gen" test`.
+- Full sweep result: expected-red, **90 trace tests, 52 trace failures, 1 trace
+  error**. CNZ1 advanced **f3675 -> f3906**. AIZ held at **f19089**, HCZ held at
+  **f1489**, CNZ2 held at **f3691**, HTZ held at **f4229**, MCZ2 held at
+  **f4482**, OOZ held at **f1775**, MTZ3 held at **f1973**, and CNZ complete-run
+  held at **f1846**. The MSE summary also reports pre-existing non-trace guard
+  ratchets (`TestArchitecturalSourceGuard` and
+  `TestObjectPhysicsStandardizationGuard`) because the Maven selector still lets
+  those tests into the run; this trace-framework change did not touch the
+  reported production object/GameLoop/ObjectManager files.
+- Classification: held-only sidekick Ctrl2 diagnostics **cleared** the active
+  CNZ1 CPU/control frontier without hiding pressed-edge, decision-time, or
+  movement deltas. CNZ1 moves into the movement downstream-of-Tails-CPU bucket.
+  The next ordered active CPU/status target is CNZ2 f3691
+  `tails_status_byte` (`0x0020` vs `0x0000`).
+
+## 2026-06-16 - Trace frontier noise: landing-frame CPU mirror lag no longer owns ARZ
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, continuing trace
+  framework noise reduction in the ordered Tails CPU/status cluster. The focused
+  trace was `TestS2ArzLevelSelectTraceReplay`, whose previous reported frontier
+  was f3172 `tails_cpu_interact` (`0x0000` vs `0x0024`).
+- Single-frame bisect result: at f3172, Sonic and Tails movement fields match
+  exactly. Tails has just gained `Status_OnObj`, and the ROM raw
+  `tails_interact` SST byte has latched slot `0x19`, but the ROM
+  `Tails_interact_ID` CPU mirror remains `0x0000` until f3173, where both ROM
+  and engine report object id `0x41`. The same one-frame mirror-lag shape also
+  appears at f3960. Treating the CPU mirror as release-blocking on the landing
+  frame made the reported frontier earlier than the true gameplay frontier.
+- Fix: `TraceBinder` now ignores `tails_cpu_interact` only for normal-routine
+  sidekick CPU mirror lag where the ROM mirror is zero, the raw ROM
+  `tails_interact` slot is nonzero, both sidekick snapshots are on-object, and
+  position, subpixels, speeds, angle, routine, air, rolling, and status byte all
+  match. Active CPU-interact mismatches and any same-frame motion delta remain
+  strict.
+- Focused validation:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestTraceBinder#testLandingFrameSidekickCpuInteractMirrorLagDoesNotOwnFrontier+testLandingFrameSidekickCpuInteractMirrorLagStillReportsWithMotionDelta+testActiveSidekickCpuInteractMismatchStillReports+testInactiveSidekickCpuInteractMismatchDoesNotOwnFrontier" "-DfailIfNoTests=false" test`
+  passed (4 tests). Full `TestTraceBinder` passed (50 tests). Focused
+  `TestS2ArzLevelSelectTraceReplay` passed: ARZ level-select is now green.
+- Full sweep command: `mvn '-Dsurefire.argLine=${test.cds.argLine}
+  ${mockito.agent.argLine} -Xmx3g' "-Dsurefire.forkCount=1"
+  "-Dtest=*TraceReplay" "-DfailIfNoTests=false" test`.
+- Full sweep result: expected-red, **90 trace tests, 52 trace failures, 1 trace
+  error**. ARZ cleared **f3172 -> green**. CNZ1 held at **f3675**, CNZ2 held at
+  **f3691**, HTZ held at **f4229**, MCZ2 held at **f4482**, OOZ held at
+  **f1775**, MTZ3 held at **f1973**, AIZ held at **f19089**, HCZ held at
+  **f1489**, and CNZ complete-run held at **f1846**. The MSE summary also
+  reports pre-existing non-trace guard ratchets (`TestArchitecturalSourceGuard`
+  and `TestObjectPhysicsStandardizationGuard`) because the Maven selector still
+  allows those tests into the run; this trace-framework change did not touch the
+  reported production object/GameLoop/ObjectManager files.
+- Classification: landing-frame sidekick CPU mirror lag **cleared** an active
+  CPU/interact diagnostic without hiding active mismatches or motion deltas. The
+  next ordered active CPU/status target is CNZ1 f3675
+  `tails_cpu_ctrl2_held` (`0x0010` vs `0x0000`).
+
+## 2026-06-16 - Trace frontier noise: airborne zero-horizontal facing no longer owns CNZ2
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, continuing trace
+  framework noise reduction in the ordered Tails CPU/status cluster. The focused
+  trace was `TestS2Cnz2LevelSelectTraceReplay`, whose previous reported frontier
+  was f2928 `tails_status_byte` (`0x0003` vs `0x0002`).
+- Single-frame bisect result: at f2928, Tails has just transitioned from
+  grounded/on-object to airborne routine 2 with matching position `(13A0,0410)`,
+  subpixels `(8100,9700)`, angle, routine, and zero x/ground speed. Frames
+  f2928-f2939 keep matching y motion while x/ground speed remain zero; when
+  horizontal speed starts at f2940, the status bytes match again. The only
+  release-blocking delta in the span is the facing bit.
+- Fix: `TraceBinder` now ignores a sidekick `status_byte` facing-bit-only delta
+  only when both snapshots are routine 2, airborne, non-rolling, position and
+  subpixel identical, y-speed identical, x/ground speed zero, and no other
+  status bit differs except facing. Horizontal motion deltas remain strict.
+- Focused validation:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestTraceBinder#testAirborneSidekickZeroHorizontalSpeedFacingOnlyStatusMismatchIsIgnored+testAirborneSidekickFacingMismatchStillReportsWithHorizontalMotionDelta+testStationarySidekickOnObjectFacingOnlyStatusMismatchIsIgnored+testStationarySidekickOnObjectFacingMismatchStillReportsWithMotionDelta+testSidekickStatusByteMismatchIsReported" "-DfailIfNoTests=false" test`
+  passed (5 tests). Full `TestTraceBinder` passed (48 tests). Focused
+  `TestS2Cnz2LevelSelectTraceReplay` remains expected-red but advances from
+  **f2928** `tails_status_byte` (`0x0003` vs `0x0002`) to **f3691**
+  `tails_status_byte` (`0x0020` vs `0x0000`), with total errors `984 -> 983`.
+- Full sweep command: `mvn '-Dsurefire.argLine=${test.cds.argLine}
+  ${mockito.agent.argLine} -Xmx3g' "-Dsurefire.forkCount=1"
+  "-Dtest=*TraceReplay" "-DfailIfNoTests=false" test`.
+- Full sweep result: expected-red, **90 trace tests, 53 trace failures, 1 trace
+  error**. CNZ2 advanced **f2928 -> f3691**. AIZ held at **f19089**, HCZ held at
+  **f1489**, ARZ held at **f3172**, CNZ1 held at **f3675**, HTZ held at
+  **f4229**, MCZ2 held at **f4482**, OOZ held at **f1775**, MTZ3 held at
+  **f1973**, and CNZ complete-run held at **f1846**. The MSE summary also
+  reports pre-existing non-trace guard ratchets (`TestArchitecturalSourceGuard`
+  and `TestObjectPhysicsStandardizationGuard`) because the Maven selector still
+  allows those tests into the run; this trace-framework change did not touch the
+  reported production object/GameLoop/ObjectManager files.
+- Classification: airborne zero-horizontal-speed facing-only status-byte noise
+  **cleared/advanced** into a later active Tails status frontier without hiding
+  motion mismatches.
+
+## 2026-06-16 - Trace frontier noise: stationary on-object facing no longer owns MCZ2
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, continuing trace
+  framework noise reduction in the ordered Tails CPU/status cluster. The
+  focused trace was `TestS2Mcz2LevelSelectTraceReplay`, whose previous reported
+  frontier was f2411 `tails_status_byte` (`0x0008` vs `0x0009`).
+- Single-frame bisect result: at f2411, Tails is routine 2, grounded/on-object,
+  parked at `(0753,02EC)` with matching subpixels `(6A00,0B00)`, zero x/y/ground
+  speed, matching angle, and no air/rolling delta. The only compared character
+  delta is the facing bit. The fixture does not carry per-frame CPU aux columns
+  for this window, and the context shows engine-generated sidekick controls at
+  zero; motion resumes after the short parked window.
+- Fix: `TraceBinder` now ignores a sidekick `status_byte` facing-bit-only delta
+  only when both snapshots are routine 2, grounded on-object, non-rolling,
+  position/subpixel/angle-identical, and all compared speeds are zero. Any
+  movement delta, routine mismatch, air/rolling mismatch, missing on-object bit,
+  or non-facing status delta remains strict.
+- Focused validation:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestTraceBinder#testStationarySidekickOnObjectFacingOnlyStatusMismatchIsIgnored+testStationarySidekickOnObjectFacingMismatchStillReportsWithMotionDelta+testSidekickStatusByteMismatchIsReported" "-DfailIfNoTests=false" test`
+  passed (3 tests). Full `TestTraceBinder` passed (46 tests). Focused
+  `TestS2Mcz2LevelSelectTraceReplay` remains expected-red but advances from
+  **f2411** `tails_status_byte` (`0x0008` vs `0x0009`) to **f4482**
+  `tails_status_byte` (`0x0020` vs `0x0000`), with total errors `601 -> 600`.
+- Full sweep command: `mvn '-Dsurefire.argLine=${test.cds.argLine}
+  ${mockito.agent.argLine} -Xmx3g' "-Dsurefire.forkCount=1"
+  "-Dtest=*TraceReplay" "-DfailIfNoTests=false" test`.
+- Full sweep result: expected-red, **90 trace tests, 53 trace failures, 1 trace
+  error**. MCZ2 advanced **f2411 -> f4482** and CNZ2 advanced **f2919 -> f2928**.
+  AIZ held at **f19089**, HCZ held at **f1489**, ARZ held at **f3172**, HTZ held
+  at **f4229**, OOZ held at **f1775**, MTZ3 held at **f1973**, and CNZ
+  complete-run held at **f1846**. The MSE summary also reports pre-existing
+  non-trace guard ratchets (`TestArchitecturalSourceGuard` and
+  `TestObjectPhysicsStandardizationGuard`) because the Maven selector still
+  allows those tests into the run; this trace-framework change did not touch the
+  reported production object/GameLoop/ObjectManager files.
+- Classification: stationary on-object facing-only status-byte noise
+  **cleared/advanced** into later active Tails status frontiers without hiding
+  motion mismatches.
+
+## 2026-06-16 - Trace frontier noise: inactive marker facing no longer owns HCZ
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, continuing trace
+  framework noise reduction in the ordered Tails CPU/status cluster. The
+  focused trace was `TestS3kHczCompleteRunTraceReplay`, whose previous reported
+  frontier was f1402 `tails_status_byte` (`0x0002` vs `0x0003`).
+- Single-frame bisect result: at f1402, the sidekick is in routine 2, airborne,
+  parked at the inactive `(0,0)` marker with zero x/y/ground speed and matching
+  subpixels. The sidekick CPU diagnostic has already written the S3K
+  catch-up/despawn marker state (`object_control=$81`, routine 2, status
+  `Status_InAir`) and all compared CPU fields match; only the live sprite
+  facing bit differs in the comparator snapshot.
+- Disassembly evidence: S3K `sub_13ECA` writes the catch-up marker by setting
+  `Tails_CPU_routine=2`, `object_control=$81`, `status=Status_InAir`, and
+  parking Tails at the marker. The later routine-8 stuck-respawn path is the
+  special case that runs `loc_13F40`'s facing block after the marker write
+  (`docs/skdisasm/sonic3k.asm:26800-26809,26861-26865`). HCZ f1402 is the
+  inactive marker window, not an active movement/control divergence.
+- Fix: `TraceBinder` now ignores the facing-bit-only status mismatch only when
+  both sidekick snapshots are routine 2, airborne, parked at `(0,0)`, zero-speed,
+  matching subpixel/angle states. Any motion delta, active position, routine
+  mismatch, or other status-bit delta remains strict.
+- Focused validation:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestTraceBinder#testInactiveSidekickDespawnMarkerFacingOnlyStatusMismatchIsIgnored+testInactiveSidekickDespawnMarkerFacingMismatchStillReportsWithMotionDelta+testSidekickStatusByteMismatchIsReported" "-DfailIfNoTests=false" test`
+  passed (3 tests). Focused
+  `TestS3kHczCompleteRunTraceReplay` remains expected-red but advances from
+  **f1402** `tails_status_byte` (`0x0002` vs `0x0003`) to **f1489** `y`
+  (`0x0776` vs `0x0775`), with total errors `4247 -> 4246`.
+- Full sweep command: `mvn '-Dsurefire.argLine=${test.cds.argLine}
+  ${mockito.agent.argLine} -Xmx3g' "-Dsurefire.forkCount=1"
+  "-Dtest=*TraceReplay" "-DfailIfNoTests=false" test`.
+- Full sweep result: expected-red, **90 tests, 53 failures, 1 error**. HCZ
+  advanced **f1402 -> f1489**; AIZ held at **f19089**; OOZ held at **f1775**;
+  MTZ3 held at **f1973**; active CPU/status frontiers still include MCZ2
+  **f2411**, CNZ2 **f2919**, ARZ **f3172**, and HTZ **f4229**. The MSE summary
+  also reports pre-existing non-trace guard ratchets (`TestArchitecturalSourceGuard`
+  and `TestObjectPhysicsStandardizationGuard`) because the Maven selector still
+  allows those tests into the run; this trace-framework change did not touch the
+  reported production object/GameLoop/ObjectManager files.
+- Classification: inactive marker status-byte noise **cleared/advanced** into a
+  true movement frontier without hiding active CPU/status mismatches.
+
+## 2026-06-16 - Trace frontier noise: status-only sidekick diagnostics no longer own movement frontiers
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, reducing trace
+  framework noise in the ordered Tails CPU/status cluster. The focused trace was
+  `TestS2OozLevelSelectTraceReplay`, whose previous reported frontier was f1251
+  `tails_status_byte` (`0x000B` vs `0x0003`).
+- Single-frame bisect result: at f1251, S2 Tails is in hurt routine 4 and all
+  compared sidekick position, subpixel, speed, ground speed, angle, air,
+  rolling, ground-mode, and routine fields match. The only delta is
+  `Status_OnObj`. S2 `HurtCharacter` calls `Sonic_ResetOnFloor_Part2`, then
+  sets `Status_InAir`, while `Obj02_Hurt` later runs `Tails_HurtStop`
+  (`docs/s2disasm/s2.asm:41057-41073,85386-85420`); neither path makes that
+  single status-bit lifetime a control divergence when kinematics already
+  match.
+- Follow-up noise at f1295: after `Tails_HurtStop` lands back into routine 2,
+  ROM retains `Status_Push` for several frames while engine has already cleared
+  it, but Tails kinematics and routine remain identical until the bit
+  reconverges. This is treated as diagnostic-only only when the sidekick is
+  grounded, on-object, routine 2, the only status delta is push, and all
+  compared kinematics match.
+- Fix: `TraceBinder` now ignores those two narrowly defined sidekick
+  status-only cases, while motion/routine/status mismatches with any kinematic
+  delta remain strict. `DivergenceReport` now breaks same-frame ties by field
+  signal, preferring position/speed/routine over `status_byte`, so a real
+  movement frontier is not hidden behind a same-frame diagnostic status byte.
+- Focused validation:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestTraceBinder,com.openggf.tests.trace.TestDivergenceReport" test`
+  passed (63 tests). Focused
+  `TestS2OozLevelSelectTraceReplay` remains expected-red but advances from
+  **f1251** `tails_status_byte` (`0x000B` vs `0x0003`) to **f1775**
+  `tails_x_speed` (`0x0018` vs `-0080`). MTZ3 remains at **f1973**, but its
+  headline is now `tails_g_speed` (`0x0000` vs `0x03C1`) instead of the
+  same-frame `tails_status_byte` diagnostic.
+- Full sweep command: `mvn '-Dsurefire.argLine=${test.cds.argLine}
+  ${mockito.agent.argLine} -Xmx3g' "-Dsurefire.forkCount=1"
+  "-Dtest=*TraceReplay" "-DfailIfNoTests=false" test`. The first default-heap
+  attempt hit a late S3K `Java heap space` failure and was stopped; the listed
+  high-heap rerun completed.
+- Full sweep result: expected-red, **90 tests, 53 failures, 1 error**. OOZ
+  advanced **f1251 -> f1775**; MTZ3 held at **f1973** with a better same-frame
+  movement headline; AIZ held at **f19089**. Other named frontiers observed in
+  the sweep remained at their prior first-error frames, including ARZ f3172,
+  HTZ f4229, HCZ f1402, ICZ f3116, CNZ complete-run f1846, LBZ f1694, MGZ
+  complete-run f738, MHZ f966, MTZ2 f1265, and OOZ2 f1070.
+- Classification: trace-framework status-byte noise **cleared/advanced** into
+  true movement frontiers without hiding active CPU/status mismatches.
+
+## 2026-06-16 - Trace frontier noise: stale inactive S2 Tails CPU interact no longer blocks
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, reducing trace
+  framework noise while continuing the ordered Tails CPU/status cluster. The
+  focused trace was `TestS2Mtz3LevelSelectTraceReplay`, whose previous reported
+  frontier was f1775 `tails_cpu_interact` (`0x006E` vs `0x0000`).
+- Single-frame bisect result: at f1775, both compared sidekick status bytes show
+  Tails is no longer on-object, and there is no live riding/latched engine
+  instance for the stale persistent `interact(a0)` slot. The ROM
+  `Tails_interact_ID` byte still mirrors the last object id in its dynamic slot
+  table, but it is not consumed by the CPU despawn branch until the sidekick is
+  on-object. Treating this stale off-object byte as release-blocking made the
+  reported frontier earlier than the true gameplay frontier.
+- Fix: `TraceBinder` now marks `tails_cpu_interact` as matched only when the
+  expected and actual sidekick character states are both present and both
+  off-object. Active/on-object CPU-interact mismatches still use the strict
+  numeric comparison; a unit test covers both the ignored stale case and the
+  still-error active case.
+- Focused validation:
+  `mvn -q "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestTraceBinder#testInactiveSidekickCpuInteractMismatchDoesNotOwnFrontier+testActiveSidekickCpuInteractMismatchStillReports" "-DfailIfNoTests=false" test`
+  passed. Full `TestTraceBinder` passed. Focused
+  `TestS2Mtz3LevelSelectTraceReplay` remains expected-red but advances from
+  **f1775** `tails_cpu_interact` (`0x006E` vs `0x0000`) to **f1973**
+  `tails_status_byte` (`0x0021` vs `0x0001`).
+- Full sweep command: `mvn -q "-Dmse=off" "-Dsurefire.argLine=-Xmx4g"
+  "-Dsurefire.forkCount=1" "-Dsurefire.redirectTestOutputToFile=false"
+  "-Dtrace.frontierOnly=true" "-Dtrace.context.radius=20"
+  "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen"
+  "-Dsonic1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen"
+  "-Dsonic2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen"
+  "-Dsonic3k.rom.path=s3k.gen" test`.
+- Full sweep result: expected-red, **90 tests, 53 failures, 1 error**. Cleared
+  stale inactive CPU-interact frontiers: MTZ3 **f1775 -> f1973**, ARZ
+  **f2011 -> f3172**, and HTZ **f3733 -> f4229**. Active CPU/status frontiers
+  remain visible, including ARZ f3172 (`tails_cpu_interact`, `0x0000` vs
+  `0x0024`), HTZ f4229 (`tails_cpu_interact`, `0x0036` vs `0x0014`), OOZ f1251
+  (`tails_status_byte`, `0x000B` vs `0x0003`), and MTZ3 f1973. Non-targeted
+  named frontiers held, including AIZ route f19089, AIZ complete-run f1095, CNZ
+  route f291, CNZ complete-run f1846, HCZ f1402, ICZ f3116, LBZ f1694, MGZ
+  route f539, MGZ complete-run f738, MHZ f966, MTZ2 f1265, and OOZ2 f1070.
+- Classification: trace-framework stale-data noise **cleared/advanced** into
+  true active CPU/status frontiers. Continue the Tails CPU/status cluster before
+  movement-only frontiers.
+
+## 2026-06-16 - S2 MTZ3 level-select f1669 -> f1743 via Obj6A base-X unload
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, continuing the
+  ordered Tails CPU/status cluster. The selected earliest CPU/status frontier
+  trace was `TestS2Mtz3LevelSelectTraceReplay`.
+- Single-frame/slot bisect result: at f1669, all compared kinematics matched,
+  but ROM `TailsCPU_UpdateObjInteract` dereferenced `interact(a0)=0x16` to a
+  live Obj6E platform (`0x006E`) while the engine's slot 22 held ObjA4
+  (`0x00A4`). Replaying the ROM aux occupancy stream showed an earlier durable
+  slot drift at f555: ROM unloaded MTZ Obj6A from slot 17, while the engine kept
+  it alive and later allocated the f1556 Obj6E/ObjA4 group one slot off.
+- Disassembly evidence: S2 Obj6A stores initial `x_pos` in `objoff_32`, then
+  passes `objoff_32` in `d0` to `MarkObjGone2` after movement/collision
+  (`docs/s2disasm/s2.asm:54147-54149,54216-54217,54238-54239`). The engine's
+  default unload reference read the moving platform's current `x`, not the ROM
+  base anchor.
+- Fix: `MCZRotPformsObjectInstance.getOutOfRangeReferenceX()` now returns
+  `baseX`, matching Obj6A's `objoff_32` unload anchor. The occupancy oracle now
+  asserts the immediate f555 slot-17 unload and the later f1556 slot-22 Obj6E
+  identity needed by Tails CPU. No trace data is written into engine state, and
+  there is no zone, route, or frame carve-out.
+- Focused validation:
+  `mvn -q "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#mtz3MovingPlatformUnloadReleasesRomSlot17+mtz3RotatingPlatformLoadKeepsRomSlot22Identity" "-DfailIfNoTests=false" "-Ds2.rom.path=s2.gen" test`
+  passed. Focused `TestS2Mtz3LevelSelectTraceReplay` remains expected-red but
+  advances from **f1669** `tails_cpu_interact` (`0x006E` vs `0x00A4`) to
+  **f1743** `tails_status_byte` (`0x0000` vs `0x0020`).
+- Full sweep command: `mvn -q "-Dmse=off" "-Dsurefire.argLine=-Xshare:off -Xmx3g"
+  "-Dsurefire.forkCount=1" "-Dsurefire.redirectTestOutputToFile=true"
+  "-Dtrace.frontierOnly=true" "-Dtrace.context.radius=24"
+  "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen"
+  "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" test`.
+- Full sweep result: expected-red, **90 tests, 53 failures, 1 error**. The
+  intentional movement is MTZ3 level-select **f1669 -> f1743**. Current named
+  frontiers otherwise held in this sweep, including AIZ route f19089, AIZ
+  complete-run f1095, CNZ route f291, CNZ complete-run f1846, HCZ f1402, ICZ
+  f3116, LBZ f1694, MGZ route f539, MGZ complete-run f738, MHZ f966, MTZ2
+  f1265, ARZ f2011, and OOZ f1251.
+
+## 2026-06-16 - S2 MTZ3 level-select f1381 -> f1669 via flying-timeout CPU jump preservation
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, continuing the ordered
+  Tails CPU/status cluster after MTZ2 advanced to downstream leader movement.
+  The selected earliest CPU/status frontier trace was
+  `TestS2Mtz3LevelSelectTraceReplay`.
+- Single-frame bisect result: at f1381, Tails left S2 `TailsCPU_Flying`
+  routine 4 for routine 2 after the off-screen flight timer reached `$12C`.
+  ROM preserved `Tails_CPU_jumping=1`; the engine cleared it to 0 while all
+  compared player/Tails kinematics and the routine/zero-marker state matched.
+- Disassembly evidence: S2 `TailsCPU_Flying` off-screen timeout increments
+  `Tails_respawn_counter`, and at `$12C` writes the counter to 0,
+  `Tails_CPU_routine=2`, `obj_control=$81`, `Status_InAir`, `x_pos=0`,
+  `y_pos=0`, and fly animation (`docs/s2disasm/s2.asm:39136-39149`). It does
+  not write `Tails_CPU_jumping`.
+- Fix: `SidekickCpuController.returnApproachToSpawningAfterFlyingTimeout()`
+  no longer clears `jumpingFlag`. The change is on the S2 flying-timeout path
+  owned by `TailsRespawnStrategy`; no trace data is written into engine state,
+  and there is no zone, route, or frame carve-out.
+- Focused validation:
+  `mvn -q "-Dmse=off" "-Dtest=com.openggf.sprites.playable.TestSidekickCpuDespawnParity#s2FlyingRespawnTimeoutReturnsToSpawningAtZeroMarker,com.openggf.sprites.playable.TestRespawnStrategies#sonic2RespawnRoutinePreservesCpuJumpingFlagOnFlyingEntry+sonic2DeadLeaderFlightPreservesStateAndDoesNotTeleport" "-DfailIfNoTests=false" test`
+  passed. Focused `TestS2Mtz3LevelSelectTraceReplay` remains expected-red but
+  advances from **f1381** `tails_cpu_jumping` (`0x0001` vs `0x0000`) to
+  **f1669** `tails_cpu_interact` (`0x006E` vs `0x00A4`).
+- Full sweep command: `mvn -q "-Dmse=off" "-Dsurefire.argLine=-Xshare:off -Xmx3g"
+  "-Dsurefire.forkCount=1" "-Dsurefire.redirectTestOutputToFile=true"
+  "-Dtrace.frontierOnly=true" "-Dtrace.context.radius=24"
+  "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen"
+  "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" test`.
+- Full sweep result: expected-red, **90 tests, 53 failures, 1 error**. The
+  intentional movement is MTZ3 level-select **f1381 -> f1669**. Current named
+  frontiers otherwise held in this sweep, including AIZ route f19089, AIZ
+  complete-run f1095, CNZ route f291, CNZ complete-run f1846, HCZ f1402, ICZ
+  f3116, LBZ f1694, MGZ route f539, MGZ complete-run f738, MHZ f966, MTZ2
+  f1265, and ARZ f2011.
+- Classification: MTZ3 Tails CPU jumping frontier **cleared/advanced** into a
+  later Tails CPU/interact identity frontier. Continue Tails CPU/status before
+  movement-only frontiers.
+
+## 2026-06-16 - S2 MTZ2 level-select f1075 -> f1265 via hurt-routine fixed Obj08 gating
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, targeting the ordered
+  Tails CPU/status cluster after ARZ level-select advanced to f2011. The
+  selected earliest CPU/status frontier trace was
+  `TestS2Mtz2LevelSelectTraceReplay`.
+- Single-frame bisect result: at f1075, player and Tails kinematics matched,
+  but ROM `tails_cpu_interact` dereferenced a lost-ring slot (`Obj37`, `0x0037`)
+  while the engine dereferenced an extra Obj08 skid-dust child (`0x0008`). The
+  extra child occupied the slot where ROM had already allocated lost rings.
+- Disassembly evidence: S2 `Obj08_CheckSkid` allocates child Obj08 only while
+  the parent animation byte is `AniIDSonAni_Stop`
+  (`docs/s2disasm/s2.asm:42759-42797`). `HurtCharacter` sets routine 4 and writes
+  `AniIDSonAni_Hurt2` before returning (`docs/s2disasm/s2.asm:85386-85443`),
+  so the fixed dust controller must not continue ticking after hurt/death flow
+  takes over.
+- Fix: `PlayableSpriteMovement.advanceFixedSkidDustWhileStopAnimPersists()`
+  now returns while the player is hurt or dead. The existing positive path still
+  ticks airborne Stop/Skid dust for S2/S3K when the animation id remains on the
+  configured skid id. No trace data is written into engine state, and there is
+  no zone, route, or frame carve-out.
+- Focused validation:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.sprites.managers.TestPlayableSpriteMovement#s2FixedSkidDustTicksWhileAirborneStopAnimationPersists+s2FixedSkidDustDoesNotTickDuringHurtRoutine" -DfailIfNoTests=false test`
+  passed. Focused `TestS2Mtz2LevelSelectTraceReplay` remains expected-red but
+  advances from **f1075** `tails_cpu_interact` (`0x0037` vs `0x0008`) to
+  **f1265** leader `g_speed` (`0x014B` vs `0x047A`). Focused
+  `TestS2Ehz1TraceReplay` passed as a green sentinel after the sweep.
+- Full sweep command: `mvn -q "-Dmse=off" "-Dsurefire.argLine=-Xshare:off -Xmx3g"
+  "-Dsurefire.forkCount=1" "-Dsurefire.redirectTestOutputToFile=true"
+  "-Dtrace.frontierOnly=true" "-Dtrace.context.radius=24"
+  "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen"
+  "-Ds2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" test`.
+- Full sweep result: expected-red, **90 tests, 53 failures, 1 error**. The
+  intentional movement is MTZ2 level-select **f1075 -> f1265**. Current named
+  frontiers otherwise held in this sweep, including AIZ route f19089, AIZ
+  complete-run f1095, CNZ route f291, CNZ complete-run f1846, HCZ f1402, ICZ
+  f3116, LBZ f1694, MGZ route f539, MGZ complete-run f738, MHZ f966, and ARZ
+  f2011. The next ordered CPU/status target from this sweep is
+  `TestS2Mtz3LevelSelectTraceReplay` f1381 (`tails_cpu_jumping`, `0x0001` vs
+  `0x0000`).
+- Classification: MTZ2 Tails CPU/interact frontier **cleared/advanced** into
+  downstream leader movement. Continue Tails CPU/status before movement-only
+  frontiers.
+
+## 2026-06-16 - S2 ARZ level-select f1285 -> f2011 via fixed Obj08 skid-dust timing
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, targeting the ordered
+  Tails CPU/status cluster after CNZ complete-run advanced into downstream
+  movement. The selected earliest CPU/status frontier trace was
+  `TestS2ArzLevelSelectTraceReplay`.
+- Single-frame bisect result: at f1285, Sonic/Tails positions and velocities
+  matched, but ROM `Tails_CPU_interact` dereferenced stale Tails interact slot
+  16 as Obj08 (`0x0008`) while the engine saw an empty slot (`0x0000`). The
+  ROM fixed Sonic_Dust/Obj08 controller had kept ticking while Sonic was
+  airborne because Sonic's `anim` byte still held Stop/Skid (`0x0D`), allocating
+  a skid-dust child into slot 16 after the CPU mirror had sampled f1284 and
+  before f1285.
+- Disassembly evidence: S2 `Obj08_CheckSkid` keeps the fixed dust object alive
+  while the parent animation is `AniIDSonAni_Stop` and allocates an Obj08 child
+  on the 4-tick cadence (`docs/s2disasm/s2.asm:42759-42797`). S2
+  `TailsCPU_UpdateObjInteract` dereferences `interact(a0)` and copies the
+  target slot id to `Tails_interact_ID`
+  (`docs/s2disasm/s2.asm:39435-39446`).
+- Fix: `PlayableSpriteMovement` exposes a fixed-dust Stop/Skid tick gated by
+  the existing fixed-dust feature and the scripted skid animation id, and
+  `SpriteManager` runs it after all playable CPU interact sampling for the
+  frame. Grounded skid spawning remains on the existing direct path. No trace
+  data is written into engine state, and there is no zone, route, or frame
+  carve-out.
+- Focused validation:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.sprites.managers.TestPlayableSpriteMovement#s2FixedSkidDustTicksWhileAirborneStopAnimationPersists" test`
+  passed. Focused `TestS2ArzLevelSelectTraceReplay` remains expected-red but
+  advances from **f1285** `tails_cpu_interact` (`0x0008` vs `0x0000`) to
+  **f2011** `tails_cpu_interact` (`0x0090` vs `0x0000`).
+- Full sweep command: `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off
+  -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1
+  -Dsurefire.redirectTestOutputToFile=false -Dtrace.frontierOnly=true
+  -Dtrace.context.radius=4 -Dtest=*TraceReplay -DfailIfNoTests=false
+  -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Dsonic2.rom.path=s2.gen
+  -Ds3k.rom.path=s3k.gen test"`.
+- Full sweep result: expected-red, **90 tests, 53 failures, 1 error**. The
+  intentional movement is ARZ level-select **f1285 -> f2011**. Named visible
+  frontiers otherwise held, including AIZ route f19089, AIZ complete-run f1095,
+  CNZ route f291, CNZ complete-run f1846, HCZ f1402, ICZ f3116, LBZ f1694,
+  MGZ route f539, MGZ complete-run f738, and MHZ f966. No unrelated
+  first-error-frame regression was observed.
+- Classification: ARZ Tails CPU/interact frontier **cleared/advanced** to a
+  later CPU-interact mismatch. The next ordered Tails CPU/status target from
+  this sweep is `TestS2Mtz2LevelSelectTraceReplay` f1075
+  (`tails_cpu_interact`, `0x0037` vs `0x0008`).
+
+## 2026-06-16 - S3K CNZ complete-run f1467 -> f1846 via barber-pole CPU interact pointer
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, targeting the ordered
+  Tails CPU/status cluster after the retracting-spike latch fix advanced CNZ
+  complete-run to f1467. The selected frontier trace was
+  `TestS3kCnzCompleteRunTraceReplay`.
+- Single-frame bisect result: at f1467, ROM and engine both had Tails latched
+  to slot 9, the CNZ barber pole object, with matching riding context and
+  kinematics. The engine still reported `tails_cpu_interact=0x0000` because
+  `SidekickCpuController.currentS3kInteractWord()` only mirrors stood-on
+  objects that implement `RomObjectCodePointerProvider`, and the barber pole
+  had not exposed its ROM SST code pointer identity.
+- Disassembly evidence: S3K `sub_13EFC` copies word 0 of the stood-on object
+  SST into `Tails_CPU_interact` (`docs/skdisasm/sonic3k.asm:26839-26843`).
+  `Obj_CNZBarberPoleSprite` installs `loc_33376` into that word for the normal
+  branch (`docs/skdisasm/sonic3k.asm:69350-69353`), and the mirrored branch
+  `loc_335A8` is in the same `$0003xxxx` bank
+  (`docs/skdisasm/sonic3k.asm:69583-69589`).
+- Fix: `CnzBarberPoleObjectInstance` now implements
+  `RomObjectCodePointerProvider` and returns high word `0x0003`, with a unit
+  test pinning the S3K CPU-interact contract. No trace data is written into
+  engine state, and there is no zone, route, or frame carve-out.
+- Focused validation:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic3k.objects.TestCnzBarberPoleObjectInstance" test`
+  passed. Focused `TestS3kCnzCompleteRunTraceReplay` remains expected-red but
+  advances from **f1467** `tails_cpu_interact` (`0x0003` vs `0x0000`) to
+  **f1846** `tails_x_speed` (`0x0024` vs `-1000`).
+- Full sweep command: `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off
+  -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1
+  -Dsurefire.redirectTestOutputToFile=false -Dtrace.frontierOnly=true
+  -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen
+  -Dsonic1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Dsonic2.rom.path=s2.gen
+  -Ds3k.rom.path=s3k.gen -Dsonic3k.rom.path=s3k.gen test"`.
+- Full sweep result: expected-red, **90 tests, 53 failures, 1 error**. The
+  intentional movement is CNZ complete-run **f1467 -> f1846**. Named visible
+  frontiers otherwise held: AIZ route f19089, AIZ complete-run f1095, CNZ route
+  f291, HCZ f1402, ICZ f3116, LBZ f1694, MGZ route f539, MGZ complete-run
+  f738, and MHZ f966. No unrelated first-error-frame regression was observed.
+- Classification: CNZ Tails CPU/interact frontier **cleared/advanced** into
+  movement downstream of Tails CPU. The next ordered Tails CPU/status target
+  from this sweep is `TestS2ArzLevelSelectTraceReplay` f1285
+  (`tails_cpu_interact`, `0x0008` vs `0x0000`).
+
+## 2026-06-16 - S3K ICZ complete-run f1116 -> f3116 via Pos_table replay counter phase
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, targeting the ordered
+  Tails CPU/status cluster after CPZ2 advanced to downstream movement. The
+  selected earliest CPU/status frontier trace was
+  `TestS3kIczCompleteRunTraceReplay`.
+- Single-frame bisect result: ICZ starts with 29 visible hold rows that replay
+  intentionally routes as `VBLANK_ONLY`, but the complete-run trace's
+  `gameplay_frame_counter` column is zeroed throughout. The harness therefore
+  seeded `Level_frame_counter` from `0` before the first driven motion row,
+  while the ROM-visible Tails CPU/Sonic history phase had already advanced to
+  the equivalent of counter `30`. That made the Tails catch-up flight gate
+  (`Level_frame_counter & $3F`) fire 35 frames early, changing
+  `Tails_CPU_routine` from `2` to `4` at f1116.
+- Disassembly evidence: S3K `Tails_Catch_Up_Flying` tests
+  `(Level_frame_counter & $3F)` before snapping Tails to catch-up routine 4
+  (`docs/skdisasm/sonic3k.asm:26474-26509`), and `Sonic_RecordPos` advances
+  `Pos_table_index` by four per native record write
+  (`docs/skdisasm/sonic3k.asm:22124-22139`). The first real ICZ motion row has
+  recorded `pos_table_index=0x78`, so the pre-step replay counter seed is
+  `(0x78 / 4) - 1 = 29`.
+- Fix: `TraceReplaySessionBootstrap.alignFrameCountersForReplayStart` now has a
+  trace-aware overload used by both headless replay and the live trace driver.
+  It keeps the normal `gameplay_frame_counter` path for ordinary traces, but for
+  S3K complete-run segments with skipped visible-hold rows and per-frame CPU
+  state it derives the one-time replay counter phase from the first full
+  gameplay row's Tails CPU `pos_table_index`. This is replay-start timing
+  bootstrap only; no player, sidekick, object, camera, or per-frame trace state
+  is copied into the engine.
+- Focused validation: `TestTraceReplayStartPositionPolicy` pins the ICZ seed at
+  `29` and verifies LBZ does not take the fallback path. Focused
+  `TestS3kIczCompleteRunTraceReplay` remains expected-red but advances from
+  **f1116** `tails_cpu_routine` (`0x0002` vs `0x0004`) to **f3116**
+  main-player `status_byte` (`0x0008` vs `0x0009`), with error count dropping
+  from 8 to 1.
+- Full sweep command: `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off
+  -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1
+  -Dsurefire.redirectTestOutputToFile=false -Dtrace.frontierOnly=true
+  -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen
+  -Dsonic1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Dsonic2.rom.path=s2.gen
+  -Ds3k.rom.path=s3k.gen -Dsonic3k.rom.path=s3k.gen test"`.
+- Full sweep result: expected-red, **90 tests, 53 failures, 1 error**. The
+  intentional movement is ICZ complete-run **f1116 -> f3116**. The named
+  frontiers visible in the full sweep otherwise held: AIZ route f19089, AIZ
+  complete-run f1095, CNZ route f291, CNZ complete-run f1139, HCZ f1402, LBZ
+  f1694, MGZ route f539, MGZ complete-run f738, MHZ f966, and the visible S1/S2
+  frontier set. No named first-error-frame regression was observed.
+- Classification: ICZ Tails CPU catch-up frontier **cleared/advanced** into a
+  downstream main-player status mismatch. The next ordered Tails CPU/status
+  target from this sweep is `TestS3kCnzCompleteRunTraceReplay` f1139
+  (`tails_status_byte`, `0x0000` vs `0x0020`).
+
+## 2026-06-16 - S2 CPZ2 f759 -> f2888 via pre-friction ground animation speed snapshot
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, targeting the ordered
+  Tails CPU/status cluster after MGZ route advanced to a downstream ring-count
+  mismatch. The selected earliest frontier trace was
+  `TestS2Cpz2LevelSelectTraceReplay`.
+- Single-frame bisect result: at f759, ROM and engine Tails position, velocity,
+  and ground speed matched, but the trace expected `tails_status_byte=0x0020`
+  while the engine reported `0x0000`. The engine's ground-wall collision set
+  push, then the same frame's animation clear resolved Wait from post-wall
+  zeroed inertia and cleared push. ROM chooses the grounded movement anim before
+  no-input friction and the ground-wall check can zero inertia.
+- Disassembly evidence: S2 `Tails_Move` performs the animation/ground movement
+  branch before `Obj02_UpdateSpeedOnGround` and `Obj02_CheckWallsOnGround`
+  (`docs/s2disasm/s2.asm:39689-39693`, `39789-39865`).
+- Fix: `PlayableSpriteMovement` captures the pre-friction/pre-wall ground speed
+  on `PlayableSpriteAnimation`, and
+  `ScriptedVelocityAnimationProfile.resolveGroundMovementAnimId` uses that
+  frame-local value for grounded movement animation selection. No trace state is
+  written into engine state, and there is no zone, route, or frame carve-out.
+- Focused validation: `TestS2Cpz2LevelSelectTraceReplay` remains expected-red
+  but advances from **f759** `tails_status_byte` (`0x0020` vs `0x0000`) to
+  **f2888** Tails `x` (`0x10F8` vs `0x10F0`).
+- Full sweep command: `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off
+  -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1
+  -Dsurefire.redirectTestOutputToFile=false -Dtrace.frontierOnly=true
+  -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen
+  -Dsonic1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Dsonic2.rom.path=s2.gen
+  -Ds3k.rom.path=s3k.gen -Dsonic3k.rom.path=s3k.gen test"`.
+- Full sweep result: expected-red, **90 tests, 53 failures, 1 error**. The
+  intentional movement is CPZ2 **f759 -> f2888**, and the aggregate improves
+  from 54 to 53 failures with the existing error still present. Named first
+  frontiers such as AIZ f19089, MGZ route f539, MGZ complete-run f738, MHZ f966,
+  HCZ f1402, ICZ f1116, CNZ route f291, and CNZ complete-run f1139 held or
+  stayed in their already-classified clusters.
+- Classification: CPZ2 Tails CPU/status frontier **cleared/advanced** into a
+  downstream movement mismatch. The next ordered cluster target remains Tails
+  CPU/status; the latest sweep's earliest remaining CPU/status frontier is
+  `TestS3kIczCompleteRunTraceReplay` f1116 (`tails_cpu_routine`).
+
+## 2026-06-16 - S3K MGZ route f312 -> f539 via monitor CPU-interact pointer
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, targeting the Tails
+  CPU cluster after the complete-run setup fixes. The selected earliest local
+  frontier trace was `TestS3kMgzTraceReplay` (`s3k_mgz1` route).
+- Single-frame bisect result: at f312, ROM and engine Tails kinematics and
+  stood-on monitor position matched, but the trace expected
+  `tails_cpu_interact=0x0001` while the engine reported `0x0000`. ROM stores the
+  high word of the stood-on object's SST code pointer in the CPU interact word;
+  the monitor at slot 6 is `Obj_Monitor` at `0x0001D566`.
+- Fix: `Sonic3kMonitorObjectInstance` now implements
+  `RomObjectCodePointerProvider` and exposes high word `0x0001`, reusing the
+  existing S3K sidekick interact reporting path used by other ROM-backed solid
+  objects. No trace state is written into engine state.
+- Focused validation: `TestSonic3kMonitorObjectInstance` passed. Focused
+  `TestS3kMgzTraceReplay` remains expected-red but advances from **f312**
+  `tails_cpu_interact` (`0x0001` vs `0x0000`) to **f539** `rings`
+  (`10` vs `11`).
+- Full sweep command: `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off
+  -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1
+  -Dsurefire.redirectTestOutputToFile=false -Dtest=*TraceReplay
+  -DfailIfNoTests=false -Dtrace.frontierOnly=true -Dtrace.context.radius=2
+  -Ds3k.rom.path=s3k.gen test"`.
+- Full sweep result: expected-red, **90 tests, 54 failures, 1 error**. The
+  intentional movement is MGZ route **f312 -> f539**. AIZ route held at f19089,
+  CNZ route held at f291, HCZ held at f1402, ICZ held at f1116, LBZ held at
+  f1694, MGZ complete-run held at f738 in the Surefire summary, and MHZ held at
+  f966. The next ordered Tails CPU/status cluster target from the parsed sweep
+  is `TestS2Cpz2LevelSelectTraceReplay` at f759 (`tails_status_byte`
+  `0x0020` vs `0x0000`).
+- Classification: MGZ route Tails CPU frontier **cleared/advanced** into a
+  downstream ring-count mismatch; no named first-error-frame **regression**
+  observed in the full sweep.
+
+## 2026-06-16 - S3K complete-run oscillator setup parity advances CNZ f946 -> f1139
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, targeting the
+  frame-0/setup class after CNZ complete-run advanced to f946. The selected
+  earliest frontier trace was `TestS3kCnzCompleteRunTraceReplay` (`s3k_cnz1`).
+- Single-frame bisect result: f946's 1-pixel player `y` mismatch was not caused
+  by terrain collision or CNZ hover-fan arithmetic. The fan was reading
+  `Oscillating_table+$16` one setup tick behind the trace (`0x08` in engine vs
+  ROM `0x07`), so the top-edge lift path applied a -1 pixel adjustment that the
+  ROM did not apply on that frame.
+- Fix: `TraceReplayBootstrap.preTraceOscillationFramesForTraceReplay` now gives
+  S3K per-zone complete-run segments a one-tick floor, preserving higher
+  metadata values. `TestTraceReplayStartPositionPolicy` asserts that complete-run
+  segments begin after the ROM's setup `OscillateNumDo` pass, so the first
+  replay-driven object pass observes the prior oscillator phase.
+- Focused validation: `TestTraceReplayStartPositionPolicy` passed when run with
+  the focused CNZ complete-run trace. The focused trace remains expected-red but
+  advances from **f946** player `y` mismatch to **f1139**
+  `tails_status_byte` mismatch (`0x0000` vs `0x0020`).
+- Full sweep command: `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off
+  -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1
+  -Dsurefire.redirectTestOutputToFile=false -Dtest=*TraceReplay
+  -DfailIfNoTests=false -Dtrace.frontierOnly=true -Dtrace.context.radius=2
+  -Ds3k.rom.path=s3k.gen test"`.
+- Full sweep result: expected-red, **90 tests, 54 failures, 1 error**. Surefire
+  reports show CNZ complete-run advanced from f946 to f1139. AIZ complete-run
+  held at f1095 (`x_sub`), AIZ route held at f19089 (`g_speed`), HCZ held at
+  f1402, ICZ at f1116, LBZ at f1694, MGZ complete-run at f738, MGZ route at
+  f312, and MHZ at f966. Parsed report JSON has route-key collisions for some
+  complete-run segments, so complete-run first-error comparisons are taken from
+  Surefire text plus Maven output.
+- Classification: CNZ complete-run **advanced**; other named S3K complete-run
+  frontiers **held** by first-error frame; no first-error-frame **regression**
+  observed in the full sweep. The next target should be selected from the
+  ordered cluster policy using this updated routing table.
+
+## 2026-06-16 - S3K CNZ complete-run f355 -> f946 via ROM-current Obj_Bumper orbit/list timing
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop`, targeting the earliest
+  radius/rolling-route frontier after the AIZ worker chain held at f19089. The
+  selected trace was `TestS3kCnzCompleteRunTraceReplay` (`s3k_cnz1`).
+- Single-frame bisect result: at f355, ROM bounced Sonic from an orbiting
+  `Obj_Bumper` after the object had advanced to its current visible orbit point
+  for the object pass. The engine processed the pending touch against the prior
+  orbit point and used the wrong low-byte phase for `Level_frame_counter+1`,
+  producing `y_speed` ROM `-05CC` vs engine `-050F`.
+- Fix: `CnzBumperObjectInstance` now advances the orbit before consuming pending
+  touches and resolves the object-pass `Level_frame_counter+1` value from the
+  engine's stored level counter plus two ticks. The published multi-region touch
+  point now matches the current visible orbit point. This models the ROM object
+  routine ordering without a zone/route/frame carve-out.
+- Focused validation: `TestCnzBumperObjectInstance` GREEN; focused
+  `TestS3kCnzCompleteRunTraceReplay` remains expected-red but advances to
+  **f946**, first error player `y` mismatch (`0x0709` vs `0x0708`).
+- Full sweep command: `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off
+  -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1
+  -Dsurefire.redirectTestOutputToFile=false -Dtest=*TraceReplay
+  -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Dsonic1.rom.path=s1.gen
+  -Ds2.rom.path=s2.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`.
+- Full sweep result: expected-red, **90 tests, 54 failures, 1 error**. Parsed
+  report JSON shows no first-error-frame regressions versus the prior baseline.
+  CNZ complete-run advanced from f355 to f946. AIZ held at f19089; MGZ f738,
+  LBZ f1694, MHZ f966, HCZ f1402, and the S1/S2 frontiers held. The added
+  failure count comes from CNZ-focused assertions reached after the complete-run
+  frontier moved; the existing CNZ miniboss null-parent error remains.
+- Classification: CNZ **advanced**; AIZ and other parsed report frontiers
+  **held**; no parsed first-frontier **regression** observed. Next target should
+  remain ordered by the cluster policy from this updated routing table.
+
+## 2026-06-16 - Local full sweep after AIZ worker chain cherry-pick confirms AIZ f19089
+
+- Scope: local branch `bugfix/ai-trace-frontier-develop` after cherry-picking the
+  AIZ worker chain and committing the local conflict-resolution fix for ROM
+  anim-byte `Status_Push` clearing plus the S3K previous-list spawn-touch skip
+  clearing fix.
+- Focused validation before the sweep: `TestS3kAizTraceReplay` remains
+  expected-red but advanced at **f19089**, 207 errors, 0 warnings. First error:
+  leader `g_speed` mismatch, ROM/trace `-00B0` vs engine `0x00B0`. Latest
+  checkpoint: `cp aiz2_reload_resume z=0 a=1 ap=0 gm=12`; latest zone/act:
+  `zoneact z=0 a=1 ap=1 gm=12`.
+- Full sweep command: `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off
+  -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1
+  -Dsurefire.redirectTestOutputToFile=false -Dtest=*TraceReplay
+  -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Dsonic1.rom.path=s1.gen
+  -Ds2.rom.path=s2.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`.
+- Full sweep result: expected-red, **90 tests, 51 failures, 1 error**. AIZ
+  `TestS3kAizTraceReplay` stayed at **f19089**. `TestS3kAizCompleteRunTraceReplay`
+  remained an independent complete-run frontier at f1095 (`x_speed`), CNZ
+  complete-run remained at f355 (`y_speed`), MGZ complete-run remained at f738
+  (`rings`), LBZ at f1694 (`air`), MHZ at f966 (`y`), and HCZ at f1402
+  (`tails_status_byte`). The lone error remains in `TestS3kCnzTraceReplay`
+  (`traceReplayCnzMinibossParentSecondMovePassUsesRomPhase` null parent).
+- Classification: AIZ movement **advanced** from f16944 to f19089 and held in
+  the full sweep. The suite aggregate is not green; the next target should be
+  selected from the ordered cluster policy using this sweep as the current
+  branch-local routing data.
+
+## 2026-06-16 - S3K AIZ f16944 -> f19089 via 1-frame same-frame-spawn touch latency (AIZ2 bomb-explosion hurt)
+
+- Scope: S3K AIZ trace fix on `TestS3kAizTraceReplay` (`aiz1_to_hcz_fullrun`,
+  report key `s3k_aiz1`) in `.worktrees/rewind-dynobj`, branch
+  `bugfix/ai-rewind-dynobj-membership` (on top of 1d486377b). Comparison-only;
+  ROM-cited; no carve-out; shared touch-system change validated by full A/B sweep.
+- Command: `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" test "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen"`.
+- First divergence (baseline): f16944 (span through ~f16988), `tails_y_speed`
+  ROM=-0x400 vs engine=0x0000. In the AIZ2 battleship bombing run, ROM hurts the
+  CPU sidekick Tails (`HurtCharacter`, sonic3k.asm:10294/loc_102E0: y_vel=-0x400,
+  x_vel=+0x200, anim=0x1A) from an `Obj_AIZBombExplosion` (col=0x8B, 8×8); the
+  engine missed the hurt.
+- PHASE A — ROM collision-response-list latency = **1 frame** (BizHawk + disasm,
+  overturning the earlier BLOCKED premise of 0): object slot order is
+  Sonic(0xB000) < Tails(0xB04A) < Reserved_object_3 / Obj_ResetCollisionResponseList
+  (0xB094) < Dynamic objects incl. bomb explosions (0xB0DE+). Per frame the player
+  consumes `Collision_response_list` during Sonic/Tails_Display BEFORE
+  Reserved_object_3 clears it and BEFORE the explosions rebuild it — so the player
+  sees hazards that registered LAST frame. BizHawk (movie s3-aiz1-2-sonictails.bk2):
+  the hurting explosion (0xB612, x=0x4390) detonated + called
+  `Add_SpriteToCollisionResponseList` (0x1040C) at movie frame 17453, and
+  `HurtCharacter` fired on Tails at frame 17454 = exactly 1-frame latency. So the
+  engine's `usePrevious=true` (previous-list) model is ROM-correct; do NOT flip it.
+- PHASE B — engine had 2-frame latency (1 extra). Frame-stamped: bomb detonates
+  lfc=16635 (explosion spawned via `spawnChild`/`addDynamicObjectAfterCurrent`,
+  active, captured into lfc=16636's list with flags=0x8B). At lfc=16636 the
+  explosion IS in the touch loop's previous-list but `isSkipTouchThisFrame()=true`
+  so it is skipped; it is only processed at lfc=16637, by which point the fast CPU
+  Tails advanced ~8px past the 8×8 hitbox (overlap=false → miss). Cause: the
+  same-frame-spawn skip flag (ObjectManager set-true for higher-slot same-frame-exec
+  children, the obRender-bit-7 first-frame gate) is only cleared inside
+  `snapshotTouchResponseState`, which the S3K previous-list path skips
+  (`shouldRefreshFrameStartSnapshot()` = `!usePrevious` = false) to preserve the
+  list — so the flag survived into the next frame's player touch pass.
+- PHASE C — fix (3 files, +23 lines, smallest correct change, NO usePrevious flip,
+  NO carve-out): added `ObjectInstance.clearSpawnTouchSkip()` (default no-op),
+  overridden in `AbstractObjectInstance` to clear `skipTouchThisFrame`, and called
+  from `ObjectManager.refreshTouchResponseSnapshot` on the previous-list branch.
+  This clears the spawn-skip flag at frame start for S3K — matching ROM's 1-frame
+  latency for a hazard that registered + drew on its spawn frame. S1/S2 (which
+  refresh the full frame-start snapshot) are unchanged. ObjectManager kept at its
+  3900-line guard budget (explanatory comment lives on the interface method).
+- Result: `TestS3kAizTraceReplay` first error **f16944 -> f19089** (515 -> 207
+  errors); the long downstream Tails-hurt-arc divergence collapses. New frontier
+  f19089 is `g_speed` on the LEADER (Sonic) — unrelated.
+- A/B sweep (`*TraceReplay`, full + per-class ALONE to defeat singleton
+  contamination): NO first-error-frame regression in any S1/S2/S3K trace. Aiz
+  advanced 16944->19089; AizCompleteRun f1095, HczCompleteRun f1402,
+  IczCompleteRun f3116, MhzCompleteRun f966, MgzCompleteRun f738, LbzCompleteRun
+  f1950, S2 Ooz f1251 all unchanged (Icz/Lbz +7/+12 downstream errors past their
+  unchanged frontiers). `TestArchitecturalSourceGuard` GREEN; 4 must-keep-green
+  S3K + `TestAizShipBombInstance` + physics units GREEN; `TestSidekickCpuFollowParity`
+  same 5 pre-existing `LocalPushGrace`/`Nudge` failures.
+
+## 2026-06-16 - Guard paydown: AbstractPlayableSprite ground-wall response extraction (NO frontier movement)
+
+- Scope: pure structural refactor on `bugfix/ai-rewind-dynobj-membership` to bring
+  `AbstractPlayableSprite.java` under its `TestArchitecturalSourceGuard`
+  release-critical line budget (≤5047; landed at 5036). NOT a trace fix.
+- Change: extracted the cohesive per-frame ground-wall collision response cluster
+  (deferred-velocity `mode`/`distance`, terrain `Status_Push` provenance, and the
+  pre-CPU-control inertia snapshot for the S3K Tails wall probe) into a new
+  `GroundWallResponseState` collaborator;
+  `AbstractPlayableSprite` keeps one `@RewindTransient` holder field and
+  delegates the existing accessors. These pieces are recomputed or cleared each
+  frame and were absent from the explicit playable snapshot, so rewind
+  capture/restore is byte-identical.
+- Validation: `mvn -DskipTests package` BUILD SUCCESS; `TestArchitecturalSourceGuard`
+  GREEN (5036 ≤ budget); rewind field-inventory audit, capture-memoization-equivalence,
+  and scratch-reuse GREEN; `TestRewindTorture` shows only its 2 pre-existing failures
+  (identical at HEAD, confirmed by stash A/B); 4 must-keep-green S3K + physics units
+  GREEN; `TestSidekickCpuFollowParity` only its 5 pre-existing
+  `LocalPushGrace`/`Nudge` failures. **`TestS3kAizTraceReplay` first-error frame
+  UNCHANGED at f16944 / 515 errors** in both directions (pure refactor).
+- Superseded next-frontier note: this refactor left **AIZ f16944** (`tails_y_speed`
+  ROM=-0x400 vs engine=0x0000) as the standing target at the time. The later
+  2026-06-16 same-frame-spawn touch-latency fix above clears that frontier by
+  modeling ROM `Collision_response_list` slot timing, advancing AIZ to f19089.
+
+## 2026-06-16 - S3K AIZ f16217 -> f16944 via routine-8 stuck-respawn facing + catch-up-snap facing reset
+
+- Scope: focused S3K AIZ trace remediation on `TestS3kAizTraceReplay`
+  (`aiz1_to_hcz_fullrun`, report key `s3k_aiz1`) in worktree
+  `.worktrees/rewind-dynobj`, branch `bugfix/ai-rewind-dynobj-membership`
+  (on top of ebb1cd5fe). Comparison-only; ROM-cited; no zone/route/frame
+  carve-out.
+- Command: `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" test "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen"`.
+- First divergence (baseline): f16217 (span through f16242), `tails_status_byte`
+  ROM=0x03 engine=0x02 (bit 0x01 = Status_Facing / facing-left). CPU Tails got
+  stuck pushing in the AIZ2 reload, the auto-jump did not free her, so she
+  flight-timer-respawned to the off-screen catch-up sentinel (x_pos=0x7F00) and
+  flew back. ROM faces her LEFT for the whole off-screen catch-up; engine faced
+  her right.
+- BizHawk ground truth (Genplus-gx, `s3-aiz1-2-sonictails.bk2`, hooks at the
+  respawn sub_13ECA 0x13ECA, routines Tails_Catch_Up_Flying 0x13B26 /
+  Tails_FlySwim_Unknown 0x13BF8, the flight facing bset/bclr 0x13C98/0x13CAA,
+  plus per-frame Tails_CPU_routine 0xF708 / target_X 0xF70A / status; Tails base
+  0xB04A): the stuck respawn runs in ROM routine 8 (loc_13F40). loc_13F40
+  `bsr sub_13EFC` tail-calls sub_13ECA (x_pos=0x7F00, status=0x02 InAir,
+  routine=2), then loc_13F40 CONTINUES past the call and runs its facing block
+  on the post-warp x_pos: `bclr Status_Facing; if x_pos(a0) >= x_pos(a1)
+  bset Status_Facing` (sonic3k.asm:26861-26865). 0x7F00 >= leader.x -> faces
+  LEFT (status 0x03), and routine 2 (Tails_Catch_Up_Flying) leaves it untouched
+  while parked off-screen. The catch-up snap (loc_13B50, routine 2->4) then does
+  `move.b #2,status` (sonic3k.asm:26509), clearing facing back to right, and
+  routine 4 re-derives facing from x_pos vs target each frame. Contrast AIZ
+  trace F2405: a LEVEL_BOUNDARY death-kill marker (Kill_Character/sub_123C2, NOT
+  routine 8) leaves sub_13ECA's cleared facing -> ROM status=0x02 there.
+- Root cause: the engine's `applyDespawnMarker` (the sub_13ECA equivalent)
+  unconditionally `setDirection(RIGHT)` for every despawn-marker entry, and the
+  catch-up snap `updateCatchUpFlight` (loc_13B50) never wrote facing. So the
+  routine-8 stuck respawn never faced left, and once that was fixed the snap
+  leaked the left facing into the first routine-4 frame (where x_pos==target, no
+  facing write) -> f16243 over-corrected to facing-left.
+- Fix (1 file, ROM-cited): `SidekickCpuController`
+  1. `applyDespawnMarker(boolean fromStuckRespawnRoutine8)`: when the marker is
+     reached from the routine-8 stuck/off-screen respawn path
+     (`triggerDespawn` direct, gated on `state == State.PANIC` = ROM routine 8),
+     set facing per loc_13F40: LEFT if the despawn-sentinel x >= leader.x
+     (always true at 0x7F00), else RIGHT. Death / boundary-kill / S2 SPAWNING
+     marker paths keep sub_13ECA's cleared (RIGHT) facing (preserves F2405).
+  2. `updateCatchUpFlight` (loc_13B50 snap): `setDirection(RIGHT)` to model
+     `move.b #2,status` clearing Status_Facing, so routine 4 re-derives facing
+     instead of inheriting the off-screen LEFT.
+- Result: `TestS3kAizTraceReplay` first error **f16217 -> f16944** (515 vs 516
+  errors). New frontier is `tails_y_speed` (ROM=-0x400 engine=0x000) at f16944 --
+  an unrelated Tails jump/bounce velocity issue.
+- A/B sweep (`*TraceReplay`, full + per-class ALONE to defeat singleton
+  contamination): NO first-error-frame regression in any S1/S2/S3K trace. Aiz
+  advanced 16217->16944; all other frontiers identical (AizCompleteRun f1095,
+  HczCompleteRun f1402, IczCompleteRun f3116, MhzCompleteRun f966,
+  MgzCompleteRun f738, LbzCompleteRun f1950; S2 Wfz f3519, Ooz f1251, Cpz f1157,
+  Arz f2011). A few downstream error counts shifted slightly (Icz +7, Mgz -1,
+  Hcz/Aiz unchanged-frame deltas) past their unchanged frontiers.
+  `TestSidekickCpuFollowParity` same 5 pre-existing `LocalPushGrace`/`Nudge`
+  failures (verified BEFORE==AFTER; none facing-related, none newly failing).
+  Physics units (TestPhysicsProfile, TestCollisionModel, CollisionSystemTest)
+  and the 4 must-keep-green S3K tests pass.
+
+## 2026-06-16 - S3K AIZ f15795 -> f16217 via Tails_CPU_auto_jump_flag persisting through the push-bypass
+
+- Scope: focused S3K AIZ trace remediation on `TestS3kAizTraceReplay`
+  (`aiz1_to_hcz_fullrun`, report key `s3k_aiz1`) in worktree
+  `.worktrees/rewind-dynobj`, branch `bugfix/ai-rewind-dynobj-membership`
+  (on top of a410d0537). Comparison-only; ROM-cited; no zone/route/frame
+  carve-out.
+- Command: `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" test "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen"`.
+- First divergence (baseline): f15795 (span through f15812), field
+  `tails_cpu_jumping` ROM=0x0001 engine=0x0000. CPU Tails is stuck pushing a
+  RIGHT wall underwater in the AIZ2 reload (ap=1, x=0x3693, status=0x21); ROM
+  fires an auto-jump and HOLDS `Tails_CPU_auto_jump_flag` for ~18 grounded
+  frames; the engine cleared its `jumpingFlag` on the first grounded frame.
+- BizHawk ground truth (Genplus-gx, `s3-aiz1-2-sonictails.bk2`, hooks at the
+  push-bypass branch 0x13DEE, loc_13E64 0x13E64, the flag-clear 0x13E76, the
+  loc_13E9C $3F gate 0x13E9C/0x13EA0, the flag-set 0x13EB2, and the
+  Ctrl_2_logical write 0x13EB8; Tails base 0xB04A, auto_jump_flag at 0xF70F):
+  during the stuck-push the bypass branch 0x13DEE fires EVERY frame (Tails
+  pushing AND delayed leader not pushing 16 frames ago), so loc_13E64 is never
+  reached. On the frame `(Level_frame_counter+1) & 0x3F == 0` the gate at
+  loc_13E9C sets `Tails_CPU_auto_jump_flag`=1 and presses A|B|C; on the
+  following ~18 push-bypass frames the flag is NOT cleared (loc_13E64's
+  `move.b #0,auto_jump_flag` is bypassed) and no jump input is written
+  (Ctrl_2_logical d1=0x0000) — the jump impulse comes from the press on the
+  gate frame. The flag clears only when Tails stops pushing and the NORMAL
+  path reaches loc_13E64 (move.b #0). The jump-launch frame (gvel=-0x880,
+  status Push+Roll=0x25) STILL hits the bypass — Status_Push is set there.
+- Root cause: `SidekickCpuController` modelled loc_13E64's flag clear with
+  `if (!sidekick.getAir()) jumpingFlag = false;`, firing every grounded frame.
+  But ROM only reaches loc_13E64 on the NON-push-bypass path; while in the
+  push-bypass (loc_13DD0 `beq.w loc_13E9C`, sonic3k.asm:26702-26705) the clear
+  (and the flag-driven jump hold) are skipped. The engine therefore dropped the
+  flag a frame after setting it.
+- Fix (1 file, ROM-cited): gate the auto-jump flag's jump-hold + ground-clear
+  block on `!autoJumpPushBypass`, where `autoJumpPushBypass` is the LITERAL ROM
+  loc_13DD0 bypass condition: current Status_Push bit set
+  (`currentStatusPush`, the raw `btst #Status_Push,status(a0)`) AND the delayed
+  leader not pushing 16 frames ago (`(recordedStatus & STATUS_PUSHING)==0`,
+  the `btst #5,d4`), plus the existing `objectOrderGrace` engine bridge and the
+  Obj85 preserved-rolling suppression. Uses the raw push bit (not
+  `romVisibleCurrentStatusPush`/`currentPushBypass`, which strip a
+  rolling+nonzero-ground_vel "stale push" for follow steering) because the
+  jump-launch frame still has Status_Push set and ROM still bypasses loc_13E64
+  there. While push-bypassing, the flag now persists (matching ROM) and drives
+  no input (ROM Ctrl_2 d1=0); follow/jump input is unchanged.
+- Result: `TestS3kAizTraceReplay` first error **f15795 -> f16217** (516 vs 518
+  errors). New frontier is `tails_status_byte` (ROM=0x03 engine=0x02, bit
+  0x01=facing) at f16217 -- an unrelated Tails facing-direction issue.
+- A/B sweep (`*TraceReplay`, full + per-class ALONE to defeat singleton
+  contamination): NO first-error-frame regression in any S1/S2/S3K trace. Aiz
+  advanced 15795->16217; all other frontiers identical (AizCompleteRun f1095,
+  HczCompleteRun f1402, IczCompleteRun f3116, MhzCompleteRun f966,
+  MgzCompleteRun f738, LbzCompleteRun f1950; S2 Arz f2011, Ooz f1251,
+  Ooz2 f1070). Most downstream error counts dropped (Htz/Mcz2/Mtz2/Mgz/Mhz/Lbz
+  lower); S2 Arz/Ooz gained downstream errors past unchanged frontiers.
+  `TestSidekickCpuFollowParity` same 5 pre-existing failures (verified BEFORE==
+  AFTER; none are the `...AutoJump...` methods, which stay green). Physics units
+  (TestPhysicsProfile, TestCollisionModel, CollisionSystemTest) and the 4
+  must-keep-green S3K tests pass.
+
+## 2026-06-16 - S3K AIZ f15016 -> f15795 via anim-byte (not push-render) prev_anim push-clear at AIZ2 right-wall bounce
+
+- Scope: focused S3K AIZ trace remediation on `TestS3kAizTraceReplay`
+  (`aiz1_to_hcz_fullrun`, report key `s3k_aiz1`) in worktree
+  `.worktrees/rewind-dynobj`, branch `bugfix/ai-rewind-dynobj-membership`
+  (on top of 26670aad2). Comparison-only; ROM-cited; no zone/route/frame
+  carve-out.
+- Command: `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" test "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen"`.
+- First divergence (baseline): f15016, `tails_status_byte` ROM=0x00 engine=0x20
+  (Status_Push 0x20). CPU Tails in an AIZ2 underwater grounded sub-pixel bounce
+  against a RIGHT wall at whole-pixel x=0x36B5; engine HAS push where ROM cleared
+  it, a 1-frame push-bit phase slip.
+- BizHawk ground truth (Genplus-gx, `s3-aiz1-2-sonictails.bk2`, hooks at the wall
+  gate 0x14B9E, sub_F61C 0x14BB4, left/right push branches 0x14C12/0x14BF2, the
+  idle/facing/friction clears 0x14A2E/0x14C30/0x14CBA, and Animate_Tails
+  0x15868/0x15884, Tails base 0xB04A in AIZ act 1): at the divergent ROM frame
+  the wall hit (sub_F61C d1=-1) sets Status_Push, but Animate_Tails clears it the
+  SAME frame because the movement `anim` byte (0=WALK) differs from `prev_anim`
+  (5=WAIT, set by the prior grounded idle frame loc_14A16/loc_14A34). The engine
+  reproduces the wall hit exactly (predDx=1, dist=-1) but did NOT clear push.
+  Cross-checked against a SUSTAINED push at AIZ1 x=0x1CED (frames ~3219-3231):
+  ROM holds Status_Push there with anim=5, prev_anim=5 (no anim change, no
+  clear) -- so the rule is genuinely "clear iff the movement anim byte changes".
+- Root cause: the engine's `clearPushForAnimationChange` compared the rendered
+  animation id against `lastAnimationId`, but the engine substitutes a distinct
+  `pushAnimId` for rendering when Status_Push is set
+  (`ScriptedVelocityAnimationProfile.resolveAnimationId`). ROM has NO distinct
+  push anim BYTE: the push frames are a sub-handler inside the walk script
+  (Animate_Sonic loc_12A72 btst #5,status, sonic3k.asm:24832; Animate_Tails reads
+  `anim` directly, 29356-29364), and `anim`/`prev_anim` stay at the
+  movement-selected value (WALK/WAIT/BALANCE/ROLL...). The render substitution
+  desynced the engine's anim-id from the ROM anim byte that actually drives the
+  push-clear.
+- Fix (2 files, ROM-cited):
+  1. `ScriptedVelocityAnimationProfile`: split out `resolveGroundMovementAnimId`
+     and add an `applyPushRenderSubstitution` overload of `resolveAnimationId`;
+     rendering keeps the push substitution, but the push-clear resolves the anim
+     id with it disabled (the real ROM anim byte, still honoring the
+     higher-priority roll/air/hurt/spring branches).
+  2. `PlayableSpriteAnimation`: track the movement anim byte
+     (`lastGroundMovementAnimId`, with rewind state) and clear Status_Push only
+     when this frame's movement anim byte differs from the previous frame's,
+     matching Animate_Sonic/Animate_Tails. Gated by
+     `PhysicsFeatureSet.animationChangeClearsPush()` (S1 behind FixBugs).
+- Result: `TestS3kAizTraceReplay` first error **f15016 -> f15795** (518 vs 525
+  errors). New frontier is an unrelated field, `tails_cpu_jumping` (ROM=1
+  engine=0): the CPU sidekick auto-jump trigger, not a push/status issue.
+- A/B sweep (`*TraceReplay`, full + per-class ALONE to defeat singleton
+  contamination): NO first-error-frame regression in any S1/S2/S3K trace. Aiz
+  advanced 15016->15795; all other frontiers identical (AizCompleteRun f1095,
+  HczCompleteRun f1402, IczCompleteRun f3116, MgzCompleteRun f738,
+  LbzCompleteRun f1950; S2 Arz f2011, Cpz f1157, Mtz2 f645). Most downstream
+  error counts dropped (Hcz/Icz/Mgz/Lbz/Cnz lower); S2 Cpz +2 past its unchanged
+  frontier. `TestS3kCnzTraceReplay` 9F/1E unchanged. `TestSidekickCpuFollowParity`
+  same 5 pre-existing failures; `TestRewindTorture` same 2 pre-existing failures.
+  Physics units (TestPhysicsProfile, TestCollisionModel, CollisionSystemTest) and
+  the 4 must-keep-green S3K tests pass.
+
+## 2026-06-16 - S3K AIZ f14301 -> f15016 via facing-flip prev_anim push-clear at AIZ2 underwater bounce
+
+- Scope: focused S3K AIZ trace remediation on `TestS3kAizTraceReplay`
+  (`aiz1_to_hcz_fullrun`, report key `s3k_aiz1`) in worktree
+  `.worktrees/rewind-dynobj`, branch `bugfix/ai-rewind-dynobj-membership`.
+  Trace data stayed comparison-only diagnostic input; the fix models the ROM
+  facing-flip + animation push-clear and adds no zone/route/frame carve-out.
+- Command: `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" test "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen"`.
+- First divergence (baseline): f14301, `tails_status_byte` ROM=0x41 engine=0x61
+  (the differing bit is 0x20 Status_Push). CPU Tails is in an AIZ2 underwater
+  grounded sub-pixel bounce against a LEFT wall at whole-pixel x=0x31CA.
+- BizHawk ground truth (Genplus-gx, `s3-aiz1-2-sonictails.bk2`, hooks at the
+  Tails wall gate 0x14B9E, sub_F61C return 0x14BB4, the push branch 0x14C00, and
+  Animate_Tails_Part2 0x15868/0x15884, filtered to Tails base 0xB04A in
+  AIZ act 2): on the small-rebound frame (x_sub=0x9400, ground_vel=-6) ROM's
+  wall sensor returns d1=0 -> NO push branch; on the deeper frame (x_pos=0x31C9,
+  ground_vel=-12) it returns d1=-1 -> push. The engine's
+  `CollisionSystem.resolveGroundWallCollision` reproduces both distances exactly
+  (dist=0 vs -1). The divergence was push RETENTION: ROM clears Status_Push at
+  frame end in `Animate_Tails_Part2` (sonic3k.asm:29359-29364) when anim !=
+  prev_anim, because the facing flip in `sub_14C20`/`sub_14CAC`
+  (sonic3k.asm:28041/28109) set prev_anim=1 that frame. The engine only armed
+  its equivalent post-ground-wall clear when the sprite was ALREADY pushing
+  before the wall pass (`wasPushing` gate), so a push the wall set later on the
+  same flip frame survived into the next no-hit frame as a stale 0x20.
+- Fix (1 file, ROM-cited): in
+  `PlayableSpriteMovement.updatePushingOnDirectionChange`, arm
+  `facingFlipForcesPushClearAfterGroundWall` on any grounded, non-rolling facing
+  flip (matching ROM's unconditional prev_anim=1 sentinel), not only when push
+  was already set before the wall pass. This is shared S2/S3K code gated by
+  `PhysicsFeatureSet.animationChangeClearsPush()` (S1 leaves it behind FixBugs),
+  so it stays ROM-general.
+- Result: `TestS3kAizTraceReplay` first error **f14301 -> f15016**
+  (`tails_status_byte` ROM=0x00 engine=0x20: a separate one-frame push-phase
+  offset at a later AIZ2 right-wall bounce, x=0x36B5); errors 527 -> 525.
+- A/B sweep (`*TraceReplay`, run per-class ALONE to avoid singleton
+  contamination): NO first-error-frame regression. Identical frontier for
+  S3K AizCompleteRun (f1095), HczCompleteRun (f1402), IczCompleteRun (f3116),
+  MhzCompleteRun (f966), LbzCompleteRun (f1950), MgzCompleteRun (f738), and
+  S2 Ooz2/Mtz2/Cnz. Two traces (S3K MgzCompleteRun, S2 Ooz) keep the same
+  first-error frame but gain downstream errors past their existing divergence.
+  `TestSidekickCpuFollowParity` has the same 5 pre-existing failures before and
+  after (unchanged by this fix). Physics unit tests (TestPhysicsProfile,
+  TestCollisionModel, CollisionSystemTest, TestSpindashGating) and the 4
+  must-keep-green S3K tests pass.
+
+## 2026-06-16 - S3K AIZ f14299 -> f14301 via terrain-wall push provenance at AIZ2 underwater bounce
+
+- Scope: focused S3K AIZ trace remediation on `TestS3kAizTraceReplay`
+  (`aiz1_to_hcz_fullrun`, report key `s3k_aiz1`) in worktree
+  `.worktrees/rewind-dynobj`, branch `bugfix/ai-rewind-dynobj-membership`.
+  Trace data stayed comparison-only diagnostic input; the fix models the live
+  ROM `Status_Push` read at `Tails_CPU_Control` loc_13DD0 and adds no
+  zone/route/frame carve-out.
+- Command: `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay" test "-DfailIfNoTests=false" "-Ds3k.rom.path=s3k.gen"`.
+- First divergence (baseline): f14299, `tails_cpu_ctrl2_held` ROM=0x0008 (RIGHT)
+  engine=0x0004 (LEFT). CPU Tails is pinned against a LEFT wall UNDERWATER at
+  whole-pixel x=0x31CA (AIZ2 reload, ap=1), grounded, bouncing in sub-pixel.
+- Root cause (verified by instrumentation): on the wall-rebound frames the
+  engine entered `SidekickCpuController.updateNormal` with the genuine ROM push
+  bit set (entryPush=true, status 0x61, matching ROM loc_13DD0), but the
+  pre-CPU released-underwater consumed-clear (lines 1621-1625, added by commit
+  56644e0fd for the AIZ2-reload stale released-object push) wrongly discarded
+  it because the stale interact slot (a destroyed MonitorContents) kept
+  `releasedUnderwaterPushConsumed` latched. With push cleared, the loc_13DD0
+  bypass (sonic3k.asm:26702-26705) did not fire, follow-steering ran, and the
+  follow direction toward the delayed leader produced LEFT instead of ROM's
+  delayed-Ctrl RIGHT. ROM sets that push via terrain ground-wall collision
+  (`Tails_DoLevelCollision` loc_14C00 bset Status_Push, sonic3k.asm:28012-28017)
+  and reads it live at loc_13DD0; ROM has no equivalent pre-clear.
+- Fix (3 files, ROM-cited): add a transient (`@RewindTransient`) push-provenance
+  flag on `AbstractPlayableSprite` (`pushFromGroundWallCollision`), set it in
+  `CollisionSystem.applyGroundWallVelocityResponse` when a terrain ground-wall
+  collision raises `Status_Push`, clear it whenever push is cleared, and gate
+  the `SidekickCpuController` released-underwater pre-clear on
+  `!isPushFromGroundWallCollision()`. A genuine terrain wall push now survives
+  to the loc_13DD0 read (bypass -> delayed RIGHT); a stale released-object push
+  (no terrain provenance) is still pre-cleared, so the original
+  `TestSidekickCpuFollowParity` released-slot guard stays green.
+- Result: `TestS3kAizTraceReplay` first error **f14299 -> f14301**
+  (`tails_status_byte` ROM=0x41 engine=0x61: a separate, deeper underwater
+  wall-sensor penetration-frequency issue where the engine registers a wall hit
+  on the small-rebound frame that ROM does not); errors 723 -> 527. The
+  underwater bounce velocity phase now matches ROM exactly
+  (00F4,0006,FF80,007A,FFFA cycle). No regression: S3K AizCompleteRun f1095,
+  HczCompleteRun f1402, IczCompleteRun f3116, MhzCompleteRun f966 bit-identical
+  to baseline; Cnz f39672 / Mgz f33271 are pre-existing BK2 input-alignment
+  failures (not physics). S2 sweep A/B identical (7 classes, all first-error
+  frames unchanged). Must-keep-green S3K + `TestObjectServicesMigrationGuard`
+  pass; `TestSidekickCpuFollowParity` 6->5 (the 1 transient regression from an
+  earlier velocity-only discriminator was eliminated by the provenance flag;
+  the remaining 5 are pre-existing, A/B verified).
+
+## 2026-06-16 - S2 ARZ2 object-near reporting exposes the true frontier
+
+- Scope: exact `0x100` speed-delta cluster triage for
+  `TestS2Arz2LevelSelectTraceReplay`. The previously reported frontier was
+  frame 1817 `y_speed` (expected `-0090`, actual `-0190`), but the single-frame
+  bisect showed that bounce arithmetic was already ROM-correct and the speed
+  delta was downstream of earlier dynamic-slot divergence.
+- Bisect result: the ROM spills lost rings when the ring count drops at trace
+  frame 1717, after low dynamic slots are still occupied by ARZ objects; the
+  engine's earlier slot cadence allowed an Obj37 lost ring into a low slot. At
+  the old frame-1817 symptom, the engine therefore collected the low-slot lost
+  ring before reaching the Grounder in the touch loop, while the ROM killed the
+  Grounder first and applied the enemy bounce. Enabling dynamic-slot
+  `object_near` comparison for ARZ2 moves the reported frontier to the earlier
+  object-slot cause instead of the downstream speed mismatch.
+- Focused frontier check:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=false -Dtrace.frontierOnly=true -Dtrace.context.radius=20 -Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Dsonic2.rom.path=s2.gen test"`.
+  Result: expected-red. `s2_arz2` now reports frame 187
+  `obj_s17_type` (expected `0x15`, actual `missing`). Player/Tails physics still
+  match at frame 187; ROM has dynamic Obj15/SwingingPlatform near slot 23 at
+  `@03B6,0416` routine `04`, while the engine has not yet produced the matching
+  dynamic platform. By frame 194 the engine has an extra/mispositioned Obj15 at
+  `@03B8,045E`, while the ROM has Obj15 entries at `@0397,045E` and
+  `@03A0,0417`, so the next local target is ARZ2 Obj15 placement/movement slot
+  cadence, not enemy-bounce physics.
+- Full trace sweep:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=24 -Dtest=*TraceReplay -DfailIfNoTests=false -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red, 90 tests, 50 failures, 1 error. Compared with the
+  previous 90-test sweep at 50 failures and 1 error, aggregate counts did not
+  regress. The intentional reporting movement is `s2_arz2` frame 1817
+  `y_speed` -> frame 187 `obj_s17_type`; this is a true-frontier exposure, so
+  the exact `0x100` speed delta is reclassified as downstream of the ARZ2
+  Obj15 dynamic-slot frontier.
+
+## 2026-06-16 - S2 respawn-tracked kills keep the ChkLoadObj latch
+
+- Scope: Sonic 2 respawn-tracked layout object lifetime. The current Tails CPU
+  cluster target was `TestS2MtzLevelSelectTraceReplay` frame 1169, where ROM
+  Tails interacted with the newly-streamed Obj74 invisible block in dynamic slot
+  21, but the engine had reloaded the earlier killed ObjA4 Asteron into that
+  slot.
+- Bisect result: frame 1168 was the single-frame slot divergence. MTZ1 layout
+  entry x=`$0720`, y=`$0190`, id=`$A4` is respawn-tracked and was loaded at
+  frame 577, then killed before the camera returned. ROM `ChkLoadObj` still
+  `bset`/tests bit 7 in the respawn table and skips an already-set entry
+  (`docs/s2disasm/s2.asm:33592-33607`); the player-kill path does not run
+  `MarkObjGone`, so that bit remains set until level reset. The engine was
+  removing the spawn from the active placement set without preserving the S2
+  remembered bit, so the placement scan reloaded ObjA4 and displaced Obj74/Obj64
+  by one slot.
+- Focused regression/frontier checks:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#mtz1RespawnTrackedBadnikKillDoesNotReloadThroughPlacementWindow -DfailIfNoTests=false -Dsonic2.rom.path=s2.gen test"`.
+  Red before the fix: expected slot 21 id `0x74`, actual `0xA4`. Green after
+  the fix.
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=48 -Dtest=com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Dsonic2.rom.path=s2.gen test"`.
+  Result: expected-red. `TestS2MtzLevelSelectTraceReplay` advanced from frame
+  1169 `tails_cpu_interact` (expected `0x0074`, actual `0x00A4`) to frame 1267
+  `y` (expected `0x00AC`, actual `0x00A4`). The MTZ1 object-slot/Tails
+  interaction frontier is cleared; the next local owner is downstream movement.
+- Full trace sweep:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=24 -Dtest=*TraceReplay -DfailIfNoTests=false -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red, 90 tests, 50 failures, 1 error. Compared with the prior
+  90-test sweep at 50 failures and 1 error, aggregate counts did not regress;
+  the intentional frontier movement is `s2_mtz1` frame 1169 -> frame 1267.
+  The next visible Tails CPU cluster target from this sweep is
+  `TestS2ArzLevelSelectTraceReplay` frame 1285 `tails_cpu_interact` (expected
+  `0x0008`, actual `0x0000`); MTZ1 moves to the later movement-downstream
+  cluster.
+
+## 2026-06-16 - S2 MTZ2 object-slot cadence advances past Obj37/Tails CPU frontier
+
+- Scope: Sonic 2 MTZ2 object allocation and per-frame object timing. The current
+  Tails CPU cluster target was `TestS2Mtz2LevelSelectTraceReplay` frame 1073,
+  where ROM Tails had not yet latched the newly-spilled Obj37 lost ring but the
+  engine let the later sidekick slot observe it in the same player pass.
+- Bisect result: the frame-1073 mismatch was a compounded slot-cadence issue
+  rather than a CPU branch by itself. The fix keeps Obj37 spill allocation
+  visible after the current player hurt path, anchors the collected Obj37 sparkle
+  routine to the object's next slot update, uses the S2 sparkle animation delay
+  byte, and lets Obj08 skid-dust deletion live through its ROM delete routine.
+  MTZ2 also needed ROM slot pressure from Obj6C parent conveyors expanding on
+  their first object pass, Obj70 cogs reserving the seven child tooth slots,
+  S2 badnik placements honoring respawn tracking, and Obj27 destruction
+  allocating the animal before points. Obj70 still renders/collides through the
+  parent multi-piece model, but its sidekick side-contact path now models the
+  stale-rider no-contact branch exposed by separate ROM tooth slots.
+- Focused frontier check:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=32 -Dtest=com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Ds2.rom.path=s2.gen test"`.
+  Result: expected-red. `TestS2Mtz2LevelSelectTraceReplay` advanced from frame
+  1073 `tails_cpu_interact` (expected `0x0000`, actual `0x00A0`) to frame 1265
+  `g_speed` (expected `0x014B`, actual `0x047A`). The MTZ2 Tails CPU/object
+  latch frontier is cleared; the next local owner is downstream movement around
+  wall-mode/terrain speed.
+- Full trace sweep:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=24 -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=\"Sonic and Knuckles & Sonic 3 (W) [!].gen\" test"`.
+  Result: expected-red, 90 tests, 50 failures, 1 error. Compared with the prior
+  90-test sweep at 50 failures and 1 error, aggregate counts did not regress;
+  the intentional frontier movement is `s2_mtz2` frame 1073 -> frame 1265.
+  The next earliest Tails CPU cluster target is now
+  `TestS2MtzLevelSelectTraceReplay` frame 1169 `tails_cpu_interact` (expected
+  `0x0074`, actual `0x00A4`); MTZ2 moves to the later movement-downstream
+  cluster.
+
+## 2026-06-16 - S2 HTZ2 panic release advances past Tails CPU routine mismatch
+
+- Scope: Sonic 2 sidekick panic control. The current Tails CPU cluster target was
+  `TestS2Htz2LevelSelectTraceReplay` frame 1023, where ROM had already changed
+  `Tails_CPU_routine` from panic `0x0008` back to normal `0x0006`, while the
+  engine stayed in panic.
+- Bisect result: the single-frame context showed `Level_frame_counter=$0400`,
+  `pinballMode=true`, nonzero inertia/ground speed, and no move-lock or manual
+  control counter. `TailsCPU_Panic` reads `spin_dash_flag`, then the panic
+  charging branch checks `(Level_frame_counter+1).b & $7F` and releases to
+  routine `6` on zero (`docs/s2disasm/s2.asm:39458-39491`). The engine stores
+  this S2 rolling-only panic state as `pinballMode`, so
+  `PhysicsFeatureSet.SONIC_2.sidekickPanicTreatsPinballModeAsSpindashFlag`
+  now enables the same release branch for S2 instead of blocking on nonzero
+  `g_speed`.
+- Focused frontier check:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=32 -Dtest=com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Ds2.rom.path=s2.gen test"`.
+  Result: expected-red. `TestS2Htz2LevelSelectTraceReplay` advanced from frame
+  1023 `tails_cpu_routine` (expected `0x0006`, actual `0x0008`) to frame 1078
+  `y_speed` (expected `-0568`, actual `0x0568`), so the HTZ2 Tails CPU frontier
+  is cleared and the next local frontier is movement/spring-contact downstream.
+- Full trace sweep:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=24 -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=\"Sonic and Knuckles & Sonic 3 (W) [!].gen\" test"`.
+  Result: expected-red, 90 tests, 50 failures, 1 error. Compared with the prior
+  90-test sweep at 50 failures and 1 error, aggregate counts did not regress;
+  the intentional frontier movement is `s2_htz2` frame 1023 -> frame 1078. The
+  next earliest Tails CPU cluster target is
+  `TestS2Mtz2LevelSelectTraceReplay` frame 1073 `tails_cpu_interact` (expected
+  `0x0000`, actual `0x00A0`), narrowly ahead of `TestS2MtzLevelSelectTraceReplay`
+  frame 1169.
+
+## 2026-06-16 - S2 MTZ SteamSpring inclusive edge advances MTZ1 frontier
+
+- Scope: Sonic 2 Obj42 SteamSpring solid-contact parity. The earliest current
+  MTZ1 Tails CPU frontier was `TestS2MtzLevelSelectTraceReplay` frame 1006,
+  where ROM Tails kept `Status_Push`/`Status_OnObj` on the exact right edge of
+  the MTZ steam piston but the engine treated that edge as outside the solid.
+- Bisect result: the single-frame context showed ROM Obj42 at `x_pos=$04B0`
+  with `d1=$1B`, Tails at `x_pos=$04CB`, and `obj_control/interact` pointing at
+  the spring. `SolidObject_cont` computes `relX + d1 = $36`, compares against
+  `d1*2`, and rejects only on `bhi`; therefore `relX == d1*2` is still contact.
+  `SteamSpringObjectInstance.usesInclusiveRightEdge()` now opts this object into
+  the ROM right-edge rule instead of using the engine's default exclusive edge.
+- Focused regression/frontier checks:
+  `mvn clean "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" "-DfailIfNoTests=false" test`:
+  passed, 30 tests.
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=24 -Dtest=com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Ds2.rom.path=s2.gen test"`:
+  expected-red, advanced from frame 1006 `tails_status_byte` (expected
+  `0x0021`, actual `0x0001`) to frame 1169 `tails_cpu_interact` (expected
+  `0x0074`, actual `0x00A4`).
+- Full trace sweep:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red, 90 tests, 50 failures, 1 error. Compared with the prior
+  90-test sweep at 50 failures and 1 error, suite counts did not regress; the
+  intentional movement is `TestS2MtzLevelSelectTraceReplay` frame 1006 -> frame
+  1169. The next earliest Tails CPU cluster target is
+  `TestS2Htz2LevelSelectTraceReplay` frame 1023 `tails_cpu_routine` (expected
+  `0x0006`, actual `0x0008`), followed by `TestS2Mtz2LevelSelectTraceReplay`
+  frame 1073 `tails_cpu_interact`.
+
+## 2026-06-16 - S2 HTZ2 panic Ctrl_2 latch no longer masks true Tails CPU frontier
+
+- Scope: trace comparator frontier reporting only. Sonic 2 HTZ2 exposed a
+  `tails_cpu_ctrl2_held` mismatch at frame 936 while Tails was in CPU routine
+  `0x08` (panic) and still coasting with nonzero `g_speed`. The S2 panic
+  routine returns before writing DOWN while inertia is nonzero, so the recorded
+  post-frame `Ctrl_2_Logical` latch is not the branch-local decision that drives
+  movement. The comparator now treats routine-8 `Ctrl_2` held/pressed latch
+  differences as non-frontier only while both recorded and replayed sidekick
+  states are present and still coasting; once `g_speed` reaches zero, `Ctrl_2`
+  remains a strict comparison field.
+- Bisect result: the earliest current Tails CPU frontier was
+  `TestS2Htz2LevelSelectTraceReplay` frame 936. Frame-local inspection showed
+  matching routine `0x08` and nonzero sidekick ground speed on both sides, with
+  the visible mismatch isolated to the latched global `Ctrl_2` bytes. Focused
+  replay advanced HTZ2 to frame 1023 `tails_cpu_routine` (expected `0x0006`,
+  actual `0x0008`), making the reported frontier the actionable CPU state
+  transition.
+- Focused regression/frontier checks:
+  `mvn "-Dtest=com.openggf.tests.trace.TestTraceBinder" test`: the
+  `TestTraceBinder` XML report passed, 36 tests, 0 failures, 0 errors.
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=80 -Dtest=com.openggf.tests.trace.s2.TestS2Htz2LevelSelectTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Ds2.rom.path=s2.gen test"`:
+  expected-red, advanced from frame 936 `tails_cpu_ctrl2_held` to frame 1023
+  `tails_cpu_routine`.
+- Full trace sweep:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red, 90 tests, 50 failures, 1 error. Compared with the prior
+  90-test sweep at 50 failures and 1 error, the suite counts did not regress;
+  the intentional frontier movement is `TestS2Htz2LevelSelectTraceReplay`
+  frame 936 -> frame 1023. The earliest current Tails CPU cluster target is
+  now `TestS2MtzLevelSelectTraceReplay` frame 1006 `tails_status_byte`
+  (expected `0x0021`, actual `0x0001`), narrowly ahead of HTZ2 frame 1023.
+
+## 2026-06-16 - S2 MTZ object-slot parity advances MTZ1 Tails CPU frontier
+
+- Scope: Sonic 2 object lifetime, dynamic allocation, and post-camera placement
+  cadence on the MTZ route. The batch keeps the ROM's object slot order through
+  several hidden MTZ occupancy frontiers without hydrating trace state or adding
+  route/frame carve-outs: Obj42 SteamPuff no longer unloads through the
+  MarkObjGone range window, Obj65 bit-7 long platforms defer their child cog
+  until the first routine pass, broken monitors allocate a real Obj2E monitor
+  contents object before the Obj27 explosion, Asteron death converts the current
+  slot to Obj27 and allocates Obj98 spike children after it, and the post-camera
+  object loader performs the ROM's backward left-gap scan without moving the
+  main placement cursor.
+- WFZ regression fix: ObjBD small metal platform children now resolve their
+  manual solid checkpoint before applying the post-checkpoint vertical move and
+  report geometry from the solid `y_pos` used by that checkpoint. This preserves
+  `TestS2WfzLevelSelectTraceReplay` while keeping the MTZ slot advances.
+- Bisect result: the hidden MTZ occupancy oracle advanced through frames 487,
+  535, 716, 753/778/819/823, and now reports the earliest hidden mismatch at
+  frame 1132 slot 29 (`expectedId=0x28`, `actualId=0x29`). The visible
+  `TestS2MtzLevelSelectTraceReplay` frontier advanced from frame 931
+  `tails_cpu_interact` (expected `0x009F`, actual `0x0006`) to frame 1006
+  `tails_status_byte` (expected `0x0021`, actual `0x0001`).
+- Focused regression/frontier checks:
+  `cmd /c "mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=false -Dtest=com.openggf.level.objects.TestObjectPlacementManager#postCameraBackwardScanCreatesLeftGapSpawnsInRomOrder,com.openggf.game.sonic2.objects.TestMonitorObjectInstance,com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#steamPuffDoesNotUseMarkObjGoneUnloadWindow+mtzLongPlatformDefersBit7ChildCogUntilFirstRoutinePass,com.openggf.game.sonic2.objects.badniks.TestAsteronBadnikInstance -DfailIfNoTests=false test"`:
+  passed, 14 tests.
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=40 -Dtest=com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Ds2.rom.path=s2.gen test"`:
+  passed, all frames match.
+  `cmd /c "mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=false -Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#measureMtz1OccupancyDivergence -DfailIfNoTests=false -Ds2.rom.path=s2.gen test"`:
+  expected measurement result at frame 1132 slot 29.
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=40 -Dtest=com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Ds2.rom.path=s2.gen test"`:
+  expected-red, advanced to frame 1006.
+- Full trace sweep:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dtrace.frontierOnly=true -Dtrace.context.radius=20 -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red, 90 tests, 50 failures, 1 error. XML comparison against
+  the pre-fix baseline found no added or removed failing/erroring trace
+  testcases; only `TestS2MtzLevelSelectTraceReplay` changed from frame 931 to
+  frame 1006. The next highest-leverage target remains the Tails CPU cluster:
+  the earliest current Tails CPU frontier is
+  `TestS2Htz2LevelSelectTraceReplay` frame 936 `tails_cpu_ctrl2_held`
+  (expected `0x0002`, actual `0x0000`).
+
+## 2026-06-16 - Fresh ground-wall push survives animation clear and advances CPZ2
+
+- Scope: shared playable terrain/animation coordination. Ground-wall terrain
+  collision now marks `Status_Push` as freshly set for the current frame, and
+  the S2/S3K animation-change push-clear path consumes that marker before
+  deciding whether to erase the bit. This preserves the ROM-observed push bit
+  when terrain collision sets it after the earlier idle clear point, without
+  hydrating trace state or adding a route/frame carve-out.
+- Disassembly evidence: `docs/s2disasm/s2.asm:39675-39696` shows Tails'
+  normal idle path clearing `Status_Push` before choosing Wait when inertia is
+  already zero, while `docs/s2disasm/s2.asm:38370-38386` shows the animation
+  driver clears push on animation-byte changes. The bisect showed the terrain
+  wall response happens after the idle clear point for this row, so the later
+  animation check must not erase the newly set ground-wall push.
+- Bisect result: the earliest active Tails CPU frontier was
+  `TestS2Cpz2LevelSelectTraceReplay` frame 759. Position, velocity, and ground
+  speed matched the trace; only `tails_status_byte` missed bit `0x20`. A
+  single-frame probe showed a mode `0x40` ground-wall collision at distance `-1`
+  setting push, followed by the animation resolver seeing Walk -> Idle and
+  clearing it in the same compared frame.
+- Focused regression/frontier check:
+  `cmd /c "mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=com.openggf.sprites.managers.TestPlayableSpriteAnimation#s2FreshGroundWallPushSurvivesWalkToIdleAnimationCheck,com.openggf.tests.trace.s2.TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace -Dtrace.frontierOnly=true -Dtrace.context.radius=20 -DfailIfNoTests=false -Ds2.rom.path=s2.gen test"`.
+  Result: expected-red. The new animation regression test passed, and
+  `TestS2Cpz2LevelSelectTraceReplay` advanced from frame 759
+  `tails_status_byte` (expected `0x0020`, actual `0x0000`) to frame 2888
+  `tails_x` (expected `0x10F8`, actual `0x10F0`).
+- Full trace sweep:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dtrace.frontierOnly=true -Dtrace.context.radius=20 -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red, 90 tests, 50 failures, 1 error. Compared with the prior
+  90-test sweep at 50 failures and 1 error, `s2_cpz2` advanced 759 -> 2888
+  with no aggregate-count regression. The next target remains in the Tails CPU
+  cluster: the earliest current Tails CPU frontier is
+  `TestS2MtzLevelSelectTraceReplay` frame 931 `tails_cpu_interact` (expected
+  `0x009F`, actual `0x0006`).
+
+## 2026-06-16 - S2 lost-ring Obj37 owner slot advances MTZ2 Tails CPU frontier
+
+- Scope: Sonic 2 lost-ring allocation only. `ObjectSlotLayout.SONIC_2` now
+  models the ROM `HurtCharacter` path that allocates the first Obj37 owner slot
+  before `Obj37_Init` spills the remaining lost rings with `AllocateObject`.
+  This keeps the S2 object scan order aligned when Tails overlaps both a lost
+  ring and a damaging object during the same touch-response pass.
+- Disassembly evidence: `docs/s2disasm/s2.asm:85386-85404` allocates and seeds
+  the first `ObjID_LostRings` object from `HurtCharacter`, and
+  `docs/s2disasm/s2.asm:25123-25155` has `Obj37_Init` use that current object
+  as the first ring before calling `AllocateObject` for later spill entries.
+- Bisect result: the earliest Tails CPU cluster frontier was
+  `TestS2Mtz2LevelSelectTraceReplay` frame 645. A single-frame object/touch
+  probe showed the engine hurting Tails on ObjA0 Shellcracker claw one frame
+  before the ROM, because the engine's lost rings were allocated later than the
+  ROM's slots. The ROM's earlier Obj37 lost ring entry is scanned first and
+  consumes the overlap before the claw; the prior Shellcracker pending-init
+  collision hypothesis did not advance the trace and was rejected.
+- Focused regression test:
+  `cmd /c "mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=com.openggf.level.rings.TestLostRingObjectInstance -DfailIfNoTests=false test"`.
+  Result: passed, 19 tests.
+- Focused frontier check:
+  `cmd /c "mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=20 -Dtest=com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Ds2.rom.path=s2.gen test"`.
+  Result: expected-red. `TestS2Mtz2LevelSelectTraceReplay` advanced from frame
+  645 `tails_x_speed` (expected `0x00C1`, actual `-0200`) to frame 1073
+  `tails_cpu_interact` (expected `0x0000`, actual `0x00A0`).
+- Full trace sweep:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dtrace.frontierOnly=true -Dtrace.context.radius=20 -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red, 90 tests, 50 failures, 1 error. Compared with the prior
+  90-test sweep at 50 failures and 1 error, `s2_mtz2` advanced 645 -> 1073
+  with no aggregate-count regression. The exact `0x100` speed-delta cluster did
+  not remain as the highest-leverage active cluster after the preceding setup
+  and AIZ advances, so the next target remains in the Tails CPU cluster: the
+  earliest current Tails CPU frontier is `TestS2Cpz2LevelSelectTraceReplay`
+  frame 759 `tails_status_byte` (expected `0x0020`, actual `0x0000`).
+
+## 2026-06-16 - S3K seed-frame setup object prelude advances CNZ route
+
+- Scope: S3K Sonic+Tails level-select seed-frame trace bootstrap only. These
+  traces already have the native setup `Process_Sprites` object pass in effect
+  before the first compared row, but Sonic's own frame-0 movement remains
+  comparison-only state. Replay now runs the native level-object setup pass
+  before normal frame-1 driving, separately from the existing sidekick-only
+  title-card prelude, without hydrating trace object/SST state.
+- Disassembly evidence: `docs/skdisasm/sonic3k.asm:66752-66775` initializes
+  `Obj_CNZBalloon` by consuming `Random_Number` into `angle(a0)`, and
+  `docs/skdisasm/sonic3k.asm:66783-66791` increments that angle every object
+  pass before calculating `y_pos`. The recorded CNZ frame-zero objects match the
+  reset-seed RNG bytes after the setup pass has already advanced them; starting
+  from the trace's frame-zero RNG seed without that pass moves the balloon phase
+  enough to create the frame-185 contact mismatch.
+- Focused regression test:
+  `cmd /c "mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=com.openggf.tests.trace.TestTraceReplayStartPositionPolicy#s3kGameplayTraceSeedsFrameZeroAfterSidekickOnlyPrelude -DfailIfNoTests=false test"`.
+  Result: passed, 1 test. The new assertion failed red before the fix with
+  object prelude frames `0` for the same seed-frame trace.
+- Focused frontier check:
+  `cmd /c "mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtrace.frontierOnly=true -Dtrace.context.radius=20 -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red. `TestS3kCnzTraceReplay` advanced from frame 185
+  `y_speed` (expected `0x0370`, actual `-0700`) to frame 1558
+  `tails_cpu_interact` (expected `0x0003`, actual `0x0000`).
+- Full trace sweep:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dtrace.frontierOnly=true -Dtrace.context.radius=20 -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red, 90 tests, 50 failures, 1 error. Compared with the prior
+  90-test sweep at 53 failures and 1 error, the tracked S3K route frontier
+  advance is CNZ frame 185 -> 1558; the AIZ worker stack on the same branch is
+  also confirmed at `TestS3kAizTraceReplay` frame 14299
+  `tails_cpu_ctrl2_held` after its documented frame 5705 -> 14299 advance.
+  Other tracked S3K frontiers from the prior sweep remain in the same order:
+  `TestS3kMgzTraceReplay` frame 238 `status_byte`,
+  `TestS3kCnzCompleteRunTraceReplay` frame 355 `x_speed`,
+  `TestS3kMgzCompleteRunTraceReplay` frame 738 `rings`,
+  `TestS3kMhzCompleteRunTraceReplay` frame 966 `y`,
+  `TestS3kAizCompleteRunTraceReplay` frame 1095 `x_sub`,
+  `TestS3kHczCompleteRunTraceReplay` frame 1402 `tails_status_byte`,
+  `TestS3kIczCompleteRunTraceReplay` frame 1116 `tails_cpu_routine`,
+  and `TestS3kLbzCompleteRunTraceReplay` frame 1950 `status_byte`.
+- Cluster status: the earliest radius/rolling-hypothesis target was not a
+  radius bug; it was a setup object/RNG prelude issue and is advanced to a later
+  Tails-CPU frontier. Per the requested cluster order, the next target is the
+  exact `0x100` speed-delta cluster rather than following CNZ's new Tails-CPU
+  frontier yet.
+
+## 2026-06-16 - S3K complete-run setup object restoration advances ICZ/LBZ
+
+- Scope: S3K complete-run trace bootstrap only. Complete-run segment setup now
+  restores the event-owned startup objects that the native setup prelude needs
+  after `objectManager.reset(cameraX)`, without hydrating object state from
+  trace rows. ICZ restores and primes the snowboard intro into the post-startup
+  board-handoff state, LBZ restores the ground-launch countdown with the native
+  one setup tick already accounted for, and AIZ restores the plane intro object
+  without dispatching it early.
+- Phase fix: ICZ complete-run frames 0-28 are repeated visible rows with native
+  launch velocity already present (`x_speed=0x0800`) but unchanged gameplay,
+  VBlank, and lag counters. Those rows now stay `VBLANK_ONLY` until the first
+  state-changing frame 29; LBZ remains a normal gameplay setup countdown
+  because its repeated rows have zero visible velocity.
+- Focused regression test:
+  `cmd /c "mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=com.openggf.tests.trace.TestTraceReplayStartPositionPolicy#s3kCompleteRunVisibleVelocityHoldRowsWaitForFirstStateChange -DfailIfNoTests=false test"`.
+  Result: passed, 1 test.
+- Focused frontier check:
+  `cmd /c "mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay,com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay -DfailIfNoTests=false -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red. ICZ advanced from frame 29 `x` setup drift to frame
+  1116 `tails_cpu_routine` (expected `0x0002`, actual `0x0004`). LBZ advanced
+  from frame 29 `y_speed` ground-launch setup drift to frame 1950
+  `status_byte` (expected `0x0021`, actual `0x0001`).
+- Full trace sweep:
+  `cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -Dmse=off -Dsurefire.argLine=-Xmx4g -Dtrace.frontierOnly=true -Dtrace.context.radius=20 -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=true -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test"`.
+  Result: expected-red, 90 tests, 53 failures, 1 error. The S3K complete-run
+  setup targets are no longer the true earliest frontiers. Current relevant
+  S3K frontiers from the sweep: `TestS3kCnzTraceReplay` frame 185
+  `y_speed`, `TestS3kMgzTraceReplay` frame 238 `status_byte`,
+  `TestS3kCnzCompleteRunTraceReplay` frame 355 `x_speed`,
+  `TestS3kMgzCompleteRunTraceReplay` frame 738 `rings`,
+  `TestS3kMhzCompleteRunTraceReplay` frame 966 `y`,
+  `TestS3kAizCompleteRunTraceReplay` frame 1095 `x_sub`,
+  `TestS3kHczCompleteRunTraceReplay` frame 1402 `tails_status_byte`,
+  `TestS3kIczCompleteRunTraceReplay` frame 1116 `tails_cpu_routine`,
+  and `TestS3kLbzCompleteRunTraceReplay` frame 1950 `status_byte`.
+- Cluster status: frame-0/setup issues for ICZ and LBZ are cleared/advanced.
+  No new trace-suite count regression was detected by the full sweep. Per the
+  requested order, the next target is the radius/rolling hypothesis, with the
+  earliest current S3K frontier at `TestS3kCnzTraceReplay` frame 185.
+
+## 2026-06-15 - S3K CNZ complete-run setup object prelude frontier advance
+
+- Scope: S3K complete-run trace bootstrap now reproduces the native setup
+  `Process_Sprites` object pass before applying the frame-zero RNG seed. This
+  keeps already-live setup objects, including CNZ balloons whose init routines
+  consume RNG, on the ROM object/RNG cadence without hydrating object state from
+  trace rows and without zone, route, or frame carve-outs.
+- Disassembly evidence:
+  - `docs/skdisasm/sonic3k.asm:7849-7855` shows the S3K level setup block
+    calling `SpawnLevelMainSprites`, `Process_Sprites`, and `Animate_Tiles`
+    before controls unlock and before the first replay-driven `LevelLoop`.
+  - `docs/skdisasm/sonic3k.asm:7884-7894` shows `LevelLoop` incrementing
+    `Level_frame_counter` and then calling `Process_Sprites` for normal
+    gameplay rows, separate from the setup pass.
+- Regression tests:
+  - `cmd /c mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestTraceReplayStartPositionPolicy#s3kCompleteRunSegmentsDoNotSeedFrameZeroTraceState" "-DfailIfNoTests=false" test`
+  - Result: passed, **1** test. The new assertion failed red before the fix
+    with object prelude frames `0` for `aiz_completerun`.
+- Focused replay:
+  - `cmd /c mvn -Dmse=off -Dtrace.frontierOnly=true -Dtrace.context.radius=20 -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzCompleteRunTraceReplay -DfailIfNoTests=false -Ds3k.rom.path=s3k.gen test`
+  - Result: expected-red trace with **8** bounded errors. The previous frame
+    **248** CNZ balloon/RNG launch frontier is fixed. The first release-blocking
+    error is now frame **355**: `x_speed` expected `-03E2`, actual `-04D0`
+    (`y_speed` also diverges on the same frame: expected `-05CC`, actual
+    `-050F`), with a separate bumper/monitor interaction cluster already in
+    view.
+  - A non-frontier-only expected-red run in the same checkout exhausted the
+    Surefire fork heap while retaining thousands of downstream mismatches. Use
+    `-Dtrace.frontierOnly=true` for frontier verification and sweeps unless the
+    full downstream report is explicitly needed.
+
 ## 2026-06-15 - Trace frontier-only sweep harness bounds failing replay memory
 
 - Scope: trace-replay harness infrastructure only. No engine state is hydrated
@@ -14663,3 +16567,104 @@ Tails x_pos diff vs ROM across the HCZ approach (CPU-sidekick movement chain;
 
 No engine change committed in this entry (investigation only). The diagnostic
 lua is committed for reuse. AIZ frontier remains f3135; HCZ remains f1402.
+
+## 2026-06-16 — S2 ARZ2 Obj15 child SST slot exposes the true frontier
+
+Branch `bugfix/ai-trace-frontier-develop`.
+Commands:
+`cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=false -Dtrace.frontierOnly=true -Dtrace.context.radius=20 -Dtest=com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Dsonic2.rom.path=s2.gen test"`
+`cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=false -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Dsonic1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=\"Sonic and Knuckles & Sonic 3 (W) [!].gen\" test"`
+
+Fix:
+- `SwingingPlatformObjectInstance` now creates the ROM Obj15 display-child SST
+  slot with the parent's object id/subtype/render flags. The child is
+  non-rendering because the parent still emits the complete multi-sprite
+  assembly; it exists to preserve object-slot/frontier parity.
+- `updatePositions` now mirrors the oscillator when the object's x-flip bit is
+  set, matching Obj15 `sub_FE70` (`s2.asm:22617-22620`), and copies the
+  0x40-anchor multi-sprite child position into that child slot while keeping the
+  parent/platform at the full chain endpoint plus half-link.
+
+Result:
+- Focused ARZ2 expected-red advanced from **f187** `obj_s17_type` missing Obj15
+  child slot to **f523** `obj_s13_type` missing Obj91. The old f187 setup/object
+  slot divergence is cleared.
+- Full `*TraceReplay` sweep remains expected-red with the same release-blocking
+  shape as the prior baseline: **90 tests, 50 failures, 1 error**. ARZ2 reports
+  **3863 errors, first error f523**. No unrelated first-error regression was
+  observed in the Maven failing summary; the AIZ route remains at f14299 on this
+  branch because the worker Items 5-9 chain has not yet been reconciled here.
+- Next local target after this scoped ARZ2 commit is to reconcile the worker
+  AIZ f14299 -> f16944 chain now that its class-size guard rejection has been
+  resolved, then resume the ordered cluster queue from the measured frontier set.
+
+## 2026-06-16 — S3K CNZ complete-run spike SST latch clears Tails push
+
+Branch `bugfix/ai-trace-frontier-develop`.
+Commands:
+`cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=false -Dtrace.frontierOnly=true -Dtrace.context.radius=8 -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzCompleteRunTraceReplay#replayMatchesTrace -DfailIfNoTests=false -Ds3k.rom.path=s3k.gen -Dsonic3k.rom.path=s3k.gen test"`
+`mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic3k.objects.TestSonic3kSpikeObjectInstance,com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" test`
+`cmd /c "set MAVEN_OPTS=-Xmx4g && mvn -q -Dmse=off -Dsurefire.argLine=-Xmx4g -Dsurefire.forkCount=1 -Dsurefire.redirectTestOutputToFile=false -Dtrace.frontierOnly=true -Dtest=*TraceReplay -DfailIfNoTests=false -Ds1.rom.path=s1.gen -Dsonic1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen -Dsonic3k.rom.path=s3k.gen test"`
+For A/B, temporarily reversed the three-file spike latch patch via
+`git apply -R target/spike-latch-fix.patch`, reran the same full `*TraceReplay`
+command, saved `target/spike-latch-baseline-frontiers.json`, then reapplied the
+patch and reran the focused CNZ complete-run command.
+
+Fix:
+- `AbstractSpikeObjectInstance` now returns true for
+  `usesInstanceSolidStateLatchKey()`, so shared S2/S3K retracting spikes keep
+  their solid standing/pushing latch on the live object instance instead of the
+  value-equal dynamic `ObjectSpawn` position. This matches ROM SST semantics:
+  S3K `Obj_Spikes` stores per-player push/standing bits in `status(a0)` while
+  calling `SolidObjectFull` (`docs/skdisasm/sonic3k.asm:48930-49027`), and the
+  generic solid helper clears that same object's pushing bit plus player
+  `Status_Push` in `sub_1E0C2` (`sonic3k.asm:41517-41537`). The same rule was
+  already present in the S2 spike subclass; it is now hosted by the shared spike
+  base instead of S2-only code.
+- Added S3K spike unit coverage for the live-object latch key.
+
+Result:
+- Focused `TestS3kCnzCompleteRunTraceReplay` advanced from **f1139**
+  `tails_status_byte` (expected `0x0000`, actual `0x0020`) to **f1467**
+  `tails_cpu_interact` (expected `0x0003`, actual `0x0000`).
+- Full `*TraceReplay` A/B sweep with the patch applied and then temporarily
+  reversed produced the same overall expected-red shape: **90 tests, 53
+  failures, 1 error**. No unrelated first-error regression was observed. The
+  only measured frontier move was the CNZ complete-run f1139 -> f1467 advance.
+- The next target in the ordered Tails CPU cluster is the new CNZ complete-run
+  f1467 `tails_cpu_interact` divergence.
+
+## 2026-06-16 — S2 MTZ3 Obj64 live SST latch clears stale Tails push
+
+Branch `bugfix/ai-trace-frontier-develop`.
+Commands:
+`mvn -q "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestS2ObjectOccupancyOracle#mtz3TwinStomperNoContactClearsTailsPushAtRomFrame1743" "-DfailIfNoTests=false" "-Ds2.rom.path=s2.gen" test`
+`mvn -q "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false" "-Ds2.rom.path=s2.gen" test`
+`mvn -q "-Dmse=off" "-Dsurefire.argLine=-Xmx4g" "-Dsurefire.forkCount=1" "-Dsurefire.redirectTestOutputToFile=false" "-Dtrace.frontierOnly=true" "-Dtrace.context.radius=20" "-Dtest=*TraceReplay" "-DfailIfNoTests=false" "-Ds1.rom.path=s1.gen" "-Dsonic1.rom.path=s1.gen" "-Ds2.rom.path=s2.gen" "-Dsonic2.rom.path=s2.gen" "-Ds3k.rom.path=s3k.gen" "-Dsonic3k.rom.path=s3k.gen" test`
+
+Fix:
+- `MTZTwinStompersObjectInstance` now returns true from
+  `usesInstanceSolidStateLatchKey()`. S2 Obj64 stores player standing/pushing
+  bits in its live SST `status(a0)` while calling `SolidObject` after movement
+  (`docs/s2disasm/s2.asm:52669-52677`), and the generic no-contact path clears
+  the same object's pushing bit plus player `Status_Push` in
+  `SolidObject_TestClearPush` (`docs/s2disasm/s2.asm:35456-35467`). The engine
+  rebuilds Obj64's dynamic spawn as its `y_pos` moves, so the spawn-position key
+  lost the prior pushing bit before the next no-contact clear path.
+- Added a focused MTZ3 replay regression that drives the real trace to f1743
+  and asserts ROM Tails has `Status_Push` clear while the engine sidekick push
+  bit is also clear. The test failed before the fix with Tails still pushing at
+  `(0605,05F0)` and Obj64 nearby in slot 26; it passes after the latch-key fix.
+
+Result:
+- Focused `TestS2Mtz3LevelSelectTraceReplay` advanced from **f1743**
+  `tails_status_byte` (expected `0x0000`, actual `0x0020`) to **f1775**
+  `tails_cpu_interact` (expected `0x006E`, actual `0x0000`).
+- Full frontier-only `*TraceReplay` sweep remains expected-red at **90 tests,
+  53 failures, 1 error**. MTZ3 reports one frontier error at **f1775**. No
+  unrelated first-frontier regression was observed in the named replay summary;
+  S3K AIZ remains f19089, S3K CNZ complete-run remains f1846, and the current
+  S1/S2 named frontiers match the branch's prior baseline shape.
+- Next target in the ordered Tails CPU cluster is MTZ3 f1775
+  `tails_cpu_interact`, which now follows the cleared stale-`Status_Push`
+  release.

@@ -101,6 +101,22 @@ public interface ObjectInstance {
     }
 
     /**
+     * Clears the same-frame-spawn touch-skip flag at the start of a later frame.
+     * <p>
+     * ROM parity: a hazard spawned at slot M during frame N's ExecuteObjects also
+     * registers itself to {@code Collision_response_list} and runs {@code Draw_Sprite}
+     * (sets obRender bit 7) that same frame, so by frame N+1 — when the player slot
+     * reads the list — it is fully touch-eligible (1-frame latency, NOT 2). Modules
+     * that consume the previous frame's collision-response list
+     * ({@code touchResponseUsesPreviousCollisionResponseList}) skip the full
+     * frame-start touch snapshot (to preserve that list), so they must still clear
+     * this spawn-skip flag here, or a same-frame-spawned hazard would be skipped for
+     * an extra frame.
+     */
+    default void clearSpawnTouchSkip() {
+    }
+
+    /**
      * Returns true when this object's just-finished routine published itself to
      * S3K's {@code Collision_response_list}. Most touch-capable objects tail-call
      * {@code Sprite_CheckDeleteTouch*}; routines that return before that tail

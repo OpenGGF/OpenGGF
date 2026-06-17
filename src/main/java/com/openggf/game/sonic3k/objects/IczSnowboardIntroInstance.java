@@ -230,6 +230,37 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         player.clearForcedInputMask();
     }
 
+    public void primePostStartupWaitForBoardHandoff(AbstractPlayableSprite player) {
+        initialized = true;
+        state = State.WAIT_FOR_BOARD_JUMP;
+        startupTimer = 0;
+        boardFrameTimer = 0;
+        currentX = INITIAL_SNOWBOARD_X;
+        currentY = INITIAL_SNOWBOARD_Y;
+        currentMappingFrame = 8;
+        activeSlope = 0;
+        slopeIndex = 0;
+        overlayAnimationId = 1;
+        overlayAnimationTimer = 0;
+        overlayAnimationCursor = 0;
+        lastOverlayAnimationId = -1;
+        sonicSnowboardOverlayActive = false;
+        sonicSnowboardTouchedGround = false;
+        dustTimer = 0;
+        boardMotion.x = INITIAL_SNOWBOARD_X;
+        boardMotion.y = INITIAL_SNOWBOARD_Y;
+        boardMotion.xSub = 0;
+        boardMotion.ySub = 0;
+        boardMotion.xVel = 0;
+        boardMotion.yVel = 0;
+        updateDynamicSpawn(currentX, currentY);
+        if (player != null) {
+            holdPlayerControlLock(player);
+            releaseStartupObjectControl(player);
+            player.clearForcedInputMask();
+        }
+    }
+
     private void initializePlayer(AbstractPlayableSprite player) {
         initialized = true;
         applyInitialPlayerLock(player);

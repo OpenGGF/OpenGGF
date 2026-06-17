@@ -247,17 +247,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected short prePhysicsCentreX = 0;
         protected short prePhysicsCentreY = 0;
 
-        /**
-         * Snapshot of ground speed before the CPU sidekick controller mutates
-         * the sprite for the current frame. S3K's Tails CPU wall probe uses
-         * the pre-control inertia for zero-distance seam handling; the later
-         * pre-physics snapshot is already after CPU follow acceleration.
-         */
-        protected short preCpuControlGSpeed = 0;
-
-        protected boolean deferredGroundWallVelocityResponse = false;
-        protected int deferredGroundWallVelocityMode = 0;
-        protected int deferredGroundWallVelocityDistance = 0;
+        /** Per-frame ground-wall collision response (pre-control inertia snapshot for the
+         * wall probe, deferred velocity, terrain push provenance). All fields are
+         * recomputed/cleared each frame, so this holder is
+         * not persisted by the explicit rewind snapshot. */
+        @RewindTransient(reason = "ground-wall response state is recomputed from terrain collision each frame")
+        protected final GroundWallResponseState groundWallResponse = new GroundWallResponseState();
 
         /**
          * Whether this sprite is currently jumping (ROM: jumping(a0) status bit).
@@ -1929,38 +1924,20 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         /** Captures CPU-sidekick state before {@code SidekickCpuController.update}. */
-        public void capturePreCpuControlSnapshot() {
-                this.preCpuControlGSpeed = this.gSpeed;
-        }
+        public void capturePreCpuControlSnapshot() { groundWallResponse.capturePreControlGSpeed(this.gSpeed); }
 
         /** Ground speed captured before the CPU controller ran this frame. */
-        public short getPreCpuControlGSpeed() {
-                return preCpuControlGSpeed;
-        }
+        public short getPreCpuControlGSpeed() { return groundWallResponse.preControlGSpeed(); }
 
-        public void deferGroundWallVelocityResponse(int mode, int distance) {
-                this.deferredGroundWallVelocityResponse = true;
-                this.deferredGroundWallVelocityMode = mode;
-                this.deferredGroundWallVelocityDistance = distance;
-        }
+        public void deferGroundWallVelocityResponse(int mode, int distance) { groundWallResponse.defer(mode, distance); }
 
-        public boolean hasDeferredGroundWallVelocityResponse() {
-                return deferredGroundWallVelocityResponse;
-        }
+        public boolean hasDeferredGroundWallVelocityResponse() { return groundWallResponse.hasDeferred(); }
 
-        public int getDeferredGroundWallVelocityMode() {
-                return deferredGroundWallVelocityMode;
-        }
+        public int getDeferredGroundWallVelocityMode() { return groundWallResponse.mode(); }
 
-        public int getDeferredGroundWallVelocityDistance() {
-                return deferredGroundWallVelocityDistance;
-        }
+        public int getDeferredGroundWallVelocityDistance() { return groundWallResponse.distance(); }
 
-        public void clearDeferredGroundWallVelocityResponse() {
-                this.deferredGroundWallVelocityResponse = false;
-                this.deferredGroundWallVelocityMode = 0;
-                this.deferredGroundWallVelocityDistance = 0;
-        }
+        public void clearDeferredGroundWallVelocityResponse() { groundWallResponse.clearDeferred(); }
 
         public boolean isSliding() {
                 return sliding;
@@ -2163,7 +2140,16 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setPushing(boolean pushing) {
                 this.pushing = pushing;
+                if (!pushing) {
+                        groundWallResponse.clearPushState();
+                }
         }
+
+        /** Marks the live push bit as set this cycle by a terrain ground-wall collision. */
+        public void markPushFromGroundWallCollision() { groundWallResponse.markPushFromGroundWallCollision(); }
+
+        /** @return true when the live push bit came from a terrain ground-wall collision. */
+        public boolean isPushFromGroundWallCollision() { return groundWallResponse.isPushFromGroundWallCollision(); }
 
         public boolean getSkidding() {
                 return skidding;
@@ -2496,11 +2482,19 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (debugMode || invincibleFrames > 0 || isSuperSonic()) {
                         return true;
                 }
-                // The engine stores the post-display-decrement value that trace
-                // comparison sees. Touch damage consumes that ROM-visible value:
-                // a stored 1 is the expiring display sample and must not block
-                // the same frame's TouchResponse hit.
-                return !ignoreIFrames && invulnerableFrames > 1;
+                // ROM Touch_Hurt (sonic3k.asm:21044-21047, s2.asm Touch_Hurt) gates
+                // purely on a NONZERO invulnerability_timer: `tst.b
+                // invulnerability_timer(a0); bne.s Touch_ChkHurt_Return`. The timer is
+                // decremented earlier in the same object slot by *_Display
+                // (Sonic_Display sonic3k.asm:22038-22041, Tails_Display
+                // sonic3k.asm:26279-26282), which the engine mirrors via
+                // tickInvulnerabilityDisplayTimerBeforeTouchResponse() before
+                // applyTouchResponses (SpriteManager.java:1414). So invulnerableFrames at
+                // touch time already holds the post-decrement value, and any nonzero
+                // value blocks the hit -- matching the ROM `bne` exactly. This applies
+                // identically to the CPU sidekick, whose Tails_Display performs the same
+                // pre-touch decrement.
+                return !ignoreIFrames && invulnerableFrames > 0;
         }
 
         /**
@@ -3899,7 +3893,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public void setRolling(boolean rolling) {
                 if (this.rolling == rolling) {
                         if (rolling) {
-                                applyRollAnimationFromProfile();
+                                applyRollAnimationFromProfile(); setSkidding(false);
                         }
                         return;
                 }
@@ -3922,7 +3916,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
                 this.rolling = rolling;
                 if (rolling) {
-                        applyRollAnimationFromProfile();
+                        applyRollAnimationFromProfile(); setSkidding(false);
                 }
         }
 
@@ -3947,7 +3941,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public void setRollingFlagPreserveRadii(boolean rolling) {
                 this.rolling = rolling;
                 if (rolling) {
-                        applyRollAnimationFromProfile();
+                        applyRollAnimationFromProfile(); setSkidding(false);
                 }
         }
 
@@ -5040,5 +5034,3 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return -0x400;
         }
 }
-
-

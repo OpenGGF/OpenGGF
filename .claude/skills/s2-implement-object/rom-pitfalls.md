@@ -2076,6 +2076,41 @@ frame 1637 to frame 3675 after the preceding Tails live-push fix.
 
 ---
 
+## P49 — `SolidObject_cont` right edge is inclusive when the ROM reject is `bhi`
+
+**Pattern.** The standard S2 `SolidObject_cont` X bounds path computes a
+relative X value and rejects the contact only when the unsigned comparison is
+strictly higher than the doubled half-width. Objects that pass their half-width
+through this helper therefore still collide when `relX == d1*2` on the right
+edge.
+
+**Engine symptom.** A player at the exact right edge of a solid object loses
+`Status_Push`/`Status_OnObj`, while ROM keeps the side contact active. In MTZ1,
+Tails reached Obj42 SteamSpring at `x_pos=$04CB` while the spring was at
+`x_pos=$04B0` with `d1=$1B`; ROM kept the contact because `$04CB - $04B0 + $1B`
+equals `$36`, exactly `d1*2`, but the engine's default exclusive right edge
+cleared the push bit and advanced the Tails CPU state down the wrong path.
+
+**What to check.** When porting an S2 solid object:
+1. Find the exact ROM helper and branch used for the X reject. If it reaches
+   `SolidObject_cont` and rejects with `bhi`, opt the object into
+   `usesInclusiveRightEdge()`.
+2. Keep the opt-in object-local. Do not make every solid inclusive without
+   checking helpers that use different bounds or bespoke side handling.
+3. Add a unit test at `object.x + halfWidth`/`relX == d1*2` so future
+   refactors preserve the exact-edge push/contact behavior.
+
+**ROM citation.** S2 Obj42 passes `d1=$1B` before calling
+`SolidObject_Always_SingleCharacter` (`docs/s2disasm/s2.asm:52445-52451` in the
+current checkout); `SolidObject_cont` rejects only with `cmp.w d3,d0 / bhi`
+(`docs/s2disasm/s2.asm:35149-35152`).
+
+**Originating commit.** `<pending>` S2 MTZ SteamSpring inclusive right-edge
+solid contact; `TestS2MtzLevelSelectTraceReplay` advances from frame 1006
+`tails_status_byte` to frame 1169 `tails_cpu_interact`.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

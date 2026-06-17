@@ -183,6 +183,8 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
             loadSubObjectInitPending = false;
             return;
         }
+        boolean usesRomRangeUnload = type == ProjectileType.BUZZER_STINGER
+                || type == ProjectileType.AQUIS_BULLET;
         // Initial delay: projectile stays stationary (Octus bullet: 16 frames)
         if (initialDelay > 0) {
             initialDelay--;
@@ -204,13 +206,7 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
         currentX = motionState.x;
         currentY = motionState.y;
 
-        // ROM: Buzzer's Obj4B_Projectile ends with MarkObjGone_P1, and Aquis
-        // Obj50_Bullet ends with MarkObjGone (docs/s2disasm/s2.asm:60600-60603),
-        // so both stay alive until the normal object out_of_range X window
-        // removes them.
-        boolean usesRomRangeUnload = type == ProjectileType.BUZZER_STINGER
-                || type == ProjectileType.AQUIS_BULLET;
-        if (!usesRomRangeUnload && !isOnScreen(32)) {
+        if (!usesRomRangeUnload && !isOnScreen(projectileScreenMargin())) {
             setDestroyed(true);
         }
 
@@ -236,6 +232,21 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
         if (type == ProjectileType.NEBULA_BOMB) {
             paletteBlink = !paletteBlink;
         }
+    }
+
+    private int projectileScreenMargin() {
+        if (type == ProjectileType.ASTERON_SPIKE) {
+            if (xVelocity == 0 && yVelocity < 0) {
+                return 32 + Math.max(1, Math.abs(yVelocity >> 8));
+            }
+            if (xVelocity > 0) {
+                return 4;
+            }
+            if (xVelocity < 0 && yVelocity > 0) {
+                return 32 + Math.max(1, Math.abs(xVelocity >> 8));
+            }
+        }
+        return 32;
     }
 
     @Override

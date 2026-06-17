@@ -13,7 +13,10 @@ public record ObjectSlotLayout(
         boolean twoAxisCursorPlacement,
         boolean preallocatesLostRingOwnerSlot) {
     public static final ObjectSlotLayout SONIC_1 = new ObjectSlotLayout(32, 96);
-    public static final ObjectSlotLayout SONIC_2 = new ObjectSlotLayout(16, 112);
+    // S2 HurtCharacter allocates the first Obj37 owner slot before Obj37_Init
+    // fills the spill with AllocateObject from that owner (docs/s2disasm/s2.asm:
+    // 85386-85404, 25123-25155).
+    public static final ObjectSlotLayout SONIC_2 = new ObjectSlotLayout(16, 112, false, true);
     // S3K Object_RAM has Player_1, Player_2, and Reserved_object_3 before
     // Dynamic_object_RAM, but AllocateObject pre-increments from
     // Dynamic_object_RAM before testing a slot (docs/skdisasm/sonic3k.asm:37906-37918),

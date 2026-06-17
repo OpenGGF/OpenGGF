@@ -17,6 +17,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.mock;
 
@@ -31,6 +32,15 @@ class TestSonic3kMonitorObjectInstance {
     @AfterEach
     void tearDown() {
         SessionManager.clear();
+    }
+
+    @Test
+    void exposesRomPointerHighWordForS3kTailsCpuInteract() {
+        Sonic3kMonitorObjectInstance monitor = new Sonic3kMonitorObjectInstance(
+                new ObjectSpawn(0x840, 0x6E9, 0x01, 6, 0, false, 0));
+
+        assertEquals(0x0001, monitor.romObjectCodePointerHighWord(),
+                "S3K Tails_CPU_interact stores the high word of Obj_Monitor at 0x0001D566");
     }
 
     @Test

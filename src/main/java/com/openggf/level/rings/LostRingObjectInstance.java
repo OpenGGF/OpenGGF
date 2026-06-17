@@ -437,8 +437,11 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
     public void markCollected(int frameCounter) {
         collected = true;
-        sparkleStartFrame = frameCounter;
-        lastFrameCounter = frameCounter;
+        // Touch response observes Obj37 after its object update for the frame;
+        // the collected sparkle routine takes effect when that slot next runs.
+        int collectionFrame = lastFrameCounter > 0 ? lastFrameCounter + 1 : frameCounter;
+        sparkleStartFrame = collectionFrame;
+        lastFrameCounter = collectionFrame;
     }
 
     public int getSparkleStartFrame() {
@@ -521,7 +524,8 @@ public class LostRingObjectInstance extends AbstractObjectInstance
             return true;
         }
         int elapsed = Math.max(0, frameCounter - sparkleStartFrame);
-        return elapsed / ringManager.getSparkleFrameDelay() >= ringManager.getSparkleFrameCount();
+        int totalDuration = ringManager.getSparkleFrameCount() * ringManager.getSparkleFrameDelay() + 1;
+        return elapsed >= totalDuration;
     }
 
     // ── Test accessors (fixed-point, so the sub-pixel carry is exercised exactly) ──

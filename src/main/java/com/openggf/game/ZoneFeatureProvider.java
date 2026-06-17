@@ -201,6 +201,29 @@ public interface ZoneFeatureProvider {
     }
 
     /**
+     * Whether the FOREGROUND (Plane A) layer renders as a persistent $200-wide
+     * (VDP plane width, 64 cells) nametable ring for the current zone state.
+     * Default false (the FG is a single full-width tilemap by world X).
+     *
+     * <p>S3K AIZ2's post-bombing ship loop ({@code AIZ2_DoShipLoop}, s3.asm:70956)
+     * subtracts {@code $200} from {@code Camera_X_pos} each loop; because {@code $200}
+     * equals the Plane A nametable width, the forest columns drawn at the camera's
+     * leading edge ({@code 0x46Cx}) reappear at the wrapped {@code 0x44Cx} on
+     * hardware. The engine samples the flat FG layout (a canopy gap at the wrapped
+     * position), so the canopy dropped each loop. When this returns true, the FG
+     * tilemap becomes a persistent $200 ring whose leading-edge column is drawn
+     * incrementally as the camera advances (natural reveal) and whose cells are
+     * retained across the {@code -$200} wrap (seamless loop) — the engine analog
+     * of {@code DrawTilesAsYouMove} into Plane A (s3.asm:70638,70680). The player
+     * {@code x_pos} also wraps {@code $200}, so collision parity is preserved.
+     *
+     * @return true if the FG should render as a $200 persistent nametable ring
+     */
+    default boolean foregroundWrapsHorizontally() {
+        return false;
+    }
+
+    /**
      * Whether this zone should select a full-width background tilemap window
      * while still using a per-line scrolled background path.
      */

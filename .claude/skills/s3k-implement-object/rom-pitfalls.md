@@ -793,6 +793,39 @@ re-collection after adding delayed spill ordering and the `sub_24280` Y rewind).
 
 ---
 
+## P20 -- `SolidObjectFull`/`SolidObject_cont` right edge is inclusive when the ROM reject is `bhi`
+
+**Pattern.** S3K solid helpers that route through the standard
+`SolidObjectFull`/`SolidObject_cont` side bounds reject only when the relative X
+comparison is strictly higher than the doubled half-width. A contact at
+`relX == width*2` is still a ROM contact, so the engine object must opt into an
+inclusive right edge when the disassembly shows the `bhi` reject.
+
+**Engine symptom.** Player or sidekick state loses `Status_Push` at the exact
+right edge of a solid. The AIZ2 rock case had Sonic at the edge after a
+roll-stop animation clear; ROM re-set `Status_Push` through the inclusive
+side-contact path, while the engine default exclusive edge let the push bit
+stay clear until the object opted into `usesInclusiveRightEdge()`.
+
+**What to check.** When porting an S3K solid:
+1. Read the object's helper call and the helper's X reject branch. If it uses
+   the standard `bhi` reject, implement `usesInclusiveRightEdge()`.
+2. Keep the rule object-local; bespoke collision handlers and objects using a
+   different helper may have different edge semantics.
+3. Add an exact-edge test where the player's native `x_pos` satisfies
+   `relX == width*2`, and assert the player/object push state matches ROM.
+
+**ROM citation.** AIZ/LRZ/EMZ rock uses the standard solid side-contact path;
+the S&K-side helper rejects the X bound with `bhi` and then sets `Status_Push`
+in the side branch (`docs/skdisasm/sonic3k.asm:41403-41406,41494-41500`).
+The S2 Obj42 SteamSpring mirror is documented in the S2 pitfall catalogue.
+
+**Originating commit.** `<pending>` cross-game mirror of the S2 MTZ SteamSpring
+inclusive right-edge fix; prior AIZ2 rock fix advanced `TestS3kAizTraceReplay`
+from frame 14193 to frame 14299.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

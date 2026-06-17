@@ -832,6 +832,28 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         return true;
     }
 
+    public void restoreIntroObjectAfterPreludeReset() {
+        if (!shouldSpawnIntro(0)) {
+            return;
+        }
+        AizPlaneIntroInstance existing = findLiveIntroObject();
+        if (existing != null) {
+            AizPlaneIntroInstance.adoptActiveIntroInstance(existing);
+            introSpawned = true;
+            return;
+        }
+        LevelManager lm = levelManager();
+        if (lm == null || lm.getObjectManager() == null) {
+            return;
+        }
+        ObjectSpawn spawn = new ObjectSpawn(0x60, 0x30, 0, 0, 0, false, 0);
+        AizPlaneIntroInstance intro = spawnObject(() -> new AizPlaneIntroInstance(spawn));
+        introSpawned = intro != null;
+        if (introSpawned) {
+            LOG.info("AIZ1 intro: restored plane intro object for setup prelude");
+        }
+    }
+
     private boolean hasLiveIntroObject() {
         return findLiveIntroObject() != null;
     }
@@ -1779,6 +1801,20 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 && !bossFlag
                 && cameraX >= BATTLESHIP_FOREST_FRONT_START_X
                 && cameraX <= AIZ_END_BOSS_LOCK_X;
+    }
+
+    /**
+     * True while the post-bombing ship loop is repeating the forest section
+     * ({@code AIZ2_DoShipLoop} with {@code Events_bg+$02 = $46C0}, s3.asm:70569,
+     * 70956-70971). ROM state only: the auto-scroll loop is active and its wrap
+     * boundary is the post-bombing forest boundary. Drives the FG Plane A {@code $200}
+     * horizontal wrap that keeps the looped forest canopy continuous across the
+     * camera wrap (the engine analog of the ROM's {@code $200} Plane A nametable
+     * ring, since the {@code $200} wrap distance equals the nametable width).
+     */
+    public boolean isBattleshipForestLoopActive() {
+        return battleshipAutoScrollActive
+                && battleshipWrapX == BATTLESHIP_WRAP_X_POST_BOMBING;
     }
 
     /**

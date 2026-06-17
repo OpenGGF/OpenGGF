@@ -230,6 +230,13 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getOutOfRangeReferenceX() {
+        // ROM Obj6A stores the initial x_pos in objoff_32 and passes that to
+        // MarkObjGone2 after each movement/collision step.
+        return baseX;
+    }
+
+    @Override
     public SolidObjectParams getSolidParams() {
         ensureInitialized();
         // s2.asm:53797-53802 (MTZ) and 53822-53827 (MCZ):

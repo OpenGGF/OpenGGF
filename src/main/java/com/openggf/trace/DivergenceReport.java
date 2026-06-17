@@ -12,6 +12,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -86,6 +87,51 @@ public class DivergenceReport {
         return buildSummary(false);
     }
 
+    /**
+     * Short assertion-only summary for failing trace replay tests. The
+     * JSON/context report files carry checkpoint, zone, and diagnostics detail;
+     * this string stays small so full sweeps do not flood Surefire XML and
+     * console output with repeated context.
+     */
+    public String toAssertionSummary() {
+        int errorCount = totalErrorCount();
+        int warningCount = totalWarningCount();
+
+        if (errorCount == 0 && warningCount == 0) {
+            return "All frames match trace. No divergences.";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(errorCount > 0
+                ? "Trace replay diverged. "
+                : "Trace replay produced warnings. ");
+        sb.append(String.format("Totals: %d error%s, %d warning%s.",
+            errorCount, errorCount == 1 ? "" : "s",
+            warningCount, warningCount == 1 ? "" : "s"));
+
+        BootstrapDivergence firstBootstrapError =
+                firstBootstrapDivergence(BootstrapDivergence.Severity.ERROR);
+        if (firstBootstrapError != null) {
+            appendBootstrapSummary(sb, "error", firstBootstrapError, false);
+            return sb.toString();
+        }
+        if (!errors.isEmpty()) {
+            appendGroupSummary(sb, "error", errors.get(0));
+            return sb.toString();
+        }
+
+        BootstrapDivergence firstBootstrapWarning =
+                firstBootstrapDivergence(BootstrapDivergence.Severity.WARNING);
+        if (firstBootstrapWarning != null) {
+            appendBootstrapSummary(sb, "warning", firstBootstrapWarning, false);
+            return sb.toString();
+        }
+        if (!warnings.isEmpty()) {
+            appendGroupSummary(sb, "warning", warnings.get(0));
+        }
+        return sb.toString();
+    }
+
     private String buildSummary(boolean includeInlineDiagnostics) {
         int errorCount = totalErrorCount();
         int warningCount = totalWarningCount();
@@ -138,6 +184,11 @@ public class DivergenceReport {
                 && !divergence.context().isBlank()) {
             sb.append(" ").append(divergence.context());
         }
+    }
+
+    private void appendGroupSummary(StringBuilder sb, String label, DivergenceGroup group) {
+        sb.append(String.format(" First %s: frame %d -- %s mismatch (expected=%s, actual=%s)",
+            label, group.startFrame(), group.field(), group.expectedAtStart(), group.actualAtStart()));
     }
 
     /**
@@ -193,7 +244,7 @@ public class DivergenceReport {
             root.put("bootstrap_error_count", bootstrapErrorCount());
             root.put("bootstrap_warning_count", bootstrapWarningCount());
             root.put("total_frames", allComparisons.size());
-            root.put("summary", toSummary());
+            root.put("summary", toCompactSummary());
 
             int referenceFrame = summaryReferenceFrame();
             TraceEvent.Checkpoint checkpoint = latestCheckpointAtOrBefore(referenceFrame);
@@ -241,22 +292,31 @@ public class DivergenceReport {
         int centreIndex = comparisonIndexForFrame(centreFrame);
         int start = Math.max(0, centreIndex - radius);
         int end = Math.min(allComparisons.size() - 1, centreIndex + radius);
+        List<FrameComparison> rows = contextRows(start, end, centreFrame);
 
         StringBuilder sb = new StringBuilder();
-        appendBootstrapSection(sb);
+        if (shouldRenderBootstrapSection()) {
+            appendBootstrapSection(sb);
+        }
         appendTraceContextWindow(sb, centreFrame);
         sb.append("=== Per-frame ===\n");
         sb.append(String.format("%-6s", "Frame"));
 
         Set<String> fieldNames = new LinkedHashSet<>();
-        boolean hasDiagnostics = false;
-        for (int i = start; i <= end; i++) {
-            if (i < allComparisons.size()) {
-                FrameComparison fc = allComparisons.get(i);
+        boolean allFields = shouldRenderAllContextFields();
+        for (FrameComparison fc : rows) {
+            if (allFields) {
                 fieldNames.addAll(fc.fields().keySet());
-                if (!fc.romDiagnostics().isEmpty() || !fc.engineDiagnostics().isEmpty()) {
-                    hasDiagnostics = true;
-                }
+            } else {
+                fc.fields().entrySet().stream()
+                        .filter(entry -> entry.getValue().isContextRelevant())
+                        .map(Map.Entry::getKey)
+                        .forEach(fieldNames::add);
+            }
+        }
+        if (fieldNames.isEmpty()) {
+            for (FrameComparison fc : rows) {
+                fieldNames.addAll(fc.fields().keySet());
             }
         }
 
@@ -265,33 +325,113 @@ public class DivergenceReport {
         }
         sb.append("\n");
 
-        for (int i = start; i <= end; i++) {
-            if (i >= allComparisons.size()) {
-                break;
-            }
-            FrameComparison fc = allComparisons.get(i);
+        for (FrameComparison fc : rows) {
             sb.append(String.format("%-6d", fc.frame()));
             for (String field : fieldNames) {
                 FieldComparison comp = fc.fields().get(field);
                 if (comp != null) {
-                    String marker = comp.severity() == Severity.ERROR ? "*" : " ";
+                    String marker = comp.severity() == Severity.ERROR
+                            ? "*"
+                            : comp.observedMismatch() ? "~" : " ";
                     sb.append(String.format(" | %-8s |%s%-7s",
                         comp.expected(), marker, comp.actual()));
                 } else {
                     sb.append(String.format(" | %-8s | %-8s", "?", "?"));
                 }
             }
-            if (hasDiagnostics && fc.hasDivergence()) {
+            if (shouldRenderFrameDiagnostics(fc, centreFrame)) {
                 String romDiag = fc.romDiagnostics();
                 String engDiag = fc.engineDiagnostics();
                 if (!romDiag.isEmpty() || !engDiag.isEmpty()) {
-                    sb.append("\n       ROM: ").append(romDiag.isEmpty() ? "-" : romDiag);
-                    sb.append("\n       ENG: ").append(engDiag.isEmpty() ? "-" : engDiag);
+                    sb.append("\n       ROM: ").append(formatContextDiagnostics(romDiag));
+                    sb.append("\n       ENG: ").append(formatContextDiagnostics(engDiag));
                 }
             }
             sb.append("\n");
         }
         return sb.toString();
+    }
+
+    private List<FrameComparison> contextRows(int start, int end, int centreFrame) {
+        List<FrameComparison> radiusRows = new ArrayList<>();
+        for (int i = start; i <= end && i < allComparisons.size(); i++) {
+            radiusRows.add(allComparisons.get(i));
+        }
+        if (shouldRenderAllContextRows()) {
+            return radiusRows;
+        }
+        List<FrameComparison> relevantRows = radiusRows.stream()
+                .filter(fc -> fc.frame() == centreFrame || hasContextRelevantField(fc))
+                .toList();
+        return relevantRows.isEmpty() ? radiusRows : relevantRows;
+    }
+
+    private boolean hasContextRelevantField(FrameComparison comparison) {
+        return comparison.fields().values().stream()
+                .anyMatch(FieldComparison::isContextRelevant);
+    }
+
+    private boolean shouldRenderAllContextRows() {
+        String mode = System.getProperty("trace.context.rows", "relevant")
+                .trim()
+                .toLowerCase(Locale.ROOT);
+        return switch (mode) {
+            case "all", "full", "radius", "window" -> true;
+            default -> false;
+        };
+    }
+
+    private boolean shouldRenderFrameDiagnostics(FrameComparison comparison, int centreFrame) {
+        if (!comparison.hasDivergence()) {
+            return false;
+        }
+        String mode = System.getProperty("trace.context.diagnostics", "frontier")
+                .trim()
+                .toLowerCase(Locale.ROOT);
+        return switch (mode) {
+            case "all", "full", "verbose" -> true;
+            case "none", "off", "false" -> false;
+            default -> comparison.frame() == centreFrame;
+        };
+    }
+
+    private boolean shouldRenderAllContextFields() {
+        String mode = System.getProperty("trace.context.fields", "divergent")
+                .trim()
+                .toLowerCase(Locale.ROOT);
+        return switch (mode) {
+            case "all", "full", "compared" -> true;
+            default -> false;
+        };
+    }
+
+    private String formatContextDiagnostics(String diagnostics) {
+        if (diagnostics == null || diagnostics.isEmpty()) {
+            return "-";
+        }
+        int maxChars = contextDiagnosticMaxChars();
+        if (maxChars < 0 || diagnostics.length() <= maxChars) {
+            return diagnostics;
+        }
+        int visibleChars = Math.max(0, maxChars);
+        return diagnostics.substring(0, visibleChars)
+                + "... [truncated "
+                + (diagnostics.length() - visibleChars)
+                + " chars; set -Dtrace.context.diagnosticChars=full]";
+    }
+
+    private int contextDiagnosticMaxChars() {
+        String value = System.getProperty("trace.context.diagnosticChars", "900")
+                .trim()
+                .toLowerCase(Locale.ROOT);
+        if (value.equals("full") || value.equals("all") || value.equals("unlimited")) {
+            return -1;
+        }
+        try {
+            return Math.max(0, Integer.parseInt(value));
+        } catch (NumberFormatException e) {
+            return 900;
+        }
     }
 
     private int comparisonIndexForFrame(int frame) {
@@ -542,6 +682,19 @@ public class DivergenceReport {
         return null;
     }
 
+    private boolean shouldRenderBootstrapSection() {
+        if (!bootstrapDivergences.isEmpty()) {
+            return true;
+        }
+        String mode = System.getProperty("trace.context.bootstrap", "divergent")
+                .trim()
+                .toLowerCase(Locale.ROOT);
+        return switch (mode) {
+            case "all", "always", "full", "true" -> true;
+            default -> false;
+        };
+    }
+
     private static List<DivergenceGroup> buildGroups(List<FrameComparison> comparisons) {
         List<DivergenceGroup> groups = new ArrayList<>();
         Map<String, DivergenceGroupBuilder> openGroups = new LinkedHashMap<>();
@@ -585,9 +738,34 @@ public class DivergenceReport {
             groups.add(builder.build());
         }
 
-        groups.sort(Comparator.comparingInt(DivergenceGroup::startFrame));
+        groups.sort(Comparator
+            .comparingInt(DivergenceGroup::startFrame)
+            .thenComparingInt(g -> fieldSummaryPriority(g.field())));
         markCascading(groups);
         return groups;
+    }
+
+    private static int fieldSummaryPriority(String field) {
+        if (field == null) {
+            return 50;
+        }
+        if (field.equals("x") || field.equals("y")
+                || field.endsWith("_x") || field.endsWith("_y")
+                || field.equals("x_sub") || field.equals("y_sub")
+                || field.endsWith("_x_sub") || field.endsWith("_y_sub")
+                || field.equals("x_speed") || field.equals("y_speed")
+                || field.equals("g_speed")
+                || field.endsWith("_x_speed") || field.endsWith("_y_speed")
+                || field.endsWith("_g_speed")) {
+            return 0;
+        }
+        if (field.equals("routine") || field.endsWith("_routine")) {
+            return 10;
+        }
+        if (field.equals("status_byte") || field.endsWith("_status_byte")) {
+            return 40;
+        }
+        return 20;
     }
 
     private static void markCascading(List<DivergenceGroup> groups) {

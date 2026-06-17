@@ -13,6 +13,13 @@ public class PlayableSpriteAnimation {
     private static final int DEFAULT_RUN_SPEED_THRESHOLD = 0x600;
     private final AbstractPlayableSprite sprite;
     private int lastAnimationId = -1;
+    // ROM prev_anim equivalent for the Status_Push frame-end clear: the grounded
+    // movement-selected anim byte (WAIT/WALK/BALANCE/...), tracked separately from
+    // lastAnimationId because lastAnimationId also carries the engine's push render
+    // animation substitution, which the ROM anim byte does not. See
+    // ScriptedVelocityAnimationProfile.resolveGroundMovementAnimId.
+    private int lastGroundMovementAnimId = -1;
+    private int groundMovementAnimSpeedSnapshot = Integer.MIN_VALUE;
 
     /**
      * Resets the tracked animation ID so the next update sees a mismatch
@@ -40,18 +47,36 @@ public class PlayableSpriteAnimation {
      * forward+rewind cycles (surfaced by TestRewindTorture).
      */
     public RewindState captureRewindState() {
-        return new RewindState(lastAnimationId);
+        return new RewindState(lastAnimationId, lastGroundMovementAnimId);
     }
 
     public void restoreRewindState(RewindState state) {
         if (state == null) {
             lastAnimationId = -1;
+            lastGroundMovementAnimId = -1;
             return;
         }
         lastAnimationId = state.lastAnimationId();
+        lastGroundMovementAnimId = state.lastGroundMovementAnimId();
     }
 
-    public record RewindState(int lastAnimationId) {}
+    public record RewindState(int lastAnimationId, int lastGroundMovementAnimId) {}
+
+    public void captureGroundMovementAnimSpeed(short speed) {
+        groundMovementAnimSpeedSnapshot = speed;
+    }
+
+    public void clearGroundMovementAnimSpeed() {
+        groundMovementAnimSpeedSnapshot = Integer.MIN_VALUE;
+    }
+
+    public boolean hasGroundMovementAnimSpeed() {
+        return groundMovementAnimSpeedSnapshot != Integer.MIN_VALUE;
+    }
+
+    public short getGroundMovementAnimSpeed() {
+        return hasGroundMovementAnimSpeed() ? (short) groundMovementAnimSpeedSnapshot : sprite.getGSpeed();
+    }
 
     public void update(int frameCounter) {
         if (sprite == null) {
@@ -461,8 +486,29 @@ public class PlayableSpriteAnimation {
     }
 
     private void clearPushForAnimationChange(ScriptedVelocityAnimationProfile profile,
-                                             int frameCounter,
-                                             int scriptCount) {
+                                             int frameCounter, int scriptCount) {
+        // ROM Animate_Sonic/Animate_Tails clear Status_Push whenever the anim byte
+        // differs from prev_anim, then store anim into prev_anim
+        // (s2.asm:38033-38038,40879-40884; sonic3k.asm:29359-29364,29681-29686).
+        // The byte that drives this is the real ROM anim byte the movement/state
+        // code writes (roll/air/walk/wait/balance/...), NOT the engine's push
+        // render substitution: ROM shows the push frames inside the walk script's
+        // special handler while the anim byte stays at the movement value
+        // (Animate_Sonic loc_12A72, sonic3k.asm:24832). Resolve the anim id with
+        // the push render substitution disabled and compare against the previous
+        // frame's. Track every grounded scripted frame so prev_anim stays current
+        // even when no push is set (push-clear is then a no-op, as in ROM).
+        // S1 leaves the clear behind FixBugs.
+        Integer resolved = profile.resolveAnimationId(sprite, frameCounter, scriptCount, false);
+        if (resolved == null) {
+            // Object-controlled / move-locked: ROM movement routine does not run,
+            // so prev_anim is not updated here. Leave the tracker untouched.
+            return;
+        }
+        int animByteId = groundMoveAnimByte(profile, resolved.intValue());
+        int prevAnimByteId = lastGroundMovementAnimId;
+        lastGroundMovementAnimId = animByteId;
+
         if (!sprite.getPushing()) {
             return;
         }
@@ -470,26 +516,37 @@ public class PlayableSpriteAnimation {
                 || !sprite.getPhysicsFeatureSet().animationChangeClearsPush()) {
             return;
         }
-
-        int currentAnimId = sprite.getAnimationId();
-        Integer desiredWithoutPush;
-        sprite.setPushing(false);
-        try {
-            desiredWithoutPush = profile.resolveAnimationId(sprite, frameCounter, scriptCount);
-        } finally {
-            sprite.setPushing(true);
-        }
-        if (desiredWithoutPush == null
-                || desiredWithoutPush == currentAnimId
-                || currentAnimId == profile.getPushAnimId()) {
+        if (prevAnimByteId < 0 || animByteId == prevAnimByteId) {
             return;
         }
 
-        // S2/S3K animation drivers clear Status_Push whenever anim differs
-        // from prev_anim, with no air/roll guard (s2.asm:38033-38038,
-        // 40879-40884; sonic3k.asm:29359-29364,29681-29686). S1 leaves this
-        // behind FixBugs.
         sprite.setPushing(false);
+    }
+
+    /**
+     * Collapses the engine's distinct Run animation id onto the Walk id for the
+     * purpose of the ROM {@code anim != prev_anim} push-clear comparison.
+     *
+     * <p>In both S2 and S3K the ground directional-movement routines write the
+     * Walk animation id into the {@code anim} byte regardless of speed — S2
+     * {@code Sonic_MoveRight}/{@code Sonic_MoveLeft} (s2.asm:36956,36891
+     * {@code move.b #AniIDSonAni_Walk,anim(a0)}), S3K {@code sub_14CAC}/
+     * {@code sub_14C20} and {@code SonicKnux_Move} (sonic3k.asm:28122,28056,
+     * 22811,22877 {@code move.b #0,anim(a0)}). The Run frames are a render-time
+     * selection inside that same {@code AniXXX00} script (S2 SonAni_Walk vs
+     * SonAni_Run pointers are dispatched by speed in the animation routine; S3K
+     * {@code Animate_Sonic}/{@code Animate_Tails} loc_15A14 selects Run frames
+     * by {@code ground_vel} within the Walk script). The engine instead models
+     * Run as its own animation id, so a Run->Walk transition that ROM never
+     * records as an {@code anim}-byte change would otherwise trip
+     * {@code Animate}'s {@code anim != prev_anim} push-clear. Treating Run as the
+     * Walk byte here matches the ROM comparison: a CPU sidekick decelerating
+     * from a run into a wall keeps Status_Push across the speed step
+     * (sonic3k.asm:29360-29364,28122 — {@code anim} stays Walk so push is not
+     * cleared).
+     */
+    private static int groundMoveAnimByte(ScriptedVelocityAnimationProfile profile, int animId) {
+        return animId == profile.getRunAnimId() ? profile.getWalkAnimId() : animId;
     }
 
 }

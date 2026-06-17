@@ -286,6 +286,19 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether a side classification should return no contact before applying
+     * side correction or speed zeroing.
+     * <p>
+     * This is for ROM objects whose own per-slot standing bit can route a
+     * player through a stale-rider branch before {@code SolidObject_cont}.
+     * Use only with an object-level disassembly citation; ordinary full solids
+     * should keep the shared side-contact behavior.
+     */
+    default boolean sideContactReturnsNoContact(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Whether a grounded lower-half edge escape from the squash path should
      * set the player/object push bits even when the player is not moving into
      * the object.
@@ -310,6 +323,33 @@ public interface SolidObjectProvider {
      */
     default boolean usesInstanceSolidStateLatchKey() {
         return false;
+    }
+
+    /**
+     * Whether CPU sidekick follow steering should treat this still-ridden object
+     * as preserving the previous frame's push bit until the ROM CPU slot reads
+     * it.
+     * <p>
+     * This is intentionally object-local. Most objects should not bridge a
+     * cleared {@code Status_Push}: their current helper phase already matches
+     * what the CPU sees. Plain SolidObject/SolidObjectFull callers that keep
+     * standing/pushing bits in the live object status byte can opt in when trace
+     * evidence shows the engine has reconciled support before TailsCPU_Normal
+     * reads {@code Status_Push} (S2 loc_24836, docs/s2disasm/s2.asm:39291-39294).
+     */
+    default boolean preservesSidekickCpuPushGraceWhileRiding(PlayableEntity player) {
+        return false;
+    }
+
+    /**
+     * Minimum remaining push-grace frames for the CPU sidekick riding bridge.
+     * <p>
+     * The default keeps the conservative shared threshold. Objects with ROM
+     * evidence that their {@code SolidObject} status byte stays visible longer
+     * to Tails' CPU slot may lower this value locally.
+     */
+    default int sidekickCpuPushGraceMinimumFramesWhileRiding(PlayableEntity player) {
+        return Integer.MAX_VALUE;
     }
 
     /**

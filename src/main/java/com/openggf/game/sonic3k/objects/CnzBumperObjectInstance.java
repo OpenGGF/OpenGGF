@@ -81,10 +81,10 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        updateOrbit(frameCounter);
         processPendingTouches(frameCounter);
         touchX = currentX;
         touchY = currentY;
-        updateOrbit(frameCounter);
         updateAnimation();
     }
 
@@ -179,9 +179,10 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
         ObjectServices svc = tryServices();
         LevelManager levelManager = svc != null ? svc.levelManager() : null;
         if (levelManager != null) {
-            // Obj_Bumper reads the low byte at Level_frame_counter+1 during its
-            // object routine.
-            return levelManager.getFrameCounter() + 1;
+            // The object pass runs with LevelManager.frameCounter + 1. Obj_Bumper
+            // then reads the low byte at Level_frame_counter+1 during its object
+            // routine.
+            return levelManager.getFrameCounter() + 2;
         }
         return objectFrameCounter + 1;
     }

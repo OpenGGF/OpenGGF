@@ -201,15 +201,21 @@ Various agents (Claude, Codex, and Gemini, in various models, versions and forms
 the commit history doesn't hide it; you'll see `Co-Authored-By` tags throughout. But the project
 has been in development since 2013, long before AI coding assistants existed.
 
-The core engine framework, architecture, rendering pipeline, physics engine, and collision system
-were designed and coded by hand. The multi-game provider architecture, the GPU shader pipeline, the
-SMPS audio driver, and the original physics rewrite are all human-authored. AI was brought in
-for bulk analysis and research, to accelerate bulk object and boss implementation, debugging, validation, and
-unit tests; all under direct architectural oversight, with accuracy verified against the original
-ROM disassemblies. Every commit is reviewed, tested, and corrected where needed.
+The pre-AI core — the engine framework and architecture, the rendering pipeline, the physics
+engine and its subpixel movement model, and the sensor-based collision system — was designed and
+coded by hand over years, long before any agent touched the repo. Other subsystems were built
+with heavy AI assistance under direct human oversight; the SMPS audio engine, in particular, was
+AI-built and steered against reference implementations rather than hand-written. AI was brought in for bulk analysis and research, to accelerate
+object and boss implementation, debugging, validation, and unit tests; all with accuracy verified
+against the original ROM disassemblies. Every commit is reviewed, tested, and corrected where
+needed.
 
-You can't prompt your way to ROM accuracy (yet!). But we certainly prompted our way through object
+[You can't prompt your way to ROM accuracy (yet!)](docs/AI_JOURNEY.md). But we certainly prompted our way through object
 implementations, research and boilerplate code a lot faster than would have been possible by hand.
+
+For the visual version of that story, the [Development Timeline](docs/DEVELOPMENT_TIMELINE.md) is a
+captioned gallery of real dev builds — bugs and all — from a 2015 white-box prototype through to
+the present, including the audio engine slowly un-mangling itself.
 
 ### How can I contribute?
 
@@ -225,6 +231,49 @@ straightforward to add new objects, zones, and game-specific behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Trace frontier reporting/noise reduction + AIZ2 visual capture fixes (2026-06-17).** Merged
+  `bugfix/ai-trace-frontier-develop`, making trace replay reports focus on the
+  true release-blocking frontier, compacting noisy diagnostic context, advancing
+  several S2/S3K route frontiers, and carrying the AIZ worker's trace-faithful
+  `TraceCaptureTool` frame driver. The same branch adds the AIZ2 battleship
+  section clip mode and fixes the display-only forest-canopy Plane-A wrap so
+  the post-bombing loop reveals and wraps like the ROM while leaving the AIZ
+  gameplay frontier at f19089.
+- **Timeline-clip tooling for contributors (2026-06-16).** Merged
+  `feature/timeline-clip-tooling`, adding `docs/assets/timeline/make_clip.py`
+  (a one-shot ffmpeg encoder that produces house-style GIFs/MP3s — 320px,
+  8 fps, midpoint-centred, 64-colour palette) and `docs/assets/timeline/README.md`
+  documenting the settings and how to add a Development Timeline clip, so
+  contributed clips stay visually consistent. Docs/tooling only.
+- **Dev-clip date correction + README timeline link (2026-06-16).** Merged
+  `feature/ai-journey-clip-date-fix`: the oldest dev clip (white box under
+  terrain) is a v0.05 build from 2015-04-09 captured in 2024, not an Oct 2024
+  build — corrected in `docs/AI_JOURNEY.md` and `docs/DEVELOPMENT_TIMELINE.md`.
+  Also links the Development Timeline from the README's AI section. Docs-only.
+- **Development-timeline 2024 prologue (2026-06-16).** Merged
+  `feature/ai-journey-timeline-prologue`, adding the two oldest dev clips (the
+  white-box-under-terrain physics rewrite and the first Emerald Hill tiles
+  decompressed from the ROM, Oct 2024) as a chronological prologue to
+  `docs/DEVELOPMENT_TIMELINE.md`, so it matches the hall of shame in
+  `docs/AI_JOURNEY.md`. Reuses existing `assets/ai-journey/` media; docs-only.
+- **AI journey journal expansion + development-timeline gallery (2026-06-16).** Merged
+  `feature/ai-journey-expansion`, substantially expanding `docs/AI_JOURNEY.md` against
+  the commit log and the project's two-person chat history: corrects the AI-use timeline
+  (first real AI work was ChatGPT + Kosinski in Sept 2024, agentic Codex in June 2025,
+  Jules-scaffolded/human-tuned audio in Nov 2025), reframes audio as the oracle-less
+  exception, and adds a curated hall of shame. Adds `docs/DEVELOPMENT_TIMELINE.md`, a
+  captioned GIF/audio gallery of ~40 dev builds (Dec 2025 → Apr 2026), with media under
+  `docs/assets/`. Docs-only; no engine change.
+- **S3K AIZ trace frontier to f19089 + AI journey journal (2026-06-16).** Merged
+  `bugfix/ai-trace-frontier-develop`, advancing the S3K AIZ trace past the AIZ2
+  battleship bombing run and wrap into the end-boss arena approach (frame ~19089)
+  via ROM-cited fixes: same-frame-spawned hazard touch latency (1-frame), the
+  `Status_Push` frame-end clear keyed on the real ROM anim byte (S2/S3K), and
+  CPU-sidekick off-screen respawn-facing / auto-jump / wall-push state (S3K),
+  plus S2 MTZ/HTZ/ARZ object-slot frontier advances and a `GroundWallResponseState`
+  extraction. Also adds `docs/AI_JOURNEY.md` — a commit-log-verified history of
+  the project's AI use — and corrects the README's AI-authorship section (the
+  SMPS audio engine was AI-built, not hand-authored).
 - **Runtime display shader library branch (2026-06-15).** Merged
   `feature/ai-display-shader-library-spec-no-trace`, adding a user-supplied
   root `shaders/` library, runtime shader cycling, a searchable/folder-based

@@ -1,11 +1,20 @@
 package com.openggf.tests;
 
 import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.PlayableEntity;
+import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Field;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -91,6 +100,108 @@ class TestSidekickCpuControllerLevelStart {
         assertEquals(AbstractPlayableSprite.INPUT_RIGHT, controller.getDiagnosticGeneratedHeldInput());
         assertEquals(AbstractPlayableSprite.INPUT_RIGHT, controller.getDiagnosticGeneratedPressedInput(),
                 "ROM TailsCPU_Normal_FollowRight writes RIGHT into both Ctrl_2 logical bytes");
+    }
+
+    @Test
+    void s2GroundedRidingPushGraceBypassesFollowSteering() {
+        TestablePlayableSprite leader = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        leader.setCentreX((short) 0x0C70);
+        leader.setCentreY((short) 0x0571);
+        seedLeaderHistory(leader, AbstractPlayableSprite.INPUT_RIGHT, false);
+
+        TestableTailsSprite tails = new TestableTailsSprite("tails_p2", (short) 0, (short) 0);
+        tails.setCentreX((short) 0x0CE3);
+        tails.setCentreY((short) 0x0574);
+        tails.setCpuControlled(true);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setAir(false);
+        tails.setOnObject(true);
+        tails.setRolling(false);
+        tails.setPushing(true);
+        tails.setGSpeed((short) 0x000C);
+        tails.setLatchedSolidObject(0x36, new DummyRidingObject());
+
+        SidekickCpuController controller = new SidekickCpuController(tails, leader);
+        controller.setInitialState(SidekickCpuController.State.NORMAL);
+        controller.update(1774);
+
+        tails.setPushing(false);
+        tails.setOnObject(true);
+        tails.setLatchedSolidObject(0x36, new DummyRidingObject());
+        controller.update(1775);
+
+        assertFalse(controller.getInputLeft(),
+                "S2 TailsCPU_Normal should not synthesize LEFT while the ROM-visible prior-frame "
+                        + "Status_Push bypass is represented by grounded riding-object grace");
+        assertTrue(controller.getInputRight(),
+                "The bypass should preserve the delayed Ctrl_1 RIGHT sample that Tails_InputAcceleration_Path consumes");
+        assertEquals("riding_push_grace", controller.getLatestNormalStepDiagnostics().followBranch(),
+                "Diagnostic branch should identify the live-riding-object push bridge");
+    }
+
+    @Test
+    void s2AgedObj36RidingPushGraceStillPreservesDelayedRightAtOozFrontier() throws Exception {
+        TestablePlayableSprite leader = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        leader.setCentreX((short) 0x0C78);
+        leader.setCentreY((short) 0x0574);
+        seedLeaderHistory(leader, AbstractPlayableSprite.INPUT_RIGHT, false);
+
+        TestableTailsSprite tails = new TestableTailsSprite("tails_p2", (short) 0, (short) 0);
+        tails.setCentreX((short) 0x0CE3);
+        tails.setCentreY((short) 0x0574);
+        tails.setCpuControlled(true);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setAir(false);
+        tails.setOnObject(true);
+        tails.setRolling(false);
+        tails.setPushing(false);
+        tails.setGSpeed((short) 0xFF80);
+        tails.setXSpeed((short) 0xFF80);
+        tails.setLatchedSolidObject(0x36, new DummyRidingObject());
+
+        SidekickCpuController controller = new SidekickCpuController(tails, leader);
+        controller.setInitialState(SidekickCpuController.State.NORMAL);
+        setNormalPushingGraceFrames(controller, 11);
+        controller.update(1779);
+
+        assertEquals("riding_push_grace", controller.getLatestNormalStepDiagnostics().followBranch(),
+                "S2 Obj36 keeps its SolidObject push state visible to TailsCPU_Normal long enough "
+                        + "for the OOZ f1779 push-bypass branch.");
+        assertFalse(controller.getInputLeft(),
+                "FollowLeft must not replace the delayed Ctrl_1 sample while Obj36 preserves the push bridge");
+        assertTrue(controller.getInputRight(),
+                "The bypass preserves delayed RIGHT, allowing Tails_TurnRight to flip inertia to +$80");
+    }
+
+    @Test
+    void s2AgedObj36RidingPushGraceFallsThroughWhileStillMovingRightBeforeOozFlip() throws Exception {
+        TestablePlayableSprite leader = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        leader.setCentreX((short) 0x0C78);
+        leader.setCentreY((short) 0x0574);
+        seedLeaderHistory(leader, AbstractPlayableSprite.INPUT_RIGHT, false);
+
+        TestableTailsSprite tails = new TestableTailsSprite("tails_p2", (short) 0, (short) 0);
+        tails.setCentreX((short) 0x0CE4);
+        tails.setCentreY((short) 0x0574);
+        tails.setCpuControlled(true);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+        tails.setAir(false);
+        tails.setOnObject(true);
+        tails.setRolling(false);
+        tails.setPushing(false);
+        tails.setGSpeed((short) 0x0030);
+        tails.setXSpeed((short) 0x0030);
+        tails.setLatchedSolidObject(0x36, new DummyRidingObject());
+
+        SidekickCpuController controller = new SidekickCpuController(tails, leader);
+        controller.setInitialState(SidekickCpuController.State.NORMAL);
+        setNormalPushingGraceFrames(controller, 12);
+        controller.update(1778);
+
+        assertEquals("follow_steering", controller.getLatestNormalStepDiagnostics().followBranch(),
+                "OOZ f1778 still falls through FollowLeft before the Obj36 side response flips Tails to -$80.");
+        assertTrue(controller.getInputLeft());
+        assertFalse(controller.getInputRight());
     }
 
     @Test
@@ -233,5 +344,53 @@ class TestSidekickCpuControllerLevelStart {
                 (heldMask & AbstractPlayableSprite.INPUT_JUMP) != 0,
                 jumpPress);
         leader.endOfTick();
+    }
+
+    private static void setNormalPushingGraceFrames(SidekickCpuController controller, int frames) throws Exception {
+        Field field = SidekickCpuController.class.getDeclaredField("normalPushingGraceFrames");
+        field.setAccessible(true);
+        field.setInt(controller, frames);
+    }
+
+    private static final class DummyRidingObject implements ObjectInstance, SolidObjectProvider {
+        private final ObjectSpawn spawn = new ObjectSpawn(0x0CF0, 0x0594, 0x36, 0, 0, false, 0x0594);
+
+        @Override
+        public ObjectSpawn getSpawn() {
+            return spawn;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+        }
+
+        @Override
+        public boolean isHighPriority() {
+            return false;
+        }
+
+        @Override
+        public boolean isDestroyed() {
+            return false;
+        }
+
+        @Override
+        public SolidObjectParams getSolidParams() {
+            return new SolidObjectParams(0x1B, 0x10, 0x11);
+        }
+
+        @Override
+        public boolean preservesSidekickCpuPushGraceWhileRiding(PlayableEntity player) {
+            return true;
+        }
+
+        @Override
+        public int sidekickCpuPushGraceMinimumFramesWhileRiding(PlayableEntity player) {
+            return player != null && player.getGSpeed() < 0 ? 11 : 14;
+        }
     }
 }

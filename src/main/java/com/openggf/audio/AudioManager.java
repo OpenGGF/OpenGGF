@@ -1116,6 +1116,19 @@ public class AudioManager {
      *   <li>Ending sequence - final boss defeated, going to credits (s2.asm:82064, 82525)</li>
      * </ul>
      */
+    /**
+     * Monotonic count of music fade-out requests actually issued (excludes
+     * rewind-replay-suppressed calls). Lets out-of-engine observers — e.g. the
+     * trace video-capture tool — detect a music fade such as the AIZ2 end-boss
+     * fade in {@code AizEndBossInstance} without inspecting object state.
+     */
+    private long fadeOutMusicCount;
+
+    /** @return the monotonic {@link #fadeOutMusic(int, int)} request count. */
+    public long musicFadeOutCount() {
+        return fadeOutMusicCount;
+    }
+
     public void fadeOutMusic() {
         // ROM default: 0x28 (40) steps, delay of 3 frames between steps
         fadeOutMusic(0x28, 3);
@@ -1133,6 +1146,7 @@ public class AudioManager {
         if (suppressingRewindReplay()) {
             return;
         }
+        fadeOutMusicCount++;
         recordTimelineCommand(new AudioCommand.FadeOutMusic(steps, delay));
         if (sendLiveBackendCommands()) {
             backend.fadeOutMusic(steps, delay);
