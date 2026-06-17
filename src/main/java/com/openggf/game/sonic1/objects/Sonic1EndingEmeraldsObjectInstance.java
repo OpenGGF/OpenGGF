@@ -58,7 +58,10 @@ public class Sonic1EndingEmeraldsObjectInstance extends AbstractObjectInstance {
     // ========================================================================
 
     private PatternSpriteRenderer renderer;
-    private final int frameId;
+    // Un-final so GenericFieldCapturer reapplies the per-emerald color frame (1-6)
+    // after a rewind recreate; spawn subtype/objectId are identical across all six,
+    // so frameId is not spawn-derivable. See rewind batch-5 fix.
+    private int frameId;
 
     private int origX;
     private int origY;

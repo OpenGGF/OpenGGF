@@ -4,6 +4,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S1 (batch 5): more held-rewind objects restored.** The ending-sequence Sonic and its orbiting chaos emeralds, the MZ glass-block reflection shine, and the end-of-act results screen now have rewind recreate codecs (recreated on a backward seek instead of dropped). The TRY-AGAIN end-screen emerald display stays uncaptured (gameplay-scoped rewind never sees it; see docs/KNOWN_DISCREPANCIES.md).
+
 - **S2 (batch 5): more held-rewind objects restored.** The CPZ-boss dripper and pipe segment, the HTZ Rexon lava-snake head, the Egg-prison capsule button and its destroyed open-capsule body, the ARZ falling-leaf particle, and the act-results screen now have rewind recreate codecs (recreated on a backward seek instead of dropped).
 
 - **S3K: HCZ conveyor belt, MHZ pulley lift / swing vine, MGZ head-trigger and badnik projectiles, ICZ big snow pile, end-of-act signpost (+ stub), air-countdown bubbles, and StarPost stars now rewind cleanly (recreate codecs).**

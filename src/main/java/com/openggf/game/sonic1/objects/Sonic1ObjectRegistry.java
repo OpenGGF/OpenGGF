@@ -99,6 +99,17 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
                     Sonic1EggPrisonObjectInstance.class,
                     spawn -> new Sonic1EggPrisonObjectInstance(spawn)),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    Sonic1EndingEmeraldsObjectInstance.class,
+                    spawn -> new Sonic1EndingEmeraldsObjectInstance(
+                            spawn.x(), spawn.y(), 0, 0)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    Sonic1EndingSonicObjectInstance.class,
+                    spawn -> new Sonic1EndingSonicObjectInstance(spawn.x(), spawn.y())),
+            glassReflectionCodec(),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    Sonic1ResultsScreenObjectInstance.class,
+                    spawn -> new Sonic1ResultsScreenObjectInstance(0, 0, 0)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
                     Sonic1ExplosionItemObjectInstance.class,
                     spawn -> new Sonic1ExplosionItemObjectInstance(spawn.x(), spawn.y(), null, 0)),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
@@ -186,6 +197,65 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
                 if (dist < bestDist) {
                     bestDist = dist;
                     best = bomb;
+                }
+            }
+        }
+        return best;
+    }
+
+    private static DynamicObjectRewindCodec glassReflectionCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == Sonic1GlassReflectionInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return Sonic1GlassReflectionInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                ObjectSpawn spawn = entry.spawn();
+                // Parent glass block is a layout (active) object recreated earlier
+                // in the restore loop, so it is live in getActiveObjects(). Match by
+                // nearest spawn position (multiple glass blocks may exist).
+                Sonic1GlassBlockObjectInstance parent =
+                        findLiveGlassBlockParentForRewind(context, spawn.x(), spawn.y());
+                if (parent == null) {
+                    return null;
+                }
+                // reflectSubtype / isTall are derived from the parent's spawn (the
+                // child receives the SAME spawn as its parent), so recompute them
+                // rather than un-finaling. Matches Sonic1GlassBlockObjectInstance:
+                //   fullSubtype = spawn.subtype() & 0xFF
+                //   isTall      = subtype < 3
+                //   reflectSubtype = (fullSubtype + 8) & 0x0F   (addq.b #8 / andi.b #$F)
+                int fullSubtype = spawn.subtype() & 0xFF;
+                int reflectSubtype = (fullSubtype + 8) & 0x0F;
+                boolean isTall = fullSubtype < 3;
+                // x / y / baseY / glassDist are non-final and reapplied by
+                // restoreObjectRewindState after recreate.
+                return new Sonic1GlassReflectionInstance(spawn, parent, reflectSubtype, isTall);
+            }
+        };
+    }
+
+    private static Sonic1GlassBlockObjectInstance findLiveGlassBlockParentForRewind(
+            DynamicObjectRecreateContext context, int x, int y) {
+        Sonic1GlassBlockObjectInstance best = null;
+        long bestDist = Long.MAX_VALUE;
+        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+            if (inst instanceof Sonic1GlassBlockObjectInstance block) {
+                // Block x is stable (= spawn.x()); compare baseY for the y key.
+                long dx = block.getX() - x;
+                long dy = block.getBaseY() - y;
+                long dist = dx * dx + dy * dy;
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    best = block;
                 }
             }
         }

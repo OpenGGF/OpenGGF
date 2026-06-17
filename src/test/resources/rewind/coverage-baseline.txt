@@ -56,10 +56,7 @@ com.openggf.game.sonic1.objects.Sonic1ElevatorObjectInstance#finalScalar#isSpawn
 com.openggf.game.sonic1.objects.Sonic1ElevatorObjectInstance#finalScalar#origX
 com.openggf.game.sonic1.objects.Sonic1ElevatorObjectInstance#finalScalar#origY
 com.openggf.game.sonic1.objects.Sonic1ElevatorObjectInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1EndingEmeraldsObjectInstance#finalScalar#frameId
-com.openggf.game.sonic1.objects.Sonic1EndingEmeraldsObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1EndingSTHObjectInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1EndingSonicObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1ExplosionItemObjectInstance#finalScalar#pointsAllocatedBeforeAnimal
 com.openggf.game.sonic1.objects.Sonic1ExplosionItemObjectInstance#finalScalar#pointsValue
 com.openggf.game.sonic1.objects.Sonic1FanObjectInstance#finalScalar#alwaysOn
@@ -93,7 +90,6 @@ com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#finalScalar#moveT
 com.openggf.game.sonic1.objects.Sonic1GlassBlockObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance#finalScalar#isTall
 com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance#finalScalar#reflectSubtype
-com.openggf.game.sonic1.objects.Sonic1GlassReflectionInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1GrassFireObjectInstance#finalScalar#isWalker
 com.openggf.game.sonic1.objects.Sonic1HarpoonObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1HiddenBonusObjectInstance#recreate
@@ -160,10 +156,6 @@ com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#finalScalar#spawnX
 com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#finalScalar#spawnY
 com.openggf.game.sonic1.objects.Sonic1PushBlockObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1PylonObjectInstance#recreate
-com.openggf.game.sonic1.objects.Sonic1ResultsScreenObjectInstance#finalScalar#actNumber
-com.openggf.game.sonic1.objects.Sonic1ResultsScreenObjectInstance#finalScalar#elapsedTimeSeconds
-com.openggf.game.sonic1.objects.Sonic1ResultsScreenObjectInstance#finalScalar#ringCount
-com.openggf.game.sonic1.objects.Sonic1ResultsScreenObjectInstance#recreate
 com.openggf.game.sonic1.objects.Sonic1RingFlashObjectInstance#finalScalar#posX
 com.openggf.game.sonic1.objects.Sonic1RingFlashObjectInstance#finalScalar#posY
 com.openggf.game.sonic1.objects.Sonic1RockObjectInstance#recreate

@@ -1088,3 +1088,23 @@ CPZ-boss components and hazards that were previously dropped now have rewind cod
 `CPZBossPipe`, `CPZBossPipePump`, `CPZBossPump`, `CPZBossRobotnik`,
 `LavaBubbleObjectInstance`, `MCZFallingDebrisInstance`, `BubbleObjectInstance`, and
 `OOZBurnerFlameObjectInstance`.
+
+## Batch-5 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)
+
+`Sonic1TryAgainEmeraldsObjectInstance` (S1 Object-8C "TRY AGAIN" chaos-emerald orbit
+display) is intentionally **not** captured/recreated across a held-rewind boundary (no
+rewind codec; its `#recreate` key stays in `src/test/resources/rewind/coverage-baseline.txt`).
+It is a `GameMode.TRY_AGAIN_END` end-screen display object that is never instantiated in
+production gameplay (no `new Sonic1TryAgainEmeraldsObjectInstance` outside its own file and
+no registry/ObjectId binding; the live Try-Again screen is rendered by
+`com.openggf.game.sonic1.credits.TryAgainEndManager`, which re-implements the emerald orbit
+standalone). Rewind capture is gameplay-mode-scoped (`RewindRegistry`/`RewindController` live
+on `GameplayModeContext`), so this object can never appear in a held-rewind snapshot and the
+"dropped on restore -> vanishes" failure mode cannot occur. It also has no `ObjectSpawn`
+(`super(null, "TryChaos")`) and derives all per-emerald state lazily from
+`GameStateManager` emerald data, so `exactSpawnCodec` is structurally inapplicable. It holds
+no player/score/terrain state. This mirrors the AIZ2 transient-children precedent and the
+batch-2/3/4 cosmetic cases above. All other batch-5 S1 objects that were previously dropped
+now have rewind codecs in `Sonic1ObjectRegistry` and are restored on a backward seek:
+`Sonic1EndingEmeraldsObjectInstance`, `Sonic1EndingSonicObjectInstance`,
+`Sonic1GlassReflectionInstance`, and `Sonic1ResultsScreenObjectInstance`.

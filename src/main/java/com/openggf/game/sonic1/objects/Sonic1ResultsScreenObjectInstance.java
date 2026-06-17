@@ -145,9 +145,12 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen {
     private int ringBonus;
 
     // Input data
-    private final int elapsedTimeSeconds;
-    private final int ringCount;
-    private final int actNumber; // 1-indexed for display
+    // Un-final so GenericFieldCapturer reapplies these after a rewind recreate:
+    // they are computed at signpost time, not carried in ObjectSpawn, so the codec
+    // passes placeholder zeros and the captured values are restored.
+    private int elapsedTimeSeconds;
+    private int ringCount;
+    private int actNumber; // 1-indexed for display
 
     // Per-element current X positions (VDP coordinates, updated each frame during slide)
     private final int[] elemCurrentX = new int[ELEMENT_COUNT];
