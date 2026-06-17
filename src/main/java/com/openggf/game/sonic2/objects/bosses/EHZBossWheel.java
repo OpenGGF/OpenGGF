@@ -26,7 +26,7 @@ public class EHZBossWheel extends AbstractBossChild {
     private static final int Y_RADIUS = 0x10;
     private static final int VEHICLE_FRAME_OFFSET = 7;
 
-    private final int subtype;
+    private int subtype;
     private final ObjectAnimationState animationState;
     private int routineSecondary;
     private int timer;

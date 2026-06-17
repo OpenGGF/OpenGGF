@@ -45,7 +45,7 @@ public class HtzFireProjectileObjectInstance extends AbstractObjectInstance impl
     private int xVel;
     private int yVel;
 
-    private final boolean hFlip;
+    private boolean hFlip;
     private boolean vFlip;
     private int animFrame;
     private int animTimer;

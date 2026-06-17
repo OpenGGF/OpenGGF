@@ -8,6 +8,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 - **S3K (batch 2): more held-rewind objects restored.** AIZ rock-shatter fragments, CNZ miniboss debris, boss-explosion puffs, signpost sparkles, MHZ pollen, the MHZ miniboss flame/escape-shard hazards, StarPost bonus stars, the special-stage entry flash, the ICZ post-boss egg capsule, Caterkiller Jr body segments, and Buggernaut babies now have rewind recreate codecs (recreated on a backward seek instead of dropped). MGZ end-boss defeat debris stays uncaptured as transient cosmetic re-emitted in-frame (see docs/S3K_KNOWN_DISCREPANCIES.md).
 
+- **S2 (batch 2): more held-rewind objects restored.** The ARZ-boss rising pillar and ride-on arrow, the EHZ-boss spike and wheels, the HTZ fire bubble and ground fire, the Grounder thrown rock and wall debris, the ARZ Buzzer-style arrow projectile, and the Balkiry jet exhaust now have rewind recreate codecs (recreated on a backward seek instead of dropped).
+
 - **AIZ2 ship-loop and boss no longer break under rewind:** holding rewind
   during the Sonic 3&K AIZ2 battleship auto-scroll loop or the miniboss/end-boss
   no longer softlocks, desyncs, or corrupts graphics. The AIZ2 ship/boss dynamic

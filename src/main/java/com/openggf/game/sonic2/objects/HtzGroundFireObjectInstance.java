@@ -41,7 +41,7 @@ public class HtzGroundFireObjectInstance extends AbstractObjectInstance implemen
 
     private int currentX;
     private int currentY;
-    private final int spreadDirection;  // +1 (right) or -1 (left)
+    private int spreadDirection;  // +1 (right) or -1 (left)
     private int spreadRemaining;        // Clones left to spawn
     private int spreadTimer;            // Countdown to next spread
     private int animFrame;

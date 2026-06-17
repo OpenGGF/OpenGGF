@@ -40,11 +40,17 @@ import com.openggf.game.sonic2.objects.badniks.SlicerBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.NebulaBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.TurtloidBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.BalkiryBadnikInstance;
+import com.openggf.game.sonic2.objects.badniks.BalkiryJetObjectInstance;
 import com.openggf.game.sonic2.objects.badniks.CluckerBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.WFZStickBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.WFZUnknownBadnikInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance;
+import com.openggf.game.sonic2.objects.bosses.ARZBossArrow;
+import com.openggf.game.sonic2.objects.bosses.ARZBossEyes;
+import com.openggf.game.sonic2.objects.bosses.ARZBossPillar;
+import com.openggf.game.sonic2.objects.bosses.EHZBossSpike;
+import com.openggf.game.sonic2.objects.bosses.EHZBossWheel;
 import com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2HTZBossInstance;
@@ -75,7 +81,25 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                     MonitorContentsObjectInstance.class,
                     spawn -> new MonitorContentsObjectInstance(spawn, null)),
             checkpointDongleCodec(),
-            checkpointStarCodec());
+            checkpointStarCodec(),
+            arzBossArrowCodec(),
+            arzBossPillarCodec(),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    GrounderRockProjectile.class,
+                    spawn -> new GrounderRockProjectile(spawn.x(), spawn.y(), 0, null)),
+            grounderWallCodec(),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    HtzFireProjectileObjectInstance.class,
+                    s -> new HtzFireProjectileObjectInstance(s.x(), s.y(), 0, 0, false)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    HtzGroundFireObjectInstance.class,
+                    s -> new HtzGroundFireObjectInstance(s.x(), s.y(), 1, 0)),
+            ehzBossSpikeCodec(),
+            ehzBossWheelCodec(),
+            balkiryJetCodec(),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    ArrowProjectileInstance.class,
+                    spawn -> new ArrowProjectileInstance(spawn, spawn.x(), spawn.y(), false)));
 
     private final Map<Integer, List<String>> namesById = new HashMap<>();
     private final Set<Integer> unknownIds = new HashSet<>();
@@ -323,6 +347,213 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             }
         }
         return null;
+    }
+
+    private static <T> T findLiveInstance(DynamicObjectRecreateContext context, Class<T> type) {
+        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+            if (type.isInstance(inst)) {
+                return type.cast(inst);
+            }
+        }
+        return null;
+    }
+
+    private static DynamicObjectRewindCodec arzBossArrowCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == ARZBossArrow.class;
+            }
+
+            @Override
+            public String className() {
+                return ARZBossArrow.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                Sonic2ARZBossInstance boss = findLiveInstance(context, Sonic2ARZBossInstance.class);
+                ARZBossEyes eyes = findLiveInstance(context, ARZBossEyes.class);
+                if (boss == null || eyes == null) {
+                    return null;
+                }
+                // RENDER_X_FLIP (0x01) is set on the spawn renderFlags exactly for the
+                // right-pillar arrow, and is the same bit initArrow() OR-sets, so this
+                // derivation is correct against both pre-init and post-init renderFlags.
+                boolean fromRightPillar = (entry.spawn().renderFlags() & 1) != 0;
+                return new ARZBossArrow(entry.spawn(), boss, eyes, fromRightPillar);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec arzBossPillarCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance instanceof ARZBossPillar;
+            }
+
+            @Override
+            public String className() {
+                return ARZBossPillar.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                Sonic2ARZBossInstance parent = findArzBossParentForRewind(context);
+                return parent == null ? null : new ARZBossPillar(entry.spawn(), parent);
+            }
+        };
+    }
+
+    private static Sonic2ARZBossInstance findArzBossParentForRewind(
+            DynamicObjectRecreateContext context) {
+        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+            if (inst instanceof Sonic2ARZBossInstance boss) {
+                return boss;
+            }
+        }
+        return null;
+    }
+
+    private static DynamicObjectRewindCodec grounderWallCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance instanceof GrounderWallInstance;
+            }
+
+            @Override
+            public String className() {
+                return GrounderWallInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                // Relink to a live Grounder parent so the pre-activation gate still
+                // works. Parent is only consulted while !activated; once activated
+                // (a restored non-final scalar) it is irrelevant. wallIndex 0 is a
+                // placeholder: the velocities it derives are overwritten by
+                // restoreObjectRewindState (xVelocity/yVelocity are non-final).
+                GrounderBadnikInstance parent = findGrounderParentForRewind(context);
+                ObjectSpawn s = entry.spawn();
+                return new GrounderWallInstance(s.x(), s.y(), 0, parent);
+            }
+        };
+    }
+
+    private static GrounderBadnikInstance findGrounderParentForRewind(
+            DynamicObjectRecreateContext context) {
+        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+            if (inst instanceof GrounderBadnikInstance parent) {
+                return parent;
+            }
+        }
+        return null;
+    }
+
+    private static DynamicObjectRewindCodec ehzBossSpikeCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance instanceof EHZBossSpike;
+            }
+
+            @Override
+            public String className() {
+                return EHZBossSpike.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                Sonic2EHZBossInstance parent = findEhzBossParentForRewind(context);
+                return parent == null ? null : new EHZBossSpike(parent);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec ehzBossWheelCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == EHZBossWheel.class;
+            }
+
+            @Override
+            public String className() {
+                return EHZBossWheel.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                Sonic2EHZBossInstance parent = findEhzBossParentForRewind(context);
+                if (parent == null) {
+                    return null;
+                }
+                // subtype/xOffset/priority are placeholders: subtype is restored as a
+                // (now non-final) captured scalar, currentX/currentY and priority are
+                // restored from the per-object snapshot, and the final animationState
+                // is restored in-place by ObjectAnimationStateCodec.
+                return new EHZBossWheel(parent, 0, 0, 0);
+            }
+        };
+    }
+
+    private static Sonic2EHZBossInstance findEhzBossParentForRewind(
+            DynamicObjectRecreateContext context) {
+        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+            if (inst instanceof Sonic2EHZBossInstance parent) {
+                return parent;
+            }
+        }
+        return null;
+    }
+
+    private static DynamicObjectRewindCodec balkiryJetCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == BalkiryJetObjectInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return BalkiryJetObjectInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                BalkiryBadnikInstance best = null;
+                long bestDistance = Long.MAX_VALUE;
+                ObjectSpawn spawn = entry.spawn();
+                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+                    if (!(inst instanceof BalkiryBadnikInstance balkiry)) {
+                        continue;
+                    }
+                    if (spawn == null) {
+                        best = balkiry;
+                        break;
+                    }
+                    long dx = balkiry.getX() - spawn.x();
+                    long dy = balkiry.getY() - spawn.y();
+                    long distance = dx * dx + dy * dy;
+                    if (distance < bestDistance) {
+                        bestDistance = distance;
+                        best = balkiry;
+                    }
+                }
+                if (best == null) {
+                    return null;
+                }
+                return new BalkiryJetObjectInstance(entry.spawn(), best);
+            }
+        };
     }
 
     @Override
