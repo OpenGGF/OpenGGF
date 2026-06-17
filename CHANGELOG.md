@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **User pause indicator stays on-screen and fades:** the Enter-key engine pause
+  overlay now renders in the logical bottom-right corner instead of using window
+  viewport pixels, preventing clipped "PAU" text in display modes where those
+  coordinate spaces differ. The label now fades smoothly in and out every half
+  second while paused.
+
 - **Sonic sidekicks run in from clear terrain and keep extension overlays isolated:**
   Sonic sidekick respawn now uses Sonic-specific ground run-in behavior, staggers
   multi-sidekick entries, seeds catch-up speed from the main player when needed,

@@ -169,6 +169,33 @@ public class TestGameLoop {
     }
 
     @Test
+    public void userPauseIndicatorPlacementUsesLogicalBottomRightCorner() {
+        Engine.PauseIndicatorPlacement placement = Engine.userPauseIndicatorPlacement(
+                320, 224, 54, 11);
+
+        assertEquals(258, placement.x());
+        assertEquals(205, placement.y());
+    }
+
+    @Test
+    public void userPauseIndicatorPlacementClampsInsideNarrowLogicalViewport() {
+        Engine.PauseIndicatorPlacement placement = Engine.userPauseIndicatorPlacement(
+                48, 40, 54, 11);
+
+        assertEquals(0, placement.x());
+        assertEquals(21, placement.y());
+    }
+
+    @Test
+    public void userPauseIndicatorAlphaSmoothlyFadesInAndOutEveryHalfSecond() {
+        assertEquals(255, Engine.userPauseIndicatorAlpha(0));
+        assertEquals(128, Engine.userPauseIndicatorAlpha(250_000_000L), 1);
+        assertEquals(0, Engine.userPauseIndicatorAlpha(500_000_000L), 1);
+        assertEquals(128, Engine.userPauseIndicatorAlpha(750_000_000L), 1);
+        assertEquals(255, Engine.userPauseIndicatorAlpha(1_000_000_000L));
+    }
+
+    @Test
     public void traceRealtimeRewindRunsBeforePlaybackInputBridge() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
         int rewind = source.indexOf("handleRealtimeRewindInput(inputHandler)");
