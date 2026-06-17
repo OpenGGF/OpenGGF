@@ -264,8 +264,6 @@ public class SidekickCpuController {
     private NormalStepDiagnostics latestNormalStepDiagnostics;
     private int diagnosticCtrl2HeldLatch;
     private int diagnosticCtrl2PressedLatch;
-    @RewindTransient(reason = "Comparison-only same-frame Ctrl_2_logical publication marker")
-    private int diagnosticCtrl2LogicalLateWriteFrame = -1;
 
     // =====================================================================
     // Tails-carry-Sonic support (S3K-only; null trigger = feature disabled)
@@ -521,13 +519,6 @@ public class SidekickCpuController {
         // (docs/skdisasm/sonic3k.asm:26196-26203,181919-181988).
         diagnosticCtrl2HeldLatch = controller2Held & MANUAL_HELD_MASK;
         diagnosticCtrl2PressedLatch = controller2Logical & MANUAL_HELD_MASK;
-        diagnosticCtrl2LogicalLateWriteFrame = frameCounter;
-    }
-
-    public void publishDiagnosticCtrl2LogicalWrite(int held, int pressed) {
-        diagnosticCtrl2HeldLatch = held & MANUAL_HELD_MASK;
-        diagnosticCtrl2PressedLatch = pressed & MANUAL_HELD_MASK;
-        diagnosticCtrl2LogicalLateWriteFrame = frameCounter;
     }
 
     /**
@@ -612,7 +603,6 @@ public class SidekickCpuController {
         if (state == State.NORMAL
                 && d != null
                 && d.frameCounter() == frameCounter
-                && diagnosticCtrl2LogicalLateWriteFrame != frameCounter
                 && d.hasCpuResult()) {
             return d.generatedInput() & 0xFF;
         }
@@ -624,7 +614,6 @@ public class SidekickCpuController {
         if (state == State.NORMAL
                 && d != null
                 && d.frameCounter() == frameCounter
-                && diagnosticCtrl2LogicalLateWriteFrame != frameCounter
                 && d.hasCpuResult()) {
             return d.generatedPressedInput() & 0xFF;
         }
@@ -800,7 +789,6 @@ public class SidekickCpuController {
                                                       int appliedFollowNudge) {
         diagnosticCtrl2HeldLatch = generatedInput & 0xFF;
         diagnosticCtrl2PressedLatch = generatedPressedInput & 0xFF;
-        diagnosticCtrl2LogicalLateWriteFrame = -1;
         latestNormalStepDiagnostics = base.withCpuResult(
                 branch,
                 followDelayFrames,
@@ -5109,7 +5097,6 @@ public class SidekickCpuController {
         controlCounter = 0;
         controller2Held = 0;
         controller2Logical = 0;
-        diagnosticCtrl2LogicalLateWriteFrame = -1;
         normalFrameCount = 0;
         jumpingFlag = false;
         normalPushingGraceFrames = 0;
