@@ -14,7 +14,10 @@ import com.openggf.level.objects.ObjectSpawn;
  * the animal, preserving the same FindFreeObj ordering.
  */
 public class Sonic1ExplosionItemObjectInstance extends ExplosionObjectInstance {
-    private final int pointsValue;
+    // Un-finaled for rewind: pointsValue is NOT spawn-derivable (it is the destroyed
+    // badnik's points value passed by the spawner), so the generic field capturer
+    // reapplies the captured value after the codec recreates with placeholder 0.
+    private int pointsValue;
     private boolean spawnedChildren;
 
     public Sonic1ExplosionItemObjectInstance(int x, int y, ObjectServices services, int pointsValue) {

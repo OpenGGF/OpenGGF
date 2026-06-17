@@ -82,8 +82,11 @@ public class Sonic1SeesawBallObjectInstance extends AbstractObjectInstance
     private int yVel;
 
     // Original reference positions (see_origX = objoff_30, see_origY = objoff_34)
-    private final int origX;
-    private final int origY;
+    // Un-finaled for rewind: the ball's getSpawn() reports its RUNTIME position, not the
+    // seesaw origin, so the generic field capturer reapplies the captured origX/origY
+    // values after the codec recreates with spawn.x()/spawn.y() placeholders.
+    private int origX;
+    private int origY;
 
     // Stored angle state (see_frame = objoff_3A)
     private int storedFrame;

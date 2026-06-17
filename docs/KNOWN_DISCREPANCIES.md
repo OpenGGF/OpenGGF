@@ -1046,3 +1046,27 @@ All other batch-2 S1 transient/relink children (`Sonic1BombFuseInstance`,
 `Sonic1NewtronMissileInstance`, `GHZBossWreckingBall`, `Sonic1SLZBossSpikeball`,
 `SYZBossSpike`) now have rewind codecs in `Sonic1ObjectRegistry` and are restored on a
 backward seek.
+
+## Batch-3 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)
+
+`Sonic1SplashObjectInstance` (LZ water splash, object `0x08`) is intentionally **not**
+captured/recreated across a held-rewind boundary (no rewind codec; its `#recreate` and
+`#finalScalar` keys stay in `src/test/resources/rewind/coverage-baseline.txt`). It is a
+short-lived, purely cosmetic water splash with no collision and no player/score/terrain
+state: a 3-frame animation (~12 game ticks) that self-deletes, spawned on water
+entry/exit. The water-entry/exit code path naturally re-emits it within ~1 frame on
+forward re-simulation, so a dropped in-flight splash is visually undetectable. This
+mirrors the AIZ2 transient-children precedent and the batch-2 `Sonic1MotobugSmokeInstance`
+case above: capture is only worthwhile when a dropped object would otherwise visibly
+re-emit and play forward; a sub-lifetime cosmetic that re-emits in-frame does not qualify.
+
+All other batch-3 S1 objects that were previously dropped now have rewind codecs in
+`Sonic1ObjectRegistry` and are restored on a backward seek: `FZCylinder`,
+`FZPlasmaLauncher`, `FZPlasmaBall`, `Sonic1BossBlockInstance` (boss + fragment forms),
+`Sonic1CollapsingFloorObjectInstance`, `Sonic1EggPrisonObjectInstance`,
+`Sonic1ExplosionItemObjectInstance`, `Sonic1FloatingBlockObjectInstance`,
+`Sonic1GrassFireObjectInstance`, `Sonic1LamppostTwirlInstance`,
+`Sonic1MonitorPowerUpObjectInstance`, `Sonic1RingFlashObjectInstance`,
+`Sonic1RingInstance` (collected/animating child rings),
+`Sonic1SeesawBallObjectInstance`, `Sonic1SpikedBallChainObjectInstance`,
+`Sonic1StomperDoorObjectInstance`, and `Sonic1TeleporterObjectInstance`.

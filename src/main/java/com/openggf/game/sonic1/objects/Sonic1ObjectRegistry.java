@@ -1,5 +1,6 @@
 package com.openggf.game.sonic1.objects;
 
+import com.openggf.game.GameServices;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic1.Sonic1Level;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
@@ -25,6 +26,9 @@ import com.openggf.game.sonic1.objects.badniks.Sonic1NewtronBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1RollerBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1YadrinBadnikInstance;
+import com.openggf.game.sonic1.objects.bosses.FZCylinder;
+import com.openggf.game.sonic1.objects.bosses.FZPlasmaBall;
+import com.openggf.game.sonic1.objects.bosses.FZPlasmaLauncher;
 import com.openggf.game.sonic1.objects.bosses.GHZBossWreckingBall;
 import com.openggf.game.sonic1.objects.bosses.SYZBossSpike;
 import com.openggf.game.sonic1.objects.bosses.Sonic1BossBlockInstance;
@@ -38,6 +42,7 @@ import com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1FZBossInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance;
+import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectRegistry;
 import com.openggf.level.objects.DynamicObjectRecreateContext;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
@@ -84,7 +89,60 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
                     spawn -> new Sonic1NewtronMissileInstance(spawn.x(), spawn.y(), 0, false)),
             ghzBossWreckingBallCodec(),
             slzBossSpikeballCodec(),
-            syzBossSpikeCodec());
+            syzBossSpikeCodec(),
+            fzCylinderCodec(),
+            fzPlasmaLauncherCodec(),
+            fzPlasmaBallCodec(),
+            bossBlockCodec(),
+            collapsingFloorCodec(),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    Sonic1EggPrisonObjectInstance.class,
+                    spawn -> new Sonic1EggPrisonObjectInstance(spawn)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    Sonic1ExplosionItemObjectInstance.class,
+                    spawn -> new Sonic1ExplosionItemObjectInstance(spawn.x(), spawn.y(), null, 0)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    Sonic1FloatingBlockObjectInstance.class,
+                    spawn -> new Sonic1FloatingBlockObjectInstance(
+                            spawn,
+                            GameServices.levelOrNull() != null
+                                    ? GameServices.levelOrNull().getRomZoneId()
+                                    : -1)),
+            grassFireChildCodec(),
+            lamppostTwirlCodec(),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    Sonic1MonitorPowerUpObjectInstance.class,
+                    spawn -> new Sonic1MonitorPowerUpObjectInstance(
+                            spawn.x(), spawn.y(), spawn.subtype(), null)),
+            ringFlashCodec(),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    Sonic1RingInstance.class,
+                    spawn -> new Sonic1RingInstance(
+                            spawn,
+                            new RingSpawn(spawn.x(), spawn.y()),
+                            spawn.x())),
+            seesawBallCodec(),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    Sonic1SpikedBallChainObjectInstance.class,
+                    spawn -> {
+                        LevelManager lm = GameServices.levelOrNull();
+                        int zoneIndex = (lm != null) ? lm.getRomZoneId() : -1;
+                        return new Sonic1SpikedBallChainObjectInstance(spawn, zoneIndex);
+                    }),
+            // Sonic1SplashObjectInstance (LZ water splash, object 0x08) is accept-drop:
+            // a sub-1-second purely-cosmetic splash re-emitted naturally on water
+            // entry/exit. See docs/KNOWN_DISCREPANCIES.md "Batch-3 Rewind: Transient
+            // Cosmetic Children Not Rewound".
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    Sonic1StomperDoorObjectInstance.class,
+                    spawn -> {
+                        LevelManager lm = GameServices.levelOrNull();
+                        int zoneIndex = (lm != null) ? lm.getRomZoneId() : -1;
+                        return new Sonic1StomperDoorObjectInstance(spawn, zoneIndex);
+                    }),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    Sonic1TeleporterObjectInstance.class,
+                    spawn -> new Sonic1TeleporterObjectInstance(spawn)));
 
     private static DynamicObjectRewindCodec bombFuseChildCodec() {
         return new DynamicObjectRewindCodec() {
@@ -264,6 +322,308 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
                     return null;
                 }
                 return new SYZBossSpike(boss);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec fzCylinderCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == FZCylinder.class;
+            }
+
+            @Override
+            public String className() {
+                return FZCylinder.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                Sonic1FZBossInstance boss = null;
+                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+                    if (inst instanceof Sonic1FZBossInstance b) {
+                        boss = b;
+                        break;
+                    }
+                }
+                if (boss == null) {
+                    return null;
+                }
+                // subtype (and derived isBottom/baseX/baseY) un-finaled so the generic
+                // capturer reapplies the captured per-cylinder values; ctor gets a
+                // placeholder subtype.
+                return new FZCylinder(boss, 0);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec fzPlasmaLauncherCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == FZPlasmaLauncher.class;
+            }
+
+            @Override
+            public String className() {
+                return FZPlasmaLauncher.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                Sonic1FZBossInstance parent = null;
+                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+                    if (inst instanceof Sonic1FZBossInstance fz) {
+                        parent = fz;
+                        break;
+                    }
+                }
+                if (parent == null) {
+                    return null; // parent not yet restored -> drop
+                }
+                return new FZPlasmaLauncher(parent);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec fzPlasmaBallCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == FZPlasmaBall.class;
+            }
+
+            @Override
+            public String className() {
+                return FZPlasmaBall.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                FZPlasmaLauncher launcher = null;
+                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+                    if (inst instanceof FZPlasmaLauncher l) {
+                        launcher = l;
+                        break;
+                    }
+                }
+                if (launcher == null) {
+                    return null;
+                }
+                ObjectSpawn spawn = entry.spawn();
+                // startX/startY from spawn; targetX is a non-final scalar reapplied by
+                // restoreObjectRewindState, so a placeholder 0 is fine.
+                return new FZPlasmaBall(launcher, spawn.x(), spawn.y(), 0);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec bossBlockCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == Sonic1BossBlockInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return Sonic1BossBlockInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                ObjectSpawn spawn = entry.spawn();
+                // Recreate via the public column ctor. blockColumn is un-finaled so the
+                // generic field capturer reapplies its captured value (-1 for fragments,
+                // 0-9 for blocks); spawn.subtype() is a placeholder for the block form.
+                Sonic1BossBlockInstance block =
+                        new Sonic1BossBlockInstance(spawn.subtype());
+                // Relink the grabbingBoss object reference to the live SYZ boss.
+                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+                    if (inst instanceof Sonic1SYZBossInstance boss) {
+                        block.relinkGrabbingBoss(boss);
+                        break;
+                    }
+                }
+                return block;
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec collapsingFloorCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == Sonic1CollapsingFloorObjectInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return Sonic1CollapsingFloorObjectInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                // Conceptually exactSpawnCodec: recreate purely from spawn + live zone
+                // (the same ROM zone id the production factory uses).
+                int zoneIndex = context.objectServices().romZoneId();
+                return new Sonic1CollapsingFloorObjectInstance(entry.spawn(), zoneIndex);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec grassFireChildCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == Sonic1GrassFireObjectInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return Sonic1GrassFireObjectInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                // Parent platform is a layout-spawned (active) object, recreated before
+                // its dynamic fire children, so it is live in getActiveObjects().
+                Sonic1LargeGrassyPlatformObjectInstance parent = null;
+                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+                    if (inst instanceof Sonic1LargeGrassyPlatformObjectInstance p) {
+                        parent = p;
+                        break;
+                    }
+                }
+                if (parent == null) {
+                    return null;
+                }
+                ObjectSpawn spawn = entry.spawn();
+                // isWalker is spawn-derivable (subtype 0 = walker, 1 = stationary).
+                boolean isWalker = spawn.subtype() == 0;
+                // baseY/originX were un-finaled so the generic capturer reapplies the
+                // captured values; pass placeholder sinkOffset 0.
+                return new Sonic1GrassFireObjectInstance(
+                        spawn.x(), spawn.y(), 0, parent.getSlopeData(), parent, isWalker);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec lamppostTwirlCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == Sonic1LamppostTwirlInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return Sonic1LamppostTwirlInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                // The lamppost is a placed/layout-spawned object, recreated earlier in
+                // the restore loop. Pick the nearest one to the twirl's spawn position.
+                ObjectSpawn spawn = entry.spawn();
+                Sonic1LamppostObjectInstance parent = null;
+                long bestDist = Long.MAX_VALUE;
+                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+                    if (inst instanceof Sonic1LamppostObjectInstance lamp) {
+                        long dx = lamp.getCenterX() - spawn.x();
+                        long dy = lamp.getCenterY() - spawn.y();
+                        long dist = dx * dx + dy * dy;
+                        if (dist < bestDist) {
+                            bestDist = dist;
+                            parent = lamp;
+                        }
+                    }
+                }
+                if (parent == null) {
+                    return null;
+                }
+                return new Sonic1LamppostTwirlInstance(parent);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec ringFlashCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == Sonic1RingFlashObjectInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return Sonic1RingFlashObjectInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                ObjectSpawn spawn = entry.spawn();
+                Sonic1GiantRingObjectInstance parent = null;
+                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+                    if (inst instanceof Sonic1GiantRingObjectInstance ring) {
+                        parent = ring;
+                        break;
+                    }
+                }
+                // hFlip placeholder (false); the live capturer reapplies the real value
+                // after recreate since hFlip is un-finaled. Parent may be null if the
+                // ring was already deleted at frame 3 (ctor only dereferences it once,
+                // gated by !triggerFired).
+                return new Sonic1RingFlashObjectInstance(parent, spawn.x(), spawn.y(), false);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec seesawBallCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == Sonic1SeesawBallObjectInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return Sonic1SeesawBallObjectInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                // The seesaw (object 0x5E) is a layout-spawned active object recreated
+                // earlier in the restore loop. Find the nearest one to the ball's
+                // captured position. origX/origY are un-finaled and reapplied by the
+                // generic field capturer; flipped passed here is a placeholder.
+                ObjectSpawn spawn = entry.spawn();
+                Sonic1SeesawObjectInstance parent = null;
+                long bestDist = Long.MAX_VALUE;
+                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+                    if (inst instanceof Sonic1SeesawObjectInstance s) {
+                        long dx = (long) s.getX() - spawn.x();
+                        long dy = (long) s.getY() - spawn.y();
+                        long dist = dx * dx + dy * dy;
+                        if (dist < bestDist) {
+                            bestDist = dist;
+                            parent = s;
+                        }
+                    }
+                }
+                if (parent == null) {
+                    return null;
+                }
+                return new Sonic1SeesawBallObjectInstance(parent, spawn.x(), spawn.y(), false);
             }
         };
     }
