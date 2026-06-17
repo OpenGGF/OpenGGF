@@ -4,6 +4,17 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **AIZ1 cutscene miniboss no longer strands flame children in AIZ2:** the
+  AIZ Act 1 cutscene miniboss (object 0x90, `AizMinibossCutsceneInstance`) is a
+  one-shot scripted object whose long fly-off is still running when the AIZ1->AIZ2
+  fire transition snapshots persistent objects. Because it and its persistent
+  flame-barrel children were carried across the seamless reload without the world
+  offset being applied, they stranded partway through AIZ2 -- an invisible-bodied
+  "copy" of the miniboss whose flames kept hurting the player. It now removes
+  itself and its tracked children when carried across the act transition,
+  mirroring the ROM where `Obj_AIZMinibossCutscene`s object slot does not survive
+  the AIZ2 level reload.
+
 - **Trace context marks tolerated status mismatches:** trace replay context
   windows now keep ignored-but-real sidekick status-byte mismatches visible with
   a `~` marker, so push/facing diagnostics that precede a movement frontier can
