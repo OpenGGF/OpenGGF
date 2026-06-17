@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **AIZ end-sign flow keeps Sonic in the foreground layer:** when the AIZ
+  miniboss signpost falls, clearing the boss flag no longer releases Sonic's
+  high-priority foreground state early. Sonic and elemental shields continue
+  rendering in front of the AIZ tree masks through the results flow.
+
 - **Breakable blocks use ROM roll-animation snapshots for spin breaks:** S1,
   S2, and S3K breakable-wall/block/rock checks now gate spin breaks on the
   saved roll animation ID instead of the mutable rolling status bit, preventing

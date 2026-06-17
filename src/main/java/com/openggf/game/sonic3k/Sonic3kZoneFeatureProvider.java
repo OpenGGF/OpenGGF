@@ -377,6 +377,8 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         AizZoneRuntimeState aizState = getAizState();
         boolean forestFrontPhaseActive = aizState != null && aizState.isBattleshipForestFrontPhaseActive();
         boolean bossArenaFrontPriority = aizState != null && aizState.isBossFlagActive();
+        var gameState = GameServices.gameStateOrNull();
+        boolean endSignResultsActive = gameState != null && gameState.isEndOfLevelActive();
 
         // ROM: During the post-boss cutscene (egg capsule, results, walk-right,
         // bridge collapse) the player's art_tile high-priority bit stays set.
@@ -385,7 +387,7 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         boolean postBossCutsceneActive = com.openggf.game.sonic3k.objects
                 .Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive();
 
-        if (forestFrontPhaseActive || bossArenaFrontPriority || postBossCutsceneActive) {
+        if (forestFrontPhaseActive || bossArenaFrontPriority || endSignResultsActive || postBossCutsceneActive) {
             player.setHighPriority(true);
             player.setPriorityBucket(RenderPriority.MIN);
             forcedAizForestFrontPrioritySprites.add(player);
