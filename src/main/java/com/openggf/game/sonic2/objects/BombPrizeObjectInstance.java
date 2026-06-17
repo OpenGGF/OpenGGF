@@ -39,14 +39,18 @@ public class BombPrizeObjectInstance extends AbstractObjectInstance {
     // Position tracking (16.16 fixed point for precision)
     private int currentX;      // 16.16 fixed point X
     private int currentY;      // 16.16 fixed point Y
-    private final int machineX; // Machine center X
-    private final int machineY; // Machine center Y
+    // Un-final for rewind: machineX/machineY are non-spawn-derivable scalars
+    // reapplied by GenericFieldCapturer after the exactSpawnCodec recreates the bomb.
+    private int machineX; // Machine center X
+    private int machineY; // Machine center Y
 
     // Display delay before active
     private int displayDelay;
 
-    // Reference to parent counter (for decrementing)
-    private final int[] prizeCounter;
+    // Reference to parent counter (for decrementing). Un-final for rewind: the
+    // shared array reference cannot be captured/relinked, so the codec passes a
+    // fresh placeholder; only the parent slot-machine bookkeeping decrement drifts.
+    private int[] prizeCounter;
 
     // Reference to LevelManager for rendering
 

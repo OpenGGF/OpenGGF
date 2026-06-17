@@ -58,6 +58,17 @@ import com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance;
+import com.openggf.game.sonic2.objects.badniks.ShellcrackerClawInstance;
+import com.openggf.game.sonic2.objects.badniks.SlicerPincerInstance;
+import com.openggf.game.sonic2.objects.badniks.TurtloidJetInstance;
+import com.openggf.game.sonic2.objects.badniks.TurtloidRiderInstance;
+import com.openggf.game.sonic2.objects.badniks.SolFireballObjectInstance;
+import com.openggf.game.sonic2.objects.bosses.EHZBossGroundVehicle;
+import com.openggf.game.sonic2.objects.bosses.EHZBossPropeller;
+import com.openggf.game.sonic2.objects.bosses.EHZBossVehicleTop;
+import com.openggf.game.sonic2.objects.bosses.HTZBossFlamethrower;
+import com.openggf.game.sonic2.objects.bosses.HTZBossLavaBall;
+import com.openggf.game.sonic2.objects.bosses.CNZBossElectricBall;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -96,10 +107,48 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                     s -> new HtzGroundFireObjectInstance(s.x(), s.y(), 1, 0)),
             ehzBossSpikeCodec(),
             ehzBossWheelCodec(),
+            ehzBossGroundVehicleCodec(),
+            ehzBossPropellerCodec(),
+            ehzBossVehicleTopCodec(),
             balkiryJetCodec(),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     ArrowProjectileInstance.class,
-                    spawn -> new ArrowProjectileInstance(spawn, spawn.x(), spawn.y(), false)));
+                    spawn -> new ArrowProjectileInstance(spawn, spawn.x(), spawn.y(), false)),
+            // Batch-3 S2 rewind codecs.
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    GrounderBadnikInstance.class,
+                    spawn -> new GrounderBadnikInstance(
+                            spawn, spawn.objectId() == Sonic2ObjectIds.GROUNDER_IN_WALL2)),
+            shellcrackerClawCodec(),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    SlicerPincerInstance.class,
+                    spawn -> new SlicerPincerInstance(
+                            spawn, null, spawn.x(), spawn.y(), 0, false, 0)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    SpikerDrillObjectInstance.class,
+                    spawn -> new SpikerDrillObjectInstance(
+                            spawn, spawn.x(), spawn.y(),
+                            (spawn.renderFlags() & 0x01) != 0,
+                            (spawn.renderFlags() & 0x02) != 0)),
+            turtloidJetCodec(),
+            turtloidRiderCodec(),
+            solFireballCodec(),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    WallTurretShotInstance.class,
+                    s -> new WallTurretShotInstance(s, s.x(), s.y(), 0, 0)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    VerticalLaserObjectInstance.class,
+                    s -> new VerticalLaserObjectInstance(s, s.x(), s.y())),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    SpikyBlockSpikeInstance.class,
+                    spawn -> new SpikyBlockSpikeInstance(spawn, "SpikyBlock-Spike", 0, 0)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    BombPrizeObjectInstance.class,
+                    spawn -> new BombPrizeObjectInstance(
+                            spawn.x(), spawn.y(), 0, 0, 0, new int[]{0})),
+            htzFlamethrowerCodec(),
+            htzBossLavaBallCodec(),
+            cnzBossElectricBallCodec());
 
     private final Map<Integer, List<String>> namesById = new HashMap<>();
     private final Set<Integer> unknownIds = new HashSet<>();
@@ -552,6 +601,338 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                     return null;
                 }
                 return new BalkiryJetObjectInstance(entry.spawn(), best);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec shellcrackerClawCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == ShellcrackerClawInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return ShellcrackerClawInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                ObjectSpawn spawn = entry.spawn();
+                ShellcrackerBadnikInstance best = null;
+                long bestDistance = Long.MAX_VALUE;
+                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+                    if (!(inst instanceof ShellcrackerBadnikInstance body)) {
+                        continue;
+                    }
+                    if (spawn == null) {
+                        best = body;
+                        break;
+                    }
+                    long dx = body.getX() - spawn.x();
+                    long dy = body.getY() - spawn.y();
+                    long distance = dx * dx + dy * dy;
+                    if (distance < bestDistance) {
+                        bestDistance = distance;
+                        best = body;
+                    }
+                }
+                if (best == null) {
+                    return null;
+                }
+                // pieceIndex / facingRight are un-finaled non-spawn scalars; restoreObjectRewindState
+                // reapplies the captured values after construction, so placeholders are safe here.
+                return new ShellcrackerClawInstance(spawn, best, spawn.x(), spawn.y(), 0, false);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec turtloidJetCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == TurtloidJetInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return TurtloidJetInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                TurtloidBadnikInstance best = null;
+                long bestDistance = Long.MAX_VALUE;
+                ObjectSpawn spawn = entry.spawn();
+                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+                    if (!(inst instanceof TurtloidBadnikInstance turtloid)) {
+                        continue;
+                    }
+                    if (spawn == null) {
+                        best = turtloid;
+                        break;
+                    }
+                    long dx = turtloid.getX() - spawn.x();
+                    long dy = turtloid.getY() - spawn.y();
+                    long distance = dx * dx + dy * dy;
+                    if (distance < bestDistance) {
+                        bestDistance = distance;
+                        best = turtloid;
+                    }
+                }
+                if (best == null) {
+                    return null;
+                }
+                return new TurtloidJetInstance(entry.spawn(), best);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec turtloidRiderCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == TurtloidRiderInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return TurtloidRiderInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                // The rider is spawned at parentBodyPos + (+4, -0x18); find the live
+                // placed Turtloid body whose position best matches that derivation.
+                TurtloidBadnikInstance best = null;
+                long bestDistance = Long.MAX_VALUE;
+                ObjectSpawn spawn = entry.spawn();
+                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+                    if (!(inst instanceof TurtloidBadnikInstance turtloid)) {
+                        continue;
+                    }
+                    if (spawn == null) {
+                        best = turtloid;
+                        break;
+                    }
+                    long dx = turtloid.getX() - spawn.x();
+                    long dy = turtloid.getY() - spawn.y();
+                    long distance = dx * dx + dy * dy;
+                    if (distance < bestDistance) {
+                        bestDistance = distance;
+                        best = turtloid;
+                    }
+                }
+                if (best == null) {
+                    return null;
+                }
+                return new TurtloidRiderInstance(entry.spawn(), best);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec solFireballCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == SolFireballObjectInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return SolFireballObjectInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                // All four fireballs are spawned with the parent's own ObjectSpawn, so the
+                // live Sol's position matches entry.spawn(); fall back to first live Sol.
+                SolBadnikInstance best = null;
+                long bestDistance = Long.MAX_VALUE;
+                ObjectSpawn spawn = entry.spawn();
+                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+                    if (!(inst instanceof SolBadnikInstance sol)) {
+                        continue;
+                    }
+                    if (spawn == null) {
+                        best = sol;
+                        break;
+                    }
+                    long dx = sol.getX() - spawn.x();
+                    long dy = sol.getY() - spawn.y();
+                    long distance = dx * dx + dy * dy;
+                    if (distance < bestDistance) {
+                        bestDistance = distance;
+                        best = sol;
+                    }
+                }
+                if (best == null) {
+                    return null;
+                }
+                // angle is a non-final captured scalar reapplied by restoreObjectRewindState.
+                return new SolFireballObjectInstance(entry.spawn(), best, 0);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec ehzBossGroundVehicleCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == EHZBossGroundVehicle.class;
+            }
+
+            @Override
+            public String className() {
+                return EHZBossGroundVehicle.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                Sonic2EHZBossInstance parent = findEhzBossParentForRewind(context);
+                if (parent == null) {
+                    return null;
+                }
+                // currentX/currentY restored from the per-object snapshot (AbstractBossChild),
+                // routineSecondary/renderFlags are non-final captured scalars reapplied by
+                // restoreObjectRewindState, and initialY is re-derived from the live parent.
+                return new EHZBossGroundVehicle(parent);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec ehzBossPropellerCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == EHZBossPropeller.class;
+            }
+
+            @Override
+            public String className() {
+                return EHZBossPropeller.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                Sonic2EHZBossInstance parent = findEhzBossParentForRewind(context);
+                return parent == null ? null : new EHZBossPropeller(parent);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec ehzBossVehicleTopCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == EHZBossVehicleTop.class;
+            }
+
+            @Override
+            public String className() {
+                return EHZBossVehicleTop.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                Sonic2EHZBossInstance parent = findEhzBossParentForRewind(context);
+                return parent == null ? null : new EHZBossVehicleTop(parent);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec htzFlamethrowerCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance instanceof HTZBossFlamethrower;
+            }
+
+            @Override
+            public String className() {
+                return HTZBossFlamethrower.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                Sonic2HTZBossInstance parent = findHtzBossParentForRewind(context);
+                if (parent == null) {
+                    return null;
+                }
+                // currentX/currentY/xVel/flipped/animFrame/animTimer are non-final scalars
+                // reapplied by restoreObjectRewindState, so the spawn-time offset math in
+                // the ctor is overwritten and placeholder ctor args are safe.
+                return new HTZBossFlamethrower(parent, entry.spawn().x(), entry.spawn().y(), false);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec htzBossLavaBallCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == HTZBossLavaBall.class;
+            }
+
+            @Override
+            public String className() {
+                return HTZBossLavaBall.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                Sonic2HTZBossInstance parent = findHtzBossParentForRewind(context);
+                if (parent == null) {
+                    return null;
+                }
+                // spawnX/spawnY/leftBall/fromLeftSide are placeholders: currentX/currentY come
+                // from the per-object snapshot, and leftBall/fromLeftSide/xFixed/yFixed/xVel/
+                // yVel/animFrame/animTimer are non-final captured scalars reapplied on restore.
+                return new HTZBossLavaBall(parent, 0, 0, false, false);
+            }
+        };
+    }
+
+    private static Sonic2HTZBossInstance findHtzBossParentForRewind(
+            DynamicObjectRecreateContext context) {
+        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+            if (inst instanceof Sonic2HTZBossInstance boss) {
+                return boss;
+            }
+        }
+        return null;
+    }
+
+    private static DynamicObjectRewindCodec cnzBossElectricBallCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == CNZBossElectricBall.class;
+            }
+
+            @Override
+            public String className() {
+                return CNZBossElectricBall.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                Sonic2CNZBossInstance boss = findLiveInstance(context, Sonic2CNZBossInstance.class);
+                if (boss == null) {
+                    return null;
+                }
+                return new CNZBossElectricBall(entry.spawn(), boss);
             }
         };
     }
