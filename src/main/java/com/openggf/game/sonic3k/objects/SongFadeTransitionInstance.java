@@ -19,11 +19,16 @@ import java.util.List;
  */
 public class SongFadeTransitionInstance extends AbstractObjectInstance {
 
+    // Non-final: delayFrames/musicId are not derivable from the dummy
+    // ObjectSpawn (the ctor passes ObjectSpawn(0,0,0,0,0,false,0) to super).
+    // The rewind codec constructs with placeholder (0, 0) and the
+    // GenericFieldCapturer reapplies these captured values after recreate.
+
     /** Number of frames to wait after fade-out starts before playing new music. */
-    private final int delayFrames;
+    private int delayFrames;
 
     /** Music ID to play when the delay expires. */
-    private final int musicId;
+    private int musicId;
 
     /** Frame counter since creation. */
     private int timer;

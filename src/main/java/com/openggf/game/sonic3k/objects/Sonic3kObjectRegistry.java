@@ -66,6 +66,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.objects.DynamicObjectRecreateContext;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
+import com.openggf.level.objects.EggPrisonAnimalInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.ObjectSlotLayout;
@@ -433,7 +434,60 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // MHZ Act 2 ship-sequence controller (self-contained; ROM-fixed seeds).
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     MhzShipSequenceControllerInstance.class,
-                    s -> new MhzShipSequenceControllerInstance(0x04C0, 0x4000)));
+                    s -> new MhzShipSequenceControllerInstance(0x04C0, 0x4000)),
+
+            // --- Release-slice batch 7: Pachinko traps/flippers + boss-defeat
+            // signpost flow + song-fade transition + rock debris + egg-prison
+            // animal recreate codecs --------------------------------------------
+            // Without these, recreateDynamicObject() returns null for the listed
+            // objects captured in a rewind keyframe and they vanish on restore.
+            // All are self-contained (no live parent/sibling relink). Non-spawn
+            // differentiator scalars were made non-final where needed so the
+            // generic field capturer reapplies them after recreate.
+
+            // Pachinko bonus-stage capture trap (gameplay-critical: captures the
+            // player and ends the bonus stage). All mutable fields already
+            // non-final; spawn carries x/y, so a plain exactSpawnCodec suffices.
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    PachinkoEnergyTrapObjectInstance.class,
+                    PachinkoEnergyTrapObjectInstance::new),
+
+            // Pachinko sloped top-solid flipper (route-critical traversal
+            // terrain + control-lock launch). All mutable fields already
+            // non-final; fully spawn-constructible.
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    PachinkoFlipperObjectInstance.class,
+                    PachinkoFlipperObjectInstance::new),
+
+            // AIZ/LRZ breakable-rock gravity debris (cosmetic). mappingFrame /
+            // artKey un-finaled and reapplied; codec passes placeholder
+            // velocities/frame. Mirrors AizRockFragmentChild (batch 2).
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    RockDebrisChild.class,
+                    s -> new RockDebrisChild(s, 0, 0, 0, null)),
+
+            // Boss-defeat -> signpost -> results -> act-transition orchestrator
+            // (gameplay-critical, invisible, persistent). signpostX is spawn-
+            // derivable (getX()); apparentAct/cleanupAction un-finaled and
+            // reapplied after recreate.
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    S3kBossDefeatSignpostFlow.class,
+                    s -> new S3kBossDefeatSignpostFlow(
+                            s.x(), 0, S3kBossDefeatSignpostFlow.CleanupAction.NONE)),
+
+            // Pending music-transition object (persistent; owns a queued fade ->
+            // playMusic). delayFrames/musicId un-finaled and reapplied; codec
+            // uses a placeholder ctor since the ObjectSpawn carries no state.
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    SongFadeTransitionInstance.class,
+                    spawn -> new SongFadeTransitionInstance(0, 0)),
+
+            // Egg-prison released animal (persistent; spawned by S1/S2/S3K
+            // capsules). delay/artVariant fields already non-final; codec passes
+            // placeholder 0s. Mirrors the Mgz2CapsuleAnimalInstance sibling.
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    EggPrisonAnimalInstance.class,
+                    s -> new EggPrisonAnimalInstance(s, 0, 0)));
 
     // AIZ2 dynamic objects still intentionally dropped on rewind restore (no codec):
     //   (none remaining) — all AIZ2 battleship/boss transient children are now
