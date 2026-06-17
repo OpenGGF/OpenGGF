@@ -38,6 +38,7 @@ import com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance;
 import com.openggf.level.objects.AbstractObjectRegistry;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.objects.DynamicObjectRecreateContext;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectInstance;
@@ -80,7 +81,56 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             cnzMinibossChildCodec(CnzMinibossSparkInstance.class, CnzMinibossSparkInstance::new),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     CnzMinibossScrollControlInstance.class,
-                    CnzMinibossScrollControlInstance::new));
+                    CnzMinibossScrollControlInstance::new),
+
+            // --- AIZ2 battleship / boss-endgame dynamic objects ---------------
+            // Without these codecs, recreateDynamicObject() returns null for any
+            // AIZ2 ship/boss object captured in a rewind keyframe and the object
+            // is silently dropped on restore. The differentiating state (e.g.
+            // baseSecondaryY, subtype, barrelIndex) lives in scalar fields that
+            // were made non-final so the generic field capturer reapplies them
+            // after recreate; codecs only need to build a structurally-correct
+            // instance, so placeholders are passed where the value is reapplied.
+
+            // Tier 1: self-contained, no parent link.
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    AizBgTreeSpawnerInstance.class, s -> new AizBgTreeSpawnerInstance()),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    AizBossSmallInstance.class, s -> new AizBossSmallInstance()),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    AizMinibossNapalmProjectile.class,
+                    s -> new AizMinibossNapalmProjectile(s.x(), s.y())),
+
+            // Tier 2: non-final differentiator reapplied after recreate.
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    AizBattleshipInstance.class, s -> new AizBattleshipInstance(s, s.y())),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    AizBgTreeInstance.class, s -> new AizBgTreeInstance(0)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    Aiz2BossEndSequenceController.class,
+                    s -> new Aiz2BossEndSequenceController(s.x(), s.y())),
+
+            // Tier 3: relink to the live boss recreated earlier in the restore.
+            aizMinibossChildCodec(AizMinibossBodyChild.class, AizMinibossBodyChild::new),
+            aizMinibossChildCodec(AizMinibossArmChild.class, AizMinibossArmChild::new),
+            aizMinibossChildCodec(AizMinibossNapalmController.class,
+                    boss -> new AizMinibossNapalmController(boss, 0)),
+            aizMinibossChildCodec(AizMinibossFlameBarrelChild.class,
+                    boss -> new AizMinibossFlameBarrelChild(boss, 0, false)),
+            aizEndBossChildCodec(AizEndBossShipChild.class, AizEndBossShipChild::new),
+            aizEndBossChildCodec(AizEndBossFlameColumnChild.class, AizEndBossFlameColumnChild::new),
+            aizEndBossChildCodec(AizEndBossArmChild.class,
+                    boss -> new AizEndBossArmChild(boss, 0, 0, 0)));
+
+    // AIZ2 dynamic objects intentionally dropped on rewind restore (no codec):
+    // transient combat/cosmetic effects and children whose sibling-relink is too
+    // fragile to reconstruct. They respawn within a few frames from their live
+    // parents, so dropping them is safe:
+    //   AizShipBombInstance, AizBombExplosionInstance,
+    //   AizMinibossBarrelShotChild, AizMinibossBarrelShotFlareChild,
+    //   AizMinibossImpactFlameChild, AizMinibossFlameChild, AizMinibossDebrisChild,
+    //   AizEndBossPropellerChild, AizEndBossFlameChild, AizEndBossBombChild,
+    //   AizEndBossSmokeChild, AizEndBossDebrisChild.
 
     @Override
     public ObjectSlotLayout objectSlotLayout() {
@@ -131,6 +181,69 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
             if (inst instanceof CnzMinibossInstance parent) {
                 return parent;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Codec for an AIZ miniboss child. The live {@link AizMinibossInstance} is
+     * layout-spawned and recreated before the dynamic-object restore loop, so it
+     * is already present in {@code getActiveObjects()}. The child's
+     * {@code parent} is final and passed into the constructor. If the live
+     * miniboss is absent the child is dropped (codec returns null) rather than
+     * throwing.
+     */
+    private static DynamicObjectRewindCodec aizMinibossChildCodec(
+            Class<? extends AbstractObjectInstance> type,
+            Function<AbstractBossInstance, ? extends AbstractObjectInstance> factory) {
+        return bossChildCodec(type, AizMinibossInstance.class, factory);
+    }
+
+    /**
+     * Codec for an AIZ end-boss child. As with the miniboss children, the live
+     * {@link AizEndBossInstance} is recreated before the dynamic-object restore
+     * loop, so it is found in {@code getActiveObjects()} and passed into the
+     * child constructor.
+     */
+    private static DynamicObjectRewindCodec aizEndBossChildCodec(
+            Class<? extends AbstractObjectInstance> type,
+            Function<AizEndBossInstance, ? extends AbstractObjectInstance> factory) {
+        return bossChildCodec(type, AizEndBossInstance.class, factory);
+    }
+
+    private static <B extends AbstractBossInstance> DynamicObjectRewindCodec bossChildCodec(
+            Class<? extends AbstractObjectInstance> type,
+            Class<B> bossType,
+            Function<? super B, ? extends AbstractObjectInstance> factory) {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == type;
+            }
+
+            @Override
+            public String className() {
+                return type.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                B boss = findLiveBossForRewind(context, bossType);
+                if (boss == null) {
+                    return null;
+                }
+                return factory.apply(boss);
+            }
+        };
+    }
+
+    private static <B extends AbstractBossInstance> B findLiveBossForRewind(
+            DynamicObjectRecreateContext context, Class<B> bossType) {
+        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+            if (bossType.isInstance(inst)) {
+                return bossType.cast(inst);
             }
         }
         return null;

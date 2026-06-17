@@ -56,6 +56,11 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
         drawBridgeBurnActive = active;
     }
 
+    /** Rewind snapshot accessor for the shared draw-bridge burn latch. */
+    public static boolean isDrawBridgeBurnActive() {
+        return drawBridgeBurnActive;
+    }
+
     private final boolean isFireBridge;
     private final int halfWidth;
     private final int subtypeBase;

@@ -37,8 +37,10 @@ public class AizBgTreeInstance extends AbstractObjectInstance {
     /** Camera X threshold to delete tree. ROM: cmpi.w #$4880,(Camera_X_pos).w. */
     private static final int DELETE_CAMERA_X = 0x4880;
 
-    /** Smooth scroll X value at spawn time (baseline for parallax delta). */
-    private final int spawnSmoothScrollX;
+    /** Smooth scroll X value at spawn time (baseline for parallax delta).
+     *  Non-final so the generic rewind field capturer reapplies it after a
+     *  codec-driven recreate (the codec passes a placeholder). */
+    private int spawnSmoothScrollX;
 
     /** Current screen-relative X position, updated each frame. */
     private int screenX;

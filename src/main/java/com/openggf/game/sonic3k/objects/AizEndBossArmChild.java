@@ -37,9 +37,11 @@ public class AizEndBossArmChild extends AbstractBossChild {
     private static final int ROUTINE_WAIT_FIRE = 8;
     private static final int ROUTINE_WAIT_RETRACT = 10;
     private final AizEndBossInstance boss;
-    private final int offsetX;
-    private final int offsetY;
-    private final int subtype;
+    // Non-final so the generic rewind field capturer reapplies them after a
+    // codec-driven recreate (the codec passes placeholder 0/0/0).
+    private int offsetX;
+    private int offsetY;
+    private int subtype;
     private int routine;
     private int mappingFrame;
     private int waitTimer;

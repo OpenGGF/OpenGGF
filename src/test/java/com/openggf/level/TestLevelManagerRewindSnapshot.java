@@ -85,6 +85,7 @@ class TestLevelManagerRewindSnapshot {
                             level.currentEpoch(),
                             level.blocksReference(),
                             level.chunksReference(),
+                            level.patternsReference(),
                             level.getMap().getData(),
                             0,
                             true,
@@ -276,6 +277,7 @@ class TestLevelManagerRewindSnapshot {
                 0,
                 new Block[0],
                 new Chunk[0],
+                new Pattern[0],
                 new byte[0],
                 0);
 

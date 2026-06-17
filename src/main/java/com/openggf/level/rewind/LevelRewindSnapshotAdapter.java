@@ -1,11 +1,14 @@
 package com.openggf.level.rewind;
 
+import com.openggf.game.GameServices;
 import com.openggf.game.LevelState;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.AbstractLevel;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
+import com.openggf.level.Pattern;
 
 /**
  * Rewind adapter for mutable level geometry plus level-scoped HUD and checkpoint state.
@@ -39,6 +42,7 @@ public final class LevelRewindSnapshotAdapter implements RewindSnapshottable<Lev
                 level.currentEpoch(),
                 level.blocksReference(),
                 level.chunksReference(),
+                level.patternsReference(),
                 level.getMap().getData(),
                 manager.getFrameCounter(),
                 levelState != null,
@@ -58,6 +62,8 @@ public final class LevelRewindSnapshotAdapter implements RewindSnapshottable<Lev
                         || level.chunksReference() != snapshot.chunks()
                         || level.getMap().getData() != snapshot.mapData();
 
+        restorePatterns(level, snapshot.patterns());
+
         level.replaceBlocks(snapshot.blocks());
         level.replaceChunks(snapshot.chunks());
         level.getMap().restoreData(snapshot.mapData());
@@ -70,6 +76,48 @@ public final class LevelRewindSnapshotAdapter implements RewindSnapshottable<Lev
         restoreLevelHudState(snapshot);
         manager.restoreRespawnRequestedForRewind(snapshot.respawnRequested());
         manager.restoreCheckpointStateForRewind(snapshot.checkpointState());
+    }
+
+    /**
+     * Restores the captured patterns array and re-uploads only the atlas slots
+     * whose Pattern instance differs from the snapshot. applyPatternOverlay
+     * writes copy-on-write (fresh Pattern instances for touched slots and a
+     * cloned array), so identity inequality precisely marks the overlay-edited
+     * tiles that the GL atlas currently holds with post-overlay pixels.
+     */
+    private void restorePatterns(AbstractLevel level, Pattern[] snapshotPatterns) {
+        if (snapshotPatterns == null) {
+            return;
+        }
+        Pattern[] live = level.patternsReference();
+        if (live == snapshotPatterns) {
+            return;
+        }
+
+        GraphicsManager graphics = GameServices.graphics();
+        boolean reupload = graphics != null && graphics.isGlInitialized();
+        if (reupload) {
+            graphics.beginPatternAtlasBatch();
+        }
+        try {
+            level.replacePatterns(snapshotPatterns);
+            if (!reupload) {
+                return;
+            }
+            // Re-cache only the slots the atlas currently disagrees with: any
+            // index present in both arrays but holding a different Pattern
+            // instance is an overlay-edited tile whose atlas pixels are stale.
+            int overlap = Math.min(live.length, snapshotPatterns.length);
+            for (int i = 0; i < overlap; i++) {
+                if (live[i] != snapshotPatterns[i] && snapshotPatterns[i] != null) {
+                    graphics.cachePatternTexture(snapshotPatterns[i], i);
+                }
+            }
+        } finally {
+            if (reupload) {
+                graphics.endPatternAtlasBatch();
+            }
+        }
     }
 
     private void restoreLevelHudState(LevelSnapshot snapshot) {

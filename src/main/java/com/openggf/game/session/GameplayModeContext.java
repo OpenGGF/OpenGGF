@@ -23,6 +23,7 @@ import com.openggf.game.rewind.RewindController;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.LevelEventProvider;
+import com.openggf.game.rewind.snapshot.Aiz2BossEndSequenceStaticAdapter;
 import com.openggf.game.rewind.snapshot.OscillationStaticAdapter;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.solid.SolidExecutionRegistry;
@@ -199,6 +200,7 @@ public final class GameplayModeContext implements ModeContext {
         this.rewindRegistry.register(timerManager);
         this.rewindRegistry.register(fadeManager);
         this.rewindRegistry.register(new OscillationStaticAdapter());
+        this.rewindRegistry.register(new Aiz2BossEndSequenceStaticAdapter());
         // Register solid-execution adapter (no-op if not DefaultSolidExecutionRegistry)
         if (solidExecutionRegistry instanceof DefaultSolidExecutionRegistry dser) {
             this.rewindRegistry.register(dser);
@@ -418,6 +420,7 @@ public final class GameplayModeContext implements ModeContext {
         rewindRegistry.deregister("object-manager");
         rewindRegistry.deregister("level-event");
         rewindRegistry.deregister("solid-execution");
+        rewindRegistry.deregisterPostRestoreCallback("level-tilemap-event-reconcile");
         rewindRegistry.register(levelManager.levelRewindSnapshottable());
         if (levelManager.getObjectManager() != null) {
             rewindRegistry.register(levelManager.getObjectManager().rewindSnapshottable());
@@ -426,12 +429,30 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.register(dser);
         }
         // Register level-event manager adapter (available after gameModule is set).
+        AbstractLevelEventManager levelEventManager = null;
         if (levelManager.getGameModule() != null) {
             LevelEventProvider lep = levelManager.getGameModule().getLevelEventProvider();
             if (lep instanceof AbstractLevelEventManager alem) {
+                levelEventManager = alem;
                 rewindRegistry.register(alem);
             }
         }
+        // Post-restore reconciliation (runs after all entry restores, i.e. after
+        // object-manager recreate): let level-event handlers reconcile one-shot
+        // sequence state against the restored object set (e.g. S3K AIZ2
+        // ship-loop/boss softlock guards), and force a tilemap rebuild so the
+        // camera-history-dependent FG ring / BG window re-derive from the
+        // restored camera position. No-ops outside the zones that need them.
+        final AbstractLevelEventManager reconcileTarget = levelEventManager;
+        rewindRegistry.registerPostRestoreCallback("level-tilemap-event-reconcile", () -> {
+            if (reconcileTarget != null) {
+                reconcileTarget.reconcileAfterRewindRestore();
+            }
+            var tilemapManager = levelManager.getTilemapManager();
+            if (tilemapManager != null) {
+                tilemapManager.resetTilemapsForRewindRestore();
+            }
+        });
     }
 
     /**

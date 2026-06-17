@@ -4,6 +4,21 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **AIZ2 ship-loop and boss no longer break under rewind:** holding rewind
+  during the Sonic 3&K AIZ2 battleship auto-scroll loop or the miniboss/end-boss
+  no longer softlocks, desyncs, or corrupts graphics. The AIZ2 ship/boss dynamic
+  objects (battleship, small craft, tree spawner, boss-endgame controller, and
+  the structural boss children) now have rewind codecs so they are recreated on
+  a backward seek instead of being silently dropped while their one-shot spawn
+  guards stay set; a post-restore reconciliation releases any orphaned
+  auto-scroll camera lock when a driver object is absent; the AIZ2 boss-endgame
+  cutscene latches are snapshotted; the in-place battleship/fire pattern overlay
+  is now copy-on-write and captured so rewinding past the terrain load no longer
+  leaves ship/fire tiles behind; and the foreground ship-loop ring plus the
+  background tilemap window are rebuilt from the restored camera on every rewind
+  restore. Short-lived combat/cosmetic boss children are intentionally not
+  restored (they respawn within frames) — see S3K_KNOWN_DISCREPANCIES.md.
+
 - **Trace context marks tolerated status mismatches:** trace replay context
   windows now keep ignored-but-real sidekick status-byte mismatches visible with
   a `~` marker, so push/facing diagnostics that precede a movement frontier can

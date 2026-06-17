@@ -61,7 +61,9 @@ public class AizBattleshipInstance extends AbstractObjectInstance {
 
     // 16:16 fixed-point ship position (integer part = upper 16 bits)
     private int shipXFixed;
-    private final int baseSecondaryY;
+    // Non-final so the generic rewind field capturer reapplies it after a
+    // codec-driven recreate (see Sonic3kObjectRegistry dynamic rewind codecs).
+    private int baseSecondaryY;
     private int effectiveSecondaryY;
     private int scriptIndex;
     private int delayTimer;

@@ -6,6 +6,7 @@ import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.rewind.snapshot.SpriteManagerSnapshot;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
+import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import org.junit.jupiter.api.Test;
@@ -91,6 +92,7 @@ class TestRewindBenchmarkSizeEstimator {
                 1L,
                 new Block[] {new Block(), new Block()},
                 new Chunk[] {new Chunk(), new Chunk(), new Chunk()},
+                new Pattern[] {new Pattern(), new Pattern()},
                 new byte[64 * 1024],
                 42);
 
@@ -118,9 +120,10 @@ class TestRewindBenchmarkSizeEstimator {
     void retainedWindowEstimateAccountsForSharedLevelArraysAcrossKeyframes() {
         Block[] sharedBlocks = new Block[] {new Block(), new Block()};
         Chunk[] sharedChunks = new Chunk[] {new Chunk(), new Chunk(), new Chunk()};
+        Pattern[] sharedPatterns = new Pattern[] {new Pattern(), new Pattern()};
         byte[] sharedMap = new byte[64 * 1024];
-        LevelSnapshot first = new LevelSnapshot(1L, sharedBlocks, sharedChunks, sharedMap, 42);
-        LevelSnapshot second = new LevelSnapshot(1L, sharedBlocks, sharedChunks, sharedMap, 43);
+        LevelSnapshot first = new LevelSnapshot(1L, sharedBlocks, sharedChunks, sharedPatterns, sharedMap, 42);
+        LevelSnapshot second = new LevelSnapshot(1L, sharedBlocks, sharedChunks, sharedPatterns, sharedMap, 43);
         IdentityHashMap<Object, Boolean> seen = new IdentityHashMap<>();
 
         long firstBytes = RewindBenchmark.estimateStructuralSizeShared(first, seen);

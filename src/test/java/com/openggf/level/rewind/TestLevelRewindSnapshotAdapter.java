@@ -44,6 +44,7 @@ class TestLevelRewindSnapshotAdapter {
         assertEquals("level", LevelRewindSnapshotAdapter.create(manager).key());
         assertSame(level.blocksReference(), snapshot.blocks());
         assertSame(level.chunksReference(), snapshot.chunks());
+        assertSame(level.patternsReference(), snapshot.patterns());
         assertSame(level.getMap().getData(), snapshot.mapData());
         assertEquals(77, snapshot.frameCounter());
         assertEquals(31, snapshot.levelRings());
@@ -61,11 +62,13 @@ class TestLevelRewindSnapshotAdapter {
         when(manager.getLevelGamestate()).thenReturn(levelState);
         Block[] snapshotBlocks = new Block[] {new Block()};
         Chunk[] snapshotChunks = new Chunk[] {new Chunk()};
+        Pattern[] snapshotPatterns = new Pattern[] {new Pattern()};
         byte[] snapshotMap = new byte[] {0x11, 0x22};
         LevelSnapshot snapshot = new LevelSnapshot(
                 3,
                 snapshotBlocks,
                 snapshotChunks,
+                snapshotPatterns,
                 snapshotMap,
                 88,
                 true,
@@ -101,6 +104,7 @@ class TestLevelRewindSnapshotAdapter {
                 level.currentEpoch(),
                 level.blocksReference(),
                 level.chunksReference(),
+                level.patternsReference(),
                 level.getMap().getData(),
                 44,
                 true,

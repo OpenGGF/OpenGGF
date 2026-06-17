@@ -708,6 +708,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     @Override
+    public void reconcileAfterRewindRestore() {
+        if (aizEvents != null) {
+            aizEvents.reconcileSequenceAfterRewindRestore();
+        }
+    }
+
+    @Override
     public void setBossFlag(boolean value) {
         if (aizEvents != null) {
             aizEvents.setBossFlag(value);

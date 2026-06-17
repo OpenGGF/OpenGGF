@@ -289,6 +289,12 @@ public class Sonic3kLevel extends AbstractLevel {
         int requiredPatternCount = startPatternIndex + overlayPatternCount;
         ensurePatternCapacity(requiredPatternCount);
 
+        // Rewind keyframes share the live patterns array by reference
+        // (LevelSnapshot contract): write into a cloned array with freshly
+        // constructed Pattern instances so previously captured keyframes keep
+        // the pre-overlay pixels. Mirrors applyChunkOverlay's copy-on-write.
+        Pattern[] newPatterns = patterns.clone();
+
         GraphicsManager graphics = GameServices.graphics();
         graphics.beginPatternAtlasBatch();
         try {
@@ -298,12 +304,9 @@ public class Sonic3kLevel extends AbstractLevel {
                 System.arraycopy(overlayData, src, tileBytes, 0, Pattern.PATTERN_SIZE_IN_ROM);
 
                 int patternIndex = startPatternIndex + i;
-                Pattern pattern = patterns[patternIndex];
-                if (pattern == null) {
-                    pattern = new Pattern();
-                    patterns[patternIndex] = pattern;
-                }
+                Pattern pattern = new Pattern();
                 pattern.fromSegaFormat(tileBytes);
+                newPatterns[patternIndex] = pattern;
 
                 if (graphics.isGlInitialized()) {
                     graphics.cachePatternTexture(pattern, patternIndex);
@@ -315,10 +318,11 @@ public class Sonic3kLevel extends AbstractLevel {
             // mode retained for intro swap parity behavior.
             if (clearTrailing && requiredPatternCount < patternCount) {
                 for (int i = requiredPatternCount; i < patternCount; i++) {
-                    if (patterns[i] != null) {
-                        patterns[i].clear();
+                    if (newPatterns[i] != null) {
+                        Pattern cleared = new Pattern();
+                        newPatterns[i] = cleared;
                         if (graphics.isGlInitialized()) {
-                            graphics.cachePatternTexture(patterns[i], i);
+                            graphics.cachePatternTexture(cleared, i);
                         }
                     }
                 }
@@ -326,6 +330,8 @@ public class Sonic3kLevel extends AbstractLevel {
         } finally {
             graphics.endPatternAtlasBatch();
         }
+
+        patterns = newPatterns;
     }
 
     /**
