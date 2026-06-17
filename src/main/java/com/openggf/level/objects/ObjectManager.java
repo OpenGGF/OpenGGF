@@ -8,6 +8,7 @@ import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.solid.ContactKind;
+import com.openggf.level.objects.boss.BossChildComponent;
 import com.openggf.game.solid.ObjectSolidExecutionContext;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.PlayerStandingState;
@@ -1338,9 +1339,22 @@ public class ObjectManager {
     public List<ObjectInstance> snapshotPersistentDynamicObjectsForTransition() {
         List<ObjectInstance> snapshot = new ArrayList<>();
         for (ObjectInstance instance : dynamicObjects) {
-            if (instance != null && !instance.isDestroyed() && instance.isPersistent()) {
-                snapshot.add(instance);
+            if (instance == null || instance.isDestroyed() || !instance.isPersistent()) {
+                continue;
             }
+            // ROM Load_Level clears Dynamic_object_RAM, so a boss object group does
+            // not survive a level reload. Boss component children report persistent
+            // only so they survive the off-screen cull during the fixed-arena fight
+            // (see AbstractBossChild.isPersistent); they must NOT ride a seamless act
+            // reload. Carrying them strands them un-offset in the new act — concretely
+            // the placed AIZ1 miniboss cutscene is dropped on the AIZ1->AIZ2 fire
+            // reload while its persistent body/arm/flame-barrel children were carried,
+            // leaving an art-less (invisible) body and still-hurting flame barrels
+            // partway through AIZ2.
+            if (instance instanceof BossChildComponent) {
+                continue;
+            }
+            snapshot.add(instance);
         }
         return snapshot;
     }

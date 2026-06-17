@@ -231,6 +231,13 @@ straightforward to add new objects, zones, and game-specific behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **AIZ miniboss body/flames no longer strand in AIZ2 -- actual carry-path fix (2026-06-17).** Merged
+  `bugfix/ai-aiz2-boss-child-carry-strand`. The two earlier AIZ miniboss carry fixes targeted the
+  *placed* cutscene object (0x90), which is never in the dynamic-object carry snapshot, so they
+  did not stop the strand. The objects actually carried across the AIZ1->AIZ2 fire reload were the
+  miniboss boss component children (body/arm/flame barrels); the carry snapshot now excludes
+  `BossChildComponent`, matching ROM `Load_Level` clearing `Dynamic_object_RAM`. Off-screen
+  boss-part persistence during a fight is unaffected.
 - **Test-suite cleanup after trace-frontier fixes (2026-06-17).** Merged
   `bugfix/ai-test-suite-cleanup`, aligning stale parity and guard tests with the
   current trace-frontier behavior while fixing the underlying rewind snapshot,
