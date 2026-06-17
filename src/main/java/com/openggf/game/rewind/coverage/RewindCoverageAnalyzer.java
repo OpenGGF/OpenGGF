@@ -50,8 +50,10 @@ public final class RewindCoverageAnalyzer {
         Path srcMain = ObjectClasspathScan.findSourceRoot();
         if (srcMain == null) {
             // Source tree unavailable (e.g., running from a packaged JAR);
-            // return an empty report rather than crashing.
-            return new RewindCoverageReport(List.of());
+            // fail loudly so CI doesn't pass vacuously.
+            throw new IllegalStateException(
+                    "Rewind coverage scan found no objects (source root not resolved). " +
+                    "The analyzer must run from a source checkout.");
         }
 
         List<ObjectClasspathScan.SourceClass> classes;
@@ -77,6 +79,13 @@ public final class RewindCoverageAnalyzer {
                     List.of(),  // uncapturedFinalScalarFields — Task 4 fills
                     List.of()   // unIdObjectRefFields — Task 4 fills
             ));
+        }
+
+        // Fail loudly if the scan produced zero objects (misconfiguration)
+        if (coverages.isEmpty()) {
+            throw new IllegalStateException(
+                    "Rewind coverage scan found no objects (source root: " + srcMain + "). " +
+                    "The analyzer must run from a source checkout with concrete objects.");
         }
 
         // Sort by className for stable output
