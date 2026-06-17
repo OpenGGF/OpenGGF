@@ -61,6 +61,10 @@ import com.openggf.game.sonic3k.objects.bosses.MhzEndBossSpikeChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossVisualChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherMachineChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherVisualChild;
+import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator;
+import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusStageRuntime;
+import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageController;
 import com.openggf.level.objects.AbstractObjectRegistry;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.boss.AbstractBossInstance;
@@ -487,7 +491,21 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // placeholder 0s. Mirrors the Mgz2CapsuleAnimalInstance sibling.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     EggPrisonAnimalInstance.class,
-                    s -> new EggPrisonAnimalInstance(s, 0, 0)));
+                    s -> new EggPrisonAnimalInstance(s, 0, 0)),
+
+            // --- Release-slice batch 8: Slot-machine bonus-stage objects --------
+            // Without these codecs, recreateDynamicObject() returns null for the
+            // three slot-stage dynamic objects captured in a rewind keyframe, and
+            // they are silently dropped on restore — softlocking the bonus stage.
+            // All mutable scalar fields are already non-final and reapplied by the
+            // generic field capturer after recreate. The only non-trivial piece is
+            // supplying the live S3kSlotStageController; it is resolved from the
+            // active Sonic3kBonusStageCoordinator via GameServices.bonusStageOrNull()
+            // (a game-package cast inside a game-package codec, so ArchUnit-clean).
+            // If the bonus stage is not active the codec returns null gracefully.
+            slotBonusCageCodec(),
+            slotRingRewardCodec(),
+            slotSpikeRewardCodec());
 
     // AIZ2 dynamic objects still intentionally dropped on rewind restore (no codec):
     //   (none remaining) — all AIZ2 battleship/boss transient children are now
@@ -947,6 +965,125 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             }
         }
         return best;
+    }
+
+    /**
+     * Resolves the live {@link S3kSlotStageController} from the active
+     * {@link Sonic3kBonusStageCoordinator} via the shared
+     * {@link GameServices#bonusStageOrNull()} facade. Returns {@code null} when
+     * the bonus stage is not active (bonus stage not entered, or already exited).
+     *
+     * <p>Called by each of the three slot-object rewind codecs.  The coordinator
+     * cast is inside a game-package method, so the ArchUnit shared→game rule is
+     * not violated.
+     */
+    private static S3kSlotStageController resolveSlotStageControllerForRewind() {
+        if (!(GameServices.bonusStageOrNull() instanceof Sonic3kBonusStageCoordinator coordinator)) {
+            return null;
+        }
+        S3kSlotBonusStageRuntime runtime = coordinator.activeSlotRuntime();
+        if (runtime == null) {
+            return null;
+        }
+        return runtime.stageController();
+    }
+
+    /**
+     * Codec for {@link S3kSlotBonusCageObjectInstance}. The cage is added to the
+     * dynamic object list by {@code S3kSlotBonusStageRuntime} and captured in
+     * rewind keyframes. Without this codec it is silently dropped on restore,
+     * leaving the bonus stage without its driving cage object.
+     *
+     * <p>The cage's mutable scalar fields are all non-final and reapplied by the
+     * generic field capturer after recreate; the only non-trivial piece is
+     * supplying the live {@link S3kSlotStageController}. If the controller is not
+     * available (bonus stage not active) the codec returns {@code null} and the
+     * restore gracefully drops the object.
+     */
+    private static DynamicObjectRewindCodec slotBonusCageCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == S3kSlotBonusCageObjectInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return S3kSlotBonusCageObjectInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                S3kSlotStageController controller = resolveSlotStageControllerForRewind();
+                if (controller == null) {
+                    return null;
+                }
+                return new S3kSlotBonusCageObjectInstance(entry.spawn(), controller);
+            }
+        };
+    }
+
+    /**
+     * Codec for {@link S3kSlotRingRewardObjectInstance}. The ring-reward child is
+     * added dynamically by the cage and captured in rewind keyframes. Without this
+     * codec it is silently dropped on restore. Mutable scalar fields are non-final
+     * and reapplied after recreate; the live {@link S3kSlotStageController} is
+     * fetched from the active bonus-stage coordinator.
+     */
+    private static DynamicObjectRewindCodec slotRingRewardCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == S3kSlotRingRewardObjectInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return S3kSlotRingRewardObjectInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                S3kSlotStageController controller = resolveSlotStageControllerForRewind();
+                if (controller == null) {
+                    return null;
+                }
+                return new S3kSlotRingRewardObjectInstance(entry.spawn(), controller);
+            }
+        };
+    }
+
+    /**
+     * Codec for {@link S3kSlotSpikeRewardObjectInstance}. The spike-reward child is
+     * added dynamically by the cage and captured in rewind keyframes. Without this
+     * codec it is silently dropped on restore. Mutable scalar fields are non-final
+     * and reapplied after recreate; the live {@link S3kSlotStageController} is
+     * fetched from the active bonus-stage coordinator.
+     */
+    private static DynamicObjectRewindCodec slotSpikeRewardCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == S3kSlotSpikeRewardObjectInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return S3kSlotSpikeRewardObjectInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                S3kSlotStageController controller = resolveSlotStageControllerForRewind();
+                if (controller == null) {
+                    return null;
+                }
+                return new S3kSlotSpikeRewardObjectInstance(entry.spawn(), controller);
+            }
+        };
     }
 
     /**

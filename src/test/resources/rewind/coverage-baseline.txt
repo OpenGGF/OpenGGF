@@ -1242,9 +1242,6 @@ com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance#finalScalar#monitorX
 com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance#finalScalar#monitorY
 com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance#recreate
 com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance#objectRef#playerRef
-com.openggf.game.sonic3k.objects.S3kSlotBonusCageObjectInstance#recreate
-com.openggf.game.sonic3k.objects.S3kSlotRingRewardObjectInstance#recreate
-com.openggf.game.sonic3k.objects.S3kSlotSpikeRewardObjectInstance#recreate
 com.openggf.game.sonic3k.objects.SinkingMudObjectInstance#finalScalar#halfWidth
 com.openggf.game.sonic3k.objects.SinkingMudObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Sonic3kButtonObjectInstance#finalScalar#adjustedY

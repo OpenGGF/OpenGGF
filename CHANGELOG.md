@@ -4,6 +4,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S3K (batch 8): slot-machine bonus-stage objects restored under rewind.** The slot-machine cage, ring-reward child, and spike-reward child now have rewind recreate codecs; the live S3kSlotStageController is recovered from the active Sonic3kBonusStageCoordinator via GameServices.bonusStageOrNull() (null-safe, returns null gracefully when the bonus stage is not active). Previously these three objects were silently dropped on rewind restore, leaving the bonus stage without its driving cage object.
+
 - **S2 (batch 7): more held-rewind objects restored.** The shared boss-defeat explosion and the end-of-act signpost ring sparkle now have rewind recreate codecs (recreated on a backward seek instead of dropped; the sparkle codec is shared with S1, and S1 boss explosions are now codec'd too). The debug-box base class stays uncaptured as a non-spawned abstract-role base (see docs/KNOWN_DISCREPANCIES.md).
 
 - **S1 (batch 7): rewind classification for two cosmetic/dead-code objects.** The TRY AGAIN / END ending Eggman instance class (dead code - the live ending Eggman is reimplemented inline in TryAgainEndManager) and the shared underwater drowning bubble (a cosmetic particle re-emitted in-frame by DrowningController) stay uncaptured on a held-rewind boundary; both are accept-drop with their coverage-baseline keys retained (see docs/KNOWN_DISCREPANCIES.md "Batch-7 Rewind: Transient Cosmetic Children Not Rewound").
