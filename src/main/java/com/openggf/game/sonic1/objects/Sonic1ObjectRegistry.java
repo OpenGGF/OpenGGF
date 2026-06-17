@@ -2,6 +2,7 @@ package com.openggf.game.sonic1.objects;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
+import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.Sonic1Level;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.objects.badniks.Sonic1BallHogBadnikInstance;
@@ -43,6 +44,7 @@ import com.openggf.game.sonic1.objects.bosses.Sonic1FZBossInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance;
 import com.openggf.level.LevelManager;
+import com.openggf.level.objects.boss.BossExplosionObjectInstance;
 import com.openggf.level.objects.AbstractObjectRegistry;
 import com.openggf.level.objects.DynamicObjectRecreateContext;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
@@ -153,7 +155,11 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
                     }),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     Sonic1TeleporterObjectInstance.class,
-                    spawn -> new Sonic1TeleporterObjectInstance(spawn)));
+                    spawn -> new Sonic1TeleporterObjectInstance(spawn)),
+            // Batch-7 S1 rewind codec (shared boss-defeat explosion).
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    BossExplosionObjectInstance.class,
+                    s -> new BossExplosionObjectInstance(s.x(), s.y(), Sonic1Sfx.BOSS_EXPLOSION.id)));
 
     private static DynamicObjectRewindCodec bombFuseChildCodec() {
         return new DynamicObjectRewindCodec() {

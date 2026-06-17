@@ -212,7 +212,11 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                     spawn -> new LeafParticleObjectInstance(spawn.x(), spawn.y(), 0, 0, 0, 0)),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     ResultsScreenObjectInstance.class,
-                    spawn -> new ResultsScreenObjectInstance(0, 0, 0, false)));
+                    spawn -> new ResultsScreenObjectInstance(0, 0, 0, false)),
+            // Batch-7 S2 rewind codec (shared boss-defeat explosion).
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    BossExplosionObjectInstance.class,
+                    s -> new BossExplosionObjectInstance(s.x(), s.y(), Sonic2Sfx.BOSS_EXPLOSION.id)));
 
     private final Map<Integer, List<String>> namesById = new HashMap<>();
     private final Set<Integer> unknownIds = new HashSet<>();

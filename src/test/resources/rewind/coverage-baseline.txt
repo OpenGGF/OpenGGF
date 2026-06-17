@@ -1449,11 +1449,7 @@ com.openggf.level.objects.BreathingBubbleInstance#recreate
 com.openggf.level.objects.ExplosionObjectInstance#finalScalar#pointsAllocatedBeforeAnimal
 com.openggf.level.objects.ExplosionObjectInstance#finalScalar#pointsValue
 com.openggf.level.objects.PlaceholderObjectInstance#recreate
-com.openggf.level.objects.SignpostSparkleObjectInstance#finalScalar#worldX
-com.openggf.level.objects.SignpostSparkleObjectInstance#finalScalar#worldY
-com.openggf.level.objects.SignpostSparkleObjectInstance#recreate
 com.openggf.level.objects.SkidDustObjectInstance#finalScalar#facingLeft
 com.openggf.level.objects.SplashObjectInstance#finalScalar#facingLeft
 com.openggf.level.objects.SplashObjectInstance#recreate
 com.openggf.level.objects.boss.BossExplosionObjectInstance#finalScalar#sfxId
-com.openggf.level.objects.boss.BossExplosionObjectInstance#recreate

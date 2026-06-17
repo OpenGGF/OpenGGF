@@ -21,8 +21,10 @@ public class SignpostSparkleObjectInstance extends AbstractObjectInstance {
     private int animFrame = 0;
     private int totalFrames = 4; // Default, will be updated from RingManager
     private int sparkleStartIndex = 4; // Default sparkle frame start
-    private final int worldX;
-    private final int worldY;
+    // Non-final so GenericFieldCapturer captures them and restoreObjectRewindState reapplies
+    // them after a rewind recreate (the base `spawn` is null, so position is not spawn-derivable).
+    private int worldX;
+    private int worldY;
 
     public SignpostSparkleObjectInstance(int x, int y) {
         super(null, "signpost_sparkle_" + x + "_" + y);

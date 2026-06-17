@@ -23,7 +23,12 @@ public final class ObjectRewindDynamicCodecs {
                         InvincibilityStarsObjectInstance.class,
                         InvincibilityStarsObjectInstance.class),
                 explosionCodec(),
-                skidDustCodec());
+                skidDustCodec(),
+                // Batch-7: signpost ring sparkle (shared S1+S2; S3K uses S3kSignpostSparkleChild).
+                // worldX/worldY are reapplied by the post-recreate non-final scalar restore.
+                exactSpawnCodec(
+                        SignpostSparkleObjectInstance.class,
+                        spawn -> new SignpostSparkleObjectInstance(0, 0)));
     }
 
     public static DynamicObjectRewindCodec deferredPlayerBoundCodec(

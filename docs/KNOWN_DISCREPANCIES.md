@@ -1138,3 +1138,27 @@ All other batch-6 S2 objects that were previously dropped now have rewind codecs
 slot-machine ring prize), `SteamPuffObjectInstance` (MTZ steam puff), `SeesawBallObjectInstance`
 (HTZ seesaw ball, parent-relink), and `CPZBossContainerExtend` (CPZ-boss container extend,
 boss+container relink).
+
+## Batch-7 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)
+
+One batch-7 cosmetic object is intentionally **not** captured/recreated across a held-rewind
+boundary (no rewind codec; its `#recreate` / `#finalScalar` keys stay in
+`src/test/resources/rewind/coverage-baseline.txt`). This mirrors the AIZ2 transient-children
+precedent and the batch-2/3/4/5/6 cosmetic cases above.
+
+- `com.openggf.level.objects.BoxObjectInstance` (debug-box base class; renders only a coloured
+  outline + crosshair, holds no player/score/terrain state): it is **never** registered as a
+  factory in any `*ObjectRegistry` and is never spawned as its own concrete type in gameplay —
+  all real instances are subclasses (checkpoints, springs, bridges, CNZ blocks, elevators, etc.),
+  each with its own object ID and its own codec. Its baseline keys
+  (`#recreate` + `#finalScalar#{b,g,halfHeight,halfWidth,highPriority,r}`) are a
+  `RewindCoverageAnalyzer` static over-approximation of a base class that no live carry path can
+  produce as itself, so it can never actually be dropped on a held rewind. Accept-drop-as-baseline
+  rather than registering a production codec for an abstract-role base class with no spawn factory.
+
+All other batch-7 objects now have rewind codecs and are restored on a backward seek:
+`com.openggf.level.objects.boss.BossExplosionObjectInstance` (shared boss-defeat explosion,
+registered per-game in `Sonic1ObjectRegistry`/`Sonic2ObjectRegistry`) and
+`com.openggf.level.objects.SignpostSparkleObjectInstance` (shared S1+S2 signpost ring sparkle,
+in `ObjectRewindDynamicCodecs.sharedCodecs()`; its non-final `worldX`/`worldY` are reapplied after
+recreate). S3K's signpost sparkle (`S3kSignpostSparkleChild`) is already codec'd separately.

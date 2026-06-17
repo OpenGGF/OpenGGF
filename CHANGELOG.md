@@ -4,6 +4,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 (batch 7): more held-rewind objects restored.** The shared boss-defeat explosion and the end-of-act signpost ring sparkle now have rewind recreate codecs (recreated on a backward seek instead of dropped; the sparkle codec is shared with S1, and S1 boss explosions are now codec'd too). The debug-box base class stays uncaptured as a non-spawned abstract-role base (see docs/KNOWN_DISCREPANCIES.md).
+
 - **S3K (batch 7): more held-rewind objects restored.** The Pachinko bonus-stage energy trap and sloped flipper, the boss-defeat-to-signpost orchestrator, the queued song-fade music transition, the AIZ/LRZ breakable-rock debris fragment, and the egg-prison released animal now have rewind recreate codecs (recreated on a backward seek instead of dropped).
 
 - **S2 (batch 6): more held-rewind objects restored.** The CNZ slot-machine ring prize, the MTZ steam puff, the HTZ seesaw ball, and the CPZ-boss container extend now have rewind recreate codecs (recreated on a backward seek instead of dropped). The Super Sonic sparkle trail and the water splash stay uncaptured as transient cosmetics re-emitted in-frame (see docs/KNOWN_DISCREPANCIES.md).
