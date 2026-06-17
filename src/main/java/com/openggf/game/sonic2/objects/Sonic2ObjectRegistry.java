@@ -35,6 +35,7 @@ import com.openggf.game.sonic2.objects.badniks.SpikerBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.SpikerDrillObjectInstance;
 import com.openggf.game.sonic2.objects.badniks.SolBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.RexonBadnikInstance;
+import com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance;
 import com.openggf.game.sonic2.objects.badniks.ShellcrackerBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.SlicerBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.NebulaBadnikInstance;
@@ -71,11 +72,13 @@ import com.openggf.game.sonic2.objects.bosses.HTZBossLavaBall;
 import com.openggf.game.sonic2.objects.bosses.CNZBossElectricBall;
 import com.openggf.game.sonic2.objects.bosses.CPZBossContainer;
 import com.openggf.game.sonic2.objects.bosses.CPZBossContainerFloor;
+import com.openggf.game.sonic2.objects.bosses.CPZBossDripper;
 import com.openggf.game.sonic2.objects.bosses.CPZBossFallingPart;
 import com.openggf.game.sonic2.objects.bosses.CPZBossFlame;
 import com.openggf.game.sonic2.objects.bosses.CPZBossGunk;
 import com.openggf.game.sonic2.objects.bosses.CPZBossPipe;
 import com.openggf.game.sonic2.objects.bosses.CPZBossPipePump;
+import com.openggf.game.sonic2.objects.bosses.CPZBossPipeSegment;
 import com.openggf.game.sonic2.objects.bosses.CPZBossPump;
 import com.openggf.game.sonic2.objects.bosses.CPZBossRobotnik;
 import com.openggf.game.sonic2.objects.bosses.LavaBubbleObjectInstance;
@@ -181,7 +184,22 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     BubbleObjectInstance.class,
                     spawn -> new BubbleObjectInstance(spawn.x(), spawn.y(), 0, 0)),
-            oozBurnerFlameCodec());
+            oozBurnerFlameCodec(),
+            // Batch-5 S2 rewind codecs (CPZ-boss Dripper/PipeSegment, Rexon head,
+            // Egg-prison destroyed body + button, ARZ leaf particle, results screen).
+            cpzBossDripperCodec(),
+            cpzBossPipeSegmentCodec(),
+            rexonHeadCodec(),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    DestroyedEggPrisonObjectInstance.class,
+                    spawn -> new DestroyedEggPrisonObjectInstance(spawn, spawn.x(), spawn.y())),
+            eggPrisonButtonCodec(),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    LeafParticleObjectInstance.class,
+                    spawn -> new LeafParticleObjectInstance(spawn.x(), spawn.y(), 0, 0, 0, 0)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    ResultsScreenObjectInstance.class,
+                    spawn -> new ResultsScreenObjectInstance(0, 0, 0, false)));
 
     private final Map<Integer, List<String>> namesById = new HashMap<>();
     private final Set<Integer> unknownIds = new HashSet<>();
@@ -1200,6 +1218,122 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             }
         }
         return null;
+    }
+
+    // ---- Batch-5 relink codecs ----
+
+    private static DynamicObjectRewindCodec cpzBossDripperCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == CPZBossDripper.class;
+            }
+
+            @Override
+            public String className() {
+                return CPZBossDripper.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                Sonic2CPZBossInstance boss = findLiveInstance(context, Sonic2CPZBossInstance.class);
+                CPZBossPipe pipe = findLiveInstance(context, CPZBossPipe.class);
+                // mainBoss + parentPipe relinked via ctor (both stay final object refs).
+                // All scalar state (x, y, renderFlags, routineSecondary, anim, mappingFrame,
+                // timer, timer4) is non-final and reapplied by restoreObjectRewindState.
+                return pipe == null ? null : new CPZBossDripper(entry.spawn(), boss, pipe);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec cpzBossPipeSegmentCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == CPZBossPipeSegment.class;
+            }
+
+            @Override
+            public String className() {
+                return CPZBossPipeSegment.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                Sonic2CPZBossInstance boss = findLiveInstance(context, Sonic2CPZBossInstance.class);
+                CPZBossPipe pipe = findLiveInstance(context, CPZBossPipe.class);
+                if (pipe == null) {
+                    return null;
+                }
+                // mainBoss + parentPipe relinked via ctor (both stay final). yOffset is a
+                // non-final scalar reapplied by restoreObjectRewindState, so 0 here is a
+                // placeholder; x/y/renderFlags/anim/mappingFrame/retracting are non-final and
+                // overwritten on restore; animationState is rebuilt in the ctor.
+                return new CPZBossPipeSegment(entry.spawn(), boss, pipe, 0);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec rexonHeadCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == RexonHeadObjectInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return RexonHeadObjectInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                RexonBadnikInstance parent = findLiveInstance(context, RexonBadnikInstance.class);
+                if (parent == null) {
+                    return null;
+                }
+                // parent relinked via ctor. x/y, headIndex, headNumber, xFlip (un-finaled),
+                // state, velocities, oscillation phase/dir/counter, baseX/Y, sub-pixels,
+                // timers, projectileTimer, destroyed are reapplied by restoreObjectRewindState.
+                // linkedHead (sibling) is an object-ref field relinked generically by identity
+                // id. Placeholders below are overwritten on restore.
+                return new RexonHeadObjectInstance(
+                        entry.spawn(), parent,
+                        entry.spawn().x(), entry.spawn().y(),
+                        0,      // headIndex placeholder (un-finaled, reapplied)
+                        false); // xFlip placeholder (un-finaled, reapplied)
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec eggPrisonButtonCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == EggPrisonButtonObjectInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return EggPrisonButtonObjectInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                EggPrisonObjectInstance parent =
+                        findLiveInstance(context, EggPrisonObjectInstance.class);
+                if (parent == null) {
+                    return null;
+                }
+                // parent relinked via ctor; baseY recomputed from spawn (final, spawn-derivable);
+                // currentY/triggered are non-final scalars reapplied by restoreObjectRewindState.
+                return new EggPrisonButtonObjectInstance(entry.spawn(), parent);
+            }
+        };
     }
 
     @Override

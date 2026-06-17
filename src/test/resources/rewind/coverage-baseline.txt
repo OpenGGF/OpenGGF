@@ -383,10 +383,8 @@ com.openggf.game.sonic2.objects.ConveyorObjectInstance#finalScalar#baseY
 com.openggf.game.sonic2.objects.ConveyorObjectInstance#finalScalar#xFlip
 com.openggf.game.sonic2.objects.DestroyedEggPrisonObjectInstance#finalScalar#positionX
 com.openggf.game.sonic2.objects.DestroyedEggPrisonObjectInstance#finalScalar#positionY
-com.openggf.game.sonic2.objects.DestroyedEggPrisonObjectInstance#recreate
 com.openggf.game.sonic2.objects.EHZWaterfallObjectInstance#recreate
 com.openggf.game.sonic2.objects.EggPrisonButtonObjectInstance#finalScalar#baseY
-com.openggf.game.sonic2.objects.EggPrisonButtonObjectInstance#recreate
 com.openggf.game.sonic2.objects.EggPrisonObjectInstance#recreate
 com.openggf.game.sonic2.objects.ElevatorObjectInstance#finalScalar#b
 com.openggf.game.sonic2.objects.ElevatorObjectInstance#finalScalar#g
@@ -473,7 +471,6 @@ com.openggf.game.sonic2.objects.LauncherSpringObjectInstance#recreate
 com.openggf.game.sonic2.objects.LavaMarkerObjectInstance#finalScalar#collisionFlags
 com.openggf.game.sonic2.objects.LavaMarkerObjectInstance#finalScalar#subtypeIndex
 com.openggf.game.sonic2.objects.LavaMarkerObjectInstance#recreate
-com.openggf.game.sonic2.objects.LeafParticleObjectInstance#recreate
 com.openggf.game.sonic2.objects.LeavesGeneratorObjectInstance#finalScalar#collisionHalfHeight
 com.openggf.game.sonic2.objects.LeavesGeneratorObjectInstance#finalScalar#collisionHalfWidth
 com.openggf.game.sonic2.objects.LeavesGeneratorObjectInstance#recreate
@@ -556,11 +553,6 @@ com.openggf.game.sonic2.objects.PointPokeyObjectInstance#finalScalar#halfWidth
 com.openggf.game.sonic2.objects.PointPokeyObjectInstance#finalScalar#highPriority
 com.openggf.game.sonic2.objects.PointPokeyObjectInstance#finalScalar#r
 com.openggf.game.sonic2.objects.PointPokeyObjectInstance#recreate
-com.openggf.game.sonic2.objects.ResultsScreenObjectInstance#finalScalar#actNumber
-com.openggf.game.sonic2.objects.ResultsScreenObjectInstance#finalScalar#allRingsCollected
-com.openggf.game.sonic2.objects.ResultsScreenObjectInstance#finalScalar#elapsedTimeSeconds
-com.openggf.game.sonic2.objects.ResultsScreenObjectInstance#finalScalar#ringCount
-com.openggf.game.sonic2.objects.ResultsScreenObjectInstance#recreate
 com.openggf.game.sonic2.objects.RingPrizeObjectInstance#finalScalar#machineX
 com.openggf.game.sonic2.objects.RingPrizeObjectInstance#finalScalar#machineY
 com.openggf.game.sonic2.objects.RingPrizeObjectInstance#recreate
@@ -703,10 +695,6 @@ com.openggf.game.sonic2.objects.badniks.OctusBadnikInstance#finalScalar#startY
 com.openggf.game.sonic2.objects.badniks.OctusBadnikInstance#finalScalar#xFlip
 com.openggf.game.sonic2.objects.badniks.OctusBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.RexonBadnikInstance#recreate
-com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance#finalScalar#headIndex
-com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance#finalScalar#headNumber
-com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance#finalScalar#xFlip
-com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance#recreate
 com.openggf.game.sonic2.objects.badniks.ShellcrackerBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.SlicerBadnikInstance#recreate
 com.openggf.game.sonic2.objects.badniks.SolBadnikInstance#finalScalar#orbitDirection
@@ -724,8 +712,6 @@ com.openggf.game.sonic2.objects.badniks.WhispBadnikInstance#recreate
 com.openggf.game.sonic2.objects.bosses.ARZBossArrow#finalScalar#fromRightPillar
 com.openggf.game.sonic2.objects.bosses.ARZBossEyes#recreate
 com.openggf.game.sonic2.objects.bosses.CPZBossContainerExtend#recreate
-com.openggf.game.sonic2.objects.bosses.CPZBossDripper#recreate
-com.openggf.game.sonic2.objects.bosses.CPZBossPipeSegment#recreate
 com.openggf.game.sonic2.objects.bosses.CPZBossSmokePuff#recreate
 com.openggf.game.sonic2.objects.bosses.EHZBossGroundVehicle#finalScalar#initialY
 com.openggf.game.sonic2.objects.bosses.HTZBossSmokeParticle#recreate

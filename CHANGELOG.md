@@ -4,6 +4,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **S2 (batch 5): more held-rewind objects restored.** The CPZ-boss dripper and pipe segment, the HTZ Rexon lava-snake head, the Egg-prison capsule button and its destroyed open-capsule body, the ARZ falling-leaf particle, and the act-results screen now have rewind recreate codecs (recreated on a backward seek instead of dropped).
+
 - **S3K: HCZ conveyor belt, MHZ pulley lift / swing vine, MGZ head-trigger and badnik projectiles, ICZ big snow pile, end-of-act signpost (+ stub), air-countdown bubbles, and StarPost stars now rewind cleanly (recreate codecs).**
 
 - **S3K (batch 4): HCZ end-boss scene and AIZ boss/intro objects restored under rewind.** The HCZ2 end boss, its egg capsule, the post-boss geyser cutscene, the Robotnik ship, turbine, propeller blades, blade splash, blade water chutes, and the rideable water column, plus the AIZ2 end boss, AIZ2 end egg capsule, and the AIZ1 intro biplane and wave-splash children now have rewind recreate codecs (recreated on a backward seek instead of dropped). The non-rendered AIZ1 intro emerald-glow child stays uncaptured (never a dynamic-object entry; see docs/S3K_KNOWN_DISCREPANCIES.md).
