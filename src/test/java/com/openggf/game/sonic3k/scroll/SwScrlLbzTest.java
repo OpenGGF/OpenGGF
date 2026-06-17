@@ -105,6 +105,47 @@ class SwScrlLbzTest {
     }
 
     @Test
+    void act2WaterlineLookupIsAnchoredAtRomSurfaceTableIndex() {
+        SwScrlLbz handler = new SwScrlLbz(zeroWaterlineLookup());
+        int[] buffer = new int[VISIBLE_LINES];
+
+        handler.update(buffer, 0x2000, 0x05B0, 0, 1);
+
+        short surfaceSource = handler.getLbz2HScrollWordForTest(79);
+        assertEquals((short) 0x0470, surfaceSource,
+                "The remap source should be HScroll_table+$09E after the ROM below-water gradient fill.");
+        assertEquals(surfaceSource, handler.getLbz2HScrollWordForTest(80),
+                "LBZ2_Deform positive waterline deltas remap forward from HScroll_table+$09E.");
+        assertEquals(surfaceSource, handler.getLbz2HScrollWordForTest(115),
+                "The visible dynamic waterline span should be remapped before the underwater bands begin.");
+    }
+
+    @Test
+    void act2WaterlinePhaseSubtractsScreenShakeBeforeEquilibriumMath() {
+        TestEnvironment.activeGameplayMode();
+        LbzZoneRuntimeState state = new LbzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE);
+        state.requestScreenShakeOffset(8);
+        GameServices.zoneRuntimeRegistry().install(state);
+        SwScrlLbz handler = new SwScrlLbz();
+        int[] buffer = new int[VISIBLE_LINES];
+
+        handler.update(buffer, 0x2010, 0x05F0, 0, 1);
+
+        assertEquals(4, state.lbz2WaterlinePhase(),
+                "ROM LBZ2_Deform subtracts Screen_shake_offset before writing Events_bg+$10.");
+        assertEquals((short) 0x02C4, handler.getVscrollFactorBG(),
+                "BG vscroll should use the shaken-relative value and then add Screen_shake_offset back.");
+    }
+
+    @Test
+    void act2HScrollTableMatchesLbz2DeformForVisibleWaterlineCase() {
+        byte[] waterlineData = zeroWaterlineLookup();
+
+        assertLbz2TableMatchesReference(0x2000, 0x05B0, 0, 0, waterlineData);
+        assertLbz2TableMatchesReference(0x2000, 0x0630, 0, 0, waterlineData);
+    }
+
+    @Test
     void act2DeathEggDeformOnlyActivatesDuringLaunchMode() {
         TestEnvironment.activeGameplayMode();
         SwScrlLbz normalHandler = new SwScrlLbz();
@@ -164,4 +205,215 @@ class SwScrlLbzTest {
         assertEquals(firstLatch, state.getDeathEggDeformWrapLatch(),
                 "wrap latch remains stable after the first frame instead of recomputing as frame-local floorMod");
     }
+
+    private static byte[] zeroWaterlineLookup() {
+        return new byte[0x1040];
+    }
+
+    private static void assertLbz2TableMatchesReference(int cameraX,
+                                                        int cameraY,
+                                                        int screenShakeOffset,
+                                                        int frameCounter,
+                                                        byte[] waterlineData) {
+        SwScrlLbz handler = new SwScrlLbz(waterlineData);
+        handler.setScreenShakeOffset(screenShakeOffset);
+        int[] buffer = new int[VISIBLE_LINES];
+
+        handler.update(buffer, cameraX, cameraY, frameCounter, 1);
+
+        short[] expected = buildExpectedLbz2DeformTable(
+                cameraX, cameraY, screenShakeOffset, frameCounter, waterlineData);
+        for (int i = 0; i < expected.length; i++) {
+            assertEquals(expected[i], handler.getLbz2HScrollWordForTest(i),
+                    "HScroll_table word " + i + " must match LBZ2_Deform for cameraY $"
+                            + Integer.toHexString(cameraY));
+        }
+    }
+
+    private static short[] buildExpectedLbz2DeformTable(int cameraX,
+                                                        int cameraY,
+                                                        int screenShakeOffset,
+                                                        int frameCounter,
+                                                        byte[] waterlineData) {
+        short[] hScroll = new short[241];
+        int relativeY = (short) (cameraY - screenShakeOffset - 0x5F0);
+        int d0Y = fixedFromWord(relativeY) >> 1;
+        int d2 = d0Y >> 3;
+        d0Y -= d2;
+        d2 >>= 2;
+        d0Y -= d2;
+        int equilibriumDelta = (short) (wordFromFixed(d0Y) - relativeY);
+
+        int cameraXFixed = fixedFromWord(cameraX);
+        if (equilibriumDelta != 0) {
+            applyExpectedWaterlineGradient(hScroll, cameraXFixed, equilibriumDelta, waterlineData);
+        }
+        applyExpectedUnderwaterBands(hScroll, cameraXFixed, equilibriumDelta);
+        applyExpectedCloudBands(hScroll, cameraXFixed, 0);
+        applyExpectedLowerBackgroundBands(hScroll, cameraXFixed, equilibriumDelta);
+        applyExpectedWaterWaves(hScroll, equilibriumDelta, frameCounter);
+        return hScroll;
+    }
+
+    private static void applyExpectedWaterlineGradient(short[] hScroll,
+                                                       int cameraXFixed,
+                                                       int equilibriumDelta,
+                                                       byte[] waterlineData) {
+        int d1 = cameraXFixed;
+        int d3 = cameraXFixed >> 6;
+        d3 -= d3 >> 3;
+        if (equilibriumDelta <= -0x40) {
+            int index = 0x01E / 2;
+            for (int i = 0; i < 0x20; i++) {
+                hScroll[index++] = wordFromFixed(d1);
+                d1 -= d3;
+                hScroll[index++] = wordFromFixed(d1);
+                d1 -= d3;
+            }
+            return;
+        }
+
+        int index = 0x11E / 2;
+        for (int i = 0; i < 0x20; i++) {
+            hScroll[--index] = wordFromFixed(d1);
+            d1 -= d3;
+            hScroll[--index] = wordFromFixed(d1);
+            d1 -= d3;
+        }
+        if (equilibriumDelta >= 0x40) {
+            return;
+        }
+
+        int anchor = 0x09E / 2;
+        if (equilibriumDelta > 0) {
+            int dataOffset = (0x40 - equilibriumDelta) << 6;
+            for (int i = 0; i < equilibriumDelta; i++) {
+                hScroll[anchor + i] = hScroll[anchor + (waterlineData[dataOffset + i] & 0xFF)];
+            }
+            return;
+        }
+
+        int dataOffset = (equilibriumDelta + 0x40) << 6;
+        for (int i = 0; i < -equilibriumDelta; i++) {
+            hScroll[anchor - 1 - i] = hScroll[anchor + (waterlineData[dataOffset + i] & 0xFF)];
+        }
+    }
+
+    private static void applyExpectedUnderwaterBands(short[] hScroll, int cameraXFixed, int equilibriumDelta) {
+        int d1 = cameraXFixed >> 1;
+        int d3 = d1 >> 3;
+        int index = 0x1E2 / 2;
+        hScroll[--index] = wordFromFixed(d1);
+        d1 -= d3;
+        hScroll[--index] = wordFromFixed(d1);
+        d1 -= d3;
+
+        for (int range : new int[] { 7, 1, 3, 1, 7 }) {
+            d1 -= d3;
+            short word = wordFromFixed(d1);
+            for (int i = 0; i <= range; i++) {
+                hScroll[--index] = word;
+                hScroll[--index] = word;
+                hScroll[--index] = word;
+                hScroll[--index] = word;
+            }
+        }
+
+        int count = 0x40 - 1;
+        if (equilibriumDelta >= 0) {
+            count -= equilibriumDelta;
+            if (count < 0) {
+                return;
+            }
+        }
+        short word = wordFromFixed(d1);
+        for (int i = 0; i <= count; i++) {
+            hScroll[--index] = word;
+        }
+    }
+
+    private static void applyExpectedCloudBands(short[] hScroll, int cameraXFixed, int cloudAccumulator) {
+        int d1 = cameraXFixed >> 6;
+        int d3 = d1;
+        for (int offset : new int[] { 0x16, 0x0E, 0x0A, 0x14, 0x0C, 0x06, 0x18,
+                0x10, 0x12, 0x02, 0x08, 0x04, 0x00 }) {
+            d1 += cloudAccumulator;
+            hScroll[offset / 2] = wordFromFixed(d1);
+            d1 += d3;
+        }
+    }
+
+    private static void applyExpectedLowerBackgroundBands(short[] hScroll,
+                                                          int cameraXFixed,
+                                                          int equilibriumDelta) {
+        int d1 = cameraXFixed >> 4;
+        int d3 = d1 >> 1;
+        int index = 0x01A / 2;
+        hScroll[index++] = wordFromFixed(d1);
+        d1 += d3;
+        hScroll[index++] = wordFromFixed(d1);
+
+        int d4;
+        if (equilibriumDelta < 0) {
+            d4 = 0x40 - 1 + equilibriumDelta;
+            if (d4 < 0) {
+                return;
+            }
+            if (d4 >= 0x30) {
+                d4 -= 0x30;
+                short word = wordFromFixed(d1);
+                for (int i = 0; i < 0x18; i++) {
+                    hScroll[index++] = word;
+                    hScroll[index++] = word;
+                }
+                d1 += d3;
+            }
+        } else {
+            d4 = 0x10 - 1;
+            short word = wordFromFixed(d1);
+            for (int i = 0; i < 0x18; i++) {
+                hScroll[index++] = word;
+                hScroll[index++] = word;
+            }
+            d1 += d3;
+        }
+
+        short word = wordFromFixed(d1);
+        for (int i = 0; i <= d4; i++) {
+            hScroll[index++] = word;
+        }
+    }
+
+    private static void applyExpectedWaterWaves(short[] hScroll, int equilibriumDelta, int frameCounter) {
+        int count = 0x3F - equilibriumDelta;
+        if (count < 0) {
+            return;
+        }
+        count += 0x60;
+        if (count >= 0xE0) {
+            count = 0xE0 - 1;
+        }
+
+        int waveIndex = (frameCounter >> 1) & 0x3F;
+        int tableIndex = 0x1DE / 2;
+        for (int i = 0; i <= count; i++) {
+            waveIndex = (waveIndex - 1) & 0x3F;
+            hScroll[--tableIndex] = (short) (hScroll[tableIndex] + LBZ_WATER_WAVE_ARRAY[waveIndex]);
+        }
+    }
+
+    private static int fixedFromWord(int value) {
+        return ((short) value) << 16;
+    }
+
+    private static short wordFromFixed(int fixed) {
+        return (short) (fixed >> 16);
+    }
+
+    private static final short[] LBZ_WATER_WAVE_ARRAY = {
+            1, 1, 1, 0, 0, 0, -1, -1, -1, -1, -1, -1, 0, 0, 0, 1,
+            1, 1, 1, 1, 1, 0, -1, -2, -2, -1, 0, 2, 2, 2, 2, 0,
+            0, 0, -1, -1, -1, -1, -1, -1, 0, 0, 0, 1, 1, 1, 1, 1,
+            1, 0, 0, 0, -1, -1, -1, -1, -1, -1, 0, 0, 0, 1, 1, 1
+    };
 }

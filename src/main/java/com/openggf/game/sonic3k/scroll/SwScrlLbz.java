@@ -7,7 +7,6 @@ import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.compose.DeformationPlan;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import com.openggf.level.scroll.compose.ScrollValueTable;
-import com.openggf.level.scroll.compose.WaterlineBlendComposer;
 
 import static com.openggf.level.scroll.M68KMath.negWord;
 
@@ -45,6 +44,10 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
     private static final int[] LBZ2_BG_UNDERWATER_DEFORM_RANGE = {
             7, 1, 3, 1, 7
     };
+    private static final int LBZ2_WATERLINE_UPPER_START_INDEX = 0x01E / 2;
+    private static final int LBZ2_WATERLINE_ANCHOR_INDEX = 0x09E / 2;
+    private static final int LBZ2_WATERLINE_LOWER_END_INDEX = 0x11E / 2;
+    private static final int LBZ2_WATERLINE_LOOKUP_STRIDE = 0x40;
 
     private static final short[] LBZ_WATER_WAVE_ARRAY = {
             1, 1, 1, 0, 0, 0, -1, -1, -1, -1, -1, -1, 0, 0, 0, 1,
@@ -54,12 +57,6 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
     };
 
     private static final DeformationPlan.ScrollValueTransform NEGATE_WORD = value -> negWord(value);
-    private static final WaterlineBlendComposer WATERLINE_BLEND = new WaterlineBlendComposer(
-            79,
-            143,
-            207,
-            0x40
-    );
 
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
     private final ScrollValueTable lbz1HScroll = ScrollValueTable.ofLength(9);
@@ -203,7 +200,7 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
                             LbzZoneRuntimeState runtimeState) {
         lbz2HScroll.clear();
 
-        int relativeY = (short) (cameraY - 0x5F0);
+        int relativeY = (short) (cameraY - screenShakeOffset - 0x5F0);
         int bgYFixed = fixedFromWord(relativeY) >> 1;
         int step = bgYFixed >> 3;
         bgYFixed -= step;
@@ -384,19 +381,54 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
         int value = cameraXFixed;
         int gradientStep = (cameraXFixed >> 6) - (cameraXFixed >> 9);
         if (equilibriumDelta <= -0x40) {
-            fillForwardGradient(15, value, gradientStep, 64);
+            fillForwardGradient(LBZ2_WATERLINE_UPPER_START_INDEX, value, gradientStep, LBZ2_WATERLINE_LOOKUP_STRIDE);
             return;
         }
 
-        fillBackwardGradient(143, value, gradientStep, 64);
-        if (equilibriumDelta < 0x40) {
-            WATERLINE_BLEND.apply(
-                    lbz2HScroll,
-                    (short) equilibriumDelta,
-                    lbz2HScroll.get(78),
-                    lbz2HScroll.get(143),
-                    waterlineData);
+        fillBackwardGradient(LBZ2_WATERLINE_LOWER_END_INDEX, value, gradientStep, LBZ2_WATERLINE_LOOKUP_STRIDE);
+        if (equilibriumDelta >= 0x40) {
+            return;
         }
+        applyLbz2WaterlineLookup(equilibriumDelta);
+    }
+
+    private void applyLbz2WaterlineLookup(int equilibriumDelta) {
+        if (waterlineData == null) {
+            return;
+        }
+        if (equilibriumDelta > 0) {
+            int dataOffset = (LBZ2_WATERLINE_LOOKUP_STRIDE - equilibriumDelta) * LBZ2_WATERLINE_LOOKUP_STRIDE;
+            for (int i = 0; i < equilibriumDelta; i++) {
+                int lookupIndex = dataOffset + i;
+                if (lookupIndex >= waterlineData.length) {
+                    break;
+                }
+                int readIndex = LBZ2_WATERLINE_ANCHOR_INDEX + (waterlineData[lookupIndex] & 0xFF);
+                int writeIndex = LBZ2_WATERLINE_ANCHOR_INDEX + i;
+                copyWaterlineLookupWord(readIndex, writeIndex);
+            }
+            return;
+        }
+
+        int count = -equilibriumDelta;
+        int dataOffset = (equilibriumDelta + LBZ2_WATERLINE_LOOKUP_STRIDE) * LBZ2_WATERLINE_LOOKUP_STRIDE;
+        for (int i = 0; i < count; i++) {
+            int lookupIndex = dataOffset + i;
+            if (lookupIndex >= waterlineData.length) {
+                break;
+            }
+            int readIndex = LBZ2_WATERLINE_ANCHOR_INDEX + (waterlineData[lookupIndex] & 0xFF);
+            int writeIndex = LBZ2_WATERLINE_ANCHOR_INDEX - 1 - i;
+            copyWaterlineLookupWord(readIndex, writeIndex);
+        }
+    }
+
+    private void copyWaterlineLookupWord(int readIndex, int writeIndex) {
+        if (readIndex < 0 || readIndex >= lbz2HScroll.size()
+                || writeIndex < 0 || writeIndex >= lbz2HScroll.size()) {
+            return;
+        }
+        lbz2HScroll.set(writeIndex, lbz2HScroll.get(readIndex));
     }
 
     private void fillForwardGradient(int startIndex, int value, int step, int count) {
@@ -426,6 +458,7 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
         lastLbz2ScrollArtPhaseSource = wordFromFixed(value) & 0xFFFF;
         lbz2HScroll.set(--index, wordFromFixed(value));
 
+        value -= step;
         for (int range : LBZ2_BG_UNDERWATER_DEFORM_RANGE) {
             value -= step;
             short word = wordFromFixed(value);
@@ -479,7 +512,6 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
             }
             if (count >= 0x30) {
                 count -= 0x30;
-            } else {
                 fillCountedPairs(index, value, 0x18 - 1);
                 value += step;
                 index += 0x18 * 2;

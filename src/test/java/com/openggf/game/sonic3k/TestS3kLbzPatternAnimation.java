@@ -169,6 +169,31 @@ class TestS3kLbzPatternAnimation {
         }
     }
 
+    @Test
+    void lbz2WaterlineComposeReadsThroughAdjacentBgArtForNearSurfaceRows() throws Exception {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(0x06, 1)
+                .build();
+
+        Sonic3kPatternAnimator animator = resolvePatternAnimator();
+        LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(GameServices.zoneRuntimeRegistry())
+                .orElseThrow(() -> new AssertionError("Expected LBZ runtime state"));
+        Level level = GameServices.level().getCurrentLevel();
+        assertNotNull(level, "Level must be loaded");
+
+        state.publishLbz2DeformOutputs(1, 0, 0);
+        animator.update();
+
+        byte[] waterlineAbove = getByteArrayField(animator, "lbz2WaterlineAboveData");
+        byte[] upperBg = getByteArrayField(animator, "lbz2UpperBgData");
+        byte[] waterlineScroll = getByteArrayField(animator, "lbzWaterlineScrollData");
+        byte[] expected = expectedLbz2WaterlineSnapshot(waterlineAbove, upperBg, waterlineScroll, 0x0FC0);
+
+        assertArrayEquals(expected, snapshotRange(level, 0x2D3, 0x2E2),
+                "ROM sub_27F66 reads lookup values $80..$BF past ArtUnc_AniLBZ2_WaterlineAbove"
+                        + " into the immediately following UpperBG art.");
+    }
+
     private static void assertGraphChannelsInstalled(String... expectedChannelIds) {
         List<String> channelIds = GameServices.animatedTileChannelGraph().channels().stream()
                 .map(AnimatedTileChannel::channelId)
@@ -231,6 +256,47 @@ class TestS3kLbzPatternAnimation {
             }
         }
         throw new AssertionError("Unexpected AnimatedPatternManager type: " + manager.getClass().getName());
+    }
+
+    private static byte[] getByteArrayField(Sonic3kPatternAnimator animator, String fieldName) throws Exception {
+        Field field = Sonic3kPatternAnimator.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return (byte[]) field.get(animator);
+    }
+
+    private static byte[] expectedLbz2WaterlineSnapshot(byte[] waterlineArt,
+                                                        byte[] adjacentBgArt,
+                                                        byte[] waterlineScroll,
+                                                        int tableOffset) {
+        byte[] source = new byte[waterlineArt.length + adjacentBgArt.length];
+        System.arraycopy(waterlineArt, 0, source, 0, waterlineArt.length);
+        System.arraycopy(adjacentBgArt, 0, source, waterlineArt.length, adjacentBgArt.length);
+
+        byte[] composed = new byte[0x200];
+        for (int i = 0; i < 0x40; i++) {
+            int sourceByteOffset = (waterlineScroll[tableOffset + i] & 0xFF) << 2;
+            System.arraycopy(source, sourceByteOffset, composed, i << 2, 4);
+            System.arraycopy(source, 0x100 + sourceByteOffset, composed, 0x100 + (i << 2), 4);
+        }
+
+        return rawSegaPatternsToSnapshot(composed);
+    }
+
+    private static byte[] rawSegaPatternsToSnapshot(byte[] rawData) {
+        int tileCount = rawData.length / Pattern.PATTERN_SIZE_IN_ROM;
+        byte[] data = new byte[tileCount * Pattern.PATTERN_SIZE_IN_MEM];
+        Pattern pattern = new Pattern();
+        byte[] tileBytes = new byte[Pattern.PATTERN_SIZE_IN_ROM];
+        int writeOffset = 0;
+        for (int tile = 0; tile < tileCount; tile++) {
+            System.arraycopy(rawData, tile * Pattern.PATTERN_SIZE_IN_ROM,
+                    tileBytes, 0, Pattern.PATTERN_SIZE_IN_ROM);
+            pattern.fromSegaFormat(tileBytes);
+            byte[] pixels = snapshot(pattern);
+            System.arraycopy(pixels, 0, data, writeOffset, pixels.length);
+            writeOffset += pixels.length;
+        }
+        return data;
     }
 
     private static byte[] snapshotRange(Level level, int startTile, int endTileInclusive) {

@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **LBZ2 normal background waterline now follows the disassembly:** the Act 2
+  deformation uses the ROM waterline table anchors and screen-shake-adjusted
+  camera Y, fixes the underwater/lower-background table writes, and the
+  animated waterline composer reads through the adjacent upper/lower BG art so
+  near-surface water rows render correctly from either side of the surface.
+
 - **LBZ2 Death Egg launch background now publishes ROM-equivalent runtime
   signals:** the launch scroll handler records the `Events_bg` phase words and
   background X copy used by the disassembly, the Death Egg deformation exposes

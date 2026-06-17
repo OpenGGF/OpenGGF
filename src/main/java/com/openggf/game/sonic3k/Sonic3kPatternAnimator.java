@@ -180,6 +180,8 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     private byte[] lbz2LowerBgData;
     private byte[] lbz2WaterlineAboveData;
     private byte[] lbz2UpperBgData;
+    private byte[] lbz2WaterlineBelowSourceData;
+    private byte[] lbz2WaterlineAboveSourceData;
     private byte[] lbzWaterlineScrollData;
     private final byte[] soz1BgData;
     private final byte[] soz1Bg2Data;
@@ -1450,7 +1452,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
 
         if (delta < 0) {
             if (delta > -0x40) {
-                applyLbz2DynamicWaterline(lbz2WaterlineBelowData, (delta + 0x40) << 6, 0x2C3);
+                applyLbz2DynamicWaterline(lbz2WaterlineBelowSourceData, (delta + 0x40) << 6, 0x2C3);
             } else {
                 applyRawPatternSliceToLevel(lbz2WaterlineBelowData, 0, 0x200, 0x2C3);
             }
@@ -1460,7 +1462,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
 
         applyRawPatternSliceToLevel(lbz2LowerBgData, 0, 0x200, 0x2C3);
         if (delta < 0x40) {
-            applyLbz2DynamicWaterline(lbz2WaterlineAboveData, (-delta + 0x40) << 6, 0x2D3);
+            applyLbz2DynamicWaterline(lbz2WaterlineAboveSourceData, (-delta + 0x40) << 6, 0x2D3);
         } else {
             applyRawPatternSliceToLevel(lbz2WaterlineAboveData, 0, 0x200, 0x2D3);
         }
@@ -1498,6 +1500,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             LOG.fine(() -> "Sonic3kPatternAnimator.computeLbz2WaterlineDelta: " + e.getMessage());
         }
 
+        return computeLbz2WaterlineDeltaFromCamera(shake);
+    }
+
+    private int computeLbz2WaterlineDeltaFromCamera(int shake) {
         int relativeY = (short) (getCameraY() - shake - 0x5F0);
         int bgYFixed = (((short) relativeY) << 16) >> 1;
         int step = bgYFixed >> 3;
@@ -1716,9 +1722,21 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         lbz2UpperBgData = loadRawBytes(reader,
                 Sonic3kConstants.ART_UNC_ANI_LBZ2_UPPER_BG_ADDR,
                 Sonic3kConstants.ART_UNC_ANI_LBZ2_UPPER_BG_SIZE);
+        lbz2WaterlineBelowSourceData = concatenateLbz2WaterlineSource(lbz2WaterlineBelowData, lbz2LowerBgData);
+        lbz2WaterlineAboveSourceData = concatenateLbz2WaterlineSource(lbz2WaterlineAboveData, lbz2UpperBgData);
         lbzWaterlineScrollData = loadRawBytes(reader,
                 Sonic3kConstants.LBZ_WATERLINE_SCROLL_DATA_ADDR,
                 Sonic3kConstants.LBZ_WATERLINE_SCROLL_DATA_SIZE);
+    }
+
+    private static byte[] concatenateLbz2WaterlineSource(byte[] waterlineData, byte[] adjacentBgData) {
+        if (waterlineData == null || adjacentBgData == null) {
+            return null;
+        }
+        byte[] source = new byte[waterlineData.length + adjacentBgData.length];
+        System.arraycopy(waterlineData, 0, source, 0, waterlineData.length);
+        System.arraycopy(adjacentBgData, 0, source, waterlineData.length, adjacentBgData.length);
+        return source;
     }
 
     private void bootstrapLbz2WaterlinePhase() {
@@ -1732,7 +1750,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
                 || state.publishedBgCameraX() != 0) {
             return;
         }
-        int waterlinePhase = getCameraY() >= 0x0540 ? -0x40 : 0x40;
+        int waterlinePhase = computeLbz2WaterlineDeltaFromCamera(0);
         state.publishLbz2DeformOutputs(waterlinePhase, 0, 0);
     }
 
