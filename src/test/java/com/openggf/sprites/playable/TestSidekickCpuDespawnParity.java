@@ -5,6 +5,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.AizTransitionFloorObjectInstance;
 import com.openggf.game.sonic3k.objects.CorkFloorObjectInstance;
 import com.openggf.graphics.GLCommand;
@@ -22,6 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -296,6 +298,28 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void s3kSonicSidekickDespawnUsesRunInRespawnStrategy() {
+        TestableSprite leader = new TestableSprite("tails");
+        TestableSprite sonicSidekick = new TestableSprite("sonic_p2");
+        sonicSidekick.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sonicSidekick.setCpuControlled(true);
+        sonicSidekick.setCentreX((short) 0x0545);
+        sonicSidekick.setCentreY((short) 0x0270);
+
+        SidekickCpuController controller = new SidekickCpuController(sonicSidekick, leader);
+        controller.setInitialState(SidekickCpuController.State.NORMAL);
+
+        controller.despawn();
+
+        assertInstanceOf(SonicRespawnStrategy.class, controller.getRespawnStrategy());
+        assertEquals(SidekickCpuController.State.SPAWNING, controller.getState(),
+                "Sonic sidekicks must not enter S3K Tails_Catch_Up_Flying after off-screen despawn");
+        assertEquals((short) 0x7F00, sonicSidekick.getCentreX(),
+                "S3K still parks at the off-screen despawn marker before the character strategy starts");
+        assertEquals((short) 0x0000, sonicSidekick.getCentreY());
+    }
+
+    @Test
     void s3kDespawnMarkerClearsRollStatusWithoutRestoringRadii() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
@@ -367,6 +391,30 @@ class TestSidekickCpuDespawnParity {
         // retained.
         assertEquals((short) -0x700, tails.getYSpeed());
         assertEquals((short) 0x0000, tails.getGSpeed());
+    }
+
+    @Test
+    void s3kSonicSidekickLevelBoundaryKillUsesDeathAnimation() {
+        TestableSprite leader = new TestableSprite("tails");
+        TestableSprite sonicSidekick = new TestableSprite("sonic_p2");
+        sonicSidekick.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sonicSidekick.setCpuControlled(true);
+        sonicSidekick.setCentreX((short) 0x2D90);
+        sonicSidekick.setCentreY((short) 0x0402);
+        sonicSidekick.setAir(true);
+        sonicSidekick.setXSpeed((short) 0x0000);
+        sonicSidekick.setYSpeed((short) 0x0198);
+        sonicSidekick.setGSpeed((short) 0x0000);
+
+        SidekickCpuController controller = new SidekickCpuController(sonicSidekick, leader);
+        controller.setInitialState(SidekickCpuController.State.NORMAL);
+
+        controller.despawn(SidekickCpuController.DespawnCause.LEVEL_BOUNDARY);
+
+        assertInstanceOf(SonicRespawnStrategy.class, controller.getRespawnStrategy());
+        assertEquals(SidekickCpuController.State.DEAD_FALLING, controller.getState());
+        assertEquals(Sonic3kAnimationIds.DEATH.id(), sonicSidekick.getForcedAnimationId(),
+                "Kill_Character writes the death animation; Sonic sidekicks must not inherit Tails' fly animation");
     }
 
     @Test

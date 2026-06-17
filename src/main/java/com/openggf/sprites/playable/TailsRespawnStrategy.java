@@ -165,6 +165,11 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
     }
 
     @Override
+    public boolean usesS3kCatchUpMarker(PhysicsFeatureSet featureSet) {
+        return featureSet != null && featureSet.sidekickRespawnEntersCatchUpFlight();
+    }
+
+    @Override
     public void onApproachComplete(AbstractPlayableSprite sidekick, AbstractPlayableSprite leader) {
         // S2 TailsCPU_Flying completion writes anim=Walk and status=$02
         // (Status_InAir only), then inherits priority/solid bits from Sonic

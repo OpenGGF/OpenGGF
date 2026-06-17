@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Sonic sidekicks run in from clear terrain and keep extension overlays isolated:**
+  Sonic sidekick respawn now uses Sonic-specific ground run-in behavior, staggers
+  multi-sidekick entries, seeds catch-up speed from the main player when needed,
+  and scans inward from the screen edge so run-in spawns do not embed in ledge
+  terrain. Sidekick-only insta-shield overlays now use auxiliary dynamic object
+  space, keeping extension effects out of ROM-modeled object slots and rewind
+  dynamic-object snapshots.
+
 - **HCZ waterfall priority renders over foreground ramps again:** Hydrocity now
   registers a foreground-stage BG high-priority replay pass so Plane B waterfall
   tiles cover low-priority Plane A ramp chunks instead of leaving cut-away gaps.
