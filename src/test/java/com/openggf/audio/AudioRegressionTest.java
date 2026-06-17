@@ -293,12 +293,31 @@ public class AudioRegressionTest {
         short[] buffer = new short[BUFFER_SIZE * 2];
         AudioBenchmarkMemoryProbe probe = AudioBenchmarkMemoryProbe.create();
 
+        // Concrete render oracle: collect the PCM produced by the workload so we
+        // can assert the exact sample count and that the workload was audible.
+        // The driver fills the whole buffer per read, so 4 reads must yield
+        // exactly 4 * buffer.length samples.
+        final int readCount = 4;
+        final int expectedSamples = readCount * buffer.length;
+        short[] rendered = new short[expectedSamples];
+        final int[] samplesWritten = {0};
+
         AudioBenchmarkMemoryProbe.RunResult result = probe.measureTimedRun(() -> {
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < readCount; i++) {
                 driver.read(buffer);
+                System.arraycopy(buffer, 0, rendered, samplesWritten[0], buffer.length);
+                samplesWritten[0] += buffer.length;
             }
         });
 
+        // Primary oracle: the audio render workload produced the expected PCM.
+        assertEquals(expectedSamples, samplesWritten[0],
+                "Audio render workload should produce the exact expected PCM sample count");
+        assertTrue(hasNonZeroSample(rendered),
+                "Audio render workload should produce audible (non-zero) PCM output");
+
+        // Informational only: the memory probe deltas are reported but are not
+        // the sole oracle for this test.
         assertTrue(!result.allocatedBytesSupported() || result.allocatedBytes() >= 0,
                 "Allocated bytes delta should be non-negative when supported");
         assertTrue(result.gcCountDelta() >= 0, "GC count delta should be non-negative");

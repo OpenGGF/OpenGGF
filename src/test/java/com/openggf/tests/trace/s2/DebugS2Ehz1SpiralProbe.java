@@ -18,6 +18,9 @@ import com.openggf.trace.TraceReplayBootstrap;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.lang.reflect.Field;
@@ -60,6 +63,7 @@ class DebugS2Ehz1SpiralProbe {
 
             TraceReplayBootstrap.applyPreTraceState(trace, fixture);
 
+            int framesDumped = 0;
             TraceFrame previous = null;
             for (int i = 0; i <= endFrame; i++) {
                 TraceFrame current = trace.getFrame(i);
@@ -73,9 +77,20 @@ class DebugS2Ehz1SpiralProbe {
 
                 if (i >= startFrame) {
                     dumpFrame(current);
+                    framesDumped++;
                 }
                 previous = current;
             }
+
+            // Oracle: the spiral window must dump at least one frame and the player
+            // sprite must exist after replaying through endFrame.
+            assertTrue(framesDumped > 0,
+                    "spiral window dumped no frames (startFrame=" + startFrame + " endFrame=" + endFrame + ")");
+            var spiralPlayer = GameServices.sprites().getSprite("sonic");
+            assertNotNull(spiralPlayer, "player sprite missing after spiral-window replay");
+            // characterization guard: capture the spiral physics state currently reported.
+            assertTrue(spiralPlayer instanceof com.openggf.sprites.playable.AbstractPlayableSprite,
+                    "sonic sprite is not a playable sprite after spiral-window replay");
         } finally {
             sharedLevel.dispose();
         }

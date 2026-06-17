@@ -182,6 +182,15 @@ public class TestAizTerrainSwapAlignment {
             }
             System.out.printf("  Pattern 0x%03X: nonZero=%d hasPixel15=%b%n", i, nonZeroCount, hasPixel15);
         }
+
+        // characterization upper bound: current red leakage; a fix to 0 still passes,
+        // a regression that increases it fails. Low-priority pal-2 FG tiles in the
+        // tree-canopy gap region currently leak red (pixel index 15) where BG sky
+        // should show; bound it at the observed value so improvements pass and
+        // regressions that increase the leak fail.
+        assertTrue(nonTransparentAtGaps <= 7904,
+                "Red (pixel-15) leakage in low-priority pal-2 FG tiles at canopy gaps must not exceed "
+                        + "the current observed bound (7904); was " + nonTransparentAtGaps);
     }
 
     /**
@@ -256,6 +265,12 @@ public class TestAizTerrainSwapAlignment {
         } else {
             System.out.println("WARNING: Terrain swap may NOT be applied (patterns don't match MainLevel)");
         }
+
+        // Regression guard: at least one overlay-start tile must match the MainLevel
+        // art and differ from entry 0's secondary art, proving the AIZ1 terrain swap
+        // overlay was actually applied during the skip-intro load.
+        assertTrue(anyDifference,
+                "Terrain swap must be applied (overlay-start patterns match MainLevel, not entry 0 secondary)");
     }
 
     /**
@@ -384,6 +399,14 @@ public class TestAizTerrainSwapAlignment {
 
         System.out.printf("FG red low-pri tiles with BG-high coverage: %d, without: %d%n",
                 fgRedWithBgHigh, fgRedWithBgLow);
+
+        // Regression guard for the documented invariant: all AIZ BG tiles in the tree
+        // area are LOW priority, so the BG-high overlay renders nothing for AIZ and no
+        // BG-high tile can cover an FG-low red pixel.
+        assertEquals(0, bgHighCount,
+                "All AIZ BG tiles in the tree area must be low priority (no BG-high overlay for AIZ)");
+        assertEquals(0, fgRedWithBgHigh,
+                "No FG low-priority red tile may be covered by a high-priority BG tile");
     }
 
     /**
@@ -475,6 +498,13 @@ public class TestAizTerrainSwapAlignment {
             }
         }
         System.out.printf("FG refs to trailing tiles with pixel-15: %d%n", trailingRefsWithRed);
+
+        // Regression guard: no FG chunk may reference a trailing (non-overwritten,
+        // entry 0 secondary) tile that still contains red (pixel-15). Such a reference
+        // would render red through the canopy where the terrain swap should have
+        // replaced the art.
+        assertEquals(0, trailingRefsWithRed,
+                "No FG chunk may reference a trailing tile containing red (pixel-15)");
     }
 
     private boolean patternsMatch(Pattern a, Pattern b) {

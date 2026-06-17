@@ -1931,6 +1931,41 @@ public class Ym2612Chip {
         }
     }
 
+    // ---- Minimal test seams (test observation only) ----
+    // These expose internal synthesis state so unit tests can assert that
+    // production register/table generation actually reached the chip, rather
+    // than re-deriving values inline. Not intended for gameplay use.
+
+    /** Test seam: total-level register value for an operator (0=loudest, 127=silent). */
+    public int getOperatorTotalLevelForTest(int chIdx, int opIdx) {
+        return channels[chIdx].ops[opIdx].tl;
+    }
+
+    /** Test seam: algorithm number latched for a channel (0-7). */
+    public int getChannelAlgorithmForTest(int chIdx) {
+        return channels[chIdx].algo;
+    }
+
+    /** Test seam: number of operators currently running SSG-EG. */
+    public int getSsgEgActiveCountForTest() {
+        return ssgEgActiveCount;
+    }
+
+    /** Test seam: copy of the generated GPGX SIN_TAB. */
+    public static int[] getSinTabForTest() {
+        return SIN_TAB.clone();
+    }
+
+    /** Test seam: copy of the generated GPGX TL_TAB. */
+    public static int[] getTlTabForTest() {
+        return TL_TAB.clone();
+    }
+
+    /** Test seam: copy of the generated GPGX ENV_TAB. */
+    public static int[] getEnvTabForTest() {
+        return ENV_TAB.clone();
+    }
+
     // DAC sample transitions produce audible clicks (no crossfade).
     // The original hardware exhibits the same behavior, so this is accurate.
     public void playDac(int note) {

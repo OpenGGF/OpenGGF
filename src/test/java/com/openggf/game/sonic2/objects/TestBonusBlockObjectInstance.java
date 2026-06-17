@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -44,9 +43,7 @@ class TestBonusBlockObjectInstance {
         assertFalse(block.requiresRenderFlagForTouch());
         assertEquals(0xD7, block.getCollisionFlags());
         assertEquals(0, block.getCollisionProperty());
-        assertDoesNotThrow(() -> BonusBlockObjectInstance.class.getDeclaredMethod("getTouchResponseProfile"));
         assertEquals(profile, block.getTouchResponseProfile(false));
-        assertDoesNotThrow(() -> BonusBlockObjectInstance.class.getDeclaredMethod("getTouchResponseProfile", boolean.class));
     }
 
     @Test

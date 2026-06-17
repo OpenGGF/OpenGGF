@@ -143,17 +143,38 @@ public class TestS3kAiz1SpecialStageReturn {
 
         // Check secondary (path B) collision too
         System.out.println("\n=== SECONDARY PATH SCAN at X=0x1BC3 ===");
+        int secondaryTilesInspected = 0;
+        int secondarySolidBelowRing = 0;
         for (int y = 0x400; y <= 0x520; y += 16) {
             ChunkDesc desc = GameServices.level().getChunkDescAt((byte) 1, bigRingX, y);
             String info = "  Y=0x" + Integer.toHexString(y) + ": ";
             if (desc == null) {
                 info += "null";
             } else {
+                secondaryTilesInspected++;
+                boolean secondarySolid = desc.hasSecondarySolidity();
+                if (secondarySolid && y >= bigRingY) {
+                    secondarySolidBelowRing++;
+                }
                 info += "chunk=0x" + Integer.toHexString(desc.getChunkIndex())
-                        + " secondarySolid=" + desc.hasSecondarySolidity();
+                        + " secondarySolid=" + secondarySolid;
             }
             System.out.println(info);
         }
+
+        // Honest oracle: this is a diagnostic scan, not a behavioral test (the sibling
+        // specialStageReturn_* tests cover the real return/landing flow). Assert the
+        // scan actually resolved the level and inspected terrain at the big-ring
+        // secondary-path column, so the diagnostic can't silently no-op.
+        assertNotNull(GameServices.level().getCurrentLevel(),
+                "Level must be loaded for the big-ring terrain scan");
+        assertTrue(secondaryTilesInspected > 0,
+                "Secondary-path scan must inspect at least one chunk at the big-ring column");
+        // characterization: current terrain state at big-ring column. The secondary
+        // (path B) plane currently has NO solid terrain below the big ring; pin this
+        // observed value so a change in collision data at this column is surfaced.
+        assertEquals(0, secondarySolidBelowRing,
+                "Secondary-path solid-below-ring count changed from the observed value (0)");
     }
 
     /**

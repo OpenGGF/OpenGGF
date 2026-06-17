@@ -273,9 +273,21 @@ class TestRewindProfilerAttribution {
         // Five-arg constructor (no profiler, no audio manager).
         RewindController rc = new RewindController(reg, keyframes, inputs, stepper, 5);
         for (int i = 0; i < 7; i++) rc.step();
+        assertEquals(7, rc.currentFrame(), "after 7 forward steps");
+        assertEquals(7, state.get(), "stepper ran once per forward step");
+
         rc.seekTo(3);
+        assertEquals(3, rc.currentFrame(), "after seekTo(3)");
+        assertEquals(3, state.get(),
+                "restored to keyframe 0 then replayed forward 3 frames");
+
         for (int i = 0; i < 2; i++) rc.stepBackward();
-        // Reaching this line with no exception is the assertion.
+        // The controller must land on the expected logical frame and the
+        // replayed state captured by the registry must match it — even with
+        // no profiler wired in.
+        assertEquals(1, rc.currentFrame(), "after two stepBackward calls");
+        assertEquals(1, state.get(),
+                "replayed engine state must match the rewound logical frame");
     }
 
     private static final class FakeInputSource implements InputSource {

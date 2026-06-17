@@ -138,12 +138,27 @@ public class TestSmpsFadeAudioThroughput {
 
         musicSeq.triggerFadeOut(FADE_OUT_STEPS, FADE_OUT_DELAY);
 
+        // Record per-chunk peak amplitude so we can assert fade behavior in
+        // addition to throughput.
+        int[] chunkPeaks = new int[FADE_WINDOW_CHUNKS];
         long start = System.nanoTime();
-        boolean audible = renderChunks(driver, buffer, FADE_WINDOW_CHUNKS);
+        boolean audible = renderChunks(driver, buffer, FADE_WINDOW_CHUNKS, chunkPeaks);
         long elapsedNanos = System.nanoTime() - start;
 
         assertTrue(audible, "fade window should contain audible PCM before fade completion");
         assertTrue(elapsedNanos > 0, "timed window must consume wall time");
+
+        // Behavioral invariant: a fade-out must reduce amplitude over the window.
+        // The early peak (start of fade) should be louder than the late peak
+        // (near/after fade completion). The fade does not necessarily reach full
+        // silence within this window, so we assert decreasing amplitude rather
+        // than a silent tail.
+        int earlyPeak = chunkPeaks[0];
+        int latePeak = chunkPeaks[chunkPeaks.length - 1];
+        assertTrue(earlyPeak > 0, "fade window should start with audible PCM");
+        assertTrue(latePeak < earlyPeak,
+                "fade-out must reduce PCM amplitude across the fade window "
+                        + "(early peak=" + earlyPeak + ", late peak=" + latePeak + ")");
 
         double renderedSeconds = FADE_WINDOW_FRAMES / SAMPLE_RATE;
         return renderedSeconds / (elapsedNanos / 1_000_000_000.0);
@@ -151,16 +166,30 @@ public class TestSmpsFadeAudioThroughput {
 
     /** Renders {@code chunks} full buffers; returns true if any sample was non-zero. */
     private static boolean renderChunks(SmpsDriver driver, short[] buffer, int chunks) {
+        return renderChunks(driver, buffer, chunks, null);
+    }
+
+    /**
+     * Renders {@code chunks} full buffers; returns true if any sample was
+     * non-zero. When {@code chunkPeaks} is non-null, records each chunk's peak
+     * absolute amplitude into it (length must be {@code >= chunks}).
+     */
+    private static boolean renderChunks(SmpsDriver driver, short[] buffer, int chunks, int[] chunkPeaks) {
         boolean nonZero = false;
         for (int chunk = 0; chunk < chunks; chunk++) {
             driver.read(buffer);
-            if (!nonZero) {
-                for (short s : buffer) {
-                    if (s != 0) {
-                        nonZero = true;
-                        break;
-                    }
+            int peak = 0;
+            for (short s : buffer) {
+                int mag = Math.abs(s);
+                if (mag > peak) {
+                    peak = mag;
                 }
+            }
+            if (peak != 0) {
+                nonZero = true;
+            }
+            if (chunkPeaks != null) {
+                chunkPeaks[chunk] = peak;
             }
         }
         return nonZero;

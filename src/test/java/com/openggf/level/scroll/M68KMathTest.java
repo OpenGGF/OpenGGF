@@ -185,8 +185,8 @@ public class M68KMathTest {
         int cameraX = 256;
         short d2 = negWord(cameraX); // FG scroll = -256
 
-        // Band 1 (sky): BG = 0
-        assertEquals((short) 0, (short) 0);
+        // Band 1 (sky) BG is an unconditional constant 0 in SwScrlEhz (no math
+        // path produces it), so there is nothing to exercise here via M68KMath.
 
         // Band 2 (far clouds): BG = d2 >> 6 = -4
         assertEquals((short) -4, asrWord(d2, 6));

@@ -820,7 +820,7 @@ public class TestCNZObjectBugs {
      * checks whether the calculation was even triggered.
      */
     @Test
-    public void testPointPokeySlotDisplayOffsetY() {
+    public void testPointPokeySlotDisplayOffsetY() throws Exception {
         System.out.println("=== Bug #15: Slot Display Y Offset ===");
 
         // Search for a linked-mode PointPokey (subtype 0x01) specifically
@@ -865,58 +865,39 @@ public class TestCNZObjectBugs {
             System.out.println("appendRenderCommands exception (expected in headless): " + e.getMessage());
         }
 
-        // Use reflection to read the slotDisplayOffsetY field
-        try {
-            Field offsetYField = linkedPokey.getClass().getDeclaredField("slotDisplayOffsetY");
-            offsetYField.setAccessible(true);
-            int actualOffsetY = (int) offsetYField.get(linkedPokey);
+        // Read the slotDisplayOffsetY field via reflection. A reflection failure
+        // (renamed/removed field) is a real test failure, not something to swallow.
+        Field offsetYField = linkedPokey.getClass().getDeclaredField("slotDisplayOffsetY");
+        offsetYField.setAccessible(true);
+        int actualOffsetY = (int) offsetYField.get(linkedPokey);
 
-            Field calculatedField = linkedPokey.getClass().getDeclaredField("slotDisplayOffsetCalculated");
-            calculatedField.setAccessible(true);
-            boolean wasCalculated = (boolean) calculatedField.get(linkedPokey);
+        Field calculatedField = linkedPokey.getClass().getDeclaredField("slotDisplayOffsetCalculated");
+        calculatedField.setAccessible(true);
+        boolean wasCalculated = (boolean) calculatedField.get(linkedPokey);
 
-            System.out.println("slotDisplayOffsetCalculated: " + wasCalculated);
-            System.out.println("slotDisplayOffsetY: " + actualOffsetY);
+        System.out.println("slotDisplayOffsetCalculated: " + wasCalculated);
+        System.out.println("slotDisplayOffsetY: " + actualOffsetY);
 
-            if (!wasCalculated) {
-                System.out.println("Offset calculation was not triggered; cannot verify bug.");
-                System.out.println("This may happen if appendRenderCommands() exited early.");
-                // Still check the default value is reasonable
-                // DEFAULT_OFFSET_Y is 40 (below cage), which is correct for uncalculated
-                return;
-            }
+        // The offset calculation must have been triggered for this linked-mode cage;
+        // otherwise the bug under test cannot be verified.
+        assertTrue(wasCalculated,
+                "Linked-mode PointPokey slot display offset should have been calculated after appendRenderCommands()");
 
-            // The bug: offset uses -12 instead of -4.
-            // If the offset was calculated from pattern scan, the difference between
-            // buggy (-12) and correct (-4) is exactly 8 pixels.
-            // We can't know the exact expected value without the pattern scan result,
-            // but we can verify the offset is not unreasonably shifted.
-            //
-            // With the -12 bug: slotDisplayOffsetY = patternOffset - 12
-            // Without the bug:  slotDisplayOffsetY = patternOffset - 4
-            //
-            // The default is 40 (below cage). For CNZ1 linked cages, the display is
-            // typically below the cage, so the offset should be positive.
-            // A negative offset (above cage) combined with a large magnitude suggests
-            // the -12 overcorrection.
-            System.out.println("Slot display offset Y = " + actualOffsetY +
-                    " (default would be 40, bug shifts 8px up from correct value)");
+        // Bug #15: the Y offset must use -4 (pattern center -> pattern top edge), NOT -12.
+        // The correct value is the raw pattern-scan offset minus 4. Recompute the raw
+        // pattern offset the same way the object does, then assert the stored field
+        // matches the documented (-4) formula. A -12 regression would be off by 8px.
+        int[] rawOffset = GameServices.level().findPatternOffset(
+                cageX, cageY,
+                com.openggf.game.sonic2.slotmachine.CNZSlotMachineRenderer.SLOT_TILE_MIN,
+                com.openggf.game.sonic2.slotmachine.CNZSlotMachineRenderer.SLOT_TILE_MAX,
+                128);
+        assertNotNull(rawOffset,
+                "Slot display patterns must be found near the cage when the offset was calculated");
 
-            // This assertion documents the bug: the Y offset is 8px more negative than it should be.
-            // After the fix (changing -12 to -4), the offset will be 8 pixels higher (more positive).
-            // We flag this as a known issue by checking if the offset seems excessively corrected.
-            // The exact assertion depends on the pattern scan result for this specific cage.
-            // For now, we verify the calculation ran and log the value for manual inspection.
-            assertNotNull(actualOffsetY, "slotDisplayOffsetY should have been calculated");
-
-        } catch (NoSuchFieldException e) {
-            System.out.println("Could not access slotDisplayOffsetY via reflection: " + e.getMessage());
-            System.out.println("The field may have been renamed or removed. " +
-                    "Check PointPokeyObjectInstance.java line 549 for the -12 vs -4 offset.");
-            // Do not fail the test if reflection does not work; this is a best-effort check
-        } catch (IllegalAccessException e) {
-            System.out.println("Reflection access denied for slotDisplayOffsetY: " + e.getMessage());
-        }
+        int expectedOffsetY = rawOffset[1] - 4;
+        assertEquals(expectedOffsetY, actualOffsetY,
+                "slotDisplayOffsetY must use the -4 pattern-center-to-top-edge correction, not -12");
     }
 }
 

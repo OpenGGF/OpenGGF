@@ -22,6 +22,9 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 @RequiresRom(SonicGame.SONIC_1)
 public class DebugS1Credits05SbzJunctionProbe {
     private static final Path TRACE_DIR = Path.of("src/test/resources/traces/s1/credits_05_sbz1");
@@ -64,6 +67,8 @@ public class DebugS1Credits05SbzJunctionProbe {
             // forbids any trace-derived pose hydration.
             GameServices.level().updateObjectPositionsWithoutTouches();
 
+            int windowIterations = 0;
+            String lastJunctionState = null;
             for (int i = 0; i <= 380; i++) {
                 TraceFrame expected = trace.getFrame(i);
                 TraceFrame previous = i > 0 ? trace.getFrame(i - 1) : null;
@@ -95,6 +100,13 @@ public class DebugS1Credits05SbzJunctionProbe {
 
                 Sonic1JunctionObjectInstance junction = findJunction();
                 AbstractPlayableSprite player = fixture.sprite();
+                String junctionState = junction == null ? "null" : String.format(
+                        "routine=%s frame=%d timer=%d dir=%d grab=%d",
+                        getPrivateObject(junction, "routine"),
+                        getPrivateInt(junction, "mappingFrame"),
+                        getPrivateInt(junction, "frameTimer"),
+                        getPrivateInt(junction, "frameDirection"),
+                        getPrivateInt(junction, "grabFrame"));
                 System.out.printf(
                         "frame=%03d base=%s run=%s nextDiff=%s input=%04X px=%04X py=%04X xsp=%04X ysp=%04X gsp=%04X objCtrl=%s lock=%s jn=%s%n",
                         i,
@@ -109,14 +121,19 @@ public class DebugS1Credits05SbzJunctionProbe {
                         player.getGSpeed() & 0xFFFF,
                         player.isObjectControlled(),
                         player.isControlLocked(),
-                        junction == null ? "null" : String.format(
-                                "routine=%s frame=%d timer=%d dir=%d grab=%d",
-                                getPrivateObject(junction, "routine"),
-                                getPrivateInt(junction, "mappingFrame"),
-                                getPrivateInt(junction, "frameTimer"),
-                                getPrivateInt(junction, "frameDirection"),
-                                getPrivateInt(junction, "grabFrame")));
+                        junctionState);
+                windowIterations++;
+                lastJunctionState = junctionState;
             }
+
+            // characterization guard: the probe must reach its junction
+            // inspection window and produce the junction state string the probe
+            // reports. A missing/empty string means the replay regressed before
+            // the window was reached.
+            assertTrue(windowIterations > 0,
+                    "probe never reached the junction inspection window");
+            assertNotNull(lastJunctionState, "junction state string was never produced");
+            assertTrue(!lastJunctionState.isEmpty(), "junction state string was empty");
         } finally {
             sharedLevel.dispose();
             config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE,

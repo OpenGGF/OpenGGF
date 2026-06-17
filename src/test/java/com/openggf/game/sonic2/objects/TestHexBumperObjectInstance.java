@@ -9,7 +9,6 @@ import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchShieldDeflectCapability;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -62,8 +61,6 @@ class TestHexBumperObjectInstance {
         assertEquals(0x4A, bumper.getCollisionFlags());
         assertEquals(0, bumper.getCollisionProperty());
         assertTrue(bumper.enablesPostSpecialTouchAirborneSideVelocityPreservation());
-        assertDoesNotThrow(() -> HexBumperObjectInstance.class.getDeclaredMethod("getTouchResponseProfile"));
         assertEquals(profile, bumper.getTouchResponseProfile(false));
-        assertDoesNotThrow(() -> HexBumperObjectInstance.class.getDeclaredMethod("getTouchResponseProfile", boolean.class));
     }
 }

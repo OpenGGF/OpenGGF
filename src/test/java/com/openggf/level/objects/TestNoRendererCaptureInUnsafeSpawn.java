@@ -71,7 +71,7 @@ public class TestNoRendererCaptureInUnsafeSpawn {
     public void rendererCapturingObjects_mustNotBeSpawnedViaRawAddDynamicObject() throws IOException {
         Path srcMain = Path.of("src/main/java");
         if (!Files.isDirectory(srcMain)) {
-            return;
+            fail("could not locate src/main/java for guard scan");
         }
 
         Set<String> rendererCapturingClasses = findClassesCapturingRendererInConstructor(srcMain);

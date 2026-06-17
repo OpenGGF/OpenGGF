@@ -33,4 +33,13 @@ public class TerrainCollisionManager {
 	public void resetState() {
 		java.util.Arrays.fill(pooledResults, null);
 	}
+
+	/**
+	 * Test seam: exposes the internal pooled-result buffer so guard tests can
+	 * assert it is fully cleared after {@link #resetState()}. Not part of the
+	 * public API — package-private and intended for collision tests only.
+	 */
+	SensorResult[] pooledResultsForTest() {
+		return pooledResults;
+	}
 }

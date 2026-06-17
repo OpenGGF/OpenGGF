@@ -32,9 +32,15 @@ import com.openggf.trace.TraceMetadata;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DebugS3kAizReplayWindowProbe {
 
@@ -77,9 +83,21 @@ public class DebugS3kAizReplayWindowProbe {
                 "S3K AIZ replay offset sweep: rawOffset=%d range=[%d,%d] maxTraceFrame=%d%n",
                 rawOffset, minOffset, maxOffset, MAX_TRACE_FRAME);
 
+        List<SweepResult> results = new ArrayList<>();
         for (int offset = minOffset; offset <= maxOffset; offset++) {
             SweepResult result = runProbe(trace, offset);
             System.out.println(result.format());
+            results.add(result);
+        }
+
+        // Oracle: the offset sweep must actually run every offset in the range.
+        assertTrue(trace.frameCount() > 0, "trace had no frames to replay");
+        assertEquals(maxOffset - minOffset + 1, results.size(),
+                "sweep did not cover the full offset range");
+        // characterization guard: each offset produces a populated result whose
+        // checkpoint label is non-null (defaults to "<none>" when unreached).
+        for (SweepResult result : results) {
+            assertNotNull(result.latestCheckpoint(), "sweep result missing checkpoint label");
         }
     }
 
@@ -89,7 +107,12 @@ public class DebugS3kAizReplayWindowProbe {
         TraceData trace = TraceData.load(TRACE_DIR);
         int rawOffset = trace.metadata().bk2FrameOffset();
 
-        dumpWindow(trace, rawOffset, MONKEY_WINDOW_START, MONKEY_WINDOW_END);
+        int framesStepped = dumpWindow(trace, rawOffset, MONKEY_WINDOW_START, MONKEY_WINDOW_END);
+        // Oracle: the monkey window must replay through its end frame.
+        assertTrue(framesStepped > MONKEY_WINDOW_END,
+                "monkey window did not reach end frame " + MONKEY_WINDOW_END);
+        // characterization guard: replay steps exactly one trace frame per index up to MONKEY_WINDOW_END.
+        assertEquals(MONKEY_WINDOW_END + 1, framesStepped, "monkey window frame count drifted");
     }
 
     @Test
@@ -98,7 +121,12 @@ public class DebugS3kAizReplayWindowProbe {
         TraceData trace = TraceData.load(TRACE_DIR);
         int rawOffset = trace.metadata().bk2FrameOffset();
 
-        dumpWindow(trace, rawOffset, START_WINDOW_START, START_WINDOW_END);
+        int framesStepped = dumpWindow(trace, rawOffset, START_WINDOW_START, START_WINDOW_END);
+        // Oracle: the gameplay-start window must replay through its end frame.
+        assertTrue(framesStepped > START_WINDOW_END,
+                "start window did not reach end frame " + START_WINDOW_END);
+        // characterization guard: one trace frame stepped per index up to START_WINDOW_END.
+        assertEquals(START_WINDOW_END + 1, framesStepped, "start window frame count drifted");
     }
 
     @Test
@@ -113,7 +141,14 @@ public class DebugS3kAizReplayWindowProbe {
         try {
             config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
             config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            dumpWindowWithMetadataStart(trace, rawOffset, START_WINDOW_START, START_WINDOW_END);
+            int framesStepped =
+                    dumpWindowWithMetadataStart(trace, rawOffset, START_WINDOW_START, START_WINDOW_END);
+            // Oracle: intro-bootstrap replay must reach the start-window end frame.
+            assertTrue(framesStepped > START_WINDOW_END,
+                    "intro-bootstrap window did not reach end frame " + START_WINDOW_END);
+            // characterization guard: one trace frame stepped per index up to START_WINDOW_END.
+            assertEquals(START_WINDOW_END + 1, framesStepped,
+                    "intro-bootstrap window frame count drifted");
         } finally {
             config.setConfigValue(
                     SonicConfiguration.S3K_SKIP_INTROS,
@@ -136,7 +171,12 @@ public class DebugS3kAizReplayWindowProbe {
         try {
             config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
             config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            dumpLegacyBootstrapSamples(trace, rawOffset);
+            int framesStepped = dumpLegacyBootstrapSamples(trace, rawOffset);
+            // Oracle: legacy-bootstrap progression must step at least one trace frame.
+            assertTrue(framesStepped > 0, "legacy-bootstrap progression stepped no frames");
+            // characterization guard: the scan walks up to (and breaks at) the final sample frame.
+            assertTrue(framesStepped <= trace.frameCount(),
+                    "legacy-bootstrap stepped beyond trace length");
         } finally {
             config.setConfigValue(
                     SonicConfiguration.S3K_SKIP_INTROS,
@@ -161,7 +201,10 @@ public class DebugS3kAizReplayWindowProbe {
         try {
             config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
             config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            dumpLegacyBootstrapWindow(trace, rawOffset, startFrame, endFrame);
+            int framesStepped = dumpLegacyBootstrapWindow(trace, rawOffset, startFrame, endFrame);
+            // Oracle: the route window replays at least one trace frame through to endFrame.
+            assertTrue(framesStepped > 0, "legacy-bootstrap route window stepped no frames");
+            assertTrue(endFrame >= startFrame, "route window bounds inverted");
         } finally {
             config.setConfigValue(
                     SonicConfiguration.S3K_SKIP_INTROS,
@@ -189,8 +232,10 @@ public class DebugS3kAizReplayWindowProbe {
         try {
             config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
             config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            scanLegacyBootstrapForFirstLargeDrift(
+            int framesScanned = scanLegacyBootstrapForFirstLargeDrift(
                     trace, rawOffset, startFrame, endFrame, xBudget, yBudget, camBudget);
+            // Oracle: the drift scan must replay at least one frame of the window.
+            assertTrue(framesScanned > 0, "legacy-bootstrap drift scan stepped no frames");
         } finally {
             config.setConfigValue(
                     SonicConfiguration.S3K_SKIP_INTROS,
@@ -217,7 +262,10 @@ public class DebugS3kAizReplayWindowProbe {
         try {
             config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
             config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            scanFullTraceReplayForFirstLargeDrift(trace, startFrame, endFrame, xBudget, yBudget, camBudget);
+            int framesScanned =
+                    scanFullTraceReplayForFirstLargeDrift(trace, startFrame, endFrame, xBudget, yBudget, camBudget);
+            // Oracle: the full-trace drift scan must replay at least one frame.
+            assertTrue(framesScanned > 0, "full-trace drift scan stepped no frames");
         } finally {
             config.setConfigValue(
                     SonicConfiguration.S3K_SKIP_INTROS,
@@ -241,7 +289,10 @@ public class DebugS3kAizReplayWindowProbe {
         try {
             config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
             config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            dumpFullTraceReplayWindow(trace, startFrame, endFrame);
+            int framesStepped = dumpFullTraceReplayWindow(trace, startFrame, endFrame);
+            // Oracle: the full-trace window must replay through its end frame.
+            assertTrue(framesStepped > 0, "full-trace window stepped no frames");
+            assertTrue(endFrame >= startFrame, "full-trace window bounds inverted");
         } finally {
             config.setConfigValue(
                     SonicConfiguration.S3K_SKIP_INTROS,
@@ -264,7 +315,12 @@ public class DebugS3kAizReplayWindowProbe {
         try {
             config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
             config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            dumpFullTraceReplayFocusFrame(trace, probeFrame);
+            // Oracle: the probe frame must be within the trace before we replay to it.
+            assertTrue(probeFrame < trace.frameCount(),
+                    "focus frame " + probeFrame + " is beyond trace length " + trace.frameCount());
+            int reachedFrame = dumpFullTraceReplayFocusFrame(trace, probeFrame);
+            // characterization guard: replay landed on the requested focus frame.
+            assertEquals(probeFrame, reachedFrame, "focus replay did not land on the probe frame");
         } finally {
             config.setConfigValue(
                     SonicConfiguration.S3K_SKIP_INTROS,
@@ -289,7 +345,10 @@ public class DebugS3kAizReplayWindowProbe {
         try {
             config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
             config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            dumpLegacyBootstrapRockWindow(trace, rawOffset, startFrame, endFrame);
+            int framesStepped = dumpLegacyBootstrapRockWindow(trace, rawOffset, startFrame, endFrame);
+            // Oracle: the rock window must replay through to its end frame.
+            assertTrue(framesStepped > 0, "rock window stepped no frames");
+            assertTrue(endFrame >= startFrame, "rock window bounds inverted");
         } finally {
             config.setConfigValue(
                     SonicConfiguration.S3K_SKIP_INTROS,
@@ -300,7 +359,8 @@ public class DebugS3kAizReplayWindowProbe {
         }
     }
 
-    private void dumpWindow(TraceData trace, int rawOffset, int startFrame, int endFrame) throws Exception {
+    private int dumpWindow(TraceData trace, int rawOffset, int startFrame, int endFrame) throws Exception {
+        int framesStepped = 0;
         SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
         try {
             HeadlessTestFixture fixture = HeadlessTestFixture.builder()
@@ -330,6 +390,7 @@ public class DebugS3kAizReplayWindowProbe {
                 int bk2Input = phase == TraceExecutionPhase.VBLANK_ONLY
                         ? fixture.skipFrameFromRecording()
                         : fixture.stepFrameFromRecording();
+                framesStepped++;
 
                 if (current.frame() >= startFrame) {
                     System.out.printf(
@@ -358,9 +419,10 @@ public class DebugS3kAizReplayWindowProbe {
         } finally {
             sharedLevel.dispose();
         }
+        return framesStepped;
     }
 
-    private void dumpWindowWithMetadataStart(
+    private int dumpWindowWithMetadataStart(
             TraceData trace, int rawOffset, int startFrame, int endFrame) throws Exception {
         SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
         try {
@@ -372,14 +434,15 @@ public class DebugS3kAizReplayWindowProbe {
                     .startPositionIsCentre()
                     .build();
 
-            runDumpLoop(trace, fixture, startFrame, endFrame);
+            return runDumpLoop(trace, fixture, startFrame, endFrame);
         } finally {
             sharedLevel.dispose();
         }
     }
 
-    private void runDumpLoop(
+    private int runDumpLoop(
             TraceData trace, HeadlessTestFixture fixture, int startFrame, int endFrame) {
+        int framesStepped = 0;
         ObjectManager objectManager = GameServices.level().getObjectManager();
         if (objectManager != null) {
             objectManager.initVblaCounter(trace.initialVblankCounter() - 1);
@@ -398,6 +461,7 @@ public class DebugS3kAizReplayWindowProbe {
             int bk2Input = phase == TraceExecutionPhase.VBLANK_ONLY
                     ? fixture.skipFrameFromRecording()
                     : fixture.stepFrameFromRecording();
+            framesStepped++;
 
             if (current.frame() >= startFrame) {
                 System.out.printf(
@@ -423,6 +487,7 @@ public class DebugS3kAizReplayWindowProbe {
             }
             previous = current;
         }
+        return framesStepped;
     }
 
     private SweepResult runProbe(TraceData trace, int offset) throws Exception {
@@ -493,7 +558,8 @@ public class DebugS3kAizReplayWindowProbe {
         }
     }
 
-    private void dumpLegacyBootstrapSamples(TraceData trace, int rawOffset) throws Exception {
+    private int dumpLegacyBootstrapSamples(TraceData trace, int rawOffset) throws Exception {
+        int framesStepped = 0;
         SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
         try {
             HeadlessTestFixture fixture = HeadlessTestFixture.builder()
@@ -537,6 +603,7 @@ public class DebugS3kAizReplayWindowProbe {
                 } else {
                     fixture.stepFrameFromRecording();
                 }
+                framesStepped++;
 
                 S3kCheckpointProbe probe = captureProbe(current.frame(), fixture);
                 TraceEvent.Checkpoint engineCheckpoint = detector.observe(probe);
@@ -588,10 +655,12 @@ public class DebugS3kAizReplayWindowProbe {
         } finally {
             sharedLevel.dispose();
         }
+        return framesStepped;
     }
 
-    private void dumpLegacyBootstrapWindow(
+    private int dumpLegacyBootstrapWindow(
             TraceData trace, int rawOffset, int startFrame, int endFrame) throws Exception {
+        int framesStepped = 0;
         SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
         try {
             HeadlessTestFixture fixture = HeadlessTestFixture.builder()
@@ -624,6 +693,7 @@ public class DebugS3kAizReplayWindowProbe {
                 int bk2Input = phase == TraceExecutionPhase.VBLANK_ONLY
                         ? fixture.skipFrameFromRecording()
                         : fixture.stepFrameFromRecording();
+                framesStepped++;
 
                 if (current.frame() >= startFrame) {
                     System.out.printf(
@@ -661,9 +731,10 @@ public class DebugS3kAizReplayWindowProbe {
         } finally {
             sharedLevel.dispose();
         }
+        return framesStepped;
     }
 
-    private void scanLegacyBootstrapForFirstLargeDrift(
+    private int scanLegacyBootstrapForFirstLargeDrift(
             TraceData trace,
             int rawOffset,
             int startFrame,
@@ -671,6 +742,7 @@ public class DebugS3kAizReplayWindowProbe {
             int xBudget,
             int yBudget,
             int camBudget) throws Exception {
+        int framesScanned = 0;
         SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
         try {
             HeadlessTestFixture fixture = HeadlessTestFixture.builder()
@@ -704,6 +776,7 @@ public class DebugS3kAizReplayWindowProbe {
                 int bk2Input = phase == TraceExecutionPhase.VBLANK_ONLY
                         ? fixture.skipFrameFromRecording()
                         : fixture.stepFrameFromRecording();
+                framesScanned++;
 
                 int dx = Math.abs(fixture.sprite().getCentreX() - current.x());
                 int dy = Math.abs(fixture.sprite().getCentreY() - current.y());
@@ -757,15 +830,17 @@ public class DebugS3kAizReplayWindowProbe {
         } finally {
             sharedLevel.dispose();
         }
+        return framesScanned;
     }
 
-    private void scanFullTraceReplayForFirstLargeDrift(
+    private int scanFullTraceReplayForFirstLargeDrift(
             TraceData trace,
             int startFrame,
             int endFrame,
             int xBudget,
             int yBudget,
             int camBudget) throws Exception {
+        int framesScanned = 0;
         SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
         try {
             HeadlessTestFixture fixture = HeadlessTestFixture.builder()
@@ -803,6 +878,7 @@ public class DebugS3kAizReplayWindowProbe {
                 int bk2Input = phase == TraceExecutionPhase.VBLANK_ONLY
                         ? fixture.skipFrameFromRecording()
                         : fixture.stepFrameFromRecording();
+                framesScanned++;
 
                 int dx = Math.abs(fixture.sprite().getCentreX() - current.x());
                 int dy = Math.abs(fixture.sprite().getCentreY() - current.y());
@@ -865,9 +941,11 @@ public class DebugS3kAizReplayWindowProbe {
                 sharedLevel.dispose();
             }
         }
+        return framesScanned;
     }
 
-    private void dumpFullTraceReplayWindow(TraceData trace, int startFrame, int endFrame) throws Exception {
+    private int dumpFullTraceReplayWindow(TraceData trace, int startFrame, int endFrame) throws Exception {
+        int framesStepped = 0;
         SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
         try {
             HeadlessTestFixture fixture = HeadlessTestFixture.builder()
@@ -899,6 +977,7 @@ public class DebugS3kAizReplayWindowProbe {
                 int bk2Input = phase == TraceExecutionPhase.VBLANK_ONLY
                         ? fixture.skipFrameFromRecording()
                         : fixture.stepFrameFromRecording();
+                framesStepped++;
                 if (traceIndex >= startFrame) {
                     System.out.printf(
                             "full-trace-window frame=%d phase=%s expIn=%04X bk2In=%04X "
@@ -952,9 +1031,10 @@ public class DebugS3kAizReplayWindowProbe {
         } finally {
             sharedLevel.dispose();
         }
+        return framesStepped;
     }
 
-    private void dumpFullTraceReplayFocusFrame(TraceData trace, int probeFrame) throws Exception {
+    private int dumpFullTraceReplayFocusFrame(TraceData trace, int probeFrame) throws Exception {
         SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
         try {
             HeadlessTestFixture fixture = HeadlessTestFixture.builder()
@@ -988,7 +1068,7 @@ public class DebugS3kAizReplayWindowProbe {
                         : fixture.stepFrameFromRecording();
                 if (traceIndex == probeFrame) {
                     dumpFullTraceReplayFocusState(trace, current, fixture, phase, bk2Input);
-                    return;
+                    return traceIndex;
                 }
                 previous = current;
             }
@@ -1092,8 +1172,9 @@ public class DebugS3kAizReplayWindowProbe {
         return -1;
     }
 
-    private void dumpLegacyBootstrapRockWindow(
+    private int dumpLegacyBootstrapRockWindow(
             TraceData trace, int rawOffset, int startFrame, int endFrame) throws Exception {
+        int framesStepped = 0;
         SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
         try {
             HeadlessTestFixture fixture = HeadlessTestFixture.builder()
@@ -1126,6 +1207,7 @@ public class DebugS3kAizReplayWindowProbe {
                 int bk2Input = phase == TraceExecutionPhase.VBLANK_ONLY
                         ? fixture.skipFrameFromRecording()
                         : fixture.stepFrameFromRecording();
+                framesStepped++;
 
                 if (current.frame() >= startFrame) {
                     System.out.printf(
@@ -1147,6 +1229,7 @@ public class DebugS3kAizReplayWindowProbe {
         } finally {
             sharedLevel.dispose();
         }
+        return framesStepped;
     }
 
     private static Path findBk2File() throws Exception {
