@@ -58,7 +58,9 @@ public class Sonic3kStarPostBonusStarChild extends AbstractObjectInstance {
     // S3K ring threshold for bonus stars
     private static final int RING_THRESHOLD = 20;
     private final Sonic3kStarPostObjectInstance parentStarPost;
-    private final BonusStarVariant variant;
+    // Non-final so the generic field capturer reapplies it after a rewind
+    // recreate (the bonus-stage type is not derivable from the spawn/parent).
+    private BonusStarVariant variant;
     private final int centerX;  // $30
     private final int centerY;  // $32
     private int angle;          // $34

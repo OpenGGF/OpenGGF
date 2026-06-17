@@ -3,7 +3,9 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.BatbotBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.BuggernautBabyInstance;
 import com.openggf.game.sonic3k.objects.badniks.BuggernautBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.CaterkillerJrBodyInstance;
 import com.openggf.game.sonic3k.objects.badniks.ButterdroidBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance;
 import com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance;
@@ -35,6 +37,7 @@ import com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance;
 import com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance;
+import com.openggf.game.sonic3k.objects.bosses.IczEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance;
 import com.openggf.level.objects.AbstractObjectRegistry;
@@ -196,10 +199,53 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     S3kAirCountdownObjectInstance.class,
                     s -> new S3kAirCountdownObjectInstance(0, 0, 0, 0, 0)),
 
+            // --- Release-slice batch 2: AIZ/CNZ/MGZ/MHZ/ICZ/SS/badnik recreate codecs ---
+            // Transient cosmetic debris/explosion/sparkle children, damaging miniboss
+            // children, the ICZ post-boss egg capsule, the SS-entry flash, and two
+            // badnik children. Self-contained objects use exactSpawnCodec; non-spawn
+            // differentiator scalars were made non-final (reapplied by the generic
+            // capturer); parent/sibling-linked objects use relink codecs.
+
+            // Self-contained cosmetic / gameplay debris and effects.
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    AizRockFragmentChild.class,
+                    s -> new AizRockFragmentChild(s, 0, 0, 0, 0)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    CnzMinibossDebrisChild.class,
+                    spawn -> new CnzMinibossDebrisChild(spawn.x(), spawn.y(), (spawn.subtype() & 0xFF) / 2)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    S3kBossExplosionChild.class,
+                    spawn -> new S3kBossExplosionChild(spawn.x(), spawn.y())),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    S3kSignpostSparkleChild.class,
+                    s -> new S3kSignpostSparkleChild(s.x(), s.y())),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    MhzPollenParticleInstance.class,
+                    s -> new MhzPollenParticleInstance(
+                            s.x(), s.y(), 0, 0, 0, 0,
+                            MhzPollenParticleInstance.ArtMode.POLLEN)),
+
+            // Self-contained gameplay-critical ICZ post-boss egg capsule.
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    IczEndBossEggCapsuleInstance.class,
+                    s -> new IczEndBossEggCapsuleInstance(s.x(), s.y())),
+
+            // Self-contained badnik child (no live parent ref; differentiators captured).
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    CaterkillerJrBodyInstance.class,
+                    s -> CaterkillerJrBodyInstance.forRewindRecreate(s)),
+
+            // MHZ miniboss children (relink to the live boss recreated earlier).
+            mhzMinibossChildCodec(MhzMinibossFlameInstance.class, MhzMinibossFlameInstance::new),
+            mhzMinibossEscapeShardCodec(),
+
             // Parent/sibling relink codecs.
             iczBigSnowPileCodec(),
             signpostStubCodec(),
-            starPostStarChildCodec());
+            starPostStarChildCodec(),
+            starPostBonusStarChildCodec(),
+            ssEntryFlashCodec(),
+            buggernautBabyCodec());
 
     // AIZ2 dynamic objects still intentionally dropped on rewind restore (no codec):
     //   (none remaining) — all AIZ2 battleship/boss transient children are now
@@ -622,6 +668,182 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     return null;
                 }
                 return new Sonic3kStarPostStarChild(parent);
+            }
+        };
+    }
+
+    /**
+     * Codec for {@link Sonic3kStarPostBonusStarChild}. The orbiting bonus star
+     * re-derives its orbit center from its live
+     * {@link Sonic3kStarPostObjectInstance} parent in the constructor, so the only
+     * non-derivable state is (a) that parent link and (b) the enum {@code variant}
+     * (the bonus-stage type chosen from the ring count at spawn). Several StarPosts
+     * may be live, so the parent is relinked by nearest captured spawn position.
+     * {@code variant} is no longer final, so the generic field capturer reapplies it
+     * after recreate; a placeholder is passed to the constructor here. StarPosts are
+     * layout objects recreated before the dynamic-object restore loop, so the parent
+     * is present; if absent the star is dropped.
+     */
+    private static DynamicObjectRewindCodec starPostBonusStarChildCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == Sonic3kStarPostBonusStarChild.class;
+            }
+
+            @Override
+            public String className() {
+                return Sonic3kStarPostBonusStarChild.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                Sonic3kStarPostObjectInstance parent = findNearestLiveInstance(
+                        context, Sonic3kStarPostObjectInstance.class, entry.spawn());
+                if (parent == null) {
+                    return null;
+                }
+                // angleOffset (0) and variant (placeholder) are reapplied by the
+                // generic field capturer after recreate; centerX/centerY are
+                // re-derived from the relinked parent in the constructor.
+                return new Sonic3kStarPostBonusStarChild(parent, 0,
+                        Sonic3kStarPostObjectInstance.BonusStarVariant.YELLOW);
+            }
+        };
+    }
+
+    /**
+     * Codec for {@link Sonic3kSSEntryFlashObjectInstance}. The flash holds a final
+     * {@link Sonic3kSSEntryRingObjectInstance} parent ring; while a flash exists the
+     * ring is ENTERED with {@code isPersistent()/shouldStayActiveWhenRemembered()}
+     * true and is a layout object recreated earlier in the restore loop, so it is
+     * present in {@code getActiveObjects()}. Position is spawn-derivable; the scalar
+     * gameplay-control fields (state, animIndex, waitTimer, ringDeleteTriggered) are
+     * non-final and reapplied by the generic field capturer. If no live ring is
+     * present the flash is dropped.
+     */
+    private static DynamicObjectRewindCodec ssEntryFlashCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == Sonic3kSSEntryFlashObjectInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return Sonic3kSSEntryFlashObjectInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                Sonic3kSSEntryRingObjectInstance ring =
+                        findLiveInstance(context, Sonic3kSSEntryRingObjectInstance.class);
+                if (ring == null) {
+                    return null;
+                }
+                ObjectSpawn spawn = entry.spawn();
+                return new Sonic3kSSEntryFlashObjectInstance(ring, spawn.x(), spawn.y());
+            }
+        };
+    }
+
+    /**
+     * Codec for an MHZ miniboss child relinked to the single live
+     * {@link MhzMinibossInstance} (an {@link AbstractBossInstance} recreated before
+     * the dynamic-object restore loop). The child's captured scalar state is
+     * reapplied by the generic field capturer; a placeholder child index is passed
+     * to the constructor. If the live boss is absent the child is dropped.
+     */
+    private static DynamicObjectRewindCodec mhzMinibossChildCodec(
+            Class<? extends AbstractObjectInstance> type,
+            BiFunction<MhzMinibossInstance, Integer, ? extends AbstractObjectInstance> factory) {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == type;
+            }
+
+            @Override
+            public String className() {
+                return type.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                MhzMinibossInstance boss = findLiveBossForRewind(context, MhzMinibossInstance.class);
+                if (boss == null) {
+                    return null;
+                }
+                return factory.apply(boss, 0);
+            }
+        };
+    }
+
+    /**
+     * Codec for {@link MhzMinibossEscapeShardInstance}. The shard's only non-spawn
+     * dependency is the live {@link MhzMinibossInstance} parent; position is taken
+     * straight from the captured spawn, and all stateful scalar fields are reapplied
+     * by the generic field capturer. If the live boss is absent the shard is dropped.
+     */
+    private static DynamicObjectRewindCodec mhzMinibossEscapeShardCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == MhzMinibossEscapeShardInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return MhzMinibossEscapeShardInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                MhzMinibossInstance parent = findLiveBossForRewind(context, MhzMinibossInstance.class);
+                if (parent == null) {
+                    return null;
+                }
+                return new MhzMinibossEscapeShardInstance(
+                        entry.spawn().x(), entry.spawn().y(), parent);
+            }
+        };
+    }
+
+    /**
+     * Codec for {@link BuggernautBabyInstance}. The baby is relinked to the nearest
+     * live {@link BuggernautBadnikInstance} parent by captured spawn position
+     * (several buggernauts may be live). The parent is a layout-spawned badnik
+     * recreated before the dynamic-object restore loop. The baby's
+     * {@code @RewindTransient} parent link is re-supplied here; all other state is
+     * reapplied by the generic field capturer. If no live Buggernaut exists the baby
+     * is dropped (matching the codebase-wide drop-child-when-parent-absent rule).
+     */
+    private static DynamicObjectRewindCodec buggernautBabyCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == BuggernautBabyInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return BuggernautBabyInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                BuggernautBadnikInstance parent = findNearestLiveInstance(
+                        context, BuggernautBadnikInstance.class, entry.spawn());
+                if (parent == null) {
+                    return null;
+                }
+                return BuggernautBadnikInstance.recreateBabyForRewind(
+                        entry.spawn(), entry.spawn().x(), entry.spawn().y(), parent);
             }
         };
     }

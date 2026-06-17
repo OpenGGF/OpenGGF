@@ -431,3 +431,21 @@ from a routine (not the constructor), so no double-spawn occurs.
 the formerly-dropped transients). `TestAiz2TransientChildRewind` boots AIZ act 2, drops a
 battleship bomb, captures, removes it, restores, and asserts the bomb is recreated with
 its mid-flight scalar state (not reset to spawn defaults) and relinked to the live ship.
+## Batch-2 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)
+
+`MgzEndBossDefeatDebrisChild` is intentionally **not** captured/recreated across a
+held-rewind boundary (no rewind codec; its `#recreate` and `#finalScalar` keys stay in
+`src/test/resources/rewind/coverage-baseline.txt`). It is short-lived cosmetic debris:
+three MGZ end-boss fragments emitted at defeat that drift at constant velocity, render a
+static frame, and self-destruct the moment they pass the offscreen margin. They hold no
+player, score, terrain, or arena state, so a one-frame catch-up on forward re-simulation
+is invisible. This mirrors the AIZ2 transient-children precedent above: capture is only
+worthwhile when a dropped object would otherwise visibly re-emit and play forward; a
+sub-lifetime cosmetic fragment that re-emits in-frame does not qualify.
+
+All other batch-2 S3K transient/relink children (`AizRockFragmentChild`,
+`CnzMinibossDebrisChild`, `S3kBossExplosionChild`, `S3kSignpostSparkleChild`,
+`MhzPollenParticleInstance`, `MhzMinibossFlameInstance`, `MhzMinibossEscapeShardInstance`,
+`Sonic3kStarPostBonusStarChild`, `Sonic3kSSEntryFlashObjectInstance`,
+`IczEndBossEggCapsuleInstance`, `CaterkillerJrBodyInstance`, `BuggernautBabyInstance`) now
+have rewind codecs in `Sonic3kObjectRegistry` and are restored on a backward seek.

@@ -6,6 +6,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 - **S3K: HCZ conveyor belt, MHZ pulley lift / swing vine, MGZ head-trigger and badnik projectiles, ICZ big snow pile, end-of-act signpost (+ stub), air-countdown bubbles, and StarPost stars now rewind cleanly (recreate codecs).**
 
+- **S3K (batch 2): more held-rewind objects restored.** AIZ rock-shatter fragments, CNZ miniboss debris, boss-explosion puffs, signpost sparkles, MHZ pollen, the MHZ miniboss flame/escape-shard hazards, StarPost bonus stars, the special-stage entry flash, the ICZ post-boss egg capsule, Caterkiller Jr body segments, and Buggernaut babies now have rewind recreate codecs (recreated on a backward seek instead of dropped). MGZ end-boss defeat debris stays uncaptured as transient cosmetic re-emitted in-frame (see docs/S3K_KNOWN_DISCREPANCIES.md).
+
 - **AIZ2 ship-loop and boss no longer break under rewind:** holding rewind
   during the Sonic 3&K AIZ2 battleship auto-scroll loop or the miniboss/end-boss
   no longer softlocks, desyncs, or corrupts graphics. The AIZ2 ship/boss dynamic

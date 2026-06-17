@@ -29,9 +29,11 @@ public class MhzPollenParticleInstance extends AbstractObjectInstance {
     }
 
     private final SubpixelMotion.State motion;
-    private final ArtMode artMode;
-    private final int gravityStep;
-    private final boolean preserveInitialAngleOnFloat;
+    // Non-final so the generic field capturer reapplies them after a rewind
+    // recreate (not spawn-derivable: the stored spawn carries only x/y).
+    private ArtMode artMode;
+    private int gravityStep;
+    private boolean preserveInitialAngleOnFloat;
     private Routine routine;
     private int angle;
     private int mappingFrame;
