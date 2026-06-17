@@ -26,4 +26,15 @@ class TestRewindCoverageAnalyzer {
         assertTrue(cov.uncapturedFinalScalarFields().contains("subtype"),
                 "final non-transient scalar must be reported as uncaptured");
     }
+
+    @Test
+    void dynamicObjectWithCodecHasRecreatePath() {
+        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K);
+        ObjectCoverage cov = report.objects().stream()
+                .filter(o -> o.className().endsWith("AizBattleshipInstance"))
+                .findFirst().orElseThrow();
+        assertTrue(cov.isDynamicSpawnable());
+        assertTrue(cov.hasRecreatePath(), "battleship has a dynamic rewind codec on this branch");
+    }
 }
+
