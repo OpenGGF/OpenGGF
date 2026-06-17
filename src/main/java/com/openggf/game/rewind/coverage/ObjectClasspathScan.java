@@ -1,6 +1,9 @@
 package com.openggf.game.rewind.coverage;
 
+import com.openggf.level.objects.AbstractObjectInstance;
+
 import java.io.IOException;
+import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -93,6 +96,13 @@ final class ObjectClasspathScan {
             }
             if (isSubclassOf(entry, BASE_CLASS_SIMPLE_NAME, bySimpleName)) {
                 result.add(new SourceClass(entry.fqn(), entry.packagePath()));
+                // Step 2b: reflectively enumerate inner classes of this outer class.
+                // Inner/nested classes (e.g. static class FooChild extends AbstractObjectInstance
+                // declared inside BarObjectInstance.java) are never emitted by the file-based FQN
+                // derivation above. After loading the outer class, getDeclaredClasses() yields all
+                // directly-declared nested types; collectInnerObjectClasses() recurses to find all
+                // non-abstract AbstractObjectInstance subclasses among them.
+                collectInnerObjectClasses(entry.fqn(), entry.packagePath(), result);
             }
         }
         return result;
@@ -116,6 +126,67 @@ final class ObjectClasspathScan {
             }
         }
         return null;
+    }
+
+    /**
+     * Reflectively enumerates all declared inner/nested classes of the given outer
+     * class FQN, and adds any that are concrete (non-abstract) subclasses of
+     * {@link AbstractObjectInstance} as additional {@link SourceClass} entries.
+     *
+     * <p>This is the correct approach for inner-class discovery because:
+     * <ol>
+     *   <li>The source-file walk derives one FQN per {@code .java} file; inner classes
+     *       nested inside an outer class file are invisible to that file-path mapping.</li>
+     *   <li>The analyzer already loads the outer class via {@code Class.forName} to inspect
+     *       fields — so the classpath cost is already paid.</li>
+     *   <li>{@code Class.getDeclaredClasses()} returns all directly-declared member types.
+     *       Recursing into each yields deeply nested types as well.</li>
+     *   <li>{@code Class.getName()} returns the JVM binary name (e.g. {@code Outer$Inner}),
+     *       which is exactly what codec lookups and snapshot keys use.</li>
+     * </ol>
+     *
+     * <p>If the outer class cannot be loaded (e.g., not on the test classpath), the method
+     * silently returns without adding any inner-class entries — consistent with the field-gap
+     * fallback in {@code RewindCoverageAnalyzer.findUncapturedFinalScalarFields}.
+     *
+     * @param outerFqn    the source-derived FQN of the outer class (dot-separated)
+     * @param packagePath the package path of the outer class (propagated to inner entries)
+     * @param result      the list to append newly-discovered inner-class entries to
+     */
+    private static void collectInnerObjectClasses(String outerFqn, String packagePath,
+                                                  List<SourceClass> result) {
+        Class<?> outerClass;
+        try {
+            outerClass = Class.forName(outerFqn);
+        } catch (ClassNotFoundException e) {
+            // Outer class not on classpath; skip inner-class scan for it.
+            return;
+        }
+        collectDeclaredInnerObjectClasses(outerClass, packagePath, result);
+    }
+
+    /**
+     * Recursively collects concrete {@link AbstractObjectInstance} subclasses declared
+     * inside {@code enclosing}, adding them to {@code result}.
+     */
+    private static void collectDeclaredInnerObjectClasses(Class<?> enclosing, String packagePath,
+                                                          List<SourceClass> result) {
+        for (Class<?> inner : enclosing.getDeclaredClasses()) {
+            // Skip abstract classes — they cannot be spawned directly.
+            if (Modifier.isAbstract(inner.getModifiers())) {
+                // Still recurse: an abstract inner class may contain concrete grandchildren.
+                collectDeclaredInnerObjectClasses(inner, packagePath, result);
+                continue;
+            }
+            // Interfaces, annotations, enums — not spawnable objects.
+            if (!inner.isInterface() && !inner.isAnnotation() && !inner.isEnum()
+                    && AbstractObjectInstance.class.isAssignableFrom(inner)) {
+                // Class.getName() yields the binary name e.g. "com.openggf...Outer$Inner".
+                result.add(new SourceClass(inner.getName(), packagePath));
+            }
+            // Recurse regardless (may hold grandchildren).
+            collectDeclaredInnerObjectClasses(inner, packagePath, result);
+        }
     }
 
     private static String detectExtends(String content) {

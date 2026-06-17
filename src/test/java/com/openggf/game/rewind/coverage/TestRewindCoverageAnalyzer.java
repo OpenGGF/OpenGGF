@@ -140,5 +140,33 @@ class TestRewindCoverageAnalyzer {
                 .anyMatch(o -> o.className().endsWith("AizEndBossArmChild")),
                 "boss-child classes must be enumerated by the classpath scan");
     }
+
+    /**
+     * RED→GREEN: inner-class concrete AbstractObjectInstance subclasses must be
+     * enumerated by the classpath scan.
+     *
+     * <p>{@code HCZWaterDropObjectInstance$WaterDropChild} is declared as a
+     * {@code private static class} inside {@code HCZWaterDropObjectInstance.java}.
+     * Before the fix, the scan only emits one entry per {@code .java} file (the outer
+     * class), so the inner child is completely invisible to coverage analysis.
+     * After the fix, {@code getDeclaredClasses()} enumeration on the outer class yields
+     * the inner child as a separate entry with binary name {@code Outer$Inner}.
+     *
+     * <p>Similarly, {@code TurboSpikerBadnikInstance$TurboSpikerShellChild} is a
+     * gameplay-critical hazard child (implements {@code TouchResponseProvider}) that
+     * must appear in coverage so it is not silently dropped on rewind.
+     */
+    @Test
+    void enumerationIncludesInnerClassObjectChildren() {
+        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K, s3kCodecClassNames());
+
+        assertTrue(report.objects().stream()
+                .anyMatch(o -> o.className().contains("HCZWaterDropObjectInstance$WaterDropChild")),
+                "inner-class concrete child HCZWaterDropObjectInstance$WaterDropChild must be enumerated");
+
+        assertTrue(report.objects().stream()
+                .anyMatch(o -> o.className().contains("TurboSpikerBadnikInstance$TurboSpikerShellChild")),
+                "inner-class concrete child TurboSpikerBadnikInstance$TurboSpikerShellChild must be enumerated");
+    }
 }
 
