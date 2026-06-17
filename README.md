@@ -140,7 +140,8 @@ ownership, trace/rewind invariants, and object-service boundaries. A recent
 test-suite quality pass (driven by a multi-agent audit) replaced assertion-free
 diagnostic, tautological, and source-text-grep tests with real behavioral
 oracles, and added a guard that fails the build on assertion-free `@Test`
-methods. See CHANGELOG.md for the detailed, per-merge history.
+methods, plus an order-dependent S3K AIZ replay-probe crash fix. See
+CHANGELOG.md for the detailed, per-merge history.
 
 ### Where do I get ROMs?
 
