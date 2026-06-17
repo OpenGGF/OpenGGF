@@ -593,7 +593,9 @@ public class DebugS3kAizReplayWindowProbe {
                 }
             }
 
-            TraceFrame previous = trace.getFrame(replayStart.seededTraceIndex());
+            TraceFrame previous = replayStart.hasSeededTraceState()
+                    ? trace.getFrame(replayStart.seededTraceIndex())
+                    : null;
             for (int traceIndex = replayStart.startingTraceIndex(); traceIndex < trace.frameCount(); traceIndex++) {
                 TraceFrame current = trace.getFrame(traceIndex);
                 TraceExecutionPhase phase =
@@ -685,7 +687,9 @@ public class DebugS3kAizReplayWindowProbe {
             TraceReplayBootstrap.ReplayStartState replayStart =
                     TraceReplayBootstrap.applyReplayStartState(trace, fixture);
 
-            TraceFrame previous = trace.getFrame(replayStart.seededTraceIndex());
+            TraceFrame previous = replayStart.hasSeededTraceState()
+                    ? trace.getFrame(replayStart.seededTraceIndex())
+                    : null;
             for (int traceIndex = replayStart.startingTraceIndex(); traceIndex <= endFrame; traceIndex++) {
                 TraceFrame current = trace.getFrame(traceIndex);
                 TraceExecutionPhase phase =
@@ -767,7 +771,9 @@ public class DebugS3kAizReplayWindowProbe {
             TraceReplayBootstrap.ReplayStartState replayStart =
                     TraceReplayBootstrap.applyReplayStartState(trace, fixture);
 
-            TraceFrame previous = trace.getFrame(replayStart.seededTraceIndex());
+            TraceFrame previous = replayStart.hasSeededTraceState()
+                    ? trace.getFrame(replayStart.seededTraceIndex())
+                    : null;
             boolean found = false;
             for (int traceIndex = replayStart.startingTraceIndex(); traceIndex <= endFrame; traceIndex++) {
                 TraceFrame current = trace.getFrame(traceIndex);
@@ -1199,7 +1205,9 @@ public class DebugS3kAizReplayWindowProbe {
             TraceReplayBootstrap.ReplayStartState replayStart =
                     TraceReplayBootstrap.applyReplayStartState(trace, fixture);
 
-            TraceFrame previous = trace.getFrame(replayStart.seededTraceIndex());
+            TraceFrame previous = replayStart.hasSeededTraceState()
+                    ? trace.getFrame(replayStart.seededTraceIndex())
+                    : null;
             for (int traceIndex = replayStart.startingTraceIndex(); traceIndex <= endFrame; traceIndex++) {
                 TraceFrame current = trace.getFrame(traceIndex);
                 TraceExecutionPhase phase =
