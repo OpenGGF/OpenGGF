@@ -49,8 +49,10 @@ public class AizEndBossDebrisChild extends AbstractObjectInstance {
     // ROM: MoveSprite applies addi.w #$38,y_vel(a0) each frame
     private static final int GRAVITY = 0x38;
 
-    private final int mappingFrame;
-    private final int xVel;  // 8:8 fixed-point
+    // mappingFrame/xVel are non-final so the rewind field capturer reapplies them
+    // after the codec recreates the debris from its spawn (placeholder index 0).
+    private int mappingFrame;
+    private int xVel;  // 8:8 fixed-point
     private int yVel;        // 8:8 fixed-point, modified by gravity each frame
     private int posX;        // 16-bit pixel
     private int posY;

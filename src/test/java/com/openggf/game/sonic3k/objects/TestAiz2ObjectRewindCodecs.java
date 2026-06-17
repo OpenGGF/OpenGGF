@@ -7,14 +7,19 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies that {@link Sonic3kObjectRegistry} exposes a dynamic rewind codec
  * for every AIZ2 battleship / boss-endgame object that must survive a rewind
- * keyframe restore (Tier 1-3), and that the intentionally-dropped transient
- * effects (Tier 4) have no codec.
+ * keyframe restore, including the transient combat/cosmetic children that were
+ * previously dropped.
+ *
+ * <p>Held rewind restores the nearest keyframe and re-simulates forward each
+ * displayed frame, so any object dropped on restore is re-emitted from scratch
+ * and visibly plays forward. To make the whole scene reverse cleanly, every AIZ2
+ * battleship/boss child is now captured and recreated — there are no longer any
+ * intentionally-dropped AIZ2 transients.
  *
  * <p>This is a pure registry-content test: it constructs a registry and reads
  * {@code dynamicRewindCodecs()} without a ROM, OpenGL, or an active gameplay
@@ -68,11 +73,11 @@ class TestAiz2ObjectRewindCodecs {
     }
 
     @Test
-    void doesNotRegisterCodecsForIntentionallyDroppedTransients() {
+    void registersCodecsForFormerlyDroppedTransientChildren() {
         Set<String> names = codecClassNames();
-        // Tier 4: transient combat/cosmetic effects deliberately dropped on
-        // restore (they respawn within frames from their live parents).
-        List<String> dropped = List.of(
+        // Previously Tier-4 (dropped). Now captured + recreated so held rewind
+        // reverses them cleanly instead of re-emitting them forward.
+        List<String> nowCovered = List.of(
                 AizShipBombInstance.class.getName(),
                 AizBombExplosionInstance.class.getName(),
                 AizMinibossBarrelShotChild.class.getName(),
@@ -85,9 +90,9 @@ class TestAiz2ObjectRewindCodecs {
                 AizEndBossBombChild.class.getName(),
                 AizEndBossSmokeChild.class.getName(),
                 AizEndBossDebrisChild.class.getName());
-        for (String name : dropped) {
-            assertFalse(names.contains(name),
-                    "Tier-4 transient should NOT have a rewind codec: " + name);
+        for (String name : nowCovered) {
+            assertTrue(names.contains(name),
+                    "AIZ2 transient child must now have a rewind codec: " + name);
         }
     }
 }

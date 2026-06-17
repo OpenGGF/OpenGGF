@@ -48,6 +48,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
 
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
@@ -120,17 +121,54 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             aizEndBossChildCodec(AizEndBossShipChild.class, AizEndBossShipChild::new),
             aizEndBossChildCodec(AizEndBossFlameColumnChild.class, AizEndBossFlameColumnChild::new),
             aizEndBossChildCodec(AizEndBossArmChild.class,
-                    boss -> new AizEndBossArmChild(boss, 0, 0, 0)));
+                    boss -> new AizEndBossArmChild(boss, 0, 0, 0)),
 
-    // AIZ2 dynamic objects intentionally dropped on rewind restore (no codec):
-    // transient combat/cosmetic effects and children whose sibling-relink is too
-    // fragile to reconstruct. They respawn within a few frames from their live
-    // parents, so dropping them is safe:
-    //   AizShipBombInstance, AizBombExplosionInstance,
-    //   AizMinibossBarrelShotChild, AizMinibossBarrelShotFlareChild,
-    //   AizMinibossImpactFlameChild, AizMinibossFlameChild, AizMinibossDebrisChild,
-    //   AizEndBossPropellerChild, AizEndBossFlameChild, AizEndBossBombChild,
-    //   AizEndBossSmokeChild, AizEndBossDebrisChild.
+            // --- AIZ2 transient combat/cosmetic children (now captured+restored) ---
+            // These were previously dropped (Tier-4). Held rewind restores the
+            // nearest keyframe and re-simulates forward each displayed frame, so a
+            // dropped child gets RE-EMITTED from scratch and visibly plays forward.
+            // Capturing + recreating them makes the whole scene rewind cleanly. The
+            // codec only builds a structurally-correct instance (relinking the live
+            // parent/sibling recreated earlier in spawn order); the non-final scalar
+            // fields are reapplied afterward by the generic field capturer, so
+            // placeholders are passed where a value is captured.
+
+            // Self-contained (real spawn carries position; differentiators captured).
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    AizBombExplosionInstance.class,
+                    s -> new AizBombExplosionInstance(s.x(), s.y(), 0, 0)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    AizEndBossDebrisChild.class,
+                    s -> new AizEndBossDebrisChild(s.x(), s.y(), 0)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    AizMinibossImpactFlameChild.class,
+                    s -> new AizMinibossImpactFlameChild(s.x(), s.y(), s.subtype(), false)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    AizMinibossDebrisChild.class,
+                    s -> new AizMinibossDebrisChild(s.x(), s.y(), 0, 0)),
+
+            // Relink to the live battleship recreated earlier in the restore.
+            aizBattleshipChildCodec(AizShipBombInstance.class,
+                    (ship, s) -> new AizShipBombInstance(s, ship, 0, s.y())),
+
+            // Relink to the live miniboss; sibling barrel/anchor where needed.
+            aizMinibossChildCodec(AizMinibossFlameChild.class,
+                    boss -> new AizMinibossFlameChild(boss, 0, 0, 0)),
+            aizMinibossBarrelShotCodec(),
+            aizSiblingAnchoredCodec(AizMinibossBarrelShotFlareChild.class,
+                    AizMinibossBarrelShotChild.class, AizMinibossBarrelShotFlareChild::new),
+
+            // Relink to the live end boss; sibling arm/propeller where needed.
+            aizEndBossPropellerCodec(),
+            aizEndBossFlameCodec(),
+            aizEndBossChildCodec(AizEndBossBombChild.class,
+                    boss -> new AizEndBossBombChild(boss, 0, 0, 0)),
+            aizEndBossChildCodec(AizEndBossSmokeChild.class,
+                    boss -> new AizEndBossSmokeChild(boss, 0, 0, false)));
+
+    // AIZ2 dynamic objects still intentionally dropped on rewind restore (no codec):
+    //   (none remaining) — all AIZ2 battleship/boss transient children are now
+    //   captured and recreated on restore so held rewind reverses the scene cleanly.
 
     @Override
     public ObjectSlotLayout objectSlotLayout() {
@@ -247,6 +285,208 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             }
         }
         return null;
+    }
+
+    /**
+     * Codec for the AIZ2 battleship's dropped bombs. The live
+     * {@link AizBattleshipInstance} is recreated earlier in the restore loop
+     * (entries are processed in spawn order, and the ship spawns before its
+     * bombs), so it is found in {@code getActiveObjects()} and passed into the
+     * bomb constructor. If no live ship is present the bomb is dropped.
+     */
+    private static DynamicObjectRewindCodec aizBattleshipChildCodec(
+            Class<? extends AbstractObjectInstance> type,
+            BiFunction<AizBattleshipInstance, ObjectSpawn, ? extends AbstractObjectInstance> factory) {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == type;
+            }
+
+            @Override
+            public String className() {
+                return type.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                AizBattleshipInstance ship = findLiveInstance(context, AizBattleshipInstance.class);
+                if (ship == null) {
+                    return null;
+                }
+                return factory.apply(ship, entry.spawn());
+            }
+        };
+    }
+
+    /**
+     * Codec for the AIZ end-boss propeller, which needs both the live boss and
+     * the live {@link AizEndBossArmChild} it is mounted on. The arm is spawned
+     * before the propeller, so it is already present in
+     * {@code getActiveObjects()} during the propeller's recreate. If either the
+     * boss or the arm is absent the propeller is dropped.
+     */
+    private static DynamicObjectRewindCodec aizEndBossPropellerCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == AizEndBossPropellerChild.class;
+            }
+
+            @Override
+            public String className() {
+                return AizEndBossPropellerChild.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                AizEndBossInstance boss = findLiveBossForRewind(context, AizEndBossInstance.class);
+                AizEndBossArmChild arm = findLiveInstance(context, AizEndBossArmChild.class);
+                if (boss == null || arm == null) {
+                    return null;
+                }
+                return new AizEndBossPropellerChild(boss, arm, 0);
+            }
+        };
+    }
+
+    /**
+     * Codec for the AIZ end-boss flame, which needs both the live boss and the
+     * live {@link AizEndBossPropellerChild} that emitted it. The propeller is
+     * spawned before its flames, so it is present during the flame's recreate.
+     * If either is absent the flame is dropped.
+     */
+    private static DynamicObjectRewindCodec aizEndBossFlameCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == AizEndBossFlameChild.class;
+            }
+
+            @Override
+            public String className() {
+                return AizEndBossFlameChild.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                AizEndBossInstance boss = findLiveBossForRewind(context, AizEndBossInstance.class);
+                AizEndBossPropellerChild propeller =
+                        findLiveInstance(context, AizEndBossPropellerChild.class);
+                if (boss == null || propeller == null) {
+                    return null;
+                }
+                return new AizEndBossFlameChild(boss, propeller, 0);
+            }
+        };
+    }
+
+    /**
+     * Codec for the AIZ miniboss barrel shot, which needs both the live miniboss
+     * and the live {@link AizMinibossFlameBarrelChild} that fired it. The barrel
+     * is spawned before its shots, so it is present during the shot's recreate.
+     * When several barrels are live the shot is relinked to the barrel nearest
+     * its captured spawn position; if none is live the shot is dropped.
+     */
+    private static DynamicObjectRewindCodec aizMinibossBarrelShotCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == AizMinibossBarrelShotChild.class;
+            }
+
+            @Override
+            public String className() {
+                return AizMinibossBarrelShotChild.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                AizMinibossInstance boss = findLiveBossForRewind(context, AizMinibossInstance.class);
+                AizMinibossFlameBarrelChild barrel = findNearestLiveInstance(
+                        context, AizMinibossFlameBarrelChild.class, entry.spawn());
+                if (boss == null || barrel == null) {
+                    return null;
+                }
+                return new AizMinibossBarrelShotChild(
+                        boss, barrel, 0, 0, AizMinibossBarrelShotChild.Mode.SIMPLE);
+            }
+        };
+    }
+
+    /**
+     * Codec for a cosmetic child anchored to a live sibling (e.g. the barrel-shot
+     * muzzle flare anchored to its barrel shot). The anchor is recreated earlier
+     * in spawn order; when several anchors of the type are live the child is
+     * relinked to the one nearest its captured spawn position. If no anchor is
+     * live the child is dropped rather than recreated with a null anchor.
+     */
+    private static <A extends AbstractObjectInstance> DynamicObjectRewindCodec aizSiblingAnchoredCodec(
+            Class<? extends AbstractObjectInstance> type,
+            Class<A> anchorType,
+            Function<? super A, ? extends AbstractObjectInstance> factory) {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == type;
+            }
+
+            @Override
+            public String className() {
+                return type.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                A anchor = findNearestLiveInstance(context, anchorType, entry.spawn());
+                if (anchor == null) {
+                    return null;
+                }
+                return factory.apply(anchor);
+            }
+        };
+    }
+
+    private static <T> T findLiveInstance(DynamicObjectRecreateContext context, Class<T> type) {
+        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+            if (type.isInstance(inst)) {
+                return type.cast(inst);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Finds the live instance of {@code type} whose current position is nearest
+     * the captured spawn. Used to relink a cosmetic/combat child to the correct
+     * one of several live siblings of the same concrete type. Falls back to the
+     * first live instance when the spawn is null.
+     */
+    private static <T> T findNearestLiveInstance(
+            DynamicObjectRecreateContext context, Class<T> type, ObjectSpawn spawn) {
+        T best = null;
+        long bestDistance = Long.MAX_VALUE;
+        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+            if (!type.isInstance(inst)) {
+                continue;
+            }
+            if (spawn == null) {
+                return type.cast(inst);
+            }
+            long dx = inst.getX() - spawn.x();
+            long dy = inst.getY() - spawn.y();
+            long distance = dx * dx + dy * dy;
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = type.cast(inst);
+            }
+        }
+        return best;
     }
 
     @Override

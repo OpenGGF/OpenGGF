@@ -16,8 +16,9 @@ All notable changes to the OpenGGF project are documented in this file.
   is now copy-on-write and captured so rewinding past the terrain load no longer
   leaves ship/fire tiles behind; and the foreground ship-loop ring plus the
   background tilemap window are rebuilt from the restored camera on every rewind
-  restore. Short-lived combat/cosmetic boss children are intentionally not
-  restored (they respawn within frames) — see S3K_KNOWN_DISCREPANCIES.md.
+  restore. All AIZ2 ship/boss dynamic objects — including the transient combat
+  children (bombs, explosions, flames) — are now captured and restored, so the
+  scene reverses cleanly under rewind (see S3K_KNOWN_DISCREPANCIES.md).
 
 - **Trace context marks tolerated status mismatches:** trace replay context
   windows now keep ignored-but-real sidekick status-byte mismatches visible with
