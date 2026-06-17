@@ -1141,8 +1141,8 @@ boss+container relink).
 
 ## Batch-7 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)
 
-One batch-7 cosmetic object is intentionally **not** captured/recreated across a held-rewind
-boundary (no rewind codec; its `#recreate` / `#finalScalar` keys stay in
+Several batch-7 cosmetic objects are intentionally **not** captured/recreated across a held-rewind
+boundary (no rewind codec; their `#recreate` / `#finalScalar` keys stay in
 `src/test/resources/rewind/coverage-baseline.txt`). This mirrors the AIZ2 transient-children
 precedent and the batch-2/3/4/5/6 cosmetic cases above.
 
@@ -1155,6 +1155,29 @@ precedent and the batch-2/3/4/5/6 cosmetic cases above.
   `RewindCoverageAnalyzer` static over-approximation of a base class that no live carry path can
   produce as itself, so it can never actually be dropped on a held rewind. Accept-drop-as-baseline
   rather than registering a production codec for an abstract-role base class with no spawn factory.
+- `com.openggf.game.sonic1.objects.Sonic1TryAgainEggmanObjectInstance` (S1 TRY AGAIN / END ending
+  Eggman, object 0x8B): the class is **never** instantiated in `src/main` — no `new`, no factory
+  registration, no `spawnChild`. The live TRY AGAIN / END ending-screen Eggman state machine and
+  rendering are fully reimplemented inline inside `com.openggf.game.sonic1.credits.TryAgainEndManager`,
+  so the instance class is orphaned/dead code and never enters the rewindable dynamic-object list — it
+  can never actually be dropped on a held rewind. Its baseline `#recreate` key is a
+  `RewindCoverageAnalyzer` static over-approximation ("No probe-compatible constructor found"). It is
+  not spawn-constructible anyway (super ctor passes `null` spawn, fixed screen-space coords, and it
+  holds a live sibling `emeralds` ref + a renderer), so even if wired up it would need a sibling-relink
+  codec, not an `exactSpawnCodec`. Accept-drop-as-baseline rather than adding a codec for dead code.
+- `com.openggf.level.objects.BreathingBubbleInstance` (game-agnostic underwater drowning bubble,
+  spawned by the shared `com.openggf.sprites.playable.DrowningController` for both S1 LZ Obj0A and S2
+  drowning; reported as S1 because its disasm refs/primary use are S1 LZ): a short-lived cosmetic
+  bubble/particle continuously re-emitted (every `nextBubbleTimer` frames) by `DrowningController`
+  while the player is submerged, holding no player/score/terrain state (the air timer lives on the
+  player). An `exactSpawnCodec` is impossible: the ctor takes 6 non-spawn args (`startsFacingLeft`,
+  `countdownNumber`, `artKey`, `countdownFrameMap`, `maxBubbleFrame`, `riseVelocity`) while
+  `ObjectSpawn` only carries x/y/objectId=0x0A/subtype=0 — the per-game art config and the RNG-gated
+  `countdownNumber` (a one-time snapshot of player air at spawn) are not spawn-derivable, and it is not
+  parent/sibling-linked. Its baseline keys (`#recreate` + `#finalScalar#maxBubbleFrame` +
+  `#finalScalar#riseVelocity`) stay in the baseline. Dropping it on rewind only briefly blanks bubbles
+  until the next in-frame emit, directly analogous to the accepted `Sonic1SplashObjectInstance`
+  precedent ("Batch-3 Rewind: Transient Cosmetic Children Not Rewound"). Accept-drop.
 
 All other batch-7 objects now have rewind codecs and are restored on a backward seek:
 `com.openggf.level.objects.boss.BossExplosionObjectInstance` (shared boss-defeat explosion,
