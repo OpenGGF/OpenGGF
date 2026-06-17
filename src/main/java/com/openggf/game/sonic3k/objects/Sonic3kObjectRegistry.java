@@ -47,7 +47,18 @@ import com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance;
+import com.openggf.game.sonic3k.objects.bosses.MhzEndBossArenaHelperInstance;
+import com.openggf.game.sonic3k.objects.bosses.MhzEndBossDefeatFragmentChild;
+import com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance;
+import com.openggf.game.sonic3k.objects.bosses.MhzEndBossHitProxyChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance;
+import com.openggf.game.sonic3k.objects.bosses.MhzEndBossPaletteFadeController;
+import com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikHeadChild;
+import com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikShipFlameInstance;
+import com.openggf.game.sonic3k.objects.bosses.MhzEndBossSpikeChild;
+import com.openggf.game.sonic3k.objects.bosses.MhzEndBossVisualChild;
+import com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherMachineChild;
+import com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherVisualChild;
 import com.openggf.level.objects.AbstractObjectRegistry;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.boss.AbstractBossInstance;
@@ -295,7 +306,66 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // AIZ1 intro biplane cutscene children (parent-relink to the live
             // AizPlaneIntroInstance orchestrator).
             aizPlaneIntroChildCodec(),
-            aizPlaneIntroWaveChildCodec());
+            aizPlaneIntroWaveChildCodec(),
+
+            // --- Release-slice batch 5: MHZ end-boss family + CNZ traversal codecs ---
+            // Without these, recreateDynamicObject() returns null for the listed
+            // objects captured in a rewind keyframe and they vanish on restore.
+            // Self-contained objects use exactSpawnCodec (re-running the ctor from
+            // the captured spawn); non-spawn differentiator scalars were made
+            // non-final where needed so the generic field capturer reapplies them
+            // after recreate. MHZ end-boss children parent-relink to the live boss,
+            // which is registered FIRST so it is recreated before the relink runs.
+
+            // Self-contained gameplay-critical CNZ traversal/launch objects.
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    CnzBumperObjectInstance.class,
+                    s -> new CnzBumperObjectInstance(s)),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    CnzCannonInstance.class, CnzCannonInstance::new),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    CnzCylinderInstance.class, CnzCylinderInstance::new),
+            // CNZ lights flash: restoreAfter is un-finaled (reapplied by the capturer).
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    CnzLightsFlashChildInstance.class,
+                    s -> new CnzLightsFlashChildInstance(s, false)),
+
+            // MHZ end boss: registered before its children so they relink to a
+            // live boss in getActiveObjects(). The boss is normally re-spawned via
+            // the placement (JAWZ-id) path; this codec also covers the dynamic-
+            // capture case and closes its #recreate coverage gap.
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    MhzEndBossInstance.class, s -> new MhzEndBossInstance(s)),
+
+            // Self-contained MHZ end-boss objects.
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    MhzEndBossEggCapsuleInstance.class,
+                    s -> new MhzEndBossEggCapsuleInstance(s.x(), s.y())),
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    MhzEndBossPaletteFadeController.class,
+                    s -> new MhzEndBossPaletteFadeController(new byte[0][], true, 0)),
+
+            // MHZ end-boss arena helper: role/spikeIndex/spikeTier/alternateSide
+            // are un-finaled and reapplied; relinks the long-lived MHZ events owner.
+            mhzEndBossArenaHelperCodec(),
+
+            // MHZ end-boss children — relink to the live boss recreated earlier.
+            bossChildCodec(MhzEndBossRobotnikHeadChild.class, MhzEndBossInstance.class,
+                    MhzEndBossRobotnikHeadChild::new),
+            bossChildCodec(MhzEndBossRobotnikShipFlameInstance.class, MhzEndBossInstance.class,
+                    MhzEndBossRobotnikShipFlameInstance::new),
+            bossChildCodec(MhzEndBossSpikeChild.class, MhzEndBossInstance.class,
+                    boss -> new MhzEndBossSpikeChild(boss, 0, 0, 0)),
+            bossChildCodec(MhzEndBossVisualChild.class, MhzEndBossInstance.class,
+                    boss -> new MhzEndBossVisualChild(boss, 0, 0, false)),
+            bossChildCodec(MhzEndBossWeatherMachineChild.class, MhzEndBossInstance.class,
+                    boss -> new MhzEndBossWeatherMachineChild(boss)),
+            mhzEndBossHitProxyCodec(),
+            mhzEndBossDefeatFragmentCodec(),
+
+            // MHZ weather-machine visual children — relink to the live
+            // weather-machine child recreated just above (in spawn order).
+            mhzEndBossWeatherVisualChildCodec());
 
     // AIZ2 dynamic objects still intentionally dropped on rewind restore (no codec):
     //   (none remaining) — all AIZ2 battleship/boss transient children are now
@@ -789,6 +859,147 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     return null;
                 }
                 return new IczBigSnowPileInstance(entry.spawn(), events);
+            }
+        };
+    }
+
+    /**
+     * Codec for {@link MhzEndBossArenaHelperInstance}. The helper's only non-spawn
+     * constructor argument is the long-lived
+     * {@link com.openggf.game.sonic3k.events.Sonic3kMHZEvents} owner, reached
+     * via the level event provider (mirrors {@link #iczBigSnowPileCodec()}). The
+     * role-discriminator scalars (role/spikeIndex/spikeTier/alternateSide) are
+     * un-finaled and reapplied by the generic field capturer after recreate, so a
+     * structurally-valid PILLAR placeholder is built here; position and role-derived
+     * render/collision fields are non-final and reapplied too. If the events owner is
+     * absent the helper is dropped (codec returns null).
+     */
+    private static DynamicObjectRewindCodec mhzEndBossArenaHelperCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == MhzEndBossArenaHelperInstance.class;
+            }
+
+            @Override
+            public String className() {
+                return MhzEndBossArenaHelperInstance.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                if (!(context.objectServices().levelEventProvider()
+                        instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager mgr)) {
+                    return null;
+                }
+                com.openggf.game.sonic3k.events.Sonic3kMHZEvents events = mgr.getMhzEvents();
+                if (events == null) {
+                    return null;
+                }
+                return MhzEndBossArenaHelperInstance.pillar(events);
+            }
+        };
+    }
+
+    /**
+     * Codec for {@link MhzEndBossHitProxyChild}. The proxy's only non-spawn-derivable
+     * field is its final {@link MhzEndBossInstance} parent, which is relinked from the
+     * live boss in {@code getActiveObjects()} (the boss is recreated earlier in spawn
+     * order). The proxy's package-private constructor rebuilds its spawn and position
+     * from the live parent via {@code refreshFromParent()}, so the captured spawn is
+     * intentionally unused. If the boss is absent the proxy is dropped.
+     */
+    private static DynamicObjectRewindCodec mhzEndBossHitProxyCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == MhzEndBossHitProxyChild.class;
+            }
+
+            @Override
+            public String className() {
+                return MhzEndBossHitProxyChild.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                MhzEndBossInstance parent =
+                        findLiveBossForRewind(context, MhzEndBossInstance.class);
+                if (parent == null) {
+                    return null;
+                }
+                return MhzEndBossHitProxyChild.forRewindRecreate(parent);
+            }
+        };
+    }
+
+    /**
+     * Codec for {@link MhzEndBossDefeatFragmentChild}. The fragment relinks the live
+     * {@link MhzEndBossInstance} parent (recreated earlier in spawn order) and recovers
+     * its {@code subtype} from the captured spawn ({@code subtype} is the 4th
+     * {@link ObjectSpawn} argument). {@code xVel} is re-derived in the constructor from
+     * subtype + the relinked parent's render flags; the remaining motion scalars are
+     * reapplied by the generic field capturer after recreate. If the boss is absent the
+     * fragment is dropped.
+     */
+    private static DynamicObjectRewindCodec mhzEndBossDefeatFragmentCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == MhzEndBossDefeatFragmentChild.class;
+            }
+
+            @Override
+            public String className() {
+                return MhzEndBossDefeatFragmentChild.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                MhzEndBossInstance parent =
+                        findLiveBossForRewind(context, MhzEndBossInstance.class);
+                if (parent == null) {
+                    return null;
+                }
+                return MhzEndBossDefeatFragmentChild.forRewindRecreate(
+                        parent, entry.spawn().subtype());
+            }
+        };
+    }
+
+    /**
+     * Codec for {@link MhzEndBossWeatherVisualChild}. The visual child relinks its live
+     * {@link MhzEndBossWeatherMachineChild} parent (recreated just before it in spawn
+     * order, found by nearest captured spawn position when several are live) and
+     * re-derives its {@code subtype} and {@code spark} discriminator from the captured
+     * spawn (the spark bit is encoded into the spawn's {@code rawYWord} at construction).
+     * The remaining animation scalars are reapplied by the generic field capturer; x/y
+     * are re-derived from the parent each frame. If no parent is live the child is dropped.
+     */
+    private static DynamicObjectRewindCodec mhzEndBossWeatherVisualChildCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == MhzEndBossWeatherVisualChild.class;
+            }
+
+            @Override
+            public String className() {
+                return MhzEndBossWeatherVisualChild.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                MhzEndBossWeatherMachineChild parent = findNearestLiveInstance(
+                        context, MhzEndBossWeatherMachineChild.class, entry.spawn());
+                if (parent == null) {
+                    return null;
+                }
+                return MhzEndBossWeatherVisualChild.forRewindRecreate(parent, entry.spawn());
             }
         };
     }

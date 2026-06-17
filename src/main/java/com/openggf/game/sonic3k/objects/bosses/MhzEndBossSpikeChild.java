@@ -32,14 +32,14 @@ public final class MhzEndBossSpikeChild extends AbstractObjectInstance implement
 
     @RewindTransient(reason = "Structural parent link; live position and collision derive from parent state.")
     private final MhzEndBossInstance parent;
-    private final int subtype;
-    private final int xOffset;
-    private final int yOffset;
+    private int subtype;
+    private int xOffset;
+    private int yOffset;
     private int x;
     private int y;
     private int collisionFlags;
 
-    MhzEndBossSpikeChild(MhzEndBossInstance parent, int subtype, int xOffset, int yOffset) {
+    public MhzEndBossSpikeChild(MhzEndBossInstance parent, int subtype, int xOffset, int yOffset) {
         super(new ObjectSpawn(
                         parent.getX() + xOffset,
                         parent.getY() + yOffset,

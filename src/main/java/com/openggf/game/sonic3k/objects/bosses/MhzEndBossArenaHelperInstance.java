@@ -32,10 +32,10 @@ public final class MhzEndBossArenaHelperInstance extends AbstractObjectInstance
 
     @RewindTransient(reason = "Zone event workspace owner; helper state is derived each frame.")
     private final Sonic3kMHZEvents events;
-    private final Role role;
-    private final int spikeIndex;
-    private final int spikeTier;
-    private final boolean alternateSide;
+    private Role role;
+    private int spikeIndex;
+    private int spikeTier;
+    private boolean alternateSide;
     private int mappingFrame;
     private int priorityBucket;
     private int collisionFlags;
