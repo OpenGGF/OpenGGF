@@ -200,7 +200,6 @@ public final class GameplayModeContext implements ModeContext {
         this.rewindRegistry.register(timerManager);
         this.rewindRegistry.register(fadeManager);
         this.rewindRegistry.register(new OscillationStaticAdapter());
-        this.rewindRegistry.register(new Aiz2BossEndSequenceStaticAdapter());
         // Register solid-execution adapter (no-op if not DefaultSolidExecutionRegistry)
         if (solidExecutionRegistry instanceof DefaultSolidExecutionRegistry dser) {
             this.rewindRegistry.register(dser);
@@ -420,11 +419,17 @@ public final class GameplayModeContext implements ModeContext {
         rewindRegistry.deregister("object-manager");
         rewindRegistry.deregister("level-event");
         rewindRegistry.deregister("solid-execution");
+        rewindRegistry.deregister("aiz2-boss-end-sequence");
         rewindRegistry.deregisterPostRestoreCallback("level-tilemap-event-reconcile");
         rewindRegistry.register(levelManager.levelRewindSnapshottable());
         if (levelManager.getObjectManager() != null) {
             rewindRegistry.register(levelManager.getObjectManager().rewindSnapshottable());
         }
+        // AIZ2 boss-endgame static latches: a zone-specific static-state adapter,
+        // registered with the level adapters (not the game-agnostic atomic core)
+        // so it is present during gameplay capture/restore without polluting the
+        // global atomic adapter set. Cheap static snapshot; harmless outside AIZ2.
+        rewindRegistry.register(new Aiz2BossEndSequenceStaticAdapter());
         if (solidExecutionRegistry instanceof DefaultSolidExecutionRegistry dser) {
             rewindRegistry.register(dser);
         }
