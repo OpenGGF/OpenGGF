@@ -231,6 +231,13 @@ straightforward to add new objects, zones, and game-specific behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **AIZ1 cutscene miniboss no longer strands flame children in AIZ2 (2026-06-17).** Merged
+  `bugfix/ai-aiz2-miniboss-carry`, fixing an AIZ playthrough bug where the AIZ Act 1
+  cutscene miniboss (object 0x90) and its persistent flame-barrel children were carried
+  across the seamless AIZ1->AIZ2 fire reload without the world offset applied, stranding an
+  invisible-bodied "copy" of the miniboss whose flames kept hurting the player partway
+  through AIZ2. The cutscene object now removes itself and its tracked children when carried
+  across the act transition, matching the ROM.
 - **Trace frontier reporting/noise reduction + AIZ2 visual capture fixes (2026-06-17).** Merged
   `bugfix/ai-trace-frontier-develop`, making trace replay reports focus on the
   true release-blocking frontier, compacting noisy diagnostic context, advancing
