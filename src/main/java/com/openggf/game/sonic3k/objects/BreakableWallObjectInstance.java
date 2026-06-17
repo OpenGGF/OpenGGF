@@ -45,6 +45,7 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
     private static final int FRAGMENT_GRAVITY = 0x70;
     private static final int PRIORITY = 5;
     private static final int BREAK_SPEED_THRESHOLD = 0x480;
+    private static final int ANIM_ROLL = 2;
     private static final int GLIDE_ACTIVE = 1;
     private static final int GLIDE_FALLING = 2;
     private static final int KNUCKLES_FALL_FROM_GLIDE_ANIM = 0x21;
@@ -122,7 +123,7 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
 
     private short savedPreContactXSpeed;
     private short savedPreContactYSpeed;
-    private boolean savedPreContactRolling;
+    private int savedPreContactAnimationId;
 
     public BreakableWallObjectInstance(ObjectSpawn spawn) {
         super(spawn, "BreakableWall");
@@ -195,7 +196,7 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
 
         savedPreContactXSpeed = result.preContact().xSpeed();
         savedPreContactYSpeed = result.preContact().ySpeed();
-        savedPreContactRolling = result.preContact().rolling();
+        savedPreContactAnimationId = result.preContact().animationId();
 
         // MGZ spin-break walls key off side-contact feedback instead of the
         // generic push flag. The other modes still require a pushing contact.
@@ -225,7 +226,9 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
         if (isKnuckles()) {
             return true;
         }
-        if (!savedPreContactRolling) {
+        // Obj_BreakableWall gates standard spin breaks on anim(a1)==2 after saving x_vel,
+        // not on the status rolling bit.
+        if (savedPreContactAnimationId != ANIM_ROLL) {
             return false;
         }
         if (Math.abs(savedPreContactXSpeed) < BREAK_SPEED_THRESHOLD) {

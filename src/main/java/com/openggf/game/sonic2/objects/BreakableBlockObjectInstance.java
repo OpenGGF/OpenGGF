@@ -2,6 +2,7 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.level.objects.BoxObjectInstance;
 
 import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.PlayableEntity;
 
 import com.openggf.audio.GameSound;
@@ -129,22 +130,21 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
         }
 
         // ROM Obj32_Main snapshots player anim before SolidObject, then checks
-        // standing bits after SolidObject (docs/s2disasm/s2.asm:48889-48959).
-        // Use the pre-contact rolling state because landing resolution can clear
-        // rolling before this callback runs.
-        boolean wasRolling = services().objectManager() != null
-                ? services().objectManager().getPreContactRolling()
-                : player.getRolling();
+        // standing bits after SolidObject (docs/s2disasm/s2.asm:49295-49350).
+        int preContactAnimationId = services().objectManager() != null
+                ? services().objectManager().getPreContactAnimationId()
+                : player.getAnimationId();
+        boolean wasRollAnimating = preContactAnimationId == Sonic2AnimationIds.ROLL.id();
         //   andi.b #standing_mask,d0         ; only break if a player is STANDING on the block
         //   bne.s  Obj32_SupportingSomeone
         //   ; ... checks each standing player's saved anim individually:
         //   ; - MainCharacter standing && saved anim==Roll  -> Obj32_BouncePlayer(MainCharacter)
         //   ; - Sidekick standing      && saved anim==Roll  -> Obj32_BouncePlayer(Sidekick)
         // Side and below contacts NEVER break the block in ROM. Each player's own
-        // rolling state determines if THIS player triggers the break (the engine's
-        // previous "playerWasRolling" cache leaked Sonic's rolling state into Tails'
+        // saved animation determines if THIS player triggers the break (the engine's
+        // previous player cache leaked Sonic's roll signal into Tails'
         // onSolidContact call, knocking Tails airborne via the side-touch path).
-        if (contact.standing() && wasRolling) {
+        if (contact.standing() && wasRollAnimating) {
             breakBlock(player, contact);
         }
     }
@@ -418,4 +418,3 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
         }
     }
 }
-

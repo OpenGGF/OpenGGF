@@ -5,6 +5,7 @@ import com.openggf.level.objects.ExplosionObjectInstance;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
+import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -107,8 +108,7 @@ public class RivetObjectInstance extends AbstractObjectInstance
     private boolean busted;
 
     // Tracks the player's animation state each frame (ROM: objoff_30)
-    // ROM stores MainCharacter+anim here to check rolling state
-    private boolean playerWasRolling;
+    private int cachedMainAnimationId;
     private AbstractPlayableSprite lastNativeMainPlayer;
 
     public RivetObjectInstance(ObjectSpawn spawn, String name) {
@@ -124,10 +124,9 @@ public class RivetObjectInstance extends AbstractObjectInstance
 
         // ROM: ObjC2_Main (s2.asm line 80588)
         // move.b (MainCharacter+anim).w,objoff_30(a0)
-        // Store native P1's rolling state each frame for checking in onSolidContact.
         AbstractPlayableSprite player = nativeMainPlayer(playerEntity);
         lastNativeMainPlayer = player;
-        playerWasRolling = player != null && player.getRolling();
+        cachedMainAnimationId = player != null ? player.getAnimationId() : 0;
     }
 
     // ========================================================================
@@ -174,7 +173,7 @@ public class RivetObjectInstance extends AbstractObjectInstance
         // ROM: ObjC2_Bust (s2.asm line 80600)
         // cmpi.b #2,objoff_30(a0) - check if player was rolling (anim == 2)
         // bne.s + (skip if not rolling)
-        if (!playerWasRolling && !player.getRolling()) {
+        if (cachedMainAnimationId != Sonic2AnimationIds.ROLL.id()) {
             return;
         }
 

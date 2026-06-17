@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -60,6 +61,30 @@ class TestS3kBreakableWallPlayerParticipation {
 
         assertTrue(wall.isDestroyed(),
                 "S3K breakable wall should process the update-time primary before queried participants");
+    }
+
+    @Test
+    void breakableWallUsesPlayerOneRollAnimationSnapshotBeforeSidekickContact() {
+        TestablePlayableSprite sonic = player("sonic", 0x0F00, 0x1000);
+        sonic.setXSpeed((short) 0);
+        TestablePlayableSprite tails = rollingPlayer("tails", 0x0F00, 0x1000);
+        tails.setXSpeed((short) 0);
+        TestableBreakableWallObjectInstance wall = new TestableBreakableWallObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic3kObjectIds.BREAKABLE_WALL, 0, 0, false, 0));
+        wall.setCheckpointBatch(new SolidCheckpointBatch(wall, Map.of(
+                sonic, sideContact(0x0480, false, 2),
+                tails, sideContact(0x0600, true, 2)
+        )));
+        wall.setServices(queryOnlyServices(sonic, List.of(tails)));
+
+        wall.update(1, sonic);
+
+        assertTrue(wall.isDestroyed(),
+                "Obj_BreakableWall checks Player_1's anim/x_vel snapshot before falling through to Player_2");
+        assertEquals(0x0480, sonic.getXSpeed() & 0xFFFF,
+                "Player_1 should receive the ROM-saved x_vel from $30(a0)");
+        assertEquals(0, tails.getXSpeed(),
+                "Player_2 must not consume the break when Player_1 satisfies the ROM roll-animation gate");
     }
 
     @Test
@@ -124,8 +149,12 @@ class TestS3kBreakableWallPlayerParticipation {
     }
 
     private static PlayerSolidContactResult sideContact(int xSpeed) {
+        return sideContact(xSpeed, true, 2);
+    }
+
+    private static PlayerSolidContactResult sideContact(int xSpeed, boolean rolling, int animationId) {
         return new PlayerSolidContactResult(ContactKind.SIDE, false, false, true, false,
-                new PreContactState((short) xSpeed, (short) 0, true, 0), null, 0);
+                new PreContactState((short) xSpeed, (short) 0, rolling, animationId), null, 0);
     }
 
     private static TestObjectServices queryOnlyServices(

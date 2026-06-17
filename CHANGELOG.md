@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Breakable blocks use ROM roll-animation snapshots for spin breaks:** S1,
+  S2, and S3K breakable-wall/block/rock checks now gate spin breaks on the
+  saved roll animation ID instead of the mutable rolling status bit, preventing
+  sidekick/contact ordering from letting Tails break an object while Sonic stalls.
+
 - **User pause indicator stays on-screen and fades:** the Enter-key engine pause
   overlay now renders in the logical bottom-right corner instead of using window
   viewport pixels, preventing clipped "PAU" text in display modes where those

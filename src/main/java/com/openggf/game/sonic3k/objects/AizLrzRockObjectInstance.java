@@ -163,7 +163,15 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
                 break;
             }
             if (participant instanceof AbstractPlayableSprite participantSprite) {
-                applyCheckpointContact(participantSprite, batch.perPlayer().get(participant));
+                PlayerSolidContactResult result = batch.perPlayer().get(participant);
+                applyCheckpointContact(participantSprite, result);
+                if (!breaking
+                        && (behaviorBits & BIT_BREAK_SIDE) != 0
+                        && isSideBreakCandidate(result)
+                        && canSideBreak(participantSprite, result.pushingNow())) {
+                    breakFromSide(participantSprite);
+                    return;
+                }
             }
         }
         if (breaking) {
@@ -189,27 +197,6 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
                 player.setYSpeed((short) -0x300);
                 player.setAir(true);
                 player.setOnObject(false);
-                breakRock(player);
-                playerStandingOnRock = false;
-                playerPushingSide = false;
-                return;
-            }
-        }
-
-        if ((behaviorBits & BIT_BREAK_SIDE) != 0 && playerPushingSide && player != null) {
-            if (canSideBreak(player)) {
-                if (savedPreContactRolling) {
-                    enterRollingLaunch(player);
-                }
-                player.setXSpeed((short) savedPreContactXSpeed);
-                int playerX = player.getCentreX();
-                if (playerX < currentX) {
-                    player.setCentreXPreserveSubpixel((short) (playerX - 4));
-                } else {
-                    player.setCentreXPreserveSubpixel((short) (playerX + 4));
-                }
-                player.setGSpeed(player.getXSpeed());
-                player.setPushing(false);
                 breakRock(player);
                 playerStandingOnRock = false;
                 playerPushingSide = false;
@@ -258,7 +245,13 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private boolean canSideBreak(AbstractPlayableSprite player) {
+    private boolean isSideBreakCandidate(PlayerSolidContactResult result) {
+        return result != null
+                && result.kind() != ContactKind.NONE
+                && (result.kind() == ContactKind.SIDE || result.pushingNow());
+    }
+
+    private boolean canSideBreak(AbstractPlayableSprite player, boolean pushingNow) {
         if (knucklesOnly) {
             return isKnuckles();
         }
@@ -268,13 +261,34 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         if (player.isSuperSonic()) {
             return true;
         }
-        if (!savedPreContactRolling || Math.abs(savedPreContactXSpeed) < SIDE_BREAK_SPEED_THRESHOLD) {
+        // Obj_AIZLRZEMZRock_PushBreakMain gates side breaks on anim(a1)==2
+        // after saving x_vel to $30/$36, not on the status rolling bit.
+        if (savedPreContactAnimationId != Sonic3kAnimationIds.ROLL.id()
+                || Math.abs(savedPreContactXSpeed) < SIDE_BREAK_SPEED_THRESHOLD) {
             return false;
         }
         if (player.getShieldType() == ShieldType.FIRE) {
             return true;
         }
-        return playerPushingSide;
+        return pushingNow;
+    }
+
+    private void breakFromSide(AbstractPlayableSprite player) {
+        if (savedPreContactRolling) {
+            enterRollingLaunch(player);
+        }
+        player.setXSpeed((short) savedPreContactXSpeed);
+        int playerX = player.getCentreX();
+        if (playerX < currentX) {
+            player.setCentreXPreserveSubpixel((short) (playerX - 4));
+        } else {
+            player.setCentreXPreserveSubpixel((short) (playerX + 4));
+        }
+        player.setGSpeed(player.getXSpeed());
+        player.setPushing(false);
+        breakRock(player);
+        playerStandingOnRock = false;
+        playerPushingSide = false;
     }
 
     private void enterRollingLaunch(AbstractPlayableSprite player) {
