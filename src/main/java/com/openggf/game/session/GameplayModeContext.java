@@ -23,7 +23,6 @@ import com.openggf.game.rewind.RewindController;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.LevelEventProvider;
-import com.openggf.game.rewind.snapshot.Aiz2BossEndSequenceStaticAdapter;
 import com.openggf.game.rewind.snapshot.OscillationStaticAdapter;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.solid.SolidExecutionRegistry;
@@ -419,17 +418,11 @@ public final class GameplayModeContext implements ModeContext {
         rewindRegistry.deregister("object-manager");
         rewindRegistry.deregister("level-event");
         rewindRegistry.deregister("solid-execution");
-        rewindRegistry.deregister("aiz2-boss-end-sequence");
         rewindRegistry.deregisterPostRestoreCallback("level-tilemap-event-reconcile");
         rewindRegistry.register(levelManager.levelRewindSnapshottable());
         if (levelManager.getObjectManager() != null) {
             rewindRegistry.register(levelManager.getObjectManager().rewindSnapshottable());
         }
-        // AIZ2 boss-endgame static latches: a zone-specific static-state adapter,
-        // registered with the level adapters (not the game-agnostic atomic core)
-        // so it is present during gameplay capture/restore without polluting the
-        // global atomic adapter set. Cheap static snapshot; harmless outside AIZ2.
-        rewindRegistry.register(new Aiz2BossEndSequenceStaticAdapter());
         if (solidExecutionRegistry instanceof DefaultSolidExecutionRegistry dser) {
             rewindRegistry.register(dser);
         }
@@ -440,6 +433,14 @@ public final class GameplayModeContext implements ModeContext {
             if (lep instanceof AbstractLevelEventManager alem) {
                 levelEventManager = alem;
                 rewindRegistry.register(alem);
+            }
+        }
+        // Register game-specific extra adapters contributed by the level-event manager
+        // (e.g. S3K AIZ2 boss-endgame static latches). Deregister first for idempotency.
+        if (levelEventManager != null) {
+            for (com.openggf.game.rewind.RewindSnapshottable<?> extra : levelEventManager.extraRewindAdapters()) {
+                rewindRegistry.deregister(extra.key());
+                rewindRegistry.register(extra);
             }
         }
         // Post-restore reconciliation (runs after all entry restores, i.e. after

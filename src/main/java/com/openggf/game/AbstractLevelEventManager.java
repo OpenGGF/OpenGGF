@@ -115,6 +115,15 @@ public abstract class AbstractLevelEventManager
     public void reconcileAfterRewindRestore() {
     }
 
+    /**
+     * Game-specific rewind adapters this level-event manager contributes;
+     * {@link com.openggf.game.session.GameplayModeContext} registers them with
+     * the level adapters. Default none.
+     */
+    public java.util.List<com.openggf.game.rewind.RewindSnapshottable<?>> extraRewindAdapters() {
+        return java.util.List.of();
+    }
+
     @Override
     public void updatePrePhysics() {
         // Runs before the player physics step; the frame counter is advanced by
