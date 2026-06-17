@@ -77,8 +77,7 @@ class TestLbz2RideCameoInstances {
         assertEquals(0x3AB8, camera.getMaxX() & 0xFFFF,
                 "ship should request gradual camera opening, not snap current max X");
         assertEquals(0x6000, camera.getMaxXTarget() & 0xFFFF);
-        assertTrue(fixture.runtime.consumeLbz2RideAnimatedTilesRequested());
-        assertFalse(fixture.runtime.consumeLbz2RideAnimatedTilesRequested());
+        assertTrue(fixture.runtime.isLbz2RideAnimatedTileGateActive());
         assertTrue(ship.spawnedChildrenForTest().stream()
                         .anyMatch(Lbz2RobotnikShipInstance.ExhaustFlameChild.class::isInstance),
                 "ship grab/start should spawn the LBZ2 exhaust flame child");

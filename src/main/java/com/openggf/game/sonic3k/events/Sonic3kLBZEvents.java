@@ -46,6 +46,7 @@ import java.util.Optional;
  */
 public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private static final int FG_LAYER = 0;
+    private static final int BG_LAYER = 1;
     private static final int ENDING_CLEAR_X = 0x74;
     private static final int ENDING_CLEAR_Y = 0;
     private static final int ENDING_CLEAR_WIDTH = 4;
@@ -112,6 +113,10 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private static final int LBZ2_PAD_CLEAR_Y = 0x0B;
     private static final int LBZ2_PAD_CLEAR_WIDTH = 3;
     private static final int LBZ2_PAD_CLEAR_HEIGHT = 2;
+    private static final int LBZ2_DEATH_EGG_BG_REFRAME_SOURCE_ROW_0 = 2;
+    private static final int LBZ2_DEATH_EGG_BG_REFRAME_SOURCE_ROW_1 = 3;
+    private static final int LBZ2_DEATH_EGG_BG_REFRAME_DEST_ROW_0 = 0;
+    private static final int LBZ2_DEATH_EGG_BG_REFRAME_DEST_ROW_1 = 1;
 
     private boolean endingCollapseActive;
     private boolean endingCollapseFinished;
@@ -394,7 +399,7 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     }
 
     public void requestLbz2RideAnimatedTiles() {
-        currentLbzRuntimeState().ifPresent(LbzZoneRuntimeState::requestLbz2RideAnimatedTiles);
+        currentLbzRuntimeState().ifPresent(state -> state.setLbz2RideAnimatedTileGateActive(true));
     }
 
     public boolean consumeLbz2RideAnimatedTilesRequested() {
@@ -816,6 +821,48 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         camera.setMaxY((short) LBZ2_LAUNCH_CAMERA_MAX_Y);
         camera.setMaxYTarget((short) LBZ2_LAUNCH_CAMERA_MAX_Y);
         camera.setFrozen(true);
+        applyDeathEggSmallBackgroundReframe();
+    }
+
+    private void applyDeathEggSmallBackgroundReframe() {
+        Level level = levelManager().getCurrentLevel();
+        if (level == null || level.getMap() == null) {
+            return;
+        }
+        Map map = level.getMap();
+        LayoutMutationContext context = new LayoutMutationContext(
+                LevelMutationSurface.forLevel(level),
+                levelManager()::applyMutationEffects);
+        zoneLayoutMutationPipeline().applyImmediately(
+                mutationContext -> {
+                    LevelMutationSurface surface = mutationContext.surface();
+                    MutationEffects combined = copyBackgroundRow(
+                            map,
+                            surface,
+                            LBZ2_DEATH_EGG_BG_REFRAME_SOURCE_ROW_0,
+                            LBZ2_DEATH_EGG_BG_REFRAME_DEST_ROW_0);
+                    return mergeEffects(combined, copyBackgroundRow(
+                            map,
+                            surface,
+                            LBZ2_DEATH_EGG_BG_REFRAME_SOURCE_ROW_1,
+                            LBZ2_DEATH_EGG_BG_REFRAME_DEST_ROW_1));
+                },
+                context);
+    }
+
+    private static MutationEffects copyBackgroundRow(Map map,
+                                                     LevelMutationSurface surface,
+                                                     int sourceRow,
+                                                     int destRow) {
+        if (sourceRow >= map.getHeight() || destRow >= map.getHeight()) {
+            return MutationEffects.NONE;
+        }
+        MutationEffects combined = MutationEffects.NONE;
+        for (int col = 0; col < map.getWidth(); col++) {
+            int blockIndex = map.getValue(BG_LAYER, col, sourceRow) & 0xFF;
+            combined = mergeEffects(combined, surface.setBlockInMap(BG_LAYER, col, destRow, blockIndex));
+        }
+        return combined;
     }
 
     private void updateLaunchMotion(LbzZoneRuntimeState state) {

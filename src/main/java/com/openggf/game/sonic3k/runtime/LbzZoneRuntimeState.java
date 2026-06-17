@@ -12,18 +12,20 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     private static final int LAUNCH_EXTENSION_VERSION_1 = 1;
     private static final int LAUNCH_EXTENSION_VERSION_2 = 2;
     private static final int LAUNCH_EXTENSION_VERSION_3 = 3;
-    private static final int LAUNCH_EXTENSION_VERSION = 4;
+    private static final int LAUNCH_EXTENSION_VERSION_4 = 4;
+    private static final int LAUNCH_EXTENSION_VERSION = 5;
     private static final int LAUNCH_EXTENSION_BYTES_V1 = 34;
     private static final int LAUNCH_EXTENSION_BYTES_V2 = 41;
     private static final int LAUNCH_EXTENSION_BYTES_V3 = 49;
-    private static final int LAUNCH_EXTENSION_BYTES = 53;
+    private static final int LAUNCH_EXTENSION_BYTES_V4 = 53;
+    private static final int LAUNCH_EXTENSION_BYTES = 65;
     private static final int LAUNCH_FLAG_ACTIVE = 1;
     private static final int LAUNCH_FLAG_DEATH_EGG_RUMBLE = 1 << 1;
     private static final int LAUNCH_FLAG_START_REQUESTED = 1 << 2;
     private static final int LAUNCH_FLAG_PAD_COLLAPSE_REQUESTED = 1 << 3;
     private static final int LAUNCH_FLAG_FINAL_FALL_REQUESTED = 1 << 4;
     private static final int LAUNCH_FLAG_RIDER_ANCHOR_REGISTERED = 1 << 5;
-    private static final int LAUNCH_FLAG_LBZ2_RIDE_ANIMATED_TILES_REQUESTED = 1 << 6;
+    private static final int LAUNCH_FLAG_LBZ2_RIDE_ANIMATED_TILE_GATE_ACTIVE = 1 << 6;
     private static final int LAUNCH_FLAG_PAD_COLLAPSE_ACTIVE = 1 << 7;
     private static final int LAUNCH_FLAG_FINAL_FALL_ACTIVE = 1 << 8;
     private static final int LAUNCH_FLAG_DEATH_EGG_TERRAIN_SWAP_QUEUED = 1 << 9;
@@ -57,7 +59,7 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     private boolean padCollapseStartRequested;
     private boolean finalFallRequested;
     private boolean launchRiderAnchorRegistered;
-    private boolean lbz2RideAnimatedTilesRequested;
+    private boolean lbz2RideAnimatedTileGateActive;
     private boolean padCollapseActive;
     private boolean finalFallActive;
     private boolean deathEggTerrainSwapQueued;
@@ -69,6 +71,9 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     private int deathEggDeformWrapLatch;
     private boolean finaleCutsceneAnchorRegistered;
     private int finaleCutsceneAnchorId;
+    private int lbz2WaterlinePhase;
+    private int lbz2ScrollArtPhaseSource;
+    private int publishedBgCameraX;
 
     public LbzZoneRuntimeState(int actIndex, PlayerCharacter playerCharacter) {
         this.actIndex = actIndex;
@@ -351,13 +356,50 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     }
 
     public void requestLbz2RideAnimatedTiles() {
-        lbz2RideAnimatedTilesRequested = true;
+        setLbz2RideAnimatedTileGateActive(true);
     }
 
     public boolean consumeLbz2RideAnimatedTilesRequested() {
-        boolean requested = lbz2RideAnimatedTilesRequested;
-        lbz2RideAnimatedTilesRequested = false;
-        return requested;
+        return isLbz2RideAnimatedTileGateActive();
+    }
+
+    public boolean isLbz2RideAnimatedTileGateActive() {
+        return lbz2RideAnimatedTileGateActive;
+    }
+
+    public void setLbz2RideAnimatedTileGateActive(boolean active) {
+        lbz2RideAnimatedTileGateActive = active;
+    }
+
+    /**
+     * Publishes the ROM global values used by {@code AnimateTiles_LBZ2}.
+     *
+     * <p>{@code Events_bg+$10} drives the dynamic waterline art, while
+     * {@code Events_bg+$12 - Camera_X_pos_BG_copy} drives the scroll-art phase.
+     * The scroll/deform routine owns these values, including the Death Egg
+     * deform path where they intentionally diverge from the normal camera
+     * formula.
+     */
+    public void publishLbz2DeformOutputs(int waterlinePhase, int scrollArtPhaseSource, int bgCameraX) {
+        this.lbz2WaterlinePhase = waterlinePhase & 0xFFFF;
+        this.lbz2ScrollArtPhaseSource = scrollArtPhaseSource & 0xFFFF;
+        this.publishedBgCameraX = bgCameraX & 0xFFFF;
+    }
+
+    public int lbz2WaterlinePhase() {
+        return lbz2WaterlinePhase;
+    }
+
+    public int lbz2ScrollArtPhaseSource() {
+        return lbz2ScrollArtPhaseSource;
+    }
+
+    public int publishedBgCameraX() {
+        return publishedBgCameraX;
+    }
+
+    public int lbz2ScrollArtPhase() {
+        return (lbz2ScrollArtPhaseSource - publishedBgCameraX) & 0x0F;
     }
 
     /**
@@ -421,6 +463,9 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         buffer.putInt(deathEggDeformWrapLatch);
         buffer.putInt(finaleCutsceneAnchorId);
         buffer.putInt(launchRiderDelta);
+        buffer.putInt(lbz2WaterlinePhase);
+        buffer.putInt(lbz2ScrollArtPhaseSource);
+        buffer.putInt(publishedBgCameraX);
         return buffer.array();
     }
 
@@ -482,6 +527,16 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
             launchRiderDelta = 0;
             return;
         }
+        if (version == LAUNCH_EXTENSION_VERSION_4
+                && bytes.length >= LEGACY_CAPTURE_BYTES + LAUNCH_EXTENSION_BYTES_V4) {
+            restoreLaunchFlags(buffer.getInt());
+            restoreLaunchInts(buffer, true, true);
+            launchRiderDelta = buffer.getInt();
+            lbz2WaterlinePhase = 0;
+            lbz2ScrollArtPhaseSource = 0;
+            publishedBgCameraX = 0;
+            return;
+        }
         if (version != LAUNCH_EXTENSION_VERSION || bytes.length < LEGACY_CAPTURE_BYTES + LAUNCH_EXTENSION_BYTES) {
             clearLaunchState();
             return;
@@ -490,6 +545,9 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         restoreLaunchFlags(flags);
         restoreLaunchInts(buffer, true, true);
         launchRiderDelta = buffer.getInt();
+        lbz2WaterlinePhase = buffer.getInt();
+        lbz2ScrollArtPhaseSource = buffer.getInt();
+        publishedBgCameraX = buffer.getInt();
     }
 
     private void restoreLaunchFlags(int flags) {
@@ -499,8 +557,8 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         padCollapseStartRequested = (flags & LAUNCH_FLAG_PAD_COLLAPSE_REQUESTED) != 0;
         finalFallRequested = (flags & LAUNCH_FLAG_FINAL_FALL_REQUESTED) != 0;
         launchRiderAnchorRegistered = (flags & LAUNCH_FLAG_RIDER_ANCHOR_REGISTERED) != 0;
-        lbz2RideAnimatedTilesRequested =
-                (flags & LAUNCH_FLAG_LBZ2_RIDE_ANIMATED_TILES_REQUESTED) != 0;
+        lbz2RideAnimatedTileGateActive =
+                (flags & LAUNCH_FLAG_LBZ2_RIDE_ANIMATED_TILE_GATE_ACTIVE) != 0;
         padCollapseActive = (flags & LAUNCH_FLAG_PAD_COLLAPSE_ACTIVE) != 0;
         finalFallActive = (flags & LAUNCH_FLAG_FINAL_FALL_ACTIVE) != 0;
         deathEggTerrainSwapQueued = (flags & LAUNCH_FLAG_DEATH_EGG_TERRAIN_SWAP_QUEUED) != 0;
@@ -539,7 +597,7 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         launchStartRequested = false;
         padCollapseStartRequested = false;
         finalFallRequested = false;
-        lbz2RideAnimatedTilesRequested = false;
+        lbz2RideAnimatedTileGateActive = false;
         padCollapseActive = false;
         finalFallActive = false;
         deathEggTerrainSwapQueued = false;
@@ -548,6 +606,9 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         deathEggDeformWrapLatch = 0;
         launchRiderDelta = 0;
         launchFallingAccelActive = false;
+        lbz2WaterlinePhase = 0;
+        lbz2ScrollArtPhaseSource = 0;
+        publishedBgCameraX = 0;
         clearLaunchRiderAnchor();
         clearFinaleCutsceneAnchor();
     }
@@ -572,8 +633,8 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         if (launchRiderAnchorRegistered) {
             flags |= LAUNCH_FLAG_RIDER_ANCHOR_REGISTERED;
         }
-        if (lbz2RideAnimatedTilesRequested) {
-            flags |= LAUNCH_FLAG_LBZ2_RIDE_ANIMATED_TILES_REQUESTED;
+        if (lbz2RideAnimatedTileGateActive) {
+            flags |= LAUNCH_FLAG_LBZ2_RIDE_ANIMATED_TILE_GATE_ACTIVE;
         }
         if (padCollapseActive) {
             flags |= LAUNCH_FLAG_PAD_COLLAPSE_ACTIVE;

@@ -145,20 +145,27 @@ class TestS3kLbzPatternAnimation {
         byte[] phaseZero = snapshotRange(level, scrollTiles.startTile(), scrollTiles.endTileInclusive());
 
         fixture.camera().setX((short) 0x20);
-        state.requestLbz2RideAnimatedTiles();
+        state.setLbz2RideAnimatedTileGateActive(true);
         animator.update();
 
-        assertFalse(state.consumeLbz2RideAnimatedTilesRequested(),
-                "LBZ2 ride animated-tile graph channel must consume the runtime one-shot");
+        assertTrue(state.isLbz2RideAnimatedTileGateActive(),
+                "Anim_Counters+$F stays set after Obj_LBZ2RobotnikShip starts the ride");
         assertArrayEquals(phaseZero,
                 snapshotRange(level, scrollTiles.startTile(), scrollTiles.endTileInclusive()),
-                "Anim_Counters+$F skips the LBZ2 scroll-tile upload on the triggered frame");
+                "Anim_Counters+$F skips the LBZ2 scroll-tile upload while the gate remains set");
 
+        animator.update();
+        assertArrayEquals(phaseZero,
+                snapshotRange(level, scrollTiles.startTile(), scrollTiles.endTileInclusive()),
+                "the LBZ2 scroll-tile upload stays gated on later frames while Anim_Counters+$F is set");
+
+        state.setLbz2RideAnimatedTileGateActive(false);
+        state.publishLbz2DeformOutputs(0, 0x000F, 0);
         animator.update();
 
         byte[] afterUngatedFrame = snapshotRange(level, scrollTiles.startTile(), scrollTiles.endTileInclusive());
         if (Arrays.equals(phaseZero, afterUngatedFrame)) {
-            fail("Expected LBZ2 scroll tiles to advance on the frame after the one-shot trigger is consumed");
+            fail("Expected LBZ2 scroll tiles to advance after Anim_Counters+$F is explicitly cleared");
         }
     }
 

@@ -311,7 +311,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance {
 
     private void startRidePresentation() {
         openRideCamera();
-        runtimeState().ifPresent(LbzZoneRuntimeState::requestLbz2RideAnimatedTiles);
+        runtimeState().ifPresent(state -> state.setLbz2RideAnimatedTileGateActive(true));
         if (!exhaustSpawned) {
             exhaustSpawned = true;
             ExhaustFlameChild flame = spawnChild(() -> new ExhaustFlameChild(this));

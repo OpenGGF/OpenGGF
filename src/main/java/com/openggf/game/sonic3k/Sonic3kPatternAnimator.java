@@ -211,7 +211,6 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     private int pachinkoSourceOffset;
     private int pachinkoStripeOffset;
     private int lbzRegularScriptCount;
-    private boolean lbz2RideTriggerActiveThisFrame;
     private int frameCounter;
 
     // Gumball bonus stage: direct DMA of uncompressed art based on BG scroll
@@ -536,6 +535,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         }
 
         loadLbzRawArt(reader);
+        bootstrapLbz2WaterlinePhase();
 
         if (zoneIndex == 0x08 && actIndex == 0) {
             this.soz1BgData = loadRawBytes(reader, ART_UNC_ANI_SOZ1_BG_ADDR, ART_UNC_ANI_SOZ1_BG_SIZE);
@@ -596,7 +596,6 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             return;
         }
         if (!graph.channels().isEmpty()) {
-            lbz2RideTriggerActiveThisFrame = false;
             graph.update(new ChannelContext(
                     graph, null, level, GameServices.zoneRuntimeState(), zoneIndex, actIndex, frameCounter++));
             return;
@@ -745,7 +744,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
 
     boolean shouldRunLbzSharedChannel() {
         return lbzSharedData != null
-                && !(actIndex == 1 && lbz2RideTriggerActiveThisFrame);
+                && !(actIndex == 1 && isLbz2RideAnimatedTileGateActive());
     }
 
     boolean shouldRunLbz1CustomChannels() {
@@ -759,7 +758,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     }
 
     boolean shouldRunLbz2ScrollChannel() {
-        return actIndex == 1 && lbz2ScrollData != null && !lbz2RideTriggerActiveThisFrame;
+        return actIndex == 1 && lbz2ScrollData != null && !isLbz2RideAnimatedTileGateActive();
     }
 
     boolean shouldRunLbz2WaterlineChannel() {
@@ -860,11 +859,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     }
 
     void consumeLbz2RideTriggerForGraph() {
-        if (actIndex != 1 || !GameServices.hasRuntime()) {
-            return;
-        }
-        LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(GameServices.zoneRuntimeRegistry()).orElse(null);
-        lbz2RideTriggerActiveThisFrame = state != null && state.consumeLbz2RideAnimatedTilesRequested();
+        isLbz2RideAnimatedTileGateActive();
     }
 
     private void updateHcz1BackgroundStrips() {
@@ -1358,11 +1353,20 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     }
 
     private boolean isLbzAlarmAnimationActive() {
-        if (!GameServices.hasRuntime()) {
-            return false;
-        }
-        LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(GameServices.zoneRuntimeRegistry()).orElse(null);
+        LbzZoneRuntimeState state = currentLbzState();
         return state != null && state.isAlarmAnimationActive();
+    }
+
+    private boolean isLbz2RideAnimatedTileGateActive() {
+        LbzZoneRuntimeState state = currentLbzState();
+        return state != null && state.isLbz2RideAnimatedTileGateActive();
+    }
+
+    private LbzZoneRuntimeState currentLbzState() {
+        if (!GameServices.hasRuntime()) {
+            return null;
+        }
+        return S3kRuntimeStates.currentLbz(GameServices.zoneRuntimeRegistry()).orElse(null);
     }
 
     int computeLbz1ScrollPhase() {
@@ -1373,6 +1377,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     }
 
     int computeLbz2ScrollPhase() {
+        LbzZoneRuntimeState state = currentLbzState();
+        if (state != null) {
+            return state.lbz2ScrollArtPhase();
+        }
         int cameraX = getCameraX();
         int bgCameraX = resolveLbzBgCameraX(asrWordValue(cameraX, 1));
         int eventsBg12 = asrWordValue(cameraX, 1) - asrWordValue(cameraX, 4);
@@ -1479,6 +1487,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     }
 
     private int computeLbz2WaterlineDelta() {
+        LbzZoneRuntimeState state = currentLbzState();
+        if (state != null) {
+            return (short) state.lbz2WaterlinePhase();
+        }
         int shake = 0;
         try {
             shake = GameServices.parallax().getShakeOffsetY();
@@ -1707,6 +1719,21 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         lbzWaterlineScrollData = loadRawBytes(reader,
                 Sonic3kConstants.LBZ_WATERLINE_SCROLL_DATA_ADDR,
                 Sonic3kConstants.LBZ_WATERLINE_SCROLL_DATA_SIZE);
+    }
+
+    private void bootstrapLbz2WaterlinePhase() {
+        if (zoneIndex != Sonic3kZoneIds.ZONE_LBZ || actIndex != 1) {
+            return;
+        }
+        LbzZoneRuntimeState state = currentLbzState();
+        if (state == null
+                || state.lbz2WaterlinePhase() != 0
+                || state.lbz2ScrollArtPhaseSource() != 0
+                || state.publishedBgCameraX() != 0) {
+            return;
+        }
+        int waterlinePhase = getCameraY() >= 0x0540 ? -0x40 : 0x40;
+        state.publishLbz2DeformOutputs(waterlinePhase, 0, 0);
     }
 
     private byte[] loadRawBytes(RomByteReader reader, int addr, int size) {

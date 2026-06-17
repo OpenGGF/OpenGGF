@@ -76,10 +76,11 @@ class TestLbzLaunchRuntimeState {
         original.setDeathEggTerrainSwapQueued(true);
         original.setDeathEggTerrainSwapApplied(true);
         original.setDeathEggDeformWrapLatch(0x0200);
+        original.publishLbz2DeformOutputs(0xFFFC, 0x1234, 0x1200);
+        original.setLbz2RideAnimatedTileGateActive(true);
         original.requestLaunchStart();
         original.requestPadCollapseStart();
         original.requestFinalFall();
-        original.requestLbz2RideAnimatedTiles();
         original.registerLaunchRiderAnchor(0x1234_5678);
         original.registerFinaleCutsceneAnchor(0x3344_5566);
 
@@ -101,12 +102,16 @@ class TestLbzLaunchRuntimeState {
         assertTrue(restored.isDeathEggTerrainSwapQueued());
         assertTrue(restored.isDeathEggTerrainSwapApplied());
         assertEquals(0x0200, restored.getDeathEggDeformWrapLatch());
+        assertEquals(0xFFFC, restored.lbz2WaterlinePhase());
+        assertEquals(0x1234, restored.lbz2ScrollArtPhaseSource());
+        assertEquals(0x1200, restored.publishedBgCameraX());
+        assertEquals(0x04, restored.lbz2ScrollArtPhase());
+        assertTrue(restored.isLbz2RideAnimatedTileGateActive());
         assertEquals(OptionalInt.of(0x1234_5678), restored.getLaunchRiderAnchorId());
         assertEquals(OptionalInt.of(0x3344_5566), restored.getFinaleCutsceneAnchorId());
         assertTrue(restored.consumeLaunchStartRequested());
         assertTrue(restored.consumePadCollapseStartRequested());
         assertTrue(restored.consumeFinalFallRequested());
-        assertTrue(restored.consumeLbz2RideAnimatedTilesRequested());
     }
 
     @Test
@@ -116,12 +121,10 @@ class TestLbzLaunchRuntimeState {
         assertFalse(state.consumeLaunchStartRequested());
         assertFalse(state.consumePadCollapseStartRequested());
         assertFalse(state.consumeFinalFallRequested());
-        assertFalse(state.consumeLbz2RideAnimatedTilesRequested());
 
         state.requestLaunchStart();
         state.requestPadCollapseStart();
         state.requestFinalFall();
-        state.requestLbz2RideAnimatedTiles();
 
         assertTrue(state.consumeLaunchStartRequested());
         assertFalse(state.consumeLaunchStartRequested());
@@ -129,8 +132,23 @@ class TestLbzLaunchRuntimeState {
         assertFalse(state.consumePadCollapseStartRequested());
         assertTrue(state.consumeFinalFallRequested());
         assertFalse(state.consumeFinalFallRequested());
-        assertTrue(state.consumeLbz2RideAnimatedTilesRequested());
-        assertFalse(state.consumeLbz2RideAnimatedTilesRequested());
+    }
+
+    @Test
+    void lbz2RideAnimatedTileGatePersistsUntilExplicitlyCleared() {
+        LbzZoneRuntimeState state = new LbzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE);
+
+        assertFalse(state.isLbz2RideAnimatedTileGateActive());
+
+        state.setLbz2RideAnimatedTileGateActive(true);
+
+        assertTrue(state.isLbz2RideAnimatedTileGateActive());
+        assertTrue(state.isLbz2RideAnimatedTileGateActive(),
+                "ROM Anim_Counters+$F is a latched flag, not a one-frame consumer");
+
+        state.setLbz2RideAnimatedTileGateActive(false);
+
+        assertFalse(state.isLbz2RideAnimatedTileGateActive());
     }
 
     @Test
@@ -175,10 +193,11 @@ class TestLbzLaunchRuntimeState {
         state.setDeathEggTerrainSwapQueued(true);
         state.setDeathEggTerrainSwapApplied(true);
         state.setDeathEggDeformWrapLatch(0x0200);
+        state.publishLbz2DeformOutputs(0xFFFC, 0x1234, 0x1200);
+        state.setLbz2RideAnimatedTileGateActive(true);
         state.requestLaunchStart();
         state.requestPadCollapseStart();
         state.requestFinalFall();
-        state.requestLbz2RideAnimatedTiles();
         state.registerLaunchRiderAnchor(0x1234_5678);
         state.registerFinaleCutsceneAnchor(0x3344_5566);
     }
@@ -199,10 +218,13 @@ class TestLbzLaunchRuntimeState {
         assertFalse(state.isDeathEggTerrainSwapQueued());
         assertFalse(state.isDeathEggTerrainSwapApplied());
         assertEquals(0, state.getDeathEggDeformWrapLatch());
+        assertEquals(0, state.lbz2WaterlinePhase());
+        assertEquals(0, state.lbz2ScrollArtPhaseSource());
+        assertEquals(0, state.publishedBgCameraX());
+        assertFalse(state.isLbz2RideAnimatedTileGateActive());
         assertFalse(state.consumeLaunchStartRequested());
         assertFalse(state.consumePadCollapseStartRequested());
         assertFalse(state.consumeFinalFallRequested());
-        assertFalse(state.consumeLbz2RideAnimatedTilesRequested());
         assertTrue(state.getLaunchRiderAnchorId().isEmpty());
         assertTrue(state.getFinaleCutsceneAnchorId().isEmpty());
     }

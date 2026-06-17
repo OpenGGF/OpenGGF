@@ -68,6 +68,7 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
 
     private int cloudAccumulator;
     private int lastBgCameraX = Integer.MIN_VALUE;
+    private int lastLbz2ScrollArtPhaseSource;
     private int screenShakeOffset;
     private int currentBgPeriodWidth = DEFAULT_BG_PERIOD_WIDTH;
     private short vscrollFactorFG;
@@ -122,7 +123,7 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
         } else if (runtimeState != null && runtimeState.isLaunchActive()) {
             updateAct2DeathEgg(cameraX, cameraY, frameCounter, fgScroll, runtimeState);
         } else {
-            updateAct2(cameraX, cameraY, frameCounter, fgScroll);
+            updateAct2(cameraX, cameraY, frameCounter, fgScroll, runtimeState);
         }
 
         if (screenShakeOffset != 0) {
@@ -195,7 +196,11 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
                 NEGATE_WORD);
     }
 
-    private void updateAct2(int cameraX, int cameraY, int frameCounter, short fgScroll) {
+    private void updateAct2(int cameraX,
+                            int cameraY,
+                            int frameCounter,
+                            short fgScroll,
+                            LbzZoneRuntimeState runtimeState) {
         lbz2HScroll.clear();
 
         int relativeY = (short) (cameraY - 0x5F0);
@@ -213,6 +218,7 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
         buildCloudBands(cameraXFixed);
         buildLowerBackgroundBands(cameraXFixed, equilibriumDelta);
         applyWaterWaves(equilibriumDelta, frameCounter);
+        publishLbz2DeformOutputs(runtimeState, equilibriumDelta, lastLbz2ScrollArtPhaseSource, lastBgCameraX);
 
         DeformationPlan.applyFlaggedTableBands(
                 composer,
@@ -270,6 +276,14 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
         buildDeathEggCloudBands(cameraXFixed);
         buildDeathEggLowerBackgroundBands(cameraXFixed);
         applyDeathEggWaterWaves(equilibriumDelta, frameCounter);
+        int waterlinePhase = (runtimeState.getBgLaunchSpeed() < 0 || equilibriumDelta < 0)
+                ? 0x7FFF
+                : equilibriumDelta;
+        publishLbz2DeformOutputs(
+                runtimeState,
+                waterlinePhase,
+                runtimeState.lbz2ScrollArtPhaseSource(),
+                runtimeState.publishedBgCameraX());
 
         DeformationPlan.applyFlaggedTableBands(
                 composer,
@@ -409,6 +423,7 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
         int index = 241;
         lbz2HScroll.set(--index, wordFromFixed(value));
         value -= step;
+        lastLbz2ScrollArtPhaseSource = wordFromFixed(value) & 0xFFFF;
         lbz2HScroll.set(--index, wordFromFixed(value));
 
         for (int range : LBZ2_BG_UNDERWATER_DEFORM_RANGE) {
@@ -507,6 +522,15 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
             waveIndex = (waveIndex - 1) & 0x3F;
             tableIndex--;
             lbz2HScroll.set(tableIndex, (short) (lbz2HScroll.get(tableIndex) + LBZ_WATER_WAVE_ARRAY[waveIndex]));
+        }
+    }
+
+    private static void publishLbz2DeformOutputs(LbzZoneRuntimeState runtimeState,
+                                                 int waterlinePhase,
+                                                 int scrollArtPhaseSource,
+                                                 int bgCameraX) {
+        if (runtimeState != null) {
+            runtimeState.publishLbz2DeformOutputs(waterlinePhase, scrollArtPhaseSource, bgCameraX);
         }
     }
 

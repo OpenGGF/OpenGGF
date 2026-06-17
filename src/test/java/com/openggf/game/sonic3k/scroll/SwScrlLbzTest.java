@@ -75,14 +75,33 @@ class SwScrlLbzTest {
         SwScrlLbz handler = new SwScrlLbz();
         int[] buffer = new int[VISIBLE_LINES];
 
-        handler.update(buffer, 0x2000, 0x05F0, 0, 1);
+        handler.update(buffer, 0x2010, 0x05F0, 0, 1);
 
         assertEquals((short) 0x02C0, handler.getVscrollFactorBG(),
                 "LBZ2_Deform bases Camera_Y_pos_BG_copy at $2C0 when the waterline delta is neutral");
-        assertEquals(0x1000, handler.getBgCameraX(),
+        assertEquals(0x1008, handler.getBgCameraX(),
                 "LBZ2_Deform exposes Camera_X_pos_BG_copy = Camera_X_pos_copy / 2");
         assertNotEquals(unpackBG(buffer[0]), unpackBG(buffer[VISIBLE_LINES - 1]),
                 "LBZ2 should produce real multi-band parallax, not a flat fallback background");
+    }
+
+    @Test
+    void act2PublishesRomEventsBgValuesForAnimatedTiles() {
+        TestEnvironment.activeGameplayMode();
+        LbzZoneRuntimeState state = new LbzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE);
+        GameServices.zoneRuntimeRegistry().install(state);
+        SwScrlLbz handler = new SwScrlLbz();
+        int[] buffer = new int[VISIBLE_LINES];
+
+        handler.update(buffer, 0x2010, 0x05F0, 0, 1);
+
+        assertEquals(0, state.lbz2WaterlinePhase(),
+                "LBZ2_Deform writes Events_bg+$10 for AnimateTiles_LBZ2 waterline art");
+        assertEquals(0x0E07, state.lbz2ScrollArtPhaseSource(),
+                "LBZ2_Deform writes Events_bg+$12 after subtracting the final underwater step");
+        assertEquals(0x1008, state.publishedBgCameraX(),
+                "LBZ2_Deform writes Camera_X_pos_BG_copy for animated-tile phase subtraction");
+        assertEquals(0x0F, state.lbz2ScrollArtPhase());
     }
 
     @Test
@@ -123,6 +142,7 @@ class SwScrlLbzTest {
         LbzZoneRuntimeState state = new LbzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE);
         state.setLaunchActive(true);
         state.setFgAccum(0x0300_0000);
+        state.setBgLaunchSpeed(-1);
         GameServices.zoneRuntimeRegistry().install(state);
 
         SwScrlLbz handler = new SwScrlLbz();
@@ -132,6 +152,8 @@ class SwScrlLbzTest {
         int firstLatch = state.getDeathEggDeformWrapLatch();
         assertTrue(firstLatch >= 0x200,
                 "Death Egg deform should persistently accumulate $100 wrap steps while adjusted BG Y is negative");
+        assertEquals(0x7FFF, state.lbz2WaterlinePhase(),
+                "LBZ2_DeathEggDeform forces Events_bg+$10 to $7FFF once the BG launch speed is negative");
         assertEquals(handler.getLbz2HScrollWordForTest(8), handler.getLbz2HScrollWordForTest(0),
                 "Death Egg deform copies HScroll_table+$010 over the first four longs");
         assertEquals(handler.getLbz2HScrollWordForTest(15), handler.getLbz2HScrollWordForTest(7),

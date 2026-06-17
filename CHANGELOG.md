@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **LBZ2 Death Egg launch background now publishes ROM-equivalent runtime
+  signals:** the launch scroll handler records the `Events_bg` phase words and
+  background X copy used by the disassembly, the Death Egg deformation exposes
+  the waterline phase consumed by LBZ2 animated tiles, the ride cameo keeps the
+  special launch tile gate latched after object cleanup, and the LBZ analysis
+  note has been restored to document the current engine/disassembly mapping.
+
 - **LBZ2 Knuckles launch cameo support art now uses the ROM tile slot:** the
   Death Egg terrain swap queues `ArtKosM_LBZ2DeathEgg2_8x8` into the
   `ArtTile_Explosion` slot used by `Map_LBZKnuxPillar`, and refreshes the

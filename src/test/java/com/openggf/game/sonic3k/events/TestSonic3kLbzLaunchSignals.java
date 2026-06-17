@@ -72,7 +72,8 @@ class TestSonic3kLbzLaunchSignals {
         assertTrue(events.consumeFinalFallRequested());
         assertFalse(events.consumeFinalFallRequested());
         assertTrue(events.consumeLbz2RideAnimatedTilesRequested());
-        assertFalse(events.consumeLbz2RideAnimatedTilesRequested());
+        assertTrue(events.consumeLbz2RideAnimatedTilesRequested(),
+                "Anim_Counters+$F is a persistent flag, not a one-frame launch signal");
         assertEquals(0x3456, state.getLaunchRiderAnchorId().orElseThrow());
         assertTrue(eventsFg5(events), "consuming launch signals must not consume eventsFg5");
     }
@@ -100,6 +101,39 @@ class TestSonic3kLbzLaunchSignals {
         assertEquals(0x1E00, state.getFgLaunchSpeed());
         assertEquals(0x6200, state.getBgLaunchSpeed());
         assertEquals(0, state.getLaunchYDelta(), "pre-launch delay should publish no rider delta");
+    }
+
+    @Test
+    void launchStartReframesDeathEggSmallBackgroundRows() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 1)
+                .build();
+        Sonic3kLBZEvents events = new Sonic3kLBZEvents();
+        Level level = GameServices.level().getCurrentLevel();
+        assertNotNull(level);
+        com.openggf.level.Map map = level.getMap();
+        assertNotNull(map);
+        int width = map.getWidth();
+        for (int col = 0; col < width; col++) {
+            map.setValue(1, col, 0, (byte) 0x11);
+            map.setValue(1, col, 1, (byte) 0x22);
+            map.setValue(1, col, 2, (byte) (0x30 + (col & 0x0F)));
+            map.setValue(1, col, 3, (byte) (0x50 + (col & 0x0F)));
+        }
+        Camera camera = fixture.camera();
+        camera.setFocusedSprite(new TestablePlayableSprite("sonic", (short) 0x4480, (short) 0x0700));
+        camera.setX((short) 0x4300);
+        camera.setY((short) 0x0660);
+
+        events.requestLaunchStart();
+        events.update(1, 1);
+
+        for (int col = 0; col < width; col++) {
+            assertEquals(map.getValue(1, col, 2), map.getValue(1, col, 0),
+                    "ROM LBZ2BGE_Normal copies BG row 2 over row 0 when the Death Egg launch starts");
+            assertEquals(map.getValue(1, col, 3), map.getValue(1, col, 1),
+                    "ROM LBZ2BGE_Normal copies BG row 3 over row 1 when the Death Egg launch starts");
+        }
     }
 
     @Test
