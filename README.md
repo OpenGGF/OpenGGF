@@ -231,6 +231,11 @@ straightforward to add new objects, zones, and game-specific behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Test-suite cleanup after trace-frontier fixes (2026-06-17).** Merged
+  `bugfix/ai-test-suite-cleanup`, aligning stale parity and guard tests with the
+  current trace-frontier behavior while fixing the underlying rewind snapshot,
+  dynamic object lifecycle, S1 fixed-air countdown access, and headless tilemap
+  cache issues exposed by the full suite.
 - **AIZ miniboss self-destructs if carried across an act reload (2026-06-17).** Merged
   `bugfix/ai-aiz2-miniboss-defeat-carry-guard`, hardening the AIZ2 fightable miniboss
   (object 0x91) against the same ghost failure mode as the AIZ1 cutscene fix: the persistent

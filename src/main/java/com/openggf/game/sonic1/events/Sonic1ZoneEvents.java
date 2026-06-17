@@ -7,6 +7,7 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.function.Supplier;
 
@@ -47,6 +48,14 @@ abstract class Sonic1ZoneEvents {
 
     protected <T> T gameService(Class<T> type) {
         return GameServices.module().getGameService(type);
+    }
+
+    static AbstractPlayableSprite focusedSpriteOrNull() {
+        try {
+            return GameServices.camera().getFocusedSprite();
+        } catch (IllegalStateException ex) {
+            return null;
+        }
     }
 
     /** Reset event state for a new level. */

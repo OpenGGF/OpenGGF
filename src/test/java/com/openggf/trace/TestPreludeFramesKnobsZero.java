@@ -48,7 +48,8 @@ class TestPreludeFramesKnobsZero {
                 List.of(seed, next));
 
         assertEquals(1, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace));
-        assertEquals(0, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace));
+        assertEquals(1, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace),
+                "S3K Sonic+Tails seed-frame traces replay the native Process_Sprites setup pass before frame 1");
     }
 
     @Test

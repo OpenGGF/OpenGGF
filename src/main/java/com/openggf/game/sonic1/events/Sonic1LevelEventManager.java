@@ -6,7 +6,6 @@ import com.openggf.game.sonic1.Sonic1LoopManager;
 import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.game.GameServices;
 
 import java.nio.ByteBuffer;
 
@@ -36,7 +35,7 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
     private final Sonic1SBZEvents sbzEvents;
     private final Sonic1EndingEvents endingEvents;
     private final Sonic1FixedAirCountdownManager fixedAirCountdownManager =
-            new Sonic1FixedAirCountdownManager();
+            new Sonic1FixedAirCountdownManager(Sonic1ZoneEvents::focusedSpriteOrNull);
 
     // Loop/plane switching manager
     private final Sonic1LoopManager loopManager = new Sonic1LoopManager();

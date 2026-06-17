@@ -13,6 +13,7 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.Palette;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -842,10 +843,10 @@ public class AizMinibossInstance extends AbstractBossInstance {
     @Override
     public void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
         for (var child : childComponents) {
-            child.setDestroyed(true);
+            ObjectLifetimeOps.destroyBossChildLatched(child);
         }
         childComponents.clear();
-        setDestroyed(true);
+        ObjectLifetimeOps.destroyLatched(this);
     }
 
     @Override

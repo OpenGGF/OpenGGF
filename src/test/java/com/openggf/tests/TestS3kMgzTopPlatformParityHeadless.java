@@ -201,6 +201,7 @@ class TestS3kMgzTopPlatformParityHeadless {
         sprite.setRingCount(10);
 
         invokeSharedTouchHurt(null);
+        fixture.stepIdleFrames(1);
 
         assertTrue(sprite.isHurt(), "Ordinary touch hurt should still put the player into hurt");
         assertEquals(0, sprite.getRingCount(),

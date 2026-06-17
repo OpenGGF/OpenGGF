@@ -1,5 +1,7 @@
 package com.openggf.level.objects;
 
+import com.openggf.level.objects.boss.BossChildComponent;
+
 import java.util.Objects;
 
 /**
@@ -11,6 +13,12 @@ public final class ObjectLifetimeOps {
 
     public static void destroyLatched(AbstractObjectInstance instance) {
         markDestroyedNoRespawn(instance);
+    }
+
+    public static void destroyBossChildLatched(BossChildComponent component) {
+        BossChildComponent checked = Objects.requireNonNull(component, "component");
+        checked.setDestroyed(false);
+        checked.setDestroyed(true);
     }
 
     public static void destroyRespawnableOffscreen(AbstractObjectInstance instance) {

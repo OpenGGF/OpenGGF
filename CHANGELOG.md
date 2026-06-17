@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Test-suite cleanup aligns stale parity assumptions with trace-frontier fixes:**
+  rewind snapshot diffs now compare private record content safely, S1 fixed-air
+  countdown cadence no longer trips the zone-event runtime access guard, dynamic
+  object rewind restores conveyor spawns to live classification, and headless
+  tilemap reads preserve runtime foreground writes even when render pattern
+  lookup data is unavailable.
+
 - **AIZ miniboss self-destructs if carried across an act reload:** the AIZ2
   fightable miniboss (object 0x91, `AizMinibossInstance`) is spawned in AIZ2 and
   holds the boss arena camera lock every frame even after defeat (it does not use

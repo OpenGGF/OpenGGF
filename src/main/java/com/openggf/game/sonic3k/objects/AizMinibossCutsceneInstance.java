@@ -9,6 +9,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.S3kAizEventWriteSupport;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.boss.AbstractBossChild;
@@ -158,10 +159,10 @@ public class AizMinibossCutsceneInstance extends AbstractBossInstance {
     @Override
     public void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
         for (var child : getChildComponents()) {
-            child.setDestroyed(true);
+            ObjectLifetimeOps.destroyBossChildLatched(child);
         }
         getChildComponents().clear();
-        setDestroyed(true);
+        ObjectLifetimeOps.destroyLatched(this);
     }
 
     @Override
