@@ -36,5 +36,68 @@ class TestRewindCoverageAnalyzer {
         assertTrue(cov.isDynamicSpawnable());
         assertTrue(cov.hasRecreatePath(), "battleship has a dynamic rewind codec on this branch");
     }
+
+    /**
+     * POSITIVE test (Task 4): CutsceneKnuxCnz2WallInstance holds a non-transient,
+     * non-structural reference to an ObjectInstance ({@code owner} field, type
+     * {@code ObjectInstance}). The field name is not in the structural-name set of
+     * {@code DefaultObjectRewindPolicies}, so no policy suppresses it.
+     * The analyzer must report it as an un-id'd object-ref gap.
+     *
+     * <p>This test is RED before Task 4 is implemented (unIdObjectRefFields always
+     * returns an empty list) and GREEN after implementation.
+     */
+    @Test
+    void flagsNonTransientObjectRefField() {
+        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K);
+        // CutsceneKnuxCnz2WallInstance has `private final ObjectInstance owner`.
+        // The field name "owner" is not in DefaultObjectRewindPolicies.STRUCTURAL_OBJECT_FIELD_NAMES,
+        // the field is not @RewindTransient / @RewindDeferred, and there is no exact-field policy.
+        // The type ObjectInstance is assignable to ObjectInstance. This must be flagged.
+        ObjectCoverage cov = report.objects().stream()
+                .filter(o -> o.className().endsWith("CutsceneKnuxCnz2WallInstance"))
+                .findFirst().orElseThrow();
+        assertTrue(cov.unIdObjectRefFields().contains("owner"),
+                "non-transient, non-structural ObjectInstance ref field 'owner' must be reported as un-id'd object-ref gap");
+    }
+
+    /**
+     * NEGATIVE test (Task 4): MhzEndBossHitProxyChild holds only one ObjectInstance ref
+     * ({@code parent}), which is annotated {@code @RewindTransient}. The analyzer must
+     * NOT flag it as an un-id'd object-ref gap.
+     *
+     * <p>This test is trivially GREEN before Task 4 (empty list), and must remain GREEN
+     * after implementation because the transient annotation suppresses the gap.
+     */
+    @Test
+    void transientObjectRefFieldIsNotFlagged() {
+        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K);
+        // MhzEndBossHitProxyChild has only `@RewindTransient private final MhzEndBossInstance parent`.
+        // No other ObjectInstance-typed fields exist on this class (x and y are primitives).
+        ObjectCoverage cov = report.objects().stream()
+                .filter(o -> o.className().endsWith("MhzEndBossHitProxyChild"))
+                .findFirst().orElseThrow();
+        assertTrue(cov.unIdObjectRefFields().isEmpty(),
+                "ObjectInstance ref annotated @RewindTransient must NOT be reported as an un-id'd gap");
+    }
+
+    /**
+     * NEGATIVE test (Task 4): AizEndBossArmChild holds an {@code AizEndBossInstance boss}
+     * field that, while not annotated {@code @RewindTransient}, is classified structural by
+     * {@code DefaultObjectRewindPolicies} (field name "boss" is in the structural-name set).
+     * The analyzer must NOT flag it as an un-id'd object-ref gap.
+     */
+    @Test
+    void structuralObjectRefFieldIsNotFlagged() {
+        RewindCoverageReport report = RewindCoverageAnalyzer.analyze(GameId.S3K);
+        // AizEndBossArmChild has `private final AizEndBossInstance boss`.
+        // The name "boss" is in DefaultObjectRewindPolicies.STRUCTURAL_OBJECT_FIELD_NAMES,
+        // causing policyForAudit to return TRANSIENT — so it must NOT be in unIdObjectRefFields.
+        ObjectCoverage cov = report.objects().stream()
+                .filter(o -> o.className().endsWith("AizEndBossArmChild"))
+                .findFirst().orElseThrow();
+        assertFalse(cov.unIdObjectRefFields().contains("boss"),
+                "ObjectInstance ref classified structural by policy must NOT be reported as un-id'd gap");
+    }
 }
 

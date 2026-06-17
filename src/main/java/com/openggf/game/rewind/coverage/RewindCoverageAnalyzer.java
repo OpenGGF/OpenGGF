@@ -11,7 +11,9 @@ import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -114,6 +116,7 @@ public final class RewindCoverageAnalyzer {
             }
 
             List<String> uncapturedFinalScalars = findUncapturedFinalScalarFields(sc.fqn());
+            List<String> unIdObjectRefs = findUnIdObjectRefFields(sc.fqn());
             boolean isDynamic = dynamicCodecClassNames.contains(sc.fqn());
 
             coverages.add(new ObjectCoverage(
@@ -123,7 +126,7 @@ public final class RewindCoverageAnalyzer {
                     isDynamic,  // hasRecreatePath — true iff a codec exists (Phase-1: layout-spawnable
                                 // classes without a codec are reported as gaps; see class Javadoc)
                     uncapturedFinalScalars,
-                    List.of()   // unIdObjectRefFields — Task 4 fills
+                    unIdObjectRefs
             ));
         }
 
@@ -271,6 +274,90 @@ public final class RewindCoverageAnalyzer {
         if (GenericFieldCapturer.isCapturedByDefaultObjectScalarPolicy(field)) {
             return false;
         }
+        return true;
+    }
+
+    /**
+     * Reflects all declared fields on the concrete class and its superclasses
+     * (up to, but not including, {@link AbstractObjectInstance}) and returns
+     * the names of fields that are un-id'd object-reference gaps.
+     *
+     * <p>A field is a gap when:
+     * <ul>
+     *   <li>It is non-static and non-synthetic.</li>
+     *   <li>It is NOT annotated {@code @RewindTransient} or {@code @RewindDeferred}.</li>
+     *   <li>Its declared type is assignable to {@link ObjectInstance} or
+     *       {@link AbstractPlayableSprite} — live object graph references that
+     *       cannot be reconstructed from scalar data alone.</li>
+     *   <li>{@link RewindPolicyRegistry#policyForAudit} does not mark it
+     *       {@code TRANSIENT} or {@code DEFERRED} (i.e., not excluded by any
+     *       registered policy rule).</li>
+     *   <li>No object-ref codec/id exists for it (Phase 1: no id-capture yet,
+     *       so this condition is always met).</li>
+     * </ul>
+     *
+     * <p>If the class cannot be loaded the method returns an empty list.
+     */
+    private static List<String> findUnIdObjectRefFields(String fqn) {
+        Class<?> cls;
+        try {
+            cls = Class.forName(fqn);
+        } catch (ClassNotFoundException e) {
+            return List.of();
+        }
+
+        List<String> gaps = new ArrayList<>();
+        for (Class<?> c = cls;
+                c != null && c != AbstractObjectInstance.class && c != Object.class;
+                c = c.getSuperclass()) {
+            for (Field field : c.getDeclaredFields()) {
+                if (isUnIdObjectRef(field)) {
+                    gaps.add(field.getName());
+                }
+            }
+        }
+        gaps.sort(String::compareTo);
+        return List.copyOf(gaps);
+    }
+
+    /**
+     * Returns {@code true} when the field is a live object-reference gap:
+     * its type is an {@link ObjectInstance} or {@link AbstractPlayableSprite} subtype,
+     * it is not excluded by annotation or policy, and no id-capture exists for it.
+     *
+     * <p>This is an audit-only predicate; it has no effect on runtime rewind behaviour.
+     */
+    private static boolean isUnIdObjectRef(Field field) {
+        int mods = field.getModifiers();
+
+        // Statics and synthetics are never part of rewind state.
+        if (Modifier.isStatic(mods) || field.isSynthetic()) {
+            return false;
+        }
+        // Explicitly suppressed by the object author — not a gap.
+        if (field.isAnnotationPresent(RewindTransient.class)
+                || field.isAnnotationPresent(RewindDeferred.class)) {
+            return false;
+        }
+        // Only object-ref types are in scope: ObjectInstance subtypes and
+        // known playable/sidekick types (AbstractPlayableSprite hierarchy).
+        Class<?> type = field.getType();
+        boolean isObjectRef = ObjectInstance.class.isAssignableFrom(type)
+                || AbstractPlayableSprite.class.isAssignableFrom(type);
+        if (!isObjectRef) {
+            return false;
+        }
+        // A registered policy that marks the field TRANSIENT or DEFERRED means
+        // the system has already decided to exclude it; not a gap.
+        Optional<RewindFieldPolicy> policy = RewindPolicyRegistry.policyForAudit(field);
+        if (policy.isPresent()) {
+            RewindFieldPolicy p = policy.get();
+            if (p == RewindFieldPolicy.TRANSIENT || p == RewindFieldPolicy.DEFERRED) {
+                return false;
+            }
+        }
+        // Phase 1: no id-capture mechanisms exist yet; every remaining object-ref
+        // field is an un-id'd gap. Phase 2 will add codec/id checks here.
         return true;
     }
 
