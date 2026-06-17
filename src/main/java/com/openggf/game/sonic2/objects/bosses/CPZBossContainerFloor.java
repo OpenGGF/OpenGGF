@@ -20,7 +20,9 @@ import java.util.List;
 public class CPZBossContainerFloor extends AbstractObjectInstance {
     private final Sonic2CPZBossInstance mainBoss;
     private final CPZBossContainer container;
-    private final boolean isFloor2;
+    // Non-final so GenericFieldCapturer captures/restores it across held rewind: the codec
+    // recreates with a placeholder (false) and the captured value is reapplied on restore.
+    private boolean isFloor2;
 
     private int x;
     private int y;

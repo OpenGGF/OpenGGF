@@ -31,7 +31,10 @@ public class MCZFallingDebrisInstance extends AbstractObjectInstance implements 
     private static final int FRAME_STONE = 0x0D; // Map_obj57_014C: 2x2 rock
     private static final int FRAME_SPIKE = 0x14; // Map_obj57_01C2: 1x4 stalactite
 
-    private final boolean isSpike;
+    // Non-final so GenericFieldCapturer captures/restores it across held rewind: the codec
+    // recreates with a placeholder (false) and the captured stone/spike value is reapplied
+    // on restore (the ObjectSpawn carries no spike bit, so it is not spawn-derivable).
+    private boolean isSpike;
     private int posX;
     private int posY;
     private int yFixed;

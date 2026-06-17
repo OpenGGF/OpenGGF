@@ -1070,3 +1070,21 @@ All other batch-3 S1 objects that were previously dropped now have rewind codecs
 `Sonic1RingInstance` (collected/animating child rings),
 `Sonic1SeesawBallObjectInstance`, `Sonic1SpikedBallChainObjectInstance`,
 `Sonic1StomperDoorObjectInstance`, and `Sonic1TeleporterObjectInstance`.
+
+## Batch-4 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)
+
+`CPZBossSmokePuff` (CPZ boss retreat smoke) is intentionally **not** captured/recreated
+across a held-rewind boundary (no rewind codec; its `#recreate` key stays in
+`src/test/resources/rewind/coverage-baseline.txt`). It is a purely cosmetic smoke effect
+with no collision and no player/score/terrain state: it re-derives its X/Y from the live
+boss every frame (`x = mainBoss.getX() - 0x28`, `y = mainBoss.getY() + 4`) and
+self-destructs when the boss is destroyed. It is also currently dead code — nothing in
+`src/main` or the tests ever constructs it (the CPZ boss only spawns Robotnik/Flame/Pump/
+Container/Pipe), so it can never enter a rewind snapshot at runtime. This mirrors the AIZ2
+transient-children precedent and the batch-2/3 cosmetic cases above. All other batch-4 S2
+CPZ-boss components and hazards that were previously dropped now have rewind codecs in
+`Sonic2ObjectRegistry` and are restored on a backward seek: `CPZBossContainer`,
+`CPZBossContainerFloor`, `CPZBossFallingPart`, `CPZBossFlame`, `CPZBossGunk`,
+`CPZBossPipe`, `CPZBossPipePump`, `CPZBossPump`, `CPZBossRobotnik`,
+`LavaBubbleObjectInstance`, `MCZFallingDebrisInstance`, `BubbleObjectInstance`, and
+`OOZBurnerFlameObjectInstance`.
