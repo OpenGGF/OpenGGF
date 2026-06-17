@@ -349,13 +349,11 @@ class TestRewindParityAgainstTrace {
                     + " (A=" + la.epochAtCapture() + ")");
         }
 
-        // Shallow-cloned block/chunk/pattern arrays: same instances after restore
+        // Shallow-cloned block/chunk arrays: same Block/Chunk instances after restore
         if (!Arrays.equals(la.blocks(), lb.blocks()))
             failures.add("[level] blocks array mismatch (element-wise reference comparison)");
         if (!Arrays.equals(la.chunks(), lb.chunks()))
             failures.add("[level] chunks array mismatch (element-wise reference comparison)");
-        if (!Arrays.equals(la.patterns(), lb.patterns()))
-            failures.add("[level] patterns array mismatch (element-wise reference comparison)");
 
         // mapData: byte-level equality
         if (!Arrays.equals(la.mapData(), lb.mapData()))

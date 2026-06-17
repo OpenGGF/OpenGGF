@@ -10,7 +10,6 @@ import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.level.LevelConstants;
 import com.openggf.level.LevelManager;
-import com.openggf.level.Pattern;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.tests.rules.RequiresRom;
@@ -103,34 +102,6 @@ class TestSonic3kLevelOverlayRewindIsolation {
                 "captured keyframe block must keep its pre-overlay contents");
         assertFalse(Arrays.equals(keyframeState, level.blocksReference()[blockIndex].saveState()),
                 "live level must show the overlaid block contents");
-    }
-
-    @Test
-    void patternOverlayLeavesPreviouslyCapturedPatternArrayUntouched() {
-        Pattern[] keyframePatterns = level.patternsReference();
-        int patternIndex = 1;
-        byte[] keyframeBytes = new byte[Pattern.PATTERN_SIZE_IN_MEM];
-        keyframePatterns[patternIndex].copyInto(keyframeBytes, 0);
-        Pattern keyframePattern = keyframePatterns[patternIndex];
-
-        byte[] overlay = new byte[Pattern.PATTERN_SIZE_IN_ROM];
-        Arrays.fill(overlay, (byte) 0x11);
-        level.applyPatternOverlay(overlay, patternIndex * Pattern.PATTERN_SIZE_IN_ROM, false);
-
-        assertNotSame(keyframePatterns, level.patternsReference(),
-                "overlay must install a cloned patterns array, not write into the captured one");
-        assertNotSame(keyframePattern, level.patternsReference()[patternIndex],
-                "overlay must install a fresh Pattern instance for the touched slot");
-
-        byte[] afterOverlayKeyframeBytes = new byte[Pattern.PATTERN_SIZE_IN_MEM];
-        keyframePattern.copyInto(afterOverlayKeyframeBytes, 0);
-        assertArrayEquals(keyframeBytes, afterOverlayKeyframeBytes,
-                "captured keyframe pattern must keep its pre-overlay pixels");
-
-        byte[] liveBytes = new byte[Pattern.PATTERN_SIZE_IN_MEM];
-        level.patternsReference()[patternIndex].copyInto(liveBytes, 0);
-        assertFalse(Arrays.equals(keyframeBytes, liveBytes),
-                "live level must show the overlaid pattern pixels");
     }
 
     @Test

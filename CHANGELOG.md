@@ -12,9 +12,7 @@ All notable changes to the OpenGGF project are documented in this file.
   a backward seek instead of being silently dropped while their one-shot spawn
   guards stay set; a post-restore reconciliation releases any orphaned
   auto-scroll camera lock when a driver object is absent; the AIZ2 boss-endgame
-  cutscene latches are snapshotted; the in-place battleship/fire pattern overlay
-  is now copy-on-write and captured so rewinding past the terrain load no longer
-  leaves ship/fire tiles behind; and the foreground ship-loop ring plus the
+  cutscene latches are snapshotted; and the foreground ship-loop ring plus the
   background tilemap window are rebuilt from the restored camera on every rewind
   restore. All AIZ2 ship/boss dynamic objects — including the transient combat
   children (bombs, explosions, flames) — are now captured and restored, so the

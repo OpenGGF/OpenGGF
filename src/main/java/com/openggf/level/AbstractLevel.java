@@ -206,11 +206,6 @@ public abstract class AbstractLevel implements Level {
         return chunks;
     }
 
-    /** Returns a reference to the live patterns array. */
-    public Pattern[] patternsReference() {
-        return patterns;
-    }
-
     /** Replaces the live blocks array (used by snapshot restore). */
     public void replaceBlocks(Block[] newBlocks) {
         this.blocks = newBlocks;
@@ -221,12 +216,6 @@ public abstract class AbstractLevel implements Level {
     public void replaceChunks(Chunk[] newChunks) {
         this.chunks = newChunks;
         this.chunkCount = newChunks.length;
-    }
-
-    /** Replaces the live patterns array (used by snapshot restore). */
-    public void replacePatterns(Pattern[] newPatterns) {
-        this.patterns = newPatterns;
-        this.patternCount = newPatterns.length;
     }
 
     /**

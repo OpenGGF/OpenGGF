@@ -590,7 +590,6 @@ public class RewindBenchmark {
         bytes += 8L;  // epochAtCapture
         bytes += shallowArraySizeShared(snapshot.blocks(), seen);
         bytes += shallowArraySizeShared(snapshot.chunks(), seen);
-        bytes += shallowArraySizeShared(snapshot.patterns(), seen);  // CoW shares unchanged pattern arrays
         bytes += sharedReferenceSize(snapshot.mapData(), seen);  // CoW keeps the payload shared
         bytes += 4L;  // frameCounter
         bytes += 1L;  // respawnRequested
@@ -1091,7 +1090,6 @@ public class RewindBenchmark {
         // while the level content remains identical.
         return Arrays.equals(la.blocks(), lb.blocks())
             && Arrays.equals(la.chunks(), lb.chunks())
-            && Arrays.equals(la.patterns(), lb.patterns())
             && Arrays.equals(la.mapData(), lb.mapData());
     }
 

@@ -450,7 +450,6 @@ public final class RewindSnapshotDiff {
         // while the level content remains identical.
         return Arrays.equals(la.blocks(), lb.blocks())
             && Arrays.equals(la.chunks(), lb.chunks())
-            && Arrays.equals(la.patterns(), lb.patterns())
             && Arrays.equals(la.mapData(), lb.mapData());
     }
 
