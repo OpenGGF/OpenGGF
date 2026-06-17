@@ -59,11 +59,11 @@ public class Sonic1BuzzBomberMissileInstance extends AbstractObjectInstance
 
     private int currentX;
     private int currentY;
-    private final int xVelocity;
-    private final int yVelocity;
+    private int xVelocity;
+    private int yVelocity;
     private final SubpixelMotion.State motionState;
-    private final boolean facingLeft;
-    private final int parentSlotIndex;
+    private boolean facingLeft;
+    private int parentSlotIndex;
 
     private Phase phase;
     private int flareTimer;

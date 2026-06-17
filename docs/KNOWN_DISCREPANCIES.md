@@ -1023,3 +1023,26 @@ these files so this debt cannot reappear silently under the release branch.
 Replace each embedded table with ROM-backed loaders or generated mappings
 through the normal user-supplied ROM pipeline, then reduce or remove the
 `sonic1EmbeddedRuntimeDataExceptionsStayDocumentedAndBounded` ratchet.
+
+## Batch-2 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)
+
+`Sonic1MotobugSmokeInstance` is intentionally **not** captured/recreated across a
+held-rewind boundary (no rewind codec; its `#recreate` and `#finalScalar` keys stay in
+`src/test/resources/rewind/coverage-baseline.txt`). It is the Motobug exhaust puff:
+an animation-only object with no collision and no player/score/terrain state that plays a
+short smoke script then self-deletes. The parent `Sonic1MotobugBadnikInstance` already has
+a rewind `#recreate` path and continuously re-emits a fresh puff within ~1 frame on
+forward re-simulation, so a dropped in-flight puff is visually undetectable. An
+`exactSpawnCodec` is also the wrong tool here because the captured `ObjectSpawn` does not
+carry the puff's facing bit. This mirrors the AIZ2 transient-children precedent (and the
+S3K `MgzEndBossDefeatDebrisChild` case in `docs/S3K_KNOWN_DISCREPANCIES.md`): capture is
+only worthwhile when a dropped object would otherwise visibly re-emit and play forward; a
+sub-lifetime cosmetic that re-emits in-frame does not qualify.
+
+All other batch-2 S1 transient/relink children (`Sonic1BombFuseInstance`,
+`Sonic1BombShrapnelInstance`, `Sonic1BuzzBomberMissileInstance`,
+`Sonic1BuzzBomberMissileDissolveInstance`, `Sonic1CannonballInstance`,
+`Sonic1CaterkillerBodyInstance`, `Sonic1CrabmeatProjectileInstance`,
+`Sonic1NewtronMissileInstance`, `GHZBossWreckingBall`, `Sonic1SLZBossSpikeball`,
+`SYZBossSpike`) now have rewind codecs in `Sonic1ObjectRegistry` and are restored on a
+backward seek.

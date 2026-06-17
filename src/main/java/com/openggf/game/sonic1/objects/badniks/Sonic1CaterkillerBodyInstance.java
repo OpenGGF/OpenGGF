@@ -86,10 +86,10 @@ public class Sonic1CaterkillerBodyInstance extends AbstractObjectInstance
     private int deleteFrame = -1;
 
     // Body segment type: true if this is a BodySeg2 (has independent animation)
-    private final boolean isAnimatedSegment;
+    private boolean isAnimatedSegment;
 
     // Index into Cat_FragSpeed for fragment X velocity (based on routine index)
-    private final int fragSpeedIndex;
+    private int fragSpeedIndex;
 
     // Ring buffer read pointer (cat_parent low byte)
     private int ringBufferIndex;

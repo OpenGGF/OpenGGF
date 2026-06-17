@@ -10,6 +10,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 - **S2 (batch 2): more held-rewind objects restored.** The ARZ-boss rising pillar and ride-on arrow, the EHZ-boss spike and wheels, the HTZ fire bubble and ground fire, the Grounder thrown rock and wall debris, the ARZ Buzzer-style arrow projectile, and the Balkiry jet exhaust now have rewind recreate codecs (recreated on a backward seek instead of dropped).
 
+- **S1 (batch 2): more held-rewind objects restored.** The Bomb fuse and shrapnel, Buzz Bomber missile and its dissolve puff, Ball Hog cannonball, Caterkiller body segments, Crabmeat projectile, Newtron missile, and the GHZ wrecking-ball / SLZ spikeball / SYZ spike boss hazards now have rewind recreate codecs (recreated on a backward seek instead of dropped). The Motobug exhaust puff stays uncaptured as transient cosmetic re-emitted in-frame (see docs/KNOWN_DISCREPANCIES.md).
+
 - **AIZ2 ship-loop and boss no longer break under rewind:** holding rewind
   during the Sonic 3&K AIZ2 battleship auto-scroll loop or the miniboss/end-boss
   no longer softlocks, desyncs, or corrupts graphics. The AIZ2 ship/boss dynamic
