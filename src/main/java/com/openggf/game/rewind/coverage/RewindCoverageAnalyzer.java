@@ -6,9 +6,6 @@ import com.openggf.game.rewind.RewindDeferred;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.rewind.schema.RewindFieldPolicy;
 import com.openggf.game.rewind.schema.RewindPolicyRegistry;
-import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
-import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
-import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectInstance;
@@ -37,9 +34,9 @@ import java.util.Set;
  * <ul>
  *   <li>{@link ObjectRewindDynamicCodecs#sharedCodecs()} — game-agnostic codecs
  *       (animals, lost rings, shields, invincibility stars, explosions, skid dust), and</li>
- *   <li>the game-specific registry's {@code dynamicRewindCodecs()} —
- *       {@link Sonic1ObjectRegistry}, {@link Sonic2ObjectRegistry}, or
- *       {@link Sonic3kObjectRegistry} depending on the {@link GameId} being analyzed.</li>
+ *   <li>any caller-supplied {@code extraCodecClassNames} — typically the per-game
+ *       registry's {@code dynamicRewindCodecs()} class-name set, collected by the
+ *       caller (test or tool layer) which is allowed to depend on game-specific packages.</li>
  * </ul>
  *
  * <p><b>Phase-1 over-approximation (intentional):</b> This analyzer cannot
@@ -71,23 +68,68 @@ public final class RewindCoverageAnalyzer {
      * given game. Objects in shared packages ({@code com.openggf.level.objects})
      * are included for all games.
      *
+     * <p>Only the shared codecs from {@link ObjectRewindDynamicCodecs#sharedCodecs()}
+     * are consulted for recreate-path detection. Callers that also need game-specific
+     * registry codecs should use {@link #analyze(GameId, java.util.Set)} and supply
+     * the extra codec class names collected from the per-game registry.
+     *
      * @param game the game to analyze
      * @return the coverage report, objects sorted by class name
      */
     public static RewindCoverageReport analyze(GameId game) {
-        return buildReport(game);
+        return analyze(game, Set.of());
+    }
+
+    /**
+     * Analyzes rewind coverage for all spawnable objects belonging to the
+     * given game, augmenting the shared codec set with caller-supplied names.
+     *
+     * <p>Use this overload when the caller can legally depend on game-specific
+     * packages (e.g., a test class or a {@code com.openggf.tools} CLI) and
+     * needs the per-game registry codecs included in recreate-path detection.
+     *
+     * @param game                  the game to analyze
+     * @param extraCodecClassNames  additional fully-qualified class names that have
+     *                              a dynamic recreate codec (e.g. from a per-game
+     *                              registry's {@code dynamicRewindCodecs()} call)
+     * @return the coverage report, objects sorted by class name
+     */
+    public static RewindCoverageReport analyze(GameId game, Set<String> extraCodecClassNames) {
+        return buildReport(game, extraCodecClassNames);
     }
 
     /**
      * Analyzes rewind coverage across all games.
      *
+     * <p>Only the shared codecs from {@link ObjectRewindDynamicCodecs#sharedCodecs()}
+     * are consulted for recreate-path detection. Callers that also need game-specific
+     * registry codecs should use {@link #analyzeAll(java.util.Set)} and supply the
+     * extra codec class names collected from all per-game registries.
+     *
      * @return the coverage report covering S1, S2, and S3K objects
      */
     public static RewindCoverageReport analyzeAll() {
-        return buildReport(null);
+        return analyzeAll(Set.of());
     }
 
-    private static RewindCoverageReport buildReport(GameId filterGame) {
+    /**
+     * Analyzes rewind coverage across all games, augmenting the shared codec set
+     * with caller-supplied names.
+     *
+     * <p>Use this overload when the caller can legally depend on game-specific
+     * packages (e.g., a test class or a {@code com.openggf.tools} CLI) and
+     * needs all per-game registry codecs included in recreate-path detection.
+     *
+     * @param extraCodecClassNames  additional fully-qualified class names that have
+     *                              a dynamic recreate codec (e.g. the union of all
+     *                              per-game registries' {@code dynamicRewindCodecs()} calls)
+     * @return the coverage report covering S1, S2, and S3K objects
+     */
+    public static RewindCoverageReport analyzeAll(Set<String> extraCodecClassNames) {
+        return buildReport(null, extraCodecClassNames);
+    }
+
+    private static RewindCoverageReport buildReport(GameId filterGame, Set<String> extraCodecClassNames) {
         Path srcMain = ObjectClasspathScan.findSourceRoot();
         if (srcMain == null) {
             // Source tree unavailable (e.g., running from a packaged JAR);
@@ -105,9 +147,9 @@ public final class RewindCoverageAnalyzer {
         }
 
         // Build the set of class names that have a dynamic recreate codec.
-        // This unions the shared codecs with all game-specific registry codecs
-        // relevant to the requested game (or all games when filterGame is null).
-        Set<String> dynamicCodecClassNames = buildDynamicCodecClassNames(filterGame);
+        // This unions the shared codecs with the caller-supplied extra names
+        // (typically per-game registry codecs collected by the caller).
+        Set<String> dynamicCodecClassNames = buildDynamicCodecClassNames(extraCodecClassNames);
 
         List<ObjectCoverage> coverages = new ArrayList<>();
         for (ObjectClasspathScan.SourceClass sc : classes) {
@@ -121,7 +163,7 @@ public final class RewindCoverageAnalyzer {
 
             coverages.add(new ObjectCoverage(
                     sc.fqn(),
-                    true,       // isLayoutSpawnable — conservative default; Task 2 refines
+                    true,       // isLayoutSpawnable — conservative default; Phase 2 refines
                     isDynamic,  // isDynamicSpawnable — true iff a codec exists for this class
                     isDynamic,  // hasRecreatePath — true iff a codec exists (Phase-1: layout-spawnable
                                 // classes without a codec are reported as gaps; see class Javadoc)
@@ -146,15 +188,16 @@ public final class RewindCoverageAnalyzer {
     /**
      * Builds the set of fully-qualified class names that have a dynamic recreate codec,
      * by unioning the shared codecs ({@link ObjectRewindDynamicCodecs#sharedCodecs()})
-     * with the per-game registry codecs ({@code dynamicRewindCodecs()}) for all games
-     * relevant to {@code filterGame} ({@code null} means all games).
+     * with the caller-supplied {@code extraCodecClassNames}.
      *
-     * <p>Each registry is constructed with no-arg {@code new} — the same pattern used
-     * by {@code TestAiz2ObjectRewindCodecs} and other registry-content tests. No ROM,
-     * OpenGL, or active gameplay session is required; the codec lists are static
-     * constants initialized at class load time.
+     * <p>Game-specific registry codecs are intentionally not collected here — doing so
+     * would require importing concrete game packages ({@code com.openggf.game.sonic1/2/3k}),
+     * which violates the ArchUnit layering rules for shared {@code game.*} packages.
+     * Instead, callers that reside in layers allowed to depend on game-specific packages
+     * (i.e., tests and {@code com.openggf.tools.*}) collect the per-game codec names
+     * and pass them in via {@code extraCodecClassNames}.
      */
-    private static Set<String> buildDynamicCodecClassNames(GameId filterGame) {
+    private static Set<String> buildDynamicCodecClassNames(Set<String> extraCodecClassNames) {
         Set<String> names = new HashSet<>();
 
         // Shared codecs apply across all games.
@@ -162,22 +205,9 @@ public final class RewindCoverageAnalyzer {
             names.add(codec.className());
         }
 
-        // Game-specific registry codecs.
-        if (filterGame == null || filterGame == GameId.S1) {
-            for (DynamicObjectRewindCodec codec : new Sonic1ObjectRegistry().dynamicRewindCodecs()) {
-                names.add(codec.className());
-            }
-        }
-        if (filterGame == null || filterGame == GameId.S2) {
-            for (DynamicObjectRewindCodec codec : new Sonic2ObjectRegistry().dynamicRewindCodecs()) {
-                names.add(codec.className());
-            }
-        }
-        if (filterGame == null || filterGame == GameId.S3K) {
-            for (DynamicObjectRewindCodec codec : new Sonic3kObjectRegistry().dynamicRewindCodecs()) {
-                names.add(codec.className());
-            }
-        }
+        // Caller-supplied names (typically per-game registry codecs collected by the
+        // test or tool layer, which is allowed to depend on game-specific packages).
+        names.addAll(extraCodecClassNames);
 
         return names;
     }

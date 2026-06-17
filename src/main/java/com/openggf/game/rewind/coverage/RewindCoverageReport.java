@@ -31,14 +31,14 @@ public record RewindCoverageReport(List<ObjectCoverage> objects) {
     /**
      * Renders a stable, human-readable report sorted by class name.
      * Each class appears with its gap keys (or "OK" when fully covered).
+     *
+     * <p>The {@code objects} list is already sorted by class name when the report
+     * is constructed (sorted in {@code RewindCoverageAnalyzer.buildReport}), so no
+     * additional sort is performed here.
      */
     public String render() {
-        List<ObjectCoverage> sorted = objects.stream()
-                .sorted((a, b) -> a.className().compareTo(b.className()))
-                .toList();
-
         StringBuilder sb = new StringBuilder();
-        for (ObjectCoverage obj : sorted) {
+        for (ObjectCoverage obj : objects) {
             sb.append(obj.className());
             List<String> gaps = obj.gapKeys();
             if (gaps.isEmpty()) {
