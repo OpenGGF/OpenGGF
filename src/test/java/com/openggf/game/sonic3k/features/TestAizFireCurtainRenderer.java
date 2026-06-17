@@ -33,6 +33,8 @@ public class TestAizFireCurtainRenderer {
 
         AizFireCurtainRenderer.CurtainCompositionPlan plan = renderer.buildCompositionPlan(state, 320, 224);
 
+        assertFalse(plan.columns().isEmpty(),
+                "an active rising curtain must emit visible columns to validate");
         for (AizFireCurtainRenderer.ColumnRenderPlan column : plan.columns()) {
             boolean coversBottom = false;
             for (AizFireCurtainRenderer.TileDraw draw : column.draws()) {
@@ -139,6 +141,8 @@ public class TestAizFireCurtainRenderer {
 
         AizFireCurtainRenderer.CurtainCompositionPlan plan = renderer.buildCompositionPlan(state, 320, 224);
 
+        assertFalse(plan.columns().isEmpty(),
+                "an active rising curtain must emit visible columns to validate the palette force");
         for (AizFireCurtainRenderer.ColumnRenderPlan column : plan.columns()) {
             for (AizFireCurtainRenderer.TileDraw draw : column.draws()) {
                 assertEquals(3, (draw.descriptor() >> 13) & 0x3, "Curtain tiles must always use palette line 4");
@@ -180,6 +184,8 @@ public class TestAizFireCurtainRenderer {
         AizFireCurtainRenderer.CurtainCompositionPlan plan =
                 renderer.buildCompositionPlan(state, 320, 224);
 
+        assertFalse(plan.columns().isEmpty(),
+                "a fully-raised curtain with negative wave offsets must emit visible columns");
         for (AizFireCurtainRenderer.ColumnRenderPlan column : plan.columns()) {
             assertTrue(column.topY() <= 0, "Column " + column.columnIndex()
                             + " has gap at top: topY=" + column.topY());

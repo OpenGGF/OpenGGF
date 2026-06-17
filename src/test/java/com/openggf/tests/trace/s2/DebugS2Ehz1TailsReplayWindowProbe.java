@@ -28,6 +28,9 @@ import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.lang.reflect.Field;
@@ -75,6 +78,7 @@ class DebugS2Ehz1TailsReplayWindowProbe {
             TraceReplayBootstrap.ReplayStartState replayStart =
                     TraceReplaySessionBootstrap.applyBootstrap(trace, fixture, -1).replayStart();
 
+            int framesStepped = 0;
             TraceFrame previous = null;
             for (int i = replayStart.startingTraceIndex(); i <= endFrame; i++) {
                 TraceFrame current = trace.getFrame(i);
@@ -84,6 +88,7 @@ class DebugS2Ehz1TailsReplayWindowProbe {
                 int bk2Input = phase == TraceExecutionPhase.VBLANK_ONLY
                         ? fixture.skipFrameFromRecording()
                         : fixture.stepFrameFromRecording();
+                framesStepped++;
 
                 maybePrintFirstSonicPixelMismatch(current);
                 maybePrintFirstSonicSubMismatch(current);
@@ -93,6 +98,21 @@ class DebugS2Ehz1TailsReplayWindowProbe {
                     dumpFrame(current, bk2Input, phase);
                 }
             }
+
+            // Oracle: the Tails platform window must replay through endFrame, stepping
+            // exactly one trace frame per index from the bootstrap start to endFrame, and
+            // invoking all four first-mismatch detectors on each frame.
+            assertTrue(replayStart.startingTraceIndex() <= endFrame,
+                    "Tails window bounds inverted (start=" + replayStart.startingTraceIndex()
+                            + " end=" + endFrame + ")");
+            assertTrue(framesStepped > 0, "Tails window stepped no frames");
+            assertEquals(endFrame - replayStart.startingTraceIndex() + 1, framesStepped,
+                    "Tails window frame count drifted");
+            // characterization guard: the requested dump window end must lie at or beyond the
+            // dump start, so dumpFrame and the four first-mismatch detectors are exercised over
+            // a real window rather than an empty one.
+            assertTrue(endFrame >= startFrame,
+                    "dump window inverted (startFrame=" + startFrame + " endFrame=" + endFrame + ")");
         } finally {
             sharedLevel.dispose();
         }

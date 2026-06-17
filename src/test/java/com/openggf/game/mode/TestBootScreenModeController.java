@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -111,19 +110,5 @@ class TestBootScreenModeController {
 
         verify(input).update();
         verify(input, never()).isKeyDown(0);
-    }
-
-    @Test
-    void selectionHookValueObjectPreservesIdentity() {
-        // Sanity assertion ensuring assertEquals import is exercised and the
-        // controller does not substitute a different screen instance.
-        MasterTitleScreen screen = mock(MasterTitleScreen.class);
-        when(screen.isGameSelected()).thenReturn(true);
-        InputHandler input = mock(InputHandler.class);
-        AtomicReference<MasterTitleScreen> selected = new AtomicReference<>();
-
-        controller.updateMasterTitle(screen, input, selected::set);
-
-        assertEquals(screen, selected.get());
     }
 }

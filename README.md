@@ -136,8 +136,11 @@ bundled title emblem resource, S2 trace-frontier closures (Sky Chase and Casino
 Night
 level-select replays), object-physics standardization onto shared contracts,
 expanded rewind coverage, and architecture-guard hardening across runtime
-ownership, trace/rewind invariants, and object-service boundaries. See
-CHANGELOG.md for the detailed, per-merge history.
+ownership, trace/rewind invariants, and object-service boundaries. A recent
+test-suite quality pass (driven by a multi-agent audit) replaced assertion-free
+diagnostic, tautological, and source-text-grep tests with real behavioral
+oracles, and added a guard that fails the build on assertion-free `@Test`
+methods. See CHANGELOG.md for the detailed, per-merge history.
 
 ### Where do I get ROMs?
 

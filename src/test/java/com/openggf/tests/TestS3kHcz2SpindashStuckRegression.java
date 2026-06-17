@@ -144,6 +144,11 @@ public class TestS3kHcz2SpindashStuckRegression {
     public void hcz2Spindash_diagnosticTrace() {
         System.out.println("[DIAG] Initial: " + describeState());
 
+        boolean stuckGrounded = false;
+        int stuckFrame = -1;
+        short stuckX = 0;
+        boolean reachedTarget = false;
+
         for (int frame = 0; frame < ROLL_FRAMES; frame++) {
             fixture.stepFrame(false, false, false, false, false);
 
@@ -154,7 +159,17 @@ public class TestS3kHcz2SpindashStuckRegression {
                     frame, x, sprite.getY(), gSpeed, sprite.getXSpeed(), sprite.getYSpeed(),
                     sprite.getAngle() & 0xFF, sprite.getAir(), sprite.getRolling(), sprite.getPushing());
 
+            // Reaching the target area before stopping means the roll succeeded.
+            if (x > 7550) {
+                reachedTarget = true;
+                System.out.println("[DIAG] Passed target area — no stuck condition.");
+                break;
+            }
+
             if (gSpeed == 0 && !sprite.getAir()) {
+                stuckGrounded = true;
+                stuckFrame = frame;
+                stuckX = x;
                 System.out.println("[DIAG] *** gSpeed=0 at x=" + x + " ***");
                 for (int extra = 0; extra < 5; extra++) {
                     fixture.stepFrame(false, false, false, false, false);
@@ -165,12 +180,15 @@ public class TestS3kHcz2SpindashStuckRegression {
                 }
                 break;
             }
-
-            if (x > 7550) {
-                System.out.println("[DIAG] Passed target area — no stuck condition.");
-                break;
-            }
         }
+
+        // Regression guard: the rolling spindash must not stall on the ground
+        // (gSpeed==0 while grounded) before clearing the documented x>7550 target.
+        assertFalse(stuckGrounded,
+                "Sonic got stuck grounded with gSpeed=0 at roll frame " + stuckFrame
+                        + " x=" + stuckX + " before reaching x>7550. " + describeState());
+        assertTrue(reachedTarget,
+                "Sonic should have rolled past the x>7550 target without stalling. " + describeState());
     }
 
     private String describeState() {

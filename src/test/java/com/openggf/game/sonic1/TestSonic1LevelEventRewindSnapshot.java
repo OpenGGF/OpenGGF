@@ -40,22 +40,27 @@ class TestSonic1LevelEventRewindSnapshot {
     }
 
     @Test
-    void roundTripSbz3TransitionFlag() {
+    void roundTripSbz3TransitionFlag() throws Exception {
         Sonic1LevelEventManager mgr = new Sonic1LevelEventManager();
         mgr.initLevel(5 /* ZONE_SBZ */, 1);
 
-        // Capture with flag cleared
-        LevelEventSnapshot snapClear = mgr.capture();
-        assertNotNull(snapClear.extra());
+        java.lang.reflect.Field flag =
+                Sonic1LevelEventManager.class.getDeclaredField("sbz3TransitionRequested");
+        flag.setAccessible(true);
 
-        // Directly set sbz3TransitionRequested via the package-private field isn't accessible from
-        // this package, but we can verify a round-trip after initLevel clears it.
-        LevelEventSnapshot snap2 = mgr.capture();
-        mgr.restore(snapClear);
-        // Flag should remain false (it was false at capture time)
-        LevelEventSnapshot snap3 = mgr.capture();
-        assertArrayEquals(snapClear.extra(), snap3.extra(),
-                "extra bytes should round-trip unchanged");
+        // Set the transition flag true and capture that state.
+        flag.setBoolean(mgr, true);
+        LevelEventSnapshot snapTrue = mgr.capture();
+        assertNotNull(snapTrue.extra());
+
+        // Mutate: clear the flag back to false.
+        flag.setBoolean(mgr, false);
+        assertFalse(flag.getBoolean(mgr), "precondition: flag cleared before restore");
+
+        // Restore the true-snapshot and confirm the flag is brought back to true.
+        mgr.restore(snapTrue);
+        assertTrue(flag.getBoolean(mgr),
+                "sbz3TransitionRequested should be restored to true from the captured snapshot");
     }
 
     @Test

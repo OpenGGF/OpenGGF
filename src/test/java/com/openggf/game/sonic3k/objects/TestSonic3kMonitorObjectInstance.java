@@ -12,6 +12,7 @@ import com.openggf.game.sonic3k.Sonic3kSuperStateController;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidRoutineKind;
 import com.openggf.level.objects.SolidRoutineProfile;
@@ -31,9 +32,9 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
@@ -332,10 +333,71 @@ class TestSonic3kMonitorObjectInstance {
     }
 
     @Test
-    void rewindCaptureIncludesFinalMotionState() {
+    void rewindCaptureIncludesFinalMotionState() throws Exception {
+        // Break the monitor so the icon-rise motion state machine is active,
+        // then advance it to a non-initial mid-rise motion state.
         Sonic3kMonitorObjectInstance monitor = monitor();
+        DummyPlayer breaker = new DummyPlayer();
+        breaker.setRolling(true);
+        breaker.setAnimationId(Sonic3kAnimationIds.ROLL);
+        breaker.setYSpeed((short) 0x05A0);
+        monitor.onTouchResponse(breaker, TOUCH_RESULT, 1);
+        for (int i = 0; i < 5; i++) {
+            monitor.update(i, breaker);
+        }
 
-        assertDoesNotThrow(() -> monitor.captureRewindState());
+        // Read the live final motion-state values BEFORE capture.
+        boolean originalIconActive = readBooleanField(monitor, "iconActive");
+        int originalIconSubY = readIntField(monitor, "iconSubY");
+        int originalIconVelY = readIntField(monitor, "iconVelY");
+        int originalIconWait = readIntField(monitor, "iconWaitFrames");
+
+        // The break must have produced a non-default motion state, otherwise the
+        // round-trip below could pass vacuously against a freshly constructed
+        // monitor's zeroed state. iconActive flips true and iconSubY is seeded to
+        // posY()<<8 on break, so both differ from the default.
+        assertTrue(originalIconActive, "icon-rise must be active after breaking the monitor");
+        assertNotEquals(0, originalIconSubY,
+                "iconSubY must be seeded (posY()<<8) on break, not the default 0");
+
+        // Capture, then restore into a fresh monitor and read its motion state by VALUE.
+        PerObjectRewindSnapshot captured = monitor.captureRewindState();
+        Sonic3kMonitorObjectInstance restored = monitor();
+        restored.restoreRewindState(captured);
+
+        assertEquals(originalIconActive, readBooleanField(restored, "iconActive"),
+                "iconActive must round-trip through rewind restore");
+        assertEquals(originalIconSubY, readIntField(restored, "iconSubY"),
+                "iconSubY must round-trip through rewind restore");
+        assertEquals(originalIconVelY, readIntField(restored, "iconVelY"),
+                "iconVelY (final motion state) must round-trip through rewind restore");
+        assertEquals(originalIconWait, readIntField(restored, "iconWaitFrames"),
+                "iconWaitFrames must round-trip through rewind restore");
+    }
+
+    private static int readIntField(Sonic3kMonitorObjectInstance monitor, String name) throws Exception {
+        java.lang.reflect.Field field = resolveField(monitor.getClass(), name);
+        field.setAccessible(true);
+        return field.getInt(monitor);
+    }
+
+    private static boolean readBooleanField(Sonic3kMonitorObjectInstance monitor, String name)
+            throws Exception {
+        java.lang.reflect.Field field = resolveField(monitor.getClass(), name);
+        field.setAccessible(true);
+        return field.getBoolean(monitor);
+    }
+
+    private static java.lang.reflect.Field resolveField(Class<?> type, String name)
+            throws NoSuchFieldException {
+        for (Class<?> cls = type; cls != null; cls = cls.getSuperclass()) {
+            try {
+                return cls.getDeclaredField(name);
+            } catch (NoSuchFieldException ignored) {
+                // walk up to AbstractMonitorObjectInstance which declares the icon fields
+            }
+        }
+        throw new NoSuchFieldException(name);
     }
 
     private static Sonic3kMonitorObjectInstance monitor() {

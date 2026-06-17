@@ -29,6 +29,9 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 @RequiresRom(SonicGame.SONIC_1)
 public class DebugS1Credits03LzDoorProbe {
     private static final Path TRACE_DIR = Path.of("src/test/resources/traces/s1/credits_03_lz3");
@@ -74,6 +77,9 @@ public class DebugS1Credits03LzDoorProbe {
             // trace-derived hydration.
             GameServices.level().updateObjectPositionsWithoutTouches();
 
+            int windowIterations = 0;
+            String lastDoorState = null;
+            String lastPoleState = null;
             for (int i = 0; i <= 360; i++) {
                 TraceFrame expected = trace.getFrame(i);
                 TraceFrame previous = i > 0 ? trace.getFrame(i - 1) : null;
@@ -154,7 +160,21 @@ public class DebugS1Credits03LzDoorProbe {
                         formatSensors(groundSensors),
                         doorState,
                         poleState);
+                windowIterations++;
+                lastDoorState = doorState;
+                lastPoleState = poleState;
             }
+
+            // characterization guard: the replay must reach its door/tunnel
+            // inspection window and produce the door/pole state strings. The
+            // captured strings are the probe's key computed quantities; an empty
+            // or absent string means the replay regressed before the window.
+            assertTrue(windowIterations > 0,
+                    "probe never reached the door/tunnel inspection window");
+            assertNotNull(lastDoorState, "door state string was never produced");
+            assertNotNull(lastPoleState, "pole state string was never produced");
+            assertTrue(!lastDoorState.isEmpty(), "door state string was empty");
+            assertTrue(!lastPoleState.isEmpty(), "pole state string was empty");
         } finally {
             sharedLevel.dispose();
             config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE,

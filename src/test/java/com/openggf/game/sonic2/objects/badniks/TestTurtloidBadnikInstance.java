@@ -23,7 +23,6 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -146,9 +145,7 @@ public class TestTurtloidBadnikInstance {
                 "The rider should preserve the S2 render-flag opt-out through its touch-response profile");
         assertFalse(rider.requiresRenderFlagForTouch(),
                 "S2 TouchResponse scans collision_flags directly; SCZ Turtloid rider must remain hittable before the engine on-screen touch gate catches up");
-        assertDoesNotThrow(() -> TurtloidRiderInstance.class.getDeclaredMethod("getTouchResponseProfile"));
         assertEquals(expectedProfile, rider.getTouchResponseProfile(false));
-        assertDoesNotThrow(() -> TurtloidRiderInstance.class.getDeclaredMethod("getTouchResponseProfile", boolean.class));
     }
 
     @Test

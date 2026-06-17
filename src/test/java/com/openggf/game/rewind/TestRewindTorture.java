@@ -11,7 +11,6 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -96,8 +95,10 @@ class TestRewindTorture {
     }
 
     @Test
-    @Disabled("Long-running torture profile; keep enabled for targeted soak runs, not normal verification.")
     void tortureProgressiveLongRewinds() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("rewind.soak"),
+                "Long-running soak profile; excluded from normal runs — run manually "
+                        + "with -Drewind.soak=true");
         runTorture("progressive-long",
                 RewindTorturePattern.ProgressiveLongRewind::new, true);
     }

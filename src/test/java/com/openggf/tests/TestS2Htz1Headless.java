@@ -539,11 +539,13 @@ public class TestS2Htz1Headless {
         System.out.println("  cameraBgYOffset: " + htzState().cameraBgYOffset());
 
         if (!enteredZone) {
-            // Try forcing the shake manually to test the offset logic
             System.out.println("\nManually enabling earthquake for offset testing...");
-            ((Sonic2LevelEventManager) GameServices.module().getLevelEventProvider())
-                    .getHtzEvents().setEarthquakeActive(true);
         }
+        // Force the earthquake active so the offset-sync invariant is always exercised,
+        // even when headless camera clamping prevents the natural trigger.
+        levelEventManager.getHtzEvents().setEarthquakeActive(true);
+        assertTrue(htzState().earthquakeActive(),
+                "Earthquake should be active before verifying offset synchronization");
 
         System.out.println("\n=== Verifying offset values during earthquake ===");
         System.out.println("Frame | cameraBgYOffset | shakeOffsetY | Combined | screenShakeActive");
@@ -569,18 +571,29 @@ public class TestS2Htz1Headless {
                 lastBgYOffset = cameraBgYOffset;
                 lastShakeY = shakeOffsetY;
             }
+
+            // Synchronization invariant: during the earthquake, SwScrlHtz computes
+            // Vscroll_Factor_BG = (Camera_Y_pos - cameraBgYOffset) + shakeOffsetY
+            // (see SwScrlHtz.updateEarthquakeMode). The BG scroll factor must stay
+            // locked to BOTH the camera BG offset and the per-frame shake offset; if
+            // they diverged, visual terrain and collision platforms would desync
+            // (the invisible-wall symptom). Verify the relationship every frame.
+            short expectedBgVscroll = (short) ((camera.getY() - cameraBgYOffset) + shakeOffsetY);
+            assertEquals(expectedBgVscroll, parallaxManager.getVscrollFactorBG(),
+                    "BG vscroll factor must stay synchronized with cameraBgYOffset and shakeOffsetY "
+                            + "during the earthquake (frame " + frame + ", cameraY=" + camera.getY()
+                            + ", cameraBgYOffset=" + cameraBgYOffset + ", shakeOffsetY=" + shakeOffsetY + ")");
         }
 
         System.out.println("\n=== Test Complete ===");
         System.out.println("Final position: (" + sprite.getX() + ", " + sprite.getY() + ")");
 
-        // Diagnostic only: earthquake trigger depends on camera bounds after ROM level load,
-        // which may clamp camera outside the trigger zone in headless mode.
-        // Manual inspection of the printed offset table above verifies synchronization.
-        if (GameServices.gameState().isScreenShakeActive()) {
-            int shakeY = parallaxManager.getShakeOffsetY();
-            System.out.println("shakeOffsetY during active shake: " + shakeY);
-        }
+        // The earthquake must remain active across the observation window so the
+        // synchronization checks above were actually exercised on the shake path.
+        assertTrue(GameServices.gameState().isScreenShakeActive(),
+                "Screen shake should remain active throughout the offset-sync observation window");
+        assertTrue(htzState().earthquakeActive(),
+                "HTZ earthquake should remain active throughout the offset-sync observation window");
     }
 
     /**

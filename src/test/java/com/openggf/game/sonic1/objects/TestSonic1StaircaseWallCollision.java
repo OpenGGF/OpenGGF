@@ -8,11 +8,11 @@ import com.openggf.tests.SharedLevel;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_1)
@@ -48,15 +48,16 @@ public class TestSonic1StaircaseWallCollision {
     @Test
     public void ridingIntoHigherStepPushesLikeWall() {
         Sonic1StaircaseObjectInstance staircase = activateMovingStaircase();
-        Assumptions.assumeTrue(staircase != null, "Expected SLZ staircase to become active near test coordinates");
+        assertNotNull(staircase, "Expected SLZ staircase to become active near test coordinates");
 
         StepPair pair = findLargestAdjacentStep(staircase);
-        Assumptions.assumeTrue(pair != null && pair.heightDifference() >= 6, "Expected a visible SLZ staircase height difference before wall-collision check");
+        assertTrue(pair != null && pair.heightDifference() >= 6,
+                "Expected a visible SLZ staircase height difference before wall-collision check");
 
         placeSpriteAbovePiece(staircase, pair.lowerPiece());
         ObjectManager objectManager = GameServices.level().getObjectManager();
         boolean landed = waitForRideOnPiece(objectManager, staircase, pair.lowerPiece(), 60);
-        Assumptions.assumeTrue(landed, "Sonic could not land on the lower SLZ staircase piece");
+        assertTrue(landed, "Sonic could not land on the lower SLZ staircase piece");
 
         int startX = fixture.sprite().getCentreX();
         boolean moveRight = staircase.getPieceX(pair.higherPiece()) > staircase.getPieceX(pair.lowerPiece());
