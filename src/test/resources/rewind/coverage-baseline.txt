@@ -751,12 +751,8 @@ com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$ExhaustPuff#finalScalar#currentFrame
 com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$ExhaustPuff#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ArticulatedChild#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$BombChild#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ForearmChild#finalScalar#isFront
 com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ForearmChild#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$HeadChild#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$JetChild#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$SensorChild#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2HTZBossInstance#recreate
@@ -776,11 +772,8 @@ com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicSpikeb
 com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicSpikeball#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicTargetingSensor#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZFloatingPlatform#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaser#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaserShooter#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaserWall#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZPlatformHurt#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZPlatformReleaser#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZRobotnik#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZRobotnikPlatform#recreate

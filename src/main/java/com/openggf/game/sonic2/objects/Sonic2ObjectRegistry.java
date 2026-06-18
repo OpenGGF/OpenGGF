@@ -101,6 +101,21 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             "com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance$BuzzerFlameChild";
     private static final String DEZ_BARRIER_WALL_CLASS =
             "com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$BarrierWall";
+    // Batch-inner2 inner-class hazard/solid child binary names.
+    private static final String DEZ_ROBOT_ARTICULATED_CHILD_CLASS =
+            "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ArticulatedChild";
+    private static final String DEZ_ROBOT_BOMB_CHILD_CLASS =
+            "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$BombChild";
+    private static final String DEZ_ROBOT_HEAD_CHILD_CLASS =
+            "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$HeadChild";
+    private static final String DEZ_ROBOT_JET_CHILD_CLASS =
+            "com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$JetChild";
+    private static final String WFZ_FLOATING_PLATFORM_CLASS =
+            "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZFloatingPlatform";
+    private static final String WFZ_LASER_WALL_CLASS =
+            "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZLaserWall";
+    private static final String WFZ_PLATFORM_HURT_CLASS =
+            "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZPlatformHurt";
     private static final List<DynamicObjectRewindCodec> DYNAMIC_REWIND_CODECS = List.of(
             badnikProjectileCodec(),
             buzzerFlameCodec(),
@@ -227,7 +242,16 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                     spawn -> new SmallMetalPformObjectInstance.SmallMetalPformChildInstance(
                             spawn, (spawn.renderFlags() & 0x01) != 0)),
             dezBarrierWallCodec(),
-            mtzBossLaserCodec());
+            mtzBossLaserCodec(),
+            // Batch-inner2 S2 rewind codecs (DEZ Death Egg Robot articulated/bomb/head/jet
+            // children + WFZ floating-platform/laser-wall/platform-hurt children).
+            dezRobotArticulatedChildCodec(),
+            deathEggRobotBombCodec(),
+            dezBossHeadCodec(),
+            dezJetChildCodec(),
+            wfzFloatingPlatformCodec(),
+            wfzLaserWallCodec(),
+            wfzPlatformHurtCodec());
 
     private final Map<Integer, List<String>> namesById = new HashMap<>();
     private final Set<Integer> unknownIds = new HashSet<>();
@@ -557,6 +581,328 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                 return new Sonic2MTZBossInstance.MTZBossLaser(boss, entry.spawn().x(), entry.spawn().y(), false);
             }
         };
+    }
+
+    // ---- Batch-inner2 inner-class hazard/solid child relink codecs ----
+
+    private static DynamicObjectRewindCodec dezRobotArticulatedChildCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                // Exact-class match: do NOT catch the ForearmChild subclass (it needs its own
+                // codec because `isFront` is a final ctor-only field).
+                return instance.getClass().getName().equals(DEZ_ROBOT_ARTICULATED_CHILD_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return DEZ_ROBOT_ARTICULATED_CHILD_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                try {
+                    // Spawn-order restore guarantees the placed Death Egg Robot body is already
+                    // live; relink it so the recreated articulated part shares the boss lifetime
+                    // (mirrors mtzBossLaserCodec / buzzerFlameCodec parent relink).
+                    Sonic2DeathEggRobotInstance parent =
+                            findLiveInstance(context, Sonic2DeathEggRobotInstance.class);
+                    if (parent == null) {
+                        return null;
+                    }
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(
+                            Sonic2DeathEggRobotInstance.class, String.class, int.class, int.class);
+                    ctor.setAccessible(true);
+                    // priority/frame are placeholder ctor args; the actual non-spawn-derivable
+                    // state (frame, priority, currentX/currentY, xFixed/yFixed, falling, xVel,
+                    // yVel, fallTimer) is all stored in non-final fields and reapplied by
+                    // GenericFieldCapturer after recreate. The part carries its own in-flight
+                    // falling trajectory and is NOT re-emitted by the body, so it must be
+                    // restored rather than dropped.
+                    return (ObjectInstance) ctor.newInstance(parent, "ArticulatedChild", 0, 0);
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec deathEggRobotBombCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(DEZ_ROBOT_BOMB_CHILD_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return DEZ_ROBOT_BOMB_CHILD_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                // The Death Egg Robot is the placed/layout-spawned boss, recreated
+                // before the dynamic-object restore loop, so it is in getActiveObjects().
+                Sonic2DeathEggRobotInstance boss =
+                        findLiveInstance(context, Sonic2DeathEggRobotInstance.class);
+                if (boss == null) {
+                    return null; // boss gone -> drop the orphaned bomb
+                }
+                try {
+                    Class<?> cls = Class.forName(entry.className());
+                    // Placeholder ctor args (0,0,0,0): currentX/currentY/xVel/yVel and
+                    // the other in-flight scalars are non-final and reapplied by the
+                    // generic field capturer after recreate.
+                    var ctor = cls.getDeclaredConstructor(
+                            Sonic2DeathEggRobotInstance.class, int.class, int.class, int.class, int.class);
+                    ctor.setAccessible(true);
+                    return (ObjectInstance) ctor.newInstance(boss, 0, 0, 0, 0);
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec dezBossHeadCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(DEZ_ROBOT_HEAD_CHILD_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return DEZ_ROBOT_HEAD_CHILD_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                // Relink the live parent boss body (only one DEZ Death Egg Robot exists at a time).
+                Sonic2DeathEggRobotInstance parent =
+                        findLiveInstance(context, Sonic2DeathEggRobotInstance.class);
+                if (parent == null) {
+                    return null;
+                }
+                try {
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(
+                            Sonic2DeathEggRobotInstance.class, int.class);
+                    ctor.setAccessible(true);
+                    // priority is hardcoded to 4 for the head in spawnChildren(); it is a
+                    // non-final field, so GenericFieldCapturer reapplies the captured value
+                    // (along with headRoutine/waitTimer/bodyMiscSignaled/glow*) after construct.
+                    return (ObjectInstance) ctor.newInstance(parent, 4);
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec dezJetChildCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(DEZ_ROBOT_JET_CHILD_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return DEZ_ROBOT_JET_CHILD_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                try {
+                    // Spawn-order restore guarantees the (only) Death Egg Robot body is
+                    // already live; relink its back-reference so the boss keeps driving the
+                    // restored jet (jet.setJetRoutine(...) / positionNonAnimatedChildren()).
+                    Sonic2DeathEggRobotInstance parent = findLiveInstance(
+                            context, Sonic2DeathEggRobotInstance.class);
+                    if (parent == null) {
+                        return null;
+                    }
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(
+                            Sonic2DeathEggRobotInstance.class, int.class);
+                    ctor.setAccessible(true);
+                    // priority 4 = the fixed spawn constant from spawnChildren()
+                    ObjectInstance child = (ObjectInstance) ctor.newInstance(parent, 4);
+                    // Relink parent.jet to the restored child (mirrors buzzerFlameCodec /
+                    // dezBarrierWallCodec). Animation scalars (jetRoutine/jetAnimId/jetFrame/
+                    // animIdx/animTimer) and collisionFlags are non-final and reapplied by
+                    // GenericFieldCapturer after recreate.
+                    var f = Sonic2DeathEggRobotInstance.class.getDeclaredField("jet");
+                    f.setAccessible(true);
+                    f.set(parent, child);
+                    return child;
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec wfzFloatingPlatformCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(WFZ_FLOATING_PLATFORM_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return WFZ_FLOATING_PLATFORM_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                try {
+                    // Relink the single live (restored) WFZ boss as the platform's parent.
+                    Sonic2WFZBossInstance boss = findLiveInstance(context, Sonic2WFZBossInstance.class);
+                    if (boss == null) {
+                        return null;
+                    }
+                    // Independent floating platform (SolidObjectProvider) flies its own
+                    // descend->horizontal-oscillation trajectory once released and is NOT
+                    // re-emitted by the PlatformReleaser, so it must be restored. Spawn x/y are
+                    // placeholders; phase/phaseTimer/reverseTimer/xVel/yVel/xFixed/yFixed/baseY
+                    // and currentX/currentY are all non-final and reapplied by GenericFieldCapturer
+                    // after recreate (hurtChild back-ref is relinked by its own WFZPlatformHurt codec).
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(
+                            Sonic2WFZBossInstance.class, int.class, int.class);
+                    ctor.setAccessible(true);
+                    return (ObjectInstance) ctor.newInstance(
+                            boss, entry.spawn().x(), entry.spawn().y());
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec wfzLaserWallCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(WFZ_LASER_WALL_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return WFZ_LASER_WALL_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                try {
+                    // Spawn-order restore guarantees the parent boss is already live.
+                    Sonic2WFZBossInstance parent = findLiveInstance(
+                            context, Sonic2WFZBossInstance.class);
+                    if (parent == null) {
+                        return null;
+                    }
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(
+                            Sonic2WFZBossInstance.class, int.class, int.class);
+                    ctor.setAccessible(true);
+                    ObjectInstance child = (ObjectInstance) ctor.newInstance(
+                            parent, entry.spawn().x(), entry.spawn().y());
+                    // Relink whichever side back-reference the restored parent is missing
+                    // (two walls share this binary name; left vs right by null slot / X side).
+                    var leftF = Sonic2WFZBossInstance.class.getDeclaredField("leftWall");
+                    var rightF = Sonic2WFZBossInstance.class.getDeclaredField("rightWall");
+                    leftF.setAccessible(true);
+                    rightF.setAccessible(true);
+                    if (leftF.get(parent) == null) {
+                        leftF.set(parent, child);
+                    } else if (rightF.get(parent) == null) {
+                        rightF.set(parent, child);
+                    }
+                    // Keep the parent's childComponents list consistent.
+                    var listF = Sonic2WFZBossInstance.class.getDeclaredField("childComponents");
+                    listF.setAccessible(true);
+                    @SuppressWarnings("unchecked")
+                    java.util.List<Object> comps = (java.util.List<Object>) listF.get(parent);
+                    if (comps != null && !comps.contains(child)) {
+                        comps.add(child);
+                    }
+                    return child;
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec wfzPlatformHurtCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(WFZ_PLATFORM_HURT_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return WFZ_PLATFORM_HURT_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                try {
+                    // Relink the live (already spawn-order-restored) platform parent.
+                    ObjectInstance platformParent = findWfzPlatformParentForRewind(
+                            context, entry.spawn());
+                    if (platformParent == null) {
+                        return null;  // platform not yet restored / dropped -> drop child this pass
+                    }
+                    ObjectInstance boss = findLiveInstance(context, Sonic2WFZBossInstance.class);
+                    Class<?> cls = Class.forName(entry.className());
+                    Class<?> platformCls = Class.forName(WFZ_FLOATING_PLATFORM_CLASS);
+                    var ctor = cls.getDeclaredConstructor(
+                            Sonic2WFZBossInstance.class, platformCls);
+                    ctor.setAccessible(true);
+                    return (ObjectInstance) ctor.newInstance(boss, platformParent);
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    // Match the restored WFZFloatingPlatform parent by position (mirrors
+    // findCheckpointParentForRewind). Requires the platform's own codec to have restored
+    // it earlier in spawn order. The hurt child sits at platformX, platformY+0x0C.
+    private static ObjectInstance findWfzPlatformParentForRewind(
+            DynamicObjectRecreateContext context, ObjectSpawn childSpawn) {
+        if (childSpawn == null) {
+            return null;
+        }
+        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+            if (inst.getClass().getName().equals(WFZ_FLOATING_PLATFORM_CLASS)
+                    && inst.getX() == childSpawn.x()
+                    && inst.getY() == (childSpawn.y() - 0x0C)) {
+                return inst;
+            }
+        }
+        return null;
     }
 
     private static DynamicObjectRewindCodec arzBossArrowCodec() {
