@@ -317,10 +317,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // CnzBumperObjectInstance / CnzCannonInstance / CnzCylinderInstance codecs
             // deleted (Phase-2 batch 2): all three now implement RewindRecreatable
             // -> genericRecreate Path 1.
-            // CNZ lights flash: restoreAfter is un-finaled (reapplied by the capturer).
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    CnzLightsFlashChildInstance.class,
-                    s -> new CnzLightsFlashChildInstance(s, false)),
+            // CNZ lights flash codec deleted in Phase-2 batch 3: restoreAfter is
+            // reapplied by the capturer after genericRecreate Path 1.
 
             // MHZ end boss: registered before its children so they relink to a
             // live boss in getActiveObjects(). The boss is normally re-spawned via
@@ -506,8 +504,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     AizHollowTreeObjectInstance.AizTreeRevealControlObjectInstance.class,
                     s -> new AizHollowTreeObjectInstance.AizTreeRevealControlObjectInstance(
                             s.x(), s.y())),
-            // HCZ water-drop cosmetic child (self-contained, private nested).
-            hczWaterDropChildCodec(),
+            // HCZ water-drop cosmetic child codec deleted in Phase-2 batch 3:
+            // self-contained private nested class now uses genericRecreate Path 1.
             // Blastoid in-flight projectile (self-contained, private nested).
             blastoidProjectileCodec(),
             // Corkey laser shot (relink to nearest live nozzle for the script).
@@ -1043,8 +1041,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild";
     private static final String MADMOLE_SIDE_DRILL_CHILD_CLASS =
             "com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild";
-    private static final String HCZ_WATER_DROP_CHILD_CLASS =
-            "com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance$WaterDropChild";
     private static final String ICZ_ESCAPE_SHIP_CLASS =
             "com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossRobotnikEscapeShip";
 
@@ -1469,34 +1465,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     var ctor = cls.getDeclaredConstructor(int.class, int.class, boolean.class);
                     ctor.setAccessible(true);
                     return (ObjectInstance) ctor.newInstance(spawn.x(), spawn.y(), facingLeft);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
-                }
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec hczWaterDropChildCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(HCZ_WATER_DROP_CHILD_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return HCZ_WATER_DROP_CHILD_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                try {
-                    Class<?> cls = Class.forName(entry.className());
-                    var ctor = cls.getDeclaredConstructor(ObjectSpawn.class);
-                    ctor.setAccessible(true);
-                    return (ObjectInstance) ctor.newInstance(entry.spawn());
                 } catch (ReflectiveOperationException e) {
                     throw new IllegalStateException(
                             "Failed to recreate dynamic rewind object " + entry.className(), e);

@@ -68,12 +68,15 @@ public class TestRewindHarnessCoverageRatchet {
      *       SpikedLog/CutsceneKnuckles and S2 Turtloid, Buzzer, ARZBoss, CNZBoss families.
      *       Parents that spawn children in ctor (Balkiry, CPZBoss) excluded as honest
      *       ceiling — they need a live session (6 classes remain parent-dependent).</li>
+     *   <li>2026-06-19: raised to 38 after Phase-2 codec-deletion batch 3 moved
+     *       SmallMetalPformChild, CnzLightsFlashChild, and HCZWaterDropChild onto
+     *       RewindRecreatable generic recreate without losing round-trip coverage.</li>
      * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 37;
+    static final int RATCHET_FLOOR = 38;
 
     @BeforeEach
     void initHeadless() {

@@ -234,11 +234,9 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                     BossExplosionObjectInstance.class,
                     s -> new BossExplosionObjectInstance(s.x(), s.y(), Sonic2Sfx.BOSS_EXPLOSION.id)),
             // Batch-inner1 S2 rewind codecs (inner-class hazard/solid children:
-            // WFZ small-metal-platform child, DEZ Eggman barrier wall, MTZ boss laser).
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    SmallMetalPformObjectInstance.SmallMetalPformChildInstance.class,
-                    spawn -> new SmallMetalPformObjectInstance.SmallMetalPformChildInstance(
-                            spawn, (spawn.renderFlags() & 0x01) != 0)),
+            // DEZ Eggman barrier wall, MTZ boss laser). WFZ small-metal-platform
+            // child codec deleted in Phase-2 batch 3: it now implements
+            // RewindRecreatable -> genericRecreate Path 1.
             dezBarrierWallCodec(),
             mtzBossLaserCodec(),
             // Batch-inner2 S2 rewind codecs (DEZ Death Egg Robot bomb child +
