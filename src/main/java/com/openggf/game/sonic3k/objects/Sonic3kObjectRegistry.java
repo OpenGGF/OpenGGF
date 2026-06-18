@@ -61,7 +61,6 @@ import com.openggf.game.sonic3k.objects.bosses.MhzEndBossSpikeChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossVisualChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherMachineChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherVisualChild;
-import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusStageRuntime;
@@ -73,6 +72,7 @@ import com.openggf.level.objects.DynamicObjectRecreateContext;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.EggPrisonAnimalInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
@@ -501,8 +501,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // All mutable scalar fields are already non-final and reapplied by the
             // generic field capturer after recreate. The only non-trivial piece is
             // supplying the live S3kSlotStageController; it is resolved from the
-            // active Sonic3kBonusStageCoordinator via GameServices.bonusStageOrNull()
-            // (a game-package cast inside a game-package codec, so ArchUnit-clean).
+            // active Sonic3kBonusStageCoordinator via the injected
+            // ObjectServices#bonusStageProviderOrNull() accessor (a game-package
+            // cast inside a game-package codec, so ArchUnit-clean).
             // If the bonus stage is not active the codec returns null gracefully.
             slotBonusCageCodec(),
             slotRingRewardCodec(),
@@ -1917,16 +1918,21 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
 
     /**
      * Resolves the live {@link S3kSlotStageController} from the active
-     * {@link Sonic3kBonusStageCoordinator} via the shared
-     * {@link GameServices#bonusStageOrNull()} facade. Returns {@code null} when
-     * the bonus stage is not active (bonus stage not entered, or already exited).
+     * {@link Sonic3kBonusStageCoordinator} via the restore-time
+     * {@link ObjectServices#bonusStageProviderOrNull()} accessor. Returns
+     * {@code null} when the bonus stage is not active (bonus stage not entered,
+     * or already exited).
      *
      * <p>Called by each of the three slot-object rewind codecs.  The coordinator
      * cast is inside a game-package method, so the ArchUnit shared→game rule is
      * not violated.
      */
-    private static S3kSlotStageController resolveSlotStageControllerForRewind() {
-        if (!(GameServices.bonusStageOrNull() instanceof Sonic3kBonusStageCoordinator coordinator)) {
+    private static S3kSlotStageController resolveSlotStageControllerForRewind(
+            DynamicObjectRecreateContext context) {
+        ObjectServices objectServices = context.objectServices();
+        if (objectServices == null
+                || !(objectServices.bonusStageProviderOrNull()
+                        instanceof Sonic3kBonusStageCoordinator coordinator)) {
             return null;
         }
         S3kSlotBonusStageRuntime runtime = coordinator.activeSlotRuntime();
@@ -1963,7 +1969,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             @Override
             public ObjectInstance recreate(DynamicObjectRecreateContext context,
                     ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                S3kSlotStageController controller = resolveSlotStageControllerForRewind();
+                S3kSlotStageController controller = resolveSlotStageControllerForRewind(context);
                 if (controller == null) {
                     return null;
                 }
@@ -1994,7 +2000,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             @Override
             public ObjectInstance recreate(DynamicObjectRecreateContext context,
                     ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                S3kSlotStageController controller = resolveSlotStageControllerForRewind();
+                S3kSlotStageController controller = resolveSlotStageControllerForRewind(context);
                 if (controller == null) {
                     return null;
                 }
@@ -2025,7 +2031,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             @Override
             public ObjectInstance recreate(DynamicObjectRecreateContext context,
                     ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                S3kSlotStageController controller = resolveSlotStageControllerForRewind();
+                S3kSlotStageController controller = resolveSlotStageControllerForRewind(context);
                 if (controller == null) {
                     return null;
                 }

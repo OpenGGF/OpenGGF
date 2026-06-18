@@ -18,9 +18,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * for slot-stage objects captured in a rewind keyframe and they are silently
  * dropped on restore — softlocking the bonus stage on rewind. The codecs resolve
  * the live {@link com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageController}
- * via {@link com.openggf.game.GameServices#bonusStageOrNull()} and reconstruct
- * a structurally correct instance; all mutable scalar state is then reapplied by
- * the generic field capturer.
+ * via the injected {@code ObjectServices#bonusStageProviderOrNull()} accessor and
+ * reconstruct a structurally correct instance; all mutable scalar state is then
+ * reapplied by the generic field capturer.
  */
 class TestRewindFixS3KSlotCodecs {
 

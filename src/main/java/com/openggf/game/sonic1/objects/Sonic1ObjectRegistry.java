@@ -1,6 +1,5 @@
 package com.openggf.game.sonic1.objects;
 
-import com.openggf.game.GameServices;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.Sonic1Level;
@@ -43,7 +42,6 @@ import com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1FZBossInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance;
-import com.openggf.level.LevelManager;
 import com.openggf.level.objects.boss.BossExplosionObjectInstance;
 import com.openggf.level.objects.AbstractObjectRegistry;
 import com.openggf.level.objects.DynamicObjectRecreateContext;
@@ -129,11 +127,8 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
                     spawn -> new Sonic1ExplosionItemObjectInstance(spawn.x(), spawn.y(), null, 0)),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     Sonic1FloatingBlockObjectInstance.class,
-                    spawn -> new Sonic1FloatingBlockObjectInstance(
-                            spawn,
-                            GameServices.levelOrNull() != null
-                                    ? GameServices.levelOrNull().getRomZoneId()
-                                    : -1)),
+                    (spawn, os) -> new Sonic1FloatingBlockObjectInstance(
+                            spawn, os != null ? os.romZoneId() : -1)),
             grassFireChildCodec(),
             lamppostTwirlCodec(),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
@@ -150,9 +145,8 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             seesawBallCodec(),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     Sonic1SpikedBallChainObjectInstance.class,
-                    spawn -> {
-                        LevelManager lm = GameServices.levelOrNull();
-                        int zoneIndex = (lm != null) ? lm.getRomZoneId() : -1;
+                    (spawn, os) -> {
+                        int zoneIndex = (os != null) ? os.romZoneId() : -1;
                         return new Sonic1SpikedBallChainObjectInstance(spawn, zoneIndex);
                     }),
             // Sonic1SplashObjectInstance (LZ water splash, object 0x08) is accept-drop:
@@ -161,9 +155,8 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             // Cosmetic Children Not Rewound".
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     Sonic1StomperDoorObjectInstance.class,
-                    spawn -> {
-                        LevelManager lm = GameServices.levelOrNull();
-                        int zoneIndex = (lm != null) ? lm.getRomZoneId() : -1;
+                    (spawn, os) -> {
+                        int zoneIndex = (os != null) ? os.romZoneId() : -1;
                         return new Sonic1StomperDoorObjectInstance(spawn, zoneIndex);
                     }),
             ObjectRewindDynamicCodecs.exactSpawnCodec(

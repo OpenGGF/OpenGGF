@@ -4,6 +4,7 @@ import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 
 import java.lang.reflect.Constructor;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
@@ -98,6 +99,34 @@ public final class ObjectRewindDynamicCodecs {
             public ObjectInstance recreate(DynamicObjectRecreateContext context,
                     ObjectManagerSnapshot.DynamicObjectEntry entry) {
                 return factory.apply(entry.spawn());
+            }
+        };
+    }
+
+    /**
+     * Variant of {@link #exactSpawnCodec(Class, Function)} whose factory also
+     * receives the restore-time {@link ObjectServices}, so codecs that need
+     * runtime context (e.g. the current ROM zone id) can resolve it through the
+     * injected service handle rather than a global {@code GameServices} lookup.
+     */
+    public static DynamicObjectRewindCodec exactSpawnCodec(
+            Class<? extends AbstractObjectInstance> type,
+            BiFunction<ObjectSpawn, ObjectServices, ? extends AbstractObjectInstance> factory) {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == type;
+            }
+
+            @Override
+            public String className() {
+                return type.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                return factory.apply(entry.spawn(), context.objectServices());
             }
         };
     }

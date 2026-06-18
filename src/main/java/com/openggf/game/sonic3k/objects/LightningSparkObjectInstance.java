@@ -11,10 +11,10 @@ import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.GameModule;
-import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.art.SpriteArtSet;
 
@@ -91,10 +91,11 @@ public class LightningSparkObjectInstance extends AbstractObjectInstance {
      * does; the object null-guards missing art, so a structurally-valid instance is
      * always returned.
      */
-    public static LightningSparkObjectInstance forRewindRecreate(ObjectSpawn spawn) {
+    public static LightningSparkObjectInstance forRewindRecreate(
+            ObjectSpawn spawn, ObjectServices services) {
         SpriteAnimationSet animSet = null;
         Pattern[] sparkTiles = null;
-        GameModule module = GameModuleRegistry.getCurrent();
+        GameModule module = (services != null) ? services.gameModule() : null;
         if (module != null
                 && module.getObjectArtProvider() instanceof Sonic3kObjectArtProvider s3k) {
             SpriteArtSet sparkArt = s3k.getShieldArtSet(Sonic3kObjectArtKeys.LIGHTNING_SPARK);
