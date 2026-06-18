@@ -9,6 +9,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -49,7 +51,7 @@ import java.util.List;
  * test while still matching the ROM's forced rolling and release semantics.
  */
 public final class CnzCannonInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
 
     private static final int PRIORITY = 0x280;
     private static final int FRAME_CHAMBER_IDLE = 4;
@@ -83,6 +85,20 @@ public final class CnzCannonInstance extends AbstractObjectInstance
 
     public CnzCannonInstance(ObjectSpawn spawn) {
         super(spawn, "CNZCannon");
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Self-contained: rebuilds from the captured spawn. Scalar fields are reapplied
+     * by the standard scalar-restore pass after recreate; player back-references are not
+     * wired here (they were not captured by the deleted codec either). Replaces the former
+     * {@code exactSpawnCodec(CnzCannonInstance.class, CnzCannonInstance::new)}
+     * (Phase-2 codec-deletion batch 2).
+     */
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CnzCannonInstance(ctx.spawn());
     }
 
     @Override

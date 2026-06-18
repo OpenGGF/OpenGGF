@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -37,6 +38,28 @@ public class TestScalarOnlyCodecDeletion {
             "com.openggf.game.sonic3k.objects.AizBgTreeSpawnerInstance";
     private static final String AIZ_MINIBOSS_NAPALM_FQN =
             "com.openggf.game.sonic3k.objects.AizMinibossNapalmProjectile";
+
+    /**
+     * Batch-2 scalar-only classes whose dynamic rewind codec was deleted in favour
+     * of the {@link RewindRecreatable} {@code genericRecreate} Path 1. Each must:
+     * (a) implement {@link RewindRecreatable}, (b) NOT have a registered dynamic codec,
+     * and (c) still round-trip {@code Passed} through the real ObjectManager harness.
+     *
+     * <p>Every class here is scalar-only (no {@code AbstractObjectInstance}/
+     * {@code ObjectInstance}-typed instance fields, dodging the {@code required=true}
+     * resolve-throw invariant) and was harness-PASSED via its codec before deletion.
+     */
+    private static final List<String> BATCH2_DELETED_CODEC_FQNS = List.of(
+            "com.openggf.game.sonic3k.objects.AizBossSmallInstance",
+            "com.openggf.game.sonic3k.objects.CnzMinibossScrollControlInstance",
+            "com.openggf.game.sonic3k.objects.HCZConveyorBeltObjectInstance",
+            "com.openggf.game.sonic3k.objects.MhzPulleyLiftObjectInstance",
+            "com.openggf.game.sonic3k.objects.MhzSwingVineObjectInstance",
+            "com.openggf.game.sonic3k.objects.CnzCannonInstance",
+            "com.openggf.game.sonic3k.objects.CnzCylinderInstance",
+            "com.openggf.game.sonic3k.objects.CnzBumperObjectInstance",
+            "com.openggf.game.sonic3k.objects.PachinkoFlipperObjectInstance",
+            "com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance");
 
     @BeforeEach
     void initHeadless() { GraphicsManager.getInstance().initHeadless(); }
@@ -105,6 +128,71 @@ public class TestScalarOnlyCodecDeletion {
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     fqn + " must round-trip as Passed via RewindRecreatable path; got: " + result);
         }
+    }
+
+    // =====================================================================
+    // Batch 2: ten scalar-only S3K classes — codec deleted, RewindRecreatable added
+    // =====================================================================
+
+    @Test
+    void batch2ClassesAllImplementRewindRecreatable() {
+        for (String fqn : BATCH2_DELETED_CODEC_FQNS) {
+            Class<?> cls;
+            try { cls = Class.forName(fqn); }
+            catch (ClassNotFoundException e) { throw new AssertionError(e); }
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    fqn + " must implement RewindRecreatable (codec deleted in batch 2)");
+        }
+    }
+
+    @Test
+    void batch2ClassesHaveNoRegisteredCodec() {
+        for (String fqn : BATCH2_DELETED_CODEC_FQNS) {
+            assertFalse(hasRegisteredDynamicCodec(fqn),
+                    fqn + " must have NO registered dynamic rewind codec after batch-2 deletion; "
+                            + "it should round-trip purely via genericRecreate Path 1");
+        }
+    }
+
+    @Test
+    void batch2ClassesGenericRecreateProducesInstance() {
+        for (String fqn : BATCH2_DELETED_CODEC_FQNS) {
+            ObjectInstance result = invokeGenericRecreate(fqn, 0x120, 0x240, GameId.S3K);
+            assertNotNull(result, "genericRecreate must return non-null for " + fqn);
+            assertEquals(fqn, result.getClass().getName(),
+                    "genericRecreate must return the same concrete class for " + fqn);
+        }
+    }
+
+    @Test
+    void batch2ClassesRoundTripPassedWithoutCodec() {
+        for (String fqn : BATCH2_DELETED_CODEC_FQNS) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(fqn);
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    fqn + " must round-trip as Passed via RewindRecreatable path (no codec); got: " + result);
+        }
+    }
+
+    /**
+     * Returns true if the given FQN has a registered dynamic rewind codec in the
+     * shared codecs or in any of the three per-game registries. Distinct from
+     * the harness's {@code hasRegisteredCodec}, which also returns true for
+     * {@link RewindRecreatable} classes — here we want to confirm the explicit
+     * codec entry is GONE, independent of the RewindRecreatable path.
+     */
+    private static boolean hasRegisteredDynamicCodec(String fqn) {
+        for (var c : com.openggf.level.objects.ObjectRewindDynamicCodecs.sharedCodecs()) {
+            if (fqn.equals(c.className())) return true;
+        }
+        for (ObjectRegistry reg : new ObjectRegistry[]{
+                new Sonic1ObjectRegistry(),
+                new Sonic2ObjectRegistry(),
+                new Sonic3kObjectRegistry()}) {
+            for (var c : reg.dynamicRewindCodecs()) {
+                if (fqn.equals(c.className())) return true;
+            }
+        }
+        return false;
     }
 
     // Private helpers

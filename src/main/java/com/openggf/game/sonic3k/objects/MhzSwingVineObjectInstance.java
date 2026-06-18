@@ -8,6 +8,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.PostPlayerUpdateHook;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -25,7 +27,8 @@ import java.util.List;
  * {@code loc_22B68}. This models the route-critical handle grab, hang, and
  * jump-release behavior; visual child segments use the MHZ misc PLC art.
  */
-public final class MhzSwingVineObjectInstance extends AbstractObjectInstance implements PostPlayerUpdateHook {
+public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
+        implements PostPlayerUpdateHook, RewindRecreatable {
     private static final int PRIORITY_BUCKET_LOW = 4; // priority $200
     private static final int PRIORITY_BUCKET_HIGH = 5; // priority $280
     private static final int HANDLE_Y_OFFSET = 0x10;
@@ -92,6 +95,19 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance imp
         handleY = spawn.y() + HANDLE_Y_OFFSET;
         prevHandleX = handleX;
         prevHandleY = handleY;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Self-contained: rebuilds from the captured spawn (same path the deleted
+     * {@code exactSpawnCodec(MhzSwingVineObjectInstance.class, MhzSwingVineObjectInstance::new)}
+     * used). The object's own scalar fields are reapplied by the standard scalar-restore
+     * pass (Phase-2 codec-deletion batch 2).
+     */
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MhzSwingVineObjectInstance(ctx.spawn());
     }
 
     @Override

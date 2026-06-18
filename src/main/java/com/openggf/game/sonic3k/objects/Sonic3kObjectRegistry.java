@@ -111,9 +111,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             cnzMinibossChildCodec(CnzMinibossTopInstance.class, CnzMinibossTopInstance::new),
             cnzMinibossChildCodec(CnzMinibossCoilInstance.class, CnzMinibossCoilInstance::new),
             cnzMinibossChildCodec(CnzMinibossSparkInstance.class, CnzMinibossSparkInstance::new),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    CnzMinibossScrollControlInstance.class,
-                    CnzMinibossScrollControlInstance::new),
+            // CnzMinibossScrollControlInstance codec deleted (Phase-2 batch 2):
+            // now implements RewindRecreatable -> genericRecreate Path 1.
 
             // --- AIZ2 battleship / boss-endgame dynamic objects ---------------
             // Without these codecs, recreateDynamicObject() returns null for any
@@ -124,9 +123,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // after recreate; codecs only need to build a structurally-correct
             // instance, so placeholders are passed where the value is reapplied.
 
-            // Tier 1: self-contained, no parent link.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    AizBossSmallInstance.class, s -> new AizBossSmallInstance()),
+            // Tier 1: AizBossSmallInstance codec deleted (Phase-2 batch 2):
+            // now implements RewindRecreatable -> genericRecreate Path 1.
 
             // Tier 2: non-final differentiator reapplied after recreate.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
@@ -199,14 +197,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // the captured spawn); non-spawn differentiator scalars were made
             // non-final so the generic field capturer reapplies them after recreate.
 
-            // Self-contained (constructor derives all state from the spawn).
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    HCZConveyorBeltObjectInstance.class,
-                    HCZConveyorBeltObjectInstance::new),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    MhzPulleyLiftObjectInstance.class, MhzPulleyLiftObjectInstance::new),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    MhzSwingVineObjectInstance.class, MhzSwingVineObjectInstance::new),
+            // HCZConveyorBeltObjectInstance / MhzPulleyLiftObjectInstance /
+            // MhzSwingVineObjectInstance codecs deleted (Phase-2 batch 2): all three
+            // now implement RewindRecreatable -> genericRecreate Path 1.
 
             // Self-contained, non-final differentiators reapplied after recreate.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
@@ -321,13 +314,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // which is registered FIRST so it is recreated before the relink runs.
 
             // Self-contained gameplay-critical CNZ traversal/launch objects.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    CnzBumperObjectInstance.class,
-                    s -> new CnzBumperObjectInstance(s)),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    CnzCannonInstance.class, CnzCannonInstance::new),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    CnzCylinderInstance.class, CnzCylinderInstance::new),
+            // CnzBumperObjectInstance / CnzCannonInstance / CnzCylinderInstance codecs
+            // deleted (Phase-2 batch 2): all three now implement RewindRecreatable
+            // -> genericRecreate Path 1.
             // CNZ lights flash: restoreAfter is un-finaled (reapplied by the capturer).
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     CnzLightsFlashChildInstance.class,
@@ -445,19 +434,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // differentiator scalars were made non-final where needed so the
             // generic field capturer reapplies them after recreate.
 
-            // Pachinko bonus-stage capture trap (gameplay-critical: captures the
-            // player and ends the bonus stage). All mutable fields already
-            // non-final; spawn carries x/y, so a plain exactSpawnCodec suffices.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    PachinkoEnergyTrapObjectInstance.class,
-                    PachinkoEnergyTrapObjectInstance::new),
-
-            // Pachinko sloped top-solid flipper (route-critical traversal
-            // terrain + control-lock launch). All mutable fields already
-            // non-final; fully spawn-constructible.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    PachinkoFlipperObjectInstance.class,
-                    PachinkoFlipperObjectInstance::new),
+            // Pachinko bonus-stage capture trap + sloped flipper codecs deleted
+            // (Phase-2 batch 2): both now implement RewindRecreatable ->
+            // genericRecreate Path 1 (fully spawn-constructible, no parent link).
 
             // AIZ/LRZ breakable-rock gravity debris (cosmetic). mappingFrame /
             // artKey un-finaled and reapplied; codec passes placeholder

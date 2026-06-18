@@ -8,6 +8,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -34,7 +36,7 @@ import java.util.List;
  * 64px radius using the low byte at {@code Level_frame_counter+1}; X flip reverses the cycle.
  */
 public class CnzBumperObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener {
+        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
 
     private static final int COLLISION_FLAGS = 0x40 | 0x17;
     private static final int BOUNCE_VELOCITY = 0x700;
@@ -70,6 +72,22 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
         this.touchY = originY;
         this.initialAngle = spawn.subtype() & 0xFF;
         this.reverseOrbit = (spawn.renderFlags() & 0x1) != 0;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Self-contained: all state (including the {@code final} origin/angle/orbit fields)
+     * is derived deterministically from the captured spawn. Mutable scalar fields are
+     * reapplied by the standard scalar-restore pass after recreate; pending player-touch
+     * back-references are not wired here (they were not captured by the deleted codec
+     * either). Replaces the former
+     * {@code exactSpawnCodec(CnzBumperObjectInstance.class, s -> new CnzBumperObjectInstance(s))}
+     * (Phase-2 codec-deletion batch 2).
+     */
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new CnzBumperObjectInstance(ctx.spawn());
     }
 
     @Override
