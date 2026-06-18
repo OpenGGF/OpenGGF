@@ -250,6 +250,9 @@ live in `CHANGELOG.md`; this README keeps only the high-level shape of the relea
   construction reaches a bounded subset of the ~212 codec'd classes; the remainder need a running
   level/session to construct, so the deletion tail will be verified by session-level rewind tests.
   No forward-gameplay behavior change.
+- **Rewind codec deletion underway (2026-06-18).** First verified batch: 3 scalar-only dynamic objects
+  (`HtzGroundFire`, `AizBgTreeSpawner`, `AizMinibossNapalmProjectile`) now restore via `genericRecreate` +
+  `RewindRecreatable` with their hand-written codecs deleted, harness-verified; ~209 codecs remain.
 - **AIZ2 rewind softlock fixed + full rewind-coverage campaign (2026-06-17).** Merged
   `bugfix/ai-aiz2-rewind-loop-boss`. Fixed the AIZ2 boss / ship-loop held-rewind softlock and visual
   corruption, then shipped a Phase-1 rewind-coverage audit (`RewindCoverageAnalyzer` + report-only
