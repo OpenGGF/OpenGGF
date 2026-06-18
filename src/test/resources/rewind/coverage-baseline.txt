@@ -619,7 +619,6 @@ com.openggf.game.sonic2.objects.SlidingSpikesObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic2.objects.SlidingSpikesObjectInstance#recreate
 com.openggf.game.sonic2.objects.SmallMetalPformObjectInstance#recreate
 com.openggf.game.sonic2.objects.SmallMetalPformObjectInstance$SmallMetalPformChildInstance#finalScalar#xFlipped
-com.openggf.game.sonic2.objects.SmallMetalPformObjectInstance$SmallMetalPformChildInstance#recreate
 com.openggf.game.sonic2.objects.SmashableGroundObjectInstance#finalScalar#b
 com.openggf.game.sonic2.objects.SmashableGroundObjectInstance#finalScalar#g
 com.openggf.game.sonic2.objects.SmashableGroundObjectInstance#finalScalar#halfHeight
@@ -755,9 +754,6 @@ com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$BarrierWall#finalScalar#wallX
-com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$BarrierWall#finalScalar#wallY
-com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$BarrierWall#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$ExhaustPuff#finalScalar#currentFrame
 com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$ExhaustPuff#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance#recreate
@@ -772,8 +768,6 @@ com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2HTZBossInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2MCZBossInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance#recreate
-com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossLaser#finalScalar#xVel
-com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossLaser#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossOrb#finalScalar#orbIndex
 com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossOrb#finalScalar#tiltFlag
 com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossOrb#recreate

@@ -57,6 +57,7 @@ import com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2HTZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance;
+import com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance;
 import com.openggf.game.sonic2.objects.badniks.ShellcrackerClawInstance;
@@ -98,6 +99,8 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
     private static final Logger LOGGER = Logger.getLogger(Sonic2ObjectRegistry.class.getName());
     private static final String BUZZER_FLAME_CHILD_CLASS =
             "com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance$BuzzerFlameChild";
+    private static final String DEZ_BARRIER_WALL_CLASS =
+            "com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$BarrierWall";
     private static final List<DynamicObjectRewindCodec> DYNAMIC_REWIND_CODECS = List.of(
             badnikProjectileCodec(),
             buzzerFlameCodec(),
@@ -216,7 +219,15 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             // Batch-7 S2 rewind codec (shared boss-defeat explosion).
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     BossExplosionObjectInstance.class,
-                    s -> new BossExplosionObjectInstance(s.x(), s.y(), Sonic2Sfx.BOSS_EXPLOSION.id)));
+                    s -> new BossExplosionObjectInstance(s.x(), s.y(), Sonic2Sfx.BOSS_EXPLOSION.id)),
+            // Batch-inner1 S2 rewind codecs (inner-class hazard/solid children:
+            // WFZ small-metal-platform child, DEZ Eggman barrier wall, MTZ boss laser).
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    SmallMetalPformObjectInstance.SmallMetalPformChildInstance.class,
+                    spawn -> new SmallMetalPformObjectInstance.SmallMetalPformChildInstance(
+                            spawn, (spawn.renderFlags() & 0x01) != 0)),
+            dezBarrierWallCodec(),
+            mtzBossLaserCodec());
 
     private final Map<Integer, List<String>> namesById = new HashMap<>();
     private final Set<Integer> unknownIds = new HashSet<>();
@@ -473,6 +484,79 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             }
         }
         return null;
+    }
+
+    // ---- Batch-inner1 inner-class hazard/solid child relink codecs ----
+
+    private static DynamicObjectRewindCodec dezBarrierWallCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(DEZ_BARRIER_WALL_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return DEZ_BARRIER_WALL_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                try {
+                    // Find the live (restored) parent Eggman so its barrierWall back-reference
+                    // can be relinked; spawn-order restore guarantees the parent is already live.
+                    Sonic2DEZEggmanInstance parent = findLiveInstance(
+                            context, Sonic2DEZEggmanInstance.class);
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(int.class, int.class);
+                    ctor.setAccessible(true);
+                    ObjectInstance child = (ObjectInstance) ctor.newInstance(
+                            entry.spawn().x(), entry.spawn().y());
+                    if (parent != null) {
+                        // Relink the parent's back-reference so signalEggmanRunning() targets
+                        // the restored child (mirrors buzzerFlameCodec parent relink).
+                        var f = Sonic2DEZEggmanInstance.class.getDeclaredField("barrierWall");
+                        f.setAccessible(true);
+                        f.set(parent, child);
+                    }
+                    return child;
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec mtzBossLaserCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == Sonic2MTZBossInstance.MTZBossLaser.class;
+            }
+
+            @Override
+            public String className() {
+                return Sonic2MTZBossInstance.MTZBossLaser.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                // Relink the single live MTZ boss arena instance (parent back-pointer).
+                Sonic2MTZBossInstance boss = findLiveInstance(context, Sonic2MTZBossInstance.class);
+                if (boss == null) {
+                    return null;
+                }
+                // Placeholder ctor args: currentX/currentY/xVel are non-spawn-derivable
+                // and are reapplied by GenericFieldCapturer after recreate (currentX/currentY
+                // are already non-final; xVel must be un-finaled). The fired laser carries its
+                // own in-flight trajectory and is NOT re-emitted by the boss, so it must be
+                // restored rather than dropped.
+                return new Sonic2MTZBossInstance.MTZBossLaser(boss, entry.spawn().x(), entry.spawn().y(), false);
+            }
+        };
     }
 
     private static DynamicObjectRewindCodec arzBossArrowCodec() {
