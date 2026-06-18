@@ -94,7 +94,8 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             // NOTE: syzBossSpikeCodec intentionally REMOVED.
             // SYZBossSpike is construction-spawned: Sonic1SYZBossInstance.initializeBossState()
             // calls spawnSpikeChild() which calls spawnFreeChild(). Re-adding a codec would
-            // double it on rewind restore (1 → 2). Reconstruction re-establishes it.
+            // double it on rewind restore (1 → 2). The restore adopts the reconstructed child
+            // in place at its exact captured state (ObjectManager step-4 reconciliation).
             // See docs/KNOWN_DISCREPANCIES.md and TestBossChildNoDoubleSpawnParity.
             fzCylinderCodec(),
             fzPlasmaLauncherCodec(),
@@ -106,7 +107,8 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             // NOTE: scrapEggmanButtonCodec intentionally REMOVED.
             // ScrapEggmanButton is construction-spawned: Sonic1ScrapEggmanInstance
             // constructor calls spawnDynamicObject(button). Re-adding a codec would
-            // double it on rewind restore (1 → 2). Reconstruction re-establishes it.
+            // double it on rewind restore (1 → 2). The restore adopts the reconstructed
+            // child in place at its exact captured state (ObjectManager step-4 reconciliation).
             // See docs/KNOWN_DISCREPANCIES.md and TestBossChildNoDoubleSpawnParity.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     Sonic1EggPrisonObjectInstance.class,

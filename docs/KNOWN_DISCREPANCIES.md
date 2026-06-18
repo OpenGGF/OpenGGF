@@ -1216,21 +1216,37 @@ reflection-constructed, parent relinked).
 `Sonic1ScrapEggmanInstance$ScrapEggmanButton` intentionally has no codec — see
 "Construction-Spawned Boss/Object Children" below.
 
-## Construction-Spawned Boss/Object Children: Re-Established By Reconstruction, No Codec
+## Construction-Spawned Boss/Object Children: Adopted In Place At Exact State, No Codec
 
 When a boss or object is a **placed/active object** (in the level spawn list), rewind restore
 reconstructs it by calling `registry.create(spawn)` → constructor → `initializeBossState()`.
-If that constructor/initializer also spawns permanent child objects into `dynamicObjects`, those
-children are re-established by reconstruction automatically. Registering a rewind codec for
-such children would cause double-spawning on restore: the boss reconstruction adds them once,
-then the dynamic-object codec-restore loop adds them again.
+If that constructor/initializer also spawns permanent child objects, those children are
+**adopted in place** by the restore: the reconstructed parent wires its back-references
+(`childComponents`, named child fields) to the constructed children, and the step-4
+dynamic-object reconciliation loop in `ObjectManager.restore()` then registers each one at its
+captured slot and applies its **exact captured state** on top.
 
-**Principle:** Only children spawned from **update/attack routines** (not from the constructor
-or `initializeBossState()`) need codecs. Construction-spawned children are intentionally
-absent from `DYNAMIC_REWIND_CODECS`; their `#recreate` keys stay in the coverage baseline.
-This is verified by `TestBossChildNoDoubleSpawnParity`.
+To make this work, `AbstractObjectInstance.spawnChild`/`spawnFreeChild` route child spawns
+through `ObjectManager.registerRewindReconstructionChild(...)` (instead of `addDynamicObject*`)
+whenever `ObjectConstructionContext.isRewindActiveRestore()` is true. The reconciliation loop
+matches each captured `DynamicObjectEntry` to the pending reconstruction child of the same class
+in first-in (spawn) order — construction order is deterministic and equals the capture order —
+and adopts it, falling back to a codec recreate only for routine-spawned children that have no
+construction counterpart. This gives **exact-state fidelity** for construction children with
+`target == keyframe` (zero re-simulation), keeps the parent's child references valid (they point
+at the very instances that get the captured state), and avoids the double-spawn a codec recreate
+would cause.
 
-**Affected children (no codec, construction-spawned):**
+**Principle:** Construction-spawned children do **not** need (and must not have) a
+`DYNAMIC_REWIND_CODECS` entry — adoption restores them. Only children spawned from
+**update/attack routines** (no construction counterpart to adopt) need codecs. Construction
+children remain absent from `DYNAMIC_REWIND_CODECS`; their `#recreate` keys stay in the coverage
+baseline because the static `RewindCoverageAnalyzer` is codec-based and cannot see the adoption
+path (it documents such no-codec-but-correctly-restored classes as acceptable `#recreate`
+over-approximations). Verified by `TestBossChildNoDoubleSpawnParity` (count parity) and
+`TestBossChildExactStateRewind` (exact non-init state + reference integrity).
+
+**Affected children (no codec, construction-spawned, adopted in place at exact state):**
 
 - `com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ArticulatedChild`
   (×6 spawned in `initializeBossState()` → `spawnChildren()`; DEZ Death Egg Robot body parts)
@@ -1247,7 +1263,7 @@ This is verified by `TestBossChildNoDoubleSpawnParity`.
   (all spawned in `Sonic2EHZBossInstance.initializeBossState()` → `spawnChildComponents()`;
   7 construction children total. The Propeller is additionally reloaded from a routine
   (`reloadPropeller()` during the fly-off phase) but that is the same singleton child, so the
-  construction instance is still re-established by reconstruction. All five codecs were removed
+  construction instance is still adopted in place at exact state. All five codecs were removed
   in the EHZ pass; their `#recreate` keys are in the coverage baseline.)
 
 **Construction children that were never codec'd (correct, verified, no change needed):**

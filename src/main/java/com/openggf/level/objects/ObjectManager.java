@@ -172,6 +172,18 @@ public class ObjectManager {
     private boolean rewindInPlaceRestoreEnabled = true;
     private final Map<ObjectSpawn, ObjectInstance> rewindRestoreReuseScratch = new IdentityHashMap<>();
     private final Map<Class<?>, Boolean> rewindRestoreConstructionSideEffects = new HashMap<>();
+
+    // Rewind: construction-spawned boss/object children produced while an active object is
+    // reconstructed during restore. The reconstructed parent wires its back-references
+    // (childComponents, named child fields) to THESE instances; the step-4 dynamic-object
+    // reconciliation loop then adopts each one in place — registering it at its captured slot
+    // and applying its EXACT captured state — instead of recreating a duplicate via a codec.
+    // This gives exact-state fidelity for construction children while keeping the parent's
+    // back-references valid (they point at the very instances the loop restores onto), and
+    // avoids the double-spawn that a codec recreate would cause. Cleared at the start and end
+    // of each restore so it never leaks instances across passes.
+    private final List<AbstractObjectInstance> rewindReconstructionChildren = new ArrayList<>();
+    private boolean rewindReconstructionChildCapture;
     private static final java.util.concurrent.ConcurrentMap<Class<?>, Boolean>
             REWIND_IN_PLACE_REUSE_SAFE_CLASSES = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -3225,6 +3237,11 @@ public class ObjectManager {
                 auxiliaryDynamicObjects.clear();
                 Arrays.fill(execOrder, null);
                 pendingPlayerBoundEntries.clear();
+                // Capture construction-spawned children produced while active objects are
+                // reconstructed below, so the step-4 reconciliation loop can adopt them in
+                // place instead of recreating duplicates. (See registerRewindReconstructionChild.)
+                rewindReconstructionChildren.clear();
+                rewindReconstructionChildCapture = true;
 
                 // 2. Restore scalar counters and slot occupancy
                 slotAllocator.restoreFromLongArray(s.usedSlotsBits());
@@ -3254,16 +3271,22 @@ public class ObjectManager {
                             // Use PRE_ALLOCATED_SLOT so the constructor picks up the correct slot
                             int dynamicCountBefore = dynamicObjects.size();
                             int reservedChildBefore = reservedChildSlots.size();
+                            int reconstructionChildBefore = rewindReconstructionChildren.size();
                             inst = ObjectConstructionContext.withRewindActiveRestore(
                                     () -> ObjectConstructionContext.with(objectServices, targetSlot,
                                             () -> registry != null ? registry.create(spawn) : null));
                             if (inst != null) {
                                 // Constructors that spawn children or reserve child slots have
                                 // restore-relevant construction side effects that in-place reuse
-                                // would skip; latch those classes onto the recreate path.
+                                // would skip; latch those classes onto the recreate path. Under
+                                // rewind restore, child spawns are routed to
+                                // rewindReconstructionChildren (not dynamicObjects), so count that
+                                // growth too — otherwise a child-spawning boss would look
+                                // side-effect-free and wrongly become reuse-eligible.
                                 boolean constructionSideEffects =
                                         dynamicObjects.size() != dynamicCountBefore
-                                        || reservedChildSlots.size() != reservedChildBefore;
+                                        || reservedChildSlots.size() != reservedChildBefore
+                                        || rewindReconstructionChildren.size() != reconstructionChildBefore;
                                 rewindRestoreConstructionSideEffects.merge(
                                         inst.getClass(), constructionSideEffects, Boolean::logicalOr);
                             }
@@ -3296,11 +3319,29 @@ public class ObjectManager {
                             Arrays.copyOf(ce.reservedSlots(), ce.reservedSlots().length));
                 }
 
+                // Stop routing further child spawns into the reconstruction-children scratch:
+                // any spawns triggered below (e.g. by a codec's recreate) are normal restore
+                // wiring, not reconstruction side effects to be adopted.
+                rewindReconstructionChildCapture = false;
                 for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry
                         : s.dynamicObjects()) {
-                    ObjectInstance inst = recreateDynamicObject(entry);
+                    // Prefer adopting the construction-spawned child the reconstructed parent
+                    // already created and back-references. Adopting it in place gives exact
+                    // captured state AND keeps the parent's child reference valid, with no
+                    // double-spawn. Routine-spawned children (no construction counterpart) fall
+                    // back to the codec recreate path.
+                    AbstractObjectInstance adopted = adoptRewindReconstructionChild(entry.className());
+                    ObjectInstance inst = adopted != null ? adopted : recreateDynamicObject(entry);
                     if (inst instanceof AbstractObjectInstance aoi) {
                         aoi.setServices(objectServices);
+                        if (adopted != null) {
+                            // Adopt at the captured slot; the construction spawn did not allocate
+                            // one (the slot allocator is already restored from the snapshot).
+                            int slot = entry.slotIndex();
+                            if (slot >= 0) {
+                                aoi.setSlotIndex(slot);
+                            }
+                        }
                         restoreObjectRewindState(aoi, entry.state(), rewindContext);
                         dynamicObjects.add(aoi);
                         int execIdx = execIndexForSlot(aoi.getSlotIndex());
@@ -3309,6 +3350,12 @@ public class ObjectManager {
                         }
                     }
                 }
+                // Any reconstruction children NOT matched by a captured entry were spawned by a
+                // parent whose child was not in dynamicObjects at capture (should not happen for
+                // current bosses, but drop them rather than leak: they are unregistered and the
+                // parent's reference to them is replaced by the next live restore). Clearing the
+                // scratch guarantees no instances leak across restore passes.
+                rewindReconstructionChildren.clear();
 
                 if (s.placement() != null) {
                     twoAxisCameraYCoarse = placement.restoreRewindState(s.placement());
@@ -3700,6 +3747,48 @@ public class ObjectManager {
         return rewindDynamicObjectCodecForClassName(entry.className(), registry)
                 .map(codec -> codec.recreate(new DynamicObjectRecreateContext(this), entry))
                 .orElse(null);
+    }
+
+    /**
+     * Records a child constructed while an active object is being reconstructed during a
+     * rewind restore. The child is NOT inserted into {@link #dynamicObjects} and is NOT given
+     * a freshly allocated slot here — the slot allocator was already restored from the
+     * snapshot in restore() step 2, and the child is registered at its captured slot when the
+     * step-4 reconciliation loop adopts it (see {@link #adoptRewindReconstructionChild}).
+     *
+     * <p>Called by {@link AbstractObjectInstance#spawnChild}/{@code spawnFreeChild} only when
+     * {@link ObjectConstructionContext#isRewindActiveRestore()} is true. The reconstructed
+     * parent still receives this instance as its back-reference, so adopting it in place keeps
+     * the parent's child references valid while giving the child its exact captured state.
+     */
+    public void registerRewindReconstructionChild(AbstractObjectInstance child) {
+        if (child != null && rewindReconstructionChildCapture) {
+            rewindReconstructionChildren.add(child);
+        }
+    }
+
+    /**
+     * Finds and removes the earliest pending reconstruction child whose runtime class matches
+     * {@code className}. Construction order is deterministic and equals the dynamic-object
+     * capture order, so consuming the matching class in first-in order pairs each captured
+     * {@link com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry} with
+     * the same logical child the parent re-spawned. Returns {@code null} when no construction
+     * child of that class is pending (e.g. routine-spawned children, which fall back to the
+     * codec recreate path).
+     */
+    private AbstractObjectInstance adoptRewindReconstructionChild(String className) {
+        if (className == null) {
+            return null;
+        }
+        for (java.util.Iterator<AbstractObjectInstance> it = rewindReconstructionChildren.iterator();
+                it.hasNext();) {
+            AbstractObjectInstance child = it.next();
+            if (child.getClass().getName().equals(className)) {
+                it.remove();
+                return child;
+            }
+        }
+        return null;
     }
 
     ObjectInstance findRestoredRidingObject(ObjectSpawn spawn, int slotIndex) {

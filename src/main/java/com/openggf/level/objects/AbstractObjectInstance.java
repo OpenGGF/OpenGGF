@@ -865,7 +865,15 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         try {
             ObjectManager om = services().objectManager();
             if (om != null) {
-                om.addDynamicObjectAfterCurrent(object);
+                // During an active-object rewind restore, route construction children to the
+                // reconstruction-child scratch so the step-4 reconciliation loop adopts them in
+                // place with exact captured state (no double-spawn, parent reference preserved).
+                // See spawnChild and ObjectManager.registerRewindReconstructionChild.
+                if (ObjectConstructionContext.isRewindActiveRestore()) {
+                    om.registerRewindReconstructionChild(object);
+                } else {
+                    om.addDynamicObjectAfterCurrent(object);
+                }
             }
         } catch (IllegalStateException e) {
             // Fallback for test environments or objects not managed by ObjectManager
@@ -897,8 +905,18 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         return ObjectConstructionContext.construct(svc, () -> {
             T child = factory.get();
             ObjectManager om = svc.objectManager();
+            // During an active-object rewind restore the parent is reconstructed to re-derive
+            // its non-captured structural state (including its back-references to these
+            // children). The children themselves are registered and given their EXACT captured
+            // state by the step-4 dynamic-object reconciliation loop, which reuses the
+            // instances spawned here. We still register the construction child (so the boss
+            // back-reference points at a managed instance the reconciliation can adopt), but
+            // mark it as a restore-reconstruction child so the codec loop adopts it in place
+            // instead of recreating a duplicate. See ObjectManager.restore() step 4.
             if (om != null) {
-                if (child.skipsSameFrameUpdateAfterSpawn()) {
+                if (ObjectConstructionContext.isRewindActiveRestore()) {
+                    om.registerRewindReconstructionChild(child);
+                } else if (child.skipsSameFrameUpdateAfterSpawn()) {
                     om.addDynamicObjectAfterCurrentNextFrame(child);
                 } else {
                     om.addDynamicObjectAfterCurrent(child);
@@ -925,8 +943,14 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         return ObjectConstructionContext.construct(svc, () -> {
             T child = factory.get();
             ObjectManager om = svc.objectManager();
+            // See spawnChild: during an active-object rewind restore register the construction
+            // child as a reconstruction child (no fresh slot allocation) so the step-4
+            // reconciliation loop adopts it in place with exact captured state, keeping the
+            // boss back-reference valid and avoiding a double-spawn.
             if (om != null) {
-                if (child.skipsSameFrameUpdateAfterSpawn()) {
+                if (ObjectConstructionContext.isRewindActiveRestore()) {
+                    om.registerRewindReconstructionChild(child);
+                } else if (child.skipsSameFrameUpdateAfterSpawn()) {
                     om.addDynamicObjectNextFrame(child);
                 } else {
                     om.addDynamicObject(child);
