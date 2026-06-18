@@ -3720,6 +3720,15 @@ public class ObjectManager {
     }
 
     /**
+     * Returns the game-specific {@link ObjectRegistry} for use by
+     * {@link ObjectRewindDynamicCodecs#genericRecreate} during rewind restore.
+     * Package-private: accessed only through {@link DynamicObjectRecreateContext#objectRegistry()}.
+     */
+    ObjectRegistry rewindObjectRegistry() {
+        return registry;
+    }
+
+    /**
      * Enqueues a captured {@link com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry}
      * for a player-bound dynamic class whose post-restore re-spawn happens
      * after object-manager restore (currently Shield + Stars). Called by the

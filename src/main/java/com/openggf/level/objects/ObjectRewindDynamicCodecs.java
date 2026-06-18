@@ -6,13 +6,160 @@ import java.lang.reflect.Constructor;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.logging.Logger;
 
 /**
  * Shared dynamic-object rewind codec factories. Game-specific registries compose
  * these helpers with their concrete object classes.
+ *
+ * <p>The static {@link #genericRecreate(ObjectManagerSnapshot.DynamicObjectEntry, DynamicObjectRecreateContext)}
+ * method is the Phase-2 uniform recreate entry point (Task 4). It supersedes per-object codecs
+ * for classes that either:
+ * <ul>
+ *   <li>Can be reconstructed from the captured {@link ObjectSpawn} via
+ *       {@link ObjectRegistry#create(ObjectSpawn)} (registry path), or</li>
+ *   <li>Implement {@link RewindRecreatable} and supply their own creation hook
+ *       ({@link RewindRecreatable} path).</li>
+ * </ul>
+ * Construction-spawned children continue to use the adoption keystone; they are never
+ * passed to {@code genericRecreate}.
  */
 public final class ObjectRewindDynamicCodecs {
+    private static final Logger LOG = Logger.getLogger(ObjectRewindDynamicCodecs.class.getName());
+
     private ObjectRewindDynamicCodecs() {
+    }
+
+    /**
+     * Generic recreate entry point for Phase-2 rewind (Task 4).
+     *
+     * <p>Decision tree:
+     * <ol>
+     *   <li>Load the captured class name.</li>
+     *   <li>If the class implements {@link RewindRecreatable}: construct a minimal probe
+     *       instance via {@link ObjectConstructionContext} (trying spawn-arg then zero-arg
+     *       constructors) and delegate to
+     *       {@link RewindRecreatable#recreateForRewind(RewindRecreateContext)}.</li>
+     *   <li>Else: rebuild via {@link ObjectRegistry#create(ObjectSpawn)} using the registry
+     *       in {@link DynamicObjectRecreateContext#objectRegistry()}.</li>
+     * </ol>
+     *
+     * <p><strong>Adoption safety:</strong> this method is called only AFTER
+     * {@code ObjectManager.adoptRewindReconstructionChild} returns {@code null}, so it will
+     * never be invoked for a class that the adoption keystone already handled. No additional
+     * deduplication is needed here.
+     *
+     * @param entry the captured dynamic-object entry from the snapshot
+     * @param ctx   restore-time context with services and registry
+     * @return the recreated instance, or {@code null} if recreation is not possible
+     */
+    public static ObjectInstance genericRecreate(
+            ObjectManagerSnapshot.DynamicObjectEntry entry,
+            DynamicObjectRecreateContext ctx) {
+        String className = entry.className();
+        if (className == null) {
+            return null;
+        }
+        Class<?> rawClass;
+        try {
+            rawClass = Class.forName(className);
+        } catch (ClassNotFoundException e) {
+            LOG.fine("genericRecreate: class not found: " + className);
+            return null;
+        }
+        if (!AbstractObjectInstance.class.isAssignableFrom(rawClass)) {
+            LOG.fine("genericRecreate: not an AbstractObjectInstance subclass: " + className);
+            return null;
+        }
+        @SuppressWarnings("unchecked")
+        Class<? extends AbstractObjectInstance> cls =
+                (Class<? extends AbstractObjectInstance>) rawClass;
+
+        // Path 1: RewindRecreatable — class provides its own creation hook.
+        if (RewindRecreatable.class.isAssignableFrom(cls)) {
+            AbstractObjectInstance probe = constructProbeForRewindRecreatable(cls, ctx);
+            if (probe instanceof RewindRecreatable rr) {
+                RewindRecreateContext rewindCtx = new RewindRecreateContext(
+                        entry.spawn(), entry.state(), ctx.objectServices());
+                return rr.recreateForRewind(rewindCtx);
+            }
+            LOG.fine("genericRecreate: RewindRecreatable probe construction failed for " + className);
+            return null;
+        }
+
+        // Path 2: Registry — rebuild from spawn via the game registry factory.
+        ObjectRegistry registry = ctx.objectRegistry();
+        if (registry == null || entry.spawn() == null) {
+            return null;
+        }
+        try {
+            return registry.create(entry.spawn());
+        } catch (Exception e) {
+            LOG.fine("genericRecreate: registry.create threw for " + className + ": " + e);
+            return null;
+        }
+    }
+
+    /**
+     * Constructs a minimal probe instance of a {@link RewindRecreatable} class so that
+     * {@link RewindRecreatable#recreateForRewind} can be called on it.
+     *
+     * <p>Tries constructors in order:
+     * <ol>
+     *   <li>{@code (ObjectSpawn)} — single-arg spawn constructor</li>
+     *   <li>zero-arg — no-argument default constructor</li>
+     * </ol>
+     *
+     * @return the probe instance, or {@code null} if no compatible constructor was found
+     */
+    private static AbstractObjectInstance constructProbeForRewindRecreatable(
+            Class<? extends AbstractObjectInstance> cls,
+            DynamicObjectRecreateContext ctx) {
+        ObjectSpawn spawn = new ObjectSpawn(0, 0, 0, 0, 0, false, 0);
+
+        // Try (ObjectSpawn) constructor first.
+        try {
+            Constructor<? extends AbstractObjectInstance> ctor =
+                    cls.getDeclaredConstructor(ObjectSpawn.class);
+            ctor.setAccessible(true);
+            Constructor<? extends AbstractObjectInstance> finalCtor = ctor;
+            return ObjectConstructionContext.construct(ctx.objectServices(),
+                    () -> {
+                        try {
+                            return finalCtor.newInstance(spawn);
+                        } catch (ReflectiveOperationException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+        } catch (NoSuchMethodException ignored) {
+            // Fall through.
+        } catch (Exception e) {
+            LOG.fine("genericRecreate: (ObjectSpawn) probe failed for "
+                    + cls.getName() + ": " + e);
+        }
+
+        // Try zero-arg constructor.
+        try {
+            Constructor<? extends AbstractObjectInstance> ctor =
+                    cls.getDeclaredConstructor();
+            ctor.setAccessible(true);
+            Constructor<? extends AbstractObjectInstance> finalCtor = ctor;
+            return ObjectConstructionContext.construct(ctx.objectServices(),
+                    () -> {
+                        try {
+                            return finalCtor.newInstance();
+                        } catch (ReflectiveOperationException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+        } catch (NoSuchMethodException ignored) {
+            // No compatible constructor found.
+        } catch (Exception e) {
+            LOG.fine("genericRecreate: zero-arg probe failed for "
+                    + cls.getName() + ": " + e);
+        }
+
+        return null;
     }
 
     public static List<DynamicObjectRewindCodec> sharedCodecs() {

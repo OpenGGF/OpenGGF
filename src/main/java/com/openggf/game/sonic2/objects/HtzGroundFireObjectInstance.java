@@ -8,6 +8,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -26,7 +28,8 @@ import java.util.List;
  * Animation: Anim 2 = frames 4,5,2,3,0,1,0,1,2,3,4,5 with delay 5, then $FC (delete).
  * Collision flags: 0x8B (inherited from projectile).
  */
-public class HtzGroundFireObjectInstance extends AbstractObjectInstance implements TouchResponseProvider {
+public class HtzGroundFireObjectInstance extends AbstractObjectInstance
+        implements TouchResponseProvider, RewindRecreatable {
 
     private static final int PRIORITY = 3;
     private static final int COLLISION_FLAGS = 0x8B;
@@ -59,6 +62,31 @@ public class HtzGroundFireObjectInstance extends AbstractObjectInstance implemen
         this.animIndex = 0;
         this.animFrame = ANIM_SEQUENCE[0];
         this.animTimer = ANIM_DELAY;
+    }
+
+    /**
+     * Probe constructor used by
+     * {@link com.openggf.level.objects.ObjectRewindDynamicCodecs#genericRecreate} to
+     * obtain an instance on which {@link #recreateForRewind(RewindRecreateContext)} can
+     * be called. Scalar fields are set to placeholder defaults; the standard scalar-restore
+     * pass reapplies the exact captured values after recreate returns.
+     */
+    HtzGroundFireObjectInstance(ObjectSpawn spawn) {
+        this(spawn.x(), spawn.y(), 0, 0);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Creates a fresh {@code HtzGroundFireObjectInstance} from the captured spawn position.
+     * Scalar fields ({@code spreadDirection}, {@code spreadRemaining}, timers, animation) are
+     * left at default values because the standard scalar-restore pass overwrites them
+     * immediately after this method returns.
+     */
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new HtzGroundFireObjectInstance(
+                ctx.spawn().x(), ctx.spawn().y(), 0, 0);
     }
 
     @Override
