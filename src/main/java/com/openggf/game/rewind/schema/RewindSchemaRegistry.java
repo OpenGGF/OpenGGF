@@ -96,7 +96,8 @@ public final class RewindSchemaRegistry {
             for (Field field : sortedDeclaredFields(cls)) {
                 RewindFieldPolicy configuredPolicy = DefaultObjectRewindPolicies.policyFor(field);
                 if (!GenericFieldCapturer.isCapturedByDefaultObjectScalarPolicy(field)
-                        && configuredPolicy != RewindFieldPolicy.CAPTURED) {
+                        && configuredPolicy != RewindFieldPolicy.CAPTURED
+                        && !isObjectRefFieldAllowedInSchema(field, configuredPolicy)) {
                     continue;
                 }
                 RewindCodec codec = RewindCodecs.codecFor(field).orElse(null);
@@ -108,6 +109,48 @@ public final class RewindSchemaRegistry {
             }
         }
         return fields;
+    }
+
+    /**
+     * Returns {@code true} when an object-reference field that was not accepted by the
+     * default generic scalar policy should still be included in the compact schema.
+     *
+     * <p>Specifically, a non-static, non-transient, non-final field whose declared type is
+     * {@link com.openggf.level.objects.ObjectInstance} (or a subtype) AND whose configured
+     * policy is not explicitly {@link RewindFieldPolicy#TRANSIENT} or
+     * {@link RewindFieldPolicy#DEFERRED} is allowed through.  The field is then evaluated
+     * by {@link #defaultObjectSubclassPolicyFor} which assigns {@link RewindFieldPolicy#CAPTURED}
+     * (non-final, codec present, codec does not require an existing value) or
+     * {@link RewindFieldPolicy#UNSUPPORTED} (final — {@code ObjectReferenceCodec} does not
+     * capture finals).
+     *
+     * <p>Fields marked explicitly TRANSIENT (e.g. the entries in
+     * {@link DefaultObjectRewindPolicies#STRUCTURAL_OBJECT_FIELD_NAMES}) and fields marked
+     * explicitly DEFERRED are <em>not</em> allowed through by this predicate — the caller's
+     * outer skip-gate already returns {@code false} for those.
+     */
+    private static boolean isObjectRefFieldAllowedInSchema(Field field, RewindFieldPolicy configuredPolicy) {
+        // Explicit TRANSIENT or DEFERRED: respect the policy and skip.
+        if (configuredPolicy == RewindFieldPolicy.TRANSIENT
+                || configuredPolicy == RewindFieldPolicy.DEFERRED) {
+            return false;
+        }
+        // Structural/synthetic fields are never captured.
+        int mods = field.getModifiers();
+        if (Modifier.isStatic(mods)
+                || Modifier.isTransient(mods)
+                || field.isSynthetic()) {
+            return false;
+        }
+        // Only non-final fields: ObjectReferenceCodec.capturesFinalFields() returns false,
+        // so a final ref field would be UNSUPPORTED in defaultObjectSubclassPolicyFor.
+        // Skipping finals here avoids adding UNSUPPORTED entries to the schema which would
+        // cause CompactFieldCapturer.validateSupported to throw.
+        if (Modifier.isFinal(mods)) {
+            return false;
+        }
+        // Allow through when the field needs the identity table (object or player ref types).
+        return RewindCodecs.requiresIdentityTable(field);
     }
 
     private static List<Field> sortedDeclaredFields(Class<?> cls) {
