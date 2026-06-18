@@ -7,6 +7,8 @@ import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.rewind.identity.SpawnRefId;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.level.objects.boss.BossChildComponent;
 import com.openggf.game.solid.ObjectSolidExecutionContext;
@@ -183,8 +185,7 @@ public class ObjectManager {
     // Per-object id registry: maps every live ObjectInstance to its assigned ObjectRefId
     // so capture can build the identity table without re-scanning or re-allocating ids.
     // Cleared on reset() and pruned when objects are removed.
-    private final IdentityHashMap<ObjectInstance, com.openggf.game.rewind.identity.ObjectRefId>
-            rewindObjectIds = new IdentityHashMap<>();
+    private final IdentityHashMap<ObjectInstance, ObjectRefId> rewindObjectIds = new IdentityHashMap<>();
 
     // Rewind: construction-spawned boss/object children produced while an active object is
     // reconstructed during restore. The reconstructed parent wires its back-references
@@ -3048,16 +3049,13 @@ public class ObjectManager {
      * have no spawn), no id is assigned — the object will not appear in the identity
      * table and any object-reference fields pointing to it will encode as {@code null}.
      */
-    private void assignRewindObjectId(ObjectInstance instance,
-            com.openggf.level.objects.ObjectSpawn spawn) {
+    private void assignRewindObjectId(ObjectInstance instance, ObjectSpawn spawn) {
         if (spawn == null) {
             return;
         }
         if (!rewindObjectIds.containsKey(instance)) {
-            com.openggf.game.rewind.identity.SpawnRefId spawnRef =
-                    com.openggf.game.rewind.identity.SpawnRefId.fromSpawn(spawn);
-            rewindObjectIds.put(instance,
-                    com.openggf.game.rewind.identity.ObjectRefId.forObject(spawnRef, dynamicObjectIdCounter++));
+            SpawnRefId spawnRef = SpawnRefId.fromSpawn(spawn);
+            rewindObjectIds.put(instance, ObjectRefId.forObject(spawnRef, dynamicObjectIdCounter++));
         }
     }
 
@@ -3676,13 +3674,13 @@ public class ObjectManager {
         // be captured as stable ObjectRefIds. The id was assigned when the object entered
         // the live set (via registerActiveObject / addDynamicObjectInternal).
         for (ObjectInstance inst : activeObjects.values()) {
-            com.openggf.game.rewind.identity.ObjectRefId id = rewindObjectIds.get(inst);
+            ObjectRefId id = rewindObjectIds.get(inst);
             if (id != null) {
                 table.registerObject(inst, id);
             }
         }
         for (ObjectInstance inst : dynamicObjects) {
-            com.openggf.game.rewind.identity.ObjectRefId id = rewindObjectIds.get(inst);
+            ObjectRefId id = rewindObjectIds.get(inst);
             if (id != null) {
                 table.registerObject(inst, id);
             }

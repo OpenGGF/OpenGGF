@@ -3,6 +3,8 @@ package com.openggf.game.rewind.identity;
 import com.openggf.game.GameId;
 import com.openggf.game.rewind.RewindRoundTripHarness;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import org.junit.jupiter.api.Test;
 
@@ -56,5 +58,62 @@ class TestObjectIdentityCapture {
 
         assertEquals(idA, table2.idFor(a), "id for object A must be stable across captures");
         assertEquals(idB, table2.idFor(b), "id for object B must be stable across captures");
+    }
+
+    /**
+     * The harder, spec-critical case: an object's {@link ObjectRefId} must SURVIVE a full
+     * capture→restore round-trip. Restore clears {@code rewindObjectIds} then re-populates it
+     * from the captured {@code entry.objectId()} — so a placed object reconstructed during
+     * restore must resolve to the SAME id it had before, not a freshly-minted one.
+     *
+     * <p>Uses a placed boss (DEZ Death Egg Robot) because placed/active objects are
+     * reconstructed from their spawn during restore (the path that consumes
+     * {@code PerSlotEntry.objectId()}); dynamic stub objects without a codec are dropped.
+     */
+    @Test
+    void objectRefIdSurvivesCaptureRestoreRoundTrip() {
+        RewindRoundTripHarness h = RewindRoundTripHarness.build(GameId.S2);
+        h.spawnPlacedAndStep(Sonic2ObjectIds.DEATH_EGG_ROBOT, 0);
+
+        // Capture the boss's id BEFORE the round-trip.
+        ObjectInstance bossBefore = firstNonChildActive(h);
+        assertNotNull(bossBefore, "DEZ boss must be a live active object before round-trip");
+        RewindIdentityTable tableBefore = h.captureContext().requireIdentityTable();
+        ObjectRefId idBefore = tableBefore.idFor(bossBefore);
+        assertNotNull(idBefore, "boss must have a registered id before round-trip");
+
+        // Full capture→restore. The boss is reconstructed from its spawn; its captured
+        // objectId is restored into rewindObjectIds.
+        h.roundTrip();
+
+        // After restore, the boss (possibly a fresh instance) must resolve to the SAME id.
+        ObjectInstance bossAfter = firstNonChildActive(h);
+        assertNotNull(bossAfter, "DEZ boss must survive the round-trip as a live active object");
+        RewindIdentityTable tableAfter = h.captureContext().requireIdentityTable();
+        ObjectRefId idAfter = tableAfter.idFor(bossAfter);
+        assertNotNull(idAfter, "boss must still have a registered id after round-trip");
+        assertEquals(idBefore, idAfter,
+                "an object's ObjectRefId must survive a capture→restore round-trip (restored, not re-minted)");
+
+        // And the restored id must resolve back to the live restored instance.
+        assertEquals(bossAfter, tableAfter.resolve(idAfter),
+                "the restored id must resolve to the live post-restore instance");
+    }
+
+    /**
+     * Returns the first live active object whose class name is the DEZ boss itself
+     * (not one of its construction-spawned children), or {@code null} if none.
+     */
+    private static ObjectInstance firstNonChildActive(RewindRoundTripHarness h) {
+        for (ObjectInstance o : h.objectManager().getActiveObjects()) {
+            if (o.isDestroyed()) {
+                continue;
+            }
+            String name = o.getClass().getName();
+            if (name.endsWith("Sonic2DeathEggRobotInstance")) {
+                return o;
+            }
+        }
+        return null;
     }
 }
