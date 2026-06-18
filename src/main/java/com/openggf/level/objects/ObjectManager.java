@@ -3265,7 +3265,33 @@ public class ObjectManager {
 
             @Override
             public void restore(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot s) {
-                com.openggf.game.rewind.schema.RewindCaptureContext rewindContext = rewindCaptureContext();
+                // The restore is TWO-PHASE so object-reference resolution is order-independent.
+                //   Phase 1 recreates (reuse / adopt / codec / genericRecreate / registry) every
+                //           captured object — active and dynamic — and registers each under its
+                //           captured ObjectRefId in a fresh restore identity table, WITHOUT yet
+                //           applying any field blob.
+                //   Phase 2 applies each object's compact field blob against that fully-populated
+                //           table, so an ObjectReferenceCodec ref resolves to the RESTORED target
+                //           regardless of recreate order (forward refs included).
+                // A single-pass restore could only resolve refs whose target was recreated earlier
+                // in the loop; a forward ref to a later object resolved to the orphaned pre-restore
+                // instance (or threw). See TestTwoPhaseRestoreOrdering.
+                //
+                // The restore table registers the live players (unchanged across a restore) plus
+                // every restored object; it is the resolution table phase 2 hands to the codecs.
+                com.openggf.game.rewind.identity.RewindIdentityTable restoreTable =
+                        new com.openggf.game.rewind.identity.RewindIdentityTable();
+                registerPlayersInto(restoreTable);
+                com.openggf.game.rewind.schema.RewindCaptureContext rewindContext =
+                        com.openggf.game.rewind.schema.RewindCaptureContext.withIdentityTable(restoreTable);
+                // Phase-2 work item: a recreated instance paired with the entry whose field
+                // blob must be applied to it once every id is registered.
+                record RestoreStatePair<E>(AbstractObjectInstance instance, E entry) {}
+                List<RestoreStatePair<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry>>
+                        activeStateWork = new ArrayList<>();
+                List<RestoreStatePair<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>>
+                        dynamicStateWork = new ArrayList<>();
+
                 // 0. Index live instances by spawn identity so matching snapshot entries
                 //    can reuse them in place instead of paying a full reconstruction.
                 Map<ObjectSpawn, ObjectInstance> previousActive = rewindRestoreReuseScratch;
@@ -3283,7 +3309,7 @@ public class ObjectManager {
                 Arrays.fill(execOrder, null);
                 pendingPlayerBoundEntries.clear();
                 // Capture construction-spawned children produced while active objects are
-                // reconstructed below, so the step-4 reconciliation loop can adopt them in
+                // reconstructed below, so the dynamic reconciliation loop can adopt them in
                 // place instead of recreating duplicates. (See registerRewindReconstructionChild.)
                 rewindReconstructionChildren.clear();
                 rewindReconstructionChildCapture = true;
@@ -3301,11 +3327,12 @@ public class ObjectManager {
                 dynamicObjectIdCounter = s.dynamicObjectIdCounter();
                 rewindObjectIds.clear();
 
-                // 3. Restore each captured object: reuse the live instance in place when it
+                // 3. PHASE 1 (active objects): reuse the live instance in place when it
                 //    is provably equivalent to a fresh reconstruction, otherwise recreate
-                //    from the spawn as before. The finally-clear guarantees the scratch
-                //    map never retains stale instance refs past this restore, even when a
-                //    factory or per-object restore throws.
+                //    from the spawn as before. Register the captured id into the restore table
+                //    and defer the field-blob application to phase 2. The finally-clear
+                //    guarantees the scratch map never retains stale instance refs past this
+                //    restore, even when a factory throws.
                 try {
                     for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry entry : s.slots()) {
                         ObjectSpawn spawn = entry.spawn();
@@ -3345,19 +3372,21 @@ public class ObjectManager {
                             if (aoi.getSlotIndex() < 0 && targetSlot >= 0) {
                                 aoi.setSlotIndex(targetSlot);
                             }
-                            // 4. Restore per-instance state
-                            restoreObjectRewindState(aoi, entry.state(), rewindContext);
                             registerActiveObject(spawn, inst);
                             // Override the freshly-assigned rewind id with the captured one
-                            // from the snapshot (stable across re-simulation ordering).
+                            // from the snapshot (stable across re-simulation ordering) and
+                            // register it in the restore table so phase-2 refs resolve here.
                             if (entry.objectId() != null) {
                                 rewindObjectIds.put(inst, entry.objectId());
+                                restoreTable.registerObject(inst, entry.objectId());
                             }
                             // Wire into execOrder if within the managed slot window
                             int execIdx = execIndexForSlot(aoi.getSlotIndex());
                             if (execIdx >= 0 && execIdx < execOrder.length) {
                                 execOrder[execIdx] = aoi;
                             }
+                            // Defer per-instance field-blob application to phase 2.
+                            activeStateWork.add(new RestoreStatePair<>(aoi, entry));
                         } else if (inst != null) {
                             registerActiveObject(spawn, inst);
                         }
@@ -3366,13 +3395,15 @@ public class ObjectManager {
                     previousActive.clear();
                 }
 
-                // 5. Restore reservedChildSlots
+                // 4. Restore reservedChildSlots
                 reservedChildSlots.clear();
                 for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ChildSpawnEntry ce : s.childSpawns()) {
                     reservedChildSlots.put(ce.parentSpawn(),
                             Arrays.copyOf(ce.reservedSlots(), ce.reservedSlots().length));
                 }
 
+                // 5. PHASE 1 (dynamic objects): recreate each captured dynamic object and register
+                //    its captured id, still deferring field-blob application to phase 2.
                 // Stop routing further child spawns into the reconstruction-children scratch:
                 // any spawns triggered below (e.g. by a codec's recreate) are normal restore
                 // wiring, not reconstruction side effects to be adopted.
@@ -3396,11 +3427,15 @@ public class ObjectManager {
                                 aoi.setSlotIndex(slot);
                             }
                         }
-                        restoreObjectRewindState(aoi, entry.state(), rewindContext);
                         // Restore the captured rewind id so the identity table built from
-                        // the next rewindCaptureContext() re-uses the pre-restore id.
+                        // the next rewindCaptureContext() re-uses the pre-restore id, and
+                        // register it in the restore table so phase-2 refs resolve here.
+                        // A null captured id means the object had no identity at capture, so no
+                        // captured ref points at it — minting a fresh id is enough (and it is not
+                        // added to the restore table because nothing resolves against it).
                         if (entry.objectId() != null) {
                             rewindObjectIds.put(aoi, entry.objectId());
+                            restoreTable.registerObject(aoi, entry.objectId());
                         } else {
                             assignRewindObjectId(aoi, aoi.getSpawn());
                         }
@@ -3409,6 +3444,8 @@ public class ObjectManager {
                         if (execIdx >= 0 && execIdx < execOrder.length) {
                             execOrder[execIdx] = aoi;
                         }
+                        // Defer per-instance field-blob application to phase 2.
+                        dynamicStateWork.add(new RestoreStatePair<>(aoi, entry));
                     }
                 }
                 // Any reconstruction children NOT matched by a captured entry were spawned by a
@@ -3417,6 +3454,18 @@ public class ObjectManager {
                 // parent's reference to them is replaced by the next live restore). Clearing the
                 // scratch guarantees no instances leak across restore passes.
                 rewindReconstructionChildren.clear();
+
+                // 6. PHASE 2: every captured id is now registered in restoreTable, so applying
+                //    the field blobs resolves all object/player references — including forward
+                //    references to objects recreated later in phase 1.
+                for (RestoreStatePair<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry>
+                        work : activeStateWork) {
+                    restoreObjectRewindState(work.instance(), work.entry().state(), rewindContext);
+                }
+                for (RestoreStatePair<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>
+                        work : dynamicStateWork) {
+                    restoreObjectRewindState(work.instance(), work.entry().state(), rewindContext);
+                }
 
                 if (s.placement() != null) {
                     twoAxisCameraYCoarse = placement.restoreRewindState(s.placement());
@@ -3650,6 +3699,33 @@ public class ObjectManager {
     private com.openggf.game.rewind.schema.RewindCaptureContext rewindCaptureContext() {
         com.openggf.game.rewind.identity.RewindIdentityTable table =
                 new com.openggf.game.rewind.identity.RewindIdentityTable();
+        registerPlayersInto(table);
+        // Register every live object (placed + dynamic) so object-reference fields can
+        // be captured as stable ObjectRefIds. The id was assigned when the object entered
+        // the live set (via registerActiveObject / addDynamicObjectInternal).
+        for (ObjectInstance inst : activeObjects.values()) {
+            ObjectRefId id = rewindObjectIds.get(inst);
+            if (id != null) {
+                table.registerObject(inst, id);
+            }
+        }
+        for (ObjectInstance inst : dynamicObjects) {
+            ObjectRefId id = rewindObjectIds.get(inst);
+            if (id != null) {
+                table.registerObject(inst, id);
+            }
+        }
+        return com.openggf.game.rewind.schema.RewindCaptureContext.withIdentityTable(table);
+    }
+
+    /**
+     * Registers the live player + sidekick references into {@code table} under their stable
+     * {@link com.openggf.game.rewind.identity.PlayerRefId}s. Players are not part of the
+     * object set rebuilt by a restore, so the same registration is valid for both the capture
+     * context and the restore context — player-reference fields resolve to the live players
+     * either way.
+     */
+    private void registerPlayersInto(com.openggf.game.rewind.identity.RewindIdentityTable table) {
         com.openggf.sprites.playable.AbstractPlayableSprite main = null;
         List<PlayableEntity> sidekicks = List.of();
         if (objectServices != null) {
@@ -3670,22 +3746,6 @@ public class ObjectManager {
             }
             table.registerPlayer(sidekick, com.openggf.game.rewind.identity.PlayerRefId.sidekick(i));
         }
-        // Register every live object (placed + dynamic) so object-reference fields can
-        // be captured as stable ObjectRefIds. The id was assigned when the object entered
-        // the live set (via registerActiveObject / addDynamicObjectInternal).
-        for (ObjectInstance inst : activeObjects.values()) {
-            ObjectRefId id = rewindObjectIds.get(inst);
-            if (id != null) {
-                table.registerObject(inst, id);
-            }
-        }
-        for (ObjectInstance inst : dynamicObjects) {
-            ObjectRefId id = rewindObjectIds.get(inst);
-            if (id != null) {
-                table.registerObject(inst, id);
-            }
-        }
-        return com.openggf.game.rewind.schema.RewindCaptureContext.withIdentityTable(table);
     }
 
     private void markOwnedSlot(BitSet owned, ObjectInstance inst) {
