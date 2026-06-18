@@ -126,12 +126,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
 
             // Tier 1: self-contained, no parent link.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    AizBgTreeSpawnerInstance.class, s -> new AizBgTreeSpawnerInstance()),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
                     AizBossSmallInstance.class, s -> new AizBossSmallInstance()),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    AizMinibossNapalmProjectile.class,
-                    s -> new AizMinibossNapalmProjectile(s.x(), s.y())),
 
             // Tier 2: non-final differentiator reapplied after recreate.
             ObjectRewindDynamicCodecs.exactSpawnCodec(

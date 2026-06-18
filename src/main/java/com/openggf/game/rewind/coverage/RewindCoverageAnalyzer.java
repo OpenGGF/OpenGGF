@@ -159,7 +159,8 @@ public final class RewindCoverageAnalyzer {
 
             List<String> uncapturedFinalScalars = findUncapturedFinalScalarFields(sc.fqn());
             List<String> unIdObjectRefs = findUnIdObjectRefFields(sc.fqn());
-            boolean isDynamic = dynamicCodecClassNames.contains(sc.fqn());
+            boolean isDynamic = dynamicCodecClassNames.contains(sc.fqn())
+                    || isRewindRecreatable(sc.fqn());
 
             coverages.add(new ObjectCoverage(
                     sc.fqn(),
@@ -414,5 +415,22 @@ public final class RewindCoverageAnalyzer {
         }
         // Shared level/objects package — include for all games
         return true;
+    }
+
+    /**
+     * Returns {@code true} if the class with the given fully-qualified name implements
+     * {@link com.openggf.level.objects.RewindRecreatable}.
+     *
+     * <p>{@link com.openggf.level.objects.ObjectRewindDynamicCodecs#genericRecreate} handles
+     * {@code RewindRecreatable} classes via Path 1, so they do not need an
+     * {@code exactSpawnCodec} registration to have a recreate path.
+     */
+    private static boolean isRewindRecreatable(String fqn) {
+        try {
+            Class<?> cls = Class.forName(fqn);
+            return com.openggf.level.objects.RewindRecreatable.class.isAssignableFrom(cls);
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
     }
 }

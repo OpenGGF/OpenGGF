@@ -545,6 +545,14 @@ public final class RewindRoundTripHarness {
                 if (fqn.equals(c.className())) return true;
             }
         }
+        // Phase-2 Path 1: RewindRecreatable -- genericRecreate handles these directly.
+        try {
+            Class<?> cls = Class.forName(fqn);
+            if (com.openggf.level.objects.RewindRecreatable.class.isAssignableFrom(cls)) {
+                return true;
+            }
+        } catch (ClassNotFoundException ignored) {
+        }
         return false;
     }
 

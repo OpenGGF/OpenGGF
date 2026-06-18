@@ -6,6 +6,8 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -25,7 +27,7 @@ import java.util.logging.Logger;
  *
  * <p>Spawned by {@link Sonic3kAIZEvents#onBattleshipComplete()}.
  */
-public class AizBgTreeSpawnerInstance extends AbstractObjectInstance {
+public class AizBgTreeSpawnerInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(AizBgTreeSpawnerInstance.class.getName());
 
     /** Camera X threshold to activate the spawner. ROM: cmpi.w #$44D0,(Camera_X_pos).w. */
@@ -59,6 +61,29 @@ public class AizBgTreeSpawnerInstance extends AbstractObjectInstance {
         super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "AIZ2MakeTree");
         this.activated = false;
         this.scriptIndex = 0;
+    }
+
+    /**
+     * Probe constructor used by
+     * {@link com.openggf.level.objects.ObjectRewindDynamicCodecs#genericRecreate} to
+     * obtain an instance on which {@link #recreateForRewind(RewindRecreateContext)} can
+     * be called. Delegates to the zero-arg constructor.
+     */
+    AizBgTreeSpawnerInstance(ObjectSpawn spawn) {
+        this();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Creates a fresh {@code AizBgTreeSpawnerInstance} with default state.
+     * Scalar fields ({@code activated}, {@code activationSmoothScrollX}, {@code scriptIndex})
+     * are left at default values because the standard scalar-restore pass overwrites them
+     * immediately after this method returns.
+     */
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new AizBgTreeSpawnerInstance();
     }
 
     @Override

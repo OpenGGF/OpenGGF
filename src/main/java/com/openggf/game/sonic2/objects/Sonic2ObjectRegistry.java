@@ -130,9 +130,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     HtzFireProjectileObjectInstance.class,
                     s -> new HtzFireProjectileObjectInstance(s.x(), s.y(), 0, 0, false)),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    HtzGroundFireObjectInstance.class,
-                    s -> new HtzGroundFireObjectInstance(s.x(), s.y(), 1, 0)),
             // NOTE: EHZ boss child codecs (Spike, Wheel, GroundVehicle, Propeller,
             // VehicleTop) intentionally REMOVED. All five are construction-spawned
             // (inside initializeBossState() → spawnChildComponents()), so the
