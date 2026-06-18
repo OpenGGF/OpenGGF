@@ -243,12 +243,18 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                             spawn, (spawn.renderFlags() & 0x01) != 0)),
             dezBarrierWallCodec(),
             mtzBossLaserCodec(),
-            // Batch-inner2 S2 rewind codecs (DEZ Death Egg Robot articulated/bomb/head/jet
-            // children + WFZ floating-platform/laser-wall/platform-hurt children).
-            dezRobotArticulatedChildCodec(),
+            // Batch-inner2 S2 rewind codecs (DEZ Death Egg Robot bomb child +
+            // WFZ floating-platform/laser-wall/platform-hurt children).
+            //
+            // NOTE: ArticulatedChild, HeadChild, JetChild codecs intentionally REMOVED.
+            // These three children are construction-spawned (inside initializeBossState() →
+            // spawnChildren()), so they are re-established by boss reconstruction during
+            // the activeObjects restore loop. Adding a codec would produce a second copy
+            // from the dynamic-objects restore loop, doubling the count (10 → 18).
+            // ForearmChild has no codec and is correct (also construction-spawned).
+            // BombChild is kept because it is fired from an attack routine, not construction.
+            // See docs/KNOWN_DISCREPANCIES.md and TestBossChildNoDoubleSpawnParity.
             deathEggRobotBombCodec(),
-            dezBossHeadCodec(),
-            dezJetChildCodec(),
             wfzFloatingPlatformCodec(),
             wfzLaserWallCodec(),
             wfzPlatformHurtCodec());

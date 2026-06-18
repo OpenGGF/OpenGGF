@@ -9,7 +9,6 @@ import com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBodyInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatProjectileInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1NewtronMissileInstance;
 import com.openggf.game.sonic1.objects.bosses.GHZBossWreckingBall;
-import com.openggf.game.sonic1.objects.bosses.SYZBossSpike;
 import com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossSpikeball;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
@@ -29,6 +28,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>Pure registry-content test: it constructs a registry and reads
  * {@code dynamicRewindCodecs()} without a ROM, OpenGL, or an active gameplay
  * session. Full session round-trip is handled by the rewind coverage guard.
+ *
+ * <p><b>Intentionally absent:</b> {@code SYZBossSpike} is construction-spawned
+ * (inside {@code Sonic1SYZBossInstance.initializeBossState()} → {@code spawnSpikeChild()}).
+ * Registering a codec would double it on rewind restore (1 → 2). Re-established by
+ * boss reconstruction. See {@code TestBossChildNoDoubleSpawnParity}.
  *
  * <p>{@code Sonic1MotobugSmokeInstance} is intentionally excluded: it is an
  * accept-drop transient cosmetic (re-emitted in-frame by its parent), documented
@@ -62,8 +66,9 @@ class TestRewindFixS1Batch2Codecs {
                 Sonic1CrabmeatProjectileInstance.class.getName(),
                 Sonic1NewtronMissileInstance.class.getName(),
                 GHZBossWreckingBall.class.getName(),
-                Sonic1SLZBossSpikeball.class.getName(),
-                SYZBossSpike.class.getName());
+                // SYZBossSpike intentionally absent: construction-spawned child.
+                // Adding a codec would double it on restore. See TestBossChildNoDoubleSpawnParity.
+                Sonic1SLZBossSpikeball.class.getName());
 
         for (String name : required) {
             assertTrue(names.contains(name),

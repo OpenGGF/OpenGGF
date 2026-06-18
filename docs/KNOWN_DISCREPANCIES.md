@@ -1043,9 +1043,10 @@ All other batch-2 S1 transient/relink children (`Sonic1BombFuseInstance`,
 `Sonic1BombShrapnelInstance`, `Sonic1BuzzBomberMissileInstance`,
 `Sonic1BuzzBomberMissileDissolveInstance`, `Sonic1CannonballInstance`,
 `Sonic1CaterkillerBodyInstance`, `Sonic1CrabmeatProjectileInstance`,
-`Sonic1NewtronMissileInstance`, `GHZBossWreckingBall`, `Sonic1SLZBossSpikeball`,
-`SYZBossSpike`) now have rewind codecs in `Sonic1ObjectRegistry` and are restored on a
-backward seek.
+`Sonic1NewtronMissileInstance`, `GHZBossWreckingBall`, `Sonic1SLZBossSpikeball`)
+now have rewind codecs in `Sonic1ObjectRegistry` and are restored on a backward seek.
+`SYZBossSpike` intentionally has no codec — see "Construction-Spawned Boss/Object Children"
+below.
 
 ## Batch-3 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)
 
@@ -1206,11 +1207,48 @@ codec; their `#recreate` key stays in `src/test/resources/rewind/coverage-baseli
   re-emit fires naturally. Accept-drop-as-baseline rather than registering a codec for a deterministically
   re-emitted display-only child.
 
-The other three batch-inner1 S1 inner-class children now have parent-relink rewind codecs in
+Two batch-inner1 S1 inner-class children now have parent-relink rewind codecs in
 `Sonic1ObjectRegistry` and are restored on a backward seek:
 `Sonic1FalseFloorInstance$FalseFloorBlock` (SBZ2 boss collapsing-floor tile; un-finaled
 `currentX`/`currentY`/`blockIndex`, re-registered into the master's `childBlocks`),
 `Sonic1OrbinautBadnikInstance$OrbSpikeObjectInstance` (Orbinaut HURT satellite/projectile;
-reflection-constructed, parent relinked), and
-`Sonic1ScrapEggmanInstance$ScrapEggmanButton` (SBZ2 cutscene button; parent relinked, spawn-derived
-`buttonX`/`buttonY`).
+reflection-constructed, parent relinked).
+`Sonic1ScrapEggmanInstance$ScrapEggmanButton` intentionally has no codec — see
+"Construction-Spawned Boss/Object Children" below.
+
+## Construction-Spawned Boss/Object Children: Re-Established By Reconstruction, No Codec
+
+When a boss or object is a **placed/active object** (in the level spawn list), rewind restore
+reconstructs it by calling `registry.create(spawn)` → constructor → `initializeBossState()`.
+If that constructor/initializer also spawns permanent child objects into `dynamicObjects`, those
+children are re-established by reconstruction automatically. Registering a rewind codec for
+such children would cause double-spawning on restore: the boss reconstruction adds them once,
+then the dynamic-object codec-restore loop adds them again.
+
+**Principle:** Only children spawned from **update/attack routines** (not from the constructor
+or `initializeBossState()`) need codecs. Construction-spawned children are intentionally
+absent from `DYNAMIC_REWIND_CODECS`; their `#recreate` keys stay in the coverage baseline.
+This is verified by `TestBossChildNoDoubleSpawnParity`.
+
+**Affected children (no codec, construction-spawned):**
+
+- `com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ArticulatedChild`
+  (×6 spawned in `initializeBossState()` → `spawnChildren()`; DEZ Death Egg Robot body parts)
+- `com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$HeadChild`
+  (×1 spawned in `initializeBossState()` → `spawnChildren()`; DEZ hittable head)
+- `com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$JetChild`
+  (×1 spawned in `initializeBossState()` → `spawnChildren()`; DEZ jet exhaust)
+- `com.openggf.game.sonic1.objects.bosses.SYZBossSpike`
+  (×1 spawned in `Sonic1SYZBossInstance.initializeBossState()` → `spawnSpikeChild()`)
+- `com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton`
+  (×1 spawned directly in `Sonic1ScrapEggmanInstance` constructor via `spawnDynamicObject()`)
+
+**Children with codecs (routine-spawned, NOT construction):**
+
+- `Sonic2DeathEggRobotInstance$BombChild` — spawned from attack routine `fireBombs()`
+- `Sonic2DeathEggRobotInstance$ForearmChild` — no codec (construction-spawned, same as above;
+  plus `isFront` is a final field; baseline carries `#finalScalar#isFront` and `#recreate`)
+- `Sonic2DeathEggRobotInstance$SensorChild` — no codec (spawned from update targeting routine;
+  transient, re-emitted by parent; accepted as drop)
+- All WFZ boss children (`WFZFloatingPlatform`, `WFZLaserWall`, `WFZPlatformHurt`) — spawned
+  from `updateSpawnChildren()` (update routine `ROUTINE_SPAWN_CHILDREN`, not construction)

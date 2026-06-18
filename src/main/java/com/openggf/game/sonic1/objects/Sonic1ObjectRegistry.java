@@ -91,7 +91,11 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
                     spawn -> new Sonic1NewtronMissileInstance(spawn.x(), spawn.y(), 0, false)),
             ghzBossWreckingBallCodec(),
             slzBossSpikeballCodec(),
-            syzBossSpikeCodec(),
+            // NOTE: syzBossSpikeCodec intentionally REMOVED.
+            // SYZBossSpike is construction-spawned: Sonic1SYZBossInstance.initializeBossState()
+            // calls spawnSpikeChild() which calls spawnFreeChild(). Re-adding a codec would
+            // double it on rewind restore (1 → 2). Reconstruction re-establishes it.
+            // See docs/KNOWN_DISCREPANCIES.md and TestBossChildNoDoubleSpawnParity.
             fzCylinderCodec(),
             fzPlasmaLauncherCodec(),
             fzPlasmaBallCodec(),
@@ -99,7 +103,11 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             collapsingFloorCodec(),
             falseFloorBlockCodec(),
             orbSpikeCodec(),
-            scrapEggmanButtonCodec(),
+            // NOTE: scrapEggmanButtonCodec intentionally REMOVED.
+            // ScrapEggmanButton is construction-spawned: Sonic1ScrapEggmanInstance
+            // constructor calls spawnDynamicObject(button). Re-adding a codec would
+            // double it on rewind restore (1 → 2). Reconstruction re-establishes it.
+            // See docs/KNOWN_DISCREPANCIES.md and TestBossChildNoDoubleSpawnParity.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     Sonic1EggPrisonObjectInstance.class,
                     spawn -> new Sonic1EggPrisonObjectInstance(spawn)),

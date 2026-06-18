@@ -298,9 +298,11 @@ com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossSpikeball#finalScalar#seesawX
 com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossSpikeball#finalScalar#seesawY
 com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance#recreate
+com.openggf.game.sonic1.objects.bosses.SYZBossSpike#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton#finalScalar#buttonX
 com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton#finalScalar#buttonY
+com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton#recreate
 com.openggf.game.sonic2.objects.ARZPlatformObjectInstance#recreate
 com.openggf.game.sonic2.objects.ARZRotPformsObjectInstance#finalScalar#initialX
 com.openggf.game.sonic2.objects.ARZRotPformsObjectInstance#finalScalar#initialY
@@ -751,8 +753,11 @@ com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$ExhaustPuff#finalScalar#currentFrame
 com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$ExhaustPuff#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance#recreate
+com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ArticulatedChild#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ForearmChild#finalScalar#isFront
 com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ForearmChild#recreate
+com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$HeadChild#recreate
+com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$JetChild#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$SensorChild#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2HTZBossInstance#recreate

@@ -30,13 +30,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *   <li>{@code Sonic1OrbinautBadnikInstance$OrbSpikeObjectInstance} — Orbinaut HURT
  *       satellite/projectile. Parent-relink codec (reflection ctor); all live state
  *       is non-final and reapplied after recreate.</li>
- *   <li>{@code Sonic1ScrapEggmanInstance$ScrapEggmanButton} — SBZ2 final-boss cutscene
- *       button. Parent-relink codec re-running the
- *       {@code (ObjectSpawn, Sonic1ScrapEggmanInstance)} ctor; {@code buttonX}/{@code buttonY}
- *       are spawn-derived, {@code buttonPhase}/{@code buttonFrame} reapplied after recreate.</li>
  * </ul>
  *
- * <p>The fourth batch-inner1 child
+ * <p><b>Intentionally absent:</b> {@code ScrapEggmanButton} is construction-spawned
+ * (the {@code Sonic1ScrapEggmanInstance} constructor directly calls
+ * {@code spawnDynamicObject(button)}). Registering a codec would double it on
+ * rewind restore (1 → 2) because boss reconstruction already re-adds it.
+ * See {@code TestBossChildNoDoubleSpawnParity} and {@code docs/KNOWN_DISCREPANCIES.md}.
+ *
+ * <p>The other batch-inner1 child
  * ({@code Sonic1JunctionObjectInstance$Sonic1JunctionChildInstance}) is intentionally
  * accept-drop (display-only, parent re-emits when {@code childInstance == null}), so it
  * is documented in {@code docs/KNOWN_DISCREPANCIES.md} and is NOT asserted here.
@@ -64,13 +66,12 @@ class TestRewindFixS1InnerBatch1Codecs {
     void registersCodecsForBatchInner1S1Children() {
         Set<String> names = codecClassNames();
 
+        // ScrapEggmanButton intentionally absent: construction-spawned.
         List<String> required = List.of(
                 "com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance"
                         + "$FalseFloorBlock",
                 "com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance"
-                        + "$OrbSpikeObjectInstance",
-                "com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance"
-                        + "$ScrapEggmanButton");
+                        + "$OrbSpikeObjectInstance");
 
         for (String name : required) {
             assertTrue(names.contains(name),
