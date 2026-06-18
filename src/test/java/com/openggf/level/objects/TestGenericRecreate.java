@@ -1,12 +1,12 @@
 package com.openggf.level.objects;
 
-import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
+import com.openggf.game.GameId;
+import com.openggf.game.rewind.RewindRoundTripHarness;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.HtzGroundFireObjectInstance;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
-import com.openggf.level.objects.boss.AbstractBossChild;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,20 +16,22 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Unit tests for {@link ObjectRewindDynamicCodecs#genericRecreate(DynamicObjectEntry, DynamicObjectRecreateContext)}.
+ * Tests for {@link ObjectRewindDynamicCodecs#genericRecreate(DynamicObjectEntry, DynamicObjectRecreateContext)}
+ * and its wiring into the production {@code ObjectManager} restore path.
  *
- * <p>Covers two recreate paths:
+ * <p>Covers:
  * <ol>
- *   <li><strong>Registry path:</strong> spawn-constructible object with its objectId registered in
- *       the game registry recreates via {@code registry.create(spawn)}.</li>
- *   <li><strong>{@link RewindRecreatable} path:</strong> non-spawn-constructible object that
- *       implements {@link RewindRecreatable} recreates via
- *       {@link RewindRecreatable#recreateForRewind(RewindRecreateContext)}.</li>
+ *   <li><strong>{@link RewindRecreatable} path (direct):</strong> a class implementing
+ *       {@link RewindRecreatable} recreates via
+ *       {@link RewindRecreatable#recreateForRewind(RewindRecreateContext)}, including spawn
+ *       propagation to the hook.</li>
+ *   <li><strong>Registry path (direct):</strong> a class without {@link RewindRecreatable}
+ *       falls through to {@code registry.create(spawn)}.</li>
+ *   <li><strong>Production restore wiring:</strong> a codec-less {@link RewindRecreatable}
+ *       fixture survives a REAL {@code ObjectManager} capture→restore round-trip, proving
+ *       {@code genericRecreate} is reached via {@code recreateDynamicObject} (not only by
+ *       direct call).</li>
  * </ol>
- *
- * <p>Adoption safety: both paths must not return a class already adopted by the keystone
- * (construction-spawned children); this is enforced by the ObjectManager restore loop
- * before calling {@code genericRecreate}, so the method itself simply never sees adopted classes.
  */
 class TestGenericRecreate {
 
@@ -39,7 +41,6 @@ class TestGenericRecreate {
     @BeforeEach
     void setUp() {
         GraphicsManager.getInstance().initHeadless();
-        StubObjectServices[] serviceHolder = new StubObjectServices[1];
         ObjectManager[] managerHolder = new ObjectManager[1];
 
         StubObjectServices stub = new StubObjectServices() {
@@ -48,7 +49,6 @@ class TestGenericRecreate {
                 return managerHolder[0];
             }
         };
-        serviceHolder[0] = stub;
 
         Sonic2ObjectRegistry registry = new Sonic2ObjectRegistry();
         objectManager = new ObjectManager(
@@ -69,21 +69,15 @@ class TestGenericRecreate {
     }
 
     // =========================================================================
-    // Path 1 — RewindRecreatable hook (HtzGroundFireObjectInstance)
+    // Path 1 — RewindRecreatable hook (direct genericRecreate call)
     // =========================================================================
 
     /**
      * A non-spawn-constructible object that implements {@link RewindRecreatable} must
      * recreate successfully via {@code genericRecreate} without a per-object codec registered.
-     *
-     * <p>HtzGroundFireObjectInstance normally requires {@code (int x, int y, int dir, int remaining)}
-     * constructor arguments that the registry cannot supply. By implementing
-     * {@link RewindRecreatable}, it provides its own recreation hook so no
-     * {@link DynamicObjectRewindCodec} is needed.
      */
     @Test
     void rewindRecreatableObjectRecreatesViaHook() {
-        // HtzGroundFireObjectInstance has no per-object codec — it uses RewindRecreatable.
         DynamicObjectEntry entry = capturedEntryFor(
                 new HtzGroundFireObjectInstance(100, 200, 1, 3));
 
@@ -95,49 +89,94 @@ class TestGenericRecreate {
     }
 
     /**
-     * The RewindRecreateContext passed to the hook must expose the captured spawn.
+     * The captured spawn coordinates must propagate through {@code genericRecreate} into the
+     * {@link RewindRecreateContext} and onto the recreated instance.
      */
     @Test
     void rewindRecreatableHookReceivesSpawnFromEntry() {
         ObjectSpawn spawn = new ObjectSpawn(42, 77, Sonic2ObjectIds.LAVA_BUBBLE, 0, 0, false, 0);
-        HtzGroundFireObjectInstance inst = new HtzGroundFireObjectInstance(42, 77, -1, 2);
-        DynamicObjectEntry entry = capturedEntryFor(inst, spawn);
+        HtzGroundFireObjectInstance original = new HtzGroundFireObjectInstance(42, 77, -1, 2);
+        DynamicObjectEntry entry = capturedEntryFor(original, spawn);
 
         ObjectInstance result = ObjectRewindDynamicCodecs.genericRecreate(entry, ctx);
 
         assertNotNull(result);
         assertEquals(HtzGroundFireObjectInstance.class, result.getClass());
+        // HtzGroundFireObjectInstance.recreateForRewind builds from ctx.spawn().x()/y().
+        // getX()/getY() return the constructor-supplied position, so x==42 proves the
+        // captured spawn coordinate actually propagated through the hook.
+        assertEquals(42, result.getX(),
+                "recreated instance X must reflect the captured spawn X (42)");
+        assertEquals(77, result.getY(),
+                "recreated instance Y must reflect the captured spawn Y (77)");
     }
 
     // =========================================================================
-    // Path 2 — Registry path (spawn-constructible, registered class)
+    // Path 2 — Registry path (direct genericRecreate call)
     // =========================================================================
 
     /**
-     * A spawn-constructible object whose objectId maps to the correct class in the
-     * registry recreates via {@code registry.create(spawn)} when the class does NOT
-     * implement {@link RewindRecreatable}.
+     * A class WITHOUT {@link RewindRecreatable} falls through to the registry path. With no
+     * factory registered for the artificial spawn's objectId, {@code registry.create(spawn)}
+     * yields a placeholder (never null), and {@code genericRecreate} returns it unchanged —
+     * documenting that the registry path is taken (not the RewindRecreatable hook).
      */
     @Test
-    void spawnConstructibleObjectRecreatesViaRegistry() {
-        // SignpostSparkleObjectInstance is a simple spawn-constructible shared object.
-        // It has an (int, int) constructor, not (ObjectSpawn), but the shared codec handles it.
-        // For the registry path test we use a spawn-registered non-badnik object.
-        // Use LostRingObjectInstance which has a (ObjectSpawn) ctor and is registered.
-        ObjectSpawn spawn = new ObjectSpawn(50, 50, 0, 0, 0, false, 0);
-        // MinimalRegistryObject is a spawn-constructible stand-in:
+    void spawnConstructibleObjectFallsThroughToRegistry() {
+        // objectId=0xFFFF has no registered factory → AbstractObjectRegistry.defaultFactory
+        // returns a PlaceholderObjectInstance. The key signal: genericRecreate returns a
+        // non-null instance of the REGISTRY's product type, NOT MinimalRegistryObject.
+        ObjectSpawn spawn = new ObjectSpawn(50, 50, 0xFFFF, 0, 0, false, 0);
         DynamicObjectEntry entry = new DynamicObjectEntry(
                 MinimalRegistryObject.class.getName(),
                 spawn, -1, null);
 
-        // MinimalRegistryObject is NOT in any registry — genericRecreate falls through
-        // to registry path and returns null (no factory registered for objectId=0).
-        // This validates the registry path is attempted (and gracefully returns null).
         ObjectInstance result = ObjectRewindDynamicCodecs.genericRecreate(entry, ctx);
-        // Registry has no factory for objectId=0 → PlaceholderObjectInstance or null.
-        // The key assertion is that genericRecreate does not throw.
-        // (A null result is expected when registry has no matching factory for this artificial spawn.)
-        assertDoesNotThrow(() -> ObjectRewindDynamicCodecs.genericRecreate(entry, ctx));
+
+        assertNotNull(result, "registry path must produce the registry's product for an unmapped id");
+        assertEquals(PlaceholderObjectInstance.class, result.getClass(),
+                "unmapped objectId must yield the registry's PlaceholderObjectInstance, "
+                        + "proving the registry path (not the RewindRecreatable hook) was taken");
+    }
+
+    // =========================================================================
+    // Path 3 — Production restore wiring (REAL ObjectManager capture→restore)
+    // =========================================================================
+
+    /**
+     * A codec-less {@link RewindRecreatable} fixture must survive a REAL
+     * {@code ObjectManager} capture→restore round-trip. This proves {@code genericRecreate}
+     * is reached via the production {@code recreateDynamicObject} fallback — not only by a
+     * direct test call. Without the wiring, the fixture would be dropped on restore (codec
+     * lookup returns null) and the post-restore count would be 0.
+     */
+    @Test
+    void codecLessRewindRecreatableSurvivesProductionRestore() {
+        RewindRoundTripHarness harness = RewindRoundTripHarness.build(GameId.S2);
+        ObjectManager om = harness.objectManager();
+
+        // Add a codec-less RewindRecreatable fixture as a dynamic object with a captured marker.
+        ObjectSpawn spawn = new ObjectSpawn(0x140, 0x80, 0x7000, 0, 0, false, -1);
+        RewindRecreatableFixture fixture = ObjectConstructionContext.construct(
+                servicesFor(om), () -> new RewindRecreatableFixture(spawn));
+        fixture.setMarker(99);
+        om.addDynamicObject(fixture);
+
+        int liveBefore = countFixtures(om);
+        assertEquals(1, liveBefore, "precondition: exactly one fixture is live before round-trip");
+
+        // Real production capture→restore through RewindRegistry + ObjectManager.restore().
+        harness.roundTrip();
+
+        int liveAfter = countFixtures(om);
+        assertEquals(1, liveAfter,
+                "codec-less RewindRecreatable fixture must survive production restore via "
+                        + "genericRecreate (count 1→1, not dropped to 0)");
+
+        RewindRecreatableFixture restored = firstFixture(om);
+        assertNotNull(restored, "a restored fixture instance must exist after round-trip");
+        assertEquals(99, restored.getMarker(),
+                "scalar state (marker=99) must be restored exactly on the recreated fixture");
     }
 
     // =========================================================================
@@ -157,25 +196,46 @@ class TestGenericRecreate {
     // Helpers
     // =========================================================================
 
-    /**
-     * Builds a minimal {@link DynamicObjectEntry} for the given live instance,
-     * using the instance's captured spawn.
-     */
-    private static DynamicObjectEntry capturedEntryFor(AbstractObjectInstance instance) {
+    private DynamicObjectEntry capturedEntryFor(AbstractObjectInstance instance) {
         return capturedEntryFor(instance, instance.getSpawn());
     }
 
-    /**
-     * Builds a minimal {@link DynamicObjectEntry} for the given live instance with an
-     * explicit spawn override (e.g. to test spawn field propagation to the hook).
-     */
-    private static DynamicObjectEntry capturedEntryFor(AbstractObjectInstance instance, ObjectSpawn spawn) {
+    private DynamicObjectEntry capturedEntryFor(AbstractObjectInstance instance, ObjectSpawn spawn) {
         return new DynamicObjectEntry(
                 instance.getClass().getName(),
                 spawn,
                 -1,
-                null // state; scalar restore is out-of-scope for unit tests
+                null // state; scalar restore is exercised by the production-restore test
         );
+    }
+
+    private static int countFixtures(ObjectManager om) {
+        int n = 0;
+        for (ObjectInstance o : om.getActiveObjects()) {
+            if (o instanceof RewindRecreatableFixture && !o.isDestroyed()) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    private static RewindRecreatableFixture firstFixture(ObjectManager om) {
+        for (ObjectInstance o : om.getActiveObjects()) {
+            if (o instanceof RewindRecreatableFixture f && !o.isDestroyed()) {
+                return f;
+            }
+        }
+        return null;
+    }
+
+    private static StubObjectServices servicesFor(ObjectManager om) {
+        ObjectManager[] holder = new ObjectManager[]{ om };
+        return new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return holder[0];
+            }
+        };
     }
 
     private static com.openggf.camera.Camera mockCamera() {
@@ -189,8 +249,8 @@ class TestGenericRecreate {
     }
 
     /**
-     * Minimal spawn-constructible object for registry-path testing.
-     * Deliberately NOT implementing {@link RewindRecreatable} — exercises the registry path.
+     * Minimal spawn-constructible object for the registry-path test. Deliberately NOT
+     * implementing {@link RewindRecreatable} so {@code genericRecreate} takes the registry path.
      */
     private static final class MinimalRegistryObject extends AbstractObjectInstance {
         MinimalRegistryObject(ObjectSpawn spawn) {

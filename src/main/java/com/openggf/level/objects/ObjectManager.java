@@ -3843,9 +3843,36 @@ public class ObjectManager {
 
     private ObjectInstance recreateDynamicObject(
             com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
-        return rewindDynamicObjectCodecForClassName(entry.className(), registry)
-                .map(codec -> codec.recreate(new DynamicObjectRecreateContext(this), entry))
-                .orElse(null);
+        DynamicObjectRecreateContext context = new DynamicObjectRecreateContext(this);
+        Optional<DynamicObjectRewindCodec> codec =
+                rewindDynamicObjectCodecForClassName(entry.className(), registry);
+        if (codec.isPresent()) {
+            return codec.get().recreate(context, entry);
+        }
+        // Phase-2 generic recreate (Task 4): opt-in fallback for classes that explicitly
+        // implement RewindRecreatable but have no registered codec. Classes without a codec
+        // AND without RewindRecreatable still drop on restore (unchanged behavior); broadly
+        // routing every codec-less class through genericRecreate is Task 6's job.
+        if (isRewindRecreatableClassName(entry.className())) {
+            return ObjectRewindDynamicCodecs.genericRecreate(entry, context);
+        }
+        return null;
+    }
+
+    /**
+     * Returns true if the captured class name resolves to a concrete object class that
+     * implements {@link RewindRecreatable}. Used to opt the class into the generic
+     * recreate fallback without referencing any concrete game package.
+     */
+    private static boolean isRewindRecreatableClassName(String className) {
+        if (className == null) {
+            return false;
+        }
+        try {
+            return RewindRecreatable.class.isAssignableFrom(Class.forName(className));
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
     }
 
     /**

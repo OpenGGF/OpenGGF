@@ -110,56 +110,77 @@ public final class ObjectRewindDynamicCodecs {
      *   <li>zero-arg — no-argument default constructor</li>
      * </ol>
      *
-     * @return the probe instance, or {@code null} if no compatible constructor was found
+     * <p><strong>Failure handling:</strong> a missing constructor signature
+     * ({@link NoSuchMethodException}) is benign — the next strategy is tried, and if none
+     * matches {@code null} is returned. But a constructor that EXISTS and throws mid-body
+     * is a hard error: the probe-construction failure would otherwise silently produce a
+     * {@code null} recreate (a missing object on rewind). Such failures are logged at
+     * {@code WARNING} and re-thrown so Task-6 migration mistakes surface loudly rather than
+     * corrupting restored state.
+     *
+     * @return the probe instance, or {@code null} if no compatible constructor signature exists
+     * @throws RuntimeException if a matching constructor exists but throws while constructing
      */
     private static AbstractObjectInstance constructProbeForRewindRecreatable(
             Class<? extends AbstractObjectInstance> cls,
             DynamicObjectRecreateContext ctx) {
         ObjectSpawn spawn = new ObjectSpawn(0, 0, 0, 0, 0, false, 0);
 
-        // Try (ObjectSpawn) constructor first.
-        try {
-            Constructor<? extends AbstractObjectInstance> ctor =
-                    cls.getDeclaredConstructor(ObjectSpawn.class);
-            ctor.setAccessible(true);
-            Constructor<? extends AbstractObjectInstance> finalCtor = ctor;
-            return ObjectConstructionContext.construct(ctx.objectServices(),
-                    () -> {
-                        try {
-                            return finalCtor.newInstance(spawn);
-                        } catch (ReflectiveOperationException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
-        } catch (NoSuchMethodException ignored) {
-            // Fall through.
-        } catch (Exception e) {
-            LOG.fine("genericRecreate: (ObjectSpawn) probe failed for "
-                    + cls.getName() + ": " + e);
+        Constructor<? extends AbstractObjectInstance> spawnCtor = findCtor(cls, ObjectSpawn.class);
+        if (spawnCtor != null) {
+            return invokeProbeCtor(cls, spawnCtor, ctx, spawn);
         }
 
-        // Try zero-arg constructor.
-        try {
-            Constructor<? extends AbstractObjectInstance> ctor =
-                    cls.getDeclaredConstructor();
-            ctor.setAccessible(true);
-            Constructor<? extends AbstractObjectInstance> finalCtor = ctor;
-            return ObjectConstructionContext.construct(ctx.objectServices(),
-                    () -> {
-                        try {
-                            return finalCtor.newInstance();
-                        } catch (ReflectiveOperationException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
-        } catch (NoSuchMethodException ignored) {
-            // No compatible constructor found.
-        } catch (Exception e) {
-            LOG.fine("genericRecreate: zero-arg probe failed for "
-                    + cls.getName() + ": " + e);
+        Constructor<? extends AbstractObjectInstance> noArgCtor = findCtor(cls);
+        if (noArgCtor != null) {
+            return invokeProbeCtor(cls, noArgCtor, ctx);
         }
 
+        // No (ObjectSpawn) or zero-arg constructor — cannot build a probe for this class.
         return null;
+    }
+
+    /**
+     * Looks up a declared constructor with the given parameter types, returning {@code null}
+     * when no such signature exists (a benign "try the next strategy" condition).
+     */
+    private static Constructor<? extends AbstractObjectInstance> findCtor(
+            Class<? extends AbstractObjectInstance> cls, Class<?>... paramTypes) {
+        try {
+            Constructor<? extends AbstractObjectInstance> ctor =
+                    cls.getDeclaredConstructor(paramTypes);
+            ctor.setAccessible(true);
+            return ctor;
+        } catch (NoSuchMethodException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Invokes a probe constructor that is known to exist. Any exception thrown while
+     * constructing (the constructor body failing) is logged at {@code WARNING} and
+     * re-thrown — it is never swallowed into a {@code null} recreate.
+     */
+    private static AbstractObjectInstance invokeProbeCtor(
+            Class<? extends AbstractObjectInstance> cls,
+            Constructor<? extends AbstractObjectInstance> ctor,
+            DynamicObjectRecreateContext ctx,
+            Object... args) {
+        try {
+            return ObjectConstructionContext.construct(ctx.objectServices(),
+                    () -> {
+                        try {
+                            return ctor.newInstance(args);
+                        } catch (ReflectiveOperationException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+        } catch (RuntimeException e) {
+            LOG.log(java.util.logging.Level.WARNING,
+                    "genericRecreate: RewindRecreatable probe constructor threw for "
+                            + cls.getName() + "; recreate cannot proceed", e);
+            throw e;
+        }
     }
 
     public static List<DynamicObjectRewindCodec> sharedCodecs() {
