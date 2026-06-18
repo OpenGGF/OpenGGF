@@ -57,6 +57,17 @@ public final class RewindIdentityTable {
         return objectToId.get(object);
     }
 
+    /**
+     * Returns the registered {@link ObjectRefId} for the given object instance, or
+     * {@code null} if the object has not been registered.
+     *
+     * <p>This is a convenience alias for {@link #encodeObject(ObjectInstance)} using the
+     * name preferred by Task-2 callers and tests.
+     */
+    public ObjectRefId idFor(ObjectInstance object) {
+        return encodeObject(object);
+    }
+
     public ObjectInstance resolveObject(ObjectRefId id, boolean required) {
         if (id == null) {
             return null;
@@ -66,6 +77,17 @@ public final class RewindIdentityTable {
             throw new IllegalStateException("Missing required object reference: " + id);
         }
         return object;
+    }
+
+    /**
+     * Resolves an {@link ObjectRefId} to the live {@link ObjectInstance} it was registered
+     * for, or {@code null} if not found.
+     *
+     * <p>This is a non-throwing convenience alias for {@link #resolveObject(ObjectRefId, boolean)}
+     * using the name preferred by Task-2 callers.
+     */
+    public ObjectInstance resolve(ObjectRefId id) {
+        return resolveObject(id, false);
     }
 
     public void registerSpawn(ObjectSpawn spawn) {

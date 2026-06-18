@@ -1,6 +1,7 @@
 package com.openggf.game.rewind.snapshot;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
@@ -46,7 +47,15 @@ public record ObjectManagerSnapshot(
         List<SolidContactRidingEntry> solidContactRiding,
         SolidContactState solidContactState,
         PlaneSwitcherSnapshot planeSwitchers,
-        TouchResponseOverlapState touchResponseOverlap
+        TouchResponseOverlapState touchResponseOverlap,
+        /**
+         * Captured value of {@code ObjectManager.dynamicObjectIdCounter} at capture time.
+         * Restored verbatim so any new dynamics spawned after a restore get non-colliding
+         * ids. {@code 0} for legacy snapshots (default-null-tolerant: the restore path
+         * uses the captured value if present, or leaves the live counter unchanged if
+         * the snapshot was captured before this field existed).
+         */
+        int dynamicObjectIdCounter
 ) {
     public ObjectManagerSnapshot {
         usedSlotsBits = usedSlotsBits == null ? new long[0] : Arrays.copyOf(usedSlotsBits, usedSlotsBits.length);
@@ -60,6 +69,33 @@ public record ObjectManagerSnapshot(
         planeSwitchers = planeSwitchers == null ? PlaneSwitcherSnapshot.empty() : planeSwitchers;
         touchResponseOverlap = touchResponseOverlap == null
                 ? TouchResponseOverlapState.empty() : touchResponseOverlap;
+    }
+
+    /** Backward-compatible 14-arg constructor (pre-Task-2 callers; counter defaults to 0). */
+    public ObjectManagerSnapshot(
+            long[] usedSlotsBits,
+            List<PerSlotEntry> slots,
+            int frameCounter,
+            int vblaCounter,
+            int currentExecSlot,
+            int peakSlotCount,
+            boolean bucketsDirty,
+            List<ChildSpawnEntry> childSpawns,
+            List<DynamicObjectEntry> dynamicObjects,
+            PlacementSnapshot placement,
+            List<SolidContactRidingEntry> solidContactRiding,
+            SolidContactState solidContactState,
+            PlaneSwitcherSnapshot planeSwitchers,
+            TouchResponseOverlapState touchResponseOverlap
+    ) {
+        this(
+                usedSlotsBits, slots,
+                frameCounter, vblaCounter, currentExecSlot, peakSlotCount,
+                bucketsDirty, childSpawns, dynamicObjects, placement,
+                solidContactRiding, solidContactState,
+                planeSwitchers, touchResponseOverlap,
+                0
+        );
     }
 
     public ObjectManagerSnapshot(
@@ -118,15 +154,25 @@ public record ObjectManagerSnapshot(
      *                  restore always falls back to recreate.
      * @param state     captured per-instance state from
      *                  {@link com.openggf.level.objects.AbstractObjectInstance#captureRewindState()}
+     * @param objectId  the stable rewind identity for this instance, minted at spawn time and
+     *                  captured here so the restore path can register it in the identity table.
+     *                  {@code null} for legacy snapshot entries captured before Task 2.
      */
     public record PerSlotEntry(
             int slotIndex,
             ObjectSpawn spawn,
             String className,
-            PerObjectRewindSnapshot state
+            PerObjectRewindSnapshot state,
+            ObjectRefId objectId
     ) {
+        /** Backward-compatible constructor (pre-Task-2 callers; objectId defaults to null). */
+        public PerSlotEntry(int slotIndex, ObjectSpawn spawn, String className, PerObjectRewindSnapshot state) {
+            this(slotIndex, spawn, className, state, null);
+        }
+
+        /** Backward-compatible 3-arg constructor (pre-className callers). */
         public PerSlotEntry(int slotIndex, ObjectSpawn spawn, PerObjectRewindSnapshot state) {
-            this(slotIndex, spawn, null, state);
+            this(slotIndex, spawn, null, state, null);
         }
     }
 
@@ -154,15 +200,33 @@ public record ObjectManagerSnapshot(
             ObjectSpawn spawn,
             int slotIndex,
             PerObjectRewindSnapshot state,
-            PlayableEntity playerOwner
+            PlayableEntity playerOwner,
+            /**
+             * Stable rewind identity for this dynamic object, minted at spawn time and
+             * captured here so the restore path can register it in the identity table after
+             * the object is reconstructed. {@code null} for legacy snapshot entries.
+             */
+            ObjectRefId objectId
     ) {
+        /** Backward-compatible constructor that includes playerOwner but not objectId. */
+        public DynamicObjectEntry(
+                String className,
+                ObjectSpawn spawn,
+                int slotIndex,
+                PerObjectRewindSnapshot state,
+                PlayableEntity playerOwner
+        ) {
+            this(className, spawn, slotIndex, state, playerOwner, null);
+        }
+
+        /** Backward-compatible 4-arg constructor (no playerOwner, no objectId). */
         public DynamicObjectEntry(
                 String className,
                 ObjectSpawn spawn,
                 int slotIndex,
                 PerObjectRewindSnapshot state
         ) {
-            this(className, spawn, slotIndex, state, null);
+            this(className, spawn, slotIndex, state, null, null);
         }
     }
 

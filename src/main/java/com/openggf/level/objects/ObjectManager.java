@@ -173,6 +173,19 @@ public class ObjectManager {
     private final Map<ObjectSpawn, ObjectInstance> rewindRestoreReuseScratch = new IdentityHashMap<>();
     private final Map<Class<?>, Boolean> rewindRestoreConstructionSideEffects = new HashMap<>();
 
+    // Rewind: monotonically-increasing counter assigned once per object when it is
+    // added to the live object set (activeObjects or dynamicObjects). Combined with
+    // the spawn's layoutIndex it forms a stable ObjectRefId via ObjectRefId.forObject()
+    // that survives capture→restore→re-simulation cycles because re-simulation adds
+    // objects in the same order, re-minting the same ids. Captured in the snapshot
+    // and restored so the counter never accidentally aliases a pre-restore id.
+    private int dynamicObjectIdCounter = 0;
+    // Per-object id registry: maps every live ObjectInstance to its assigned ObjectRefId
+    // so capture can build the identity table without re-scanning or re-allocating ids.
+    // Cleared on reset() and pruned when objects are removed.
+    private final IdentityHashMap<ObjectInstance, com.openggf.game.rewind.identity.ObjectRefId>
+            rewindObjectIds = new IdentityHashMap<>();
+
     // Rewind: construction-spawned boss/object children produced while an active object is
     // reconstructed during restore. The reconstructed parent wires its back-references
     // (childComponents, named child fields) to THESE instances; the step-4 dynamic-object
@@ -285,6 +298,8 @@ public class ObjectManager {
         activeObjectsCacheDirty = true;
         bucketsDirty = true;
         frameCounter = 0;
+        dynamicObjectIdCounter = 0;
+        rewindObjectIds.clear();
         twoAxisCameraYCoarse = Integer.MIN_VALUE;
         placement.reset(cameraX);
         if (registry != null) {
@@ -1665,6 +1680,7 @@ public class ObjectManager {
                 slotAllocator.reserveOrMarkUsed(slot);
             }
         }
+        assignRewindObjectId(object, object.getSpawn());
         dynamicObjects.add(object);
         if (!allowSameFrameExec && updating) {
             deferredDynamicExecThisFrame.add(object);
@@ -3003,18 +3019,46 @@ public class ObjectManager {
     private void registerActiveObject(ObjectSpawn spawn, ObjectInstance instance) {
         activeObjects.put(spawn, instance);
         instanceToSpawn.put(instance, spawn);
+        assignRewindObjectId(instance, spawn);
     }
 
     private void removeActiveObject(ObjectSpawn spawn) {
         ObjectInstance removed = activeObjects.remove(spawn);
         if (removed != null) {
             instanceToSpawn.remove(removed);
+            // Prune the live-map so rewindObjectIds stays lean during normal play.
+            // (Not strictly required — stale entries are harmless since rewindCaptureContext
+            //  only iterates activeObjects/dynamicObjects, but trimming prevents unbounded growth.)
+            rewindObjectIds.remove(removed);
         }
     }
 
     private void clearActiveObjects() {
         activeObjects.clear();
         instanceToSpawn.clear();
+    }
+
+    /**
+     * Assigns a stable rewind identity to {@code instance} the first time it enters
+     * the live object set. The id encodes the spawn's layout index plus the current
+     * {@link #dynamicObjectIdCounter} value (incremented after assignment), making
+     * it unique within a session and re-mintable in the same order on re-simulation.
+     *
+     * <p>If {@code spawn} is {@code null} (some internally-constructed dynamic objects
+     * have no spawn), no id is assigned — the object will not appear in the identity
+     * table and any object-reference fields pointing to it will encode as {@code null}.
+     */
+    private void assignRewindObjectId(ObjectInstance instance,
+            com.openggf.level.objects.ObjectSpawn spawn) {
+        if (spawn == null) {
+            return;
+        }
+        if (!rewindObjectIds.containsKey(instance)) {
+            com.openggf.game.rewind.identity.SpawnRefId spawnRef =
+                    com.openggf.game.rewind.identity.SpawnRefId.fromSpawn(spawn);
+            rewindObjectIds.put(instance,
+                    com.openggf.game.rewind.identity.ObjectRefId.forObject(spawnRef, dynamicObjectIdCounter++));
+        }
     }
 
     private void populateDynamicFallbackScratch() {
@@ -3141,7 +3185,8 @@ public class ObjectManager {
                                 aoi.getSlotIndex(),
                                 spawn,
                                 aoi.getClass().getName(),
-                                captureObjectRewindState(aoi, rewindContext)
+                                captureObjectRewindState(aoi, rewindContext),
+                                rewindObjectIds.get(inst)
                         ));
                     }
                 }
@@ -3186,7 +3231,8 @@ public class ObjectManager {
                                         inst.getSpawn(),
                                         aoi.getSlotIndex(),
                                         captureObjectRewindState(aoi, rewindContext),
-                                        playerBoundOwner(inst)));
+                                        playerBoundOwner(inst),
+                                        rewindObjectIds.get(inst)));
                     }
                 }
 
@@ -3214,7 +3260,8 @@ public class ObjectManager {
                                 : com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherSnapshot.empty(),
                         touchResponses != null
                                 ? touchResponses.captureRewindState()
-                                : com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.TouchResponseOverlapState.empty()
+                                : com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.TouchResponseOverlapState.empty(),
+                        dynamicObjectIdCounter
                 );
             }
 
@@ -3251,6 +3298,10 @@ public class ObjectManager {
                 slotAllocator.restorePeakSlotCount(s.peakSlotCount());
                 bucketsDirty = s.bucketsDirty();
                 activeObjectsCacheDirty = true;
+                // Restore the object-id counter so any new objects spawned after restore
+                // (in replay or fresh gameplay) do not alias the restored objects' ids.
+                dynamicObjectIdCounter = s.dynamicObjectIdCounter();
+                rewindObjectIds.clear();
 
                 // 3. Restore each captured object: reuse the live instance in place when it
                 //    is provably equivalent to a fresh reconstruction, otherwise recreate
@@ -3299,6 +3350,11 @@ public class ObjectManager {
                             // 4. Restore per-instance state
                             restoreObjectRewindState(aoi, entry.state(), rewindContext);
                             registerActiveObject(spawn, inst);
+                            // Override the freshly-assigned rewind id with the captured one
+                            // from the snapshot (stable across re-simulation ordering).
+                            if (entry.objectId() != null) {
+                                rewindObjectIds.put(inst, entry.objectId());
+                            }
                             // Wire into execOrder if within the managed slot window
                             int execIdx = execIndexForSlot(aoi.getSlotIndex());
                             if (execIdx >= 0 && execIdx < execOrder.length) {
@@ -3343,6 +3399,13 @@ public class ObjectManager {
                             }
                         }
                         restoreObjectRewindState(aoi, entry.state(), rewindContext);
+                        // Restore the captured rewind id so the identity table built from
+                        // the next rewindCaptureContext() re-uses the pre-restore id.
+                        if (entry.objectId() != null) {
+                            rewindObjectIds.put(aoi, entry.objectId());
+                        } else {
+                            assignRewindObjectId(aoi, aoi.getSpawn());
+                        }
                         dynamicObjects.add(aoi);
                         int execIdx = execIndexForSlot(aoi.getSlotIndex());
                         if (execIdx >= 0 && execIdx < execOrder.length) {
@@ -3572,6 +3635,20 @@ public class ObjectManager {
         return owned.toLongArray();
     }
 
+    /**
+     * Builds a fresh {@link com.openggf.game.rewind.schema.RewindCaptureContext} reflecting
+     * the current live object + player set. The returned context's
+     * {@link com.openggf.game.rewind.identity.RewindIdentityTable} maps every live object
+     * to a stable {@link com.openggf.game.rewind.identity.ObjectRefId}.
+     *
+     * <p>This method is called internally by the capture/restore path and is also
+     * exposed publicly so test harnesses can inspect the identity table without
+     * triggering a full snapshot capture.
+     */
+    public com.openggf.game.rewind.schema.RewindCaptureContext captureIdentityContext() {
+        return rewindCaptureContext();
+    }
+
     private com.openggf.game.rewind.schema.RewindCaptureContext rewindCaptureContext() {
         com.openggf.game.rewind.identity.RewindIdentityTable table =
                 new com.openggf.game.rewind.identity.RewindIdentityTable();
@@ -3594,6 +3671,21 @@ public class ObjectManager {
                 continue;
             }
             table.registerPlayer(sidekick, com.openggf.game.rewind.identity.PlayerRefId.sidekick(i));
+        }
+        // Register every live object (placed + dynamic) so object-reference fields can
+        // be captured as stable ObjectRefIds. The id was assigned when the object entered
+        // the live set (via registerActiveObject / addDynamicObjectInternal).
+        for (ObjectInstance inst : activeObjects.values()) {
+            com.openggf.game.rewind.identity.ObjectRefId id = rewindObjectIds.get(inst);
+            if (id != null) {
+                table.registerObject(inst, id);
+            }
+        }
+        for (ObjectInstance inst : dynamicObjects) {
+            com.openggf.game.rewind.identity.ObjectRefId id = rewindObjectIds.get(inst);
+            if (id != null) {
+                table.registerObject(inst, id);
+            }
         }
         return com.openggf.game.rewind.schema.RewindCaptureContext.withIdentityTable(table);
     }

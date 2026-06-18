@@ -2,6 +2,7 @@ package com.openggf.game.rewind;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameId;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
@@ -236,6 +237,43 @@ public final class RewindRoundTripHarness {
      */
     public ObjectManager objectManager() {
         return om;
+    }
+
+    /**
+     * Spawns a minimal stub {@link AbstractObjectInstance} using the given spawn and adds
+     * it as a dynamic object to the harness's {@code ObjectManager}.
+     *
+     * <p>The spawned object is a no-op stub that does not render or update — suitable only
+     * for identity-registration tests that do not exercise object behaviour.
+     *
+     * @param spawn the spawn descriptor (layoutIndex drives the minted {@code ObjectRefId})
+     * @return the spawned (live) instance
+     */
+    public AbstractObjectInstance spawnDynamic(ObjectSpawn spawn) {
+        ObjectManager[] holder = new ObjectManager[]{ om };
+        StubObjectServices stub = new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return holder[0];
+            }
+        };
+        AbstractObjectInstance inst = ObjectConstructionContext.construct(stub, () -> new MinimalStubObject(spawn));
+        om.addDynamicObject(inst);
+        return inst;
+    }
+
+    /**
+     * Builds a fresh {@link RewindCaptureContext} reflecting the current live object set
+     * of the harness's {@code ObjectManager}, including all registered objects in the
+     * identity table.
+     *
+     * <p>This does NOT trigger a full snapshot capture — it only builds the identity table.
+     * Use {@link #roundTrip()} for a full capture→restore cycle.
+     *
+     * @return a context with a populated identity table
+     */
+    public RewindCaptureContext captureContext() {
+        return om.captureIdentityContext();
     }
 
     // =========================================================================
@@ -707,5 +745,20 @@ public final class RewindRoundTripHarness {
         }
         String msg = root.getMessage();
         return root.getClass().getSimpleName() + (msg != null ? ": " + msg : "");
+    }
+
+    /**
+     * Minimal no-op {@link AbstractObjectInstance} used by {@link #spawnDynamic(ObjectSpawn)}.
+     * Does not render, update, or consume any services beyond what the base class requires.
+     */
+    private static final class MinimalStubObject extends AbstractObjectInstance {
+        MinimalStubObject(ObjectSpawn spawn) {
+            super(spawn, "MinimalStubObject");
+        }
+
+        @Override
+        public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) {
+            // no-op
+        }
     }
 }
