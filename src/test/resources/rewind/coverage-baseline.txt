@@ -745,6 +745,11 @@ com.openggf.game.sonic2.objects.bosses.ARZBossArrow#finalScalar#fromRightPillar
 com.openggf.game.sonic2.objects.bosses.ARZBossEyes#recreate
 com.openggf.game.sonic2.objects.bosses.CPZBossSmokePuff#recreate
 com.openggf.game.sonic2.objects.bosses.EHZBossGroundVehicle#finalScalar#initialY
+com.openggf.game.sonic2.objects.bosses.EHZBossGroundVehicle#recreate
+com.openggf.game.sonic2.objects.bosses.EHZBossPropeller#recreate
+com.openggf.game.sonic2.objects.bosses.EHZBossSpike#recreate
+com.openggf.game.sonic2.objects.bosses.EHZBossVehicleTop#recreate
+com.openggf.game.sonic2.objects.bosses.EHZBossWheel#recreate
 com.openggf.game.sonic2.objects.bosses.HTZBossSmokeParticle#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance#recreate
 com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance#recreate

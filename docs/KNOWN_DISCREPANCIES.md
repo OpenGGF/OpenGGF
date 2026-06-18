@@ -1242,6 +1242,29 @@ This is verified by `TestBossChildNoDoubleSpawnParity`.
   (×1 spawned in `Sonic1SYZBossInstance.initializeBossState()` → `spawnSpikeChild()`)
 - `com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton`
   (×1 spawned directly in `Sonic1ScrapEggmanInstance` constructor via `spawnDynamicObject()`)
+- `com.openggf.game.sonic2.objects.bosses.EHZBossSpike`,
+  `EHZBossWheel` (×3), `EHZBossGroundVehicle`, `EHZBossPropeller`, `EHZBossVehicleTop`
+  (all spawned in `Sonic2EHZBossInstance.initializeBossState()` → `spawnChildComponents()`;
+  7 construction children total. The Propeller is additionally reloaded from a routine
+  (`reloadPropeller()` during the fly-off phase) but that is the same singleton child, so the
+  construction instance is still re-established by reconstruction. All five codecs were removed
+  in the EHZ pass; their `#recreate` keys are in the coverage baseline.)
+
+**Construction children that were never codec'd (correct, verified, no change needed):**
+
+- `Sonic2MTZBossInstance$MTZBossOrb` (×7) and `Sonic2MTZBossInstance$MTZLaserShooter` (×1) —
+  both spawned in `initializeBossState()` (`spawnOrbs()` / direct). Neither has ever had a codec,
+  so MTZ never double-spawned. `MTZBossLaser` is fired from a routine (`fireLaser()`) and KEEPS
+  its codec. (MTZ is event-spawned with no registry factory, so it is not reconstructed via
+  `registry.create()` during restore the way EHZ/DEZ are.)
+- `Sonic2MechaSonicInstance$MechaSonicLEDWindow`, `$MechaSonicTargetingSensor`,
+  `$MechaSonicDEZWindow` — all spawned in `initializeBossState()` → `spawnChildObjects()`.
+  None has ever had a codec, so Mecha Sonic never double-spawned. `MechaSonicSpikeball` is
+  routine-spawned (`fireSpikeballs()`).
+
+The MTZ/Mecha cases are guarded statically by `TestBossChildNoDoubleSpawnParity`
+(`mtzBossConstructionChildrenHaveNoCodecs`, `mechaSonicConstructionChildrenHaveNoCodecs`):
+those construction children must never gain a codec.
 
 **Children with codecs (routine-spawned, NOT construction):**
 

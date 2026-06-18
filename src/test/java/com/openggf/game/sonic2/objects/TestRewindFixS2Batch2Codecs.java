@@ -3,8 +3,6 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.game.sonic2.objects.badniks.BalkiryJetObjectInstance;
 import com.openggf.game.sonic2.objects.bosses.ARZBossArrow;
 import com.openggf.game.sonic2.objects.bosses.ARZBossPillar;
-import com.openggf.game.sonic2.objects.bosses.EHZBossSpike;
-import com.openggf.game.sonic2.objects.bosses.EHZBossWheel;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import org.junit.jupiter.api.Test;
@@ -49,8 +47,9 @@ class TestRewindFixS2Batch2Codecs {
                 GrounderWallInstance.class.getName(),
                 HtzFireProjectileObjectInstance.class.getName(),
                 HtzGroundFireObjectInstance.class.getName(),
-                EHZBossSpike.class.getName(),
-                EHZBossWheel.class.getName(),
+                // EHZBossSpike / EHZBossWheel codecs intentionally REMOVED:
+                // construction-spawned children re-established by boss reconstruction
+                // (see TestBossChildNoDoubleSpawnParity / KNOWN_DISCREPANCIES).
                 BalkiryJetObjectInstance.class.getName(),
                 ArrowProjectileInstance.class.getName());
 

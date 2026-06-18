@@ -50,8 +50,6 @@ import com.openggf.game.sonic2.objects.bosses.Sonic2CPZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.ARZBossArrow;
 import com.openggf.game.sonic2.objects.bosses.ARZBossEyes;
 import com.openggf.game.sonic2.objects.bosses.ARZBossPillar;
-import com.openggf.game.sonic2.objects.bosses.EHZBossSpike;
-import com.openggf.game.sonic2.objects.bosses.EHZBossWheel;
 import com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2HTZBossInstance;
@@ -65,9 +63,6 @@ import com.openggf.game.sonic2.objects.badniks.SlicerPincerInstance;
 import com.openggf.game.sonic2.objects.badniks.TurtloidJetInstance;
 import com.openggf.game.sonic2.objects.badniks.TurtloidRiderInstance;
 import com.openggf.game.sonic2.objects.badniks.SolFireballObjectInstance;
-import com.openggf.game.sonic2.objects.bosses.EHZBossGroundVehicle;
-import com.openggf.game.sonic2.objects.bosses.EHZBossPropeller;
-import com.openggf.game.sonic2.objects.bosses.EHZBossVehicleTop;
 import com.openggf.game.sonic2.objects.bosses.HTZBossFlamethrower;
 import com.openggf.game.sonic2.objects.bosses.HTZBossLavaBall;
 import com.openggf.game.sonic2.objects.bosses.CNZBossElectricBall;
@@ -138,11 +133,17 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     HtzGroundFireObjectInstance.class,
                     s -> new HtzGroundFireObjectInstance(s.x(), s.y(), 1, 0)),
-            ehzBossSpikeCodec(),
-            ehzBossWheelCodec(),
-            ehzBossGroundVehicleCodec(),
-            ehzBossPropellerCodec(),
-            ehzBossVehicleTopCodec(),
+            // NOTE: EHZ boss child codecs (Spike, Wheel, GroundVehicle, Propeller,
+            // VehicleTop) intentionally REMOVED. All five are construction-spawned
+            // (inside initializeBossState() → spawnChildComponents()), so the
+            // activeObjects restore loop re-establishes them when the boss is
+            // reconstructed via registry.create(). A codec would add a second copy
+            // from the dynamic-objects restore loop, doubling the count (7 → 14).
+            // The Propeller is also reloaded from a routine (reloadPropeller during
+            // flying-off) but that is the same singleton child; reconstruction still
+            // re-establishes the construction instance. MTZBossLaser (fired) and the
+            // routine-fired children keep their codecs.
+            // See docs/KNOWN_DISCREPANCIES.md and TestBossChildNoDoubleSpawnParity.
             balkiryJetCodec(),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     ArrowProjectileInstance.class,
@@ -1008,64 +1009,11 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
         return null;
     }
 
-    private static DynamicObjectRewindCodec ehzBossSpikeCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance instanceof EHZBossSpike;
-            }
-
-            @Override
-            public String className() {
-                return EHZBossSpike.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic2EHZBossInstance parent = findEhzBossParentForRewind(context);
-                return parent == null ? null : new EHZBossSpike(parent);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec ehzBossWheelCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == EHZBossWheel.class;
-            }
-
-            @Override
-            public String className() {
-                return EHZBossWheel.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic2EHZBossInstance parent = findEhzBossParentForRewind(context);
-                if (parent == null) {
-                    return null;
-                }
-                // subtype/xOffset/priority are placeholders: subtype is restored as a
-                // (now non-final) captured scalar, currentX/currentY and priority are
-                // restored from the per-object snapshot, and the final animationState
-                // is restored in-place by ObjectAnimationStateCodec.
-                return new EHZBossWheel(parent, 0, 0, 0);
-            }
-        };
-    }
-
-    private static Sonic2EHZBossInstance findEhzBossParentForRewind(
-            DynamicObjectRecreateContext context) {
-        for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
-            if (inst instanceof Sonic2EHZBossInstance parent) {
-                return parent;
-            }
-        }
-        return null;
-    }
+    // EHZ boss child codecs (Spike, Wheel, GroundVehicle, Propeller, VehicleTop)
+    // and the shared findEhzBossParentForRewind() helper were removed: those
+    // children are construction-spawned and re-established by boss reconstruction
+    // during the activeObjects restore loop, so a codec would double them. See the
+    // DYNAMIC_REWIND_CODECS list comment and TestBossChildNoDoubleSpawnParity.
 
     private static DynamicObjectRewindCodec balkiryJetCodec() {
         return new DynamicObjectRewindCodec() {
@@ -1284,74 +1232,9 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
         };
     }
 
-    private static DynamicObjectRewindCodec ehzBossGroundVehicleCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == EHZBossGroundVehicle.class;
-            }
-
-            @Override
-            public String className() {
-                return EHZBossGroundVehicle.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic2EHZBossInstance parent = findEhzBossParentForRewind(context);
-                if (parent == null) {
-                    return null;
-                }
-                // currentX/currentY restored from the per-object snapshot (AbstractBossChild),
-                // routineSecondary/renderFlags are non-final captured scalars reapplied by
-                // restoreObjectRewindState, and initialY is re-derived from the live parent.
-                return new EHZBossGroundVehicle(parent);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec ehzBossPropellerCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == EHZBossPropeller.class;
-            }
-
-            @Override
-            public String className() {
-                return EHZBossPropeller.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic2EHZBossInstance parent = findEhzBossParentForRewind(context);
-                return parent == null ? null : new EHZBossPropeller(parent);
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec ehzBossVehicleTopCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == EHZBossVehicleTop.class;
-            }
-
-            @Override
-            public String className() {
-                return EHZBossVehicleTop.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                Sonic2EHZBossInstance parent = findEhzBossParentForRewind(context);
-                return parent == null ? null : new EHZBossVehicleTop(parent);
-            }
-        };
-    }
+    // ehzBossGroundVehicleCodec / ehzBossPropellerCodec / ehzBossVehicleTopCodec
+    // removed (construction-spawned EHZ boss children — see DYNAMIC_REWIND_CODECS
+    // list comment).
 
     private static DynamicObjectRewindCodec htzFlamethrowerCodec() {
         return new DynamicObjectRewindCodec() {

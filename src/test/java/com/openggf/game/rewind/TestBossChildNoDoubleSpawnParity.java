@@ -8,6 +8,7 @@ import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
@@ -17,9 +18,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Parity guard: construction-spawned boss children must NOT double-spawn after a
@@ -51,6 +55,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *   <li><b>S1 ScrapEggman</b>: {@code ScrapEggmanButton} is spawned directly in the
  *       constructor via {@code spawnDynamicObject()} — 1 construction child.
  *       Test asserts count stays at 1 after restore.</li>
+ *   <li><b>S2 EHZ Boss</b>: {@code EHZBossVehicleTop}, {@code EHZBossGroundVehicle},
+ *       {@code EHZBossPropeller}, {@code EHZBossWheel} ×3, {@code EHZBossSpike} — 7
+ *       construction children (initializeBossState → spawnChildComponents). All five
+ *       distinct classes had codecs (the bug: 7 → 14). Test asserts count stays at 7.</li>
+ *   <li><b>S2 MTZ Boss</b> and <b>S2 Mecha Sonic</b>: their construction children
+ *       ({@code MTZBossOrb}/{@code MTZLaserShooter}; {@code MechaSonicLEDWindow}/
+ *       {@code MechaSonicTargetingSensor}/{@code MechaSonicDEZWindow}) never had codecs,
+ *       so they never double-spawned. Guarded statically here: those construction children
+ *       must never gain a codec ({@code MTZBossLaser}/{@code MechaSonicSpikeball} are
+ *       routine-fired and may keep codecs).</li>
  * </ul>
  */
 public class TestBossChildNoDoubleSpawnParity {
@@ -211,8 +225,134 @@ public class TestBossChildNoDoubleSpawnParity {
     }
 
     // =========================================================================
+    // S2 EHZ Boss — construction children (drill-car boss)
+    // =========================================================================
+
+    /**
+     * EHZ boss: 6 children spawned during construction (initializeBossState →
+     * spawnChildComponents): 1 VehicleTop, 1 GroundVehicle, 1 Propeller,
+     * 3 Wheel, 1 Spike = 7 construction children. All five distinct child
+     * classes had codecs (the bug). After a rewind round-trip, the per-class
+     * count must remain unchanged (no doubling).
+     */
+    @Test
+    void ehzBossConstructionChildCountUnchangedAfterRewindRoundTrip() {
+        final String EHZ_CHILD_PKG =
+                "com.openggf.game.sonic2.objects.bosses.EHZBoss";
+
+        ObjectManager[] holder = new ObjectManager[1];
+        Camera camera = mockCamera();
+        ObjectServices services = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public Camera camera() { return camera; }
+        };
+
+        ObjectSpawn bossSpawn = new ObjectSpawn(160, 240,
+                Sonic2ObjectIds.EHZ_BOSS, 0, 0, false, 0);
+        Sonic2ObjectRegistry registry = new Sonic2ObjectRegistry();
+        ObjectManager om = new ObjectManager(
+                List.of(bossSpawn), registry,
+                0, null, null,
+                GraphicsManager.getInstance(), camera, services);
+        holder[0] = om;
+        om.reset(0);
+
+        RewindRegistry rr = new RewindRegistry();
+        rr.register(om.rewindSnapshottable());
+
+        int childCountBefore = countByPrefix(om, EHZ_CHILD_PKG);
+
+        CompositeSnapshot snap = rr.capture();
+        rr.restore(snap);
+
+        int childCountAfter = countByPrefix(om, EHZ_CHILD_PKG);
+
+        assertEquals(childCountBefore, childCountAfter,
+                "S2 EHZ Boss: construction child count changed across rewind round-trip — "
+                        + "double-spawn detected. before=" + childCountBefore
+                        + " after=" + childCountAfter
+                        + " (EHZBossVehicleTop/GroundVehicle/Propeller/Wheel/Spike are all "
+                        + "spawned in initializeBossState() and must NOT have codecs — "
+                        + "reconstruction re-establishes them)");
+    }
+
+    // =========================================================================
+    // S2 MTZ Boss — construction children must have NO codecs (static guard)
+    // =========================================================================
+
+    /**
+     * MTZ boss: construction children are {@code MTZLaserShooter} ×1 and
+     * {@code MTZBossOrb} ×7 (both spawned in initializeBossState). These must NOT
+     * have rewind codecs (reconstruction re-establishes them). {@code MTZBossLaser}
+     * is fired from a routine ({@code fireLaser}) and correctly KEEPS its codec.
+     *
+     * <p>MTZ is event-spawned (no registry factory), so it is not reconstructed via
+     * {@code registry.create()} during restore the way EHZ/DEZ are; the relevant
+     * invariant here is purely that no construction child carries a codec.
+     */
+    @Test
+    void mtzBossConstructionChildrenHaveNoCodecs() {
+        Set<String> codecClassNames = codecClassNames(new Sonic2ObjectRegistry());
+
+        assertNoCodec(codecClassNames,
+                "com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossOrb",
+                "MTZBossOrb is spawned in initializeBossState() (spawnOrbs) — construction child");
+        assertNoCodec(codecClassNames,
+                "com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZLaserShooter",
+                "MTZLaserShooter is spawned in initializeBossState() — construction child");
+    }
+
+    // =========================================================================
+    // S2 Mecha Sonic — construction children must have NO codecs (static guard)
+    // =========================================================================
+
+    /**
+     * Mecha Sonic (DEZ Silver Sonic): construction children are
+     * {@code MechaSonicLEDWindow}, {@code MechaSonicTargetingSensor}, and
+     * {@code MechaSonicDEZWindow} (all spawned in initializeBossState →
+     * spawnChildObjects). None must have a codec. {@code MechaSonicSpikeball} is
+     * routine-spawned (fireSpikeballs) and may keep a codec if one is ever added.
+     */
+    @Test
+    void mechaSonicConstructionChildrenHaveNoCodecs() {
+        Set<String> codecClassNames = codecClassNames(new Sonic2ObjectRegistry());
+
+        assertNoCodec(codecClassNames,
+                "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicLEDWindow",
+                "MechaSonicLEDWindow is spawned in initializeBossState() — construction child");
+        assertNoCodec(codecClassNames,
+                "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicTargetingSensor",
+                "MechaSonicTargetingSensor is spawned in initializeBossState() — construction child");
+        assertNoCodec(codecClassNames,
+                "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$MechaSonicDEZWindow",
+                "MechaSonicDEZWindow is spawned in initializeBossState() — construction child");
+    }
+
+    // =========================================================================
     // Helpers
     // =========================================================================
+
+    /** Collect the binary class names of every registered dynamic rewind codec. */
+    private static Set<String> codecClassNames(Sonic2ObjectRegistry registry) {
+        Set<String> names = new HashSet<>();
+        for (DynamicObjectRewindCodec codec : registry.dynamicRewindCodecs()) {
+            String cn = codec.className();
+            if (cn != null) {
+                names.add(cn);
+            }
+        }
+        return names;
+    }
+
+    /** Assert that the given construction-child class has NO registered codec. */
+    private static void assertNoCodec(Set<String> codecClassNames, String childClassName,
+            String why) {
+        assertFalse(codecClassNames.contains(childClassName),
+                "Construction-spawned boss child must NOT have a rewind codec (double-spawn): "
+                        + childClassName + " — " + why
+                        + ". Reconstruction re-establishes it; a codec adds a duplicate.");
+    }
+
 
     /** Count live non-destroyed objects whose class name starts with the given prefix. */
     private static int countByPrefix(ObjectManager om, String prefix) {

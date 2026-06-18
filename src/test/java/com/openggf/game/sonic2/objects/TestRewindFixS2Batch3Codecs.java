@@ -8,9 +8,6 @@ import com.openggf.game.sonic2.objects.badniks.SpikerDrillObjectInstance;
 import com.openggf.game.sonic2.objects.badniks.TurtloidJetInstance;
 import com.openggf.game.sonic2.objects.badniks.TurtloidRiderInstance;
 import com.openggf.game.sonic2.objects.bosses.CNZBossElectricBall;
-import com.openggf.game.sonic2.objects.bosses.EHZBossGroundVehicle;
-import com.openggf.game.sonic2.objects.bosses.EHZBossPropeller;
-import com.openggf.game.sonic2.objects.bosses.EHZBossVehicleTop;
 import com.openggf.game.sonic2.objects.bosses.HTZBossFlamethrower;
 import com.openggf.game.sonic2.objects.bosses.HTZBossLavaBall;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
@@ -62,9 +59,10 @@ class TestRewindFixS2Batch3Codecs {
                 VerticalLaserObjectInstance.class.getName(),
                 SpikyBlockSpikeInstance.class.getName(),
                 BombPrizeObjectInstance.class.getName(),
-                EHZBossGroundVehicle.class.getName(),
-                EHZBossPropeller.class.getName(),
-                EHZBossVehicleTop.class.getName(),
+                // EHZBossGroundVehicle / EHZBossPropeller / EHZBossVehicleTop codecs
+                // intentionally REMOVED: construction-spawned children re-established by
+                // boss reconstruction (see TestBossChildNoDoubleSpawnParity /
+                // KNOWN_DISCREPANCIES).
                 HTZBossFlamethrower.class.getName(),
                 HTZBossLavaBall.class.getName(),
                 CNZBossElectricBall.class.getName());
