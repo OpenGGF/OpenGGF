@@ -27,7 +27,7 @@ import java.util.stream.Stream;
  * mirrors the existing source-scan approach so the tool stays consistent with
  * the rest of the guard infrastructure.
  */
-final class ObjectClasspathScan {
+public final class ObjectClasspathScan {
 
     /** Package paths (relative to {@code src/main/java}) to scan. */
     static final String[] SCANNED_PACKAGES = {
@@ -57,7 +57,7 @@ final class ObjectClasspathScan {
      * class name, the package path it was found under, and whether it is
      * abstract.
      */
-    static List<SourceClass> findConcreteObjectInstances(Path srcMain) throws IOException {
+    public static List<SourceClass> findConcreteObjectInstances(Path srcMain) throws IOException {
         // Step 1: load all source files in the scanned packages
         Map<String, SourceEntry> bySimpleName = new HashMap<>();
         List<SourceEntry> entries = new ArrayList<>();
@@ -112,7 +112,7 @@ final class ObjectClasspathScan {
      * Resolves the source root, checking the current working directory first
      * then its parent (consistent with {@code ObjectGuardSourceScanner.findSourceRoot()}).
      */
-    static Path findSourceRoot() {
+    public static Path findSourceRoot() {
         Path cwd = Path.of(System.getProperty("user.dir"));
         Path srcMain = cwd.resolve("src/main/java");
         if (Files.isDirectory(srcMain)) {
@@ -210,7 +210,7 @@ final class ObjectClasspathScan {
     }
 
     /** A discovered concrete object instance class. */
-    record SourceClass(String fqn, String packagePath) {
+    public record SourceClass(String fqn, String packagePath) {
     }
 
     private record SourceEntry(

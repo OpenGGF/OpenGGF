@@ -1,16 +1,13 @@
 package com.openggf.game.rewind.coverage;
 
+import com.openggf.game.rewind.RewindRoundTripHarness;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectConstructionContext;
-import com.openggf.level.objects.ObjectServices;
-import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.StubObjectServices;
 
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
@@ -75,10 +72,6 @@ import java.util.logging.Logger;
 public final class RewindRoundTripProbe {
 
     private static final Logger LOG = Logger.getLogger(RewindRoundTripProbe.class.getName());
-
-    /** Representative spawn used for all no-ROM test constructions. */
-    private static final ObjectSpawn PROBE_SPAWN =
-            new ObjectSpawn(0x100, 0x100, 1, 0, 0, false, 0);
 
     // -------------------------------------------------------------------------
     // Public result types
@@ -263,13 +256,11 @@ public final class RewindRoundTripProbe {
 
         StubObjectServices stub = new StubObjectServices();
 
-        // Attempt construction
+        // Attempt construction — delegate to the shared harness construction entry point
+        // so there is exactly ONE constructor-strategy implementation in the codebase.
         AbstractObjectInstance original;
-        ConstructionStrategy strategy;
         try {
-            StrategyAndInstance result = tryConstruct(cls, stub);
-            original = result.instance();
-            strategy = result.strategy();
+            original = RewindRoundTripHarness.constructHeadless(cls, stub);
             original.setServices(stub);
         } catch (Throwable t) {
             return new ProbeResult.Skipped(describeThrowable(t));
@@ -283,10 +274,10 @@ public final class RewindRoundTripProbe {
             return new ProbeResult.Skipped("captureRewindState threw: " + describeThrowable(t));
         }
 
-        // Fresh construction from same spawn
+        // Fresh construction from same spawn — again via the harness shared path
         AbstractObjectInstance restored;
         try {
-            restored = tryConstructWith(cls, stub, strategy);
+            restored = RewindRoundTripHarness.constructHeadless(cls, stub);
             restored.setServices(stub);
         } catch (Throwable t) {
             return new ProbeResult.Skipped("second construction threw: " + describeThrowable(t));
@@ -304,151 +295,9 @@ public final class RewindRoundTripProbe {
         return new ProbeResult.Probed(gaps);
     }
 
-    /** Records which constructor signature was used so we can reuse it for the second instance. */
-    private enum ConstructionStrategy {
-        ZERO_ARG,
-        SPAWN_ONLY,
-        SPAWN_STRING,
-        SPAWN_SERVICES
-    }
-
-    private record StrategyAndInstance(AbstractObjectInstance instance, ConstructionStrategy strategy) {}
-
-    private StrategyAndInstance tryConstruct(
-            Class<? extends AbstractObjectInstance> cls,
-            StubObjectServices stub) throws ReflectiveOperationException {
-
-        // Strategy 1: zero-arg
-        {
-            Constructor<? extends AbstractObjectInstance> ctor = findCtor(cls);
-            if (ctor != null) {
-                try {
-                    AbstractObjectInstance inst = constructWith(stub, () -> invokeNoArg(ctor));
-                    return new StrategyAndInstance(inst, ConstructionStrategy.ZERO_ARG);
-                } catch (Throwable t) {
-                    // fall through to next strategy
-                }
-            }
-        }
-
-        // Strategy 2: (ObjectSpawn)
-        {
-            Constructor<? extends AbstractObjectInstance> ctor = findCtor(cls, ObjectSpawn.class);
-            if (ctor != null) {
-                try {
-                    AbstractObjectInstance inst = constructWith(stub, () -> invokeWith(ctor, PROBE_SPAWN));
-                    return new StrategyAndInstance(inst, ConstructionStrategy.SPAWN_ONLY);
-                } catch (Throwable t) {
-                    // fall through
-                }
-            }
-        }
-
-        // Strategy 3: (ObjectSpawn, String)
-        {
-            Constructor<? extends AbstractObjectInstance> ctor = findCtor(cls, ObjectSpawn.class, String.class);
-            if (ctor != null) {
-                try {
-                    AbstractObjectInstance inst = constructWith(stub, () -> invokeWith(ctor, PROBE_SPAWN, "probe"));
-                    return new StrategyAndInstance(inst, ConstructionStrategy.SPAWN_STRING);
-                } catch (Throwable t) {
-                    // fall through
-                }
-            }
-        }
-
-        // Strategy 4: (ObjectSpawn, ObjectServices)
-        {
-            Constructor<? extends AbstractObjectInstance> ctor = findCtor(cls, ObjectSpawn.class, ObjectServices.class);
-            if (ctor != null) {
-                try {
-                    AbstractObjectInstance inst = constructWith(stub, () -> invokeWith(ctor, PROBE_SPAWN, stub));
-                    return new StrategyAndInstance(inst, ConstructionStrategy.SPAWN_SERVICES);
-                } catch (Throwable t) {
-                    // fall through
-                }
-            }
-        }
-
-        throw new NoSuchMethodException(
-                "No probe-compatible constructor found for " + cls.getName()
-                + " (tried zero-arg, (ObjectSpawn), (ObjectSpawn,String), (ObjectSpawn,ObjectServices))");
-    }
-
-    private AbstractObjectInstance tryConstructWith(
-            Class<? extends AbstractObjectInstance> cls,
-            StubObjectServices stub,
-            ConstructionStrategy strategy) throws ReflectiveOperationException {
-        return switch (strategy) {
-            case ZERO_ARG -> {
-                Constructor<? extends AbstractObjectInstance> ctor = findCtor(cls);
-                yield constructWith(stub, () -> invokeNoArg(Objects.requireNonNull(ctor)));
-            }
-            case SPAWN_ONLY -> {
-                Constructor<? extends AbstractObjectInstance> ctor = findCtor(cls, ObjectSpawn.class);
-                yield constructWith(stub, () -> invokeWith(Objects.requireNonNull(ctor), PROBE_SPAWN));
-            }
-            case SPAWN_STRING -> {
-                Constructor<? extends AbstractObjectInstance> ctor = findCtor(cls, ObjectSpawn.class, String.class);
-                yield constructWith(stub, () -> invokeWith(Objects.requireNonNull(ctor), PROBE_SPAWN, "probe"));
-            }
-            case SPAWN_SERVICES -> {
-                Constructor<? extends AbstractObjectInstance> ctor = findCtor(cls, ObjectSpawn.class, ObjectServices.class);
-                yield constructWith(stub, () -> invokeWith(Objects.requireNonNull(ctor), PROBE_SPAWN, stub));
-            }
-        };
-    }
-
     // -------------------------------------------------------------------------
     // Reflection helpers
     // -------------------------------------------------------------------------
-
-    @SuppressWarnings("unchecked")
-    private static <T extends AbstractObjectInstance> Constructor<T> findCtor(
-            Class<T> cls, Class<?>... paramTypes) {
-        try {
-            Constructor<T> ctor = cls.getDeclaredConstructor(paramTypes);
-            ctor.setAccessible(true);
-            return ctor;
-        } catch (NoSuchMethodException e) {
-            return null;
-        }
-    }
-
-    private static AbstractObjectInstance constructWith(
-            StubObjectServices stub,
-            ThrowingSupplier<AbstractObjectInstance> factory) {
-        return ObjectConstructionContext.construct(stub, () -> {
-            try {
-                return factory.get();
-            } catch (Throwable t) {
-                if (t instanceof RuntimeException re) throw re;
-                throw new RuntimeException(t);
-            }
-        });
-    }
-
-    private static AbstractObjectInstance invokeNoArg(Constructor<? extends AbstractObjectInstance> ctor) {
-        try {
-            return ctor.newInstance();
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private static AbstractObjectInstance invokeWith(
-            Constructor<? extends AbstractObjectInstance> ctor, Object... args) {
-        try {
-            return ctor.newInstance(args);
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    @FunctionalInterface
-    private interface ThrowingSupplier<T> {
-        T get() throws Throwable;
-    }
 
     /**
      * Reflectively diffs all comparable subclass fields between {@code original} and {@code restored}.
