@@ -238,6 +238,15 @@ straightforward to add new objects, zones, and game-specific behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Rewind Phase 2 — generic-recreate mechanism foundation (2026-06-18).** Merged
+  `feature/ai-rewind-phase2-generic-recreate` (Tasks 1-5 of the plan). Lays the groundwork to retire
+  the ~200 hand-written rewind codecs: a real capture→restore round-trip harness gate
+  (`TestEveryObjectRewindRoundTrip`), every object registered in `RewindIdentityTable` at capture,
+  object-reference fields resolved through the existing compact blob (no side channel),
+  a uniform `RewindRecreatable` + `genericRecreate` contract wired into restore, and a two-phase
+  restore (recreate+register all ids, then apply field blobs) so forward references resolve. The
+  codec-deletion sweep (Tasks 6-8) is a gated follow-up: it needs the harness to verify each class,
+  which today reaches only 19 of ~200 headlessly. No forward-gameplay behavior change.
 - **AIZ2 rewind softlock fixed + full rewind-coverage campaign (2026-06-17).** Merged
   `bugfix/ai-aiz2-rewind-loop-boss`. Fixed the AIZ2 boss / ship-loop held-rewind softlock and visual
   corruption, then shipped a Phase-1 rewind-coverage audit (`RewindCoverageAnalyzer` + report-only
