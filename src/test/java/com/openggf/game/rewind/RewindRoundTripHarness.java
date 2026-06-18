@@ -464,6 +464,15 @@ public final class RewindRoundTripHarness {
             boolean recreateReturnedNullInIsolation =
                     beforeForClass > 0 && afterForClass == 0 && afterCounts.isEmpty();
             if (recreateReturnedNullInIsolation) {
+                // The codec's recreate() returned null because it scanned getActiveObjects()
+                // for a live parent that is not present in the isolated harness ObjectManager.
+                // Retry with a seeded parent: build a fresh ObjectManager with a stub parent
+                // of the known type, then redo the round-trip.
+                RoundTripSweepResult retried =
+                        tryRoundTripWithSeededParent(fqn, cls, gameId, beforeFields);
+                if (retried != null) {
+                    return retried;
+                }
                 return new RoundTripSweepResult.Unprobed(
                         "parent-dependent — recreate needs a live parent in isolation");
             }
@@ -634,10 +643,370 @@ public final class RewindRoundTripHarness {
             }
         }
 
+        // Strategy 5: (ObjectSpawn, boolean) — e.g. GrounderBadnikInstance(spawn, skipWallSetup).
+        // Use false as the representative boolean (safe/default variant).
+        Constructor<? extends AbstractObjectInstance> ctor4 =
+                findCtor(cls, ObjectSpawn.class, boolean.class);
+        if (ctor4 != null) {
+            try {
+                return ObjectConstructionContext.construct(stub,
+                        () -> invokeWith(ctor4, PROBE_SPAWN, false));
+            } catch (Throwable ignored) {
+            }
+        }
+
+        // Strategy 6: (ObjectSpawn, AbstractObjectInstance-subtype) — parent-child pattern.
+        // Scan for a 2-parameter constructor whose second parameter is a concrete
+        // AbstractObjectInstance subclass (a live parent reference). Build a stub parent of
+        // that type headlessly (using strategies 1-2 only to avoid recursion), then
+        // construct the child with (PROBE_SPAWN, stubParent).
+        AbstractObjectInstance constructedWithParent = tryConstructWithInferredParent(cls, stub);
+        if (constructedWithParent != null) {
+            return constructedWithParent;
+        }
+
         throw new NoSuchMethodError(
                 "No probe-compatible constructor found for " + cls.getName()
                         + " (tried zero-arg, (ObjectSpawn), (ObjectSpawn,String),"
-                        + " (ObjectSpawn,ObjectServices))");
+                        + " (ObjectSpawn,ObjectServices), (ObjectSpawn,boolean),"
+                        + " (ObjectSpawn,ParentType))");
+    }
+
+    /**
+     * Known parent types for parent-dependent children: child FQN -> parent FQN.
+     * Used in tandem with {@link #PARENT_SPAWN_OBJECT_IDS} (parent FQN -> objectId).
+     * Add entries when a new family of parent-dependent children is discovered.
+     *
+     * <p>If the parent FQN has an entry in {@link #PARENT_SPAWN_OBJECT_IDS}, it is seeded
+     * as a PLACED spawn (survives restore without a codec). Otherwise it is added as a
+     * dynamic object and must have its own dynamic rewind codec to survive the round-trip.
+     */
+    private static final Map<String, String> PARENT_SEED_TABLE;
+    static {
+        Map<String, String> m = new LinkedHashMap<>();
+        // S3K CNZ miniboss children — parent: CnzMinibossInstance (placed, objectId 0xA6)
+        m.put("com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance",
+                "com.openggf.game.sonic3k.objects.CnzMinibossInstance");
+        m.put("com.openggf.game.sonic3k.objects.CnzMinibossSparkInstance",
+                "com.openggf.game.sonic3k.objects.CnzMinibossInstance");
+        m.put("com.openggf.game.sonic3k.objects.CnzMinibossTopInstance",
+                "com.openggf.game.sonic3k.objects.CnzMinibossInstance");
+        // S3K GumballMachine exit trigger — parent: GumballMachineObjectInstance (placed, objectId 0x86)
+        m.put("com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$ExitTriggerChild",
+                "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance");
+        // S3K AIZ spiked-log collision child — parent: AizSpikedLogObjectInstance (placed, objectId 0x2E)
+        m.put("com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance$SpikedLogCollisionChild",
+                "com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance");
+        // S3K AIZ1 cutscene knuckles rock child — parent: CutsceneKnucklesAiz1Instance (dynamic with codec)
+        m.put("com.openggf.game.sonic3k.objects.CutsceneKnucklesRockChild",
+                "com.openggf.game.sonic3k.objects.CutsceneKnucklesAiz1Instance");
+        // S2 Turtloid children — parent: TurtloidBadnikInstance (placed, objectId 0x9A)
+        m.put("com.openggf.game.sonic2.objects.badniks.TurtloidRiderInstance",
+                "com.openggf.game.sonic2.objects.badniks.TurtloidBadnikInstance");
+        m.put("com.openggf.game.sonic2.objects.badniks.TurtloidJetInstance",
+                "com.openggf.game.sonic2.objects.badniks.TurtloidBadnikInstance");
+        // S2 Buzzer flame child — parent: BuzzerBadnikInstance (placed, objectId 0x4B).
+        // BuzzerBadnikInstance spawns flame lazily (from update(), not ctor), so the
+        // placed-spawn approach is safe — no duplicate child in the OM at reset time.
+        m.put("com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance$BuzzerFlameChild",
+                "com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance");
+        // S2 ARZ boss pillar — parent: Sonic2ARZBossInstance (placed, objectId 0x89).
+        // ARZ boss ctor does not spawn any children, so placed-spawn approach is safe.
+        m.put("com.openggf.game.sonic2.objects.bosses.ARZBossPillar",
+                "com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance");
+        // S2 CNZ boss electric ball — parent: Sonic2CNZBossInstance (placed, objectId 0x51).
+        // CNZ boss ctor does not spawn the electric ball (spawned during boss sequence only).
+        m.put("com.openggf.game.sonic2.objects.bosses.CNZBossElectricBall",
+                "com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance");
+        // NOTE: BalkiryBadnikInstance OMITTED: its ctor calls spawnJetChild() immediately,
+        // which would add a BalkiryJetObjectInstance to the OM before we add our probe child,
+        // causing a double-jet on restore. BalkiryJetObjectInstance stays parent-dependent.
+        // NOTE: Sonic2CPZBossInstance OMITTED: its ctor spawns all 5 CPZ components
+        // (CPZBossContainer, CPZBossFlame, CPZBossPipe, CPZBossPump, CPZBossRobotnik)
+        // immediately, polluting the OM before the probe adds its single child.
+        // All 5 CPZ boss components stay parent-dependent (honest ceiling: need live session).
+        PARENT_SEED_TABLE = Map.copyOf(m);
+    }
+
+    /**
+     * Placed-spawn objectIds for parent classes. The parent must be a PLACED object
+     * (re-materialised from the spawn list by {@code ObjectManager.reset()} after restore)
+     * so it survives the round-trip without needing a dynamic rewind codec.
+     * Key = parent FQN, Value = objectId for the placed spawn.
+     * These IDs must match the registry factory for the parent class.
+     *
+     * <p>If a parent FQN is NOT in this table, it is added as a dynamic object
+     * (requires the parent to have its own dynamic rewind codec to survive restore).
+     */
+    private static final Map<String, Integer> PARENT_SPAWN_OBJECT_IDS = Map.of(
+            // CnzMinibossInstance: Sonic3kObjectIds.CNZ_MINIBOSS = 0xA6
+            "com.openggf.game.sonic3k.objects.CnzMinibossInstance", 0xA6,
+            // GumballMachineObjectInstance: Sonic3kObjectIds.GUMBALL_MACHINE = 0x86
+            "com.openggf.game.sonic3k.objects.GumballMachineObjectInstance", 0x86,
+            // AizSpikedLogObjectInstance: Sonic3kObjectIds.AIZ_SPIKED_LOG = 0x2E
+            "com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance", 0x2E,
+            // TurtloidBadnikInstance: Sonic2ObjectIds.TURTLOID = 0x9A (lazy child spawn)
+            "com.openggf.game.sonic2.objects.badniks.TurtloidBadnikInstance", 0x9A,
+            // BuzzerBadnikInstance: Sonic2ObjectIds.BUZZER = 0x4B (lazy child spawn)
+            "com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance", 0x4B,
+            // Sonic2ARZBossInstance: Sonic2ObjectIds.ARZ_BOSS = 0x89 (no ctor child spawn)
+            "com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance", 0x89,
+            // Sonic2CNZBossInstance: Sonic2ObjectIds.CNZ_BOSS = 0x51 (no ctor child spawn)
+            "com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance", 0x51
+            // Omitted: BalkiryBadnikInstance (spawns jet in ctor — would pollute OM)
+            // Omitted: Sonic2CPZBossInstance (spawns 5 children in ctor — would pollute OM)
+    );
+
+    /**
+     * Retries the round-trip for a parent-dependent child by seeding a live parent
+     * in a fresh ObjectManager, then running the full probe lifecycle again.
+     *
+     * <p>The {@code beforeFields} parameter (from the initial failed probe) is NOT used
+     * in the field diff — a fresh baseline is captured from the child inside the seeded
+     * ObjectManager immediately before the round-trip, ensuring the "before" and "after"
+     * positions/fields are relative to the same parent context.
+     *
+     * @param fqn          the child class FQN
+     * @param cls          the child class
+     * @param gameId       the game ID (for registry selection)
+     * @param beforeFields unused; retained for caller-API symmetry
+     * @return a {@link RoundTripSweepResult} if the retry succeeds (parent found and
+     *         round-trip completes), or {@code null} if the parent is not in the table
+     *         or construction/round-trip fails
+     */
+    @SuppressWarnings("unchecked")
+    private static RoundTripSweepResult tryRoundTripWithSeededParent(
+            String fqn,
+            Class<? extends AbstractObjectInstance> cls,
+            GameId gameId,
+            Map<String, String> beforeFields) {
+        String parentFqn = PARENT_SEED_TABLE.get(fqn);
+        if (parentFqn == null) {
+            return null; // Not in the well-known table; stay Unprobed.
+        }
+        Class<? extends AbstractObjectInstance> parentCls;
+        try {
+            Class<?> raw = Class.forName(parentFqn);
+            if (!AbstractObjectInstance.class.isAssignableFrom(raw)) return null;
+            parentCls = (Class<? extends AbstractObjectInstance>) raw;
+        } catch (ClassNotFoundException e) {
+            return null;
+        }
+
+        // Build a fresh ObjectManager with the parent as a PLACED spawn.
+        // Placed objects are re-materialised from the immutable spawn list after each
+        // restore (ObjectManager.reset() is called at restore-time), so the parent survives
+        // the round-trip even without a dynamic codec. The codec for the child then finds
+        // the parent in getActiveObjects() and links it successfully.
+        GraphicsManager.getInstance().initHeadless();
+        ObjectManager[] holder = new ObjectManager[1];
+        Camera camera = mockCamera();
+        StubObjectServices stub = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public Camera camera() { return camera; }
+        };
+        ObjectRegistry registry = registryFor(gameId);
+
+        // The parent's objectId is looked up from PARENT_SPAWN_OBJECT_IDS so the registry
+        // creates it via its normal factory. Fall back to dynamic (no-codec) add if not found.
+        Integer parentObjectId = PARENT_SPAWN_OBJECT_IDS.get(parentFqn);
+        List<ObjectSpawn> placedSpawns;
+        if (parentObjectId != null) {
+            placedSpawns = List.of(new ObjectSpawn(160, 240, parentObjectId, 0, 0, false, 0));
+        } else {
+            placedSpawns = List.of();
+        }
+        ObjectManager om = new ObjectManager(
+                placedSpawns, registry, 0, null, null,
+                GraphicsManager.getInstance(), camera, stub);
+        holder[0] = om;
+        om.reset(0);
+
+        if (parentObjectId == null) {
+            // No placed-spawn ID — try dynamic parent (may not survive restore).
+            AbstractObjectInstance parent = tryConstructParentHeadless(parentCls, stub);
+            if (parent == null) return null;
+            try {
+                om.addDynamicObject(parent);
+            } catch (Throwable t) {
+                return null;
+            }
+        }
+
+        // Construct the child using the live parent already in the seeded ObjectManager,
+        // rather than a stub parent from tryConstruct (which may spawn construction-time
+        // children into this same ObjectManager, causing double-spawn on the round-trip).
+        AbstractObjectInstance liveParent = findFirstByClass(om, parentCls);
+        AbstractObjectInstance child = tryConstructChildWithLiveParent(cls, stub, liveParent);
+        if (child == null) {
+            // Fall back to generic construct (e.g. for dynamic-parent cases where the
+            // parent is already in the OM as a dynamic object rather than placed).
+            try {
+                child = tryConstruct(cls, stub);
+            } catch (Throwable t) {
+                return null;
+            }
+        }
+        try {
+            om.addDynamicObject(child);
+        } catch (Throwable t) {
+            return null;
+        }
+
+        // Capture the "before" baseline INSIDE the seeded ObjectManager so both
+        // "before" and "after" fields are relative to the same parent context.
+        Map<String, String> seededBeforeFields = captureScalarFields(child, cls);
+
+        // Do the round-trip.
+        RewindRegistry rr = new RewindRegistry();
+        rr.register(om.rewindSnapshottable());
+        CompositeSnapshot snap;
+        try {
+            snap = rr.capture();
+            rr.restore(snap);
+        } catch (Throwable t) {
+            return null;
+        }
+
+        // Check count — parent + child should both survive.
+        Map<String, Integer> afterCounts = countByTypeFrom(om);
+        int childAfter = afterCounts.getOrDefault(fqn, 0);
+        if (childAfter == 0) {
+            // Still dropped after seeding; stay Unprobed.
+            return null;
+        }
+
+        // Field diff using the fresh baseline captured above.
+        AbstractObjectInstance restored = findFirstByClass(om, cls);
+        if (restored == null) return null;
+        Map<String, String> afterFields = captureScalarFields(restored, cls);
+        List<ScalarDiff> diffs = new ArrayList<>();
+        for (Map.Entry<String, String> entry : seededBeforeFields.entrySet()) {
+            String key = entry.getKey();
+            String beforeVal = entry.getValue();
+            String afterVal = afterFields.get(key);
+            if (!Objects.equals(beforeVal, afterVal)) {
+                boolean isFinal = isFieldFinal(cls, key);
+                diffs.add(new ScalarDiff(fqn, key, beforeVal, afterVal, isFinal));
+            }
+        }
+        if (!diffs.isEmpty()) {
+            return new RoundTripSweepResult.ScalarMismatch(diffs);
+        }
+        return new RoundTripSweepResult.Passed();
+    }
+
+    /**
+     * Attempts to construct a child of {@code cls} by finding a constructor of the form
+     * {@code (ObjectSpawn, ParentType)} where {@code ParentType} is assignment-compatible
+     * with {@code liveParent}, then invoking it directly with the live parent instance.
+     *
+     * <p>This avoids the double-spawn side-effect that occurs when strategy 6 builds a
+     * NEW stub parent inside the seeded ObjectManager (triggering the parent's own
+     * construction-time child-spawns). By passing the already-materialized placed parent
+     * from the ObjectManager, we leave the OM state pristine.
+     *
+     * @return the constructed child, or {@code null} if no matching constructor is found
+     *         or construction throws
+     */
+    @SuppressWarnings("unchecked")
+    private static AbstractObjectInstance tryConstructChildWithLiveParent(
+            Class<? extends AbstractObjectInstance> cls,
+            StubObjectServices stub,
+            AbstractObjectInstance liveParent) {
+        if (liveParent == null) return null;
+        for (Constructor<?> rawCtor : cls.getDeclaredConstructors()) {
+            Class<?>[] params = rawCtor.getParameterTypes();
+            if (params.length != 2) continue;
+            if (params[0] != ObjectSpawn.class) continue;
+            if (!params[1].isAssignableFrom(liveParent.getClass())) continue;
+            Constructor<? extends AbstractObjectInstance> ctor =
+                    (Constructor<? extends AbstractObjectInstance>) rawCtor;
+            ctor.setAccessible(true);
+            final AbstractObjectInstance parent = liveParent;
+            try {
+                return ObjectConstructionContext.construct(stub,
+                        () -> invokeWith(ctor, PROBE_SPAWN, parent));
+            } catch (Throwable ignored) {
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Strategy 6: attempts to construct a child that requires a live parent reference
+     * as its second constructor parameter.
+     *
+     * <p>Scans declared constructors for a 2-parameter signature
+     * {@code (ObjectSpawn, ParentType)} where {@code ParentType} is a concrete,
+     * non-abstract {@link AbstractObjectInstance} subclass. When found:
+     * <ol>
+     *   <li>Build a stub parent of {@code ParentType} headlessly using strategy 2
+     *       ({@code (ObjectSpawn)}) or strategy 1 (zero-arg) — no recursion into
+     *       strategy 6 to prevent infinite loops.</li>
+     *   <li>Construct the child with {@code (PROBE_SPAWN, stubParent)}.</li>
+     * </ol>
+     *
+     * <p>Returns {@code null} if no suitable 2-parameter constructor is found or if
+     * stub-parent construction fails, allowing the caller to fall through to the
+     * NoSuchMethodError.
+     */
+    @SuppressWarnings("unchecked")
+    private static AbstractObjectInstance tryConstructWithInferredParent(
+            Class<? extends AbstractObjectInstance> cls,
+            StubObjectServices stub) {
+        for (Constructor<?> rawCtor : cls.getDeclaredConstructors()) {
+            Class<?>[] params = rawCtor.getParameterTypes();
+            if (params.length != 2) continue;
+            if (params[0] != ObjectSpawn.class) continue;
+            Class<?> secondType = params[1];
+            if (!AbstractObjectInstance.class.isAssignableFrom(secondType)) continue;
+            if (Modifier.isAbstract(secondType.getModifiers())) continue;
+            // Found (ObjectSpawn, ConcreteParentType). Try to build a stub parent.
+            @SuppressWarnings("unchecked")
+            Class<? extends AbstractObjectInstance> parentCls =
+                    (Class<? extends AbstractObjectInstance>) secondType;
+            AbstractObjectInstance stubParent = tryConstructParentHeadless(parentCls, stub);
+            if (stubParent == null) continue;
+            @SuppressWarnings("unchecked")
+            Constructor<? extends AbstractObjectInstance> ctor =
+                    (Constructor<? extends AbstractObjectInstance>) rawCtor;
+            ctor.setAccessible(true);
+            try {
+                final AbstractObjectInstance finalParent = stubParent;
+                return ObjectConstructionContext.construct(stub,
+                        () -> invokeWith(ctor, PROBE_SPAWN, finalParent));
+            } catch (Throwable ignored) {
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Tries to construct a stub parent instance using only the two simplest strategies
+     * (zero-arg and {@code (ObjectSpawn)}) to avoid recursive parent-of-parent chains.
+     * Returns {@code null} if neither strategy succeeds.
+     */
+    private static AbstractObjectInstance tryConstructParentHeadless(
+            Class<? extends AbstractObjectInstance> parentCls,
+            StubObjectServices stub) {
+        Constructor<? extends AbstractObjectInstance> zeroArg = findCtor(parentCls);
+        if (zeroArg != null) {
+            try {
+                return ObjectConstructionContext.construct(stub, () -> invokeNoArg(zeroArg));
+            } catch (Throwable ignored) {
+            }
+        }
+        Constructor<? extends AbstractObjectInstance> spawnArg =
+                findCtor(parentCls, ObjectSpawn.class);
+        if (spawnArg != null) {
+            try {
+                return ObjectConstructionContext.construct(stub,
+                        () -> invokeWith(spawnArg, PROBE_SPAWN));
+            } catch (Throwable ignored) {
+            }
+        }
+        return null;
     }
 
     @SuppressWarnings("unchecked")
