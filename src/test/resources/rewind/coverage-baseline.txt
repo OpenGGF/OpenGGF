@@ -283,16 +283,11 @@ com.openggf.game.sonic1.objects.badniks.Sonic1NewtronMissileInstance#finalScalar
 com.openggf.game.sonic1.objects.badniks.Sonic1NewtronMissileInstance#finalScalar#gravity
 com.openggf.game.sonic1.objects.badniks.Sonic1NewtronMissileInstance#finalScalar#offScreenMargin
 com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance#recreate
-com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance$OrbSpikeObjectInstance#recreate
 com.openggf.game.sonic1.objects.badniks.Sonic1RollerBadnikInstance#recreate
 com.openggf.game.sonic1.objects.badniks.Sonic1YadrinBadnikInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1BossFireInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1FZBossInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance#recreate
-com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFloorBlock#finalScalar#blockIndex
-com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFloorBlock#finalScalar#currentX
-com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFloorBlock#finalScalar#currentY
-com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFloorBlock#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFloorFragment#finalScalar#currentX
 com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFloorFragment#finalScalar#mappingFrame
 com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFloorFragment#recreate
@@ -306,7 +301,6 @@ com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance#recreate
 com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton#finalScalar#buttonX
 com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton#finalScalar#buttonY
-com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton#recreate
 com.openggf.game.sonic2.objects.ARZPlatformObjectInstance#recreate
 com.openggf.game.sonic2.objects.ARZRotPformsObjectInstance#finalScalar#initialX
 com.openggf.game.sonic2.objects.ARZRotPformsObjectInstance#finalScalar#initialY

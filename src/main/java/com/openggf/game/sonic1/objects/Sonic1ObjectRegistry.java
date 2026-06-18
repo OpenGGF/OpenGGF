@@ -97,6 +97,9 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             fzPlasmaBallCodec(),
             bossBlockCodec(),
             collapsingFloorCodec(),
+            falseFloorBlockCodec(),
+            orbSpikeCodec(),
+            scrapEggmanButtonCodec(),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     Sonic1EggPrisonObjectInstance.class,
                     spawn -> new Sonic1EggPrisonObjectInstance(spawn)),
@@ -550,6 +553,150 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
                 // (the same ROM zone id the production factory uses).
                 int zoneIndex = context.objectServices().romZoneId();
                 return new Sonic1CollapsingFloorObjectInstance(entry.spawn(), zoneIndex);
+            }
+        };
+    }
+
+    private static final String FALSE_FLOOR_BLOCK_CLASS =
+            "com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance$FalseFloorBlock";
+
+    private static DynamicObjectRewindCodec falseFloorBlockCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(FALSE_FLOOR_BLOCK_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return FALSE_FLOOR_BLOCK_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                // Relink the live restored master FalseFloor (persistent/layout-spawned,
+                // isPersistent()==true, so live in getActiveObjects() at restore time).
+                // currentX/currentY/blockIndex were un-finaled and passed as placeholders
+                // (0,0,0); the generic field capturer reapplies their captured values,
+                // and broken/goSignal are already non-final captured scalars.
+                Sonic1FalseFloorInstance master = null;
+                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+                    if (inst instanceof Sonic1FalseFloorInstance ff) {
+                        master = ff;
+                        break;
+                    }
+                }
+                if (master == null) {
+                    return null;
+                }
+                try {
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(int.class, int.class, int.class);
+                    ctor.setAccessible(true);
+                    ObjectInstance block = (ObjectInstance) ctor.newInstance(0, 0, 0);
+                    // Re-register into the master's childBlocks so the disintegration
+                    // sequence (childBlocks.get(currentFrame).signalBreak()) still resolves.
+                    master.reattachChildBlock((Sonic1FalseFloorInstance.FalseFloorBlock) block);
+                    return block;
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    private static final String ORB_SPIKE_CLASS =
+            "com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance"
+                    + "$OrbSpikeObjectInstance";
+
+    private static DynamicObjectRewindCodec orbSpikeCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(ORB_SPIKE_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return ORB_SPIKE_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                // Relink the live Orbinaut parent (a layout/active badnik recreated
+                // earlier in the restore loop). The OrbSpikeObjectInstance is a private
+                // static nested class, so it is constructed by reflection on the
+                // (Sonic1OrbinautBadnikInstance, int) ctor with a placeholder startAngle.
+                // All live state (x, y, angle, launched, xVelocity) is non-final and
+                // reapplied by restoreObjectRewindState; the parent ref stays final
+                // (relinked here); motion is reset from x/xVel each step.
+                Sonic1OrbinautBadnikInstance parent = null;
+                for (ObjectInstance inst : context.objectManager().getActiveObjects()) {
+                    if (inst instanceof Sonic1OrbinautBadnikInstance o) {
+                        parent = o;
+                        break;
+                    }
+                }
+                if (parent == null) {
+                    return null;
+                }
+                try {
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(
+                            Sonic1OrbinautBadnikInstance.class, int.class);
+                    ctor.setAccessible(true);
+                    return (ObjectInstance) ctor.newInstance(parent, 0);
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec scrapEggmanButtonCodec() {
+        final String CLASS_NAME =
+                "com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance$ScrapEggmanButton";
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(CLASS_NAME);
+            }
+
+            @Override
+            public String className() {
+                return CLASS_NAME;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                try {
+                    // Relink the live parent by scanning active objects.
+                    Sonic1ScrapEggmanInstance parent = null;
+                    for (ObjectInstance obj : context.objectManager().getActiveObjects()) {
+                        if (obj instanceof Sonic1ScrapEggmanInstance segg) {
+                            parent = segg;
+                            break;
+                        }
+                    }
+                    if (parent == null) {
+                        return null;
+                    }
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(
+                            ObjectSpawn.class, Sonic1ScrapEggmanInstance.class);
+                    ctor.setAccessible(true);
+                    // buttonPhase/buttonFrame are restored by GenericFieldCapturer
+                    // after recreate; buttonX/buttonY are spawn-derived.
+                    return (ObjectInstance) ctor.newInstance(entry.spawn(), parent);
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
             }
         };
     }
