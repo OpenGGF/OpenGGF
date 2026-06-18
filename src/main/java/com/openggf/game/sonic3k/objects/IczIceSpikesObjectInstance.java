@@ -225,8 +225,11 @@ public class IczIceSpikesObjectInstance extends AbstractObjectInstance
 
     public static final class SpikeHurtChild extends AbstractObjectInstance implements TouchResponseProvider {
         private final IczIceSpikesObjectInstance parent;
-        private final int x;
-        private final int y;
+        // Non-final so the generic rewind field capturer reapplies the captured
+        // (spawn-derived) values after the codec recreates this child; the codec
+        // already passes them via the ctor, so this is idempotent.
+        private int x;
+        private int y;
 
         private SpikeHurtChild(IczIceSpikesObjectInstance parent, int x, int y) {
             super(new ObjectSpawn(x, y, Sonic3kObjectIds.ICZ_ICE_SPIKES, 0, 0, false, y),

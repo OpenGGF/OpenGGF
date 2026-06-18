@@ -1024,8 +1024,6 @@ com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLeafPa
 com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLeafParticle#recreate
 com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild#objectRef#player
 com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild#recreate
-com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild#finalScalar#knucklesRoute
-com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild#recreate
 com.openggf.game.sonic3k.objects.CutsceneKnucklesSkIntroInstance#recreate
 com.openggf.game.sonic3k.objects.CutsceneKnuxCnz2WallInstance#objectRef#owner
 com.openggf.game.sonic3k.objects.DoorObjectInstance#finalScalar#baseX
@@ -1063,7 +1061,6 @@ com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$DispenserChild#rec
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$EjectionEffectChild#finalScalar#drawX
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$EjectionEffectChild#finalScalar#drawY
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$EjectionEffectChild#recreate
-com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$ExitTriggerChild#recreate
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$GumballSpringChild#recreate
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$PlatformChild#finalScalar#mappingFrame
 com.openggf.game.sonic3k.objects.GumballMachineObjectInstance$PlatformChild#finalScalar#offsetFromMachine
@@ -1159,10 +1156,6 @@ com.openggf.game.sonic3k.objects.Hcz2CutsceneButtonInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.Hcz2CutsceneButtonInstance#finalScalar#y
 com.openggf.game.sonic3k.objects.Hcz2CutsceneButtonInstance#recreate
 com.openggf.game.sonic3k.objects.HczMinibossInstance#recreate
-com.openggf.game.sonic3k.objects.HczMinibossInstance$RocketTouchChild#finalScalar#layoutIndex
-com.openggf.game.sonic3k.objects.HczMinibossInstance$RocketTouchChild#finalScalar#objectId
-com.openggf.game.sonic3k.objects.HczMinibossInstance$RocketTouchChild#finalScalar#rocketIndex
-com.openggf.game.sonic3k.objects.HczMinibossInstance$RocketTouchChild#recreate
 com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild#finalScalar#frame
 com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild#finalScalar#vortexX
 com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild#finalScalar#vortexY
@@ -1222,9 +1215,6 @@ com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#finalScalar#original
 com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#finalScalar#subtypeZero
 com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#finalScalar#vFlip
 com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance#recreate
-com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild#finalScalar#x
-com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild#finalScalar#y
-com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild#recreate
 com.openggf.game.sonic3k.objects.IczMinibossInstance#recreate
 com.openggf.game.sonic3k.objects.IczMinibossPostBossPaletteController#recreate
 com.openggf.game.sonic3k.objects.IczPathFollowPlatformObjectInstance#finalScalar#hFlip
@@ -1338,10 +1328,6 @@ com.openggf.game.sonic3k.objects.MGZDashTriggerObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MGZHeadTriggerObjectInstance#finalScalar#flipped
 com.openggf.game.sonic3k.objects.MGZHeadTriggerObjectInstance#finalScalar#triggerIndex
 com.openggf.game.sonic3k.objects.MGZHeadTriggerObjectInstance#recreate
-com.openggf.game.sonic3k.objects.MGZHeadTriggerObjectInstance$HeadTriggerStoneChipChild#finalScalar#hFlipCopied
-com.openggf.game.sonic3k.objects.MGZHeadTriggerObjectInstance$HeadTriggerStoneChipChild#finalScalar#originX
-com.openggf.game.sonic3k.objects.MGZHeadTriggerObjectInstance$HeadTriggerStoneChipChild#finalScalar#originY
-com.openggf.game.sonic3k.objects.MGZHeadTriggerObjectInstance$HeadTriggerStoneChipChild#recreate
 com.openggf.game.sonic3k.objects.MGZHeadTriggerProjectileInstance#finalScalar#worldY
 com.openggf.game.sonic3k.objects.MGZLBZSmashingPillarObjectInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.MGZLBZSmashingPillarObjectInstance#finalScalar#targetDistance
@@ -1394,17 +1380,9 @@ com.openggf.game.sonic3k.objects.MgzEndBossDefeatDebrisChild#finalScalar#xVel
 com.openggf.game.sonic3k.objects.MgzEndBossDefeatDebrisChild#finalScalar#yVel
 com.openggf.game.sonic3k.objects.MgzEndBossDefeatDebrisChild#recreate
 com.openggf.game.sonic3k.objects.MgzMinibossInstance#recreate
-com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingDebrisChild#finalScalar#mappingFrame
-com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingDebrisChild#finalScalar#spire
 com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingDebrisChild#recreate
-com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingSpireChild#finalScalar#mappingFrame
-com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingSpireChild#finalScalar#spire
-com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingSpireChild#recreate
 com.openggf.game.sonic3k.objects.MgzMinibossInstance$DefeatFragmentChild#finalScalar#mappingFrame
 com.openggf.game.sonic3k.objects.MgzMinibossInstance$DefeatFragmentChild#recreate
-com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild#finalScalar#xOffset
-com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild#finalScalar#yOffset
-com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild#recreate
 com.openggf.game.sonic3k.objects.MgzMinibossInstance$KnucklesSpikePlatformChild#finalScalar#baseY
 com.openggf.game.sonic3k.objects.MgzMinibossInstance$KnucklesSpikePlatformChild#finalScalar#mirrored
 com.openggf.game.sonic3k.objects.MgzMinibossInstance$KnucklesSpikePlatformChild#recreate
@@ -1418,7 +1396,6 @@ com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance#finalScalar#x
 com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance#finalScalar#y
 com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance#recreate
 com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance$Mhz1CutscenePlayerTwoStopper#objectRef#owner
-com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance$Mhz1CutscenePlayerTwoStopper#recreate
 com.openggf.game.sonic3k.objects.MhzCurledVineObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.MhzCurledVineObjectInstance#recreate
 com.openggf.game.sonic3k.objects.MhzMinibossInstance#recreate

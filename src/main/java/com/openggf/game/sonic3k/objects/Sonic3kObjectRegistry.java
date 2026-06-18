@@ -557,7 +557,32 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // recovered from the spawn render flag).
             madmoleSideDrillCodec(),
             // ICZ end-boss fleeing-Robotnik escape ship (self-contained cutscene).
-            iczEndBossEscapeShipCodec());
+            iczEndBossEscapeShipCodec(),
+
+            // --- Batch-inner2: nested-class hazard/solid/cutscene child codecs -----
+            // More static/non-static nested children dropped on held rewind because
+            // no codec matched their JVM binary name. Parent-relinked children resolve
+            // the live parent (placed boss / cutscene / event owner) via
+            // getActiveObjects(); self-contained chips re-run their ctor from the
+            // captured spawn. Non-spawn differentiator scalars were un-finaled so the
+            // generic field capturer reapplies them after recreate.
+
+            // MGZ miniboss ceiling spire (free-falling hurt hazard; relink parent).
+            mgzCeilingSpireCodec(),
+            // MGZ miniboss drill arm (one-shot hurt hitbox; relink live boss).
+            mgzDrillArmCodec(),
+            // Gumball bonus-stage exit trigger (gameplay-critical; gate on live machine).
+            gumballExitTriggerCodec(),
+            // MGZ head-trigger stone chip (cosmetic; self-contained private nested).
+            mgzHeadTriggerStoneChipCodec(),
+            // MHZ1 cutscene Player-2 stopper (sidekick lock; relink cutscene owner).
+            mhz1CutscenePlayerTwoStopperCodec(),
+            // MHZ2 cutscene route-switch carrier (cosmetic; relink cutscene parent).
+            mhz2KnucklesRouteSwitchChildCodec(),
+            // HCZ miniboss rocket touch hitbox (hurt hazard; relink boss + slot).
+            hczMinibossRocketTouchCodec(),
+            // ICZ ice-spikes hurt child (hurt hazard; relink nearest live spike base).
+            iczIceSpikesHurtChildCodec());
 
     // AIZ2 dynamic objects still intentionally dropped on rewind restore (no codec):
     //   (none remaining) — all AIZ2 battleship/boss transient children are now
@@ -1048,6 +1073,22 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
     private static final String ICZ_ESCAPE_SHIP_CLASS =
             "com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossRobotnikEscapeShip";
 
+    // Batch-inner2 binary-name keys (private/nested children -> no Class literal).
+    private static final String MGZ_CEILING_SPIRE_CHILD_CLASS =
+            "com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingSpireChild";
+    private static final String MGZ_DRILL_ARM_CHILD_CLASS =
+            "com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild";
+    private static final String MGZ_STONE_CHIP_CHILD_CLASS =
+            "com.openggf.game.sonic3k.objects.MGZHeadTriggerObjectInstance$HeadTriggerStoneChipChild";
+    private static final String MHZ1_CUTSCENE_P2_STOPPER_CLASS =
+            "com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance$Mhz1CutscenePlayerTwoStopper";
+    private static final String MHZ2_KNUX_ROUTE_SWITCH_CHILD_CLASS =
+            "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild";
+    private static final String HCZ_MINIBOSS_ROCKET_TOUCH_CLASS =
+            "com.openggf.game.sonic3k.objects.HczMinibossInstance$RocketTouchChild";
+    private static final String ICZ_ICE_SPIKES_HURT_CHILD_CLASS =
+            "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild";
+
     private static DynamicObjectRewindCodec aizSpikedLogSpikeCodec() {
         return new DynamicObjectRewindCodec() {
             @Override
@@ -1510,6 +1551,362 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     var ctor = cls.getDeclaredConstructor(int.class, int.class);
                     ctor.setAccessible(true);
                     return (ObjectInstance) ctor.newInstance(spawn.x(), spawn.y());
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    // ===================================================================
+    // Batch-inner2: nested-class hazard/solid/cutscene child rewind codecs
+    // ===================================================================
+
+    /**
+     * Codec for the MGZ miniboss free-falling ceiling spire (a HURT hazard, anim
+     * collision flags 0x84). The parent miniboss emits NEW random debris each
+     * ceiling-shake tick but never re-creates or re-positions an existing spire,
+     * so a dropped spire is a live in-flight hazard that is lost (parentReEmits=
+     * false) and must be restored. The live {@link MgzMinibossInstance} is relinked
+     * only for restore-ordering sanity (the ctor takes no parent reference); the
+     * trajectory scalars are already non-final and reapplied by the capturer, and
+     * {@code mappingFrame}/{@code spire} on the superclass were un-finaled so they
+     * too are reapplied after this placeholder recreate.
+     */
+    private static DynamicObjectRewindCodec mgzCeilingSpireCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(MGZ_CEILING_SPIRE_CHILD_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return MGZ_CEILING_SPIRE_CHILD_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                MgzMinibossInstance parent = findLiveInstance(context, MgzMinibossInstance.class);
+                if (parent == null) {
+                    return null;
+                }
+                try {
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(int.class, int.class, int.class);
+                    ctor.setAccessible(true);
+                    return (ObjectInstance) ctor.newInstance(entry.spawn().x(), entry.spawn().y(), 0);
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    /**
+     * Codec for the MGZ miniboss drill arm (a HURT hitbox, ARM_COLLISION_FLAGS
+     * 0x9E). The arms are spawned ONCE at the arena-engage transition, not per
+     * frame, so the restored boss never re-emits them (parentReEmits=false) and a
+     * dropped arm leaves the miniboss without its drill-arm hitboxes for the rest
+     * of the fight. Relinks the live {@link MgzMinibossInstance} (recreated before
+     * the dynamic-restore loop) and reconstructs via the private ctor; xOffset/
+     * yOffset were un-finaled so the capturer reapplies the left/right
+     * differentiator, and currentX/currentY are already non-final.
+     */
+    private static DynamicObjectRewindCodec mgzDrillArmCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(MGZ_DRILL_ARM_CHILD_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return MGZ_DRILL_ARM_CHILD_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                MgzMinibossInstance parent = findLiveInstance(context, MgzMinibossInstance.class);
+                if (parent == null) {
+                    return null;
+                }
+                try {
+                    Class<?> cls = Class.forName(MGZ_DRILL_ARM_CHILD_CLASS);
+                    var ctor = cls.getDeclaredConstructor(
+                            MgzMinibossInstance.class, int.class, int.class);
+                    ctor.setAccessible(true);
+                    return (ObjectInstance) ctor.newInstance(parent, 0, 0);
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + MGZ_DRILL_ARM_CHILD_CLASS, e);
+                }
+            }
+        };
+    }
+
+    /**
+     * Codec for the gumball-machine bonus-stage exit trigger (gameplay-critical:
+     * detects the player in the exit box and calls {@code requestBonusStageExit()},
+     * the only way the bonus stage ends). The parent spawns its children once
+     * behind a one-shot {@code childrenSpawned} latch and never re-emits them
+     * (parentReEmits=false), so a dropped trigger would softlock the bonus stage.
+     * Gates restore on the live machine and rebuilds from the spawn; {@code
+     * exitFired} is non-final and reapplied by the capturer. The ctor is
+     * package-private and lives in this package, so no reflection is needed.
+     */
+    private static DynamicObjectRewindCodec gumballExitTriggerCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass()
+                        == GumballMachineObjectInstance.ExitTriggerChild.class;
+            }
+
+            @Override
+            public String className() {
+                return GumballMachineObjectInstance.ExitTriggerChild.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                GumballMachineObjectInstance machine =
+                        findLiveInstance(context, GumballMachineObjectInstance.class);
+                if (machine == null) {
+                    return null;
+                }
+                return new GumballMachineObjectInstance.ExitTriggerChild(entry.spawn());
+            }
+        };
+    }
+
+    /**
+     * Codec for the MGZ head-trigger stone chip (cosmetic; a transient animated
+     * chip that self-destructs in ~7 frames). It holds no parent reference and is
+     * self-contained, so the codec re-runs its private ctor from the captured
+     * spawn (which carries x/y). {@code hFlipCopied} and the originX/originY mirror
+     * were un-finaled so the capturer reapplies them after this placeholder
+     * recreate (the spawn does not carry the h-flip).
+     */
+    private static DynamicObjectRewindCodec mgzHeadTriggerStoneChipCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(MGZ_STONE_CHIP_CHILD_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return MGZ_STONE_CHIP_CHILD_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                try {
+                    ObjectSpawn spawn = entry.spawn();
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(int.class, int.class, boolean.class);
+                    ctor.setAccessible(true);
+                    return (ObjectInstance) ctor.newInstance(spawn.x(), spawn.y(), false);
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    /**
+     * Codec for the MHZ1 rival-Knuckles cutscene Player-2 stopper (an invisible
+     * helper that locks/ducks native Player 2 during the cutscene). The owner
+     * spawns it exactly once behind a captured {@code playerTwoStopperSpawned}
+     * latch that survives rewind, so it is NOT re-emitted (parentReEmits=false)
+     * and dropping it would lose the sidekick lock. Relinks the live
+     * {@link Mhz1CutsceneKnucklesInstance} owner and reconstructs via the private
+     * 1-arg ctor; the only mutable scalar ({@code locked}) is captured generically.
+     */
+    private static DynamicObjectRewindCodec mhz1CutscenePlayerTwoStopperCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(MHZ1_CUTSCENE_P2_STOPPER_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return MHZ1_CUTSCENE_P2_STOPPER_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                Mhz1CutsceneKnucklesInstance parent =
+                        findLiveInstance(context, Mhz1CutsceneKnucklesInstance.class);
+                if (parent == null) {
+                    return null;
+                }
+                try {
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(Mhz1CutsceneKnucklesInstance.class);
+                    ctor.setAccessible(true);
+                    return (ObjectInstance) ctor.newInstance(parent);
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    /**
+     * Codec for the MHZ2 Knuckles leaf-blower cutscene route-switch carrier
+     * (cosmetic: only draws the route-switch sprite; the hazard/camera/launch
+     * logic lives on the parent). The parent spawns it once behind a non-rewound
+     * {@code switchChildSpawned} latch and never re-emits it (parentReEmits=false),
+     * so it must be restored for visual parity. Relinks the unique live
+     * {@link CutsceneKnucklesMhz2Instance} parent and reconstructs via the private
+     * 1-arg ctor; {@code knucklesRoute} was un-finaled so the capturer reapplies
+     * the captured value after recreate.
+     */
+    private static DynamicObjectRewindCodec mhz2KnucklesRouteSwitchChildCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(MHZ2_KNUX_ROUTE_SWITCH_CHILD_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return MHZ2_KNUX_ROUTE_SWITCH_CHILD_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                CutsceneKnucklesMhz2Instance parent =
+                        findLiveInstance(context, CutsceneKnucklesMhz2Instance.class);
+                if (parent == null) {
+                    return null;
+                }
+                try {
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(CutsceneKnucklesMhz2Instance.class);
+                    ctor.setAccessible(true);
+                    return (ObjectInstance) ctor.newInstance(parent);
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    /**
+     * Codec for the HCZ miniboss rocket touch-response child (4 per fight; a HURT
+     * hitbox view over the parent's RocketState[]). The boss re-positions the
+     * rockets every frame but does NOT re-emit the children: {@code
+     * spawnRocketTouchChildren()} is guarded one-shot, so a dropped child is gone
+     * for the rest of the fight (parentReEmits=false) — it must be restored.
+     * Relinks the single live {@link HczMinibossInstance} (layout-placed,
+     * recreated before this loop), reconstructs via the non-static inner ctor
+     * (synthetic leading enclosing-instance param), and re-attaches the parent's
+     * {@code rocketTouchChildren[rocketIndex]} slot. The three scalar args are
+     * un-finaled and reapplied by the capturer.
+     */
+    private static DynamicObjectRewindCodec hczMinibossRocketTouchCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(HCZ_MINIBOSS_ROCKET_TOUCH_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return HCZ_MINIBOSS_ROCKET_TOUCH_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                try {
+                    HczMinibossInstance parent =
+                            findLiveInstance(context, HczMinibossInstance.class);
+                    if (parent == null) {
+                        return null;
+                    }
+                    ObjectSpawn spawn = entry.spawn();
+                    int rocketIndex = spawn.subtype() / 2;
+                    int objectId = spawn.objectId();
+                    int layoutIndex = spawn.layoutIndex();
+
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(
+                            HczMinibossInstance.class, int.class, int.class, int.class);
+                    ctor.setAccessible(true);
+                    ObjectInstance child = (ObjectInstance) ctor.newInstance(
+                            parent, rocketIndex, objectId, layoutIndex);
+
+                    var f = HczMinibossInstance.class.getDeclaredField("rocketTouchChildren");
+                    f.setAccessible(true);
+                    Object arr = f.get(parent);
+                    if (arr == null) {
+                        arr = java.lang.reflect.Array.newInstance(cls, 4);
+                        f.set(parent, arr);
+                    }
+                    if (rocketIndex >= 0 && rocketIndex < java.lang.reflect.Array.getLength(arr)) {
+                        java.lang.reflect.Array.set(arr, rocketIndex, child);
+                    }
+                    return child;
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    /**
+     * Codec for the ICZ ice-spikes hurt child (a HURT hitbox, CHILD_COLLISION_FLAGS
+     * 0x98). The subtype-0 parent spawns it once behind a captured {@code
+     * childSpawned} latch restored to true on rewind, so the parent does not
+     * re-emit it (parentReEmits=false) and a dropped child permanently loses a hurt
+     * hitbox. Relinks the nearest live {@link IczIceSpikesObjectInstance} (multiple
+     * spike bases can coexist) and reconstructs via the private 3-arg ctor; x/y are
+     * spawn-derivable so nothing needs un-finaling.
+     */
+    private static DynamicObjectRewindCodec iczIceSpikesHurtChildCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(ICZ_ICE_SPIKES_HURT_CHILD_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return ICZ_ICE_SPIKES_HURT_CHILD_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                IczIceSpikesObjectInstance parent = findNearestLiveInstance(
+                        context, IczIceSpikesObjectInstance.class, entry.spawn());
+                if (parent == null) {
+                    return null;
+                }
+                try {
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(
+                            IczIceSpikesObjectInstance.class, int.class, int.class);
+                    ctor.setAccessible(true);
+                    return (ObjectInstance) ctor.newInstance(
+                            parent, entry.spawn().x(), entry.spawn().y());
                 } catch (ReflectiveOperationException e) {
                     throw new IllegalStateException(
                             "Failed to recreate dynamic rewind object " + entry.className(), e);
