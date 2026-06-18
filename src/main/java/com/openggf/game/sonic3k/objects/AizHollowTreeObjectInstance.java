@@ -358,11 +358,14 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
      * Obj_AIZ1TreeRevealControl parity shim.
      * Tracks the Events_fg_4 counter used by AIZ terrain reveal scripting.
      */
-    private static final class AizTreeRevealControlObjectInstance extends AbstractObjectInstance {
+    // Package-private (not private) so Sonic3kObjectRegistry can name the type
+    // for its rewind exactSpawnCodec; the parent only spawns this control shim on
+    // the one-shot first-capture transition, so a held rewind must recreate it.
+    static final class AizTreeRevealControlObjectInstance extends AbstractObjectInstance {
         // Mirrors object RAM word $2E (with low byte at $2F used for odd/even gating).
         private int timer2EWord;
 
-        private AizTreeRevealControlObjectInstance(int x, int y) {
+        AizTreeRevealControlObjectInstance(int x, int y) {
             super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "AIZ1TreeRevealControl");
         }
 

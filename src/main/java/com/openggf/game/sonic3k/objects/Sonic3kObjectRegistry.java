@@ -62,6 +62,7 @@ import com.openggf.game.sonic3k.objects.bosses.MhzEndBossVisualChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherMachineChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherVisualChild;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusStageRuntime;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageController;
@@ -505,7 +506,58 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // If the bonus stage is not active the codec returns null gracefully.
             slotBonusCageCodec(),
             slotRingRewardCodec(),
-            slotSpikeRewardCodec());
+            slotSpikeRewardCodec(),
+
+            // --- Batch-inner1: inner-class hazard/solid/cosmetic child codecs -----
+            // Static nested children that were dropped on held rewind because no
+            // codec matched their JVM binary name. Each is keyed by the binary-name
+            // string (mirroring buzzerFlameCodec) or the typed exactSpawnCodec where
+            // the class is registry-visible. Parent-relinked children resolve the
+            // live parent via getActiveObjects(); self-contained projectiles/effects
+            // re-run their ctor from the captured spawn. Non-spawn differentiator
+            // scalars were un-finaled so the generic field capturer reapplies them
+            // after recreate, so placeholder ctor args are safe.
+
+            // AIZ spiked-log spike hitbox (relink to nearest live spiked log).
+            aizSpikedLogSpikeCodec(),
+            // AIZ falling-log ridable platform (self-contained; act-derived artKey
+            // reapplied by the capturer).
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    AizFallingLogObjectInstance.FallingLogChild.class,
+                    s -> new AizFallingLogObjectInstance.FallingLogChild(
+                            s.x(), s.y(), Sonic3kObjectArtKeys.AIZ1_FALLING_LOG)),
+            // AIZ tree-reveal control shim (self-contained logic object).
+            ObjectRewindDynamicCodecs.exactSpawnCodec(
+                    AizHollowTreeObjectInstance.AizTreeRevealControlObjectInstance.class,
+                    s -> new AizHollowTreeObjectInstance.AizTreeRevealControlObjectInstance(
+                            s.x(), s.y())),
+            // HCZ water-drop cosmetic child (self-contained, private nested).
+            hczWaterDropChildCodec(),
+            // Blastoid in-flight projectile (self-contained, private nested).
+            blastoidProjectileCodec(),
+            // Corkey laser shot (relink to nearest live nozzle for the script).
+            corkeyShotCodec(),
+            // Dragonfly swinging body segment (relink to live parent / prior sibling).
+            dragonflyLinkedBodyChildCodec(),
+            // Ribot leg/swing appendage (relink to nearest live Ribot body).
+            ribotActiveChildCodec(),
+            // SnaleBlaster fired projectile (self-contained, private nested).
+            snaleBlasterProjectileCodec(),
+            // Spiker spring-loaded top spike (relink to nearest live Spiker).
+            spikerTopSpikeCodec(),
+            // Spiker fired spike projectile (relink to nearest live Spiker).
+            spikerSpikeProjectileCodec(),
+            // Star Pointer orbiting/launched point (relink to nearest live parent).
+            starPointerPointCodec(),
+            // Orbinaut orbiting orb (relink to nearest live parent).
+            orbinautOrbCodec(),
+            // Turbo Spiker launched shell (relink to nearest live parent).
+            turboSpikerShellChildCodec(),
+            // Madmole side-drill captured/launch hazard (self-contained, facingLeft
+            // recovered from the spawn render flag).
+            madmoleSideDrillCodec(),
+            // ICZ end-boss fleeing-Robotnik escape ship (self-contained cutscene).
+            iczEndBossEscapeShipCodec());
 
     // AIZ2 dynamic objects still intentionally dropped on rewind restore (no codec):
     //   (none remaining) — all AIZ2 battleship/boss transient children are now
@@ -965,6 +1017,505 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             }
         }
         return best;
+    }
+
+    // ===================================================================
+    // Batch-inner1: inner-class hazard/solid/cosmetic child rewind codecs
+    // ===================================================================
+
+    private static final String BLASTOID_PROJECTILE_CLASS =
+            "com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance$BlastoidProjectile";
+    private static final String SNALE_BLASTER_PROJECTILE_CLASS =
+            "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterProjectile";
+    private static final String SPIKER_SPIKE_PROJECTILE_CLASS =
+            "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSpikeProjectile";
+    private static final String SPIKER_TOP_SPIKE_CHILD_CLASS =
+            "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerTopSpikeChild";
+    private static final String RIBOT_ACTIVE_CHILD_CLASS =
+            "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild";
+    private static final String DRAGONFLY_LINKED_BODY_CHILD_CLASS =
+            "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$LinkedBodyChild";
+    private static final String STAR_POINTER_POINT_CLASS =
+            "com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance$OrbitingPointInstance";
+    private static final String ORBINAUT_ORB_CLASS =
+            "com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance$OrbinautOrbInstance";
+    private static final String TURBO_SPIKER_SHELL_CHILD_CLASS =
+            "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild";
+    private static final String MADMOLE_SIDE_DRILL_CHILD_CLASS =
+            "com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild";
+    private static final String HCZ_WATER_DROP_CHILD_CLASS =
+            "com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance$WaterDropChild";
+    private static final String ICZ_ESCAPE_SHIP_CLASS =
+            "com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossRobotnikEscapeShip";
+
+    private static DynamicObjectRewindCodec aizSpikedLogSpikeCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass()
+                        == AizSpikedLogObjectInstance.SpikedLogCollisionChild.class;
+            }
+
+            @Override
+            public String className() {
+                return AizSpikedLogObjectInstance.SpikedLogCollisionChild.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                // The child spawns at the parent log's spawn (x,y); relink the
+                // correct one of several live spiked logs by nearest captured spawn.
+                AizSpikedLogObjectInstance parent = findNearestLiveInstance(
+                        context, AizSpikedLogObjectInstance.class, entry.spawn());
+                if (parent == null) {
+                    return null;
+                }
+                return new AizSpikedLogObjectInstance.SpikedLogCollisionChild(
+                        entry.spawn(), parent);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec blastoidProjectileCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(BLASTOID_PROJECTILE_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return BLASTOID_PROJECTILE_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                try {
+                    ObjectSpawn spawn = entry.spawn();
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(
+                            ObjectSpawn.class, int.class, int.class, int.class, int.class);
+                    ctor.setAccessible(true);
+                    return (ObjectInstance) ctor.newInstance(spawn, spawn.x(), spawn.y(), 0, 0);
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec corkeyShotCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == CorkeyBadnikInstance.CorkeyShotChild.class;
+            }
+
+            @Override
+            public String className() {
+                return CorkeyBadnikInstance.CorkeyShotChild.class.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                ObjectSpawn spawn = entry.spawn();
+                CorkeyBadnikInstance.CorkeyNozzleChild nozzle = findNearestLiveInstance(
+                        context, CorkeyBadnikInstance.CorkeyNozzleChild.class, spawn);
+                int[] script = CorkeyBadnikInstance.CorkeyShotChild.scriptForSpawn(spawn, nozzle);
+                return new CorkeyBadnikInstance.CorkeyShotChild(
+                        spawn, spawn.x(), spawn.y(), script);
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec dragonflyLinkedBodyChildCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(DRAGONFLY_LINKED_BODY_CHILD_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return DRAGONFLY_LINKED_BODY_CHILD_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                DragonflyBadnikInstance parent = findNearestLiveInstance(
+                        context, DragonflyBadnikInstance.class, entry.spawn());
+                if (parent == null) {
+                    return null;
+                }
+                // segmentIndex = subtype >> 1 (subtype = i << 1). Segment 0 anchors
+                // to the parent; later segments chain off the previously-recreated
+                // sibling (restore is spawn-order, so the earlier sibling is live).
+                ObjectSpawn spawn = entry.spawn();
+                int subtype = spawn != null ? spawn.subtype() : 0;
+                int segmentIndex = subtype >> 1;
+                AbstractObjectInstance followAnchor = parent;
+                if (segmentIndex > 0) {
+                    AbstractObjectInstance sibling = findNearestLiveInstance(
+                            context, DragonflyBadnikInstance.LinkedBodyChild.class, spawn);
+                    if (sibling != null) {
+                        followAnchor = sibling;
+                    }
+                }
+                try {
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(
+                            DragonflyBadnikInstance.class, AbstractObjectInstance.class,
+                            int.class, int.class);
+                    ctor.setAccessible(true);
+                    return (ObjectInstance) ctor.newInstance(
+                            parent, followAnchor, subtype, segmentIndex);
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec ribotActiveChildCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(RIBOT_ACTIVE_CHILD_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return RIBOT_ACTIVE_CHILD_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                try {
+                    // Children spawn within +/-0x18 px of the parent body; relink
+                    // the nearest live Ribot to the captured child spawn.
+                    RibotBadnikInstance parent = findNearestLiveInstance(
+                            context, RibotBadnikInstance.class, entry.spawn());
+                    if (parent == null) {
+                        return null;
+                    }
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(
+                            ObjectSpawn.class, RibotBadnikInstance.class,
+                            int.class, int.class, int.class);
+                    ctor.setAccessible(true);
+                    // childIndex/originX/originY (now un-final) reapplied by the capturer.
+                    return (ObjectInstance) ctor.newInstance(
+                            entry.spawn(), parent, 0, entry.spawn().x(), entry.spawn().y());
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec snaleBlasterProjectileCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(SNALE_BLASTER_PROJECTILE_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return SNALE_BLASTER_PROJECTILE_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                try {
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(
+                            ObjectSpawn.class, int.class, int.class,
+                            int.class, int.class, boolean.class);
+                    ctor.setAccessible(true);
+                    // velocities/hFlip placeholders; the capturer reapplies the
+                    // captured trajectory + (now non-final) hFlip after recreate.
+                    return (ObjectInstance) ctor.newInstance(
+                            entry.spawn(), entry.spawn().x(), entry.spawn().y(), 0, 0, false);
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec spikerTopSpikeCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(SPIKER_TOP_SPIKE_CHILD_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return SPIKER_TOP_SPIKE_CHILD_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                SpikerBadnikInstance parent = findNearestLiveInstance(
+                        context, SpikerBadnikInstance.class, entry.spawn());
+                if (parent == null) {
+                    return null;
+                }
+                try {
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(SpikerBadnikInstance.class);
+                    ctor.setAccessible(true);
+                    return (ObjectInstance) ctor.newInstance(parent);
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec spikerSpikeProjectileCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(SPIKER_SPIKE_PROJECTILE_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return SPIKER_SPIKE_PROJECTILE_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                SpikerBadnikInstance parent = findNearestLiveInstance(
+                        context, SpikerBadnikInstance.class, entry.spawn());
+                if (parent == null) {
+                    return null;
+                }
+                try {
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(
+                            SpikerBadnikInstance.class, int.class, int.class,
+                            int.class, int.class, boolean.class);
+                    ctor.setAccessible(true);
+                    // x/y/velocity/hFlip placeholders; the capturer reapplies the
+                    // captured trajectory + (now non-final) hFlip after recreate.
+                    return (ObjectInstance) ctor.newInstance(
+                            parent, entry.spawn().x(), entry.spawn().y(), 0, 0, false);
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec starPointerPointCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(STAR_POINTER_POINT_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return STAR_POINTER_POINT_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                StarPointerBadnikInstance parent = findNearestLiveInstance(
+                        context, StarPointerBadnikInstance.class, entry.spawn());
+                if (parent == null) {
+                    return null;
+                }
+                try {
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(
+                            ObjectSpawn.class, StarPointerBadnikInstance.class, int.class);
+                    ctor.setAccessible(true);
+                    // index seeds the initial angle only; the captured angle/launched/
+                    // xVelocity/break* scalars are reapplied by the capturer.
+                    return (ObjectInstance) ctor.newInstance(entry.spawn(), parent, 0);
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec orbinautOrbCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(ORBINAUT_ORB_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return ORBINAUT_ORB_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                OrbinautBadnikInstance parent = findNearestLiveInstance(
+                        context, OrbinautBadnikInstance.class, entry.spawn());
+                if (parent == null) {
+                    return null;
+                }
+                try {
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(
+                            ObjectSpawn.class, OrbinautBadnikInstance.class, int.class);
+                    ctor.setAccessible(true);
+                    // index seeds the initial angle only; the captured angle scalar
+                    // is reapplied by the capturer after recreate.
+                    return (ObjectInstance) ctor.newInstance(entry.spawn(), parent, 0);
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec turboSpikerShellChildCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(TURBO_SPIKER_SHELL_CHILD_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return TURBO_SPIKER_SHELL_CHILD_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                try {
+                    TurboSpikerBadnikInstance parent = findNearestLiveInstance(
+                            context, TurboSpikerBadnikInstance.class, entry.spawn());
+                    if (parent == null) {
+                        return null;
+                    }
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(TurboSpikerBadnikInstance.class);
+                    ctor.setAccessible(true);
+                    return (ObjectInstance) ctor.newInstance(parent);
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec madmoleSideDrillCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(MADMOLE_SIDE_DRILL_CHILD_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return MADMOLE_SIDE_DRILL_CHILD_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                try {
+                    ObjectSpawn spawn = entry.spawn();
+                    // Ctor encodes facingLeft into the spawn render flag (0 = left).
+                    boolean facingLeft = spawn.renderFlags() == 0;
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(int.class, int.class, boolean.class);
+                    ctor.setAccessible(true);
+                    return (ObjectInstance) ctor.newInstance(spawn.x(), spawn.y(), facingLeft);
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec hczWaterDropChildCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(HCZ_WATER_DROP_CHILD_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return HCZ_WATER_DROP_CHILD_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                try {
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(ObjectSpawn.class);
+                    ctor.setAccessible(true);
+                    return (ObjectInstance) ctor.newInstance(entry.spawn());
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
+    }
+
+    private static DynamicObjectRewindCodec iczEndBossEscapeShipCodec() {
+        return new DynamicObjectRewindCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass().getName().equals(ICZ_ESCAPE_SHIP_CLASS);
+            }
+
+            @Override
+            public String className() {
+                return ICZ_ESCAPE_SHIP_CLASS;
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                try {
+                    ObjectSpawn spawn = entry.spawn();
+                    Class<?> cls = Class.forName(entry.className());
+                    var ctor = cls.getDeclaredConstructor(int.class, int.class);
+                    ctor.setAccessible(true);
+                    return (ObjectInstance) ctor.newInstance(spawn.x(), spawn.y());
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + entry.className(), e);
+                }
+            }
+        };
     }
 
     /**

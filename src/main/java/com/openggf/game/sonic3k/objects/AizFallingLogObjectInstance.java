@@ -204,7 +204,9 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance {
         private int state = STATE_FALLING;
         private int timer;
         private boolean bobHidden; // $36(a0) bit 0: toggled for visibility bob
-        private final String artKey;
+        // Un-final so the generic field capturer reapplies the captured value
+        // after a rewind recreate (the codec passes a best-effort placeholder).
+        private String artKey;
         private SplashChild linkedSplash;
 
         FallingLogChild(int x, int y, String artKey) {

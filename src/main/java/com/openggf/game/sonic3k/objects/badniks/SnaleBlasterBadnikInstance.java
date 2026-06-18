@@ -519,7 +519,9 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance 
         private int yVelocity;
         private int xSubpixel;
         private int ySubpixel;
-        private final boolean hFlip;
+        // Un-final so the generic field capturer reapplies it after a rewind
+        // recreate (not spawn-derivable; the codec passes a placeholder).
+        private boolean hFlip;
 
         private SnaleBlasterProjectile(ObjectSpawn spawn, int x, int y,
                 int xVelocity, int yVelocity, boolean hFlip) {

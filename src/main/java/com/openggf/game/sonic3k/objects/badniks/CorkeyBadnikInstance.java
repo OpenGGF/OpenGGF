@@ -135,7 +135,9 @@ public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance {
         return firingLatch;
     }
 
-    static final class CorkeyNozzleChild extends AbstractObjectInstance {
+    // Public so the cross-package Sonic3kObjectRegistry rewind codec can name the
+    // nozzle type for relinking the fired shot's script on a held-rewind restore.
+    public static final class CorkeyNozzleChild extends AbstractObjectInstance {
         private static final int PRIORITY_BUCKET = 5;       // word_8C900 priority $280.
         private static final int DEFAULT_FRAME = 1;         // word_8C900 mapping_frame.
         private static final int RETRACT_FRAME = 2;         // loc_8C88C.
@@ -299,7 +301,9 @@ public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance {
         }
     }
 
-    static final class CorkeyShotChild extends AbstractObjectInstance implements TouchResponseProvider {
+    // Public so the cross-package Sonic3kObjectRegistry rewind codec can name the
+    // shot type and call its (ObjectSpawn,int,int,int[]) ctor + scriptForSpawn().
+    public static final class CorkeyShotChild extends AbstractObjectInstance implements TouchResponseProvider {
         private static final int COLLISION_FLAGS = 0xA0; // word_8C906 collision_flags.
         private static final int PRIORITY_BUCKET = 5;    // word_8C906 priority $280.
         private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
@@ -324,7 +328,10 @@ public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance {
                 6, 3, -0x0C
         };
 
-        private final int[] script;
+        // Un-final so the generic field capturer can reapply the captured value
+        // after a rewind recreate (object-array fields are not spawn-derivable;
+        // the codec reconstructs the right variant via scriptForSpawn()).
+        private int[] script;
         private int currentX;
         private int currentY;
         private int mappingFrame;
@@ -332,11 +339,31 @@ public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance {
         private int rawFrameTimer;
         private boolean initialized;
 
-        CorkeyShotChild(ObjectSpawn spawn, int x, int y, int[] script) {
+        public CorkeyShotChild(ObjectSpawn spawn, int x, int y, int[] script) {
             super(spawn, "CorkeyShot");
             this.currentX = x;
             this.currentY = y;
             this.script = script;
+        }
+
+        /**
+         * Reconstructs the shot's fire script from its spawn position relative to
+         * the live firing nozzle. {@link CorkeyNozzleChild#spawnShot} offsets the
+         * shot x by {@code -4} (left), {@code +4} (right), or {@code 0} (center).
+         * Used by the rewind codec to relink the correct variant; defaults to the
+         * center script when the nozzle is unavailable.
+         */
+        public static int[] scriptForSpawn(ObjectSpawn spawn, CorkeyNozzleChild nozzle) {
+            if (spawn != null && nozzle != null) {
+                int dx = spawn.x() - nozzle.getX();
+                if (dx == -4) {
+                    return SCRIPT_LEFT;
+                }
+                if (dx == 4) {
+                    return SCRIPT_RIGHT;
+                }
+            }
+            return SCRIPT_CENTER;
         }
 
         @Override

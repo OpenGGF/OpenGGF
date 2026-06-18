@@ -836,7 +836,6 @@ com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance#finalScalar#spawnX
 com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance#finalScalar#spawnY
 com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance#finalScalar#timingMask
 com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance#recreate
-com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$FallingLogChild#recreate
 com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$SplashChild#recreate
 com.openggf.game.sonic3k.objects.AizFlippingBridgeObjectInstance#finalScalar#animDirection
 com.openggf.game.sonic3k.objects.AizFlippingBridgeObjectInstance#finalScalar#animPeriod
@@ -858,7 +857,6 @@ com.openggf.game.sonic3k.objects.AizGiantRideVineObjectInstance#recreate
 com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance#finalScalar#treeX
 com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance#finalScalar#treeY
 com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance#recreate
-com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance$AizTreeRevealControlObjectInstance#recreate
 com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#finalScalar#xOffset
 com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#finalScalar#yOffset
 com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild#recreate
@@ -883,7 +881,6 @@ com.openggf.game.sonic3k.objects.AizRockFragmentChild#finalScalar#gravity
 com.openggf.game.sonic3k.objects.AizShipBombInstance#finalScalar#initialWorldY
 com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance#finalScalar#baseY
 com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance#recreate
-com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance$SpikedLogCollisionChild#recreate
 com.openggf.game.sonic3k.objects.AizTransitionFloorObjectInstance#recreate
 com.openggf.game.sonic3k.objects.AnimatedStillSpriteInstance#finalScalar#animDelay
 com.openggf.game.sonic3k.objects.AnimatedStillSpriteInstance#recreate
@@ -1157,7 +1154,6 @@ com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance#finalScalar#spawnInt
 com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance#finalScalar#spawnX
 com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance#finalScalar#spawnY
 com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance#recreate
-com.openggf.game.sonic3k.objects.HCZWaterDropObjectInstance$WaterDropChild#recreate
 com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance#recreate
 com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance$WaterRushBlockChild#recreate
 com.openggf.game.sonic3k.objects.HCZWaterSplashObjectInstance#finalScalar#x
@@ -1560,7 +1556,6 @@ com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance#finalScalar#plan
 com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance#finalScalar#priorityBucket
 com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance#finalScalar#triggerIndex
 com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance#recreate
-com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance$BlastoidProjectile#recreate
 com.openggf.game.sonic3k.objects.badniks.BloominatorBadnikInstance#finalScalar#collisionSizeIndex
 com.openggf.game.sonic3k.objects.badniks.BloominatorBadnikInstance#finalScalar#planePriority
 com.openggf.game.sonic3k.objects.badniks.BloominatorBadnikInstance#finalScalar#priorityBucket
@@ -1594,15 +1589,11 @@ com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance#finalScalar#planeP
 com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance#finalScalar#priorityBucket
 com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance#recreate
 com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance$CorkeyNozzleChild#recreate
-com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance$CorkeyShotChild#recreate
 com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance#finalScalar#collisionSizeIndex
 com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance#finalScalar#planePriority
 com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance#finalScalar#priorityBucket
 com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance#recreate
-com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$LinkedBodyChild#finalScalar#segmentIndex
-com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$LinkedBodyChild#finalScalar#subtype
 com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$LinkedBodyChild#objectRef#followAnchor
-com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$LinkedBodyChild#recreate
 com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$WingChild#recreate
 com.openggf.game.sonic3k.objects.badniks.Flybot767BadnikInstance#finalScalar#collisionSizeIndex
 com.openggf.game.sonic3k.objects.badniks.Flybot767BadnikInstance#finalScalar#planePriority
@@ -1617,9 +1608,7 @@ com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance#finalScalar#homeY
 com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance#finalScalar#planePriority
 com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance#finalScalar#priorityBucket
 com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance#recreate
-com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild#finalScalar#facingLeft
 com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild#objectRef#capturedPlayer
-com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild#recreate
 com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance#finalScalar#collisionSizeIndex
 com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance#finalScalar#planePriority
 com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance#finalScalar#priorityBucket
@@ -1649,7 +1638,6 @@ com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance#finalScalar#coll
 com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance#finalScalar#planePriority
 com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance#finalScalar#priorityBucket
 com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance#recreate
-com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance$OrbinautOrbInstance#recreate
 com.openggf.game.sonic3k.objects.badniks.PenguinatorBadnikInstance#finalScalar#collisionSizeIndex
 com.openggf.game.sonic3k.objects.badniks.PenguinatorBadnikInstance#finalScalar#planePriority
 com.openggf.game.sonic3k.objects.badniks.PenguinatorBadnikInstance#finalScalar#priorityBucket
@@ -1669,10 +1657,6 @@ com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance#finalScalar#collisi
 com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance#finalScalar#planePriority
 com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance#finalScalar#priorityBucket
 com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance#recreate
-com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild#finalScalar#childIndex
-com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild#finalScalar#originX
-com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild#finalScalar#originY
-com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild#recreate
 com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotVisualChild#finalScalar#originX
 com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotVisualChild#finalScalar#originY
 com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotVisualChild#finalScalar#visualIndex
@@ -1685,8 +1669,6 @@ com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance#recreate
 com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterCoverChild#finalScalar#xOffset
 com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterCoverChild#finalScalar#yOffset
 com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterCoverChild#recreate
-com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterProjectile#finalScalar#hFlip
-com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterProjectile#recreate
 com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterShooterChild#finalScalar#verticalFlipShot
 com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterShooterChild#finalScalar#xOffset
 com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance$SnaleBlasterShooterChild#finalScalar#yOffset
@@ -1704,14 +1686,10 @@ com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance#objectRef#pendingL
 com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance#recreate
 com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSideLauncherChild#finalScalar#leftSide
 com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSideLauncherChild#recreate
-com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSpikeProjectile#finalScalar#hFlip
-com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerSpikeProjectile#recreate
-com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerTopSpikeChild#recreate
 com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance#finalScalar#collisionSizeIndex
 com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance#finalScalar#planePriority
 com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance#finalScalar#priorityBucket
 com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance#recreate
-com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance$OrbitingPointInstance#recreate
 com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance#recreate
 com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance$TunnelbotArm#finalScalar#xOffset
 com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance$TunnelbotArm#finalScalar#yOffset
@@ -1730,7 +1708,6 @@ com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerAn
 com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerAnimatedParticle#finalScalar#playSound
 com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerAnimatedParticle#finalScalar#priorityBucket
 com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerAnimatedParticle#recreate
-com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild#recreate
 com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellDripParticle#finalScalar#currentX
 com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellDripParticle#finalScalar#currentY
 com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellDripParticle#finalScalar#frameDelay
@@ -1762,7 +1739,6 @@ com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebri
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebrisChild#finalScalar#frame
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebrisChild#finalScalar#gravity
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebrisChild#recreate
-com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossRobotnikEscapeShip#recreate
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossDefeatFragmentChild#finalScalar#subtype
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossDefeatFragmentChild#finalScalar#xVel
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance#finalScalar#centreX

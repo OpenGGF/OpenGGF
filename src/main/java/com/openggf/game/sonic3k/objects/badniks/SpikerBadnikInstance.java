@@ -539,7 +539,9 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
         private int yVelocity;
         private int xSubpixel;
         private int ySubpixel;
-        private final boolean hFlip;
+        // Un-final so the generic field capturer reapplies it after a rewind
+        // recreate (not spawn-derivable; the codec passes a placeholder).
+        private boolean hFlip;
         private int animFrame;
         private int animTimer;
         private boolean collisionEnabled = true;
