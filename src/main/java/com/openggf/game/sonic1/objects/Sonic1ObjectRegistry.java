@@ -7,18 +7,15 @@ import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.objects.badniks.Sonic1BallHogBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1BombBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance;
-import com.openggf.game.sonic1.objects.badniks.Sonic1BombShrapnelInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1BurrobotBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileDissolveInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileInstance;
-import com.openggf.game.sonic1.objects.badniks.Sonic1CannonballInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBodyInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1ChopperBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatProjectileInstance;
-import com.openggf.game.sonic1.objects.badniks.Sonic1NewtronMissileInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1JawsBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1MotobugBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1BatbrainBadnikInstance;
@@ -66,26 +63,17 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
     private static final List<DynamicObjectRewindCodec> DYNAMIC_REWIND_CODECS = List.of(
             bombFuseChildCodec(),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    Sonic1BombShrapnelInstance.class,
-                    s -> new Sonic1BombShrapnelInstance(s.x(), s.y(), 0, 0)),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
                     Sonic1BuzzBomberMissileInstance.class,
                     spawn -> new Sonic1BuzzBomberMissileInstance(
                             spawn.x(), spawn.y(), 0, 0, false, -1)),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     Sonic1BuzzBomberMissileDissolveInstance.class,
                     spawn -> new Sonic1BuzzBomberMissileDissolveInstance(spawn.x(), spawn.y())),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    Sonic1CannonballInstance.class,
-                    spawn -> new Sonic1CannonballInstance(spawn.x(), spawn.y(), 0, spawn.subtype())),
             caterkillerBodyCodec(),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     Sonic1CrabmeatProjectileInstance.class,
                     spawn -> new Sonic1CrabmeatProjectileInstance(
                             spawn.x(), spawn.y(), 0, 0, null)),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    Sonic1NewtronMissileInstance.class,
-                    spawn -> new Sonic1NewtronMissileInstance(spawn.x(), spawn.y(), 0, false)),
             ghzBossWreckingBallCodec(),
             slzBossSpikeballCodec(),
             // NOTE: syzBossSpikeCodec intentionally REMOVED.

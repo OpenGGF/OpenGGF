@@ -123,12 +123,14 @@ public class TestRewindHarnessCoverageRatchet {
  *   <li>2026-06-19: raised to 99 after deleting three S2 scalar/no-reference
  *       session-only codecs for ResultsScreenObjectInstance, RingPrizeObjectInstance,
  *       and MTZBossLaser.</li>
+ *   <li>2026-06-19: raised to 102 after deleting three S1 scalar/no-reference
+ *       projectile codecs for BombShrapnel, Cannonball, and NewtronMissile.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 99;
+    static final int RATCHET_FLOOR = 102;
 
     @BeforeEach
     void initHeadless() {

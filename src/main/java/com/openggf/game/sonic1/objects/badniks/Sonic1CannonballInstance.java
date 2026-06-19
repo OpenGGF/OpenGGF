@@ -10,6 +10,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -43,7 +45,7 @@ import java.util.List;
  * Collision: obColType = $87 (HURT category $80, size index $07)
  */
 public class Sonic1CannonballInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, RewindRecreatable {
 
     // --- Collision ---
     // From disassembly: move.b #$87,obColType(a0)
@@ -109,6 +111,12 @@ public class Sonic1CannonballInstance extends AbstractObjectInstance
         // obTimeFrame zero-init: first subq will go to -1, immediately toggling frame
         this.animTimer = 0;
         this.destroyed = false;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectSpawn spawn = ctx.spawn();
+        return new Sonic1CannonballInstance(spawn.x(), spawn.y(), 0, spawn.subtype());
     }
 
     @Override
