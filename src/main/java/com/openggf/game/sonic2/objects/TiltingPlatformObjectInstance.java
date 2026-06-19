@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.constants.Sonic2AudioConstants;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
@@ -186,6 +187,18 @@ public class TiltingPlatformObjectInstance extends AbstractObjectInstance
             return;
         }
         renderer.drawFrameIndex(mappingFrame, spawn.x(), spawn.y(), xFlipStatus, false);
+    }
+
+    @Override
+    public int getPriorityBucket() {
+        // ROM: ObjB6_SubObjData priority=4
+        return RenderPriority.clamp(4);
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // ROM: make_art_tile(ArtTile_ArtNem_WfzTiltingPlatform,1,1)
+        return true;
     }
 
     @Override

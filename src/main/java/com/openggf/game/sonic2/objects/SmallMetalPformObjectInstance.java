@@ -276,6 +276,12 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance {
         }
 
         @Override
+        public boolean isHighPriority() {
+            // ROM: make_art_tile(ArtTile_ArtNem_WfzBeltPlatform,3,1)
+            return true;
+        }
+
+        @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             switch (state) {

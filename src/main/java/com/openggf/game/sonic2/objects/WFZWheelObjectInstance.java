@@ -55,6 +55,12 @@ public class WFZWheelObjectInstance extends AbstractObjectInstance {
     }
 
     @Override
+    public boolean isHighPriority() {
+        // ROM: make_art_tile(ArtTile_ArtNem_WfzConveyorBeltWheel,2,1)
+        return true;
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(Sonic2ObjectArtKeys.WFZ_CONVEYOR_BELT_WHEEL);
         if (renderer == null) return;

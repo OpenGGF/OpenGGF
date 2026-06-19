@@ -180,6 +180,12 @@ public class HPropellerObjectInstance extends AbstractObjectInstance {
     }
 
     @Override
+    public boolean isHighPriority() {
+        // ROM: make_art_tile(ArtTile_ArtNem_WfzHrzntlPrpllr,1,1)
+        return true;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         // Only check players in WFZ mode (routine 2 = ObjB5_Main)
         // ROM order: player push check THEN animation update
