@@ -1219,7 +1219,42 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         }
                 }
 
+                refreshInvincibilityStarsAfterRewindRestore();
                 refreshPersistentInstaShieldAfterRewindRestore();
+        }
+
+        private void refreshInvincibilityStarsAfterRewindRestore() {
+                if (invincibleFrames <= 0) {
+                        if (invincibilityObject != null) {
+                                invincibilityObject.destroy();
+                                invincibilityObject = null;
+                        }
+                        if (shieldObject != null) {
+                                shieldObject.setVisible(true);
+                        }
+                        return;
+                }
+
+                PowerUpObject liveStars = resolveLiveInvincibilityObjectAfterRewindRestore();
+                if (liveStars != null) {
+                        invincibilityObject = liveStars;
+                        invincibilityObject.refreshArtAfterRewindRestore();
+                } else {
+                        if (invincibilityObject != null && !invincibilityObject.isDestroyed()) {
+                                invincibilityObject.destroy();
+                        }
+                        invincibilityObject = null;
+                        if (powerUpSpawner != null) {
+                                invincibilityObject = powerUpSpawner.spawnInvincibilityStars(this);
+                                if (invincibilityObject != null) {
+                                        invincibilityObject.refreshArtAfterRewindRestore();
+                                }
+                        }
+                }
+
+                if (shieldObject != null) {
+                        shieldObject.setVisible(false);
+                }
         }
 
         private void refreshPersistentInstaShieldAfterRewindRestore() {
@@ -1264,6 +1299,17 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         if (object instanceof PowerUpObject candidate && isMatchingLiveShield(candidate)) {
                                 return candidate;
                         }
+                }
+                return null;
+        }
+
+        private PowerUpObject resolveLiveInvincibilityObjectAfterRewindRestore() {
+                ObjectManager objectManager = currentObjectManagerIfAvailable();
+                if (invincibilityObject != null
+                                && !invincibilityObject.isDestroyed()
+                                && (objectManager == null
+                                                || isObjectManagerLivePowerUp(objectManager, invincibilityObject))) {
+                        return invincibilityObject;
                 }
                 return null;
         }

@@ -155,7 +155,7 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kSlotRingRewardObjectInstance", "controller"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kSlotSpikeRewardObjectInstance", "controller"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SinkingMudObjectInstance", "trackedPlayers"), RewindFieldPolicy.TRANSIENT),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kInvincibilityStarsObjectInstance", "player"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kInvincibilityStarsObjectInstance", "player"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "p1SolidContact"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "p2SolidContact"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance", "playerAtCollapse"), RewindFieldPolicy.CAPTURED),

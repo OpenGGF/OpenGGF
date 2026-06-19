@@ -259,4 +259,9 @@ public class InvincibilityStarsObjectInstance extends AbstractObjectInstance imp
     public void setVisible(boolean visible) {
         // Invincibility stars are always visible while alive; no-op.
     }
+
+    @Override
+    public boolean isInvincibilityStars() {
+        return true;
+    }
 }

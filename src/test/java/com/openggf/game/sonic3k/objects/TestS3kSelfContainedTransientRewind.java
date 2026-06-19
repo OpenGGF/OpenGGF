@@ -35,6 +35,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -100,6 +101,7 @@ class TestS3kSelfContainedTransientRewind {
         assertNoRegisteredS3kDynamicCodec(LightningShieldObjectInstance.class);
         assertNoRegisteredS3kDynamicCodec(BubbleShieldObjectInstance.class);
         assertNoRegisteredS3kDynamicCodec(InstaShieldObjectInstance.class);
+        assertNoRegisteredS3kDynamicCodec(Sonic3kInvincibilityStarsObjectInstance.class);
     }
 
     @Test
@@ -193,6 +195,71 @@ class TestS3kSelfContainedTransientRewind {
         assertFalse(restoredShield.isDestroyed(), "restored insta-shield must remain live");
         assertSame(player, shieldPlayer(restoredShield),
                 "restored insta-shield must remain bound to the same live player");
+    }
+
+    @Test
+    void playerBoundInvincibilityStarsRestoreThroughSessionSnapshot() throws Exception {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(ZONE_AIZ, ACT_2)
+                .build();
+
+        RewindRegistry registry = fixture.gameplayMode().getRewindRegistry();
+        assertNotNull(registry, "RewindRegistry must be available after S3K boot");
+
+        ObjectManager objectManager = GameServices.level().getObjectManager();
+        assertNotNull(objectManager, "ObjectManager must be available for S3K");
+
+        AbstractPlayableSprite player = fixture.sprite();
+        assertNotNull(player.getPowerUpSpawner(),
+                "S3K player must have a production power-up spawner");
+        player.giveInvincibility();
+
+        Sonic3kInvincibilityStarsObjectInstance capturedStars = assertInstanceOf(
+                Sonic3kInvincibilityStarsObjectInstance.class,
+                player.getInvincibilityObject(),
+                "precondition: S3K invincibility should create the concrete stars object");
+        assertEquals(1, countLive(objectManager, Sonic3kInvincibilityStarsObjectInstance.class),
+                "precondition: exactly one S3K invincibility-stars object is live before capture");
+
+        for (int frame = 0; frame < 4; frame++) {
+            capturedStars.update(frame, player);
+        }
+
+        int capturedSlot = capturedStars.getSlotIndex();
+        int capturedParentAngle = intField(capturedStars, "parentAngle");
+        int capturedParentAnimIndex = intField(capturedStars, "parentAnimIndex");
+        int[] capturedChildAngles = intArrayField(capturedStars, "childAngles");
+        int[] capturedChildAnimIndices = intArrayField(capturedStars, "childAnimIndices");
+
+        CompositeSnapshot snapshot = registry.capture();
+        assertNotNull(snapshot, "capture() must return a snapshot");
+
+        objectManager.removeDynamicObject(capturedStars);
+        setPowerUpObjectField(player, "invincibilityObject", null);
+        player.setInvincibleFrames(0);
+        assertEquals(0, countLive(objectManager, Sonic3kInvincibilityStarsObjectInstance.class),
+                "diverge step must remove the captured S3K invincibility stars");
+
+        registry.restore(snapshot);
+
+        List<Sonic3kInvincibilityStarsObjectInstance> restored =
+                liveObjects(objectManager, Sonic3kInvincibilityStarsObjectInstance.class);
+        assertEquals(1, restored.size(),
+                "post-restore player refresh must recreate exactly one S3K invincibility-stars object");
+        Sonic3kInvincibilityStarsObjectInstance restoredStars = restored.get(0);
+        assertSame(restoredStars, player.getInvincibilityObject(),
+                "restored player invincibility link must point at the live ObjectManager stars");
+        assertEquals(capturedSlot, restoredStars.getSlotIndex(),
+                "restored S3K invincibility stars must consume the captured dynamic slot");
+        assertEquals(capturedParentAngle, intField(restoredStars, "parentAngle"),
+                "restored S3K invincibility stars must keep captured parent orbit angle");
+        assertEquals(capturedParentAnimIndex, intField(restoredStars, "parentAnimIndex"),
+                "restored S3K invincibility stars must keep captured parent animation index");
+        assertArrayEquals(capturedChildAngles, intArrayField(restoredStars, "childAngles"),
+                "restored S3K invincibility stars must keep captured child orbit angles");
+        assertArrayEquals(capturedChildAnimIndices, intArrayField(restoredStars, "childAnimIndices"),
+                "restored S3K invincibility stars must keep captured child animation indices");
+        assertFalse(restoredStars.isDestroyed(), "restored S3K invincibility stars must remain live");
     }
 
     private static <T extends ShieldObjectInstance> void assertElementalShieldRestoresThroughSessionSnapshot(
@@ -756,6 +823,19 @@ class TestS3kSelfContainedTransientRewind {
         Field field = instance.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.setInt(instance, value);
+    }
+
+    private static int[] intArrayField(Object instance, String fieldName) throws Exception {
+        Field field = instance.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return ((int[]) field.get(instance)).clone();
+    }
+
+    private static void setPowerUpObjectField(AbstractPlayableSprite player, String fieldName, Object value)
+            throws Exception {
+        Field field = AbstractPlayableSprite.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(player, value);
     }
 
     private static Object shieldPlayer(ShieldObjectInstance shield) throws Exception {

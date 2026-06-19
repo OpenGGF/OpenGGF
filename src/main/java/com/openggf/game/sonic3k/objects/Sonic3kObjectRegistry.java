@@ -92,9 +92,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // Fire/Lightning/Bubble inherit ShieldObjectInstance's RewindRecreatable
             // pending-player-bound hook, so genericRecreate queues the captured entry
             // and the post-restore player refresh recreates the concrete shield.
-            ObjectRewindDynamicCodecs.deferredPlayerBoundCodec(
-                    Sonic3kInvincibilityStarsObjectInstance.class,
-                    com.openggf.level.objects.InvincibilityStarsObjectInstance.class),
+            // S3K invincibility-stars codec deleted (Phase-2 player-bound batch):
+            // its RewindRecreatable hook mirrors the old deferred codec and queues
+            // the captured entry for post-restore player refresh.
             cnzMinibossChildCodec(CnzMinibossTopInstance.class, CnzMinibossTopInstance::new),
             // CnzMinibossCoilInstance codec deleted (Phase-2 batch 46):
             // compact restore resolves the parent object reference after generic recreate.
