@@ -53,6 +53,8 @@ class TestS2SelfContainedTransientRewind {
         assertNoRegisteredS2DynamicCodec(VerticalLaserObjectInstance.class);
         assertNoRegisteredS2DynamicCodec(LavaBubbleObjectInstance.class);
         assertNoRegisteredS2DynamicCodec(MCZFallingDebrisInstance.class);
+        assertNoRegisteredS2DynamicCodec(BubbleObjectInstance.class);
+        assertNoRegisteredS2DynamicCodec(DestroyedEggPrisonObjectInstance.class);
     }
 
     @Test
@@ -102,6 +104,13 @@ class TestS2SelfContainedTransientRewind {
                 () -> new LavaBubbleObjectInstance(baseX + 0x110, baseY + 0x08));
         MCZFallingDebrisInstance mczFallingDebris = objectManager.createDynamicObject(
                 () -> new MCZFallingDebrisInstance(baseX + 0x130, baseY - 0x40, true));
+        BubbleObjectInstance bubble = objectManager.createDynamicObject(
+                () -> new BubbleObjectInstance(baseX + 0x150, baseY + 0x30, 1, 0x20));
+        DestroyedEggPrisonObjectInstance destroyedEggPrison = objectManager.createDynamicObject(
+                () -> new DestroyedEggPrisonObjectInstance(
+                        new ObjectSpawn(baseX + 0x180, baseY + 0x20, 0x3E, 0, 0, false, 0),
+                        baseX + 0x180,
+                        baseY + 0x20));
 
         List<AbstractObjectInstance> tracked = List.of(
                 htzFireProjectile,
@@ -112,7 +121,9 @@ class TestS2SelfContainedTransientRewind {
                 wallTurretShot,
                 verticalLaser,
                 lavaBubble,
-                mczFallingDebris);
+                mczFallingDebris,
+                bubble,
+                destroyedEggPrison);
 
         for (int frame = 0; frame < 3; frame++) {
             for (AbstractObjectInstance instance : tracked) {
@@ -145,6 +156,10 @@ class TestS2SelfContainedTransientRewind {
                 "precondition: exactly one lava bubble fixture is live");
         assertEquals(1, countLive(objectManager, MCZFallingDebrisInstance.class),
                 "precondition: exactly one MCZ falling debris fixture is live");
+        assertEquals(1, countLive(objectManager, BubbleObjectInstance.class),
+                "precondition: exactly one bubble fixture is live");
+        assertEquals(1, countLive(objectManager, DestroyedEggPrisonObjectInstance.class),
+                "precondition: exactly one destroyed Egg Prison fixture is live");
 
         Map<Class<?>, Map<String, Object>> capturedState = new LinkedHashMap<>();
         for (AbstractObjectInstance instance : tracked) {
@@ -175,6 +190,10 @@ class TestS2SelfContainedTransientRewind {
                 "diverge step must remove the lava bubble");
         assertEquals(0, countLive(objectManager, MCZFallingDebrisInstance.class),
                 "diverge step must remove the MCZ falling debris");
+        assertEquals(0, countLive(objectManager, BubbleObjectInstance.class),
+                "diverge step must remove the bubble");
+        assertEquals(0, countLive(objectManager, DestroyedEggPrisonObjectInstance.class),
+                "diverge step must remove the destroyed Egg Prison");
 
         registry.restore(snapshot);
 
@@ -187,6 +206,8 @@ class TestS2SelfContainedTransientRewind {
         assertSimpleStateRoundTrip(objectManager, VerticalLaserObjectInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, LavaBubbleObjectInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, MCZFallingDebrisInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, BubbleObjectInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, DestroyedEggPrisonObjectInstance.class, capturedState);
     }
 
     private static void assertNoRegisteredS2DynamicCodec(Class<?> type) {

@@ -169,9 +169,10 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             htzFlamethrowerCodec(),
             htzBossLavaBallCodec(),
             cnzBossElectricBallCodec(),
-            // Batch-4 S2 rewind codecs (CPZ boss component chain + ARZ bubble + OOZ flame).
+            // Batch-4 S2 rewind codecs (CPZ boss component chain + OOZ flame).
             // LavaBubbleObjectInstance and MCZFallingDebrisInstance now implement
             // RewindRecreatable -> genericRecreate Path 1.
+            // BubbleObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             cpzBossContainerCodec(),
             cpzContainerFloorCodec(),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
@@ -183,18 +184,14 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             cpzBossPipePumpCodec(),
             cpzBossPumpCodec(),
             cpzBossRobotnikCodec(),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    BubbleObjectInstance.class,
-                    spawn -> new BubbleObjectInstance(spawn.x(), spawn.y(), 0, 0)),
             oozBurnerFlameCodec(),
             // Batch-5 S2 rewind codecs (CPZ-boss Dripper/PipeSegment, Rexon head,
-            // Egg-prison destroyed body + button, ARZ leaf particle, results screen).
+            // Egg-prison button, results screen).
+            // DestroyedEggPrisonObjectInstance now implements
+            // RewindRecreatable -> genericRecreate Path 1.
             cpzBossDripperCodec(),
             cpzBossPipeSegmentCodec(),
             rexonHeadCodec(),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    DestroyedEggPrisonObjectInstance.class,
-                    spawn -> new DestroyedEggPrisonObjectInstance(spawn, spawn.x(), spawn.y())),
             eggPrisonButtonCodec(),
             // LeafParticleObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             ObjectRewindDynamicCodecs.exactSpawnCodec(

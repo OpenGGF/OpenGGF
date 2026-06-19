@@ -20,10 +20,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * was previously dropped on a held-rewind restore.
  *
  * <p>Batch-5 adds parent/sibling-relink codecs for the CPZ-boss Dripper and
- * PipeSegment, the HTZ Rexon head, and the Egg-prison button, plus exact-spawn
- * codecs for the destroyed Egg-prison body, the ARZ leaf particle, and the
- * act-results screen. All seven are gameplay-relevant (boss progression, solid
- * bodies, hazard/score state, score tally + level-transition flow), so none are
+ * PipeSegment, the HTZ Rexon head, and the Egg-prison button, plus an exact-spawn
+ * codec for the act-results screen. The destroyed Egg-prison body and ARZ leaf
+ * particle now use generic recreate. Remaining explicit codecs are gameplay-relevant
+ * (boss progression, solid bodies, score tally + level-transition flow), so none are
  * accept-drop.
  *
  * <p>Pure registry-content test: it constructs a registry and reads
@@ -52,7 +52,6 @@ class TestRewindFixS2Batch5Codecs {
                 CPZBossDripper.class.getName(),
                 CPZBossPipeSegment.class.getName(),
                 RexonHeadObjectInstance.class.getName(),
-                DestroyedEggPrisonObjectInstance.class.getName(),
                 EggPrisonButtonObjectInstance.class.getName(),
                 ResultsScreenObjectInstance.class.getName());
 
@@ -63,6 +62,9 @@ class TestRewindFixS2Batch5Codecs {
 
         assertFalse(names.contains(LeafParticleObjectInstance.class.getName()),
                 "LeafParticleObjectInstance must restore through RewindRecreatable generic recreate, "
+                        + "not a batch-5 codec");
+        assertFalse(names.contains(DestroyedEggPrisonObjectInstance.class.getName()),
+                "DestroyedEggPrisonObjectInstance must restore through RewindRecreatable generic recreate, "
                         + "not a batch-5 codec");
     }
 }

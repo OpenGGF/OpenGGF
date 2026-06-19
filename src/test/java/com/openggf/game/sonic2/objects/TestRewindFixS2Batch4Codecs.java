@@ -17,6 +17,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -25,8 +26,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * was previously dropped on a held-rewind restore.
  *
  * <p>The CPZ boss-component chain (container/floor/falling-part/flame/gunk/pipe/
- * pump/robotnik), the ARZ rising bubble, and the OOZ burner flame retain recreate
- * codecs (parent-relink, sibling-relink, or exact-spawn). {@link
+ * pump/robotnik) and the OOZ burner flame retain recreate codecs (parent-relink,
+ * sibling-relink, or exact-spawn). The ARZ rising bubble now uses generic recreate.
+ * {@link
  * com.openggf.game.sonic2.objects.bosses.CPZBossSmokePuff} is intentionally
  * accept-drop (cosmetic + dead code) and the scalar-only lava/MCZ falling hazards
  * now use generic recreate, so they are therefore NOT required here.
@@ -63,12 +65,15 @@ class TestRewindFixS2Batch4Codecs {
                 CPZBossPipePump.class.getName(),
                 CPZBossPump.class.getName(),
                 CPZBossRobotnik.class.getName(),
-                BubbleObjectInstance.class.getName(),
                 OOZBurnerFlameObjectInstance.class.getName());
 
         for (String name : required) {
             assertTrue(names.contains(name),
                     "missing rewind recreate codec for " + name);
         }
+
+        assertFalse(names.contains(BubbleObjectInstance.class.getName()),
+                "BubbleObjectInstance must restore through RewindRecreatable generic recreate, "
+                        + "not a batch-4 codec");
     }
 }
