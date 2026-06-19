@@ -65,6 +65,7 @@ class TestS2SelfContainedTransientRewind {
         assertNoRegisteredS2DynamicCodec(CPZBossFallingPart.class);
         assertNoRegisteredS2DynamicCodec(SpikyBlockSpikeInstance.class);
         assertNoRegisteredS2DynamicCodec(MonitorContentsObjectInstance.class);
+        assertNoRegisteredS2DynamicCodec(BombPrizeObjectInstance.class);
     }
 
     @Test
@@ -161,6 +162,14 @@ class TestS2SelfContainedTransientRewind {
                                 false,
                                 0),
                         null));
+        BombPrizeObjectInstance bombPrize = objectManager.createDynamicObject(
+                () -> new BombPrizeObjectInstance(
+                        baseX,
+                        baseY,
+                        baseX + 0x08,
+                        baseY + 0x08,
+                        0x20,
+                        new int[]{1}));
 
         List<AbstractObjectInstance> tracked = List.of(
                 htzFireProjectile,
@@ -178,7 +187,8 @@ class TestS2SelfContainedTransientRewind {
                 badnikProjectile,
                 cpzBossFallingPart,
                 spikyBlockSpike,
-                monitorContents);
+                monitorContents,
+                bombPrize);
 
         for (int frame = 0; frame < 3; frame++) {
             for (AbstractObjectInstance instance : tracked) {
@@ -225,6 +235,8 @@ class TestS2SelfContainedTransientRewind {
                 "precondition: exactly one SpikyBlock spike fixture is live");
         assertEquals(1, countLive(objectManager, MonitorContentsObjectInstance.class),
                 "precondition: exactly one monitor contents fixture is live");
+        assertEquals(1, countLive(objectManager, BombPrizeObjectInstance.class),
+                "precondition: exactly one bomb prize fixture is live");
 
         Map<Class<?>, Map<String, Object>> capturedState = new LinkedHashMap<>();
         for (AbstractObjectInstance instance : tracked) {
@@ -269,6 +281,8 @@ class TestS2SelfContainedTransientRewind {
                 "diverge step must remove the SpikyBlock spike");
         assertEquals(0, countLive(objectManager, MonitorContentsObjectInstance.class),
                 "diverge step must remove the monitor contents object");
+        assertEquals(0, countLive(objectManager, BombPrizeObjectInstance.class),
+                "diverge step must remove the bomb prize object");
 
         registry.restore(snapshot);
 
@@ -288,6 +302,7 @@ class TestS2SelfContainedTransientRewind {
         assertSimpleStateRoundTrip(objectManager, CPZBossFallingPart.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, SpikyBlockSpikeInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, MonitorContentsObjectInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, BombPrizeObjectInstance.class, capturedState);
     }
 
     private static void assertNoRegisteredS2DynamicCodec(Class<?> type) {

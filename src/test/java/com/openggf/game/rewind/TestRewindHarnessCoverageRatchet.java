@@ -118,12 +118,14 @@ public class TestRewindHarnessCoverageRatchet {
  *       SpikyBlockSpikeInstance dynamic codec.</li>
  *   <li>2026-06-19: raised to 95 after deleting the S2
  *       MonitorContentsObjectInstance dynamic codec.</li>
+ *   <li>2026-06-19: raised to 96 after deleting the S2
+ *       BombPrizeObjectInstance dynamic codec.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 95;
+    static final int RATCHET_FLOOR = 96;
 
     @BeforeEach
     void initHeadless() {

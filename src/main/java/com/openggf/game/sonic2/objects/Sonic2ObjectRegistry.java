@@ -147,10 +147,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             // WallTurretShotInstance and VerticalLaserObjectInstance now implement
             // RewindRecreatable -> genericRecreate Path 1.
             // SpikyBlockSpikeInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    BombPrizeObjectInstance.class,
-                    spawn -> new BombPrizeObjectInstance(
-                            spawn.x(), spawn.y(), 0, 0, 0, new int[]{0})),
+            // BombPrizeObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             // Batch-6 S2 rewind codecs (CNZ slot-machine ring prize, MTZ steam puff,
             // HTZ seesaw ball, CPZ-boss container extend).
             ObjectRewindDynamicCodecs.exactSpawnCodec(
