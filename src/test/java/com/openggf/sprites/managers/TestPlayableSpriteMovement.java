@@ -34,6 +34,9 @@ import com.openggf.physics.Direction;
 import com.openggf.physics.SensorResult;
 import com.openggf.game.GroundMode;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
+import com.openggf.sprites.animation.SpriteAnimationEndAction;
+import com.openggf.sprites.animation.SpriteAnimationScript;
+import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.playable.SecondaryAbility;
 import com.openggf.sprites.playable.SuperState;
 import java.lang.reflect.Field;
@@ -2473,6 +2476,46 @@ public class TestPlayableSpriteMovement {
                 assertFalse(mockSprite.getPushing(),
                                 "S3K grounded facing-flip push clear is unconditional; a later CalcRoomInFront "
                                                 + "contact can set Status_Push again in the normal movement path");
+        }
+
+        @Test
+        public void groundedFacingFlipRestartsWalkScriptLikeRomPrevAnimSentinel() throws Exception {
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                SpriteAnimationSet animations = new SpriteAnimationSet();
+                animations.addScript(0, new SpriteAnimationScript(0xFF,
+                                List.of(10, 11, 12, 13), SpriteAnimationEndAction.LOOP, 0));
+                animations.addScript(1, new SpriteAnimationScript(0xFF,
+                                List.of(20, 21, 22, 23), SpriteAnimationEndAction.LOOP, 0));
+                animations.addScript(5, new SpriteAnimationScript(0,
+                                List.of(30), SpriteAnimationEndAction.LOOP, 0));
+                mockSprite.setAnimationSet(animations);
+                mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                                .setIdleAnimId(5)
+                                .setWalkAnimId(0)
+                                .setRunAnimId(1)
+                                .setRunSpeedThreshold(0x600));
+                mockSprite.setAnimationId(0);
+                mockSprite.setMovementInputActive(true);
+                mockSprite.setDirection(Direction.RIGHT);
+                mockSprite.setGSpeed((short) 0);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+
+                mockSprite.getAnimationManager().update(0);
+                mockSprite.setAnimationFrameIndex(2);
+                mockSprite.setAnimationTick(0);
+
+                Method updatePush = PlayableSpriteMovement.class.getDeclaredMethod(
+                                "updatePushingOnDirectionChange", boolean.class, boolean.class);
+                updatePush.setAccessible(true);
+                updatePush.invoke(manager, true, false);
+                mockSprite.setDirection(Direction.LEFT);
+
+                mockSprite.getAnimationManager().update(1);
+
+                assertEquals(10, mockSprite.getMappingFrame(),
+                                "S2/S3K MoveLeft/MoveRight force prev_anim=Run on a grounded facing flip, "
+                                                + "so Animate_* must restart the walk script from frame 0");
         }
 
         /**
