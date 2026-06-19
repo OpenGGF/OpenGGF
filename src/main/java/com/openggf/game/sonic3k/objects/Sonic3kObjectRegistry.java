@@ -286,9 +286,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // now implements RewindRecreatable -> genericRecreate Path 1.
 
             // Self-contained MHZ end-boss objects.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    MhzEndBossEggCapsuleInstance.class,
-                    s -> new MhzEndBossEggCapsuleInstance(s.x(), s.y())),
+            // MhzEndBossEggCapsuleInstance codec deleted (Phase-2 batch 18):
+            // exact spawn coordinates are supplied by RewindRecreatable.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     MhzEndBossPaletteFadeController.class,
                     s -> new MhzEndBossPaletteFadeController(new byte[0][], true, 0)),
@@ -349,9 +348,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // self-contained; re-fetches art via RewindRecreatable.
 
             // MGZ end-of-act capsule / animals / results / collapse floor / boss.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    Mgz2EndEggCapsuleInstance.class,
-                    s -> new Mgz2EndEggCapsuleInstance(s.x(), s.y())),
+            // Mgz2EndEggCapsuleInstance codec deleted (Phase-2 batch 18):
+            // exact spawn coordinates are supplied by RewindRecreatable.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     Mgz2CapsuleAnimalInstance.class,
                     s -> new Mgz2CapsuleAnimalInstance(s, 0, 0, 0)),

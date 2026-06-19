@@ -6,6 +6,7 @@ import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossEggCapsuleInstance;
+import com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.badniks.S3kBadnikProjectileInstance;
 import com.openggf.game.sonic3k.objects.badniks.CaterkillerJrBodyInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -60,6 +61,8 @@ class TestS3kSelfContainedTransientRewind {
         assertNoRegisteredS3kDynamicCodec(Aiz2EndEggCapsuleInstance.class);
         assertNoRegisteredS3kDynamicCodec(HczEndBossEggCapsuleInstance.class);
         assertNoRegisteredS3kDynamicCodec(IczEndBossEggCapsuleInstance.class);
+        assertNoRegisteredS3kDynamicCodec(MhzEndBossEggCapsuleInstance.class);
+        assertNoRegisteredS3kDynamicCodec(Mgz2EndEggCapsuleInstance.class);
     }
 
     @Test
@@ -136,6 +139,10 @@ class TestS3kSelfContainedTransientRewind {
                 () -> new HczEndBossEggCapsuleInstance(baseX + 0x120, baseY + 0x70));
         IczEndBossEggCapsuleInstance iczEggCapsule = objectManager.createDynamicObject(
                 () -> new IczEndBossEggCapsuleInstance(baseX + 0x140, baseY + 0x78));
+        MhzEndBossEggCapsuleInstance mhzEggCapsule = objectManager.createDynamicObject(
+                () -> new MhzEndBossEggCapsuleInstance(baseX + 0x160, baseY + 0x80));
+        Mgz2EndEggCapsuleInstance mgz2EggCapsule = objectManager.createDynamicObject(
+                () -> new Mgz2EndEggCapsuleInstance(baseX + 0x180, baseY + 0x88));
 
         List<AbstractObjectInstance> tracked = List.of(
                 aizRockFragment,
@@ -158,7 +165,9 @@ class TestS3kSelfContainedTransientRewind {
                 signpostFlow,
                 aiz2EggCapsule,
                 hczEggCapsule,
-                iczEggCapsule);
+                iczEggCapsule,
+                mhzEggCapsule,
+                mgz2EggCapsule);
 
         for (int frame = 0; frame < 3; frame++) {
             for (AbstractObjectInstance instance : tracked) {
@@ -212,6 +221,10 @@ class TestS3kSelfContainedTransientRewind {
                 "precondition: exactly one HCZ egg capsule fixture is live");
         assertEquals(1, countLive(objectManager, IczEndBossEggCapsuleInstance.class),
                 "precondition: exactly one ICZ egg capsule fixture is live");
+        assertEquals(1, countLive(objectManager, MhzEndBossEggCapsuleInstance.class),
+                "precondition: exactly one MHZ egg capsule fixture is live");
+        assertEquals(1, countLive(objectManager, Mgz2EndEggCapsuleInstance.class),
+                "precondition: exactly one MGZ2 egg capsule fixture is live");
 
         Map<Class<?>, Map<String, Object>> capturedState = new LinkedHashMap<>();
         for (AbstractObjectInstance instance : tracked) {
@@ -266,6 +279,10 @@ class TestS3kSelfContainedTransientRewind {
                 "diverge step must remove the HCZ egg capsule");
         assertEquals(0, countLive(objectManager, IczEndBossEggCapsuleInstance.class),
                 "diverge step must remove the ICZ egg capsule");
+        assertEquals(0, countLive(objectManager, MhzEndBossEggCapsuleInstance.class),
+                "diverge step must remove the MHZ egg capsule");
+        assertEquals(0, countLive(objectManager, Mgz2EndEggCapsuleInstance.class),
+                "diverge step must remove the MGZ2 egg capsule");
 
         registry.restore(snapshot);
 
@@ -290,6 +307,8 @@ class TestS3kSelfContainedTransientRewind {
         assertSimpleStateRoundTrip(objectManager, Aiz2EndEggCapsuleInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, HczEndBossEggCapsuleInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, IczEndBossEggCapsuleInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, MhzEndBossEggCapsuleInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, Mgz2EndEggCapsuleInstance.class, capturedState);
     }
 
     private static void assertNoRegisteredS3kDynamicCodec(Class<?> type) {
