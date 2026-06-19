@@ -53,6 +53,8 @@ class TestS3kSelfContainedTransientRewind {
         assertNoRegisteredS3kDynamicCodec(Aiz2BossEndSequenceController.class);
         assertNoRegisteredS3kDynamicCodec(CutsceneKnucklesLbz1ThrownBomb.class);
         assertNoRegisteredS3kDynamicCodec(S3kBadnikProjectileInstance.class);
+        assertNoRegisteredS3kDynamicCodec(MhzShipSequenceControllerInstance.class);
+        assertNoRegisteredS3kDynamicCodec(S3kBossDefeatSignpostFlow.class);
     }
 
     @Test
@@ -118,6 +120,11 @@ class TestS3kSelfContainedTransientRewind {
         S3kBadnikProjectileInstance badnikProjectile = objectManager.createDynamicObject(
                 () -> S3kBadnikProjectileInstance.forRewindRecreate(
                         new ObjectSpawn(baseX + 0x30, baseY + 0x60, 0, 0, 0, false, 0)));
+        MhzShipSequenceControllerInstance mhzShipController = objectManager.createDynamicObject(
+                () -> new MhzShipSequenceControllerInstance(0x04C0, 0x4000));
+        S3kBossDefeatSignpostFlow signpostFlow = objectManager.createDynamicObject(
+                () -> new S3kBossDefeatSignpostFlow(
+                        baseX + 0xF0, 0, S3kBossDefeatSignpostFlow.CleanupAction.NONE));
 
         List<AbstractObjectInstance> tracked = List.of(
                 aizRockFragment,
@@ -135,11 +142,13 @@ class TestS3kSelfContainedTransientRewind {
                 bgTree,
                 endSequence,
                 thrownBomb,
-                badnikProjectile);
+                badnikProjectile,
+                mhzShipController,
+                signpostFlow);
 
         for (int frame = 0; frame < 3; frame++) {
             for (AbstractObjectInstance instance : tracked) {
-                if (instance != airCountdown && instance != endSequence) {
+                if (instance != airCountdown && instance != endSequence && instance != signpostFlow) {
                     instance.update(frame, fixture.sprite());
                 }
                 assertFalse(instance.isDestroyed(),
@@ -179,6 +188,10 @@ class TestS3kSelfContainedTransientRewind {
                 "precondition: exactly one LBZ1 thrown bomb fixture is live");
         assertEquals(1, countLive(objectManager, S3kBadnikProjectileInstance.class),
                 "precondition: exactly one S3K badnik projectile fixture is live");
+        assertEquals(1, countLive(objectManager, MhzShipSequenceControllerInstance.class),
+                "precondition: exactly one MHZ ship controller fixture is live");
+        assertEquals(1, countLive(objectManager, S3kBossDefeatSignpostFlow.class),
+                "precondition: exactly one S3K boss-defeat signpost flow fixture is live");
 
         Map<Class<?>, Map<String, Object>> capturedState = new LinkedHashMap<>();
         for (AbstractObjectInstance instance : tracked) {
@@ -223,6 +236,10 @@ class TestS3kSelfContainedTransientRewind {
                 "diverge step must remove the LBZ1 thrown bomb");
         assertEquals(0, countLive(objectManager, S3kBadnikProjectileInstance.class),
                 "diverge step must remove the S3K badnik projectile");
+        assertEquals(0, countLive(objectManager, MhzShipSequenceControllerInstance.class),
+                "diverge step must remove the MHZ ship controller");
+        assertEquals(0, countLive(objectManager, S3kBossDefeatSignpostFlow.class),
+                "diverge step must remove the S3K boss-defeat signpost flow");
 
         registry.restore(snapshot);
 
@@ -242,6 +259,8 @@ class TestS3kSelfContainedTransientRewind {
         assertSimpleStateRoundTrip(objectManager, Aiz2BossEndSequenceController.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, CutsceneKnucklesLbz1ThrownBomb.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, S3kBadnikProjectileInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, MhzShipSequenceControllerInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, S3kBossDefeatSignpostFlow.class, capturedState);
     }
 
     private static void assertNoRegisteredS3kDynamicCodec(Class<?> type) {

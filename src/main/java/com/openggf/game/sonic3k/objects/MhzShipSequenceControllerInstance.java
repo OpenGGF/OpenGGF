@@ -6,6 +6,8 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 
 import java.util.List;
 
@@ -17,7 +19,7 @@ import java.util.List;
  * and publishes the resulting ship H-int workspace values through the MHZ
  * event/runtime bridge.
  */
-public class MhzShipSequenceControllerInstance extends AbstractObjectInstance {
+public class MhzShipSequenceControllerInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final int OBJECT_ID = 0;
     private static final int MOTION_ACCELERATION = 0x000000C0;
     private static final int SWING_INITIAL_SPEED = 0x00002800;
@@ -39,6 +41,10 @@ public class MhzShipSequenceControllerInstance extends AbstractObjectInstance {
         this.swingVelocity = this.initialSwingSpeed;
     }
 
+    private MhzShipSequenceControllerInstance() {
+        this(0x04C0, 0x4000);
+    }
+
     public int getBombPortX() {
         return initialSwingSpeed;
     }
@@ -53,6 +59,11 @@ public class MhzShipSequenceControllerInstance extends AbstractObjectInstance {
 
     public int getMotionAccumulator() {
         return motionAccumulator;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new MhzShipSequenceControllerInstance(0x04C0, 0x4000);
     }
 
     @Override

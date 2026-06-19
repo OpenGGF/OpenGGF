@@ -377,10 +377,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // MHZ1 Knuckles cutscene door (relink to the placed button parent).
             mhz1CutsceneDoorCodec(),
 
-            // MHZ Act 2 ship-sequence controller (self-contained; ROM-fixed seeds).
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    MhzShipSequenceControllerInstance.class,
-                    s -> new MhzShipSequenceControllerInstance(0x04C0, 0x4000)),
+            // MHZ Act 2 ship-sequence controller codec deleted (Phase-2 batch 16):
+            // ROM-fixed seeds are supplied by RewindRecreatable generic recreate.
 
             // --- Release-slice batch 7: Pachinko traps/flippers + boss-defeat
             // signpost flow + song-fade transition + rock debris + egg-prison
@@ -398,14 +396,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // AIZ/LRZ breakable-rock gravity debris codec deleted (Phase-2
             // batch 12): mappingFrame/artKey are reapplied after generic recreate.
 
-            // Boss-defeat -> signpost -> results -> act-transition orchestrator
-            // (gameplay-critical, invisible, persistent). signpostX is spawn-
-            // derivable (getX()); apparentAct/cleanupAction un-finaled and
-            // reapplied after recreate.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    S3kBossDefeatSignpostFlow.class,
-                    s -> new S3kBossDefeatSignpostFlow(
-                            s.x(), 0, S3kBossDefeatSignpostFlow.CleanupAction.NONE)),
+            // Boss-defeat signpost flow codec deleted (Phase-2 batch 16):
+            // signpostX is spawn-derivable; apparentAct/cleanupAction are restored
+            // by the generic field capturer after RewindRecreatable recreate.
 
             // SongFadeTransitionInstance and EggPrisonAnimalInstance codecs
             // deleted (Phase-2 batch 13): placeholder constructor args are now
