@@ -4,6 +4,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.objects.badniks.CaterkillerJrBodyInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.EggPrisonAnimalInstance;
 import com.openggf.level.objects.ObjectInstance;
@@ -40,6 +41,13 @@ class TestS3kSelfContainedTransientRewind {
     @AfterEach
     void cleanup() {
         TestEnvironment.resetAll();
+    }
+
+    @Test
+    void phase2BatchCandidatesHaveNoExplicitDynamicCodec() {
+        assertNoRegisteredS3kDynamicCodec(S3kSignpostSparkleChild.class);
+        assertNoRegisteredS3kDynamicCodec(S3kAirCountdownObjectInstance.class);
+        assertNoRegisteredS3kDynamicCodec(CaterkillerJrBodyInstance.class);
     }
 
     @Test
@@ -89,6 +97,13 @@ class TestS3kSelfContainedTransientRewind {
                 () -> new EggPrisonAnimalInstance(
                         new ObjectSpawn(baseX + 0x90, baseY + 0x30, 0x28, 0, 0, false, 0),
                         8, 1));
+        S3kSignpostSparkleChild signpostSparkle = objectManager.createDynamicObject(
+                () -> new S3kSignpostSparkleChild(baseX + 0xA0, baseY + 0x38));
+        S3kAirCountdownObjectInstance airCountdown = objectManager.createDynamicObject(
+                () -> new S3kAirCountdownObjectInstance(baseX + 0x10, baseY, 0x06, 0x20, 0x10));
+        CaterkillerJrBodyInstance caterkillerBody = objectManager.createDynamicObject(
+                () -> CaterkillerJrBodyInstance.forRewindRecreate(
+                        new ObjectSpawn(baseX + 0xC0, baseY + 0x48, 0, 0, 0, false, 0)));
 
         List<AbstractObjectInstance> tracked = List.of(
                 aizRockFragment,
@@ -99,11 +114,16 @@ class TestS3kSelfContainedTransientRewind {
                 rockDebris,
                 mgzHeadProjectile,
                 songFade,
-                eggPrisonAnimal);
+                eggPrisonAnimal,
+                signpostSparkle,
+                airCountdown,
+                caterkillerBody);
 
         for (int frame = 0; frame < 3; frame++) {
             for (AbstractObjectInstance instance : tracked) {
-                instance.update(frame, fixture.sprite());
+                if (instance != airCountdown) {
+                    instance.update(frame, fixture.sprite());
+                }
                 assertFalse(instance.isDestroyed(),
                         instance.getClass().getSimpleName() + " should survive setup frame " + frame);
             }
@@ -127,6 +147,12 @@ class TestS3kSelfContainedTransientRewind {
                 "precondition: exactly one song fade fixture is live");
         assertEquals(1, countLive(objectManager, EggPrisonAnimalInstance.class),
                 "precondition: exactly one egg-prison animal fixture is live");
+        assertEquals(1, countLive(objectManager, S3kSignpostSparkleChild.class),
+                "precondition: exactly one signpost sparkle fixture is live");
+        assertEquals(1, countLive(objectManager, S3kAirCountdownObjectInstance.class),
+                "precondition: exactly one air countdown fixture is live");
+        assertEquals(1, countLive(objectManager, CaterkillerJrBodyInstance.class),
+                "precondition: exactly one Caterkiller Jr body fixture is live");
 
         Map<Class<?>, Map<String, Object>> capturedState = new LinkedHashMap<>();
         for (AbstractObjectInstance instance : tracked) {
@@ -157,6 +183,12 @@ class TestS3kSelfContainedTransientRewind {
                 "diverge step must remove the song fade");
         assertEquals(0, countLive(objectManager, EggPrisonAnimalInstance.class),
                 "diverge step must remove the egg-prison animal");
+        assertEquals(0, countLive(objectManager, S3kSignpostSparkleChild.class),
+                "diverge step must remove the signpost sparkle");
+        assertEquals(0, countLive(objectManager, S3kAirCountdownObjectInstance.class),
+                "diverge step must remove the air countdown");
+        assertEquals(0, countLive(objectManager, CaterkillerJrBodyInstance.class),
+                "diverge step must remove the Caterkiller Jr body");
 
         registry.restore(snapshot);
 
@@ -169,6 +201,16 @@ class TestS3kSelfContainedTransientRewind {
         assertSimpleStateRoundTrip(objectManager, MGZHeadTriggerProjectileInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, SongFadeTransitionInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, EggPrisonAnimalInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, S3kSignpostSparkleChild.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, S3kAirCountdownObjectInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, CaterkillerJrBodyInstance.class, capturedState);
+    }
+
+    private static void assertNoRegisteredS3kDynamicCodec(Class<?> type) {
+        boolean hasCodec = new Sonic3kObjectRegistry().dynamicRewindCodecs().stream()
+                .anyMatch(codec -> type.getName().equals(codec.className()));
+        assertFalse(hasCodec, type.getSimpleName()
+                + " must restore through RewindRecreatable generic recreate, not an explicit S3K dynamic codec");
     }
 
     private static <T extends AbstractObjectInstance> void assertSimpleStateRoundTrip(

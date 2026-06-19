@@ -197,9 +197,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // xVel/hFlip are reapplied after genericRecreate Path 1.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     S3kSignpostInstance.class, s -> new S3kSignpostInstance(0, 0)),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    S3kAirCountdownObjectInstance.class,
-                    s -> new S3kAirCountdownObjectInstance(0, 0, 0, 0, 0)),
+            // S3kAirCountdownObjectInstance codec deleted (Phase-2 batch 14):
+            // nullable spawn + scalar state are handled by RewindRecreatable.
 
             // --- Release-slice batch 2: AIZ/CNZ/MGZ/MHZ/ICZ/SS/badnik recreate codecs ---
             // Transient cosmetic debris/explosion/sparkle children, damaging miniboss
@@ -212,9 +211,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // AizRockFragmentChild / CnzMinibossDebrisChild / S3kBossExplosionChild
             // codecs deleted (Phase-2 batch 12): all three now implement
             // RewindRecreatable -> genericRecreate Path 1.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    S3kSignpostSparkleChild.class,
-                    s -> new S3kSignpostSparkleChild(s.x(), s.y())),
+            // S3kSignpostSparkleChild codec deleted (Phase-2 batch 14):
+            // nullable spawn + scalar state are handled by RewindRecreatable.
             // MhzPollenParticleInstance codec deleted (Phase-2 batch 12):
             // now implements RewindRecreatable -> genericRecreate Path 1.
 
@@ -224,9 +222,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     s -> new IczEndBossEggCapsuleInstance(s.x(), s.y())),
 
             // Self-contained badnik child (no live parent ref; differentiators captured).
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    CaterkillerJrBodyInstance.class,
-                    s -> CaterkillerJrBodyInstance.forRewindRecreate(s)),
+            // CaterkillerJrBodyInstance codec deleted (Phase-2 batch 14):
+            // constructor-only segment scalars are restored after generic recreate.
 
             // MHZ miniboss children (relink to the live boss recreated earlier).
             mhzMinibossChildCodec(MhzMinibossFlameInstance.class, MhzMinibossFlameInstance::new),

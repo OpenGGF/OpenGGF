@@ -6,6 +6,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -29,7 +31,7 @@ import java.util.List;
  * </ul>
  */
 public final class CaterkillerJrBodyInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, RewindRecreatable {
 
     private static final int COLLISION_BODY = 0x97;
     private static final int COLLISION_TAIL = 0x98;
@@ -118,6 +120,10 @@ public final class CaterkillerJrBodyInstance extends AbstractObjectInstance
         this.waitTimer = waitDelay;
     }
 
+    public CaterkillerJrBodyInstance(ObjectSpawn spawn) {
+        this(spawn, 0, 0);
+    }
+
     /**
      * Rewind recreate factory. The body holds no live parent reference, so a
      * structurally-valid instance positioned at the captured spawn is enough; the
@@ -129,6 +135,15 @@ public final class CaterkillerJrBodyInstance extends AbstractObjectInstance
      */
     public static CaterkillerJrBodyInstance forRewindRecreate(ObjectSpawn spawn) {
         return new CaterkillerJrBodyInstance(spawn, 0, 0);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectSpawn capturedSpawn = ctx.spawn();
+        if (capturedSpawn == null) {
+            capturedSpawn = new ObjectSpawn(0, 0, 0, 0, 0, false, 0);
+        }
+        return forRewindRecreate(capturedSpawn);
     }
 
     @Override
