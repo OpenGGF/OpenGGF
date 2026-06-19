@@ -89,12 +89,10 @@ import java.util.function.Function;
  */
 public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
     private static final List<DynamicObjectRewindCodec> DYNAMIC_REWIND_CODECS = List.of(
-            ObjectRewindDynamicCodecs.deferredPlayerBoundCodec(
-                    FireShieldObjectInstance.class, com.openggf.level.objects.ShieldObjectInstance.class),
-            ObjectRewindDynamicCodecs.deferredPlayerBoundCodec(
-                    LightningShieldObjectInstance.class, com.openggf.level.objects.ShieldObjectInstance.class),
-            ObjectRewindDynamicCodecs.deferredPlayerBoundCodec(
-                    BubbleShieldObjectInstance.class, com.openggf.level.objects.ShieldObjectInstance.class),
+            // S3K elemental shield codecs deleted (Phase-2 player-bound batch):
+            // Fire/Lightning/Bubble inherit ShieldObjectInstance's RewindRecreatable
+            // pending-player-bound hook, so genericRecreate queues the captured entry
+            // and the post-restore player refresh recreates the concrete shield.
             ObjectRewindDynamicCodecs.deferredPlayerBoundCodec(
                     Sonic3kInvincibilityStarsObjectInstance.class,
                     com.openggf.level.objects.InvincibilityStarsObjectInstance.class),

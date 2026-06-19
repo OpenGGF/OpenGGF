@@ -1,6 +1,7 @@
 package com.openggf.level.objects;
 
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.lang.reflect.Constructor;
 import java.util.List;
@@ -77,10 +78,10 @@ public final class ObjectRewindDynamicCodecs {
 
         // Path 1: RewindRecreatable — class provides its own creation hook.
         if (RewindRecreatable.class.isAssignableFrom(cls)) {
-            AbstractObjectInstance probe = constructProbeForRewindRecreatable(cls, ctx);
+            AbstractObjectInstance probe = constructProbeForRewindRecreatable(cls, entry, ctx);
             if (probe instanceof RewindRecreatable rr) {
                 RewindRecreateContext rewindCtx = new RewindRecreateContext(
-                        entry.spawn(), entry.state(), ctx.objectServices());
+                        entry.spawn(), entry.state(), ctx.objectServices(), entry);
                 return rr.recreateForRewind(rewindCtx);
             }
             LOG.fine("genericRecreate: RewindRecreatable probe construction failed for " + className);
@@ -106,6 +107,8 @@ public final class ObjectRewindDynamicCodecs {
      *
      * <p>Tries constructors in order:
      * <ol>
+     *   <li>{@code (AbstractPlayableSprite)} — player-bound dynamic objects using the
+     *       captured owner as a probe</li>
      *   <li>{@code (ObjectSpawn)} — single-arg spawn constructor</li>
      *   <li>{@code (ObjectSpawn, String)} — spawn plus harmless name placeholder</li>
      *   <li>{@code (ObjectSpawn, int)} — spawn plus harmless zero placeholder</li>
@@ -131,8 +134,17 @@ public final class ObjectRewindDynamicCodecs {
      */
     private static AbstractObjectInstance constructProbeForRewindRecreatable(
             Class<? extends AbstractObjectInstance> cls,
+            ObjectManagerSnapshot.DynamicObjectEntry entry,
             DynamicObjectRecreateContext ctx) {
         ObjectSpawn spawn = new ObjectSpawn(0, 0, 0, 0, 0, false, 0);
+
+        if (entry.playerOwner() instanceof AbstractPlayableSprite player) {
+            Constructor<? extends AbstractObjectInstance> playerCtor =
+                    findCtor(cls, AbstractPlayableSprite.class);
+            if (playerCtor != null) {
+                return invokeProbeCtor(cls, playerCtor, ctx, player);
+            }
+        }
 
         Constructor<? extends AbstractObjectInstance> spawnCtor = findCtor(cls, ObjectSpawn.class);
         if (spawnCtor != null) {

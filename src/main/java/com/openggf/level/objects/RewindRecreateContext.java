@@ -1,13 +1,12 @@
 package com.openggf.level.objects;
 
-import com.openggf.level.objects.PerObjectRewindSnapshot;
-import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.ObjectServices;
+import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 
 /**
  * Context passed to {@link RewindRecreatable#recreateForRewind(RewindRecreateContext)} during
- * a rewind restore. Exposes the captured spawn, the compact field-state blob, and the
- * restore-time object services.
+ * a rewind restore. Exposes the captured spawn, the compact field-state blob, the
+ * restore-time object services, and the captured dynamic entry when the object was
+ * restored from the dynamic-object surface.
  *
  * <p>Object-reference fields are <em>not</em> available here — they are resolved from the
  * compact blob (Task 3/5) after recreate returns. Implementations must not attempt
@@ -16,5 +15,30 @@ import com.openggf.level.objects.ObjectServices;
 public record RewindRecreateContext(
         ObjectSpawn spawn,
         PerObjectRewindSnapshot state,
-        ObjectServices objectServices) {
+        ObjectServices objectServices,
+        ObjectManagerSnapshot.DynamicObjectEntry dynamicEntry) {
+
+    public RewindRecreateContext(
+            ObjectSpawn spawn,
+            PerObjectRewindSnapshot state,
+            ObjectServices objectServices) {
+        this(spawn, state, objectServices, null);
+    }
+
+    /**
+     * Queues the captured dynamic entry for the post-restore player-bound
+     * power-up refresh path. This preserves the old deferred codec behavior:
+     * {@code recreateForRewind} returns {@code null}, then the live player
+     * refresh asks the power-up spawner to recreate and relink the concrete
+     * object using the captured slot and field state.
+     */
+    public void enqueuePendingPlayerBoundEntry(Class<?> baseType) {
+        if (dynamicEntry == null || objectServices == null || baseType == null) {
+            return;
+        }
+        ObjectManager objectManager = objectServices.objectManager();
+        if (objectManager != null) {
+            objectManager.enqueuePendingPlayerBoundEntry(baseType, dynamicEntry);
+        }
+    }
 }

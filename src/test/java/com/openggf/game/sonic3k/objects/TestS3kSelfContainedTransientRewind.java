@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.PowerUpObject;
+import com.openggf.game.ShieldType;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -15,7 +17,9 @@ import com.openggf.level.objects.EggPrisonAnimalInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ShieldObjectInstance;
 import com.openggf.level.objects.SubpixelMotion;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
@@ -32,7 +36,10 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Session-level rewind coverage for self-contained S3K transient/effect objects
@@ -87,6 +94,82 @@ class TestS3kSelfContainedTransientRewind {
         assertNoRegisteredS3kDynamicCodec(classForName(SNALE_BLASTER_PROJECTILE_CLASS));
         assertNoRegisteredS3kDynamicCodec(classForName(SPIKER_SPIKE_PROJECTILE_CLASS));
         assertNoRegisteredS3kDynamicCodec(classForName(ICZ_END_BOSS_ESCAPE_SHIP_CLASS));
+        assertNoRegisteredS3kDynamicCodec(FireShieldObjectInstance.class);
+        assertNoRegisteredS3kDynamicCodec(LightningShieldObjectInstance.class);
+        assertNoRegisteredS3kDynamicCodec(BubbleShieldObjectInstance.class);
+    }
+
+    @Test
+    void playerBoundFireShieldRestoresThroughSessionSnapshot() throws Exception {
+        assertElementalShieldRestoresThroughSessionSnapshot(
+                ShieldType.FIRE, FireShieldObjectInstance.class, true);
+    }
+
+    @Test
+    void playerBoundLightningShieldRestoresThroughSessionSnapshot() throws Exception {
+        assertElementalShieldRestoresThroughSessionSnapshot(
+                ShieldType.LIGHTNING, LightningShieldObjectInstance.class, true);
+    }
+
+    @Test
+    void playerBoundBubbleShieldRestoresThroughSessionSnapshot() throws Exception {
+        assertElementalShieldRestoresThroughSessionSnapshot(
+                ShieldType.BUBBLE, BubbleShieldObjectInstance.class, false);
+    }
+
+    private static <T extends ShieldObjectInstance> void assertElementalShieldRestoresThroughSessionSnapshot(
+            ShieldType shieldType, Class<T> shieldClass, boolean canSetAnimation) throws Exception {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(ZONE_AIZ, ACT_2)
+                .build();
+
+        RewindRegistry registry = fixture.gameplayMode().getRewindRegistry();
+        assertNotNull(registry, "RewindRegistry must be available after S3K boot");
+
+        ObjectManager objectManager = GameServices.level().getObjectManager();
+        assertNotNull(objectManager, "ObjectManager must be available for S3K");
+
+        AbstractPlayableSprite player = fixture.sprite();
+        player.giveShield(shieldType);
+        T capturedShield = assertInstanceOf(shieldClass, player.getShieldObject(),
+                        "precondition: S3K " + shieldType
+                                + " shield should create the concrete shield object");
+        if (canSetAnimation) {
+            capturedShield.getClass().getMethod("setAnimation", int.class)
+                    .invoke(capturedShield, 1);
+        }
+
+        int capturedSlot = capturedShield.getSlotIndex();
+        int capturedAnim = intField(capturedShield, "currentAnimId");
+        assertEquals(1, countLive(objectManager, shieldClass),
+                "precondition: exactly one " + shieldType + " shield fixture is live before capture");
+
+        CompositeSnapshot snapshot = registry.capture();
+        assertNotNull(snapshot, "capture() must return a snapshot");
+
+        objectManager.removeDynamicObject(capturedShield);
+        player.removeShield();
+        assertEquals(0, countLive(objectManager, shieldClass),
+                "diverge step must remove the " + shieldType + " shield object");
+
+        registry.restore(snapshot);
+
+        List<T> restored = liveObjects(objectManager, shieldClass);
+        assertEquals(1, restored.size(),
+                "post-restore player refresh must recreate exactly one " + shieldType + " shield");
+        T restoredShield = restored.get(0);
+        PowerUpObject playerShield = player.getShieldObject();
+        assertSame(restoredShield, playerShield,
+                "restored player shield link must point at the live ObjectManager shield");
+        assertEquals(capturedSlot, restoredShield.getSlotIndex(),
+                "restored shield must consume the captured dynamic slot");
+        assertEquals(capturedAnim, intField(restoredShield, "currentAnimId"),
+                "restored shield must keep captured animation state");
+        assertEquals(shieldType, player.getShieldType(),
+                "restored player state must still request the captured shield type");
+        assertFalse(restoredShield.isDestroyed(), "restored shield must remain live");
+        assertTrue(restoredShield.isShieldFor(player, shieldType),
+                "restored concrete shield must be bound to the same live player");
     }
 
     @Test
@@ -574,5 +657,11 @@ class TestS3kSelfContainedTransientRewind {
             values.put(fieldName, field.getInt(state));
         }
         return values;
+    }
+
+    private static int intField(Object instance, String fieldName) throws Exception {
+        Field field = instance.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getInt(instance);
     }
 }
