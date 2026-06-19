@@ -461,12 +461,12 @@ public class CNZSlotMachineManager {
     }
 
     private void setTargetForSlot(int slot, int targetFace) {
-        int shift = slot * 4;
-        if (shift < 0 || shift > 8) {
+        int shift = targetShiftForSlot(slot);
+        if (shift < 0) {
             return;
         }
         int face = targetFace & 0x0F;
-        int mask = Integer.rotateLeft(0xFFF0, shift) & 0xFFFF;
+        int mask = ~(0x0F << shift) & 0x0FFF;
         int packed = packedTargets();
         packed = (packed & mask) | ((face << shift) & 0xFFFF);
         unpackTargets(packed & 0x0777);
@@ -476,12 +476,21 @@ public class CNZSlotMachineManager {
      * Get target face value for a slot.
      */
     private int getTargetForSlot(int slot) {
-        int shift = slot * 4;
-        if (shift < 0 || shift > 8) {
+        int shift = targetShiftForSlot(slot);
+        if (shift < 0) {
             return 0;
         }
         int target = (packedTargets() >> shift) & 0x07;
         return target > FACE_BAR ? target - 2 : target;
+    }
+
+    private int targetShiftForSlot(int slot) {
+        return switch (slot) {
+            case 0 -> 8; // slot1_targ is the high byte of slots_targ
+            case 1 -> 4; // slot2_targ is the high nibble of slot23_targ
+            case 2 -> 0; // slot3_targ is the low nibble of slot23_targ
+            default -> -1;
+        };
     }
 
     private int packedTargets() {
