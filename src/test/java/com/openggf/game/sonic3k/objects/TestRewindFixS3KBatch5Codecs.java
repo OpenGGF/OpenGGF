@@ -14,6 +14,7 @@ import com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherMachineChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherVisualChild;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
+import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
@@ -23,12 +24,9 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies that {@link Sonic3kObjectRegistry} (unioned with the shared codecs)
- * now exposes a dynamic rewind recreate codec for every batch-5 S3K object that
- * was previously dropped on a held-rewind restore: the full MHZ end-boss family
- * (boss, capsule, palette fade, arena helper, and every parent-relinked child)
- * plus the CNZ bumper/cannon/cylinder traversal objects and the CNZ lights-flash
- * child.
+ * Verifies that every batch-5 S3K object that was previously dropped on a
+ * held-rewind restore still exposes a dynamic rewind recreate path: either a
+ * registered codec or the Phase-2 {@link RewindRecreatable} generic path.
  *
  * <p>Batch 5 has no accept-drop objects: each listed class is genuinely
  * recreated on restore (gameplay-critical hazards/structures or persistent
@@ -51,6 +49,17 @@ class TestRewindFixS3KBatch5Codecs {
             names.add(codec.className());
         }
         return names;
+    }
+
+    private static boolean hasDynamicRecreatePath(String className, Set<String> codecNames) {
+        if (codecNames.contains(className)) {
+            return true;
+        }
+        try {
+            return RewindRecreatable.class.isAssignableFrom(Class.forName(className));
+        } catch (ClassNotFoundException e) {
+            throw new AssertionError(e);
+        }
     }
 
     @Test
@@ -79,8 +88,8 @@ class TestRewindFixS3KBatch5Codecs {
                 MhzEndBossDefeatFragmentChild.class.getName());
 
         for (String name : required) {
-            assertTrue(names.contains(name),
-                    "missing rewind recreate codec for " + name);
+            assertTrue(hasDynamicRecreatePath(name, names),
+                    "missing rewind recreate path for " + name);
         }
     }
 }

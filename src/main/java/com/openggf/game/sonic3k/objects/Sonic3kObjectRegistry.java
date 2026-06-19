@@ -320,12 +320,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // CNZ lights flash codec deleted in Phase-2 batch 3: restoreAfter is
             // reapplied by the capturer after genericRecreate Path 1.
 
-            // MHZ end boss: registered before its children so they relink to a
-            // live boss in getActiveObjects(). The boss is normally re-spawned via
-            // the placement (JAWZ-id) path; this codec also covers the dynamic-
-            // capture case and closes its #recreate coverage gap.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    MhzEndBossInstance.class, s -> new MhzEndBossInstance(s)),
+            // MHZ end boss codec deleted (Phase-2 batch 4):
+            // now implements RewindRecreatable -> genericRecreate Path 1.
 
             // Self-contained MHZ end-boss objects.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
@@ -374,11 +370,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     CutsceneKnucklesLbz1ThrownBomb.class,
                     s -> new CutsceneKnucklesLbz1ThrownBomb(s.x(), s.y())),
 
-            // AIZ1 intro Knuckles rock: parent recreated FIRST (self-contained),
-            // then the rock child relinks to the live parent in getActiveObjects().
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    CutsceneKnucklesAiz1Instance.class,
-                    s -> new CutsceneKnucklesAiz1Instance(s)),
+            // AIZ1 intro Knuckles codec deleted (Phase-2 batch 4): parent is
+            // self-contained via RewindRecreatable; the rock child still relinks
+            // to the live parent in getActiveObjects().
             cutsceneKnucklesAiz1RockChildCodec(),
 
             // CNZ2 Knuckles cutscene blocking wall: relink to the placed parent.

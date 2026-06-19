@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
+import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
@@ -11,12 +12,9 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies that {@link Sonic3kObjectRegistry} (unioned with the shared codecs)
- * now exposes a dynamic rewind recreate codec for every batch-6 S3K object that
- * was previously dropped on a held-rewind restore: the LBZ1/CNZ2/AIZ1 Knuckles
- * cutscene family, the MGZ end-of-act capsule/animals/results/collapse-floor/boss
- * objects, the MHZ1 cutscene door, the MHZ ship-sequence controller, the S3K
- * insta-shield, and the lightning-shield spark particle.
+ * Verifies that every batch-6 S3K object that was previously dropped on a
+ * held-rewind restore still exposes a dynamic rewind recreate path: either a
+ * registered codec or the Phase-2 {@link RewindRecreatable} generic path.
  *
  * <p>Batch 6 has no accept-drop objects: each listed class is genuinely recreated
  * on restore (gameplay-critical cutscene/terrain/boss objects, or a one-shot
@@ -39,6 +37,17 @@ class TestRewindFixS3KBatch6Codecs {
             names.add(codec.className());
         }
         return names;
+    }
+
+    private static boolean hasDynamicRecreatePath(String className, Set<String> codecNames) {
+        if (codecNames.contains(className)) {
+            return true;
+        }
+        try {
+            return RewindRecreatable.class.isAssignableFrom(Class.forName(className));
+        } catch (ClassNotFoundException e) {
+            throw new AssertionError(e);
+        }
     }
 
     @Test
@@ -71,8 +80,8 @@ class TestRewindFixS3KBatch6Codecs {
                 MhzShipSequenceControllerInstance.class.getName());
 
         for (String name : required) {
-            assertTrue(names.contains(name),
-                    "missing rewind recreate codec for " + name);
+            assertTrue(hasDynamicRecreatePath(name, names),
+                    "missing rewind recreate path for " + name);
         }
     }
 }
