@@ -144,6 +144,28 @@ advances to `f1782`, another Obj36 contact-cadence movement delta.
 
 ## Evidence Ledger
 
+## 2026-06-19 - S2 EHZ Tails fly-in approach counter no longer becomes manual-control stall
+
+- Branch context: `bugfix/ai-s2-tails-sidekick-standing-pause`, branch-local
+  follow-up after `0c7a1a787`.
+- Root cause: `SidekickCpuController.updateApproaching()` reused
+  `controlCounter` as an approach timer, then transitioned to `NORMAL` without
+  clearing it. `updateNormal()` interprets nonzero `controlCounter` as the ROM
+  Player 2 manual-control override, so Tails could stand still with
+  `branch=manual_control`, `generatedInput=0x0`, and no move-lock/panic even
+  while Sonic was far ahead.
+- Focused behavioral proof:
+  `mvn -Dmse=off "-Dtest=com.openggf.tests.TestS2Ehz1Headless#testRegisteredTailsDoesNotStandStillForSecondsAfterFlyInLanding" test`
+  now passes. The test was red before the fix with Tails still at x=`0x01EF`
+  after 150 post-landing frames while Sonic/target were at x=`0x04C2`.
+- Trace verification:
+  `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay" test`
+  now passes locally (`Tests run: 1, Failures: 0`). Before this follow-up, the
+  same branch-local check failed at frame 1305 on `tails_x_sub`
+  (`expected=0x1B00`, `actual=0x0300`, 560 errors).
+- No full `*TraceReplay` sweep was run for this entry; the broader current
+  suite remains expected-red per the quick-state table.
+
 ## 2026-06-16 - Trace context rows reduced to frontier-relevant output
 
 - Scope: trace reporting/framework only on

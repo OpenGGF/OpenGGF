@@ -593,6 +593,112 @@ public class TestS2Ehz1Headless {
                 "registered S2 Tails should resume grounded follow after fly-in landing");
     }
 
+    @Test
+    public void testRegisteredTailsDoesNotStandStillForSecondsAfterFlyInLanding() {
+        AbstractPlayableSprite registeredSidekick = GameServices.sprites().getSidekicks().getFirst();
+        assertInstanceOf(Tails.class, registeredSidekick, "Sonic 2 should register Tails as the default sidekick");
+        tails = (Tails) registeredSidekick;
+        controller = tails.getCpuController();
+        assertNotNull(controller, "registered Tails should have a CPU controller");
+
+        controller.setInitialState(SidekickCpuController.State.SPAWNING);
+        tails.setCentreX((short) (sonic.getCentreX() - 0x120));
+        tails.setCentreY((short) (sonic.getCentreY() - 0xC0));
+        tails.setAir(true);
+        sonic.setAir(false);
+        sonic.setDead(false);
+
+        for (int i = 0; i < 80 && !controller.isApproaching(); i++) {
+            fixture.stepFrame(false, false, false, false, false);
+            sonic.setAir(false);
+            sonic.setDead(false);
+        }
+        assertEquals(SidekickCpuController.State.APPROACHING, controller.getState());
+
+        int approachFrames = 0;
+        int lastApproachTargetX = sonic.getCentreX(16) & 0xFFFF;
+        int lastApproachTargetY = sonic.getCentreY(16) & 0xFFFF;
+        for (; approachFrames < 180 && controller.isApproaching(); approachFrames++) {
+            fixture.stepFrame(false, false, false, true, false);
+            sonic.setAir(false);
+            sonic.setDead(false);
+            lastApproachTargetX = sonic.getCentreX(16) & 0xFFFF;
+            lastApproachTargetY = sonic.getCentreY(16) & 0xFFFF;
+        }
+        assertEquals(SidekickCpuController.State.NORMAL, controller.getState(),
+                "Tails should complete fly-in before checking post-landing follow; "
+                        + "approachFrames=" + approachFrames
+                        + ", tailsX=" + (tails.getCentreX() & 0xFFFF)
+                        + ", tailsY=" + (tails.getCentreY() & 0xFFFF)
+                        + ", targetX=" + lastApproachTargetX
+                        + ", targetY=" + lastApproachTargetY
+                        + ", sonicX=" + (sonic.getCentreX() & 0xFFFF)
+                        + ", sonicY=" + (sonic.getCentreY() & 0xFFFF)
+                        + ", xSpeed=0x" + Integer.toHexString(tails.getXSpeed() & 0xFFFF)
+                        + ", ySpeed=0x" + Integer.toHexString(tails.getYSpeed() & 0xFFFF)
+                        + ", gSpeed=0x" + Integer.toHexString(tails.getGSpeed() & 0xFFFF)
+                        + ", generatedInput=0x" + Integer.toHexString(controller.getDiagnosticGeneratedHeldInput()));
+
+        for (int i = 0; i < 120 && tails.getAir(); i++) {
+            fixture.stepFrame(false, false, false, true, false);
+            sonic.setAir(false);
+            sonic.setDead(false);
+        }
+        assertFalse(tails.getAir(), "registered Tails should land before checking stationary duration");
+
+        short initialX = tails.getCentreX();
+        int firstMovementFrame = -1;
+        int firstRightInputFrame = -1;
+        int firstPanicFrame = -1;
+        int maxMoveLock = 0;
+        int lastGeneratedInput = 0;
+        int lastTargetX = sonic.getCentreX(16) & 0xFFFF;
+        int lastSonicX = sonic.getCentreX() & 0xFFFF;
+        short lastGSpeed = tails.getGSpeed();
+        short lastXSpeed = tails.getXSpeed();
+        SidekickCpuController.State lastState = controller.getState();
+
+        for (int frame = 1; frame <= 150; frame++) {
+            fixture.stepFrame(false, false, false, true, false);
+            sonic.setAir(false);
+            sonic.setDead(false);
+
+            lastState = controller.getState();
+            lastGeneratedInput = controller.getDiagnosticGeneratedHeldInput();
+            lastTargetX = sonic.getCentreX(16) & 0xFFFF;
+            lastSonicX = sonic.getCentreX() & 0xFFFF;
+            lastGSpeed = tails.getGSpeed();
+            lastXSpeed = tails.getXSpeed();
+            maxMoveLock = Math.max(maxMoveLock, tails.getMoveLockTimer());
+            if (firstRightInputFrame < 0 && controller.getInputRight()) {
+                firstRightInputFrame = frame;
+            }
+            if (firstPanicFrame < 0 && lastState == SidekickCpuController.State.PANIC) {
+                firstPanicFrame = frame;
+            }
+            if (tails.getCentreX() != initialX) {
+                firstMovementFrame = frame;
+                break;
+            }
+        }
+
+        assertTrue(firstMovementFrame > 0 && firstMovementFrame <= 60,
+                "registered S2 Tails should not stand still for seconds after fly-in landing; "
+                        + "firstMovementFrame=" + firstMovementFrame
+                        + ", firstRightInputFrame=" + firstRightInputFrame
+                        + ", firstPanicFrame=" + firstPanicFrame
+                        + ", state=" + lastState
+                        + ", maxMoveLock=" + maxMoveLock
+                        + ", generatedInput=0x" + Integer.toHexString(lastGeneratedInput)
+                        + ", cpuDiag=" + controller.formatLatestNormalStepDiagnostics()
+                        + ", targetX=" + lastTargetX
+                        + ", sonicX=" + lastSonicX
+                        + ", tailsX=" + (tails.getCentreX() & 0xFFFF)
+                        + ", initialX=" + (initialX & 0xFFFF)
+                        + ", gSpeed=0x" + Integer.toHexString(lastGSpeed & 0xFFFF)
+                        + ", xSpeed=0x" + Integer.toHexString(lastXSpeed & 0xFFFF));
+    }
+
     // -- Panic State Tests --
 
     @Test
