@@ -1703,8 +1703,6 @@ com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebri
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebrisChild#finalScalar#frame
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebrisChild#finalScalar#gravity
 com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance$IczEndBossDefeatDebrisChild#recreate
-com.openggf.game.sonic3k.objects.bosses.MhzEndBossDefeatFragmentChild#finalScalar#subtype
-com.openggf.game.sonic3k.objects.bosses.MhzEndBossDefeatFragmentChild#finalScalar#xVel
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance#finalScalar#centreX
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance#finalScalar#centreY
 com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance$MhzEndBossPlayerTwoCarryChild#recreate

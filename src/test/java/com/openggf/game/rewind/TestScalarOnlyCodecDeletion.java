@@ -15,10 +15,13 @@ import com.openggf.game.sonic2.objects.PointsObjectInstance;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
+import com.openggf.game.sonic3k.objects.bosses.MhzEndBossDefeatFragmentChild;
+import com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.DynamicObjectRecreateContext;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -414,6 +417,11 @@ public class TestScalarOnlyCodecDeletion {
     private static final List<CodecDeletionCandidate> BATCH41_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance$CorkeyShotChild",
+                    GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> BATCH42_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    MhzEndBossDefeatFragmentChild.class.getName(),
                     GameId.S3K));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
@@ -2476,6 +2484,87 @@ public class TestScalarOnlyCodecDeletion {
         }
     }
 
+    // =====================================================================
+    // Batch 42: S3K MHZ end-boss defeat fragment, no live-boss dependency
+    // =====================================================================
+
+    @Test
+    void batch42ClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : BATCH42_DELETED_CODECS) {
+            Class<?> cls;
+            try {
+                cls = Class.forName(candidate.fqn());
+            } catch (ClassNotFoundException e) {
+                throw new AssertionError(e);
+            }
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 42)");
+        }
+    }
+
+    @Test
+    void batch42ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : BATCH42_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn() + " must have NO registered dynamic rewind codec after batch-42 deletion; "
+                            + "session restore must use genericRecreate Path 1");
+        }
+    }
+
+    @Test
+    void batch42ClassesGenericRecreateProducesInstance() {
+        for (CodecDeletionCandidate candidate : BATCH42_DELETED_CODECS) {
+            ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x3CA0, 0x320, candidate.gameId());
+            assertNotNull(result, "genericRecreate must return non-null for " + candidate.fqn());
+            assertEquals(candidate.fqn(), result.getClass().getName(),
+                    "genericRecreate must return the same concrete class for " + candidate.fqn());
+        }
+    }
+
+    @Test
+    void mhzEndBossDefeatFragmentGenericRecreateRestoresCapturedDerivedVelocityWithoutLiveBoss() {
+        String fqn = BATCH42_DELETED_CODECS.getFirst().fqn();
+        StubObjectServices stub = new StubObjectServices() {
+            @Override public ObjectRenderManager renderManager() { return INERT_RENDER_MANAGER; }
+            @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
+        };
+        ObjectSpawn bossSpawn = new ObjectSpawn(0x3D40, 0x2F0, 0x93, 0, 0, false, 0);
+        MhzEndBossInstance parent = ObjectConstructionContext.construct(stub,
+                () -> new MhzEndBossInstance(bossSpawn));
+        parent.getState().renderFlags = 1;
+        int capturedSubtype = 4;
+        MhzEndBossDefeatFragmentChild source = ObjectConstructionContext.construct(stub,
+                () -> MhzEndBossDefeatFragmentChild.forRewindRecreate(parent, capturedSubtype));
+        PerObjectRewindSnapshot state = source.captureRewindState();
+        ObjectSpawn capturedSpawn = source.getSpawn();
+
+        ObjectInstance recreated = invokeGenericRecreateWithState(fqn, capturedSpawn, state, GameId.S3K);
+        assertNotNull(recreated, "genericRecreate must not depend on a live MHZ end boss");
+        assertEquals(fqn, recreated.getClass().getName(),
+                "genericRecreate must return the same concrete fragment class before restore");
+        ((AbstractObjectInstance) recreated).restoreRewindState(state);
+
+        assertEquals(capturedSubtype, readIntField(recreated, "subtype"),
+                "standard scalar restore must reapply the exact captured fragment subtype");
+        assertEquals(readIntField(source, "xVel"), readIntField(recreated, "xVel"),
+                "standard scalar restore must reapply xVel derived from the captured parent render flags");
+        assertEquals(readIntField(source, "xFixed"), readIntField(recreated, "xFixed"),
+                "standard scalar restore must reapply exact fixed-point X");
+        assertEquals(readIntField(source, "yFixed"), readIntField(recreated, "yFixed"),
+                "standard scalar restore must reapply exact fixed-point Y");
+    }
+
+    @Test
+    void batch42ClassesRoundTripPassedThroughObjectManagerSessionPath() {
+        for (CodecDeletionCandidate candidate : BATCH42_DELETED_CODECS) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed through the ObjectManager session path; got: "
+                            + result);
+        }
+    }
+
     /**
      * Returns true if the given FQN has a registered dynamic rewind codec in the
      * shared codecs or in any of the three per-game registries. Distinct from
@@ -2565,6 +2654,30 @@ public class TestScalarOnlyCodecDeletion {
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to read " + fieldName + " from " + target.getClass(), e);
         }
+    }
+
+    private static int readIntField(Object target, String fieldName) {
+        try {
+            var field = findField(target.getClass(), fieldName);
+            return field.getInt(target);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to read " + fieldName + " from " + target.getClass(), e);
+        }
+    }
+
+    private static java.lang.reflect.Field findField(Class<?> cls, String fieldName)
+            throws NoSuchFieldException {
+        Class<?> current = cls;
+        while (current != null) {
+            try {
+                var field = current.getDeclaredField(fieldName);
+                field.setAccessible(true);
+                return field;
+            } catch (NoSuchFieldException ignored) {
+                current = current.getSuperclass();
+            }
+        }
+        throw new NoSuchFieldException(fieldName);
     }
 
     private static Camera mockCamera() {

@@ -143,12 +143,15 @@ public class TestRewindHarnessCoverageRatchet {
  *   <li>2026-06-19: raised to 113 after deleting the S3K CorkeyShotChild
  *       codec; generic recreate uses a placeholder script and compact restore
  *       reapplies the captured int[] script.</li>
+ *   <li>2026-06-19: raised to 114 after deleting the S3K
+ *       MhzEndBossDefeatFragmentChild codec; compact restore now reapplies the
+ *       parent-derived subtype/xVel state.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 113;
+    static final int RATCHET_FLOOR = 114;
 
     @BeforeEach
     void initHeadless() {

@@ -6,6 +6,8 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -17,7 +19,8 @@ import java.util.List;
  * {@code Set_IndexedVelocity} with base index $08 and then runs
  * {@code Obj_FlickerMove}.
  */
-public final class MhzEndBossDefeatFragmentChild extends AbstractObjectInstance {
+public final class MhzEndBossDefeatFragmentChild extends AbstractObjectInstance
+        implements RewindRecreatable {
     private static final int[] MAPPING_FRAMES = {0x12, 0x13, 0x14, 0x15, 0x16, 0x17};
     private static final int[] PRIORITY_BUCKETS = {4, 4, 6, 6, 4, 4};
     private static final int[][] VELOCITIES = {
@@ -31,19 +34,17 @@ public final class MhzEndBossDefeatFragmentChild extends AbstractObjectInstance 
     private static final int GRAVITY = 0x38;
     private static final int SUBPIXEL_SHIFT = 8;
 
-    private final int subtype;
-    private final int xVel;
+    private int subtype;
+    private int xVel;
     private int yVel;
     private int xFixed;
     private int yFixed;
     private int flickerCounter;
 
     /**
-     * Rewind-restore entry: relinks to the live parent boss and reconstructs the
-     * fragment with its captured {@code subtype} (cross-package codec access).
-     * {@code xVel} is re-derived in the constructor from subtype + the relinked
-     * parent's renderFlags; the remaining scalar state is reapplied by the generic
-     * field capturer after recreate.
+     * Parent-linked construction entry retained for tests and codec-era callers.
+     * Rewind restore now uses {@link #recreateForRewind(RewindRecreateContext)}
+     * and lets compact restore reapply the captured parent-derived {@code xVel}.
      */
     public static MhzEndBossDefeatFragmentChild forRewindRecreate(
             MhzEndBossInstance parent, int subtype) {
@@ -51,20 +52,54 @@ public final class MhzEndBossDefeatFragmentChild extends AbstractObjectInstance 
     }
 
     MhzEndBossDefeatFragmentChild(MhzEndBossInstance parent, int subtype) {
-        super(new ObjectSpawn(parent.getX(), parent.getY(), Sonic3kObjectIds.MHZ_END_BOSS, subtype, 0, false, 0),
-                "MHZEndBossDefeatFragment");
+        this(fragmentSpawn(parent.getX(), parent.getY(), subtype), subtype,
+                parentDerivedXVelocity(parent, subtype));
+    }
+
+    MhzEndBossDefeatFragmentChild(ObjectSpawn spawn) {
+        this(fragmentSpawn(spawn.x(), spawn.y(), spawn.subtype()), spawn.subtype(),
+                VELOCITIES[validatedSubtype(spawn.subtype())][0]);
+    }
+
+    private MhzEndBossDefeatFragmentChild(ObjectSpawn spawn, int subtype, int xVel) {
+        super(spawn, "MHZEndBossDefeatFragment");
         if (subtype < 0 || subtype >= MAPPING_FRAMES.length) {
             throw new IllegalArgumentException("Invalid MHZ end-boss defeat fragment subtype: " + subtype);
         }
         this.subtype = subtype;
-        this.xFixed = parent.getX() << SUBPIXEL_SHIFT;
-        this.yFixed = parent.getY() << SUBPIXEL_SHIFT;
-        int velocityX = VELOCITIES[subtype][0];
+        this.xFixed = spawn.x() << SUBPIXEL_SHIFT;
+        this.yFixed = spawn.y() << SUBPIXEL_SHIFT;
+        this.xVel = xVel;
+        this.yVel = VELOCITIES[subtype][1];
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectSpawn spawn = ctx.spawn();
+        if (spawn == null) {
+            spawn = fragmentSpawn(0, 0, 0);
+        }
+        return new MhzEndBossDefeatFragmentChild(spawn);
+    }
+
+    private static ObjectSpawn fragmentSpawn(int x, int y, int subtype) {
+        return new ObjectSpawn(x, y, Sonic3kObjectIds.MHZ_END_BOSS, subtype, 0, false, 0);
+    }
+
+    private static int parentDerivedXVelocity(MhzEndBossInstance parent, int subtype) {
+        int validSubtype = validatedSubtype(subtype);
+        int velocityX = VELOCITIES[validSubtype][0];
         if ((parent.getState().renderFlags & 1) != 0) {
             velocityX = -velocityX;
         }
-        this.xVel = velocityX;
-        this.yVel = VELOCITIES[subtype][1];
+        return velocityX;
+    }
+
+    private static int validatedSubtype(int subtype) {
+        if (subtype < 0 || subtype >= MAPPING_FRAMES.length) {
+            throw new IllegalArgumentException("Invalid MHZ end-boss defeat fragment subtype: " + subtype);
+        }
+        return subtype;
     }
 
     @Override

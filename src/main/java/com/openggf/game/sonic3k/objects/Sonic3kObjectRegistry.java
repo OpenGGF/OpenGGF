@@ -47,7 +47,6 @@ import com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossArenaHelperInstance;
-import com.openggf.game.sonic3k.objects.bosses.MhzEndBossDefeatFragmentChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossHitProxyChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance;
@@ -302,7 +301,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             bossChildCodec(MhzEndBossWeatherMachineChild.class, MhzEndBossInstance.class,
                     boss -> new MhzEndBossWeatherMachineChild(boss)),
             mhzEndBossHitProxyCodec(),
-            mhzEndBossDefeatFragmentCodec(),
+            // MhzEndBossDefeatFragmentChild codec deleted (Phase-2 batch 42):
+            // compact restore reapplies parent-derived subtype/xVel after generic recreate.
 
             // MHZ weather-machine visual children — relink to the live
             // weather-machine child recreated just above (in spawn order).
@@ -1549,41 +1549,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     return null;
                 }
                 return MhzEndBossHitProxyChild.forRewindRecreate(parent);
-            }
-        };
-    }
-
-    /**
-     * Codec for {@link MhzEndBossDefeatFragmentChild}. The fragment relinks the live
-     * {@link MhzEndBossInstance} parent (recreated earlier in spawn order) and recovers
-     * its {@code subtype} from the captured spawn ({@code subtype} is the 4th
-     * {@link ObjectSpawn} argument). {@code xVel} is re-derived in the constructor from
-     * subtype + the relinked parent's render flags; the remaining motion scalars are
-     * reapplied by the generic field capturer after recreate. If the boss is absent the
-     * fragment is dropped.
-     */
-    private static DynamicObjectRewindCodec mhzEndBossDefeatFragmentCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == MhzEndBossDefeatFragmentChild.class;
-            }
-
-            @Override
-            public String className() {
-                return MhzEndBossDefeatFragmentChild.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                MhzEndBossInstance parent =
-                        findLiveBossForRewind(context, MhzEndBossInstance.class);
-                if (parent == null) {
-                    return null;
-                }
-                return MhzEndBossDefeatFragmentChild.forRewindRecreate(
-                        parent, entry.spawn().subtype());
             }
         };
     }
