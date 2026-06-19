@@ -37,8 +37,8 @@ public final class ObjectRewindDynamicCodecs {
      * <ol>
      *   <li>Load the captured class name.</li>
      *   <li>If the class implements {@link RewindRecreatable}: construct a minimal probe
-     *       instance via {@link ObjectConstructionContext} (trying spawn-arg then zero-arg
-     *       constructors) and delegate to
+     *       instance via {@link ObjectConstructionContext} (trying known harmless
+     *       constructor signatures) and delegate to
      *       {@link RewindRecreatable#recreateForRewind(RewindRecreateContext)}.</li>
      *   <li>Else: rebuild via {@link ObjectRegistry#create(ObjectSpawn)} using the registry
      *       in {@link DynamicObjectRecreateContext#objectRegistry()}.</li>
@@ -108,6 +108,7 @@ public final class ObjectRewindDynamicCodecs {
      * <ol>
      *   <li>{@code (ObjectSpawn)} — single-arg spawn constructor</li>
      *   <li>{@code (ObjectSpawn, String)} — spawn plus harmless name placeholder</li>
+     *   <li>{@code (ObjectSpawn, int)} — spawn plus harmless zero placeholder</li>
      *   <li>{@code (ObjectSpawn, boolean)} — spawn plus default false option</li>
      *   <li>{@code (ObjectSpawn, ObjectServices, int)} — points-style constructor
      *       with default score/frame placeholder</li>
@@ -141,6 +142,12 @@ public final class ObjectRewindDynamicCodecs {
             return invokeProbeCtor(cls, spawnStringCtor, ctx, spawn, "RewindProbe");
         }
 
+        Constructor<? extends AbstractObjectInstance> spawnIntCtor =
+                findCtor(cls, ObjectSpawn.class, int.class);
+        if (spawnIntCtor != null) {
+            return invokeProbeCtor(cls, spawnIntCtor, ctx, spawn, 0);
+        }
+
         Constructor<? extends AbstractObjectInstance> spawnBooleanCtor =
                 findCtor(cls, ObjectSpawn.class, boolean.class);
         if (spawnBooleanCtor != null) {
@@ -158,7 +165,7 @@ public final class ObjectRewindDynamicCodecs {
             return invokeProbeCtor(cls, noArgCtor, ctx);
         }
 
-        // No (ObjectSpawn) or zero-arg constructor — cannot build a probe for this class.
+        // No supported probe constructor — cannot build a probe for this class.
         return null;
     }
 

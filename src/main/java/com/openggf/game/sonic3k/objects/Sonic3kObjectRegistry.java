@@ -125,9 +125,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // Tier 1: AizBossSmallInstance codec deleted (Phase-2 batch 2):
             // now implements RewindRecreatable -> genericRecreate Path 1.
 
-            // Tier 2: non-final differentiator reapplied after recreate.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    AizBattleshipInstance.class, s -> new AizBattleshipInstance(s, s.y())),
+            // Tier 2: AizBattleshipInstance codec deleted (Phase-2 generic recreate):
+            // now implements RewindRecreatable -> genericRecreate Path 1.
+            // Other non-final differentiators below are still reapplied after recreate.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     AizBgTreeInstance.class, s -> new AizBgTreeInstance(0)),
             ObjectRewindDynamicCodecs.exactSpawnCodec(

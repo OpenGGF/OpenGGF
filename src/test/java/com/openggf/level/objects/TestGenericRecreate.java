@@ -111,6 +111,26 @@ class TestGenericRecreate {
                 "recreated instance Y must reflect the captured spawn Y (77)");
     }
 
+    @Test
+    void rewindRecreatableProbeSupportsObjectSpawnIntConstructor() {
+        ObjectSpawn capturedSpawn = new ObjectSpawn(0x120, 0x90, 0x7002, 0, 0, false, -1);
+        DynamicObjectEntry entry = new DynamicObjectEntry(
+                SpawnIntRewindRecreatableObject.class.getName(),
+                capturedSpawn,
+                -1,
+                null);
+
+        ObjectInstance result = ObjectRewindDynamicCodecs.genericRecreate(entry, ctx);
+
+        SpawnIntRewindRecreatableObject recreated =
+                assertInstanceOf(SpawnIntRewindRecreatableObject.class, result,
+                        "genericRecreate must reach the RewindRecreatable hook for (ObjectSpawn, int) classes");
+        assertSame(capturedSpawn, recreated.getSpawn(),
+                "recreateForRewind must receive and use the captured spawn, not the probe spawn");
+        assertEquals(0xCAFE, recreated.constructorMarker(),
+                "fixture hook must create the final restored instance, proving the hook ran");
+    }
+
     // =========================================================================
     // Path 2 — Registry path (direct genericRecreate call)
     // =========================================================================
@@ -302,6 +322,30 @@ class TestGenericRecreate {
 
         boolean sawServicesDuringConstruction() {
             return sawServicesDuringConstruction;
+        }
+
+        @Override
+        public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) {
+            // no-op
+        }
+    }
+
+    private static final class SpawnIntRewindRecreatableObject
+            extends AbstractObjectInstance implements RewindRecreatable {
+        private final int constructorMarker;
+
+        SpawnIntRewindRecreatableObject(ObjectSpawn spawn, int constructorMarker) {
+            super(spawn, "SpawnIntRewindRecreatableObject");
+            this.constructorMarker = constructorMarker;
+        }
+
+        int constructorMarker() {
+            return constructorMarker;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            return new SpawnIntRewindRecreatableObject(ctx.spawn(), 0xCAFE);
         }
 
         @Override

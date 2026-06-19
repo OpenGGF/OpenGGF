@@ -1,19 +1,20 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.level.objects.DynamicObjectRewindCodec;
+import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies that {@link Sonic3kObjectRegistry} exposes a dynamic rewind codec
- * for every AIZ2 battleship / boss-endgame object that must survive a rewind
- * keyframe restore, including the transient combat/cosmetic children that were
- * previously dropped.
+ * Verifies that every AIZ2 battleship / boss-endgame object that must survive a
+ * rewind keyframe restore has a dynamic recreate path, either through a registry
+ * codec or the Phase-2 {@link RewindRecreatable} generic path.
  *
  * <p>Held rewind restores the nearest keyframe and re-simulates forward each
  * displayed frame, so any object dropped on restore is re-emitted from scratch
@@ -21,9 +22,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * battleship/boss child is now captured and recreated — there are no longer any
  * intentionally-dropped AIZ2 transients.
  *
- * <p>This is a pure registry-content test: it constructs a registry and reads
- * {@code dynamicRewindCodecs()} without a ROM, OpenGL, or an active gameplay
- * session.
+ * <p>This is a pure recreate-path test: it constructs a registry and reads
+ * {@code dynamicRewindCodecs()} / class metadata without a ROM, OpenGL, or an
+ * active gameplay session.
  */
 class TestAiz2ObjectRewindCodecs {
 
@@ -36,20 +37,28 @@ class TestAiz2ObjectRewindCodecs {
         return names;
     }
 
+    private static boolean hasDynamicRecreatePath(Class<?> type, Set<String> codecNames) {
+        return codecNames.contains(type.getName()) || RewindRecreatable.class.isAssignableFrom(type);
+    }
+
     @Test
-    void registersCodecsForAiz2RecreatableObjects() {
+    void hasDynamicRecreatePathsForAiz2RecreatableObjects() {
         Set<String> names = codecClassNames();
-        // Tier 1: self-contained objects.
-        assertTrue(names.contains(AizBgTreeSpawnerInstance.class.getName()),
-                "missing codec for AizBgTreeSpawnerInstance");
-        assertTrue(names.contains(AizBossSmallInstance.class.getName()),
-                "missing codec for AizBossSmallInstance");
-        assertTrue(names.contains(AizMinibossNapalmProjectile.class.getName()),
-                "missing codec for AizMinibossNapalmProjectile");
+        // Tier 1: self-contained objects may use codecs or Phase-2 generic recreate.
+        assertTrue(hasDynamicRecreatePath(AizBgTreeSpawnerInstance.class, names),
+                "missing dynamic recreate path for AizBgTreeSpawnerInstance");
+        assertTrue(hasDynamicRecreatePath(AizBossSmallInstance.class, names),
+                "missing dynamic recreate path for AizBossSmallInstance");
+        assertTrue(hasDynamicRecreatePath(AizMinibossNapalmProjectile.class, names),
+                "missing dynamic recreate path for AizMinibossNapalmProjectile");
 
         // Tier 2: non-final differentiator reapplied after recreate.
-        assertTrue(names.contains(AizBattleshipInstance.class.getName()),
-                "missing codec for AizBattleshipInstance");
+        assertFalse(names.contains(AizBattleshipInstance.class.getName()),
+                "AizBattleshipInstance codec should be deleted via Phase-2 generic recreate");
+        assertTrue(RewindRecreatable.class.isAssignableFrom(AizBattleshipInstance.class),
+                "AizBattleshipInstance must implement RewindRecreatable after codec deletion");
+        assertTrue(hasDynamicRecreatePath(AizBattleshipInstance.class, names),
+                "missing dynamic recreate path for AizBattleshipInstance");
         assertTrue(names.contains(AizBgTreeInstance.class.getName()),
                 "missing codec for AizBgTreeInstance");
         assertTrue(names.contains(Aiz2BossEndSequenceController.class.getName()),

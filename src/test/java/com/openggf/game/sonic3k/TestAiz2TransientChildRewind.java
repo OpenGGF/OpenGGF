@@ -135,7 +135,7 @@ class TestAiz2TransientChildRewind {
                 "Restored bomb must keep its non-spawn sourceSecondaryX differentiator");
 
         // 6b. The bomb relinked to the live battleship recreated earlier in restore.
-        //     The battleship's own codec also recreates it, so the live ship is a
+        //     The battleship's generic recreate path also restores it, so the live ship is a
         //     fresh instance (not the pre-restore `ship`); the bomb must point at
         //     whichever battleship is live now.
         AizBattleshipInstance liveShip = findLiveShip(objectManager);
