@@ -385,6 +385,7 @@ public record PerObjectRewindSnapshot(
             int suppressedObjectMoveAndFallAxes,
             boolean hidden,
             boolean renderFlagOnScreen, boolean renderFlagOnScreenValid,
+            boolean renderHFlip, boolean renderVFlip,
             // MGZ-specific
             boolean mgzTopPlatformSpringHandoffPending,
             int mgzTopPlatformSpringHandoffXVel,
