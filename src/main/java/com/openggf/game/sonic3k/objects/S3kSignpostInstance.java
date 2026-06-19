@@ -15,6 +15,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -30,7 +32,7 @@ import java.util.logging.Logger;
  *
  * <p>State machine: INIT -> FALLING -> LANDED -> RESULTS -> AFTER
  */
-public class S3kSignpostInstance extends AbstractObjectInstance {
+public class S3kSignpostInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(S3kSignpostInstance.class.getName());
 
     // ---- State machine ----
@@ -118,6 +120,16 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
         this.worldX = spawnX;
         this.worldY = 0; // Set properly in INIT
         this.apparentAct = apparentAct;
+    }
+
+    private S3kSignpostInstance() {
+        this(0, 0);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        int spawnX = ctx.spawn() != null ? ctx.spawn().x() : 0;
+        return new S3kSignpostInstance(spawnX, 0);
     }
 
     @Override

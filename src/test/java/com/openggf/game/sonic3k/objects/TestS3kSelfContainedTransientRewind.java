@@ -5,6 +5,7 @@ import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossGeyserCutscene;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.badniks.S3kBadnikProjectileInstance;
@@ -70,6 +71,9 @@ class TestS3kSelfContainedTransientRewind {
         assertNoRegisteredS3kDynamicCodec(IczEndBossEggCapsuleInstance.class);
         assertNoRegisteredS3kDynamicCodec(MhzEndBossEggCapsuleInstance.class);
         assertNoRegisteredS3kDynamicCodec(Mgz2EndEggCapsuleInstance.class);
+        assertNoRegisteredS3kDynamicCodec(S3kSignpostInstance.class);
+        assertNoRegisteredS3kDynamicCodec(HczEndBossGeyserCutscene.class);
+        assertNoRegisteredS3kDynamicCodec(Mgz2CapsuleAnimalInstance.class);
         assertNoRegisteredS3kDynamicCodec(classForName(BLASTOID_PROJECTILE_CLASS));
         assertNoRegisteredS3kDynamicCodec(classForName(SNALE_BLASTER_PROJECTILE_CLASS));
         assertNoRegisteredS3kDynamicCodec(classForName(SPIKER_SPIKE_PROJECTILE_CLASS));
@@ -153,6 +157,14 @@ class TestS3kSelfContainedTransientRewind {
                 () -> new MhzEndBossEggCapsuleInstance(baseX + 0x160, baseY + 0x80));
         Mgz2EndEggCapsuleInstance mgz2EggCapsule = objectManager.createDynamicObject(
                 () -> new Mgz2EndEggCapsuleInstance(baseX + 0x180, baseY + 0x88));
+        S3kSignpostInstance signpost = objectManager.createDynamicObject(
+                () -> new S3kSignpostInstance(baseX + 0x1A0, 1));
+        HczEndBossGeyserCutscene hczGeyserCutscene = objectManager.createDynamicObject(
+                () -> new HczEndBossGeyserCutscene(baseX + 0x1C0, baseY + 0xA0));
+        Mgz2CapsuleAnimalInstance mgz2CapsuleAnimal = objectManager.createDynamicObject(
+                () -> new Mgz2CapsuleAnimalInstance(
+                        new ObjectSpawn(baseX + 0x1E0, baseY + 0xA8, 0, 0, 0, false, 0),
+                        6, 1, 0x18));
         AbstractObjectInstance blastoidProjectile = objectManager.createDynamicObject(
                 () -> instantiatePrivateDynamic(
                         BLASTOID_PROJECTILE_CLASS,
@@ -200,13 +212,21 @@ class TestS3kSelfContainedTransientRewind {
                 iczEggCapsule,
                 mhzEggCapsule,
                 mgz2EggCapsule,
+                signpost,
+                hczGeyserCutscene,
+                mgz2CapsuleAnimal,
                 blastoidProjectile,
                 snaleBlasterProjectile,
                 spikerSpikeProjectile);
 
         for (int frame = 0; frame < 3; frame++) {
             for (AbstractObjectInstance instance : tracked) {
-                if (instance != airCountdown && instance != endSequence && instance != signpostFlow) {
+                if (instance != airCountdown
+                        && instance != endSequence
+                        && instance != signpostFlow
+                        && instance != signpost
+                        && instance != hczGeyserCutscene
+                        && instance != mgz2CapsuleAnimal) {
                     instance.update(frame, fixture.sprite());
                 }
                 assertFalse(instance.isDestroyed(),
@@ -260,6 +280,12 @@ class TestS3kSelfContainedTransientRewind {
                 "precondition: exactly one MHZ egg capsule fixture is live");
         assertEquals(1, countLive(objectManager, Mgz2EndEggCapsuleInstance.class),
                 "precondition: exactly one MGZ2 egg capsule fixture is live");
+        assertEquals(1, countLive(objectManager, S3kSignpostInstance.class),
+                "precondition: exactly one S3K signpost fixture is live");
+        assertEquals(1, countLive(objectManager, HczEndBossGeyserCutscene.class),
+                "precondition: exactly one HCZ geyser cutscene fixture is live");
+        assertEquals(1, countLive(objectManager, Mgz2CapsuleAnimalInstance.class),
+                "precondition: exactly one MGZ2 capsule animal fixture is live");
         assertEquals(1, countLive(objectManager, classForName(BLASTOID_PROJECTILE_CLASS)),
                 "precondition: exactly one Blastoid projectile fixture is live");
         assertEquals(1, countLive(objectManager, classForName(SNALE_BLASTER_PROJECTILE_CLASS)),
@@ -324,6 +350,12 @@ class TestS3kSelfContainedTransientRewind {
                 "diverge step must remove the MHZ egg capsule");
         assertEquals(0, countLive(objectManager, Mgz2EndEggCapsuleInstance.class),
                 "diverge step must remove the MGZ2 egg capsule");
+        assertEquals(0, countLive(objectManager, S3kSignpostInstance.class),
+                "diverge step must remove the S3K signpost");
+        assertEquals(0, countLive(objectManager, HczEndBossGeyserCutscene.class),
+                "diverge step must remove the HCZ geyser cutscene");
+        assertEquals(0, countLive(objectManager, Mgz2CapsuleAnimalInstance.class),
+                "diverge step must remove the MGZ2 capsule animal");
         assertEquals(0, countLive(objectManager, classForName(BLASTOID_PROJECTILE_CLASS)),
                 "diverge step must remove the Blastoid projectile");
         assertEquals(0, countLive(objectManager, classForName(SNALE_BLASTER_PROJECTILE_CLASS)),
@@ -356,6 +388,9 @@ class TestS3kSelfContainedTransientRewind {
         assertSimpleStateRoundTrip(objectManager, IczEndBossEggCapsuleInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, MhzEndBossEggCapsuleInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, Mgz2EndEggCapsuleInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, S3kSignpostInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, HczEndBossGeyserCutscene.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, Mgz2CapsuleAnimalInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, classForName(BLASTOID_PROJECTILE_CLASS), capturedState);
         assertSimpleStateRoundTrip(objectManager, classForName(SNALE_BLASTER_PROJECTILE_CLASS), capturedState);
         assertSimpleStateRoundTrip(objectManager, classForName(SPIKER_SPIKE_PROJECTILE_CLASS), capturedState);

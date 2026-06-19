@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.sonic3k.objects.badniks.S3kBadnikProjectileInstance;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
 import com.openggf.level.objects.ObjectRewindDynamicCodecs;
+import com.openggf.level.objects.RewindRecreatable;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
@@ -12,9 +13,9 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies that {@link Sonic3kObjectRegistry} (unioned with the shared codecs)
- * now exposes a dynamic rewind recreate codec for every HCZ/MHZ/MGZ/ICZ
- * release-slice object that was previously dropped on a held-rewind restore.
+ * Verifies that every HCZ/MHZ/MGZ/ICZ release-slice object that was previously
+ * dropped on a held-rewind restore still exposes a dynamic rewind recreate path:
+ * either a registered codec or the Phase-2 {@link RewindRecreatable} generic path.
  *
  * <p>Pure registry-content test: it constructs a registry and reads
  * {@code dynamicRewindCodecs()} without a ROM, OpenGL, or an active gameplay
@@ -35,6 +36,17 @@ class TestS3kRewindFixBatch1Codecs {
         return names;
     }
 
+    private static boolean hasDynamicRecreatePath(String className, Set<String> codecNames) {
+        if (codecNames.contains(className)) {
+            return true;
+        }
+        try {
+            return RewindRecreatable.class.isAssignableFrom(Class.forName(className));
+        } catch (ClassNotFoundException e) {
+            throw new AssertionError(e);
+        }
+    }
+
     @Test
     void registersCodecsForReleaseSliceBatch1Objects() {
         Set<String> names = codecClassNames();
@@ -52,8 +64,8 @@ class TestS3kRewindFixBatch1Codecs {
                 Sonic3kStarPostStarChild.class.getName());
 
         for (String name : required) {
-            assertTrue(names.contains(name),
-                    "missing rewind recreate codec for " + name);
+            assertTrue(hasDynamicRecreatePath(name, names),
+                    "missing rewind recreate path for " + name);
         }
     }
 }

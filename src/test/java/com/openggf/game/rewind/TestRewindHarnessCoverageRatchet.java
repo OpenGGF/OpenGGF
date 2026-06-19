@@ -95,12 +95,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       S3K session-level/no-ref exact-spawn dynamic codecs.</li>
  *   <li>2026-06-19: raised to 68 after session-level verification deleted three
  *       S3K exact-spawn end egg capsule dynamic codecs.</li>
+ *   <li>2026-06-19: raised to 76 after session-level verification deleted the
+ *       remaining S3K end egg capsule codecs, three private S3K badnik projectile
+ *       codecs, and three no-ref S3K exact-spawn dynamic codecs.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 68;
+    static final int RATCHET_FLOOR = 76;
 
     @BeforeEach
     void initHeadless() {

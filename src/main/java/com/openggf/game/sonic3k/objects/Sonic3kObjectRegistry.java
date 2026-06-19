@@ -41,7 +41,6 @@ import com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossBlade;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeSplash;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeWaterChute;
-import com.openggf.game.sonic3k.objects.bosses.HczEndBossGeyserCutscene;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikShip;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine;
@@ -189,8 +188,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // scalar differentiators are restored after generic recreate.
             // MGZHeadTriggerProjectileInstance codec deleted (Phase-2 batch 13):
             // xVel/hFlip are reapplied after genericRecreate Path 1.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    S3kSignpostInstance.class, s -> new S3kSignpostInstance(0, 0)),
+            // S3kSignpostInstance codec deleted (Phase-2 batch 20):
+            // nullable spawn + scalar state are handled by RewindRecreatable.
             // S3kAirCountdownObjectInstance codec deleted (Phase-2 batch 14):
             // nullable spawn + scalar state are handled by RewindRecreatable.
 
@@ -244,9 +243,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // Aiz2EndEggCapsuleInstance / HczEndBossEggCapsuleInstance codecs
             // deleted (Phase-2 batch 17): exact spawn coordinates are supplied
             // by RewindRecreatable.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    HczEndBossGeyserCutscene.class,
-                    s -> new HczEndBossGeyserCutscene(s.x(), s.y())),
+            // HczEndBossGeyserCutscene codec deleted (Phase-2 batch 20):
+            // exact spawn coordinates are supplied by RewindRecreatable.
 
             // HCZ end-boss children — relink to the live boss recreated earlier.
             // Turbine is registered BEFORE the water column so the column's
@@ -350,9 +348,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // MGZ end-of-act capsule / animals / results / collapse floor / boss.
             // Mgz2EndEggCapsuleInstance codec deleted (Phase-2 batch 18):
             // exact spawn coordinates are supplied by RewindRecreatable.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    Mgz2CapsuleAnimalInstance.class,
-                    s -> new Mgz2CapsuleAnimalInstance(s, 0, 0, 0)),
+            // Mgz2CapsuleAnimalInstance codec deleted (Phase-2 batch 20):
+            // captured scalar state is restored after generic recreate.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     S3kResultsScreenObjectInstance.class,
                     s -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0)),
