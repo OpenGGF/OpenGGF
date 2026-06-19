@@ -16,6 +16,9 @@ import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.ObjectSpawn;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -56,6 +59,11 @@ public final class RewindFieldInventoryTool {
             return;
         }
 
+        if (args.length == 1 && "--dynamic-codec-inventory".equals(args[0])) {
+            printDynamicCodecInventory(dynamicCodecInventory());
+            return;
+        }
+
         List<String> unsupported = unsupportedFields();
         if (unsupported.isEmpty()) {
             System.out.println("No unsupported rewind fields found.");
@@ -81,6 +89,28 @@ public final class RewindFieldInventoryTool {
         ).flatMap(List::stream)
          .map(DynamicObjectRewindCodec::className)
          .collect(Collectors.toUnmodifiableSet());
+    }
+
+    static List<DynamicCodecInventoryEntry> dynamicCodecInventory() {
+        return allGameCodecClassNames().stream()
+                .sorted()
+                .map(RewindFieldInventoryTool::dynamicCodecInventoryEntry)
+                .toList();
+    }
+
+    private static DynamicCodecInventoryEntry dynamicCodecInventoryEntry(String className) {
+        ClassLoader loader = Thread.currentThread().getContextClassLoader();
+        try {
+            Class<?> cls = Class.forName(className, false, loader);
+            return new DynamicCodecInventoryEntry(
+                    className,
+                    true,
+                    hasSimpleProbeConstructor(cls),
+                    objectReferenceFieldCount(cls, false),
+                    objectReferenceFieldCount(cls, true));
+        } catch (ClassNotFoundException e) {
+            return new DynamicCodecInventoryEntry(className, false, false, 0, 0);
+        }
     }
 
     /**
@@ -300,6 +330,53 @@ public final class RewindFieldInventoryTool {
         return packageName.isEmpty() ? "(default)" : packageName;
     }
 
+    private static boolean hasSimpleProbeConstructor(Class<?> cls) {
+        return hasDeclaredConstructor(cls)
+                || hasDeclaredConstructor(cls, ObjectSpawn.class)
+                || hasDeclaredConstructor(cls, ObjectSpawn.class, String.class)
+                || hasDeclaredConstructor(cls, ObjectSpawn.class, ObjectServices.class)
+                || hasDeclaredConstructor(cls, ObjectSpawn.class, boolean.class);
+    }
+
+    private static boolean hasDeclaredConstructor(Class<?> cls, Class<?>... parameterTypes) {
+        try {
+            cls.getDeclaredConstructor(parameterTypes);
+            return true;
+        } catch (NoSuchMethodException e) {
+            return false;
+        }
+    }
+
+    private static int objectReferenceFieldCount(Class<?> cls, boolean requireCapturedByGenericFields) {
+        int count = 0;
+        for (Class<?> cursor = cls; cursor != null && cursor != Object.class; cursor = cursor.getSuperclass()) {
+            for (Field field : cursor.getDeclaredFields()) {
+                if (!isObjectReferenceField(field)) {
+                    continue;
+                }
+                if (requireCapturedByGenericFields && isGenericFieldTransient(field)) {
+                    continue;
+                }
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private static boolean isObjectReferenceField(Field field) {
+        int mods = field.getModifiers();
+        return !Modifier.isStatic(mods)
+                && !field.isSynthetic()
+                && ObjectInstance.class.isAssignableFrom(field.getType());
+    }
+
+    private static boolean isGenericFieldTransient(Field field) {
+        int mods = field.getModifiers();
+        return Modifier.isTransient(mods)
+                || field.isAnnotationPresent(RewindTransient.class)
+                || field.isAnnotationPresent(RewindDeferred.class);
+    }
+
     private static void printAnnotationDensity(AnnotationDensity density) {
         System.out.println("Rewind annotation density:");
         printCounts("By declaring class:", density.byClass());
@@ -330,6 +407,33 @@ public final class RewindFieldInventoryTool {
             System.out.println(prefix + annotation.field()
                     + " : declaredType=" + annotation.declaredType()
                     + " inferredPolicy=" + annotation.inferredPolicy());
+        }
+    }
+
+    private static void printDynamicCodecInventory(List<DynamicCodecInventoryEntry> inventory) {
+        long missingClasses = inventory.stream()
+                .filter(entry -> !entry.classFound())
+                .count();
+        long simpleScalarProbeClasses = inventory.stream()
+                .filter(entry -> entry.classFound()
+                        && entry.hasSimpleProbeConstructor()
+                        && entry.objectReferenceFieldCount() == 0)
+                .count();
+        long liveReferenceClasses = inventory.stream()
+                .filter(entry -> entry.objectReferenceFieldCount() > 0)
+                .count();
+
+        System.out.println("Dynamic rewind codec inventory:");
+        System.out.println("total=" + inventory.size()
+                + " simpleScalarProbe=" + simpleScalarProbeClasses
+                + " liveReference=" + liveReferenceClasses
+                + " missingClass=" + missingClasses);
+        for (DynamicCodecInventoryEntry entry : inventory) {
+            System.out.println(entry.className()
+                    + " : classFound=" + entry.classFound()
+                    + " simpleProbeCtor=" + entry.hasSimpleProbeConstructor()
+                    + " objectRefs=" + entry.objectReferenceFieldCount()
+                    + " nonTransientObjectRefs=" + entry.nonTransientObjectReferenceFieldCount());
         }
     }
 
@@ -376,6 +480,14 @@ public final class RewindFieldInventoryTool {
             String declaredType,
             RewindFieldPolicy inferredPolicy,
             boolean genericEligibleClass) {
+    }
+
+    record DynamicCodecInventoryEntry(
+            String className,
+            boolean classFound,
+            boolean hasSimpleProbeConstructor,
+            int objectReferenceFieldCount,
+            int nonTransientObjectReferenceFieldCount) {
     }
 
     private RewindFieldInventoryTool() {

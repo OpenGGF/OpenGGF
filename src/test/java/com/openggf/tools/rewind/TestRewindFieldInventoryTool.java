@@ -3,6 +3,8 @@ package com.openggf.tools.rewind;
 import com.openggf.game.rewind.GenericRewindEligibility;
 import com.openggf.game.rewind.RewindDeferred;
 import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.sonic2.objects.ConveyorObjectInstance;
+import com.openggf.game.sonic3k.objects.bosses.MhzEndBossHitProxyChild;
 import com.openggf.graphics.GLCommand;
 import com.openggf.game.sonic1.objects.Sonic1TryAgainEggmanObjectInstance;
 import com.openggf.level.Pattern;
@@ -185,5 +187,36 @@ class TestRewindFieldInventoryTool {
         String out = RewindFieldInventoryTool.renderCoverageReport();
         assertTrue(out.contains("coverage:"), "must include a coverage summary line");
         assertTrue(out.contains("gaps"), "must report gap count");
+    }
+
+    @Test
+    void dynamicCodecInventoryClassifiesSimpleAndLiveReferenceEntries() {
+        List<RewindFieldInventoryTool.DynamicCodecInventoryEntry> inventory =
+                RewindFieldInventoryTool.dynamicCodecInventory();
+
+        assertFalse(inventory.isEmpty());
+
+        RewindFieldInventoryTool.DynamicCodecInventoryEntry conveyor = findInventoryEntry(
+                inventory, ConveyorObjectInstance.class.getName());
+        assertTrue(conveyor.classFound());
+        assertTrue(conveyor.hasSimpleProbeConstructor());
+        assertEquals(0, conveyor.objectReferenceFieldCount());
+        assertEquals(0, conveyor.nonTransientObjectReferenceFieldCount());
+
+        RewindFieldInventoryTool.DynamicCodecInventoryEntry hitProxy = findInventoryEntry(
+                inventory, MhzEndBossHitProxyChild.class.getName());
+        assertTrue(hitProxy.classFound());
+        assertFalse(hitProxy.hasSimpleProbeConstructor());
+        assertTrue(hitProxy.objectReferenceFieldCount() > 0);
+        assertEquals(0, hitProxy.nonTransientObjectReferenceFieldCount(),
+                "@RewindTransient parent links are live-reference tail, not generic field captures");
+    }
+
+    private static RewindFieldInventoryTool.DynamicCodecInventoryEntry findInventoryEntry(
+            List<RewindFieldInventoryTool.DynamicCodecInventoryEntry> inventory, String className) {
+        return inventory.stream()
+                .filter(entry -> entry.className().equals(className))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("missing inventory entry for " + className));
     }
 }
