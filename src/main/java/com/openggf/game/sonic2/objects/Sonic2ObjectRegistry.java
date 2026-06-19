@@ -114,7 +114,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
     private static final List<DynamicObjectRewindCodec> DYNAMIC_REWIND_CODECS = List.of(
             badnikProjectileCodec(),
             buzzerFlameCodec(),
-            conveyorCodec(),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     MonitorContentsObjectInstance.class,
                     spawn -> new MonitorContentsObjectInstance(spawn, null)),
@@ -405,26 +404,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                     throw new IllegalStateException(
                             "Failed to recreate dynamic rewind object " + entry.className(), e);
                 }
-            }
-        };
-    }
-
-    private static DynamicObjectRewindCodec conveyorCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance instanceof ConveyorObjectInstance;
-            }
-
-            @Override
-            public String className() {
-                return ConveyorObjectInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                return ConveyorObjectInstance.recreateForRewind(entry.spawn(), entry.state());
             }
         };
     }

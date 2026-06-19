@@ -8,12 +8,15 @@ import com.openggf.game.rewind.RewindRoundTripHarness.RoundTripSweepResult;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic1.objects.Sonic1PointsObjectInstance;
-import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
+import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.sonic2.objects.ConveyorObjectInstance;
 import com.openggf.game.sonic2.objects.PointsObjectInstance;
+import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.DynamicObjectRecreateContext;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -122,6 +125,9 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic2.objects.badniks.GrounderBadnikInstance",
                     GameId.S2));
+
+    private static final List<CodecDeletionCandidate> BATCH10_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(ConveyorObjectInstance.class.getName(), GameId.S2));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -558,6 +564,79 @@ public class TestScalarOnlyCodecDeletion {
         }
     }
 
+    // =====================================================================
+    // Batch 10: S2 MTZ Conveyor - codec deleted, captured constructor base preserved
+    // =====================================================================
+
+    @Test
+    void batch10ClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : BATCH10_DELETED_CODECS) {
+            Class<?> cls;
+            try {
+                cls = Class.forName(candidate.fqn());
+            } catch (ClassNotFoundException e) {
+                throw new AssertionError(e);
+            }
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 10)");
+        }
+    }
+
+    @Test
+    void batch10ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : BATCH10_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn()),
+                    candidate.fqn() + " must have NO registered dynamic rewind codec after batch-10 deletion; "
+                            + "it should round-trip purely via genericRecreate Path 1");
+        }
+    }
+
+    @Test
+    void batch10ClassesGenericRecreateProducesInstance() {
+        for (CodecDeletionCandidate candidate : BATCH10_DELETED_CODECS) {
+            ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
+            assertNotNull(result, "genericRecreate must return non-null for " + candidate.fqn());
+            assertEquals(candidate.fqn(), result.getClass().getName(),
+                    "genericRecreate must return the same concrete class for " + candidate.fqn());
+        }
+    }
+
+    @Test
+    void batch10ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : BATCH10_DELETED_CODECS) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    @Test
+    void conveyorGenericRecreatePreservesCapturedConstructorBase() {
+        ObjectSpawn spawn = new ObjectSpawn(
+                0x340, 0x280, Sonic2ObjectIds.CONVEYOR, 0x01, 0, false, 0);
+        int capturedBaseX = 0x300;
+        int capturedBaseY = 0x240;
+        ConveyorObjectInstance source =
+                new ConveyorObjectInstance(spawn, "Conveyor", capturedBaseX, capturedBaseY);
+        PerObjectRewindSnapshot state = source.captureRewindState();
+
+        ObjectInstance recreated = invokeGenericRecreateWithState(
+                ConveyorObjectInstance.class.getName(), spawn, state, GameId.S2);
+
+        assertNotNull(recreated, "genericRecreate must return non-null for ConveyorObjectInstance");
+        assertEquals(ConveyorObjectInstance.class, recreated.getClass());
+        PerObjectRewindSnapshot recreatedState =
+                ((AbstractObjectInstance) recreated).captureRewindState();
+        Object extra = recreatedState.objectSubclassExtra();
+        assertNotNull(extra, "Conveyor recreate must preserve subclass rewind extra");
+        assertEquals(capturedBaseX, readIntRecordComponent(extra, "baseX"),
+                "Conveyor generic recreate must preserve captured baseX, not derive it from spawn.x");
+        assertEquals(capturedBaseY, readIntRecordComponent(extra, "baseY"),
+                "Conveyor generic recreate must preserve captured baseY, not derive it from spawn.y");
+    }
+
     /**
      * Returns true if the given FQN has a registered dynamic rewind codec in the
      * shared codecs or in any of the three per-game registries. Distinct from
@@ -583,6 +662,14 @@ public class TestScalarOnlyCodecDeletion {
     // Private helpers
 
     private static ObjectInstance invokeGenericRecreate(String fqn, int x, int y, GameId gameId) {
+        ObjectSpawn spawn = new ObjectSpawn(x, y, 0, 0, 0, false, 0);
+        PerObjectRewindSnapshot state = new PerObjectRewindSnapshot(
+                false, false, false, 0, 0, 0, 0, false, 0, false, false, 0, -1, null, null, null);
+        return invokeGenericRecreateWithState(fqn, spawn, state, gameId);
+    }
+
+    private static ObjectInstance invokeGenericRecreateWithState(
+            String fqn, ObjectSpawn spawn, PerObjectRewindSnapshot state, GameId gameId) {
         Camera camera = mockCamera();
         ObjectManager[] holder = new ObjectManager[1];
         StubObjectServices stub = new StubObjectServices() {
@@ -600,13 +687,20 @@ public class TestScalarOnlyCodecDeletion {
                 List.of(), registry, 0, null, null, GraphicsManager.getInstance(), camera, stub);
         holder[0] = om;
         om.reset(0);
-        ObjectSpawn spawn = new ObjectSpawn(x, y, 0, 0, 0, false, 0);
-        PerObjectRewindSnapshot state = new PerObjectRewindSnapshot(
-                false, false, false, 0, 0, 0, 0, false, 0, false, false, 0, -1, null, null, null);
         ObjectManagerSnapshot.DynamicObjectEntry entry =
                 new ObjectManagerSnapshot.DynamicObjectEntry(fqn, spawn, 0, state);
         DynamicObjectRecreateContext ctx = new DynamicObjectRecreateContext(om);
         return ObjectRewindDynamicCodecs.genericRecreate(entry, ctx);
+    }
+
+    private static int readIntRecordComponent(Object record, String componentName) {
+        try {
+            var method = record.getClass().getDeclaredMethod(componentName);
+            method.setAccessible(true);
+            return (Integer) method.invoke(record);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to read " + componentName + " from " + record.getClass(), e);
+        }
     }
 
     private static Camera mockCamera() {

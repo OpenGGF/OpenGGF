@@ -105,13 +105,14 @@ public final class ObjectRewindDynamicCodecs {
      * {@link RewindRecreatable#recreateForRewind} can be called on it.
      *
      * <p>Tries constructors in order:
- * <ol>
- *   <li>{@code (ObjectSpawn)} — single-arg spawn constructor</li>
- *   <li>{@code (ObjectSpawn, boolean)} — spawn plus default false option</li>
- *   <li>{@code (ObjectSpawn, ObjectServices, int)} — points-style constructor
- *       with default score/frame placeholder</li>
- *   <li>zero-arg — no-argument default constructor</li>
- * </ol>
+     * <ol>
+     *   <li>{@code (ObjectSpawn)} — single-arg spawn constructor</li>
+     *   <li>{@code (ObjectSpawn, String)} — spawn plus harmless name placeholder</li>
+     *   <li>{@code (ObjectSpawn, boolean)} — spawn plus default false option</li>
+     *   <li>{@code (ObjectSpawn, ObjectServices, int)} — points-style constructor
+     *       with default score/frame placeholder</li>
+     *   <li>zero-arg — no-argument default constructor</li>
+     * </ol>
      *
      * <p><strong>Failure handling:</strong> a missing constructor signature
      * ({@link NoSuchMethodException}) is benign — the next strategy is tried, and if none
@@ -132,6 +133,12 @@ public final class ObjectRewindDynamicCodecs {
         Constructor<? extends AbstractObjectInstance> spawnCtor = findCtor(cls, ObjectSpawn.class);
         if (spawnCtor != null) {
             return invokeProbeCtor(cls, spawnCtor, ctx, spawn);
+        }
+
+        Constructor<? extends AbstractObjectInstance> spawnStringCtor =
+                findCtor(cls, ObjectSpawn.class, String.class);
+        if (spawnStringCtor != null) {
+            return invokeProbeCtor(cls, spawnStringCtor, ctx, spawn, "RewindProbe");
         }
 
         Constructor<? extends AbstractObjectInstance> spawnBooleanCtor =
