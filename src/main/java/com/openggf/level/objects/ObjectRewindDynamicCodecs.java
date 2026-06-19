@@ -273,7 +273,9 @@ public final class ObjectRewindDynamicCodecs {
             @Override
             public ObjectInstance recreate(DynamicObjectRecreateContext context,
                     ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                return factory.apply(entry.spawn());
+                return ObjectConstructionContext.construct(
+                        context.objectServices(),
+                        () -> factory.apply(entry.spawn()));
             }
         };
     }
@@ -301,7 +303,9 @@ public final class ObjectRewindDynamicCodecs {
             @Override
             public ObjectInstance recreate(DynamicObjectRecreateContext context,
                     ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                return factory.apply(entry.spawn(), context.objectServices());
+                return ObjectConstructionContext.construct(
+                        context.objectServices(),
+                        () -> factory.apply(entry.spawn(), context.objectServices()));
             }
         };
     }
