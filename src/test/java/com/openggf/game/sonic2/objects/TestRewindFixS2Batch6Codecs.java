@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -54,7 +55,6 @@ class TestRewindFixS2Batch6Codecs {
 
         List<String> required = List.of(
                 RingPrizeObjectInstance.class.getName(),
-                SteamPuffObjectInstance.class.getName(),
                 SeesawBallObjectInstance.class.getName(),
                 CPZBossContainerExtend.class.getName());
 
@@ -62,5 +62,9 @@ class TestRewindFixS2Batch6Codecs {
             assertTrue(names.contains(name),
                     "missing rewind recreate codec for " + name);
         }
+
+        assertFalse(names.contains(SteamPuffObjectInstance.class.getName()),
+                "SteamPuffObjectInstance must restore through RewindRecreatable generic recreate, "
+                        + "not a batch-6 codec");
     }
 }

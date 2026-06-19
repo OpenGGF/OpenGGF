@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -53,12 +54,15 @@ class TestRewindFixS2Batch5Codecs {
                 RexonHeadObjectInstance.class.getName(),
                 DestroyedEggPrisonObjectInstance.class.getName(),
                 EggPrisonButtonObjectInstance.class.getName(),
-                LeafParticleObjectInstance.class.getName(),
                 ResultsScreenObjectInstance.class.getName());
 
         for (String name : required) {
             assertTrue(names.contains(name),
                     "missing rewind recreate codec for " + name);
         }
+
+        assertFalse(names.contains(LeafParticleObjectInstance.class.getName()),
+                "LeafParticleObjectInstance must restore through RewindRecreatable generic recreate, "
+                        + "not a batch-5 codec");
     }
 }

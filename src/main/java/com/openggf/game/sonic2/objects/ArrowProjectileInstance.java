@@ -3,11 +3,14 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
+import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -31,7 +34,7 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class ArrowProjectileInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(ArrowProjectileInstance.class.getName());
 
     private static final int ARROW_VELOCITY = 0x400; // Fixed-point 8.8 = 4 pixels/frame
@@ -49,6 +52,10 @@ public class ArrowProjectileInstance extends AbstractObjectInstance
     private boolean facingLeft;
     private boolean initialized;
 
+    private ArrowProjectileInstance() {
+        this(new ObjectSpawn(0, 0, Sonic2ObjectIds.ARROW_SHOOTER, 0, 0, false, 0), 0, 0, false);
+    }
+
     public ArrowProjectileInstance(ObjectSpawn parentSpawn, int startX, int startY, boolean facingLeft) {
         super(createArrowSpawn(parentSpawn, startX, startY), "Arrow");
         this.currentX = startX;
@@ -63,6 +70,12 @@ public class ArrowProjectileInstance extends AbstractObjectInstance
         } else {
             this.xVelocity = ARROW_VELOCITY;
         }
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectSpawn s = ctx.spawn();
+        return new ArrowProjectileInstance(s, s.x(), s.y(), false);
     }
 
     private static ObjectSpawn createArrowSpawn(ObjectSpawn parent, int x, int y) {

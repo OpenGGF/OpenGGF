@@ -125,9 +125,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                     GrounderRockProjectile.class,
                     spawn -> new GrounderRockProjectile(spawn.x(), spawn.y(), 0, null)),
             grounderWallCodec(),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    HtzFireProjectileObjectInstance.class,
-                    s -> new HtzFireProjectileObjectInstance(s.x(), s.y(), 0, 0, false)),
+            // HtzFireProjectileObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             // NOTE: EHZ boss child codecs (Spike, Wheel, GroundVehicle, Propeller,
             // VehicleTop) intentionally REMOVED. All five are construction-spawned
             // (inside initializeBossState() → spawnChildComponents()), so the
@@ -140,9 +138,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             // routine-fired children keep their codecs.
             // See docs/KNOWN_DISCREPANCIES.md and TestBossChildNoDoubleSpawnParity.
             balkiryJetCodec(),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    ArrowProjectileInstance.class,
-                    spawn -> new ArrowProjectileInstance(spawn, spawn.x(), spawn.y(), false)),
+            // ArrowProjectileInstance now implements RewindRecreatable -> genericRecreate Path 1.
             shellcrackerClawCodec(),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     SlicerPincerInstance.class,
@@ -176,10 +172,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                     RingPrizeObjectInstance.class,
                     spawn -> new RingPrizeObjectInstance(
                             spawn.x(), spawn.y(), 0, 0, 0, new int[]{0})),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    SteamPuffObjectInstance.class,
-                    spawn -> new SteamPuffObjectInstance(
-                            spawn.x(), spawn.y(), (spawn.renderFlags() & 0x01) != 0)),
+            // SteamPuffObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             seesawBallCodec(),
             cpzBossContainerExtendCodec(),
             htzFlamethrowerCodec(),
@@ -216,9 +209,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                     DestroyedEggPrisonObjectInstance.class,
                     spawn -> new DestroyedEggPrisonObjectInstance(spawn, spawn.x(), spawn.y())),
             eggPrisonButtonCodec(),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    LeafParticleObjectInstance.class,
-                    spawn -> new LeafParticleObjectInstance(spawn.x(), spawn.y(), 0, 0, 0, 0)),
+            // LeafParticleObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     ResultsScreenObjectInstance.class,
                     spawn -> new ResultsScreenObjectInstance(0, 0, 0, false)),

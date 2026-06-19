@@ -6,6 +6,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -28,7 +30,7 @@ import java.util.List;
  * - 4 frames (0-3), toggles bit 1 every 11 frames
  * - Deletes when off-screen
  */
-public class LeafParticleObjectInstance extends AbstractObjectInstance {
+public class LeafParticleObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // Animation: toggle bit 1 every 11 frames
     private static final int ANIM_FRAME_DURATION = 11;
@@ -62,6 +64,10 @@ public class LeafParticleObjectInstance extends AbstractObjectInstance {
     // Frame counter for random direction changes
     private int frameCount;
 
+    private LeafParticleObjectInstance() {
+        this(0, 0, 0, 0, 0, 0);
+    }
+
     public LeafParticleObjectInstance(int x, int y, int xVel, int yVel, int initialFrame, int initialAngle) {
         super(createDummySpawn(x, y), "Leaf");
 
@@ -81,6 +87,12 @@ public class LeafParticleObjectInstance extends AbstractObjectInstance {
 
         this.displayX = x;
         this.displayY = y;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectSpawn s = ctx.spawn();
+        return new LeafParticleObjectInstance(s.x(), s.y(), 0, 0, 0, 0);
     }
 
     /**

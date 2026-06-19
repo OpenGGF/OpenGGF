@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -45,17 +46,23 @@ class TestRewindFixS2Batch2Codecs {
                 ARZBossPillar.class.getName(),
                 GrounderRockProjectile.class.getName(),
                 GrounderWallInstance.class.getName(),
-                HtzFireProjectileObjectInstance.class.getName(),
-                HtzGroundFireObjectInstance.class.getName(),
                 // EHZBossSpike / EHZBossWheel codecs intentionally REMOVED:
                 // construction-spawned children re-established by boss reconstruction
                 // (see TestBossChildNoDoubleSpawnParity / KNOWN_DISCREPANCIES).
-                BalkiryJetObjectInstance.class.getName(),
-                ArrowProjectileInstance.class.getName());
+                BalkiryJetObjectInstance.class.getName());
 
         for (String name : required) {
             assertTrue(names.contains(name),
                     "missing rewind recreate codec for " + name);
+        }
+
+        List<String> phase2Deleted = List.of(
+                HtzFireProjectileObjectInstance.class.getName(),
+                HtzGroundFireObjectInstance.class.getName(),
+                ArrowProjectileInstance.class.getName());
+        for (String name : phase2Deleted) {
+            assertFalse(names.contains(name),
+                    name + " must restore through RewindRecreatable generic recreate, not a batch-2 codec");
         }
     }
 }

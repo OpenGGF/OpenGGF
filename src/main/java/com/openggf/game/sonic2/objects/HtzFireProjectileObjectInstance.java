@@ -8,6 +8,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -27,7 +29,8 @@ import java.util.List;
  * Physics: Standard ObjectMove (8.8 velocity, 16.16 position) + gravity 0x18/frame.
  * Collision flags: 0x8B (enemy projectile).
  */
-public class HtzFireProjectileObjectInstance extends AbstractObjectInstance implements TouchResponseProvider {
+public class HtzFireProjectileObjectInstance extends AbstractObjectInstance
+        implements TouchResponseProvider, RewindRecreatable {
 
     private static final int PRIORITY = 3;
     private static final int GRAVITY = 0x18;           // ROM: addi.w #$18,y_vel(a0)
@@ -50,6 +53,10 @@ public class HtzFireProjectileObjectInstance extends AbstractObjectInstance impl
     private int animFrame;
     private int animTimer;
 
+    private HtzFireProjectileObjectInstance() {
+        this(0, 0, 0, 0, false);
+    }
+
     public HtzFireProjectileObjectInstance(int x, int y, int xVel, int yVel, boolean hFlip) {
         // Dynamic child - uses parent ID for spawn record (not placed from level layout)
         super(new ObjectSpawn(x, y, Sonic2ObjectIds.LAVA_BUBBLE, 0, 0, false, 0), "Fire Projectile");
@@ -63,6 +70,12 @@ public class HtzFireProjectileObjectInstance extends AbstractObjectInstance impl
         this.vFlip = false;
         this.animFrame = 0;
         this.animTimer = ANIM_DELAY;
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectSpawn s = ctx.spawn();
+        return new HtzFireProjectileObjectInstance(s.x(), s.y(), 0, 0, false);
     }
 
     @Override
