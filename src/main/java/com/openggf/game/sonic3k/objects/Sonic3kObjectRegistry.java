@@ -46,7 +46,6 @@ import com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance;
-import com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikHeadChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikShipFlameInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossSpikeChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossVisualChild;
@@ -285,8 +284,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // reapplied by generic scalar restore.
 
             // MHZ end-boss children — relink to the live boss recreated earlier.
-            bossChildCodec(MhzEndBossRobotnikHeadChild.class, MhzEndBossInstance.class,
-                    MhzEndBossRobotnikHeadChild::new),
+            // MhzEndBossRobotnikHeadChild codec deleted: relinks to the
+            // restored live boss through RewindRecreatable genericRecreate.
             // MhzEndBossRobotnikShipFlameInstance codec deleted (Phase-2 batch 45):
             // compact restore resolves the parent object reference after generic recreate.
             bossChildCodec(MhzEndBossSpikeChild.class, MhzEndBossInstance.class,
