@@ -18,6 +18,7 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
 - **Release hardening and architecture guards:** tightened branch/release policy hooks, trace/rewind invariants, object-service boundaries, ROM-only runtime asset rules, singleton lifecycle checks, architecture source guards, and assertion-quality tests. Test-suite cleanup replaced diagnostic-only or tautological tests with behavioral oracles where they protect real release risk.
 - **Player-facing systems:** added or improved S3K data select/save support, cross-game donation paths, ROM-derived master-title previews, legal-disclaimer startup flow, display shader support, pause/HUD presentation fixes, multi-sidekick behavior, level-editor plumbing, and user-facing configuration/docs.
 - **S1/S2 parity uplift:** closed selected Sonic 1 and Sonic 2 trace/object/boss gaps where fixes reduced active release risk or shared-code duplication, including sidekick CPU behavior, object-slot lifetime, solid/contact parity, boss/end-sequence behavior, and level-specific traversal objects.
+- **S2 Crawl contact parity:** walking into an attacking Crawl now routes through the ROM hurt collision flags instead of silently ignoring non-rolling contact.
 - **S2 Casino Night slot machine:** restored the ROM packed-target reel order so the stopped slot faces line up with the reward paid out by linked Point Pokey cages.
 
 ## v0.5.20260411 (Released 2026-04-11)

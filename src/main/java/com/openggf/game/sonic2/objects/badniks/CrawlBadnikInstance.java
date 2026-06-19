@@ -140,6 +140,7 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
     private int impactTimer;         // Frames showing impact animation
     private int xSubpixel;           // Subpixel accumulator for smooth movement
     private boolean vulnerable;      // True when hit from back (collision_flags = $17)
+    private int attackingCollisionFlags; // ROM collision_flags while in ATTACKING
     private PlayableEntity pendingTouchPlayer; // Deferred touch from Touch_Special (ROM parity)
     private boolean touchAppliedThisFrame;     // Guard: step 2 applied bounce; skip step 3 direct check
     private final AnimationTimer walkAnim = new AnimationTimer(ANIM_DELAY, 2);
@@ -153,6 +154,7 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
         this.impactTimer = 0;
         this.xSubpixel = 0;
         this.vulnerable = false;
+        this.attackingCollisionFlags = 0xD7;
 
         // Initial facing based on x_flip spawn flag
         // x_flip=1 (bit 0 set) means facing RIGHT
@@ -220,6 +222,7 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
         if (closest != null && withinOrientationBox(closest)) {
             previousState = state;
             state = State.ATTACKING;
+            attackingCollisionFlags = 0xD7;
         }
     }
 
@@ -280,6 +283,8 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
      * Touch_Special defers contact to the next frame via collision_property.
      */
     private void updateAttacking(AbstractPlayableSprite player) {
+        attackingCollisionFlags = 0xD7;
+
         // ROM: ObjC8_Attacking reads+clears collision_property, which Touch_Special set in step 2.
         // pendingTouchPlayer mirrors collision_property: set in onTouchResponse, consumed here.
         if (pendingTouchPlayer instanceof AbstractPlayableSprite pending) {
@@ -335,6 +340,10 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
         boolean inAir = player.getAir();
 
         if (!isRolling) {
+            // ROM loc_3D36C: non-rolling contact turns the bouncer into a HURT touch object
+            // for the next touch pass; invincibility downgrades it to normal ENEMY flags.
+            attackingCollisionFlags = player.getInvincibleFrames() > 0 ? 0x17 : 0x97;
+            animFrame = FRAME_WALK_2;
             return;
         }
 
@@ -354,6 +363,7 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
             // via the ENEMY touch category → onPlayerAttack → destroyBadnik.
             // Don't destroy immediately; revert state so ENEMY touch handles it next frame.
             vulnerable = true;
+            attackingCollisionFlags = 0x17;
             state = previousState;
         }
     }
@@ -475,7 +485,7 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
     @Override
     public int getCollisionFlags() {
         if (state == State.ATTACKING) {
-            return 0xD7;
+            return attackingCollisionFlags;
         }
         return super.getCollisionFlags();
     }
