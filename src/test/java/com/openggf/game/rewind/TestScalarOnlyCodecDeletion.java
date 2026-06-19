@@ -21,6 +21,7 @@ import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossInstance;
+import com.openggf.game.sonic3k.objects.CnzMinibossSparkInstance;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
@@ -450,6 +451,9 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> BATCH46_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(CnzMinibossCoilInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> BATCH47_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(CnzMinibossSparkInstance.class.getName(), GameId.S3K));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -3154,6 +3158,199 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void batch46ClassRoundTripPassedThroughHarnessParentSeedPath() {
         CodecDeletionCandidate candidate = BATCH46_DELETED_CODECS.getFirst();
+        RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+        assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                candidate.fqn()
+                        + " must round-trip as Passed through the harness parent-seed path; got: "
+                        + result);
+    }
+
+    // =====================================================================
+    // Batch 47: S3K CNZ miniboss spark, parent ref restored by identity
+    // =====================================================================
+
+    @Test
+    void batch47ClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : BATCH47_DELETED_CODECS) {
+            Class<?> cls;
+            try {
+                cls = Class.forName(candidate.fqn());
+            } catch (ClassNotFoundException e) {
+                throw new AssertionError(e);
+            }
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 47)");
+        }
+    }
+
+    @Test
+    void batch47ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : BATCH47_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn() + " must have NO registered dynamic rewind codec after batch-47 deletion; "
+                            + "session restore must use genericRecreate Path 1");
+        }
+    }
+
+    @Test
+    void batch47ClassesGenericRecreateProducesInstance() {
+        for (CodecDeletionCandidate candidate : BATCH47_DELETED_CODECS) {
+            ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x3220, 0x280, candidate.gameId());
+            assertNotNull(result, "genericRecreate must return non-null for " + candidate.fqn());
+            assertEquals(candidate.fqn(), result.getClass().getName(),
+                    "genericRecreate must return the same concrete class for " + candidate.fqn());
+        }
+    }
+
+    @Test
+    void cnzMinibossSparkGenericRecreateRestoresParentByIdentity() {
+        ObjectSpawn parentSpawn =
+                new ObjectSpawn(160, 240, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 46);
+        CnzMinibossInstance sourceParent = new CnzMinibossInstance(parentSpawn);
+        ObjectSpawn sparkSpawn = new ObjectSpawn(156, 280, Sonic3kObjectIds.CNZ_MINIBOSS, 2, 0, false, 47);
+        CnzMinibossSparkInstance source = new CnzMinibossSparkInstance(sparkSpawn);
+        source.attachBossForTest(sourceParent);
+        setIntField(source, "mappingFrame", 0x0F);
+        setIntField(source, "rawAnimPairIndex", 2);
+        setIntField(source, "rawAnimTimer", 5);
+        setBooleanField(source, "firstAnimationTick", false);
+
+        RewindCaptureContext missingCaptureContext =
+                RewindCaptureContext.withIdentityTable(new RewindIdentityTable());
+        assertThrows(IllegalStateException.class,
+                () -> source.captureRewindState(missingCaptureContext),
+                "non-null CNZ miniboss parent must be registered before spark object-ref capture");
+
+        ObjectRefId parentId = ObjectRefId.dynamic(4, 1, 46);
+        RewindIdentityTable captureTable = new RewindIdentityTable();
+        captureTable.registerObject(sourceParent, parentId);
+        RewindCaptureContext captureContext = RewindCaptureContext.withIdentityTable(captureTable);
+        PerObjectRewindSnapshot state = source.captureRewindState(captureContext);
+
+        ObjectInstance unresolved = invokeGenericRecreateWithState(
+                CnzMinibossSparkInstance.class.getName(), sparkSpawn, state, GameId.S3K);
+        assertNotNull(unresolved, "genericRecreate must return a CNZ miniboss spark child");
+        RewindCaptureContext missingParentContext =
+                RewindCaptureContext.withIdentityTable(new RewindIdentityTable());
+        assertThrows(IllegalStateException.class,
+                () -> ((AbstractObjectInstance) unresolved).restoreRewindState(state, missingParentContext),
+                "non-null CNZ miniboss spark parent must use required object-ref resolve during compact restore");
+
+        ObjectInstance recreated = invokeGenericRecreateWithState(
+                CnzMinibossSparkInstance.class.getName(), sparkSpawn, state, GameId.S3K);
+        CnzMinibossInstance restoredParent = new CnzMinibossInstance(parentSpawn);
+        RewindIdentityTable restoreTable = new RewindIdentityTable();
+        restoreTable.registerObject(restoredParent, parentId);
+        RewindCaptureContext restoreContext = RewindCaptureContext.withIdentityTable(restoreTable);
+        assertEquals(CnzMinibossSparkInstance.class, recreated.getClass(),
+                "genericRecreate must return the same concrete spark class before restore");
+        ((AbstractObjectInstance) recreated).restoreRewindState(state, restoreContext);
+
+        assertSame(restoredParent, readObjectField(recreated, "boss"),
+                "compact restore must resolve the CNZ miniboss spark parent through the restore identity table");
+        assertEquals(readIntField(source, "parentOffsetX"), readIntField(recreated, "parentOffsetX"),
+                "standard scalar restore must reapply the captured spark parent X offset");
+        assertEquals(readIntField(source, "parentOffsetY"), readIntField(recreated, "parentOffsetY"),
+                "standard scalar restore must reapply the captured spark parent Y offset");
+        assertEquals(readIntField(source, "mappingFrame"), readIntField(recreated, "mappingFrame"),
+                "standard scalar restore must reapply the captured spark mapping frame");
+        assertEquals(readIntField(source, "rawAnimPairIndex"), readIntField(recreated, "rawAnimPairIndex"),
+                "standard scalar restore must reapply the captured spark animation index");
+        assertEquals(readIntField(source, "rawAnimTimer"), readIntField(recreated, "rawAnimTimer"),
+                "standard scalar restore must reapply the captured spark animation timer");
+        assertEquals(readBooleanField(source, "firstAnimationTick"),
+                readBooleanField(recreated, "firstAnimationTick"),
+                "standard scalar restore must reapply the captured spark first-tick latch");
+    }
+
+    @Test
+    void cnzMinibossSparkRestoresThroughObjectManagerIdentityPath() {
+        ObjectManager[] holder = new ObjectManager[1];
+        Camera camera = mockCamera();
+        StubObjectServices services = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public Camera camera() { return camera; }
+            @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
+            @Override public ObjectRenderManager renderManager() { return INERT_RENDER_MANAGER; }
+        };
+        ObjectSpawn parentSpawn =
+                new ObjectSpawn(160, 240, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 46);
+        ObjectManager objectManager = new ObjectManager(
+                List.of(parentSpawn),
+                cnzMinibossParentTestRegistry(),
+                0,
+                null,
+                null,
+                GraphicsManager.getInstance(),
+                camera,
+                services);
+        holder[0] = objectManager;
+        objectManager.reset(0);
+
+        CnzMinibossInstance sourceParent = singleLiveObject(objectManager, CnzMinibossInstance.class);
+        ObjectSpawn sparkSpawn = new ObjectSpawn(156, 280, Sonic3kObjectIds.CNZ_MINIBOSS, 2, 0, false, 47);
+        CnzMinibossSparkInstance sourceSpark = objectManager.createDynamicObject(
+                () -> new CnzMinibossSparkInstance(sparkSpawn));
+        sourceSpark.attachBossForTest(sourceParent);
+        setIntField(sourceSpark, "mappingFrame", 0x0F);
+        setIntField(sourceSpark, "rawAnimPairIndex", 2);
+        setIntField(sourceSpark, "rawAnimTimer", 5);
+        setBooleanField(sourceSpark, "firstAnimationTick", false);
+        assertEquals(1, liveObjects(objectManager, CnzMinibossInstance.class).size(),
+                "precondition: exactly one captured CNZ miniboss parent is live before snapshot");
+        assertEquals(1, liveObjects(objectManager, CnzMinibossSparkInstance.class).size(),
+                "precondition: exactly one captured spark child is live before snapshot");
+
+        RewindIdentityTable captureTable = objectManager.captureIdentityContext().requireIdentityTable();
+        ObjectRefId capturedParentId = captureTable.idFor(sourceParent);
+        ObjectRefId capturedSparkId = captureTable.idFor(sourceSpark);
+        assertNotNull(capturedParentId, "ObjectManager capture identity table must register the CNZ miniboss");
+        assertNotNull(capturedSparkId, "ObjectManager capture identity table must register the spark child");
+
+        RewindRegistry registry = new RewindRegistry();
+        registry.register(objectManager.rewindSnapshottable());
+        CompositeSnapshot snapshot = registry.capture();
+
+        objectManager.removeDynamicObject(sourceSpark);
+        objectManager.createDynamicObject(() -> new CnzMinibossSparkInstance(
+                new ObjectSpawn(180, 284, Sonic3kObjectIds.CNZ_MINIBOSS, 4, 0, false, 48)));
+        assertEquals(1, liveObjects(objectManager, CnzMinibossSparkInstance.class).size(),
+                "diverge step should leave one unrelated live spark before restore");
+
+        registry.restore(snapshot);
+
+        CnzMinibossInstance restoredParent = singleLiveObject(objectManager, CnzMinibossInstance.class);
+        CnzMinibossSparkInstance restoredSpark =
+                singleLiveObject(objectManager, CnzMinibossSparkInstance.class);
+        assertFalse(restoredSpark == sourceSpark,
+                "restore should not retain the removed captured spark instance");
+
+        RewindIdentityTable restoredTable = objectManager.captureIdentityContext().requireIdentityTable();
+        assertEquals(capturedParentId, restoredTable.idFor(restoredParent),
+                "restored CNZ miniboss parent must retain the captured ObjectManager rewind identity");
+        assertEquals(capturedSparkId, restoredTable.idFor(restoredSpark),
+                "restored spark child must retain the captured ObjectManager rewind identity");
+        assertSame(restoredParent, readObjectField(restoredSpark, "boss"),
+                "restored spark parent must resolve through ObjectManager's restore identity table");
+        assertEquals(readIntField(sourceSpark, "parentOffsetX"), readIntField(restoredSpark, "parentOffsetX"),
+                "ObjectManager restore must reapply the captured spark parent X offset");
+        assertEquals(readIntField(sourceSpark, "parentOffsetY"), readIntField(restoredSpark, "parentOffsetY"),
+                "ObjectManager restore must reapply the captured spark parent Y offset");
+        assertEquals(readIntField(sourceSpark, "mappingFrame"), readIntField(restoredSpark, "mappingFrame"),
+                "ObjectManager restore must reapply the captured spark mapping frame");
+        assertEquals(readIntField(sourceSpark, "rawAnimPairIndex"),
+                readIntField(restoredSpark, "rawAnimPairIndex"),
+                "ObjectManager restore must reapply the captured spark animation index");
+        assertEquals(readIntField(sourceSpark, "rawAnimTimer"), readIntField(restoredSpark, "rawAnimTimer"),
+                "ObjectManager restore must reapply the captured spark animation timer");
+        assertEquals(readBooleanField(sourceSpark, "firstAnimationTick"),
+                readBooleanField(restoredSpark, "firstAnimationTick"),
+                "ObjectManager restore must reapply the captured spark first-tick latch");
+    }
+
+    @Test
+    void batch47ClassRoundTripPassedThroughHarnessParentSeedPath() {
+        CodecDeletionCandidate candidate = BATCH47_DELETED_CODECS.getFirst();
         RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
         assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                 candidate.fqn()

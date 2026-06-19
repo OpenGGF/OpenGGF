@@ -101,7 +101,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             cnzMinibossChildCodec(CnzMinibossTopInstance.class, CnzMinibossTopInstance::new),
             // CnzMinibossCoilInstance codec deleted (Phase-2 batch 46):
             // compact restore resolves the parent object reference after generic recreate.
-            cnzMinibossChildCodec(CnzMinibossSparkInstance.class, CnzMinibossSparkInstance::new),
+            // CnzMinibossSparkInstance codec deleted (Phase-2 batch 47):
+            // compact restore resolves the parent object reference after generic recreate.
             // CnzMinibossScrollControlInstance codec deleted (Phase-2 batch 2):
             // now implements RewindRecreatable -> genericRecreate Path 1.
 
