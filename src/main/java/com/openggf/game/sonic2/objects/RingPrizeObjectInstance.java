@@ -6,6 +6,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.rings.RingManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -28,7 +30,7 @@ import java.util.List;
  * <b>Key insight:</b> ObjDC does NOT use collision detection. Rings are awarded
  * automatically when displayDelay expires.
  */
-public class RingPrizeObjectInstance extends AbstractObjectInstance {
+public class RingPrizeObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     // State machine constants (from s2.asm ObjDC state routines)
     private static final int STATE_SPIRAL = 0;    // Moving toward center (ObjDC_Main)
@@ -88,6 +90,18 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance {
         this.machineY = machineY;
         this.displayDelay = displayDelay;
         this.prizeCounter = prizeCounter;
+    }
+
+    RingPrizeObjectInstance(int x, int y, int ignoredSubtype, boolean ignoredFlag) {
+        this(x, y, x, y, 0, new int[]{0});
+    }
+
+    @Override
+    public RingPrizeObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectSpawn spawn = ctx.spawn();
+        int x = spawn == null ? 0 : spawn.x();
+        int y = spawn == null ? 0 : spawn.y();
+        return new RingPrizeObjectInstance(x, y, x, y, 0, new int[]{0});
     }
 
     @Override

@@ -21,9 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>Batch-5 adds parent/sibling-relink codecs for the CPZ-boss Dripper and
  * PipeSegment, the HTZ Rexon head, and the Egg-prison button, plus an exact-spawn
- * codec for the act-results screen. The destroyed Egg-prison body and ARZ leaf
- * particle now use generic recreate. Remaining explicit codecs are gameplay-relevant
- * (boss progression, solid bodies, score tally + level-transition flow), so none are
+ * codec for the act-results screen. The destroyed Egg-prison body, ARZ leaf
+ * particle, and act-results screen now use generic recreate. Remaining explicit
+ * codecs are gameplay-relevant (boss progression and solid bodies), so none are
  * accept-drop.
  *
  * <p>Pure registry-content test: it constructs a registry and reads
@@ -52,8 +52,7 @@ class TestRewindFixS2Batch5Codecs {
                 CPZBossDripper.class.getName(),
                 CPZBossPipeSegment.class.getName(),
                 RexonHeadObjectInstance.class.getName(),
-                EggPrisonButtonObjectInstance.class.getName(),
-                ResultsScreenObjectInstance.class.getName());
+                EggPrisonButtonObjectInstance.class.getName());
 
         for (String name : required) {
             assertTrue(names.contains(name),
@@ -65,6 +64,9 @@ class TestRewindFixS2Batch5Codecs {
                         + "not a batch-5 codec");
         assertFalse(names.contains(DestroyedEggPrisonObjectInstance.class.getName()),
                 "DestroyedEggPrisonObjectInstance must restore through RewindRecreatable generic recreate, "
+                        + "not a batch-5 codec");
+        assertFalse(names.contains(ResultsScreenObjectInstance.class.getName()),
+                "ResultsScreenObjectInstance must restore through RewindRecreatable generic recreate, "
                         + "not a batch-5 codec");
     }
 }

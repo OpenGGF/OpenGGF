@@ -17,12 +17,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * now exposes a dynamic rewind recreate codec for every batch-6 S2 object that
  * was previously dropped on a held-rewind restore.
  *
- * <p>Batch-6 adds exact-spawn codecs for the CNZ slot-machine ring prize and the
- * MTZ steam puff, plus parent/sibling-relink codecs for the HTZ seesaw ball
+ * <p>Batch-6 adds parent/sibling-relink codecs for the HTZ seesaw ball
  * (relinked to its placed parent seesaw) and the CPZ-boss container extend
- * (relinked to its live boss + container parents). All four carry gameplay-relevant
- * state (in-flight ring award, frame-3 harmful collision, seesaw launch state,
- * extend->gunk progression), so none are accept-drop.
+ * (relinked to its live boss + container parents). The CNZ slot-machine ring
+ * prize and MTZ steam puff now restore through generic recreate.
  *
  * <p>The two cosmetic transient children evaluated in this batch —
  * {@code SuperSonicStarsObjectInstance} (Super Sonic sparkle, re-emitted each frame
@@ -54,7 +52,6 @@ class TestRewindFixS2Batch6Codecs {
         Set<String> names = codecClassNames();
 
         List<String> required = List.of(
-                RingPrizeObjectInstance.class.getName(),
                 SeesawBallObjectInstance.class.getName(),
                 CPZBossContainerExtend.class.getName());
 
@@ -65,6 +62,9 @@ class TestRewindFixS2Batch6Codecs {
 
         assertFalse(names.contains(SteamPuffObjectInstance.class.getName()),
                 "SteamPuffObjectInstance must restore through RewindRecreatable generic recreate, "
+                        + "not a batch-6 codec");
+        assertFalse(names.contains(RingPrizeObjectInstance.class.getName()),
+                "RingPrizeObjectInstance must restore through RewindRecreatable generic recreate, "
                         + "not a batch-6 codec");
     }
 }

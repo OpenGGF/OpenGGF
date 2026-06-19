@@ -120,12 +120,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       MonitorContentsObjectInstance dynamic codec.</li>
  *   <li>2026-06-19: raised to 96 after deleting the S2
  *       BombPrizeObjectInstance dynamic codec.</li>
+ *   <li>2026-06-19: raised to 99 after deleting three S2 scalar/no-reference
+ *       session-only codecs for ResultsScreenObjectInstance, RingPrizeObjectInstance,
+ *       and MTZBossLaser.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 96;
+    static final int RATCHET_FLOOR = 99;
 
     @BeforeEach
     void initHeadless() {

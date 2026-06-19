@@ -8,31 +8,30 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies that {@link Sonic2ObjectRegistry} (unioned with the shared codecs)
- * now exposes a dynamic rewind recreate codec for every batch-inner1 S2
- * inner-class hazard/solid child that was previously dropped on a held-rewind
- * restore.
+ * exposes the remaining structural parent-relink codec and no longer exposes
+ * explicit dynamic rewind recreate codecs for batch-inner1 S2 children that now
+ * restore through generic recreate.
  *
  * <p>These are static nested children keyed by their JVM binary name
  * ({@code Outer$Inner}):
  * <ul>
  *   <li>{@code SmallMetalPformObjectInstance$SmallMetalPformChildInstance} — the WFZ
  *       ObjBD rideable metal platform child (top-solid {@code SolidObjectProvider}).
- *       Self-contained {@code exactSpawnCodec}: the constructor only needs
- *       {@code (spawn, xFlipped)} and {@code xFlipped = (renderFlags & 0x01) != 0} is
- *       fully spawn-derivable, so no parent relink and no un-finaling is required.</li>
+ *       Restores through generic recreate; {@code xFlipped = (renderFlags & 0x01) != 0}
+ *       is fully spawn-derivable, so no parent relink is required.</li>
  *   <li>{@code Sonic2DEZEggmanInstance$BarrierWall} — the DEZ Eggman solid barrier wall
- *       ({@code SolidObjectProvider}). Parent-relink codec re-running the
- *       {@code (x, y)} ctor and relinking the restored Eggman's {@code barrierWall}
- *       back-reference; {@code wallX}/{@code wallY} were un-finaled so the capturer
- *       reapplies them.</li>
+ *       ({@code SolidObjectProvider}). Keeps its explicit relink codec because
+ *       Eggman's structural {@code barrierWall} back-reference is not captured by
+ *       the compact field blob.</li>
  *   <li>{@code Sonic2MTZBossInstance$MTZBossLaser} — the MTZ boss fired laser
- *       ({@code TouchResponseProvider} HURT hazard). Parent-relink codec; {@code xVel}
- *       (firing direction, not spawn-derivable) was un-finaled so the capturer reapplies
- *       it after recreate.</li>
+ *       ({@code TouchResponseProvider} HURT hazard). Now restored through generic
+ *       recreate; {@code xVel} (firing direction, not spawn-derivable) is reapplied
+ *       by the capturer after recreate.</li>
  * </ul>
  *
  * <p>Pure registry-content test: it constructs a registry and reads
@@ -55,18 +54,21 @@ class TestRewindFixS2InnerBatch1Codecs {
     }
 
     @Test
-    void registersCodecsForBatchInner1S2Children() {
+    void batchInner1S2ChildrenHaveExpectedCodecCoverage() {
         Set<String> names = codecClassNames();
 
-        List<String> required = List.of(
-                "com.openggf.game.sonic2.objects.SmallMetalPformObjectInstance"
-                        + "$SmallMetalPformChildInstance",
-                "com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$BarrierWall",
-                "com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossLaser");
-
-        for (String name : required) {
-            assertTrue(names.contains(name),
-                    "missing rewind recreate codec for " + name);
-        }
+        assertFalse(names.contains(
+                        "com.openggf.game.sonic2.objects.SmallMetalPformObjectInstance"
+                                + "$SmallMetalPformChildInstance"),
+                "SmallMetalPform child must restore through RewindRecreatable generic recreate, "
+                        + "not a batch-inner1 codec");
+        assertTrue(names.contains(
+                        "com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance$BarrierWall"),
+                "DEZ barrier wall must keep its explicit parent-relink codec until "
+                        + "structural parent references move to a verified generic path");
+        assertFalse(names.contains(
+                        "com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossLaser"),
+                "MTZ boss laser must restore through RewindRecreatable generic recreate, "
+                        + "not a batch-inner1 codec");
     }
 }

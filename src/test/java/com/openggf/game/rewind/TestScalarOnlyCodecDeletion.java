@@ -329,6 +329,17 @@ public class TestScalarOnlyCodecDeletion {
     private static final List<CodecDeletionCandidate> BATCH31_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(BombPrizeObjectInstance.class.getName(), GameId.S2));
 
+    private static final List<CodecDeletionCandidate> BATCH32_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.ResultsScreenObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.RingPrizeObjectInstance",
+                    GameId.S2),
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance$MTZBossLaser",
+                    GameId.S2));
+
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
     private static final ObjectRenderManager INERT_RENDER_MANAGER =
@@ -1841,6 +1852,59 @@ public class TestScalarOnlyCodecDeletion {
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // Batch 32: remaining S2 scalar/no-reference session-only dynamics
+    // =====================================================================
+
+    @Test
+    void batch32ClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : BATCH32_DELETED_CODECS) {
+            Class<?> cls;
+            try {
+                cls = Class.forName(candidate.fqn());
+            } catch (ClassNotFoundException e) {
+                throw new AssertionError(e);
+            }
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 32)");
+        }
+    }
+
+    @Test
+    void batch32ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : BATCH32_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn() + " must have NO registered dynamic rewind codec after batch-32 deletion; "
+                            + "session restore must use genericRecreate Path 1");
+        }
+    }
+
+    @Test
+    void batch32ClassesGenericRecreateProducesInstance() {
+        for (CodecDeletionCandidate candidate : BATCH32_DELETED_CODECS) {
+            ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
+            assertNotNull(result, "genericRecreate must return non-null for " + candidate.fqn());
+            assertEquals(candidate.fqn(), result.getClass().getName(),
+                    "genericRecreate must return the same concrete class for " + candidate.fqn());
+        }
+    }
+
+    @Test
+    void batch32ClassesRoundTripDoesNotFailWhenProbeable() {
+        for (CodecDeletionCandidate candidate : BATCH32_DELETED_CODECS) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            if (result instanceof RoundTripSweepResult.Unprobed unprobed) {
+                assertTrue(unprobed.reason().contains("No probe-compatible constructor"),
+                        candidate.fqn() + " may remain session-verified only, but not fail hard; got: " + result);
+                continue;
+            }
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed when the headless harness can construct it; got: "
                             + result);
         }
     }

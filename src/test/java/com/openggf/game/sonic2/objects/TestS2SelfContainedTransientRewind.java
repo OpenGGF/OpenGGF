@@ -9,6 +9,7 @@ import com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance;
 import com.openggf.game.sonic2.objects.bosses.CPZBossFallingPart;
 import com.openggf.game.sonic2.objects.bosses.LavaBubbleObjectInstance;
 import com.openggf.game.sonic2.objects.bosses.MCZFallingDebrisInstance;
+import com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance;
 import com.openggf.game.sonic2.objects.badniks.SpikerDrillObjectInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
@@ -66,6 +67,9 @@ class TestS2SelfContainedTransientRewind {
         assertNoRegisteredS2DynamicCodec(SpikyBlockSpikeInstance.class);
         assertNoRegisteredS2DynamicCodec(MonitorContentsObjectInstance.class);
         assertNoRegisteredS2DynamicCodec(BombPrizeObjectInstance.class);
+        assertNoRegisteredS2DynamicCodec(ResultsScreenObjectInstance.class);
+        assertNoRegisteredS2DynamicCodec(RingPrizeObjectInstance.class);
+        assertNoRegisteredS2DynamicCodec(Sonic2MTZBossInstance.MTZBossLaser.class);
     }
 
     @Test
@@ -170,6 +174,18 @@ class TestS2SelfContainedTransientRewind {
                         baseY + 0x08,
                         0x20,
                         new int[]{1}));
+        ResultsScreenObjectInstance resultsScreen = objectManager.createDynamicObject(
+                () -> new ResultsScreenObjectInstance(42, 17, 1, false));
+        RingPrizeObjectInstance ringPrize = objectManager.createDynamicObject(
+                () -> new RingPrizeObjectInstance(
+                        baseX + 0x70,
+                        baseY + 0x20,
+                        baseX + 0x50,
+                        baseY + 0x10,
+                        0x20,
+                        new int[]{1}));
+        Sonic2MTZBossInstance.MTZBossLaser mtzBossLaser = objectManager.createDynamicObject(
+                () -> new Sonic2MTZBossInstance.MTZBossLaser(null, 0x2B80, baseY, false));
 
         List<AbstractObjectInstance> tracked = List.of(
                 htzFireProjectile,
@@ -188,7 +204,10 @@ class TestS2SelfContainedTransientRewind {
                 cpzBossFallingPart,
                 spikyBlockSpike,
                 monitorContents,
-                bombPrize);
+                bombPrize,
+                resultsScreen,
+                ringPrize,
+                mtzBossLaser);
 
         for (int frame = 0; frame < 3; frame++) {
             for (AbstractObjectInstance instance : tracked) {
@@ -237,6 +256,12 @@ class TestS2SelfContainedTransientRewind {
                 "precondition: exactly one monitor contents fixture is live");
         assertEquals(1, countLive(objectManager, BombPrizeObjectInstance.class),
                 "precondition: exactly one bomb prize fixture is live");
+        assertEquals(1, countLive(objectManager, ResultsScreenObjectInstance.class),
+                "precondition: exactly one results-screen fixture is live");
+        assertEquals(1, countLive(objectManager, RingPrizeObjectInstance.class),
+                "precondition: exactly one ring-prize fixture is live");
+        assertEquals(1, countLive(objectManager, Sonic2MTZBossInstance.MTZBossLaser.class),
+                "precondition: exactly one MTZ boss laser fixture is live");
 
         Map<Class<?>, Map<String, Object>> capturedState = new LinkedHashMap<>();
         for (AbstractObjectInstance instance : tracked) {
@@ -283,6 +308,12 @@ class TestS2SelfContainedTransientRewind {
                 "diverge step must remove the monitor contents object");
         assertEquals(0, countLive(objectManager, BombPrizeObjectInstance.class),
                 "diverge step must remove the bomb prize object");
+        assertEquals(0, countLive(objectManager, ResultsScreenObjectInstance.class),
+                "diverge step must remove the results-screen object");
+        assertEquals(0, countLive(objectManager, RingPrizeObjectInstance.class),
+                "diverge step must remove the ring-prize object");
+        assertEquals(0, countLive(objectManager, Sonic2MTZBossInstance.MTZBossLaser.class),
+                "diverge step must remove the MTZ boss laser object");
 
         registry.restore(snapshot);
 
@@ -303,6 +334,9 @@ class TestS2SelfContainedTransientRewind {
         assertSimpleStateRoundTrip(objectManager, SpikyBlockSpikeInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, MonitorContentsObjectInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, BombPrizeObjectInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, ResultsScreenObjectInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, RingPrizeObjectInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, Sonic2MTZBossInstance.MTZBossLaser.class, capturedState);
     }
 
     private static void assertNoRegisteredS2DynamicCodec(Class<?> type) {

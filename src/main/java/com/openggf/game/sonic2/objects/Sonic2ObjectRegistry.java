@@ -148,12 +148,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             // RewindRecreatable -> genericRecreate Path 1.
             // SpikyBlockSpikeInstance now implements RewindRecreatable -> genericRecreate Path 1.
             // BombPrizeObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            // Batch-6 S2 rewind codecs (CNZ slot-machine ring prize, MTZ steam puff,
-            // HTZ seesaw ball, CPZ-boss container extend).
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    RingPrizeObjectInstance.class,
-                    spawn -> new RingPrizeObjectInstance(
-                            spawn.x(), spawn.y(), 0, 0, 0, new int[]{0})),
+            // RingPrizeObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             // SteamPuffObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             seesawBallCodec(),
             cpzBossContainerExtendCodec(),
@@ -183,16 +178,12 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             rexonHeadCodec(),
             eggPrisonButtonCodec(),
             // LeafParticleObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    ResultsScreenObjectInstance.class,
-                    spawn -> new ResultsScreenObjectInstance(0, 0, 0, false)),
+            // ResultsScreenObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             // BossExplosionObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
-            // Batch-inner1 S2 rewind codecs (inner-class hazard/solid children:
-            // DEZ Eggman barrier wall, MTZ boss laser). WFZ small-metal-platform
-            // child codec deleted in Phase-2 batch 3: it now implements
+            // DEZ Eggman barrier wall keeps an explicit relink codec for its
+            // structural parent back-reference. MTZ boss laser now implements
             // RewindRecreatable -> genericRecreate Path 1.
             dezBarrierWallCodec(),
-            mtzBossLaserCodec(),
             // Batch-inner2 S2 rewind codecs (DEZ Death Egg Robot bomb child +
             // WFZ floating-platform/laser-wall/platform-hurt children).
             //
@@ -457,36 +448,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
         };
     }
 
-    private static DynamicObjectRewindCodec mtzBossLaserCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == Sonic2MTZBossInstance.MTZBossLaser.class;
-            }
-
-            @Override
-            public String className() {
-                return Sonic2MTZBossInstance.MTZBossLaser.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                // Relink the single live MTZ boss arena instance (parent back-pointer).
-                Sonic2MTZBossInstance boss = findLiveInstance(context, Sonic2MTZBossInstance.class);
-                if (boss == null) {
-                    return null;
-                }
-                // Placeholder ctor args: currentX/currentY/xVel are non-spawn-derivable
-                // and are reapplied by GenericFieldCapturer after recreate (currentX/currentY
-                // are already non-final; xVel must be un-finaled). The fired laser carries its
-                // own in-flight trajectory and is NOT re-emitted by the boss, so it must be
-                // restored rather than dropped.
-                return new Sonic2MTZBossInstance.MTZBossLaser(boss, entry.spawn().x(), entry.spawn().y(), false);
-            }
-        };
-    }
-
     // ---- Batch-inner2 inner-class hazard/solid child relink codecs ----
 
     private static DynamicObjectRewindCodec dezRobotArticulatedChildCodec() {
@@ -509,7 +470,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                 try {
                     // Spawn-order restore guarantees the placed Death Egg Robot body is already
                     // live; relink it so the recreated articulated part shares the boss lifetime
-                    // (mirrors mtzBossLaserCodec / buzzerFlameCodec parent relink).
+                    // (mirrors the other parent-relink codecs in this registry).
                     Sonic2DeathEggRobotInstance parent =
                             findLiveInstance(context, Sonic2DeathEggRobotInstance.class);
                     if (parent == null) {
@@ -641,8 +602,8 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
                     ctor.setAccessible(true);
                     // priority 4 = the fixed spawn constant from spawnChildren()
                     ObjectInstance child = (ObjectInstance) ctor.newInstance(parent, 4);
-                    // Relink parent.jet to the restored child (mirrors buzzerFlameCodec /
-                    // dezBarrierWallCodec). Animation scalars (jetRoutine/jetAnimId/jetFrame/
+                    // Relink parent.jet to the restored child. Animation scalars
+                    // (jetRoutine/jetAnimId/jetFrame/
                     // animIdx/animTimer) and collisionFlags are non-final and reapplied by
                     // GenericFieldCapturer after recreate.
                     var f = Sonic2DeathEggRobotInstance.class.getDeclaredField("jet");
