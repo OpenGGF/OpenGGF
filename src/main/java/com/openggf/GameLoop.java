@@ -3366,6 +3366,10 @@ public class GameLoop {
             ssProvider.toggleAlignmentTestMode();
         }
 
+        if (isUnmodifiedDebugKeyPressed(GLFW_KEY_F1)) {
+            ssProvider.toggleLagCompensationDisplay();
+        }
+
         // Lag compensation adjustment (F6 decrease, F7 increase)
         if (isUnmodifiedDebugKeyPressed(GLFW_KEY_F6)) {
             adjustLagCompensation(-0.05);
@@ -3455,13 +3459,9 @@ public class GameLoop {
      */
     private void adjustLagCompensation(double delta) {
         SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
-        if (!ssProvider.isInitialized()) {
+        if (!ssProvider.isInitialized() || !ssProvider.adjustLagCompensationIfDisplayEnabled(delta)) {
             return;
         }
-
-        double current = ssProvider.getLagCompensation();
-        double newValue = current + delta;
-        ssProvider.setLagCompensation(newValue);
 
         // Calculate effective simulation rate for display
         // Base is 60 fps. With lag compensation, effective = 60 * (1 - lagComp)
