@@ -149,12 +149,15 @@ public class TestRewindHarnessCoverageRatchet {
  *   <li>2026-06-19: raised to 115 after deleting the S3K Madmole
  *       SideDrillChild codec; generic recreate derives facingLeft from the
  *       captured spawn render flag.</li>
+ *   <li>2026-06-19: raised to 116 after deleting the S3K
+ *       S3kResultsScreenObjectInstance codec; compact restore reapplies
+ *       constructor state and required playerRef identity resolution.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 115;
+    static final int RATCHET_FLOOR = 116;
 
     @BeforeEach
     void initHeadless() {

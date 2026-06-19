@@ -4,6 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameId;
 import com.openggf.game.ObjectArtProvider;
+import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rewind.RewindRoundTripHarness.RoundTripSweepResult;
 import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
@@ -16,6 +17,7 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.ConveyorObjectInstance;
 import com.openggf.game.sonic2.objects.PointsObjectInstance;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
+import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossDefeatFragmentChild;
@@ -434,6 +436,9 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild",
                     GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> BATCH44_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(S3kResultsScreenObjectInstance.class.getName(), GameId.S3K));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -2680,6 +2685,118 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void batch43ClassesRoundTripPassedThroughObjectManagerSessionPath() {
         for (CodecDeletionCandidate candidate : BATCH43_DELETED_CODECS) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed through the ObjectManager session path; got: "
+                            + result);
+        }
+    }
+
+    // =====================================================================
+    // Batch 44: S3K results screen - exact-spawn codec deleted
+    // =====================================================================
+
+    @Test
+    void batch44ClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : BATCH44_DELETED_CODECS) {
+            Class<?> cls;
+            try {
+                cls = Class.forName(candidate.fqn());
+            } catch (ClassNotFoundException e) {
+                throw new AssertionError(e);
+            }
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 44)");
+        }
+    }
+
+    @Test
+    void batch44ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : BATCH44_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn() + " must have NO registered dynamic rewind codec after batch-44 deletion; "
+                            + "session restore must use genericRecreate Path 1");
+        }
+    }
+
+    @Test
+    void batch44ClassesGenericRecreateProducesInstance() {
+        for (CodecDeletionCandidate candidate : BATCH44_DELETED_CODECS) {
+            ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0, 0, candidate.gameId());
+            assertNotNull(result, "genericRecreate must return non-null for " + candidate.fqn());
+            assertEquals(candidate.fqn(), result.getClass().getName(),
+                    "genericRecreate must return the same concrete class for " + candidate.fqn());
+        }
+    }
+
+    @Test
+    void s3kResultsGenericRecreateRestoresCapturedConstructorStateAndPlayerRef() {
+        String fqn = BATCH44_DELETED_CODECS.getFirst().fqn();
+        StubObjectServices stub = new StubObjectServices() {
+            @Override public ObjectRenderManager renderManager() { return INERT_RENDER_MANAGER; }
+            @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
+        };
+        S3kResultsScreenObjectInstance source = ObjectConstructionContext.construct(stub,
+                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.TAILS_ALONE, 1));
+        setIntField(source, "timeBonus", 4321);
+        setIntField(source, "ringBonus", 210);
+        setIntField(source, "totalBonusCountUp", 1234);
+        setIntField(source, "exitQueueCounter", 7);
+        setBooleanField(source, "musicPlayed", true);
+        setBooleanField(source, "actTransitionSignaled", true);
+        TestablePlayableSprite capturedPlayer =
+                new TestablePlayableSprite("tails", (short) 0x200, (short) 0x160);
+        setObjectField(source, "playerRef", capturedPlayer);
+        RewindIdentityTable captureTable = new RewindIdentityTable();
+        captureTable.registerPlayer(capturedPlayer, PlayerRefId.mainPlayer());
+        RewindCaptureContext rewindContext =
+                RewindCaptureContext.withIdentityTable(captureTable);
+        PerObjectRewindSnapshot state = source.captureRewindState(rewindContext);
+
+        ObjectInstance unresolved = invokeGenericRecreateWithState(
+                fqn, source.getSpawn(), state, GameId.S3K);
+        RewindCaptureContext missingPlayerContext =
+                RewindCaptureContext.withIdentityTable(new RewindIdentityTable());
+        assertThrows(IllegalStateException.class,
+                () -> ((AbstractObjectInstance) unresolved).restoreRewindState(state, missingPlayerContext),
+                "non-null playerRef must use required player-ref resolve during compact restore");
+
+        ObjectInstance recreated = invokeGenericRecreateWithState(
+                fqn, source.getSpawn(), state, GameId.S3K);
+        TestablePlayableSprite restoredPlayer =
+                new TestablePlayableSprite("tails", (short) 0x200, (short) 0x160);
+        RewindIdentityTable restoreTable = new RewindIdentityTable();
+        restoreTable.registerPlayer(restoredPlayer, PlayerRefId.mainPlayer());
+        RewindCaptureContext restoreContext = RewindCaptureContext.withIdentityTable(restoreTable);
+        assertNotNull(recreated, "genericRecreate must return an S3K results screen");
+        assertEquals(fqn, recreated.getClass().getName(),
+                "genericRecreate must return the same concrete results class before restore");
+        ((AbstractObjectInstance) recreated).restoreRewindState(state, restoreContext);
+
+        assertEquals(PlayerCharacter.TAILS_ALONE, readObjectField(recreated, "character"),
+                "standard restore must reapply the captured character constructor arg");
+        assertEquals(1, readIntField(recreated, "act"),
+                "standard restore must reapply the captured act constructor arg");
+        assertEquals(4321, readIntField(recreated, "timeBonus"),
+                "standard restore must reapply the exact time bonus");
+        assertEquals(210, readIntField(recreated, "ringBonus"),
+                "standard restore must reapply the exact ring bonus");
+        assertEquals(1234, readIntField(recreated, "totalBonusCountUp"),
+                "standard restore must reapply the exact tally count");
+        assertEquals(7, readIntField(recreated, "exitQueueCounter"),
+                "standard restore must reapply the exit queue counter");
+        assertTrue(readBooleanField(recreated, "musicPlayed"),
+                "standard restore must reapply musicPlayed");
+        assertTrue(readBooleanField(recreated, "actTransitionSignaled"),
+                "standard restore must reapply actTransitionSignaled");
+        assertSame(restoredPlayer, readObjectField(recreated, "playerRef"),
+                "compact restore must resolve playerRef through the restore identity table");
+    }
+
+    @Test
+    void batch44ClassesRoundTripPassedThroughObjectManagerSessionPath() {
+        for (CodecDeletionCandidate candidate : BATCH44_DELETED_CODECS) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     candidate.fqn()

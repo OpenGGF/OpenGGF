@@ -346,9 +346,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // exact spawn coordinates are supplied by RewindRecreatable.
             // Mgz2CapsuleAnimalInstance codec deleted (Phase-2 batch 20):
             // captured scalar state is restored after generic recreate.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    S3kResultsScreenObjectInstance.class,
-                    s -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0)),
+            // S3kResultsScreenObjectInstance codec deleted (Phase-2 batch 44):
+            // character/act/player-ref state is restored after generic recreate.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     Mgz2ResultsScreenObjectInstance.class,
                     s -> new Mgz2ResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0)),

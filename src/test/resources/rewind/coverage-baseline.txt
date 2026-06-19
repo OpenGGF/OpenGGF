@@ -787,7 +787,6 @@ com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZRobotnikPlatform
 com.openggf.game.sonic3k.objects.Aiz1TreeObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Aiz1ZiplinePegObjectInstance#recreate
 com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance$Aiz2ResultsScreenObjectInstance#objectRef#playerRef
-com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance$Aiz2ResultsScreenObjectInstance#recreate
 com.openggf.game.sonic3k.objects.AizBombExplosionInstance#finalScalar#posY
 com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance#finalScalar#hFlip
 com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance#finalScalar#halfWidth
