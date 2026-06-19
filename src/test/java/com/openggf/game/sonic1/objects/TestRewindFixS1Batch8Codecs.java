@@ -6,7 +6,10 @@ import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.sonic1.objects.badniks.Sonic1BombShrapnelInstance;
+import com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileDissolveInstance;
+import com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1CannonballInstance;
+import com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatProjectileInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1NewtronMissileInstance;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
@@ -66,7 +69,26 @@ class TestRewindFixS1Batch8Codecs {
                     Sonic1NewtronMissileInstance.class,
                     () -> new Sonic1NewtronMissileInstance(0x1C0, 0x140, 0x200, true),
                     List.of("currentX", "currentY", "facingLeft", "animTimer", "animFrame",
-                            "motionState.xVel")));
+                            "motionState.xVel")),
+            new Candidate(
+                    Sonic1BuzzBomberMissileInstance.class,
+                    () -> new Sonic1BuzzBomberMissileInstance(
+                            0x1E0, 0x150, -0x200, 0x200, true, 7),
+                    List.of("currentX", "currentY", "xVelocity", "yVelocity",
+                            "motionState.xVel", "motionState.yVel", "facingLeft",
+                            "parentSlotIndex", "phase", "flareTimer", "animTimer", "animFrame",
+                            "renderedFrame", "collisionEnabled")),
+            new Candidate(
+                    Sonic1BuzzBomberMissileDissolveInstance.class,
+                    () -> new Sonic1BuzzBomberMissileDissolveInstance(0x200, 0x160),
+                    List.of("currentX", "currentY", "animFrame", "frameTimer")),
+            new Candidate(
+                    Sonic1CrabmeatProjectileInstance.class,
+                    () -> new Sonic1CrabmeatProjectileInstance(
+                            0x220, 0x170, 0x100, -0x400, null),
+                    List.of("currentX", "currentY", "motionState.xVel", "motionState.yVel",
+                            "animTimer", "renderedFrame", "launchYVelocity", "initialized",
+                            "touchCollisionActive", "deferSameFrameUpdateAfterSpawn")));
 
     @BeforeEach
     void initHeadless() {

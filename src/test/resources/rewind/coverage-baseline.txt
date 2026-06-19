@@ -268,7 +268,6 @@ com.openggf.game.sonic1.objects.badniks.Sonic1ChopperBadnikInstance#recreate
 com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatBadnikInstance#recreate
 com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatProjectileInstance#finalScalar#collisionSizeIndex
 com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatProjectileInstance#finalScalar#gravity
-com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatProjectileInstance#finalScalar#launchYVelocity
 com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatProjectileInstance#finalScalar#offScreenMargin
 com.openggf.game.sonic1.objects.badniks.Sonic1JawsBadnikInstance#finalScalar#turnTimeDelay
 com.openggf.game.sonic1.objects.badniks.Sonic1JawsBadnikInstance#recreate

@@ -5,6 +5,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
@@ -23,7 +25,8 @@ import java.util.List;
  * then falls through to MDis_Animate which decrements on the same frame). Subsequent frames
  * show for 10 game frames each. Then deletes itself. No collision.
  */
-public class Sonic1BuzzBomberMissileDissolveInstance extends AbstractObjectInstance {
+public class Sonic1BuzzBomberMissileDissolveInstance extends AbstractObjectInstance
+        implements RewindRecreatable {
 
     // Frame duration: obTimeFrame = 9 -> decrements to 0, then advances = 10 frames per step
     private static final int FRAME_DURATION = 10;
@@ -44,6 +47,16 @@ public class Sonic1BuzzBomberMissileDissolveInstance extends AbstractObjectInsta
         // First frame is 1 tick shorter: MDis_Main sets obTimeFrame=9 then falls through
         // to MDis_Animate which does subq on the same frame, making effective first duration 9
         this.frameTimer = FRAME_DURATION - 1;
+    }
+
+    private Sonic1BuzzBomberMissileDissolveInstance() {
+        this(0, 0);
+    }
+
+    @Override
+    public Sonic1BuzzBomberMissileDissolveInstance recreateForRewind(RewindRecreateContext ctx) {
+        ObjectSpawn spawn = ctx.spawn();
+        return new Sonic1BuzzBomberMissileDissolveInstance(spawn.x(), spawn.y());
     }
 
     @Override

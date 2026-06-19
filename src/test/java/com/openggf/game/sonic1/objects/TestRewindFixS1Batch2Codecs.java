@@ -1,10 +1,7 @@
 package com.openggf.game.sonic1.objects;
 
 import com.openggf.game.sonic1.objects.badniks.Sonic1BombFuseInstance;
-import com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileDissolveInstance;
-import com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBodyInstance;
-import com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatProjectileInstance;
 import com.openggf.game.sonic1.objects.bosses.GHZBossWreckingBall;
 import com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossSpikeball;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
@@ -57,10 +54,7 @@ class TestRewindFixS1Batch2Codecs {
 
         List<String> required = List.of(
                 Sonic1BombFuseInstance.class.getName(),
-                Sonic1BuzzBomberMissileInstance.class.getName(),
-                Sonic1BuzzBomberMissileDissolveInstance.class.getName(),
                 Sonic1CaterkillerBodyInstance.class.getName(),
-                Sonic1CrabmeatProjectileInstance.class.getName(),
                 GHZBossWreckingBall.class.getName(),
                 // SYZBossSpike intentionally absent: construction-spawned child.
                 // Adding a codec would double it on restore. See TestBossChildNoDoubleSpawnParity.
@@ -74,7 +68,10 @@ class TestRewindFixS1Batch2Codecs {
         List<String> genericRecreate = List.of(
                 "com.openggf.game.sonic1.objects.badniks.Sonic1BombShrapnelInstance",
                 "com.openggf.game.sonic1.objects.badniks.Sonic1CannonballInstance",
-                "com.openggf.game.sonic1.objects.badniks.Sonic1NewtronMissileInstance");
+                "com.openggf.game.sonic1.objects.badniks.Sonic1NewtronMissileInstance",
+                "com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileInstance",
+                "com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileDissolveInstance",
+                "com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatProjectileInstance");
         for (String name : genericRecreate) {
             assertFalse(names.contains(name),
                     name + " must restore through RewindRecreatable generic recreate, not a batch-2 codec");
