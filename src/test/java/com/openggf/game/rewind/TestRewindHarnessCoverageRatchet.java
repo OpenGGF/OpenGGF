@@ -137,12 +137,15 @@ public class TestRewindHarnessCoverageRatchet {
  *       MonitorPowerUp, and Ring are now headlessly probeable, while
  *       CollapsingFloor and SpikedBallChain remain honest no-probe session-tail
  *       classes.</li>
+ *   <li>2026-06-19: raised to 112 after deleting the S1 BossExplosionObjectInstance
+ *       codec and S3K MhzEndBossPaletteFadeController codec; palette fade is now
+ *       headlessly probeable through RewindRecreatable.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 111;
+    static final int RATCHET_FLOOR = 112;
 
     @BeforeEach
     void initHeadless() {

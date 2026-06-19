@@ -1,7 +1,6 @@
 package com.openggf.game.sonic1.objects;
 
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
-import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.Sonic1Level;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.objects.badniks.Sonic1BallHogBadnikInstance;
@@ -36,7 +35,6 @@ import com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1FZBossInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance;
 import com.openggf.game.sonic1.objects.bosses.Sonic1ScrapEggmanInstance;
-import com.openggf.level.objects.boss.BossExplosionObjectInstance;
 import com.openggf.level.objects.AbstractObjectRegistry;
 import com.openggf.level.objects.DynamicObjectRecreateContext;
 import com.openggf.level.objects.DynamicObjectRewindCodec;
@@ -101,19 +99,18 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             grassFireChildCodec(),
             lamppostTwirlCodec(),
             ringFlashCodec(),
-            seesawBallCodec(),
-            // Sonic1SplashObjectInstance (LZ water splash, object 0x08) is accept-drop:
-            // a sub-1-second purely-cosmetic splash re-emitted naturally on water
-            // entry/exit. See docs/KNOWN_DISCREPANCIES.md "Batch-3 Rewind: Transient
-            // Cosmetic Children Not Rewound".
-            // Sonic1StomperDoorObjectInstance now implements RewindRecreatable
-            // -> genericRecreate Path 1.
-            // Sonic1TeleporterObjectInstance codec deleted (Phase-2 batch 5):
-            // now implements RewindRecreatable -> genericRecreate Path 1.
-            // Batch-7 S1 rewind codec (shared boss-defeat explosion).
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    BossExplosionObjectInstance.class,
-                    s -> new BossExplosionObjectInstance(s.x(), s.y(), Sonic1Sfx.BOSS_EXPLOSION.id)));
+            seesawBallCodec());
+
+    // Sonic1SplashObjectInstance (LZ water splash, object 0x08) is accept-drop:
+    // a sub-1-second purely-cosmetic splash re-emitted naturally on water
+    // entry/exit. See docs/KNOWN_DISCREPANCIES.md "Batch-3 Rewind: Transient
+    // Cosmetic Children Not Rewound".
+    // Sonic1StomperDoorObjectInstance now implements RewindRecreatable
+    // -> genericRecreate Path 1.
+    // Sonic1TeleporterObjectInstance codec deleted (Phase-2 batch 5):
+    // now implements RewindRecreatable -> genericRecreate Path 1.
+    // BossExplosionObjectInstance codec deleted (Phase-2 batch 39):
+    // shared class already implements RewindRecreatable -> genericRecreate Path 1.
 
     private static DynamicObjectRewindCodec bombFuseChildCodec() {
         return new DynamicObjectRewindCodec() {

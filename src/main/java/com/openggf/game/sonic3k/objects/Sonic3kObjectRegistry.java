@@ -51,7 +51,6 @@ import com.openggf.game.sonic3k.objects.bosses.MhzEndBossDefeatFragmentChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossHitProxyChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance;
-import com.openggf.game.sonic3k.objects.bosses.MhzEndBossPaletteFadeController;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikHeadChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikShipFlameInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossSpikeChild;
@@ -283,9 +282,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // Self-contained MHZ end-boss objects.
             // MhzEndBossEggCapsuleInstance codec deleted (Phase-2 batch 18):
             // exact spawn coordinates are supplied by RewindRecreatable.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    MhzEndBossPaletteFadeController.class,
-                    s -> new MhzEndBossPaletteFadeController(new byte[0][], true, 0)),
+            // MhzEndBossPaletteFadeController codec deleted (Phase-2 batch 40):
+            // placeholder palette state matches the previous codec; scalar/array
+            // state is restored after generic recreate.
 
             // MHZ end-boss arena helper: role/spikeIndex/spikeTier/alternateSide
             // are un-finaled and reapplied; relinks the long-lived MHZ events owner.
