@@ -1,6 +1,7 @@
 package com.openggf.game.rewind;
 
 import com.openggf.camera.Camera;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameId;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
@@ -22,6 +23,7 @@ import com.openggf.level.objects.boss.AbstractBossChild;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -64,6 +66,9 @@ public final class RewindRoundTripHarness {
     /** Representative spawn used by the class sweep when no specific ID is known. */
     private static final ObjectSpawn PROBE_SPAWN =
             new ObjectSpawn(0x100, 0x100, 1, 0, 0, false, 0);
+
+    private static final SonicConfigurationService DEFAULT_CONFIGURATION =
+            createDefaultConfiguration();
 
     /** Binary class name of the inner ArticulatedChild (not ForearmChild). */
     private static final String ARTICULATED_CHILD_CLASS =
@@ -256,6 +261,11 @@ public final class RewindRoundTripHarness {
             public ObjectManager objectManager() {
                 return holder[0];
             }
+
+            @Override
+            public SonicConfigurationService configuration() {
+                return DEFAULT_CONFIGURATION;
+            }
         };
         AbstractObjectInstance inst = ObjectConstructionContext.construct(stub, () -> new MinimalStubObject(spawn));
         om.addDynamicObject(inst);
@@ -392,6 +402,11 @@ public final class RewindRoundTripHarness {
             public Camera camera() {
                 return camera;
             }
+
+            @Override
+            public SonicConfigurationService configuration() {
+                return DEFAULT_CONFIGURATION;
+            }
         };
 
         GameId gameId = inferGameIdFromFqn(fqn);
@@ -520,7 +535,19 @@ public final class RewindRoundTripHarness {
             public Camera camera() {
                 return camera;
             }
+
+            @Override
+            public SonicConfigurationService configuration() {
+                return DEFAULT_CONFIGURATION;
+            }
         };
+    }
+
+    private static SonicConfigurationService createDefaultConfiguration() {
+        SonicConfigurationService config =
+                SonicConfigurationService.createStandalone(Path.of("target", "rewind-harness-config"));
+        config.resetToDefaults();
+        return config;
     }
 
     /**
@@ -812,6 +839,7 @@ public final class RewindRoundTripHarness {
         StubObjectServices stub = new StubObjectServices() {
             @Override public ObjectManager objectManager() { return holder[0]; }
             @Override public Camera camera() { return camera; }
+            @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
         };
         ObjectRegistry registry = registryFor(gameId);
 

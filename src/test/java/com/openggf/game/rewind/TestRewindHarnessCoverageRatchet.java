@@ -71,12 +71,15 @@ public class TestRewindHarnessCoverageRatchet {
      *   <li>2026-06-19: raised to 38 after Phase-2 codec-deletion batch 3 moved
      *       SmallMetalPformChild, CnzLightsFlashChild, and HCZWaterDropChild onto
      *       RewindRecreatable generic recreate without losing round-trip coverage.</li>
+     *   <li>2026-06-19: raised to 39 after Phase-2 codec-deletion batch 7 moved
+     *       HczEndBossInstance onto RewindRecreatable generic recreate and supplied
+     *       deterministic harness configuration for its character-dependent constructor.</li>
      * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 38;
+    static final int RATCHET_FLOOR = 39;
 
     @BeforeEach
     void initHeadless() {

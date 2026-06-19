@@ -278,8 +278,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     Aiz2EndEggCapsuleInstance.class,
                     s -> new Aiz2EndEggCapsuleInstance(s.x(), s.y())),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    HczEndBossInstance.class, s -> new HczEndBossInstance(s)),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
                     HczEndBossEggCapsuleInstance.class,
                     s -> new HczEndBossEggCapsuleInstance(s.x(), s.y())),
             ObjectRewindDynamicCodecs.exactSpawnCodec(

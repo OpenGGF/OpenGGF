@@ -1,6 +1,7 @@
 package com.openggf.game.rewind;
 
 import com.openggf.camera.Camera;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameId;
 import com.openggf.game.rewind.RewindRoundTripHarness.RoundTripSweepResult;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
@@ -97,6 +98,14 @@ public class TestScalarOnlyCodecDeletion {
             new CodecDeletionCandidate(
                     "com.openggf.game.sonic3k.objects.MgzDrillingRobotnikInstance",
                     GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> BATCH7_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(
+                    "com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance",
+                    GameId.S3K));
+
+    private static final SonicConfigurationService DEFAULT_CONFIGURATION =
+            createDefaultConfiguration();
 
     @BeforeEach
     void initHeadless() { GraphicsManager.getInstance().initHeadless(); }
@@ -390,6 +399,51 @@ public class TestScalarOnlyCodecDeletion {
         }
     }
 
+    // =====================================================================
+    // Batch 7: HCZ end boss - codec deleted
+    // =====================================================================
+
+    @Test
+    void batch7ClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : BATCH7_DELETED_CODECS) {
+            Class<?> cls;
+            try { cls = Class.forName(candidate.fqn()); }
+            catch (ClassNotFoundException e) { throw new AssertionError(e); }
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 7)");
+        }
+    }
+
+    @Test
+    void batch7ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : BATCH7_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn()),
+                    candidate.fqn() + " must have NO registered dynamic rewind codec after batch-7 deletion; "
+                            + "it should round-trip purely via genericRecreate Path 1");
+        }
+    }
+
+    @Test
+    void batch7ClassesGenericRecreateProducesInstance() {
+        for (CodecDeletionCandidate candidate : BATCH7_DELETED_CODECS) {
+            ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
+            assertNotNull(result, "genericRecreate must return non-null for " + candidate.fqn());
+            assertEquals(candidate.fqn(), result.getClass().getName(),
+                    "genericRecreate must return the same concrete class for " + candidate.fqn());
+        }
+    }
+
+    @Test
+    void batch7ClassesRoundTripPassedWithoutCodec() {
+        for (CodecDeletionCandidate candidate : BATCH7_DELETED_CODECS) {
+            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                    candidate.fqn()
+                            + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
+                            + result);
+        }
+    }
+
     /**
      * Returns true if the given FQN has a registered dynamic rewind codec in the
      * shared codecs or in any of the three per-game registries. Distinct from
@@ -420,6 +474,7 @@ public class TestScalarOnlyCodecDeletion {
         StubObjectServices stub = new StubObjectServices() {
             @Override public ObjectManager objectManager() { return holder[0]; }
             @Override public Camera camera() { return camera; }
+            @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
         };
         ObjectRegistry registry = switch (gameId) {
             case S1 -> new Sonic1ObjectRegistry();
@@ -447,5 +502,12 @@ public class TestScalarOnlyCodecDeletion {
             @Override public short getHeight() { return 224; }
             @Override public boolean isVerticalWrapEnabled() { return false; }
         };
+    }
+
+    private static SonicConfigurationService createDefaultConfiguration() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(
+                java.nio.file.Path.of("target", "rewind-scalar-codec-deletion-config"));
+        config.resetToDefaults();
+        return config;
     }
 }
