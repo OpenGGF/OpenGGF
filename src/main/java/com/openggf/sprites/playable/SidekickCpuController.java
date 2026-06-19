@@ -1675,6 +1675,7 @@ public class SidekickCpuController {
             sidekick.setHurt(false);
             sidekick.setAir(true);
             state = State.NORMAL;
+            controlCounter = 0;
             normalFrameCount = 0;
             despawnCounter = Math.max(0, respawnStrategy.consumeApproachDespawnCarryFrames());
         }
