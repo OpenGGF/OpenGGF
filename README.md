@@ -135,6 +135,7 @@ divergence plus diagnostic context, animated ROM-derived master-title game previ
 bundled title emblem resource, S2 trace-frontier closures (Sky Chase and Casino
 Night
 level-select replays), object-physics standardization onto shared contracts,
+Casino Night slot-machine reward/display alignment,
 expanded rewind coverage, and architecture-guard hardening across runtime
 ownership, trace/rewind invariants, and object-service boundaries. A recent
 test-suite quality pass (driven by a multi-agent audit) replaced assertion-free
