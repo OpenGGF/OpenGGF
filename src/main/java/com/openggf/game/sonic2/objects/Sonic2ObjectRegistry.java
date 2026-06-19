@@ -144,11 +144,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     ArrowProjectileInstance.class,
                     spawn -> new ArrowProjectileInstance(spawn, spawn.x(), spawn.y(), false)),
-            // Batch-3 S2 rewind codecs.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    GrounderBadnikInstance.class,
-                    spawn -> new GrounderBadnikInstance(
-                            spawn, spawn.objectId() == Sonic2ObjectIds.GROUNDER_IN_WALL2)),
             shellcrackerClawCodec(),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     SlicerPincerInstance.class,
