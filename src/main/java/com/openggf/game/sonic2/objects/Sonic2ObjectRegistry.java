@@ -17,7 +17,6 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.game.sonic2.objects.badniks.AsteronBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.AquisBadnikInstance;
-import com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance;
 import com.openggf.game.sonic2.objects.badniks.OctusBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.MasherBadnikInstance;
 import com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance;
@@ -112,7 +111,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
     private static final String WFZ_PLATFORM_HURT_CLASS =
             "com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance$WFZPlatformHurt";
     private static final List<DynamicObjectRewindCodec> DYNAMIC_REWIND_CODECS = List.of(
-            badnikProjectileCodec(),
+            // BadnikProjectileInstance now implements RewindRecreatable -> genericRecreate Path 1.
             buzzerFlameCodec(),
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     MonitorContentsObjectInstance.class,
@@ -312,38 +311,6 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
         if (!missingEntries.isEmpty()) {
             LOGGER.info("Missing object ids: " + String.join(", ", missingEntries));
         }
-    }
-
-    private static DynamicObjectRewindCodec badnikProjectileCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance instanceof BadnikProjectileInstance;
-            }
-
-            @Override
-            public String className() {
-                return BadnikProjectileInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                var extra = (PerObjectRewindSnapshot.BadnikProjectileRewindExtra)
-                        entry.state().objectSubclassExtra();
-                return new BadnikProjectileInstance(
-                        entry.spawn(),
-                        BadnikProjectileInstance.ProjectileType.valueOf(extra.projectileType()),
-                        extra.currentX(),
-                        extra.currentY(),
-                        extra.xVelocity(),
-                        extra.yVelocity(),
-                        extra.applyGravity(),
-                        extra.hFlip(),
-                        extra.initialDelay(),
-                        extra.fixedFrame());
-            }
-        };
     }
 
     private static DynamicObjectRewindCodec buzzerFlameCodec() {

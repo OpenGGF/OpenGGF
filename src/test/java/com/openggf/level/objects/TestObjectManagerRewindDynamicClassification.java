@@ -104,7 +104,7 @@ class TestObjectManagerRewindDynamicClassification {
     }
 
     @Test
-    void sonic2BadnikProjectileRestoresThroughRegistryCodec() {
+    void sonic2BadnikProjectileRestoresThroughGenericRecreate() {
         Sonic2ObjectRegistry registry = new Sonic2ObjectRegistry();
         ObjectManager manager = new ObjectManager(List.of(), registry, 0, null, null);
         ObjectSpawn spawn = new ObjectSpawn(0x100, 0x180, 0x98, 0, 0, false, 0);
