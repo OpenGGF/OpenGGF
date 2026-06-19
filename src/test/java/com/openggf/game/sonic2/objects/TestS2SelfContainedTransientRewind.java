@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
+import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance;
 import com.openggf.game.sonic2.objects.bosses.CPZBossFallingPart;
@@ -63,6 +64,7 @@ class TestS2SelfContainedTransientRewind {
         assertNoRegisteredS2DynamicCodec(BadnikProjectileInstance.class);
         assertNoRegisteredS2DynamicCodec(CPZBossFallingPart.class);
         assertNoRegisteredS2DynamicCodec(SpikyBlockSpikeInstance.class);
+        assertNoRegisteredS2DynamicCodec(MonitorContentsObjectInstance.class);
     }
 
     @Test
@@ -148,6 +150,17 @@ class TestS2SelfContainedTransientRewind {
                         "SpikyBlock-Spike",
                         2,
                         0));
+        MonitorContentsObjectInstance monitorContents = objectManager.createDynamicObject(
+                () -> new MonitorContentsObjectInstance(
+                        new ObjectSpawn(
+                                baseX + 0x270,
+                                baseY + 0x20,
+                                Sonic2ObjectIds.MONITOR_CONTENTS,
+                                1,
+                                0,
+                                false,
+                                0),
+                        null));
 
         List<AbstractObjectInstance> tracked = List.of(
                 htzFireProjectile,
@@ -164,7 +177,8 @@ class TestS2SelfContainedTransientRewind {
                 bossExplosion,
                 badnikProjectile,
                 cpzBossFallingPart,
-                spikyBlockSpike);
+                spikyBlockSpike,
+                monitorContents);
 
         for (int frame = 0; frame < 3; frame++) {
             for (AbstractObjectInstance instance : tracked) {
@@ -209,6 +223,8 @@ class TestS2SelfContainedTransientRewind {
                 "precondition: exactly one CPZ boss falling-part fixture is live");
         assertEquals(1, countLive(objectManager, SpikyBlockSpikeInstance.class),
                 "precondition: exactly one SpikyBlock spike fixture is live");
+        assertEquals(1, countLive(objectManager, MonitorContentsObjectInstance.class),
+                "precondition: exactly one monitor contents fixture is live");
 
         Map<Class<?>, Map<String, Object>> capturedState = new LinkedHashMap<>();
         for (AbstractObjectInstance instance : tracked) {
@@ -251,6 +267,8 @@ class TestS2SelfContainedTransientRewind {
                 "diverge step must remove the CPZ boss falling part");
         assertEquals(0, countLive(objectManager, SpikyBlockSpikeInstance.class),
                 "diverge step must remove the SpikyBlock spike");
+        assertEquals(0, countLive(objectManager, MonitorContentsObjectInstance.class),
+                "diverge step must remove the monitor contents object");
 
         registry.restore(snapshot);
 
@@ -269,6 +287,7 @@ class TestS2SelfContainedTransientRewind {
         assertSimpleStateRoundTrip(objectManager, BadnikProjectileInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, CPZBossFallingPart.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, SpikyBlockSpikeInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, MonitorContentsObjectInstance.class, capturedState);
     }
 
     private static void assertNoRegisteredS2DynamicCodec(Class<?> type) {

@@ -112,9 +112,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
     private static final List<DynamicObjectRewindCodec> DYNAMIC_REWIND_CODECS = List.of(
             // BadnikProjectileInstance now implements RewindRecreatable -> genericRecreate Path 1.
             buzzerFlameCodec(),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    MonitorContentsObjectInstance.class,
-                    spawn -> new MonitorContentsObjectInstance(spawn, null)),
+            // MonitorContentsObjectInstance now implements RewindRecreatable -> genericRecreate Path 1.
             checkpointDongleCodec(),
             checkpointStarCodec(),
             arzBossArrowCodec(),
