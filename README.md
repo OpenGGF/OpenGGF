@@ -238,6 +238,10 @@ straightforward to add new objects, zones, and game-specific behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Sonic 2 multi-sidekick Tails landing fix (2026-06-19).** Merged
+  `bugfix/ai-s2-tails-sidekick-landing`, keeping Tails fly-in completion tied to
+  its active chain leader instead of the root Sonic crossing shortcut used by
+  physics-driven sidekick respawns.
 - **Slope turn-around sprite orientation fix (2026-06-19).** Merged
   `bugfix/ai-slope-sprite-orientation`, matching the ROM `prev_anim=Run`
   sentinel on grounded S2/S3K facing flips so slow slope reversals restart the

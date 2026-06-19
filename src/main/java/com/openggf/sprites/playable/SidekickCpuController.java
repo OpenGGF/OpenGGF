@@ -1652,7 +1652,7 @@ public class SidekickCpuController {
         int previousCentreX = sidekick.getCentreX();
         boolean approachComplete = respawnStrategy.updateApproaching(sidekick, effectiveLeader, frameCounter);
         AbstractPlayableSprite completionLeader = effectiveLeader;
-        if (!approachComplete) {
+        if (!approachComplete && respawnStrategy.requiresPhysics()) {
             AbstractPlayableSprite mainLeader = getRootLeader();
             if (mainLeader != null
                     && mainLeader != effectiveLeader

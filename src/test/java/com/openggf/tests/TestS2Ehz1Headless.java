@@ -552,6 +552,47 @@ public class TestS2Ehz1Headless {
         assertFalse(controller.isApproaching(), "isApproaching() should be false after landing");
     }
 
+    @Test
+    public void testRegisteredTailsMovesAfterFlyInLandsInNormalState() {
+        AbstractPlayableSprite registeredSidekick = GameServices.sprites().getSidekicks().getFirst();
+        assertInstanceOf(Tails.class, registeredSidekick, "Sonic 2 should register Tails as the default sidekick");
+        tails = (Tails) registeredSidekick;
+        controller = tails.getCpuController();
+        assertNotNull(controller, "registered Tails should have a CPU controller");
+
+        controller.setInitialState(SidekickCpuController.State.SPAWNING);
+        tails.setCentreX((short) (sonic.getCentreX() - 0x120));
+        tails.setCentreY((short) (sonic.getCentreY() - 0xC0));
+        tails.setAir(true);
+        sonic.setAir(false);
+        sonic.setDead(false);
+
+        for (int i = 0; i < 80 && !controller.isApproaching(); i++) {
+            fixture.stepFrame(false, false, false, false, false);
+            sonic.setAir(false);
+            sonic.setDead(false);
+        }
+        assertEquals(SidekickCpuController.State.APPROACHING, controller.getState());
+
+        tails.setCentreX(sonic.getCentreX(16));
+        tails.setCentreY(sonic.getCentreY(16));
+        fixture.stepFrame(false, false, false, false, false);
+        assertEquals(SidekickCpuController.State.NORMAL, controller.getState());
+
+        for (int i = 0; i < 90 && tails.getAir(); i++) {
+            fixture.stepFrame(false, false, false, false, false);
+        }
+        assertFalse(tails.getAir(), "registered Tails should land before checking grounded follow");
+
+        short initialX = tails.getCentreX();
+        for (int i = 0; i < 40; i++) {
+            fixture.stepFrame(false, false, false, true, false);
+        }
+
+        assertTrue(tails.getCentreX() > initialX,
+                "registered S2 Tails should resume grounded follow after fly-in landing");
+    }
+
     // -- Panic State Tests --
 
     @Test
@@ -865,5 +906,3 @@ public class TestS2Ehz1Headless {
         assertTrue(resultsSpawned, "A ResultsScreenObjectInstance should have been spawned after walk-off");
     }
 }
-
-
