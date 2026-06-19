@@ -98,6 +98,12 @@ public class LaserObjectInstance extends AbstractObjectInstance {
     }
 
     @Override
+    public boolean isHighPriority() {
+        // ROM: make_art_tile(ArtTile_ArtNem_WfzHrzntlLazer,2,1)
+        return true;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         switch (routine) {
             case 2 -> updateWaitForOnScreen();

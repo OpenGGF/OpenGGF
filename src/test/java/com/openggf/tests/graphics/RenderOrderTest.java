@@ -235,6 +235,18 @@ public class RenderOrderTest {
                 "getDebugRenderer().renderDebugInfo();");
     }
 
+    @Test
+    public void testStageRingsRenderAtRomPriorityBucketInsideSpriteObjectPasses() throws IOException {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelRenderer.java"));
+
+        assertEquals(4, countOccurrences(source, "drawStageRingsForBucket(ringManager,"),
+                "LevelRenderer should place stage-ring drawing in each sprite/object bucket path");
+        assertTrue(source.contains("bucket != RenderPriority.PLAYER_DEFAULT"),
+                "Obj25 rings use ROM priority bucket 2, so higher-bucket clouds must draw before rings");
+        assertTrue(source.contains("ringManager.draw(lm.frameCounter);"),
+                "Stage ring drawing should still go through RingManager");
+    }
+
     private static void assertPostFadeExceptionRecordedBefore(String source,
                                                               String recorderCall,
                                                               String renderCall) {
@@ -244,6 +256,16 @@ public class RenderOrderTest {
         int recorderIndex = source.lastIndexOf(recorderCall, renderIndex);
         assertTrue(recorderIndex >= 0,
                 "Expected " + recorderCall + " before " + renderCall);
+    }
+
+    private static int countOccurrences(String source, String needle) {
+        int count = 0;
+        int index = 0;
+        while ((index = source.indexOf(needle, index)) >= 0) {
+            count++;
+            index += needle.length();
+        }
+        return count;
     }
 }
 

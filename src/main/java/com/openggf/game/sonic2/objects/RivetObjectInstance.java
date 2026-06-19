@@ -312,4 +312,10 @@ public class RivetObjectInstance extends AbstractObjectInstance
         // ROM: SubObjData priority = 4
         return RenderPriority.clamp(4);
     }
+
+    @Override
+    public boolean isHighPriority() {
+        // ROM: make_art_tile(ArtTile_ArtNem_WfzSwitch,1,1)
+        return true;
+    }
 }

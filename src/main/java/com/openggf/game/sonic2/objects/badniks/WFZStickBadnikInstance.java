@@ -61,6 +61,12 @@ public class WFZStickBadnikInstance extends AbstractBadnikInstance {
     }
 
     @Override
+    public boolean isHighPriority() {
+        // ROM: make_art_tile(ArtTile_ArtNem_WfzUnusedBadnik,3,1)
+        return true;
+    }
+
+    @Override
     public int getOnScreenHalfWidth() {
         return WIDTH_PIXELS;
     }
