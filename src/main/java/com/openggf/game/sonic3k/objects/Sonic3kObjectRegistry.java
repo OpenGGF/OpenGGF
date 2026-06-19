@@ -44,7 +44,6 @@ import com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikShip;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance;
-import com.openggf.game.sonic3k.objects.bosses.MhzEndBossArenaHelperInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossHitProxyChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance;
@@ -282,10 +281,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // MhzEndBossPaletteFadeController codec deleted (Phase-2 batch 40):
             // placeholder palette state matches the previous codec; scalar/array
             // state is restored after generic recreate.
-
-            // MHZ end-boss arena helper: role/spikeIndex/spikeTier/alternateSide
-            // are un-finaled and reapplied; relinks the long-lived MHZ events owner.
-            mhzEndBossArenaHelperCodec(),
+            // MhzEndBossArenaHelperInstance relinks the long-lived MHZ events owner
+            // via RewindRecreatable; role/spikeIndex/spikeTier/alternateSide are
+            // reapplied by generic scalar restore.
 
             // MHZ end-boss children — relink to the live boss recreated earlier.
             bossChildCodec(MhzEndBossRobotnikHeadChild.class, MhzEndBossInstance.class,
@@ -1439,45 +1437,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     throw new IllegalStateException(
                             "Failed to recreate dynamic rewind object " + entry.className(), e);
                 }
-            }
-        };
-    }
-
-    /**
-     * Codec for {@link MhzEndBossArenaHelperInstance}. The helper's only non-spawn
-     * constructor argument is the long-lived
-     * {@link com.openggf.game.sonic3k.events.Sonic3kMHZEvents} owner, reached
-     * via the level event provider. The
-     * role-discriminator scalars (role/spikeIndex/spikeTier/alternateSide) are
-     * un-finaled and reapplied by the generic field capturer after recreate, so a
-     * structurally-valid PILLAR placeholder is built here; position and role-derived
-     * render/collision fields are non-final and reapplied too. If the events owner is
-     * absent the helper is dropped (codec returns null).
-     */
-    private static DynamicObjectRewindCodec mhzEndBossArenaHelperCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == MhzEndBossArenaHelperInstance.class;
-            }
-
-            @Override
-            public String className() {
-                return MhzEndBossArenaHelperInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                if (!(context.objectServices().levelEventProvider()
-                        instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager mgr)) {
-                    return null;
-                }
-                com.openggf.game.sonic3k.events.Sonic3kMHZEvents events = mgr.getMhzEvents();
-                if (events == null) {
-                    return null;
-                }
-                return MhzEndBossArenaHelperInstance.pillar(events);
             }
         };
     }

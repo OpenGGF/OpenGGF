@@ -21,6 +21,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -91,5 +92,7 @@ class TestRewindFixS3KBatch5Codecs {
             assertTrue(hasDynamicRecreatePath(name, names),
                     "missing rewind recreate path for " + name);
         }
+        assertFalse(names.contains(MhzEndBossArenaHelperInstance.class.getName()),
+                "MhzEndBossArenaHelperInstance must use the RewindRecreatable generic path, not an explicit codec");
     }
 }

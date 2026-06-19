@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.events.Sonic3kMHZEvents;
@@ -9,6 +10,8 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -21,7 +24,7 @@ import java.util.List;
  * and {@code loc_5577C} spike helpers.
  */
 public final class MhzEndBossArenaHelperInstance extends AbstractObjectInstance
-        implements TouchResponseProvider {
+        implements TouchResponseProvider, RewindRecreatable {
     public enum Role {
         PILLAR,
         TALL_SUPPORT,
@@ -40,6 +43,10 @@ public final class MhzEndBossArenaHelperInstance extends AbstractObjectInstance
     private int priorityBucket;
     private int collisionFlags;
     private boolean spikeDrawActive;
+
+    private MhzEndBossArenaHelperInstance() {
+        this(null, Role.PILLAR, 0x4238, 0x02F0, -1, 0, false);
+    }
 
     private MhzEndBossArenaHelperInstance(
             Sonic3kMHZEvents events,
@@ -73,6 +80,19 @@ public final class MhzEndBossArenaHelperInstance extends AbstractObjectInstance
             int spikeTier,
             boolean alternateSide) {
         return new MhzEndBossArenaHelperInstance(events, Role.SPIKE, 0, 0, spikeIndex, spikeTier, alternateSide);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        if (ctx.objectServices() == null
+                || !(ctx.objectServices().levelEventProvider() instanceof Sonic3kLevelEventManager manager)) {
+            return null;
+        }
+        Sonic3kMHZEvents liveEvents = manager.getMhzEvents();
+        if (liveEvents == null) {
+            return null;
+        }
+        return pillar(liveEvents);
     }
 
     private void initializeRomObjectData() {
