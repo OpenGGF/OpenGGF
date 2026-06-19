@@ -4,6 +4,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.objects.badniks.S3kBadnikProjectileInstance;
 import com.openggf.game.sonic3k.objects.badniks.CaterkillerJrBodyInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.EggPrisonAnimalInstance;
@@ -48,6 +49,10 @@ class TestS3kSelfContainedTransientRewind {
         assertNoRegisteredS3kDynamicCodec(S3kSignpostSparkleChild.class);
         assertNoRegisteredS3kDynamicCodec(S3kAirCountdownObjectInstance.class);
         assertNoRegisteredS3kDynamicCodec(CaterkillerJrBodyInstance.class);
+        assertNoRegisteredS3kDynamicCodec(AizBgTreeInstance.class);
+        assertNoRegisteredS3kDynamicCodec(Aiz2BossEndSequenceController.class);
+        assertNoRegisteredS3kDynamicCodec(CutsceneKnucklesLbz1ThrownBomb.class);
+        assertNoRegisteredS3kDynamicCodec(S3kBadnikProjectileInstance.class);
     }
 
     @Test
@@ -104,6 +109,15 @@ class TestS3kSelfContainedTransientRewind {
         CaterkillerJrBodyInstance caterkillerBody = objectManager.createDynamicObject(
                 () -> CaterkillerJrBodyInstance.forRewindRecreate(
                         new ObjectSpawn(baseX + 0xC0, baseY + 0x48, 0, 0, 0, false, 0)));
+        AizBgTreeInstance bgTree = objectManager.createDynamicObject(
+                () -> new AizBgTreeInstance(0x1200));
+        Aiz2BossEndSequenceController endSequence = objectManager.createDynamicObject(
+                () -> new Aiz2BossEndSequenceController(baseX + 0xD0, baseY + 0x50));
+        CutsceneKnucklesLbz1ThrownBomb thrownBomb = objectManager.createDynamicObject(
+                () -> new CutsceneKnucklesLbz1ThrownBomb(baseX + 0xE0, baseY + 0x58));
+        S3kBadnikProjectileInstance badnikProjectile = objectManager.createDynamicObject(
+                () -> S3kBadnikProjectileInstance.forRewindRecreate(
+                        new ObjectSpawn(baseX + 0x30, baseY + 0x60, 0, 0, 0, false, 0)));
 
         List<AbstractObjectInstance> tracked = List.of(
                 aizRockFragment,
@@ -117,11 +131,15 @@ class TestS3kSelfContainedTransientRewind {
                 eggPrisonAnimal,
                 signpostSparkle,
                 airCountdown,
-                caterkillerBody);
+                caterkillerBody,
+                bgTree,
+                endSequence,
+                thrownBomb,
+                badnikProjectile);
 
         for (int frame = 0; frame < 3; frame++) {
             for (AbstractObjectInstance instance : tracked) {
-                if (instance != airCountdown) {
+                if (instance != airCountdown && instance != endSequence) {
                     instance.update(frame, fixture.sprite());
                 }
                 assertFalse(instance.isDestroyed(),
@@ -153,6 +171,14 @@ class TestS3kSelfContainedTransientRewind {
                 "precondition: exactly one air countdown fixture is live");
         assertEquals(1, countLive(objectManager, CaterkillerJrBodyInstance.class),
                 "precondition: exactly one Caterkiller Jr body fixture is live");
+        assertEquals(1, countLive(objectManager, AizBgTreeInstance.class),
+                "precondition: exactly one AIZ background tree fixture is live");
+        assertEquals(1, countLive(objectManager, Aiz2BossEndSequenceController.class),
+                "precondition: exactly one AIZ2 end-sequence fixture is live");
+        assertEquals(1, countLive(objectManager, CutsceneKnucklesLbz1ThrownBomb.class),
+                "precondition: exactly one LBZ1 thrown bomb fixture is live");
+        assertEquals(1, countLive(objectManager, S3kBadnikProjectileInstance.class),
+                "precondition: exactly one S3K badnik projectile fixture is live");
 
         Map<Class<?>, Map<String, Object>> capturedState = new LinkedHashMap<>();
         for (AbstractObjectInstance instance : tracked) {
@@ -189,6 +215,14 @@ class TestS3kSelfContainedTransientRewind {
                 "diverge step must remove the air countdown");
         assertEquals(0, countLive(objectManager, CaterkillerJrBodyInstance.class),
                 "diverge step must remove the Caterkiller Jr body");
+        assertEquals(0, countLive(objectManager, AizBgTreeInstance.class),
+                "diverge step must remove the AIZ background tree");
+        assertEquals(0, countLive(objectManager, Aiz2BossEndSequenceController.class),
+                "diverge step must remove the AIZ2 end-sequence controller");
+        assertEquals(0, countLive(objectManager, CutsceneKnucklesLbz1ThrownBomb.class),
+                "diverge step must remove the LBZ1 thrown bomb");
+        assertEquals(0, countLive(objectManager, S3kBadnikProjectileInstance.class),
+                "diverge step must remove the S3K badnik projectile");
 
         registry.restore(snapshot);
 
@@ -204,6 +238,10 @@ class TestS3kSelfContainedTransientRewind {
         assertSimpleStateRoundTrip(objectManager, S3kSignpostSparkleChild.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, S3kAirCountdownObjectInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, CaterkillerJrBodyInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, AizBgTreeInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, Aiz2BossEndSequenceController.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, CutsceneKnucklesLbz1ThrownBomb.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, S3kBadnikProjectileInstance.class, capturedState);
     }
 
     private static void assertNoRegisteredS3kDynamicCodec(Class<?> type) {

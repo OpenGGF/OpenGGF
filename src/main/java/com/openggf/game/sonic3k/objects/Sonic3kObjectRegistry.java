@@ -128,11 +128,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // Tier 2: AizBattleshipInstance codec deleted (Phase-2 generic recreate):
             // now implements RewindRecreatable -> genericRecreate Path 1.
             // Other non-final differentiators below are still reapplied after recreate.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    AizBgTreeInstance.class, s -> new AizBgTreeInstance(0)),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    Aiz2BossEndSequenceController.class,
-                    s -> new Aiz2BossEndSequenceController(s.x(), s.y())),
+            // AizBgTreeInstance / Aiz2BossEndSequenceController codecs deleted
+            // (Phase-2 batch 15): both use RewindRecreatable generic recreate.
 
             // Tier 3: relink to the live boss recreated earlier in the restore.
             aizMinibossChildCodec(AizMinibossBodyChild.class, AizMinibossBodyChild::new),
@@ -190,9 +187,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // now implement RewindRecreatable -> genericRecreate Path 1.
 
             // Self-contained, non-final differentiators reapplied after recreate.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    S3kBadnikProjectileInstance.class,
-                    s -> S3kBadnikProjectileInstance.forRewindRecreate(s)),
+            // S3kBadnikProjectileInstance codec deleted (Phase-2 batch 15):
+            // scalar differentiators are restored after generic recreate.
             // MGZHeadTriggerProjectileInstance codec deleted (Phase-2 batch 13):
             // xVel/hFlip are reapplied after genericRecreate Path 1.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
@@ -339,9 +335,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // LBZ1 Knuckles cutscene family.
             cutsceneKnucklesLbz1CollapseChildCodec(),
             cutsceneKnucklesLbz1RangeHelperCodec(),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    CutsceneKnucklesLbz1ThrownBomb.class,
-                    s -> new CutsceneKnucklesLbz1ThrownBomb(s.x(), s.y())),
+            // CutsceneKnucklesLbz1ThrownBomb codec deleted (Phase-2 batch 15):
+            // motion state is restored after generic recreate.
 
             // AIZ1 intro Knuckles codec deleted (Phase-2 batch 4): parent is
             // self-contained via RewindRecreatable; the rock child still relinks
