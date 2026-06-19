@@ -451,8 +451,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             mhz1CutscenePlayerTwoStopperCodec(),
             // MHZ2 cutscene route-switch carrier (cosmetic; relink cutscene parent).
             mhz2KnucklesRouteSwitchChildCodec(),
-            // HCZ miniboss rocket touch hitbox (hurt hazard; relink boss + slot).
-            hczMinibossRocketTouchCodec(),
+            // HCZ miniboss rocket touch hitbox codec deleted (Phase-2 batch):
+            // non-static inner generic recreate resolves the live boss and relinks the slot.
             // ICZ ice-spikes hurt child (hurt hazard; relink nearest live spike base).
             iczIceSpikesHurtChildCodec());
 
@@ -940,8 +940,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             "com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance$Mhz1CutscenePlayerTwoStopper";
     private static final String MHZ2_KNUX_ROUTE_SWITCH_CHILD_CLASS =
             "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild";
-    private static final String HCZ_MINIBOSS_ROCKET_TOUCH_CLASS =
-            "com.openggf.game.sonic3k.objects.HczMinibossInstance$RocketTouchChild";
     private static final String ICZ_ICE_SPIKES_HURT_CHILD_CLASS =
             "com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance$SpikeHurtChild";
 
@@ -1325,70 +1323,6 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     var ctor = cls.getDeclaredConstructor(CutsceneKnucklesMhz2Instance.class);
                     ctor.setAccessible(true);
                     return (ObjectInstance) ctor.newInstance(parent);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(
-                            "Failed to recreate dynamic rewind object " + entry.className(), e);
-                }
-            }
-        };
-    }
-
-    /**
-     * Codec for the HCZ miniboss rocket touch-response child (4 per fight; a HURT
-     * hitbox view over the parent's RocketState[]). The boss re-positions the
-     * rockets every frame but does NOT re-emit the children: {@code
-     * spawnRocketTouchChildren()} is guarded one-shot, so a dropped child is gone
-     * for the rest of the fight (parentReEmits=false) — it must be restored.
-     * Relinks the single live {@link HczMinibossInstance} (layout-placed,
-     * recreated before this loop), reconstructs via the non-static inner ctor
-     * (synthetic leading enclosing-instance param), and re-attaches the parent's
-     * {@code rocketTouchChildren[rocketIndex]} slot. The three scalar args are
-     * un-finaled and reapplied by the capturer.
-     */
-    private static DynamicObjectRewindCodec hczMinibossRocketTouchCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass().getName().equals(HCZ_MINIBOSS_ROCKET_TOUCH_CLASS);
-            }
-
-            @Override
-            public String className() {
-                return HCZ_MINIBOSS_ROCKET_TOUCH_CLASS;
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                try {
-                    HczMinibossInstance parent =
-                            findLiveInstance(context, HczMinibossInstance.class);
-                    if (parent == null) {
-                        return null;
-                    }
-                    ObjectSpawn spawn = entry.spawn();
-                    int rocketIndex = spawn.subtype() / 2;
-                    int objectId = spawn.objectId();
-                    int layoutIndex = spawn.layoutIndex();
-
-                    Class<?> cls = Class.forName(entry.className());
-                    var ctor = cls.getDeclaredConstructor(
-                            HczMinibossInstance.class, int.class, int.class, int.class);
-                    ctor.setAccessible(true);
-                    ObjectInstance child = (ObjectInstance) ctor.newInstance(
-                            parent, rocketIndex, objectId, layoutIndex);
-
-                    var f = HczMinibossInstance.class.getDeclaredField("rocketTouchChildren");
-                    f.setAccessible(true);
-                    Object arr = f.get(parent);
-                    if (arr == null) {
-                        arr = java.lang.reflect.Array.newInstance(cls, 4);
-                        f.set(parent, arr);
-                    }
-                    if (rocketIndex >= 0 && rocketIndex < java.lang.reflect.Array.getLength(arr)) {
-                        java.lang.reflect.Array.set(arr, rocketIndex, child);
-                    }
-                    return child;
                 } catch (ReflectiveOperationException e) {
                     throw new IllegalStateException(
                             "Failed to recreate dynamic rewind object " + entry.className(), e);

@@ -4,6 +4,7 @@ import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -109,6 +110,9 @@ public final class ObjectRewindDynamicCodecs {
      * <ol>
      *   <li>{@code (AbstractPlayableSprite)} — player-bound dynamic objects using the
      *       captured owner as a probe</li>
+     *   <li>non-static member constructors using a live enclosing object from
+     *       {@link DynamicObjectRecreateContext#objectManager()} plus harmless
+     *       placeholders — parent-linked inner children</li>
      *   <li>{@code (ObjectSpawn)} — single-arg spawn constructor</li>
      *   <li>{@code (ObjectSpawn, String)} — spawn plus harmless name placeholder</li>
      *   <li>{@code (ObjectSpawn, int)} — spawn plus harmless zero placeholder</li>
@@ -143,6 +147,40 @@ public final class ObjectRewindDynamicCodecs {
                     findCtor(cls, AbstractPlayableSprite.class);
             if (playerCtor != null) {
                 return invokeProbeCtor(cls, playerCtor, ctx, player);
+            }
+        }
+
+        AbstractObjectInstance enclosingInstance = findLiveEnclosingInstanceForProbe(cls, ctx);
+        if (enclosingInstance != null) {
+            Class<?> enclosingType = cls.getEnclosingClass();
+            Constructor<? extends AbstractObjectInstance> enclosingCtor = findCtor(cls, enclosingType);
+            if (enclosingCtor != null) {
+                return invokeProbeCtor(cls, enclosingCtor, ctx, enclosingInstance);
+            }
+
+            Constructor<? extends AbstractObjectInstance> enclosingSpawnCtor =
+                    findCtor(cls, enclosingType, ObjectSpawn.class);
+            if (enclosingSpawnCtor != null) {
+                return invokeProbeCtor(cls, enclosingSpawnCtor, ctx, enclosingInstance, spawn);
+            }
+
+            Constructor<? extends AbstractObjectInstance> enclosingIntIntIntCtor =
+                    findCtor(cls, enclosingType, int.class, int.class, int.class);
+            if (enclosingIntIntIntCtor != null) {
+                return invokeProbeCtor(cls, enclosingIntIntIntCtor, ctx, enclosingInstance, 0, 0, 0);
+            }
+
+            Constructor<? extends AbstractObjectInstance> enclosingIntIntIntIntCtor =
+                    findCtor(cls, enclosingType, int.class, int.class, int.class, int.class);
+            if (enclosingIntIntIntIntCtor != null) {
+                return invokeProbeCtor(cls, enclosingIntIntIntIntCtor, ctx, enclosingInstance, 0, 0, 0, 0);
+            }
+
+            Constructor<? extends AbstractObjectInstance> enclosingIntIntIntBooleanCtor =
+                    findCtor(cls, enclosingType, int.class, int.class, int.class, boolean.class);
+            if (enclosingIntIntIntBooleanCtor != null) {
+                return invokeProbeCtor(
+                        cls, enclosingIntIntIntBooleanCtor, ctx, enclosingInstance, 0, 0, 0, false);
             }
         }
 
@@ -199,6 +237,25 @@ public final class ObjectRewindDynamicCodecs {
         }
 
         // No supported probe constructor — cannot build a probe for this class.
+        return null;
+    }
+
+    private static AbstractObjectInstance findLiveEnclosingInstanceForProbe(
+            Class<? extends AbstractObjectInstance> cls,
+            DynamicObjectRecreateContext ctx) {
+        if (!cls.isMemberClass() || Modifier.isStatic(cls.getModifiers())) {
+            return null;
+        }
+        Class<?> enclosingType = cls.getEnclosingClass();
+        if (enclosingType == null || !AbstractObjectInstance.class.isAssignableFrom(enclosingType)
+                || ctx == null || ctx.objectManager() == null) {
+            return null;
+        }
+        for (ObjectInstance instance : ctx.objectManager().getActiveObjects()) {
+            if (enclosingType.isInstance(instance) && instance instanceof AbstractObjectInstance aoi) {
+                return aoi;
+            }
+        }
         return null;
     }
 
