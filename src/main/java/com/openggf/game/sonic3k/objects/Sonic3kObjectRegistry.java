@@ -41,13 +41,11 @@ import com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossBlade;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeSplash;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeWaterChute;
-import com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossGeyserCutscene;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikShip;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn;
-import com.openggf.game.sonic3k.objects.bosses.IczEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossArenaHelperInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossDefeatFragmentChild;
@@ -212,10 +210,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // MhzPollenParticleInstance codec deleted (Phase-2 batch 12):
             // now implements RewindRecreatable -> genericRecreate Path 1.
 
-            // Self-contained gameplay-critical ICZ post-boss egg capsule.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    IczEndBossEggCapsuleInstance.class,
-                    s -> new IczEndBossEggCapsuleInstance(s.x(), s.y())),
+            // IczEndBossEggCapsuleInstance codec deleted (Phase-2 batch 17):
+            // exact spawn coordinates are supplied by RewindRecreatable.
 
             // Self-contained badnik child (no live parent ref; differentiators captured).
             // CaterkillerJrBodyInstance codec deleted (Phase-2 batch 14):
@@ -245,12 +241,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // Self-contained gameplay-critical bosses / cutscenes / capsules.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     AizEndBossInstance.class, s -> new AizEndBossInstance(s)),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    Aiz2EndEggCapsuleInstance.class,
-                    s -> new Aiz2EndEggCapsuleInstance(s.x(), s.y())),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    HczEndBossEggCapsuleInstance.class,
-                    s -> new HczEndBossEggCapsuleInstance(s.x(), s.y())),
+            // Aiz2EndEggCapsuleInstance / HczEndBossEggCapsuleInstance codecs
+            // deleted (Phase-2 batch 17): exact spawn coordinates are supplied
+            // by RewindRecreatable.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     HczEndBossGeyserCutscene.class,
                     s -> new HczEndBossGeyserCutscene(s.x(), s.y())),

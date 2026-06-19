@@ -4,6 +4,8 @@ import com.openggf.game.GameServices;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance;
+import com.openggf.game.sonic3k.objects.bosses.IczEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.badniks.S3kBadnikProjectileInstance;
 import com.openggf.game.sonic3k.objects.badniks.CaterkillerJrBodyInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -55,6 +57,9 @@ class TestS3kSelfContainedTransientRewind {
         assertNoRegisteredS3kDynamicCodec(S3kBadnikProjectileInstance.class);
         assertNoRegisteredS3kDynamicCodec(MhzShipSequenceControllerInstance.class);
         assertNoRegisteredS3kDynamicCodec(S3kBossDefeatSignpostFlow.class);
+        assertNoRegisteredS3kDynamicCodec(Aiz2EndEggCapsuleInstance.class);
+        assertNoRegisteredS3kDynamicCodec(HczEndBossEggCapsuleInstance.class);
+        assertNoRegisteredS3kDynamicCodec(IczEndBossEggCapsuleInstance.class);
     }
 
     @Test
@@ -125,6 +130,12 @@ class TestS3kSelfContainedTransientRewind {
         S3kBossDefeatSignpostFlow signpostFlow = objectManager.createDynamicObject(
                 () -> new S3kBossDefeatSignpostFlow(
                         baseX + 0xF0, 0, S3kBossDefeatSignpostFlow.CleanupAction.NONE));
+        Aiz2EndEggCapsuleInstance aiz2EggCapsule = objectManager.createDynamicObject(
+                () -> new Aiz2EndEggCapsuleInstance(baseX + 0x100, baseY + 0x68));
+        HczEndBossEggCapsuleInstance hczEggCapsule = objectManager.createDynamicObject(
+                () -> new HczEndBossEggCapsuleInstance(baseX + 0x120, baseY + 0x70));
+        IczEndBossEggCapsuleInstance iczEggCapsule = objectManager.createDynamicObject(
+                () -> new IczEndBossEggCapsuleInstance(baseX + 0x140, baseY + 0x78));
 
         List<AbstractObjectInstance> tracked = List.of(
                 aizRockFragment,
@@ -144,7 +155,10 @@ class TestS3kSelfContainedTransientRewind {
                 thrownBomb,
                 badnikProjectile,
                 mhzShipController,
-                signpostFlow);
+                signpostFlow,
+                aiz2EggCapsule,
+                hczEggCapsule,
+                iczEggCapsule);
 
         for (int frame = 0; frame < 3; frame++) {
             for (AbstractObjectInstance instance : tracked) {
@@ -192,6 +206,12 @@ class TestS3kSelfContainedTransientRewind {
                 "precondition: exactly one MHZ ship controller fixture is live");
         assertEquals(1, countLive(objectManager, S3kBossDefeatSignpostFlow.class),
                 "precondition: exactly one S3K boss-defeat signpost flow fixture is live");
+        assertEquals(1, countLive(objectManager, Aiz2EndEggCapsuleInstance.class),
+                "precondition: exactly one AIZ2 egg capsule fixture is live");
+        assertEquals(1, countLive(objectManager, HczEndBossEggCapsuleInstance.class),
+                "precondition: exactly one HCZ egg capsule fixture is live");
+        assertEquals(1, countLive(objectManager, IczEndBossEggCapsuleInstance.class),
+                "precondition: exactly one ICZ egg capsule fixture is live");
 
         Map<Class<?>, Map<String, Object>> capturedState = new LinkedHashMap<>();
         for (AbstractObjectInstance instance : tracked) {
@@ -240,6 +260,12 @@ class TestS3kSelfContainedTransientRewind {
                 "diverge step must remove the MHZ ship controller");
         assertEquals(0, countLive(objectManager, S3kBossDefeatSignpostFlow.class),
                 "diverge step must remove the S3K boss-defeat signpost flow");
+        assertEquals(0, countLive(objectManager, Aiz2EndEggCapsuleInstance.class),
+                "diverge step must remove the AIZ2 egg capsule");
+        assertEquals(0, countLive(objectManager, HczEndBossEggCapsuleInstance.class),
+                "diverge step must remove the HCZ egg capsule");
+        assertEquals(0, countLive(objectManager, IczEndBossEggCapsuleInstance.class),
+                "diverge step must remove the ICZ egg capsule");
 
         registry.restore(snapshot);
 
@@ -261,6 +287,9 @@ class TestS3kSelfContainedTransientRewind {
         assertSimpleStateRoundTrip(objectManager, S3kBadnikProjectileInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, MhzShipSequenceControllerInstance.class, capturedState);
         assertSimpleStateRoundTrip(objectManager, S3kBossDefeatSignpostFlow.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, Aiz2EndEggCapsuleInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, HczEndBossEggCapsuleInstance.class, capturedState);
+        assertSimpleStateRoundTrip(objectManager, IczEndBossEggCapsuleInstance.class, capturedState);
     }
 
     private static void assertNoRegisteredS3kDynamicCodec(Class<?> type) {
