@@ -217,7 +217,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             mhzMinibossEscapeShardCodec(),
 
             // Parent/sibling relink codecs.
-            iczBigSnowPileCodec(),
+            // IczBigSnowPileInstance codec deleted (Phase-2 ICZ snow-pile batch):
+            // live Sonic3kICZEvents owner is resolved by RewindRecreatable.
             signpostStubCodec(),
             starPostStarChildCodec(),
             starPostBonusStarChildCodec(),
@@ -1507,46 +1508,10 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
     }
 
     /**
-     * Codec for {@link IczBigSnowPileInstance}. The pile's only non-spawn
-     * constructor argument is the live {@link Sonic3kICZEvents} parent, which is
-     * a long-lived singleton owned by {@link Sonic3kLevelEventManager} (present
-     * for the whole ICZ session). It is reached via the level event provider
-     * rather than an active-object scan. If the events owner is absent the pile
-     * is dropped (codec returns null) rather than recreated with a null parent.
-     */
-    private static DynamicObjectRewindCodec iczBigSnowPileCodec() {
-        return new DynamicObjectRewindCodec() {
-            @Override
-            public boolean supports(ObjectInstance instance) {
-                return instance.getClass() == IczBigSnowPileInstance.class;
-            }
-
-            @Override
-            public String className() {
-                return IczBigSnowPileInstance.class.getName();
-            }
-
-            @Override
-            public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                    ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                if (!(context.objectServices().levelEventProvider()
-                        instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager mgr)) {
-                    return null;
-                }
-                com.openggf.game.sonic3k.events.Sonic3kICZEvents events = mgr.getIczEvents();
-                if (events == null) {
-                    return null;
-                }
-                return new IczBigSnowPileInstance(entry.spawn(), events);
-            }
-        };
-    }
-
-    /**
      * Codec for {@link MhzEndBossArenaHelperInstance}. The helper's only non-spawn
      * constructor argument is the long-lived
      * {@link com.openggf.game.sonic3k.events.Sonic3kMHZEvents} owner, reached
-     * via the level event provider (mirrors {@link #iczBigSnowPileCodec()}). The
+     * via the level event provider. The
      * role-discriminator scalars (role/spikeIndex/spikeTier/alternateSide) are
      * un-finaled and reapplied by the generic field capturer after recreate, so a
      * structurally-valid PILLAR placeholder is built here; position and role-derived

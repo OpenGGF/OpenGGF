@@ -48,7 +48,7 @@ class TestS3kRewindFixBatch1Codecs {
     }
 
     @Test
-    void registersCodecsForReleaseSliceBatch1Objects() {
+    void releaseSliceBatch1ObjectsHaveDynamicRecreatePaths() {
         Set<String> names = codecClassNames();
 
         List<String> required = List.of(

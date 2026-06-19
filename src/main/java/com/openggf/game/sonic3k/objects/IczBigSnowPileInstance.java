@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.render.SpecialRenderEffectContext;
+import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.events.Sonic3kICZEvents;
@@ -12,6 +13,8 @@ import com.openggf.level.Pattern;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -30,7 +33,7 @@ import java.util.List;
  * release once the pile reaches its final Y position.
  */
 public final class IczBigSnowPileInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SolidObjectListener {
+        implements SlopedSolidProvider, SolidObjectListener, RewindRecreatable {
     public static final int X_POSITION = 0x3880;
     public static final int BASE_Y = 0x05E0;
 
@@ -77,6 +80,19 @@ public final class IczBigSnowPileInstance extends AbstractObjectInstance
         super(spawn, "ICZ1BigSnowPile");
         this.events = events;
         updateDynamicSpawn(X_POSITION, currentY);
+    }
+
+    private IczBigSnowPileInstance(ObjectSpawn spawn) {
+        this(spawn, null);
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        if (!(ctx.objectServices().levelEventProvider() instanceof Sonic3kLevelEventManager manager)) {
+            return null;
+        }
+        Sonic3kICZEvents liveEvents = manager.getIczEvents();
+        return liveEvents != null ? new IczBigSnowPileInstance(ctx.spawn(), liveEvents) : null;
     }
 
     @Override
