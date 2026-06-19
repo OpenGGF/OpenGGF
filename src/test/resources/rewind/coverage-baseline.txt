@@ -635,8 +635,6 @@ com.openggf.game.sonic2.objects.SpikeObjectInstance#finalScalar#baseX
 com.openggf.game.sonic2.objects.SpikeObjectInstance#finalScalar#baseY
 com.openggf.game.sonic2.objects.SpikeObjectInstance#recreate
 com.openggf.game.sonic2.objects.SpikyBlockObjectInstance#recreate
-com.openggf.game.sonic2.objects.SpikyBlockSpikeInstance#finalScalar#initialX
-com.openggf.game.sonic2.objects.SpikyBlockSpikeInstance#finalScalar#initialY
 com.openggf.game.sonic2.objects.SpiralObjectInstance#recreate
 com.openggf.game.sonic2.objects.SpringObjectInstance#finalScalar#b
 com.openggf.game.sonic2.objects.SpringObjectInstance#finalScalar#g

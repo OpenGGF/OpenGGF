@@ -39,7 +39,6 @@ class TestRewindFixS2Batch3Codecs {
             TurtloidJetInstance.class.getName(),
             TurtloidRiderInstance.class.getName(),
             SolFireballObjectInstance.class.getName(),
-            SpikyBlockSpikeInstance.class.getName(),
             BombPrizeObjectInstance.class.getName(),
             // EHZBossGroundVehicle / EHZBossPropeller / EHZBossVehicleTop codecs
             // intentionally REMOVED: construction-spawned children re-established by
@@ -53,7 +52,8 @@ class TestRewindFixS2Batch3Codecs {
             GrounderBadnikInstance.class.getName(),
             SpikerDrillObjectInstance.class.getName(),
             WallTurretShotInstance.class.getName(),
-            VerticalLaserObjectInstance.class.getName());
+            VerticalLaserObjectInstance.class.getName(),
+            SpikyBlockSpikeInstance.class.getName());
 
     private static Set<String> codecClassNames() {
         Set<String> names = new HashSet<>();

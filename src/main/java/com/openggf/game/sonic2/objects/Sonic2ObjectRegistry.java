@@ -148,9 +148,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
             solFireballCodec(),
             // WallTurretShotInstance and VerticalLaserObjectInstance now implement
             // RewindRecreatable -> genericRecreate Path 1.
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    SpikyBlockSpikeInstance.class,
-                    spawn -> new SpikyBlockSpikeInstance(spawn, "SpikyBlock-Spike", 0, 0)),
+            // SpikyBlockSpikeInstance now implements RewindRecreatable -> genericRecreate Path 1.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     BombPrizeObjectInstance.class,
                     spawn -> new BombPrizeObjectInstance(
