@@ -6,6 +6,7 @@ import com.openggf.game.GameId;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rewind.RewindRoundTripHarness.RoundTripSweepResult;
+import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
@@ -22,6 +23,7 @@ import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossDefeatFragmentChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance;
+import com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikShipFlameInstance;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -439,6 +441,9 @@ public class TestScalarOnlyCodecDeletion {
 
     private static final List<CodecDeletionCandidate> BATCH44_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(S3kResultsScreenObjectInstance.class.getName(), GameId.S3K));
+
+    private static final List<CodecDeletionCandidate> BATCH45_DELETED_CODECS = List.of(
+            new CodecDeletionCandidate(MhzEndBossRobotnikShipFlameInstance.class.getName(), GameId.S3K));
 
     private static final SonicConfigurationService DEFAULT_CONFIGURATION =
             createDefaultConfiguration();
@@ -2805,6 +2810,185 @@ public class TestScalarOnlyCodecDeletion {
         }
     }
 
+    // =====================================================================
+    // Batch 45: S3K MHZ Robotnik ship flame, parent ref restored by identity
+    // =====================================================================
+
+    @Test
+    void batch45ClassesAllImplementRewindRecreatable() {
+        for (CodecDeletionCandidate candidate : BATCH45_DELETED_CODECS) {
+            Class<?> cls;
+            try {
+                cls = Class.forName(candidate.fqn());
+            } catch (ClassNotFoundException e) {
+                throw new AssertionError(e);
+            }
+            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
+                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 45)");
+        }
+    }
+
+    @Test
+    void batch45ClassesHaveNoRegisteredCodec() {
+        for (CodecDeletionCandidate candidate : BATCH45_DELETED_CODECS) {
+            assertFalse(hasRegisteredDynamicCodec(candidate.fqn(), candidate.gameId()),
+                    candidate.fqn() + " must have NO registered dynamic rewind codec after batch-45 deletion; "
+                            + "session restore must use genericRecreate Path 1");
+        }
+    }
+
+    @Test
+    void batch45ClassesGenericRecreateProducesInstance() {
+        for (CodecDeletionCandidate candidate : BATCH45_DELETED_CODECS) {
+            ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x3D00, 0x300, candidate.gameId());
+            assertNotNull(result, "genericRecreate must return non-null for " + candidate.fqn());
+            assertEquals(candidate.fqn(), result.getClass().getName(),
+                    "genericRecreate must return the same concrete class for " + candidate.fqn());
+        }
+    }
+
+    @Test
+    void mhzEndBossRobotnikShipFlameGenericRecreateRestoresParentByIdentity() {
+        String fqn = BATCH45_DELETED_CODECS.getFirst().fqn();
+        StubObjectServices stub = new StubObjectServices() {
+            @Override public ObjectRenderManager renderManager() { return INERT_RENDER_MANAGER; }
+            @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
+        };
+        ObjectSpawn parentSpawn = new ObjectSpawn(0x3C40, 0x300, 0x93, 0, 0, false, 7);
+        MhzEndBossInstance sourceParent = ObjectConstructionContext.construct(stub,
+                () -> new MhzEndBossInstance(parentSpawn));
+        MhzEndBossRobotnikShipFlameInstance source = ObjectConstructionContext.construct(stub,
+                () -> new MhzEndBossRobotnikShipFlameInstance(sourceParent));
+        setBooleanField(source, "visibleThisFrame", true);
+        setBooleanField(source, "flipX", true);
+        ObjectRefId parentId = ObjectRefId.dynamic(4, 1, 44);
+        RewindIdentityTable captureTable = new RewindIdentityTable();
+        captureTable.registerObject(sourceParent, parentId);
+        RewindCaptureContext captureContext = RewindCaptureContext.withIdentityTable(captureTable);
+        PerObjectRewindSnapshot state = source.captureRewindState(captureContext);
+        ObjectSpawn capturedSpawn = source.getSpawn();
+
+        ObjectInstance unresolved = invokeGenericRecreateWithState(fqn, capturedSpawn, state, GameId.S3K);
+        RewindCaptureContext missingParentContext =
+                RewindCaptureContext.withIdentityTable(new RewindIdentityTable());
+        assertThrows(IllegalStateException.class,
+                () -> ((AbstractObjectInstance) unresolved).restoreRewindState(state, missingParentContext),
+                "non-null parent must use required object-ref resolve during compact restore");
+
+        ObjectInstance recreated = invokeGenericRecreateWithState(fqn, capturedSpawn, state, GameId.S3K);
+        MhzEndBossInstance restoredParent = ObjectConstructionContext.construct(stub,
+                () -> new MhzEndBossInstance(parentSpawn));
+        RewindIdentityTable restoreTable = new RewindIdentityTable();
+        restoreTable.registerObject(restoredParent, parentId);
+        RewindCaptureContext restoreContext = RewindCaptureContext.withIdentityTable(restoreTable);
+        assertNotNull(recreated, "genericRecreate must return an MHZ Robotnik ship flame");
+        assertEquals(fqn, recreated.getClass().getName(),
+                "genericRecreate must return the same concrete flame class before restore");
+        ((AbstractObjectInstance) recreated).restoreRewindState(state, restoreContext);
+
+        assertSame(restoredParent, readObjectField(recreated, "parent"),
+                "compact restore must resolve parent through the restore identity table");
+        assertTrue(readBooleanField(recreated, "visibleThisFrame"),
+                "standard restore must reapply visibleThisFrame");
+        assertTrue(readBooleanField(recreated, "flipX"),
+                "standard restore must reapply flipX");
+    }
+
+    @Test
+    void mhzEndBossRobotnikShipFlameRestoresThroughObjectManagerIdentityPath() {
+        ObjectManager[] holder = new ObjectManager[1];
+        Camera camera = mockCamera();
+        StubObjectServices services = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public Camera camera() { return camera; }
+            @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
+            @Override public ObjectRenderManager renderManager() { return INERT_RENDER_MANAGER; }
+        };
+        ObjectSpawn parentSpawn = new ObjectSpawn(
+                0x3C40, 0x300, 0x93, 0, 0, false, 45);
+        ObjectManager objectManager = new ObjectManager(
+                List.of(),
+                new Sonic3kObjectRegistry(),
+                0,
+                null,
+                null,
+                GraphicsManager.getInstance(),
+                camera,
+                services);
+        holder[0] = objectManager;
+        objectManager.reset(0);
+
+        MhzEndBossInstance sourceParent = objectManager.createDynamicObject(
+                () -> new MhzEndBossInstance(parentSpawn));
+        MhzEndBossRobotnikShipFlameInstance sourceFlame = objectManager.createDynamicObject(
+                () -> new MhzEndBossRobotnikShipFlameInstance(sourceParent));
+        setBooleanField(sourceFlame, "visibleThisFrame", true);
+        setBooleanField(sourceFlame, "flipX", true);
+        assertEquals(1, liveObjects(objectManager, MhzEndBossInstance.class).size(),
+                "precondition: exactly one captured MHZ end boss parent is live before snapshot");
+        assertEquals(1, liveObjects(objectManager, MhzEndBossRobotnikShipFlameInstance.class).size(),
+                "precondition: exactly one captured flame is live before snapshot");
+
+        RewindIdentityTable captureTable = objectManager.captureIdentityContext().requireIdentityTable();
+        ObjectRefId capturedParentId = captureTable.idFor(sourceParent);
+        ObjectRefId capturedFlameId = captureTable.idFor(sourceFlame);
+        assertNotNull(capturedParentId, "ObjectManager capture identity table must register the live boss");
+        assertNotNull(capturedFlameId, "ObjectManager capture identity table must register the dynamic flame");
+
+        RewindRegistry registry = new RewindRegistry();
+        registry.register(objectManager.rewindSnapshottable());
+        CompositeSnapshot snapshot = registry.capture();
+
+        objectManager.removeDynamicObject(sourceFlame);
+        objectManager.removeDynamicObject(sourceParent);
+        MhzEndBossInstance divergentParent = objectManager.createDynamicObject(
+                () -> new MhzEndBossInstance(new ObjectSpawn(0x3D00, 0x340, 0x93, 0, 0, false, 46)));
+        MhzEndBossRobotnikShipFlameInstance divergentFlame = objectManager.createDynamicObject(
+                () -> new MhzEndBossRobotnikShipFlameInstance(divergentParent));
+        assertEquals(1, liveObjects(objectManager, MhzEndBossInstance.class).size(),
+                "diverge step should leave one unrelated live parent before restore");
+        assertEquals(1, liveObjects(objectManager, MhzEndBossRobotnikShipFlameInstance.class).size(),
+                "diverge step should leave one unrelated live flame before restore");
+
+        registry.restore(snapshot);
+
+        MhzEndBossInstance restoredParent = singleLiveObject(objectManager, MhzEndBossInstance.class);
+        MhzEndBossRobotnikShipFlameInstance restoredFlame =
+                singleLiveObject(objectManager, MhzEndBossRobotnikShipFlameInstance.class);
+        assertNotNull(restoredParent, "restore must keep the MHZ end boss live");
+        assertNotNull(restoredFlame, "restore must recreate exactly one MHZ Robotnik ship flame");
+        assertFalse(restoredParent == sourceParent,
+                "restore should not retain the removed captured parent instance");
+        assertFalse(restoredParent == divergentParent,
+                "restore should replace divergent live dynamics with the captured parent snapshot entry");
+        assertFalse(restoredFlame == sourceFlame,
+                "restore should not retain the removed captured flame instance");
+        assertFalse(restoredFlame == divergentFlame,
+                "restore should replace divergent live dynamics with the captured snapshot entry");
+
+        RewindIdentityTable restoredTable = objectManager.captureIdentityContext().requireIdentityTable();
+        assertEquals(capturedParentId, restoredTable.idFor(restoredParent),
+                "restored boss must retain the captured ObjectManager rewind identity");
+        assertEquals(capturedFlameId, restoredTable.idFor(restoredFlame),
+                "restored flame must retain the captured ObjectManager rewind identity");
+        assertSame(restoredParent, readObjectField(restoredFlame, "parent"),
+                "restored flame parent must resolve through ObjectManager's restore identity table");
+        assertTrue(readBooleanField(restoredFlame, "visibleThisFrame"),
+                "ObjectManager restore must reapply visibleThisFrame");
+        assertTrue(readBooleanField(restoredFlame, "flipX"),
+                "ObjectManager restore must reapply flipX");
+    }
+
+    @Test
+    void batch45ClassRoundTripPassedThroughHarnessParentSeedPath() {
+        CodecDeletionCandidate candidate = BATCH45_DELETED_CODECS.getFirst();
+        RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
+        assertInstanceOf(RoundTripSweepResult.Passed.class, result,
+                candidate.fqn()
+                        + " must round-trip as Passed through the harness parent-seed path; got: "
+                        + result);
+    }
+
     /**
      * Returns true if the given FQN has a registered dynamic rewind codec in the
      * shared codecs or in any of the three per-game registries. Distinct from
@@ -2921,6 +3105,19 @@ public class TestScalarOnlyCodecDeletion {
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to read " + fieldName + " from " + target.getClass(), e);
         }
+    }
+
+    private static <T> T singleLiveObject(ObjectManager objectManager, Class<T> type) {
+        List<T> live = liveObjects(objectManager, type);
+        assertEquals(1, live.size(), "expected exactly one live " + type.getSimpleName());
+        return live.getFirst();
+    }
+
+    private static <T> List<T> liveObjects(ObjectManager objectManager, Class<T> type) {
+        return objectManager.getActiveObjects().stream()
+                .filter(object -> object.getClass() == type && !object.isDestroyed())
+                .map(type::cast)
+                .toList();
     }
 
     private static void setIntField(Object target, String fieldName, int value) {

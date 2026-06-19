@@ -465,7 +465,15 @@ public final class RewindRoundTripHarness {
         try {
             snap = rr.capture();
         } catch (Throwable t) {
-            return new RoundTripSweepResult.Unprobed("capture threw: " + describeThrowable(t));
+            String description = describeThrowable(t);
+            if (isUnregisteredObjectReferenceCapture(description)) {
+                RoundTripSweepResult retried =
+                        tryRoundTripWithSeededParent(fqn, cls, gameId, beforeFields);
+                if (retried != null) {
+                    return retried;
+                }
+            }
+            return new RoundTripSweepResult.Unprobed("capture threw: " + description);
         }
         try {
             rr.restore(snap);
@@ -832,6 +840,11 @@ public final class RewindRoundTripHarness {
         // (CPZBossContainer, CPZBossFlame, CPZBossPipe, CPZBossPump, CPZBossRobotnik)
         // immediately, polluting the OM before the probe adds its single child.
         // All 5 CPZ boss components stay parent-dependent (honest ceiling: need live session).
+        // S3K MHZ Robotnik ship flame — parent is itself RewindRecreatable and can be
+        // seeded dynamically. Do not use PARENT_SPAWN_OBJECT_IDS here: S3K object id
+        // 0x93 is zone-set dependent and needs runtime zone context to create via registry.
+        m.put("com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikShipFlameInstance",
+                "com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance");
         PARENT_SEED_TABLE = Map.copyOf(m);
     }
 
@@ -1007,8 +1020,9 @@ public final class RewindRoundTripHarness {
 
     /**
      * Attempts to construct a child of {@code cls} by finding a constructor of the form
-     * {@code (ObjectSpawn, ParentType)} where {@code ParentType} is assignment-compatible
-     * with {@code liveParent}, then invoking it directly with the live parent instance.
+     * {@code (ObjectSpawn, ParentType)} or {@code (ParentType)} where {@code ParentType}
+     * is assignment-compatible with {@code liveParent}, then invoking it directly with
+     * the live parent instance.
      *
      * <p>This avoids the double-spawn side-effect that occurs when strategy 6 builds a
      * NEW stub parent inside the seeded ObjectManager (triggering the parent's own
@@ -1026,16 +1040,23 @@ public final class RewindRoundTripHarness {
         if (liveParent == null) return null;
         for (Constructor<?> rawCtor : cls.getDeclaredConstructors()) {
             Class<?>[] params = rawCtor.getParameterTypes();
-            if (params.length != 2) continue;
-            if (params[0] != ObjectSpawn.class) continue;
-            if (!params[1].isAssignableFrom(liveParent.getClass())) continue;
+            boolean spawnAndParent = params.length == 2
+                    && params[0] == ObjectSpawn.class
+                    && params[1].isAssignableFrom(liveParent.getClass());
+            boolean parentOnly = params.length == 1
+                    && params[0].isAssignableFrom(liveParent.getClass());
+            if (!spawnAndParent && !parentOnly) continue;
             Constructor<? extends AbstractObjectInstance> ctor =
                     (Constructor<? extends AbstractObjectInstance>) rawCtor;
             ctor.setAccessible(true);
             final AbstractObjectInstance parent = liveParent;
             try {
+                if (spawnAndParent) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, PROBE_SPAWN, parent));
+                }
                 return ObjectConstructionContext.construct(stub,
-                        () -> invokeWith(ctor, PROBE_SPAWN, parent));
+                        () -> invokeWith(ctor, parent));
             } catch (Throwable ignored) {
             }
         }
@@ -1046,9 +1067,9 @@ public final class RewindRoundTripHarness {
      * Strategy 6: attempts to construct a child that requires a live parent reference
      * as its second constructor parameter.
      *
-     * <p>Scans declared constructors for a 2-parameter signature
-     * {@code (ObjectSpawn, ParentType)} where {@code ParentType} is a concrete,
-     * non-abstract {@link AbstractObjectInstance} subclass. When found:
+     * <p>Scans declared constructors for either {@code (ObjectSpawn, ParentType)}
+     * or {@code (ParentType)} where {@code ParentType} is a concrete, non-abstract
+     * {@link AbstractObjectInstance} subclass. When found:
      * <ol>
      *   <li>Build a stub parent of {@code ParentType} headlessly using strategy 2
      *       ({@code (ObjectSpawn)}) or strategy 1 (zero-arg) — no recursion into
@@ -1066,15 +1087,16 @@ public final class RewindRoundTripHarness {
             StubObjectServices stub) {
         for (Constructor<?> rawCtor : cls.getDeclaredConstructors()) {
             Class<?>[] params = rawCtor.getParameterTypes();
-            if (params.length != 2) continue;
-            if (params[0] != ObjectSpawn.class) continue;
-            Class<?> secondType = params[1];
-            if (!AbstractObjectInstance.class.isAssignableFrom(secondType)) continue;
-            if (Modifier.isAbstract(secondType.getModifiers())) continue;
-            // Found (ObjectSpawn, ConcreteParentType). Try to build a stub parent.
+            boolean spawnAndParent = params.length == 2 && params[0] == ObjectSpawn.class;
+            boolean parentOnly = params.length == 1;
+            if (!spawnAndParent && !parentOnly) continue;
+            Class<?> parentType = spawnAndParent ? params[1] : params[0];
+            if (!AbstractObjectInstance.class.isAssignableFrom(parentType)) continue;
+            if (Modifier.isAbstract(parentType.getModifiers())) continue;
+            // Found parent-bearing constructor. Try to build a stub parent.
             @SuppressWarnings("unchecked")
             Class<? extends AbstractObjectInstance> parentCls =
-                    (Class<? extends AbstractObjectInstance>) secondType;
+                    (Class<? extends AbstractObjectInstance>) parentType;
             AbstractObjectInstance stubParent = tryConstructParentHeadless(parentCls, stub);
             if (stubParent == null) continue;
             @SuppressWarnings("unchecked")
@@ -1083,8 +1105,12 @@ public final class RewindRoundTripHarness {
             ctor.setAccessible(true);
             try {
                 final AbstractObjectInstance finalParent = stubParent;
+                if (spawnAndParent) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, PROBE_SPAWN, finalParent));
+                }
                 return ObjectConstructionContext.construct(stub,
-                        () -> invokeWith(ctor, PROBE_SPAWN, finalParent));
+                        () -> invokeWith(ctor, finalParent));
             } catch (Throwable ignored) {
             }
         }
@@ -1223,6 +1249,11 @@ public final class RewindRoundTripHarness {
         }
         String msg = root.getMessage();
         return root.getClass().getSimpleName() + (msg != null ? ": " + msg : "");
+    }
+
+    private static boolean isUnregisteredObjectReferenceCapture(String description) {
+        return description != null
+                && description.contains("RewindIdentityTable has no registered id for object reference");
     }
 
     /**

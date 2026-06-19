@@ -132,6 +132,7 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance", "effectChildren"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance", "robotnikExplosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance", "structuralChildren"), RewindFieldPolicy.DEFERRED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikShipFlameInstance", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzBumperObjectInstance", "pendingPrimaryTouch"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzBumperObjectInstance", "pendingSidekickTouch"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CnzCannonInstance", "capturedPlayer"), RewindFieldPolicy.CAPTURED),

@@ -292,8 +292,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // MHZ end-boss children — relink to the live boss recreated earlier.
             bossChildCodec(MhzEndBossRobotnikHeadChild.class, MhzEndBossInstance.class,
                     MhzEndBossRobotnikHeadChild::new),
-            bossChildCodec(MhzEndBossRobotnikShipFlameInstance.class, MhzEndBossInstance.class,
-                    MhzEndBossRobotnikShipFlameInstance::new),
+            // MhzEndBossRobotnikShipFlameInstance codec deleted (Phase-2 batch 45):
+            // compact restore resolves the parent object reference after generic recreate.
             bossChildCodec(MhzEndBossSpikeChild.class, MhzEndBossInstance.class,
                     boss -> new MhzEndBossSpikeChild(boss, 0, 0, 0)),
             bossChildCodec(MhzEndBossVisualChild.class, MhzEndBossInstance.class,

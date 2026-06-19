@@ -152,12 +152,16 @@ public class TestRewindHarnessCoverageRatchet {
  *   <li>2026-06-19: raised to 116 after deleting the S3K
  *       S3kResultsScreenObjectInstance codec; compact restore reapplies
  *       constructor state and required playerRef identity resolution.</li>
+ *   <li>2026-06-19: raised to 117 after deleting the S3K
+ *       MhzEndBossRobotnikShipFlameInstance codec and extending the harness
+ *       parent-seed retry path to cover capture-time required object refs and
+ *       single-argument parent constructors.</li>
  * </ul>
      *
      * <p>Floor only moves UP. When raising: update this comment, run the full
      * gate suite, confirm probed count >= new floor before committing.
      */
-    static final int RATCHET_FLOOR = 116;
+    static final int RATCHET_FLOOR = 117;
 
     @BeforeEach
     void initHeadless() {
