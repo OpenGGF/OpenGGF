@@ -174,6 +174,21 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     }
 
     @Override
+    public boolean isLagCompensationDisplayEnabled() {
+        return manager.isLagCompensationDisplayEnabled();
+    }
+
+    @Override
+    public void toggleLagCompensationDisplay() {
+        manager.toggleLagCompensationDisplay();
+    }
+
+    @Override
+    public boolean adjustLagCompensationIfDisplayEnabled(double delta) {
+        return manager.adjustLagCompensationIfDisplayEnabled(delta);
+    }
+
+    @Override
     public double getLagCompensation() {
         return manager.getLagCompensation();
     }

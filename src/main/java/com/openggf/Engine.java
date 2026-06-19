@@ -1642,7 +1642,7 @@ public class Engine {
 					postFadeRecorder.recordPostFadeDiagnostic("SpecialStageDiagnosticOverlay");
 				}
 				ssProvider.renderAlignmentOverlay(windowWidth, windowHeight);
-			} else {
+			} else if (ssProvider.isLagCompensationDisplayEnabled()) {
 				if (postFadeRecorder != null) {
 					postFadeRecorder.recordPostFadeDiagnostic("SpecialStageDiagnosticOverlay");
 				}

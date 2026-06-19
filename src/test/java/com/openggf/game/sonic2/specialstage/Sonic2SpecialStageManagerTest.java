@@ -42,6 +42,42 @@ public class Sonic2SpecialStageManagerTest {
     }
 
     @Test
+    public void lagCompensationDisplayStartsOffAndToggles() {
+        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
+
+        assertFalse(manager.isLagCompensationDisplayEnabled(),
+                "Lag compensation debug display should be hidden until explicitly toggled");
+
+        manager.toggleLagCompensationDisplay();
+        assertTrue(manager.isLagCompensationDisplayEnabled(),
+                "First toggle should enable the lag compensation debug display");
+
+        manager.toggleLagCompensationDisplay();
+        assertFalse(manager.isLagCompensationDisplayEnabled(),
+                "Second toggle should hide the lag compensation debug display again");
+    }
+
+    @Test
+    public void lagCompensationAdjustmentsRequireDisplayEnabled() {
+        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
+        double initial = manager.getLagCompensation();
+
+        assertFalse(manager.adjustLagCompensationIfDisplayEnabled(0.05),
+                "F6/F7-style adjustments should be ignored while the display is disabled");
+        assertEquals(initial, manager.getLagCompensation(), 0.0001);
+
+        manager.toggleLagCompensationDisplay();
+        assertTrue(manager.adjustLagCompensationIfDisplayEnabled(0.05),
+                "F6/F7-style adjustments should apply after F1 enables the display");
+        assertEquals(initial + 0.05, manager.getLagCompensation(), 0.0001);
+
+        manager.toggleLagCompensationDisplay();
+        assertFalse(manager.adjustLagCompensationIfDisplayEnabled(-0.05),
+                "F6/F7-style adjustments should stop applying after the display is toggled off");
+        assertEquals(initial + 0.05, manager.getLagCompensation(), 0.0001);
+    }
+
+    @Test
     public void testH32Dimensions() {
         assertEquals(256, Sonic2SpecialStageManager.H32_WIDTH, "H32 width should be 256 pixels");
         assertEquals(224, Sonic2SpecialStageManager.H32_HEIGHT, "H32 height should be 224 pixels");
