@@ -12,10 +12,13 @@ import com.openggf.game.sonic2.objects.bosses.MCZFallingDebrisInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance;
 import com.openggf.game.sonic2.objects.badniks.SpikerDrillObjectInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.InvincibilityStarsObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.boss.BossExplosionObjectInstance;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
@@ -29,9 +32,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
  * Session-level rewind coverage for self-contained S2 projectile/effect objects
@@ -50,6 +56,7 @@ class TestS2SelfContainedTransientRewind {
 
     @Test
     void phase2BatchCandidatesHaveNoExplicitDynamicCodec() {
+        assertNoRegisteredSharedDynamicCodec(InvincibilityStarsObjectInstance.class);
         assertNoRegisteredS2DynamicCodec(HtzFireProjectileObjectInstance.class);
         assertNoRegisteredS2DynamicCodec(ArrowProjectileInstance.class);
         assertNoRegisteredS2DynamicCodec(SteamPuffObjectInstance.class);
@@ -70,6 +77,76 @@ class TestS2SelfContainedTransientRewind {
         assertNoRegisteredS2DynamicCodec(ResultsScreenObjectInstance.class);
         assertNoRegisteredS2DynamicCodec(RingPrizeObjectInstance.class);
         assertNoRegisteredS2DynamicCodec(Sonic2MTZBossInstance.MTZBossLaser.class);
+    }
+
+    @Test
+    void playerBoundInvincibilityStarsRestoreThroughSessionSnapshot() throws Exception {
+        assertNoRegisteredSharedDynamicCodec(InvincibilityStarsObjectInstance.class);
+
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(ZONE_EHZ, ACT_1)
+                .build();
+
+        RewindRegistry registry = fixture.gameplayMode().getRewindRegistry();
+        assertNotNull(registry, "RewindRegistry must be available after S2 boot");
+
+        ObjectManager objectManager = GameServices.level().getObjectManager();
+        assertNotNull(objectManager, "ObjectManager must be available for S2");
+
+        AbstractPlayableSprite player = fixture.sprite();
+        assertNotNull(player.getPowerUpSpawner(),
+                "S2 player must have a production power-up spawner");
+        player.giveInvincibility();
+
+        InvincibilityStarsObjectInstance capturedStars = assertInstanceOf(
+                InvincibilityStarsObjectInstance.class,
+                player.getInvincibilityObject(),
+                "precondition: S2 invincibility should create the shared stars object");
+        assertEquals(1, countLive(objectManager, InvincibilityStarsObjectInstance.class),
+                "precondition: exactly one shared invincibility-stars object is live before capture");
+
+        for (int frame = 0; frame < 4; frame++) {
+            capturedStars.update(frame, player);
+        }
+
+        int capturedSlot = capturedStars.getSlotIndex();
+        int[] capturedAngles = intArrayField(capturedStars, "angleByte");
+        int[] capturedAnimCounters = intArrayField(capturedStars, "animCounter");
+        int capturedSonic1TrailPhase = intField(capturedStars, "s1TrailPhase");
+        int[] capturedSonic1AnimationIndices = intArrayField(capturedStars, "s1AnimationIndices");
+        int[] capturedSonic1AnimationTimers = intArrayField(capturedStars, "s1AnimationTimers");
+
+        CompositeSnapshot snapshot = registry.capture();
+        assertNotNull(snapshot, "capture() must return a snapshot");
+
+        objectManager.removeDynamicObject(capturedStars);
+        setPowerUpObjectField(player, "invincibilityObject", null);
+        player.setInvincibleFrames(0);
+        assertEquals(0, countLive(objectManager, InvincibilityStarsObjectInstance.class),
+                "diverge step must remove the captured shared invincibility stars");
+
+        registry.restore(snapshot);
+
+        List<InvincibilityStarsObjectInstance> restored =
+                liveObjects(objectManager, InvincibilityStarsObjectInstance.class);
+        assertEquals(1, restored.size(),
+                "post-restore player refresh must recreate exactly one shared invincibility-stars object");
+        InvincibilityStarsObjectInstance restoredStars = restored.get(0);
+        assertSame(restoredStars, player.getInvincibilityObject(),
+                "restored player invincibility link must point at the live ObjectManager stars");
+        assertEquals(capturedSlot, restoredStars.getSlotIndex(),
+                "restored shared invincibility stars must consume the captured dynamic slot");
+        assertArrayEquals(capturedAngles, intArrayField(restoredStars, "angleByte"),
+                "restored shared invincibility stars must keep captured orbit angles");
+        assertArrayEquals(capturedAnimCounters, intArrayField(restoredStars, "animCounter"),
+                "restored shared invincibility stars must keep captured animation counters");
+        assertEquals(capturedSonic1TrailPhase, intField(restoredStars, "s1TrailPhase"),
+                "restored shared invincibility stars must keep captured S1 trail phase");
+        assertArrayEquals(capturedSonic1AnimationIndices, intArrayField(restoredStars, "s1AnimationIndices"),
+                "restored shared invincibility stars must keep captured S1 animation indices");
+        assertArrayEquals(capturedSonic1AnimationTimers, intArrayField(restoredStars, "s1AnimationTimers"),
+                "restored shared invincibility stars must keep captured S1 animation timers");
+        assertFalse(restoredStars.isDestroyed(), "restored shared invincibility stars must remain live");
     }
 
     @Test
@@ -346,6 +423,13 @@ class TestS2SelfContainedTransientRewind {
                 + " must restore through RewindRecreatable generic recreate, not an explicit S2 dynamic codec");
     }
 
+    private static void assertNoRegisteredSharedDynamicCodec(Class<?> type) {
+        boolean hasCodec = ObjectRewindDynamicCodecs.sharedCodecs().stream()
+                .anyMatch(codec -> type.getName().equals(codec.className()));
+        assertFalse(hasCodec, type.getSimpleName()
+                + " must restore through RewindRecreatable generic recreate, not an explicit shared dynamic codec");
+    }
+
     private static <T extends AbstractObjectInstance> void assertSimpleStateRoundTrip(
             ObjectManager objectManager,
             Class<T> type,
@@ -387,5 +471,24 @@ class TestS2SelfContainedTransientRewind {
             }
         }
         return values;
+    }
+
+    private static int intField(Object instance, String fieldName) throws Exception {
+        Field field = instance.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getInt(instance);
+    }
+
+    private static int[] intArrayField(Object instance, String fieldName) throws Exception {
+        Field field = instance.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return ((int[]) field.get(instance)).clone();
+    }
+
+    private static void setPowerUpObjectField(AbstractPlayableSprite player, String fieldName, Object value)
+            throws Exception {
+        Field field = AbstractPlayableSprite.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(player, value);
     }
 }

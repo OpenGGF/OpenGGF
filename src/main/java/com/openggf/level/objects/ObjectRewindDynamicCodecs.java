@@ -250,9 +250,6 @@ public final class ObjectRewindDynamicCodecs {
                 animalCodec(),
                 new LostRingRewindCodec(),
                 deferredPlayerBoundCodec(ShieldObjectInstance.class, ShieldObjectInstance.class),
-                deferredPlayerBoundCodec(
-                        InvincibilityStarsObjectInstance.class,
-                        InvincibilityStarsObjectInstance.class),
                 explosionCodec(),
                 skidDustCodec(),
                 // Batch-7: signpost ring sparkle (shared S1+S2; S3K uses S3kSignpostSparkleChild).
