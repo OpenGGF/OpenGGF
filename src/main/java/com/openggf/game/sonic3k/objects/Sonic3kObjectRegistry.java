@@ -289,8 +289,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             // compact restore resolves the parent object reference after generic recreate.
             // MhzEndBossSpikeChild codec deleted: relinks to the restored
             // live boss through RewindRecreatable genericRecreate.
-            bossChildCodec(MhzEndBossVisualChild.class, MhzEndBossInstance.class,
-                    boss -> new MhzEndBossVisualChild(boss, 0, 0, false)),
+            // MhzEndBossVisualChild codec deleted: relinks to the restored
+            // live boss through RewindRecreatable genericRecreate.
             bossChildCodec(MhzEndBossWeatherMachineChild.class, MhzEndBossInstance.class,
                     boss -> new MhzEndBossWeatherMachineChild(boss)),
             // MhzEndBossHitProxyChild codec deleted: relinks to the restored
