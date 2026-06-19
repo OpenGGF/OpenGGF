@@ -60,9 +60,7 @@ class TestRewindFixS1Batch3Codecs {
                 Sonic1RingFlashObjectInstance.class.getName(),
                 Sonic1RingInstance.class.getName(),
                 Sonic1SeesawBallObjectInstance.class.getName(),
-                Sonic1SpikedBallChainObjectInstance.class.getName(),
-                Sonic1StomperDoorObjectInstance.class.getName(),
-                Sonic1TeleporterObjectInstance.class.getName());
+                Sonic1SpikedBallChainObjectInstance.class.getName());
 
         for (String name : required) {
             assertTrue(names.contains(name),

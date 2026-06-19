@@ -99,9 +99,8 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
                     Sonic1EndingSonicObjectInstance.class,
                     spawn -> new Sonic1EndingSonicObjectInstance(spawn.x(), spawn.y())),
             glassReflectionCodec(),
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    Sonic1ResultsScreenObjectInstance.class,
-                    spawn -> new Sonic1ResultsScreenObjectInstance(0, 0, 0)),
+            // Sonic1ResultsScreenObjectInstance now implements RewindRecreatable
+            // -> genericRecreate Path 1.
             ObjectRewindDynamicCodecs.exactSpawnCodec(
                     Sonic1ExplosionItemObjectInstance.class,
                     spawn -> new Sonic1ExplosionItemObjectInstance(spawn.x(), spawn.y(), null, 0)),
@@ -133,12 +132,8 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             // a sub-1-second purely-cosmetic splash re-emitted naturally on water
             // entry/exit. See docs/KNOWN_DISCREPANCIES.md "Batch-3 Rewind: Transient
             // Cosmetic Children Not Rewound".
-            ObjectRewindDynamicCodecs.exactSpawnCodec(
-                    Sonic1StomperDoorObjectInstance.class,
-                    (spawn, os) -> {
-                        int zoneIndex = (os != null) ? os.romZoneId() : -1;
-                        return new Sonic1StomperDoorObjectInstance(spawn, zoneIndex);
-                    }),
+            // Sonic1StomperDoorObjectInstance now implements RewindRecreatable
+            // -> genericRecreate Path 1.
             // Sonic1TeleporterObjectInstance codec deleted (Phase-2 batch 5):
             // now implements RewindRecreatable -> genericRecreate Path 1.
             // Batch-7 S1 rewind codec (shared boss-defeat explosion).

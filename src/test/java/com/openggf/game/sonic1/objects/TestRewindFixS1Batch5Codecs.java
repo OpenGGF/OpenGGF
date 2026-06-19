@@ -49,8 +49,7 @@ class TestRewindFixS1Batch5Codecs {
         List<String> required = List.of(
                 Sonic1EndingEmeraldsObjectInstance.class.getName(),
                 Sonic1EndingSonicObjectInstance.class.getName(),
-                Sonic1GlassReflectionInstance.class.getName(),
-                Sonic1ResultsScreenObjectInstance.class.getName());
+                Sonic1GlassReflectionInstance.class.getName());
 
         for (String name : required) {
             assertTrue(names.contains(name),
