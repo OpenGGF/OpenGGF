@@ -3136,11 +3136,21 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// no-hit frame.)
 		if (left && !right && sprite.getDirection() == Direction.RIGHT && gSpeed <= 0) {
 			sprite.setPushing(false);
+			forceGroundFacingFlipAnimationRestart();
 			facingFlipForcesPushClearAfterGroundWall = !sprite.getAir() && !sprite.getRolling();
 		} else if (right && !left && sprite.getDirection() == Direction.LEFT && gSpeed >= 0) {
 			sprite.setPushing(false);
+			forceGroundFacingFlipAnimationRestart();
 			facingFlipForcesPushClearAfterGroundWall = !sprite.getAir() && !sprite.getRolling();
 		}
+	}
+
+	private void forceGroundFacingFlipAnimationRestart() {
+		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+		if (featureSet == null || !featureSet.animationChangeClearsPush()) {
+			return;
+		}
+		sprite.forceAnimationRestart();
 	}
 
 	private void clearFacingFlipPushAfterGroundWallCollision() {

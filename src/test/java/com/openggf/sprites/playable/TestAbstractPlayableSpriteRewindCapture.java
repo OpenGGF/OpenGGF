@@ -13,6 +13,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.PerObjectRewindSnapshot.PlayerRewindExtra;
+import com.openggf.physics.Direction;
 import com.openggf.sprites.managers.PlayableSpriteMovement;
 import com.openggf.sprites.managers.SpindashDustController;
 import org.junit.jupiter.api.AfterEach;
@@ -538,6 +539,24 @@ class TestAbstractPlayableSpriteRewindCapture {
         assertTrue(sonic.air, "air not restored directly");
         assertTrue(sonic.rolling, "rolling not restored directly");
         assertEquals((byte) 0x20, sonic.angle, "angle not restored directly");
+    }
+
+    @Test
+    void restoreRewindStateRestoresPresentedRenderFlip() {
+        Sonic sonic = new Sonic("sonic", (short) 0, (short) 0);
+        sonic.setDirection(Direction.LEFT);
+        sonic.setRenderFlips(true, false);
+
+        PerObjectRewindSnapshot snap = sonic.captureRewindState();
+
+        sonic.setDirection(Direction.RIGHT);
+        sonic.setRenderFlips(false, false);
+
+        sonic.restoreRewindState(snap);
+
+        assertEquals(Direction.LEFT, sonic.getDirection(), "gameplay facing direction not restored");
+        assertTrue(sonic.getRenderHFlip(), "render h-flip must match the restored rewind frame");
+        assertFalse(sonic.getRenderVFlip(), "render v-flip must match the restored rewind frame");
     }
 
     @Test

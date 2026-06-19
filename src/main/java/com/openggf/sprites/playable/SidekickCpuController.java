@@ -1645,14 +1645,14 @@ public class SidekickCpuController {
             return;
         }
 
-        AbstractPlayableSprite effectiveLeader = getEffectiveLeader();
+        AbstractPlayableSprite effectiveLeader = resolveApproachLeader();
         if (effectiveLeader == null) {
             return;
         }
         int previousCentreX = sidekick.getCentreX();
         boolean approachComplete = respawnStrategy.updateApproaching(sidekick, effectiveLeader, frameCounter);
         AbstractPlayableSprite completionLeader = effectiveLeader;
-        if (!approachComplete) {
+        if (!approachComplete && respawnStrategy.requiresPhysics()) {
             AbstractPlayableSprite mainLeader = getRootLeader();
             if (mainLeader != null
                     && mainLeader != effectiveLeader
@@ -1696,6 +1696,26 @@ public class SidekickCpuController {
             current = ctrl.getLeader();
         }
         return root;
+    }
+
+    private AbstractPlayableSprite resolveActiveFollowLeader() {
+        if (sidekickCount > 1 && leader != null && leader.isCpuControlled()) {
+            SidekickCpuController leaderController = leader.getCpuController();
+            if (leaderController == null || leaderController.hasWarmNormalFollowHistory()) {
+                return leader;
+            }
+        }
+        return getEffectiveLeader();
+    }
+
+    private boolean hasWarmNormalFollowHistory() {
+        return state == State.NORMAL && normalFrameCount >= ROM_FOLLOW_DELAY_FRAMES;
+    }
+
+    private AbstractPlayableSprite resolveApproachLeader() {
+        return respawnStrategy.requiresPhysics()
+                ? getEffectiveLeader()
+                : resolveActiveFollowLeader();
     }
 
     private boolean crossedOrReachedMainLeaderDuringApproach(int previousCentreX, AbstractPlayableSprite mainLeader) {
@@ -1884,7 +1904,7 @@ public class SidekickCpuController {
             normalFrameCount = 0;
         }
 
-        AbstractPlayableSprite effectiveLeader = getEffectiveLeader();
+        AbstractPlayableSprite effectiveLeader = resolveActiveFollowLeader();
         if (effectiveLeader == null) {
             updateNormalPushingGrace(currentPushing);
             finishNormalStepDiagnostics(diagnostics, "no_effective_leader", -1, -1,
@@ -4646,7 +4666,7 @@ public class SidekickCpuController {
         levelEventDormantMarkerReleasePending = false;
         skipPhysicsThisFrame = false;
         lastNormalAutoJumpPressFrameCounter = -1;
-        normalFrameCount = state == State.NORMAL ? SETTLED_FRAME_THRESHOLD : 0;
+        normalFrameCount = state == State.NORMAL ? ROM_FOLLOW_DELAY_FRAMES : 0;
         normalPushingGraceFrames = 0;
         suppressNextAirbornePushFollowSteering = false;
         releasedUnderwaterPushConsumed = false;
@@ -4679,7 +4699,7 @@ public class SidekickCpuController {
         this.diagnosticS3kInteractWord = usesS3kPointerInteract() ? interactId & 0xFFFF : 0;
         sidekick.setLatchedSolidObjectId(interactId);
         this.jumpingFlag = jumping;
-        this.normalFrameCount = state == State.NORMAL ? SETTLED_FRAME_THRESHOLD : 0;
+        this.normalFrameCount = state == State.NORMAL ? ROM_FOLLOW_DELAY_FRAMES : 0;
         normalPushingGraceFrames = 0;
         suppressNextAirbornePushFollowSteering = false;
         releasedUnderwaterPushConsumed = false;
